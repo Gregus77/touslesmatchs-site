@@ -1,0 +1,86 @@
+
+{
+  "updated_at": "2026-04-06T23:45:00+02:00",
+  "source": "github-json",
+  "today": {
+    "equipe1": "Marseille",
+    "equipe2": "Metz",
+    "flag1": "🔵",
+    "flag2": "🟡",
+    "competition": "Ligue 1 · J32",
+    "heure": "21h05",
+    "date": "Ven. 10 avril 2026",
+    "pronostic": "Victoire Marseille",
+    "cote": "1.48",
+    "note": 9,
+    "live": false,
+    "status": "a_venir",
+    "resume": "Marseille reçoit Metz. Probabilité OM estimée à 77.5%. Profil de match très déséquilibré, conforme à la règle 8/10 minimum.",
+    "sources": [
+      "Ligue 1 stats",
+      "SofaScore",
+      "Opta"
+    ],
+    "pas_de_match": false
+  },
+  "history": [
+    {
+      "date": "06/04",
+      "equipe1": "Juventus",
+      "equipe2": "Genoa",
+      "flag1": "⚪",
+      "flag2": "🔵",
+      "competition": "Serie A J31",
+      "pronostic": "Victoire Juventus",
+      "cote": "1.55",
+      "note": 8,
+      "resultat": "gagne",
+      "score": "2-0"
+    },
+    {
+      "date": "06/04",
+      "equipe1": "Atalanta",
+      "equipe2": "Lecce",
+      "flag1": "⚫",
+      "flag2": "🔴",
+      "competition": "Serie A J31",
+      "pronostic": "Victoire Atalanta",
+      "cote": "1.40",
+      "note": 9,
+      "resultat": "gagne",
+      "score": "3-0"
+    },
+    {
+      "date": "06/04",
+      "equipe1": "Napoli",
+      "equipe2": "AC Milan",
+      "flag1": "🔵",
+      "flag2": "🔴",
+      "competition": "Serie A J31 ⚠️ Hors critères",
+      "pronostic": "Les 2 équipes marquent (7/10 — règle changée depuis)",
+      "cote": "1.78",
+      "note": 7,
+      "resultat": "perdu",
+      "score": "1-0"
+    },
+    {
+      "date": "05/04",
+      "equipe1": "Monaco",
+      "equipe2": "Marseille",
+      "flag1": "🔴",
+      "flag2": "🔵",
+      "competition": "Ligue 1 J30",
+      "pronostic": "Victoire Monaco",
+      "cote": "2.17",
+      "note": 8,
+      "resultat": "gagne",
+      "score": "2-1"
+    }
+  ],
+  "stats": {
+    "taux": 69,
+    "total": 29,
+    "units": 40,
+    "cote_moy": 1.74
+  }
+}
