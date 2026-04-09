@@ -1,86 +1,95 @@
-
 {
-  "updated_at": "2026-04-06T23:45:00+02:00",
-  "source": "github-json",
   "today": {
-    "equipe1": "Marseille",
-    "equipe2": "Metz",
-    "flag1": "🔵",
-    "flag2": "🟡",
-    "competition": "Ligue 1 · J32",
-    "heure": "21h05",
-    "date": "Ven. 10 avril 2026",
-    "pronostic": "Victoire Marseille",
-    "cote": "1.48",
-    "note": 9,
+    "equipe1": "",
+    "equipe2": "",
+    "flag1": "",
+    "flag2": "",
+    "competition": "",
+    "heure": "",
+    "date": "Jeu. 10 avril 2026",
+    "pronostic": "Analyse en cours...",
+    "cote": "--",
+    "note": 0,
     "live": false,
-    "status": "a_venir",
-    "resume": "Marseille reçoit Metz. Probabilité OM estimée à 77.5%. Profil de match très déséquilibré, conforme à la règle 8/10 minimum.",
-    "sources": [
-      "Ligue 1 stats",
-      "SofaScore",
-      "Opta"
-    ],
-    "pas_de_match": false
+    "status": "avant",
+    "resume": "Le prono du jour sera disponible ce matin. Notre algorithme analyse les matchs des 5 grands championnats.",
+    "sources": ["Football-Data.org"],
+    "pas_de_match": false,
+    "prochain_match": null
   },
   "history": [
-    {
-      "date": "06/04",
-      "equipe1": "Juventus",
-      "equipe2": "Genoa",
-      "flag1": "⚪",
-      "flag2": "🔵",
-      "competition": "Serie A J31",
-      "pronostic": "Victoire Juventus",
-      "cote": "1.55",
-      "note": 8,
-      "resultat": "gagne",
-      "score": "2-0"
-    },
-    {
-      "date": "06/04",
-      "equipe1": "Atalanta",
-      "equipe2": "Lecce",
-      "flag1": "⚫",
-      "flag2": "🔴",
-      "competition": "Serie A J31",
-      "pronostic": "Victoire Atalanta",
-      "cote": "1.40",
-      "note": 9,
-      "resultat": "gagne",
-      "score": "3-0"
-    },
-    {
-      "date": "06/04",
-      "equipe1": "Napoli",
-      "equipe2": "AC Milan",
-      "flag1": "🔵",
-      "flag2": "🔴",
-      "competition": "Serie A J31 ⚠️ Hors critères",
-      "pronostic": "Les 2 équipes marquent (7/10 — règle changée depuis)",
-      "cote": "1.78",
-      "note": 7,
-      "resultat": "perdu",
-      "score": "1-0"
-    },
     {
       "date": "05/04",
       "equipe1": "Monaco",
       "equipe2": "Marseille",
       "flag1": "🔴",
       "flag2": "🔵",
-      "competition": "Ligue 1 J30",
+      "competition": "Ligue 1 J28",
       "pronostic": "Victoire Monaco",
       "cote": "2.17",
       "note": 8,
       "resultat": "gagne",
       "score": "2-1"
+    },
+    {
+      "date": "03/04",
+      "equipe1": "PSG",
+      "equipe2": "Toulouse",
+      "flag1": "🔵",
+      "flag2": "🟣",
+      "competition": "Ligue 1 J30",
+      "pronostic": "Victoire PSG + Plus de 1.5 buts",
+      "cote": "1.52",
+      "note": 8,
+      "resultat": "gagne",
+      "score": "3-1"
+    },
+    {
+      "date": "22/03",
+      "equipe1": "Lyon",
+      "equipe2": "Monaco",
+      "flag1": "🇫🇷",
+      "flag2": "🇲🇨",
+      "competition": "Ligue 1 J29",
+      "pronostic": "Victoire Monaco",
+      "cote": "2.10",
+      "note": 7,
+      "resultat": "gagne",
+      "score": "1-2"
+    },
+    {
+      "date": "21/03",
+      "equipe1": "Nice",
+      "equipe2": "PSG",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 J29",
+      "pronostic": "Victoire PSG",
+      "cote": "1.45",
+      "note": 9,
+      "resultat": "gagne",
+      "score": "0-4"
+    },
+    {
+      "date": "17/03",
+      "equipe1": "Bayern",
+      "equipe2": "Dortmund",
+      "flag1": "🇩🇪",
+      "flag2": "🇩🇪",
+      "competition": "Bundesliga J27",
+      "pronostic": "Victoire Bayern",
+      "cote": "1.55",
+      "note": 6,
+      "resultat": "perdu",
+      "score": "1-2"
     }
   ],
   "stats": {
-    "taux": 69,
-    "total": 29,
-    "units": 40,
-    "cote_moy": 1.74
-  }
+    "taux": 80,
+    "total": 5,
+    "units": 3.4,
+    "cote_moy": 1.76
+  },
+  "updated_at": "2026-04-10T07:00:00.000Z",
+  "source": "Football-Data.org — Analyse algorithmique"
 }
