@@ -1,0 +1,28 @@
+name: Prono du Jour
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  generate-prono:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Generer le prono
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+        run: node scripts/generate-prono.js
+      - name: Sauvegarder
+        run: |
+          git config --local user.email "bot@touslesmatchs.com"
+          git config --local user.name "TousLesMatchs Bot"
+          git add data/match-data.json
+          git diff --staged --quiet || git commit -m "Prono auto $(date +'%d/%m/%Y')"
+          git push
