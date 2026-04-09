@@ -6,15 +6,15 @@
     "flag2": "",
     "competition": "",
     "heure": "",
-    "date": "Jeu. 10 avril 2026",
-    "pronostic": "Analyse en cours...",
+    "date": "Jeu. 9 avril 2026",
+    "pronostic": "Pas de match recommandé ce soir",
     "cote": "--",
     "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Le prono du jour sera disponible ce matin. Notre algorithme analyse les matchs des 5 grands championnats.",
-    "sources": ["Football-Data.org"],
-    "pas_de_match": false,
+    "resume": "Aucun match dans nos 5 championnats ce soir.",
+    "sources": [],
+    "pas_de_match": true,
     "prochain_match": null
   },
   "history": [
@@ -90,6 +90,6 @@
     "units": 3.4,
     "cote_moy": 1.76
   },
-  "updated_at": "2026-04-10T07:00:00.000Z",
+  "updated_at": "2026-04-09T22:23:06.755Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
