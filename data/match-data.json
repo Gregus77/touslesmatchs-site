@@ -1,20 +1,20 @@
 {
   "today": {
-    "equipe1": "",
-    "equipe2": "",
-    "flag1": "",
-    "flag2": "",
-    "competition": "",
-    "heure": "",
-    "date": "Jeu. 9 avril 2026",
-    "pronostic": "Pas de match recommandé ce soir",
-    "cote": "--",
-    "note": 0,
+    "equipe1": "Marseille",
+    "equipe2": "Metz",
+    "flag1": "🔵",
+    "flag2": "🟡",
+    "competition": "Ligue 1 J32",
+    "heure": "21h05",
+    "date": "Ven. 10 avril 2026",
+    "pronostic": "Victoire Marseille",
+    "cote": "1.48",
+    "note": 9,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match dans nos 5 championnats ce soir.",
-    "sources": [],
-    "pas_de_match": true,
+    "resume": "Marseille reçoit Metz (lanterne rouge, 8.4% de chance). Probabilité OM : 77.5%. 4 victoires sur 5 à domicile cette saison. Match le plus déséquilibré de la journée.",
+    "sources": ["Ligue 1 stats", "SofaScore", "Opta"],
+    "pas_de_match": false,
     "prochain_match": null
   },
   "history": [
@@ -90,6 +90,6 @@
     "units": 3.4,
     "cote_moy": 1.76
   },
-  "updated_at": "2026-04-09T22:23:06.755Z",
+  "updated_at": "2026-04-10T08:00:00.000Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }

@@ -470,7 +470,7 @@ async function loadData(){
 function renderLastPronoBanner(history){
   const banner=document.getElementById('dernier-prono-banner');
   if(!banner||!history||!history.length){banner&&(banner.style.display='none');return;}
-  const preferred=history.find(h=>h.resultat==='gagne')||history.find(h=>h.resultat==='en_cours')||history[0];
+  const preferred=history[0];
   if(!preferred){banner.style.display='none';return;}
   const isWin=preferred.resultat==='gagne';
   const isLive=preferred.resultat==='en_cours';
@@ -709,6 +709,7 @@ window.addEventListener('DOMContentLoaded',function(){loadData();});</script>
         </div>
         <div style="margin-top:10px;font-size:.68rem;color:var(--muted)">🚫 Pas de barrages · Pas de CL · Pas de Coupe du Monde</div>
       </div>
+    </div>
     <div class="section">
 <div class="sec-head" style="margin-top:14px"><h2>🧠 Notre méthode</h2><div class="sec-line"></div></div>
 <div class="methode-grid">
