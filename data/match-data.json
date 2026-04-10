@@ -1,19 +1,23 @@
 {
   "today": {
-    "equipe1": "Marseille",
-    "equipe2": "Metz",
-    "flag1": "🔵",
-    "flag2": "🟡",
-    "competition": "Ligue 1 J32",
-    "heure": "21h05",
+    "equipe1": "Olympique de Marseille",
+    "equipe2": "FC Metz",
+    "flag1": "🇫🇷",
+    "flag2": "🇫🇷",
+    "competition": "Ligue 1 · Journée 29",
+    "heure": "19h05",
     "date": "Ven. 10 avril 2026",
-    "pronostic": "Victoire Marseille",
-    "cote": "1.48",
-    "note": 9,
+    "pronostic": "Victoire Olympique de Marseille",
+    "cote": "1.55",
+    "note": 8,
     "live": false,
     "status": "avant",
-    "resume": "Marseille reçoit Metz (lanterne rouge, 8.4% de chance). Probabilité OM : 77.5%. 4 victoires sur 5 à domicile cette saison. Match le plus déséquilibré de la journée.",
-    "sources": ["Ligue 1 stats", "SofaScore", "Opta"],
+    "resume": "Olympique de Marseille (4e) reçoit FC Metz (18e). À domicile, les locaux affichent 54% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "sources": [
+      "Football-Data.org",
+      "Classements officiels",
+      "Statistiques saison"
+    ],
     "pas_de_match": false,
     "prochain_match": null
   },
@@ -90,6 +94,6 @@
     "units": 3.4,
     "cote_moy": 1.76
   },
-  "updated_at": "2026-04-10T08:00:00.000Z",
+  "updated_at": "2026-04-10T00:45:53.942Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
