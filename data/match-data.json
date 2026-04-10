@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "10/04",
+      "equipe1": "Olympique de Marseille",
+      "equipe2": "FC Metz",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 29",
+      "pronostic": "Victoire Olympique de Marseille",
+      "cote": "1.55",
+      "note": 8,
+      "resultat": "gagne",
+      "score": "3-1"
+    },
+    {
       "date": "05/04",
       "equipe1": "Monaco",
       "equipe2": "Marseille",
@@ -89,11 +102,11 @@
     }
   ],
   "stats": {
-    "taux": 80,
-    "total": 5,
-    "units": 3.4,
-    "cote_moy": 1.76
+    "taux": 83,
+    "total": 6,
+    "units": 2.9,
+    "cote_moy": 1.72
   },
-  "updated_at": "2026-04-10T08:19:49.749Z",
+  "updated_at": "2026-04-10T23:38:16.206Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
