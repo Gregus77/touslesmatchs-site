@@ -484,7 +484,29 @@ function renderLastPronoBanner(history){
   banner.style.display='block';
   banner.innerHTML='<div style="background:'+bgGrad+';padding:20px 16px 18px;position:relative;overflow:hidden;border-bottom:3px solid '+borderCol+'"><div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none"></div><div style="text-align:center;position:relative;z-index:1"><div style="font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:8px">'+sublabel+'</div><div style="font-family:\'Playfair Display\',serif;font-size:1.2rem;font-weight:900;color:#fff;margin-bottom:10px;line-height:1.2">'+(p.flag1||'')+' '+p.equipe1+' <span style="opacity:.55;font-style:italic;font-size:.95rem">vs</span> '+p.equipe2+' '+(p.flag2||'')+'</div><div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:14px"><span style="font-size:.68rem;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);padding:3px 10px;border-radius:100px">'+(p.competition||'')+'</span><span style="font-size:.68rem;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);padding:3px 10px;border-radius:100px">'+p.date+'</span></div><div style="display:inline-flex;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.3);border-radius:14px;padding:14px 24px;margin-bottom:14px;flex-wrap:wrap"><div style="text-align:center"><div style="font-size:.5rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Pronostic</div><div style="font-size:.9rem;font-weight:700;color:#fff">'+p.pronostic+'</div></div><div style="width:1px;height:34px;background:rgba(255,255,255,.2)"></div><div style="text-align:center"><div style="font-size:.5rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Cote</div><div style="font-family:\'DM Mono\',monospace;font-size:1.5rem;font-weight:900;color:#fff">'+p.cote+'</div></div>'+scoreHtml+'</div><div style="display:inline-flex;align-items:center;gap:8px;border-radius:100px;padding:10px 28px;font-size:1.15rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff">'+bigLabel+'</div></div></div>';
 }
-function renderAll(data){matchData=data.today;renderLastPronoBanner(data.history||[]);renderMatch(data.today);renderHistory(data.history||[]);renderPronoBooks(data.today.cote);updateSyncBar(data);if(data.stats){document.getElementById('s-taux').textContent=(data.stats.taux||72)+'%';document.getElementById('s-total').textContent=data.stats.total||25;document.getElementById('s-units').textContent='+'+(data.stats.units||39)+'u';document.getElementById('s-cote').textContent=data.stats.cote_moy||1.77;}renderBookmakers(data.today.cote);}
+function renderStreakBar(history){
+  var el=document.getElementById('streak-bar');
+  if(!el||!history||!history.length){if(el)el.style.display='none';return;}
+  var wins=0;for(var i=0;i<history.length;i++){if(history[i].resultat==='gagne')wins++;}
+  var total=history.length;
+  var streak=0;var st=history[0].resultat==='gagne'?'W':'L';
+  for(var j=0;j<history.length;j++){var r=history[j].resultat;if((r==='gagne'&&st==='W')||(r==='perdu'&&st==='L'))streak++;else break;}
+  var dots=history.slice(0,8).map(function(h){var c=h.resultat==='gagne'?'#3ddc84':h.resultat==='en_cours'?'#f0b429':'#ff5c5c';var t=h.resultat==='gagne'?'G':'P';return'<div title="'+(h.equipe1||'')+' vs '+(h.equipe2||'')+'" style="width:26px;height:26px;border-radius:50%;background:'+c+';display:flex;align-items:center;justify-content:center;font-size:.56rem;font-weight:900;color:#000;flex-shrink:0">'+t+'</div>';}).join('');
+  var sl=st==='W'?streak+' de suite 🔥':'';
+  el.style.display='block';
+  el.innerHTML='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:10px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-size:.55rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex-shrink:0">Historique</div><div style="display:flex;gap:4px;align-items:center;flex:1">'+dots+'</div><div style="font-size:.65rem;font-weight:700;color:var(--gold);flex-shrink:0;text-align:right;line-height:1.4">'+wins+'/'+total+'<br><span style="color:var(--green);font-size:.6rem">'+sl+'</span></div></div>';
+}
+function updateVerdictCalc(){
+  var mEl=document.getElementById('vc-mise');
+  var cEl=document.getElementById('vc-cote');
+  var gEl=document.getElementById('vc-gain');
+  if(!mEl||!cEl||!gEl)return;
+  var mise=parseFloat(mEl.value)||50;
+  var cote=parseFloat((cEl.textContent||'').replace(',','.'))||1.55;
+  if(isNaN(cote)||cote<=1)return;
+  gEl.textContent=(mise*cote).toFixed(2)+'€';
+}
+function renderAll(data){matchData=data.today;renderLastPronoBanner(data.history||[]);renderStreakBar(data.history||[]);renderMatch(data.today);renderHistory(data.history||[]);renderPronoBooks(data.today.cote);updateSyncBar(data);if(data.stats){var _e;_e=document.getElementById('s-taux');if(_e)_e.textContent=(data.stats.taux||72)+'%';_e=document.getElementById('s-total');if(_e)_e.textContent=data.stats.total||25;_e=document.getElementById('s-units');if(_e)_e.textContent='+'+(data.stats.units||39)+'u';_e=document.getElementById('s-cote');if(_e)_e.textContent=data.stats.cote_moy||1.77;}var vcCote=document.getElementById('vc-cote');if(vcCote&&data.today&&data.today.cote){vcCote.textContent=data.today.cote;updateVerdictCalc();}renderBookmakers(data.today.cote);}
 
 function updateSyncBar(data){const el=document.getElementById('sync-bar');if(!el)return;const updated=data&&data.updated_at?new Date(data.updated_at):new Date();const ok=!isNaN(updated.getTime());const when=ok?updated.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'inconnue';const src=(data&&data.source&&data.source!=='fallback-local')?'GitHub/JSON':'mode local';el.innerHTML=`<span class="sync-dot"></span><span><strong>Mises à jour prêtes via GitHub + Netlify</strong> · dernière sync : ${when} · source : ${src}</span>`;}
 
@@ -623,12 +645,13 @@ window.addEventListener('DOMContentLoaded',function(){loadData();});</script>
 
 <div class="modal-overlay" id="email-modal" onclick="if(event.target===this)closeEmailModal()">
   <div class="modal-box">
-    <div class="modal-title">📧 Reçois le prono chaque matin</div>
-    <div class="modal-sub">Chaque matin avant <strong>9h00</strong>, reçois notre pronostic du jour directement dans ta boîte mail. Gratuit. Sans spam.</div>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(61,220,132,.1);border:1px solid rgba(61,220,132,.25);border-radius:100px;padding:4px 12px;font-size:.62rem;font-weight:700;color:var(--green);margin-bottom:10px">✅ 80% de réussite ce mois · 5 pronos</div>
+    <div class="modal-title">🔥 Rejoins les gagnants — 1 prono/jour</div>
+    <div class="modal-sub">Avant <strong>9h00</strong>, tu sais déjà sur quoi parier. Notre IA sélectionne uniquement les paris ≥ 8/10. <strong style="color:var(--gold)">Gratuit. Sans spam.</strong></div>
     <div class="email-benefits">
-      <div class="email-benefit">📧<div><strong>Prono avant 9h00</strong>Chaque matin</div></div>
-      <div class="email-benefit">📊<div><strong>Bilan hebdo</strong>Chaque lundi</div></div>
-      <div class="email-benefit">🔔<div><strong>Alertes cotes</strong>Meilleures opport.</div></div>
+      <div class="email-benefit">🎯<div><strong>1 pari/jour</strong>Sélectionné par IA</div></div>
+      <div class="email-benefit">🔥<div><strong>Note 8/10 min.</strong>Que le meilleur</div></div>
+      <div class="email-benefit">📊<div><strong>80% gagnant</strong>Ce mois-ci</div></div>
       <div class="email-benefit">🆓<div><strong>Gratuit</strong>Sans engagement</div></div>
     </div>
     <form class="email-form" name="newsletter" method="POST" data-netlify="true" netlify-honeypot="bot-field" onsubmit="handleEmailSubmit(event)">
@@ -636,7 +659,7 @@ window.addEventListener('DOMContentLoaded',function(){loadData();});</script>
       <input style="display:none" name="bot-field">
       <input class="email-input" type="email" name="email" placeholder="ton@email.com" required>
       <input class="email-input" type="text" name="prenom" placeholder="Ton prénom (optionnel)">
-      <button class="email-submit" type="submit">📧 M'inscrire gratuitement</button>
+      <button class="email-submit" type="submit" style="font-size:.92rem;padding:15px">🔥 Recevoir le prono gagnant de demain — Gratuit</button>
     </form>
     <button class="modal-close" onclick="closeEmailModal()">Pas maintenant</button>
   </div>
@@ -673,8 +696,15 @@ window.addEventListener('DOMContentLoaded',function(){loadData();});</script>
     <div class="trust-item"><span>🔒</span><span>Gratuit, toujours</span></div>
     <div class="trust-item"><span>🚫</span><span>Barrages exclus</span></div>
   </div>
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-item"><span class="stat-num" id="s-taux">80%</span><span class="stat-label">Taux gagnant</span></div>
+    <div class="stat-item"><span class="stat-num" id="s-total">5</span><span class="stat-label">Pronos joués</span></div>
+    <div class="stat-item"><span class="stat-num" id="s-units" style="color:var(--green)">+3.4u</span><span class="stat-label">Unités gagnées</span></div>
+    <div class="stat-item"><span class="stat-num" id="s-cote">1.76</span><span class="stat-label">Cote moyenne</span></div>
+  </div>
   <div class="sync-bar" id="sync-bar"><span class="sync-dot"></span><span><strong>Mode prêt pour GitHub + Netlify</strong> · chargement des données en cours…</span></div>
   <div id="dernier-prono-banner" style="display:none;margin:0 0 14px"></div>
+  <div id="streak-bar" style="display:none;margin:0 0 14px"></div>
   <div class="section">
     <div class="sec-head"><h2>🎯 Ce soir</h2><div class="sec-line"></div></div>
     <div class="audio-bar">
@@ -723,6 +753,35 @@ window.addEventListener('DOMContentLoaded',function(){loadData();});</script>
   Les sites qui donnent 10 pronos veulent du volume. Nous on choisit <strong style="color:var(--gold)">un seul match</strong> quand les conditions sont vraiment réunies. Les autres jours, on attend.
 </div>
 <div class="sec-head" style="margin-top:8px"><h2>🏦 Trouve la meilleure cote</h2><div class="sec-line"></div></div>
+<div id="verdict-box" style="background:linear-gradient(135deg,rgba(232,64,64,.08),rgba(201,168,76,.05));border:1.5px solid rgba(232,64,64,.35);border-radius:16px;padding:16px 14px;margin-bottom:14px">
+  <div style="font-size:.55rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:rgba(232,64,64,.8);margin-bottom:8px">⭐ Bookmaker recommandé du jour</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+    <div style="font-size:1.6rem">🎯</div>
+    <div>
+      <div style="font-weight:700;font-size:.95rem">Winamax</div>
+      <div style="font-size:.65rem;color:var(--muted)">Code parrainage : <strong style="color:var(--gold);font-family:'DM Mono',monospace">WMX8M5</strong> · 10€ offerts + 100€ remboursé</div>
+    </div>
+  </div>
+  <div style="background:rgba(0,0,0,.3);border-radius:11px;padding:11px 13px;margin-bottom:12px">
+    <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">💰 Simulateur express · match du jour</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px">
+        <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Ta mise (€)</div>
+        <input id="vc-mise" type="number" value="50" min="1" style="width:100%;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:#fff;font-family:'DM Mono',monospace;font-size:.9rem;outline:none" oninput="updateVerdictCalc()">
+      </div>
+      <div style="font-size:1.1rem;color:var(--muted)">→</div>
+      <div style="flex:1;min-width:100px;text-align:center;background:rgba(61,220,132,.08);border:1px solid rgba(61,220,132,.2);border-radius:8px;padding:7px 10px">
+        <div style="font-size:.58rem;color:var(--muted);margin-bottom:2px">Gain potentiel</div>
+        <div id="vc-gain" style="font-family:'DM Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--green)">—</div>
+      </div>
+    </div>
+    <div style="margin-top:6px;font-size:.6rem;color:var(--muted);text-align:center">Cote du jour : <span id="vc-cote" style="color:var(--gold);font-weight:700">—</span> · Calcul indicatif</div>
+  </div>
+  <a href="https://www.winamax.fr/inscription?code=WMX8M5" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#e84040,#c0392b);border-radius:11px;padding:13px;text-decoration:none;color:#fff;font-weight:700;font-size:.88rem">
+    🚀 Ouvrir mon compte Winamax — Code WMX8M5
+  </a>
+  <div style="text-align:center;font-size:.58rem;color:rgba(255,255,255,.3);margin-top:7px">⚠️ 18+ · Jouer comporte des risques</div>
+</div>
 <div style="margin-bottom:10px;font-size:.72rem;color:var(--muted)">✅ Tous agréés ANJ · Inscription gratuite · Compare avant de parier</div>
 <a href="https://www.winamax.fr/inscription" target="_blank" rel="noopener" class="book-card" style="border-color:rgba(232,64,64,.45);background:rgba(232,64,64,.04)"><div class="book-emoji" style="background:#e8404022">🎯</div><div style="flex:1"><div class="book-name">Winamax <span style="font-size:.55rem;background:#e84040;color:#fff;padding:1px 6px;border-radius:100px;margin-left:4px">PARRAINAGE</span></div><div class="book-bonus">🎁 100€ remboursé · Code <strong style="color:#c9a84c">WMX8M5</strong> · 10€ offerts</div></div>
   <div style="font-size:.68rem;color:var(--muted);border:1px solid var(--border);padding:4px 8px;border-radius:100px;flex-shrink:0">Parier →</div>
