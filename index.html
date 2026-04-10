@@ -265,7 +265,7 @@ header{position:sticky;top:0;z-index:100;background:rgba(7,7,13,.96);backdrop-fi
 .disclaimer{padding:0 14px 12px;max-width:700px;margin:0 auto}
 .disclaimer p{font-size:.64rem;color:var(--muted);border:1px solid rgba(255,255,255,.05);border-radius:9px;padding:9px 12px;line-height:1.6;text-align:center}
 
-.sync-bar{display:flex;align-items:center;justify-content:center;gap:8px;margin:10px 14px 14px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02);font-size:.72rem;color:var(--muted);text-align:center}
+.sync-bar{display:none !important;align-items:center;justify-content:center;gap:8px;margin:10px 14px 14px;padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02);font-size:.72rem;color:var(--muted);text-align:center}
 .sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px rgba(61,220,132,.45);animation:blink 1.4s infinite}
 .sync-bar strong{color:var(--text)}
 .inline-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -467,34 +467,23 @@ async function loadData(){
 }
 
 
-function renderLastPronoBanner(history){
-  const banner=document.getElementById('dernier-prono-banner');
-  if(!banner||!history||!history.length){banner&&(banner.style.display='none');return;}
-  const preferred=history[0];
-  if(!preferred){banner.style.display='none';return;}
-  const isWin=preferred.resultat==='gagne';
-  const isLive=preferred.resultat==='en_cours';
-  const bg=isWin?'#1a6e35':(isLive?'#7a5a11':'#9e1515');
-  const badge=isWin?'✅ GAGNÉ':(isLive?'🟡 EN COURS':'❌ PERDU');
-  const label=isWin?'Dernier pari gagné':(isLive?'Dernier pari suivi':'Dernier pari clôturé');
-  banner.style.display='block';
-  banner.innerHTML=`<div style="background:${bg};padding:10px 14px;display:flex;align-items:center;gap:10px">
-    <div style="flex:1;text-align:center">
-      <div style="font-size:.58rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.72);margin-bottom:3px">🏁 ${label}</div>
-      <div style="font-family:'Playfair Display',serif;font-size:.95rem;font-weight:900;color:#fff;margin-bottom:3px">${preferred.flag1||''} ${preferred.equipe1} – ${preferred.equipe2} ${preferred.flag2||''}</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
-        <span style="font-family:'DM Mono',monospace;font-size:.95rem;font-weight:900;color:#fff">${preferred.date}</span>
-        <span style="width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,.4);display:inline-block"></span>
-        <span style="font-family:'DM Mono',monospace;font-size:.95rem;font-weight:900;color:#fff">Cote ${preferred.cote}</span>
-      </div>
-      <div style="font-size:.62rem;color:rgba(255,255,255,.7)">${preferred.pronostic}${preferred.score?' · '+preferred.score:''}</div>
-    </div>
-    <div style="background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:6px 12px;text-align:center;flex-shrink:0">
-      <div style="font-size:.72rem;font-weight:900;letter-spacing:.07em;color:#fff;text-transform:uppercase">${badge}</div>
-    </div>
-  </div>`;
-}
 
+
+function renderLastPronoBanner(history){
+  var banner=document.getElementById('dernier-prono-banner');
+  if(!banner||!history||!history.length){if(banner)banner.style.display='none';return;}
+  var p=history[0];
+  if(!p){banner.style.display='none';return;}
+  var isWin=p.resultat==='gagne';
+  var isLive=p.resultat==='en_cours';
+  var bgGrad=isWin?'linear-gradient(135deg,#0d5c2e,#1a8a42)':(isLive?'linear-gradient(135deg,#6b4a00,#c9820a)':'linear-gradient(135deg,#6b0a0a,#b01c1c)');
+  var borderCol=isWin?'#2ecc71':(isLive?'#f0b429':'#e74c3c');
+  var bigLabel=isWin?'GAGNE \u2705':(isLive?'EN COURS \uD83D\uDFE1':'PERDU \u274C');
+  var sublabel=isWin?'Dernier pari gagne':(isLive?'Pari en cours':'Dernier pari');
+  var scoreHtml=p.score?('<div style="width:1px;height:32px;background:rgba(255,255,255,.2)"></div><div style="text-align:center"><div style="font-size:.52rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.1em;margin-bottom:2px">Score</div><div style="font-family:\'DM Mono\',monospace;font-size:1.4rem;font-weight:900;color:#fff">'+p.score+'</div></div>'):'';
+  banner.style.display='block';
+  banner.innerHTML='<div style="background:'+bgGrad+';padding:20px 16px 18px;position:relative;overflow:hidden;border-bottom:3px solid '+borderCol+'"><div style="position:absolute;top:-40px;right:-40px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none"></div><div style="text-align:center;position:relative;z-index:1"><div style="font-size:.58rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-bottom:8px">'+sublabel+'</div><div style="font-family:\'Playfair Display\',serif;font-size:1.2rem;font-weight:900;color:#fff;margin-bottom:10px;line-height:1.2">'+(p.flag1||'')+' '+p.equipe1+' <span style="opacity:.55;font-style:italic;font-size:.95rem">vs</span> '+p.equipe2+' '+(p.flag2||'')+'</div><div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin-bottom:14px"><span style="font-size:.68rem;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);padding:3px 10px;border-radius:100px">'+(p.competition||'')+'</span><span style="font-size:.68rem;color:rgba(255,255,255,.65);background:rgba(0,0,0,.25);padding:3px 10px;border-radius:100px">'+p.date+'</span></div><div style="display:inline-flex;align-items:center;justify-content:center;gap:16px;background:rgba(0,0,0,.3);border-radius:14px;padding:14px 24px;margin-bottom:14px;flex-wrap:wrap"><div style="text-align:center"><div style="font-size:.5rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Pronostic</div><div style="font-size:.9rem;font-weight:700;color:#fff">'+p.pronostic+'</div></div><div style="width:1px;height:34px;background:rgba(255,255,255,.2)"></div><div style="text-align:center"><div style="font-size:.5rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.1em;margin-bottom:3px">Cote</div><div style="font-family:\'DM Mono\',monospace;font-size:1.5rem;font-weight:900;color:#fff">'+p.cote+'</div></div>'+scoreHtml+'</div><div style="display:inline-flex;align-items:center;gap:8px;border-radius:100px;padding:10px 28px;font-size:1.15rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff">'+bigLabel+'</div></div></div>';
+}
 function renderAll(data){matchData=data.today;renderLastPronoBanner(data.history||[]);renderMatch(data.today);renderHistory(data.history||[]);renderPronoBooks(data.today.cote);updateSyncBar(data);if(data.stats){document.getElementById('s-taux').textContent=(data.stats.taux||72)+'%';document.getElementById('s-total').textContent=data.stats.total||25;document.getElementById('s-units').textContent='+'+(data.stats.units||39)+'u';document.getElementById('s-cote').textContent=data.stats.cote_moy||1.77;}renderBookmakers(data.today.cote);}
 
 function updateSyncBar(data){const el=document.getElementById('sync-bar');if(!el)return;const updated=data&&data.updated_at?new Date(data.updated_at):new Date();const ok=!isNaN(updated.getTime());const when=ok?updated.toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'inconnue';const src=(data&&data.source&&data.source!=='fallback-local')?'GitHub/JSON':'mode local';el.innerHTML=`<span class="sync-dot"></span><span><strong>Mises à jour prêtes via GitHub + Netlify</strong> · dernière sync : ${when} · source : ${src}</span>`;}
