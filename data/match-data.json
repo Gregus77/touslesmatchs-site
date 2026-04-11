@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "11/04",
+      "equipe1": "Arsenal FC",
+      "equipe2": "AFC Bournemouth",
+      "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "competition": "Premier League · Journée 32",
+      "pronostic": "Victoire Arsenal FC",
+      "cote": "1.55",
+      "note": 9,
+      "resultat": "perdu",
+      "score": "1-2"
+    },
+    {
       "date": "10/04",
       "equipe1": "Olympique de Marseille",
       "equipe2": "FC Metz",
@@ -102,11 +115,11 @@
     }
   ],
   "stats": {
-    "taux": 83,
-    "total": 6,
-    "units": 2.9,
-    "cote_moy": 1.72
+    "taux": 71,
+    "total": 7,
+    "units": 1.9,
+    "cote_moy": 1.7
   },
-  "updated_at": "2026-04-11T07:46:47.336Z",
+  "updated_at": "2026-04-11T23:37:44.675Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
