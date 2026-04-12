@@ -1,24 +1,20 @@
 {
   "today": {
-    "equipe1": "Arsenal FC",
-    "equipe2": "AFC Bournemouth",
-    "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-    "competition": "Premier League · Journée 32",
-    "heure": "11h30",
-    "date": "Sam. 11 avril 2026",
-    "pronostic": "Victoire Arsenal FC",
-    "cote": "1.55",
-    "note": 9,
+    "equipe1": "",
+    "equipe2": "",
+    "flag1": "",
+    "flag2": "",
+    "competition": "",
+    "heure": "",
+    "date": "Dim. 12 avril 2026",
+    "pronostic": "Pas de match recommandé ce soir",
+    "cote": "--",
+    "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Arsenal FC (1e) reçoit AFC Bournemouth (13e). À domicile, les locaux affichent 68% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
-    "sources": [
-      "Football-Data.org",
-      "Classements officiels",
-      "Statistiques saison"
-    ],
-    "pas_de_match": false,
+    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 6/10).",
+    "sources": [],
+    "pas_de_match": true,
     "prochain_match": null
   },
   "history": [
@@ -120,6 +116,6 @@
     "units": 1.9,
     "cote_moy": 1.7
   },
-  "updated_at": "2026-04-11T23:37:44.675Z",
+  "updated_at": "2026-04-12T08:00:35.153Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
