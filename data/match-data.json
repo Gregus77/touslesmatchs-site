@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "13/04",
+      "equipe1": "Manchester United FC",
+      "equipe2": "Leeds United FC",
+      "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "competition": "Premier League · Journée 32",
+      "pronostic": "Victoire Manchester United FC",
+      "cote": "1.75",
+      "note": 8,
+      "resultat": "perdu",
+      "score": "1-2"
+    },
+    {
       "date": "11/04",
       "equipe1": "Arsenal FC",
       "equipe2": "AFC Bournemouth",
@@ -115,11 +128,11 @@
     }
   ],
   "stats": {
-    "taux": 71,
-    "total": 7,
-    "units": 1.9,
+    "taux": 63,
+    "total": 8,
+    "units": 0.9,
     "cote_moy": 1.7
   },
-  "updated_at": "2026-04-13T08:59:37.085Z",
+  "updated_at": "2026-04-13T23:45:45.965Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
