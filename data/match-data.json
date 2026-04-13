@@ -1,20 +1,24 @@
 {
   "today": {
-    "equipe1": "",
-    "equipe2": "",
-    "flag1": "",
-    "flag2": "",
-    "competition": "",
-    "heure": "",
-    "date": "Dim. 12 avril 2026",
-    "pronostic": "Pas de match recommandé ce soir",
-    "cote": "--",
-    "note": 0,
+    "equipe1": "Manchester United FC",
+    "equipe2": "Leeds United FC",
+    "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "competition": "Premier League · Journée 32",
+    "heure": "19h00",
+    "date": "Lun. 13 avril 2026",
+    "pronostic": "Victoire Manchester United FC",
+    "cote": "1.75",
+    "note": 8,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 6/10).",
-    "sources": [],
-    "pas_de_match": true,
+    "resume": "Manchester United FC (3e) reçoit Leeds United FC (15e). À domicile, les locaux affichent 48% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "sources": [
+      "Football-Data.org",
+      "Classements officiels",
+      "Statistiques saison"
+    ],
+    "pas_de_match": false,
     "prochain_match": null
   },
   "history": [
@@ -116,6 +120,6 @@
     "units": 1.9,
     "cote_moy": 1.7
   },
-  "updated_at": "2026-04-12T08:00:35.153Z",
+  "updated_at": "2026-04-13T08:59:37.085Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
