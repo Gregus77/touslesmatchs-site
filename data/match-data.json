@@ -6,7 +6,7 @@
     "flag2": "",
     "competition": "",
     "heure": "",
-    "date": "Mar. 14 avril 2026",
+    "date": "Mer. 15 avril 2026",
     "pronostic": "Pas de match recommandé ce soir",
     "cote": "--",
     "note": 0,
@@ -129,6 +129,6 @@
     "units": 0.9,
     "cote_moy": 1.7
   },
-  "updated_at": "2026-04-14T08:24:21.780Z",
+  "updated_at": "2026-04-15T08:25:48.757Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
