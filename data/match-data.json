@@ -1,20 +1,24 @@
 {
   "today": {
-    "equipe1": "",
-    "equipe2": "",
-    "flag1": "",
-    "flag2": "",
-    "competition": "",
-    "heure": "",
-    "date": "Jeu. 16 avril 2026",
-    "pronostic": "Pas de match recommandé ce soir",
-    "cote": "--",
-    "note": 0,
+    "equipe1": "Racing Club de Lens",
+    "equipe2": "Toulouse FC",
+    "flag1": "🇫🇷",
+    "flag2": "🇫🇷",
+    "competition": "Ligue 1 · Journée 30",
+    "heure": "18h45",
+    "date": "Ven. 17 avril 2026",
+    "pronostic": "Victoire Racing Club de Lens",
+    "cote": "1.55",
+    "note": 9,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match dans nos 5 championnats ce soir.",
-    "sources": [],
-    "pas_de_match": true,
+    "resume": "Racing Club de Lens (2e) reçoit Toulouse FC (10e). À domicile, les locaux affichent 68% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "sources": [
+      "Football-Data.org",
+      "Classements officiels",
+      "Statistiques saison"
+    ],
+    "pas_de_match": false,
     "prochain_match": null
   },
   "history": [
@@ -129,6 +133,6 @@
     "units": 0.9,
     "cote_moy": 1.7
   },
-  "updated_at": "2026-04-16T08:25:05.479Z",
+  "updated_at": "2026-04-17T08:24:51.927Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
