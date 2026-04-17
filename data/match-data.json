@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "17/04",
+      "equipe1": "Racing Club de Lens",
+      "equipe2": "Toulouse FC",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 30",
+      "pronostic": "Victoire Racing Club de Lens",
+      "cote": "1.55",
+      "note": 9,
+      "resultat": "gagne",
+      "score": "3-2"
+    },
+    {
       "date": "13/04",
       "equipe1": "Manchester United FC",
       "equipe2": "Leeds United FC",
@@ -128,11 +141,11 @@
     }
   ],
   "stats": {
-    "taux": 63,
-    "total": 8,
-    "units": 0.9,
-    "cote_moy": 1.7
+    "taux": 67,
+    "total": 9,
+    "units": 1.5,
+    "cote_moy": 1.69
   },
-  "updated_at": "2026-04-17T08:24:51.927Z",
+  "updated_at": "2026-04-17T23:41:27.213Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
