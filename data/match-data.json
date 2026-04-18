@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "18/04",
+      "equipe1": "Lille OSC",
+      "equipe2": "OGC Nice",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 30",
+      "pronostic": "Victoire Lille OSC",
+      "cote": "1.55",
+      "note": 9,
+      "resultat": "perdu",
+      "score": "0-0"
+    },
+    {
       "date": "17/04",
       "equipe1": "Racing Club de Lens",
       "equipe2": "Toulouse FC",
@@ -141,11 +154,11 @@
     }
   ],
   "stats": {
-    "taux": 67,
-    "total": 9,
-    "units": 1.5,
-    "cote_moy": 1.69
+    "taux": 60,
+    "total": 10,
+    "units": 0.5,
+    "cote_moy": 1.67
   },
-  "updated_at": "2026-04-18T07:57:08.217Z",
+  "updated_at": "2026-04-18T23:38:22.749Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
