@@ -1,18 +1,18 @@
 {
   "today": {
-    "equipe1": "Racing Club de Lens",
-    "equipe2": "Toulouse FC",
+    "equipe1": "Lille OSC",
+    "equipe2": "OGC Nice",
     "flag1": "🇫🇷",
     "flag2": "🇫🇷",
     "competition": "Ligue 1 · Journée 30",
-    "heure": "18h45",
-    "date": "Ven. 17 avril 2026",
-    "pronostic": "Victoire Racing Club de Lens",
+    "heure": "19h05",
+    "date": "Sam. 18 avril 2026",
+    "pronostic": "Victoire Lille OSC",
     "cote": "1.55",
     "note": 9,
     "live": false,
     "status": "avant",
-    "resume": "Racing Club de Lens (2e) reçoit Toulouse FC (10e). À domicile, les locaux affichent 68% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "resume": "Lille OSC (3e) reçoit OGC Nice (15e). À domicile, les locaux affichent 55% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
     "sources": [
       "Football-Data.org",
       "Classements officiels",
@@ -146,6 +146,6 @@
     "units": 1.5,
     "cote_moy": 1.69
   },
-  "updated_at": "2026-04-17T23:41:27.213Z",
+  "updated_at": "2026-04-18T07:57:08.217Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
