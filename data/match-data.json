@@ -1,18 +1,18 @@
 {
   "today": {
-    "equipe1": "Lille OSC",
-    "equipe2": "OGC Nice",
+    "equipe1": "AS Monaco FC",
+    "equipe2": "AJ Auxerre",
     "flag1": "🇫🇷",
     "flag2": "🇫🇷",
     "competition": "Ligue 1 · Journée 30",
-    "heure": "19h05",
-    "date": "Sam. 18 avril 2026",
-    "pronostic": "Victoire Lille OSC",
+    "heure": "13h00",
+    "date": "Dim. 19 avril 2026",
+    "pronostic": "Victoire AS Monaco FC",
     "cote": "1.55",
-    "note": 9,
+    "note": 8,
     "live": false,
     "status": "avant",
-    "resume": "Lille OSC (3e) reçoit OGC Nice (15e). À domicile, les locaux affichent 55% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "resume": "AS Monaco FC (7e) reçoit AJ Auxerre (16e). À domicile, les locaux affichent 52% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
     "sources": [
       "Football-Data.org",
       "Classements officiels",
@@ -159,6 +159,6 @@
     "units": 0.5,
     "cote_moy": 1.67
   },
-  "updated_at": "2026-04-18T23:38:22.749Z",
+  "updated_at": "2026-04-19T08:04:02.651Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
