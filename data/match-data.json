@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "19/04",
+      "equipe1": "AS Monaco FC",
+      "equipe2": "AJ Auxerre",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 30",
+      "pronostic": "Victoire AS Monaco FC",
+      "cote": "1.55",
+      "note": 8,
+      "resultat": "perdu",
+      "score": "2-2"
+    },
+    {
       "date": "18/04",
       "equipe1": "Lille OSC",
       "equipe2": "OGC Nice",
@@ -154,11 +167,11 @@
     }
   ],
   "stats": {
-    "taux": 60,
-    "total": 10,
-    "units": 0.5,
-    "cote_moy": 1.67
+    "taux": 55,
+    "total": 11,
+    "units": -0.5,
+    "cote_moy": 1.66
   },
-  "updated_at": "2026-04-19T08:04:02.651Z",
+  "updated_at": "2026-04-19T23:40:07.162Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
