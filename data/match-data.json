@@ -6,27 +6,16 @@
     "flag2": "",
     "competition": "",
     "heure": "",
-    "date": "Lun. 20 avril 2026",
+    "date": "Mar. 21 avril 2026",
     "pronostic": "Pas de match recommandé ce soir",
     "cote": "--",
     "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 7/10).",
+    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 5/10).",
     "sources": [],
     "pas_de_match": true,
-    "prochain_match": {
-      "equipe1": "Crystal Palace FC",
-      "equipe2": "West Ham United FC",
-      "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-      "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-      "date": "Prochainement",
-      "heure": "19h00",
-      "competition": "Premier League",
-      "pronostic": "Victoire Crystal Palace FC",
-      "cote": "1.75",
-      "note": 7
-    }
+    "prochain_match": null
   },
   "history": [
     {
@@ -179,6 +168,6 @@
     "units": -0.5,
     "cote_moy": 1.66
   },
-  "updated_at": "2026-04-20T09:05:20.671Z",
+  "updated_at": "2026-04-21T08:51:14.007Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
