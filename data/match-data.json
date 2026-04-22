@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "22/04",
+      "equipe1": "Paris Saint-Germain FC",
+      "equipe2": "FC Nantes",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 26",
+      "pronostic": "Victoire Paris Saint-Germain FC",
+      "cote": "1.55",
+      "note": 10,
+      "resultat": "gagne",
+      "score": "3-0"
+    },
+    {
       "date": "19/04",
       "equipe1": "AS Monaco FC",
       "equipe2": "AJ Auxerre",
@@ -167,11 +180,11 @@
     }
   ],
   "stats": {
-    "taux": 55,
-    "total": 11,
-    "units": -0.5,
-    "cote_moy": 1.66
+    "taux": 58,
+    "total": 12,
+    "units": 0.1,
+    "cote_moy": 1.65
   },
-  "updated_at": "2026-04-22T08:27:54.780Z",
+  "updated_at": "2026-04-22T23:49:36.985Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
