@@ -1,24 +1,20 @@
 {
   "today": {
-    "equipe1": "Paris Saint-Germain FC",
-    "equipe2": "FC Nantes",
-    "flag1": "🇫🇷",
-    "flag2": "🇫🇷",
-    "competition": "Ligue 1 · Journée 26",
-    "heure": "17h00",
-    "date": "Mer. 22 avril 2026",
-    "pronostic": "Victoire Paris Saint-Germain FC",
-    "cote": "1.55",
-    "note": 10,
+    "equipe1": "",
+    "equipe2": "",
+    "flag1": "",
+    "flag2": "",
+    "competition": "",
+    "heure": "",
+    "date": "Jeu. 23 avril 2026",
+    "pronostic": "Pas de match recommandé ce soir",
+    "cote": "--",
+    "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Paris Saint-Germain FC (1e) reçoit FC Nantes (17e). À domicile, les locaux affichent 71% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
-    "sources": [
-      "Football-Data.org",
-      "Classements officiels",
-      "Statistiques saison"
-    ],
-    "pas_de_match": false,
+    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 5/10).",
+    "sources": [],
+    "pas_de_match": true,
     "prochain_match": null
   },
   "history": [
@@ -185,6 +181,6 @@
     "units": 0.1,
     "cote_moy": 1.65
   },
-  "updated_at": "2026-04-22T23:49:36.985Z",
+  "updated_at": "2026-04-23T08:50:39.019Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
