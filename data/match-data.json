@@ -1,32 +1,25 @@
 {
   "today": {
-    "equipe1": "",
-    "equipe2": "",
-    "flag1": "",
-    "flag2": "",
-    "competition": "",
-    "heure": "",
-    "date": "Ven. 24 avril 2026",
-    "pronostic": "Pas de match recommandé ce soir",
-    "cote": "--",
-    "note": 0,
+    "equipe1": "Olympique Lyonnais",
+    "equipe2": "AJ Auxerre",
+    "flag1": "🇫🇷",
+    "flag2": "🇫🇷",
+    "competition": "Ligue 1 · Journée 31",
+    "heure": "13h00",
+    "date": "Sam. 25 avril 2026",
+    "pronostic": "Victoire Olympique Lyonnais",
+    "cote": "1.55",
+    "note": 8,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 7/10).",
-    "sources": [],
-    "pas_de_match": true,
-    "prochain_match": {
-      "equipe1": "Sunderland AFC",
-      "equipe2": "Nottingham Forest FC",
-      "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-      "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
-      "date": "Prochainement",
-      "heure": "19h00",
-      "competition": "Premier League",
-      "pronostic": "Victoire Sunderland AFC",
-      "cote": "1.75",
-      "note": 7
-    }
+    "resume": "Olympique Lyonnais (4e) reçoit AJ Auxerre (16e). À domicile, les locaux affichent 53% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "sources": [
+      "Football-Data.org",
+      "Classements officiels",
+      "Statistiques saison"
+    ],
+    "pas_de_match": false,
+    "prochain_match": null
   },
   "history": [
     {
@@ -192,6 +185,6 @@
     "units": 0.1,
     "cote_moy": 1.65
   },
-  "updated_at": "2026-04-24T08:57:28.577Z",
+  "updated_at": "2026-04-25T08:03:06.358Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
