@@ -1,4 +1,3 @@
-
 import os
 import json
 import requests
@@ -9,12 +8,11 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 
 def build_prompt(matches):
-    return f"""Tu es un analyste sportif expert en paris à valeur positive.
-Matchs du jour : {matches}
-SCORING /10 : Forme 30% · Blessures 20% · Domicile 15% · H2H 15% · Fatigue 10% · Défense 10%
-RÈGLES : Score min 8.5/10 · Cote >= 1.50 · NHL Vainqueur OT inclus uniquement
-LISTE NOIRE : Ottawa · Montréal · Toronto Raptors · NBA moneyline · Europa League aller
-Réponds UNIQUEMENT en JSON : {{"pick":"nom","marche":"type","cote":1.65,"score_10":8.7,"valide":true,"raisons":["r1","r2"]}}"""
+    return f"""You are a sports betting analyst. Matches today: {matches}
+SCORING /10: Recent form 30% Injuries 20% Home/Away 15% H2H 15% Fatigue 10% Defense 10%
+RULES: Min score 8.5/10. Min odds 1.50. NHL Winner including OT only.
+BLACKLIST: Ottawa Montreal Toronto-Raptors NBA-moneyline Europa-League-away
+Reply ONLY in JSON: {{"pick":"name","market":"type","odds":1.65,"score_10":8.7,"valid":true,"reasons":["r1","r2"]}}"""
 
 def get_matches():
     try:
@@ -28,9 +26,9 @@ def get_matches():
                 home = next((t for t in teams if t["homeAway"]=="home"), teams[0])
                 away = next((t for t in teams if t["homeAway"]=="away"), teams[1])
                 lines.append(f"{away['team']['displayName']} @ {home['team']['displayName']}")
-        return "\n".join(lines) if lines else "Aucun match trouve"
+        return "\n".join(lines) if lines else "No matches found"
     except Exception as ex:
-        return f"Erreur: {ex}"
+        return f"Error: {ex}"
 
 def agent_gemini(prompt):
     try:
@@ -43,8 +41,8 @@ def agent_gemini(prompt):
         print(f"Gemini: {result.get('pick')} score={result.get('score_10')}")
         return result
     except Exception as ex:
-        print(f"Erreur Gemini: {ex}")
-        return {"agent":"Gemini","valide":False,"erreur":str(ex)}
+        print(f"Gemini error: {ex}")
+        return {"agent":"Gemini","valid":False,"error":str(ex)}
 
 def agent_deepseek(prompt):
     try:
@@ -58,43 +56,39 @@ def agent_deepseek(prompt):
         print(f"DeepSeek: {result.get('pick')} score={result.get('score_10')}")
         return result
     except Exception as ex:
-        print(f"Erreur DeepSeek: {ex}")
-        return {"agent":"DeepSeek","valide":False,"erreur":str(ex)}
+        print(f"DeepSeek error: {ex}")
+        return {"agent":"DeepSeek","valid":False,"error":str(ex)}
 
 def arbitre_gemini(g, d, matches):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        prompt = f"""Tu es l'arbitre final d'un conseil de 2 IAs specialisees paris sportifs.
-Matchs du jour : {matches}
-Rapport Agent1 Gemini : {json.dumps(g, ensure_ascii=False)}
-Rapport Agent2 DeepSeek : {json.dumps(d, ensure_ascii=False)}
-REGLES ABSOLUES : score >= 8.5 · cote >= 1.50 · NHL Vainqueur OT inclus · Liste noire : Ottawa Montreal Toronto-Raptors NBA-moneyline
-Si les 2 agents valident le meme pick → confirme pick final + mise 5% bankroll.
-Si desaccord ou score < 8.5 → PAS DE PICK CE SOIR - Discipline avant tout.
-Reponds en francais, format clair pour publication TousLesMatchs.com."""
+        prompt = f"""Tu es l arbitre final d un conseil de 2 IAs paris sportifs.
+Matchs: {matches}
+Rapport Gemini: {json.dumps(g, ensure_ascii=False)}
+Rapport DeepSeek: {json.dumps(d, ensure_ascii=False)}
+Regles: score >= 8.5 cote >= 1.50 NHL OT inclus Liste noire: Ottawa Montreal Toronto-Raptors
+Si consensus: donne pick final + mise 5 pourcent bankroll. Sinon: PAS DE PICK CE SOIR.
+Reponds en francais pour publication TousLesMatchs.com"""
         payload = {"contents":[{"parts":[{"text":prompt}]}]}
         r = requests.post(url, json=payload, timeout=30)
-        verdict = r.json()["candidates"][0]["content"]["parts"][0]["text"]
-        print(f"Arbitre Gemini: verdict rendu")
-        return verdict
+        return r.json()["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as ex:
-        print(f"Erreur arbitre: {ex}")
-        return f"Erreur arbitre: {ex}"
+        return f"Arbitre error: {ex}"
 
 def main():
-    print("TousLesMatchs - Pipeline Multi-Agents")
+    print("TousLesMatchs - Multi-Agent Pipeline")
     print(datetime.now().strftime("%d/%m/%Y %H:%M"))
     matches = get_matches()
-    print(f"Matchs:\n{matches}\n")
+    print(f"Matches:\n{matches}\n")
     prompt = build_prompt(matches)
     g = agent_gemini(prompt)
     d = agent_deepseek(prompt)
     verdict = arbitre_gemini(g, d, matches)
-    print("\nVERDICT FINAL:")
+    print("\nFINAL VERDICT:")
     print(verdict)
     with open("pick_du_jour.json","w",encoding="utf-8") as f:
         json.dump({"date":datetime.now().strftime("%Y-%m-%d"),"gemini":g,"deepseek":d,"verdict":verdict}, f, ensure_ascii=False, indent=2)
-    print("\nSauvegarde OK: pick_du_jour.json")
+    print("\nSaved: pick_du_jour.json")
 
 if __name__ == "__main__":
     main()
