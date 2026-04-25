@@ -31,20 +31,21 @@ def get_matches():
 
 def call_gemini(prompt):
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.2}
         }
         r = requests.post(url, json=body, timeout=30)
         data = r.json()
+        print(f"Gemini raw response: {data}")
         text = data["candidates"][0]["content"]["parts"][0]["text"]
         text = text.strip()
         start = text.find("{")
         end = text.rfind("}") + 1
         return json.loads(text[start:end])
     except Exception as ex:
-        print(f"Gemini raw error: {ex}")
+        print(f"Gemini error: {ex}")
         return {"valid": False, "error": str(ex)}
 
 def agent_gemini(prompt):
@@ -71,17 +72,21 @@ def agent_deepseek(prompt):
         return {"agent": "DeepSeek", "valid": False, "error": str(ex)}
 
 def arbitre_gemini(g, d, matches):
-    prompt = f"""Tu es l arbitre final d un conseil de 2 IAs paris sportifs.
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        prompt = f"""Tu es l arbitre final d un conseil de 2 IAs paris sportifs.
 Matchs: {matches}
 Rapport Gemini: {json.dumps(g, ensure_ascii=False)}
 Rapport DeepSeek: {json.dumps(d, ensure_ascii=False)}
 Regles: score >= 8.5 cote >= 1.50 NHL OT inclus Liste noire: Ottawa Montreal Toronto-Raptors
 Si consensus: donne pick final + mise 5 pourcent bankroll. Sinon: PAS DE PICK CE SOIR.
 Reponds en francais pour TousLesMatchs.com"""
-    result = call_gemini(prompt)
-    if isinstance(result, dict) and result.get("error"):
-        return f"Arbitre error: {result.get('error')}"
-    return str(result)
+        body = {"contents": [{"parts": [{"text": prompt}]}]}
+        r = requests.post(url, json=body, timeout=30)
+        data = r.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as ex:
+        return f"Arbitre error: {ex}"
 
 def main():
     print("TousLesMatchs - Multi-Agent Pipeline")
