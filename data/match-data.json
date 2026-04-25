@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "25/04",
+      "equipe1": "Olympique Lyonnais",
+      "equipe2": "AJ Auxerre",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 31",
+      "pronostic": "Victoire Olympique Lyonnais",
+      "cote": "1.55",
+      "note": 8,
+      "resultat": "gagne",
+      "score": "3-2"
+    },
+    {
       "date": "22/04",
       "equipe1": "Paris Saint-Germain FC",
       "equipe2": "FC Nantes",
@@ -180,11 +193,11 @@
     }
   ],
   "stats": {
-    "taux": 58,
-    "total": 12,
-    "units": 0.1,
+    "taux": 62,
+    "total": 13,
+    "units": 0.7,
     "cote_moy": 1.65
   },
-  "updated_at": "2026-04-25T08:03:06.358Z",
+  "updated_at": "2026-04-25T23:41:04.699Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
