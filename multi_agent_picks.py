@@ -15,8 +15,8 @@ def get_matches():
             c = e.get("competitions", [{}])[0]
             teams = c.get("competitors", [])
             if len(teams) == 2:
-                home = next((t for t in teams if t["homeAway"]=="home"), teams[0])
-                away = next((t for t in teams if t["homeAway"]=="away"), teams[1])
+                home = next((t for t in teams if t["homeAway"] == "home"), teams[0])
+                away = next((t for t in teams if t["homeAway"] == "away"), teams[1])
                 lines.append(f"{away['team']['displayName']} @ {home['team']['displayName']}")
         return "\n".join(lines) if lines else "No matches found"
     except Exception as ex:
@@ -24,20 +24,23 @@ def get_matches():
 
 def call_gemini(text):
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         body = {"contents": [{"parts": [{"text": text}]}]}
         r = requests.post(url, json=body, timeout=30)
         data = r.json()
+        if "candidates" not in data:
+            print(f"Gemini raw response: {data}")
+            return None
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as ex:
         print(f"Gemini error: {ex}")
         return None
 
 def agent_gemini(matches):
-    prompt = f"""You are sports betting analyst. Matches today: {matches}
-SCORING /10: Recent form 30% Injuries 20% Home/Away 15% H2H 15% Fatigue 10% Defense 10%
-RULES: Min score 8.5/10. Min odds 1.50. NHL Winner including OT only.
-BLACKLIST: Ottawa Montreal Toronto-Raptors NBA-moneyline Europa-League-away
+    prompt = f"""You are a sports betting analyst. Today's matches: {matches}
+SCORING /10: Recent form 30% Injuries 20% Home/Away 15% Head-to-head 15% Fatigue 10% Defense 10%
+RULES: Minimum score 8.5/10. Minimum odds 1.50. NHL winner, OT included.
+BLACKLIST: Ottawa Montreal Toronto Raptors NBA Moneyline Europa League away
 Reply ONLY in JSON: {{"pick":"name","market":"type","odds":1.65,"score_10":8.7,"valid":true,"reasons":["r1","r2"]}}"""
     result = call_gemini(prompt)
     if result:
@@ -55,10 +58,10 @@ Reply ONLY in JSON: {{"pick":"name","market":"type","odds":1.65,"score_10":8.7,"
 
 def agent_deepseek(matches):
     try:
-        prompt = f"""You are sports betting analyst. Matches today: {matches}
-SCORING /10: Recent form 30% Injuries 20% Home/Away 15% H2H 15% Fatigue 10% Defense 10%
-RULES: Min score 8.5/10. Min odds 1.50. NHL Winner including OT only.
-BLACKLIST: Ottawa Montreal Toronto-Raptors NBA-moneyline Europa-League-away
+        prompt = f"""You are a sports betting analyst. Today's matches: {matches}
+SCORING /10: Recent form 30% Injuries 20% Home/Away 15% Head-to-head 15% Fatigue 10% Defense 10%
+RULES: Minimum score 8.5/10. Minimum odds 1.50. NHL winner, OT included.
+BLACKLIST: Ottawa Montreal Toronto Raptors NBA Moneyline Europa League away
 Reply ONLY in JSON: {{"pick":"name","market":"type","odds":1.65,"score_10":8.7,"valid":true,"reasons":["r1","r2"]}}"""
         headers = {"Authorization": f"Bearer {DEEPSEEK_API_KEY}", "Content-Type": "application/json"}
         payload = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "temperature": 0.3}
@@ -75,19 +78,19 @@ Reply ONLY in JSON: {{"pick":"name","market":"type","odds":1.65,"score_10":8.7,"
         return {"agent": "DeepSeek", "valid": False, "error": str(ex)}
 
 def arbitre(g, d, matches):
-    prompt = f"""Tu es l arbitre final d un conseil de 2 IAs paris sportifs.
-Matchs: {matches}
-Rapport Gemini: {json.dumps(g, ensure_ascii=False)}
-Rapport DeepSeek: {json.dumps(d, ensure_ascii=False)}
-Regles absolues: score >= 8.5 cote >= 1.50 NHL OT inclus Liste noire: Ottawa Montreal Toronto-Raptors
-Si les 2 agents valident meme pick: CONFIRME + mise 5 pourcent bankroll.
-Si 1 seul valide: examine et decide.
-Si aucun ne passe 8.5: PAS DE PICK CE SOIR.
-Reponds en francais pour publication TousLesMatchs.com"""
+    prompt = f"""You are the final referee of a 2-AI sports betting council.
+Matches: {matches}
+Gemini report: {json.dumps(g, ensure_ascii=False)}
+DeepSeek report: {json.dumps(d, ensure_ascii=False)}
+Absolute rules: score >= 8.5, odds >= 1.50, NHL OT included. Blacklist: Ottawa Montreal Toronto-Raptors
+If both agents validate same pick: CONFIRM + bet 5% bankroll.
+If only 1 validates: examine and decide.
+If none passes 8.5: NO PICK TONIGHT.
+Reply in English for publication on TousLesMatchs.com"""
     result = call_gemini(prompt)
     if result:
         return result
-    return "Arbitre indisponible - DeepSeek seul: " + str(d)
+    return "Arbitre indisponible - DeepSeek seul : " + str(d)
 
 def main():
     print("TousLesMatchs - Multi-Agent Pipeline")
