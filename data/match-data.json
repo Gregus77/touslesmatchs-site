@@ -1,24 +1,20 @@
 {
   "today": {
-    "equipe1": "Olympique Lyonnais",
-    "equipe2": "AJ Auxerre",
-    "flag1": "🇫🇷",
-    "flag2": "🇫🇷",
-    "competition": "Ligue 1 · Journée 31",
-    "heure": "13h00",
-    "date": "Sam. 25 avril 2026",
-    "pronostic": "Victoire Olympique Lyonnais",
-    "cote": "1.55",
-    "note": 8,
+    "equipe1": "",
+    "equipe2": "",
+    "flag1": "",
+    "flag2": "",
+    "competition": "",
+    "heure": "",
+    "date": "Dim. 26 avril 2026",
+    "pronostic": "Pas de match recommandé ce soir",
+    "cote": "--",
+    "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Olympique Lyonnais (4e) reçoit AJ Auxerre (16e). À domicile, les locaux affichent 53% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
-    "sources": [
-      "Football-Data.org",
-      "Classements officiels",
-      "Statistiques saison"
-    ],
-    "pas_de_match": false,
+    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 6/10).",
+    "sources": [],
+    "pas_de_match": true,
     "prochain_match": null
   },
   "history": [
@@ -198,6 +194,6 @@
     "units": 0.7,
     "cote_moy": 1.65
   },
-  "updated_at": "2026-04-25T23:41:04.699Z",
+  "updated_at": "2026-04-26T08:14:08.744Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
