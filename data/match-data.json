@@ -6,16 +6,27 @@
     "flag2": "",
     "competition": "",
     "heure": "",
-    "date": "Dim. 26 avril 2026",
+    "date": "Lun. 27 avril 2026",
     "pronostic": "Pas de match recommandé ce soir",
     "cote": "--",
     "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 6/10).",
+    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 7/10).",
     "sources": [],
     "pas_de_match": true,
-    "prochain_match": null
+    "prochain_match": {
+      "equipe1": "Manchester United FC",
+      "equipe2": "Brentford FC",
+      "flag1": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "flag2": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+      "date": "Prochainement",
+      "heure": "19h00",
+      "competition": "Premier League",
+      "pronostic": "Victoire Manchester United FC",
+      "cote": "1.75",
+      "note": 7
+    }
   },
   "history": [
     {
@@ -194,6 +205,6 @@
     "units": 0.7,
     "cote_moy": 1.65
   },
-  "updated_at": "2026-04-26T08:14:08.744Z",
+  "updated_at": "2026-04-27T09:14:29.962Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
