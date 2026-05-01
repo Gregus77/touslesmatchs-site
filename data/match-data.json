@@ -6,13 +6,13 @@
     "flag2": "",
     "competition": "",
     "heure": "",
-    "date": "Jeu. 30 avril 2026",
+    "date": "Ven. 1 mai 2026",
     "pronostic": "Pas de match recommandé ce soir",
     "cote": "--",
     "note": 0,
     "live": false,
     "status": "avant",
-    "resume": "Aucun match dans nos 5 championnats ce soir.",
+    "resume": "Aucun match ne remplit nos critères ce soir (meilleur score: 6/10).",
     "sources": [],
     "pas_de_match": true,
     "prochain_match": null
@@ -194,6 +194,6 @@
     "units": 0.7,
     "cote_moy": 1.65
   },
-  "updated_at": "2026-04-30T09:08:39.067Z",
+  "updated_at": "2026-05-01T08:56:31.940Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
