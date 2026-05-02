@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "02/05",
+      "equipe1": "Paris Saint-Germain FC",
+      "equipe2": "FC Lorient",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 32",
+      "pronostic": "Victoire Paris Saint-Germain FC",
+      "cote": "1.55",
+      "note": 10,
+      "resultat": "perdu",
+      "score": "2-2"
+    },
+    {
       "date": "25/04",
       "equipe1": "Olympique Lyonnais",
       "equipe2": "AJ Auxerre",
@@ -193,11 +206,11 @@
     }
   ],
   "stats": {
-    "taux": 62,
-    "total": 13,
-    "units": 0.7,
-    "cote_moy": 1.65
+    "taux": 57,
+    "total": 14,
+    "units": -0.3,
+    "cote_moy": 1.64
   },
-  "updated_at": "2026-05-02T08:19:23.310Z",
+  "updated_at": "2026-05-02T23:49:15.667Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
