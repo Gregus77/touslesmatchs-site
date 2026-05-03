@@ -1,18 +1,18 @@
 {
   "today": {
-    "equipe1": "Paris Saint-Germain FC",
-    "equipe2": "FC Lorient",
+    "equipe1": "Lille OSC",
+    "equipe2": "Le Havre AC",
     "flag1": "🇫🇷",
     "flag2": "🇫🇷",
     "competition": "Ligue 1 · Journée 32",
-    "heure": "15h00",
-    "date": "Sam. 2 mai 2026",
-    "pronostic": "Victoire Paris Saint-Germain FC",
+    "heure": "13h00",
+    "date": "Dim. 3 mai 2026",
+    "pronostic": "Victoire Lille OSC",
     "cote": "1.55",
-    "note": 10,
+    "note": 8,
     "live": false,
     "status": "avant",
-    "resume": "Paris Saint-Germain FC (1e) reçoit FC Lorient (9e). À domicile, les locaux affichent 73% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
+    "resume": "Lille OSC (3e) reçoit Le Havre AC (14e). À domicile, les locaux affichent 55% de victoires cette saison. L'écart de classement est significatif en faveur des locaux.",
     "sources": [
       "Football-Data.org",
       "Classements officiels",
@@ -211,6 +211,6 @@
     "units": -0.3,
     "cote_moy": 1.64
   },
-  "updated_at": "2026-05-02T23:49:15.667Z",
+  "updated_at": "2026-05-03T08:44:35.102Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
