@@ -23,6 +23,19 @@
   },
   "history": [
     {
+      "date": "03/05",
+      "equipe1": "Lille OSC",
+      "equipe2": "Le Havre AC",
+      "flag1": "🇫🇷",
+      "flag2": "🇫🇷",
+      "competition": "Ligue 1 · Journée 32",
+      "pronostic": "Victoire Lille OSC",
+      "cote": "1.55",
+      "note": 8,
+      "resultat": "perdu",
+      "score": "1-1"
+    },
+    {
       "date": "02/05",
       "equipe1": "Paris Saint-Germain FC",
       "equipe2": "FC Lorient",
@@ -206,11 +219,11 @@
     }
   ],
   "stats": {
-    "taux": 57,
-    "total": 14,
-    "units": -0.3,
-    "cote_moy": 1.64
+    "taux": 53,
+    "total": 15,
+    "units": -1.3,
+    "cote_moy": 1.63
   },
-  "updated_at": "2026-05-03T08:44:35.102Z",
+  "updated_at": "2026-05-03T23:51:23.024Z",
   "source": "Football-Data.org — Analyse algorithmique"
 }
