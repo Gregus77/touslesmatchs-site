@@ -1,4 +1,4 @@
-import { useState } from "react";
+       import { useState } from "react";
 
 const picks = [
   { date: "13/05", match: "Lazio vs Inter Milan", marche: "Inter ML", cote: 1.66, resultat: "GAGNE", score: "0-2", sport: "Foot", ligue: "Finale Coupe Italie" },
@@ -19,19 +19,23 @@ const picks = [
 ];
 
 export default function App() {
-  const [filter, setFilter] = useState("ALL");
-  const filtered = filter === "ALL" ? picks : picks.filter(function(p) { return p.sport === filter; });
-  const wins = picks.filter(function(p) { return p.resultat === "GAGNE"; }).length;
-  const winrate = Math.round((wins / picks.length) * 100);
+  var filterState = useState("ALL");
+  var filter = filterState[0];
+  var setFilter = filterState[1];
+  var filtered = filter === "ALL" ? picks : picks.filter(function(p) { return p.sport === filter; });
+  var wins = picks.filter(function(p) { return p.resultat === "GAGNE"; }).length;
+  var winrate = Math.round((wins / picks.length) * 100);
 
-  return React.createElement("div", { style: { background: "#080c14", minHeight: "100vh", fontFamily: "Georgia, serif", color: "#e8e0d0", padding: "0" } },
-    React.createElement("header", { style: { borderBottom: "1px solid rgba(212,175,55,0.2)", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#080c14", position: "sticky", top: 0 } },
+  return React.createElement("div", { style: { background: "#080c14", minHeight: "100vh", fontFamily: "Georgia, serif", color: "#e8e0d0" } },
+
+    React.createElement("header", { style: { borderBottom: "1px solid rgba(212,175,55,0.2)", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#080c14", position: "sticky", top: 0, zIndex: 50 } },
       React.createElement("div", null,
         React.createElement("div", { style: { fontSize: 20, fontWeight: "bold", color: "#d4af37", letterSpacing: 2 } }, "TOUSLESMATCHS"),
         React.createElement("div", { style: { fontSize: 10, color: "#666", letterSpacing: 3 } }, "Analyse - Intelligence - Resultats")
       ),
       React.createElement("button", { style: { background: "linear-gradient(135deg, #d4af37, #f5d76e)", border: "none", borderRadius: 4, padding: "8px 20px", color: "#080c14", fontWeight: "bold", cursor: "pointer" } }, "ABONNEMENT")
     ),
+
     React.createElement("section", { style: { padding: "60px 40px 30px", textAlign: "center" } },
       React.createElement("div", { style: { fontSize: 11, letterSpacing: 6, color: "#d4af37", marginBottom: 16 } }, "PROPULSE PAR INTELLIGENCE ARTIFICIELLE"),
       React.createElement("h1", { style: { fontSize: 46, fontWeight: "bold", color: "#d4af37", margin: "0 0 20px" } }, "Le meilleur pick chaque jour."),
@@ -51,7 +55,8 @@ export default function App() {
         })
       )
     ),
-    React.createElement("section", { style: { padding: "30px 40px 60px", maxWidth: 920, margin: "0 auto" } },
+
+    React.createElement("section", { style: { padding: "30px 40px 60px", maxWidth: 980, margin: "0 auto" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 } },
         React.createElement("h2", { style: { fontSize: 16, color: "#d4af37", letterSpacing: 3, margin: 0 } }, "HISTORIQUE DES PICKS"),
         React.createElement("div", { style: { display: "flex", gap: 8 } },
@@ -60,25 +65,38 @@ export default function App() {
           })
         )
       ),
+
+      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "70px 1fr 150px 90px 80px 100px", padding: "8px 16px", fontSize: 10, letterSpacing: 2, color: "#444" } },
+        React.createElement("span", null, "DATE"),
+        React.createElement("span", null, "MATCH"),
+        React.createElement("span", null, "MARCHE"),
+        React.createElement("span", null, "COTE"),
+        React.createElement("span", null, "SCORE"),
+        React.createElement("span", null, "RESULTAT")
+      ),
+
       React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
         filtered.map(function(p, i) {
-          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "70px 1fr 140px 60px 80px 80px", padding: "14px 16px", background: p.resultat === "GAGNE" ? "rgba(212,175,55,0.04)" : "rgba(255,60,60,0.04)", border: "1px solid " + (p.resultat === "GAGNE" ? "rgba(212,175,55,0.12)" : "rgba(255,60,60,0.12)"), borderRadius: 6, alignItems: "center" } },
+          var estGagne = p.resultat === "GAGNE";
+          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "70px 1fr 150px 90px 80px 100px", padding: "14px 16px", background: estGagne ? "rgba(34,180,60,0.05)" : "rgba(255,60,60,0.05)", border: "1px solid " + (estGagne ? "rgba(34,180,60,0.2)" : "rgba(255,60,60,0.2)"), borderRadius: 6, alignItems: "center" } },
             React.createElement("span", { style: { fontSize: 12, color: "#555" } }, p.date),
             React.createElement("div", null,
               React.createElement("div", { style: { fontSize: 14, color: "#ddd" } }, p.match),
               React.createElement("div", { style: { fontSize: 10, color: "#444" } }, p.ligue)
             ),
-            React.createElement("div", { style: { background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 8px", fontSize: 11, color: "#d4af37" } }, p.marche),
-            React.createElement("span", { style: { fontSize: 15, fontWeight: "bold", color: "#fff" } }, p.cote),
+            React.createElement("div", { style: { background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 10px", fontSize: 11, color: "#d4af37", display: "inline-block" } }, p.marche),
+            React.createElement("span", { style: { fontSize: 15, fontWeight: "bold", color: "#fff", paddingLeft: 10 } }, p.cote),
             React.createElement("span", { style: { fontSize: 13, color: "#666" } }, p.score),
-            React.createElement("span", { style: { fontSize: 14, fontWeight: "bold", color: p.resultat === "GAGNE" ? "#d4af37" : "#ff4444" } }, p.resultat)
+            React.createElement("span", { style: { fontSize: 14, fontWeight: "bold", color: estGagne ? "#22cc44" : "#ff4444" } }, estGagne ? "✔ GAGNE" : "✘ PERDU")
           );
         })
       ),
+
       React.createElement("div", { style: { marginTop: 50, background: "rgba(212,175,55,0.05)", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "40px", textAlign: "center" } },
         React.createElement("div", { style: { fontSize: 11, letterSpacing: 4, color: "#d4af37", marginBottom: 12 } }, "ACCES PREMIUM"),
         React.createElement("h3", { style: { fontSize: 26, margin: "0 0 12px", color: "#fff" } }, "1 pick par jour. Analyse par IA."),
-        React.createElement("div", { style: { display: "flex", gap: 16, justifyContent: "center", marginTop: 30 } },
+        React.createElement("p", { style: { color: "#555", fontSize: 14, marginBottom: 30 } }, "Note /10, mise recommandee, analyse complete."),
+        React.createElement("div", { style: { display: "flex", gap: 16, justifyContent: "center" } },
           React.createElement("div", { style: { border: "1px solid rgba(212,175,55,0.3)", borderRadius: 8, padding: "24px 32px" } },
             React.createElement("div", { style: { fontSize: 28, fontWeight: "bold", color: "#d4af37" } }, "9 EUR"),
             React.createElement("div", { style: { fontSize: 12, color: "#555", marginTop: 4 } }, "/mois - Starter")
