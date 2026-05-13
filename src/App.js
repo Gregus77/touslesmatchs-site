@@ -1,4 +1,4 @@
-       import { useState } from "react";
+   import { useState } from "react";
 
 const picks = [
   { date: "13/05", match: "Lazio vs Inter Milan", marche: "Inter ML", cote: 1.66, resultat: "GAGNE", score: "0-2", sport: "Foot", ligue: "Finale Coupe Italie" },
@@ -66,28 +66,32 @@ export default function App() {
         )
       ),
 
-      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "70px 1fr 150px 90px 80px 100px", padding: "8px 16px", fontSize: 10, letterSpacing: 2, color: "#444" } },
-        React.createElement("span", null, "DATE"),
-        React.createElement("span", null, "MATCH"),
-        React.createElement("span", null, "MARCHE"),
-        React.createElement("span", null, "COTE"),
-        React.createElement("span", null, "SCORE"),
-        React.createElement("span", null, "RESULTAT")
-      ),
-
-      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } },
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
         filtered.map(function(p, i) {
           var estGagne = p.resultat === "GAGNE";
-          return React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "70px 1fr 150px 90px 80px 100px", padding: "14px 16px", background: estGagne ? "rgba(34,180,60,0.05)" : "rgba(255,60,60,0.05)", border: "1px solid " + (estGagne ? "rgba(34,180,60,0.2)" : "rgba(255,60,60,0.2)"), borderRadius: 6, alignItems: "center" } },
-            React.createElement("span", { style: { fontSize: 12, color: "#555" } }, p.date),
-            React.createElement("div", null,
+          return React.createElement("div", { key: i, style: { display: "flex", flexDirection: "row", alignItems: "center", padding: "14px 16px", background: estGagne ? "rgba(34,180,60,0.05)" : "rgba(255,60,60,0.05)", border: "1px solid " + (estGagne ? "rgba(34,180,60,0.2)" : "rgba(255,60,60,0.2)"), borderRadius: 6, gap: 0 } },
+
+            React.createElement("div", { style: { width: 70, fontSize: 12, color: "#555", flexShrink: 0 } }, p.date),
+
+            React.createElement("div", { style: { flex: 1, minWidth: 0 } },
               React.createElement("div", { style: { fontSize: 14, color: "#ddd" } }, p.match),
               React.createElement("div", { style: { fontSize: 10, color: "#444" } }, p.ligue)
             ),
-            React.createElement("div", { style: { background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 10px", fontSize: 11, color: "#d4af37", display: "inline-block" } }, p.marche),
-            React.createElement("span", { style: { fontSize: 15, fontWeight: "bold", color: "#fff", paddingLeft: 10 } }, p.cote),
-            React.createElement("span", { style: { fontSize: 13, color: "#666" } }, p.score),
-            React.createElement("span", { style: { fontSize: 14, fontWeight: "bold", color: estGagne ? "#22cc44" : "#ff4444" } }, estGagne ? "✔ GAGNE" : "✘ PERDU")
+
+            React.createElement("div", { style: { width: 150, flexShrink: 0 } },
+              React.createElement("div", { style: { background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 10px", fontSize: 11, color: "#d4af37", display: "inline-block" } }, p.marche)
+            ),
+
+            React.createElement("div", { style: { width: 80, flexShrink: 0, paddingLeft: 16 } },
+              React.createElement("span", { style: { fontSize: 15, fontWeight: "bold", color: "#fff" } }, p.cote)
+            ),
+
+            React.createElement("div", { style: { width: 70, flexShrink: 0, fontSize: 13, color: "#666" } }, p.score),
+
+            React.createElement("div", { style: { width: 110, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 } },
+              React.createElement("div", { style: { width: 10, height: 10, borderRadius: "50%", background: estGagne ? "#22cc44" : "#ff4444", flexShrink: 0 } }),
+              React.createElement("span", { style: { fontSize: 13, fontWeight: "bold", color: estGagne ? "#22cc44" : "#ff4444" } }, estGagne ? "GAGNE" : "PERDU")
+            )
           );
         })
       ),
