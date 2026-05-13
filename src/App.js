@@ -1,4 +1,4 @@
-   import { useState } from "react";
+ import { useState } from "react";
 
 const picks = [
   { date: "13/05", match: "Lazio vs Inter Milan", marche: "Inter ML", cote: 1.66, resultat: "GAGNE", score: "0-2", sport: "Foot", ligue: "Finale Coupe Italie" },
@@ -69,27 +69,24 @@ export default function App() {
       React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
         filtered.map(function(p, i) {
           var estGagne = p.resultat === "GAGNE";
-          return React.createElement("div", { key: i, style: { display: "flex", flexDirection: "row", alignItems: "center", padding: "14px 16px", background: estGagne ? "rgba(34,180,60,0.05)" : "rgba(255,60,60,0.05)", border: "1px solid " + (estGagne ? "rgba(34,180,60,0.2)" : "rgba(255,60,60,0.2)"), borderRadius: 6, gap: 0 } },
+          return React.createElement("div", { key: i, style: { display: "flex", flexDirection: "row", alignItems: "center", padding: "14px 16px", background: estGagne ? "rgba(34,180,60,0.05)" : "rgba(255,60,60,0.05)", border: "1px solid " + (estGagne ? "rgba(34,180,60,0.2)" : "rgba(255,60,60,0.2)"), borderRadius: 6, gap: 12 } },
 
-            React.createElement("div", { style: { width: 70, fontSize: 12, color: "#555", flexShrink: 0 } }, p.date),
+            React.createElement("div", { style: { width: 60, fontSize: 12, color: "#555", flexShrink: 0 } }, p.date),
 
             React.createElement("div", { style: { flex: 1, minWidth: 0 } },
               React.createElement("div", { style: { fontSize: 14, color: "#ddd" } }, p.match),
               React.createElement("div", { style: { fontSize: 10, color: "#444" } }, p.ligue)
             ),
 
-            React.createElement("div", { style: { width: 150, flexShrink: 0 } },
-              React.createElement("div", { style: { background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 10px", fontSize: 11, color: "#d4af37", display: "inline-block" } }, p.marche)
-            ),
-
-            React.createElement("div", { style: { width: 80, flexShrink: 0, paddingLeft: 16 } },
-              React.createElement("span", { style: { fontSize: 15, fontWeight: "bold", color: "#fff" } }, p.cote)
+            React.createElement("div", { style: { width: 180, flexShrink: 0 } },
+              React.createElement("div", { style: { background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 10px", fontSize: 11, color: "#d4af37", display: "inline-block", marginBottom: 4 } }, p.marche),
+              React.createElement("div", { style: { fontSize: 14, fontWeight: "bold", color: "#fff" } }, "Cote : " + p.cote)
             ),
 
             React.createElement("div", { style: { width: 70, flexShrink: 0, fontSize: 13, color: "#666" } }, p.score),
 
-            React.createElement("div", { style: { width: 110, flexShrink: 0, display: "flex", alignItems: "center", gap: 6 } },
-              React.createElement("div", { style: { width: 10, height: 10, borderRadius: "50%", background: estGagne ? "#22cc44" : "#ff4444", flexShrink: 0 } }),
+            React.createElement("div", { style: { width: 120, flexShrink: 0, display: "flex", alignItems: "center", gap: 8 } },
+              React.createElement("div", { style: { width: 12, height: 12, borderRadius: "50%", background: estGagne ? "#22cc44" : "#ff4444", flexShrink: 0, boxShadow: estGagne ? "0 0 6px #22cc44" : "0 0 6px #ff4444" } }),
               React.createElement("span", { style: { fontSize: 13, fontWeight: "bold", color: estGagne ? "#22cc44" : "#ff4444" } }, estGagne ? "GAGNE" : "PERDU")
             )
           );
