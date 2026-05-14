@@ -10,22 +10,22 @@ var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
 var TIKTOK_LINK = "https://www.tiktok.com/@TONFRERE";
 
 var picks = [
-  ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK"],
-  ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE"],
-  ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE"],
-  ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE"],
-  ["10/05","Colorado vs Minnesota","Colorado ML","1.62","5-1","GAGNE"],
-  ["09/05","VGK vs Anaheim","VGK ML","1.55","6-2","GAGNE"],
-  ["08/05","Carolina vs Philadelphia","Carolina ML","1.52","4-1","GAGNE"],
-  ["07/05","Anaheim vs VGK","Anaheim ML","1.78","3-1","GAGNE"],
-  ["06/05","Buffalo vs Montreal","Buffalo ML","1.60","1-5","PERDU"],
-  ["05/05","VGK vs Anaheim","VGK ML","1.54","3-1","GAGNE"],
-  ["04/05","Colorado vs Minnesota","Colorado ML","1.58","9-6","GAGNE"],
-  ["03/05","Carolina vs Philadelphia","Carolina ML","1.50","3-0","GAGNE"],
-  ["02/05","Utah vs VGK","VGK ML","1.62","5-1","GAGNE"],
-  ["01/05","Buffalo vs Boston","Buffalo ML","1.70","4-1","GAGNE"],
-  ["29/04","Leverkusen vs Dortmund","Over 2.5","1.62","3-1","GAGNE"],
-  ["28/04","Bayern vs Stuttgart","Over 2.5","1.55","1-0","PERDU"]
+  ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
+  ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot"],
+  ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot"],
+  ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE","Hockey"],
+  ["10/05","Colorado vs Minnesota","Colorado ML","1.62","5-1","GAGNE","Hockey"],
+  ["09/05","VGK vs Anaheim","VGK ML","1.55","6-2","GAGNE","Hockey"],
+  ["08/05","Carolina vs Philadelphia","Carolina ML","1.52","4-1","GAGNE","Hockey"],
+  ["07/05","Anaheim vs VGK","Anaheim ML","1.78","3-1","GAGNE","Hockey"],
+  ["06/05","Buffalo vs Montreal","Buffalo ML","1.60","1-5","PERDU","Hockey"],
+  ["05/05","VGK vs Anaheim","VGK ML","1.54","3-1","GAGNE","Hockey"],
+  ["04/05","Colorado vs Minnesota","Colorado ML","1.58","9-6","GAGNE","Hockey"],
+  ["03/05","Carolina vs Philadelphia","Carolina ML","1.50","3-0","GAGNE","Hockey"],
+  ["02/05","Utah vs VGK","VGK ML","1.62","5-1","GAGNE","Hockey"],
+  ["01/05","Buffalo vs Boston","Buffalo ML","1.70","4-1","GAGNE","Hockey"],
+  ["29/04","Leverkusen vs Dortmund","Over 2.5","1.62","3-1","GAGNE","Foot"],
+  ["28/04","Bayern vs Stuttgart","Over 2.5","1.55","1-0","PERDU","Foot"]
 ];
 
 var preuves = [
@@ -36,69 +36,13 @@ var preuves = [
 ];
 
 var bookmakers = [
-  {
-    nom:"Winamax",
-    badge:"PARTENAIRE N°1",
-    bonus:"Bonus jusqu a 200 EUR",
-    desc:"Le bookmaker francais numero 1. Cotes excellentes, interface top, retrait rapide. Notre pick prefere.",
-    color:"#e8b400",
-    link:WINAMAX_LINK,
-    note:"9.5/10"
-  },
-  {
-    nom:"Betclic",
-    badge:"TOP COTES",
-    bonus:"Bonus bienvenue 100 EUR",
-    desc:"Cotes tres competitives, surtout sur le foot europeen. Appli mobile excellente.",
-    color:"#00a651",
-    link:BETCLIC_LINK,
-    note:"9.2/10"
-  },
-  {
-    nom:"Unibet",
-    badge:"FIABLE",
-    bonus:"Mise remboursee jusqu a 100 EUR",
-    desc:"Bookmaker international solide. Large choix de sports et de marches. Tres bon service client.",
-    color:"#007832",
-    link:UNIBET_LINK,
-    note:"8.8/10"
-  },
-  {
-    nom:"PMU",
-    badge:"100% FRANCAIS",
-    bonus:"Bonus 150 EUR",
-    desc:"L historique des paris en France. Ideal pour les courses hippiques et le foot. 100% agree ANJ.",
-    color:"#d4001a",
-    link:PMU_LINK,
-    note:"8.5/10"
-  },
-  {
-    nom:"ZEbet",
-    badge:"COTES ELEVEES",
-    bonus:"Remboursement 100 EUR",
-    desc:"Specialiste des cotes boostees. Souvent les meilleures cotes sur certains matchs. A comparer.",
-    color:"#ff6600",
-    link:ZEBET_LINK,
-    note:"8.3/10"
-  },
-  {
-    nom:"ParionsSport",
-    badge:"FDJ OFFICIEL",
-    bonus:"Bonus 100 EUR",
-    desc:"Le pari sportif officiel de la FDJ. Securite maximale, ideal pour les debutants.",
-    color:"#005baa",
-    link:PARIONSSPORT_LINK,
-    note:"8.0/10"
-  },
-  {
-    nom:"NetBet",
-    badge:"BONNE VALEUR",
-    bonus:"Bonus 100 EUR",
-    desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.",
-    color:"#c8102e",
-    link:NETBET_LINK,
-    note:"7.8/10"
-  },
+  {nom:"Winamax", badge:"PARTENAIRE N1", bonus:"Bonus jusqu a 200 EUR", desc:"Le bookmaker francais numero 1. Cotes excellentes, interface top, retrait rapide.", color:"#e8b400", link:WINAMAX_LINK, note:"9.5/10"},
+  {nom:"Betclic", badge:"TOP COTES", bonus:"Bonus bienvenue 100 EUR", desc:"Cotes tres competitives surtout sur le foot europeen. Appli mobile excellente.", color:"#00a651", link:BETCLIC_LINK, note:"9.2/10"},
+  {nom:"Unibet", badge:"FIABLE", bonus:"Mise remboursee 100 EUR", desc:"Bookmaker international solide. Large choix de sports et de marches.", color:"#007832", link:UNIBET_LINK, note:"8.8/10"},
+  {nom:"PMU", badge:"100% FRANCAIS", bonus:"Bonus 150 EUR", desc:"L historique des paris en France. Ideal pour le foot et les courses hippiques.", color:"#d4001a", link:PMU_LINK, note:"8.5/10"},
+  {nom:"ZEbet", badge:"COTES ELEVEES", bonus:"Remboursement 100 EUR", desc:"Specialiste des cotes boostees. Souvent les meilleures cotes sur certains matchs.", color:"#ff6600", link:ZEBET_LINK, note:"8.3/10"},
+  {nom:"ParionsSport", badge:"FDJ OFFICIEL", bonus:"Bonus 100 EUR", desc:"Le pari sportif officiel de la FDJ. Securite maximale, ideal pour les debutants.", color:"#005baa", link:PARIONSSPORT_LINK, note:"8.0/10"},
+  {nom:"NetBet", badge:"BONNE VALEUR", bonus:"Bonus 100 EUR", desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.", color:"#c8102e", link:NETBET_LINK, note:"7.8/10"},
 ];
 
 export default function App() {
@@ -114,6 +58,10 @@ export default function App() {
   var winrate = Math.round((wins/total)*100);
   var pickDuJour = picks[0];
   var isNoPick = pickDuJour[5]==="NOPICK";
+
+  var filtered = filter === "ALL" ? picks : picks.filter(function(p){
+    return p[5] === "NOPICK" || p[6] === filter;
+  });
 
   var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"16px 30px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"10px"}},
     React.createElement("div", {style:{cursor:"pointer"},onClick:function(){setPage("home");}},
@@ -166,7 +114,7 @@ export default function App() {
       React.createElement("div", {style:{maxWidth:"860px",margin:"0 auto",padding:"40px 30px"}},
         React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, "NOS BOOKMAKERS PARTENAIRES"),
         React.createElement("p", {style:{color:"#555",fontSize:"13px",marginBottom:"6px"}}, "Tous nos partenaires sont agrees ANJ - Paris legaux et securises en France."),
-        React.createElement("p", {style:{color:"#444",fontSize:"11px",marginBottom:"30px"}}, "En vous inscrivant via nos liens vous nous aidez a maintenir ce service gratuit. Merci pour votre soutien."),
+        React.createElement("p", {style:{color:"#444",fontSize:"11px",marginBottom:"30px"}}, "En vous inscrivant via nos liens vous nous aidez a maintenir ce service gratuit. Merci."),
         React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"12px"}},
           bookmakers.map(function(b,i){
             return React.createElement("div", {key:i, style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"16px"}},
@@ -227,7 +175,7 @@ export default function App() {
         )
       ),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"5px"}},
-        picks.map(function(p,i){
+        filtered.map(function(p,i){
           var g=p[5]==="GAGNE",np=p[5]==="NOPICK";
           var bg=np?"rgba(100,100,100,0.04)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
           var bd=np?"rgba(100,100,100,0.15)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
@@ -249,7 +197,7 @@ export default function App() {
     React.createElement("section", {style:{padding:"0 30px 60px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "NOS PARTENAIRES"),
-        React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:"#d4af37",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"11px"}}, "Voir tous les bookmakers")
+        React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:"#d4af37",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"11px"}}, "Voir tous")
       ),
       React.createElement("div", {style:{display:"flex",gap:"10px",flexWrap:"wrap"}},
         bookmakers.slice(0,3).map(function(b,i){
