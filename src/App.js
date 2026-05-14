@@ -1,7 +1,7 @@
  import React from "react";
 
 var picks = [
-["14/05","Analyse en cours...","---","---","---","ATTENTE"],
+["14/05","PAS DE PARI - Aucun match n'atteint notre seuil 8/10" on vas y arriver frangin,"---","---","---","NOPICK"],
   ["13/05","Lazio vs Inter","Inter ML","1.66","0-2","GAGNE"],
   ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE"],
   ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE"],
