@@ -1,229 +1,124 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
-var BREVO_API_KEY = process.env.REACT_APP_BREVO_API_KEY;
-var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
-var BETCLIC_LINK = "https://www.betclic.fr/affiliation-TONLIEN";
-var UNIBET_LINK = "https://www.unibet.fr/affiliation-TONLIEN";
-var PMU_LINK = "https://www.pmu.fr/affiliation-TONLIEN";
-var ZEBET_LINK = "https://www.zebet.fr/affiliation-TONLIEN";
-var PARIONSSPORT_LINK = "https://www.parionssport.fdj.fr/affiliation-TONLIEN";
-var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
-var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
-
-var picks = [
-  ["17/05","Brentford vs Crystal Palace","Brentford ML","1.64","?-?","EN COURS","Foot"],
-  ["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot"],
-  ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot"],
-  ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE","Hockey"],
-  ["10/05","Colorado vs Minnesota","Colorado ML","1.62","5-1","GAGNE","Hockey"],
-  ["09/05","VGK vs Anaheim","VGK ML","1.55","6-2","GAGNE","Hockey"],
-  ["08/05","Carolina vs Philadelphia","Carolina ML","1.52","4-1","GAGNE","Hockey"],
-  ["07/05","Anaheim vs VGK","Anaheim ML","1.78","3-1","GAGNE","Hockey"],
-  ["06/05","Buffalo vs Montreal","Buffalo ML","1.60","1-5","PERDU","Hockey"],
-  ["05/05","VGK vs Anaheim","VGK ML","1.54","3-1","GAGNE","Hockey"],
-  ["04/05","Colorado vs Minnesota","Colorado ML","1.58","9-6","GAGNE","Hockey"],
-  ["03/05","Carolina vs Philadelphia","Carolina ML","1.50","3-0","GAGNE","Hockey"],
-  ["02/05","Utah vs VGK","VGK ML","1.62","5-1","GAGNE","Hockey"],
-  ["01/05","Buffalo vs Boston","Buffalo ML","1.70","4-1","GAGNE","Hockey"],
-  ["29/04","Leverkusen vs Dortmund","Over 2.5","1.62","3-1","GAGNE","Foot"],
-  ["28/04","Bayern vs Stuttgart","Over 2.5","1.55","1-0","PERDU","Foot"]
+const picks = [
+  { date: "13/05", match: "Lazio vs Inter Milan", marche: "Inter ML", cote: 1.66, resultat: "✅", score: "0-2", sport: "⚽", ligue: "Finale Coupe d'Italie" },
+  { date: "13/05", match: "Villarreal vs Séville", marche: "Over 2.5", cote: 1.75, resultat: "✅", score: "2-2", sport: "⚽", ligue: "La Liga" },
+  { date: "11/05", match: "Carolina vs Philadelphia", marche: "Carolina ML", cote: 1.58, resultat: "✅", score: "4-2", sport: "🏒", ligue: "NHL Playoffs G4" },
+  { date: "10/05", match: "Colorado vs Minnesota", marche: "Colorado ML", cote: 1.62, resultat: "✅", score: "5-1", sport: "🏒", ligue: "NHL Playoffs G3" },
+  { date: "09/05", match: "VGK vs Anaheim", marche: "VGK ML", cote: 1.55, resultat: "✅", score: "6-2", sport: "🏒", ligue: "NHL Playoffs G3" },
+  { date: "08/05", match: "Carolina vs Philadelphia", marche: "Carolina ML", cote: 1.52, resultat: "✅", score: "4-1", sport: "🏒", ligue: "NHL Playoffs G3" },
+  { date: "07/05", match: "Anaheim vs VGK", marche: "Anaheim ML", cote: 1.78, resultat: "✅", score: "3-1", sport: "🏒", ligue: "NHL Playoffs G2" },
+  { date: "06/05", match: "Buffalo vs Montréal", marche: "Buffalo ML", cote: 1.60, resultat: "❌", score: "1-5", sport: "🏒", ligue: "NHL Playoffs G2" },
+  { date: "05/05", match: "VGK vs Anaheim", marche: "VGK ML", cote: 1.54, resultat: "✅", score: "3-1", sport: "🏒", ligue: "NHL Playoffs G1" },
+  { date: "04/05", match: "Colorado vs Minnesota", marche: "Colorado ML", cote: 1.58, resultat: "✅", score: "9-6", sport: "🏒", ligue: "NHL Playoffs G1" },
+  { date: "03/05", match: "Carolina vs Philadelphia", marche: "Carolina ML", cote: 1.50, resultat: "✅", score: "3-0", sport: "🏒", ligue: "NHL Playoffs G1" },
+  { date: "02/05", match: "Utah vs VGK", marche: "VGK ML", cote: 1.62, resultat: "✅", score: "5-1", sport: "🏒", ligue: "NHL Playoffs G6" },
+  { date: "01/05", match: "Buffalo vs Boston", marche: "Buffalo ML", cote: 1.70, resultat: "✅", score: "4-1", sport: "🏒", ligue: "NHL Playoffs G6" },
+  { date: "29/04", match: "Leverkusen vs Dortmund", marche: "Over 2.5", cote: 1.62, resultat: "✅", score: "3-1", sport: "⚽", ligue: "Bundesliga" },
+  { date: "28/04", match: "Bayern vs Stuttgart", marche: "Over 2.5", cote: 1.55, resultat: "❌", score: "1-0", sport: "⚽", ligue: "Bundesliga" },
 ];
 
-var preuves = [
-  {date:"13/05/2026", match:"Villarreal victoire vs Seville", gain:"+8.80 EUR", img:"/preuves/preuve_villarreal_13mai.jpg"},
-  {date:"12/05/2026", match:"Colorado Avalanche victoire vs Minnesota", gain:"+7.80 EUR", img:"/preuves/preuve_colorado_12mai.jpg"},
-  {date:"07/05/2026", match:"Buffalo Sabres victoire vs Montreal", gain:"+7.60 EUR", img:"/preuves/preuve_buffalo_07mai.jpg"},
-  {date:"04/05/2026", match:"Colorado Avalanche victoire vs Minnesota", gain:"+5.40 EUR", img:"/preuves/preuve_colorado_04mai.jpg"},
-  {date:"13/05/2026", match:"Inter Milan victoire vs Lazio", gain:"+4.60 EUR", img:""},
-  {date:"11/05/2026", match:"Carolina Hurricanes victoire", gain:"+5.00 EUR", img:""},
-  {date:"10/05/2026", match:"Colorado Avalanche victoire", gain:"+7.80 EUR", img:""}
-];
-
-var bookmakers = [
-  {nom:"Winamax", badge:"PARTENAIRE N°1", bonus:"Bonus jusqu'à 200 EUR", desc:"Le bookmaker français numéro 1. Cotes excellentes, interface top, retraits rapides.", link:WINAMAX_LINK},
-  {nom:"Betclic", badge:"TOP COTES", bonus:"Bonus bienvenue 100 EUR", desc:"Cotes très compétitives surtout sur le foot européen. Appli mobile excellente.", link:BETCLIC_LINK},
-  {nom:"Unibet", badge:"FIABLE", bonus:"Mise remboursée 100 EUR", desc:"Bookmaker international solide. Large choix de sports et de marchés.", link:UNIBET_LINK},
-  {nom:"PMU", badge:"100% FRANÇAIS", bonus:"Bonus 150 EUR", desc:"L'historique des paris en France. Idéal pour le foot et les courses hippiques.", link:PMU_LINK},
-  {nom:"ZEbet", badge:"COTES ELEVEES", bonus:"Remboursement 100 EUR", desc:"Spécialiste des cotes boostées. Souvent les meilleures cotes sur certains marchés.", link:ZEBET_LINK},
-  {nom:"ParionsSport", badge:"FDJ", bonus:"Bonus 100 EUR", desc:"Le bookmaker de la FDJ. Réseau de points de vente partout en France.", link:PARIONSSPORT_LINK},
-  {nom:"NetBet", badge:"SIMPLE", bonus:"Bonus 50 EUR", desc:"Interface simple et efficace. Bon choix pour les débutants.", link:NETBET_LINK}
-];
-
-function App() {
-  const [email, setEmail] = useState("");
-  const [msgEnvoi, setMsgEnvoi] = useState("");
-
-  const validPicks = picks.filter(p => p[5] !== "NOPICK" && p[5] !== "EN COURS");
-  const wins = validPicks.filter(p => p[5] === "GAGNE");
-  const winRate = validPicks.length > 0 ? Math.round((wins.length / validPicks.length) * 100) : 0;
-
-  const handleSubscribe = async () => {
-    if (!email) { setMsgEnvoi("Entrez un email valide."); return; }
-    try {
-      const res = await fetch("https://api.brevo.com/v3/contacts", {
-        method: "POST",
-        headers: {
-          "accept": "application/json",
-          "api-key": BREVO_API_KEY,
-          "content-type": "application/json"
-        },
-        body: JSON.stringify({ email: email, listIds: [2], updateEnabled: true })
-      });
-      if (res.status === 201 || res.status === 204) {
-        setMsgEnvoi("✅ Inscription réussie ! Vous recevrez nos picks par email.");
-        setEmail("");
-      } else {
-        setMsgEnvoi("❌ Erreur. Veuillez réessayer.");
-      }
-    } catch {
-      setMsgEnvoi("❌ Erreur réseau. Veuillez réessayer.");
-    }
-  };
-
-  const getBgColor = (statut) => {
-    if (statut === "GAGNE") return "#d4edda";
-    if (statut === "PERDU") return "#f8d7da";
-    if (statut === "EN COURS") return "#fff3cd";
-    return "#f9f9f9";
-  };
-
-  const getEmoji = (statut) => {
-    if (statut === "GAGNE") return "✅";
-    if (statut === "PERDU") return "❌";
-    if (statut === "EN COURS") return "⏳";
-    return "—";
-  };
+export default function App() {
+  const [filter, setFilter] = useState("ALL");
+  const filtered = filter === "ALL" ? picks : picks.filter(p => p.sport === filter);
+  const wins = picks.filter(p => p.resultat === "✅").length;
+  const total = picks.filter(p => p.resultat !== "⏳").length;
+  const winrate = Math.round((wins / total) * 100);
 
   return (
-    <div style={{fontFamily:"Arial, sans-serif", maxWidth:"960px", margin:"0 auto", padding:"20px", color:"#222"}}>
-
+    <div style={{ background: "#080c14", minHeight: "100vh", fontFamily: "Georgia, serif", color: "#e8e0d0" }}>
+      
       {/* HEADER */}
-      <div style={{textAlign:"center", padding:"30px 0", borderBottom:"2px solid #eee", marginBottom:"30px"}}>
-        <h1 style={{fontSize:"2.2em", margin:"0 0 5px 0"}}>⚽ TousLesMatchs</h1>
-        <p style={{color:"#666", margin:"0 0 15px 0"}}>Picks sportifs journaliers — Seuil minimum 8/10 garanti</p>
-        <a href={TIKTOK_LINK} target="_blank" rel="noreferrer"
-           style={{background:"#000", color:"#fff", padding:"10px 20px", borderRadius:"25px", textDecoration:"none", fontWeight:"bold"}}>
-          🎵 Suivez-nous sur TikTok
-        </a>
-      </div>
+      <header style={{ borderBottom: "1px solid rgba(212,175,55,0.2)", padding: "20px 40px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(8,12,20,0.95)", position: "sticky", top: 0, zIndex: 50 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, #d4af37, #f5d76e)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⚡</div>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: "bold", letterSpacing: 2, color: "#d4af37" }}>TOUSLESMATCHS</div>
+            <div style={{ fontSize: 10, letterSpacing: 4, color: "#666" }}>Analyse · Intelligence · Résultats</div>
+          </div>
+        </div>
+        <button style={{ background: "linear-gradient(135deg, #d4af37, #f5d76e)", border: "none", borderRadius: 4, padding: "8px 20px", color: "#080c14", fontWeight: "bold", cursor: "pointer", fontSize: 12, letterSpacing: 1 }}>ABONNEMENT</button>
+      </header>
 
-      {/* STATS */}
-      <div style={{display:"flex", justifyContent:"center", gap:"20px", marginBottom:"35px", flexWrap:"wrap"}}>
-        <div style={{textAlign:"center", padding:"20px 30px", background:"#f0f0f0", borderRadius:"12px", minWidth:"100px"}}>
-          <div style={{fontSize:"2.5em", fontWeight:"bold"}}>{validPicks.length}</div>
-          <div style={{color:"#666"}}>Paris joués</div>
-        </div>
-        <div style={{textAlign:"center", padding:"20px 30px", background:"#d4edda", borderRadius:"12px", minWidth:"100px"}}>
-          <div style={{fontSize:"2.5em", fontWeight:"bold", color:"#28a745"}}>{wins.length}</div>
-          <div style={{color:"#666"}}>Gagnés</div>
-        </div>
-        <div style={{textAlign:"center", padding:"20px 30px", background:"#cce5ff", borderRadius:"12px", minWidth:"100px"}}>
-          <div style={{fontSize:"2.5em", fontWeight:"bold", color:"#007bff"}}>{winRate}%</div>
-          <div style={{color:"#666"}}>Win Rate</div>
-        </div>
-      </div>
+      {/* HERO */}
+      <section style={{ padding: "60px 40px 30px", textAlign: "center" }}>
+        <div style={{ fontSize: 11, letterSpacing: 6, color: "#d4af37", marginBottom: 16 }}>PROPULSÉ PAR INTELLIGENCE ARTIFICIELLE</div>
+        <h1 style={{ fontSize: 48, fontWeight: "bold", margin: "0 0 20px", background: "linear-gradient(135deg, #fff 30%, #d4af37 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+          Le meilleur pick<br />chaque jour.
+        </h1>
+        <p style={{ color: "#555", fontSize: 15, maxWidth: 460, margin: "0 auto 40px" }}>
+          Notre IA analyse des centaines de matchs pour livrer uniquement les paris à haute valeur. Pas de bullshit. Juste des résultats.
+        </p>
 
-      {/* PICKS */}
-      <h2 style={{borderLeft:"4px solid #007bff", paddingLeft:"12px"}}>📋 Nos Picks</h2>
-      <div style={{overflowX:"auto", marginBottom:"35px"}}>
-        <table style={{width:"100%", borderCollapse:"collapse"}}>
-          <thead>
-            <tr style={{background:"#222", color:"#fff"}}>
-              <th style={{padding:"12px 8px"}}>Date</th>
-              <th style={{padding:"12px 8px", textAlign:"left"}}>Match</th>
-              <th style={{padding:"12px 8px"}}>Pari</th>
-              <th style={{padding:"12px 8px"}}>Cote</th>
-              <th style={{padding:"12px 8px"}}>Score</th>
-              <th style={{padding:"12px 8px"}}>Sport</th>
-              <th style={{padding:"12px 8px"}}>Résultat</th>
-            </tr>
-          </thead>
-          <tbody>
-            {picks.map((p, i) => (
-              <tr key={i} style={{background:getBgColor(p[5]), borderBottom:"1px solid #ddd"}}>
-                <td style={{padding:"10px 8px", textAlign:"center", whiteSpace:"nowrap"}}>{p[0]}</td>
-                <td style={{padding:"10px 8px"}}>{p[1]}</td>
-                <td style={{padding:"10px 8px", textAlign:"center"}}>{p[2]}</td>
-                <td style={{padding:"10px 8px", textAlign:"center", fontWeight:"bold"}}>{p[3]}</td>
-                <td style={{padding:"10px 8px", textAlign:"center"}}>{p[4]}</td>
-                <td style={{padding:"10px 8px", textAlign:"center"}}>{p[6]}</td>
-                <td style={{padding:"10px 8px", textAlign:"center", fontSize:"1.3em"}}>{getEmoji(p[5])}</td>
-              </tr>
+        {/* STATS */}
+        <div style={{ display: "flex", justifyContent: "center", maxWidth: 720, margin: "0 auto", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 8, overflow: "hidden" }}>
+          {[
+            { label: "WIN RATE", value: `${winrate}%`, sub: `sur ${total} paris` },
+            { label: "BANKROLL", value: "+55%", sub: "en 2 semaines" },
+            { label: "PROFIT NET", value: "+23€", sub: "depuis le début" },
+            { label: "SÉRIE EN COURS", value: "9W", sub: "consécutives 🔥" },
+          ].map((s, i) => (
+            <div key={i} style={{ flex: 1, padding: "24px 16px", borderRight: i < 3 ? "1px solid rgba(212,175,55,0.15)" : "none", background: i % 2 === 0 ? "rgba(212,175,55,0.03)" : "transparent" }}>
+              <div style={{ fontSize: 10, color: "#555", letterSpacing: 2, marginBottom: 8 }}>{s.label}</div>
+              <div style={{ fontSize: 26, fontWeight: "bold", color: "#d4af37" }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: "#444", marginTop: 4 }}>{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* PICKS TABLE */}
+      <section style={{ padding: "30px 40px 60px", maxWidth: 920, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <h2 style={{ fontSize: 16, color: "#d4af37", letterSpacing: 3, margin: 0 }}>HISTORIQUE DES PICKS</h2>
+          <div style={{ display: "flex", gap: 8 }}>
+            {["ALL", "⚽", "🏒"].map(f => (
+              <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? "rgba(212,175,55,0.15)" : "transparent", border: `1px solid ${filter === f ? "#d4af37" : "rgba(255,255,255,0.1)"}`, color: filter === f ? "#d4af37" : "#555", padding: "6px 16px", borderRadius: 4, cursor: "pointer", fontSize: 13 }}>
+                {f === "ALL" ? "Tous" : f}
+              </button>
             ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* PREUVES */}
-      <h2 style={{borderLeft:"4px solid #28a745", paddingLeft:"12px"}}>🏆 Preuves de Gains</h2>
-      <p style={{color:"#666", marginBottom:"20px"}}>Captures Winamax authentiques — nos picks paient.</p>
-      <div style={{display:"flex", flexWrap:"wrap", gap:"15px", marginBottom:"35px"}}>
-        {preuves.map((p, i) => (
-          <div key={i} style={{width:"190px", background:"#fff", border:"1px solid #ddd", borderRadius:"12px", overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
-            {p.img ? (
-              <img src={p.img} alt={p.match} style={{width:"100%", height:"160px", objectFit:"cover"}} />
-            ) : (
-              <div style={{width:"100%", height:"160px", background:"#f0f0f0", display:"flex", alignItems:"center", justifyContent:"center", color:"#aaa"}}>📷</div>
-            )}
-            <div style={{padding:"10px"}}>
-              <div style={{fontWeight:"bold", fontSize:"0.85em", marginBottom:"4px"}}>{p.match}</div>
-              <div style={{color:"#28a745", fontWeight:"bold", fontSize:"1.1em"}}>{p.gain}</div>
-              <div style={{color:"#999", fontSize:"0.78em"}}>{p.date}</div>
-            </div>
           </div>
-        ))}
-      </div>
-
-      {/* INSCRIPTION */}
-      <h2 style={{borderLeft:"4px solid #fd7e14", paddingLeft:"12px"}}>📧 Recevoir Nos Picks</h2>
-      <div style={{background:"#fff8f0", padding:"25px", borderRadius:"12px", marginBottom:"35px", border:"1px solid #ffd", }}>
-        <p style={{margin:"0 0 15px 0"}}>Inscrivez-vous pour recevoir nos picks chaque jour directement par email. Gratuit.</p>
-        <div style={{display:"flex", gap:"10px", flexWrap:"wrap"}}>
-          <input
-            type="email"
-            placeholder="votre@email.com"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            style={{flex:"1", minWidth:"200px", padding:"12px", borderRadius:"8px", border:"1px solid #ddd", fontSize:"1em"}}
-          />
-          <button
-            onClick={handleSubscribe}
-            style={{padding:"12px 24px", background:"#fd7e14", color:"#fff", border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:"bold", fontSize:"1em"}}>
-            S'inscrire gratuitement
-          </button>
         </div>
-        {msgEnvoi && <p style={{marginTop:"12px", fontWeight:"bold"}}>{msgEnvoi}</p>}
-      </div>
 
-      {/* BOOKMAKERS */}
-      <h2 style={{borderLeft:"4px solid #6f42c1", paddingLeft:"12px"}}>📚 Bookmakers Recommandés</h2>
-      <div style={{display:"flex", flexWrap:"wrap", gap:"15px", marginBottom:"35px"}}>
-        {bookmakers.map((b, i) => (
-          <div key={i} style={{flex:"1", minWidth:"220px", padding:"18px", border:"1px solid #ddd", borderRadius:"12px", background:"#fff", boxShadow:"0 2px 5px rgba(0,0,0,0.05)"}}>
-            <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"8px"}}>
-              <strong style={{fontSize:"1.1em"}}>{b.nom}</strong>
-              <span style={{background:"#6f42c1", color:"#fff", padding:"2px 8px", borderRadius:"10px", fontSize:"0.72em"}}>{b.badge}</span>
+        {/* TABLE HEADER */}
+        <div style={{ display: "grid", gridTemplateColumns: "70px 1fr 150px 60px 80px 50px", padding: "8px 16px", fontSize: 10, letterSpacing: 2, color: "#333", textTransform: "uppercase" }}>
+          <span>Date</span><span>Match</span><span>Marché</span><span>Cote</span><span>Score</span><span style={{ textAlign: "center" }}>Résultat</span>
+        </div>
+
+        {/* ROWS */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {filtered.map((p, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "70px 1fr 150px 60px 80px 50px", padding: "14px 16px", background: p.resultat === "✅" ? "rgba(212,175,55,0.04)" : p.resultat === "❌" ? "rgba(255,60,60,0.04)" : "rgba(100,100,255,0.04)", border: `1px solid ${p.resultat === "✅" ? "rgba(212,175,55,0.12)" : p.resultat === "❌" ? "rgba(255,60,60,0.12)" : "rgba(100,100,255,0.12)"}`, borderRadius: 6, alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: "#555" }}>{p.date}</span>
+              <div>
+                <div style={{ fontSize: 14, color: "#ddd" }}>{p.sport} {p.match}</div>
+                <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{p.ligue}</div>
+              </div>
+              <div style={{ background: "rgba(212,175,55,0.08)", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 3, padding: "3px 8px", fontSize: 11, color: "#d4af37", width: "fit-content" }}>{p.marche}</div>
+              <span style={{ fontSize: 15, fontWeight: "bold", color: "#fff" }}>{p.cote}</span>
+              <span style={{ fontSize: 13, color: "#666" }}>{p.score}</span>
+              <div style={{ textAlign: "center", fontSize: 18 }}>{p.resultat}</div>
             </div>
-            <div style={{color:"#28a745", fontWeight:"bold", marginBottom:"6px"}}>{b.bonus}</div>
-            <div style={{color:"#666", fontSize:"0.84em", marginBottom:"12px"}}>{b.desc}</div>
-            <a href={b.link} target="_blank" rel="noreferrer"
-               style={{display:"block", textAlign:"center", background:"#28a745", color:"#fff", padding:"9px", borderRadius:"7px", textDecoration:"none", fontWeight:"bold"}}>
-              Ouvrir un compte →
-            </a>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <div style={{ marginTop: 50, background: "linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.02))", border: "1px solid rgba(212,175,55,0.25)", borderRadius: 12, padding: "40px", textAlign: "center" }}>
+          <div style={{ fontSize: 11, letterSpacing: 4, color: "#d4af37", marginBottom: 12 }}>ACCÈS PREMIUM</div>
+          <h3 style={{ fontSize: 26, margin: "0 0 12px", color: "#fff" }}>1 pick par jour.<br />Analysé par IA.</h3>
+          <p style={{ color: "#555", fontSize: 14, marginBottom: 30 }}>Note /10, mise recommandée, analyse complète.</p>
+          <div style={{ display: "flex", gap: 16, justifyContent: "center" }}>
+            <div style={{ border: "1px solid rgba(212,175,55,0.3)", borderRadius: 8, padding: "24px 32px", minWidth: 140 }}>
+              <div style={{ fontSize: 28, fontWeight: "bold", color: "#d4af37" }}>9€</div>
+              <div style={{ fontSize: 12, color: "#555", marginTop: 4 }}>/mois — Starter</div>
+            </div>
+            <div style={{ background: "linear-gradient(135deg, #d4af37, #f5d76e)", borderRadius: 8, padding: "24px 32px", minWidth: 140 }}>
+              <div style={{ fontSize: 28, fontWeight: "bold", color: "#080c14" }}>19€</div>
+              <div style={{ fontSize: 12, color: "rgba(8,12,20,0.6)", marginTop: 4 }}>/mois — Premium ⭐</div>
+            </div>
           </div>
-        ))}
-      </div>
-
-      {/* FOOTER */}
-      <div style={{textAlign:"center", color:"#aaa", fontSize:"0.82em", paddingTop:"20px", borderTop:"1px solid #eee"}}>
-        <p>© 2026 TousLesMatchs.com — Paris responsables. 18+ uniquement.</p>
-        <a href={TIKTOK_LINK} target="_blank" rel="noreferrer" style={{color:"#000", textDecoration:"none", fontWeight:"bold"}}>🎵 @touslesmatchs.com sur TikTok</a>
-      </div>
-
+        </div>
+      </section>
     </div>
   );
 }
-
-export default App;
