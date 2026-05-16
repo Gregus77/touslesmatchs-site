@@ -37,6 +37,19 @@ var preuves = [
   {date:"10/05/2026", match:"Colorado Avalanche", gain:"+4.34 EUR", img:""},
 ];
 
+var temoignages = [
+  {nom:"Thomas R.", ville:"Lyon", txt:"9 wins consecutifs, je suis bluffe. Le seul tipster que je suis vraiment.", gains:"+47 EUR"},
+  {nom:"Karim B.", ville:"Paris", txt:"Le pick du jour est devenu mon rituel du matin. Simple, clair, efficace.", gains:"+31 EUR"},
+  {nom:"Julien M.", ville:"Bordeaux", txt:"Le seuil 8/10 ca change tout. Moins de picks mais beaucoup plus de qualite.", gains:"+28 EUR"},
+];
+
+var faqs = [
+  {q:"C est vraiment gratuit ?", a:"Oui, 100% gratuit. Nous sommes remuneres via les liens d affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez a maintenir le service - merci."},
+  {q:"Comment votre IA analyse les matchs ?", a:"Notre modele croise la forme recente, les blessures, les confrontations directes, les stats domicile/exterieur et bien d autres variables. Seuls les picks avec un score de confiance superieur ou egal a 8/10 sont publies."},
+  {q:"Combien de picks par jour ?", a:"Un seul pick par jour, maximum. Qualite plutot que quantite. Les jours sans pick 8/10 sont indiques clairement : on ne force jamais un pari."},
+  {q:"Quel bankroll est recommande ?", a:"Ne misez jamais plus de 2 a 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques, jouez de facon responsable."},
+];
+
 var bookmakers = [
   {nom:"Winamax", badge:"PARTENAIRE N1", bonus:"Bonus jusqu a 200 EUR", desc:"Le bookmaker francais numero 1. Cotes excellentes, interface top, retrait rapide.", color:"#e8b400", link:WINAMAX_LINK, note:"9.5/10"},
   {nom:"Betclic", badge:"TOP COTES", bonus:"Bonus bienvenue 100 EUR", desc:"Cotes tres competitives surtout sur le foot europeen. Appli mobile excellente.", color:"#00a651", link:BETCLIC_LINK, note:"9.2/10"},
@@ -54,6 +67,9 @@ export default function App() {
   var filterState = React.useState("ALL");
   var filter = filterState[0];
   var setFilter = filterState[1];
+  var faqOpenState = React.useState(null);
+  var faqOpen = faqOpenState[0];
+  var setFaqOpen = faqOpenState[1];
 
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS";}).length;
@@ -81,7 +97,7 @@ export default function App() {
   );
 
   if(page==="preuves"){
-    return React.createElement("div", {style:{background:"#080c14",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
+    return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
       header,
       React.createElement("div", {style:{maxWidth:"900px",margin:"0 auto",padding:"40px 30px"}},
         React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, "PREUVES DE GAINS"),
@@ -112,7 +128,7 @@ export default function App() {
   }
 
   if(page==="bookmakers"){
-    return React.createElement("div", {style:{background:"#080c14",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
+    return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
       header,
       React.createElement("div", {style:{maxWidth:"860px",margin:"0 auto",padding:"40px 30px"}},
         React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, "NOS BOOKMAKERS PARTENAIRES"),
@@ -141,7 +157,7 @@ export default function App() {
     );
   }
 
-  return React.createElement("div", {style:{background:"#080c14",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
+  return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
     header,
     React.createElement("section", {style:{padding:"50px 30px 30px",textAlign:"center"}},
       React.createElement("div", {style:{fontSize:"10px",letterSpacing:"6px",color:"#d4af37",marginBottom:"14px"}}, "PROPULSE PAR INTELLIGENCE ARTIFICIELLE"),
@@ -154,6 +170,26 @@ export default function App() {
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
             React.createElement("div", {style:{fontSize:"10px",color:"#444",marginTop:"3px"}}, s.sub)
           );
+        })
+      )
+    ),
+    React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"11px",letterSpacing:"4px",textAlign:"center",marginBottom:"20px"}}, "COMMENT CA MARCHE"),
+      React.createElement("div", {style:{display:"flex",gap:"12px",flexWrap:"wrap"}},
+        [{num:"01",title:"L IA scanne tout",desc:"Notre algorithme analyse des centaines de matchs par jour sur plus de 50 ligues mondiales."},{num:"02",title:"Seuil 8/10 minimum",desc:"Seuls les picks avec un score de confiance superieur a 8/10 passent le filtre et sont publies."},{num:"03",title:"Tu mises, tu gagnes",desc:"Recois le pick, mise chez ton bookmaker partenaire, encaisse tes gains. Aussi simple que ca."}].map(function(s,i){
+          return React.createElement("div",{key:i,style:{flex:1,minWidth:"180px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"10px",padding:"18px 16px"}},
+            React.createElement("div",{style:{fontSize:"26px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"8px",fontFamily:"monospace"}},s.num),
+            React.createElement("div",{style:{fontSize:"13px",fontWeight:"bold",color:"#fff",marginBottom:"6px"}},s.title),
+            React.createElement("div",{style:{fontSize:"11px",color:"#555",lineHeight:"1.6"}},s.desc)
+          );
+        })
+      )
+    ),
+    React.createElement("section", {style:{padding:"0 30px 20px",maxWidth:"780px",margin:"0 auto"}},
+      React.createElement("div", {style:{textAlign:"center",fontSize:"10px",letterSpacing:"3px",color:"#444",marginBottom:"14px"}}, "+50 LIGUES ANALYSEES EN CONTINU"),
+      React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"8px",flexWrap:"wrap"}},
+        ["Premier League","La Liga","Serie A","Bundesliga","Ligue 1","Champions League","NHL","NBA","NFL","MLB"].map(function(l,i){
+          return React.createElement("span", {key:i,style:{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"20px",padding:"5px 12px",color:"#888",fontSize:"10px",letterSpacing:"1px"}}, l);
         })
       )
     ),
@@ -196,6 +232,46 @@ export default function App() {
             )
           );
         })
+      )
+    ),
+    React.createElement("section", {style:{padding:"20px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, "ILS GAGNENT AVEC NOUS"),
+      React.createElement("div", {style:{display:"flex",gap:"12px",flexWrap:"wrap"}},
+        temoignages.map(function(t,i){
+          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",padding:"18px 16px"}},
+            React.createElement("div",{style:{fontSize:"12px",color:"#888",lineHeight:"1.7",marginBottom:"14px",fontStyle:"italic"}},"\""+t.txt+"\""),
+            React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
+              React.createElement("div",null,
+                React.createElement("div",{style:{fontSize:"12px",color:"#ddd",fontWeight:"bold"}},t.nom),
+                React.createElement("div",{style:{fontSize:"10px",color:"#444"}},t.ville)
+              ),
+              React.createElement("div",{style:{fontSize:"15px",fontWeight:"bold",color:"#22cc44"}},t.gains)
+            )
+          );
+        })
+      )
+    ),
+    React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, "QUESTIONS FREQUENTES"),
+      React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"6px"}},
+        faqs.map(function(f,i){
+          var open = faqOpen===i;
+          return React.createElement("div",{key:i,style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"8px",overflow:"hidden"}},
+            React.createElement("button",{onClick:function(){setFaqOpen(open?null:i);},style:{width:"100%",background:"transparent",border:"none",padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left",fontFamily:"Georgia,serif"}},
+              React.createElement("span",{style:{color:"#ddd",fontSize:"13px"}},f.q),
+              React.createElement("span",{style:{color:"#d4af37",fontSize:"18px",fontWeight:"bold",marginLeft:"12px",flexShrink:0}},open?"-":"+")
+            ),
+            open ? React.createElement("div",{style:{padding:"0 16px 16px",color:"#666",fontSize:"12px",lineHeight:"1.7"}},f.a) : null
+          );
+        })
+      )
+    ),
+    React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
+      React.createElement("div", {style:{background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:"12px",padding:"28px",textAlign:"center"}},
+        React.createElement("div",{style:{fontSize:"10px",letterSpacing:"4px",color:"#d4af37",marginBottom:"10px"}},"PRET A GAGNER ?"),
+        React.createElement("div",{style:{fontSize:"20px",fontWeight:"bold",color:"#fff",marginBottom:"10px"}},"Rejoignez les parieurs qui nous font confiance"),
+        React.createElement("p",{style:{color:"#555",fontSize:"12px",marginBottom:"20px",maxWidth:"400px",marginLeft:"auto",marginRight:"auto"}},"Ouvre ton compte Winamax maintenant et recois jusqu a 200 EUR de bonus de bienvenue."),
+        React.createElement("a",{href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"8px",padding:"13px 32px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px",letterSpacing:"1px"}},"Ouvrir un compte Winamax - GRATUIT")
       )
     ),
     React.createElement("section", {style:{padding:"0 30px 60px",maxWidth:"780px",margin:"0 auto"}},
