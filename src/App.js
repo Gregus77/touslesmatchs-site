@@ -1,4 +1,7 @@
 import React from "react";
+import CGU from "./CGU";
+import MentionsLegales from "./MentionsLegales";
+import Confidentialite from "./Confidentialite";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
 var BETCLIC_LINK = "https://www.betclic.fr/affiliation-TONLIEN";
@@ -59,6 +62,17 @@ var bookmakers = [
   {nom:"NetBet", badge:"BONNE VALEUR", bonus:"Bonus 100 EUR", desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.", color:"#c8102e", link:NETBET_LINK, note:"7.8/10"},
 ];
 
+function sportEmoji(sport) {
+  if(sport==="Foot") return "⚽ ";
+  if(sport==="Hockey") return "🏒 ";
+  if(sport==="Tennis") return "🎾 ";
+  if(sport==="Basketball") return "🏀 ";
+  if(sport==="Baseball") return "⚾ ";
+  if(sport==="Volleyball") return "🏐 ";
+  if(sport==="MLS") return "⚽🇺🇸 ";
+  return sport ? "🎯 " : "";
+}
+
 export default function App() {
   var pageState = React.useState("home");
   var page = pageState[0];
@@ -81,6 +95,26 @@ export default function App() {
     return p[5] === "NOPICK" || p[5] === "EN COURS" || p[6] === filter;
   });
 
+  var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
+    React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}},
+      "🔞 Jeu responsable — Interdit aux moins de 18 ans  |  joueurs-info-service.fr  |  09 74 75 13 13"
+    ),
+    React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}},
+      "Les paris comportent des risques de perte financiere. Pariez de maniere responsable."
+    )
+  );
+
+  var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(212,175,55,0.1)",padding:"28px 30px 90px",textAlign:"center"}},
+    React.createElement("div", {style:{fontSize:"12px",fontWeight:"bold",color:"#d4af37",letterSpacing:"3px",marginBottom:"14px"}}, "TOUSLESMATCHS.COM"),
+    React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"20px",flexWrap:"wrap",marginBottom:"12px"}},
+      React.createElement("button", {onClick:function(){setPage("cgu");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "CGU"),
+      React.createElement("button", {onClick:function(){setPage("mentions");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "Mentions Legales"),
+      React.createElement("button", {onClick:function(){setPage("confidentialite");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "Confidentialite"),
+      React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{color:"#555",fontSize:"11px",textDecoration:"underline"}}, "TikTok")
+    ),
+    React.createElement("div", {style:{fontSize:"10px",color:"#2a2a2a"}}, "© 2026 TousLesMatchs.com — Tous droits reserves")
+  );
+
   var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"16px 30px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"10px"}},
     React.createElement("div", {style:{cursor:"pointer"},onClick:function(){setPage("home");}},
       React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:"#d4af37",letterSpacing:"3px"}}, "TOUSLESMATCHS"),
@@ -94,6 +128,10 @@ export default function App() {
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok")
     )
   );
+
+  if(page==="cgu") return React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
+  if(page==="mentions") return React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
+  if(page==="confidentialite") return React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
 
   if(page==="preuves"){
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
@@ -122,7 +160,9 @@ export default function App() {
           React.createElement("p", {style:{color:"#555",fontSize:"13px",margin:"0 0 16px"}}, "Vous aussi, pariez avec les memes picks que nous"),
           React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"12px 30px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Ouvrir un compte Winamax")
         )
-      )
+      ),
+      footer,
+      bandeauLegal
     );
   }
 
@@ -142,17 +182,27 @@ export default function App() {
                   React.createElement("span", {style:{background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:"3px",padding:"2px 7px",color:"#d4af37",fontSize:"9px",letterSpacing:"1px"}}, b.badge),
                   React.createElement("span", {style:{background:"rgba(34,180,60,0.1)",border:"1px solid rgba(34,180,60,0.2)",borderRadius:"3px",padding:"2px 7px",color:"#22cc44",fontSize:"9px"}}, b.bonus)
                 ),
-                React.createElement("p", {style:{color:"#555",fontSize:"12px",margin:"0 0 6px",maxWidth:"420px"}}, b.desc),
+                React.createElement("p", {style:{color:"#555",fontSize:"12px",margin:"0 0 4px",maxWidth:"420px"}}, b.desc),
                 React.createElement("span", {style:{color:"#d4af37",fontSize:"12px",fontWeight:"bold"}}, "Notre note: "+b.note)
               ),
-              React.createElement("a", {href:b.link,target:"_blank",style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"11px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"12px",whiteSpace:"nowrap",flexShrink:0}}, "S inscrire")
+              React.createElement("div", {style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"6px",flexShrink:0}},
+                React.createElement("a", {href:b.link,target:"_blank",style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"11px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"12px",whiteSpace:"nowrap"}}, "S inscrire"),
+                React.createElement("span", {style:{color:"#333",fontSize:"9px",letterSpacing:"1px"}}, "Lien affilie")
+              )
             );
           })
         ),
-        React.createElement("div", {style:{marginTop:"30px",padding:"16px",border:"1px solid rgba(255,255,255,0.04)",borderRadius:"8px",textAlign:"center"}},
+        React.createElement("div", {style:{marginTop:"24px",padding:"16px",border:"1px solid rgba(255,100,0,0.1)",borderRadius:"8px",background:"rgba(255,100,0,0.03)"}},
+          React.createElement("p", {style:{color:"#444",fontSize:"11px",margin:0,lineHeight:"1.8",textAlign:"center"}},
+            "Les performances passees ne garantissent pas les resultats futurs. Pariez uniquement ce que vous pouvez vous permettre de perdre."
+          )
+        ),
+        React.createElement("div", {style:{marginTop:"12px",padding:"16px",border:"1px solid rgba(255,255,255,0.04)",borderRadius:"8px",textAlign:"center"}},
           React.createElement("p", {style:{color:"#2a2a2a",fontSize:"11px",margin:0,lineHeight:"1.8"}}, "Jeu responsable 18+ uniquement - joueurs-info-service.fr - 09 74 75 13 13")
         )
-      )
+      ),
+      footer,
+      bandeauLegal
     );
   }
 
@@ -194,8 +244,10 @@ export default function App() {
     ),
     React.createElement("section", {style:{padding:"10px 30px 20px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":isEnCours?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":isEnCours?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
-        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnCours?"#ffa500":"#d4af37",marginBottom:"8px"}}, isEnCours?"PICK DU JOUR - EN COURS":"PICK DU JOUR"),
-        React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}}, pickDuJour[1]),
+        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnCours?"#ffa500":"#d4af37",marginBottom:"8px"}}, isEnCours?"PICK DU JOUR — EN COURS ⏳":"PICK DU JOUR"),
+        React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}},
+          (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
+        ),
         (isNoPick) ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
           React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"4px 12px",color:"#d4af37",fontSize:"12px"}}, pickDuJour[2]),
           React.createElement("span", {style:{color:"#fff",fontWeight:"bold",fontSize:"16px"}}, "Cote: "+pickDuJour[3])
@@ -206,9 +258,9 @@ export default function App() {
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"980px",margin:"0 auto"}},
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "HISTORIQUE DES PICKS"),
-        React.createElement("div", {style:{display:"flex",gap:"6px"}},
-          ["ALL","Foot","Hockey"].map(function(f){
-            return React.createElement("button", {key:f,onClick:function(){setFilter(f);},style:{background:filter===f?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f==="ALL"?"Tous":f);
+        React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap"}},
+          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"}].map(function(f){
+            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
           })
         )
       ),
@@ -218,14 +270,15 @@ export default function App() {
           var bg=np?"rgba(100,100,100,0.04)":ec?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
           var bd=np?"rgba(100,100,100,0.15)":ec?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
           var dc=np?"#555":ec?"#ffa500":g?"#22cc44":"#ff4444";
-          var label=np?"---":ec?"EN COURS":g?"GAGNE":"PERDU";
+          var label=np?"---":ec?"EN COURS ⏳":g?"GAGNE":"PERDU";
+          var matchDisplay = (!np && p[6]) ? sportEmoji(p[6])+p[1] : p[1];
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
-            React.createElement("span", {style:{color:np?"#444":"#ddd",fontSize:"13px",flex:"1",minWidth:"140px",fontStyle:np?"italic":"normal"}}, p[1]),
+            React.createElement("span", {style:{color:np?"#444":"#ddd",fontSize:"13px",flex:"1",minWidth:"140px",fontStyle:np?"italic":"normal"}}, matchDisplay),
             React.createElement("span", {style:{background:"rgba(212,175,55,0.07)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"3px",padding:"2px 7px",color:np?"#333":"#d4af37",fontSize:"10px",minWidth:"75px",textAlign:"center",flexShrink:0}}, p[2]),
             React.createElement("span", {style:{color:np?"#222":"#fff",fontWeight:"bold",minWidth:"32px",fontSize:"13px",flexShrink:0}}, p[3]),
             React.createElement("span", {style:{color:"#555",fontSize:"12px",minWidth:"32px",flexShrink:0}}, p[4]),
-            React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"5px",minWidth:"75px",flexShrink:0}},
+            React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"5px",minWidth:"80px",flexShrink:0}},
               React.createElement("div", {style:{width:"8px",height:"8px",borderRadius:"50%",background:dc,flexShrink:0}}),
               React.createElement("span", {style:{color:dc,fontWeight:"bold",fontSize:"12px"}}, label)
             )
@@ -273,7 +326,7 @@ export default function App() {
         React.createElement("a",{href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"8px",padding:"13px 32px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px",letterSpacing:"1px"}},"Ouvrir un compte Winamax - GRATUIT")
       )
     ),
-    React.createElement("section", {style:{padding:"0 30px 60px",maxWidth:"780px",margin:"0 auto"}},
+    React.createElement("section", {style:{padding:"0 30px 30px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "NOS PARTENAIRES"),
         React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:"#d4af37",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"11px"}}, "Voir tous")
@@ -286,8 +339,9 @@ export default function App() {
             React.createElement("div", {style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"4px",padding:"7px",color:"#080c14",fontWeight:"bold",fontSize:"11px"}}, "S inscrire")
           );
         })
-      ),
-      React.createElement("p", {style:{color:"#2a2a2a",fontSize:"10px",textAlign:"center",marginTop:"12px"}}, "Jeu responsable 18+ - joueurs-info-service.fr")
-    )
+      )
+    ),
+    footer,
+    bandeauLegal
   );
 }
