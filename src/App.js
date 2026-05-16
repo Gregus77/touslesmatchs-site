@@ -31,10 +31,10 @@ var picks = [
 ];
 
 var preuves = [
-  {date:"13/05/2026", match:"Inter Milan victoire", gain:"+4.60 EUR", img:""},
-  {date:"13/05/2026", match:"Villarreal Over 2.5", gain:"+5.25 EUR", img:""},
-  {date:"11/05/2026", match:"Carolina Hurricanes", gain:"+4.06 EUR", img:""},
-  {date:"10/05/2026", match:"Colorado Avalanche", gain:"+4.34 EUR", img:""},
+  {date:"13/05/2026", match:"3 gains consecutifs - capture Winamax", gain:"+51.60 EUR", img:"/preuves/app-13mai.jpg"},
+  {date:"10/05/2026", match:"Minnesota vs Colorado Avalanche", gain:"+17.80 EUR", img:"/preuves/colorado-10mai.jpg"},
+  {date:"06/05/2026", match:"Buffalo Sabres vs Montreal", gain:"+17.60 EUR", img:"/preuves/buffalo-6mai.jpg"},
+  {date:"03/05/2026", match:"Colorado Avalanche vs Minnesota", gain:"+15.40 EUR", img:"/preuves/colorado-3mai.jpg"},
 ];
 
 var temoignages = [
@@ -106,8 +106,8 @@ export default function App() {
           preuves.map(function(p,i){
             return React.createElement("div", {key:i, style:{background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"10px",overflow:"hidden"}},
               p.img
-                ? React.createElement("img", {src:p.img,alt:p.match,style:{width:"100%",height:"180px",objectFit:"cover"}})
-                : React.createElement("div", {style:{width:"100%",height:"180px",background:"rgba(212,175,55,0.03)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
+                ? React.createElement("img", {src:p.img,alt:p.match,style:{width:"100%",height:"320px",objectFit:"contain",background:"rgba(0,0,0,0.4)",display:"block"}})
+                : React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(212,175,55,0.03)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
                     React.createElement("div", {style:{fontSize:"36px",opacity:"0.2"}}, ""),
                     React.createElement("div", {style:{color:"#333",fontSize:"11px",letterSpacing:"2px"}}, "CAPTURE A VENIR")
                   ),
