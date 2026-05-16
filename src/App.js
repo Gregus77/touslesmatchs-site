@@ -31,10 +31,14 @@ var picks = [
 ];
 
 var preuves = [
-  {date:"13/05/2026", match:"3 gains consecutifs - capture Winamax", gain:"+51.60 EUR", img:"/preuves/app-13mai.jpg"},
+  {date:"13/05/2026", match:"3 gains consecutifs - Villarreal, Colorado, Carolina", gain:"+51.60 EUR", img:"/preuves/app-13mai.jpg"},
   {date:"10/05/2026", match:"Minnesota vs Colorado Avalanche", gain:"+17.80 EUR", img:"/preuves/colorado-10mai.jpg"},
   {date:"06/05/2026", match:"Buffalo Sabres vs Montreal", gain:"+17.60 EUR", img:"/preuves/buffalo-6mai.jpg"},
   {date:"03/05/2026", match:"Colorado Avalanche vs Minnesota", gain:"+15.40 EUR", img:"/preuves/colorado-3mai.jpg"},
+  {date:"19/04/2026", match:"Vegas Golden Knights vs Utah Mammoth", gain:"+20.00 EUR", img:"/preuves/app-19avril.jpg"},
+  {date:"18/04/2026", match:"Triple gain hockey - Carolina, Edmonton, Vegas", gain:"+50.00 EUR", img:"/preuves/app-18avril.jpg"},
+  {date:"12/04/2026", match:"Foot - St. Pauli nul + Manchester City", gain:"+20.30 EUR", img:"/preuves/app-12avril.jpg"},
+  {date:"11/04/2026", match:"Foot - Bayern Plus de 2.5 + Marseille", gain:"+16.08 EUR", img:"/preuves/app-11avril.jpg"},
 ];
 
 var temoignages = [
