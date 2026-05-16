@@ -37,17 +37,17 @@ export default function MentionsLegales({setPage, footer, bandeauLegal}) {
 
       React.createElement("h2", {style:s.h2}, "EDITEUR DU SITE"),
       React.createElement("div", {style:s.box},
-        row("NOM ET PRENOM", "Votre nom et prenom", true),
-        row("ADRESSE", "Votre adresse postale complete", true),
-        row("EMAIL", "Votre adresse email de contact", true),
-        row("SIREN / SIRET", "Votre numero SIREN ou SIRET", true),
-        row("FORME JURIDIQUE", "SASU / Auto-entrepreneur (a preciser)", true),
+        row("NOM ET PRENOM", "Greg Martin"),
+        row("ADRESSE", "75000 Paris, France"),
+        row("EMAIL", "contact@touslesmatchs.com"),
+        row("SIREN / SIRET", "En cours d'immatriculation"),
+        row("FORME JURIDIQUE", "Entreprise individuelle"),
         row("SITE WEB", "touslesmatchs.com")
       ),
 
       React.createElement("h2", {style:s.h2}, "DIRECTEUR DE LA PUBLICATION"),
       React.createElement("div", {style:s.box},
-        row("NOM ET PRENOM", "Votre nom et prenom (directeur de publication)", true)
+        row("NOM ET PRENOM", "Greg Martin")
       ),
 
       React.createElement("h2", {style:s.h2}, "HEBERGEUR"),
