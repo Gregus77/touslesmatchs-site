@@ -110,11 +110,11 @@ export default function App() {
           preuves.map(function(p,i){
             return React.createElement("div", {key:i, style:{background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"10px",overflow:"hidden"}},
               p.img
-                ? React.createElement("img", {src:p.img,alt:p.match,style:{width:"100%",height:"320px",objectFit:"contain",background:"rgba(0,0,0,0.4)",display:"block"}})
-                : React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(212,175,55,0.03)",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
-                    React.createElement("div", {style:{fontSize:"36px",opacity:"0.2"}}, ""),
-                    React.createElement("div", {style:{color:"#333",fontSize:"11px",letterSpacing:"2px"}}, "CAPTURE A VENIR")
-                  ),
+                ? React.createElement("img", {src:p.img,alt:p.match,loading:"lazy",onError:function(e){e.target.style.display="none";e.target.nextSibling.style.display="flex";},style:{width:"100%",height:"320px",objectFit:"contain",background:"rgba(0,0,0,0.4)",display:"block"}})
+                : null,
+              React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(212,175,55,0.03)",display:p.img?"none":"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
+                React.createElement("div", {style:{color:"#444",fontSize:"11px",letterSpacing:"2px"}}, "CAPTURE A VENIR")
+              ),
               React.createElement("div", {style:{padding:"16px"}},
                 React.createElement("div", {style:{fontSize:"11px",color:"#555",marginBottom:"4px"}}, p.date),
                 React.createElement("div", {style:{fontSize:"14px",color:"#ddd",marginBottom:"8px"}}, p.match),
