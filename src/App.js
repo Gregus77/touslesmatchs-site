@@ -10,7 +10,8 @@ var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
-["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK"],
+  ["17/05","Brentford vs Crystal Palace","Brentford ML","1.64","?-?","EN COURS","Foot"],
+  ["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK"],
   ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot"],
   ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot"],
