@@ -11,7 +11,7 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
   ["17/05","Brentford vs Crystal Palace","Brentford ML","1.64","?-?","EN COURS","Foot"],
-  ["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK"],
+  ["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot"],
   ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot"],
@@ -56,13 +56,14 @@ export default function App() {
   var setFilter = filterState[1];
 
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
-  var total = picks.filter(function(p){return p[5]!=="NOPICK";}).length;
+  var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS";}).length;
   var winrate = Math.round((wins/total)*100);
   var pickDuJour = picks[0];
   var isNoPick = pickDuJour[5]==="NOPICK";
+  var isEnCours = pickDuJour[5]==="EN COURS";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
-    return p[5] === "NOPICK" || p[6] === filter;
+    return p[5] === "NOPICK" || p[5] === "EN COURS" || p[6] === filter;
   });
 
   var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"16px 30px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"10px"}},
@@ -72,7 +73,7 @@ export default function App() {
     ),
     React.createElement("nav", {style:{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}},
       ["home","preuves","bookmakers"].map(function(p){
-        var labels = {home:"Picks", preuves:"Preuves", bookmakers:"Bookmakers"};
+        var labels = {home:"Choix", preuves:"Preuves", bookmakers:"Les bookmakers"};
         return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(page===p?"#d4af37":"rgba(255,255,255,0.1)"),color:page===p?"#d4af37":"#666",padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, labels[p]);
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok")
@@ -157,14 +158,14 @@ export default function App() {
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 20px",maxWidth:"780px",margin:"0 auto"}},
-      React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
-        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":"#d4af37",marginBottom:"8px"}}, "PICK DU JOUR"),
+      React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":isEnCours?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":isEnCours?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
+        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnCours?"#ffa500":"#d4af37",marginBottom:"8px"}}, isEnCours?"PICK DU JOUR - EN COURS":"PICK DU JOUR"),
         React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}}, pickDuJour[1]),
-        isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
+        (isNoPick) ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
           React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"4px 12px",color:"#d4af37",fontSize:"12px"}}, pickDuJour[2]),
           React.createElement("span", {style:{color:"#fff",fontWeight:"bold",fontSize:"16px"}}, "Cote: "+pickDuJour[3])
         ),
-        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
+        (isNoPick) ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"980px",margin:"0 auto"}},
@@ -178,10 +179,11 @@ export default function App() {
       ),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"5px"}},
         filtered.map(function(p,i){
-          var g=p[5]==="GAGNE",np=p[5]==="NOPICK";
-          var bg=np?"rgba(100,100,100,0.04)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
-          var bd=np?"rgba(100,100,100,0.15)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
-          var dc=np?"#555":g?"#22cc44":"#ff4444";
+          var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS";
+          var bg=np?"rgba(100,100,100,0.04)":ec?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
+          var bd=np?"rgba(100,100,100,0.15)":ec?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
+          var dc=np?"#555":ec?"#ffa500":g?"#22cc44":"#ff4444";
+          var label=np?"---":ec?"EN COURS":g?"GAGNE":"PERDU";
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
             React.createElement("span", {style:{color:np?"#444":"#ddd",fontSize:"13px",flex:"1",minWidth:"140px",fontStyle:np?"italic":"normal"}}, p[1]),
@@ -190,7 +192,7 @@ export default function App() {
             React.createElement("span", {style:{color:"#555",fontSize:"12px",minWidth:"32px",flexShrink:0}}, p[4]),
             React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"5px",minWidth:"75px",flexShrink:0}},
               React.createElement("div", {style:{width:"8px",height:"8px",borderRadius:"50%",background:dc,flexShrink:0}}),
-              React.createElement("span", {style:{color:dc,fontWeight:"bold",fontSize:"12px"}}, np?"---":g?"GAGNE":"PERDU")
+              React.createElement("span", {style:{color:dc,fontWeight:"bold",fontSize:"12px"}}, label)
             )
           );
         })
