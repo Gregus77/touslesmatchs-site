@@ -244,7 +244,7 @@ export default function App() {
     ),
     React.createElement("section", {style:{padding:"10px 30px 20px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":isEnCours?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":isEnCours?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
-        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnCours?"#ffa500":"#d4af37",marginBottom:"8px"}}, isEnCours?"PICK DU JOUR — EN COURS ⏳":"PICK DU JOUR"),
+        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnCours?"#ffa500":"#d4af37",marginBottom:"8px"}}, isEnCours?"PICK DU JOUR — A VENIR ⏳":"PICK DU JOUR"),
         React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}},
           (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
@@ -270,7 +270,7 @@ export default function App() {
           var bg=np?"rgba(100,100,100,0.04)":ec?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
           var bd=np?"rgba(100,100,100,0.15)":ec?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
           var dc=np?"#555":ec?"#ffa500":g?"#22cc44":"#ff4444";
-          var label=np?"---":ec?"EN COURS ⏳":g?"GAGNE":"PERDU";
+          var label=np?"---":ec?"A VENIR ⏳":g?"GAGNE":"PERDU";
           var matchDisplay = (!np && p[6]) ? sportEmoji(p[6])+p[1] : p[1];
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
