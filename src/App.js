@@ -2,6 +2,7 @@ import React from "react";
 import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
+import ConseilIA from "./ConseilIA";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
 var BETCLIC_LINK = "https://www.betclic.fr/affiliation-TONLIEN";
@@ -121,14 +122,15 @@ export default function App() {
       React.createElement("div", {style:{fontSize:"9px",color:"#555",letterSpacing:"3px"}}, "ANALYSE - INTELLIGENCE - RESULTATS")
     ),
     React.createElement("nav", {style:{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}},
-      ["home","preuves","bookmakers"].map(function(p){
-        var labels = {home:"Choix", preuves:"Preuves", bookmakers:"Les bookmakers"};
+      ["home","conseil","preuves","bookmakers"].map(function(p){
+        var labels = {home:"Choix", conseil:"Conseil IA", preuves:"Preuves", bookmakers:"Les bookmakers"};
         return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(page===p?"#d4af37":"rgba(255,255,255,0.1)"),color:page===p?"#d4af37":"#666",padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, labels[p]);
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok")
     )
   );
 
+  if(page==="conseil") return React.createElement(ConseilIA, {setPage:setPage, header:header, footer:footer, bandeauLegal:bandeauLegal});
   if(page==="cgu") return React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
   if(page==="mentions") return React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
   if(page==="confidentialite") return React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
