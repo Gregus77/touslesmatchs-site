@@ -1,0 +1,50 @@
+services:
+
+  # ── Nginx : sert le site statique ──────────────────────────
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - site_data:/usr/share/nginx/html
+      - ./public/preuves:/usr/share/nginx/html/preuves:ro
+    depends_on:
+      - council
+    networks:
+      - hermes_net
+
+  # ── Hermes Council : orchestrateur IA ──────────────────────
+  council:
+    build:
+      context: .
+      dockerfile: council/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Paris
+      - SITE_HTML_PATH=/app/site/index.html
+      - SITE_TEMPLATE_PATH=/app/site/template.html
+      - DB_PATH=/app/data/history.db
+      # Mettre à "true" pour tester au 1er démarrage
+      - RUN_ON_START=false
+    volumes:
+      - ./site:/app/site
+      - council_data:/app/data
+    networks:
+      - hermes_net
+
+volumes:
+  site_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./site
+  council_data:
+
+networks:
+  hermes_net:
+    driver: bridge

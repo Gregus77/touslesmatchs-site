@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TousLesMatchs — Pick IA du Jour</title>
+<meta name="description" content="Le meilleur pick sportif du jour sélectionné par notre conseil de 5 IAs. Foot, Hockey, Basketball. Gratuit, transparent, performant."/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%);min-height:100vh;font-family:Georgia,serif;color:#e8e0d0}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:Georgia,serif}
+
+/* HEADER */
+header{border-bottom:1px solid rgba(212,175,55,.2);padding:16px 30px;display:flex;justify-content:space-between;align-items:center;background:rgba(8,12,20,.98);position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:10px}
+.logo{cursor:pointer}.logo-title{font-size:18px;font-weight:bold;color:#d4af37;letter-spacing:3px}
+.logo-sub{font-size:9px;color:#555;letter-spacing:3px}
+nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.nav-btn{background:transparent;border:1px solid rgba(255,255,255,.1);color:#666;padding:6px 14px;border-radius:4px;font-size:12px}
+.nav-btn.active{background:rgba(212,175,55,.15);border-color:#d4af37;color:#d4af37}
+.nav-tiktok{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:4px;padding:6px 14px;color:#fff;font-size:12px}
+
+/* MAIN */
+main{max-width:900px;margin:0 auto;padding:40px 30px 120px}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:50px}
+.hero-badge{display:inline-block;border:1px solid rgba(212,175,55,.3);border-radius:2px;padding:6px 18px;font-size:9px;color:#d4af37;letter-spacing:4px;margin-bottom:24px}
+.hero h1{font-size:clamp(22px,5vw,38px);color:#fff;letter-spacing:4px;font-weight:normal;line-height:1.3;margin-bottom:12px}
+.hero-sub{color:#555;font-size:13px;letter-spacing:2px;margin-bottom:32px}
+.hero-stats{display:flex;justify-content:center;gap:clamp(16px,4vw,40px);flex-wrap:wrap}
+.stat{text-align:center}.stat-value{font-size:clamp(20px,4vw,30px);color:#d4af37;font-weight:bold}
+.stat-label{font-size:10px;color:#444;letter-spacing:2px}
+
+/* PICK DU JOUR */
+.pick-card{border:1px solid rgba(212,175,55,.25);border-radius:12px;background:rgba(212,175,55,.03);padding:28px 32px;margin-bottom:40px;position:relative;overflow:hidden}
+.pick-card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#d4af37,transparent)}
+.pick-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px}
+.pick-label{font-size:10px;letter-spacing:3px;color:#555}
+.pick-date{font-size:11px;color:#333;letter-spacing:2px}
+.pick-badge-gagne{background:rgba(34,180,60,.1);border:1px solid rgba(34,180,60,.3);border-radius:4px;padding:4px 12px;color:#22cc44;font-size:11px;letter-spacing:1px}
+.pick-badge-pick{background:rgba(212,175,55,.1);border:1px solid rgba(212,175,55,.3);border-radius:4px;padding:4px 12px;color:#d4af37;font-size:11px;letter-spacing:1px}
+.pick-badge-nopick{background:rgba(100,100,100,.1);border:1px solid rgba(100,100,100,.2);border-radius:4px;padding:4px 12px;color:#555;font-size:11px;letter-spacing:1px}
+.pick-badge-encours{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:4px;padding:4px 12px;color:#60a5fa;font-size:11px;letter-spacing:1px}
+.pick-match{font-size:clamp(16px,3vw,22px);color:#fff;font-weight:bold;margin-bottom:12px;line-height:1.3}
+.pick-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.pick-tag{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:4px;padding:6px 14px;font-size:12px;color:#d4af37}
+.pick-score{font-size:22px;color:#fff;font-weight:bold;margin-bottom:8px}
+.pick-confidence{font-size:11px;color:#444;letter-spacing:1px}
+.pick-nopick-msg{font-size:14px;color:#555;line-height:1.6;padding:20px 0}
+.pick-cta{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap}
+.btn-primary{background:linear-gradient(135deg,#d4af37,#f5d76e);border:none;border-radius:6px;padding:12px 28px;color:#080c14;font-weight:bold;font-size:13px}
+.btn-secondary{background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:6px;padding:12px 28px;color:#d4af37;font-size:13px}
+
+/* AI COUNCIL BADGE */
+.council-badge{background:rgba(88,28,135,.08);border:1px solid rgba(147,51,234,.2);border-radius:8px;padding:12px 20px;margin-bottom:30px;text-align:center}
+.council-badge-title{font-size:9px;letter-spacing:3px;color:#a855f7;margin-bottom:6px}
+.council-agents{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.agent-chip{background:rgba(147,51,234,.06);border:1px solid rgba(147,51,234,.15);border-radius:20px;padding:4px 12px;font-size:10px;color:#c084fc;letter-spacing:1px}
+.agent-chip.chief{background:rgba(212,175,55,.08);border-color:rgba(212,175,55,.25);color:#d4af37}
+
+/* HISTORIQUE */
+.section-title{font-size:12px;letter-spacing:3px;color:#555;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.04);padding-bottom:12px}
+.picks-table{width:100%;border-collapse:collapse;font-size:13px}
+.picks-table thead td{font-size:10px;letter-spacing:2px;color:#333;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.picks-table tbody tr{border-bottom:1px solid rgba(255,255,255,.02)}
+.picks-table tbody tr:hover{background:rgba(255,255,255,.01)}
+.picks-table td{padding:12px;vertical-align:middle}
+.result-gagne{color:#22cc44;font-size:11px;font-weight:bold;letter-spacing:1px}
+.result-perdu{color:#ef4444;font-size:11px;font-weight:bold;letter-spacing:1px}
+.result-nopick{color:#444;font-size:11px;font-weight:bold;letter-spacing:1px}
+.result-encours{color:#60a5fa;font-size:11px;font-weight:bold;letter-spacing:1px}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.filter-btn{background:transparent;border:1px solid rgba(255,255,255,.08);border-radius:4px;padding:5px 12px;color:#444;font-size:11px;font-family:Georgia,serif}
+.filter-btn.active{border-color:rgba(212,175,55,.4);color:#d4af37;background:rgba(212,175,55,.05)}
+
+/* BOOKMAKERS */
+.bookmaker-card{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:10px}
+.bk-name{font-size:18px;font-weight:bold;color:#fff}
+.bk-badge{background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.25);border-radius:3px;padding:2px 7px;color:#d4af37;font-size:9px;letter-spacing:1px}
+.bk-bonus{background:rgba(34,180,60,.1);border:1px solid rgba(34,180,60,.2);border-radius:3px;padding:2px 7px;color:#22cc44;font-size:9px}
+.bk-desc{color:#555;font-size:12px;margin:6px 0}
+.bk-note{color:#d4af37;font-size:12px;font-weight:bold}
+.bk-cta{background:linear-gradient(135deg,#d4af37,#f5d76e);border:none;border-radius:6px;padding:11px 24px;color:#080c14;font-weight:bold;font-size:12px}
+
+/* FAQ */
+.faq-item{border:1px solid rgba(255,255,255,.06);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.faq-q{padding:16px 20px;color:#bbb;font-size:14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.faq-a{padding:0 20px 16px;color:#555;font-size:13px;line-height:1.7;display:none}
+.faq-item.open .faq-a{display:block}
+.faq-item.open .faq-q{color:#d4af37}
+
+/* FOOTER */
+footer{border-top:1px solid rgba(212,175,55,.1);padding:28px 30px;text-align:center;max-width:900px;margin:0 auto}
+.footer-title{font-size:12px;font-weight:bold;color:#d4af37;letter-spacing:3px;margin-bottom:14px}
+.footer-links{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:12px}
+.footer-links a,.footer-links button{background:transparent;border:none;color:#555;font-size:11px;cursor:pointer;text-decoration:underline;font-family:Georgia,serif}
+.footer-copy{font-size:10px;color:#2a2a2a}
+
+/* BANDEAU LEGAL */
+.legal-bar{position:fixed;bottom:0;left:0;right:0;background:#000;border-top:1px solid rgba(255,255,255,.07);padding:7px 20px;text-align:center;z-index:100}
+.legal-bar-main{font-size:10px;color:#555;line-height:1.8}
+.legal-bar-sub{font-size:9px;color:#2d2d2d;margin-top:1px}
+
+/* PAGE SECTIONS */
+.page-section{display:none}.page-section.active{display:block}
+
+@media(max-width:600px){
+  header{padding:12px 16px}
+  main{padding:24px 16px 100px}
+  .pick-card{padding:20px 18px}
+  .bookmaker-card{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" onclick="showPage('home')">
+    <div class="logo-title">TOUSLESMATCHS</div>
+    <div class="logo-sub">ANALYSE - INTELLIGENCE - RESULTATS</div>
+  </div>
+  <nav>
+    <button class="nav-btn active" id="nav-home" onclick="showPage('home')">Choix</button>
+    <button class="nav-btn" id="nav-bookmakers" onclick="showPage('bookmakers')">Les bookmakers</button>
+    <a class="nav-tiktok" href="{{TIKTOK_LINK}}" target="_blank" rel="noopener">TikTok</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- PAGE: HOME -->
+<div class="page-section active" id="page-home">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-badge">CONSEIL IA — PICK DU JOUR</div>
+    <h1>UN SEUL PICK<br/>UN SEUL OBJECTIF</h1>
+    <div class="hero-sub">SÉLECTIONNÉ PAR NOTRE CONSEIL DE 5 INTELLIGENCES ARTIFICIELLES</div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-wins">{{STAT_WINS}}</div>
+        <div class="stat-label">VICTOIRES</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-winrate">{{STAT_WINRATE}}%</div>
+        <div class="stat-label">WINRATE</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-roi">{{STAT_ROI}}%</div>
+        <div class="stat-label">ROI</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI COUNCIL BADGE -->
+  <div class="council-badge">
+    <div class="council-badge-title">CONSEIL HERMES — 5 IAS EN ACCORD</div>
+    <div class="council-agents">
+      <span class="agent-chip chief">Claude (Chef)</span>
+      <span class="agent-chip">GPT-4o Mini</span>
+      <span class="agent-chip">Gemini Flash</span>
+      <span class="agent-chip">Mistral</span>
+      <span class="agent-chip">Groq / Llama 3</span>
+    </div>
+  </div>
+
+  <!-- PICK DU JOUR -->
+  <section class="pick-card" id="pick-card">
+    <div class="pick-header">
+      <div class="pick-label">PICK DU JOUR</div>
+      <div class="pick-date">{{TODAY_DATE}}</div>
+      <div id="pick-badge-today" class="pick-badge-pick">{{TODAY_PICK_BADGE}}</div>
+    </div>
+
+    <div id="pick-content-pick" style="display:{{#if TODAY_PICK_BADGE == 'PICK'}}block{{else}}none{{/if}}">
+      <div class="pick-match">{{TODAY_PICK_SPORT_EMOJI}}{{TODAY_PICK_MATCH}}</div>
+      <div class="pick-meta">
+        <span class="pick-tag">{{TODAY_PICK_BET}}</span>
+        <span class="pick-tag">@ {{TODAY_PICK_ODDS}}</span>
+        <span class="pick-tag">{{TODAY_PICK_SPORT}}</span>
+        <span class="pick-tag">Confiance {{TODAY_PICK_CONFIDENCE}}/10</span>
+      </div>
+      <div class="pick-cta">
+        <a class="btn-primary" href="{{WINAMAX_LINK}}" target="_blank" rel="noopener">Parier sur Winamax</a>
+        <a class="btn-secondary" href="{{BETCLIC_LINK}}" target="_blank" rel="noopener">Parier sur Betclic</a>
+      </div>
+    </div>
+
+    <div id="pick-content-nopick" style="display:{{#if TODAY_PICK_BADGE == 'NOPICK'}}block{{else}}none{{/if}}">
+      <div class="pick-nopick-msg">
+        Aucun match n'atteint notre seuil de confiance 8/10 aujourd'hui.<br/>
+        Le conseil Hermes préfère ne pas publier de pick plutôt que de publier un pari incertain.
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORIQUE -->
+  <section style="margin-bottom:50px">
+    <div class="section-title">HISTORIQUE DES PICKS</div>
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="filterPicks('ALL',this)">Tous</button>
+      <button class="filter-btn" onclick="filterPicks('Foot',this)">Foot</button>
+      <button class="filter-btn" onclick="filterPicks('Hockey',this)">Hockey</button>
+      <button class="filter-btn" onclick="filterPicks('Basketball',this)">Basketball</button>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="picks-table">
+      <thead>
+        <tr>
+          <td>DATE</td>
+          <td>MATCH</td>
+          <td>PARI</td>
+          <td>COTE</td>
+          <td>SCORE</td>
+          <td>RÉSULTAT</td>
+        </tr>
+      </thead>
+      <tbody id="picks-tbody"></tbody>
+    </table>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section style="margin-bottom:40px">
+    <div class="section-title">QUESTIONS FRÉQUENTES</div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">C'est vraiment gratuit ? <span>+</span></div>
+      <div class="faq-a">Oui, 100% gratuit. Nous sommes rémunérés via les liens d'affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez à maintenir le service — merci.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Comment le Conseil Hermes fonctionne ? <span>+</span></div>
+      <div class="faq-a">5 intelligences artificielles analysent chaque jour les matchs : GPT-4o Mini, Gemini Flash, Mistral et Groq/Llama3 soumettent chacun leur analyse. Claude Anthropic, chef du conseil, synthétise les 4 rapports et prend la décision finale. Seuls les picks avec un score de confiance ≥ 8/10 sont publiés.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Combien de picks par jour ? <span>+</span></div>
+      <div class="faq-a">Un seul pick par jour maximum. Qualité plutôt que quantité. Les jours sans pick ≥ 8/10 sont indiqués clairement : le conseil ne force jamais un pari.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Quel bankroll est recommandé ? <span>+</span></div>
+      <div class="faq-a">Ne misez jamais plus de 2 à 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques, jouez de façon responsable.</div>
+    </div>
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-q">Le système s'améliore-t-il ? <span>+</span></div>
+      <div class="faq-a">Oui. Le Conseil Hermes analyse ses résultats passés chaque jour : taux de victoire par sport, performance de chaque agent IA, types de paris les plus rentables. Ces données guident les sélections futures.</div>
+    </div>
+  </section>
+
+</div><!-- /page-home -->
+
+<!-- PAGE: BOOKMAKERS -->
+<div class="page-section" id="page-bookmakers">
+  <div class="section-title">NOS BOOKMAKERS PARTENAIRES</div>
+  <p style="color:#555;font-size:13px;margin-bottom:6px">Tous nos partenaires sont agréés ANJ — Paris légaux et sécurisés en France.</p>
+  <p style="color:#444;font-size:11px;margin-bottom:30px">En vous inscrivant via nos liens vous nous aidez à maintenir ce service gratuit. Merci.</p>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">Winamax</span>
+        <span class="bk-badge">PARTENAIRE N°1</span>
+        <span class="bk-bonus">Bonus jusqu'à 200 EUR</span>
+      </div>
+      <div class="bk-desc">Le bookmaker français numéro 1. Cotes excellentes, interface top, retrait rapide.</div>
+      <div class="bk-note">Notre note : 9.5/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{WINAMAX_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">Betclic</span>
+        <span class="bk-badge">TOP COTES</span>
+        <span class="bk-bonus">Bonus bienvenue 100 EUR</span>
+      </div>
+      <div class="bk-desc">Cotes très compétitives surtout sur le foot européen. Appli mobile excellente.</div>
+      <div class="bk-note">Notre note : 9.2/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{BETCLIC_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">Unibet</span>
+        <span class="bk-badge">FIABLE</span>
+        <span class="bk-bonus">Mise remboursée 100 EUR</span>
+      </div>
+      <div class="bk-desc">Bookmaker international solide. Large choix de sports et de marchés.</div>
+      <div class="bk-note">Notre note : 8.8/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{UNIBET_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">PMU</span>
+        <span class="bk-badge">100% FRANÇAIS</span>
+        <span class="bk-bonus">Bonus 150 EUR</span>
+      </div>
+      <div class="bk-desc">L'historique des paris en France. Idéal pour le foot et les courses hippiques.</div>
+      <div class="bk-note">Notre note : 8.5/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{PMU_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">ZEbet</span>
+        <span class="bk-badge">COTES ÉLEVÉES</span>
+        <span class="bk-bonus">Remboursement 100 EUR</span>
+      </div>
+      <div class="bk-desc">Spécialiste des cotes boostées. Souvent les meilleures cotes sur certains matchs.</div>
+      <div class="bk-note">Notre note : 8.3/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{ZEBET_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">ParionsSport</span>
+        <span class="bk-badge">FDJ OFFICIEL</span>
+        <span class="bk-bonus">Bonus 100 EUR</span>
+      </div>
+      <div class="bk-desc">Le pari sportif officiel de la FDJ. Sécurité maximale, idéal pour les débutants.</div>
+      <div class="bk-note">Notre note : 8.0/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{PARIONSSPORT_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div class="bookmaker-card">
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+        <span class="bk-name">NetBet</span>
+        <span class="bk-badge">BONNE VALEUR</span>
+        <span class="bk-bonus">Bonus 100 EUR</span>
+      </div>
+      <div class="bk-desc">Bon rapport qualité/cotes. Interface simple et claire. Programme de fidélité intéressant.</div>
+      <div class="bk-note">Notre note : 7.8/10</div>
+    </div>
+    <div><a class="bk-cta" href="{{NETBET_LINK}}" target="_blank" rel="noopener">S'inscrire</a></div>
+  </div>
+
+  <div style="margin-top:24px;padding:16px;border:1px solid rgba(255,100,0,.1);border-radius:8px;background:rgba(255,100,0,.03)">
+    <p style="color:#555;font-size:11px;line-height:1.8">
+      ⚠️ Les paris sportifs comportent des risques de perte financière. Jouez de manière responsable.
+      Ces liens sont des liens d'affiliation — nous percevons une commission si vous vous inscrivez via ces liens, sans coût supplémentaire pour vous.
+    </p>
+  </div>
+</div><!-- /page-bookmakers -->
+
+</main>
+
+<footer>
+  <div class="footer-title">TOUSLESMATCHS.COM</div>
+  <div class="footer-links">
+    <a href="/cgu.html">CGU</a>
+    <a href="/mentions.html">Mentions Légales</a>
+    <a href="/confidentialite.html">Confidentialité</a>
+    <a href="{{TIKTOK_LINK}}" target="_blank" rel="noopener">TikTok</a>
+  </div>
+  <div class="footer-copy">© 2026 TousLesMatchs.com — Tous droits réservés</div>
+</footer>
+
+<div class="legal-bar">
+  <div class="legal-bar-main">🔞 Jeu responsable — Interdit aux moins de 18 ans | joueurs-info-service.fr | 09 74 75 13 13</div>
+  <div class="legal-bar-sub">Les paris comportent des risques de perte financière. Pariez de manière responsable.</div>
+</div>
+
+<script>
+// ── Picks data injected by Hermes ──
+var picks = [
+  {{PICKS_HISTORY_JS}}
+];
+
+// ── Today's pick ──
+var todayBadge = "{{TODAY_PICK_BADGE}}";
+var todayMatch = "{{TODAY_PICK_MATCH}}";
+var todayBet   = "{{TODAY_PICK_BET}}";
+var todayOdds  = "{{TODAY_PICK_ODDS}}";
+var todaySport = "{{TODAY_PICK_SPORT}}";
+var todayConf  = "{{TODAY_PICK_CONFIDENCE}}";
+
+// Apply pick display
+(function() {
+  var isNoPick = todayBadge === "NOPICK";
+  document.getElementById("pick-content-pick").style.display  = isNoPick ? "none" : "block";
+  document.getElementById("pick-content-nopick").style.display = isNoPick ? "block" : "none";
+  var badge = document.getElementById("pick-badge-today");
+  badge.className = isNoPick ? "pick-badge-nopick" : "pick-badge-pick";
+})();
+
+// ── Sport emoji ──
+function sportEmoji(s) {
+  if (s==="Foot") return "⚽ ";
+  if (s==="Hockey") return "🏒 ";
+  if (s==="Basketball") return "🏀 ";
+  if (s==="Baseball") return "⚾ ";
+  if (s==="Tennis") return "🎾 ";
+  return s ? "🎯 " : "";
+}
+
+// ── Render picks table ──
+var currentFilter = "ALL";
+function renderPicks() {
+  var tbody = document.getElementById("picks-tbody");
+  var filtered = currentFilter === "ALL"
+    ? picks
+    : picks.filter(function(p){ return p[5]==="NOPICK"||p[5]==="EN COURS"||p[6]===currentFilter; });
+  tbody.innerHTML = filtered.map(function(p) {
+    var resClass = p[5]==="GAGNE"?"result-gagne":p[5]==="PERDU"?"result-perdu":p[5]==="NOPICK"?"result-nopick":"result-encours";
+    return '<tr>'
+      +'<td style="color:#444;font-size:12px">'+p[0]+'</td>'
+      +'<td style="color:#ccc">'+sportEmoji(p[6])+p[1]+'</td>'
+      +'<td style="color:#888">'+p[2]+'</td>'
+      +'<td style="color:#d4af37">'+p[3]+'</td>'
+      +'<td style="color:#666">'+p[4]+'</td>'
+      +'<td class="'+resClass+'">'+p[5]+'</td>'
+      +'</tr>';
+  }).join("");
+}
+renderPicks();
+
+function filterPicks(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll(".filter-btn").forEach(function(b){ b.classList.remove("active"); });
+  btn.classList.add("active");
+  renderPicks();
+}
+
+// ── Page navigation ──
+function showPage(page) {
+  document.querySelectorAll(".page-section").forEach(function(s){ s.classList.remove("active"); });
+  document.querySelectorAll(".nav-btn").forEach(function(b){ b.classList.remove("active"); });
+  document.getElementById("page-"+page).classList.add("active");
+  var btn = document.getElementById("nav-"+page);
+  if (btn) btn.classList.add("active");
+  window.scrollTo(0,0);
+}
+
+// ── FAQ ──
+function toggleFaq(el) {
+  el.classList.toggle("open");
+  var arrow = el.querySelector(".faq-q span");
+  if (arrow) arrow.textContent = el.classList.contains("open") ? "−" : "+";
+}
+</script>
+
+</body>
+</html>
