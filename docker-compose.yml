@@ -1,0 +1,13 @@
+services:
+  site:
+    build: .
+    container_name: touslesmatchs-site
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - web
+
+networks:
+  web:
+    driver: bridge
