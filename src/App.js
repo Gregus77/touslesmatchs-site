@@ -13,6 +13,9 @@ var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
+  ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.62","---","EN ATTENTE","Foot"],
+  ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball"],
+  ["19/05","Boca Juniors vs Cruzeiro","Moins de 2.5 buts","1.40","1-1","GAGNE","Foot"],
   ["17/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
@@ -85,14 +88,15 @@ export default function App() {
   var setFaqOpen = faqOpenState[1];
 
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
-  var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS";}).length;
+  var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
   var winrate = Math.round((wins/total)*100);
   var pickDuJour = picks[0];
   var isNoPick = pickDuJour[5]==="NOPICK";
   var isEnCours = pickDuJour[5]==="EN COURS";
+  var isEnAttente = pickDuJour[5]==="EN ATTENTE";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
-    return p[5] === "NOPICK" || p[5] === "EN COURS" || p[6] === filter;
+    return p[5] === "NOPICK" || p[5] === "EN COURS" || p[5] === "EN ATTENTE" || p[6] === filter;
   });
 
   var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
@@ -243,8 +247,8 @@ export default function App() {
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 20px",maxWidth:"780px",margin:"0 auto"}},
-      React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":isEnCours?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":isEnCours?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
-        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnCours?"#ffa500":"#d4af37",marginBottom:"8px"}}, isEnCours?"PICK DU JOUR — A VENIR ⏳":"PICK DU JOUR"),
+      React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":(isEnCours||isEnAttente)?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":(isEnCours||isEnAttente)?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
+        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":(isEnCours||isEnAttente)?"#ffa500":"#d4af37",marginBottom:"8px"}}, (isEnCours||isEnAttente)?"PICK DU JOUR — EN ATTENTE DE RESULTAT ⏳":"PICK DU JOUR"),
         React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}},
           (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
@@ -266,11 +270,11 @@ export default function App() {
       ),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"5px"}},
         filtered.map(function(p,i){
-          var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS";
-          var bg=np?"rgba(100,100,100,0.04)":ec?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
-          var bd=np?"rgba(100,100,100,0.15)":ec?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
-          var dc=np?"#555":ec?"#ffa500":g?"#22cc44":"#ff4444";
-          var label=np?"---":ec?"A VENIR ⏳":g?"GAGNE":"PERDU";
+          var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS", ea=p[5]==="EN ATTENTE";
+          var bg=np?"rgba(100,100,100,0.04)":(ec||ea)?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
+          var bd=np?"rgba(100,100,100,0.15)":(ec||ea)?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
+          var dc=np?"#555":(ec||ea)?"#ffa500":g?"#22cc44":"#ff4444";
+          var label=np?"---":ec?"A VENIR ⏳":ea?"EN ATTENTE ⏳":g?"GAGNE":"PERDU";
           var matchDisplay = (!np && p[6]) ? sportEmoji(p[6])+p[1] : p[1];
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
