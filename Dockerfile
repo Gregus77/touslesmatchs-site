@@ -6,9 +6,8 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
 
-# Stage 2 - Serve with nginx
-FROM nginx:alpine
-COPY --from=builder /app/build /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Stage 2 - Serve with Caddy (auto SSL via Let's Encrypt)
+FROM caddy:2-alpine
+COPY --from=builder /app/build /srv
+COPY Caddyfile /etc/caddy/Caddyfile
+EXPOSE 80 443
