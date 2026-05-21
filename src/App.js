@@ -67,7 +67,7 @@ var bookmakers = [
   {nom:"NetBet", badge:"BONNE VALEUR", bonus:"Bonus 100 EUR", desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.", color:"#c8102e", link:NETBET_LINK, note:"7.8/10"},
 ];
 
-var PICKS_PAR_PAGE = 10;
+var PICKS_PAR_PAGE = 100;
 
 function sportEmoji(sport) {
   if(sport==="Foot") return "⚽ ";
