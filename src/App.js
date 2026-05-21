@@ -4,7 +4,7 @@ import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
-var BETCLIC_LINK = "https://www.betclic.fr/affiliation-TONLIEN";
+var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
 var UNIBET_LINK = "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254";
 var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728";
 var ZEBET_LINK = "https://www.zebet.fr/affiliation-TONLIEN";
