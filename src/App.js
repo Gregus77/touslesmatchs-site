@@ -6,14 +6,15 @@ import Confidentialite from "./Confidentialite";
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
 var BETCLIC_LINK = "https://www.betclic.fr/affiliation-TONLIEN";
 var UNIBET_LINK = "https://www.unibet.fr/affiliation-TONLIEN";
-var PMU_LINK = "https://www.pmu.fr/affiliation-TONLIEN";
+var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728";
 var ZEBET_LINK = "https://www.zebet.fr/affiliation-TONLIEN";
 var PARIONSSPORT_LINK = "https://www.parionssport.fdj.fr/affiliation-TONLIEN";
 var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
-  ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.62","---","EN ATTENTE","Foot"],
+  ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","---","EN ATTENTE","Basketball"],
+  ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot"],
   ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball"],
   ["19/05","Boca Juniors vs Cruzeiro","Moins de 2.5 buts","1.40","1-1","GAGNE","Foot"],
   ["17/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
@@ -37,6 +38,7 @@ var picks = [
 ];
 
 var preuves = [
+  {date:"20/05/2026", match:"Fribourg vs Aston Villa", gain:"+11.60 EUR", img:"/preuves/fribourg-20mai.png"},
   {date:"10/05/2026", match:"Minnesota vs Colorado Avalanche", gain:"+17.80 EUR", img:"/preuves/colorado-10mai.png"},
   {date:"06/05/2026", match:"Buffalo Sabres vs Montreal", gain:"+17.60 EUR", img:"/preuves/buffalo-6mai.png"},
   {date:"03/05/2026", match:"Colorado Avalanche vs Minnesota", gain:"+15.40 EUR", img:"/preuves/colorado-3mai.png"},
@@ -65,6 +67,8 @@ var bookmakers = [
   {nom:"NetBet", badge:"BONNE VALEUR", bonus:"Bonus 100 EUR", desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.", color:"#c8102e", link:NETBET_LINK, note:"7.8/10"},
 ];
 
+var PICKS_PAR_PAGE = 10;
+
 function sportEmoji(sport) {
   if(sport==="Foot") return "⚽ ";
   if(sport==="Hockey") return "🏒 ";
@@ -86,6 +90,24 @@ export default function App() {
   var faqOpenState = React.useState(null);
   var faqOpen = faqOpenState[0];
   var setFaqOpen = faqOpenState[1];
+  var pickPageState = React.useState(1);
+  var pickPage = pickPageState[0];
+  var setPickPage = pickPageState[1];
+
+  // Google Analytics
+  React.useEffect(function() {
+    if(window.gaLoaded) return;
+    window.gaLoaded = true;
+    var script = document.createElement("script");
+    script.async = true;
+    script.src = "https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK";
+    document.head.appendChild(script);
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){window.dataLayer.push(arguments);}
+    window.gtag = gtag;
+    gtag("js", new Date());
+    gtag("config", "G-ME2T7G7PSK");
+  }, []);
 
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
@@ -98,6 +120,10 @@ export default function App() {
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5] === "NOPICK" || p[5] === "EN COURS" || p[5] === "EN ATTENTE" || p[6] === filter;
   });
+
+  var totalPages = Math.ceil(filtered.length / PICKS_PAR_PAGE);
+  var pickPageSafe = Math.min(pickPage, totalPages);
+  var filteredPage = filtered.slice((pickPageSafe-1)*PICKS_PAR_PAGE, pickPageSafe*PICKS_PAR_PAGE);
 
   var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
     React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}},
@@ -146,10 +172,8 @@ export default function App() {
         React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:"16px"}},
           preuves.map(function(p,i){
             return React.createElement("div", {key:i, style:{background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"10px",overflow:"hidden"}},
-              p.img
-                ? React.createElement("img", {src:p.img,alt:p.match,loading:"lazy",onError:function(e){e.target.style.display="none";e.target.nextSibling.style.display="flex";},style:{width:"100%",height:"320px",objectFit:"contain",background:"rgba(0,0,0,0.4)",display:"block"}})
-                : null,
-              React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(212,175,55,0.03)",display:p.img?"none":"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
+              React.createElement("img", {src:p.img,alt:p.match,loading:"lazy",onError:function(e){e.target.style.display="none";e.target.nextSibling.style.display="flex";},style:{width:"100%",height:"320px",objectFit:"contain",background:"rgba(0,0,0,0.4)",display:"block"}}),
+              React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(212,175,55,0.03)",display:"none",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
                 React.createElement("div", {style:{color:"#444",fontSize:"11px",letterSpacing:"2px"}}, "CAPTURE A VENIR")
               ),
               React.createElement("div", {style:{padding:"16px"}},
@@ -195,14 +219,6 @@ export default function App() {
               )
             );
           })
-        ),
-        React.createElement("div", {style:{marginTop:"24px",padding:"16px",border:"1px solid rgba(255,100,0,0.1)",borderRadius:"8px",background:"rgba(255,100,0,0.03)"}},
-          React.createElement("p", {style:{color:"#444",fontSize:"11px",margin:0,lineHeight:"1.8",textAlign:"center"}},
-            "Les performances passees ne garantissent pas les resultats futurs. Pariez uniquement ce que vous pouvez vous permettre de perdre."
-          )
-        ),
-        React.createElement("div", {style:{marginTop:"12px",padding:"16px",border:"1px solid rgba(255,255,255,0.04)",borderRadius:"8px",textAlign:"center"}},
-          React.createElement("p", {style:{color:"#2a2a2a",fontSize:"11px",margin:0,lineHeight:"1.8"}}, "Jeu responsable 18+ uniquement - joueurs-info-service.fr - 09 74 75 13 13")
         )
       ),
       footer,
@@ -217,7 +233,7 @@ export default function App() {
       React.createElement("h1", {style:{fontSize:"38px",fontWeight:"bold",color:"#fff",margin:"0 0 10px"}}, "Le meilleur pick chaque jour."),
       React.createElement("p", {style:{color:"#555",fontSize:"13px",maxWidth:"440px",margin:"0 auto 30px"}}, "Notre IA analyse des centaines de matchs. Seulement les paris qui atteignent 8/10 minimum sont publies."),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
-        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+55%",sub:"en 2 semaines"},{label:"PROFIT NET",value:"+23 EUR",sub:"depuis le debut"},{label:"SERIE",value:"9W",sub:"consecutives"}].map(function(s,i){
+        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+399%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / 2L",sub:"serie en cours"},{label:"SERIE",value:"19W",sub:"sur 21 picks"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{flex:1,padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
@@ -235,14 +251,6 @@ export default function App() {
             React.createElement("div",{style:{fontSize:"13px",fontWeight:"bold",color:"#fff",marginBottom:"6px"}},s.title),
             React.createElement("div",{style:{fontSize:"11px",color:"#555",lineHeight:"1.6"}},s.desc)
           );
-        })
-      )
-    ),
-    React.createElement("section", {style:{padding:"0 30px 20px",maxWidth:"780px",margin:"0 auto"}},
-      React.createElement("div", {style:{textAlign:"center",fontSize:"10px",letterSpacing:"3px",color:"#444",marginBottom:"14px"}}, "+50 LIGUES ANALYSEES EN CONTINU"),
-      React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"8px",flexWrap:"wrap"}},
-        ["Premier League","La Liga","Serie A","Bundesliga","Ligue 1","Champions League","NHL","NBA","NFL","MLB"].map(function(l,i){
-          return React.createElement("span", {key:i,style:{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"20px",padding:"5px 12px",color:"#888",fontSize:"10px",letterSpacing:"1px"}}, l);
         })
       )
     ),
@@ -264,12 +272,12 @@ export default function App() {
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "HISTORIQUE DES PICKS"),
         React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap"}},
           [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"}].map(function(f){
-            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
+            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);setPickPage(1);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
           })
         )
       ),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"5px"}},
-        filtered.map(function(p,i){
+        filteredPage.map(function(p,i){
           var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS", ea=p[5]==="EN ATTENTE";
           var bg=np?"rgba(100,100,100,0.04)":(ec||ea)?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
           var bd=np?"rgba(100,100,100,0.15)":(ec||ea)?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
@@ -288,7 +296,20 @@ export default function App() {
             )
           );
         })
-      )
+      ),
+      totalPages > 1 ? React.createElement("div", {style:{display:"flex",justifyContent:"center",alignItems:"center",gap:"12px",marginTop:"16px"}},
+        React.createElement("button", {
+          onClick:function(){setPickPage(function(p){return Math.max(1,p-1);});},
+          disabled:pickPageSafe<=1,
+          style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe<=1?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe<=1?"default":"pointer",fontSize:"12px"}
+        }, "← Precedent"),
+        React.createElement("span", {style:{color:"#555",fontSize:"12px"}}, "Page "+pickPageSafe+" / "+totalPages),
+        React.createElement("button", {
+          onClick:function(){setPickPage(function(p){return Math.min(totalPages,p+1);});},
+          disabled:pickPageSafe>=totalPages,
+          style:{background:pickPageSafe>=totalPages?"transparent":"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe>=totalPages?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe>=totalPages?"default":"pointer",fontSize:"12px"}
+        }, "Suivant →")
+      ) : null
     ),
     React.createElement("section", {style:{padding:"20px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, "ILS GAGNENT AVEC NOUS"),
@@ -349,3 +370,4 @@ export default function App() {
     bandeauLegal
   );
 }
+
