@@ -30,7 +30,7 @@
     "en_attente": 0,
     "taux": 100,
     "bankroll": 509.44,
-    "derniere_maj": "2026-05-21T05:10:04.617Z"
+    "derniere_maj": "2026-05-21T22:50:01.443Z"
   },
   "ia_performance": {
     "groq": {
@@ -55,5 +55,5 @@
     }
   },
   "alerts": [],
-  "derniere_maj": "2026-05-21T05:10:04.617Z"
+  "derniere_maj": "2026-05-21T22:50:01.443Z"
 }
