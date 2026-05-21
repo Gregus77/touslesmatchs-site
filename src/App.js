@@ -94,7 +94,6 @@ export default function App() {
   var pickPage = pickPageState[0];
   var setPickPage = pickPageState[1];
 
-  // Google Analytics
   React.useEffect(function() {
     if(window.gaLoaded) return;
     window.gaLoaded = true;
@@ -118,7 +117,7 @@ export default function App() {
   var isEnAttente = pickDuJour[5]==="EN ATTENTE";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
-    return p[5] === "NOPICK" || p[5] === "EN COURS" || p[5] === "EN ATTENTE" || p[6] === filter;
+    return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
   });
 
   var totalPages = Math.ceil(filtered.length / PICKS_PAR_PAGE);
@@ -126,12 +125,8 @@ export default function App() {
   var filteredPage = filtered.slice((pickPageSafe-1)*PICKS_PAR_PAGE, pickPageSafe*PICKS_PAR_PAGE);
 
   var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
-    React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}},
-      "🔞 Jeu responsable — Interdit aux moins de 18 ans  |  joueurs-info-service.fr  |  09 74 75 13 13"
-    ),
-    React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}},
-      "Les paris comportent des risques de perte financiere. Pariez de maniere responsable."
-    )
+    React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}}, "🔞 Jeu responsable — Interdit aux moins de 18 ans  |  joueurs-info-service.fr  |  09 74 75 13 13"),
+    React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}}, "Les paris comportent des risques de perte financiere. Pariez de maniere responsable.")
   );
 
   var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(212,175,55,0.1)",padding:"28px 30px 90px",textAlign:"center"}},
@@ -260,11 +255,11 @@ export default function App() {
         React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}},
           (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
-        (isNoPick) ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
+        isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
           React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"4px 12px",color:"#d4af37",fontSize:"12px"}}, pickDuJour[2]),
           React.createElement("span", {style:{color:"#fff",fontWeight:"bold",fontSize:"16px"}}, "Cote: "+pickDuJour[3])
         ),
-        (isNoPick) ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
+        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"980px",margin:"0 auto"}},
@@ -283,7 +278,7 @@ export default function App() {
           var bd=np?"rgba(100,100,100,0.15)":(ec||ea)?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
           var dc=np?"#555":(ec||ea)?"#ffa500":g?"#22cc44":"#ff4444";
           var label=np?"---":ec?"A VENIR ⏳":ea?"EN ATTENTE ⏳":g?"GAGNE":"PERDU";
-          var matchDisplay = (!np && p[6]) ? sportEmoji(p[6])+p[1] : p[1];
+          var matchDisplay=(!np&&p[6])?sportEmoji(p[6])+p[1]:p[1];
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
             React.createElement("span", {style:{color:np?"#444":"#ddd",fontSize:"13px",flex:"1",minWidth:"140px",fontStyle:np?"italic":"normal"}}, matchDisplay),
@@ -298,17 +293,9 @@ export default function App() {
         })
       ),
       totalPages > 1 ? React.createElement("div", {style:{display:"flex",justifyContent:"center",alignItems:"center",gap:"12px",marginTop:"16px"}},
-        React.createElement("button", {
-          onClick:function(){setPickPage(function(p){return Math.max(1,p-1);});},
-          disabled:pickPageSafe<=1,
-          style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe<=1?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe<=1?"default":"pointer",fontSize:"12px"}
-        }, "← Precedent"),
+        React.createElement("button", {onClick:function(){setPickPage(function(p){return Math.max(1,p-1);});},disabled:pickPageSafe<=1,style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe<=1?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe<=1?"default":"pointer",fontSize:"12px"}}, "← Precedent"),
         React.createElement("span", {style:{color:"#555",fontSize:"12px"}}, "Page "+pickPageSafe+" / "+totalPages),
-        React.createElement("button", {
-          onClick:function(){setPickPage(function(p){return Math.min(totalPages,p+1);});},
-          disabled:pickPageSafe>=totalPages,
-          style:{background:pickPageSafe>=totalPages?"transparent":"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe>=totalPages?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe>=totalPages?"default":"pointer",fontSize:"12px"}
-        }, "Suivant →")
+        React.createElement("button", {onClick:function(){setPickPage(function(p){return Math.min(totalPages,p+1);});},disabled:pickPageSafe>=totalPages,style:{background:pickPageSafe>=totalPages?"transparent":"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe>=totalPages?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe>=totalPages?"default":"pointer",fontSize:"12px"}}, "Suivant →")
       ) : null
     ),
     React.createElement("section", {style:{padding:"20px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
@@ -332,7 +319,7 @@ export default function App() {
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, "QUESTIONS FREQUENTES"),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"6px"}},
         faqs.map(function(f,i){
-          var open = faqOpen===i;
+          var open=faqOpen===i;
           return React.createElement("div",{key:i,style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"8px",overflow:"hidden"}},
             React.createElement("button",{onClick:function(){setFaqOpen(open?null:i);},style:{width:"100%",background:"transparent",border:"none",padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left",fontFamily:"Georgia,serif"}},
               React.createElement("span",{style:{color:"#ddd",fontSize:"13px"}},f.q),
