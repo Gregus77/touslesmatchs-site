@@ -14,8 +14,8 @@ const OR_KEY       = process.env.OPENROUTER_API_KEY;
 const SYSTEM = `Tu es un analyste expert en value betting. Système V4.2 — Winamax, Gregory.
 
 CRITÈRES OBLIGATOIRES:
-• Score ≥ 8/10 | Probabilité ≥ 63% | Value (Prob×Cote)/100 > 1.06
-• Fenêtre cotes: 1.40–2.00 | Kelly% ≥ 2%
+- Score ≥ 8/10 | Probabilité ≥ 63% | Value (Prob×Cote)/100 > 1.06
+- Fenêtre cotes: 1.40–2.00 | Kelly% ≥ 2%
 
 SPORTS PRIORITAIRES (ordre de priorité):
 1. 🏒 NHL Playoffs — Meilleure valeur, résultats fiables
@@ -30,17 +30,16 @@ SPORTS PRIORITAIRES (ordre de priorité):
 10. ⚾ Baseball NPB (Japon) — Jamais MLB
 
 MARCHÉS F1 AUTORISÉS:
-• Vainqueur de la course (pole sitter favori)
-• Podium constructeur (Mercedes/Ferrari/Red Bull)
-• Pole position
-• Fastest lap
-• Course interrompue Over/Under tours
+- Vainqueur de la course (pole sitter favori)
+- Podium constructeur (Mercedes/Ferrari/Red Bull)
+- Pole position
+- Fastest lap
 JAMAIS: paris sur accidents, safety car
 
 MARCHÉS NFL AUTORISÉS:
-• Over/Under total points
-• Vainqueur match (spread inclus)
-• Premier touchdown scorer
+- Over/Under total points
+- Vainqueur match (spread inclus)
+- Premier touchdown scorer
 JAMAIS: props individuels obscurs
 
 LISTE NOIRE ÉQUIPES: Ottawa Senators, Montreal Canadiens, Toronto Raptors, Stuttgart, Manchester United, tout club de 3ème division européenne
@@ -49,7 +48,7 @@ MARCHÉS BANNIS: MLB, combinés >2 picks, NBA moneyline, cotes <1.40 ou >2.20, P
 
 KELLY:
 NHL G1 Playoffs ≥9/10 → 100% Kelly
-Autre ≥9/10 → 50% Kelly  
+Autre ≥9/10 → 50% Kelly
 8–8.9/10 → 25% Kelly
 
 Réponds UNIQUEMENT en JSON:
@@ -160,7 +159,6 @@ Réponds en JSON uniquement.`;
   const scores   = Object.values(results).filter(r => r?.score > 0).map(r => r.score);
   const avgScore = scores.length > 0 ? scores.reduce((a,b) => a+b, 0) / scores.length : 0;
 
-  // Prend le meilleur pick parmi ceux qui ont voté GO
   const goPicks = Object.values(results).filter(r => r?.hasPick && r?.score > 0);
   const best = goPicks.sort((a,b) => b.score - a.score)[0] || null;
 
@@ -169,7 +167,6 @@ Réponds en JSON uniquement.`;
   const isGO = goVotes >= 3 && avgScore >= 8.0 && best;
   console.log(`  Verdict  : ${isGO ? "✅ GO — " + best?.sport : "⛔ NO BET"}`);
 
-  // ── Mise à jour de App.js ──────────────────────────────
   const appPath = path.join(process.cwd(), "src", "App.js");
   let appContent = fs.readFileSync(appPath, "utf-8");
 
@@ -183,7 +180,6 @@ Réponds en JSON uniquement.`;
     console.log("\n⛔ Pas de pick aujourd'hui — critères non atteints");
   }
 
-  // Insère en tête du tableau picks
   appContent = appContent.replace(
     /var picks = \[/,
     `var picks = [\n${newPick}`
@@ -198,4 +194,3 @@ main().catch(err => {
   console.error("💥 ERREUR CRITIQUE:", err);
   process.exit(1);
 });
-
