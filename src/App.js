@@ -1,4 +1,4 @@
-import React from "react";
+import React from "react"; 
 import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
