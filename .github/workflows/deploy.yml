@@ -22,5 +22,5 @@ jobs:
           script: |
             cd /opt/touslesmatchs
             git pull origin main
-            docker compose up --build -d --remove-orphans
+            docker compose up --build --no-cache -d --remove-orphans
             docker image prune -f
