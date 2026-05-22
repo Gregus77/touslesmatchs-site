@@ -13,6 +13,7 @@ var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
+  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball"],
   ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot"],
   ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball"],
