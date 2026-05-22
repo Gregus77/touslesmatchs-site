@@ -155,6 +155,11 @@ export default function App() {
   if(page==="preuves"){
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
       header,
+      React.createElement("div", {style:{background:"linear-gradient(135deg,#c8102e,#ff4444)",padding:"14px 20px",textAlign:"center",fontFamily:"Georgia,serif",position:"relative",zIndex:60,overflow:"hidden"}},
+  React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:"#fff",letterSpacing:"2px",marginBottom:"6px"}}, "🏆 ALLEZ LENS — CE SOIR ON GAGNE LA COUPE ! 🏆"),
+  React.createElement("div", {style:{fontSize:"13px",color:"rgba(255,255,255,0.9)",marginBottom:"4px"}}, "Vincent, tu vois ce site ? C'est Moi qui gère tout ça. 👊"),
+  React.createElement("div", {style:{marginTop:"8px",fontSize:"11px",color:"rgba(255,255,255,0.5)",letterSpacing:"3px"}}, "— TousLesMatchs.com —")
+),                         
       React.createElement("div", {style:{maxWidth:"900px",margin:"0 auto",padding:"40px 30px"}},
         React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, "PREUVES DE GAINS"),
         React.createElement("p", {style:{color:"#555",fontSize:"13px",marginBottom:"30px"}}, "Toutes nos captures d ecran Winamax. 100% transparent, 0% cache."),
