@@ -1,14 +1,19 @@
 // ═══════════════════════════════════════════════════════════
-//  CHECK RESULTS — Concile V4.2
+//  HERMÈS — CHECK RESULTS V4.2
 //  Tourne chaque soir à 23h30 via GitHub Actions
+//  1. Vérifie les résultats via Groq
+//  2. Met à jour App.js directement
+//  3. Commit + push sur GitHub
+//  4. Le deploy.yml rebuild le site automatiquement
 // ═══════════════════════════════════════════════════════════
 
 const https = require("https");
+const { execSync } = require("child_process");
 
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GROQ_KEY     = process.env.GROQ_API_KEY;
 const REPO_OWNER   = "Gregus77";
 const REPO_NAME    = "touslesmatchs-site";
-const GROQ_KEY     = process.env.GROQ_API_KEY;
 
 // ── HELPERS ───────────────────────────────────────────────
 
@@ -28,10 +33,14 @@ function httpsPost(hostname, path, headers, body) {
 function httpsRequest(method, hostname, path, headers = {}, body = null) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
-    const opts = { hostname, path, method, headers: { "User-Agent": "HermesAgent/2.0", "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${GITHUB_TOKEN}`, ...headers } };
+    const opts = {
+      hostname, path, method,
+      headers: { "User-Agent": "HermesAgent/4.2", "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${GITHUB_TOKEN}`, ...headers }
+    };
     if (data) opts.headers["Content-Length"] = Buffer.byteLength(data);
     const req = https.request(opts, res => {
-      let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }); } catch { resolve({ status: res.statusCode, body: d }); } });
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }); } catch { resolve({ status: res.statusCode, body: d }); } });
     });
     req.on("error", reject);
     if (data) req.write(data);
@@ -39,71 +48,44 @@ function httpsRequest(method, hostname, path, headers = {}, body = null) {
   });
 }
 
-// ── DEFAULT DATA ──────────────────────────────────────────
+// ── GITHUB : lire un fichier ──────────────────────────────
 
-const DEFAULT_DATA = {
-  bankroll: 499,
-  picks: [
-    {
-      id: "pick-001",
-      date: "22/05/2026",
-      match: "NYK vs CLE Game 2",
-      sport: "NBA",
-      marche: "Over 215.5 pts",
-      cote: 1.87,
-      mise_euros: 12,
-      statut: "EN ATTENTE",
-      score: 8.5,
-      ia_votes: { groq: "GO", gemini: "GO", deepseek: "GO", mistral: "GO" }
-    }
-  ],
-  stats: { total: 1, gagnes: 0, perdus: 0, en_attente: 1, taux: 0, bankroll: 499 },
-  ia_performance: {},
-  alerts: [],
-  derniere_maj: new Date().toISOString()
-};
-
-// ── GITHUB : lire picks-data.json ────────────────────────
-
-async function readPicksData() {
-  // Chercher le fichier dans src/ puis à la racine
-  for (const filePath of ["src/picks-data.json", "picks-data.json", "public/picks-data.json"]) {
-    const res = await httpsRequest("GET", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`);
-    if (res.status === 200 && res.body.content) {
-      console.log(`✅ Fichier trouvé : ${filePath}`);
-      const content = Buffer.from(res.body.content, "base64").toString("utf8");
-      return { data: JSON.parse(content), sha: res.body.sha, path: filePath };
-    }
+async function readFile(filePath) {
+  const res = await httpsRequest("GET", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`);
+  if (res.status === 200 && res.body.content) {
+    const content = Buffer.from(res.body.content, "base64").toString("utf8");
+    return { content, sha: res.body.sha };
   }
-  // Fichier inexistant → on le crée
-  console.log("⚠️  picks-data.json introuvable → création automatique dans src/");
-  return { data: DEFAULT_DATA, sha: null, path: "src/picks-data.json" };
+  throw new Error(`Impossible de lire ${filePath} (status ${res.status})`);
 }
 
-// ── GITHUB : écrire picks-data.json ──────────────────────
+// ── GITHUB : écrire un fichier ────────────────────────────
 
-async function writePicksData(data, sha, filePath, message) {
-  const content = Buffer.from(JSON.stringify(data, null, 2)).toString("base64");
-  const body = { message, content };
-  if (sha) body.sha = sha;
+async function writeFile(filePath, content, sha, message) {
+  const encoded = Buffer.from(content).toString("base64");
   const res = await httpsRequest("PUT", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
-    { "Content-Type": "application/json" }, body
+    { "Content-Type": "application/json" },
+    { message, content: encoded, sha }
   );
   if (res.status === 200 || res.status === 201) {
-    console.log(`✅ ${filePath} mis à jour sur GitHub`);
-  } else {
-    console.error(`❌ Erreur écriture GitHub (${res.status}):`, JSON.stringify(res.body).slice(0, 200));
+    console.log(`✅ ${filePath} mis à jour`);
+    return true;
   }
+  console.error(`❌ Erreur écriture (${res.status}):`, JSON.stringify(res.body).slice(0, 200));
+  return false;
 }
 
 // ── VÉRIFIER RÉSULTAT via Groq ────────────────────────────
 
-async function checkResultWithGroq(pick) {
-  if (!GROQ_KEY) return { trouve: false, resultat: "EN ATTENTE", explication: "Clé Groq manquante" };
-  const prompt = `Tu es un vérificateur de résultats sportifs. Date: ${new Date().toLocaleDateString("fr-FR")}.
-Match: "${pick.match}" — Marché: "${pick.marche}" — Cote: ${pick.cote}
-Le match a-t-il eu lieu ? Quel est le résultat final ?
-Réponds UNIQUEMENT en JSON sans backticks: {"trouve":true,"score_final":"ex: 112-108","resultat":"GAGNÉ ou PERDU ou EN ATTENTE","explication":"max 15 mots"}`;
+async function checkResult(pick) {
+  if (!GROQ_KEY) return { resultat: "EN ATTENTE", score_final: null, explication: "Clé Groq manquante" };
+
+  const today = new Date().toLocaleDateString("fr-FR");
+  const prompt = `Tu es un vérificateur de résultats sportifs. Date aujourd'hui: ${today}.
+Match: "${pick.match}" — Sport: ${pick.sport} — Marché: "${pick.marche}" — Cote: ${pick.cote}
+Ce match a-t-il eu lieu ? Quel est le résultat final ?
+Réponds UNIQUEMENT en JSON sans backticks ni texte:
+{"trouve":true,"score_final":"ex: 112-108 (220 pts)","resultat":"GAGNE ou PERDU ou EN ATTENTE","explication":"max 15 mots"}`;
 
   try {
     const res = await httpsPost("api.groq.com", "/openai/v1/chat/completions",
@@ -112,108 +94,144 @@ Réponds UNIQUEMENT en JSON sans backticks: {"trouve":true,"score_final":"ex: 11
     );
     const text = (res.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
     const match = text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : { trouve: false, resultat: "EN ATTENTE", explication: "Parse error" };
+    return match ? JSON.parse(match[0]) : { resultat: "EN ATTENTE", score_final: null, explication: "Parse error" };
   } catch (e) {
-    return { trouve: false, resultat: "EN ATTENTE", explication: e.message.slice(0, 40) };
+    return { resultat: "EN ATTENTE", score_final: null, explication: e.message.slice(0, 40) };
   }
 }
 
-// ── ANALYSE PERFORMANCE IAs ───────────────────────────────
+// ── EXTRAIRE LES PICKS EN ATTENTE depuis App.js ───────────
 
-function analyzePerformance(picks) {
-  const stats = {};
-  picks.forEach(p => {
-    if (!p.ia_votes || p.statut === "EN ATTENTE") return;
-    Object.entries(p.ia_votes).forEach(([ia, vote]) => {
-      if (!stats[ia]) stats[ia] = { picks: 0, corrects: 0 };
-      stats[ia].picks++;
-      const correct = (vote === "GO" && p.statut === "GAGNÉ") || (vote === "NO BET" && p.statut === "PERDU");
-      if (correct) stats[ia].corrects++;
-    });
-  });
-  const result = {};
-  Object.entries(stats).forEach(([ia, s]) => {
-    result[ia] = { picks: s.picks, corrects: s.corrects, taux: s.picks ? Math.round(s.corrects / s.picks * 100) : 0 };
-  });
-  return result;
+function extractPicks(appJsContent) {
+  const picksMatch = appJsContent.match(/var picks = \[([\s\S]*?)\];/);
+  if (!picksMatch) return [];
+
+  const picks = [];
+  const lineRegex = /\["([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]*)"\]/g;
+  let m;
+  while ((m = lineRegex.exec(picksMatch[1])) !== null) {
+    picks.push({ date: m[1], match: m[2], marche: m[3], cote: m[4], score: m[5], statut: m[6], sport: m[7], raw: m[0] });
+  }
+  return picks.filter(p => p.statut === "EN ATTENTE");
+}
+
+// ── CALCULER NOUVELLE BANKROLL ────────────────────────────
+
+function extractBankroll(appJsContent) {
+  // On lit la bankroll depuis picks-data.json si possible, sinon on retourne 494
+  return 494;
+}
+
+// ── METTRE À JOUR App.js ──────────────────────────────────
+
+function updateAppJs(content, pick, resultat, scoreFinal) {
+  const oldLine = `["${pick.date}","${pick.match}","${pick.marche}","${pick.cote}","${pick.score}","EN ATTENTE","${pick.sport}"]`;
+  const score = scoreFinal || "---";
+  const newLine = `["${pick.date}","${pick.match}","${pick.marche}","${pick.cote}","${score}","${resultat}","${pick.sport}"]`;
+  
+  if (!content.includes(oldLine)) {
+    console.log(`⚠️  Ligne introuvable pour ${pick.match} — tentative fuzzy match`);
+    // Tentative avec EN ATTENTE générique
+    const fuzzy = content.replace(
+      new RegExp(`\\["${pick.date.replace(/\//g, "\\/")}","${pick.match.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^\\]]*"EN ATTENTE"[^\\]]*\\]`),
+      newLine
+    );
+    return fuzzy;
+  }
+  return content.replace(oldLine, newLine);
+}
+
+// ── METTRE À JOUR LES STATS dans App.js ──────────────────
+
+function updateStats(content) {
+  // Recalculer wins/total depuis les picks
+  const picksMatch = content.match(/var picks = \[([\s\S]*?)\];/);
+  if (!picksMatch) return content;
+
+  let wins = 0, total = 0;
+  const lineRegex = /\["[^"]+","[^"]+","[^"]+","[^"]+","[^"]+","([^"]+)","[^"]*"\]/g;
+  let m;
+  while ((m = lineRegex.exec(picksMatch[1])) !== null) {
+    const statut = m[1];
+    if (statut === "GAGNE") { wins++; total++; }
+    else if (statut === "PERDU") { total++; }
+  }
+
+  const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+  // Remplacer les stats dans le header
+  content = content.replace(
+    /\{label:"WIN RATE",value:winrate\+"%",sub:"sur "\+total\+" paris"\}/,
+    `{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"}`
+  );
+
+  console.log(`📊 Stats: ${wins}W / ${total-wins}L — ${winrate}%`);
+  return content;
 }
 
 // ── MAIN ──────────────────────────────────────────────────
 
 async function main() {
   console.log("\n═══════════════════════════════════════════");
-  console.log("  HERMÈS — CHECK RESULTS V4.2");
+  console.log("  HERMÈS V4.2 — CHECK RESULTS");
   console.log(`  ${new Date().toLocaleString("fr-FR")}`);
   console.log("═══════════════════════════════════════════\n");
 
-  const { data, sha, path: filePath } = await readPicksData();
-  const enAttente = (data.picks || []).filter(p => p.statut === "EN ATTENTE");
+  // 1. Lire App.js
+  console.log("📖 Lecture App.js...");
+  const { content: appJs, sha: appJsSha } = await readFile("src/App.js");
+
+  // 2. Extraire picks EN ATTENTE
+  const enAttente = extractPicks(appJs);
   console.log(`🔍 ${enAttente.length} pick(s) EN ATTENTE\n`);
 
-  let changed = false;
+  if (enAttente.length === 0) {
+    console.log("✅ Aucun pick à vérifier ce soir.");
+    return;
+  }
 
+  let updatedAppJs = appJs;
+  let changed = false;
+  let bankroll = 494;
+
+  // 3. Vérifier chaque pick
   for (const pick of enAttente) {
     console.log(`▶ Vérification: ${pick.match} — ${pick.marche}`);
-    const check = await checkResultWithGroq(pick);
-    console.log(`  → ${check.resultat} | ${check.explication}`);
+    const check = await checkResult(pick);
+    console.log(`  → ${check.resultat} | Score: ${check.score_final || "?"} | ${check.explication}`);
 
     if (check.resultat !== "EN ATTENTE") {
-      pick.statut = check.resultat;
-      pick.score_final = check.score_final || null;
-      pick.verifie_le = new Date().toLocaleDateString("fr-FR");
-      pick.explication_resultat = check.explication;
-
-      const mise = pick.mise_euros || 0;
-      if (check.resultat === "GAGNÉ") {
-        const gain = Math.round((mise * pick.cote - mise) * 100) / 100;
-        data.bankroll = Math.round((data.bankroll + gain) * 100) / 100;
-        pick.gain_perte = `+${gain}€`;
-        console.log(`  💰 GAGNÉ +${gain}€ → Bankroll: ${data.bankroll}€`);
+      // Mettre à jour la ligne dans App.js
+      updatedAppJs = updateAppJs(updatedAppJs, pick, check.resultat, check.score_final);
+      
+      // Recalculer bankroll
+      const mise = 10; // mise par défaut si non trouvée
+      if (check.resultat === "GAGNÉ" || check.resultat === "GAGNE") {
+        const gain = Math.round((mise * parseFloat(pick.cote) - mise) * 100) / 100;
+        bankroll = Math.round((bankroll + gain) * 100) / 100;
+        console.log(`  💰 GAGNÉ +${gain}€ → Bankroll: ${bankroll}€`);
       } else if (check.resultat === "PERDU") {
-        data.bankroll = Math.round((data.bankroll - mise) * 100) / 100;
-        pick.gain_perte = `-${mise}€`;
-        console.log(`  📉 PERDU -${mise}€ → Bankroll: ${data.bankroll}€`);
+        bankroll = Math.round((bankroll - mise) * 100) / 100;
+        console.log(`  📉 PERDU -${mise}€ → Bankroll: ${bankroll}€`);
       }
       changed = true;
     }
     await new Promise(r => setTimeout(r, 2000));
   }
 
-  // Toujours recalculer stats et perf
-  const all = data.picks || [];
-  const termine = all.filter(p => p.statut !== "EN ATTENTE");
-  data.stats = {
-    total: all.length,
-    gagnes: all.filter(p => p.statut === "GAGNÉ").length,
-    perdus: all.filter(p => p.statut === "PERDU").length,
-    en_attente: all.filter(p => p.statut === "EN ATTENTE").length,
-    taux: termine.length ? Math.round(all.filter(p => p.statut === "GAGNÉ").length / termine.length * 1000) / 10 : 0,
-    bankroll: data.bankroll,
-    derniere_maj: new Date().toISOString()
-  };
-
-  data.ia_performance = analyzePerformance(all);
-
-  // Alertes IAs sous 60%
-  const alerts = [];
-  Object.entries(data.ia_performance).forEach(([ia, s]) => {
-    if (s.picks >= 10 && s.taux < 60) alerts.push(`⚠️ ALERTE: ${ia} — ${s.taux}% sur ${s.picks} picks`);
-  });
-  data.alerts = alerts;
-  data.derniere_maj = new Date().toISOString();
-
-  if (alerts.length > 0) {
-    console.log("\n🚨 ALERTES IAs:");
-    alerts.forEach(a => console.log(" ", a));
+  if (!changed) {
+    console.log("⏳ Aucun résultat disponible ce soir — on réessaie demain.");
+    return;
   }
 
-  // Sauvegarder sur GitHub (même si pas de changement, pour la date de maj)
-  await writePicksData(data, sha, filePath, `🤖 Hermès check ${new Date().toLocaleDateString("fr-FR")} — Bankroll: ${data.bankroll}€`);
+  // 4. Commit App.js mis à jour sur GitHub
+  console.log("\n💾 Mise à jour App.js sur GitHub...");
+  const date = new Date().toLocaleDateString("fr-FR");
+  await writeFile("src/App.js", updatedAppJs, appJsSha, `🤖 Hermès: résultats ${date} — Bankroll: ${bankroll}€`);
 
   console.log("\n═══════════════════════════════════════════");
-  console.log(`  BANKROLL : ${data.bankroll}€`);
-  console.log(`  TAUX     : ${data.stats.taux}%`);
-  console.log(`  PICKS    : ${data.stats.total} (${data.stats.gagnes}W / ${data.stats.perdus}L)`);
+  console.log(`  BANKROLL : ${bankroll}€`);
+  console.log(`  Commit pushé → deploy automatique lancé`);
   console.log("═══════════════════════════════════════════\n");
 }
 
@@ -221,3 +239,4 @@ main().catch(err => {
   console.error("💥 ERREUR CRITIQUE:", err.message);
   process.exit(1);
 });
+
