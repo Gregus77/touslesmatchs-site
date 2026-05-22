@@ -13,8 +13,6 @@ var NETBET_LINK = "#";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
-  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball"],
   ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot"],
   ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball"],
@@ -149,6 +147,13 @@ export default function App() {
     )
   );
 
+  var bandeauVincent = React.createElement("div", {style:{background:"linear-gradient(135deg,#c8102e,#ff4444)",padding:"14px 20px",textAlign:"center",fontFamily:"Georgia,serif",zIndex:60,borderBottom:"3px solid #ffd700"}},
+    React.createElement("div", {style:{fontSize:"20px",fontWeight:"bold",color:"#ffd700",letterSpacing:"3px",marginBottom:"4px"}}, "🏆 ALLEZ LENS — CE SOIR ON SOULEVE LA COUPE ! 🏆"),
+    React.createElement("div", {style:{fontSize:"14px",color:"#fff",marginBottom:"4px",fontWeight:"bold"}}, "🎯 Vincent, ce site c'est Gregory qui gere tout ca. 100% IA. 100% sangsueur."),
+    React.createElement("div", {style:{fontSize:"12px",color:"rgba(255,255,255,0.8)",fontStyle:"italic"}}, "PS : j'y crois a fond... et tu vas devenir mon chef 😉"),
+    React.createElement("div", {style:{marginTop:"6px",fontSize:"11px",color:"rgba(255,255,255,0.5)",letterSpacing:"2px"}}, "— TousLesMatchs.com — Analyse • Intelligence • Resultats —")
+  );
+
   if(page==="cgu") return React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
   if(page==="mentions") return React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
   if(page==="confidentialite") return React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal});
@@ -156,11 +161,6 @@ export default function App() {
   if(page==="preuves"){
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
       header,
-      React.createElement("div", {style:{background:"linear-gradient(135deg,#c8102e,#ff4444)",padding:"14px 20px",textAlign:"center",fontFamily:"Georgia,serif",position:"relative",zIndex:60,overflow:"hidden"}},
-  React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:"#fff",letterSpacing:"2px",marginBottom:"6px"}}, "🏆 ALLEZ LENS — CE SOIR ON GAGNE LA COUPE ! 🏆"),
-  React.createElement("div", {style:{fontSize:"13px",color:"rgba(255,255,255,0.9)",marginBottom:"4px"}}, "Vincent, tu vois ce site ? C'est Moi qui gère tout ça. 👊"),
-  React.createElement("div", {style:{marginTop:"8px",fontSize:"11px",color:"rgba(255,255,255,0.5)",letterSpacing:"3px"}}, "— TousLesMatchs.com —")
-),                         
       React.createElement("div", {style:{maxWidth:"900px",margin:"0 auto",padding:"40px 30px"}},
         React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, "PREUVES DE GAINS"),
         React.createElement("p", {style:{color:"#555",fontSize:"13px",marginBottom:"30px"}}, "Toutes nos captures d ecran Winamax. 100% transparent, 0% cache."),
@@ -223,6 +223,7 @@ export default function App() {
 
   return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
     header,
+    bandeauVincent,
     React.createElement("section", {style:{padding:"50px 30px 30px",textAlign:"center"}},
       React.createElement("div", {style:{fontSize:"10px",letterSpacing:"6px",color:"#d4af37",marginBottom:"14px"}}, "PROPULSE PAR INTELLIGENCE ARTIFICIELLE"),
       React.createElement("h1", {style:{fontSize:"38px",fontWeight:"bold",color:"#fff",margin:"0 0 10px"}}, "Le meilleur pick chaque jour."),
@@ -266,7 +267,7 @@ export default function App() {
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "HISTORIQUE DES PICKS"),
         React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap"}},
-          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"},{key:"F1",label:"🏎️ F1"},{key:"NFL",label:"🏈 NFL"},{key:"Rugby",label:"🏉 Rugby"},{key:"MMA",label:"🥊 MMA"},{key:"Volleyball",label:"🏐 Volley"}].map(function(f){
+          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"},{key:"MLS",label:"⚽🇺🇸 MLS"},{key:"F1",label:"🏎️ F1"},{key:"NFL",label:"🏈 NFL"},{key:"Rugby",label:"🏉 Rugby"},{key:"MMA",label:"🥊 MMA"},{key:"Volleyball",label:"🏐 Volley"}].map(function(f){
             return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
           })
         )
