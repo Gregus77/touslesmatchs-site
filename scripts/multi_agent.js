@@ -1,11 +1,6 @@
 // ═══════════════════════════════════════════════════════════
 //  HERMÈS — MULTI AGENT V4.2
 //  Tourne chaque matin à 9h30 via GitHub Actions
-//  1. Récupère les derniers résultats
-//  2. Appelle Claude (Chef du Concile) pour analyse
-//  3. Claude appelle les 4 autres IAs pour vote
-//  4. Verdict final → met à jour App.js
-//  5. Commit + push → site à jour automatiquement
 // ═══════════════════════════════════════════════════════════
 
 const https = require("https");
@@ -18,8 +13,6 @@ const OR_KEY        = process.env.OPENROUTER_API_KEY;
 const GITHUB_TOKEN  = process.env.GITHUB_TOKEN;
 const REPO_OWNER    = "Gregus77";
 const REPO_NAME     = "touslesmatchs-site";
-
-// ── HELPERS ───────────────────────────────────────────────
 
 function httpsPost(hostname, path, headers, body) {
   return new Promise((resolve, reject) => {
@@ -53,14 +46,16 @@ function httpsRequest(method, hostname, path, headers = {}, body = null) {
 }
 
 function safeJSON(text) {
+  if (!text) return null;
   try {
-    const clean = (text || "").replace(/```json|```/g, "").trim();
+    // Nettoyer le texte
+    let clean = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    // Chercher le premier JSON valide
     const match = clean.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : null;
+    if (match) return JSON.parse(match[0]);
+    return null;
   } catch { return null; }
 }
-
-// ── GITHUB : lire/écrire App.js ───────────────────────────
 
 async function readFile(filePath) {
   const res = await httpsRequest("GET", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`);
@@ -78,157 +73,121 @@ async function writeFile(filePath, content, sha, message) {
   return res.status === 200 || res.status === 201;
 }
 
-// ── EXTRAIRE STATS depuis App.js ──────────────────────────
-
 function extractStats(appJs) {
   const picks = [];
-  const lineRegex = /\["([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]*)"\]/g;
   const picksMatch = appJs.match(/var picks = \[([\s\S]*?)\];/);
-  if (!picksMatch) return { picks, wins: 0, total: 0, bankroll: 494 };
-
+  if (!picksMatch) return { picks, wins: 0, total: 0 };
+  const lineRegex = /\["([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]*)"\]/g;
   let m;
   while ((m = lineRegex.exec(picksMatch[1])) !== null) {
     picks.push({ date: m[1], match: m[2], marche: m[3], cote: m[4], score: m[5], statut: m[6], sport: m[7] });
   }
-
   const wins = picks.filter(p => p.statut === "GAGNE").length;
   const total = picks.filter(p => !["NOPICK","EN ATTENTE","EN COURS"].includes(p.statut)).length;
-  return { picks: picks.slice(0, 5), wins, total, bankroll: 494 };
+  return { picks: picks.slice(0, 3), wins, total };
 }
-
-// ── CLAUDE — CHEF DU CONCILE ──────────────────────────────
 
 async function callClaude(stats) {
   const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
   
   const system = `Tu es Claude, Chef du Concile V4.2 — expert value betting Winamax France.
-DATE: ${today}
-BANKROLL: ${stats.bankroll}€ | STATS: ${stats.wins}W / ${stats.total - stats.wins}L
+DATE: ${today} | STATS: ${stats.wins}W / ${stats.total - stats.wins}L
 
-RÈGLES ABSOLUES:
-• Cotes: 1.40 à 2.20 UNIQUEMENT
-• Marchés bannis: MLB, NBA moneyline, combinés >2
-• Équipes bannies: Ottawa, Montréal Canadiens, Toronto Raptors, Stuttgart, Man United  
-• Sports priorité: NHL Playoffs > NBA O/U (paper trading) > Foot EU > Tennis > Volleyball > Baseball Japon
-• Seuil: score ≥8/10 + prob ≥63% + value=(prob×cote)>1.06
-• Kelly: ≥9/10 → plein Kelly; 8-8.9 → ¼ Kelly; max 10% bankroll
-• Cherche les matchs disponibles aujourd'hui via web search
+RÈGLES:
+- Cotes: 1.40 à 2.20 UNIQUEMENT
+- Marchés bannis: MLB, NBA moneyline, combinés >2
+- Équipes bannies: Ottawa, Montréal Canadiens, Toronto Raptors, Stuttgart, Man United
+- Sports: NHL Playoffs > Foot EU > Tennis > Volleyball > Baseball Japon
+- NBA Over/Under = paper trading UNIQUEMENT (pas de mise réelle)
+- Seuil: score ≥8/10 + prob ≥63%
 
-Réponds UNIQUEMENT en JSON sans backticks:
-{
-  "pick": {
-    "date": "JJ/MM",
-    "match": "Équipe A vs Équipe B",
-    "sport": "NHL/NBA/FOOT/etc",
-    "heure": "22h00",
-    "pays": "France/USA/etc",
-    "marche": "Moneyline OT inclus / Over 2.5 / etc",
-    "cote": 1.85,
-    "prob": 0.65,
-    "score": 8.5,
-    "mise_euros": 12,
-    "go": true,
-    "raison": "max 15 mots"
-  },
-  "paper_trading": {
-    "match": "match pour paper trading NBA O/U",
-    "marche": "Over/Under XXX pts",
-    "cote": 1.85,
-    "prediction": "OVER ou UNDER"
-  },
-  "no_pick_raison": "si pas de pick, pourquoi en max 10 mots"
-}`;
+IMPORTANT: Réponds UNIQUEMENT avec le JSON brut ci-dessous, sans aucun texte avant ou après, sans backticks:
+{"pick":{"date":"JJ/MM","match":"Équipe A vs Équipe B","sport":"NHL","heure":"22h00","pays":"USA","marche":"Moneyline OT inclus","cote":1.85,"prob":0.65,"score":8.5,"mise_euros":12,"go":true,"raison":"courte raison"},"paper_trading":{"match":"NBA match","marche":"Over 215 pts","cote":1.85,"prediction":"OVER"},"no_pick_raison":""}`;
 
-  const res = await httpsPost("api.anthropic.com", "/v1/messages",
-    { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-    {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1000,
-      system,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      messages: [{ role: "user", content: `Analyse les matchs disponibles aujourd'hui ${today} et donne le meilleur pick Concile V4.2. Derniers picks: ${JSON.stringify(stats.picks.slice(0,3))}` }]
-    }
-  );
+  try {
+    const res = await httpsPost("api.anthropic.com", "/v1/messages",
+      { "x-api-key": ANTHROPIC_KEY.trim(), "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+      {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 800,
+        system,
+        tools: [{ type: "web_search_20250305", name: "web_search" }],
+        messages: [{ role: "user", content: `Cherche les matchs disponibles aujourd'hui ${today} et donne le meilleur pick V4.2. Réponds UNIQUEMENT en JSON brut.` }]
+      }
+    );
 
-  const text = (res.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-  return safeJSON(text);
+    // Extraire tout le texte de la réponse
+    const blocks = res.content || [];
+    const text = blocks.filter(b => b.type === "text").map(b => b.text).join("");
+    console.log("📝 Réponse Claude (brute):", text.slice(0, 300));
+    
+    const result = safeJSON(text);
+    if (result) return result;
+    
+    // Si pas de JSON valide, créer un NO PICK par défaut
+    console.log("⚠️ JSON non parseable, NO PICK par défaut");
+    return { pick: { go: false }, paper_trading: null, no_pick_raison: "Analyse non disponible" };
+    
+  } catch (e) {
+    console.error("❌ Erreur Claude:", e.message);
+    return null;
+  }
 }
 
-// ── 4 IAs — VOTE ─────────────────────────────────────────
+async function voteIA(name, promptFn, prompt) {
+  try {
+    const raw = await promptFn(prompt);
+    const text = typeof raw === "string" ? raw : JSON.stringify(raw);
+    const v = safeJSON(text) || safeJSON(raw?.choices?.[0]?.message?.content) || safeJSON(raw?.candidates?.[0]?.content?.parts?.[0]?.text);
+    if (v) { console.log(`  ${v.vote === "GO" ? "✅" : "🔴"} ${name}: ${v.vote} (${v.confiance}/10) — ${v.raison}`); return { id: name, ...v }; }
+    return { id: name, vote: "ERREUR", confiance: 0, raison: "parse error" };
+  } catch (e) {
+    console.log(`  ❌ ${name}: erreur — ${e.message.slice(0, 40)}`);
+    return { id: name, vote: "ERREUR", confiance: 0, raison: e.message.slice(0, 30) };
+  }
+}
 
-async function callGroq(prompt) {
-  const res = await httpsPost("api.groq.com", "/openai/v1/chat/completions",
+async function callGroq(p) {
+  const r = await httpsPost("api.groq.com", "/openai/v1/chat/completions",
     { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
-    { model: "llama-3.3-70b-versatile", max_tokens: 100, temperature: 0.2,
-      messages: [{ role: "system", content: 'Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}' }, { role: "user", content: prompt }] }
+    { model: "llama-3.3-70b-versatile", max_tokens: 100, temperature: 0.2, messages: [{ role: "system", content: 'JSON only: {"vote":"GO","prob":0.65,"confiance":8,"raison":"short"}' }, { role: "user", content: p }] }
   );
-  return safeJSON(res.choices?.[0]?.message?.content);
+  return r.choices?.[0]?.message?.content;
 }
 
-async function callGemini(prompt) {
-  const res = await httpsPost("generativelanguage.googleapis.com",
-    `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+async function callGemini(p) {
+  const r = await httpsPost("generativelanguage.googleapis.com", `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
     { "Content-Type": "application/json" },
-    { contents: [{ parts: [{ text: `Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}\n\n${prompt}` }] }], generationConfig: { maxOutputTokens: 100, temperature: 0.2 } }
+    { contents: [{ parts: [{ text: `JSON only: {"vote":"GO","prob":0.65,"confiance":8,"raison":"short"}\n${p}` }] }], generationConfig: { maxOutputTokens: 100 } }
   );
-  return safeJSON(res.candidates?.[0]?.content?.parts?.[0]?.text);
+  return r.candidates?.[0]?.content?.parts?.[0]?.text;
 }
 
-async function callDeepSeek(prompt) {
-  const res = await httpsPost("api.deepseek.com", "/v1/chat/completions",
+async function callDeepSeek(p) {
+  const r = await httpsPost("api.deepseek.com", "/v1/chat/completions",
     { "Authorization": `Bearer ${DEEPSEEK_KEY}`, "Content-Type": "application/json" },
-    { model: "deepseek-chat", max_tokens: 100, temperature: 0.2,
-      messages: [{ role: "system", content: 'Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}' }, { role: "user", content: prompt }] }
+    { model: "deepseek-chat", max_tokens: 100, temperature: 0.2, messages: [{ role: "system", content: 'JSON only: {"vote":"GO","prob":0.65,"confiance":8,"raison":"short"}' }, { role: "user", content: p }] }
   );
-  return safeJSON(res.choices?.[0]?.message?.content);
+  return r.choices?.[0]?.message?.content;
 }
 
-async function callMistral(prompt) {
-  const res = await httpsPost("openrouter.ai", "/api/v1/chat/completions",
-    { "Authorization": `Bearer ${OR_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://touslesmatchs.com", "X-Title": "Concile V4.2" },
-    { model: "mistralai/mistral-7b-instruct", max_tokens: 100, temperature: 0.2,
-      messages: [{ role: "system", content: 'Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}' }, { role: "user", content: prompt }] }
+async function callMistral(p) {
+  const r = await httpsPost("openrouter.ai", "/api/v1/chat/completions",
+    { "Authorization": `Bearer ${OR_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://touslesmatchs.com" },
+    { model: "mistralai/mistral-7b-instruct", max_tokens: 100, temperature: 0.2, messages: [{ role: "system", content: 'JSON only: {"vote":"GO","prob":0.65,"confiance":8,"raison":"short"}' }, { role: "user", content: p }] }
   );
-  return safeJSON(res.choices?.[0]?.message?.content);
+  return r.choices?.[0]?.message?.content;
 }
 
-// ── METTRE À JOUR App.js avec nouveau pick ────────────────
-
-function addPickToAppJs(appJs, pick, paperTrading) {
-  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }).replace("/", "/");
-  
+function addPickToAppJs(appJs, pick, today) {
   let newLine;
   if (pick && pick.go) {
-    newLine = `  ["${pick.date}","${pick.match}","${pick.marche}","${pick.cote}","---","EN ATTENTE","${pick.sport}"],`;
+    newLine = `  ["${pick.date || today}","${pick.match}","${pick.marche}","${pick.cote}","---","EN ATTENTE","${pick.sport}"],`;
   } else {
     newLine = `  ["${today}","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],`;
   }
-
-  // Insérer après "var picks = ["
   return appJs.replace("var picks = [", `var picks = [\n${newLine}`);
 }
-
-// ── GÉNÉRER COMPTE RENDU FORMAT CONCILE ──────────────────
-
-function genCompteRendu(pick, paperTrading, votes, date) {
-  const goCount = Object.values(votes).filter(v => v && v.vote === "GO").length;
-  const totalIA = Object.values(votes).filter(v => v).length + 1; // +1 pour Claude
-
-  let pickSection = "⛔ Rien à jouer";
-  if (pick && pick.go) {
-    const verdict = goCount + 1 >= Math.ceil(totalIA * 0.75) ? "✅ GO" : goCount + 1 >= Math.ceil(totalIA * 0.5) ? "⚠️ GO RÉDUIT" : "⛔ NO BET";
-    pickSection = `${verdict}\n🏆 ${pick.match}\n🕐 ${pick.heure} • 🌍 ${pick.pays} • ${pick.sport}\n📊 ${pick.marche} @ ${pick.cote}\n💰 Mise: ${pick.mise_euros}€`;
-  }
-
-  let ptSection = "Aucun match NBA disponible";
-  if (paperTrading) {
-    ptSection = `🏀 ${paperTrading.match}\n📊 ${paperTrading.marche} — ${paperTrading.prediction} @ ${paperTrading.cote}`;
-  }
-
-  return `🏛️ CONCILE V4.2 — ${date}\n\n🎯 PICK RÉEL\n${pickSection}\n\n📝 PAPER TRADING\n${ptSection}`;
-}
-
-// ── MAIN ──────────────────────────────────────────────────
 
 async function main() {
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
@@ -238,73 +197,61 @@ async function main() {
   console.log(`  ${new Date().toLocaleString("fr-FR")}`);
   console.log("═══════════════════════════════════════════\n");
 
-  // 1. Lire App.js
-  console.log("📖 Lecture App.js...");
   const { content: appJs, sha } = await readFile("src/App.js");
   const stats = extractStats(appJs);
-  console.log(`📊 Stats: ${stats.wins}W / ${stats.total - stats.wins}L — Bankroll: ${stats.bankroll}€\n`);
+  console.log(`📊 Stats: ${stats.wins}W / ${stats.total - stats.wins}L\n`);
 
-  // 2. Claude analyse et propose un pick
-  console.log("🧠 Chef Claude — analyse en cours...");
+  console.log("🧠 Chef Claude — analyse + recherche web...");
   const chefResult = await callClaude(stats);
   
   if (!chefResult) {
-    console.log("⚠️  Claude n'a pas retourné de JSON valide — NO PICK ce soir");
+    console.log("❌ Erreur Claude — arrêt");
     return;
   }
 
   const pick = chefResult.pick;
   const paperTrading = chefResult.paper_trading;
   
-  console.log(`✅ Chef: ${pick?.go ? `PICK — ${pick.match} (${pick.score}/10)` : `NO PICK — ${chefResult.no_pick_raison}`}`);
+  console.log(`✅ Chef: ${pick?.go ? `PICK — ${pick.match} (${pick.score}/10)` : `NO PICK — ${chefResult.no_pick_raison || "seuil non atteint"}`}`);
 
-  // 3. Si pick → vote des 4 IAs
   let votes = {};
   if (pick && pick.go) {
-    const votePrompt = `Concile V4.2. Pick proposé: ${pick.match} — ${pick.marche} @ ${pick.cote}. Score chef: ${pick.score}/10. Prob: ${Math.round(pick.prob * 100)}%. Raison: ${pick.raison}. Vote GO ou NO BET ?`;
-    
-    console.log("\n📡 Vote des 4 IAs en cours...");
+    const votePrompt = `Pick: ${pick.match} — ${pick.marche} @ ${pick.cote}. Score: ${pick.score}/10. Prob: ${Math.round((pick.prob||0.6)*100)}%. ${pick.raison}. Vote GO ou NO BET?`;
+    console.log("\n📡 Vote des 4 IAs...");
     const results = await Promise.allSettled([
-      callGroq(votePrompt).then(v => ({ id: "groq", ...v })).catch(e => ({ id: "groq", vote: "ERREUR", raison: e.message.slice(0, 30) })),
-      callGemini(votePrompt).then(v => ({ id: "gemini", ...v })).catch(e => ({ id: "gemini", vote: "ERREUR", raison: e.message.slice(0, 30) })),
-      callDeepSeek(votePrompt).then(v => ({ id: "deepseek", ...v })).catch(e => ({ id: "deepseek", vote: "ERREUR", raison: e.message.slice(0, 30) })),
-      callMistral(votePrompt).then(v => ({ id: "mistral", ...v })).catch(e => ({ id: "mistral", vote: "ERREUR", raison: e.message.slice(0, 30) })),
+      voteIA("groq", callGroq, votePrompt),
+      voteIA("gemini", callGemini, votePrompt),
+      voteIA("deepseek", callDeepSeek, votePrompt),
+      voteIA("mistral", callMistral, votePrompt),
     ]);
-
-    results.forEach(r => {
-      if (r.status === "fulfilled" && r.value) {
-        votes[r.value.id] = r.value;
-        console.log(`  ${r.value.vote === "GO" ? "✅" : "🔴"} ${r.value.id}: ${r.value.vote} (${r.value.confiance}/10)`);
-      }
-    });
+    results.forEach(r => r.status === "fulfilled" && r.value && (votes[r.value.id] = r.value));
   }
 
-  // 4. Calcul verdict final
-  const goCount = Object.values(votes).filter(v => v && v.vote === "GO").length;
+  const goCount = Object.values(votes).filter(v => v?.vote === "GO").length;
   const totalIA = Object.values(votes).filter(v => v).length + 1;
   const finalGo = pick?.go && (goCount + 1 >= Math.ceil(totalIA * 0.5));
 
-  // 5. Mettre à jour App.js
   console.log("\n💾 Mise à jour App.js...");
-  const updatedAppJs = addPickToAppJs(appJs, finalGo ? pick : null, paperTrading);
-  const compteRendu = genCompteRendu(finalGo ? pick : null, paperTrading, votes, today);
-  
-  const success = await writeFile("src/App.js", updatedAppJs, sha,
-    `🤖 Hermès pick ${today}: ${finalGo && pick ? pick.match : "NO PICK"}`
-  );
+  const updatedAppJs = addPickToAppJs(appJs, finalGo ? pick : null, today);
+  await writeFile("src/App.js", updatedAppJs, sha, `🤖 Hermès pick ${today}: ${finalGo && pick ? pick.match : "NO PICK"}`);
+  console.log("✅ App.js mis à jour\n");
 
-  if (success) {
-    console.log("✅ App.js mis à jour — deploy automatique lancé\n");
-  }
+  // Compte rendu format Concile
+  const verdictLabel = !pick?.go ? "⛔ Rien à jouer" : 
+    goCount + 1 >= Math.ceil(totalIA * 0.75) ? `✅ GO\n🏆 ${pick.match}\n🕐 ${pick.heure} • 🌍 ${pick.pays} • ${pick.sport}\n📊 ${pick.marche} @ ${pick.cote}\n💰 Mise: ${pick.mise_euros}€` :
+    goCount + 1 >= Math.ceil(totalIA * 0.5) ? `⚠️ GO RÉDUIT\n🏆 ${pick.match}\n🕐 ${pick.heure} • 🌍 ${pick.pays} • ${pick.sport}\n📊 ${pick.marche} @ ${pick.cote}\n💰 Mise: ${Math.round((pick.mise_euros||10)/2)}€` :
+    "⛔ NO BET — consensus insuffisant";
 
-  // 6. Afficher compte rendu
-  console.log("\n" + "═".repeat(45));
-  console.log(compteRendu);
-  console.log("═".repeat(45) + "\n");
+  const ptLine = paperTrading ? `🏀 ${paperTrading.match}\n📊 ${paperTrading.marche} — ${paperTrading.prediction} @ ${paperTrading.cote}` : "Aucun match NBA disponible";
+
+  console.log("═".repeat(45));
+  console.log(`🏛️ CONCILE V4.2 — ${today}`);
+  console.log(`\n🎯 PICK RÉEL\n${verdictLabel}`);
+  console.log(`\n📝 PAPER TRADING\n${ptLine}`);
+  console.log("═".repeat(45));
 }
 
 main().catch(err => {
   console.error("💥 ERREUR CRITIQUE:", err.message);
   process.exit(1);
 });
-
