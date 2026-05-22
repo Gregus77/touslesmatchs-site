@@ -1,196 +1,310 @@
 // ═══════════════════════════════════════════════════════════
-//  CONCILE V4.2 — Multi-Agents Script
-//  TousLesMatchs.com — Gregory / Winamax
+//  HERMÈS — MULTI AGENT V4.2
+//  Tourne chaque matin à 9h30 via GitHub Actions
+//  1. Récupère les derniers résultats
+//  2. Appelle Claude (Chef du Concile) pour analyse
+//  3. Claude appelle les 4 autres IAs pour vote
+//  4. Verdict final → met à jour App.js
+//  5. Commit + push → site à jour automatiquement
 // ═══════════════════════════════════════════════════════════
 
-const fs   = require("fs");
-const path = require("path");
+const https = require("https");
 
-const GROQ_KEY     = process.env.GROQ_API_KEY;
-const GEMINI_KEY   = process.env.GEMINI_API_KEY;
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
-const OR_KEY       = process.env.OPENROUTER_API_KEY;
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const GROQ_KEY      = process.env.GROQ_API_KEY;
+const GEMINI_KEY    = process.env.GEMINI_API_KEY;
+const DEEPSEEK_KEY  = process.env.DEEPSEEK_API_KEY;
+const OR_KEY        = process.env.OPENROUTER_API_KEY;
+const GITHUB_TOKEN  = process.env.GITHUB_TOKEN;
+const REPO_OWNER    = "Gregus77";
+const REPO_NAME     = "touslesmatchs-site";
 
-const SYSTEM = `Tu es un analyste expert en value betting. Système V4.2 — Winamax, Gregory.
+// ── HELPERS ───────────────────────────────────────────────
 
-CRITÈRES OBLIGATOIRES:
-- Score ≥ 8/10 | Probabilité ≥ 63% | Value (Prob×Cote)/100 > 1.06
-- Fenêtre cotes: 1.40–2.00 | Kelly% ≥ 2%
-
-SPORTS PRIORITAIRES (ordre de priorité):
-1. 🏒 NHL Playoffs — Meilleure valeur, résultats fiables
-2. 🏈 NFL / CFL — Sport anti-triche par excellence, enjeux trop élevés
-3. 🏎️ F1 — Impossible de tricher, trop d'argent et de réputation en jeu. Parier sur podium, victoire constructeur, pole position
-4. ⚽ Bundesliga / Ligue 1 / PL / LaLiga — Grands championnats fiables
-5. 🎾 Tennis Grand Chelem / Masters — Joueurs top 50 uniquement
-6. 🏀 NBA Over/Under — Jamais moneyline
-7. 🏐 Volleyball — Très peu de matchs truqués
-8. 🥊 MMA UFC — Combats principaux uniquement, pas les undercard
-9. 🏉 Rugby Top 14 / Pro14 — Très fiable
-10. ⚾ Baseball NPB (Japon) — Jamais MLB
-
-MARCHÉS F1 AUTORISÉS:
-- Vainqueur de la course (pole sitter favori)
-- Podium constructeur (Mercedes/Ferrari/Red Bull)
-- Pole position
-- Fastest lap
-JAMAIS: paris sur accidents, safety car
-
-MARCHÉS NFL AUTORISÉS:
-- Over/Under total points
-- Vainqueur match (spread inclus)
-- Premier touchdown scorer
-JAMAIS: props individuels obscurs
-
-LISTE NOIRE ÉQUIPES: Ottawa Senators, Montreal Canadiens, Toronto Raptors, Stuttgart, Manchester United, tout club de 3ème division européenne
-
-MARCHÉS BANNIS: MLB, combinés >2 picks, NBA moneyline, cotes <1.40 ou >2.20, Paris live, matchs de pré-saison
-
-KELLY:
-NHL G1 Playoffs ≥9/10 → 100% Kelly
-Autre ≥9/10 → 50% Kelly
-8–8.9/10 → 25% Kelly
-
-Réponds UNIQUEMENT en JSON:
-{"hasPick":true/false,"match":"A vs B ou GP de X","competition":"Nom","sport":"Foot|Hockey|Basketball|Tennis|F1|NFL|Rugby|MMA|Volleyball","pick":"Description précise","cote":1.XX,"score":X.X,"prob":XX,"kelly":"X€","raison":"courte explication 1 phrase"}
-Si pas de pick valide: {"hasPick":false,"raison":"Explication courte"}`;
-
-function today() {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+function httpsPost(hostname, path, headers, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = https.request(
+      { hostname, path, method: "POST", headers: { ...headers, "Content-Length": Buffer.byteLength(data) } },
+      res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } }); }
+    );
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
 }
 
-function parseJSON(raw) {
-  if (!raw) return null;
+function httpsRequest(method, hostname, path, headers = {}, body = null) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const opts = {
+      hostname, path, method,
+      headers: { "User-Agent": "HermesAgent/4.2", "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${GITHUB_TOKEN}`, ...headers }
+    };
+    if (data) opts.headers["Content-Length"] = Buffer.byteLength(data);
+    const req = https.request(opts, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }); } catch { resolve({ status: res.statusCode, body: d }); } });
+    });
+    req.on("error", reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+function safeJSON(text) {
   try {
-    const clean = raw.replace(/```[\w]*\n?/g,"").replace(/```/g,"").trim();
-    const m = clean.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]);
-  } catch(e) {}
-  return null;
+    const clean = (text || "").replace(/```json|```/g, "").trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : null;
+  } catch { return null; }
 }
 
-async function askGroq(prompt) {
-  const r = await fetch("https://api.groq.com/openai/v1/chat/completions",{
-    method:"POST",
-    headers:{"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
-    body:JSON.stringify({model:"llama-3.3-70b-versatile",messages:[{role:"system",content:SYSTEM},{role:"user",content:prompt}],max_tokens:500,temperature:0.1})
-  });
-  const d = await r.json();
-  return parseJSON(d.choices?.[0]?.message?.content);
+// ── GITHUB : lire/écrire App.js ───────────────────────────
+
+async function readFile(filePath) {
+  const res = await httpsRequest("GET", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`);
+  if (res.status === 200 && res.body.content) {
+    return { content: Buffer.from(res.body.content, "base64").toString("utf8"), sha: res.body.sha };
+  }
+  throw new Error(`Impossible de lire ${filePath}`);
 }
 
-async function askGemini(prompt) {
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({contents:[{parts:[{text:SYSTEM+"\n\n"+prompt}]}],generationConfig:{maxOutputTokens:500,temperature:0.1}})
-  });
-  const d = await r.json();
-  return parseJSON(d.candidates?.[0]?.content?.parts?.[0]?.text);
+async function writeFile(filePath, content, sha, message) {
+  const res = await httpsRequest("PUT", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
+    { "Content-Type": "application/json" },
+    { message, content: Buffer.from(content).toString("base64"), sha }
+  );
+  return res.status === 200 || res.status === 201;
 }
 
-async function askDeepSeek(prompt) {
-  const r = await fetch("https://api.deepseek.com/chat/completions",{
-    method:"POST",
-    headers:{"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
-    body:JSON.stringify({model:"deepseek-chat",messages:[{role:"system",content:SYSTEM},{role:"user",content:prompt}],max_tokens:500,temperature:0.1})
-  });
-  const d = await r.json();
-  return parseJSON(d.choices?.[0]?.message?.content);
-}
+// ── EXTRAIRE STATS depuis App.js ──────────────────────────
 
-async function askMistral(prompt) {
-  const r = await fetch("https://openrouter.ai/api/v1/chat/completions",{
-    method:"POST",
-    headers:{"Authorization":`Bearer ${OR_KEY}`,"Content-Type":"application/json","HTTP-Referer":"https://touslesmatchs.com","X-Title":"Concile V4.2"},
-    body:JSON.stringify({model:"mistralai/mistral-7b-instruct:free",messages:[{role:"system",content:SYSTEM},{role:"user",content:prompt}],max_tokens:500,temperature:0.1})
-  });
-  const d = await r.json();
-  return parseJSON(d.choices?.[0]?.message?.content);
-}
+function extractStats(appJs) {
+  const picks = [];
+  const lineRegex = /\["([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]*)"\]/g;
+  const picksMatch = appJs.match(/var picks = \[([\s\S]*?)\];/);
+  if (!picksMatch) return { picks, wins: 0, total: 0, bankroll: 494 };
 
-async function main() {
-  console.log(`\n🏛️ CONCILE V4.2 — ${new Date().toISOString()}`);
-  console.log("═".repeat(55));
-
-  const prompt = `Nous sommes le ${new Date().toLocaleDateString("fr-FR")}.
-
-Scanne TOUS les événements sportifs disponibles aujourd'hui et ce soir:
-- NHL Playoffs (priorité absolue si match ce soir)
-- NFL (saison régulière ou playoffs si disponible)
-- F1 (qualifications ou course ce week-end ?)
-- NBA Over/Under (Conference Finals en cours)
-- Football européen (Bundesliga, Ligue 1, PL, LaLiga, Coupe d'Europe)
-- Tennis (Roland Garros commence bientôt ?)
-- Rugby, MMA UFC, Volleyball
-
-Identifie LE MEILLEUR pick unique selon nos critères V4.2.
-Score minimum 8/10. Value minimum 1.06.
-Si aucun ne passe le seuil, hasPick: false.
-Réponds en JSON uniquement.`;
-
-  console.log("\n📡 Consultation du Concile — 10 sports analysés...");
-
-  const [groq, gemini, deepseek, mistral] = await Promise.allSettled([
-    askGroq(prompt),
-    askGemini(prompt),
-    askDeepSeek(prompt),
-    askMistral(prompt)
-  ]);
-
-  const results = {
-    groq:     groq.status==="fulfilled" ? groq.value : null,
-    gemini:   gemini.status==="fulfilled" ? gemini.value : null,
-    deepseek: deepseek.status==="fulfilled" ? deepseek.value : null,
-    mistral:  mistral.status==="fulfilled" ? mistral.value : null,
-  };
-
-  console.log("\n📊 VOTES DU CONCILE:");
-  Object.entries(results).forEach(([ia,r]) => {
-    if (r?.hasPick) {
-      console.log(`  ✅ ${ia.padEnd(10)}: GO — ${r.match} @ ${r.cote} (${r.score}/10) [${r.sport}]`);
-    } else {
-      console.log(`  ⛔ ${ia.padEnd(10)}: NO BET — ${r?.raison || "Pas de pick valide"}`);
-    }
-  });
-
-  const goVotes  = Object.values(results).filter(r => r?.hasPick).length;
-  const scores   = Object.values(results).filter(r => r?.score > 0).map(r => r.score);
-  const avgScore = scores.length > 0 ? scores.reduce((a,b) => a+b, 0) / scores.length : 0;
-
-  const goPicks = Object.values(results).filter(r => r?.hasPick && r?.score > 0);
-  const best = goPicks.sort((a,b) => b.score - a.score)[0] || null;
-
-  console.log(`\n  Votes GO : ${goVotes}/4 | Score moyen : ${avgScore.toFixed(1)}/10`);
-
-  const isGO = goVotes >= 3 && avgScore >= 8.0 && best;
-  console.log(`  Verdict  : ${isGO ? "✅ GO — " + best?.sport : "⛔ NO BET"}`);
-
-  const appPath = path.join(process.cwd(), "src", "App.js");
-  let appContent = fs.readFileSync(appPath, "utf-8");
-
-  let newPick;
-  if (isGO && best) {
-    newPick = `  ["${today()}","${best.match}","${best.pick}","${best.cote}","---","EN ATTENTE","${best.sport}"],`;
-    console.log(`\n✅ Pick publié : ${best.match} — ${best.pick} @ ${best.cote} [${best.sport}]`);
-    console.log(`   Raison : ${best.raison}`);
-  } else {
-    newPick = `  ["${today()}","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],`;
-    console.log("\n⛔ Pas de pick aujourd'hui — critères non atteints");
+  let m;
+  while ((m = lineRegex.exec(picksMatch[1])) !== null) {
+    picks.push({ date: m[1], match: m[2], marche: m[3], cote: m[4], score: m[5], statut: m[6], sport: m[7] });
   }
 
-  appContent = appContent.replace(
-    /var picks = \[/,
-    `var picks = [\n${newPick}`
+  const wins = picks.filter(p => p.statut === "GAGNE").length;
+  const total = picks.filter(p => !["NOPICK","EN ATTENTE","EN COURS"].includes(p.statut)).length;
+  return { picks: picks.slice(0, 5), wins, total, bankroll: 494 };
+}
+
+// ── CLAUDE — CHEF DU CONCILE ──────────────────────────────
+
+async function callClaude(stats) {
+  const today = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  
+  const system = `Tu es Claude, Chef du Concile V4.2 — expert value betting Winamax France.
+DATE: ${today}
+BANKROLL: ${stats.bankroll}€ | STATS: ${stats.wins}W / ${stats.total - stats.wins}L
+
+RÈGLES ABSOLUES:
+• Cotes: 1.40 à 2.20 UNIQUEMENT
+• Marchés bannis: MLB, NBA moneyline, combinés >2
+• Équipes bannies: Ottawa, Montréal Canadiens, Toronto Raptors, Stuttgart, Man United  
+• Sports priorité: NHL Playoffs > NBA O/U (paper trading) > Foot EU > Tennis > Volleyball > Baseball Japon
+• Seuil: score ≥8/10 + prob ≥63% + value=(prob×cote)>1.06
+• Kelly: ≥9/10 → plein Kelly; 8-8.9 → ¼ Kelly; max 10% bankroll
+• Cherche les matchs disponibles aujourd'hui via web search
+
+Réponds UNIQUEMENT en JSON sans backticks:
+{
+  "pick": {
+    "date": "JJ/MM",
+    "match": "Équipe A vs Équipe B",
+    "sport": "NHL/NBA/FOOT/etc",
+    "heure": "22h00",
+    "pays": "France/USA/etc",
+    "marche": "Moneyline OT inclus / Over 2.5 / etc",
+    "cote": 1.85,
+    "prob": 0.65,
+    "score": 8.5,
+    "mise_euros": 12,
+    "go": true,
+    "raison": "max 15 mots"
+  },
+  "paper_trading": {
+    "match": "match pour paper trading NBA O/U",
+    "marche": "Over/Under XXX pts",
+    "cote": 1.85,
+    "prediction": "OVER ou UNDER"
+  },
+  "no_pick_raison": "si pas de pick, pourquoi en max 10 mots"
+}`;
+
+  const res = await httpsPost("api.anthropic.com", "/v1/messages",
+    { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+    {
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      system,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{ role: "user", content: `Analyse les matchs disponibles aujourd'hui ${today} et donne le meilleur pick Concile V4.2. Derniers picks: ${JSON.stringify(stats.picks.slice(0,3))}` }]
+    }
   );
 
-  fs.writeFileSync(appPath, appContent, "utf-8");
-  console.log("📝 App.js mis à jour !");
-  console.log("═".repeat(55));
+  const text = (res.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  return safeJSON(text);
+}
+
+// ── 4 IAs — VOTE ─────────────────────────────────────────
+
+async function callGroq(prompt) {
+  const res = await httpsPost("api.groq.com", "/openai/v1/chat/completions",
+    { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+    { model: "llama-3.3-70b-versatile", max_tokens: 100, temperature: 0.2,
+      messages: [{ role: "system", content: 'Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}' }, { role: "user", content: prompt }] }
+  );
+  return safeJSON(res.choices?.[0]?.message?.content);
+}
+
+async function callGemini(prompt) {
+  const res = await httpsPost("generativelanguage.googleapis.com",
+    `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+    { "Content-Type": "application/json" },
+    { contents: [{ parts: [{ text: `Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}\n\n${prompt}` }] }], generationConfig: { maxOutputTokens: 100, temperature: 0.2 } }
+  );
+  return safeJSON(res.candidates?.[0]?.content?.parts?.[0]?.text);
+}
+
+async function callDeepSeek(prompt) {
+  const res = await httpsPost("api.deepseek.com", "/v1/chat/completions",
+    { "Authorization": `Bearer ${DEEPSEEK_KEY}`, "Content-Type": "application/json" },
+    { model: "deepseek-chat", max_tokens: 100, temperature: 0.2,
+      messages: [{ role: "system", content: 'Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}' }, { role: "user", content: prompt }] }
+  );
+  return safeJSON(res.choices?.[0]?.message?.content);
+}
+
+async function callMistral(prompt) {
+  const res = await httpsPost("openrouter.ai", "/api/v1/chat/completions",
+    { "Authorization": `Bearer ${OR_KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://touslesmatchs.com", "X-Title": "Concile V4.2" },
+    { model: "mistralai/mistral-7b-instruct", max_tokens: 100, temperature: 0.2,
+      messages: [{ role: "system", content: 'Réponds UNIQUEMENT en JSON: {"vote":"GO","prob":0.65,"confiance":8,"raison":"max 10 mots"}' }, { role: "user", content: prompt }] }
+  );
+  return safeJSON(res.choices?.[0]?.message?.content);
+}
+
+// ── METTRE À JOUR App.js avec nouveau pick ────────────────
+
+function addPickToAppJs(appJs, pick, paperTrading) {
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }).replace("/", "/");
+  
+  let newLine;
+  if (pick && pick.go) {
+    newLine = `  ["${pick.date}","${pick.match}","${pick.marche}","${pick.cote}","---","EN ATTENTE","${pick.sport}"],`;
+  } else {
+    newLine = `  ["${today}","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],`;
+  }
+
+  // Insérer après "var picks = ["
+  return appJs.replace("var picks = [", `var picks = [\n${newLine}`);
+}
+
+// ── GÉNÉRER COMPTE RENDU FORMAT CONCILE ──────────────────
+
+function genCompteRendu(pick, paperTrading, votes, date) {
+  const goCount = Object.values(votes).filter(v => v && v.vote === "GO").length;
+  const totalIA = Object.values(votes).filter(v => v).length + 1; // +1 pour Claude
+
+  let pickSection = "⛔ Rien à jouer";
+  if (pick && pick.go) {
+    const verdict = goCount + 1 >= Math.ceil(totalIA * 0.75) ? "✅ GO" : goCount + 1 >= Math.ceil(totalIA * 0.5) ? "⚠️ GO RÉDUIT" : "⛔ NO BET";
+    pickSection = `${verdict}\n🏆 ${pick.match}\n🕐 ${pick.heure} • 🌍 ${pick.pays} • ${pick.sport}\n📊 ${pick.marche} @ ${pick.cote}\n💰 Mise: ${pick.mise_euros}€`;
+  }
+
+  let ptSection = "Aucun match NBA disponible";
+  if (paperTrading) {
+    ptSection = `🏀 ${paperTrading.match}\n📊 ${paperTrading.marche} — ${paperTrading.prediction} @ ${paperTrading.cote}`;
+  }
+
+  return `🏛️ CONCILE V4.2 — ${date}\n\n🎯 PICK RÉEL\n${pickSection}\n\n📝 PAPER TRADING\n${ptSection}`;
+}
+
+// ── MAIN ──────────────────────────────────────────────────
+
+async function main() {
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  
+  console.log("\n═══════════════════════════════════════════");
+  console.log("  HERMÈS V4.2 — PICK DU JOUR");
+  console.log(`  ${new Date().toLocaleString("fr-FR")}`);
+  console.log("═══════════════════════════════════════════\n");
+
+  // 1. Lire App.js
+  console.log("📖 Lecture App.js...");
+  const { content: appJs, sha } = await readFile("src/App.js");
+  const stats = extractStats(appJs);
+  console.log(`📊 Stats: ${stats.wins}W / ${stats.total - stats.wins}L — Bankroll: ${stats.bankroll}€\n`);
+
+  // 2. Claude analyse et propose un pick
+  console.log("🧠 Chef Claude — analyse en cours...");
+  const chefResult = await callClaude(stats);
+  
+  if (!chefResult) {
+    console.log("⚠️  Claude n'a pas retourné de JSON valide — NO PICK ce soir");
+    return;
+  }
+
+  const pick = chefResult.pick;
+  const paperTrading = chefResult.paper_trading;
+  
+  console.log(`✅ Chef: ${pick?.go ? `PICK — ${pick.match} (${pick.score}/10)` : `NO PICK — ${chefResult.no_pick_raison}`}`);
+
+  // 3. Si pick → vote des 4 IAs
+  let votes = {};
+  if (pick && pick.go) {
+    const votePrompt = `Concile V4.2. Pick proposé: ${pick.match} — ${pick.marche} @ ${pick.cote}. Score chef: ${pick.score}/10. Prob: ${Math.round(pick.prob * 100)}%. Raison: ${pick.raison}. Vote GO ou NO BET ?`;
+    
+    console.log("\n📡 Vote des 4 IAs en cours...");
+    const results = await Promise.allSettled([
+      callGroq(votePrompt).then(v => ({ id: "groq", ...v })).catch(e => ({ id: "groq", vote: "ERREUR", raison: e.message.slice(0, 30) })),
+      callGemini(votePrompt).then(v => ({ id: "gemini", ...v })).catch(e => ({ id: "gemini", vote: "ERREUR", raison: e.message.slice(0, 30) })),
+      callDeepSeek(votePrompt).then(v => ({ id: "deepseek", ...v })).catch(e => ({ id: "deepseek", vote: "ERREUR", raison: e.message.slice(0, 30) })),
+      callMistral(votePrompt).then(v => ({ id: "mistral", ...v })).catch(e => ({ id: "mistral", vote: "ERREUR", raison: e.message.slice(0, 30) })),
+    ]);
+
+    results.forEach(r => {
+      if (r.status === "fulfilled" && r.value) {
+        votes[r.value.id] = r.value;
+        console.log(`  ${r.value.vote === "GO" ? "✅" : "🔴"} ${r.value.id}: ${r.value.vote} (${r.value.confiance}/10)`);
+      }
+    });
+  }
+
+  // 4. Calcul verdict final
+  const goCount = Object.values(votes).filter(v => v && v.vote === "GO").length;
+  const totalIA = Object.values(votes).filter(v => v).length + 1;
+  const finalGo = pick?.go && (goCount + 1 >= Math.ceil(totalIA * 0.5));
+
+  // 5. Mettre à jour App.js
+  console.log("\n💾 Mise à jour App.js...");
+  const updatedAppJs = addPickToAppJs(appJs, finalGo ? pick : null, paperTrading);
+  const compteRendu = genCompteRendu(finalGo ? pick : null, paperTrading, votes, today);
+  
+  const success = await writeFile("src/App.js", updatedAppJs, sha,
+    `🤖 Hermès pick ${today}: ${finalGo && pick ? pick.match : "NO PICK"}`
+  );
+
+  if (success) {
+    console.log("✅ App.js mis à jour — deploy automatique lancé\n");
+  }
+
+  // 6. Afficher compte rendu
+  console.log("\n" + "═".repeat(45));
+  console.log(compteRendu);
+  console.log("═".repeat(45) + "\n");
 }
 
 main().catch(err => {
-  console.error("💥 ERREUR CRITIQUE:", err);
+  console.error("💥 ERREUR CRITIQUE:", err.message);
   process.exit(1);
 });
+
