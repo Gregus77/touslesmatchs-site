@@ -1,4 +1,4 @@
-import React from "react"; 
+import React from "react";
 import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
@@ -7,23 +7,17 @@ var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
 var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
 var UNIBET_LINK = "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254";
 var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728";
-var ZEBET_LINK = "https://www.zebet.fr/affiliation-TONLIEN";
-var PARIONSSPORT_LINK = "https://www.parionssport.fdj.fr/affiliation-TONLIEN";
-var NETBET_LINK = "https://www.netbet.fr/affiliation-TONLIEN";
+var ZEBET_LINK = "#";
+var PARIONSSPORT_LINK = "#";
+var NETBET_LINK = "#";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
-  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["22/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball"],
   ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot"],
   ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball"],
   ["19/05","Boca Juniors vs Cruzeiro","Moins de 2.5 buts","1.40","1-1","GAGNE","Foot"],
-  ["17/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["15/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["14/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
+  ["14/05 au 17/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot"],
   ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot"],
   ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE","Hockey"],
@@ -71,8 +65,6 @@ var bookmakers = [
   {nom:"NetBet", badge:"BONNE VALEUR", bonus:"Bonus 100 EUR", desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.", color:"#c8102e", link:NETBET_LINK, note:"7.8/10"},
 ];
 
-var PICKS_PAR_PAGE = 100;
-
 function sportEmoji(sport) {
   if(sport==="Foot") return "⚽ ";
   if(sport==="Hockey") return "🏒 ";
@@ -81,6 +73,10 @@ function sportEmoji(sport) {
   if(sport==="Baseball") return "⚾ ";
   if(sport==="Volleyball") return "🏐 ";
   if(sport==="MLS") return "⚽🇺🇸 ";
+  if(sport==="F1") return "🏎️ ";
+  if(sport==="NFL") return "🏈 ";
+  if(sport==="Rugby") return "🏉 ";
+  if(sport==="MMA") return "🥊 ";
   return sport ? "🎯 " : "";
 }
 
@@ -94,9 +90,6 @@ export default function App() {
   var faqOpenState = React.useState(null);
   var faqOpen = faqOpenState[0];
   var setFaqOpen = faqOpenState[1];
-  var pickPageState = React.useState(1);
-  var pickPage = pickPageState[0];
-  var setPickPage = pickPageState[1];
 
   React.useEffect(function() {
     if(window.gaLoaded) return;
@@ -123,10 +116,6 @@ export default function App() {
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
   });
-
-  var totalPages = Math.ceil(filtered.length / PICKS_PAR_PAGE);
-  var pickPageSafe = Math.min(pickPage, totalPages);
-  var filteredPage = filtered.slice((pickPageSafe-1)*PICKS_PAR_PAGE, pickPageSafe*PICKS_PAR_PAGE);
 
   var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
     React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}}, "🔞 Jeu responsable — Interdit aux moins de 18 ans  |  joueurs-info-service.fr  |  09 74 75 13 13"),
@@ -232,7 +221,7 @@ export default function App() {
       React.createElement("h1", {style:{fontSize:"38px",fontWeight:"bold",color:"#fff",margin:"0 0 10px"}}, "Le meilleur pick chaque jour."),
       React.createElement("p", {style:{color:"#555",fontSize:"13px",maxWidth:"440px",margin:"0 auto 30px"}}, "Notre IA analyse des centaines de matchs. Seulement les paris qui atteignent 8/10 minimum sont publies."),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
-        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+399%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / 2L",sub:"serie en cours"},{label:"SERIE",value:"19W",sub:"sur 21 picks"}].map(function(s,i){
+        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+394%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / 3L",sub:"serie en cours"},{label:"SERIE",value:"17W",sub:"sur 20 picks"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{flex:1,padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
@@ -270,13 +259,13 @@ export default function App() {
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "HISTORIQUE DES PICKS"),
         React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap"}},
-          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"}].map(function(f){
-            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);setPickPage(1);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
+          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"},{key:"F1",label:"🏎️ F1"},{key:"NFL",label:"🏈 NFL"},{key:"Rugby",label:"🏉 Rugby"},{key:"MMA",label:"🥊 MMA"},{key:"Volleyball",label:"🏐 Volley"}].map(function(f){
+            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
           })
         )
       ),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"5px"}},
-        filteredPage.map(function(p,i){
+        filtered.map(function(p,i){
           var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS", ea=p[5]==="EN ATTENTE";
           var bg=np?"rgba(100,100,100,0.04)":(ec||ea)?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
           var bd=np?"rgba(100,100,100,0.15)":(ec||ea)?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
@@ -295,12 +284,7 @@ export default function App() {
             )
           );
         })
-      ),
-      totalPages > 1 ? React.createElement("div", {style:{display:"flex",justifyContent:"center",alignItems:"center",gap:"12px",marginTop:"16px"}},
-        React.createElement("button", {onClick:function(){setPickPage(function(p){return Math.max(1,p-1);});},disabled:pickPageSafe<=1,style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe<=1?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe<=1?"default":"pointer",fontSize:"12px"}}, "← Precedent"),
-        React.createElement("span", {style:{color:"#555",fontSize:"12px"}}, "Page "+pickPageSafe+" / "+totalPages),
-        React.createElement("button", {onClick:function(){setPickPage(function(p){return Math.min(totalPages,p+1);});},disabled:pickPageSafe>=totalPages,style:{background:pickPageSafe>=totalPages?"transparent":"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",color:pickPageSafe>=totalPages?"#333":"#d4af37",padding:"6px 16px",borderRadius:"4px",cursor:pickPageSafe>=totalPages?"default":"pointer",fontSize:"12px"}}, "Suivant →")
-      ) : null
+      )
     ),
     React.createElement("section", {style:{padding:"20px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, "ILS GAGNENT AVEC NOUS"),
