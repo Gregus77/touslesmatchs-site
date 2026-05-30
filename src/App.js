@@ -13,7 +13,7 @@ var NETBET_LINK = "#";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
-  ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","120-115 (235 pts)","GAGNE","Basketball"],
+  ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","---","EN ATTENTE","Basketball"],
   ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball"],
   ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
   ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball"],
@@ -263,7 +263,7 @@ export default function App() {
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},
         React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, "HISTORIQUE DES PICKS"),
         React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap"}},
-          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"},{key:"Tennis",label:"🎾 Tennis"},{key:"Baseball",label:"⚾ Baseball"},{key:"MLS",label:"⚽🇺🇸 MLS"},{key:"F1",label:"🏎️ F1"},{key:"NFL",label:"🏈 NFL"},{key:"Rugby",label:"🏉 Rugby"},{key:"MMA",label:"🥊 MMA"},{key:"Volleyball",label:"🏐 Volley"}].map(function(f){
+          [{key:"ALL",label:"Tous"},{key:"Foot",label:"⚽ Foot"},{key:"Hockey",label:"🏒 Hockey"},{key:"Basketball",label:"🏀 Basket"}].map(function(f){
             return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
           })
         )
