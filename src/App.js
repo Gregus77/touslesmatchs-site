@@ -111,10 +111,14 @@ export default function App() {
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
   var winrate = Math.round((wins/total)*100);
-  var pickDuJour = picks[0];
-  var isNoPick = pickDuJour[5]==="NOPICK";
+  
+  // Trouver le prochain pick à jouer (EN ATTENTE) ou le dernier pick
+  var prochainPick = picks.find(function(p){ return p[5]==="EN ATTENTE"; });
+  var pickDuJour = prochainPick || picks[0];
+  var isNoPick = !prochainPick && (picks[0][5]==="NOPICK" || picks[0][5]==="GAGNE" || picks[0][5]==="PERDU");
   var isEnCours = pickDuJour[5]==="EN COURS";
   var isEnAttente = pickDuJour[5]==="EN ATTENTE";
+  var pickLabel = isEnAttente ? "PROCHAIN MATCH A JOUER" : isNoPick ? "PAS DE MATCH AUJOURD HUI" : "PICK DU JOUR";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
@@ -225,7 +229,7 @@ export default function App() {
       React.createElement("h1", {style:{fontSize:"38px",fontWeight:"bold",color:"#fff",margin:"0 0 10px"}}, "Le meilleur pick chaque jour."),
       React.createElement("p", {style:{color:"#555",fontSize:"13px",maxWidth:"440px",margin:"0 auto 30px"}}, "Notre IA analyse des centaines de matchs. Seulement les paris qui atteignent 8/10 minimum sont publies."),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
-        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+394%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / 3L",sub:"serie en cours"},{label:"SERIE",value:"17W",sub:"sur 20 picks"}].map(function(s,i){
+        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+394%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / "+(total-wins)+"L",sub:"serie en cours"},{label:"SERIE",value:wins+"W",sub:"sur "+total+" picks"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{flex:1,padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
@@ -248,9 +252,9 @@ export default function App() {
     ),
     React.createElement("section", {style:{padding:"10px 30px 20px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":(isEnCours||isEnAttente)?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":(isEnCours||isEnAttente)?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
-        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":(isEnCours||isEnAttente)?"#ffa500":"#d4af37",marginBottom:"8px"}}, (isEnCours||isEnAttente)?"PICK DU JOUR — EN ATTENTE DE RESULTAT ⏳":"PICK DU JOUR"),
+        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnAttente?"#ffa500":"#d4af37",marginBottom:"8px"}}, pickLabel),
         React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}},
-          (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
+          isNoPick ? "Aucun match ne passe nos criteres aujourd hui. Prochain pick des que le Concile valide un match." : (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
         isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
           React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"4px 12px",color:"#d4af37",fontSize:"12px"}}, pickDuJour[2]),
@@ -349,4 +353,3 @@ export default function App() {
     bandeauLegal
   );
 }
-
