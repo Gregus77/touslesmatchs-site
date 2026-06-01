@@ -15,6 +15,8 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
   ["03/06","Carolina Hurricanes vs Vegas Golden Knights","CAR Vainqueur","1.70","---","EN ATTENTE","Hockey",8.4,8],
+  ["02/06","Vegas Golden Knights vs Carolina Hurricanes","CAR Vainqueur","1.65","---","EN ATTENTE","Hockey",8.1,8],
+  ["01/06","Colombia vs Costa Rica","Colombia Vainqueur","1.52","---","EN ATTENTE","Foot",7.2,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
   ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],
   ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
@@ -114,13 +116,17 @@ export default function App() {
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
   var winrate = Math.round((wins/total)*100);
 
-  // Trouver le prochain pick à jouer (EN ATTENTE) ou le dernier pick
-  var prochainPick = picks.find(function(p){ return p[5]==="EN ATTENTE"; });
+  // Trouver le pick du JOUR en priorité (date d'aujourd'hui), puis le prochain à venir
+  var todayStr = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
+  var pickAujourdhui = picks.find(function(p){ return p[5]==="EN ATTENTE" && p[0]===todayStr; });
+  // Si pas de pick aujourd'hui, prendre le plus proche dans le futur (ordre inversé = plus ancien en premier)
+  var prochainPick = pickAujourdhui || picks.slice().reverse().find(function(p){ return p[5]==="EN ATTENTE"; });
   var pickDuJour = prochainPick || picks[0];
   var isNoPick = !prochainPick && (picks[0][5]==="NOPICK" || picks[0][5]==="GAGNE" || picks[0][5]==="PERDU");
   var isEnCours = pickDuJour[5]==="EN COURS";
   var isEnAttente = pickDuJour[5]==="EN ATTENTE";
-  var pickLabel = isEnAttente ? "PROCHAIN MATCH A JOUER" : isNoPick ? "PAS DE MATCH AUJOURD HUI" : "PICK DU JOUR";
+  var isToday = pickDuJour[0] === todayStr;
+  var pickLabel = isEnAttente ? (isToday ? "PICK DU JOUR" : "PROCHAIN MATCH A JOUER") : isNoPick ? "PAS DE MATCH AUJOURD HUI" : "PICK DU JOUR";
 
   // Threshold : index [8] = 8 (PREMIUM) ou 7 (STANDARD)
   var pickThreshold = pickDuJour[8] || 8;
