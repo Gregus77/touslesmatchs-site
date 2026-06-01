@@ -1,0 +1,242 @@
+﻿// ═══════════════════════════════════════════════════════════
+//  HERMÈS — CHECK RESULTS V4.2
+//  Tourne chaque soir à 23h30 via GitHub Actions
+//  1. Vérifie les résultats via Groq
+//  2. Met à jour App.js directement
+//  3. Commit + push sur GitHub
+//  4. Le deploy.yml rebuild le site automatiquement
+// ═══════════════════════════════════════════════════════════
+
+const https = require("https");
+const { execSync } = require("child_process");
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GROQ_KEY     = process.env.GROQ_API_KEY;
+const REPO_OWNER   = "Gregus77";
+const REPO_NAME    = "touslesmatchs-site";
+
+// ── HELPERS ───────────────────────────────────────────────
+
+function httpsPost(hostname, path, headers, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = https.request(
+      { hostname, path, method: "POST", headers: { ...headers, "Content-Length": Buffer.byteLength(data) } },
+      res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } }); }
+    );
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+function httpsRequest(method, hostname, path, headers = {}, body = null) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const opts = {
+      hostname, path, method,
+      headers: { "User-Agent": "HermesAgent/4.2", "Accept": "application/vnd.github.v3+json", "Authorization": `Bearer ${GITHUB_TOKEN}`, ...headers }
+    };
+    if (data) opts.headers["Content-Length"] = Buffer.byteLength(data);
+    const req = https.request(opts, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve({ status: res.statusCode, body: JSON.parse(d) }); } catch { resolve({ status: res.statusCode, body: d }); } });
+    });
+    req.on("error", reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+// ── GITHUB : lire un fichier ──────────────────────────────
+
+async function readFile(filePath) {
+  const res = await httpsRequest("GET", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`);
+  if (res.status === 200 && res.body.content) {
+    const content = Buffer.from(res.body.content, "base64").toString("utf8");
+    return { content, sha: res.body.sha };
+  }
+  throw new Error(`Impossible de lire ${filePath} (status ${res.status})`);
+}
+
+// ── GITHUB : écrire un fichier ────────────────────────────
+
+async function writeFile(filePath, content, sha, message) {
+  const encoded = Buffer.from(content).toString("base64");
+  const res = await httpsRequest("PUT", "api.github.com", `/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`,
+    { "Content-Type": "application/json" },
+    { message, content: encoded, sha }
+  );
+  if (res.status === 200 || res.status === 201) {
+    console.log(`✅ ${filePath} mis à jour`);
+    return true;
+  }
+  console.error(`❌ Erreur écriture (${res.status}):`, JSON.stringify(res.body).slice(0, 200));
+  return false;
+}
+
+// ── VÉRIFIER RÉSULTAT via Groq ────────────────────────────
+
+async function checkResult(pick) {
+  if (!GROQ_KEY) return { resultat: "EN ATTENTE", score_final: null, explication: "Clé Groq manquante" };
+
+  const today = new Date().toLocaleDateString("fr-FR");
+  const prompt = `Tu es un vérificateur de résultats sportifs. Date aujourd'hui: ${today}.
+Match: "${pick.match}" — Sport: ${pick.sport} — Marché: "${pick.marche}" — Cote: ${pick.cote}
+Ce match a-t-il eu lieu ? Quel est le résultat final ?
+Réponds UNIQUEMENT en JSON sans backticks ni texte:
+{"trouve":true,"score_final":"ex: 112-108 (220 pts)","resultat":"GAGNE ou PERDU ou EN ATTENTE","explication":"max 15 mots"}`;
+
+  try {
+    const res = await httpsPost("api.groq.com", "/openai/v1/chat/completions",
+      { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
+      { model: "llama-3.3-70b-versatile", max_tokens: 150, temperature: 0, messages: [{ role: "user", content: prompt }] }
+    );
+    const text = (res.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
+    const match = text.match(/\{[\s\S]*\}/);
+    return match ? JSON.parse(match[0]) : { resultat: "EN ATTENTE", score_final: null, explication: "Parse error" };
+  } catch (e) {
+    return { resultat: "EN ATTENTE", score_final: null, explication: e.message.slice(0, 40) };
+  }
+}
+
+// ── EXTRAIRE LES PICKS EN ATTENTE depuis App.js ───────────
+
+function extractPicks(appJsContent) {
+  const picksMatch = appJsContent.match(/var picks = \[([\s\S]*?)\];/);
+  if (!picksMatch) return [];
+
+  const picks = [];
+  const lineRegex = /\["([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]+)","([^"]*)"\]/g;
+  let m;
+  while ((m = lineRegex.exec(picksMatch[1])) !== null) {
+    picks.push({ date: m[1], match: m[2], marche: m[3], cote: m[4], score: m[5], statut: m[6], sport: m[7], raw: m[0] });
+  }
+  return picks.filter(p => p.statut === "EN ATTENTE");
+}
+
+// ── CALCULER NOUVELLE BANKROLL ────────────────────────────
+
+function extractBankroll(appJsContent) {
+  // On lit la bankroll depuis picks-data.json si possible, sinon on retourne 494
+  return 494;
+}
+
+// ── METTRE À JOUR App.js ──────────────────────────────────
+
+function updateAppJs(content, pick, resultat, scoreFinal) {
+  const oldLine = `["${pick.date}","${pick.match}","${pick.marche}","${pick.cote}","${pick.score}","EN ATTENTE","${pick.sport}"]`;
+  const score = scoreFinal || "---";
+  const newLine = `["${pick.date}","${pick.match}","${pick.marche}","${pick.cote}","${score}","${resultat}","${pick.sport}"]`;
+  
+  if (!content.includes(oldLine)) {
+    console.log(`⚠️  Ligne introuvable pour ${pick.match} — tentative fuzzy match`);
+    // Tentative avec EN ATTENTE générique
+    const fuzzy = content.replace(
+      new RegExp(`\\["${pick.date.replace(/\//g, "\\/")}","${pick.match.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[^\\]]*"EN ATTENTE"[^\\]]*\\]`),
+      newLine
+    );
+    return fuzzy;
+  }
+  return content.replace(oldLine, newLine);
+}
+
+// ── METTRE À JOUR LES STATS dans App.js ──────────────────
+
+function updateStats(content) {
+  // Recalculer wins/total depuis les picks
+  const picksMatch = content.match(/var picks = \[([\s\S]*?)\];/);
+  if (!picksMatch) return content;
+
+  let wins = 0, total = 0;
+  const lineRegex = /\["[^"]+","[^"]+","[^"]+","[^"]+","[^"]+","([^"]+)","[^"]*"\]/g;
+  let m;
+  while ((m = lineRegex.exec(picksMatch[1])) !== null) {
+    const statut = m[1];
+    if (statut === "GAGNE") { wins++; total++; }
+    else if (statut === "PERDU") { total++; }
+  }
+
+  const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+  // Remplacer les stats dans le header
+  content = content.replace(
+    /\{label:"WIN RATE",value:winrate\+"%",sub:"sur "\+total\+" paris"\}/,
+    `{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"}`
+  );
+
+  console.log(`📊 Stats: ${wins}W / ${total-wins}L — ${winrate}%`);
+  return content;
+}
+
+// ── MAIN ──────────────────────────────────────────────────
+
+async function main() {
+  console.log("\n═══════════════════════════════════════════");
+  console.log("  HERMÈS V4.2 — CHECK RESULTS");
+  console.log(`  ${new Date().toLocaleString("fr-FR")}`);
+  console.log("═══════════════════════════════════════════\n");
+
+  // 1. Lire App.js
+  console.log("📖 Lecture App.js...");
+  const { content: appJs, sha: appJsSha } = await readFile("src/App.js");
+
+  // 2. Extraire picks EN ATTENTE
+  const enAttente = extractPicks(appJs);
+  console.log(`🔍 ${enAttente.length} pick(s) EN ATTENTE\n`);
+
+  if (enAttente.length === 0) {
+    console.log("✅ Aucun pick à vérifier ce soir.");
+    return;
+  }
+
+  let updatedAppJs = appJs;
+  let changed = false;
+  let bankroll = 494;
+
+  // 3. Vérifier chaque pick
+  for (const pick of enAttente) {
+    console.log(`▶ Vérification: ${pick.match} — ${pick.marche}`);
+    const check = await checkResult(pick);
+    console.log(`  → ${check.resultat} | Score: ${check.score_final || "?"} | ${check.explication}`);
+
+    if (check.resultat !== "EN ATTENTE") {
+      // Mettre à jour la ligne dans App.js
+      updatedAppJs = updateAppJs(updatedAppJs, pick, check.resultat, check.score_final);
+      
+      // Recalculer bankroll
+      const mise = 10; // mise par défaut si non trouvée
+      if (check.resultat === "GAGNÉ" || check.resultat === "GAGNE") {
+        const gain = Math.round((mise * parseFloat(pick.cote) - mise) * 100) / 100;
+        bankroll = Math.round((bankroll + gain) * 100) / 100;
+        console.log(`  💰 GAGNÉ +${gain}€ → Bankroll: ${bankroll}€`);
+      } else if (check.resultat === "PERDU") {
+        bankroll = Math.round((bankroll - mise) * 100) / 100;
+        console.log(`  📉 PERDU -${mise}€ → Bankroll: ${bankroll}€`);
+      }
+      changed = true;
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+
+  if (!changed) {
+    console.log("⏳ Aucun résultat disponible ce soir — on réessaie demain.");
+    return;
+  }
+
+  // 4. Commit App.js mis à jour sur GitHub
+  console.log("\n💾 Mise à jour App.js sur GitHub...");
+  const date = new Date().toLocaleDateString("fr-FR");
+  await writeFile("src/App.js", updatedAppJs, appJsSha, `🤖 Hermès: résultats ${date} — Bankroll: ${bankroll}€`);
+
+  console.log("\n═══════════════════════════════════════════");
+  console.log(`  BANKROLL : ${bankroll}€`);
+  console.log(`  Commit pushé → deploy automatique lancé`);
+  console.log("═══════════════════════════════════════════\n");
+}
+
+main().catch(err => {
+  console.error("💥 ERREUR CRITIQUE:", err.message);
+  process.exit(1);
+});
+

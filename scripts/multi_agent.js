@@ -1,0 +1,328 @@
+﻿const https = require("https");
+const { execSync } = require("child_process");
+const fs = require("fs");
+
+// ============================================================
+// CLÉS API
+// ============================================================
+const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
+const GROQ_KEY = process.env.GROQ_API_KEY;
+const GEMINI_KEY = process.env.GEMINI_API_KEY;
+const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
+const OR_KEY = process.env.OPENROUTER_API_KEY;
+
+const TODAY = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
+
+// ============================================================
+// HTTP HELPER
+// ============================================================
+function post(hostname, path, headers, body, timeout=30000) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = https.request(
+      { hostname, path, method:"POST", headers:{...headers,"Content-Length":Buffer.byteLength(data)} },
+      res => { let d=""; res.on("data",c=>d+=c); res.on("end",()=>{ try{resolve(JSON.parse(d));}catch{resolve({raw:d});} }); }
+    );
+    req.setTimeout(timeout, () => { req.destroy(); reject(new Error("TIMEOUT")); });
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+function safeJSON(text) {
+  try {
+    const clean = String(text||"").replace(/```json|```/g,"").trim();
+    const m = clean.match(/\{[\s\S]*\}/);
+    return m ? JSON.parse(m[0]) : null;
+  } catch { return null; }
+}
+
+// ============================================================
+// ÉTAPE 1 — GROQ SCANNE LES MATCHS
+// ============================================================
+async function scanMatchesGroq() {
+  console.log("🟢 Groq — Scan des matchs...");
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const r = await post("api.groq.com", "/openai/v1/chat/completions",
+      {"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
+      { model:"llama-3.3-70b-versatile", max_tokens:2000, temperature:0.1,
+        messages:[{role:"user",content:`Date: ${today}. Liste les 5 meilleurs matchs de football (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, Champions League, MLS, Brasileirao Serie A, Copa Libertadores), Hockey NHL, Basketball NBA, ou F1 qui ont lieu AUJOURD'HUI ou CETTE NUIT. Sports bannis: Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie). Cote minimum 1.40. Réponds UNIQUEMENT en JSON: {"matches":[{"sport":"Football","competition":"Premier League","home":"Arsenal","away":"Chelsea","heure":"21h00","home_form":"VVVNV","away_form":"NVVDL","home_elo":1850,"away_elo":1780,"enjeu":"Top 4","cote_domicile":1.65,"cote_exterieur":4.50,"favoris":"home","absents_exterieur":["Titulaire clé"]}]}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(text);
+    return parsed?.matches || [];
+  } catch(e) {
+    console.error("Groq error:", e.message);
+    return [];
+  }
+}
+
+// ============================================================
+// ÉTAPE 2 — GEMINI VÉRIFIE LES H2H
+// ============================================================
+async function checkH2HGemini(matches) {
+  console.log("🔵 Gemini — Vérification H2H...");
+  if (!matches.length) return matches;
+  try {
+    const r = await post("generativelanguage.googleapis.com",
+      `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {"Content-Type":"application/json"},
+      { contents:[{parts:[{text:`Pour ces matchs, donne les H2H et statistiques défensives. Réponds en JSON: {"matches":[{"home":"nom","away":"nom","h2h_home_wins":3,"h2h_draws":1,"h2h_away_wins":1,"home_clean_sheets_last5":2,"away_goals_conceded_avg":1.4}]}. Matchs: ${JSON.stringify(matches.map(m=>({home:m.home,away:m.away,competition:m.competition})))}`}]}],
+        generationConfig:{maxOutputTokens:1000,temperature:0.1}
+      }
+    );
+    const text = r.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const parsed = safeJSON(text);
+    if (parsed?.matches) {
+      return matches.map(m => {
+        const h2h = parsed.matches.find(h => h.home===m.home || h.away===m.away);
+        return h2h ? {...m, ...h2h} : m;
+      });
+    }
+    return matches;
+  } catch(e) {
+    console.error("Gemini error:", e.message);
+    return matches;
+  }
+}
+
+// ============================================================
+// ÉTAPE 3 — DEEPSEEK ANALYSE LA FORME RÉCENTE
+// ============================================================
+async function analyzeFormDeepSeek(matches) {
+  console.log("🟠 DeepSeek — Analyse forme récente...");
+  if (!matches.length) return matches;
+  try {
+    const r = await post("api.deepseek.com", "/v1/chat/completions",
+      {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
+      { model:"deepseek-chat", max_tokens:1000, temperature:0.1,
+        messages:[{role:"user",content:`Analyse la forme récente et les blessés pour ces matchs. Réponds en JSON: {"matches":[{"home":"nom","away":"nom","home_form_score":8,"away_form_score":5,"key_absences":["joueur blessé"],"recommendation":"GO ou NO"}]}. Matchs: ${JSON.stringify(matches.map(m=>({home:m.home,away:m.away,sport:m.sport,competition:m.competition})))}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(text);
+    if (parsed?.matches) {
+      return matches.map(m => {
+        const form = parsed.matches.find(f => f.home===m.home || f.away===m.away);
+        return form ? {...m, ...form} : m;
+      });
+    }
+    return matches;
+  } catch(e) {
+    console.error("DeepSeek error:", e.message);
+    return matches;
+  }
+}
+
+// ============================================================
+// ÉTAPE 4 — MISTRAL VÉRIFIE MÉTÉO ET MOTIVATION
+// ============================================================
+async function checkContextMistral(matches) {
+  console.log("🟣 Mistral — Météo et motivation...");
+  if (!matches.length) return matches;
+  try {
+    const r = await post("openrouter.ai", "/api/v1/chat/completions",
+      {"Authorization":`Bearer ${OR_KEY}`,"Content-Type":"application/json","HTTP-Referer":"https://touslesmatchs.com","X-Title":"Concile V4.3"},
+      { model:"mistralai/mistral-7b-instruct", max_tokens:800, temperature:0.1,
+        messages:[{role:"user",content:`Vérifie météo et motivation pour ces matchs. Réponds en JSON: {"matches":[{"home":"nom","away":"nom","weather_ok":true,"enjeu_score":8,"recommendation":"GO ou NO","raison":"courte raison"}]}. Matchs: ${JSON.stringify(matches.map(m=>({home:m.home,away:m.away,competition:m.competition,enjeu:m.enjeu})))}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(text);
+    if (parsed?.matches) {
+      return matches.map(m => {
+        const ctx = parsed.matches.find(c => c.home===m.home || c.away===m.away);
+        return ctx ? {...m, weather_ok:ctx.weather_ok, enjeu_score:ctx.enjeu_score, mistral_rec:ctx.recommendation} : m;
+      });
+    }
+    return matches;
+  } catch(e) {
+    console.error("Mistral error:", e.message);
+    return matches;
+  }
+}
+
+// ============================================================
+// ÉTAPE 5 — CLAUDE CHEF DU CONCILE — DÉCISION FINALE
+// ============================================================
+async function claudeChefConcile(matches) {
+  console.log("👑 Claude — Décision finale du Concile...");
+  if (!matches.length) return null;
+
+  const prompt = `Tu es Claude, Chef du Concile V4.3. Voici les matchs analysés par Groq, Gemini, DeepSeek et Mistral:
+
+${JSON.stringify(matches, null, 2)}
+
+RÈGLES V4.3:
+- Marché: Vainqueur du match UNIQUEMENT
+- Cote: 1.40 à 2.20 (F1 podium jusqu'à 3.00)
+- Prob minimum: 63%
+- Note minimum: 7/10 (publie quand même avec mention)
+- 8 STOPS: ELO inférieur >15%, cote hors fenêtre, pas de stats, sans enjeu, météo extrême, 2+ absents majeurs, forme ≤1V/5, cote en baisse rapide
+- Sports bannis: Tennis
+- Équipes bannies: Ottawa Senators, Montréal Canadiens, Toronto Raptors, Stuttgart, Man United
+- UN PICK OBLIGATOIRE PAR JOUR — jamais "rien à jouer"
+
+Réponds UNIQUEMENT en JSON:
+{
+  "pick": {
+    "match": "Arsenal vs Chelsea",
+    "sport": "Football",
+    "competition": "Premier League",
+    "heure": "21h00",
+    "favori": "Arsenal",
+    "marche": "Arsenal Vainqueur",
+    "cote": 1.65,
+    "note": 8.5,
+    "prob": 0.68,
+    "mise_type": "PICK STANDARD",
+    "mise_euros": 10,
+    "raison": "Arsenal en grande forme, Chelsea 3 absents majeurs",
+    "stops_ok": true,
+    "votes": {"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"GO"}
+  }
+}`;
+
+  try {
+    const r = await post("api.anthropic.com", "/v1/messages",
+      {"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"},
+      { model:"claude-sonnet-4-20250514", max_tokens:1000, temperature:0.1,
+        messages:[{role:"user",content:prompt}]
+      }
+    );
+    const text = r.content?.[0]?.text || "";
+    return safeJSON(text);
+  } catch(e) {
+    console.error("Claude error:", e.message);
+    // FALLBACK: DeepSeek prend le relais si Claude échoue
+    console.log("⚠️ Claude a échoué — DeepSeek prend le relais...");
+    return await deepseekFallback(matches);
+  }
+}
+
+// ============================================================
+// FALLBACK — DEEPSEEK SI CLAUDE ÉCHOUE
+// ============================================================
+async function deepseekFallback(matches) {
+  console.log("🟠 DeepSeek FALLBACK — Chef du Concile...");
+  try {
+    const r = await post("api.deepseek.com", "/v1/chat/completions",
+      {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
+      { model:"deepseek-chat", max_tokens:1000, temperature:0.1,
+        messages:[{role:"user",content:`Tu es le Chef du Concile V4.3 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"mise_type":"PICK STANDARD","mise_euros":10,"raison":"raison courte","stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    return safeJSON(text);
+  } catch(e) {
+    console.error("DeepSeek fallback error:", e.message);
+    return null;
+  }
+}
+
+// ============================================================
+// ÉTAPE 6 — MISE À JOUR App.js
+// ============================================================
+function updateAppJs(pick) {
+  const appPath = "./src/App.js";
+  let content = fs.readFileSync(appPath, "utf8");
+
+  const sportEmojis = {"Football":"⚽","Hockey":"🏒","Basketball":"🏀","Baseball":"⚾","F1":"🏎️"};
+  const emoji = sportEmojis[pick.sport] || "🎯";
+
+  const newPick = `  ["${TODAY}","${emoji} ${pick.match}","${pick.marche}","${pick.cote}","---","EN ATTENTE","${pick.sport}"],\n`;
+
+  content = content.replace(/var picks = \[\n/, `var picks = [\n${newPick}`);
+  fs.writeFileSync(appPath, content);
+  console.log(`✅ Pick ajouté: ${pick.match} @ ${pick.cote}`);
+}
+
+function updateAppJsNoPick(reason) {
+  const appPath = "./src/App.js";
+  let content = fs.readFileSync(appPath, "utf8");
+
+  const recentNopick = content.match(/\["(\d{2}\/\d{2}) au (\d{2}\/\d{2})","PAS DE PARI/);
+  if (recentNopick) {
+    content = content.replace(
+      /\["\d{2}\/\d{2} au (\d{2}\/\d{2})","PAS DE PARI/,
+      `["${recentNopick[1]} au ${TODAY}","PAS DE PARI`
+    );
+  } else {
+    const noPick = `  ["${TODAY}","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK",""],\n`;
+    content = content.replace(/var picks = \[\n/, `var picks = [\n${noPick}`);
+  }
+  fs.writeFileSync(appPath, content);
+  console.log("📝 NOPICK mis à jour");
+}
+
+// ============================================================
+// ÉTAPE 7 — GIT COMMIT
+// ============================================================
+function gitCommit(msg) {
+  try {
+    execSync("git add src/App.js", {stdio:"inherit"});
+    execSync(`git commit -m "🤖 Hermès ${TODAY}: ${msg}"`, {stdio:"inherit"});
+    execSync("git push origin main", {stdio:"inherit"});
+    console.log("✅ Git push réussi");
+  } catch(e) {
+    console.error("Git error:", e.message);
+  }
+}
+
+// ============================================================
+// MAIN
+// ============================================================
+async function main() {
+  console.log(`\n🏛️ HERMÈS V4 — CONCILE COMPLET — ${TODAY}\n`);
+  console.log("👑 Claude (Chef) | 🟢 Groq | 🔵 Gemini | 🟠 DeepSeek | 🟣 Mistral\n");
+
+  // 1. Scan matchs (Groq)
+  let matches = await scanMatchesGroq();
+  console.log(`✅ ${matches.length} matchs trouvés`);
+
+  if (!matches.length) {
+    console.log("⚠️ Aucun match trouvé");
+    updateAppJsNoPick("Aucun match disponible");
+    gitCommit("NO PICK - Aucun match");
+    return;
+  }
+
+  // 2. H2H (Gemini)
+  matches = await checkH2HGemini(matches);
+
+  // 3. Forme (DeepSeek)
+  matches = await analyzeFormDeepSeek(matches);
+
+  // 4. Contexte (Mistral)
+  matches = await checkContextMistral(matches);
+
+  // 5. Décision finale (Claude — avec fallback DeepSeek)
+  const result = await claudeChefConcile(matches);
+
+  if (!result?.pick) {
+    console.log("⚠️ Pas de pick validé");
+    updateAppJsNoPick("Aucun match validé 7/10");
+    gitCommit("NO PICK");
+    return;
+  }
+
+  const pick = result.pick;
+  console.log(`\n🎯 PICK: ${pick.match} @ ${pick.cote} — Note: ${pick.note}/10`);
+  console.log(`📊 ${pick.marche} | Mise: ${pick.mise_euros}€ (${pick.mise_type})`);
+  console.log(`📝 ${pick.raison}`);
+  console.log(`🗳️ Votes: ${JSON.stringify(pick.votes)}`);
+
+  updateAppJs(pick);
+  gitCommit(`PICK: ${pick.match} @ ${pick.cote}`);
+
+  console.log("\n✅ HERMÈS a terminé — site mis à jour !");
+}
+
+main().catch(e => {
+  console.error("💥 Erreur fatale:", e);
+  process.exit(1);
+});
+
