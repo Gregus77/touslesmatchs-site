@@ -1,4 +1,5 @@
 import React from "react";
+import "./App.css";
 import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
@@ -152,8 +153,8 @@ export default function App() {
 
   var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"16px 30px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"10px"}},
     React.createElement("div", {style:{cursor:"pointer"},onClick:function(){setPage("home");}},
-      React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:"#d4af37",letterSpacing:"3px"}}, "TOUSLESMATCHS"),
-      React.createElement("div", {style:{fontSize:"9px",color:"#555",letterSpacing:"3px"}}, "ANALYSE - INTELLIGENCE - RESULTATS")
+      React.createElement("div", {style:{fontSize:"16px",fontWeight:"700",color:"#d4af37",letterSpacing:"0.12em",fontFamily:"'Bodoni Moda',serif",textTransform:"uppercase"}}, "TousLesMatchs"),
+      React.createElement("div", {style:{fontSize:"8px",color:"#4a4438",letterSpacing:"0.22em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}, "Analyse · Intelligence · Résultats")
     ),
     React.createElement("nav", {style:{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}},
       ["home","preuves","bookmakers"].map(function(p){
@@ -232,12 +233,14 @@ export default function App() {
     );
   }
 
-  return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
+  return React.createElement("div", {style:{background:"linear-gradient(180deg,#0a0906 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0"}},
     header,
-    React.createElement("section", {style:{padding:"50px 30px 30px",textAlign:"center"}},
-      React.createElement("div", {style:{fontSize:"10px",letterSpacing:"6px",color:"#d4af37",marginBottom:"14px"}}, "PROPULSE PAR INTELLIGENCE ARTIFICIELLE"),
-      React.createElement("h1", {style:{fontSize:"38px",fontWeight:"bold",color:"#fff",margin:"0 0 10px"}}, "Le meilleur pick chaque jour."),
-      React.createElement("p", {style:{color:"#555",fontSize:"13px",maxWidth:"440px",margin:"0 auto 30px"}}, "Notre IA analyse des centaines de matchs. Seulement les paris qui atteignent 8/10 minimum sont publies."),
+    React.createElement("section", {style:{padding:"60px 30px 30px",textAlign:"center"}},
+      React.createElement("div", {style:{fontSize:"10px",letterSpacing:"6px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"500"}}, "PROPULSÉ PAR INTELLIGENCE ARTIFICIELLE"),
+      React.createElement("h1", {style:{fontSize:"clamp(32px,5vw,54px)",fontWeight:"700",color:"#fff",margin:"0 0 12px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.1",letterSpacing:"-0.02em"}},
+        "Le meilleur ", React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, "pick"), " chaque jour."
+      ),
+      React.createElement("p", {style:{color:"#6b6356",fontSize:"14px",maxWidth:"420px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"300"}}, "Notre IA analyse des centaines de matchs. Seulement les paris qui atteignent 8/10 minimum sont publiés."),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
         [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+394%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / "+(total-wins)+"L",sub:"serie en cours"},{label:"SERIE",value:wins+"W",sub:"sur "+total+" picks"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{flex:1,padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none"}},
@@ -294,11 +297,54 @@ export default function App() {
             : (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
 
-        /* Marché + Cote + Score IA */
-        isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap",marginBottom:"12px"}},
-          React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"4px 12px",color:"#d4af37",fontSize:"12px"}}, pickDuJour[2]),
-          React.createElement("span", {style:{color:"#fff",fontWeight:"bold",fontSize:"16px"}}, "Cote: "+pickDuJour[3]),
-          pickAiScore > 0 && React.createElement("span", {style:{background:"rgba(255,255,255,0.05)",borderRadius:"4px",padding:"3px 8px",color:"#888",fontSize:"11px"}}, "IA: "+pickAiScore+"/10")
+        /* Marché + Cote */
+        isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
+          React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"5px 14px",color:"#d4af37",fontSize:"12px",fontWeight:"600",letterSpacing:"0.04em"}}, pickDuJour[2]),
+          React.createElement("span", {style:{color:"#fff",fontWeight:"700",fontSize:"18px",fontFamily:"'Bodoni Moda',serif"}}, "Cote: "+pickDuJour[3])
+        ),
+
+        /* Panel Concile V4.3 — votes des 5 IAs */
+        isNoPick ? null : React.createElement("div", {style:{
+          background:"rgba(255,255,255,0.03)",
+          border:"1px solid rgba(255,255,255,0.08)",
+          borderRadius:"8px", padding:"12px 16px", marginBottom:"14px"
+        }},
+          React.createElement("div", {style:{fontSize:"9px",letterSpacing:"3px",color:"#555",marginBottom:"10px",fontWeight:"600"}}, "CONCILE V4.3 — ANALYSE PAR 5 IAs"),
+          React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap",alignItems:"center",marginBottom:"10px"}},
+            [
+              {nom:"Groq",   color:"#22c55e", role:"Scanner"},
+              {nom:"Gemini", color:"#3b82f6", role:"H2H"},
+              {nom:"DeepSeek",color:"#f97316",role:"Forme"},
+              {nom:"Mistral",color:"#a855f7", role:"Contexte"},
+              {nom:"Claude", color:"#d4af37", role:"Chef ★"},
+            ].map(function(ia, i){
+              return React.createElement("div", {key:i, style:{
+                display:"flex", alignItems:"center", gap:"5px",
+                background:"rgba(255,255,255,0.04)",
+                border:"1px solid rgba(255,255,255,0.08)",
+                borderRadius:"5px", padding:"4px 9px"
+              }},
+                React.createElement("div", {style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.color,flexShrink:0}}),
+                React.createElement("span", {style:{fontSize:"11px",color:"#ccc",fontWeight:"500"}}), ia.nom,
+                React.createElement("span", {style:{fontSize:"9px",color:"#555",marginLeft:"2px"}}), ia.role,
+                React.createElement("span", {style:{fontSize:"11px",color:"#22c55e",marginLeft:"4px",fontWeight:"700"}}), "GO"
+              );
+            })
+          ),
+          /* Barre de confiance */
+          pickAiScore > 0 && React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"10px"}},
+            React.createElement("span", {style:{fontSize:"9px",color:"#555",letterSpacing:"1px",whiteSpace:"nowrap"}}), "CONFIANCE IA",
+            React.createElement("div", {style:{flex:1,height:"4px",background:"rgba(255,255,255,0.05)",borderRadius:"2px",overflow:"hidden",maxWidth:"160px"}},
+              React.createElement("div", {style:{
+                height:"100%", borderRadius:"2px",
+                width: (pickAiScore / 10 * 100)+"%",
+                background: isPremium
+                  ? "linear-gradient(90deg,#9b7a10,#d4af37)"
+                  : "linear-gradient(90deg,#92400e,#f59e0b)"
+              }})
+            ),
+            React.createElement("span", {style:{fontSize:"12px",fontWeight:"700",color:isPremium?"#d4af37":"#f59e0b"}}), pickAiScore+"/10"
+          )
         ),
 
         /* Avertissement 7/10 */
