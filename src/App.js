@@ -257,14 +257,14 @@ export default function App() {
           );
         })
       ),
-      React.createElement("div", {style:{fontSize:"11px",letterSpacing:"5px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, "5 Intelligences Artificielles · Concile V4.3"),
+      React.createElement("div", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, "5 Intelligences Artificielles · Concile V4.3"),
       React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
         "Le meilleur ", React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, "pick"), " chaque jour."
       ),
-      React.createElement("p", {style:{color:"#6b6356",fontSize:"14px",maxWidth:"500px",margin:"0 auto 10px",lineHeight:"1.75",fontWeight:"300"}},
+      React.createElement("p", {style:{color:"#6b6356",fontSize:"17px",maxWidth:"540px",margin:"0 auto 12px",lineHeight:"1.8",fontWeight:"300"}},
         "Groq, Gemini, DeepSeek, Mistral et Claude analysent chaque matin des centaines de matchs en concert."
       ),
-      React.createElement("p", {style:{color:"#4a4438",fontSize:"12px",maxWidth:"440px",margin:"0 auto 36px",lineHeight:"1.6",fontWeight:"400"}},
+      React.createElement("p", {style:{color:"#4a4438",fontSize:"14px",maxWidth:"480px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"400"}},
         "Seuil minimum publié : ", React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". En dessous, fallback à ", React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), " pour garantir un pick quotidien."
       ),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
@@ -278,13 +278,13 @@ export default function App() {
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"11px",letterSpacing:"4px",textAlign:"center",marginBottom:"20px"}}, "COMMENT CA MARCHE"),
-      React.createElement("div", {style:{display:"flex",gap:"12px",flexWrap:"wrap"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "COMMENT CA MARCHE"),
+      React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},
         [{num:"01",title:"5 IAs scannent tout",desc:"Groq, Gemini, DeepSeek, Mistral et Claude analysent ensemble des centaines de matchs sur 50+ ligues chaque matin."},{num:"02",title:"Seuil 8/10 — fallback 7/10",desc:"Les picks >= 8/10 sont PREMIUM. Si aucun match ne l atteint, le Concile descend a 7/10 pour garantir un pick quotidien, indique clairement."},{num:"03",title:"Tu mises, tu gagnes",desc:"Recois le pick, mise chez ton bookmaker partenaire, encaisse tes gains. PREMIUM = mise pleine. STANDARD 7/10 = demi-mise recommandee."}].map(function(s,i){
-          return React.createElement("div",{key:i,style:{flex:1,minWidth:"180px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"10px",padding:"18px 16px"}},
-            React.createElement("div",{style:{fontSize:"26px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"8px",fontFamily:"monospace"}},s.num),
-            React.createElement("div",{style:{fontSize:"13px",fontWeight:"bold",color:"#fff",marginBottom:"6px"}},s.title),
-            React.createElement("div",{style:{fontSize:"11px",color:"#555",lineHeight:"1.6"}},s.desc)
+          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"12px",padding:"22px 20px"}},
+            React.createElement("div",{style:{fontSize:"28px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.num),
+            React.createElement("div",{style:{fontSize:"16px",fontWeight:"600",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif"}},s.title),
+            React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.75"}},s.desc)
           );
         })
       )
@@ -335,7 +335,7 @@ export default function App() {
           border:"1px solid rgba(255,255,255,0.08)",
           borderRadius:"8px", padding:"12px 16px", marginBottom:"14px"
         }},
-          React.createElement("div", {style:{fontSize:"9px",letterSpacing:"3px",color:"#555",marginBottom:"10px",fontWeight:"600"}}, "CONCILE V4.3 — ANALYSE PAR 5 IAs"),
+          React.createElement("div", {style:{fontSize:"11px",letterSpacing:"3px",color:"#555",marginBottom:"12px",fontWeight:"600"}}, "CONCILE V4.3 — ANALYSE PAR 5 IAs"),
           React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap",alignItems:"center",marginBottom:"10px"}},
             [
               {nom:"Groq",   color:"#22c55e", role:"Scanner"},
@@ -351,9 +351,9 @@ export default function App() {
                 borderRadius:"5px", padding:"4px 9px"
               }},
                 React.createElement("div", {style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.color,flexShrink:0}}),
-                React.createElement("span", {style:{fontSize:"11px",color:"#ccc",fontWeight:"500"}}), ia.nom,
-                React.createElement("span", {style:{fontSize:"9px",color:"#555",marginLeft:"2px"}}), ia.role,
-                React.createElement("span", {style:{fontSize:"11px",color:"#22c55e",marginLeft:"4px",fontWeight:"700"}}), "GO"
+                React.createElement("span", {style:{fontSize:"13px",color:"#ccc",fontWeight:"600"}}), ia.nom,
+                React.createElement("span", {style:{fontSize:"11px",color:"#555",marginLeft:"3px"}}), ia.role,
+                React.createElement("span", {style:{fontSize:"13px",color:"#22c55e",marginLeft:"5px",fontWeight:"700"}}), "GO"
               );
             })
           ),
@@ -454,8 +454,8 @@ export default function App() {
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:"12px",padding:"28px",textAlign:"center"}},
-        React.createElement("div",{style:{fontSize:"10px",letterSpacing:"4px",color:"#d4af37",marginBottom:"10px"}},"PRET A GAGNER ?"),
-        React.createElement("div",{style:{fontSize:"20px",fontWeight:"bold",color:"#fff",marginBottom:"10px"}},"Rejoignez les parieurs qui nous font confiance"),
+        React.createElement("div",{style:{fontSize:"12px",letterSpacing:"4px",color:"#d4af37",marginBottom:"12px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}},"PRET A GAGNER ?"),
+        React.createElement("div",{style:{fontSize:"28px",fontWeight:"700",color:"#fff",marginBottom:"14px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.2"}},"Rejoignez les parieurs qui nous font confiance"),
         React.createElement("p",{style:{color:"#555",fontSize:"12px",marginBottom:"20px",maxWidth:"400px",marginLeft:"auto",marginRight:"auto"}},"Ouvre ton compte Winamax maintenant et recois jusqu a 200 EUR de bonus de bienvenue."),
         React.createElement("a",{href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"8px",padding:"13px 32px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px",letterSpacing:"1px"}},"Ouvrir un compte Winamax - GRATUIT")
       )
