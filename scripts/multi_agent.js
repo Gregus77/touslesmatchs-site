@@ -5,13 +5,33 @@ const fs = require("fs");
 // ============================================================
 // CLÉS API
 // ============================================================
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
-const GROQ_KEY = process.env.GROQ_API_KEY;
-const GEMINI_KEY = process.env.GEMINI_API_KEY;
-const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
-const OR_KEY = process.env.OPENROUTER_API_KEY;
+const ANTHROPIC_KEY  = process.env.ANTHROPIC_API_KEY;
+const GROQ_KEY       = process.env.GROQ_API_KEY;
+const GEMINI_KEY     = process.env.GEMINI_API_KEY;
+const DEEPSEEK_KEY   = process.env.DEEPSEEK_API_KEY;
+const OR_KEY         = process.env.OPENROUTER_API_KEY;
+const TG_TOKEN       = process.env.TELEGRAM_BOT_TOKEN;
+const TG_CHAT        = process.env.TELEGRAM_CHAT_ID;
 
 const TODAY = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
+
+// ============================================================
+// TELEGRAM NOTIFICATION
+// ============================================================
+function sendTelegram(text) {
+  if (!TG_TOKEN || !TG_CHAT) return Promise.resolve();
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: "HTML" });
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TG_TOKEN}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => { res.on("data", ()=>{}); res.on("end", resolve); });
+    req.on("error", () => resolve());
+    req.write(body); req.end();
+  });
+}
 
 // ============================================================
 // HTTP HELPER
@@ -318,7 +338,26 @@ async function main() {
   updateAppJs(pick);
   gitCommit(`PICK: ${pick.match} @ ${pick.cote}`);
 
-  console.log("\n✅ HERMÈS a terminé — site mis à jour !");
+  // 📱 Notification Telegram
+  const sportEmoji = {"Football":"⚽","Hockey":"🏒","Basketball":"🏀","Baseball":"⚾","F1":"🏎️"}[pick.sport] || "🎯";
+  const threshold = (pick.note >= 8) ? "🟢 SEUIL 8/10" : "🟡 SEUIL 7/10";
+  await sendTelegram(
+`${sportEmoji} <b>PICK DU JOUR — ${TODAY}</b>
+
+🏟 <b>${pick.match}</b>
+🎯 ${pick.marche}
+💰 Cote : <b>${pick.cote}</b>
+📊 Note IA : <b>${pick.note}/10</b> ${threshold}
+💵 Mise conseillée : ${pick.mise_euros}€
+
+📝 ${pick.raison}
+
+🗳 Votes : ${Object.entries(pick.votes||{}).map(([k,v])=>`${k}:${v}`).join(" | ")}
+
+👉 <a href="https://touslesmatchs.com">Parier sur touslesmatchs.com</a>`
+  );
+
+  console.log("\n✅ HERMÈS a terminé — site mis à jour + Telegram envoyé !");
 }
 
 main().catch(e => {

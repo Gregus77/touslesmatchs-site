@@ -10,6 +10,24 @@
 const https = require("https");
 const { execSync } = require("child_process");
 
+const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TG_CHAT  = process.env.TELEGRAM_CHAT_ID;
+
+function sendTelegram(text) {
+  if (!TG_TOKEN || !TG_CHAT) return Promise.resolve();
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: "HTML" });
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TG_TOKEN}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => { res.on("data", ()=>{}); res.on("end", resolve); });
+    req.on("error", () => resolve());
+    req.write(body); req.end();
+  });
+}
+
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GROQ_KEY     = process.env.GROQ_API_KEY;
 const REPO_OWNER   = "Gregus77";
@@ -203,17 +221,35 @@ async function main() {
     if (check.resultat !== "EN ATTENTE") {
       // Mettre à jour la ligne dans App.js
       updatedAppJs = updateAppJs(updatedAppJs, pick, check.resultat, check.score_final);
-      
+
       // Recalculer bankroll
-      const mise = 10; // mise par défaut si non trouvée
+      const mise = 10;
+      let gainPerte = 0;
       if (check.resultat === "GAGNÉ" || check.resultat === "GAGNE") {
-        const gain = Math.round((mise * parseFloat(pick.cote) - mise) * 100) / 100;
-        bankroll = Math.round((bankroll + gain) * 100) / 100;
-        console.log(`  💰 GAGNÉ +${gain}€ → Bankroll: ${bankroll}€`);
+        gainPerte = Math.round((mise * parseFloat(pick.cote) - mise) * 100) / 100;
+        bankroll = Math.round((bankroll + gainPerte) * 100) / 100;
+        console.log(`  💰 GAGNÉ +${gainPerte}€ → Bankroll: ${bankroll}€`);
       } else if (check.resultat === "PERDU") {
+        gainPerte = -mise;
         bankroll = Math.round((bankroll - mise) * 100) / 100;
         console.log(`  📉 PERDU -${mise}€ → Bankroll: ${bankroll}€`);
       }
+
+      // 📱 Notification Telegram résultat
+      const won = check.resultat === "GAGNE" || check.resultat === "GAGNÉ";
+      const emoji = won ? "✅" : "❌";
+      const gainStr = won ? `+${gainPerte}€` : `${gainPerte}€`;
+      await sendTelegram(
+`${emoji} <b>RÉSULTAT — ${pick.date}</b>
+
+🏟 <b>${pick.match}</b>
+🎯 ${pick.marche} @ ${pick.cote}
+📊 Score : <b>${check.score_final || "—"}</b>
+${emoji} <b>${check.resultat}</b> ${gainStr}
+
+💼 Bankroll : <b>${bankroll}€</b>
+📝 ${check.explication || ""}`
+      );
       changed = true;
     }
     await new Promise(r => setTimeout(r, 2000));
