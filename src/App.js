@@ -14,30 +14,31 @@ var NETBET_LINK = "#";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 
 var picks = [
-  ["03/06","Carolina Hurricanes vs Vegas Golden Knights","CAR Vainqueur","1.70","---","EN ATTENTE","Hockey"],
-  ["31/05","🏀 OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball"],
-  ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball"],
-  ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball"],
-  ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot"],
-  ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball"],
-  ["19/05","Boca Juniors vs Cruzeiro","Moins de 2.5 buts","1.40","1-1","GAGNE","Foot"],
-  ["14/05 au 17/05","PAS DE PARI - Aucun match n atteint notre seuil 8/10","---","---","---","NOPICK",""],
-  ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot"],
-  ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot"],
-  ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE","Hockey"],
-  ["10/05","Colorado vs Minnesota","Colorado ML","1.62","5-1","GAGNE","Hockey"],
-  ["09/05","VGK vs Anaheim","VGK ML","1.55","6-2","GAGNE","Hockey"],
-  ["08/05","Carolina vs Philadelphia","Carolina ML","1.52","4-1","GAGNE","Hockey"],
-  ["07/05","Anaheim vs VGK","Anaheim ML","1.78","3-1","GAGNE","Hockey"],
-  ["06/05","Buffalo vs Montreal","Buffalo ML","1.60","1-5","PERDU","Hockey"],
-  ["05/05","VGK vs Anaheim","VGK ML","1.54","3-1","GAGNE","Hockey"],
-  ["04/05","Colorado vs Minnesota","Colorado ML","1.58","9-6","GAGNE","Hockey"],
-  ["03/05","Carolina vs Philadelphia","Carolina ML","1.50","3-0","GAGNE","Hockey"],
-  ["02/05","Utah vs VGK","VGK ML","1.62","5-1","GAGNE","Hockey"],
-  ["01/05","Buffalo vs Boston","Buffalo ML","1.70","4-1","GAGNE","Hockey"],
-  ["29/04","Leverkusen vs Dortmund","Over 2.5","1.62","3-1","GAGNE","Foot"],
-  ["28/04","Bayern vs Stuttgart","Over 2.5","1.55","1-0","PERDU","Foot"]
+  ["03/06","Carolina Hurricanes vs Vegas Golden Knights","CAR Vainqueur","1.70","---","EN ATTENTE","Hockey",8.4,8],
+  ["01/06","Edmonton Oilers vs Florida Panthers","EDM Vainqueur","1.62","---","EN ATTENTE","Hockey",7.4,7],
+  ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
+  ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],
+  ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
+  ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball",8.2,8],
+  ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot",9.1,8],
+  ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball",8.8,8],
+  ["19/05","Boca Juniors vs Cruzeiro","Moins de 2.5 buts","1.40","1-1","GAGNE","Foot",8.3,8],
+  ["14/05 au 17/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
+  ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot",8.7,8],
+  ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot",8.4,8],
+  ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE","Hockey",8.9,8],
+  ["10/05","Colorado vs Minnesota","Colorado ML","1.62","5-1","GAGNE","Hockey",9.0,8],
+  ["09/05","VGK vs Anaheim","VGK ML","1.55","6-2","GAGNE","Hockey",8.5,8],
+  ["08/05","Carolina vs Philadelphia","Carolina ML","1.52","4-1","GAGNE","Hockey",8.8,8],
+  ["07/05","Anaheim vs VGK","Anaheim ML","1.78","3-1","GAGNE","Hockey",7.8,7],
+  ["06/05","Buffalo vs Montreal","Buffalo ML","1.60","1-5","PERDU","Hockey",7.6,7],
+  ["05/05","VGK vs Anaheim","VGK ML","1.54","3-1","GAGNE","Hockey",8.2,8],
+  ["04/05","Colorado vs Minnesota","Colorado ML","1.58","9-6","GAGNE","Hockey",8.6,8],
+  ["03/05","Carolina vs Philadelphia","Carolina ML","1.50","3-0","GAGNE","Hockey",9.2,8],
+  ["02/05","Utah vs VGK","VGK ML","1.62","5-1","GAGNE","Hockey",8.4,8],
+  ["01/05","Buffalo vs Boston","Buffalo ML","1.70","4-1","GAGNE","Hockey",7.9,7],
+  ["29/04","Leverkusen vs Dortmund","Over 2.5","1.62","3-1","GAGNE","Foot",8.3,8],
+  ["28/04","Bayern vs Stuttgart","Over 2.5","1.55","1-0","PERDU","Foot",7.5,7]
 ];
 
 var preuves = [
@@ -236,11 +237,31 @@ export default function App() {
   return React.createElement("div", {style:{background:"linear-gradient(180deg,#0a0906 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0"}},
     header,
     React.createElement("section", {style:{padding:"60px 30px 30px",textAlign:"center"}},
-      React.createElement("div", {style:{fontSize:"10px",letterSpacing:"6px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"500"}}, "PROPULSÉ PAR INTELLIGENCE ARTIFICIELLE"),
-      React.createElement("h1", {style:{fontSize:"clamp(32px,5vw,54px)",fontWeight:"700",color:"#fff",margin:"0 0 12px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.1",letterSpacing:"-0.02em"}},
+      /* Badges 5 IAs */
+      React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"6px",flexWrap:"wrap",marginBottom:"18px"}},
+        [
+          {nom:"Groq",    dot:"#22c55e"},
+          {nom:"Gemini",  dot:"#3b82f6"},
+          {nom:"DeepSeek",dot:"#f97316"},
+          {nom:"Mistral", dot:"#a855f7"},
+          {nom:"Claude",  dot:"#d4af37"},
+        ].map(function(ia,i){
+          return React.createElement("div",{key:i,style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"4px 12px"}},
+            React.createElement("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.dot,flexShrink:0}}),
+            React.createElement("span",{style:{fontSize:"10px",color:"#888",fontWeight:"600",letterSpacing:"0.06em"}}, ia.nom)
+          );
+        })
+      ),
+      React.createElement("div", {style:{fontSize:"11px",letterSpacing:"5px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, "5 Intelligences Artificielles · Concile V4.3"),
+      React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
         "Le meilleur ", React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, "pick"), " chaque jour."
       ),
-      React.createElement("p", {style:{color:"#6b6356",fontSize:"14px",maxWidth:"420px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"300"}}, "Notre IA analyse des centaines de matchs. Seulement les paris qui atteignent 8/10 minimum sont publiés."),
+      React.createElement("p", {style:{color:"#6b6356",fontSize:"14px",maxWidth:"500px",margin:"0 auto 10px",lineHeight:"1.75",fontWeight:"300"}},
+        "Groq, Gemini, DeepSeek, Mistral et Claude analysent chaque matin des centaines de matchs en concert."
+      ),
+      React.createElement("p", {style:{color:"#4a4438",fontSize:"12px",maxWidth:"440px",margin:"0 auto 36px",lineHeight:"1.6",fontWeight:"400"}},
+        "Seuil minimum publié : ", React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". En dessous, fallback à ", React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), " pour garantir un pick quotidien."
+      ),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
         [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+394%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / "+(total-wins)+"L",sub:"serie en cours"},{label:"SERIE",value:wins+"W",sub:"sur "+total+" picks"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{flex:1,padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none"}},
@@ -254,7 +275,7 @@ export default function App() {
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"11px",letterSpacing:"4px",textAlign:"center",marginBottom:"20px"}}, "COMMENT CA MARCHE"),
       React.createElement("div", {style:{display:"flex",gap:"12px",flexWrap:"wrap"}},
-        [{num:"01",title:"L IA scanne tout",desc:"Notre algorithme analyse des centaines de matchs par jour sur plus de 50 ligues mondiales."},{num:"02",title:"Seuil 8/10 minimum",desc:"Seuls les picks avec un score de confiance superieur a 8/10 passent le filtre et sont publies."},{num:"03",title:"Tu mises, tu gagnes",desc:"Recois le pick, mise chez ton bookmaker partenaire, encaisse tes gains. Aussi simple que ca."}].map(function(s,i){
+        [{num:"01",title:"5 IAs scannent tout",desc:"Groq, Gemini, DeepSeek, Mistral et Claude analysent ensemble des centaines de matchs sur 50+ ligues chaque matin."},{num:"02",title:"Seuil 8/10 — fallback 7/10",desc:"Les picks >= 8/10 sont PREMIUM. Si aucun match ne l atteint, le Concile descend a 7/10 pour garantir un pick quotidien, indique clairement."},{num:"03",title:"Tu mises, tu gagnes",desc:"Recois le pick, mise chez ton bookmaker partenaire, encaisse tes gains. PREMIUM = mise pleine. STANDARD 7/10 = demi-mise recommandee."}].map(function(s,i){
           return React.createElement("div",{key:i,style:{flex:1,minWidth:"180px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"10px",padding:"18px 16px"}},
             React.createElement("div",{style:{fontSize:"26px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"8px",fontFamily:"monospace"}},s.num),
             React.createElement("div",{style:{fontSize:"13px",fontWeight:"bold",color:"#fff",marginBottom:"6px"}},s.title),
