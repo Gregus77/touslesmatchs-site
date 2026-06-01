@@ -68,7 +68,35 @@ async function scanMatchesGroq() {
     const r = await post("api.groq.com", "/openai/v1/chat/completions",
       {"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
       { model:"llama-3.3-70b-versatile", max_tokens:2000, temperature:0.1,
-        messages:[{role:"user",content:`Date: ${today}. MISSION OBLIGATOIRE : trouve entre 5 et 10 matchs qui ont lieu AUJOURD'HUI ou CETTE NUIT (jusqu'à minuit heure française). Sports acceptés par ordre de priorité : Hockey NHL/Stanley Cup playoffs, Basketball NBA playoffs, Football (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, Ligue des Champions, MLS, Copa Libertadores, Brasileirao), Baseball MLB, F1, Rugby, NFL. Sports bannis : Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie). Cote du favori entre 1.35 et 2.20. Si tu ne trouves pas de match à cote idéale, inclus quand même les meilleurs matchs disponibles du jour même si la cote est un peu hors fenêtre — l'important est qu'il y ait AU MOINS UN MATCH PAR JOUR. Réponds UNIQUEMENT en JSON: {"matches":[{"sport":"Hockey","competition":"NHL Stanley Cup","home":"Carolina Hurricanes","away":"Vegas Golden Knights","heure":"19h00","home_form":"VVVNV","away_form":"NVVDL","home_elo":1850,"away_elo":1780,"enjeu":"Playoffs","cote_domicile":1.65,"cote_exterieur":2.30,"favoris":"home","absents_exterieur":["Titulaire clé"]}]}`}]
+        messages:[{role:"user",content:`Date: ${today}. MISSION OBLIGATOIRE : trouve entre 5 et 10 matchs qui ont lieu AUJOURD'HUI ou CETTE NUIT (jusqu'au lendemain 06h00 heure française).
+
+RÈGLE ABSOLUE N°1 — DISPONIBILITÉ BOOKMAKERS FRANÇAIS :
+Le match DOIT être disponible sur Winamax, Betclic ou Unibet France. Ne propose JAMAIS un match qui ne sera pas sur ces sites.
+
+COMPÉTITIONS TOUJOURS DISPONIBLES (priorité maximale) :
+- NHL Stanley Cup Playoffs
+- NBA Playoffs / Finals
+- Premier League, LaLiga, Bundesliga, Serie A, Ligue 1
+- Champions League, Europa League
+- MLS (Major League Soccer)
+- Copa Libertadores, Copa America
+- F1, MLB (séries importantes)
+- Internationaux A (France, Angleterre, Espagne, Allemagne, Italie, Belgique, Pays-Bas, Portugal, Brésil, Argentine, USA, Canada)
+
+COMPÉTITIONS GÉNÉRALEMENT DISPONIBLES (utiliser si rien d'autre) :
+- Matchs amicaux entre équipes nationales reconnues (ex: Canada, Croatie, Belgique)
+- Coupe de France, FA Cup, DFB Pokal
+- Liga Portugal, Jupiler Pro League
+
+COMPÉTITIONS À ÉVITER (rarement sur bookmakers français) :
+- Championnats d'Équateur, Bolivie, Paraguay, Pérou isolés
+- Ligues asiatiques obscures
+- Matchs amicaux entre équipes de 2e rang
+
+Sports bannis : Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie, Cambodge).
+Cote du favori entre 1.35 et 2.30. L'important : AU MOINS UN MATCH PAR JOUR sur un bookmaker français.
+
+Réponds UNIQUEMENT en JSON: {"matches":[{"sport":"Hockey","competition":"NHL Stanley Cup","home":"Carolina Hurricanes","away":"Vegas Golden Knights","heure":"19h00","home_form":"VVVNV","away_form":"NVVDL","home_elo":1850,"away_elo":1780,"enjeu":"Playoffs","cote_domicile":1.65,"cote_exterieur":2.30,"favoris":"home","absents_exterieur":["Titulaire clé"],"disponible_bookmakers_fr":true}]}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
@@ -202,6 +230,11 @@ DÉFINITION DES NIVEAUX:
   ❌ 2 titulaires majeurs absents ou plus
   ❌ Forme ≤ 1 victoire sur les 5 derniers matchs
   ❌ Cote en baisse rapide (chute >15% en 24h = signal suspect)
+
+DISPONIBILITÉ BOOKMAKERS FRANÇAIS (RÈGLE ABSOLUE):
+- Le pick DOIT être jouable sur Winamax, Betclic ou Unibet France
+- Priorité : NHL playoffs, NBA playoffs, Top 5 européens, Internationaux A reconnus
+- JAMAIS : championnats obscurs d'Amérique du Sud ou d'Asie, amicaux entre équipes mineures
 
 SPORTS BANNIS: Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie)
 ÉQUIPES BANNIES: Ottawa Senators, Montréal Canadiens, Toronto Raptors, Stuttgart, Manchester United
