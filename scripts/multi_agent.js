@@ -176,17 +176,43 @@ async function claudeChefConcile(matches) {
 
 ${JSON.stringify(matches, null, 2)}
 
-RÈGLES V4.3:
-- Marché: Vainqueur du match UNIQUEMENT
-- Cote: 1.40 à 2.20 (F1 podium jusqu'à 3.00)
-- Prob minimum: 63%
-- Note minimum: 7/10 (publie quand même avec mention)
-- 8 STOPS: ELO inférieur >15%, cote hors fenêtre, pas de stats, sans enjeu, météo extrême, 2+ absents majeurs, forme ≤1V/5, cote en baisse rapide
-- Sports bannis: Tennis
-- Équipes bannies: Ottawa Senators, Montréal Canadiens, Toronto Raptors, Stuttgart, Man United
-- UN PICK OBLIGATOIRE PAR JOUR — jamais "rien à jouer"
+═══════════════════════════════════════
+RÈGLES CONCILE V4.3 — OBLIGATOIRES
+═══════════════════════════════════════
 
-Réponds UNIQUEMENT en JSON:
+MARCHÉ: Vainqueur du match UNIQUEMENT (1N2 ou Moneyline)
+COTE: Entre 1.40 et 2.20 (exception F1 podium jusqu'à 3.00)
+PROBABILITÉ MINIMUM: 63%
+
+HIÉRARCHIE DES SEUILS (PRIORITÉ ABSOLUE):
+  1. CHERCHE D'ABORD un pick ≥ 8.0/10 → c'est le PICK PREMIUM
+  2. SI aucun pick ≥ 8.0/10 n'existe → descends à 7.0/10 → c'est le PICK STANDARD
+  3. JAMAIS en dessous de 7.0/10 — si rien à 7/10, prends le meilleur disponible
+
+DÉFINITION DES NIVEAUX:
+  - PICK PREMIUM (note ≥ 8.0) : tous les critères réunis, confiance maximale
+  - PICK STANDARD (note 7.0–7.9) : critères partiellement remplis, confiance correcte mais inférieure — À SIGNALER CLAIREMENT
+
+8 STOPS ABSOLUS (disqualification immédiate):
+  ❌ ELO inférieur de plus de 150 points
+  ❌ Cote hors fenêtre 1.40–2.20
+  ❌ Moins de 3 matchs de stats disponibles
+  ❌ Match sans enjeu (équipe déjà qualifiée/éliminée)
+  ❌ Météo extrême annoncée (neige, vent >60km/h)
+  ❌ 2 titulaires majeurs absents ou plus
+  ❌ Forme ≤ 1 victoire sur les 5 derniers matchs
+  ❌ Cote en baisse rapide (chute >15% en 24h = signal suspect)
+
+SPORTS BANNIS: Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie)
+ÉQUIPES BANNIES: Ottawa Senators, Montréal Canadiens, Toronto Raptors, Stuttgart, Manchester United
+
+UN PICK OBLIGATOIRE CHAQUE JOUR — jamais "rien à jouer", descendre à 7/10 si nécessaire
+
+═══════════════════════════════════════
+FORMAT DE RÉPONSE JSON OBLIGATOIRE
+═══════════════════════════════════════
+
+Réponds UNIQUEMENT en JSON (sans texte avant/après):
 {
   "pick": {
     "match": "Arsenal vs Chelsea",
@@ -198,13 +224,25 @@ Réponds UNIQUEMENT en JSON:
     "cote": 1.65,
     "note": 8.5,
     "prob": 0.68,
-    "mise_type": "PICK STANDARD",
+    "threshold": 8,
+    "mise_type": "PICK PREMIUM",
     "mise_euros": 10,
-    "raison": "Arsenal en grande forme, Chelsea 3 absents majeurs",
+    "label_visuel": "⭐ PICK PREMIUM",
+    "message_abonnes": "",
+    "raison": "Arsenal 4V/5, Chelsea sans Salah et Palmer, H2H 4-1 en faveur Arsenal",
+    "points_forts": ["Forme dominante 4V/5", "2 absents majeurs Chelsea", "H2H favorable"],
+    "avertissement": "",
     "stops_ok": true,
     "votes": {"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"GO"}
   }
-}`;
+}
+
+RÈGLES POUR LES CHAMPS SPÉCIAUX:
+- threshold: mettre 8 si note ≥ 8.0, mettre 7 si note entre 7.0 et 7.9
+- mise_type: "PICK PREMIUM" si threshold=8, "PICK STANDARD" si threshold=7
+- label_visuel: "⭐ PICK PREMIUM" si threshold=8, "🔔 PICK STANDARD" si threshold=7
+- message_abonnes: "" si threshold=8, "Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés." si threshold=7
+- avertissement: "" si threshold=8, "Confiance réduite — mise conseillée : 5€ max" si threshold=7`;
 
   try {
     const r = await post("api.anthropic.com", "/v1/messages",
@@ -232,7 +270,7 @@ async function deepseekFallback(matches) {
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
       { model:"deepseek-chat", max_tokens:1000, temperature:0.1,
-        messages:[{role:"user",content:`Tu es le Chef du Concile V4.3 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"mise_type":"PICK STANDARD","mise_euros":10,"raison":"raison courte","stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
+        messages:[{role:"user",content:`Tu es le Chef du Concile V4.3 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Essaie d'abord d'atteindre note ≥8.0 (threshold=8, mise_type="PICK PREMIUM", label_visuel="⭐ PICK PREMIUM"). Si impossible, descends à 7.0 (threshold=7, mise_type="PICK STANDARD", label_visuel="🔔 PICK STANDARD", message_abonnes="Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés.", avertissement="Confiance réduite — mise conseillée : 5€ max"). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels non atteints","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"raison courte","points_forts":["point1"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
@@ -250,14 +288,21 @@ function updateAppJs(pick) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
 
-  const sportEmojis = {"Football":"⚽","Hockey":"🏒","Basketball":"🏀","Baseball":"⚾","F1":"🏎️"};
-  const emoji = sportEmojis[pick.sport] || "🎯";
+  const threshold = (pick.note >= 8) ? 8 : 7;
+  const aiScore   = pick.note || 0;
 
-  const newPick = `  ["${TODAY}","${emoji} ${pick.match}","${pick.marche}","${pick.cote}","---","EN ATTENTE","${pick.sport}"],\n`;
+  // Format: [date, match, marche, cote, score, statut, sport, aiScore, threshold]
+  const newPick = `  ["${TODAY}","${pick.match}","${pick.marche}","${pick.cote}","—","EN ATTENTE","${pick.sport}",${aiScore},${threshold}],\n`;
 
-  content = content.replace(/var picks = \[\n/, `var picks = [\n${newPick}`);
+  // Supporte les deux formats de picks array (const ou var)
+  if (content.includes("const picks = [\n")) {
+    content = content.replace("const picks = [\n", `const picks = [\n${newPick}`);
+  } else {
+    content = content.replace("var picks = [\n", `var picks = [\n${newPick}`);
+  }
   fs.writeFileSync(appPath, content);
-  console.log(`✅ Pick ajouté: ${pick.match} @ ${pick.cote}`);
+  const label = threshold === 8 ? "⭐ PREMIUM" : "🔔 STANDARD 7/10";
+  console.log(`✅ Pick ajouté [${label}]: ${pick.match} @ ${pick.cote} — Note: ${aiScore}/10`);
 }
 
 function updateAppJsNoPick(reason) {

@@ -112,7 +112,7 @@ export default function App() {
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
   var winrate = Math.round((wins/total)*100);
-  
+
   // Trouver le prochain pick à jouer (EN ATTENTE) ou le dernier pick
   var prochainPick = picks.find(function(p){ return p[5]==="EN ATTENTE"; });
   var pickDuJour = prochainPick || picks[0];
@@ -120,6 +120,15 @@ export default function App() {
   var isEnCours = pickDuJour[5]==="EN COURS";
   var isEnAttente = pickDuJour[5]==="EN ATTENTE";
   var pickLabel = isEnAttente ? "PROCHAIN MATCH A JOUER" : isNoPick ? "PAS DE MATCH AUJOURD HUI" : "PICK DU JOUR";
+
+  // Threshold : index [8] = 8 (PREMIUM) ou 7 (STANDARD)
+  var pickThreshold = pickDuJour[8] || 8;
+  var pickAiScore   = pickDuJour[7] || 0;
+  var isPremium     = pickThreshold >= 8;
+  var isStandard7   = pickThreshold === 7;
+  var pickBadge     = isPremium ? "⭐ PICK PREMIUM" : "🔔 PICK STANDARD";
+  var pickBadgeColor = isPremium ? "#d4af37" : "#f59e0b";
+  var pickBorderColor = isPremium ? "rgba(212,175,55,0.35)" : "rgba(245,158,11,0.5)";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
@@ -252,16 +261,60 @@ export default function App() {
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 20px",maxWidth:"780px",margin:"0 auto"}},
-      React.createElement("div", {style:{background:isNoPick?"rgba(100,100,100,0.06)":(isEnCours||isEnAttente)?"rgba(255,165,0,0.06)":"rgba(212,175,55,0.06)",border:"1px solid "+(isNoPick?"rgba(100,100,100,0.25)":(isEnCours||isEnAttente)?"rgba(255,165,0,0.35)":"rgba(212,175,55,0.35)"),borderRadius:"12px",padding:"24px"}},
-        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnAttente?"#ffa500":"#d4af37",marginBottom:"8px"}}, pickLabel),
+      React.createElement("div", {style:{
+        background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(212,175,55,0.06)",
+        border: "1px solid " + (isNoPick ? "rgba(100,100,100,0.25)" : pickBorderColor),
+        borderRadius:"12px", padding:"24px", position:"relative", overflow:"hidden"
+      }},
+        /* Bandeau coloré en haut de la carte selon le niveau */
+        !isNoPick && React.createElement("div", {style:{
+          position:"absolute", top:0, left:0, right:0, height:"3px",
+          background: isPremium
+            ? "linear-gradient(90deg,transparent,#d4af37,transparent)"
+            : "linear-gradient(90deg,transparent,#f59e0b,transparent)"
+        }}),
+
+        /* Badge PREMIUM / STANDARD */
+        !isNoPick && React.createElement("div", {style:{
+          display:"inline-flex", alignItems:"center", gap:"6px",
+          background: isPremium ? "rgba(212,175,55,0.12)" : "rgba(245,158,11,0.15)",
+          border: "1px solid " + (isPremium ? "rgba(212,175,55,0.4)" : "rgba(245,158,11,0.5)"),
+          borderRadius:"4px", padding:"3px 10px",
+          fontSize:"10px", fontWeight:"bold", letterSpacing:"2px",
+          color: pickBadgeColor, marginBottom:"12px"
+        }}, pickBadge),
+
+        /* Label */
+        React.createElement("div", {style:{fontSize:"10px",letterSpacing:"4px",color:isNoPick?"#555":isEnAttente?"#ffa500":pickBadgeColor,marginBottom:"8px"}}, pickLabel),
+
+        /* Match */
         React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:isNoPick?"#555":"#fff",marginBottom:"8px",fontStyle:isNoPick?"italic":"normal"}},
-          isNoPick ? "Aucun match ne passe nos criteres aujourd hui. Prochain pick des que le Concile valide un match." : (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
+          isNoPick
+            ? "Aucun match ne passe nos criteres aujourd hui. Prochain pick des que le Concile valide un match."
+            : (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
-        isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"16px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
+
+        /* Marché + Cote + Score IA */
+        isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap",marginBottom:"12px"}},
           React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"4px 12px",color:"#d4af37",fontSize:"12px"}}, pickDuJour[2]),
-          React.createElement("span", {style:{color:"#fff",fontWeight:"bold",fontSize:"16px"}}, "Cote: "+pickDuJour[3])
+          React.createElement("span", {style:{color:"#fff",fontWeight:"bold",fontSize:"16px"}}, "Cote: "+pickDuJour[3]),
+          pickAiScore > 0 && React.createElement("span", {style:{background:"rgba(255,255,255,0.05)",borderRadius:"4px",padding:"3px 8px",color:"#888",fontSize:"11px"}}, "IA: "+pickAiScore+"/10")
         ),
-        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
+
+        /* Avertissement 7/10 */
+        isStandard7 && !isNoPick && React.createElement("div", {style:{
+          background:"rgba(245,158,11,0.08)",
+          border:"1px solid rgba(245,158,11,0.25)",
+          borderRadius:"6px", padding:"10px 14px", marginBottom:"14px"
+        }},
+          React.createElement("div", {style:{fontSize:"11px",color:"#f59e0b",fontWeight:"bold",marginBottom:"3px"}}, "⚠️  SEUIL ABAISSE A 7/10"),
+          React.createElement("div", {style:{fontSize:"11px",color:"#888",lineHeight:"1.6"}},
+            "Aucun match n a atteint notre seuil habituel de 8/10 aujourd hui. Ce pick est publie a seuil reduit pour les abonnes. Mise recommandee : 5 EUR maximum."
+          )
+        ),
+
+        /* CTA */
+        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:isPremium?"linear-gradient(135deg,#d4af37,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"980px",margin:"0 auto"}},
