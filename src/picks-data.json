@@ -1,0 +1,59 @@
+{
+  "bankroll": 509.44,
+  "picks": [
+    {
+      "id": "pick-001",
+      "date": "22/05/2026",
+      "match": "NYK vs CLE Game 2",
+      "sport": "NBA",
+      "marche": "Over 215.5 pts",
+      "cote": 1.87,
+      "mise_euros": 12,
+      "statut": "GAGNÉ",
+      "score": 8.5,
+      "ia_votes": {
+        "groq": "GO",
+        "gemini": "GO",
+        "deepseek": "GO",
+        "mistral": "GO"
+      },
+      "score_final": "120-115",
+      "verifie_le": "21/05/2026",
+      "explication_resultat": "Score dépasse 215.5",
+      "gain_perte": "+10.44€"
+    }
+  ],
+  "stats": {
+    "total": 1,
+    "gagnes": 1,
+    "perdus": 0,
+    "en_attente": 0,
+    "taux": 100,
+    "bankroll": 509.44,
+    "derniere_maj": "2026-05-21T22:50:01.443Z"
+  },
+  "ia_performance": {
+    "groq": {
+      "picks": 1,
+      "corrects": 1,
+      "taux": 100
+    },
+    "gemini": {
+      "picks": 1,
+      "corrects": 1,
+      "taux": 100
+    },
+    "deepseek": {
+      "picks": 1,
+      "corrects": 1,
+      "taux": 100
+    },
+    "mistral": {
+      "picks": 1,
+      "corrects": 1,
+      "taux": 100
+    }
+  },
+  "alerts": [],
+  "derniere_maj": "2026-05-21T22:50:01.443Z"
+}

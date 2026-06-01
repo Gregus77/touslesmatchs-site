@@ -1,0 +1,25 @@
+services:
+  site:
+    build: .
+    container_name: touslesmatchs-site
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  web:
+    driver: bridge

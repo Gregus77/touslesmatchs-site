@@ -1,4 +1,4 @@
-﻿const https = require("https");
+const https = require("https");
 const { execSync } = require("child_process");
 const fs = require("fs");
 

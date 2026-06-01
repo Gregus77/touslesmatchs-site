@@ -1,4 +1,4 @@
-﻿// ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
 //  HERMÈS — CHECK RESULTS V4.2
 //  Tourne chaque soir à 23h30 via GitHub Actions
 //  1. Vérifie les résultats via Groq

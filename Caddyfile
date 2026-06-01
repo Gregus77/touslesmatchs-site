@@ -1,0 +1,10 @@
+www.touslesmatchs.com {
+    root * /srv
+    file_server
+    try_files {path} /index.html
+    encode gzip
+}
+
+touslesmatchs.com {
+    redir https://www.touslesmatchs.com{uri} permanent
+}
