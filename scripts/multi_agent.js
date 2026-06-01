@@ -68,7 +68,7 @@ async function scanMatchesGroq() {
     const r = await post("api.groq.com", "/openai/v1/chat/completions",
       {"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
       { model:"llama-3.3-70b-versatile", max_tokens:2000, temperature:0.1,
-        messages:[{role:"user",content:`Date: ${today}. Liste les 5 meilleurs matchs de football (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, Champions League, MLS, Brasileirao Serie A, Copa Libertadores), Hockey NHL, Basketball NBA, ou F1 qui ont lieu AUJOURD'HUI ou CETTE NUIT. Sports bannis: Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie). Cote minimum 1.40. Réponds UNIQUEMENT en JSON: {"matches":[{"sport":"Football","competition":"Premier League","home":"Arsenal","away":"Chelsea","heure":"21h00","home_form":"VVVNV","away_form":"NVVDL","home_elo":1850,"away_elo":1780,"enjeu":"Top 4","cote_domicile":1.65,"cote_exterieur":4.50,"favoris":"home","absents_exterieur":["Titulaire clé"]}]}`}]
+        messages:[{role:"user",content:`Date: ${today}. MISSION OBLIGATOIRE : trouve entre 5 et 10 matchs qui ont lieu AUJOURD'HUI ou CETTE NUIT (jusqu'à minuit heure française). Sports acceptés par ordre de priorité : Hockey NHL/Stanley Cup playoffs, Basketball NBA playoffs, Football (Premier League, LaLiga, Bundesliga, Serie A, Ligue 1, Ligue des Champions, MLS, Copa Libertadores, Brasileirao), Baseball MLB, F1, Rugby, NFL. Sports bannis : Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie). Cote du favori entre 1.35 et 2.20. Si tu ne trouves pas de match à cote idéale, inclus quand même les meilleurs matchs disponibles du jour même si la cote est un peu hors fenêtre — l'important est qu'il y ait AU MOINS UN MATCH PAR JOUR. Réponds UNIQUEMENT en JSON: {"matches":[{"sport":"Hockey","competition":"NHL Stanley Cup","home":"Carolina Hurricanes","away":"Vegas Golden Knights","heure":"19h00","home_form":"VVVNV","away_form":"NVVDL","home_elo":1850,"away_elo":1780,"enjeu":"Playoffs","cote_domicile":1.65,"cote_exterieur":2.30,"favoris":"home","absents_exterieur":["Titulaire clé"]}]}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
@@ -338,20 +338,72 @@ function gitCommit(msg) {
 }
 
 // ============================================================
+// SCAN FALLBACK — DEEPSEEK SI GROQ ÉCHOUE
+// ============================================================
+async function scanMatchesDeepSeekFallback() {
+  console.log("🟠 DeepSeek — Scan de secours...");
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const r = await post("api.deepseek.com", "/v1/chat/completions",
+      {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
+      { model:"deepseek-chat", max_tokens:2000, temperature:0.2,
+        messages:[{role:"user",content:`Date: ${today}. Liste TOUS les matchs sportifs majeurs d'aujourd'hui dans le monde (Hockey NHL, NBA, Football Europe, MLS, MLB). Je veux absolument au moins 3 matchs. Cote favori entre 1.30 et 2.50. Réponds UNIQUEMENT en JSON: {"matches":[{"sport":"Hockey","competition":"NHL","home":"Team A","away":"Team B","heure":"20h00","home_form":"VVV","away_form":"NVV","home_elo":1800,"away_elo":1750,"enjeu":"Playoffs","cote_domicile":1.60,"cote_exterieur":2.40,"favoris":"home","absents_exterieur":[]}]}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(text);
+    return parsed?.matches || [];
+  } catch(e) {
+    console.error("DeepSeek scan fallback error:", e.message);
+    return [];
+  }
+}
+
+// ============================================================
+// FORCE PICK 7/10 — DERNIER RECOURS
+// ============================================================
+async function forcePick7(matches) {
+  console.log("🔶 Force pick 7/10 — meilleur match disponible...");
+  if (!matches.length) return null;
+  try {
+    const r = await post("api.deepseek.com", "/v1/chat/completions",
+      {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
+      { model:"deepseek-chat", max_tokens:800, temperature:0.1,
+        messages:[{role:"user",content:`Choisis le MEILLEUR match parmi ceux-ci pour un pari sportif aujourd'hui. Critères : favori le plus solide, forme la plus régulière, enjeu le plus clair. Attribue-lui une note entre 7.0 et 7.9 (threshold=7). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Hockey","competition":"NHL","heure":"20h00","favori":"X","marche":"X Vainqueur","cote":1.62,"note":7.2,"prob":0.64,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10.","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"Meilleur match disponible du jour","points_forts":["Favori solide"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"FORCE_7"}}}. Matchs disponibles: ${JSON.stringify(matches.slice(0,5))}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    return safeJSON(text);
+  } catch(e) {
+    console.error("ForcePick7 error:", e.message);
+    return null;
+  }
+}
+
+// ============================================================
 // MAIN
 // ============================================================
 async function main() {
   console.log(`\n🏛️ HERMÈS V4 — CONCILE COMPLET — ${TODAY}\n`);
   console.log("👑 Claude (Chef) | 🟢 Groq | 🔵 Gemini | 🟠 DeepSeek | 🟣 Mistral\n");
 
-  // 1. Scan matchs (Groq)
+  // 1. Scan matchs (Groq) — 1ère tentative
   let matches = await scanMatchesGroq();
   console.log(`✅ ${matches.length} matchs trouvés`);
 
+  // Si Groq trouve rien → 2ème tentative avec prompt plus large via DeepSeek
   if (!matches.length) {
-    console.log("⚠️ Aucun match trouvé");
+    console.log("⚠️ Groq n'a rien trouvé — 2ème tentative via DeepSeek...");
+    matches = await scanMatchesDeepSeekFallback();
+    console.log(`✅ DeepSeek fallback: ${matches.length} matchs`);
+  }
+
+  // Si toujours rien → NOPICK ultime
+  if (!matches.length) {
+    console.log("⚠️ Aucun match disponible aujourd'hui — NOPICK");
     updateAppJsNoPick("Aucun match disponible");
     gitCommit("NO PICK - Aucun match");
+    await sendTelegram("⏸ Aucun match disponible aujourd'hui — pas de pick.");
     return;
   }
 
@@ -365,12 +417,19 @@ async function main() {
   matches = await checkContextMistral(matches);
 
   // 5. Décision finale (Claude — avec fallback DeepSeek)
-  const result = await claudeChefConcile(matches);
+  let result = await claudeChefConcile(matches);
+
+  // Si Claude/DeepSeek ne valident rien → forcer le meilleur match disponible
+  if (!result?.pick) {
+    console.log("⚠️ Concile sans résultat — forçage du meilleur match à 7/10...");
+    result = await forcePick7(matches);
+  }
 
   if (!result?.pick) {
-    console.log("⚠️ Pas de pick validé");
-    updateAppJsNoPick("Aucun match validé 7/10");
+    console.log("❌ Impossible de trouver un pick. NOPICK enregistré.");
+    updateAppJsNoPick("Analyse sans résultat");
     gitCommit("NO PICK");
+    await sendTelegram("⏸ Aucun pick validé aujourd'hui malgré l'analyse.");
     return;
   }
 
