@@ -17,7 +17,7 @@ var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 var picks = [
   ["03/06","Carolina Hurricanes vs Vegas Golden Knights","CAR Vainqueur","1.70","---","EN ATTENTE","Hockey",8.4,8],
   ["02/06","Vegas Golden Knights vs Carolina Hurricanes","CAR Vainqueur","1.65","---","EN ATTENTE","Hockey",8.1,8],
-  ["01/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
+  ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","---","EN ATTENTE","Foot",7.1,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
   ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],
   ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
