@@ -3,6 +3,7 @@ import "./App.css";
 import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
+import AnalyseLive from "./AnalyseLive";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
 var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
@@ -185,9 +186,10 @@ export default function App() {
       React.createElement("div", {style:{fontSize:"8px",color:"#4a4438",letterSpacing:"0.22em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}, "Analyse · Intelligence · Résultats")
     ),
     React.createElement("nav", {style:{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}},
-      ["home","preuves","bookmakers"].map(function(p){
-        var labels = {home:"Choix", preuves:"Preuves", bookmakers:"Les bookmakers"};
-        return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(page===p?"#d4af37":"rgba(255,255,255,0.1)"),color:page===p?"#d4af37":"#666",padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, labels[p]);
+      ["home","preuves","bookmakers","analyse"].map(function(p){
+        var labels = {home:"Choix", preuves:"Preuves", bookmakers:"Les bookmakers", analyse:"🔮 Analyse Live"};
+        var isAnalyse = p==="analyse";
+        return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?(isAnalyse?"rgba(201,162,39,0.2)":"rgba(212,175,55,0.15)"):"transparent",border:"1px solid "+(page===p?"#d4af37":(isAnalyse?"rgba(201,162,39,0.3)":"rgba(255,255,255,0.1)")),color:page===p?"#d4af37":(isAnalyse?"#C9A227":"#666"),padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px",fontWeight:isAnalyse?"600":"400"}}, labels[p]);
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
@@ -203,6 +205,7 @@ export default function App() {
   if(page==="cgu") return React.createElement(React.Fragment, null, loveToastEl, React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="mentions") return React.createElement(React.Fragment, null, loveToastEl, React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="confidentialite") return React.createElement(React.Fragment, null, loveToastEl, React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
+  if(page==="analyse") return React.createElement(React.Fragment, null, loveToastEl, header, React.createElement(AnalyseLive, null), footer, bandeauLegal);
 
   if(page==="preuves"){
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
