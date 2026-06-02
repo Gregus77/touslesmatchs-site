@@ -297,7 +297,7 @@ export default function App() {
         "Seuil minimum publié : ", React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". En dessous, fallback à ", React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), " pour garantir un pick quotidien."
       ),
       React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
-        [{label:"WIN RATE",value:winrate+"%",sub:"sur "+total+" paris"},{label:"BANKROLL",value:"+394%",sub:"depuis le debut"},{label:"PICKS",value:wins+"W / "+(total-wins)+"L",sub:"serie en cours"},{label:"SERIE",value:wins+"W",sub:"sur "+total+" picks"}].map(function(s,i){
+        [{label:"TAUX DE RÉUSSITE",value:winrate+"%",sub:total+" paris analysés"},{label:"BANKROLL",value:"+394%",sub:"depuis le début"},{label:"RÉSULTATS",value:wins+" Gagnés",sub:(total-wins)+" Perdus sur "+total},{label:"SÉRIE",value:wins+" VICTOIRES",sub:"consécutives 🔥"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{flex:1,padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
