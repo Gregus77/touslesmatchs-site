@@ -4,7 +4,7 @@ import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
 
-var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=WMX8M5";
+var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
 var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
 var UNIBET_LINK = "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254";
 var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728";
@@ -16,7 +16,7 @@ var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
   ["03/06","Carolina Hurricanes vs Vegas Golden Knights","CAR Vainqueur","1.70","---","EN ATTENTE","Hockey",8.4,8],
-  ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","---","EN ATTENTE","Foot",7.1,7],
+  ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
   ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],
   ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],

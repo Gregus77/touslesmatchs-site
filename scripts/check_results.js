@@ -28,9 +28,9 @@ function sendTelegram(text) {
   });
 }
 
-const GITHUB_TOKEN    = process.env.GITHUB_TOKEN;
-const GROQ_KEY        = process.env.GROQ_API_KEY;
-const APISPORTS_KEY   = process.env.APISPORTS_KEY || ""; // Tier gratuit : 100 req/jour sur dashboard.api-sports.io
+const GITHUB_TOKEN      = process.env.GITHUB_TOKEN;
+const GROQ_KEY          = process.env.GROQ_API_KEY;
+const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || ""; // football-data.org — gratuit
 const REPO_OWNER   = "Gregus77";
 const REPO_NAME    = "touslesmatchs-site";
 
@@ -106,6 +106,133 @@ function httpsGet(hostname, path, headers = {}) {
     });
     req.on("error", reject); req.end();
   });
+}
+
+// ── API HOCKEY (NHL officielle — gratuite) ────────────────
+async function checkResultNHL(pick) {
+  if (pick.sport !== "Hockey") return null;
+  try {
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0,10);
+    const yesterday = new Date(today - 86400000).toISOString().slice(0,10);
+
+    for (const date of [yesterday, dateStr]) {
+      const r = await new Promise((res,rej) => {
+        require("https").get(`https://api-web.nhle.com/v1/score/${date}`, resp => {
+          let d=""; resp.on("data",c=>d+=c); resp.on("end",()=>{ try{res(JSON.parse(d))}catch{res({})} });
+        }).on("error",rej);
+      });
+      if (!r.games) continue;
+      const [home, away] = pick.match.split(" vs ").map(s=>s.trim().toLowerCase());
+      const game = r.games.find(g => {
+        const h = (g.homeTeam?.commonName?.default||"").toLowerCase();
+        const a = (g.awayTeam?.commonName?.default||"").toLowerCase();
+        return (h.includes(home.split(" ")[0]) || h.includes(home.split(" ").pop()) ||
+                a.includes(away.split(" ")[0]) || a.includes(away.split(" ").pop()));
+      });
+      if (!game) continue;
+      if (game.gameState !== "OFF" && game.gameState !== "FINAL") return { resultat:"EN ATTENTE", score_final:null };
+      const hs = game.homeTeam?.score ?? 0;
+      const as = game.awayTeam?.score ?? 0;
+      const scoreFinal = `${hs}-${as}`;
+      const marche = pick.marche.toLowerCase();
+      const homeTeamName = (game.homeTeam?.commonName?.default||"").toLowerCase();
+      let resultat = "EN ATTENTE";
+      if (marche.includes("vainqueur") || marche.includes("ml")) {
+        const homeWins = hs > as;
+        const pickHome = marche.includes(homeTeamName.split(" ")[0]) || marche.includes(home.split(" ")[0]);
+        resultat = (homeWins && pickHome) || (!homeWins && !pickHome) ? "GAGNE" : "PERDU";
+      }
+      console.log(`  ✅ NHL API: ${scoreFinal} → ${resultat}`);
+      return { resultat, score_final: scoreFinal, explication: "Score réel NHL API" };
+    }
+  } catch(e) { console.log("NHL API error:", e.message); }
+  return null;
+}
+
+// ── API BASKETBALL (BallDontLie — gratuite) ───────────────
+async function checkResultNBA(pick) {
+  if (pick.sport !== "Basketball") return null;
+  try {
+    const parts = pick.date.split("/");
+    const dateStr = `2026-${parts[1]}-${parts[0]}`;
+    const r = await new Promise((res,rej) => {
+      require("https").get(`https://api.balldontlie.io/v1/games?dates[]=${dateStr}&per_page=30`,
+        { headers: { "Authorization": "0" } },
+        resp => { let d=""; resp.on("data",c=>d+=c); resp.on("end",()=>{ try{res(JSON.parse(d))}catch{res({})} }); }
+      ).on("error",rej);
+    });
+    if (!r.data) return null;
+    const [home, away] = pick.match.split(" vs ").map(s=>s.trim().toLowerCase());
+    const game = r.data.find(g => {
+      const h=(g.home_team?.full_name||"").toLowerCase();
+      const a=(g.visitor_team?.full_name||"").toLowerCase();
+      return h.includes(home.split(" ")[0]) || a.includes(away.split(" ")[0]);
+    });
+    if (!game || game.status !== "Final") return null;
+    const hs = game.home_team_score, as = game.visitor_team_score;
+    const scoreFinal = `${hs}-${as}`;
+    const marche = pick.marche.toLowerCase();
+    let resultat = "EN ATTENTE";
+    if (marche.includes("vainqueur") || marche.includes("ml")) {
+      const homeWins = hs > as;
+      const pickHome = marche.includes((game.home_team?.full_name||"").toLowerCase().split(" ")[0]);
+      resultat = (homeWins && pickHome) || (!homeWins && !pickHome) ? "GAGNE" : "PERDU";
+    } else if (marche.includes("plus de") || marche.includes("over")) {
+      const line = parseFloat(marche.match(/(\d+\.?\d*)/)?.[1] || "215");
+      resultat = (hs + as) > line ? "GAGNE" : "PERDU";
+    } else if (marche.includes("moins de") || marche.includes("under")) {
+      const line = parseFloat(marche.match(/(\d+\.?\d*)/)?.[1] || "215");
+      resultat = (hs + as) < line ? "GAGNE" : "PERDU";
+    }
+    console.log(`  ✅ NBA API: ${hs}-${as} → ${resultat}`);
+    return { resultat, score_final: scoreFinal, explication: "Score réel NBA API" };
+  } catch(e) { console.log("NBA API error:", e.message); }
+  return null;
+}
+
+// ── API FOOTBALL (football-data.org) ─────────────────────
+async function checkResultFootball(pick) {
+  if (pick.sport !== "Football" && pick.sport !== "Foot" && pick.sport !== "MLS") return null;
+  if (!FOOTBALL_DATA_KEY) return null;
+  try {
+    const parts = pick.date.split("/");
+    const dateStr = `2026-${parts[1]}-${parts[0]}`;
+    const r = await new Promise((res,rej) => {
+      require("https").get(
+        `https://api.football-data.org/v4/matches?dateFrom=${dateStr}&dateTo=${dateStr}`,
+        { headers: { "X-Auth-Token": FOOTBALL_DATA_KEY } },
+        resp => { let d=""; resp.on("data",c=>d+=c); resp.on("end",()=>{ try{res(JSON.parse(d))}catch{res({})} }); }
+      ).on("error",rej);
+    });
+    if (!r.matches) return null;
+    const [home, away] = pick.match.split(" vs ").map(s=>s.trim().toLowerCase());
+    const game = r.matches.find(g => {
+      const h=(g.homeTeam?.name||"").toLowerCase();
+      const a=(g.awayTeam?.name||"").toLowerCase();
+      return h.includes(home.split(" ")[0]) || a.includes(away.split(" ")[0]);
+    });
+    if (!game || game.status !== "FINISHED") return null;
+    const hs = game.score?.fullTime?.home ?? 0;
+    const as = game.score?.fullTime?.away ?? 0;
+    const scoreFinal = `${hs}-${as}`;
+    const marche = pick.marche.toLowerCase();
+    let resultat = "EN ATTENTE";
+    if (marche.includes("vainqueur") || marche.includes("victoire") || marche.includes("ml")) {
+      const homeWins = hs > as;
+      const pickHome = marche.includes(home.split(" ")[0]);
+      resultat = (homeWins && pickHome) || (!homeWins && !pickHome) ? "GAGNE" : "PERDU";
+    } else if (marche.includes("plus de") || marche.includes("over")) {
+      const line = parseFloat(marche.match(/(\d+\.?\d*)/)?.[1] || "2.5");
+      resultat = (hs + as) > line ? "GAGNE" : "PERDU";
+    } else if (marche.includes("moins de") || marche.includes("under")) {
+      const line = parseFloat(marche.match(/(\d+\.?\d*)/)?.[1] || "2.5");
+      resultat = (hs + as) < line ? "GAGNE" : "PERDU";
+    }
+    console.log(`  ✅ football-data.org: ${hs}-${as} → ${resultat}`);
+    return { resultat, score_final: scoreFinal, explication: "Score réel football-data.org" };
+  } catch(e) { console.log("Football API error:", e.message); }
+  return null;
 }
 
 // Recherche le résultat réel via API-Sports (gratuit 100 req/jour)
@@ -216,14 +343,28 @@ Réponds UNIQUEMENT en JSON sans backticks ni texte:
   }
 }
 
-// Fonction principale : API-Sports d'abord, Groq en fallback
+// Fonction principale : APIs officielles gratuites → Groq fallback
 async function checkResult(pick) {
-  console.log(`  🔍 Vérification API-Sports...`);
-  const apiResult = await checkResultAPISports(pick);
-  if (apiResult && apiResult.resultat !== "EN ATTENTE") {
-    return apiResult;
+  // 1. NHL officielle (hockey)
+  if (pick.sport === "Hockey") {
+    console.log(`  🏒 NHL API officielle...`);
+    const r = await checkResultNHL(pick);
+    if (r && r.resultat !== "EN ATTENTE") return r;
   }
-  console.log(`  🔄 Fallback Groq...`);
+  // 2. NBA (basketball)
+  if (pick.sport === "Basketball") {
+    console.log(`  🏀 NBA API (BallDontLie)...`);
+    const r = await checkResultNBA(pick);
+    if (r && r.resultat !== "EN ATTENTE") return r;
+  }
+  // 3. Football-data.org (football)
+  if (["Football","Foot","MLS"].includes(pick.sport)) {
+    console.log(`  ⚽ football-data.org...`);
+    const r = await checkResultFootball(pick);
+    if (r && r.resultat !== "EN ATTENTE") return r;
+  }
+  // 4. Groq fallback pour tout
+  console.log(`  🔄 Groq fallback...`);
   return checkResultGroq(pick);
 }
 
