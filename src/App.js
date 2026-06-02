@@ -12,6 +12,7 @@ var ZEBET_LINK = "#";
 var PARIONSSPORT_LINK = "#";
 var NETBET_LINK = "#";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
+var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
   ["03/06","Carolina Hurricanes vs Vegas Golden Knights","CAR Vainqueur","1.70","---","EN ATTENTE","Hockey",8.4,8],
@@ -152,7 +153,8 @@ export default function App() {
       React.createElement("button", {onClick:function(){setPage("cgu");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "CGU"),
       React.createElement("button", {onClick:function(){setPage("mentions");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "Mentions Legales"),
       React.createElement("button", {onClick:function(){setPage("confidentialite");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "Confidentialite"),
-      React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{color:"#555",fontSize:"11px",textDecoration:"underline"}}, "TikTok")
+      React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{color:"#555",fontSize:"11px",textDecoration:"underline"}}, "TikTok"),
+      React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{color:"#29b6f6",fontSize:"11px",textDecoration:"underline"}}, "Telegram")
     ),
     React.createElement("div", {style:{fontSize:"10px",color:"#2a2a2a"}}, "© 2026 TousLesMatchs.com — Tous droits reserves")
   );
@@ -167,7 +169,8 @@ export default function App() {
         var labels = {home:"Choix", preuves:"Preuves", bookmakers:"Les bookmakers"};
         return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(page===p?"#d4af37":"rgba(255,255,255,0.1)"),color:page===p?"#d4af37":"#666",padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, labels[p]);
       }),
-      React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok")
+      React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
+      React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram")
     )
   );
 
@@ -351,15 +354,15 @@ export default function App() {
                 borderRadius:"5px", padding:"4px 9px"
               }},
                 React.createElement("div", {style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.color,flexShrink:0}}),
-                React.createElement("span", {style:{fontSize:"13px",color:"#ccc",fontWeight:"600"}}), ia.nom,
-                React.createElement("span", {style:{fontSize:"11px",color:"#555",marginLeft:"3px"}}), ia.role,
-                React.createElement("span", {style:{fontSize:"13px",color:"#22c55e",marginLeft:"5px",fontWeight:"700"}}), "GO"
+                React.createElement("span", {style:{fontSize:"13px",color:"#ccc",fontWeight:"600"}}, ia.nom),
+                React.createElement("span", {style:{fontSize:"11px",color:"#555",marginLeft:"3px"}}, ia.role),
+                React.createElement("span", {style:{fontSize:"13px",color:"#22c55e",marginLeft:"5px",fontWeight:"700"}}, "GO")
               );
             })
           ),
           /* Barre de confiance */
           pickAiScore > 0 && React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"10px"}},
-            React.createElement("span", {style:{fontSize:"9px",color:"#555",letterSpacing:"1px",whiteSpace:"nowrap"}}), "CONFIANCE IA",
+            React.createElement("span", {style:{fontSize:"9px",color:"#555",letterSpacing:"1px",whiteSpace:"nowrap"}}, "CONFIANCE IA"),
             React.createElement("div", {style:{flex:1,height:"4px",background:"rgba(255,255,255,0.05)",borderRadius:"2px",overflow:"hidden",maxWidth:"160px"}},
               React.createElement("div", {style:{
                 height:"100%", borderRadius:"2px",
@@ -369,7 +372,7 @@ export default function App() {
                   : "linear-gradient(90deg,#92400e,#f59e0b)"
               }})
             ),
-            React.createElement("span", {style:{fontSize:"12px",fontWeight:"700",color:isPremium?"#d4af37":"#f59e0b"}}), pickAiScore+"/10"
+            React.createElement("span", {style:{fontSize:"12px",fontWeight:"700",color:isPremium?"#d4af37":"#f59e0b"}}, pickAiScore+"/10")
           )
         ),
 
@@ -387,6 +390,36 @@ export default function App() {
 
         /* CTA */
         isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:isPremium?"linear-gradient(135deg,#d4af37,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, "Parier sur Winamax")
+      )
+    ),
+    React.createElement("section", {style:{padding:"10px 30px 24px",maxWidth:"780px",margin:"0 auto"}},
+      React.createElement("div", {style:{
+        background:"linear-gradient(135deg,rgba(0,136,204,0.08) 0%,rgba(0,136,204,0.03) 100%)",
+        border:"1px solid rgba(0,136,204,0.3)",
+        borderRadius:"12px",padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"16px"
+      }},
+        React.createElement("div", {style:{flex:1,minWidth:"200px"}},
+          React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}},
+            React.createElement("svg",{width:"18",height:"18",viewBox:"0 0 24 24",fill:"none",stroke:"#29b6f6",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"},
+              React.createElement("line",{x1:"22",y1:"2",x2:"11",y2:"13"}),
+              React.createElement("polygon",{points:"22 2 15 22 11 13 2 9 22 2"})
+            ),
+            React.createElement("span",{style:{fontSize:"11px",letterSpacing:"3px",color:"#29b6f6",fontWeight:"700"}},"CANAL TELEGRAM")
+          ),
+          React.createElement("div",{style:{fontSize:"16px",fontWeight:"700",color:"#fff",marginBottom:"4px",fontFamily:"'Bodoni Moda',serif"}},"Recois le pick directement sur Telegram"),
+          React.createElement("div",{style:{fontSize:"12px",color:"#555"}},"Notification instantanee des que le Concile valide un match.")
+        ),
+        React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",style:{
+          background:"linear-gradient(135deg,#0088cc,#29b6f6)",
+          borderRadius:"8px",padding:"12px 24px",color:"#fff",fontWeight:"bold",
+          textDecoration:"none",fontSize:"13px",whiteSpace:"nowrap",
+          display:"inline-flex",alignItems:"center",gap:"8px",flexShrink:0
+        }},
+          React.createElement("svg",{width:"16",height:"16",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"},
+            React.createElement("line",{x1:"22",y1:"2",x2:"11",y2:"13"}),
+            React.createElement("polygon",{points:"22 2 15 22 11 13 2 9 22 2"})
+          ),
+          "Rejoindre le canal")
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"980px",margin:"0 auto"}},
