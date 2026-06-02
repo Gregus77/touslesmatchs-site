@@ -1,6 +1,6 @@
 import React from "react";
 
-var API_URL = "http://72.61.167.175:3001";
+var API_URL = ""  // Même domaine — Caddy route /api/* → localhost:3001
 
 export default function AnalyseLive() {
   var [home, setHome] = React.useState("");
@@ -16,7 +16,7 @@ export default function AnalyseLive() {
 
   // Charger matchs live au démarrage
   React.useEffect(function() {
-    fetch(API_URL + "/live-matches")
+    fetch("/api/live-matches")
       .then(function(r){ return r.json(); })
       .then(function(d){ if(d.ok) setLive(d.matches || []); })
       .catch(function(){});
@@ -33,7 +33,7 @@ export default function AnalyseLive() {
   function analyser() {
     if (!home || !away) { setError("Entre les deux équipes."); return; }
     setLoading(true); setResult(null); setError("");
-    fetch(API_URL + "/analyse", {
+    fetch("/api/analyse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ home, away, competition, score_home: parseInt(scoreHome), score_away: parseInt(scoreAway), minute })
