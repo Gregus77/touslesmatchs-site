@@ -180,6 +180,7 @@ body { font-size: 16px; line-height: 1.65; }
 .nopick .rdot { background:var(--dim); }
 .nopick .row-result { color:var(--dim); }
 @keyframes blink { 0%,100%{opacity:1;box-shadow:0 0 4px var(--pending);}50%{opacity:.3;box-shadow:0 0 12px var(--pending);} }
+@keyframes fadeInDown { from{opacity:0;transform:translateX(-50%) translateY(-20px);}to{opacity:1;transform:translateX(-50%) translateY(0);} }
 
 /* FAQ */
 .faq-list { display:flex; flex-direction:column; gap:8px; margin-top:32px; }
