@@ -59,10 +59,133 @@ function safeJSON(text) {
 }
 
 // ============================================================
-// ÉTAPE 1 — GROQ SCANNE LES MATCHS
+// HELPER GET — pour appels API REST
+// ============================================================
+function get(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    }).on("error", reject);
+  });
+}
+
+// ============================================================
+// ÉTAPE 1a — VRAIS MATCHS VIA THESPORTSDB (source fiable)
+// ============================================================
+async function scanMatchesRealAPI() {
+  const today = new Date().toISOString().slice(0,10);
+  const SPORTS_MAP = [
+    { apiSport: "Soccer",       label: "Foot"       },
+    { apiSport: "Ice_Hockey",   label: "Hockey"     },
+    { apiSport: "Basketball",   label: "Basketball" },
+    { apiSport: "Baseball",     label: "Baseball"   },
+  ];
+  const MAJOR_LEAGUES = [
+    "nhl","nba","mlb","mls","premier league","la liga","bundesliga",
+    "serie a","ligue 1","champions league","europa league","copa",
+    "world cup","international","friendly","nations league"
+  ];
+  let matches = [];
+  for (const s of SPORTS_MAP) {
+    try {
+      const data = await get(`https://www.thesportsdb.com/api/v1/json/1/eventsday.php?d=${today}&s=${encodeURIComponent(s.apiSport)}`);
+      if (!data.events) continue;
+      for (const ev of data.events) {
+        // Ignorer matchs déjà terminés
+        if (ev.intHomeScore !== null && ev.intHomeScore !== "" && ev.intHomeScore !== undefined) continue;
+        // Filtrer ligues majeures seulement (sauf Hockey/Basket où on garde tout)
+        const league = (ev.strLeague || "").toLowerCase();
+        const isMajor = s.label === "Hockey" || s.label === "Basketball" ||
+          MAJOR_LEAGUES.some(l => league.includes(l));
+        if (!isMajor) continue;
+        // Heure locale Paris
+        let heure = "20h00";
+        if (ev.strTimestamp) {
+          const d = new Date(ev.strTimestamp);
+          heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h");
+        }
+        matches.push({
+          sport: s.label,
+          competition: ev.strLeague || "",
+          home: ev.strHomeTeam,
+          away: ev.strAwayTeam,
+          heure,
+          home_form: "UNKNOWN",
+          away_form: "UNKNOWN",
+          home_elo: 1700,
+          away_elo: 1700,
+          enjeu: "Regular",
+          cote_domicile: 0,
+          cote_exterieur: 0,
+          favoris: "unknown",
+          absents_exterieur: [],
+          disponible_bookmakers_fr: true,
+          source: "thesportsdb_verified"
+        });
+      }
+    } catch(e) {
+      console.error(`TheSportsDB ${s.label} error:`, e.message);
+    }
+  }
+  console.log(`📅 TheSportsDB: ${matches.length} vrais matchs trouvés`);
+  return matches;
+}
+
+// ============================================================
+// ÉTAPE 1b — GROQ ESTIME COTES/FORME sur vrais matchs
+// ============================================================
+async function enrichMatchesGroq(realMatches) {
+  if (!realMatches.length) return realMatches;
+  console.log(`🟢 Groq — Estimation cotes et forme pour ${realMatches.length} vrais matchs...`);
+  const today = new Date().toISOString().slice(0,10);
+  const matchList = realMatches.map(m => `${m.home} vs ${m.away} (${m.competition}, ${m.heure})`).join("\n");
+  try {
+    const r = await post("api.groq.com", "/openai/v1/chat/completions",
+      {"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
+      { model:"llama-3.3-70b-versatile", max_tokens:2000, temperature:0.1,
+        messages:[{role:"user",content:`Date: ${today}. Ces matchs ont lieu aujourd'hui (source officielle). Estime les statistiques pour chacun.
+
+MATCHS RÉELS À ANALYSER:
+${matchList}
+
+Pour chaque match, estime : forme récente des 5 derniers matchs, ELO approximatif, cotes bookmakers FR, favori, absents connus.
+RÈGLE ABSOLUE : N'ajoute AUCUN match qui n'est pas dans la liste ci-dessus. Analyse UNIQUEMENT ceux listés.
+Cote du favori entre 1.35 et 2.30. Disponible obligatoirement sur Winamax/Betclic/Unibet FR.
+
+Réponds UNIQUEMENT en JSON: {"matches":[{"home":"nom_exact","away":"nom_exact","home_form":"VVVNV","away_form":"NVVDL","home_elo":1850,"away_elo":1780,"enjeu":"Playoffs","cote_domicile":1.65,"cote_exterieur":2.30,"favoris":"home","absents_exterieur":[],"disponible_bookmakers_fr":true}]}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(text);
+    if (parsed?.matches) {
+      return realMatches.map(m => {
+        const enriched = parsed.matches.find(e =>
+          e.home && m.home && e.home.toLowerCase().includes(m.home.toLowerCase().split(" ")[0])
+        );
+        return enriched ? {...m, ...enriched, home: m.home, away: m.away} : m;
+      });
+    }
+    return realMatches;
+  } catch(e) {
+    console.error("Groq enrichissement error:", e.message);
+    return realMatches;
+  }
+}
+
+// ============================================================
+// ÉTAPE 1 — SCAN PRINCIPAL (API réelle + enrichissement IA)
 // ============================================================
 async function scanMatchesGroq() {
-  console.log("🟢 Groq — Scan des matchs...");
+  // PRIORITÉ 1 : vrais matchs via TheSportsDB
+  let matches = await scanMatchesRealAPI();
+  if (matches.length > 0) {
+    return await enrichMatchesGroq(matches);
+  }
+
+  // PRIORITÉ 2 (fallback) : Groq invente — avec avertissement dans les logs
+  console.log("⚠️ TheSportsDB sans résultat — fallback Groq (attention hallucinations possibles)");
   const today = new Date().toISOString().slice(0,10);
   try {
     const r = await post("api.groq.com", "/openai/v1/chat/completions",
