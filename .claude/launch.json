@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "touslesmatchs",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "cwd": "C:\\Users\\Greg\\touslesmatchscd",
+      "port": 3000
+    }
+  ]
+}

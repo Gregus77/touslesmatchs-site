@@ -1,6 +1,7 @@
 const https = require("https");
 const { execSync } = require("child_process");
 const fs = require("fs");
+const { buildInlineKeyboard } = require("./bookmakers.config");
 
 // ============================================================
 // CLÉS API
@@ -16,16 +17,6 @@ const TG_CHAT        = process.env.TELEGRAM_CHAT_ID;
 const TODAY = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
 
 // ============================================================
-// LIENS AFFILIÉS BOOKMAKERS
-// ============================================================
-const BOOKMAKERS = [
-  { text: "🏆 Parier sur Winamax",      url: "https://www.winamax.fr/parrain?code=WMX8M5" },
-  { text: "⚡ Parier sur Betclic",       url: "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ" },
-  { text: "🎯 Parier sur Unibet",        url: "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254" },
-  { text: "🇫🇷 Parier sur PMU",          url: "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" },
-];
-
-// ============================================================
 // TELEGRAM NOTIFICATION
 // ============================================================
 function sendTelegram(text, withButtons = false) {
@@ -37,11 +28,9 @@ function sendTelegram(text, withButtons = false) {
       parse_mode: "HTML",
       ...(withButtons && {
         reply_markup: {
-          inline_keyboard: [
-            [BOOKMAKERS[0], BOOKMAKERS[1]],
-            [BOOKMAKERS[2], BOOKMAKERS[3]],
-            [{ text: "📊 Voir les stats — touslesmatchs.com", url: "https://touslesmatchs.com" }]
-          ]
+          inline_keyboard: buildInlineKeyboard([
+            { text: "📊 Stats & historique — touslesmatchs.com", url: "https://touslesmatchs.com" }
+          ])
         }
       })
     };

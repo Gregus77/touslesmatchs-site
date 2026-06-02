@@ -98,14 +98,6 @@ export default function App() {
   var faqOpenState = React.useState(null);
   var faqOpen = faqOpenState[0];
   var setFaqOpen = faqOpenState[1];
-  var loveToastState = React.useState(false);
-  var loveToast = loveToastState[0];
-  var setLoveToast = loveToastState[1];
-
-  function handleTagalog() {
-    setLoveToast(true);
-    setTimeout(function(){ setLoveToast(false); }, 4000);
-  }
 
   React.useEffect(function() {
     if(window.gaLoaded) return;
@@ -150,18 +142,6 @@ export default function App() {
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
   });
 
-  var loveToastEl = loveToast ? React.createElement("div", {style:{
-    position:"fixed", top:"80px", left:"50%", transform:"translateX(-50%)",
-    background:"linear-gradient(135deg,#ff4d8d,#c0185a)",
-    borderRadius:"16px", padding:"18px 32px", zIndex:999,
-    boxShadow:"0 8px 40px rgba(255,77,141,0.45)",
-    textAlign:"center", minWidth:"280px",
-    animation:"fadeInDown 0.4s ease"
-  }},
-    React.createElement("div",{style:{fontSize:"28px",marginBottom:"6px"}},"🇵🇭 ❤️"),
-    React.createElement("div",{style:{fontSize:"22px",fontWeight:"bold",color:"#fff",fontFamily:"'Bodoni Moda',serif",marginBottom:"4px"}},"Mahal kita, mahal ko"),
-    React.createElement("div",{style:{fontSize:"12px",color:"rgba(255,255,255,0.75)"}}, "Je t'aime mon amour ❤️")
-  ) : null;
 
   var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
     React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}}, "🔞 Jeu responsable — Interdit aux moins de 18 ans  |  joueurs-info-service.fr  |  09 74 75 13 13"),
@@ -196,16 +176,18 @@ export default function App() {
       React.createElement("div",{style:{display:"flex",gap:"4px",marginLeft:"4px",alignItems:"center"}},
         React.createElement("button",{title:"Français",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇫🇷"),
         React.createElement("button",{title:"English",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇬🇧"),
-        React.createElement("button",{title:"Tagalog",onClick:handleTagalog,style:{background:"rgba(255,77,141,0.1)",border:"1px solid rgba(255,77,141,0.35)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1",transition:"transform 0.15s"},onMouseEnter:function(e){e.target.style.transform="scale(1.2)"},onMouseLeave:function(e){e.target.style.transform="scale(1)"}},"🇵🇭")
+        React.createElement("button",{title:"Español",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇪🇸"),
+        React.createElement("button",{title:"Italiano",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇮🇹"),
+        React.createElement("button",{title:"Русский",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇷🇺")
       )
     )
   );
 
 
-  if(page==="cgu") return React.createElement(React.Fragment, null, loveToastEl, React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
-  if(page==="mentions") return React.createElement(React.Fragment, null, loveToastEl, React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
-  if(page==="confidentialite") return React.createElement(React.Fragment, null, loveToastEl, React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
-  if(page==="analyse") return React.createElement(React.Fragment, null, loveToastEl, header, React.createElement(AnalyseLive, null), footer, bandeauLegal);
+  if(page==="cgu") return React.createElement(React.Fragment, null, React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
+  if(page==="mentions") return React.createElement(React.Fragment, null, React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
+  if(page==="confidentialite") return React.createElement(React.Fragment, null, React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
+  if(page==="analyse") return React.createElement(React.Fragment, null, header, React.createElement(AnalyseLive, null), footer, bandeauLegal);
 
   if(page==="preuves"){
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
@@ -271,7 +253,6 @@ export default function App() {
   }
 
   return React.createElement("div", {style:{background:"linear-gradient(180deg,#0a0906 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0"}},
-    loveToastEl,
     header,
     React.createElement("section", {style:{padding:"60px 30px 30px",textAlign:"center"}},
       /* Badges 5 IAs */
