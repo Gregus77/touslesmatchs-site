@@ -4,6 +4,7 @@ import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
 import AnalyseLive from "./AnalyseLive";
+import translations from "./translations";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
 var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
@@ -98,6 +99,18 @@ export default function App() {
   var faqOpenState = React.useState(null);
   var faqOpen = faqOpenState[0];
   var setFaqOpen = faqOpenState[1];
+  var langState = React.useState(localStorage.getItem("lang") || "fr");
+  var lang = langState[0];
+  var setLang = langState[1];
+
+  function changeLang(newLang) {
+    setLang(newLang);
+    localStorage.setItem("lang", newLang);
+  }
+
+  function t(key) {
+    return translations[lang]?.[key] || translations.fr[key] || key;
+  }
 
   React.useEffect(function() {
     if(window.gaLoaded) return;
@@ -144,20 +157,20 @@ export default function App() {
 
 
   var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
-    React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}}, "🔞 Jeu responsable — Interdit aux moins de 18 ans  |  joueurs-info-service.fr  |  09 74 75 13 13"),
-    React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}}, "Les paris comportent des risques de perte financiere. Pariez de maniere responsable.")
+    React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}}, t("jeu_responsable")),
+    React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}}, t("risques_financiers"))
   );
 
   var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(212,175,55,0.1)",padding:"28px 30px 90px",textAlign:"center"}},
     React.createElement("div", {style:{fontSize:"12px",fontWeight:"bold",color:"#d4af37",letterSpacing:"3px",marginBottom:"14px"}}, "TOUSLESMATCHS.COM"),
     React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"20px",flexWrap:"wrap",marginBottom:"12px"}},
-      React.createElement("button", {onClick:function(){setPage("cgu");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "CGU"),
-      React.createElement("button", {onClick:function(){setPage("mentions");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "Mentions Legales"),
-      React.createElement("button", {onClick:function(){setPage("confidentialite");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, "Confidentialite"),
+      React.createElement("button", {onClick:function(){setPage("cgu");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, t("cgu")),
+      React.createElement("button", {onClick:function(){setPage("mentions");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, t("mentions_legales")),
+      React.createElement("button", {onClick:function(){setPage("confidentialite");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, t("confidentialite")),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{color:"#555",fontSize:"11px",textDecoration:"underline"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{color:"#29b6f6",fontSize:"11px",textDecoration:"underline"}}, "Telegram")
     ),
-    React.createElement("div", {style:{fontSize:"10px",color:"#2a2a2a"}}, "© 2026 TousLesMatchs.com — Tous droits reserves")
+    React.createElement("div", {style:{fontSize:"10px",color:"#2a2a2a"}}, t("footer_droits"))
   );
 
   var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"16px 30px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"10px"}},
@@ -167,18 +180,18 @@ export default function App() {
     ),
     React.createElement("nav", {style:{display:"flex",gap:"8px",alignItems:"center",flexWrap:"wrap"}},
       ["home","preuves","bookmakers","analyse"].map(function(p){
-        var labels = {home:"Choix", preuves:"Preuves", bookmakers:"Les bookmakers", analyse:"🔮 Analyse Live"};
+        var labels = {home:t("nav_choix"), preuves:t("nav_preuves"), bookmakers:t("nav_bookmakers"), analyse:t("nav_analyse")};
         var isAnalyse = p==="analyse";
         return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?(isAnalyse?"rgba(201,162,39,0.2)":"rgba(212,175,55,0.15)"):"transparent",border:"1px solid "+(page===p?"#d4af37":(isAnalyse?"rgba(201,162,39,0.3)":"rgba(255,255,255,0.1)")),color:page===p?"#d4af37":(isAnalyse?"#C9A227":"#666"),padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px",fontWeight:isAnalyse?"600":"400"}}, labels[p]);
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
       React.createElement("div",{style:{display:"flex",gap:"4px",marginLeft:"4px",alignItems:"center"}},
-        React.createElement("button",{title:"Français",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇫🇷"),
-        React.createElement("button",{title:"English",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇬🇧"),
-        React.createElement("button",{title:"Español",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇪🇸"),
-        React.createElement("button",{title:"Italiano",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇮🇹"),
-        React.createElement("button",{title:"Русский",style:{background:"transparent",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇷🇺")
+        React.createElement("button",{title:"Français",onClick:function(){changeLang("fr");},style:{background:lang==="fr"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="fr"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇫🇷"),
+        React.createElement("button",{title:"English",onClick:function(){changeLang("en");},style:{background:lang==="en"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="en"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇬🇧"),
+        React.createElement("button",{title:"Español",onClick:function(){changeLang("es");},style:{background:lang==="es"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="es"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇪🇸"),
+        React.createElement("button",{title:"Italiano",onClick:function(){changeLang("it");},style:{background:lang==="it"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="it"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇮🇹"),
+        React.createElement("button",{title:"Русский",onClick:function(){changeLang("ru");},style:{background:lang==="ru"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="ru"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇷🇺")
       )
     )
   );
@@ -270,12 +283,14 @@ export default function App() {
           );
         })
       ),
-      React.createElement("div", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, "5 Intelligences Artificielles · Concile V4.3"),
+      React.createElement("div", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
       React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
-        "Le meilleur ", React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, "pick"), " chaque jour."
+        lang==="fr" ? "Le meilleur " : lang==="en" ? "The best " : lang==="es" ? "La mejor " : lang==="it" ? "La migliore " : "Лучший ",
+        React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, lang==="fr" ? "pick" : lang==="en" ? "pick" : lang==="es" ? "selección" : lang==="it" ? "scelta" : "прогноз"),
+        lang==="fr" ? " chaque jour." : lang==="en" ? " every day." : lang==="es" ? " cada día." : lang==="it" ? " ogni giorno." : " каждый день."
       ),
       React.createElement("p", {style:{color:"#6b6356",fontSize:"17px",maxWidth:"540px",margin:"0 auto 12px",lineHeight:"1.8",fontWeight:"300"}},
-        "Groq, Gemini, DeepSeek, Mistral et Claude analysent chaque matin des centaines de matchs en concert."
+        t("hero_subtitle")
       ),
       React.createElement("p", {style:{color:"#4a4438",fontSize:"14px",maxWidth:"480px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"400"}},
         "Seuil minimum publié : ", React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". En dessous, fallback à ", React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), " pour garantir un pick quotidien."
