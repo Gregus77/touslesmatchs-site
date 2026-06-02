@@ -1,0 +1,227 @@
+
+> touslesmatchscd@0.1.0 start
+> react-scripts start
+
+(node:15956) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:15956) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:15956) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+Compiled with warnings.
+
+[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 65:5:   Duplicate key 'gagne'  no-dupe-keys
+  Line 66:5:   Duplicate key 'perdu'  no-dupe-keys
+  Line 145:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 146:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 225:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 226:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 305:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 306:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 385:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 386:5:  Duplicate key 'perdu'  no-dupe-keys
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 65:5:   [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 66:5:   [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 145:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 146:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 225:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 226:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 305:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 306:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 385:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 386:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 143:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 144:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 223:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 224:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 303:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 304:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 383:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 384:5:  Duplicate key 'perdu'  no-dupe-keys
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 143:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 144:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 223:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 224:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 303:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 304:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 383:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 384:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 221:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 222:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 301:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 302:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 381:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 382:5:  Duplicate key 'perdu'  no-dupe-keys
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 221:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 222:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 301:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 302:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 381:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 382:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 299:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 300:5:  Duplicate key 'perdu'  no-dupe-keys
+  Line 379:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 380:5:  Duplicate key 'perdu'  no-dupe-keys
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 299:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 300:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+  Line 379:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 380:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 377:5:  Duplicate key 'gagne'  no-dupe-keys
+  Line 378:5:  Duplicate key 'perdu'  no-dupe-keys
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+src\translations.js
+  Line 377:5:  [1m[31mDuplicate[39m[22m[1m key 'gagne'  no-dupe-keys
+  Line 378:5:  [1m[31mDuplicate[39m[22m[1m key 'perdu'  no-dupe-keys
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
+Compiling...
+Compiled with warnings.
+
+[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+Search for the keywords to learn more about each warning.
+To ignore, add // eslint-disable-next-line to the line before.
+
+[1m[33mWARNING[39m[22m in [1m[eslint] 
+src\AnalyseLive.js
+  Line 3:5:  'API_URL' is assigned a value but never used  no-unused-vars
+
+src\App.js
+  Line 140:7:  'isEnCours' is assigned a value but never used  no-unused-vars
+
+[39m[22m
+
+webpack compiled with [1m[33m1 warning[39m[22m
