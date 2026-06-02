@@ -420,9 +420,10 @@ export default function App() {
     ),
     React.createElement("section", {style:{padding:"10px 30px 24px",maxWidth:"780px",margin:"0 auto"}},
       React.createElement("div", {style:{
-        background:"linear-gradient(135deg,rgba(0,136,204,0.08) 0%,rgba(0,136,204,0.03) 100%)",
-        border:"1px solid rgba(0,136,204,0.3)",
-        borderRadius:"12px",padding:"24px 28px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"16px"
+        background:"linear-gradient(135deg,rgba(0,136,204,0.12) 0%,rgba(0,136,204,0.05) 100%)",
+        border:"2px solid rgba(0,136,204,0.5)",
+        borderRadius:"16px",padding:"28px 32px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"16px",
+        boxShadow:"0 0 30px rgba(0,136,204,0.12)"
       }},
         React.createElement("div", {style:{flex:1,minWidth:"200px"}},
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"6px"}},
@@ -430,22 +431,24 @@ export default function App() {
               React.createElement("line",{x1:"22",y1:"2",x2:"11",y2:"13"}),
               React.createElement("polygon",{points:"22 2 15 22 11 13 2 9 22 2"})
             ),
-            React.createElement("span",{style:{fontSize:"11px",letterSpacing:"3px",color:"#29b6f6",fontWeight:"700"}},"CANAL TELEGRAM")
+            React.createElement("span",{style:{fontSize:"11px",letterSpacing:"3px",color:"#29b6f6",fontWeight:"700"}},"📲 CANAL TELEGRAM GRATUIT")
           ),
-          React.createElement("div",{style:{fontSize:"16px",fontWeight:"700",color:"#fff",marginBottom:"4px",fontFamily:"'Bodoni Moda',serif"}},"Recois le pick directement sur Telegram"),
-          React.createElement("div",{style:{fontSize:"12px",color:"#555"}},"Notification instantanee des que le Concile valide un match.")
+          React.createElement("div",{style:{fontSize:"18px",fontWeight:"700",color:"#fff",marginBottom:"6px",fontFamily:"'Bodoni Moda',serif"}},"Reçois le pick + les liens pour parier"),
+          React.createElement("div",{style:{fontSize:"13px",color:"#888",marginBottom:"8px"}},"Chaque matin, le pick du jour avec les boutons directs vers les bookmakers."),
+          React.createElement("div",{style:{display:"flex",gap:"8px",flexWrap:"wrap"}},
+            ["Winamax","Betclic","Unibet","PMU"].map(function(b){
+              return React.createElement("span",{key:b,style:{fontSize:"10px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"2px 8px",color:"#555"}},b);
+            })
+          )
         ),
         React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",style:{
           background:"linear-gradient(135deg,#0088cc,#29b6f6)",
-          borderRadius:"8px",padding:"12px 24px",color:"#fff",fontWeight:"bold",
-          textDecoration:"none",fontSize:"13px",whiteSpace:"nowrap",
-          display:"inline-flex",alignItems:"center",gap:"8px",flexShrink:0
+          borderRadius:"10px",padding:"16px 28px",color:"#fff",fontWeight:"bold",
+          textDecoration:"none",fontSize:"15px",whiteSpace:"nowrap",
+          display:"inline-flex",alignItems:"center",gap:"10px",flexShrink:0,
+          boxShadow:"0 4px 20px rgba(0,136,204,0.4)"
         }},
-          React.createElement("svg",{width:"16",height:"16",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",strokeLinecap:"round",strokeLinejoin:"round"},
-            React.createElement("line",{x1:"22",y1:"2",x2:"11",y2:"13"}),
-            React.createElement("polygon",{points:"22 2 15 22 11 13 2 9 22 2"})
-          ),
-          "Rejoindre le canal")
+          "✈️ Rejoindre — C'est gratuit")
       )
     ),
     React.createElement("section", {style:{padding:"10px 30px 30px",maxWidth:"980px",margin:"0 auto"}},

@@ -16,12 +16,36 @@ const TG_CHAT        = process.env.TELEGRAM_CHAT_ID;
 const TODAY = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
 
 // ============================================================
+// LIENS AFFILIÉS BOOKMAKERS
+// ============================================================
+const BOOKMAKERS = [
+  { text: "🏆 Parier sur Winamax",      url: "https://www.winamax.fr/parrain?code=WMX8M5" },
+  { text: "⚡ Parier sur Betclic",       url: "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ" },
+  { text: "🎯 Parier sur Unibet",        url: "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254" },
+  { text: "🇫🇷 Parier sur PMU",          url: "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" },
+];
+
+// ============================================================
 // TELEGRAM NOTIFICATION
 // ============================================================
-function sendTelegram(text) {
+function sendTelegram(text, withButtons = false) {
   if (!TG_TOKEN || !TG_CHAT) return Promise.resolve();
   return new Promise((resolve) => {
-    const body = JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: "HTML" });
+    const payload = {
+      chat_id: TG_CHAT,
+      text,
+      parse_mode: "HTML",
+      ...(withButtons && {
+        reply_markup: {
+          inline_keyboard: [
+            [BOOKMAKERS[0], BOOKMAKERS[1]],
+            [BOOKMAKERS[2], BOOKMAKERS[3]],
+            [{ text: "📊 Voir les stats — touslesmatchs.com", url: "https://touslesmatchs.com" }]
+          ]
+        }
+      })
+    };
+    const body = JSON.stringify(payload);
     const req = https.request({
       hostname: "api.telegram.org",
       path: `/bot${TG_TOKEN}/sendMessage`,
@@ -614,7 +638,8 @@ async function main() {
 
 🗳 Votes : ${Object.entries(pick.votes||{}).map(([k,v])=>`${k}:${v}`).join(" | ")}
 
-👉 <a href="https://touslesmatchs.com">Parier sur touslesmatchs.com</a>`
+⬇️ <b>Choisis ton bookmaker et parie maintenant :</b>`,
+    true  // active les boutons bookmakers
   );
 
   console.log("\n✅ HERMÈS a terminé — site mis à jour + Telegram envoyé !");
