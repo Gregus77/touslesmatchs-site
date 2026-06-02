@@ -1,0 +1,25 @@
+name: Deploy Bot vers VPS
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'scripts/bot.js'
+      - 'Dockerfile.bot'
+      - 'docker-compose.yml'
+
+jobs:
+  deploy-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/touslesmatchs
+            git pull origin main
+            docker compose up --build -d bot
+            echo "✅ Bot redémarré avec succès"
