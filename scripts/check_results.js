@@ -28,8 +28,9 @@ function sendTelegram(text) {
   });
 }
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GROQ_KEY     = process.env.GROQ_API_KEY;
+const GITHUB_TOKEN    = process.env.GITHUB_TOKEN;
+const GROQ_KEY        = process.env.GROQ_API_KEY;
+const APISPORTS_KEY   = process.env.APISPORTS_KEY || ""; // Tier gratuit : 100 req/jour sur dashboard.api-sports.io
 const REPO_OWNER   = "Gregus77";
 const REPO_NAME    = "touslesmatchs-site";
 
@@ -93,9 +94,105 @@ async function writeFile(filePath, content, sha, message) {
   return false;
 }
 
-// ── VÉRIFIER RÉSULTAT via Groq ────────────────────────────
+// ── VÉRIFIER RÉSULTAT via API-Sports (réel) puis Groq (fallback) ──
 
-async function checkResult(pick) {
+function httpsGet(hostname, path, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const opts = { hostname, path, method: "GET",
+      headers: { "User-Agent": "HermesAgent/4.3", ...headers } };
+    const req = require("https").request(opts, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.on("error", reject); req.end();
+  });
+}
+
+// Recherche le résultat réel via API-Sports (gratuit 100 req/jour)
+async function checkResultAPISports(pick) {
+  if (!APISPORTS_KEY) return null;
+
+  const sportMap = {
+    "Football": { api: "football", path: "/fixtures" },
+    "Basketball": { api: "basketball", path: "/games" },
+    "Hockey": { api: "hockey", path: "/games" },
+    "Baseball": { api: "baseball", path: "/games" },
+  };
+  const sport = sportMap[pick.sport];
+  if (!sport) return null;
+
+  // Date du match (format YYYY-MM-DD)
+  const parts = pick.date.split("/");
+  const dateISO = `2026-${parts[1]}-${parts[0]}`;
+
+  try {
+    const res = await httpsGet(
+      `v3.${sport.api}.api-sports.io`,
+      `${sport.path}?date=${dateISO}&timezone=Europe/Paris`,
+      { "x-apisports-key": APISPORTS_KEY }
+    );
+
+    if (!res.response || !res.response.length) return null;
+
+    // Cherche le match par nom d'équipe
+    const [homeTeam, awayTeam] = pick.match.split(" vs ").map(s => s.trim().toLowerCase());
+    const found = res.response.find(g => {
+      const h = (g.teams?.home?.name || g.home?.name || "").toLowerCase();
+      const a = (g.teams?.away?.name || g.away?.name || "").toLowerCase();
+      return (h.includes(homeTeam.split(" ")[0]) || a.includes(awayTeam.split(" ")[0]));
+    });
+
+    if (!found) return null;
+
+    const status = found.fixture?.status?.short || found.status?.short || "";
+    if (!["FT","AET","PEN","AOT","POST","FT_PEN"].includes(status)) {
+      return { resultat: "EN ATTENTE", score_final: null, explication: `Match status: ${status}` };
+    }
+
+    // Score selon le sport
+    let scoreHome, scoreAway;
+    if (pick.sport === "Football") {
+      scoreHome = found.goals?.home ?? found.score?.home;
+      scoreAway = found.goals?.away ?? found.score?.away;
+    } else {
+      scoreHome = found.scores?.home?.total ?? found.home?.score;
+      scoreAway = found.scores?.away?.total ?? found.away?.score;
+    }
+
+    const scoreFinal = `${scoreHome}-${scoreAway}`;
+    const marche = pick.marche.toLowerCase();
+
+    // Déterminer GAGNE/PERDU selon le marché
+    let resultat = "EN ATTENTE";
+    if (marche.includes("vainqueur") || marche.includes("ml") || marche.includes("winner")) {
+      const homeWins = scoreHome > scoreAway;
+      const favoriteIsHome = pick.match.split(" vs ")[0].toLowerCase().includes(
+        pick.marche.toLowerCase().split(" ")[0]
+      );
+      resultat = homeWins === favoriteIsHome ? "GAGNE" : "PERDU";
+    } else if (marche.includes("over") || marche.includes("plus de")) {
+      const lineMatch = marche.match(/(\d+\.?\d*)/);
+      const line = lineMatch ? parseFloat(lineMatch[1]) : 2.5;
+      const total = parseInt(scoreHome) + parseInt(scoreAway);
+      resultat = total > line ? "GAGNE" : "PERDU";
+    } else if (marche.includes("under") || marche.includes("moins de")) {
+      const lineMatch = marche.match(/(\d+\.?\d*)/);
+      const line = lineMatch ? parseFloat(lineMatch[1]) : 2.5;
+      const total = parseInt(scoreHome) + parseInt(scoreAway);
+      resultat = total < line ? "GAGNE" : "PERDU";
+    }
+
+    console.log(`  ✅ API-Sports: ${scoreFinal} → ${resultat}`);
+    return { resultat, score_final: scoreFinal, explication: `Score réel API-Sports` };
+
+  } catch (e) {
+    console.log(`  ⚠️ API-Sports error: ${e.message}`);
+    return null;
+  }
+}
+
+// Fallback Groq si API-Sports ne trouve pas
+async function checkResultGroq(pick) {
   if (!GROQ_KEY) return { resultat: "EN ATTENTE", score_final: null, explication: "Clé Groq manquante" };
 
   const today = new Date().toLocaleDateString("fr-FR");
@@ -103,19 +200,31 @@ async function checkResult(pick) {
 Match: "${pick.match}" — Sport: ${pick.sport} — Marché: "${pick.marche}" — Cote: ${pick.cote}
 Ce match a-t-il eu lieu ? Quel est le résultat final ?
 Réponds UNIQUEMENT en JSON sans backticks ni texte:
-{"trouve":true,"score_final":"ex: 112-108 (220 pts)","resultat":"GAGNE ou PERDU ou EN ATTENTE","explication":"max 15 mots"}`;
+{"trouve":true,"score_final":"ex: 112-108","resultat":"GAGNE ou PERDU ou EN ATTENTE","explication":"max 15 mots"}`;
 
   try {
     const res = await httpsPost("api.groq.com", "/openai/v1/chat/completions",
       { "Authorization": `Bearer ${GROQ_KEY}`, "Content-Type": "application/json" },
-      { model: "llama-3.3-70b-versatile", max_tokens: 150, temperature: 0, messages: [{ role: "user", content: prompt }] }
+      { model: "llama-3.3-70b-versatile", max_tokens: 150, temperature: 0,
+        messages: [{ role: "user", content: prompt }] }
     );
     const text = (res.choices?.[0]?.message?.content || "").replace(/```json|```/g, "").trim();
     const match = text.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : { resultat: "EN ATTENTE", score_final: null, explication: "Parse error" };
+    return match ? JSON.parse(match[0]) : { resultat: "EN ATTENTE", score_final: null };
   } catch (e) {
     return { resultat: "EN ATTENTE", score_final: null, explication: e.message.slice(0, 40) };
   }
+}
+
+// Fonction principale : API-Sports d'abord, Groq en fallback
+async function checkResult(pick) {
+  console.log(`  🔍 Vérification API-Sports...`);
+  const apiResult = await checkResultAPISports(pick);
+  if (apiResult && apiResult.resultat !== "EN ATTENTE") {
+    return apiResult;
+  }
+  console.log(`  🔄 Fallback Groq...`);
+  return checkResultGroq(pick);
 }
 
 // ── EXTRAIRE LES PICKS EN ATTENTE depuis App.js ───────────
