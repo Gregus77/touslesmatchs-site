@@ -1,4 +1,10 @@
 www.touslesmatchs.com {
+    # API proxy vers le backend
+    handle /api/* {
+        reverse_proxy api:3001
+    }
+
+    # Frontend React
     root * /srv
     file_server
     try_files {path} /index.html

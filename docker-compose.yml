@@ -16,6 +16,20 @@ services:
     networks:
       - web
 
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: touslesmatchs-api
+    restart: unless-stopped
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - FOOTBALL_DATA_KEY=${FOOTBALL_DATA_KEY}
+    networks:
+      - web
+    expose:
+      - "3001"
+
   bot:
     build:
       context: .
