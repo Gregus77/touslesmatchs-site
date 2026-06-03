@@ -218,7 +218,15 @@ export default function App() {
               React.createElement("div", {style:{padding:"16px"}},
                 React.createElement("div", {style:{fontSize:"11px",color:"#555",marginBottom:"4px"}}, p.date),
                 React.createElement("div", {style:{fontSize:"14px",color:"#ddd",marginBottom:"8px"}}, p.match),
-                React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:"#22cc44"}}, p.gain)
+                React.createElement("div", {style:{fontSize:"18px",fontWeight:"bold",color:"#22cc44",marginBottom:"10px"}}, p.gain),
+                React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"6px",background:"rgba(34,180,60,0.08)",border:"1px solid rgba(34,180,60,0.22)",borderRadius:"5px",padding:"5px 9px"}},
+                  React.createElement("span", {style:{color:"#22cc44",fontSize:"11px",fontWeight:"bold"}}, "✅ Validé par le Concile"),
+                  React.createElement("div", {style:{display:"flex",gap:"3px",marginLeft:"auto"}},
+                    ["#22c55e","#3b82f6","#f59e0b","#a855f7","#d4af37"].map(function(c,j){
+                      return React.createElement("span", {key:j, title:["Groq","Gemini","DeepSeek","Mistral","Claude"][j], style:{width:"7px",height:"7px",borderRadius:"50%",background:c,display:"inline-block"}});
+                    })
+                  )
+                )
               )
             );
           })
