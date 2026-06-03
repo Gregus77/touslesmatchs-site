@@ -416,82 +416,26 @@ async function claudeChefConcile(matches) {
   console.log("👑 Claude — Décision finale du Concile...");
   if (!matches.length) return null;
 
-  const prompt = `Tu es Claude, Chef du Concile V5. Voici les matchs analysés par Groq, Gemini, DeepSeek, Mistral et Qwen:
+  // Réduire la taille du JSON pour économiser les tokens
+  const minMatches = matches.map(m => ({
+    home: m.home,
+    away: m.away,
+    heure: m.heure,
+    home_elo: m.home_elo,
+    away_elo: m.away_elo,
+    cote_domicile: m.cote_domicile,
+    cote_exterieur: m.cote_exterieur,
+    favoris: m.favoris
+  }));
 
-${JSON.stringify(matches, null, 2)}
+  const prompt = `Choisis le MEILLEUR pick parmi ces ${matches.length} matchs.
+Critères: cote 1.40-2.20, prob≥63%, vainqueur. Cherche d'abord 8/10+ (PREMIUM), sinon 7/10 (STANDARD).
 
-═══════════════════════════════════════
-RÈGLES CONCILE V4.3 — OBLIGATOIRES
-═══════════════════════════════════════
+Matchs:
+${JSON.stringify(minMatches)}
 
-MARCHÉ: Vainqueur du match UNIQUEMENT (1N2 ou Moneyline)
-COTE: Entre 1.40 et 2.20 (exception F1 podium jusqu'à 3.00)
-PROBABILITÉ MINIMUM: 63%
-
-HIÉRARCHIE DES SEUILS (PRIORITÉ ABSOLUE):
-  1. CHERCHE D'ABORD un pick ≥ 8.0/10 → c'est le PICK PREMIUM
-  2. SI aucun pick ≥ 8.0/10 n'existe → descends à 7.0/10 → c'est le PICK STANDARD
-  3. JAMAIS en dessous de 7.0/10 — si rien à 7/10, prends le meilleur disponible
-
-DÉFINITION DES NIVEAUX:
-  - PICK PREMIUM (note ≥ 8.0) : tous les critères réunis, confiance maximale
-  - PICK STANDARD (note 7.0–7.9) : critères partiellement remplis, confiance correcte mais inférieure — À SIGNALER CLAIREMENT
-
-8 STOPS ABSOLUS (disqualification immédiate):
-  ❌ ELO inférieur de plus de 150 points
-  ❌ Cote hors fenêtre 1.40–2.20
-  ❌ Moins de 3 matchs de stats disponibles
-  ❌ Match sans enjeu (équipe déjà qualifiée/éliminée)
-  ❌ Météo extrême annoncée (neige, vent >60km/h)
-  ❌ 2 titulaires majeurs absents ou plus
-  ❌ Forme ≤ 1 victoire sur les 5 derniers matchs
-  ❌ Cote en baisse rapide (chute >15% en 24h = signal suspect)
-
-DISPONIBILITÉ BOOKMAKERS FRANÇAIS (RÈGLE ABSOLUE):
-- Le pick DOIT être jouable sur Winamax, Betclic ou Unibet France
-- Priorité : NHL playoffs, NBA playoffs, Top 5 européens, Internationaux A reconnus
-- JAMAIS : championnats obscurs d'Amérique du Sud ou d'Asie, amicaux entre équipes mineures
-
-SPORTS BANNIS: Tennis, championnats corrompus (Chine, Vietnam, Nigeria, Biélorussie)
-ÉQUIPES BANNIES: Ottawa Senators, Montréal Canadiens, Toronto Raptors, Stuttgart, Manchester United
-
-UN PICK OBLIGATOIRE CHAQUE JOUR — jamais "rien à jouer", descendre à 7/10 si nécessaire
-
-═══════════════════════════════════════
-FORMAT DE RÉPONSE JSON OBLIGATOIRE
-═══════════════════════════════════════
-
-Réponds UNIQUEMENT en JSON (sans texte avant/après):
-{
-  "pick": {
-    "match": "Arsenal vs Chelsea",
-    "sport": "Football",
-    "competition": "Premier League",
-    "heure": "21h00",
-    "favori": "Arsenal",
-    "marche": "Arsenal Vainqueur",
-    "cote": 1.65,
-    "note": 8.5,
-    "prob": 0.68,
-    "threshold": 8,
-    "mise_type": "PICK PREMIUM",
-    "mise_euros": 10,
-    "label_visuel": "⭐ PICK PREMIUM",
-    "message_abonnes": "",
-    "raison": "Arsenal 4V/5, Chelsea sans Salah et Palmer, H2H 4-1 en faveur Arsenal",
-    "points_forts": ["Forme dominante 4V/5", "2 absents majeurs Chelsea", "H2H favorable"],
-    "avertissement": "",
-    "stops_ok": true,
-    "votes": {"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"GO"}
-  }
-}
-
-RÈGLES POUR LES CHAMPS SPÉCIAUX:
-- threshold: mettre 8 si note ≥ 8.0, mettre 7 si note entre 7.0 et 7.9
-- mise_type: "PICK PREMIUM" si threshold=8, "PICK STANDARD" si threshold=7
-- label_visuel: "⭐ PICK PREMIUM" si threshold=8, "🔔 PICK STANDARD" si threshold=7
-- message_abonnes: "" si threshold=8, "Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés." si threshold=7
-- avertissement: "" si threshold=8, "Confiance réduite — mise conseillée : 5€ max" si threshold=7`;
+Réponds UNIQUEMENT en JSON:
+{"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":8.5,"prob":0.68,"threshold":8,"mise_type":"PICK PREMIUM","mise_euros":10,"label_visuel":"⭐ PICK PREMIUM","message_abonnes":"","raison":"courte raison","points_forts":["point1"],"avertissement":"","stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"GO"}}}`;
 
   try {
     console.log(`   [DEBUG] OR_KEY défini: ${!!OR_KEY}`);
