@@ -448,7 +448,8 @@ Réponds UNIQUEMENT en JSON:
     );
     console.log(`   [DEBUG] API response keys: ${Object.keys(r).join(",")}`);
     if (r.error) console.log(`   [DEBUG] API error: ${JSON.stringify(r.error)}`);
-    const text = r.choices?.[0]?.message?.content || "";
+    if (r.raw) console.log(`   [DEBUG] raw: ${r.raw.slice(0,300)}`);
+    const text = r.choices?.[0]?.message?.content || r.raw?.split("content")[1]?.match(/"content":"([^"]+)"/)?.[1] || "";
     console.log(`   Claude brut (OpenRouter): ${text.slice(0,300)}`);
     const result = safeJSON(text);
     if (!result?.pick) console.log("   ⚠️ Claude: JSON parsé mais pas de .pick trouvé");
