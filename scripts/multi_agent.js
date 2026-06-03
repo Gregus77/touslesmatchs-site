@@ -14,7 +14,18 @@ const OR_KEY         = process.env.OPENROUTER_API_KEY;
 const TG_TOKEN       = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT        = process.env.TELEGRAM_CHAT_ID;
 
-const TODAY = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
+// ── Dates : aujourd'hui (0), demain (1), après-demain (2) ──
+function dateForOffset(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return {
+    offset,
+    iso: d.toISOString().slice(0, 10),
+    fr: d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" }),
+    label: ["AUJOURD'HUI", "DEMAIN", "APRÈS-DEMAIN"][offset] || `J+${offset}`
+  };
+}
+const TODAY = dateForOffset(0).fr;
 
 // ============================================================
 // TELEGRAM NOTIFICATION
@@ -87,8 +98,8 @@ function get(url) {
 // ============================================================
 // ÉTAPE 1a — VRAIS MATCHS VIA THESPORTSDB (source fiable)
 // ============================================================
-async function scanMatchesRealAPI() {
-  const today = new Date().toISOString().slice(0,10);
+async function scanMatchesRealAPI(targetISO) {
+  const today = targetISO || new Date().toISOString().slice(0,10);
   const SPORTS_MAP = [
     { apiSport: "Soccer",       label: "Foot"       },
     { apiSport: "Ice_Hockey",   label: "Hockey"     },
@@ -149,10 +160,10 @@ async function scanMatchesRealAPI() {
 // ============================================================
 // ÉTAPE 1b — GROQ ESTIME COTES/FORME sur vrais matchs
 // ============================================================
-async function enrichMatchesGroq(realMatches) {
+async function enrichMatchesGroq(realMatches, targetISO) {
   if (!realMatches.length) return realMatches;
   console.log(`🟢 Groq — Estimation cotes et forme pour ${realMatches.length} vrais matchs...`);
-  const today = new Date().toISOString().slice(0,10);
+  const today = targetISO || new Date().toISOString().slice(0,10);
   const matchList = realMatches.map(m => `${m.home} vs ${m.away} (${m.competition}, ${m.heure})`).join("\n");
   try {
     const r = await post("api.groq.com", "/openai/v1/chat/completions",
@@ -190,16 +201,16 @@ Réponds UNIQUEMENT en JSON: {"matches":[{"home":"nom_exact","away":"nom_exact",
 // ============================================================
 // ÉTAPE 1 — SCAN PRINCIPAL (API réelle + enrichissement IA)
 // ============================================================
-async function scanMatchesGroq() {
+async function scanMatchesGroq(targetISO) {
   // PRIORITÉ 1 : vrais matchs via TheSportsDB
-  let matches = await scanMatchesRealAPI();
+  let matches = await scanMatchesRealAPI(targetISO);
   if (matches.length > 0) {
-    return await enrichMatchesGroq(matches);
+    return await enrichMatchesGroq(matches, targetISO);
   }
 
   // PRIORITÉ 2 (fallback) : Groq invente — avec avertissement dans les logs
   console.log("⚠️ TheSportsDB sans résultat — fallback Groq (attention hallucinations possibles)");
-  const today = new Date().toISOString().slice(0,10);
+  const today = targetISO || new Date().toISOString().slice(0,10);
   try {
     const r = await post("api.groq.com", "/openai/v1/chat/completions",
       {"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"},
@@ -453,15 +464,22 @@ async function deepseekFallback(matches) {
 // ============================================================
 // ÉTAPE 6 — MISE À JOUR App.js
 // ============================================================
-function updateAppJs(pick) {
+function updateAppJs(pick, displayDate) {
   const appPath = "./src/App.js";
+  const dateStr = displayDate || TODAY;
   let content = fs.readFileSync(appPath, "utf8");
 
   const threshold = (pick.note >= 8) ? 8 : 7;
   const aiScore   = pick.note || 0;
 
+  // Anti-doublon : retire un éventuel pick EN ATTENTE déjà présent pour cette date
+  const dedupe = new RegExp(
+    '  \\["' + dateStr.replace('/', '\\/') + '"[^\\n]*"EN ATTENTE"[^\\n]*\\],\\n', 'g'
+  );
+  content = content.replace(dedupe, "");
+
   // Format: [date, match, marche, cote, score, statut, sport, aiScore, threshold]
-  const newPick = `  ["${TODAY}","${pick.match}","${pick.marche}","${pick.cote}","—","EN ATTENTE","${pick.sport}",${aiScore},${threshold}],\n`;
+  const newPick = `  ["${dateStr}","${pick.match}","${pick.marche}","${pick.cote}","—","EN ATTENTE","${pick.sport}",${aiScore},${threshold}],\n`;
 
   // Supporte les deux formats de picks array (const ou var)
   if (content.includes("const picks = [\n")) {
@@ -471,7 +489,7 @@ function updateAppJs(pick) {
   }
   fs.writeFileSync(appPath, content);
   const label = threshold === 8 ? "⭐ PREMIUM" : "🔔 STANDARD 7/10";
-  console.log(`✅ Pick ajouté [${label}]: ${pick.match} @ ${pick.cote} — Note: ${aiScore}/10`);
+  console.log(`✅ Pick ${dateStr} ajouté [${label}]: ${pick.match} @ ${pick.cote} — Note: ${aiScore}/10`);
 }
 
 function updateAppJsNoPick(reason) {
@@ -509,9 +527,9 @@ function gitCommit(msg) {
 // ============================================================
 // SCAN FALLBACK — DEEPSEEK SI GROQ ÉCHOUE
 // ============================================================
-async function scanMatchesDeepSeekFallback() {
+async function scanMatchesDeepSeekFallback(targetISO) {
   console.log("🟠 DeepSeek — Scan de secours...");
-  const today = new Date().toISOString().slice(0,10);
+  const today = targetISO || new Date().toISOString().slice(0,10);
   try {
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
@@ -550,88 +568,99 @@ async function forcePick7(matches) {
 }
 
 // ============================================================
-// MAIN
+// PIPELINE — UN JOUR (scan → concile → pick)
 // ============================================================
-async function main() {
-  console.log(`\n🏛️ HERMÈS V4 — CONCILE COMPLET — ${TODAY}\n`);
-  console.log("👑 Claude (Chef) | 🟢 Groq | 🔵 Gemini | 🟠 DeepSeek | 🟣 Mistral\n");
+async function generateForDay(day) {
+  console.log(`\n──────── ${day.label} (${day.fr}) ────────`);
 
-  // 1. Scan matchs (Groq) — 1ère tentative
-  let matches = await scanMatchesGroq();
-  console.log(`✅ ${matches.length} matchs trouvés`);
+  // 1. Scan matchs (TheSportsDB + Groq) pour la date cible
+  let matches = await scanMatchesGroq(day.iso);
+  console.log(`✅ ${matches.length} matchs trouvés pour ${day.fr}`);
 
-  // Si Groq trouve rien → 2ème tentative avec prompt plus large via DeepSeek
   if (!matches.length) {
-    console.log("⚠️ Groq n'a rien trouvé — 2ème tentative via DeepSeek...");
-    matches = await scanMatchesDeepSeekFallback();
+    console.log("⚠️ Groq n'a rien trouvé — fallback DeepSeek...");
+    matches = await scanMatchesDeepSeekFallback(day.iso);
     console.log(`✅ DeepSeek fallback: ${matches.length} matchs`);
   }
-
-  // Si toujours rien → NOPICK ultime
   if (!matches.length) {
-    console.log("⚠️ Aucun match disponible aujourd'hui — NOPICK");
-    updateAppJsNoPick("Aucun match disponible");
-    gitCommit("NO PICK - Aucun match");
-    await sendTelegram("⏸ Aucun match disponible aujourd'hui — pas de pick.");
-    return;
+    console.log(`⚠️ Aucun match pour ${day.fr}`);
+    return null;
   }
 
-  // 2. H2H (Gemini)
+  // 2-4. Enrichissement du Concile (Gemini H2H, DeepSeek forme, Mistral contexte)
   matches = await checkH2HGemini(matches);
-
-  // 3. Forme (DeepSeek)
   matches = await analyzeFormDeepSeek(matches);
-
-  // 4. Contexte (Mistral)
   matches = await checkContextMistral(matches);
 
-  // 5. Décision finale (Claude — avec fallback DeepSeek)
+  // 5. Décision finale (Claude chef → fallback DeepSeek → force 7/10)
   let result = await claudeChefConcile(matches);
-
-  // Si Claude/DeepSeek ne valident rien → forcer le meilleur match disponible
   if (!result?.pick) {
     console.log("⚠️ Concile sans résultat — forçage du meilleur match à 7/10...");
     result = await forcePick7(matches);
   }
-
   if (!result?.pick) {
-    console.log("❌ Impossible de trouver un pick. NOPICK enregistré.");
-    updateAppJsNoPick("Analyse sans résultat");
-    gitCommit("NO PICK");
-    await sendTelegram("⏸ Aucun pick validé aujourd'hui malgré l'analyse.");
-    return;
+    console.log(`❌ Impossible de trouver un pick pour ${day.fr}`);
+    return null;
   }
 
   const pick = result.pick;
-  console.log(`\n🎯 PICK: ${pick.match} @ ${pick.cote} — Note: ${pick.note}/10`);
-  console.log(`📊 ${pick.marche} | Mise: ${pick.mise_euros}€ (${pick.mise_type})`);
-  console.log(`📝 ${pick.raison}`);
-  console.log(`🗳️ Votes: ${JSON.stringify(pick.votes)}`);
+  console.log(`🎯 ${day.fr} — ${pick.match} @ ${pick.cote} — Note: ${pick.note}/10 (${pick.mise_type})`);
+  updateAppJs(pick, day.fr);
+  return pick;
+}
 
-  updateAppJs(pick);
-  gitCommit(`PICK: ${pick.match} @ ${pick.cote}`);
+// ============================================================
+// MAIN — AUJOURD'HUI + DEMAIN + APRÈS-DEMAIN
+// Garantit toujours au moins un match jouable à venir (seuil 8/10,
+// repli automatique 7/10). NB : le Concile tourne 1× par jour ciblé.
+// ============================================================
+async function main() {
+  console.log(`\n🏛️ HERMÈS V4 — CONCILE COMPLET — 3 JOURS — ${TODAY}\n`);
+  console.log("👑 Claude (Chef) | 🟢 Groq | 🔵 Gemini | 🟠 DeepSeek | 🟣 Mistral\n");
 
-  // 📱 Notification Telegram
-  const sportEmoji = {"Football":"⚽","Hockey":"🏒","Basketball":"🏀","Baseball":"⚾","F1":"🏎️"}[pick.sport] || "🎯";
-  const threshold = (pick.note >= 8) ? "🟢 SEUIL 8/10" : "🟡 SEUIL 7/10";
-  await sendTelegram(
-`${sportEmoji} <b>PICK DU JOUR — ${TODAY}</b>
+  const days = [dateForOffset(0), dateForOffset(1), dateForOffset(2)];
+  const picksByDay = [];
 
-🏟 <b>${pick.match}</b>
-🎯 ${pick.marche}
-💰 Cote : <b>${pick.cote}</b>
-📊 Note IA : <b>${pick.note}/10</b> ${threshold}
-💵 Mise conseillée : ${pick.mise_euros}€
+  for (const day of days) {
+    try {
+      const pick = await generateForDay(day);
+      picksByDay.push({ day, pick });
+    } catch (e) {
+      console.error(`💥 Erreur ${day.fr}:`, e.message);
+      picksByDay.push({ day, pick: null });
+    }
+  }
 
-📝 ${pick.raison}
+  const anyPick = picksByDay.some(p => p.pick);
+  if (!anyPick) {
+    console.log("\n⚠️ Aucun match validé sur les 3 jours — NOPICK");
+    updateAppJsNoPick("Aucun match disponible");
+    gitCommit("NO PICK - 3 jours sans match");
+    await sendTelegram("⏸ Aucun match validé pour aujourd'hui, demain ou après-demain.");
+    return;
+  }
 
-🗳 Votes : ${Object.entries(pick.votes||{}).map(([k,v])=>`${k}:${v}`).join(" | ")}
+  // Un seul commit pour les 3 jours
+  gitCommit(`PICKS 3 jours — ${picksByDay.filter(p => p.pick).map(p => p.day.fr).join(", ")}`);
 
-⬇️ <b>Choisis ton bookmaker et parie maintenant :</b>`,
-    true  // active les boutons bookmakers
-  );
+  // 📱 Notification Telegram récapitulative (aujourd'hui + demain + après-demain)
+  const sportEmoji = s => ({Football:"⚽",Foot:"⚽",Hockey:"🏒",Basketball:"🏀",Baseball:"⚾",F1:"🏎️"}[s] || "🎯");
+  let msg = `📅 <b>PROGRAMME TOUSLESMATCHS</b>\n\n`;
+  for (const { day, pick } of picksByDay) {
+    if (pick) {
+      const seuil = (pick.note >= 8) ? "🟢 8/10" : "🟡 7/10";
+      msg += `<b>${day.label}</b> (${day.fr})\n` +
+        `${sportEmoji(pick.sport)} <b>${pick.match}</b>\n` +
+        `🎯 ${pick.marche} — Cote <b>${pick.cote}</b> — ${seuil}\n` +
+        `📝 ${pick.raison}\n\n`;
+    } else {
+      msg += `<b>${day.label}</b> (${day.fr})\n⏳ Pas encore de match validé — mise à jour automatique.\n\n`;
+    }
+  }
+  msg += `⬇️ <b>Choisis ton bookmaker et parie :</b>`;
+  await sendTelegram(msg, true);
 
-  console.log("\n✅ HERMÈS a terminé — site mis à jour + Telegram envoyé !");
+  console.log("\n✅ HERMÈS a terminé — 3 jours mis à jour + Telegram envoyé !");
 }
 
 main().catch(e => {

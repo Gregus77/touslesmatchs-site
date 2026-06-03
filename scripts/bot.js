@@ -34,7 +34,11 @@ function sendLanguageMenu(chatId) {
           { text: "🇬🇧 English",  callback_data: "lang_en" }
         ],
         [
-          { text: "🇵🇭 Tagalog",  callback_data: "lang_tl" }
+          { text: "🇪🇸 Español",  callback_data: "lang_es" },
+          { text: "🇮🇹 Italiano", callback_data: "lang_it" }
+        ],
+        [
+          { text: "🇷🇺 Русский",  callback_data: "lang_ru" }
         ]
       ]
     }
@@ -55,22 +59,15 @@ async function handleUpdate(update) {
     const chatId = query.message.chat.id;
     await api("answerCallbackQuery", { callback_query_id: query.id });
 
-    if (query.data === "lang_tl") {
-      await api("sendMessage", {
-        chat_id: chatId,
-        text: "🇵🇭 ❤️\n\n<b>Mahal kita, mahal ko</b>\n\n<i>Je t'aime mon amour</i> 💕",
-        parse_mode: "HTML"
-      });
-    } else if (query.data === "lang_fr") {
-      await api("sendMessage", {
-        chat_id: chatId,
-        text: "🇫🇷 Langue française sélectionnée.\n\nVous recevrez vos picks en français. ✅"
-      });
-    } else if (query.data === "lang_en") {
-      await api("sendMessage", {
-        chat_id: chatId,
-        text: "🇬🇧 English selected.\n\nYou will receive your picks in English. ✅"
-      });
+    const confirmations = {
+      lang_fr: "🇫🇷 Langue française sélectionnée.\n\nVous recevrez vos picks en français. ✅",
+      lang_en: "🇬🇧 English selected.\n\nYou will receive your picks in English. ✅",
+      lang_es: "🇪🇸 Idioma español seleccionado.\n\nRecibirás tus pronósticos en español. ✅",
+      lang_it: "🇮🇹 Lingua italiana selezionata.\n\nRiceverai i tuoi pronostici in italiano. ✅",
+      lang_ru: "🇷🇺 Выбран русский язык.\n\nВы будете получать прогнозы на русском. ✅"
+    };
+    if (confirmations[query.data]) {
+      await api("sendMessage", { chat_id: chatId, text: confirmations[query.data] });
     }
   }
 }
