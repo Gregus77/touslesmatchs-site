@@ -496,15 +496,17 @@ RÈGLES POUR LES CHAMPS SPÉCIAUX:
   try {
     const r = await post("api.anthropic.com", "/v1/messages",
       {"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"},
-      { model:"claude-sonnet-4-20250514", max_tokens:1000, temperature:0.1,
+      { model:"claude-haiku-4-5", max_tokens:2000, temperature:0.1,
         messages:[{role:"user",content:prompt}]
       }
     );
     const text = r.content?.[0]?.text || "";
-    return safeJSON(text);
+    console.log(`   Claude brut (200c): ${text.slice(0,200)}`);
+    const result = safeJSON(text);
+    if (!result?.pick) console.log("   ⚠️ Claude: JSON parsé mais pas de .pick trouvé");
+    return result;
   } catch(e) {
     console.error("Claude error:", e.message);
-    // FALLBACK: DeepSeek prend le relais si Claude échoue
     console.log("⚠️ Claude a échoué — DeepSeek prend le relais...");
     return await deepseekFallback(matches);
   }
@@ -518,11 +520,12 @@ async function deepseekFallback(matches) {
   try {
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
-      { model:"deepseek-chat", max_tokens:1000, temperature:0.1,
-        messages:[{role:"user",content:`Tu es le Chef du Concile V4.3 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Essaie d'abord d'atteindre note ≥8.0 (threshold=8, mise_type="PICK PREMIUM", label_visuel="⭐ PICK PREMIUM"). Si impossible, descends à 7.0 (threshold=7, mise_type="PICK STANDARD", label_visuel="🔔 PICK STANDARD", message_abonnes="Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés.", avertissement="Confiance réduite — mise conseillée : 5€ max"). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels non atteints","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"raison courte","points_forts":["point1"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
+      { model:"deepseek-chat", max_tokens:2000, temperature:0.1,
+        messages:[{role:"user",content:`Tu es le Chef du Concile V5 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Essaie d'abord d'atteindre note ≥8.0 (threshold=8, mise_type="PICK PREMIUM", label_visuel="⭐ PICK PREMIUM"). Si impossible, descends à 7.0 (threshold=7, mise_type="PICK STANDARD", label_visuel="🔔 PICK STANDARD", message_abonnes="Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés.", avertissement="Confiance réduite — mise conseillée : 5€ max"). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels non atteints","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"raison courte","points_forts":["point1"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
+    console.log(`   DeepSeek fallback brut (200c): ${text.slice(0,200)}`);
     return safeJSON(text);
   } catch(e) {
     console.error("DeepSeek fallback error:", e.message);
@@ -624,11 +627,12 @@ async function forcePick7(matches) {
   try {
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
-      { model:"deepseek-chat", max_tokens:800, temperature:0.1,
+      { model:"deepseek-chat", max_tokens:1500, temperature:0.1,
         messages:[{role:"user",content:`Choisis le MEILLEUR match parmi ceux-ci pour un pari sportif aujourd'hui. Critères : favori le plus solide, forme la plus régulière, enjeu le plus clair. Attribue-lui une note entre 7.0 et 7.9 (threshold=7). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Hockey","competition":"NHL","heure":"20h00","favori":"X","marche":"X Vainqueur","cote":1.62,"note":7.2,"prob":0.64,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10.","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"Meilleur match disponible du jour","points_forts":["Favori solide"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"FORCE_7"}}}. Matchs disponibles: ${JSON.stringify(matches.slice(0,5))}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
+    console.log(`   ForcePick7 brut (200c): ${text.slice(0,200)}`);
     return safeJSON(text);
   } catch(e) {
     console.error("ForcePick7 error:", e.message);
