@@ -130,11 +130,29 @@ async function scanMatchesRealAPI(targetISO) {
   }
   let matches = [];
   try {
-    const data = await rapidGet(`/football-get-all-fixtures-by-date?date=${today}`);
-    const fixtures = data?.response?.data || data?.response || data?.data || [];
+    // Essai de plusieurs endpoints possibles selon la doc RapidAPI
+    let data = null;
+    const endpoints = [
+      `/football-get-all-fixtures?date=${today}`,
+      `/fixtures?date=${today}`,
+      `/football-fixtures?date=${today}`,
+      `/football-get-fixtures-by-date?date=${today}`,
+    ];
+    for (const ep of endpoints) {
+      const res = await rapidGet(ep);
+      if (!res?.message) { data = res; break; }
+      console.log(`   ❌ ${ep} → ${res.message}`);
+    }
+    if (!data) {
+      // Log l'endpoint livescores pour debug
+      const live = await rapidGet("/football-get-all-livescores");
+      console.log(`   Livescores brut (150c): ${JSON.stringify(live).slice(0,150)}`);
+      return [];
+    }
+    const fixtures = data?.response?.data || data?.response || data?.data || data?.fixtures || [];
     if (!Array.isArray(fixtures) || !fixtures.length) {
       console.log(`📅 RapidAPI: réponse vide ou format inattendu pour ${today}`);
-      console.log(`   Réponse brute (100 chars): ${JSON.stringify(data).slice(0, 100)}`);
+      console.log(`   Réponse brute (150 chars): ${JSON.stringify(data).slice(0, 150)}`);
       return [];
     }
     for (const fx of fixtures) {
