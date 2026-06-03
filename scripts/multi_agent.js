@@ -11,6 +11,7 @@ const GROQ_KEY       = process.env.GROQ_API_KEY;
 const GEMINI_KEY     = process.env.GEMINI_API_KEY;
 const DEEPSEEK_KEY   = process.env.DEEPSEEK_API_KEY;
 const OR_KEY         = process.env.OPENROUTER_API_KEY;
+const RAPIDAPI_KEY   = process.env.RAPIDAPI_KEY;
 const TG_TOKEN       = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT        = process.env.TELEGRAM_CHAT_ID;
 
@@ -95,65 +96,81 @@ function get(url) {
   });
 }
 
+function rapidGet(path) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname: "free-api-live-football-data.p.rapidapi.com",
+      path,
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-rapidapi-host": "free-api-live-football-data.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY
+      }
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try { resolve(JSON.parse(d)); } catch { resolve({}); }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
 // ============================================================
-// ÉTAPE 1a — VRAIS MATCHS VIA THESPORTSDB (source fiable)
+// ÉTAPE 1a — VRAIS MATCHS VIA RAPIDAPI (Free API Live Football)
 // ============================================================
 async function scanMatchesRealAPI(targetISO) {
   const today = targetISO || new Date().toISOString().slice(0,10);
-  const SPORTS_MAP = [
-    { apiSport: "Soccer",       label: "Foot"       },
-    { apiSport: "Ice_Hockey",   label: "Hockey"     },
-    { apiSport: "Basketball",   label: "Basketball" },
-    { apiSport: "Baseball",     label: "Baseball"   },
-  ];
-  const MAJOR_LEAGUES = [
-    "nhl","nba","mlb","mls","premier league","la liga","bundesliga",
-    "serie a","ligue 1","champions league","europa league","copa",
-    "world cup","international","friendly","nations league"
-  ];
-  let matches = [];
-  for (const s of SPORTS_MAP) {
-    try {
-      const data = await get(`https://www.thesportsdb.com/api/v1/json/1/eventsday.php?d=${today}&s=${encodeURIComponent(s.apiSport)}`);
-      if (!data.events) continue;
-      for (const ev of data.events) {
-        // Ignorer matchs déjà terminés
-        if (ev.intHomeScore !== null && ev.intHomeScore !== "" && ev.intHomeScore !== undefined) continue;
-        // Filtrer ligues majeures seulement (sauf Hockey/Basket où on garde tout)
-        const league = (ev.strLeague || "").toLowerCase();
-        const isMajor = s.label === "Hockey" || s.label === "Basketball" ||
-          MAJOR_LEAGUES.some(l => league.includes(l));
-        if (!isMajor) continue;
-        // Heure locale Paris
-        let heure = "20h00";
-        if (ev.strTimestamp) {
-          const d = new Date(ev.strTimestamp);
-          heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h");
-        }
-        matches.push({
-          sport: s.label,
-          competition: ev.strLeague || "",
-          home: ev.strHomeTeam,
-          away: ev.strAwayTeam,
-          heure,
-          home_form: "UNKNOWN",
-          away_form: "UNKNOWN",
-          home_elo: 1700,
-          away_elo: 1700,
-          enjeu: "Regular",
-          cote_domicile: 0,
-          cote_exterieur: 0,
-          favoris: "unknown",
-          absents_exterieur: [],
-          disponible_bookmakers_fr: true,
-          source: "thesportsdb_verified"
-        });
-      }
-    } catch(e) {
-      console.error(`TheSportsDB ${s.label} error:`, e.message);
-    }
+  if (!RAPIDAPI_KEY) {
+    console.log("⚠️ RAPIDAPI_KEY manquante — scan API réel désactivé");
+    return [];
   }
-  console.log(`📅 TheSportsDB: ${matches.length} vrais matchs trouvés`);
+  let matches = [];
+  try {
+    const data = await rapidGet(`/football-get-all-fixtures-by-date?date=${today}`);
+    const fixtures = data?.response?.data || data?.response || data?.data || [];
+    if (!Array.isArray(fixtures) || !fixtures.length) {
+      console.log(`📅 RapidAPI: réponse vide ou format inattendu pour ${today}`);
+      console.log(`   Réponse brute (100 chars): ${JSON.stringify(data).slice(0, 100)}`);
+      return [];
+    }
+    for (const fx of fixtures) {
+      const home = fx.homeTeam?.name || fx.home?.name || fx.teams?.home?.name || "";
+      const away = fx.awayTeam?.name || fx.away?.name || fx.teams?.away?.name || "";
+      const league = fx.league?.name || fx.competition?.name || fx.tournament?.name || "";
+      const status = fx.status?.type || fx.status || "";
+      if (!home || !away) continue;
+      if (status === "finished" || status === "cancelled") continue;
+      let heure = "20h00";
+      const ts = fx.startTimestamp || fx.time?.timestamp || fx.date;
+      if (ts) {
+        const d = new Date(typeof ts === "number" ? ts * 1000 : ts);
+        if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h");
+      }
+      matches.push({
+        sport: "Foot",
+        competition: league,
+        home, away, heure,
+        home_form: "UNKNOWN",
+        away_form: "UNKNOWN",
+        home_elo: 1700,
+        away_elo: 1700,
+        enjeu: "Regular",
+        cote_domicile: 0,
+        cote_exterieur: 0,
+        favoris: "unknown",
+        absents_exterieur: [],
+        disponible_bookmakers_fr: true,
+        source: "rapidapi_verified"
+      });
+    }
+  } catch(e) {
+    console.error("RapidAPI error:", e.message);
+  }
+  console.log(`📅 RapidAPI: ${matches.length} vrais matchs trouvés pour ${today}`);
   return matches;
 }
 
