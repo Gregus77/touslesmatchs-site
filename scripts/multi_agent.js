@@ -132,24 +132,12 @@ async function scanMatchesRealAPI(targetISO) {
   try {
     // Essai de plusieurs endpoints possibles selon la doc RapidAPI
     let data = null;
-    const endpoints = [
-      `/football-get-all-fixtures?date=${today}`,
-      `/fixtures?date=${today}`,
-      `/football-fixtures?date=${today}`,
-      `/football-get-fixtures-by-date?date=${today}`,
-    ];
-    for (const ep of endpoints) {
-      const res = await rapidGet(ep);
-      if (!res?.message) { data = res; break; }
-      console.log(`   ❌ ${ep} → ${res.message}`);
-    }
-    if (!data) {
-      // Log l'endpoint livescores pour debug
-      const live = await rapidGet("/football-get-all-livescores");
-      console.log(`   Livescores brut (150c): ${JSON.stringify(live).slice(0,150)}`);
+    data = await rapidGet(`/football-get-matches-by-date?date=${today}`);
+    if (data?.message) {
+      console.log(`   ❌ RapidAPI: ${data.message}`);
       return [];
     }
-    const fixtures = data?.response?.data || data?.response || data?.data || data?.fixtures || [];
+    const fixtures = data?.response || data?.data || data?.matches || data?.fixtures || Object.values(data || {}).find(v => Array.isArray(v)) || [];
     if (!Array.isArray(fixtures) || !fixtures.length) {
       console.log(`📅 RapidAPI: réponse vide ou format inattendu pour ${today}`);
       console.log(`   Réponse brute (150 chars): ${JSON.stringify(data).slice(0, 150)}`);
