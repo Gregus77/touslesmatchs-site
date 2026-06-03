@@ -222,8 +222,8 @@ export default function App() {
                 React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"6px",background:"rgba(34,180,60,0.08)",border:"1px solid rgba(34,180,60,0.22)",borderRadius:"5px",padding:"5px 9px"}},
                   React.createElement("span", {style:{color:"#22cc44",fontSize:"11px",fontWeight:"bold"}}, "✅ Validé par le Concile"),
                   React.createElement("div", {style:{display:"flex",gap:"3px",marginLeft:"auto"}},
-                    ["#22c55e","#3b82f6","#f59e0b","#a855f7","#d4af37"].map(function(c,j){
-                      return React.createElement("span", {key:j, title:["Groq","Gemini","DeepSeek","Mistral","Claude"][j], style:{width:"7px",height:"7px",borderRadius:"50%",background:c,display:"inline-block"}});
+                    ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444","#d4af37"].map(function(c,j){
+                      return React.createElement("span", {key:j, title:["Groq","Gemini","DeepSeek","Mistral","Qwen","Claude"][j], style:{width:"7px",height:"7px",borderRadius:"50%",background:c,display:"inline-block"}});
                     })
                   )
                 )
@@ -276,13 +276,14 @@ export default function App() {
   return React.createElement("div", {style:{background:"linear-gradient(180deg,#0a0906 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0"}},
     header,
     React.createElement("section", {style:{padding:"60px 30px 30px",textAlign:"center"}},
-      /* Badges 5 IAs */
+      /* Badges 6 IAs */
       React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"6px",flexWrap:"wrap",marginBottom:"18px"}},
         [
           {nom:"Groq",    dot:"#22c55e"},
           {nom:"Gemini",  dot:"#3b82f6"},
           {nom:"DeepSeek",dot:"#f97316"},
           {nom:"Mistral", dot:"#a855f7"},
+          {nom:"Qwen",    dot:"#ef4444"},
           {nom:"Claude",  dot:"#d4af37"},
         ].map(function(ia,i){
           return React.createElement("div",{key:i,style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"4px 12px"}},
@@ -365,7 +366,7 @@ export default function App() {
           React.createElement("span", {style:{color:"#fff",fontWeight:"700",fontSize:"18px",fontFamily:"'Bodoni Moda',serif"}}, "Cote: "+pickDuJour[3])
         ),
 
-        /* Panel Concile V4.3 — votes des 5 IAs */
+        /* Panel Concile V5 — votes des 6 IAs */
         isNoPick ? null : React.createElement("div", {style:{
           background:"rgba(255,255,255,0.03)",
           border:"1px solid rgba(255,255,255,0.08)",
@@ -378,6 +379,7 @@ export default function App() {
               {nom:"Gemini", color:"#3b82f6", role:"H2H"},
               {nom:"DeepSeek",color:"#f97316",role:"Forme"},
               {nom:"Mistral",color:"#a855f7", role:"Contexte"},
+              {nom:"Qwen",   color:"#ef4444", role:"Value"},
               {nom:"Claude", color:"#d4af37", role:"Chef ★"},
             ].map(function(ia, i){
               return React.createElement("div", {key:i, style:{

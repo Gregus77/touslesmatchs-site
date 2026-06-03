@@ -341,13 +341,41 @@ async function checkContextMistral(matches) {
 }
 
 // ============================================================
+// ÉTAPE 4b — QWEN VÉRIFIE VALEUR DES COTES
+// ============================================================
+async function checkValueQwen(matches) {
+  console.log("🔴 Qwen — Analyse value bet...");
+  if (!matches.length) return matches;
+  try {
+    const r = await post("openrouter.ai", "/api/v1/chat/completions",
+      {"Authorization":`Bearer ${OR_KEY}`,"Content-Type":"application/json","HTTP-Referer":"https://touslesmatchs.com","X-Title":"Concile V5"},
+      { model:"qwen/qwen-2.5-72b-instruct", max_tokens:800, temperature:0.1,
+        messages:[{role:"user",content:`Analyse la valeur des cotes pour ces matchs. Pour chaque match, estime la probabilite reelle du favori et compare avec la cote proposee. Reponds en JSON: {"matches":[{"home":"nom","away":"nom","prob_reelle":0.65,"cote_juste":1.54,"value_score":8,"qwen_rec":"GO ou NO","raison":"courte raison"}]}. Matchs: ${JSON.stringify(matches.map(m=>({home:m.home,away:m.away,competition:m.competition,cote_domicile:m.cote_domicile,cote_exterieur:m.cote_exterieur,favoris:m.favoris})))}`}]
+      }
+    );
+    const text = r.choices?.[0]?.message?.content || "";
+    const parsed = safeJSON(text);
+    if (parsed?.matches) {
+      return matches.map(m => {
+        const qw = parsed.matches.find(q => q.home===m.home || q.away===m.away);
+        return qw ? {...m, prob_reelle:qw.prob_reelle, value_score:qw.value_score, qwen_rec:qw.qwen_rec} : m;
+      });
+    }
+    return matches;
+  } catch(e) {
+    console.error("Qwen error:", e.message);
+    return matches;
+  }
+}
+
+// ============================================================
 // ÉTAPE 5 — CLAUDE CHEF DU CONCILE — DÉCISION FINALE
 // ============================================================
 async function claudeChefConcile(matches) {
   console.log("👑 Claude — Décision finale du Concile...");
   if (!matches.length) return null;
 
-  const prompt = `Tu es Claude, Chef du Concile V4.3. Voici les matchs analysés par Groq, Gemini, DeepSeek et Mistral:
+  const prompt = `Tu es Claude, Chef du Concile V5. Voici les matchs analysés par Groq, Gemini, DeepSeek, Mistral et Qwen:
 
 ${JSON.stringify(matches, null, 2)}
 
@@ -413,7 +441,7 @@ Réponds UNIQUEMENT en JSON (sans texte avant/après):
     "points_forts": ["Forme dominante 4V/5", "2 absents majeurs Chelsea", "H2H favorable"],
     "avertissement": "",
     "stops_ok": true,
-    "votes": {"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"GO"}
+    "votes": {"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"GO"}
   }
 }
 
@@ -450,7 +478,7 @@ async function deepseekFallback(matches) {
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
       { model:"deepseek-chat", max_tokens:1000, temperature:0.1,
-        messages:[{role:"user",content:`Tu es le Chef du Concile V4.3 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Essaie d'abord d'atteindre note ≥8.0 (threshold=8, mise_type="PICK PREMIUM", label_visuel="⭐ PICK PREMIUM"). Si impossible, descends à 7.0 (threshold=7, mise_type="PICK STANDARD", label_visuel="🔔 PICK STANDARD", message_abonnes="Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés.", avertissement="Confiance réduite — mise conseillée : 5€ max"). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels non atteints","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"raison courte","points_forts":["point1"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
+        messages:[{role:"user",content:`Tu es le Chef du Concile V4.3 en remplacement de Claude. Choisis le meilleur pick parmi ces matchs. Cote 1.40-2.20, prob ≥63%, vainqueur uniquement. Essaie d'abord d'atteindre note ≥8.0 (threshold=8, mise_type="PICK PREMIUM", label_visuel="⭐ PICK PREMIUM"). Si impossible, descends à 7.0 (threshold=7, mise_type="PICK STANDARD", label_visuel="🔔 PICK STANDARD", message_abonnes="Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10 pour les abonnés.", avertissement="Confiance réduite — mise conseillée : 5€ max"). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Football","competition":"Ligue","heure":"21h00","favori":"X","marche":"X Vainqueur","cote":1.65,"note":7.5,"prob":0.65,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels non atteints","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"raison courte","points_forts":["point1"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"FALLBACK"}}}. Matchs: ${JSON.stringify(matches)}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
@@ -556,7 +584,7 @@ async function forcePick7(matches) {
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
       { model:"deepseek-chat", max_tokens:800, temperature:0.1,
-        messages:[{role:"user",content:`Choisis le MEILLEUR match parmi ceux-ci pour un pari sportif aujourd'hui. Critères : favori le plus solide, forme la plus régulière, enjeu le plus clair. Attribue-lui une note entre 7.0 et 7.9 (threshold=7). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Hockey","competition":"NHL","heure":"20h00","favori":"X","marche":"X Vainqueur","cote":1.62,"note":7.2,"prob":0.64,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10.","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"Meilleur match disponible du jour","points_forts":["Favori solide"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","claude":"FORCE_7"}}}. Matchs disponibles: ${JSON.stringify(matches.slice(0,5))}`}]
+        messages:[{role:"user",content:`Choisis le MEILLEUR match parmi ceux-ci pour un pari sportif aujourd'hui. Critères : favori le plus solide, forme la plus régulière, enjeu le plus clair. Attribue-lui une note entre 7.0 et 7.9 (threshold=7). Réponds en JSON: {"pick":{"match":"X vs Y","sport":"Hockey","competition":"NHL","heure":"20h00","favori":"X","marche":"X Vainqueur","cote":1.62,"note":7.2,"prob":0.64,"threshold":7,"mise_type":"PICK STANDARD","mise_euros":5,"label_visuel":"🔔 PICK STANDARD","message_abonnes":"Critères habituels (8/10) non atteints aujourd'hui. Pick publié à seuil réduit 7/10.","avertissement":"Confiance réduite — mise conseillée : 5€ max","raison":"Meilleur match disponible du jour","points_forts":["Favori solide"],"stops_ok":true,"votes":{"groq":"GO","gemini":"GO","deepseek":"GO","mistral":"GO","qwen":"GO","claude":"FORCE_7"}}}. Matchs disponibles: ${JSON.stringify(matches.slice(0,5))}`}]
       }
     );
     const text = r.choices?.[0]?.message?.content || "";
@@ -592,6 +620,9 @@ async function generateForDay(day) {
   matches = await analyzeFormDeepSeek(matches);
   matches = await checkContextMistral(matches);
 
+  // 4b. Value bet (Qwen)
+  matches = await checkValueQwen(matches);
+
   // 5. Décision finale (Claude chef → fallback DeepSeek → force 7/10)
   let result = await claudeChefConcile(matches);
   if (!result?.pick) {
@@ -616,7 +647,7 @@ async function generateForDay(day) {
 // ============================================================
 async function main() {
   console.log(`\n🏛️ HERMÈS V4 — CONCILE COMPLET — 3 JOURS — ${TODAY}\n`);
-  console.log("👑 Claude (Chef) | 🟢 Groq | 🔵 Gemini | 🟠 DeepSeek | 🟣 Mistral\n");
+  console.log("👑 Claude (Chef) | 🟢 Groq | 🔵 Gemini | 🟠 DeepSeek | 🟣 Mistral | 🔴 Qwen\n");
 
   const days = [dateForOffset(0), dateForOffset(1), dateForOffset(2)];
   const picksByDay = [];
