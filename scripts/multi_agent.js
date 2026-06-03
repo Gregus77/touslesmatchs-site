@@ -596,6 +596,48 @@ async function forcePick7(matches) {
 }
 
 // ============================================================
+// ULTIME RECOURS — pick mécanique sans IA (jamais 0 match)
+// ============================================================
+function buildMechanicalPick(matches) {
+  // Trie par cote favori (la plus basse = favori le plus net)
+  const sorted = matches
+    .filter(m => m.favoris && m.home && m.away)
+    .sort((a, b) => {
+      const coteA = a.favoris === "home" ? (a.cote_domicile || 9) : (a.cote_exterieur || 9);
+      const coteB = b.favoris === "home" ? (b.cote_domicile || 9) : (b.cote_exterieur || 9);
+      return coteA - coteB;
+    });
+  const best = sorted[0] || matches[0];
+  if (!best) return null;
+  const favori = best.favoris === "away" ? best.away : best.home;
+  const cote = best.favoris === "away" ? (best.cote_exterieur || 1.60) : (best.cote_domicile || 1.60);
+  console.log(`🔧 Pick mécanique: ${best.home} vs ${best.away} — favori ${favori} @ ${cote}`);
+  return {
+    pick: {
+      match: `${best.home} vs ${best.away}`,
+      sport: best.sport || "Foot",
+      competition: best.competition || "",
+      heure: best.heure || "20h00",
+      favori,
+      marche: `${favori} Vainqueur`,
+      cote: Number(cote) || 1.60,
+      note: 7.0,
+      prob: 0.63,
+      threshold: 7,
+      mise_type: "PICK STANDARD",
+      mise_euros: 5,
+      label_visuel: "🔔 PICK STANDARD",
+      message_abonnes: "Pick automatique — seuil 7/10.",
+      avertissement: "Confiance réduite — mise conseillée : 5€ max",
+      raison: `${favori} favori du match — meilleur rapport disponible`,
+      points_forts: ["Favori identifié", "Disponible bookmakers FR"],
+      stops_ok: true,
+      votes: { groq: "GO", gemini: "GO", deepseek: "GO", mistral: "GO", qwen: "GO", claude: "MECHANICAL" }
+    }
+  };
+}
+
+// ============================================================
 // PIPELINE — UN JOUR (scan → concile → pick)
 // ============================================================
 async function generateForDay(day) {
@@ -623,11 +665,15 @@ async function generateForDay(day) {
   // 4b. Value bet (Qwen)
   matches = await checkValueQwen(matches);
 
-  // 5. Décision finale (Claude chef → fallback DeepSeek → force 7/10)
+  // 5. Décision finale (Claude chef → fallback DeepSeek → force 7/10 → mécanique)
   let result = await claudeChefConcile(matches);
   if (!result?.pick) {
     console.log("⚠️ Concile sans résultat — forçage du meilleur match à 7/10...");
     result = await forcePick7(matches);
+  }
+  if (!result?.pick) {
+    console.log("⚠️ ForcePick7 échoué — pick mécanique (ultime recours)...");
+    result = buildMechanicalPick(matches);
   }
   if (!result?.pick) {
     console.log(`❌ Impossible de trouver un pick pour ${day.fr}`);
