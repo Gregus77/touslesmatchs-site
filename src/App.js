@@ -17,9 +17,9 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["05/06","Paris Saint-Germain vs AS Monaco","Paris Saint-Germain Vainqueur","1.5","—","EN ATTENTE","Football",7,7],
-  ["04/06","Bayern Munich vs Borussia Dortmund","Bayern Munich Vainqueur","1.45","—","EN ATTENTE","Football",7,7],
-  ["03/06","Paris Saint-Germain vs Lyon","Paris Saint-Germain Vainqueur","1.5","—","EN ATTENTE","Football",7,7],
+  ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["04/06","South Korea vs El Salvador","South Korea Vainqueur","1.4","—","EN ATTENTE","Foot",7,7],
+  ["03/06","Denmark vs DR Congo","Denmark Vainqueur","1.4","—","EN ATTENTE","Foot",7,7],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
   ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],
