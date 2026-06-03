@@ -494,14 +494,17 @@ RÈGLES POUR LES CHAMPS SPÉCIAUX:
 - avertissement: "" si threshold=8, "Confiance réduite — mise conseillée : 5€ max" si threshold=7`;
 
   try {
+    console.log(`   [DEBUG] ANTHROPIC_KEY défini: ${!!ANTHROPIC_KEY}`);
     const r = await post("api.anthropic.com", "/v1/messages",
       {"x-api-key":ANTHROPIC_KEY,"anthropic-version":"2023-06-01","Content-Type":"application/json"},
-      { model:"claude-haiku-4-5", max_tokens:2000, temperature:0.1,
+      { model:"claude-opus-4-1", max_tokens:2000, temperature:0.1,
         messages:[{role:"user",content:prompt}]
       }
     );
+    console.log(`   [DEBUG] API response keys: ${Object.keys(r).join(",")}`);
+    if (r.error) console.log(`   [DEBUG] API error: ${JSON.stringify(r.error)}`);
     const text = r.content?.[0]?.text || "";
-    console.log(`   Claude brut (200c): ${text.slice(0,200)}`);
+    console.log(`   Claude brut: ${text.slice(0,300)}`);
     const result = safeJSON(text);
     if (!result?.pick) console.log("   ⚠️ Claude: JSON parsé mais pas de .pick trouvé");
     return result;
@@ -518,6 +521,7 @@ RÈGLES POUR LES CHAMPS SPÉCIAUX:
 async function deepseekFallback(matches) {
   console.log("🟠 DeepSeek FALLBACK — Chef du Concile...");
   try {
+    console.log(`   [DEBUG] DEEPSEEK_KEY défini: ${!!DEEPSEEK_KEY}`);
     const r = await post("api.deepseek.com", "/v1/chat/completions",
       {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"},
       { model:"deepseek-chat", max_tokens:2000, temperature:0.1,
