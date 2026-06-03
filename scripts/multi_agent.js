@@ -132,39 +132,57 @@ async function scanMatchesRealAPI(targetISO) {
   try {
     // Essai de plusieurs endpoints possibles selon la doc RapidAPI
     let data = null;
-    data = await rapidGet(`/football-get-matches-by-date?date=${today}`);
+    // Format requis par l'API : YYYYMMDD (sans tirets)
+    const dateCompact = today.replace(/-/g, "");
+    data = await rapidGet(`/football-get-matches-by-date?date=${dateCompact}`);
     if (data?.message) {
       console.log(`   ❌ RapidAPI: ${data.message}`);
       return [];
     }
-    const fixtures = data?.response || data?.data || data?.matches || data?.fixtures || Object.values(data || {}).find(v => Array.isArray(v)) || [];
+    // Structure réelle confirmée : data.response.matches[]
+    const fixtures = data?.response?.matches || [];
     if (!Array.isArray(fixtures) || !fixtures.length) {
-      console.log(`📅 RapidAPI: réponse vide ou format inattendu pour ${today}`);
-      console.log(`   Réponse brute (150 chars): ${JSON.stringify(data).slice(0, 150)}`);
+      console.log(`📅 RapidAPI: réponse vide pour ${today}`);
       return [];
     }
+
+    // Ligues majeures filtrées par leagueId connu
+    const MAJOR_LEAGUE_IDS = new Set([
+      914609, // Internationaux A (qualifs, amicaux)
+      344,    // UEFA U21
+      928683, // U20 Coupe du monde
+      47,     // Premier League
+      87,     // La Liga
+      54,     // Bundesliga
+      55,     // Serie A
+      53,     // Ligue 1
+      42,     // Champions League
+      73,     // Europa League
+      188,    // Nations League
+      77,     // Ligue des Nations
+    ]);
+
     for (const fx of fixtures) {
-      const home = fx.homeTeam?.name || fx.home?.name || fx.teams?.home?.name || "";
-      const away = fx.awayTeam?.name || fx.away?.name || fx.teams?.away?.name || "";
-      const league = fx.league?.name || fx.competition?.name || fx.tournament?.name || "";
-      const status = fx.status?.type || fx.status || "";
+      if (fx.status?.finished || fx.status?.cancelled) continue;
+      const home = fx.home?.name || "";
+      const away = fx.away?.name || "";
       if (!home || !away) continue;
-      if (status === "finished" || status === "cancelled") continue;
+      if (!MAJOR_LEAGUE_IDS.has(fx.leagueId)) continue;
+
       let heure = "20h00";
-      const ts = fx.startTimestamp || fx.time?.timestamp || fx.date;
-      if (ts) {
-        const d = new Date(typeof ts === "number" ? ts * 1000 : ts);
+      if (fx.status?.utcTime) {
+        const d = new Date(fx.status.utcTime);
         if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h");
       }
       matches.push({
         sport: "Foot",
-        competition: league,
+        competition: `League ${fx.leagueId}`,
         home, away, heure,
         home_form: "UNKNOWN",
         away_form: "UNKNOWN",
         home_elo: 1700,
         away_elo: 1700,
-        enjeu: "Regular",
+        enjeu: "International",
         cote_domicile: 0,
         cote_exterieur: 0,
         favoris: "unknown",
