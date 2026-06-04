@@ -18,6 +18,8 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
+  ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["05/06 au 06/06","PAS DE PARI - Filtre ARJEL: aucun match dispo sur bookmakers FR","---","---","---","NOPICK","",0,8],
   ["04/06","Cambodia vs Bhutan","Cambodia Vainqueur","1.60","2-0","GAGNE","Foot",7.3,7],
   ["03/06","Portugal U21 vs Northern Ireland U21","Portugal U21 Vainqueur","1.40","1-1","PERDU","Foot",7.0,7],
