@@ -34,7 +34,14 @@ docker compose -f /home/user/touslesmatchs-site/docker-compose.yml ps
 - ✅ Les 2 services (nginx + council) sont "running"
 - ❌ Un service est "exited" ou absent
 
-### 5. Logs du conseil sans erreur critique ?
+### 5. Telegram configuré et fonctionnel ?
+```bash
+grep "TELEGRAM_BOT_TOKEN=1234" /home/user/touslesmatchs-site/.env 2>/dev/null
+```
+- ✅ Résultat vide = token personnalisé configuré
+- ❌ Token exemple encore en place = Telegram non fonctionnel
+
+### 6. Logs du conseil sans erreur critique ?
 ```bash
 tail -20 /var/lib/docker/volumes/touslesmatchs-site_council_data/_data/hermes.log 2>/dev/null || echo "Log introuvable"
 ```

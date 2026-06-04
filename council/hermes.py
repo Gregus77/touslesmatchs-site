@@ -18,11 +18,16 @@ load_dotenv("/app/.env")
 sys.path.insert(0, "/app/council")
 
 from tools.history_db import (
-    init_db, save_pick, get_recent_picks, get_stats,
-    get_agent_accuracy, save_agent_vote
+    init_db, save_pick, save_premium_pick, mark_premium_sent,
+    get_recent_picks, get_stats, get_premium_stats,
+    get_agent_accuracy, save_agent_vote, get_full_analytics
 )
 from tools.sports_api import get_todays_matches, format_matches_for_prompt
 from tools.html_generator import inject_pick_into_html
+from tools.telegram_bot import (
+    send_free_pick, send_nopick, send_premium_pick,
+    send_premium_stats, is_configured as telegram_ok
+)
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
 
 logging.basicConfig(
@@ -118,6 +123,14 @@ def run_council():
             name, report = future.result()
             agent_reports[key] = report
 
+    # 4. Collecter les picks premium (confiance 7-7.9) des agents
+    premium_candidates = []
+    for key, report in agent_reports.items():
+        conf = report.get("confidence", 0)
+        if 7.0 <= conf < 8.0 and report.get("recommendation") == "PICK":
+            premium_candidates.append(report)
+            log.info(f"  [{key}] Pick premium candidat: {report.get('match')} ({conf}/10)")
+
     # 4. Claude (Chef) makes final decision
     log.info("Claude (Chef) prend sa décision finale...")
     decision = claude_chief.decide(
@@ -159,17 +172,50 @@ def run_council():
         claude_reasoning=decision.get("reasoning", ""),
     )
 
-    # 7. Save agent votes for performance tracking
+    # 7. Save picks premium (confiance 7-7.9)
+    seen_premium_matches = set()
+    for pc in premium_candidates:
+        match_key = pc.get("match", "")
+        if match_key and match_key not in seen_premium_matches:
+            seen_premium_matches.add(match_key)
+            pid = save_premium_pick(
+                date=today_display,
+                match=pc.get("match"),
+                bet=pc.get("bet"),
+                odds=pc.get("odds"),
+                sport=pc.get("sport", ""),
+                confidence=pc.get("confidence"),
+                agents_votes=agents_votes_summary,
+                claude_reasoning=pc.get("reasoning", ""),
+            )
+            # Envoyer sur Telegram premium
+            if telegram_ok():
+                ok = send_premium_pick(
+                    match=pc.get("match"),
+                    bet=pc.get("bet"),
+                    odds=pc.get("odds"),
+                    sport=pc.get("sport", ""),
+                    confidence=pc.get("confidence"),
+                    reasoning=pc.get("reasoning", ""),
+                )
+                if ok:
+                    mark_premium_sent(pid)
+                    log.info(f"  Pick premium envoyé Telegram: {match_key}")
+
+    # 8. Save agent votes for performance tracking
     for key, report in agent_reports.items():
         agent_name = {"gpt": "GPT-4o Mini", "gemini": "Gemini Flash",
                       "mistral": "Mistral", "groq": "Groq/Llama3"}.get(key, key)
-        save_agent_vote(agent_name, today_display, json.dumps(report))
+        save_agent_vote(
+            agent_name, today_display, json.dumps(report),
+            sport=report.get("sport"), confidence=report.get("confidence")
+        )
 
-    # 8. Refresh picks history (now includes today)
+    # 9. Refresh picks history (now includes today)
     picks_history = get_recent_picks(days=60)
     stats = get_stats()
 
-    # 9. Generate new index.html
+    # 10. Generate new index.html
     log.info("Génération du HTML...")
     pick_data = {
         "nopick": is_nopick,
@@ -184,6 +230,24 @@ def run_council():
         log.info("Site mis à jour avec succès !")
     else:
         log.error("Erreur lors de la génération du HTML.")
+
+    # 11. Telegram — canal gratuit
+    if telegram_ok():
+        if is_nopick:
+            send_nopick()
+            log.info("Telegram gratuit : NOPICK envoyé")
+        else:
+            send_free_pick(
+                match=decision.get("match"),
+                bet=decision.get("bet"),
+                odds=decision.get("odds"),
+                sport=decision.get("sport", ""),
+                confidence=decision.get("confidence", 0),
+                reasoning=decision.get("reasoning", ""),
+            )
+            log.info("Telegram gratuit : pick du jour envoyé")
+    else:
+        log.warning("Telegram non configuré — messages non envoyés")
 
     log.info("=" * 60)
     log.info("HERMES COUNCIL - Session terminée")
