@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "system": "Concile Auto-Apprentissant V2",
+  "meta": {
+    "created": "2026-06-03T06:45:00Z",
+    "last_updated": "2026-06-03T06:45:00Z",
+    "total_picks": 23,
+    "total_wins": 18,
+    "total_losses": 5,
+    "win_rate": 0.783
+  },
+  "sport_stats": {
+    "Hockey": {"picks": 15, "wins": 13, "losses": 2, "win_rate": 0.867, "status": "ACTIVE"},
+    "Foot": {"picks": 5, "wins": 4, "losses": 1, "win_rate": 0.80, "status": "ACTIVE"},
+    "Basketball": {"picks": 3, "wins": 1, "losses": 2, "win_rate": 0.33, "status": "DISABLED"}
+  },
+  "ia_stats": {
+    "groq": {"status": "ACTIVE", "reason": "Gratuit, scanner fiable"},
+    "gemini": {"status": "UNKNOWN", "reason": "Pas de votes détaillés dans historique"},
+    "deepseek": {"status": "ACTIVE", "reason": "Chef principal, remplace Claude"},
+    "mistral": {"status": "DISABLED", "reason": "Pas de valeur mesurée"},
+    "qwen": {"status": "DISABLED", "reason": "Pas de valeur mesurée"},
+    "claude": {"status": "DISABLED", "reason": "Cassé via OpenRouter, trop cher"}
+  },
+  "rules": {
+    "min_confidence": 8.0,
+    "min_odds": 1.4,
+    "max_odds": 2.2,
+    "min_probability": 0.63,
+    "sports_allowed": ["Hockey", "Foot"],
+    "sports_disabled": ["Basketball"]
+  },
+  "next_actions": [
+    "2026-06-04 : Générer picks Hockey/Foot uniquement",
+    "2026-06-10 : Analyser taux de réussite Groq vs DeepSeek",
+    "2026-06-17 : Réactiver Gemini si données disponibles"
+  ]
+}
