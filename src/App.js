@@ -18,9 +18,7 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["06/06","Angola vs Mauritania","Angola Vainqueur","1.6","—","EN ATTENTE","Foot",7.5,7],
-  ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7.4,7],
-  ["04/06","Cambodia vs Bhutan","Cambodia Vainqueur","1.6","—","EN ATTENTE","Foot",7.3,7],
+  ["04/06 au 06/06","PAS DE PARI - Filtre ARJEL: aucun match dispo sur bookmakers FR","---","---","---","NOPICK","",0,8],
   ["03/06","Portugal U21 vs Northern Ireland U21","Portugal U21 Vainqueur","1.40","1-1","PERDU","Foot",7.0,7],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],

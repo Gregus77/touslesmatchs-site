@@ -84,6 +84,11 @@
 4. ✅ Header mobile compact (TikTok + drapeaux IT/ES/RU cachés)
 5. ✅ **Calculateur de projection** (page /calculateur) — 3 scénarios réalistes basés sur stats réelles
 6. ✅ **Google Analytics 4** intégré (G-ME2T7G7PSK)
+7. ✅ **FILTRE ARJEL** : ne sélectionne QUE matchs dispo Winamax/Betclic/Unibet
+   - LIGUES_ARJEL : Top 5 européens + UCL + UEL + Nations League
+   - NATIONS_ARJEL : 60+ nations whitelistées (Europe + Amériques + Afrique + Asie majeures)
+   - REJET : Cambodia, Bhutan, Angola, Iraq, Mauritania, etc.
+   - Si aucun match ARJEL → "PAS DE PARI - Aucun match dispo bookmakers FR"
 7. ⏳ Stripe abonnement (priorité prochaine session)
 8. ⏳ Capture email (lead magnet)
 9. ⏳ CTA affiliés optimisés sur chaque pick

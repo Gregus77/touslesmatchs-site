@@ -72,20 +72,77 @@ function rapidGet(path) {
   });
 }
 
+// ═══════════════════════════════════════════════════════
+// LIGUES DISPONIBLES SUR BOOKMAKERS FRANÇAIS (ARJEL/ANJ)
+// Winamax, Betclic, Unibet, PMU, ParionsSport
+// ═══════════════════════════════════════════════════════
+const LIGUES_ARJEL = new Set([
+  // Top 5 européens
+  47,    // Premier League
+  87,    // La Liga
+  54,    // Bundesliga
+  55,    // Serie A
+  53,    // Ligue 1
+  // Coupes européennes
+  42,    // Champions League
+  73,    // Europa League
+  // Compétitions internationales
+  188,   // Nations League UEFA
+  77,    // Ligue des Nations
+  // Note: 914609 (Internationaux A) RETIRÉ — filtré par TEAMS_ARJEL ci-dessous
+]);
+
+// ═══════════════════════════════════════════════════════
+// NATIONS DISPONIBLES SUR BOOKMAKERS FRANÇAIS
+// (Pour les matchs internationaux dans la ligue 914609)
+// ═══════════════════════════════════════════════════════
+const NATIONS_ARJEL = new Set([
+  // UEFA
+  "France","England","Spain","Italy","Germany","Portugal","Netherlands","Belgium",
+  "Croatia","Denmark","Switzerland","Sweden","Norway","Poland","Czech Republic","Austria",
+  "Scotland","Wales","Northern Ireland","Republic of Ireland","Ukraine","Russia","Serbia","Turkey",
+  "Greece","Hungary","Romania","Bulgaria","Slovakia","Slovenia","Iceland","Finland",
+  // Amérique du Sud
+  "Brazil","Argentina","Uruguay","Colombia","Chile","Peru","Ecuador","Paraguay","Bolivia","Venezuela",
+  // CONCACAF
+  "USA","Mexico","Canada","Costa Rica","Jamaica","Honduras","Panama",
+  // Afrique top
+  "Senegal","Morocco","Egypt","Algeria","Tunisia","Nigeria","Cameroon","Ghana",
+  "Ivory Coast","South Africa","Mali","Burkina Faso","DR Congo",
+  // Asie top
+  "Japan","South Korea","Australia","Iran","Saudi Arabia","Iraq","Qatar","UAE",
+  // Aliases (l'API peut envoyer différents formats)
+  "Côte d'Ivoire","Cote d'Ivoire","Korea Republic","IR Iran","United States"
+]);
+
+function isMatchARJEL(fx) {
+  // 1. Ligue Top européenne ou coupe européenne → OK
+  if (LIGUES_ARJEL.has(fx.leagueId)) return true;
+  // 2. Match international : vérifier que les 2 équipes sont des nations ARJEL
+  if (fx.leagueId === 914609) {
+    const home = (fx.home?.name || "").trim();
+    const away = (fx.away?.name || "").trim();
+    return NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
+  }
+  // 3. Sinon → REJET
+  return false;
+}
+
 async function scanMatchesRealAPI(targetISO) {
-  console.log("📅 RapidAPI...");
+  console.log("📅 RapidAPI (filtre ARJEL)...");
   const dateCompact = targetISO.replace(/-/g, "");
   const data = await rapidGet(`/football-get-matches-by-date?date=${dateCompact}`);
   const fixtures = data?.response?.matches || [];
   let matches = [];
-  const MAJOR = new Set([914609, 344, 928683, 47, 87, 54, 55, 53, 42, 73, 188, 77]);
+  let rejected = 0;
   for (const fx of fixtures) {
-    if (fx.status?.finished || fx.status?.cancelled || !fx.home?.name || !fx.away?.name || !MAJOR.has(fx.leagueId)) continue;
+    if (fx.status?.finished || fx.status?.cancelled || !fx.home?.name || !fx.away?.name) continue;
+    if (!isMatchARJEL(fx)) { rejected++; continue; }
     let heure = "20h00";
     if (fx.status?.utcTime) { const d = new Date(fx.status.utcTime); if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h"); }
     matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo: 1700, away_elo: 1700, cote_domicile: 1.6, cote_exterieur: 1.8 });
   }
-  console.log(`✅ ${matches.length} matchs`);
+  console.log(`✅ ${matches.length} matchs ARJEL (${rejected} matchs hors ARJEL rejetés)`);
   return matches;
 }
 
@@ -139,12 +196,35 @@ Matchs: ${JSON.stringify(valid)}`}] });
 async function generateForDay(day) {
   console.log(`\n──── ${day.label} (${day.fr}) ────`);
   let matches = await scanMatchesRealAPI(day.iso);
-  if (!matches.length) return null;
+  if (!matches.length) {
+    console.log(`⚠️ ${day.fr}: aucun match ARJEL disponible`);
+    updateAppJsNoPick(day.fr, "Aucun match dispo bookmakers FR");
+    return null;
+  }
   matches = await enrichGroq(matches);
   let result = await deepseekChef(matches);
-  if (!result?.pick) return null;
+  if (!result?.pick) {
+    updateAppJsNoPick(day.fr, "Aucun pick fiable détecté");
+    return null;
+  }
   updateAppJs(result.pick, day.fr);
   return result;
+}
+
+function updateAppJsNoPick(dateStr, reason) {
+  const appPath = "./src/App.js";
+  let content = fs.readFileSync(appPath, "utf8");
+  const newPick = `  ["${dateStr}","PAS DE PARI - ${reason}","---","---","---","NOPICK","",0,8],\n`;
+  // Supprime tout pick existant pour cette date (EN ATTENTE)
+  const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}"[^\\n]*\\n`, "g");
+  if (content.match(dateRegex)) {
+    content = content.replace(dateRegex, newPick);
+    console.log(`📝 ${dateStr}: PAS DE PARI (${reason})`);
+  } else {
+    content = content.replace("var picks = [\n", `var picks = [\n${newPick}`);
+    console.log(`📝 ${dateStr}: PAS DE PARI ajouté (${reason})`);
+  }
+  fs.writeFileSync(appPath, content);
 }
 
 function updateAppJs(pick, dateStr) {
