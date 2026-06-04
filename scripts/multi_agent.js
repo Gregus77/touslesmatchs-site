@@ -1,4 +1,4 @@
-﻿// HERMÈS V2 — SYSTÈME OPTIMISÉ
+// HERMÈS V2 — SYSTÈME OPTIMISÉ
 const https = require("https");
 const { execSync } = require("child_process");
 const fs = require("fs");
@@ -8,7 +8,8 @@ const GROQ_KEY = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TG_CHAT = process.env.TELEGRAM_CHAT_ID;
+const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
+const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
 const SPORTS_ALLOWED = ["Hockey", "Foot"];
 
 function dateForOffset(offset) {
@@ -19,10 +20,28 @@ function dateForOffset(offset) {
 }
 const TODAY = dateForOffset(0).fr;
 
-function sendTelegram(text) {
+// Canal gratuit — message enrichi
+function sendTelegram(pick) {
   if (!TG_TOKEN || !TG_CHAT) return Promise.resolve();
+  const text = pick
+    ? `🏆 <b>PICK DU JOUR — ${TODAY}</b>\n\n⚽ ${pick.match}\n💡 Pari : <b>${pick.match.split(" vs ")[0]} Vainqueur</b>\n💰 Cote : <b>${pick.cote}</b>\n🔥 Note : <b>${pick.note}/10</b>\n\n<i>${pick.raison || "Sélectionné par le Conseil Hermès"}</i>\n\n⏩ Joue sur <a href="https://touslesmatchs.com">touslesmatchs.com</a>\n\n⚠️ 18+ — Jeu responsable — Max 2-5% bankroll`
+    : `🔍 <b>ANALYSE DU ${TODAY}</b>\n\n❌ <b>PAS DE PICK AUJOURD'HUI</b>\n\nAucun match n'atteint le seuil de confiance.\nOn préfère ne pas publier plutôt que de forcer un pari incertain.\n\n📈 Winrate maintenu grâce à cette discipline.`;
   return new Promise((resolve) => {
-    const payload = { chat_id: TG_CHAT, text, parse_mode: "HTML", reply_markup: { inline_keyboard: buildInlineKeyboard([{ text: "📊 touslesmatchs.com", url: "https://touslesmatchs.com" }]) } };
+    const payload = { chat_id: TG_CHAT, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buildInlineKeyboard([{ text: "📊 touslesmatchs.com", url: "https://touslesmatchs.com" }]) } };
+    const body = JSON.stringify(payload);
+    const req = https.request({ hostname: "api.telegram.org", path: `/bot${TG_TOKEN}/sendMessage`, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, res => { res.on("data", ()=>{}); res.on("end", resolve); });
+    req.on("error", () => resolve());
+    req.write(body); req.end();
+  });
+}
+
+// Canal premium — picks note 7-7.9
+function sendTelegramPremium(picks) {
+  if (!TG_TOKEN || !TG_PREMIUM || !picks.length) return Promise.resolve();
+  const lines = picks.map(p => `⚽ <b>${p.match}</b>\n💡 ${p.match.split(" vs ")[0]} Vainqueur @ <b>${p.cote}</b> (note ${p.note}/10)\n<i>${p.raison || ""}</i>`).join("\n\n");
+  const text = `💎 <b>PICKS PREMIUM — ${TODAY}</b>\n\n${lines}\n\n⏩ <a href="https://touslesmatchs.com">touslesmatchs.com</a>\n⚠️ 18+ — Jeu responsable`;
+  return new Promise((resolve) => {
+    const payload = { chat_id: TG_PREMIUM, text, parse_mode: "HTML", disable_web_page_preview: true };
     const body = JSON.stringify(payload);
     const req = https.request({ hostname: "api.telegram.org", path: `/bot${TG_TOKEN}/sendMessage`, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, res => { res.on("data", ()=>{}); res.on("end", resolve); });
     req.on("error", () => resolve());
@@ -82,33 +101,39 @@ async function enrichGroq(matches) {
   return matches;
 }
 
+// DeepSeek retourne maintenant : pick principal + picks premium (7-7.9)
 async function deepseekChef(matches) {
-  console.log("👑 DeepSeek — Sélection meilleur match...");
+  console.log("👑 DeepSeek — Sélection...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
   if (!valid.length) return null;
   try {
-    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:1500, temperature:0.1, messages:[{role:"user",content:`Analyse TOUS ces matchs et attribue une NOTE 7.0-10 à chacun selon: cote 1.40-2.20, écart ELO, forme, importance match. SÉLECTIONNE le match avec la PLUS HAUTE NOTE.
+    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:2000, temperature:0.1, messages:[{role:"user",content:`Analyse TOUS ces matchs. Attribue une NOTE 7.0-10 à chacun.
 
-Règles strictes:
-- Préfère note ≥8.0 (PREMIUM)
-- Si plusieurs à 8+: prends le plus haut (8.7 > 8.3)
-- Si rien à 8: prends le plus proche de 8 (7.8 > 7.2)
-- Refuse cote <1.40 ou >2.20
+Règles:
+- Cote acceptable: 1.40-2.20
+- Note ≥8.0 = PICK GRATUIT (publié sur le site)
+- Note 7.0-7.9 = PICK PREMIUM (canal privé abonnés)
+- Si plusieurs à 8+: prends le plus haut
+- Si rien à 8: prends le plus proche de 8
 
-Réponds JSON: {"pick":{"match":"X vs Y","cote":1.65,"note":8.5,"threshold":8,"raison":"courte"}}
+Réponds JSON:
+{
+  "pick": {"match":"X vs Y","cote":1.65,"note":8.5,"raison":"courte"},
+  "premium": [{"match":"A vs B","cote":1.55,"note":7.4,"raison":"courte"}]
+}
 
 Matchs: ${JSON.stringify(valid)}`}] });
     const text = r.choices?.[0]?.message?.content || "";
     const result = safeJSON(text);
     if (result?.pick) {
-      console.log(`   ✓ Sélection DeepSeek: ${result.pick.match} (note ${result.pick.note})`);
+      console.log(`   ✓ Pick principal: ${result.pick.match} (note ${result.pick.note})`);
+      if (result.premium?.length) console.log(`   ✓ Picks premium: ${result.premium.length} match(s)`);
       return result;
     }
   } catch(e) { console.error("DeepSeek error:", e.message); }
-  // Fallback : meilleur favori (cote la plus basse mais >= 1.4)
   const candidates = valid.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
   const best = candidates.length ? candidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : valid[0];
-  return { pick: { match: `${best.home} vs ${best.away}`, cote: best.cote_domicile || 1.5, note: 7.0, threshold: 7 } };
+  return { pick: { match: `${best.home} vs ${best.away}`, cote: best.cote_domicile || 1.5, note: 7.0, raison: "Fallback" }, premium: [] };
 }
 
 async function generateForDay(day) {
@@ -116,21 +141,19 @@ async function generateForDay(day) {
   let matches = await scanMatchesRealAPI(day.iso);
   if (!matches.length) return null;
   matches = await enrichGroq(matches);
-  let pick = await deepseekChef(matches);
-  if (!pick?.pick) return null;
-  updateAppJs(pick.pick, day.fr);
-  return pick.pick;
+  let result = await deepseekChef(matches);
+  if (!result?.pick) return null;
+  updateAppJs(result.pick, day.fr);
+  return result;
 }
 
 function updateAppJs(pick, dateStr) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
-  const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.threshold}],\n`;
-  // ANTI-DOUBLON : si pick existe déjà pour cette date, le remplacer
+  const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}],\n`;
   const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}",[^\\n]*\\n`, "g");
   const existing = content.match(dateRegex);
   if (existing) {
-    // Comparer notes : garder celui avec la meilleure note
     const existingNote = parseFloat(existing[0].match(/,(\d+\.?\d*),\d+\],/)?.[1] || 0);
     if (pick.note > existingNote) {
       content = content.replace(dateRegex, newPick);
@@ -148,16 +171,36 @@ function updateAppJs(pick, dateStr) {
 
 async function main() {
   console.log("\n🏛️ HERMÈS V2 — 3 JOURS\n");
-  const picks = [];
+  const results = [];
+  const allPremium = [];
+
   for (let offset = 0; offset < 3; offset++) {
     const day = dateForOffset(offset);
-    const pick = await generateForDay(day);
-    if (pick) picks.push(pick);
+    const result = await generateForDay(day);
+    if (result) {
+      results.push(result.pick);
+      if (result.premium?.length) allPremium.push(...result.premium);
+    }
   }
-  if (picks.length) {
-    console.log(`\n✅ ${picks.length} picks générés`);
-    await sendTelegram(`🤖 HERMÈS\n${picks.map(p => p.match + " @ " + p.cote).join("\n")}`);
+
+  if (results.length) {
+    console.log(`\n✅ ${results.length} picks générés`);
+
+    // Canal gratuit : pick du jour (meilleure note)
+    const bestPick = results.reduce((a, b) => b.note > a.note ? b : a);
+    await sendTelegram(bestPick);
+    console.log("📤 Telegram gratuit envoyé");
+
+    // Canal premium : picks 7-7.9
+    if (allPremium.length) {
+      await sendTelegramPremium(allPremium);
+      console.log(`💎 Telegram premium: ${allPremium.length} pick(s) envoyé(s)`);
+    }
+
     execSync("git add -A && git commit -m '🤖 Hermès: picks générés' && git push origin main", {stdio:"inherit"});
+  } else {
+    console.log("Aucun pick généré aujourd'hui");
+    await sendTelegram(null); // envoie message NOPICK
   }
 }
 
