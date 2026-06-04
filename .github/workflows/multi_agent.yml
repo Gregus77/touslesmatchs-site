@@ -44,6 +44,8 @@ jobs:
         run: node scripts/multi_agent.js
 
       - name: Build React app
+        env:
+          CI: false
         run: npm run build
 
       - name: Commit picks + build
