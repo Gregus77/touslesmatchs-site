@@ -12,6 +12,7 @@ PHILOSOPHIE :
 - Un consensus entre plusieurs agents renforce la confiance.
 - Un désaccord fort entre agents doit baisser la confiance finale.
 - Les cotes trop basses (<1.45) ou trop hautes (>3.50) méritent méfiance.
+- OBLIGATOIRE : le match choisi doit être dans une ligue disponible sur Winamax et Betclic (bookmakers agréés ANJ français). Un match introuvable sur ces sites = NOPICK automatique.
 - Prends en compte les performances passées des agents pour pondérer leurs votes.
 
 FORMAT DE RÉPONSE (JSON strict) :
