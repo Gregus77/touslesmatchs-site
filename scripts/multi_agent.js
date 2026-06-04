@@ -129,20 +129,25 @@ function isMatchARJEL(fx) {
 }
 
 async function scanMatchesRealAPI(targetISO) {
-  console.log("📅 RapidAPI (filtre ARJEL)...");
+  console.log("📅 RapidAPI (FREEMIUM: ARJEL gratuit + HORS-ARJEL premium)...");
   const dateCompact = targetISO.replace(/-/g, "");
   const data = await rapidGet(`/football-get-matches-by-date?date=${dateCompact}`);
   const fixtures = data?.response?.matches || [];
   let matches = [];
-  let rejected = 0;
+  let arjelCount = 0, premiumCount = 0;
+  // Ligues majeures internationales (toujours considérées même hors ARJEL pour premium)
+  const LIGUES_INTERNATIONALES = new Set([914609, 344, 928683, ...LIGUES_ARJEL]);
   for (const fx of fixtures) {
     if (fx.status?.finished || fx.status?.cancelled || !fx.home?.name || !fx.away?.name) continue;
-    if (!isMatchARJEL(fx)) { rejected++; continue; }
+    // On garde tous les matchs des ligues internationales/majeures
+    if (!LIGUES_INTERNATIONALES.has(fx.leagueId)) continue;
+    const arjel = isMatchARJEL(fx);
+    if (arjel) arjelCount++; else premiumCount++;
     let heure = "20h00";
     if (fx.status?.utcTime) { const d = new Date(fx.status.utcTime); if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h"); }
-    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo: 1700, away_elo: 1700, cote_domicile: 1.6, cote_exterieur: 1.8 });
+    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo: 1700, away_elo: 1700, cote_domicile: 1.6, cote_exterieur: 1.8, arjel });
   }
-  console.log(`✅ ${matches.length} matchs ARJEL (${rejected} matchs hors ARJEL rejetés)`);
+  console.log(`✅ ${arjelCount} matchs ARJEL (gratuit) + ${premiumCount} matchs HORS-ARJEL (premium)`);
   return matches;
 }
 
@@ -158,56 +163,78 @@ async function enrichGroq(matches) {
   return matches;
 }
 
-// DeepSeek retourne maintenant : pick principal + picks premium (7-7.9)
+// DeepSeek retourne :
+//   - pick (ARJEL ≥7) → site gratuit + Telegram public
+//   - premium_arjel (ARJEL ≥7) → Telegram premium (clients abonnés)
+//   - premium_hors_arjel (HORS-ARJEL ≥7) → Telegram premium UNIQUEMENT (Pinnacle/PS3838)
 async function deepseekChef(matches) {
-  console.log("👑 DeepSeek — Sélection...");
+  console.log("👑 DeepSeek — Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
+  const validArjel = valid.filter(m => m.arjel);
+  const validHorsArjel = valid.filter(m => !m.arjel);
+  console.log(`   Pool ARJEL: ${validArjel.length} | Pool HORS-ARJEL: ${validHorsArjel.length}`);
   if (!valid.length) return null;
   try {
-    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:2000, temperature:0.1, messages:[{role:"user",content:`Analyse TOUS ces matchs. Attribue une NOTE 7.0-10 à chacun.
+    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:2500, temperature:0.1, messages:[{role:"user",content:`Système FREEMIUM TousLesMatchs. Analyse 2 catégories de matchs :
+
+POOL ARJEL (jouables Winamax/Betclic/Unibet/PMU): ${JSON.stringify(validArjel)}
+
+POOL HORS-ARJEL (Pinnacle/PS3838 uniquement - clients premium): ${JSON.stringify(validHorsArjel)}
 
 Règles:
 - Cote acceptable: 1.40-2.20
-- Note ≥8.0 = PICK GRATUIT (publié sur le site)
-- Note 7.0-7.9 = PICK PREMIUM (canal privé abonnés)
-- Si plusieurs à 8+: prends le plus haut
-- Si rien à 8: prends le plus proche de 8
+- Note 7.0-10 sur chaque match
+- pick = MEILLEUR match ARJEL (publié gratuitement sur site + Telegram public)
+- premium_arjel = 2e meilleur match ARJEL (canal Telegram premium, abonnés payants)
+- premium_hors_arjel = MEILLEUR match HORS-ARJEL (canal premium UNIQUEMENT, gros bookmakers internationaux)
 
 Réponds JSON:
 {
   "pick": {"match":"X vs Y","cote":1.65,"note":8.5,"raison":"courte"},
-  "premium": [{"match":"A vs B","cote":1.55,"note":7.4,"raison":"courte"}]
+  "premium_arjel": {"match":"A vs B","cote":1.55,"note":7.6,"raison":"courte"},
+  "premium_hors_arjel": {"match":"C vs D","cote":1.70,"note":7.8,"raison":"courte"}
 }
 
-Matchs: ${JSON.stringify(valid)}`}] });
+Si pool vide pour une catégorie, mets null.`}] });
     const text = r.choices?.[0]?.message?.content || "";
     const result = safeJSON(text);
     if (result?.pick) {
-      console.log(`   ✓ Pick principal: ${result.pick.match} (note ${result.pick.note})`);
-      if (result.premium?.length) console.log(`   ✓ Picks premium: ${result.premium.length} match(s)`);
+      console.log(`   ✓ Pick GRATUIT (site): ${result.pick.match} (note ${result.pick.note})`);
+      if (result.premium_arjel) console.log(`   💎 Premium ARJEL: ${result.premium_arjel.match} (note ${result.premium_arjel.note})`);
+      if (result.premium_hors_arjel) console.log(`   💎 Premium HORS-ARJEL: ${result.premium_hors_arjel.match} (note ${result.premium_hors_arjel.note})`);
       return result;
     }
   } catch(e) { console.error("DeepSeek error:", e.message); }
-  const candidates = valid.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
-  const best = candidates.length ? candidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : valid[0];
-  return { pick: { match: `${best.home} vs ${best.away}`, cote: best.cote_domicile || 1.5, note: 7.0, raison: "Fallback" }, premium: [] };
+  // Fallback : utilise UNIQUEMENT matchs ARJEL pour le pick gratuit
+  const arjelCandidates = validArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
+  const horsArjelCandidates = validHorsArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
+  const bestArjel = arjelCandidates.length ? arjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
+  const bestHorsArjel = horsArjelCandidates.length ? horsArjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
+  if (!bestArjel && !bestHorsArjel) return null;
+  return {
+    pick: bestArjel ? { match: `${bestArjel.home} vs ${bestArjel.away}`, cote: bestArjel.cote_domicile, note: 7.0, raison: "Fallback ARJEL" } : null,
+    premium_arjel: null,
+    premium_hors_arjel: bestHorsArjel ? { match: `${bestHorsArjel.home} vs ${bestHorsArjel.away}`, cote: bestHorsArjel.cote_domicile, note: 7.0, raison: "Fallback HORS-ARJEL" } : null
+  };
 }
 
 async function generateForDay(day) {
   console.log(`\n──── ${day.label} (${day.fr}) ────`);
   let matches = await scanMatchesRealAPI(day.iso);
   if (!matches.length) {
-    console.log(`⚠️ ${day.fr}: aucun match ARJEL disponible`);
-    updateAppJsNoPick(day.fr, "Aucun match dispo bookmakers FR");
+    console.log(`⚠️ ${day.fr}: aucun match disponible`);
+    updateAppJsNoPick(day.fr, "Aucun match disponible");
     return null;
   }
   matches = await enrichGroq(matches);
   let result = await deepseekChef(matches);
-  if (!result?.pick) {
+  if (!result?.pick && !result?.premium_hors_arjel) {
     updateAppJsNoPick(day.fr, "Aucun pick fiable détecté");
     return null;
   }
-  updateAppJs(result.pick, day.fr);
+  // Pick ARJEL → site public (gratuit)
+  if (result?.pick) updateAppJs(result.pick, day.fr);
+  else updateAppJsNoPick(day.fr, "Pas de pick ARJEL - voir Premium");
   return result;
 }
 

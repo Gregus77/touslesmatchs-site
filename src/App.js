@@ -18,7 +18,8 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["04/06 au 06/06","PAS DE PARI - Filtre ARJEL: aucun match dispo sur bookmakers FR","---","---","---","NOPICK","",0,8],
+  ["05/06 au 06/06","PAS DE PARI - Filtre ARJEL: aucun match dispo sur bookmakers FR","---","---","---","NOPICK","",0,8],
+  ["04/06","Cambodia vs Bhutan","Cambodia Vainqueur","1.60","2-0","GAGNE","Foot",7.3,7],
   ["03/06","Portugal U21 vs Northern Ireland U21","Portugal U21 Vainqueur","1.40","1-1","PERDU","Foot",7.0,7],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
@@ -349,6 +350,30 @@ export default function App() {
         })
       )
     ),
+    // ════ ENCART PREMIUM 19.90€/mois (ARJEL + HORS-ARJEL Pinnacle/PS3838) ════
+    React.createElement("section", {className:"home-section",style:{padding:"30px 20px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("div", {style:{background:"linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.03))",border:"2px solid #d4af37",borderRadius:"16px",padding:"24px 20px",textAlign:"center",position:"relative",overflow:"hidden"}},
+        React.createElement("div", {style:{position:"absolute",top:"12px",right:"12px",background:"#d4af37",color:"#000",padding:"4px 10px",fontSize:"10px",fontWeight:"bold",letterSpacing:"1px",borderRadius:"4px"}}, "💎 PREMIUM"),
+        React.createElement("div", {style:{fontSize:"11px",color:"#d4af37",letterSpacing:"3px",marginBottom:"10px",textTransform:"uppercase"}}, "Pour les parieurs sérieux"),
+        React.createElement("h3", {style:{color:"#fff",fontSize:"22px",marginBottom:"12px",fontFamily:"'Bodoni Moda',serif",fontWeight:"400"}}, "Accès aux picks ", React.createElement("span",{style:{color:"#d4af37"}},"HORS ARJEL")),
+        React.createElement("p", {style:{color:"#aaa",fontSize:"13px",marginBottom:"18px",lineHeight:"1.6",maxWidth:"500px",margin:"0 auto 18px"}}, "Cotes supérieures sur ", React.createElement("strong",{style:{color:"#fff"}},"Pinnacle, PS3838"), " et autres bookmakers internationaux. Idéal pour matchs internationaux à valeur (qualifications Asie/Afrique/Amérique latine)."),
+        React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"24px",marginBottom:"20px",flexWrap:"wrap"}},
+          React.createElement("div",{},
+            React.createElement("div",{style:{fontSize:"24px",color:"#d4af37",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif"}}, "1 pick ARJEL"),
+            React.createElement("div",{style:{fontSize:"11px",color:"#666"}}, "+ bookmakers FR")
+          ),
+          React.createElement("div",{style:{color:"#444",fontSize:"24px",lineHeight:"1"}},"+"),
+          React.createElement("div",{},
+            React.createElement("div",{style:{fontSize:"24px",color:"#d4af37",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif"}}, "1 pick HORS-ARJEL"),
+            React.createElement("div",{style:{fontSize:"11px",color:"#666"}}, "Pinnacle / PS3838")
+          )
+        ),
+        React.createElement("div", {style:{fontSize:"32px",color:"#fff",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif",marginBottom:"4px"}}, "19,90€ ", React.createElement("span",{style:{fontSize:"14px",color:"#888",fontWeight:"normal"}},"/ mois")),
+        React.createElement("div", {style:{fontSize:"11px",color:"#666",marginBottom:"18px"}}, "Sans engagement • Stripe sécurisé"),
+        React.createElement("a", {href:"https://t.me/touslesmatchs_bot",target:"_blank",rel:"noopener noreferrer",onClick:function(){ if(window.trackEvent) window.trackEvent("click_premium_cta", {price:19.90}); },style:{display:"inline-block",background:"linear-gradient(135deg, #d4af37, #b8941f)",color:"#000",padding:"14px 36px",borderRadius:"8px",textDecoration:"none",fontWeight:"bold",fontSize:"14px",letterSpacing:"2px",textTransform:"uppercase"}}, "💎 Devenir Premium")
+      )
+    ),
+
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
       React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},

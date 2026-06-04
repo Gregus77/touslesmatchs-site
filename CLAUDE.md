@@ -94,23 +94,42 @@
 9. ⏳ CTA affiliés optimisés sur chaque pick
 10. ⏳ Vidéos hero (Phase 3)
 
-## 💰 ROADMAP RENTABILITÉ
+## 💰 MODÈLE FREEMIUM (stratégie validée)
 
-**Phase 1 (cette semaine) — Bases rentabilité**
+### Tier GRATUIT (0€)
+- ✅ 1 pick/jour ARJEL (Winamax, Betclic, Unibet, PMU)
+- ✅ Site touslesmatchs.com accessible
+- ✅ Canal Telegram public
+- ✅ Calculateur projection
+
+### Tier PREMIUM (19,90€/mois)
+- ✅ 1 pick ARJEL + 1 pick **HORS-ARJEL** (Pinnacle, PS3838)
+- ✅ Cotes supérieures sur matchs internationaux (Asie, Afrique, Amérique latine)
+- ✅ Canal Telegram premium privé
+- ✅ Sans engagement, Stripe sécurisé
+
+### Système implémenté
+- `multi_agent.js` génère maintenant : `pick` (ARJEL gratuit) + `premium_arjel` + `premium_hors_arjel`
+- Encart Premium 19,90€/mois sur la page d'accueil
+- CTA "💎 Devenir Premium" track via GA4 event `click_premium_cta`
+
+## 🗺️ ROADMAP RENTABILITÉ
+
+**Phase 1 (FAIT)**
 - ✅ Calculateur de projection
 - ✅ GA4 (mesurer trafic)
-- 🔄 CTA affiliés boostés sur picks
-- 🔄 Capture email obligatoire pour picks 7-7.9
+- ✅ Modèle Freemium ARJEL vs Premium
+- ✅ Encart Premium 19,90€/mois
 
-**Phase 2 (semaine prochaine) — Monétisation directe**
-- Stripe abonnement 9.90€/19.90€
-- Webhook activation compte
-- Canal Telegram premium privé
+**Phase 2 (prochaine) — Stripe**
+- 🔄 Page paiement Stripe Checkout
+- 🔄 Webhook activation compte client
+- 🔄 Gestion canal Telegram premium privé (ajout/retrait abonnés)
 
-**Phase 3 (mois prochain) — Croissance**
+**Phase 3 — Croissance**
 - TikTok auto-post
-- Vidéos hero
-- SEO optimisé
+- Vidéos hero foot/hockey
+- SEO optimisé (sitemap, meta tags)
 
 ---
 
