@@ -43,6 +43,23 @@ services:
     networks:
       - web
 
+  hermes-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: touslesmatchs-hermes-admin
+    restart: unless-stopped
+    command: node scripts/hermes_admin_bot.js
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_ADMIN_BOT_TOKEN}
+      - TELEGRAM_ADMIN_ID=${TELEGRAM_ADMIN_ID}
+      - USERS_DB_PATH=./scripts/users_db.json
+    volumes:
+      - ./scripts:/app/scripts
+      - ./src:/app/src
+    networks:
+      - web
+
 volumes:
   caddy_data:
   caddy_config:
