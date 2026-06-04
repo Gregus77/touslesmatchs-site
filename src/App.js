@@ -5,6 +5,8 @@ import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
 import AnalyseLive from "./AnalyseLive";
 import Calculateur from "./Calculateur";
+import Login from "./Login";
+import Subscription from "./Subscription";
 import translations from "./translations";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
@@ -229,6 +231,8 @@ export default function App() {
   );
 
 
+  if(page==="login") return React.createElement(React.Fragment, null, React.createElement(Login, {setPage:setPage}));
+  if(page==="subscription") return React.createElement(React.Fragment, null, React.createElement(Subscription, {setPage:setPage}));
   if(page==="cgu") return React.createElement(React.Fragment, null, React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="mentions") return React.createElement(React.Fragment, null, React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="confidentialite") return React.createElement(React.Fragment, null, React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));

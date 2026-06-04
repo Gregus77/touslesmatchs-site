@@ -7,6 +7,7 @@
 
 const https  = require("https");
 const http   = require("http");
+const { handleLogin, handleRegister, handleStripeCheckout } = require("./api_auth");
 
 const GROQ_KEY      = process.env.GROQ_API_KEY || "";
 const FOOTBALL_KEY  = process.env.FOOTBALL_DATA_KEY || "";
@@ -216,6 +217,31 @@ const server = http.createServer(async (req, res) => {
     });
     stripeReq.write(stripeBody);
     stripeReq.end();
+    return;
+  }
+
+  // ── AUTH ENDPOINTS ──────────────────────────────────────
+  // POST /auth/login
+  if (req.method === "POST" && url.pathname === "/auth/login") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => handleLogin(req, res, body));
+    return;
+  }
+
+  // POST /auth/register
+  if (req.method === "POST" && url.pathname === "/auth/register") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => handleRegister(req, res, body));
+    return;
+  }
+
+  // POST /stripe/create-checkout (new version with user auth)
+  if (req.method === "POST" && url.pathname === "/stripe/create-checkout") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => handleStripeCheckout(req, res, body));
     return;
   }
 
