@@ -370,7 +370,16 @@ export default function App() {
         ),
         React.createElement("div", {style:{fontSize:"32px",color:"#fff",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif",marginBottom:"4px"}}, "19,90€ ", React.createElement("span",{style:{fontSize:"14px",color:"#888",fontWeight:"normal"}},"/ mois")),
         React.createElement("div", {style:{fontSize:"11px",color:"#666",marginBottom:"18px"}}, "Sans engagement • Stripe sécurisé"),
-        React.createElement("a", {href:"https://t.me/touslesmatchs_bot",target:"_blank",rel:"noopener noreferrer",onClick:function(){ if(window.trackEvent) window.trackEvent("click_premium_cta", {price:19.90}); },style:{display:"inline-block",background:"linear-gradient(135deg, #d4af37, #b8941f)",color:"#000",padding:"14px 36px",borderRadius:"8px",textDecoration:"none",fontWeight:"bold",fontSize:"14px",letterSpacing:"2px",textTransform:"uppercase"}}, "💎 Devenir Premium")
+        React.createElement("button", {onClick:function(){
+          if(window.trackEvent) window.trackEvent("click_premium_cta", {price:19.90});
+          fetch("https://www.touslesmatchs.com/api/create-checkout", {method:"POST"})
+            .then(function(r){return r.json();})
+            .then(function(data){
+              if(data.url) window.location.href = data.url;
+              else window.open("https://t.me/touslesmatchs_bot","_blank");
+            })
+            .catch(function(){ window.open("https://t.me/touslesmatchs_bot","_blank"); });
+        },style:{display:"inline-block",background:"linear-gradient(135deg, #d4af37, #b8941f)",color:"#000",padding:"14px 36px",borderRadius:"8px",border:"none",fontWeight:"bold",fontSize:"14px",letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer"}}, "💎 Devenir Premium")
       )
     ),
 
