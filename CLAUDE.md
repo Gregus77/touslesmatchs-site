@@ -35,12 +35,57 @@
 
 ## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
 
-**04/06/2026 — Status**: ✅ Site déployé, Concile V2 actif (Groq+DeepSeek)
+**04/06/2026 17h — Status**: ✅ Concile V2 actif | 🚧 Plan stratégie à implémenter
 
-**Prochaine étape suggérée** :
-1. Tester le site sur téléphone réel (https://www.touslesmatchs.com)
-2. Vérifier que les picks 04-06/06 s'affichent correctement
-3. Activer le canal Telegram premium si besoin
+---
+
+## 🎯 STRATÉGIE COMPLÈTE TOUSLESMATCHS (à implémenter étape par étape)
+
+### 1️⃣ Flux financier
+- Clients s'inscrivent via affiliés **PMU, Winamax, ParisPortif**
+- Gains reversés vers **Pinnacle**
+- Réinvestissement en **ETFs Trade Republic** via revenus Stripe
+
+### 2️⃣ Abonnement Stripe
+- Paiement récurrent **5-10€/jour** pour accès picks IA
+- Webhook Stripe pour activation compte client après paiement
+- Plans : Free / Standard 9.90€ / Premium 19.90€
+
+### 3️⃣ Calculateur projection interactive (page publique)
+- Client rentre montant initial → voit 3 scénarios sur 6 mois
+- Basé sur stats réelles : 21/23, cote moyenne 1.52, Kelly modéré 1.5x
+- Formule : `Bank finale = Bank initiale × (1 + ROI)^nb_jours`
+
+### 4️⃣ Gestion mise progressive (Python script)
+- À chaque pari gagné → calcule mise suivante via **Kelly 1.5x**
+- À chaque perte → réduit mise de **-10%**
+- Stop-loss : 3 pertes d'affilée → réduction **-50% pendant 2 jours**
+
+### 5️⃣ Google Analytics 4
+- Implémenter GA4 sur toutes les pages
+- Track : inscriptions, clics Stripe, temps sur calculateur, taux conversion
+
+### 6️⃣ Responsive design + Vidéos
+- Mobile / Tablette / Desktop (en cours d'amélioration)
+- Garder **dark black & or**
+- Ajouter vidéos buts foot/hockey 5-8s en boucle (sources gratuites)
+
+### 7️⃣ Historique paris (logging complet)
+- Chaque pick enregistre : date, cote réelle, résultat, mise
+- Stats mises à jour en direct (déjà partiellement fait)
+
+---
+
+## ⚡ ACTIONS IMMÉDIATES (cette session)
+
+1. ✅ Doublons picks corrigés (déduplication runtime)
+2. ✅ Stats dynamiques (+394% remplacé par ROI calculé)
+3. ✅ Bandeau stats grid 2×2 (plus de débordement mobile)
+4. ✅ Header mobile compact (TikTok + drapeaux IT/ES/RU cachés)
+5. ⏳ Stripe (à venir)
+6. ⏳ Calculateur projection (à venir)
+7. ⏳ GA4 (à venir)
+8. ⏳ Vidéos hero (à venir)
 
 ---
 

@@ -129,9 +129,40 @@ export default function App() {
     gtag("config", "G-ME2T7G7PSK");
   }, []);
 
+  // ═══ DÉDUPLICATION : 1 seul pick par date ═══
+  var seenDates = {};
+  picks = picks.filter(function(p){
+    var key = p[0] + "|" + p[5]; // date + status
+    if (seenDates[key]) return false;
+    seenDates[key] = true;
+    return true;
+  });
+
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
+  var losses = picks.filter(function(p){return p[5]==="PERDU";}).length;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
-  var winrate = Math.round((wins/total)*100);
+  var winrate = total > 0 ? Math.round((wins/total)*100) : 0;
+
+  // ═══ CALCUL ROI DYNAMIQUE (basé sur cotes réelles, mise fixe 10€) ═══
+  var miseFixe = 10;
+  var bankrollDepart = 100;
+  var gainsCumules = 0;
+  picks.forEach(function(p){
+    if (p[5] === "GAGNE") {
+      var cote = parseFloat(p[3]) || 1.5;
+      gainsCumules += (cote - 1) * miseFixe;
+    } else if (p[5] === "PERDU") {
+      gainsCumules -= miseFixe;
+    }
+  });
+  var roiPct = Math.round((gainsCumules / bankrollDepart) * 100);
+
+  // ═══ SÉRIE DE VICTOIRES EN COURS ═══
+  var serieEnCours = 0;
+  for (var i = 0; i < picks.length; i++) {
+    if (picks[i][5] === "GAGNE") serieEnCours++;
+    else if (picks[i][5] === "PERDU") break;
+  }
 
   // Trouver le pick du JOUR en priorité (date d'aujourd'hui), puis le prochain à venir
   var todayStr = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
@@ -307,9 +338,9 @@ export default function App() {
       React.createElement("p", {style:{color:"#4a4438",fontSize:"14px",maxWidth:"480px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"400"}},
         t("seuil_minimum"), React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
       ),
-      React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden",flexWrap:"wrap"}},
-        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:"+394%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:(total-wins)+" "+t("perdu")+" sur "+total},{label:t("serie"),value:wins+" "+t("victoires"),sub:"consécutives 🔥"}].map(function(s,i){
-          return React.createElement("div", {key:i, style:{flex:1,minWidth:"50%",padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none"}},
+      React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
+        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:losses+" "+t("perdu")+" sur "+total},{label:t("serie"),value:serieEnCours+" "+t("victoires"),sub:"consécutives 🔥"}].map(function(s,i){
+          return React.createElement("div", {key:i, style:{padding:"18px 8px",borderRight:(i%2===0)?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none",textAlign:"center"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
             React.createElement("div", {style:{fontSize:"10px",color:"#444",marginTop:"3px"}}, s.sub)
