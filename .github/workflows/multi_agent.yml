@@ -65,6 +65,7 @@ jobs:
           command_timeout: 120s
           script: |
             cd /opt/touslesmatchs
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             docker compose up --build -d --remove-orphans
             docker image prune -f
