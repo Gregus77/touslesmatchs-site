@@ -36,16 +36,17 @@ const prices = [
   },
 ];
 
-async function post(hostname, path, body) {
+// Stripe exige application/x-www-form-urlencoded (pas JSON)
+function stripePost(path, params) {
   return new Promise((resolve, reject) => {
-    const data = JSON.stringify(body);
+    const data = new URLSearchParams(params).toString();
     const req = https.request({
-      hostname,
+      hostname: "api.stripe.com",
       path,
       method: "POST",
       headers: {
         "Authorization": `Bearer ${STRIPE_KEY}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/x-www-form-urlencoded",
         "Content-Length": Buffer.byteLength(data),
       },
     }, res => {
@@ -53,7 +54,11 @@ async function post(hostname, path, body) {
       res.on("data", c => d += c);
       res.on("end", () => {
         try {
-          resolve(JSON.parse(d));
+          const parsed = JSON.parse(d);
+          if (parsed.error) {
+            console.error("  Stripe error:", parsed.error.message);
+          }
+          resolve(parsed);
         } catch {
           reject(new Error("Parse error"));
         }
@@ -74,9 +79,8 @@ async function createPrices() {
     try {
       // 1. Create product
       console.log(`  → Creating ${price.name} product...`);
-      const productRes = await post("api.stripe.com", "/v1/products", {
+      const productRes = await stripePost("/v1/products", {
         name: price.product_name,
-        type: "service",
       });
 
       if (!productRes.id) {
@@ -89,13 +93,11 @@ async function createPrices() {
 
       // 2. Create price for product
       console.log(`  → Creating ${price.name} price (€${(price.amount / 100).toFixed(2)}/month)...`);
-      const priceRes = await post("api.stripe.com", "/v1/prices", {
+      const priceRes = await stripePost("/v1/prices", {
         product: productId,
-        amount: price.amount,
+        unit_amount: price.amount,
         currency: price.currency,
-        recurring: {
-          interval: price.interval,
-        },
+        "recurring[interval]": price.interval,
       });
 
       if (!priceRes.id) {
