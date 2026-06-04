@@ -35,11 +35,16 @@
 
 ## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
 
-**04/06/2026 22h — Status**: 
-- ✅ Audit complet Phase 0 terminé
-- ✅ Bug 405 Analyse Live CORRIGÉ (uri strip_prefix /api dans Caddyfile)
-- 🚧 Stripe : clés manquantes (Phase 2)
-- 🚧 Telegram Premium : canal non créé (Phase 2)
+**04/06/2026 23h — Status**: 
+- ✅ Phase 0: Audit complet terminé
+- ✅ Phase 1: Bug 405 Analyse Live CORRIGÉ → déployé VPS
+- ✅ Phase 2: Architecture multi-IA implémentée
+  - Fallback routing: DeepSeek → OpenRouter → Gemini → Mistral → Fallback
+  - Nouveau script: `scripts/verify_apis.js`
+  - multi_agent.js refactorisé avec `callWithFallback()`
+- 🚧 Phase 2 suite: Exécuter vérification des APIs (voir ci-dessous)
+- 🚧 Phase 3: Analyse Live V2 (simplification UI)
+- 🚧 Phase 5: Stripe (clés manquantes)
 
 ---
 
@@ -161,12 +166,26 @@
 - **VPS** : Hostinger — IP `72.61.167.175`
 - **CI/CD** : GitHub Actions → push sur `main` → redéploiement auto VPS
 
-### Agents IA dans multi_agent.js
-| Agent | Rôle | API |
-|-------|------|-----|
-| RapidAPI | Données matchs foot | free-api-live-football-data |
-| Groq/Llama3 | Enrichissement cotes | api.groq.com |
-| DeepSeek | Chef — sélection finale | api.deepseek.com |
+### Agents IA dans multi_agent.js (Phase 2: Multi-IA)
+| Composant | Rôle | Status |
+|-----------|------|--------|
+| RapidAPI | Données matchs foot | ✅ Stable |
+| Groq/Llama3 | Enrichissement cotes | ✅ Actif |
+| **Fallback Router** | Chef — essai séquentiel | ✅ NOUVEAU (Phase 2) |
+| → DeepSeek | 1er choix | ✅ Configuré |
+| → OpenRouter | Fallback 1 | 🟡 À configurer |
+| → Gemini | Fallback 2 | 🟡 À configurer |
+| → Mistral | Fallback 3 | 🟡 À configurer |
+| → Manual | Fallback final | ✅ Toujours disponible |
+
+**Flux Phase 2:**
+```
+RapidAPI → matchs
+  → Groq → cotes
+    → callWithFallback([DeepSeek, OpenRouter, Gemini, Mistral])
+      → premier succès = pick retourné
+      → tous échoués = fallback manuel (best cote)
+```
 
 ### Flux quotidien (GitHub Actions, 11h59)
 ```

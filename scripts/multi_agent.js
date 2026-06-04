@@ -7,10 +7,57 @@ const { buildInlineKeyboard } = require("./bookmakers.config");
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
+const GEMINI_KEY = process.env.GEMINI_API_KEY;
+const MISTRAL_KEY = process.env.MISTRAL_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
 const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
 const SPORTS_ALLOWED = ["Hockey", "Foot"];
+
+// ═══════════════════════════════════════════════════════
+// MULTI-IA PROVIDER INTERFACE — Fallback routing
+// ═══════════════════════════════════════════════════════
+const AI_PROVIDERS = [
+  {
+    name: "DeepSeek",
+    available: () => !!DEEPSEEK_KEY,
+    call: (prompt) => callDeepSeek(prompt)
+  },
+  {
+    name: "OpenRouter",
+    available: () => !!OPENROUTER_KEY,
+    call: (prompt) => callOpenRouter(prompt)
+  },
+  {
+    name: "Gemini",
+    available: () => !!GEMINI_KEY,
+    call: (prompt) => callGemini(prompt)
+  },
+  {
+    name: "Mistral",
+    available: () => !!MISTRAL_KEY,
+    call: (prompt) => callMistral(prompt)
+  }
+];
+
+async function callWithFallback(prompt) {
+  for (const provider of AI_PROVIDERS) {
+    if (!provider.available()) {
+      console.log(`   ⏭️  ${provider.name}: non configuré`);
+      continue;
+    }
+    try {
+      console.log(`   🔄 Essai ${provider.name}...`);
+      const result = await provider.call(prompt);
+      console.log(`   ✓ ${provider.name}: succès`);
+      return { provider: provider.name, result };
+    } catch (e) {
+      console.error(`   ❌ ${provider.name}: ${e.message}`);
+    }
+  }
+  return { provider: "FALLBACK", result: null };
+}
 
 function dateForOffset(offset) {
   const d = new Date();
@@ -169,19 +216,93 @@ async function enrichGroq(matches) {
   return matches;
 }
 
-// DeepSeek retourne :
+// ═══════════════════════════════════════════════════════
+// PROVIDER-SPECIFIC IMPLEMENTATIONS
+// ═══════════════════════════════════════════════════════
+
+async function callDeepSeek(prompt) {
+  const r = await post("api.deepseek.com", "/v1/chat/completions", {
+    "Authorization": `Bearer ${DEEPSEEK_KEY}`,
+    "Content-Type": "application/json"
+  }, {
+    model: "deepseek-chat",
+    max_tokens: 2500,
+    temperature: 0.1,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const text = r.choices?.[0]?.message?.content || "";
+  return safeJSON(text);
+}
+
+async function callOpenRouter(prompt) {
+  const r = await post("openrouter.ai", "/api/v1/chat/completions", {
+    "Authorization": `Bearer ${OPENROUTER_KEY}`,
+    "Content-Type": "application/json"
+  }, {
+    model: "deepseek/deepseek-chat", // Compatible alias
+    max_tokens: 2500,
+    temperature: 0.1,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const text = r.choices?.[0]?.message?.content || "";
+  return safeJSON(text);
+}
+
+async function callGemini(prompt) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 2500, temperature: 0.1 }
+    });
+    const req = https.request({
+      hostname: "generativelanguage.googleapis.com",
+      path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try {
+          const r = JSON.parse(d);
+          const text = r.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          resolve(safeJSON(text));
+        } catch { reject(new Error("Gemini parse error")); }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function callMistral(prompt) {
+  const r = await post("api.mistral.ai", "/v1/chat/completions", {
+    "Authorization": `Bearer ${MISTRAL_KEY}`,
+    "Content-Type": "application/json"
+  }, {
+    model: "mistral-large-latest",
+    max_tokens: 2500,
+    temperature: 0.1,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const text = r.choices?.[0]?.message?.content || "";
+  return safeJSON(text);
+}
+
+// Chef retourne :
 //   - pick (ARJEL ≥7) → site gratuit + Telegram public
 //   - premium_arjel (ARJEL ≥7) → Telegram premium (clients abonnés)
 //   - premium_hors_arjel (HORS-ARJEL ≥7) → Telegram premium UNIQUEMENT (Pinnacle/PS3838)
 async function deepseekChef(matches) {
-  console.log("👑 DeepSeek — Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
+  console.log("👑 Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
   const validArjel = valid.filter(m => m.arjel);
   const validHorsArjel = valid.filter(m => !m.arjel);
   console.log(`   Pool ARJEL: ${validArjel.length} | Pool HORS-ARJEL: ${validHorsArjel.length}`);
   if (!valid.length) return null;
-  try {
-    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:2500, temperature:0.1, messages:[{role:"user",content:`Système FREEMIUM TousLesMatchs. Analyse 2 catégories de matchs :
+
+  const prompt = `Système FREEMIUM TousLesMatchs. Analyse 2 catégories de matchs :
 
 POOL ARJEL (jouables Winamax/Betclic/Unibet/PMU): ${JSON.stringify(validArjel)}
 
@@ -201,16 +322,18 @@ Réponds JSON:
   "premium_hors_arjel": {"match":"C vs D","cote":1.70,"note":7.8,"raison":"courte"}
 }
 
-Si pool vide pour une catégorie, mets null.`}] });
-    const text = r.choices?.[0]?.message?.content || "";
-    const result = safeJSON(text);
+Si pool vide pour une catégorie, mets null.`;
+
+  try {
+    const { provider, result } = await callWithFallback(prompt);
+    console.log(`   Utilisé: ${provider}`);
     if (result?.pick) {
       console.log(`   ✓ Pick GRATUIT (site): ${result.pick.match} (note ${result.pick.note})`);
       if (result.premium_arjel) console.log(`   💎 Premium ARJEL: ${result.premium_arjel.match} (note ${result.premium_arjel.note})`);
       if (result.premium_hors_arjel) console.log(`   💎 Premium HORS-ARJEL: ${result.premium_hors_arjel.match} (note ${result.premium_hors_arjel.note})`);
       return result;
     }
-  } catch(e) { console.error("DeepSeek error:", e.message); }
+  } catch(e) { console.error("AI error:", e.message); }
   // Fallback : utilise UNIQUEMENT matchs ARJEL pour le pick gratuit
   const arjelCandidates = validArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
   const horsArjelCandidates = validHorsArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
