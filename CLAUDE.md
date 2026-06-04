@@ -82,10 +82,30 @@
 2. ✅ Stats dynamiques (+394% remplacé par ROI calculé)
 3. ✅ Bandeau stats grid 2×2 (plus de débordement mobile)
 4. ✅ Header mobile compact (TikTok + drapeaux IT/ES/RU cachés)
-5. ⏳ Stripe (à venir)
-6. ⏳ Calculateur projection (à venir)
-7. ⏳ GA4 (à venir)
-8. ⏳ Vidéos hero (à venir)
+5. ✅ **Calculateur de projection** (page /calculateur) — 3 scénarios réalistes basés sur stats réelles
+6. ✅ **Google Analytics 4** intégré (G-ME2T7G7PSK)
+7. ⏳ Stripe abonnement (priorité prochaine session)
+8. ⏳ Capture email (lead magnet)
+9. ⏳ CTA affiliés optimisés sur chaque pick
+10. ⏳ Vidéos hero (Phase 3)
+
+## 💰 ROADMAP RENTABILITÉ
+
+**Phase 1 (cette semaine) — Bases rentabilité**
+- ✅ Calculateur de projection
+- ✅ GA4 (mesurer trafic)
+- 🔄 CTA affiliés boostés sur picks
+- 🔄 Capture email obligatoire pour picks 7-7.9
+
+**Phase 2 (semaine prochaine) — Monétisation directe**
+- Stripe abonnement 9.90€/19.90€
+- Webhook activation compte
+- Canal Telegram premium privé
+
+**Phase 3 (mois prochain) — Croissance**
+- TikTok auto-post
+- Vidéos hero
+- SEO optimisé
 
 ---
 

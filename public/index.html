@@ -34,6 +34,22 @@
       window.plausible.init=window.plausible.init||function(i){window.plausible.o=i||{}};
       window.plausible.init();
     </script>
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-ME2T7G7PSK', {
+        page_path: window.location.pathname,
+        send_page_view: true
+      });
+      // Tracker événements personnalisés
+      window.trackEvent = function(name, params) {
+        if (window.gtag) window.gtag('event', name, params || {});
+      };
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
