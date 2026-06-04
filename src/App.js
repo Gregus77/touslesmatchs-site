@@ -22,7 +22,6 @@ var picks = [
   ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["05/06 au 06/06","PAS DE PARI - Filtre ARJEL: aucun match dispo sur bookmakers FR","---","---","---","NOPICK","",0,8],
   ["04/06","Cambodia vs Bhutan","Cambodia Vainqueur","1.60","2-0","GAGNE","Foot",7.3,7],
-  ["03/06","Portugal U21 vs Northern Ireland U21","Portugal U21 Vainqueur","1.40","1-1","PERDU","Foot",7.0,7],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
   ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
   ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],

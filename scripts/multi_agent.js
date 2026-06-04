@@ -76,20 +76,18 @@ function rapidGet(path) {
 // LIGUES DISPONIBLES SUR BOOKMAKERS FRANÇAIS (ARJEL/ANJ)
 // Winamax, Betclic, Unibet, PMU, ParionsSport
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// LIGUES ACCEPTÉES — CHAMPIONNAT RÉGULIER UNIQUEMENT
+// PAS de finales, PAS de qualifications, PAS de U21/U20/U23
+// On ne joue QUE là où les stats parlent (saison régulière)
+// ═══════════════════════════════════════════════════════
 const LIGUES_ARJEL = new Set([
-  // Top 5 européens
+  // Top 5 européens — SAISON RÉGULIÈRE
   47,    // Premier League
   87,    // La Liga
   54,    // Bundesliga
   55,    // Serie A
   53,    // Ligue 1
-  // Coupes européennes
-  42,    // Champions League
-  73,    // Europa League
-  // Compétitions internationales
-  188,   // Nations League UEFA
-  77,    // Ligue des Nations
-  // Note: 914609 (Internationaux A) RETIRÉ — filtré par TEAMS_ARJEL ci-dessous
 ]);
 
 // ═══════════════════════════════════════════════════════
@@ -115,16 +113,24 @@ const NATIONS_ARJEL = new Set([
   "Côte d'Ivoire","Cote d'Ivoire","Korea Republic","IR Iran","United States"
 ]);
 
+// Mots-clés INTERDITS dans les noms d'équipes (haute variance, pas de stats fiables)
+const BANNED_KEYWORDS = ["U21", "U20", "U23", "U19", "U18", "U17", "Olympic", "Olympique B",
+  "Women", "Femmes", "Femenino", "W ", " W"];
+
 function isMatchARJEL(fx) {
-  // 1. Ligue Top européenne ou coupe européenne → OK
+  const home = (fx.home?.name || "").trim();
+  const away = (fx.away?.name || "").trim();
+  // REJET : équipes jeunes / féminines
+  for (const kw of BANNED_KEYWORDS) {
+    if (home.includes(kw) || away.includes(kw)) return false;
+  }
+  // 1. Ligue Top 5 européen — SAISON RÉGULIÈRE → OK
   if (LIGUES_ARJEL.has(fx.leagueId)) return true;
-  // 2. Match international : vérifier que les 2 équipes sont des nations ARJEL
+  // 2. Match international A (pas U21) : vérifier nations ARJEL
   if (fx.leagueId === 914609) {
-    const home = (fx.home?.name || "").trim();
-    const away = (fx.away?.name || "").trim();
     return NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
   }
-  // 3. Sinon → REJET
+  // 3. Sinon → REJET (Champions League, Europa League, qualifs = haute variance)
   return false;
 }
 
