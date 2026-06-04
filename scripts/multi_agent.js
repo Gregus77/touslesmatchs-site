@@ -83,16 +83,31 @@ async function enrichGroq(matches) {
 }
 
 async function deepseekChef(matches) {
-  console.log("👑 DeepSeek...");
+  console.log("👑 DeepSeek — Sélection meilleur match...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
   if (!valid.length) return null;
   try {
-    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:1000, temperature:0.1, messages:[{role:"user",content:`Pick 8/10+ ou 7/10. Cote 1.40-2.20. JSON: {"pick":{"match":"X vs Y","cote":1.65,"note":8.5,"threshold":8}}\n${JSON.stringify(valid)}`}] });
+    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:1500, temperature:0.1, messages:[{role:"user",content:`Analyse TOUS ces matchs et attribue une NOTE 7.0-10 à chacun selon: cote 1.40-2.20, écart ELO, forme, importance match. SÉLECTIONNE le match avec la PLUS HAUTE NOTE.
+
+Règles strictes:
+- Préfère note ≥8.0 (PREMIUM)
+- Si plusieurs à 8+: prends le plus haut (8.7 > 8.3)
+- Si rien à 8: prends le plus proche de 8 (7.8 > 7.2)
+- Refuse cote <1.40 ou >2.20
+
+Réponds JSON: {"pick":{"match":"X vs Y","cote":1.65,"note":8.5,"threshold":8,"raison":"courte"}}
+
+Matchs: ${JSON.stringify(valid)}`}] });
     const text = r.choices?.[0]?.message?.content || "";
     const result = safeJSON(text);
-    if (result?.pick) return result;
-  } catch(e) { console.error("DeepSeek:", e.message); }
-  const best = valid[0];
+    if (result?.pick) {
+      console.log(`   ✓ Sélection DeepSeek: ${result.pick.match} (note ${result.pick.note})`);
+      return result;
+    }
+  } catch(e) { console.error("DeepSeek error:", e.message); }
+  // Fallback : meilleur favori (cote la plus basse mais >= 1.4)
+  const candidates = valid.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
+  const best = candidates.length ? candidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : valid[0];
   return { pick: { match: `${best.home} vs ${best.away}`, cote: best.cote_domicile || 1.5, note: 7.0, threshold: 7 } };
 }
 
@@ -111,9 +126,24 @@ function updateAppJs(pick, dateStr) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
   const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.threshold}],\n`;
-  content = content.replace("var picks = [\n", `var picks = [\n${newPick}`);
+  // ANTI-DOUBLON : si pick existe déjà pour cette date, le remplacer
+  const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}",[^\\n]*\\n`, "g");
+  const existing = content.match(dateRegex);
+  if (existing) {
+    // Comparer notes : garder celui avec la meilleure note
+    const existingNote = parseFloat(existing[0].match(/,(\d+\.?\d*),\d+\],/)?.[1] || 0);
+    if (pick.note > existingNote) {
+      content = content.replace(dateRegex, newPick);
+      console.log(`🔄 ${dateStr}: remplacement (${existingNote} → ${pick.note})`);
+    } else {
+      console.log(`⏭️ ${dateStr}: gardé existant (${existingNote} ≥ ${pick.note})`);
+      return;
+    }
+  } else {
+    content = content.replace("var picks = [\n", `var picks = [\n${newPick}`);
+    console.log(`✅ ${dateStr}: ${pick.match} @ ${pick.cote} (note ${pick.note})`);
+  }
   fs.writeFileSync(appPath, content);
-  console.log(`✅ ${dateStr}: ${pick.match} @ ${pick.cote}`);
 }
 
 async function main() {

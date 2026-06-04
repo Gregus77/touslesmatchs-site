@@ -43,6 +43,10 @@ jobs:
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node scripts/multi_agent.js
 
+      - name: Antithèse — Audit qualité (détection bugs)
+        continue-on-error: true
+        run: node scripts/antithese_audit.js
+
       - name: Build React app
         env:
           CI: false
