@@ -280,10 +280,13 @@ body { font-size: 16px; line-height: 1.65; }
   .nav-links { display:none; }
   .nav-burger { display:flex; }
   .hero { padding:100px 16px 60px; }
-  .hero-section { padding-left: 12px !important; padding-right: 12px !important; }
+  .hero-section { padding: 30px 12px 20px !important; }
   .home-section { padding-left: 12px !important; padding-right: 12px !important; }
   .lang-flags { display: none !important; }
-  .main-nav { gap: 4px !important; }
+  .main-nav { gap: 4px !important; flex-wrap: wrap !important; }
+  .main-nav button, .main-nav a { font-size: 11px !important; padding: 5px 10px !important; }
+  /* TikTok caché sur mobile pour économiser place */
+  .main-nav a[href*="tiktok"] { display: none !important; }
   .hero-title { font-size:clamp(34px,11vw,52px); }
   .hero-sub { font-size:14px; margin-bottom:36px; }
   .stats-grid { grid-template-columns:repeat(2,1fr); max-width:100%; border-radius:var(--r); }
@@ -309,4 +312,25 @@ body { font-size: 16px; line-height: 1.65; }
   .partners-grid { grid-template-columns:1fr; }
   .bm-card { flex-direction:column; align-items:flex-start; }
   .preuves-grid { grid-template-columns:1fr; }
+}
+
+/* PETITS TÉLÉPHONES (iPhone SE, etc.) */
+@media (max-width:480px) {
+  .hero-section { padding: 20px 10px 15px !important; }
+  .home-section { padding-left: 10px !important; padding-right: 10px !important; }
+  .hero-title { font-size: clamp(28px, 9vw, 40px) !important; }
+  .hero-sub { font-size: 13px !important; }
+  .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
+  .stat-card { padding: 12px 8px !important; }
+  .stat-value { font-size: 22px !important; }
+  .pick-card { padding: 18px 14px !important; }
+  .main-nav { justify-content: center !important; }
+  /* Header plus compact */
+  header { padding: 8px 10px !important; }
+}
+
+/* TRÈS PETITS (Galaxy Fold fermé, etc.) */
+@media (max-width:360px) {
+  .main-nav button { font-size: 10px !important; padding: 4px 8px !important; }
+  .hero-title { font-size: 26px !important; }
 }

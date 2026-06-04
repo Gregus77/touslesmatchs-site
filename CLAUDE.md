@@ -1,8 +1,59 @@
 # CLAUDE.md — Mémoire partagée du projet TousLesMatchs
 
-> Ce fichier est la **source de vérité** pour toutes les sessions Claude Code,
-> que ce soit depuis le téléphone ou l'ordinateur.
-> **Toujours lire ce fichier en premier** avant toute action.
+> **🔄 SYNCHRONISATION MULTI-APPAREILS (téléphone ⇄ ordinateur)**
+>
+> Ce fichier est la **source de vérité** pour toutes les sessions Claude Code.
+> Sur mobile ou desktop, ce fichier garde l'état du projet partagé via Git.
+>
+> ## ⚡ AU DÉBUT DE CHAQUE SESSION CLAUDE CODE (Mobile OU Desktop)
+>
+> **Étape obligatoire** : `git pull origin main`
+> Cela synchronise le code + ce CLAUDE.md avec la dernière version.
+>
+> Ensuite **lis ce fichier en entier** pour connaître :
+> - Où en est le projet
+> - Ce qui marche
+> - Ce qui est en cours
+> - La prochaine action à faire (section "🔥 PROCHAINE ACTION")
+>
+> ## 📱 INSTRUCTIONS SPÉCIFIQUES MOBILE
+>
+> Si tu es sur Claude Code mobile :
+> 1. Vérifie d'abord `git status` pour voir les modifs en cours
+> 2. Si modifications non commitées : commit + push immédiatement
+> 3. Travaille sur des **petits changements** (mobile = moins de tokens)
+> 4. **Toujours `git push`** à la fin pour synchroniser avec le desktop
+>
+> ## 💾 ÉTAT PARTAGÉ
+>
+> À la fin de chaque session importante, **mettre à jour** :
+> - Section "🔥 PROCHAINE ACTION" ci-dessous
+> - Section "📅 DERNIÈRE SESSION"
+> - `git add CLAUDE.md && git commit -m "etat: synthese session" && git push`
+
+---
+
+## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
+
+**04/06/2026 — Status**: ✅ Site déployé, Concile V2 actif (Groq+DeepSeek)
+
+**Prochaine étape suggérée** :
+1. Tester le site sur téléphone réel (https://www.touslesmatchs.com)
+2. Vérifier que les picks 04-06/06 s'affichent correctement
+3. Activer le canal Telegram premium si besoin
+
+---
+
+## 📅 DERNIÈRE SESSION (04/06/2026)
+
+- ✅ Concile simplifié : Claude/Gemini/Mistral/Qwen SUPPRIMÉS, Groq+DeepSeek actifs
+- ✅ Basketball désactivé (33% réussite vs 87% Hockey)
+- ✅ Anti-doublon : seul le pick avec meilleure note conservé
+- ✅ Build React intégré au workflow GitHub Actions
+- ✅ Skill Antithèse (audit auto) : `scripts/antithese_audit.js`
+- ✅ Script test complet : `scripts/test_all.js`
+- ✅ Responsive mobile amélioré (breakpoints 480px + 360px)
+- ✅ CLAUDE.md enrichi pour sync mobile/desktop
 
 ---
 
