@@ -20,7 +20,7 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","1-1","PERDU","Foot",7,7],
   ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["04/06","Sweden vs Greece","Sweden Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["04/06 au 06/06","PAS DE PARI - Aucun match ARJEL disponible","---","---","---","NOPICK","",0,8],
