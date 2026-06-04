@@ -1,6 +1,7 @@
 www.touslesmatchs.com {
     # API proxy vers le backend
     handle /api/* {
+        uri strip_prefix /api
         reverse_proxy api:3001
     }
 

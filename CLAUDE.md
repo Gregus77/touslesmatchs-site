@@ -35,7 +35,11 @@
 
 ## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
 
-**04/06/2026 17h — Status**: ✅ Concile V2 actif | 🚧 Plan stratégie à implémenter
+**04/06/2026 22h — Status**: 
+- ✅ Audit complet Phase 0 terminé
+- ✅ Bug 405 Analyse Live CORRIGÉ (uri strip_prefix /api dans Caddyfile)
+- 🚧 Stripe : clés manquantes (Phase 2)
+- 🚧 Telegram Premium : canal non créé (Phase 2)
 
 ---
 
