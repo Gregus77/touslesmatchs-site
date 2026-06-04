@@ -18,6 +18,9 @@ var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
   ["06/06","Angola vs Mauritania","Angola Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["04/06","Cambodia vs Bhutan","Cambodia Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["06/06","Angola vs Mauritania","Angola Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["05/06","Spain vs Iraq","Spain Vainqueur","1.4","—","EN ATTENTE","Foot",7,7],
   ["04/06","Iran vs Mali","Iran Vainqueur","1.4","—","EN ATTENTE","Foot",7,7],
   ["03/06","Portugal U21 vs Northern Ireland U21","Portugal U21 Vainqueur","1.2","—","EN ATTENTE","Foot",7,7],
