@@ -260,29 +260,49 @@ WINAMAX_LINK=              # ⬅️ À REMPLACER par lien perso (pas WMX8M5)
 
 ---
 
-## ❌ Ce qui reste à faire (par priorité)
+## ✅ Phases Complétées
 
-### URGENT
-- [ ] Créer canal Telegram premium privé + ajouter TELEGRAM_PREMIUM_CHAT_ID dans .env sur VPS
+- [x] **Phase 0** — Audit complet du projet
+- [x] **Phase 1** — Correction bug 405 Analyse Live (routing Caddy)
+- [x] **Phase 2** — Architecture multi-IA (fallback DeepSeek → OpenRouter → Gemini → Mistral)
 
-### Phase 2 — Premium
-- [ ] `multi_agent.js` : envoyer picks note 7-7.9 → canal Telegram premium
-- [ ] `multi_agent.js` : message pick enrichi (plus de détails qu'actuellement)
-- [ ] Stripe — abonnements 9,90€ / 19,90€
-- [ ] Gestion accès premium (vérification abonné avant envoi)
+## ❌ Ce qui reste à faire (par ordre de priorité)
 
-### Phase 3 — Site
-- [ ] Hero vidéo en boucle (buts + dunks + célébrations — sources Pexels/Mixkit)
-- [ ] Simulateur de bankroll interactif (flat bet / pourcentage / courbe)
-- [ ] Page stats analytics (par sport, par IA, par type de pari)
+### Phase 2 (suite) — Configuration multi-IA
+- [ ] Ajouter clés OpenRouter/Gemini/Mistral au `.env` sur VPS
+- [ ] Exécuter `node scripts/verify_apis.js` pour tester chaque API
+- [ ] Vérifier logs de `multi_agent.js` lors de la prochaine génération (11h59)
 
-### Phase 4 — Live IA
-- [ ] Page analyse live par match (xG, tirs, corners, cotes live)
-- [ ] Probabilités Over/BTTS/1X2 avec code couleur vert/jaune/rouge
-- [ ] Comparateur API (SportMonks vs API-Football vs Odds-API < 30€/mois)
+### Phase 3 — Simplification Analyse Live
+- [ ] Frontend: supprimer champs compétition/score/minute (auto-complétés)
+- [ ] Backend: enrichir auto-fetch de `match_id` via API sport
+- [ ] Affichage : probabilités Over/BTTS/1X2 avec couleurs (vert/jaune/rouge)
+- [ ] Tester page /analyse-live en tant qu'utilisateur
 
-### Phase 5
-- [ ] Application mobile React Native
+### Phase 4 — Comptes Utilisateurs
+- [ ] Inscription email/pwd
+- [ ] Système de statuts (Free/Premium/VIP/Elite)
+- [ ] Stockage base de données
+
+### Phase 5 — Stripe
+- [ ] Ajouter clés Stripe au `.env` VPS
+- [ ] Tester paiement (checkout + webhook)
+- [ ] Intégration "après paiement → accès Premium"
+
+### Phase 6 — Quotas
+- [ ] Free : 3 analyses
+- [ ] Premium : 10 analyses/jour
+- [ ] VIP : 30 analyses/jour
+
+### Future
+- [ ] Créer canal Telegram premium privé + TELEGRAM_PREMIUM_CHAT_ID
+- [ ] Telegram Admin privé (pilotage depuis Telegram)
+- [ ] Analytics (Plausible + Google Analytics + Search Console)
+- [ ] Base email + email quotidien
+- [ ] Dashboard Admin
+- [ ] Surveillance automatique Hermès (toutes les heures)
+- [ ] Parrainage + Gamification
+- [ ] Croissance (SEO, TikTok, Ads)
 
 ---
 
