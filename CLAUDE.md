@@ -142,14 +142,16 @@ WINAMAX_LINK=              # ⬅️ À REMPLACER par lien perso (pas WMX8M5)
 - [x] Vérificateur antithèse (antithese_audit.js)
 - [x] HTTPS automatique via Caddy
 - [x] Filtre : seules les grandes ligues (MAJOR leagues IDs)
+- [x] Lien Winamax perso (code=77953728) — remplacé WMX8M5
+- [x] Picks premium 7-7.9/10 → TELEGRAM_PREMIUM_CHAT_ID (multi_agent.js)
+- [x] Fix responsive mobile — plus de scroll horizontal (commit b5b1377)
 
 ---
 
 ## ❌ Ce qui reste à faire (par priorité)
 
 ### URGENT
-- [ ] Remplacer lien Winamax WMX8M5 → lien perso du propriétaire
-- [ ] Créer canal Telegram premium privé + ajouter TELEGRAM_PREMIUM_CHAT_ID dans .env
+- [ ] Créer canal Telegram premium privé + ajouter TELEGRAM_PREMIUM_CHAT_ID dans .env sur VPS
 
 ### Phase 2 — Premium
 - [ ] `multi_agent.js` : envoyer picks note 7-7.9 → canal Telegram premium
