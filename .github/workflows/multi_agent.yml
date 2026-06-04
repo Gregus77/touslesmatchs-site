@@ -9,6 +9,11 @@ on:
 jobs:
   generate-pick:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,46 +30,29 @@ jobs:
           git config user.name "Hermès Bot"
           git config user.email "hermes@touslesmatchs.com"
 
-      - name: Run Multi-Agents Concile V5
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Hermès V2 — Génération picks
         env:
-          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
           DEEPSEEK_API_KEY:   ${{ secrets.DEEPSEEK_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           RAPIDAPI_KEY:       ${{ secrets.RAPIDAPI_KEY }}
           GITHUB_TOKEN:       ${{ secrets.HERMES_GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node scripts/multi_agent.js
 
-      - name: Sync clés API vers VPS (hermes.env)
-        continue-on-error: true
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: 22
-          command_timeout: 30s
-          envs: GROQ_API_KEY,GEMINI_API_KEY,DEEPSEEK_API_KEY,ANTHROPIC_API_KEY,FOOTBALL_DATA_KEY
-          script: |
-            cat > /root/hermes.env << ENVEOF
-            GROQ_API_KEY=$GROQ_API_KEY
-            GEMINI_API_KEY=$GEMINI_API_KEY
-            DEEPSEEK_API_KEY=$DEEPSEEK_API_KEY
-            ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
-            FOOTBALL_DATA_KEY=$FOOTBALL_DATA_KEY
-            ENVEOF
-            chmod 600 /root/hermes.env
-        env:
-          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
-          DEEPSEEK_API_KEY:   ${{ secrets.DEEPSEEK_API_KEY }}
-          ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
-          FOOTBALL_DATA_KEY:  ${{ secrets.FOOTBALL_DATA_KEY }}
+      - name: Build React app
+        run: npm run build
 
-      - name: Deploy site via SSH
+      - name: Commit picks + build
+        run: |
+          git add src/App.js
+          git diff --staged --quiet || git commit -m "🤖 Hermès $(date +'%d/%m'): picks mis à jour"
+          git push origin main || true
+
+      - name: Deploy vers VPS via SSH
         continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
