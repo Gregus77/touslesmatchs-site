@@ -22,7 +22,7 @@ var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 var picks = [
   ["07/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
-  ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","—","GAGNE","Foot",7,7],
   ["04/06 au 06/06","PAS DE PARI - Aucun match championnat disponible","---","---","---","NOPICK","",0,8],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
   ["26/05 au 01/06","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
