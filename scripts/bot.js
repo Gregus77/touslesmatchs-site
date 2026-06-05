@@ -1,5 +1,6 @@
 const https = require("https");
 const fs = require("fs");
+const { buildInlineKeyboard } = require("./bookmakers.config");
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 let offset = 0;
@@ -96,9 +97,13 @@ async function handleUpdate(update) {
     if (todayPick) {
       await api("sendMessage", {
         chat_id: chatId,
-        text: `🎯 <b>PICK DU JOUR</b>\n\n⚽ <b>${todayPick.match}</b>\n💡 Pari : ${todayPick.bet}\n💰 Cote : <b>${todayPick.odds}</b>\n📅 Date : ${todayPick.date}\n\n📊 Stats : ${stats.wins}G/${stats.losses}P (${stats.winrate}%)\n\n✅ Jouable sur <b>Winamax, Betclic, Unibet, PMU</b>\n\n⚠️ 18+ — Max 2-5% bankroll`,
+        text: `🎯 <b>PICK DU JOUR</b>\n\n⚽ <b>${todayPick.match}</b>\n💡 Pari : ${todayPick.bet}\n💰 Cote : <b>${todayPick.odds}</b>\n📅 Date : ${todayPick.date}\n\n📊 Stats : ${stats.wins}G/${stats.losses}P (${stats.winrate}%)\n\n⬇️ <b>Parie maintenant :</b>\n⚠️ 18+ — Max 2-5% bankroll`,
         parse_mode: "HTML",
-        reply_markup: { inline_keyboard: [[{ text: "📊 touslesmatchs.com", url: "https://touslesmatchs.com" }]] }
+        reply_markup: {
+          inline_keyboard: buildInlineKeyboard([
+            { text: "📊 Historique — touslesmatchs.com", url: "https://touslesmatchs.com" }
+          ])
+        }
       });
     } else {
       await api("sendMessage", {
