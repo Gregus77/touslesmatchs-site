@@ -53,8 +53,11 @@ services:
     restart: unless-stopped
     command: node scripts/hermes_admin_bot.js
     environment:
+      - TELEGRAM_ADMIN_BOT_TOKEN=${TELEGRAM_ADMIN_BOT_TOKEN}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_ADMIN_BOT_TOKEN}
       - TELEGRAM_ADMIN_ID=${TELEGRAM_ADMIN_ID}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
       - USERS_DB_PATH=./scripts/users_db.json
     volumes:
       - ./scripts:/app/scripts
