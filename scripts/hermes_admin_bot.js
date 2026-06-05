@@ -12,9 +12,10 @@ const BOT_TOKEN    = process.env.TELEGRAM_ADMIN_BOT_TOKEN || process.env.TELEGRA
 const ADMIN_ID     = process.env.TELEGRAM_ADMIN_ID;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 const GROQ_KEY     = process.env.GROQ_API_KEY;
-const DB_PATH      = process.env.USERS_DB_PATH || "./scripts/users_db.json";
-const PICKS_PATH   = "./src/App.js";
-const HERMES_DB    = "./scripts/hermes_db.json";
+const REPO_PATH    = "/repo";
+const DB_PATH      = process.env.USERS_DB_PATH || `${REPO_PATH}/scripts/users_db.json`;
+const PICKS_PATH   = `${REPO_PATH}/src/App.js`;
+const HERMES_DB    = `${REPO_PATH}/scripts/hermes_db.json`;
 
 if (!BOT_TOKEN) { console.error("❌ TELEGRAM_ADMIN_BOT_TOKEN manquant"); process.exit(1); }
 
@@ -172,7 +173,7 @@ const COMMANDS = {
   "/redeploy": (chatId) => {
     sendMsg(chatId, "🔄 Redéploiement en cours...");
     try {
-      execSync("cd /opt/touslesmatchs && git pull origin main && docker compose down && docker compose up -d", { timeout: 60000 });
+      execSync(`cd ${REPO_PATH} && git pull origin main && docker compose down && docker compose up -d`, { timeout: 60000 });
       sendMsg(chatId, "✅ Redéploiement réussi!");
     } catch (e) {
       sendMsg(chatId, `❌ Erreur redéploiement: ${e.message.slice(0, 200)}`);
@@ -181,7 +182,7 @@ const COMMANDS = {
 
   "/erreurs": (chatId) => {
     try {
-      const log = execSync("docker compose logs --tail=20 touslesmatchs-api 2>&1", { cwd: "/opt/touslesmatchs" }).toString();
+      const log = execSync("docker compose logs --tail=20 touslesmatchs-api 2>&1", { cwd: REPO_PATH }).toString();
       sendMsg(chatId, `📋 <b>LOGS API (20 dernières lignes)</b>\n\n<pre>${log.slice(0, 3000)}</pre>`);
     } catch (e) {
       sendMsg(chatId, `❌ Impossible de lire les logs: ${e.message}`);
@@ -218,9 +219,9 @@ async function callLLM(prompt) {
 // ── Déploiement automatique ───────────────────────────
 function autoDeploy(chatId, commitMsg) {
   try {
-    execSync(`cd /opt/touslesmatchs && git add -A && git commit -m "${commitMsg}" && git push origin main`, { timeout: 30000 });
+    execSync(`cd ${REPO_PATH} && git add -A && git commit -m "${commitMsg}" && git push origin main`, { timeout: 30000 });
     sendMsg(chatId, "📤 <b>Poussé sur GitHub!</b>");
-    execSync("cd /opt/touslesmatchs && docker compose restart touslesmatchs-site", { timeout: 30000 });
+    execSync(`cd ${REPO_PATH} && docker compose restart touslesmatchs-site`, { timeout: 30000 });
     sendMsg(chatId, "✅ <b>Site mis à jour!</b>");
   } catch (e) {
     sendMsg(chatId, `⚠️ Deploy: ${e.message.slice(0, 200)}`);
@@ -230,7 +231,7 @@ function autoDeploy(chatId, commitMsg) {
 // ── Bannir une compétition/mot-clé ───────────────────
 function banKeyword(chatId, keyword) {
   try {
-    let content = fs.readFileSync("./scripts/multi_agent.js", "utf8");
+    let content = fs.readFileSync(`${REPO_PATH}/scripts/multi_agent.js`, "utf8");
     // Ajoute le mot-clé dans BANNED_KEYWORDS
     if (content.includes(`"${keyword}"`)) {
       sendMsg(chatId, `ℹ️ <b>${keyword}</b> est déjà banni.`);
@@ -240,7 +241,7 @@ function banKeyword(chatId, keyword) {
       /const BANNED_KEYWORDS = \[/,
       `const BANNED_KEYWORDS = [\n  "${keyword}",`
     );
-    fs.writeFileSync("./scripts/multi_agent.js", content);
+    fs.writeFileSync(`${REPO_PATH}/scripts/multi_agent.js`, content);
     sendMsg(chatId, `🚫 <b>${keyword}</b> banni du système!`);
     autoDeploy(chatId, `rule: ban ${keyword} via Hermes bot`);
   } catch (e) {
@@ -267,7 +268,7 @@ function forcePick(chatId, match, bet, cote, sport) {
 function lancerConcile(chatId) {
   sendMsg(chatId, "🏛️ <b>Lancement du Concile...</b>\nRecherche des matchs du jour...");
   try {
-    execSync("cd /opt/touslesmatchs && node scripts/multi_agent.js", { timeout: 120000 });
+    execSync(`node ${REPO_PATH}/scripts/multi_agent.js`, { cwd: REPO_PATH, timeout: 120000 });
     sendMsg(chatId, "✅ <b>Concile terminé!</b>\nPick du jour généré et publié.");
   } catch (e) {
     sendMsg(chatId, `❌ Concile échoué: ${e.message.slice(0, 300)}`);
@@ -314,7 +315,7 @@ async function interpretAndExecute(chatId, text) {
 
   let bannedKeywords = "";
   try {
-    const agentContent = fs.readFileSync("./scripts/multi_agent.js", "utf8");
+    const agentContent = fs.readFileSync(`${REPO_PATH}/scripts/multi_agent.js`, "utf8");
     const banned = agentContent.match(/const BANNED_KEYWORDS = \[([\s\S]*?)\]/)?.[1] || "";
     bannedKeywords = banned.replace(/\s+/g, " ").trim().slice(0, 300);
   } catch {}
@@ -379,7 +380,7 @@ Réponds UNIQUEMENT en JSON valide. Pas de texte autour.`;
     case "redeploy":
       sendMsg(chatId, "🔄 Redéploiement...");
       try {
-        execSync("cd /opt/touslesmatchs && git pull origin main && docker compose down && docker compose up -d", { timeout: 90000 });
+        execSync(`cd ${REPO_PATH} && git pull origin main && docker compose down && docker compose up -d`, { timeout: 90000 });
         sendMsg(chatId, "✅ Redéploiement terminé!");
       } catch (e) { sendMsg(chatId, `❌ ${e.message.slice(0, 200)}`); }
       break;

@@ -52,6 +52,7 @@ services:
     container_name: touslesmatchs-hermes-admin
     restart: unless-stopped
     command: node scripts/hermes_admin_bot.js
+    working_dir: /repo
     environment:
       - TELEGRAM_ADMIN_BOT_TOKEN=${TELEGRAM_ADMIN_BOT_TOKEN}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_ADMIN_BOT_TOKEN}
@@ -59,9 +60,9 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - USERS_DB_PATH=./scripts/users_db.json
+      - GIT_DIR=/repo/.git
     volumes:
-      - ./scripts:/app/scripts
-      - ./src:/app/src
+      - /opt/touslesmatchs:/repo
     networks:
       - web
 
