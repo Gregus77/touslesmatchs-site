@@ -173,7 +173,7 @@ const COMMANDS = {
   "/redeploy": (chatId) => {
     sendMsg(chatId, "🔄 Redéploiement en cours...");
     try {
-      execSync(`cd ${REPO_PATH} && git pull origin main && docker compose down && docker compose up -d`, { timeout: 60000 });
+      execSync(`cd ${REPO_PATH} && git pull origin main && docker-compose down && docker-compose up -d`, { timeout: 60000 });
       sendMsg(chatId, "✅ Redéploiement réussi!");
     } catch (e) {
       sendMsg(chatId, `❌ Erreur redéploiement: ${e.message.slice(0, 200)}`);
@@ -182,7 +182,7 @@ const COMMANDS = {
 
   "/erreurs": (chatId) => {
     try {
-      const log = execSync("docker compose logs --tail=20 touslesmatchs-api 2>&1", { cwd: REPO_PATH }).toString();
+      const log = execSync("docker-compose logs --tail=20 touslesmatchs-api 2>&1", { cwd: REPO_PATH }).toString();
       sendMsg(chatId, `📋 <b>LOGS API (20 dernières lignes)</b>\n\n<pre>${log.slice(0, 3000)}</pre>`);
     } catch (e) {
       sendMsg(chatId, `❌ Impossible de lire les logs: ${e.message}`);
@@ -221,7 +221,7 @@ function autoDeploy(chatId, commitMsg) {
   try {
     execSync(`cd ${REPO_PATH} && git add -A && git commit -m "${commitMsg}" && git push origin main`, { timeout: 30000 });
     sendMsg(chatId, "📤 <b>Poussé sur GitHub!</b>");
-    execSync(`cd ${REPO_PATH} && docker compose restart touslesmatchs-site`, { timeout: 30000 });
+    execSync(`cd ${REPO_PATH} && docker-compose restart touslesmatchs-site`, { timeout: 30000 });
     sendMsg(chatId, "✅ <b>Site mis à jour!</b>");
   } catch (e) {
     sendMsg(chatId, `⚠️ Deploy: ${e.message.slice(0, 200)}`);
@@ -380,7 +380,7 @@ Réponds UNIQUEMENT en JSON valide. Pas de texte autour.`;
     case "redeploy":
       sendMsg(chatId, "🔄 Redéploiement...");
       try {
-        execSync(`cd ${REPO_PATH} && git pull origin main && docker compose down && docker compose up -d`, { timeout: 90000 });
+        execSync(`cd ${REPO_PATH} && git pull origin main && docker-compose down && docker-compose up -d`, { timeout: 90000 });
         sendMsg(chatId, "✅ Redéploiement terminé!");
       } catch (e) { sendMsg(chatId, `❌ ${e.message.slice(0, 200)}`); }
       break;
