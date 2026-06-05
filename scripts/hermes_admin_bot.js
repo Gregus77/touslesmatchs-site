@@ -215,60 +215,113 @@ async function callLLM(prompt) {
   });
 }
 
-// ── Interprétation langage naturel ───────────────────
+// ── Interprétation langage naturel + exécution ───────
 async function interpretAndExecute(chatId, text) {
   const s = getStats();
   const picks = getPicks().filter(p => p.result !== "NOPICK").slice(0, 5);
-  const picksStr = picks.map(p => `${p.date}: ${p.match} → ${p.result} ${p.score}`).join("\n");
+  const picksStr = picks.map(p => `${p.date}: ${p.match} → ${p.result} ${p.score || "—"}`).join("\n");
 
-  const systemContext = `Tu es Hermès, le directeur opérationnel de TousLesMatchs.
-Tu as accès aux données en temps réel:
+  // Lire les règles actuelles de multi_agent.js
+  let regles = "";
+  try {
+    const agentContent = fs.readFileSync("./scripts/multi_agent.js", "utf8");
+    const ligues = agentContent.match(/const LIGUES_ARJEL[\s\S]*?}\);/)?.[0] || "";
+    const banned = agentContent.match(/const BANNED_KEYWORDS[\s\S]*?\];/)?.[0] || "";
+    regles = `LIGUES: ${ligues.slice(0, 300)}\nBANNED: ${banned.slice(0, 200)}`;
+  } catch {}
 
-STATS: ${s.wins}W/${s.losses}L, winrate ${s.winrate}%, série ${s.serie} victoires, ${s.users} utilisateurs, MRR ${s.mrr.toFixed(2)}€
+  const systemPrompt = `Tu es Hermès, le directeur opérationnel IA de TousLesMatchs.fr.
+Greg est ton patron. Il te parle en français naturel. Tu comprends et tu agis.
 
-DERNIERS PICKS:
-${picksStr}
+DONNÉES EN TEMPS RÉEL:
+- Stats: ${s.wins}W / ${s.losses}L — Winrate: ${s.winrate}% — Série: ${s.serie} victoires
+- Utilisateurs: ${s.users} (${s.premium} premium, ${s.vip} VIP) — MRR: ${s.mrr.toFixed(2)}€
+- Derniers picks: ${picksStr}
 
-ACTIONS DISPONIBLES:
-- stats → afficher les statistiques
-- picks → afficher les picks récents
-- rapport → rapport complet
-- verifier → état du système
-- redeploy → redémarrer le site
-- erreurs → voir les logs
+RÈGLES ACTUELLES DU SYSTÈME:
+${regles}
 
-Greg te parle en langage naturel. Réponds en français de façon naturelle et concise.
-Si Greg demande des stats/picks/rapport, donne-lui directement l'information depuis les données ci-dessus.
-Si Greg demande une action système (redeploy, erreurs), indique que tu l'exécutes.
-Sois direct, pas trop formel. Tu es son assistant personnel.`;
+TU PEUX EXÉCUTER CES ACTIONS (réponds avec un JSON action):
+{
+  "reponse": "Ce que tu dis à Greg",
+  "action": null | "redeploy" | "show_stats" | "show_picks" | "show_errors" | "edit_rules" | "update_pick",
+  "params": {}
+}
 
-  const response = await callLLM(`${systemContext}\n\nGreg dit: "${text}"\n\nRéponds directement:`);
+EXEMPLES:
+- Greg: "nos stats ?" → action: "show_stats"
+- Greg: "redémarre" → action: "redeploy"
+- Greg: "ne prends plus la Champions League" → action: "edit_rules", params: {"rule": "Champions League bloquée", "keyword": "Champions"}
+- Greg: "Belgium a perdu 1-1" → action: "update_pick", params: {"team": "Belgium", "result": "PERDU", "score": "1-1"}
 
-  if (!response) {
-    sendMsg(chatId, "❌ IA indisponible. Utilise /stats /picks /rapport");
+Réponds UNIQUEMENT en JSON valide. Pas de markdown.`;
+
+  const raw = await callLLM(`${systemPrompt}\n\nGreg: "${text}"`);
+
+  let parsed;
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+  } catch { parsed = null; }
+
+  if (!parsed) {
+    // Fallback: réponse directe sans action
+    const simpleResponse = await callLLM(`Tu es Hermès, assistant de TousLesMatchs. Stats: ${s.wins}W/${s.losses}L winrate ${s.winrate}%. Greg dit: "${text}". Réponds en 2-3 phrases max en français.`);
+    sendMsg(chatId, simpleResponse || "Je n'ai pas compris. Essaie /aide");
     return;
   }
 
-  // Détecte si une action système est demandée
-  const lower = text.toLowerCase();
-  if (lower.includes("redémarr") || lower.includes("redeploy") || lower.includes("restart")) {
-    sendMsg(chatId, `🔄 ${response}\n\nExécution en cours...`);
-    try {
-      execSync("cd /opt/touslesmatchs && docker compose restart", { timeout: 30000 });
-      sendMsg(chatId, "✅ Redémarrage effectué!");
-    } catch (e) {
-      sendMsg(chatId, `⚠️ Erreur: ${e.message.slice(0, 200)}`);
-    }
-    return;
-  }
+  // Envoyer la réponse textuelle
+  if (parsed.reponse) sendMsg(chatId, parsed.reponse);
 
-  if (lower.includes("erreur") || lower.includes("log") || lower.includes("problème")) {
-    sendMsg(chatId, response);
-    COMMANDS["/erreurs"](chatId);
-    return;
+  // Exécuter l'action
+  switch (parsed.action) {
+    case "show_stats":
+      COMMANDS["/stats"](chatId);
+      break;
+    case "show_picks":
+      COMMANDS["/picks"](chatId);
+      break;
+    case "show_errors":
+      COMMANDS["/erreurs"](chatId);
+      break;
+    case "redeploy":
+      sendMsg(chatId, "🔄 Redéploiement en cours...");
+      try {
+        execSync("cd /opt/touslesmatchs && git pull origin main && docker compose down && docker compose up -d", { timeout: 60000 });
+        sendMsg(chatId, "✅ Site redéployé avec succès!");
+      } catch (e) {
+        sendMsg(chatId, `❌ Erreur: ${e.message.slice(0, 200)}`);
+      }
+      break;
+    case "update_pick":
+      if (parsed.params?.team && parsed.params?.result) {
+        try {
+          let content = fs.readFileSync("./src/App.js", "utf8");
+          const team = parsed.params.team;
+          const result = parsed.params.result;
+          const score = parsed.params.score || "—";
+          // Cherche la ligne avec cette équipe en EN ATTENTE et met à jour
+          content = content.replace(
+            new RegExp(`("${team}[^"]*"[^\\n]*)"EN ATTENTE"([^\\n]*)`, "i"),
+            `$1"${result}"$2`
+          );
+          fs.writeFileSync("./src/App.js", content);
+          sendMsg(chatId, `✅ Pick mis à jour: ${team} → ${result} ${score}`);
+          // Push automatique
+          execSync(`cd /opt/touslesmatchs && git add src/App.js && git commit -m "fix: ${team} ${result} ${score} via Hermès bot" && git push origin main`, { timeout: 30000 });
+          sendMsg(chatId, "📤 Poussé sur le site!");
+        } catch (e) {
+          sendMsg(chatId, `❌ Erreur mise à jour: ${e.message.slice(0, 200)}`);
+        }
+      }
+      break;
+    case "edit_rules":
+      sendMsg(chatId, `📋 Règle notée: <b>${parsed.params?.rule || text}</b>\n\nJe vais l'appliquer au prochain cycle. Veux-tu que je modifie le code maintenant?`);
+      break;
+    default:
+      break;
   }
-
-  sendMsg(chatId, response);
 }
 
 // ── Gestion messages ──────────────────────────────────
