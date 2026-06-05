@@ -5,10 +5,6 @@ var API_URL = ""  // Même domaine — Caddy route /api/* → localhost:3001
 export default function AnalyseLive() {
   var [home, setHome] = React.useState("");
   var [away, setAway] = React.useState("");
-  var [competition, setComp] = React.useState("");
-  var [scoreHome, setScoreHome] = React.useState("0");
-  var [scoreAway, setScoreAway] = React.useState("0");
-  var [minute, setMinute] = React.useState("");
   var [loading, setLoading] = React.useState(false);
   var [result, setResult] = React.useState(null);
   var [error, setError] = React.useState("");
@@ -22,21 +18,22 @@ export default function AnalyseLive() {
       .catch(function(){});
   }, []);
 
+  // PHASE 3 V2: Sélectionner un match live auto-remplit home/away
   function selectMatch(m) {
-    setHome(m.home); setAway(m.away);
-    setComp(m.competition);
-    setScoreHome(String(m.score_home));
-    setScoreAway(String(m.score_away));
-    setMinute(String(m.minute));
+    setHome(m.home);
+    setAway(m.away);
+    // Les autres données (compétition, score, minute) sont auto-récupérées par le backend
   }
 
+  // PHASE 3 V2: Formulaire minimaliste — seulement 2 champs
   function analyser() {
     if (!home || !away) { setError("Entre les deux équipes."); return; }
     setLoading(true); setResult(null); setError("");
+    // Backend récupère auto: compétition, score, minute via API football-data
     fetch("/api/analyse", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ home, away, competition, score_home: parseInt(scoreHome), score_away: parseInt(scoreAway), minute })
+      body: JSON.stringify({ home, away })
     })
       .then(function(r){ return r.json(); })
       .then(function(d){
@@ -77,42 +74,21 @@ export default function AnalyseLive() {
       )
     ),
 
-    // Formulaire
+    // PHASE 3 V2: Formulaire ultra-simplifié — seulement 2 champs
     React.createElement("div", {style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(201,162,39,0.2)",borderRadius:"16px",padding:"24px",marginBottom:"24px"}},
-      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"14px"}},
+      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"14px",marginBottom:"16px"}},
         React.createElement("div", null,
-          React.createElement("label", {style:{fontSize:"11px",letterSpacing:"2px",color:"#C9A227",display:"block",marginBottom:"8px",fontWeight:"600"}}, "ÉQUIPE DOMICILE"),
-          React.createElement("input", {value:home, onChange:function(e){setHome(e.target.value);}, placeholder:"ex: Paris Saint-Germain",
+          React.createElement("label", {style:{fontSize:"11px",letterSpacing:"2px",color:"#C9A227",display:"block",marginBottom:"8px",fontWeight:"600"}}, "⚽ ÉQUIPE DOMICILE"),
+          React.createElement("input", {value:home, onChange:function(e){setHome(e.target.value);}, placeholder:"ex: PSG",
             style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"8px",padding:"12px",color:"#F5F0E8",fontSize:"15px",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}})
         ),
         React.createElement("div", null,
-          React.createElement("label", {style:{fontSize:"11px",letterSpacing:"2px",color:"#C9A227",display:"block",marginBottom:"8px",fontWeight:"600"}}, "ÉQUIPE EXTÉRIEURE"),
-          React.createElement("input", {value:away, onChange:function(e){setAway(e.target.value);}, placeholder:"ex: Olympique de Marseille",
+          React.createElement("label", {style:{fontSize:"11px",letterSpacing:"2px",color:"#C9A227",display:"block",marginBottom:"8px",fontWeight:"600"}}, "⚽ ÉQUIPE EXTÉRIEURE"),
+          React.createElement("input", {value:away, onChange:function(e){setAway(e.target.value);}, placeholder:"ex: OM",
             style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"8px",padding:"12px",color:"#F5F0E8",fontSize:"15px",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}})
         )
       ),
-      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 40px 40px 60px",gap:"10px",alignItems:"end",marginBottom:"14px"}},
-        React.createElement("div", null,
-          React.createElement("label", {style:{fontSize:"11px",letterSpacing:"2px",color:"#C9A227",display:"block",marginBottom:"8px",fontWeight:"600"}}, "COMPÉTITION"),
-          React.createElement("input", {value:competition, onChange:function(e){setComp(e.target.value);}, placeholder:"ex: Ligue 1",
-            style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"8px",padding:"12px",color:"#F5F0E8",fontSize:"15px",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}})
-        ),
-        React.createElement("div", null,
-          React.createElement("label", {style:{fontSize:"10px",letterSpacing:"1px",color:"#C9A227",display:"block",marginBottom:"8px"}}, "DOM"),
-          React.createElement("input", {value:scoreHome, onChange:function(e){setScoreHome(e.target.value);}, type:"number", min:"0",
-            style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"8px",padding:"12px 8px",color:"#F5F0E8",fontSize:"16px",textAlign:"center",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}})
-        ),
-        React.createElement("div", null,
-          React.createElement("label", {style:{fontSize:"10px",letterSpacing:"1px",color:"#C9A227",display:"block",marginBottom:"8px"}}, "EXT"),
-          React.createElement("input", {value:scoreAway, onChange:function(e){setScoreAway(e.target.value);}, type:"number", min:"0",
-            style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"8px",padding:"12px 8px",color:"#F5F0E8",fontSize:"16px",textAlign:"center",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}})
-        ),
-        React.createElement("div", null,
-          React.createElement("label", {style:{fontSize:"10px",letterSpacing:"1px",color:"#C9A227",display:"block",marginBottom:"8px"}}, "MINUTE"),
-          React.createElement("input", {value:minute, onChange:function(e){setMinute(e.target.value);}, placeholder:"45",
-            style:{width:"100%",background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"8px",padding:"12px 8px",color:"#F5F0E8",fontSize:"15px",textAlign:"center",fontFamily:"'Jost',sans-serif",boxSizing:"border-box"}})
-        )
-      ),
+      React.createElement("div", {style:{fontSize:"12px",color:"#6b6356",marginBottom:"14px"}}, "💡 Données auto-récupérées : compétition, score, minute"),
       error && React.createElement("div", {style:{color:"#EF4444",fontSize:"13px",marginBottom:"12px"}}, "⚠️ "+error),
       React.createElement("button", {
         onClick:analyser, disabled:loading,

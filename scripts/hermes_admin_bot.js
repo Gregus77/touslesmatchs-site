@@ -171,12 +171,13 @@ const COMMANDS = {
   },
 
   "/redeploy": (chatId) => {
-    sendMsg(chatId, "🔄 Redéploiement en cours...");
+    sendMsg(chatId, "🔄 Redémarrage du site...");
     try {
-      execSync(`cd ${REPO_PATH} && git pull origin main && docker-compose down && docker-compose up -d`, { timeout: 60000 });
-      sendMsg(chatId, "✅ Redéploiement réussi!");
+      execSync(`cd ${REPO_PATH} && git pull origin main`, { timeout: 30000 });
+      execSync("docker restart touslesmatchs-site touslesmatchs-api touslesmatchs-bot", { timeout: 60000 });
+      sendMsg(chatId, "✅ Site redémarré!");
     } catch (e) {
-      sendMsg(chatId, `❌ Erreur redéploiement: ${e.message.slice(0, 200)}`);
+      sendMsg(chatId, `❌ Erreur: ${e.message.slice(0, 200)}`);
     }
   },
 
@@ -221,8 +222,12 @@ function autoDeploy(chatId, commitMsg) {
   try {
     execSync(`cd ${REPO_PATH} && git add -A && git commit -m "${commitMsg}" && git push origin main`, { timeout: 30000 });
     sendMsg(chatId, "📤 <b>Poussé sur GitHub!</b>");
-    execSync(`cd ${REPO_PATH} && docker-compose restart touslesmatchs-site`, { timeout: 30000 });
-    sendMsg(chatId, "✅ <b>Site mis à jour!</b>");
+    try {
+      execSync("docker restart touslesmatchs-site", { timeout: 30000 });
+      sendMsg(chatId, "✅ <b>Site redémarré!</b>");
+    } catch {
+      sendMsg(chatId, "⚠️ Site pas redémarré - fais /redeploy manuellement");
+    }
   } catch (e) {
     sendMsg(chatId, `⚠️ Deploy: ${e.message.slice(0, 200)}`);
   }
