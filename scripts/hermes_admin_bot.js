@@ -1,20 +1,22 @@
 // ═══════════════════════════════════════════════════════
 //  HERMÈS ADMIN BOT — Telegram privé administrateur
-//  Pilotage complet depuis Telegram
-//  Commandes: /stats /picks /rapport /erreurs /update /pick
+//  Langage naturel + commandes
+//  Tu parles, Hermès comprend et exécute.
 // ═══════════════════════════════════════════════════════
 
 const https = require("https");
 const fs    = require("fs");
 const { execSync } = require("child_process");
 
-const BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
-const ADMIN_ID    = process.env.TELEGRAM_ADMIN_ID; // Ton Telegram user ID
-const DB_PATH     = process.env.USERS_DB_PATH || "./scripts/users_db.json";
-const PICKS_PATH  = "./src/App.js";
-const HERMES_DB   = "./scripts/hermes_db.json";
+const BOT_TOKEN    = process.env.TELEGRAM_ADMIN_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+const ADMIN_ID     = process.env.TELEGRAM_ADMIN_ID;
+const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
+const GROQ_KEY     = process.env.GROQ_API_KEY;
+const DB_PATH      = process.env.USERS_DB_PATH || "./scripts/users_db.json";
+const PICKS_PATH   = "./src/App.js";
+const HERMES_DB    = "./scripts/hermes_db.json";
 
-if (!BOT_TOKEN) { console.error("❌ TELEGRAM_BOT_TOKEN manquant"); process.exit(1); }
+if (!BOT_TOKEN) { console.error("❌ TELEGRAM_ADMIN_BOT_TOKEN manquant"); process.exit(1); }
 
 let lastUpdateId = 0;
 
@@ -187,45 +189,113 @@ const COMMANDS = {
   },
 };
 
-// ── Gestion commandes avec arguments ─────────────────
-function handleMessage(msg) {
+// ── Appel LLM (DeepSeek ou Groq fallback) ────────────
+async function callLLM(prompt) {
+  const body = JSON.stringify({
+    model: DEEPSEEK_KEY ? "deepseek-chat" : "llama-3.3-70b-versatile",
+    max_tokens: 800,
+    temperature: 0.2,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const hostname = DEEPSEEK_KEY ? "api.deepseek.com" : "api.groq.com";
+  const apiKey   = DEEPSEEK_KEY || GROQ_KEY;
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname, path: "/v1/chat/completions", method: "POST",
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => {
+        try { resolve(JSON.parse(d).choices?.[0]?.message?.content || ""); }
+        catch { resolve(""); }
+      });
+    });
+    req.on("error", () => resolve(""));
+    req.write(body); req.end();
+  });
+}
+
+// ── Interprétation langage naturel ───────────────────
+async function interpretAndExecute(chatId, text) {
+  const s = getStats();
+  const picks = getPicks().filter(p => p.result !== "NOPICK").slice(0, 5);
+  const picksStr = picks.map(p => `${p.date}: ${p.match} → ${p.result} ${p.score}`).join("\n");
+
+  const systemContext = `Tu es Hermès, le directeur opérationnel de TousLesMatchs.
+Tu as accès aux données en temps réel:
+
+STATS: ${s.wins}W/${s.losses}L, winrate ${s.winrate}%, série ${s.serie} victoires, ${s.users} utilisateurs, MRR ${s.mrr.toFixed(2)}€
+
+DERNIERS PICKS:
+${picksStr}
+
+ACTIONS DISPONIBLES:
+- stats → afficher les statistiques
+- picks → afficher les picks récents
+- rapport → rapport complet
+- verifier → état du système
+- redeploy → redémarrer le site
+- erreurs → voir les logs
+
+Greg te parle en langage naturel. Réponds en français de façon naturelle et concise.
+Si Greg demande des stats/picks/rapport, donne-lui directement l'information depuis les données ci-dessus.
+Si Greg demande une action système (redeploy, erreurs), indique que tu l'exécutes.
+Sois direct, pas trop formel. Tu es son assistant personnel.`;
+
+  const response = await callLLM(`${systemContext}\n\nGreg dit: "${text}"\n\nRéponds directement:`);
+
+  if (!response) {
+    sendMsg(chatId, "❌ IA indisponible. Utilise /stats /picks /rapport");
+    return;
+  }
+
+  // Détecte si une action système est demandée
+  const lower = text.toLowerCase();
+  if (lower.includes("redémarr") || lower.includes("redeploy") || lower.includes("restart")) {
+    sendMsg(chatId, `🔄 ${response}\n\nExécution en cours...`);
+    try {
+      execSync("cd /opt/touslesmatchs && docker compose restart", { timeout: 30000 });
+      sendMsg(chatId, "✅ Redémarrage effectué!");
+    } catch (e) {
+      sendMsg(chatId, `⚠️ Erreur: ${e.message.slice(0, 200)}`);
+    }
+    return;
+  }
+
+  if (lower.includes("erreur") || lower.includes("log") || lower.includes("problème")) {
+    sendMsg(chatId, response);
+    COMMANDS["/erreurs"](chatId);
+    return;
+  }
+
+  sendMsg(chatId, response);
+}
+
+// ── Gestion messages ──────────────────────────────────
+async function handleMessage(msg) {
   const chatId = msg.chat.id;
   const userId = msg.from?.id;
   const text = (msg.text || "").trim();
 
   if (!isAdmin(userId)) {
-    sendMsg(chatId, "⛔ Accès refusé. Ce bot est réservé à l'administrateur.");
+    sendMsg(chatId, "⛔ Accès refusé.");
     return;
   }
 
-  // Commande /update PSG Marseille GAGNE 2-1
-  if (text.startsWith("/update ")) {
-    const parts = text.split(" ");
-    // Format: /update NomMatch GAGNE|PERDU score
-    const result = parts.find(p => ["GAGNE", "PERDU"].includes(p.toUpperCase()));
-    const score  = parts.find(p => /\d-\d/.test(p)) || "—";
-    if (!result) {
-      sendMsg(chatId, "❌ Format: /update NomEquipe GAGNE 2-1\nExemple: /update PSG GAGNE 2-0");
-      return;
+  // Commandes slash → exécution directe
+  if (text.startsWith("/")) {
+    const cmd = text.split(" ")[0].toLowerCase();
+    if (COMMANDS[cmd]) {
+      COMMANDS[cmd](chatId);
+    } else {
+      sendMsg(chatId, `❓ Commande inconnue. Tape /aide`);
     }
-    sendMsg(chatId, `📝 Mise à jour: résultat ${result} / score ${score}\n\nUtilise GitHub Actions ou demande-moi de modifier App.js directement.`);
     return;
   }
 
-  // Commande /forcer_pick
-  if (text.startsWith("/forcer_pick ")) {
-    const args = text.replace("/forcer_pick ", "");
-    sendMsg(chatId, `🎯 Pick forcé reçu: <b>${args}</b>\n\nJe vais l'ajouter au prochain cycle de génération.`);
-    return;
-  }
-
-  // Commandes simples
-  const cmd = text.split(" ")[0].toLowerCase();
-  if (COMMANDS[cmd]) {
-    COMMANDS[cmd](chatId);
-  } else {
-    sendMsg(chatId, `❓ Commande inconnue: <b>${text}</b>\n\nTape /aide pour voir toutes les commandes.`);
-  }
+  // Langage naturel → IA comprend et répond
+  sendMsg(chatId, "🔮 Hermès réfléchit...");
+  await interpretAndExecute(chatId, text);
 }
 
 // ── Polling Telegram ──────────────────────────────────
