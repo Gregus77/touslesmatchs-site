@@ -215,46 +215,145 @@ async function callLLM(prompt) {
   });
 }
 
+// ── Déploiement automatique ───────────────────────────
+function autoDeploy(chatId, commitMsg) {
+  try {
+    execSync(`cd /opt/touslesmatchs && git add -A && git commit -m "${commitMsg}" && git push origin main`, { timeout: 30000 });
+    sendMsg(chatId, "📤 <b>Poussé sur GitHub!</b>");
+    execSync("cd /opt/touslesmatchs && docker compose restart touslesmatchs-site", { timeout: 30000 });
+    sendMsg(chatId, "✅ <b>Site mis à jour!</b>");
+  } catch (e) {
+    sendMsg(chatId, `⚠️ Deploy: ${e.message.slice(0, 200)}`);
+  }
+}
+
+// ── Bannir une compétition/mot-clé ───────────────────
+function banKeyword(chatId, keyword) {
+  try {
+    let content = fs.readFileSync("./scripts/multi_agent.js", "utf8");
+    // Ajoute le mot-clé dans BANNED_KEYWORDS
+    if (content.includes(`"${keyword}"`)) {
+      sendMsg(chatId, `ℹ️ <b>${keyword}</b> est déjà banni.`);
+      return;
+    }
+    content = content.replace(
+      /const BANNED_KEYWORDS = \[/,
+      `const BANNED_KEYWORDS = [\n  "${keyword}",`
+    );
+    fs.writeFileSync("./scripts/multi_agent.js", content);
+    sendMsg(chatId, `🚫 <b>${keyword}</b> banni du système!`);
+    autoDeploy(chatId, `rule: ban ${keyword} via Hermes bot`);
+  } catch (e) {
+    sendMsg(chatId, `❌ Erreur: ${e.message}`);
+  }
+}
+
+// ── Forcer un pick ────────────────────────────────────
+function forcePick(chatId, match, bet, cote, sport) {
+  try {
+    const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    let content = fs.readFileSync("./src/App.js", "utf8");
+    const newPick = `  ["${today}","${match}","${bet}","${cote}","—","EN ATTENTE","${sport}",8,8],\n`;
+    content = content.replace("var picks = [\n", `var picks = [\n${newPick}`);
+    fs.writeFileSync("./src/App.js", content);
+    sendMsg(chatId, `🎯 <b>Pick ajouté!</b>\n${today}: ${match}\n${bet} @ ${cote}`);
+    autoDeploy(chatId, `pick: ${match} via Hermes bot`);
+  } catch (e) {
+    sendMsg(chatId, `❌ Erreur: ${e.message}`);
+  }
+}
+
+// ── Lancer le concile manuellement ───────────────────
+function lancerConcile(chatId) {
+  sendMsg(chatId, "🏛️ <b>Lancement du Concile...</b>\nRecherche des matchs du jour...");
+  try {
+    execSync("cd /opt/touslesmatchs && node scripts/multi_agent.js", { timeout: 120000 });
+    sendMsg(chatId, "✅ <b>Concile terminé!</b>\nPick du jour généré et publié.");
+  } catch (e) {
+    sendMsg(chatId, `❌ Concile échoué: ${e.message.slice(0, 300)}`);
+  }
+}
+
+// ── Mettre à jour résultat d'un pick ─────────────────
+function updatePick(chatId, team, result, score) {
+  try {
+    let content = fs.readFileSync("./src/App.js", "utf8");
+    const regex = new RegExp(`("${team}[^"]*","[^"]*","[^"]*","[^"]*",)"EN ATTENTE"`, "i");
+    if (!content.match(regex)) {
+      sendMsg(chatId, `⚠️ Pick "${team}" EN ATTENTE non trouvé. Cherche dans tous les picks...`);
+      // Cherche plus large
+      const regex2 = new RegExp(`"${team}[^"]*"[^\\n]*"EN ATTENTE"`, "i");
+      if (!content.match(regex2)) {
+        sendMsg(chatId, `❌ Aucun pick en attente pour "${team}"`);
+        return;
+      }
+      content = content.replace(regex2, m => m.replace('"EN ATTENTE"', `"${result}"`));
+    } else {
+      content = content.replace(regex, `$1"${result}"`);
+    }
+    // Ajoute le score
+    if (score) {
+      content = content.replace(
+        new RegExp(`("${team}[^"]*"[^\\n]*)"—"([^\\n]*)"${result}"`, "i"),
+        `$1"${score}"$2"${result}"`
+      );
+    }
+    fs.writeFileSync("./src/App.js", content);
+    sendMsg(chatId, `✅ <b>${team} → ${result} ${score || ""}</b>`);
+    autoDeploy(chatId, `result: ${team} ${result} ${score} via Hermes`);
+  } catch (e) {
+    sendMsg(chatId, `❌ Erreur: ${e.message}`);
+  }
+}
+
 // ── Interprétation langage naturel + exécution ───────
 async function interpretAndExecute(chatId, text) {
   const s = getStats();
   const picks = getPicks().filter(p => p.result !== "NOPICK").slice(0, 5);
   const picksStr = picks.map(p => `${p.date}: ${p.match} → ${p.result} ${p.score || "—"}`).join("\n");
 
-  // Lire les règles actuelles de multi_agent.js
-  let regles = "";
+  let bannedKeywords = "";
   try {
     const agentContent = fs.readFileSync("./scripts/multi_agent.js", "utf8");
-    const ligues = agentContent.match(/const LIGUES_ARJEL[\s\S]*?}\);/)?.[0] || "";
-    const banned = agentContent.match(/const BANNED_KEYWORDS[\s\S]*?\];/)?.[0] || "";
-    regles = `LIGUES: ${ligues.slice(0, 300)}\nBANNED: ${banned.slice(0, 200)}`;
+    const banned = agentContent.match(/const BANNED_KEYWORDS = \[([\s\S]*?)\]/)?.[1] || "";
+    bannedKeywords = banned.replace(/\s+/g, " ").trim().slice(0, 300);
   } catch {}
 
-  const systemPrompt = `Tu es Hermès, le directeur opérationnel IA de TousLesMatchs.fr.
-Greg est ton patron. Il te parle en français naturel. Tu comprends et tu agis.
+  const systemPrompt = `Tu es Hermès, directeur opérationnel IA de TousLesMatchs.fr.
+Greg est ton patron. Tu comprends le français naturel et tu EXÉCUTES des actions réelles.
 
 DONNÉES EN TEMPS RÉEL:
-- Stats: ${s.wins}W / ${s.losses}L — Winrate: ${s.winrate}% — Série: ${s.serie} victoires
-- Utilisateurs: ${s.users} (${s.premium} premium, ${s.vip} VIP) — MRR: ${s.mrr.toFixed(2)}€
+- Stats: ${s.wins}W/${s.losses}L — Winrate: ${s.winrate}% — Série: ${s.serie} victoires
+- MRR: ${s.mrr.toFixed(2)}€ — Utilisateurs: ${s.users}
 - Derniers picks: ${picksStr}
+- Mots-clés bannis: ${bannedKeywords}
 
-RÈGLES ACTUELLES DU SYSTÈME:
-${regles}
-
-TU PEUX EXÉCUTER CES ACTIONS (réponds avec un JSON action):
+ACTIONS DISPONIBLES (réponds JSON strict, pas de markdown):
 {
-  "reponse": "Ce que tu dis à Greg",
-  "action": null | "redeploy" | "show_stats" | "show_picks" | "show_errors" | "edit_rules" | "update_pick",
-  "params": {}
+  "reponse": "message court pour Greg",
+  "action": "show_stats" | "show_picks" | "redeploy" | "ban_keyword" | "force_pick" | "update_pick" | "run_concile" | "show_errors" | null,
+  "params": {
+    "keyword": "mot à bannir",
+    "match": "Equipe1 vs Equipe2",
+    "bet": "type de pari",
+    "cote": 1.65,
+    "sport": "Foot",
+    "team": "nom équipe",
+    "result": "GAGNE|PERDU",
+    "score": "2-1"
+  }
 }
 
 EXEMPLES:
-- Greg: "nos stats ?" → action: "show_stats"
-- Greg: "redémarre" → action: "redeploy"
-- Greg: "ne prends plus la Champions League" → action: "edit_rules", params: {"rule": "Champions League bloquée", "keyword": "Champions"}
-- Greg: "Belgium a perdu 1-1" → action: "update_pick", params: {"team": "Belgium", "result": "PERDU", "score": "1-1"}
+- "nos stats" → action: "show_stats"
+- "interdit la Champions League" → action: "ban_keyword", params: {"keyword": "Champions"}
+- "pas de matchs amicaux" → action: "ban_keyword", params: {"keyword": "Friendly"}
+- "PSG a gagné 2-0" → action: "update_pick", params: {"team": "PSG", "result": "GAGNE", "score": "2-0"}
+- "lance le concile" → action: "run_concile"
+- "force un pick PSG vs Lyon cote 1.65" → action: "force_pick", params: {"match": "PSG vs Lyon", "bet": "PSG Vainqueur", "cote": "1.65", "sport": "Foot"}
+- "redémarre" → action: "redeploy"
 
-Réponds UNIQUEMENT en JSON valide. Pas de markdown.`;
+Réponds UNIQUEMENT en JSON valide. Pas de texte autour.`;
 
   const raw = await callLLM(`${systemPrompt}\n\nGreg: "${text}"`);
 
@@ -265,62 +364,38 @@ Réponds UNIQUEMENT en JSON valide. Pas de markdown.`;
   } catch { parsed = null; }
 
   if (!parsed) {
-    // Fallback: réponse directe sans action
-    const simpleResponse = await callLLM(`Tu es Hermès, assistant de TousLesMatchs. Stats: ${s.wins}W/${s.losses}L winrate ${s.winrate}%. Greg dit: "${text}". Réponds en 2-3 phrases max en français.`);
-    sendMsg(chatId, simpleResponse || "Je n'ai pas compris. Essaie /aide");
+    const simpleResponse = await callLLM(`Tu es Hermès assistant de TousLesMatchs. Stats: ${s.wins}W/${s.losses}L winrate ${s.winrate}%. Greg dit: "${text}". Réponds en 2-3 phrases en français.`);
+    sendMsg(chatId, simpleResponse || "❓ Je n'ai pas compris. Reformule ou tape /aide");
     return;
   }
 
-  // Envoyer la réponse textuelle
   if (parsed.reponse) sendMsg(chatId, parsed.reponse);
 
-  // Exécuter l'action
+  const p = parsed.params || {};
   switch (parsed.action) {
-    case "show_stats":
-      COMMANDS["/stats"](chatId);
-      break;
-    case "show_picks":
-      COMMANDS["/picks"](chatId);
-      break;
-    case "show_errors":
-      COMMANDS["/erreurs"](chatId);
-      break;
+    case "show_stats":    COMMANDS["/stats"](chatId); break;
+    case "show_picks":    COMMANDS["/picks"](chatId); break;
+    case "show_errors":   COMMANDS["/erreurs"](chatId); break;
     case "redeploy":
-      sendMsg(chatId, "🔄 Redéploiement en cours...");
+      sendMsg(chatId, "🔄 Redéploiement...");
       try {
-        execSync("cd /opt/touslesmatchs && git pull origin main && docker compose down && docker compose up -d", { timeout: 60000 });
-        sendMsg(chatId, "✅ Site redéployé avec succès!");
-      } catch (e) {
-        sendMsg(chatId, `❌ Erreur: ${e.message.slice(0, 200)}`);
-      }
+        execSync("cd /opt/touslesmatchs && git pull origin main && docker compose down && docker compose up -d", { timeout: 90000 });
+        sendMsg(chatId, "✅ Redéploiement terminé!");
+      } catch (e) { sendMsg(chatId, `❌ ${e.message.slice(0, 200)}`); }
+      break;
+    case "ban_keyword":
+      if (p.keyword) banKeyword(chatId, p.keyword);
+      break;
+    case "force_pick":
+      if (p.match) forcePick(chatId, p.match, p.bet || "Vainqueur", p.cote || "1.65", p.sport || "Foot");
       break;
     case "update_pick":
-      if (parsed.params?.team && parsed.params?.result) {
-        try {
-          let content = fs.readFileSync("./src/App.js", "utf8");
-          const team = parsed.params.team;
-          const result = parsed.params.result;
-          const score = parsed.params.score || "—";
-          // Cherche la ligne avec cette équipe en EN ATTENTE et met à jour
-          content = content.replace(
-            new RegExp(`("${team}[^"]*"[^\\n]*)"EN ATTENTE"([^\\n]*)`, "i"),
-            `$1"${result}"$2`
-          );
-          fs.writeFileSync("./src/App.js", content);
-          sendMsg(chatId, `✅ Pick mis à jour: ${team} → ${result} ${score}`);
-          // Push automatique
-          execSync(`cd /opt/touslesmatchs && git add src/App.js && git commit -m "fix: ${team} ${result} ${score} via Hermès bot" && git push origin main`, { timeout: 30000 });
-          sendMsg(chatId, "📤 Poussé sur le site!");
-        } catch (e) {
-          sendMsg(chatId, `❌ Erreur mise à jour: ${e.message.slice(0, 200)}`);
-        }
-      }
+      if (p.team && p.result) updatePick(chatId, p.team, p.result, p.score);
       break;
-    case "edit_rules":
-      sendMsg(chatId, `📋 Règle notée: <b>${parsed.params?.rule || text}</b>\n\nJe vais l'appliquer au prochain cycle. Veux-tu que je modifie le code maintenant?`);
+    case "run_concile":
+      lancerConcile(chatId);
       break;
-    default:
-      break;
+    default: break;
   }
 }
 
