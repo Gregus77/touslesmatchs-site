@@ -433,7 +433,7 @@ async function main() {
       console.log(`💎 Telegram premium: ${allPremium.length} pick(s) envoyé(s)`);
     }
 
-    execSync("git add -A && git commit -m '🤖 Hermès: picks générés' && git push origin main", {stdio:"inherit"});
+    // Git commit géré par le workflow GitHub Actions (évite le double commit)
   } else {
     console.log("Aucun pick généré aujourd'hui");
     await sendTelegram(null); // envoie message NOPICK
