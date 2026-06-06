@@ -2,6 +2,7 @@
 const https = require("https");
 const { execSync } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 const { buildInlineKeyboard } = require("./bookmakers.config");
 
 const GROQ_KEY = process.env.GROQ_API_KEY;
@@ -191,6 +192,19 @@ async function main() {
     await sendTelegram(bestPick);
     console.log("📤 Telegram gratuit envoyé");
 
+    // Sauvegarde pour le bot Telegram
+    const todayPickData = {
+      date: new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"}),
+      match: bestPick.match,
+      bet: bestPick.bet,
+      odds: String(bestPick.cote),
+      sport: bestPick.sport || "Foot",
+      confidence: bestPick.note,
+      nopick: false
+    };
+    fs.writeFileSync(path.join(__dirname, "today_pick.json"), JSON.stringify(todayPickData, null, 2));
+    console.log("💾 today_pick.json mis à jour");
+
     // Canal premium : picks 7-7.9
     if (allPremium.length) {
       await sendTelegramPremium(allPremium);
@@ -201,6 +215,8 @@ async function main() {
   } else {
     console.log("Aucun pick généré aujourd'hui");
     await sendTelegram(null); // envoie message NOPICK
+    // Bot : marquer nopick
+    fs.writeFileSync(path.join(__dirname, "today_pick.json"), JSON.stringify({ nopick: true }, null, 2));
   }
 }
 
