@@ -25,6 +25,10 @@ services:
     environment:
       - GROQ_API_KEY=${GROQ_API_KEY}
       - FOOTBALL_DATA_KEY=${FOOTBALL_DATA_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PRICE_ID_PREMIUM=${STRIPE_PRICE_ID_PREMIUM}
+      - STRIPE_PRICE_ID_VIP=${STRIPE_PRICE_ID_VIP}
+      - STRIPE_PRICE_ID_ELITE=${STRIPE_PRICE_ID_ELITE}
     networks:
       - web
     expose:
@@ -38,6 +42,28 @@ services:
     restart: unless-stopped
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    networks:
+      - web
+
+  hermes-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.hermes
+    container_name: touslesmatchs-hermes-admin
+    restart: unless-stopped
+    working_dir: /repo
+    environment:
+      - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GIT_AUTHOR_NAME=Hermes
+      - GIT_AUTHOR_EMAIL=hermes@touslesmatchs.com
+      - GIT_COMMITTER_NAME=Hermes
+      - GIT_COMMITTER_EMAIL=hermes@touslesmatchs.com
+    volumes:
+      - /opt/touslesmatchs:/repo
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - web
 

@@ -8,10 +8,57 @@ const { buildInlineKeyboard } = require("./bookmakers.config");
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
+const GEMINI_KEY = process.env.GEMINI_API_KEY;
+const MISTRAL_KEY = process.env.MISTRAL_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
 const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
 const SPORTS_ALLOWED = ["Hockey", "Foot"];
+
+// ═══════════════════════════════════════════════════════
+// MULTI-IA PROVIDER INTERFACE — Fallback routing
+// ═══════════════════════════════════════════════════════
+const AI_PROVIDERS = [
+  {
+    name: "DeepSeek",
+    available: () => !!DEEPSEEK_KEY,
+    call: (prompt) => callDeepSeek(prompt)
+  },
+  {
+    name: "OpenRouter",
+    available: () => !!OPENROUTER_KEY,
+    call: (prompt) => callOpenRouter(prompt)
+  },
+  {
+    name: "Gemini",
+    available: () => !!GEMINI_KEY,
+    call: (prompt) => callGemini(prompt)
+  },
+  {
+    name: "Mistral",
+    available: () => !!MISTRAL_KEY,
+    call: (prompt) => callMistral(prompt)
+  }
+];
+
+async function callWithFallback(prompt) {
+  for (const provider of AI_PROVIDERS) {
+    if (!provider.available()) {
+      console.log(`   ⏭️  ${provider.name}: non configuré`);
+      continue;
+    }
+    try {
+      console.log(`   🔄 Essai ${provider.name}...`);
+      const result = await provider.call(prompt);
+      console.log(`   ✓ ${provider.name}: succès`);
+      return { provider: provider.name, result };
+    } catch (e) {
+      console.error(`   ❌ ${provider.name}: ${e.message}`);
+    }
+  }
+  return { provider: "FALLBACK", result: null };
+}
 
 function dateForOffset(offset) {
   const d = new Date();
@@ -73,20 +120,88 @@ function rapidGet(path) {
   });
 }
 
+// ═══════════════════════════════════════════════════════
+// LIGUES DISPONIBLES SUR BOOKMAKERS FRANÇAIS (ARJEL/ANJ)
+// Winamax, Betclic, Unibet, PMU, ParionsSport
+// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// LIGUES ACCEPTÉES — CHAMPIONNAT RÉGULIER UNIQUEMENT
+// PAS de finales, PAS de qualifications, PAS de U21/U20/U23
+// On ne joue QUE là où les stats parlent (saison régulière)
+// ═══════════════════════════════════════════════════════
+const LIGUES_ARJEL = new Set([
+  // Top 5 européens — SAISON RÉGULIÈRE
+  47,    // Premier League
+  87,    // La Liga
+  54,    // Bundesliga
+  55,    // Serie A
+  53,    // Ligue 1
+]);
+
+// ═══════════════════════════════════════════════════════
+// NATIONS DISPONIBLES SUR BOOKMAKERS FRANÇAIS
+// (Pour les matchs internationaux dans la ligue 914609)
+// ═══════════════════════════════════════════════════════
+const NATIONS_ARJEL = new Set([
+  // UEFA
+  "France","England","Spain","Italy","Germany","Portugal","Netherlands","Belgium",
+  "Croatia","Denmark","Switzerland","Sweden","Norway","Poland","Czech Republic","Austria",
+  "Scotland","Wales","Northern Ireland","Republic of Ireland","Ukraine","Russia","Serbia","Turkey",
+  "Greece","Hungary","Romania","Bulgaria","Slovakia","Slovenia","Iceland","Finland",
+  // Amérique du Sud
+  "Brazil","Argentina","Uruguay","Colombia","Chile","Peru","Ecuador","Paraguay","Bolivia","Venezuela",
+  // CONCACAF
+  "USA","Mexico","Canada","Costa Rica","Jamaica","Honduras","Panama",
+  // Afrique top
+  "Senegal","Morocco","Egypt","Algeria","Tunisia","Nigeria","Cameroon","Ghana",
+  "Ivory Coast","South Africa","Mali","Burkina Faso","DR Congo",
+  // Asie top
+  "Japan","South Korea","Australia","Iran","Saudi Arabia","Iraq","Qatar","UAE",
+  // Aliases (l'API peut envoyer différents formats)
+  "Côte d'Ivoire","Cote d'Ivoire","Korea Republic","IR Iran","United States"
+]);
+
+// Mots-clés INTERDITS dans les noms d'équipes (haute variance, pas de stats fiables)
+const BANNED_KEYWORDS = ["U21", "U20", "U23", "U19", "U18", "U17", "Olympic", "Olympique B",
+  "Women", "Femmes", "Femenino", "W ", " W"];
+
+function isMatchARJEL(fx) {
+  const home = (fx.home?.name || "").trim();
+  const away = (fx.away?.name || "").trim();
+  // REJET : équipes jeunes / féminines
+  for (const kw of BANNED_KEYWORDS) {
+    if (home.includes(kw) || away.includes(kw)) return false;
+  }
+  // 1. Ligue Top 5 européen — SAISON RÉGULIÈRE → OK
+  if (LIGUES_ARJEL.has(fx.leagueId)) return true;
+  // 2. Match international A (pas U21) : vérifier nations ARJEL
+  if (fx.leagueId === 914609) {
+    return NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
+  }
+  // 3. Sinon → REJET (Champions League, Europa League, qualifs = haute variance)
+  return false;
+}
+
 async function scanMatchesRealAPI(targetISO) {
-  console.log("📅 RapidAPI...");
+  console.log("📅 RapidAPI (FREEMIUM: ARJEL gratuit + HORS-ARJEL premium)...");
   const dateCompact = targetISO.replace(/-/g, "");
   const data = await rapidGet(`/football-get-matches-by-date?date=${dateCompact}`);
   const fixtures = data?.response?.matches || [];
   let matches = [];
-  const MAJOR = new Set([914609, 344, 928683, 47, 87, 54, 55, 53, 42, 73, 188, 77]);
+  let arjelCount = 0, premiumCount = 0;
+  // Ligues majeures internationales (toujours considérées même hors ARJEL pour premium)
+  const LIGUES_INTERNATIONALES = new Set([914609, 344, 928683, ...LIGUES_ARJEL]);
   for (const fx of fixtures) {
-    if (fx.status?.finished || fx.status?.cancelled || !fx.home?.name || !fx.away?.name || !MAJOR.has(fx.leagueId)) continue;
+    if (fx.status?.finished || fx.status?.cancelled || !fx.home?.name || !fx.away?.name) continue;
+    // On garde tous les matchs des ligues internationales/majeures
+    if (!LIGUES_INTERNATIONALES.has(fx.leagueId)) continue;
+    const arjel = isMatchARJEL(fx);
+    if (arjel) arjelCount++; else premiumCount++;
     let heure = "20h00";
     if (fx.status?.utcTime) { const d = new Date(fx.status.utcTime); if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h"); }
-    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo: 1700, away_elo: 1700, cote_domicile: 1.6, cote_exterieur: 1.8 });
+    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo: 1700, away_elo: 1700, cote_domicile: 1.6, cote_exterieur: 1.8, arjel });
   }
-  console.log(`✅ ${matches.length} matchs`);
+  console.log(`✅ ${arjelCount} matchs ARJEL (gratuit) + ${premiumCount} matchs HORS-ARJEL (premium)`);
   return matches;
 }
 
@@ -102,55 +217,192 @@ async function enrichGroq(matches) {
   return matches;
 }
 
-// DeepSeek retourne maintenant : pick principal + picks premium (7-7.9)
+// ═══════════════════════════════════════════════════════
+// PROVIDER-SPECIFIC IMPLEMENTATIONS
+// ═══════════════════════════════════════════════════════
+
+async function callDeepSeek(prompt) {
+  const r = await post("api.deepseek.com", "/v1/chat/completions", {
+    "Authorization": `Bearer ${DEEPSEEK_KEY}`,
+    "Content-Type": "application/json"
+  }, {
+    model: "deepseek-chat",
+    max_tokens: 2500,
+    temperature: 0.1,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const text = r.choices?.[0]?.message?.content || "";
+  return safeJSON(text);
+}
+
+async function callOpenRouter(prompt) {
+  const r = await post("openrouter.ai", "/api/v1/chat/completions", {
+    "Authorization": `Bearer ${OPENROUTER_KEY}`,
+    "Content-Type": "application/json"
+  }, {
+    model: "deepseek/deepseek-chat", // Compatible alias
+    max_tokens: 2500,
+    temperature: 0.1,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const text = r.choices?.[0]?.message?.content || "";
+  return safeJSON(text);
+}
+
+async function callGemini(prompt) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 2500, temperature: 0.1 }
+    });
+    const req = https.request({
+      hostname: "generativelanguage.googleapis.com",
+      path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try {
+          const r = JSON.parse(d);
+          const text = r.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          resolve(safeJSON(text));
+        } catch { reject(new Error("Gemini parse error")); }
+      });
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function callMistral(prompt) {
+  const r = await post("api.mistral.ai", "/v1/chat/completions", {
+    "Authorization": `Bearer ${MISTRAL_KEY}`,
+    "Content-Type": "application/json"
+  }, {
+    model: "mistral-large-latest",
+    max_tokens: 2500,
+    temperature: 0.1,
+    messages: [{ role: "user", content: prompt }]
+  });
+  const text = r.choices?.[0]?.message?.content || "";
+  return safeJSON(text);
+}
+
+// Chef retourne :
+//   - pick (ARJEL ≥7) → site gratuit + Telegram public
+//   - premium_arjel (ARJEL ≥7) → Telegram premium (clients abonnés)
+//   - premium_hors_arjel (HORS-ARJEL ≥7) → Telegram premium UNIQUEMENT (Pinnacle/PS3838)
 async function deepseekChef(matches) {
-  console.log("👑 DeepSeek — Sélection...");
+  console.log("👑 Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
+  const validArjel = valid.filter(m => m.arjel);
+  const validHorsArjel = valid.filter(m => !m.arjel);
+  console.log(`   Pool ARJEL: ${validArjel.length} | Pool HORS-ARJEL: ${validHorsArjel.length}`);
   if (!valid.length) return null;
-  try {
-    const r = await post("api.deepseek.com", "/v1/chat/completions", {"Authorization":`Bearer ${DEEPSEEK_KEY}`,"Content-Type":"application/json"}, { model:"deepseek-chat", max_tokens:2000, temperature:0.1, messages:[{role:"user",content:`Analyse TOUS ces matchs. Attribue une NOTE 7.0-10 à chacun.
+
+  const prompt = `Système FREEMIUM TousLesMatchs. Analyse 2 catégories de matchs :
+
+POOL ARJEL (jouables Winamax/Betclic/Unibet/PMU): ${JSON.stringify(validArjel)}
+
+POOL HORS-ARJEL (Pinnacle/PS3838 uniquement - clients premium): ${JSON.stringify(validHorsArjel)}
 
 Règles:
 - Cote acceptable: 1.40-2.20
-- Note ≥8.0 = PICK GRATUIT (publié sur le site)
-- Note 7.0-7.9 = PICK PREMIUM (canal privé abonnés)
-- Si plusieurs à 8+: prends le plus haut
-- Si rien à 8: prends le plus proche de 8
+- Note 7.0-10 sur chaque match
+- pick = MEILLEUR match ARJEL (publié gratuitement sur site + Telegram public)
+- premium_arjel = 2e meilleur match ARJEL (canal Telegram premium, abonnés payants)
+- premium_hors_arjel = MEILLEUR match HORS-ARJEL (canal premium UNIQUEMENT, gros bookmakers internationaux)
 
 Réponds JSON:
 {
   "pick": {"match":"X vs Y","cote":1.65,"note":8.5,"raison":"courte"},
-  "premium": [{"match":"A vs B","cote":1.55,"note":7.4,"raison":"courte"}]
+  "premium_arjel": {"match":"A vs B","cote":1.55,"note":7.6,"raison":"courte"},
+  "premium_hors_arjel": {"match":"C vs D","cote":1.70,"note":7.8,"raison":"courte"}
 }
 
-Matchs: ${JSON.stringify(valid)}`}] });
-    const text = r.choices?.[0]?.message?.content || "";
-    const result = safeJSON(text);
+Si pool vide pour une catégorie, mets null.`;
+
+  try {
+    const { provider, result } = await callWithFallback(prompt);
+    console.log(`   Utilisé: ${provider}`);
     if (result?.pick) {
-      console.log(`   ✓ Pick principal: ${result.pick.match} (note ${result.pick.note})`);
-      if (result.premium?.length) console.log(`   ✓ Picks premium: ${result.premium.length} match(s)`);
+      console.log(`   ✓ Pick GRATUIT (site): ${result.pick.match} (note ${result.pick.note})`);
+      if (result.premium_arjel) console.log(`   💎 Premium ARJEL: ${result.premium_arjel.match} (note ${result.premium_arjel.note})`);
+      if (result.premium_hors_arjel) console.log(`   💎 Premium HORS-ARJEL: ${result.premium_hors_arjel.match} (note ${result.premium_hors_arjel.note})`);
       return result;
     }
-  } catch(e) { console.error("DeepSeek error:", e.message); }
-  const candidates = valid.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
-  const best = candidates.length ? candidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : valid[0];
-  return { pick: { match: `${best.home} vs ${best.away}`, cote: best.cote_domicile || 1.5, note: 7.0, raison: "Fallback" }, premium: [] };
+  } catch(e) { console.error("AI error:", e.message); }
+  // Fallback : utilise UNIQUEMENT matchs ARJEL pour le pick gratuit
+  const arjelCandidates = validArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
+  const horsArjelCandidates = validHorsArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
+  const bestArjel = arjelCandidates.length ? arjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
+  const bestHorsArjel = horsArjelCandidates.length ? horsArjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
+  if (!bestArjel && !bestHorsArjel) return null;
+  return {
+    pick: bestArjel ? { match: `${bestArjel.home} vs ${bestArjel.away}`, cote: bestArjel.cote_domicile, note: 7.0, raison: "Fallback ARJEL" } : null,
+    premium_arjel: null,
+    premium_hors_arjel: bestHorsArjel ? { match: `${bestHorsArjel.home} vs ${bestHorsArjel.away}`, cote: bestHorsArjel.cote_domicile, note: 7.0, raison: "Fallback HORS-ARJEL" } : null
+  };
 }
 
 async function generateForDay(day) {
   console.log(`\n──── ${day.label} (${day.fr}) ────`);
   let matches = await scanMatchesRealAPI(day.iso);
-  if (!matches.length) return null;
+  if (!matches.length) {
+    console.log(`⚠️ ${day.fr}: aucun match disponible`);
+    updateAppJsNoPick(day.fr, "Aucun match disponible");
+    return null;
+  }
   matches = await enrichGroq(matches);
   let result = await deepseekChef(matches);
-  if (!result?.pick) return null;
-  updateAppJs(result.pick, day.fr);
+  if (!result?.pick && !result?.premium_hors_arjel) {
+    updateAppJsNoPick(day.fr, "Aucun pick fiable détecté");
+    return null;
+  }
+  // Pick ARJEL → site public (gratuit)
+  if (result?.pick) updateAppJs(result.pick, day.fr);
+  else updateAppJsNoPick(day.fr, "Pas de pick ARJEL - voir Premium");
   return result;
+}
+
+// ═══ PROTECTION ABSOLUE : JAMAIS écraser un pick GAGNE ou PERDU ═══
+function isPickResolved(content, dateStr) {
+  const escapedDate = dateStr.replace("/", "\\/");
+  const match = content.match(new RegExp(`\\["${escapedDate}"[^\\]]*"(GAGNE|PERDU)"`, "g"));
+  return match && match.length > 0;
+}
+
+function updateAppJsNoPick(dateStr, reason) {
+  const appPath = "./src/App.js";
+  let content = fs.readFileSync(appPath, "utf8");
+  // PROTECTION : ne JAMAIS écraser un résultat terminé
+  if (isPickResolved(content, dateStr)) {
+    console.log(`🛡️ ${dateStr}: PROTÉGÉ (résultat déjà enregistré — pas d'écrasement)`);
+    return;
+  }
+  const newPick = `  ["${dateStr}","PAS DE PARI - ${reason}","---","---","---","NOPICK","",0,8],\n`;
+  const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}"[^\\n]*\\n`, "g");
+  if (content.match(dateRegex)) {
+    content = content.replace(dateRegex, newPick);
+    console.log(`📝 ${dateStr}: PAS DE PARI (${reason})`);
+  } else {
+    content = content.replace("var picks = [\n", `var picks = [\n${newPick}`);
+    console.log(`📝 ${dateStr}: PAS DE PARI ajouté (${reason})`);
+  }
+  fs.writeFileSync(appPath, content);
 }
 
 function updateAppJs(pick, dateStr) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
+  // PROTECTION : ne JAMAIS écraser un résultat terminé
+  if (isPickResolved(content, dateStr)) {
+    console.log(`🛡️ ${dateStr}: PROTÉGÉ (résultat déjà enregistré — pas d'écrasement)`);
+    return;
+  }
   const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}],\n`;
   const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}",[^\\n]*\\n`, "g");
   const existing = content.match(dateRegex);
@@ -211,7 +463,7 @@ async function main() {
       console.log(`💎 Telegram premium: ${allPremium.length} pick(s) envoyé(s)`);
     }
 
-    execSync("git add -A && git commit -m '🤖 Hermès: picks générés' && git push origin main", {stdio:"inherit"});
+    // Git commit géré par le workflow GitHub Actions (évite le double commit)
   } else {
     console.log("Aucun pick généré aujourd'hui");
     await sendTelegram(null); // envoie message NOPICK

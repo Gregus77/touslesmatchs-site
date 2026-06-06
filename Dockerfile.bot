@@ -1,4 +1,6 @@
 FROM node:20-alpine
 WORKDIR /app
 COPY scripts/bot.js ./
+COPY scripts/bookmakers.config.js ./
+COPY src/App.js ./App.js
 CMD ["node", "bot.js"]

@@ -1,0 +1,5 @@
+FROM node:20-alpine
+# Installer git + docker + compose pour que Hermès puisse déployer
+RUN apk add --no-cache git docker-cli docker-compose
+WORKDIR /repo
+CMD ["node", "scripts/hermes_admin_bot.js"]

@@ -43,6 +43,13 @@ jobs:
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: node scripts/multi_agent.js
 
+      - name: Hermès Supervisor — Analyse résultats + shadow betting
+        continue-on-error: true
+        env:
+          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
+          DEEPSEEK_API_KEY:   ${{ secrets.DEEPSEEK_API_KEY }}
+        run: node scripts/hermes_supervisor.js
+
       - name: Antithèse — Audit qualité (détection bugs)
         continue-on-error: true
         run: node scripts/antithese_audit.js
@@ -52,10 +59,10 @@ jobs:
           CI: false
         run: npm run build
 
-      - name: Commit picks + build
+      - name: Commit picks + Hermès DB
         run: |
-          git add src/App.js
-          git diff --staged --quiet || git commit -m "🤖 Hermès $(date +'%d/%m'): picks mis à jour"
+          git add src/App.js scripts/hermes_db.json scripts/picks_history.json
+          git diff --staged --quiet || git commit -m "🤖 Hermès $(date +'%d/%m'): picks + analyse résultats"
           git push origin main || true
 
       - name: Deploy vers VPS via SSH
@@ -66,7 +73,8 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: 22
-          command_timeout: 120s
+          command_timeout: 180s
+          timeout: 60s
           script: |
             cd /opt/touslesmatchs
             git fetch origin main

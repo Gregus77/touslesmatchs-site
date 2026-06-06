@@ -4,6 +4,9 @@ import CGU from "./CGU";
 import MentionsLegales from "./MentionsLegales";
 import Confidentialite from "./Confidentialite";
 import AnalyseLive from "./AnalyseLive";
+import Calculateur from "./Calculateur";
+import Login from "./Login";
+import Subscription from "./Subscription";
 import translations from "./translations";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
@@ -17,19 +20,16 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["06/06","Angola vs Mauritania","Angola Vainqueur","1.6","—","EN ATTENTE","Foot",7.5,7],
-  ["05/06","Spain vs Iraq","Spain Vainqueur","1.6","—","EN ATTENTE","Foot",7.4,7],
-  ["04/06","Cambodia vs Bhutan","Cambodia Vainqueur","1.6","—","EN ATTENTE","Foot",7.3,7],
-  ["03/06","Portugal U21 vs Northern Ireland U21","Portugal U21 Vainqueur","1.40","1-1","PERDU","Foot",7.0,7],
+  ["08/06","Greece vs Italy","Greece Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["07/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","3-0","GAGNE","Foot",7,7],
+  ["04/06 au 06/06","PAS DE PARI - Aucun match championnat disponible","---","---","---","NOPICK","",0,8],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
-  ["31/05","OKC Thunder vs San Antonio Spurs","OKC Vainqueur","1.65","103-111","PERDU","Basketball",8.1,8],
-  ["29/05","San Antonio Spurs vs OKC Thunder","SAS Vainqueur","1.70","118-91","GAGNE","Basketball",8.6,8],
-  ["26/05 au 30/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
-  ["22/05","New York Knicks vs Cleveland Cavaliers","Plus de 215.5 pts","1.87","109-93 (202 pts)","PERDU","Basketball",8.2,8],
+  ["26/05 au 01/06","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
   ["20/05","Fribourg vs Aston Villa","Victoire Aston Villa","1.58","0-1","GAGNE","Foot",9.1,8],
-  ["19/05","New York Knicks vs Cleveland Cavaliers","Plus de 216.5 pts","1.85","115-104 (219 pts)","GAGNE","Basketball",8.8,8],
   ["19/05","Boca Juniors vs Cruzeiro","Moins de 2.5 buts","1.40","1-1","GAGNE","Foot",8.3,8],
-  ["14/05 au 17/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
+  ["14/05 au 18/05","PAS DE PARI - Aucun match n atteint notre seuil 7/10","---","---","---","NOPICK","",0,8],
   ["13/05","Lazio vs Inter Milan","Inter ML","1.66","0-2","GAGNE","Foot",8.7,8],
   ["13/05","Villarreal vs Seville","Over 2.5","1.75","2-2","GAGNE","Foot",8.4,8],
   ["11/05","Carolina vs Philadelphia","Carolina ML","1.58","4-2","GAGNE","Hockey",8.9,8],
@@ -129,9 +129,40 @@ export default function App() {
     gtag("config", "G-ME2T7G7PSK");
   }, []);
 
+  // ═══ DÉDUPLICATION : 1 seul pick par date ═══
+  var seenDates = {};
+  picks = picks.filter(function(p){
+    var key = p[0] + "|" + p[5]; // date + status
+    if (seenDates[key]) return false;
+    seenDates[key] = true;
+    return true;
+  });
+
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
+  var losses = picks.filter(function(p){return p[5]==="PERDU";}).length;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
-  var winrate = Math.round((wins/total)*100);
+  var winrate = total > 0 ? Math.round((wins/total)*100) : 0;
+
+  // ═══ CALCUL ROI DYNAMIQUE (basé sur cotes réelles, mise fixe 10€) ═══
+  var miseFixe = 10;
+  var bankrollDepart = 100;
+  var gainsCumules = 0;
+  picks.forEach(function(p){
+    if (p[5] === "GAGNE") {
+      var cote = parseFloat(p[3]) || 1.5;
+      gainsCumules += (cote - 1) * miseFixe;
+    } else if (p[5] === "PERDU") {
+      gainsCumules -= miseFixe;
+    }
+  });
+  var roiPct = Math.round((gainsCumules / bankrollDepart) * 100);
+
+  // ═══ SÉRIE DE VICTOIRES EN COURS ═══
+  var serieEnCours = 0;
+  for (var i = 0; i < picks.length; i++) {
+    if (picks[i][5] === "GAGNE") serieEnCours++;
+    else if (picks[i][5] === "PERDU") break;
+  }
 
   // Trouver le pick du JOUR en priorité (date d'aujourd'hui), puis le prochain à venir
   var todayStr = new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"});
@@ -182,10 +213,11 @@ export default function App() {
       React.createElement("div", {style:{fontSize:"8px",color:"#4a4438",letterSpacing:"0.22em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}, t("analyse_sous_menu"))
     ),
     React.createElement("nav", {className:"main-nav",style:{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap",flex:1,justifyContent:"flex-end"}},
-      ["home","preuves","bookmakers","analyse"].map(function(p){
-        var labels = {home:t("nav_choix"), preuves:t("nav_preuves"), bookmakers:t("nav_bookmakers"), analyse:t("nav_analyse")};
+      ["home","preuves","bookmakers","calculateur","analyse"].map(function(p){
+        var labels = {home:t("nav_choix"), preuves:t("nav_preuves"), bookmakers:t("nav_bookmakers"), calculateur:"💰 Calculateur", analyse:t("nav_analyse")};
         var isAnalyse = p==="analyse";
-        return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?(isAnalyse?"rgba(201,162,39,0.2)":"rgba(212,175,55,0.15)"):"transparent",border:"1px solid "+(page===p?"#d4af37":(isAnalyse?"rgba(201,162,39,0.3)":"rgba(255,255,255,0.1)")),color:page===p?"#d4af37":(isAnalyse?"#C9A227":"#666"),padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px",fontWeight:isAnalyse?"600":"400"}}, labels[p]);
+        var isCalc = p==="calculateur";
+        return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?(isAnalyse?"rgba(201,162,39,0.2)":"rgba(212,175,55,0.15)"):"transparent",border:"1px solid "+(page===p?"#d4af37":(isAnalyse||isCalc?"rgba(201,162,39,0.3)":"rgba(255,255,255,0.1)")),color:page===p?"#d4af37":(isAnalyse||isCalc?"#C9A227":"#666"),padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px",fontWeight:(isAnalyse||isCalc)?"600":"400"}}, labels[p]);
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
@@ -200,10 +232,13 @@ export default function App() {
   );
 
 
+  if(page==="login") return React.createElement(React.Fragment, null, React.createElement(Login, {setPage:setPage}));
+  if(page==="subscription") return React.createElement(React.Fragment, null, React.createElement(Subscription, {setPage:setPage}));
   if(page==="cgu") return React.createElement(React.Fragment, null, React.createElement(CGU, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="mentions") return React.createElement(React.Fragment, null, React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="confidentialite") return React.createElement(React.Fragment, null, React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="analyse") return React.createElement(React.Fragment, null, header, React.createElement(AnalyseLive, null), footer, bandeauLegal);
+  if(page==="calculateur") return React.createElement(Calculateur, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal, header:header, picks:picks});
 
   if(page==="preuves"){
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
@@ -307,9 +342,9 @@ export default function App() {
       React.createElement("p", {style:{color:"#4a4438",fontSize:"14px",maxWidth:"480px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"400"}},
         t("seuil_minimum"), React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
       ),
-      React.createElement("div", {style:{display:"flex",justifyContent:"center",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden",flexWrap:"wrap"}},
-        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:"+394%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:(total-wins)+" "+t("perdu")+" sur "+total},{label:t("serie"),value:wins+" "+t("victoires"),sub:"consécutives 🔥"}].map(function(s,i){
-          return React.createElement("div", {key:i, style:{flex:1,minWidth:"50%",padding:"18px 8px",borderRight:i<3?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none"}},
+      React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
+        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:losses+" "+t("perdu")+" sur "+total},{label:t("serie"),value:serieEnCours+" "+t("victoires"),sub:"consécutives 🔥"}].map(function(s,i){
+          return React.createElement("div", {key:i, style:{padding:"18px 8px",borderRight:(i%2===0)?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none",textAlign:"center"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
             React.createElement("div", {style:{fontSize:"10px",color:"#444",marginTop:"3px"}}, s.sub)
@@ -317,6 +352,39 @@ export default function App() {
         })
       )
     ),
+    // ════ ENCART PREMIUM 19.90€/mois (ARJEL + HORS-ARJEL Pinnacle/PS3838) ════
+    React.createElement("section", {className:"home-section",style:{padding:"30px 20px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("div", {style:{background:"linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.03))",border:"2px solid #d4af37",borderRadius:"16px",padding:"24px 20px",textAlign:"center",position:"relative",overflow:"hidden"}},
+        React.createElement("div", {style:{position:"absolute",top:"12px",right:"12px",background:"#d4af37",color:"#000",padding:"4px 10px",fontSize:"10px",fontWeight:"bold",letterSpacing:"1px",borderRadius:"4px"}}, "💎 PREMIUM"),
+        React.createElement("div", {style:{fontSize:"11px",color:"#d4af37",letterSpacing:"3px",marginBottom:"10px",textTransform:"uppercase"}}, "Pour les parieurs sérieux"),
+        React.createElement("h3", {style:{color:"#fff",fontSize:"22px",marginBottom:"12px",fontFamily:"'Bodoni Moda',serif",fontWeight:"400"}}, "Accès aux picks ", React.createElement("span",{style:{color:"#d4af37"}},"HORS ARJEL")),
+        React.createElement("p", {style:{color:"#aaa",fontSize:"13px",marginBottom:"18px",lineHeight:"1.6",maxWidth:"500px",margin:"0 auto 18px"}}, "Cotes supérieures sur ", React.createElement("strong",{style:{color:"#fff"}},"Pinnacle, PS3838"), " et autres bookmakers internationaux. Idéal pour matchs internationaux à valeur (qualifications Asie/Afrique/Amérique latine)."),
+        React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"24px",marginBottom:"20px",flexWrap:"wrap"}},
+          React.createElement("div",{},
+            React.createElement("div",{style:{fontSize:"24px",color:"#d4af37",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif"}}, "1 pick ARJEL"),
+            React.createElement("div",{style:{fontSize:"11px",color:"#666"}}, "+ bookmakers FR")
+          ),
+          React.createElement("div",{style:{color:"#444",fontSize:"24px",lineHeight:"1"}},"+"),
+          React.createElement("div",{},
+            React.createElement("div",{style:{fontSize:"24px",color:"#d4af37",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif"}}, "1 pick HORS-ARJEL"),
+            React.createElement("div",{style:{fontSize:"11px",color:"#666"}}, "Pinnacle / PS3838")
+          )
+        ),
+        React.createElement("div", {style:{fontSize:"32px",color:"#fff",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif",marginBottom:"4px"}}, "19,90€ ", React.createElement("span",{style:{fontSize:"14px",color:"#888",fontWeight:"normal"}},"/ mois")),
+        React.createElement("div", {style:{fontSize:"11px",color:"#666",marginBottom:"18px"}}, "Sans engagement • Stripe sécurisé"),
+        React.createElement("button", {onClick:function(){
+          if(window.trackEvent) window.trackEvent("click_premium_cta", {price:19.90});
+          fetch("https://www.touslesmatchs.com/api/create-checkout", {method:"POST"})
+            .then(function(r){return r.json();})
+            .then(function(data){
+              if(data.url) window.location.href = data.url;
+              else window.open("https://t.me/touslesmatchs_bot","_blank");
+            })
+            .catch(function(){ window.open("https://t.me/touslesmatchs_bot","_blank"); });
+        },style:{display:"inline-block",background:"linear-gradient(135deg, #d4af37, #b8941f)",color:"#000",padding:"14px 36px",borderRadius:"8px",border:"none",fontWeight:"bold",fontSize:"14px",letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer"}}, "💎 Devenir Premium")
+      )
+    ),
+
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
       React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},

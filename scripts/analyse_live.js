@@ -7,9 +7,12 @@
 
 const https  = require("https");
 const http   = require("http");
+const { handleLogin, handleRegister, handleStripeCheckout } = require("./api_auth");
 
 const GROQ_KEY      = process.env.GROQ_API_KEY || "";
 const FOOTBALL_KEY  = process.env.FOOTBALL_DATA_KEY || "";
+const STRIPE_KEY    = process.env.STRIPE_SECRET_KEY || "";
+const STRIPE_PRICE  = process.env.STRIPE_PRICE_ID || "";
 const PORT          = 3001;
 
 // ── CORS headers ──────────────────────────────────────────
@@ -162,6 +165,83 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ ok: false, error: e.message }));
       }
     });
+    return;
+  }
+
+  // ── POST /create-checkout — Stripe Checkout Session ──
+  if (req.method === "POST" && url.pathname === "/create-checkout") {
+    if (!STRIPE_KEY || !STRIPE_PRICE) {
+      res.writeHead(500);
+      res.end(JSON.stringify({ ok: false, error: "Stripe non configuré" }));
+      return;
+    }
+    const stripeBody = new URLSearchParams({
+      "payment_method_types[0]": "card",
+      "mode": "subscription",
+      "line_items[0][price]": STRIPE_PRICE,
+      "line_items[0][quantity]": "1",
+      "success_url": "https://www.touslesmatchs.com?premium=success",
+      "cancel_url": "https://www.touslesmatchs.com?premium=cancel",
+      "allow_promotion_codes": "true"
+    }).toString();
+    const stripeReq = https.request({
+      hostname: "api.stripe.com",
+      path: "/v1/checkout/sessions",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${STRIPE_KEY}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(stripeBody)
+      }
+    }, stripeRes => {
+      let d = ""; stripeRes.on("data", c => d += c);
+      stripeRes.on("end", () => {
+        try {
+          const session = JSON.parse(d);
+          if (session.url) {
+            res.writeHead(200);
+            res.end(JSON.stringify({ ok: true, url: session.url }));
+          } else {
+            res.writeHead(400);
+            res.end(JSON.stringify({ ok: false, error: session.error?.message || "Erreur Stripe" }));
+          }
+        } catch(e) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ ok: false, error: "Erreur parsing Stripe" }));
+        }
+      });
+    });
+    stripeReq.on("error", () => {
+      res.writeHead(500);
+      res.end(JSON.stringify({ ok: false, error: "Connexion Stripe échouée" }));
+    });
+    stripeReq.write(stripeBody);
+    stripeReq.end();
+    return;
+  }
+
+  // ── AUTH ENDPOINTS ──────────────────────────────────────
+  // POST /auth/login
+  if (req.method === "POST" && url.pathname === "/auth/login") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => handleLogin(req, res, body));
+    return;
+  }
+
+  // POST /auth/register
+  if (req.method === "POST" && url.pathname === "/auth/register") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => handleRegister(req, res, body));
+    return;
+  }
+
+  // POST /stripe/create-checkout (new version with user auth)
+  if (req.method === "POST" && url.pathname === "/stripe/create-checkout") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => handleStripeCheckout(req, res, body));
     return;
   }
 
