@@ -35,16 +35,35 @@
 
 ## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
 
-**04/06/2026 23h — Status**: 
-- ✅ Phase 0: Audit complet terminé
-- ✅ Phase 1: Bug 405 Analyse Live CORRIGÉ → déployé VPS
-- ✅ Phase 2: Architecture multi-IA implémentée
-  - Fallback routing: DeepSeek → OpenRouter → Gemini → Mistral → Fallback
-  - Nouveau script: `scripts/verify_apis.js`
-  - multi_agent.js refactorisé avec `callWithFallback()`
-- 🚧 Phase 2 suite: Exécuter vérification des APIs (voir ci-dessous)
-- 🚧 Phase 3: Analyse Live V2 (simplification UI)
-- 🚧 Phase 5: Stripe (clés manquantes)
+**06/06/2026 — Status**:
+- ✅ Fix responsive mobile (commit b5b1377)
+- ✅ Bot Telegram refait — navigation + bouton 🔙 retour
+- ✅ RÈGLE ANTI-AMICAUX ajoutée dans multi_agent.js (voir ci-dessous)
+- 🚧 Déployer sur VPS : `git pull origin main && docker compose restart bot api`
+- 🚧 Implémenter les 7 tâches UX/pricing (voir prompt d'audit)
+- 🚧 Stripe (clés manquantes)
+
+---
+
+## 🚫 RÈGLES ABSOLUES — JAMAIS DE PICK SUR CES MATCHS
+
+> Ces règles ont été établies après des pertes réelles. NE PAS MODIFIER sans validation.
+
+### ❌ AMICAUX INTERNATIONAUX — INTERDICTION TOTALE
+**Leçon : Suisse 1-1 Australie (06/06/2026) — pari PERDU**
+- Match amical à San Diego, aucun enjeu, équipes mixées
+- La Suisse menait 1-0 (Ndoye 14') → égalisation Australie (Yengi 56')
+- Filtre corrigé dans `multi_agent.js` : `BANNED_LEAGUE_KEYWORDS` détecte
+  "friendly", "amical", "exhibition", "tour" dans le nom de la ligue
+- **Règle : JAMAIS de pick sur un amical, peu importe la cote ou la confiance**
+
+### ❌ ÉQUIPES JEUNES / FÉMININES
+- U17, U18, U19, U20, U21, U23 → REJET
+- Women, Femmes, Femenino → REJET
+
+### ✅ SEULS MATCHS AUTORISÉS
+- Top 5 européens saison régulière (L1, PL, BL, SA, LL)
+- Compétitions FIFA/UEFA officielles avec enjeu réel (Coupe du Monde, Nations League, qualifs)
 
 ---
 

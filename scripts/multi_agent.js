@@ -165,20 +165,41 @@ const NATIONS_ARJEL = new Set([
 const BANNED_KEYWORDS = ["U21", "U20", "U23", "U19", "U18", "U17", "Olympic", "Olympique B",
   "Women", "Femmes", "Femenino", "W ", " W"];
 
+// Mots-clés INTERDITS dans le nom de la ligue — AMICAUX BANNIS définitivement
+// Leçon apprise : Suisse 1-1 Australie (06/06/2026) — amical San Diego → PERDU
+// Les amicaux ont zéro enjeu, équipes mixtes, stats non fiables → JAMAIS de pick
+const BANNED_LEAGUE_KEYWORDS = [
+  "friendly", "Friendly", "amical", "Amical", "FRIENDLY", "AMICAL",
+  "test match", "Test Match", "exhibition", "Exhibition",
+  "international friendly", "International Friendly",
+  "tour ", " tour", "Tour "
+];
+
 function isMatchARJEL(fx) {
   const home = (fx.home?.name || "").trim();
   const away = (fx.away?.name || "").trim();
-  // REJET : équipes jeunes / féminines
+  const leagueName = (fx.leagueName || fx.league?.name || fx.competition?.name || "").toLowerCase();
+
+  // REJET absolu : équipes jeunes / féminines
   for (const kw of BANNED_KEYWORDS) {
     if (home.includes(kw) || away.includes(kw)) return false;
   }
+
+  // REJET absolu : amicaux et matchs sans enjeu — jamais de pick dessus
+  for (const kw of BANNED_LEAGUE_KEYWORDS) {
+    if (leagueName.includes(kw.toLowerCase())) {
+      console.log(`  ❌ AMICAL REJETÉ: ${home} vs ${away} (${leagueName})`);
+      return false;
+    }
+  }
+
   // 1. Ligue Top 5 européen — SAISON RÉGULIÈRE → OK
   if (LIGUES_ARJEL.has(fx.leagueId)) return true;
-  // 2. Match international A (pas U21) : vérifier nations ARJEL
+  // 2. Match international A officiel (Coupe du Monde, Nations League, qualifs FIFA/UEFA) : vérifier nations ARJEL
   if (fx.leagueId === 914609) {
     return NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
   }
-  // 3. Sinon → REJET (Champions League, Europa League, qualifs = haute variance)
+  // 3. Sinon → REJET
   return false;
 }
 
