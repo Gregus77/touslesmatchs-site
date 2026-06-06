@@ -231,19 +231,29 @@
       "result": "LOSS",
       "sport": "Foot",
       "added": "2026-06-04T17:44:07.454Z"
+    },
+    {
+      "date": "05/06",
+      "match": "Russia vs Burkina Faso",
+      "bet": "Russia Vainqueur",
+      "odds": 1.6,
+      "score": "3-0",
+      "result": "WIN",
+      "sport": "Foot",
+      "added": "2026-06-06T04:18:31.177Z"
     }
   ],
   "shadow_bets": [],
   "ia_stats": {
     "deepseek": {
-      "total": 23,
-      "wins": 19,
+      "total": 24,
+      "wins": 20,
       "losses": 4,
       "roi": 0,
       "by_sport": {
         "Foot": {
-          "total": 8,
-          "wins": 7
+          "total": 9,
+          "wins": 8
         },
         "Basketball": {
           "total": 4,
@@ -256,8 +266,8 @@
       },
       "by_market": {
         "moneyline": {
-          "total": 20,
-          "wins": 17
+          "total": 21,
+          "wins": 18
         },
         "over": {
           "total": 3,
