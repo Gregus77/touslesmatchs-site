@@ -367,11 +367,22 @@ async function generateForDay(day) {
   return result;
 }
 
+// ═══ PROTECTION ABSOLUE : JAMAIS écraser un pick GAGNE ou PERDU ═══
+function isPickResolved(content, dateStr) {
+  const escapedDate = dateStr.replace("/", "\\/");
+  const match = content.match(new RegExp(`\\["${escapedDate}"[^\\]]*"(GAGNE|PERDU)"`, "g"));
+  return match && match.length > 0;
+}
+
 function updateAppJsNoPick(dateStr, reason) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
+  // PROTECTION : ne JAMAIS écraser un résultat terminé
+  if (isPickResolved(content, dateStr)) {
+    console.log(`🛡️ ${dateStr}: PROTÉGÉ (résultat déjà enregistré — pas d'écrasement)`);
+    return;
+  }
   const newPick = `  ["${dateStr}","PAS DE PARI - ${reason}","---","---","---","NOPICK","",0,8],\n`;
-  // Supprime tout pick existant pour cette date (EN ATTENTE)
   const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}"[^\\n]*\\n`, "g");
   if (content.match(dateRegex)) {
     content = content.replace(dateRegex, newPick);
@@ -386,6 +397,11 @@ function updateAppJsNoPick(dateStr, reason) {
 function updateAppJs(pick, dateStr) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
+  // PROTECTION : ne JAMAIS écraser un résultat terminé
+  if (isPickResolved(content, dateStr)) {
+    console.log(`🛡️ ${dateStr}: PROTÉGÉ (résultat déjà enregistré — pas d'écrasement)`);
+    return;
+  }
   const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}],\n`;
   const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}",[^\\n]*\\n`, "g");
   const existing = content.match(dateRegex);
