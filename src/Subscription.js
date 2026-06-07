@@ -288,7 +288,7 @@ export default function Subscription() {
 
           // CTA Button
           React.createElement("button", {
-            onClick: () => handleCheckout(plan),
+            onClick: () => { setSelectedPlan(plan.name); handleCheckout(plan); },
             disabled: loading,
             style: {
               width: "100%",
@@ -310,10 +310,6 @@ export default function Subscription() {
               loading && selectedPlan === plan.name
                 ? "🔄 Chargement..."
                 : plan.cta,
-            onClick: () => {
-              setSelectedPlan(plan.name);
-              handleCheckout(plan);
-            },
           })
         )
       )

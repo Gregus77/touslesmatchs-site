@@ -1,6 +1,5 @@
 import React from "react";
 
-var API_URL = ""  // Même domaine — Caddy route /api/* → localhost:3001
 
 export default function AnalyseLive() {
   var [home, setHome] = React.useState("");

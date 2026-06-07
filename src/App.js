@@ -172,7 +172,6 @@ export default function App() {
   var prochainPick = pickAujourdhui || picks.slice().reverse().find(function(p){ return p[5]==="EN ATTENTE"; });
   var pickDuJour = prochainPick || picks[0];
   var isNoPick = !prochainPick && (picks[0][5]==="NOPICK" || picks[0][5]==="GAGNE" || picks[0][5]==="PERDU");
-  var isEnCours = pickDuJour[5]==="EN COURS";
   var isEnAttente = pickDuJour[5]==="EN ATTENTE";
   var isToday = pickDuJour[0] === todayStr;
   var pickLabel = isEnAttente ? (isToday ? t("pick_du_jour") : t("prochain_match")) : isNoPick ? t("pas_de_match") : t("pick_du_jour");

@@ -29,24 +29,6 @@ export default function Calculateur({ setPage, footer, bandeauLegal, header, pic
   });
   var coteMoyenne = coteCount > 0 ? (coteSum/coteCount) : 1.55;
 
-  // 3 scénarios : pessimiste / moyen / optimiste
-  // ROI quotidien moyen = (winrate × (cote-1) - (1-winrate))
-  function calc(scenarioWinrate) {
-    var mise = bankroll * (misePct/100);
-    var roi = (scenarioWinrate * (coteMoyenne - 1)) - (1 - scenarioWinrate);
-    // ROI par pari (1 pari/jour)
-    var bankFinale = bankroll;
-    for (var j = 0; j < duree; j++) {
-      var miseDuJour = bankFinale * (misePct/100);
-      var gainOuPerte = Math.random() < scenarioWinrate
-        ? miseDuJour * (coteMoyenne - 1)
-        : -miseDuJour;
-      // Approximation : on utilise l'espérance plutôt que le random pour stabilité
-      bankFinale += miseDuJour * roi;
-    }
-    return Math.round(bankFinale);
-  }
-
   // Calcul déterministe (espérance mathématique)
   function calcDet(scenarioWinrate) {
     var roiPariMoyen = (scenarioWinrate * (coteMoyenne - 1)) - (1 - scenarioWinrate);
