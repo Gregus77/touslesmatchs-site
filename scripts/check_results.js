@@ -231,11 +231,30 @@ async function main() {
       continue;
     }
 
-    const homeGoals = found.home?.goals ?? found.score?.home ?? null;
-    const awayGoals = found.away?.goals ?? found.score?.away ?? null;
+    // Debug: log raw fixture to help diagnose field names if needed
+    console.log("   🔍 Fixture brut:", JSON.stringify(found).slice(0, 600));
+
+    const homeGoals =
+      found.home?.goals         ??
+      found.score?.home         ??
+      found.homeScore           ??
+      found.score?.fullTime?.home ??
+      found.result?.home        ??
+      found.goals?.home         ??
+      found.ft?.home            ??
+      null;
+    const awayGoals =
+      found.away?.goals         ??
+      found.score?.away         ??
+      found.awayScore           ??
+      found.score?.fullTime?.away ??
+      found.result?.away        ??
+      found.goals?.away         ??
+      found.ft?.away            ??
+      null;
 
     if (homeGoals === null || awayGoals === null) {
-      console.log("   ❓ Score non disponible dans la réponse API");
+      console.log("   ❓ Score non disponible dans la réponse API — vérifier le debug ci-dessus");
       continue;
     }
 
