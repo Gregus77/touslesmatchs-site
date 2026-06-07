@@ -182,9 +182,9 @@ function gitPush(message) {
 function rebuildSite() {
   const root = path.join(__dirname, "..");
   try {
-    console.log("   🔨 Rebuild image Docker en cours (2-3 min)...");
-    execSync(`cd ${root} && docker compose up -d --build site`, { stdio: "pipe", timeout: 300000 });
-    console.log("   ✅ Image reconstruite — site mis à jour");
+    console.log("   🔨 Rebuild images Docker (site + bot) en cours (2-4 min)...");
+    execSync(`cd ${root} && docker compose up -d --build site bot`, { stdio: "pipe", timeout: 360000 });
+    console.log("   ✅ Site + bot Telegram mis à jour");
   } catch (e) {
     console.error("   ⚠️  Docker build échoué :", e.message.slice(0, 200));
   }
