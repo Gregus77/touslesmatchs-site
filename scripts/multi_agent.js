@@ -747,7 +747,7 @@ async function main() {
     const day = dateForOffset(offset);
     const result = await generateForDay(day);
     if (result) {
-      results.push(result.pick);
+      if (result.pick) results.push(result.pick);
       if (result.premium?.length) allPremium.push(...result.premium);
     }
   }
