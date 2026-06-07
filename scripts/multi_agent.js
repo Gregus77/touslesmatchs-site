@@ -5,6 +5,33 @@ const fs = require("fs");
 const path = require("path");
 const { buildInlineKeyboard } = require("./bookmakers.config");
 const { getElo: getClubElo } = require("./clubelo");
+const { getMatchOdds, getEventsForSport, hasKey: hasOddsKey } = require("./oddsapi");
+
+// Mapping nos compétitions → sport keys The Odds API
+const ODDS_SPORTS = [
+  "soccer_uefa_nations_league",
+  "soccer_fifa_world_cup",
+  "soccer_uefa_european_championship",
+  "soccer_epl",                   // Premier League
+  "soccer_spain_la_liga",
+  "soccer_germany_bundesliga",
+  "soccer_italy_serie_a",
+  "soccer_france_ligue_one",
+  "soccer_uefa_champs_league",
+  "soccer_uefa_europa_league",
+  "soccer_conmebol_copa_america",
+];
+const HOCKEY_SPORTS = ["icehockey_nhl"];
+const BASEBALL_SPORTS = ["baseball_mlb"];
+
+async function tryRealOdds(home, away, sports = ODDS_SPORTS) {
+  if (!hasOddsKey()) return null;
+  for (const sk of sports) {
+    const odds = await getMatchOdds(sk, home, away);
+    if (odds && odds.nb_bookmakers >= 3) return odds;
+  }
+  return null;
+}
 
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
@@ -221,15 +248,77 @@ async function scanMatchesRealAPI(targetISO) {
     if (arjel) arjelCount++; else premiumCount++;
     let heure = "20h00";
     if (fx.status?.utcTime) { const d = new Date(fx.status.utcTime); if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h"); }
-    // ELO réel via ClubElo API (cache 24h, fallback 1500 si inconnu)
-    const [home_elo, away_elo] = await Promise.all([
+    // ELO réel via ClubElo API + cotes réelles via The Odds API
+    const [home_elo, away_elo, realOdds] = await Promise.all([
       getClubElo(fx.home.name),
-      getClubElo(fx.away.name)
+      getClubElo(fx.away.name),
+      tryRealOdds(fx.home.name, fx.away.name),
     ]);
-    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo, away_elo, cote_domicile: 1.6, cote_exterieur: 1.8, arjel });
+    const cote_domicile = realOdds?.cote_domicile ?? 1.6;
+    const cote_exterieur = realOdds?.cote_exterieur ?? 1.8;
+    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo, away_elo, cote_domicile, cote_exterieur, arjel, real_odds: !!realOdds });
   }
   console.log(`✅ ${arjelCount} matchs ARJEL (gratuit) + ${premiumCount} matchs HORS-ARJEL (premium)`);
   return matches;
+}
+
+// ─── Scanner Hockey NHL + MLB via The Odds API ──────────────
+async function scanOddsApiSports(targetISO) {
+  if (!hasOddsKey()) return [];
+  const matches = [];
+  for (const sportKey of [...HOCKEY_SPORTS, ...BASEBALL_SPORTS]) {
+    const events = await getEventsForSport(sportKey, targetISO);
+    for (const ev of events) {
+      const odds = extractEventOdds(ev);
+      if (!odds) continue;
+      const isHockey = sportKey.includes("hockey");
+      const heure = formatHeure(ev.commence_time);
+      matches.push({
+        sport: isHockey ? "Hockey" : "Baseball",
+        home: ev.home_team,
+        away: ev.away_team,
+        heure,
+        home_elo: 1700,
+        away_elo: 1700,
+        cote_domicile: odds.cote_domicile,
+        cote_exterieur: odds.cote_exterieur,
+        arjel: false,
+        real_odds: true,
+        league: sportKey,
+      });
+    }
+  }
+  if (matches.length) console.log(`🏒 ${matches.filter(m=>m.sport==="Hockey").length} matchs NHL + ${matches.filter(m=>m.sport==="Baseball").length} matchs MLB via Odds API`);
+  return matches;
+}
+
+function extractEventOdds(event) {
+  const allHome = [], allAway = [];
+  for (const book of (event.bookmakers || [])) {
+    for (const market of (book.markets || [])) {
+      if (market.key !== "h2h") continue;
+      for (const out of (market.outcomes || [])) {
+        const p = parseFloat(out.price);
+        if (isNaN(p)) continue;
+        if (out.name === event.home_team) allHome.push(p);
+        else if (out.name === event.away_team) allAway.push(p);
+      }
+    }
+  }
+  if (!allHome.length || !allAway.length) return null;
+  const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
+  return {
+    cote_domicile: Math.round(avg(allHome) * 100) / 100,
+    cote_exterieur: Math.round(avg(allAway) * 100) / 100,
+  };
+}
+
+function formatHeure(iso) {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return "20h00";
+    return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }).replace(":", "h");
+  } catch { return "20h00"; }
 }
 
 async function enrichGroq(matches) {
@@ -239,7 +328,12 @@ async function enrichGroq(matches) {
     const r = await post("api.groq.com", "/openai/v1/chat/completions", {"Authorization":`Bearer ${GROQ_KEY}`,"Content-Type":"application/json"}, { model:"llama-3.3-70b-versatile", max_tokens:1000, temperature:0.1, messages:[{role:"user",content:`Estime cotes pour: ${JSON.stringify(matches.map(m=>m.home+"-"+m.away))}`}] });
     const text = r.choices?.[0]?.message?.content || "";
     const picks = safeJSON(text) || [];
-    if (Array.isArray(picks)) { for (let i=0; i<Math.min(matches.length, picks.length); i++) { matches[i].cote_domicile = picks[i].cote_h || 1.6; matches[i].cote_exterieur = picks[i].cote_a || 1.8; } }
+    if (Array.isArray(picks)) { for (let i=0; i<Math.min(matches.length, picks.length); i++) {
+      // Ne pas écraser les vraies cotes The Odds API par les estimations Groq
+      if (matches[i].real_odds) continue;
+      matches[i].cote_domicile = picks[i].cote_h || 1.6;
+      matches[i].cote_exterieur = picks[i].cote_a || 1.8;
+    } }
   } catch(e) { console.error("Groq:", e.message); }
   return matches;
 }
@@ -525,6 +619,9 @@ Je préfère un abonné déçu ce soir à un abonné ruiné cette semaine.`;
 async function generateForDay(day) {
   console.log(`\n──── ${day.label} (${day.fr}) ────`);
   let matches = await scanMatchesRealAPI(day.iso);
+  // Ajoute Hockey NHL + MLB via The Odds API
+  const hockeyMatches = await scanOddsApiSports(day.iso);
+  matches = matches.concat(hockeyMatches);
   if (!matches.length) {
     console.log(`⚠️ ${day.fr}: aucun match disponible`);
     updateAppJsNoPick(day.fr, "Aucun match disponible");

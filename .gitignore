@@ -25,3 +25,4 @@ yarn-error.log*
 # Runtime caches
 scripts/clubelo_cache.json
 scripts/today_pick.json
+scripts/oddsapi_cache.json

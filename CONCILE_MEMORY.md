@@ -48,6 +48,18 @@
 
 ---
 
+## 🔌 SOURCES DE DONNÉES BRANCHÉES
+
+- **RapidAPI free-football** : fixtures foot internationales et ARJEL
+- **ClubElo.com** : ELO réel des clubs européens (mis à jour quotidiennement)
+- **Table NATIONAL_ELO** : ELO sélections nationales calibré FIFA juin 2026
+- **The Odds API** : cotes réelles 30+ bookmakers (foot, NHL, MLB)
+  - Si `ODDS_API_KEY` est définie, les vraies cotes remplacent les valeurs par défaut
+  - Les matchs NHL et MLB sont ajoutés automatiquement au pool d'analyse
+  - Le flag `real_odds: true` indique que les cotes sont fiables
+
+---
+
 ## 🤖 PROCESSUS AUTOMATIQUE EN PLACE
 
 - **check_results.js** tourne via cron toutes les 2h (cf. crontab VPS).
