@@ -1,0 +1,32 @@
+# Vérifie les résultats toutes les heures de 19h à 01h (Paris)
+# Décalage UTC+2 en été : 17h-23h UTC
+name: Check Results
+
+on:
+  schedule:
+    - cron: "0 17,18,19,20,21,22,23 * * *"  # 19h-01h Paris (UTC+2)
+    - cron: "0 0,1 * * *"
+  workflow_dispatch:  # Lancement manuel possible
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Vérifier les résultats
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+        run: node scripts/check_results.js
+
+      - name: Push si changements
+        run: |
+          git config user.email "hermes@touslesmatchs.com"
+          git config user.name "Hermès Bot"
+          git diff --quiet || (git add src/App.js scripts/today_pick.json && git commit -m "auto: résultats matchs $(date +%d/%m)" && git push)
