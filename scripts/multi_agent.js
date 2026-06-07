@@ -317,56 +317,111 @@ async function callMistral(prompt) {
 //   - premium_arjel (ARJEL ≥7) → Telegram premium (clients abonnés)
 //   - premium_hors_arjel (HORS-ARJEL ≥7) → Telegram premium UNIQUEMENT (Pinnacle/PS3838)
 async function deepseekChef(matches) {
-  console.log("👑 Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
+  console.log("👑 Hermès — Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
   const validArjel = valid.filter(m => m.arjel);
   const validHorsArjel = valid.filter(m => !m.arjel);
   console.log(`   Pool ARJEL: ${validArjel.length} | Pool HORS-ARJEL: ${validHorsArjel.length}`);
   if (!valid.length) return null;
 
-  const prompt = `Système FREEMIUM TousLesMatchs. Analyse 2 catégories de matchs :
+  const prompt = `Tu es HERMÈS, chef suprême du Conseil TousLesMatchs.
+Ta mission : protéger le bankroll de nos abonnés. Tu ne joues QUE quand tu es sûr.
+Si aucun match ne mérite, tu réponds NOPICK. C'est une force, pas une faiblesse.
 
-POOL ARJEL (jouables Winamax/Betclic/Unibet/PMU): ${JSON.stringify(validArjel)}
+═══════════════════════════════════════
+MATCHS DISPONIBLES
+═══════════════════════════════════════
 
-POOL HORS-ARJEL (Pinnacle/PS3838 uniquement - clients premium): ${JSON.stringify(validHorsArjel)}
+POOL ARJEL (Winamax/Betclic/Unibet/PMU — pick gratuit public):
+${JSON.stringify(validArjel, null, 2)}
 
-Règles:
-- Cote acceptable: 1.40-2.20
-- Note 7.0-10 sur chaque match
-- pick = MEILLEUR match ARJEL (publié gratuitement sur site + Telegram public)
-- premium_arjel = 2e meilleur match ARJEL (canal Telegram premium, abonnés payants)
-- premium_hors_arjel = MEILLEUR match HORS-ARJEL (canal premium UNIQUEMENT, gros bookmakers internationaux)
+POOL HORS-ARJEL (Pinnacle/PS3838 — premium uniquement):
+${JSON.stringify(validHorsArjel, null, 2)}
 
-Réponds JSON:
+═══════════════════════════════════════
+RÈGLES ABSOLUES — JAMAIS DE DÉROGATION
+═══════════════════════════════════════
+
+🚫 REJETTE IMMÉDIATEMENT tout match avec :
+  - "friendly", "amical", "exhibition", "tour" dans le nom de la ligue
+    LEÇON APPRISE : Suisse 1-1 Australie (06/06/2026) → pari PERDU sur amical
+    Les amicaux = équipes mixées, aucun enjeu, stats inutilisables
+  - Equipes U17/U18/U19/U20/U21/U23 ou féminines
+  - Matchs à moins de 72h de données disponibles (forme récente inconnue)
+  - Cote < 1.40 (valeur trop faible) ou > 2.20 (risque trop élevé)
+  - Deux équipes en crise de forme (3 défaites consécutives ou plus)
+  - Match en terrain neutre sans avantage statistique clair
+  - Contexte suspect : transferts massifs, joueurs clés absents, fin de saison sans enjeu
+
+✅ CRITÈRES OBLIGATOIRES pour valider un pick :
+  - Compétition officielle avec enjeu RÉEL (Top 5 européens, Coupe du Monde, Nations League, qualifs FIFA/UEFA)
+  - Au moins 5 matchs récents analysables pour chaque équipe
+  - Avantage statistique clair ET justifiable en 1 phrase
+  - Note de confiance ≥ 8.0/10 pour le pick gratuit public
+  - Note de confiance ≥ 7.0/10 pour les picks premium (7.0-7.9)
+  - La raison doit être factuelle : forme, H2H, domicile/extérieur, motivation
+
+═══════════════════════════════════════
+STRATÉGIE DE MISE (Kelly modifié)
+═══════════════════════════════════════
+  - Note 8.0-8.9 → mise conseillée : 2% du bankroll
+  - Note 9.0-9.9 → mise conseillée : 3% du bankroll
+  - Note 10/10   → mise conseillée : 5% du bankroll (exceptionnel)
+  - JAMAIS plus de 5% du bankroll sur un seul pari
+
+═══════════════════════════════════════
+FORMAT DE RÉPONSE (JSON strict)
+═══════════════════════════════════════
+
+Si au moins un match ARJEL mérite ≥ 8.0/10 :
 {
-  "pick": {"match":"X vs Y","cote":1.65,"note":8.5,"raison":"courte"},
-  "premium_arjel": {"match":"A vs B","cote":1.55,"note":7.6,"raison":"courte"},
-  "premium_hors_arjel": {"match":"C vs D","cote":1.70,"note":7.8,"raison":"courte"}
+  "pick": {
+    "match": "Equipe A vs Equipe B",
+    "cote": 1.65,
+    "note": 8.5,
+    "sport": "Foot",
+    "mise_conseillée": "2% bankroll",
+    "raison": "phrase factuelle courte : stat concrète qui justifie le pari"
+  },
+  "premium_arjel": {"match":"...","cote":1.55,"note":7.6,"raison":"..."},
+  "premium_hors_arjel": {"match":"...","cote":1.70,"note":7.8,"raison":"..."}
 }
 
-Si pool vide pour une catégorie, mets null.`;
+Si AUCUN match ne mérite la confiance minimale :
+{
+  "pick": null,
+  "premium_arjel": null,
+  "premium_hors_arjel": null,
+  "nopick_raison": "explication courte pourquoi Hermès ne joue pas aujourd'hui"
+}
+
+RAPPEL : un NOPICK est une victoire. Ne jamais forcer un pari incertain.
+Le winrate à 78% vient de cette discipline. Ne le sacrifie pas.`;
 
   try {
     const { provider, result } = await callWithFallback(prompt);
     console.log(`   Utilisé: ${provider}`);
     if (result?.pick) {
-      console.log(`   ✓ Pick GRATUIT (site): ${result.pick.match} (note ${result.pick.note})`);
+      console.log(`   ✓ Pick GRATUIT: ${result.pick.match} (note ${result.pick.note}/10)`);
       if (result.premium_arjel) console.log(`   💎 Premium ARJEL: ${result.premium_arjel.match} (note ${result.premium_arjel.note})`);
       if (result.premium_hors_arjel) console.log(`   💎 Premium HORS-ARJEL: ${result.premium_hors_arjel.match} (note ${result.premium_hors_arjel.note})`);
+      // Vérification finale : rejeter si note < 8.0 pour le pick gratuit
+      if (result.pick.note < 8.0) {
+        console.log(`   ⚠️ Note ${result.pick.note} < 8.0 → Pick gratuit refusé par Hermès, rétrogradé en premium`);
+        result.premium_arjel = result.premium_arjel || result.pick;
+        result.pick = null;
+      }
       return result;
     }
+    if (result?.nopick_raison) {
+      console.log(`   🛑 NOPICK décidé par Hermès : ${result.nopick_raison}`);
+    }
+    return result || null;
   } catch(e) { console.error("AI error:", e.message); }
-  // Fallback : utilise UNIQUEMENT matchs ARJEL pour le pick gratuit
-  const arjelCandidates = validArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
-  const horsArjelCandidates = validHorsArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
-  const bestArjel = arjelCandidates.length ? arjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
-  const bestHorsArjel = horsArjelCandidates.length ? horsArjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
-  if (!bestArjel && !bestHorsArjel) return null;
-  return {
-    pick: bestArjel ? { match: `${bestArjel.home} vs ${bestArjel.away}`, cote: bestArjel.cote_domicile, note: 7.0, raison: "Fallback ARJEL" } : null,
-    premium_arjel: null,
-    premium_hors_arjel: bestHorsArjel ? { match: `${bestHorsArjel.home} vs ${bestHorsArjel.away}`, cote: bestHorsArjel.cote_domicile, note: 7.0, raison: "Fallback HORS-ARJEL" } : null
-  };
+
+  // Fallback conservateur : NOPICK plutôt que forcer un pari risqué
+  console.log("   ⚠️ Fallback conservateur → NOPICK (aucun match validé automatiquement)");
+  return { pick: null, premium_arjel: null, premium_hors_arjel: null, nopick_raison: "Fallback conservateur — aucune IA disponible pour valider" };
 }
 
 async function generateForDay(day) {
