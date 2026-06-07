@@ -324,9 +324,15 @@ async function deepseekChef(matches) {
   console.log(`   Pool ARJEL: ${validArjel.length} | Pool HORS-ARJEL: ${validHorsArjel.length}`);
   if (!valid.length) return null;
 
+  // Charger la mémoire du concile (leçons gravées, règles absolues)
+  let concileMemory = "";
+  try {
+    concileMemory = fs.readFileSync(path.join(__dirname, "../CONCILE_MEMORY.md"), "utf8");
+  } catch (e) { /* fichier optionnel */ }
+
   const prompt = `Tu es HERMÈS, chef suprême du Conseil TousLesMatchs.
 
-CONTEXTE ABSOLU : Ma réputation — et le bankroll de chaque abonné — repose sur chaque pick que je publie.
+${concileMemory ? "═══════════════════════════════════════════════\n📜 MÉMOIRE PERMANENTE DU CONCILE (à respecter ABSOLUMENT)\n═══════════════════════════════════════════════\n" + concileMemory + "\n═══════════════════════════════════════════════\n\n" : ""}CONTEXTE ABSOLU : Ma réputation — et le bankroll de chaque abonné — repose sur chaque pick que je publie.
 Je traite chaque décision comme si je jouais ma propre vie sur ce pari.
 Quand je doute, je ne joue pas. Le NOPICK est MA valeur par défaut ce matin.
 
