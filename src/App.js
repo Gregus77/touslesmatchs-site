@@ -20,7 +20,9 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["08/06","Greece vs Italy","Greece Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["09/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
+  ["07/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
+  ["08/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","PERDU","Foot",7,7],
   ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","5-0","GAGNE","Foot",7,7],
   ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","3-0","GAGNE","Foot",7,7],
