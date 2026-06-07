@@ -353,13 +353,16 @@ RÈGLES ABSOLUES — JAMAIS DE DÉROGATION
   - Match en terrain neutre sans avantage statistique clair
   - Contexte suspect : transferts massifs, joueurs clés absents, fin de saison sans enjeu
 
-✅ CRITÈRES OBLIGATOIRES pour valider un pick :
+✅ CRITÈRES OBLIGATOIRES pour valider un pick (gratuit OU premium) :
   - Compétition officielle avec enjeu RÉEL (Top 5 européens, Coupe du Monde, Nations League, qualifs FIFA/UEFA)
   - Au moins 5 matchs récents analysables pour chaque équipe
   - Avantage statistique clair ET justifiable en 1 phrase
-  - Note de confiance ≥ 8.0/10 pour le pick gratuit public
-  - Note de confiance ≥ 7.0/10 pour les picks premium (7.0-7.9)
+  - Note de confiance ≥ 7.0/10 — valable pour le pick gratuit public
+  - Note ≥ 8.0/10 = pick fort, publié avec priorité
+  - Note 7.0-7.9 = pick acceptable, publié si aucun ≥ 8.0 disponible ce jour-là
   - La raison doit être factuelle : forme, H2H, domicile/extérieur, motivation
+  IMPORTANT : la note 7.0 ne dispense PAS des règles de qualité ci-dessus.
+  Un amical à 9.5/10 reste REJETÉ. La note ne change rien aux règles absolues.
 
 ═══════════════════════════════════════
 STRATÉGIE DE MISE (Kelly modifié)
@@ -405,10 +408,9 @@ Le winrate à 78% vient de cette discipline. Ne le sacrifie pas.`;
       console.log(`   ✓ Pick GRATUIT: ${result.pick.match} (note ${result.pick.note}/10)`);
       if (result.premium_arjel) console.log(`   💎 Premium ARJEL: ${result.premium_arjel.match} (note ${result.premium_arjel.note})`);
       if (result.premium_hors_arjel) console.log(`   💎 Premium HORS-ARJEL: ${result.premium_hors_arjel.match} (note ${result.premium_hors_arjel.note})`);
-      // Vérification finale : rejeter si note < 8.0 pour le pick gratuit
-      if (result.pick.note < 8.0) {
-        console.log(`   ⚠️ Note ${result.pick.note} < 8.0 → Pick gratuit refusé par Hermès, rétrogradé en premium`);
-        result.premium_arjel = result.premium_arjel || result.pick;
+      // Vérification finale : rejeter si note < 7.0
+      if (result.pick.note < 7.0) {
+        console.log(`   ⚠️ Note ${result.pick.note} < 7.0 → Pick refusé par Hermès`);
         result.pick = null;
       }
       return result;
