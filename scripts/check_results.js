@@ -231,10 +231,8 @@ async function main() {
       continue;
     }
 
-    // Debug: log raw fixture to help diagnose field names if needed
-    console.log("   🔍 Fixture brut:", JSON.stringify(found).slice(0, 600));
-
     const homeGoals =
+      found.home?.score         ??  // RapidAPI free-football: home.score
       found.home?.goals         ??
       found.score?.home         ??
       found.homeScore           ??
@@ -244,6 +242,7 @@ async function main() {
       found.ft?.home            ??
       null;
     const awayGoals =
+      found.away?.score         ??  // RapidAPI free-football: away.score
       found.away?.goals         ??
       found.score?.away         ??
       found.awayScore           ??
