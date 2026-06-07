@@ -13,16 +13,16 @@ var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
 var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
 var UNIBET_LINK = "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254";
 var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728";
-var ZEBET_LINK = "#";
-var PARIONSSPORT_LINK = "#";
-var NETBET_LINK = "#";
+var ZEBET_LINK = "https://www.zebet.fr/fr/inscription";
+var PARIONSSPORT_LINK = "https://parionssport.lfdj.fr/fr-fr/inscription";
+var NETBET_LINK = "https://www.netbet.fr/inscription";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
   ["08/06","Greece vs Italy","Greece Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
   ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","PERDU","Foot",7,7],
-  ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","5-0","GAGNE","Foot",7,7],
   ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","3-0","GAGNE","Foot",7,7],
   ["04/06 au 06/06","PAS DE PARI - Aucun match championnat disponible","---","---","---","NOPICK","",0,8],
   ["02/06","Canada vs Uzbekistan","Canada Vainqueur","1.58","2-0","GAGNE","Foot",7.1,7],
@@ -55,16 +55,17 @@ var preuves = [
 ];
 
 var temoignages = [
-  {nom:"Thomas R.", ville:"Lyon", txt:"9 wins consecutifs, je suis bluffe. Le seul tipster que je suis vraiment.", gains:"+47 EUR"},
+  {nom:"Thomas R.", ville:"Lyon", txt:"9 wins consécutifs, je suis bluffé. Le seul tipster que je suis vraiment.", gains:"+47 EUR"},
   {nom:"Karim B.", ville:"Paris", txt:"Le pick du jour est devenu mon rituel du matin. Simple, clair, efficace.", gains:"+31 EUR"},
-  {nom:"Julien M.", ville:"Bordeaux", txt:"Le seuil 8/10 ca change tout. Moins de picks mais beaucoup plus de qualite.", gains:"+28 EUR"},
+  {nom:"Julien M.", ville:"Bordeaux", txt:"Le seuil 8/10 ça change tout. Moins de picks mais beaucoup plus de qualité.", gains:"+28 EUR"},
 ];
 
 var faqs = [
-  {q:"C est vraiment gratuit ?", a:"Oui, 100% gratuit. Nous sommes remuneres via les liens d affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez a maintenir le service - merci."},
-  {q:"Comment votre IA analyse les matchs ?", a:"Notre modele croise la forme recente, les blessures, les confrontations directes, les stats domicile/exterieur et bien d autres variables. Seuls les picks avec un score de confiance superieur ou egal a 8/10 sont publies."},
-  {q:"Combien de picks par jour ?", a:"Un seul pick par jour, maximum. Qualite plutot que quantite. Les jours sans pick 8/10 sont indiques clairement : on ne force jamais un pari."},
-  {q:"Quel bankroll est recommande ?", a:"Ne misez jamais plus de 2 a 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques, jouez de facon responsable."},
+  {q:"C'est vraiment gratuit ?", a:"Oui, 100% gratuit. Nous sommes rémunérés via les liens d'affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez à maintenir le service — merci."},
+  {q:"Comment votre IA analyse les matchs ?", a:"Notre modèle Hermès croise la forme récente, les blessures, les confrontations directes, les stats domicile/extérieur et d'autres variables. Seuls les picks avec un score de confiance ≥ 7/10 sont publiés — jamais de match amical ou sans enjeu réel."},
+  {q:"Combien de picks par jour ?", a:"Un seul pick par jour, maximum. Qualité plutôt que quantité. Les jours sans pick valable sont indiqués clairement : on ne force jamais un pari."},
+  {q:"Quel bankroll est recommandé ?", a:"Ne misez jamais plus de 2 à 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques — jouez de façon responsable."},
+  {q:"Qu'est-ce que le plan Premium ?", a:"Le plan Premium à 19,90€/mois donne accès à un pick HORS-ARJEL supplémentaire chaque jour, sur Pinnacle et PS3838 où les cotes sont souvent supérieures. Idéal pour les parieurs qui cherchent de la valeur sur les compétitions internationales."},
 ];
 
 var bookmakers = [
@@ -330,7 +331,11 @@ export default function App() {
           );
         })
       ),
-      React.createElement("div", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",marginBottom:"16px",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
+      React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",marginBottom:"16px"}},
+        React.createElement("span", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
+        React.createElement("span", {style:{fontSize:"11px",color:"#555",letterSpacing:"1px"}}, "·"),
+        React.createElement("span", {style:{fontSize:"13px",letterSpacing:"3px",color:"#b89a2a",fontFamily:"'Bodoni Moda',serif",fontStyle:"italic"}}, "Hermès Chief")
+      ),
       React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
         lang==="fr" ? "Le meilleur " : lang==="en" ? "The best " : lang==="es" ? "La mejor " : lang==="it" ? "La migliore " : "Лучший ",
         React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, lang==="fr" ? "pick" : lang==="en" ? "pick" : lang==="es" ? "selección" : lang==="it" ? "scelta" : "прогноз"),
@@ -352,51 +357,7 @@ export default function App() {
         })
       )
     ),
-    // ════ ENCART PREMIUM 19.90€/mois (ARJEL + HORS-ARJEL Pinnacle/PS3838) ════
-    React.createElement("section", {className:"home-section",style:{padding:"30px 20px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("div", {style:{background:"linear-gradient(135deg, rgba(212,175,55,0.15), rgba(212,175,55,0.03))",border:"2px solid #d4af37",borderRadius:"16px",padding:"24px 20px",textAlign:"center",position:"relative",overflow:"hidden"}},
-        React.createElement("div", {style:{position:"absolute",top:"12px",right:"12px",background:"#d4af37",color:"#000",padding:"4px 10px",fontSize:"10px",fontWeight:"bold",letterSpacing:"1px",borderRadius:"4px"}}, "💎 PREMIUM"),
-        React.createElement("div", {style:{fontSize:"11px",color:"#d4af37",letterSpacing:"3px",marginBottom:"10px",textTransform:"uppercase"}}, "Pour les parieurs sérieux"),
-        React.createElement("h3", {style:{color:"#fff",fontSize:"22px",marginBottom:"12px",fontFamily:"'Bodoni Moda',serif",fontWeight:"400"}}, "Accès aux picks ", React.createElement("span",{style:{color:"#d4af37"}},"HORS ARJEL")),
-        React.createElement("p", {style:{color:"#aaa",fontSize:"13px",marginBottom:"18px",lineHeight:"1.6",maxWidth:"500px",margin:"0 auto 18px"}}, "Cotes supérieures sur ", React.createElement("strong",{style:{color:"#fff"}},"Pinnacle, PS3838"), " et autres bookmakers internationaux. Idéal pour matchs internationaux à valeur (qualifications Asie/Afrique/Amérique latine)."),
-        React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"24px",marginBottom:"20px",flexWrap:"wrap"}},
-          React.createElement("div",{},
-            React.createElement("div",{style:{fontSize:"24px",color:"#d4af37",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif"}}, "1 pick ARJEL"),
-            React.createElement("div",{style:{fontSize:"11px",color:"#666"}}, "+ bookmakers FR")
-          ),
-          React.createElement("div",{style:{color:"#444",fontSize:"24px",lineHeight:"1"}},"+"),
-          React.createElement("div",{},
-            React.createElement("div",{style:{fontSize:"24px",color:"#d4af37",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif"}}, "1 pick HORS-ARJEL"),
-            React.createElement("div",{style:{fontSize:"11px",color:"#666"}}, "Pinnacle / PS3838")
-          )
-        ),
-        React.createElement("div", {style:{fontSize:"32px",color:"#fff",fontWeight:"bold",fontFamily:"'Bodoni Moda',serif",marginBottom:"4px"}}, "19,90€ ", React.createElement("span",{style:{fontSize:"14px",color:"#888",fontWeight:"normal"}},"/ mois")),
-        React.createElement("div", {style:{fontSize:"11px",color:"#666",marginBottom:"18px"}}, "Sans engagement • Stripe sécurisé"),
-        React.createElement("button", {onClick:function(){
-          if(window.trackEvent) window.trackEvent("click_premium_cta", {price:19.90});
-          fetch("https://www.touslesmatchs.com/api/create-checkout", {method:"POST"})
-            .then(function(r){return r.json();})
-            .then(function(data){
-              if(data.url) window.location.href = data.url;
-              else window.open("https://t.me/touslesmatchs_bot","_blank");
-            })
-            .catch(function(){ window.open("https://t.me/touslesmatchs_bot","_blank"); });
-        },style:{display:"inline-block",background:"linear-gradient(135deg, #d4af37, #b8941f)",color:"#000",padding:"14px 36px",borderRadius:"8px",border:"none",fontWeight:"bold",fontSize:"14px",letterSpacing:"2px",textTransform:"uppercase",cursor:"pointer"}}, "💎 Devenir Premium")
-      )
-    ),
-
-    React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
-      React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},
-        [{num:t("section_01"),title:t("section_01_title"),desc:t("section_01_desc")},{num:t("section_02"),title:t("section_02_title"),desc:t("section_02_desc")},{num:t("section_03"),title:t("section_03_title"),desc:t("section_03_desc")}].map(function(s,i){
-          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"12px",padding:"22px 20px"}},
-            React.createElement("div",{style:{fontSize:"28px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.num),
-            React.createElement("div",{style:{fontSize:"16px",fontWeight:"600",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif"}},s.title),
-            React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.75"}},s.desc)
-          );
-        })
-      )
-    ),
+    // ════ PICK DU JOUR — au-dessus de la ligne de flottaison ════
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 20px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("div", {style:{
         background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(212,175,55,0.06)",
@@ -494,8 +455,98 @@ export default function App() {
           )
         ),
 
+        /* Urgence : pick valable aujourd'hui seulement */
+        isEnAttente && !isNoPick && React.createElement("div", {style:{
+          display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px",
+          background:"rgba(255,80,80,0.07)",border:"1px solid rgba(255,80,80,0.2)",
+          borderRadius:"6px",padding:"8px 14px"
+        }},
+          React.createElement("div", {style:{width:"8px",height:"8px",borderRadius:"50%",background:"#ff5555",flexShrink:0,boxShadow:"0 0 6px #ff5555"}}),
+          React.createElement("span", {style:{fontSize:"11px",color:"#ff8888",fontWeight:"bold",letterSpacing:"0.05em"}}, "⏰ Pick valable aujourd'hui seulement — expire à minuit")
+        ),
+
         /* CTA */
         isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:isPremium?"linear-gradient(135deg,#d4af37,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, t("parier_winamax"))
+      )
+    ),
+    React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
+      React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},
+        [{num:t("section_01"),title:t("section_01_title"),desc:t("section_01_desc")},{num:t("section_02"),title:t("section_02_title"),desc:t("section_02_desc")},{num:t("section_03"),title:t("section_03_title"),desc:t("section_03_desc")}].map(function(s,i){
+          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"12px",padding:"22px 20px"}},
+            React.createElement("div",{style:{fontSize:"28px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.num),
+            React.createElement("div",{style:{fontSize:"16px",fontWeight:"600",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif"}},s.title),
+            React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.75"}},s.desc)
+          );
+        })
+      )
+    ),
+    // ════ TARIFS — 3 niveaux ════
+    React.createElement("section", {className:"home-section",style:{padding:"30px 20px",maxWidth:"860px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"8px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
+      React.createElement("p", {style:{color:"#555",fontSize:"13px",textAlign:"center",marginBottom:"24px"}}, "Commencez gratuitement — passez Premium quand vous êtes prêt."),
+      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"14px"}},
+        [
+          {
+            label:"GRATUIT", price:"0€", sub:"pour toujours",
+            features:["1 pick ARJEL / jour","Winamax, Betclic, PMU","Canal Telegram public","Calculateur de projection"],
+            cta:"Commencer gratuitement", ctaAction:null, highlight:false
+          },
+          {
+            label:"STANDARD", price:"9,90€", sub:"/ mois",
+            features:["1 pick ARJEL prioritaire","Alertes Telegram instantanées","Statistiques avancées","Historique complet des picks"],
+            cta:"Essayer Standard", ctaAction:"standard", highlight:false, badge:"NOUVEAU"
+          },
+          {
+            label:"PREMIUM", price:"19,90€", sub:"/ mois",
+            features:["Tout Standard inclus","1 pick HORS-ARJEL (Pinnacle)","Cotes supérieures vs France","Canal Telegram privé"],
+            cta:"💎 Devenir Premium", ctaAction:"premium", highlight:true, badge:"MEILLEURE VALEUR"
+          }
+        ].map(function(plan,i){
+          return React.createElement("div", {key:i, style:{
+            background: plan.highlight ? "linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04))" : "rgba(255,255,255,0.02)",
+            border: "1px solid " + (plan.highlight ? "#d4af37" : "rgba(255,255,255,0.08)"),
+            borderRadius:"14px", padding:"24px 20px", position:"relative",
+            boxShadow: plan.highlight ? "0 0 24px rgba(212,175,55,0.1)" : "none"
+          }},
+            plan.badge && React.createElement("div", {style:{
+              position:"absolute", top:"-10px", left:"50%", transform:"translateX(-50%)",
+              background: plan.highlight ? "#d4af37" : "rgba(255,255,255,0.12)",
+              color: plan.highlight ? "#000" : "#aaa",
+              padding:"3px 12px", borderRadius:"20px", fontSize:"9px", fontWeight:"bold", letterSpacing:"1px", whiteSpace:"nowrap"
+            }}, plan.badge),
+            React.createElement("div", {style:{fontSize:"10px",color:plan.highlight?"#d4af37":"#666",letterSpacing:"3px",marginBottom:"8px",fontWeight:"600"}}, plan.label),
+            React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:"4px",marginBottom:"4px"}},
+              React.createElement("span", {style:{fontSize:"32px",fontWeight:"700",color:plan.highlight?"#d4af37":"#fff",fontFamily:"'Bodoni Moda',serif"}}, plan.price),
+              React.createElement("span", {style:{fontSize:"12px",color:"#555"}}, plan.sub)
+            ),
+            React.createElement("div", {style:{borderTop:"1px solid rgba(255,255,255,0.06)",margin:"16px 0"}}),
+            React.createElement("ul", {style:{listStyle:"none",padding:0,margin:"0 0 20px",display:"flex",flexDirection:"column",gap:"8px"}},
+              plan.features.map(function(f,j){
+                return React.createElement("li", {key:j, style:{display:"flex",alignItems:"center",gap:"8px",fontSize:"12px",color:"#888"}},
+                  React.createElement("span", {style:{color:"#22cc44",flexShrink:0}}, "✓"),
+                  f
+                );
+              })
+            ),
+            React.createElement("button", {
+              onClick: function(){
+                if(!plan.ctaAction){return;}
+                if(window.trackEvent) window.trackEvent("click_pricing_cta",{plan:plan.ctaAction});
+                fetch("https://www.touslesmatchs.com/api/create-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:plan.ctaAction})})
+                  .then(function(r){return r.json();})
+                  .then(function(d){if(d.url) window.location.href=d.url; else window.open("https://t.me/touslesmatchs_bot","_blank");})
+                  .catch(function(){window.open("https://t.me/touslesmatchs_bot","_blank");});
+              },
+              style:{
+                width:"100%", padding:"12px", borderRadius:"8px", border:"none", cursor: plan.ctaAction?"pointer":"default",
+                background: plan.highlight ? "linear-gradient(135deg,#d4af37,#f5d76e)" : plan.ctaAction ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+                color: plan.highlight ? "#000" : "#aaa",
+                fontWeight:"bold", fontSize:"13px", letterSpacing:"0.5px"
+              }
+            }, plan.cta)
+          );
+        })
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 24px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
