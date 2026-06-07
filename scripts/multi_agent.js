@@ -7,6 +7,7 @@ const { buildInlineKeyboard } = require("./bookmakers.config");
 const { getElo: getClubElo } = require("./clubelo");
 const { getMatchOdds, getEventsForSport, hasKey: hasOddsKey } = require("./oddsapi");
 const { getMlbElo } = require("./mlb_strength");
+const { getNbaElo } = require("./nba_strength");
 const { getLeagueInfo, isSeriousCompetition } = require("./football_leagues");
 
 // Mapping nos compétitions → sport keys The Odds API
@@ -25,6 +26,7 @@ const ODDS_SPORTS = [
 ];
 const HOCKEY_SPORTS = ["icehockey_nhl"];
 const BASEBALL_SPORTS = ["baseball_mlb"];
+const BASKETBALL_SPORTS = ["basketball_nba"];
 
 async function tryRealOdds(home, away, sports = ODDS_SPORTS) {
   if (!hasOddsKey()) return null;
@@ -44,7 +46,7 @@ const MISTRAL_KEY = process.env.MISTRAL_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
 const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
-const SPORTS_ALLOWED = ["Hockey", "Foot", "Baseball"];
+const SPORTS_ALLOWED = ["Hockey", "Foot", "Baseball", "Basket"];
 
 // ═══════════════════════════════════════════════════════
 // MULTI-IA PROVIDER INTERFACE — Fallback routing
@@ -288,7 +290,7 @@ async function scanMatchesRealAPI(targetISO) {
 async function scanOddsApiSports(targetISO) {
   if (!hasOddsKey()) return [];
   const matches = [];
-  for (const sportKey of [...HOCKEY_SPORTS, ...BASEBALL_SPORTS]) {
+  for (const sportKey of [...HOCKEY_SPORTS, ...BASEBALL_SPORTS, ...BASKETBALL_SPORTS]) {
     const events = await getEventsForSport(sportKey, targetISO);
     for (const ev of events) {
       const odds = extractEventOdds(ev);
@@ -296,10 +298,13 @@ async function scanOddsApiSports(targetISO) {
       const isHockey = sportKey.includes("hockey");
       const heure = formatHeure(ev.commence_time);
       const isBaseball = sportKey.includes("baseball");
-      const home_elo = isBaseball ? getMlbElo(ev.home_team) : 1700;
-      const away_elo = isBaseball ? getMlbElo(ev.away_team) : 1700;
+      const isBasketball = sportKey.includes("basketball");
+      let home_elo = 1700, away_elo = 1700;
+      if (isBaseball) { home_elo = getMlbElo(ev.home_team); away_elo = getMlbElo(ev.away_team); }
+      else if (isBasketball) { home_elo = getNbaElo(ev.home_team); away_elo = getNbaElo(ev.away_team); }
+      const sportLabel = isHockey ? "Hockey" : isBasketball ? "Basket" : "Baseball";
       matches.push({
-        sport: isHockey ? "Hockey" : "Baseball",
+        sport: sportLabel,
         home: ev.home_team,
         away: ev.away_team,
         heure,
@@ -309,12 +314,12 @@ async function scanOddsApiSports(targetISO) {
         cote_exterieur: odds.cote_exterieur,
         arjel: false,
         real_odds: true,
-        league: isHockey ? "NHL" : "MLB",
-        league_type: isHockey ? "nhl" : "mlb",
+        league: isHockey ? "NHL" : isBasketball ? "NBA" : "MLB",
+        league_type: isHockey ? "nhl" : isBasketball ? "nba" : "mlb",
       });
     }
   }
-  if (matches.length) console.log(`🏒 ${matches.filter(m=>m.sport==="Hockey").length} matchs NHL + ${matches.filter(m=>m.sport==="Baseball").length} matchs MLB via Odds API`);
+  if (matches.length) console.log(`🏒 ${matches.filter(m=>m.sport==="Hockey").length} NHL + 🏀 ${matches.filter(m=>m.sport==="Basket").length} NBA + ⚾ ${matches.filter(m=>m.sport==="Baseball").length} MLB via Odds API`);
   return matches;
 }
 

@@ -48,6 +48,36 @@
 
 ---
 
+## 🏀⚾ CRITÈRES SPÉCIFIQUES SPORTS US (MLB / NBA / NHL)
+
+Ces sports ont des critères DIFFÉRENTS du foot. Hermès NE DOIT PAS rejeter
+en bloc faute de "xG ou H2H foot". Voici les règles validées par le concile :
+
+### MLB (Baseball)
+- ✅ **Pick valide si** : ELO diff ≥ 150 ET cote ≥ 1.50 ET real_odds=true ET value ≥ 4%
+- ✅ Pas besoin de xG, blessures, ou H2H — la moyenne des cotes 30+ bookmakers
+  EST la mesure de marché la plus fiable au monde
+- ✅ La saison régulière MLB = enjeu constant (162 matchs, qualification playoffs)
+- ⚠️ Éviter premier match d'une série (lanceur surprise) si possible
+- Note plancher : 7.0/10 atteignable avec ELO diff ≥ 200 + value ≥ 6%
+
+### NBA (Basketball)
+- ✅ **Pick valide si** : ELO diff ≥ 100 ET cote ≥ 1.45 ET real_odds=true
+- ✅ Playoffs/Finals = enjeu maximum, données extrêmement fiables
+- ✅ Différentiel domicile/extérieur très marqué en NBA (avantage home)
+- Note plancher : 7.0/10 atteignable avec moneyline favori clair en Finals
+
+### NHL (Hockey)
+- ✅ **Pick valide si** : ELO diff ≥ 80 ET cote ≥ 1.55 ET real_odds=true
+- ✅ Stanley Cup = enjeu absolu, données fiables
+- ⚠️ La variance est forte au hockey — préférer marchés Over/Under si dispo
+
+### Règle commune
+Si real_odds=true (vraies cotes 30+ bookmakers) ET ELO calibré (≠ 1500/1700 par défaut),
+le test du sommeil PASSE par défaut. Le marché est trop large pour cacher quelque chose.
+
+---
+
 ## 🔌 SOURCES DE DONNÉES BRANCHÉES
 
 - **RapidAPI free-football** : fixtures foot internationales et ARJEL

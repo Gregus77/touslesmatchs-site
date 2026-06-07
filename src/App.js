@@ -391,6 +391,23 @@ export default function App() {
             : (!isNoPick && pickDuJour[6]) ? sportEmoji(pickDuJour[6])+pickDuJour[1] : pickDuJour[1]
         ),
 
+        /* Message d'honnêteté quand NOPICK : la discipline > le contenu */
+        isNoPick && React.createElement("div", {style:{
+          background:"rgba(212,175,55,0.04)",
+          border:"1px solid rgba(212,175,55,0.15)",
+          borderRadius:"8px",
+          padding:"14px 16px",
+          marginBottom:"14px",
+          fontSize:"13px",
+          color:"#aaa",
+          lineHeight:"1.6"
+        }},
+          React.createElement("strong", {style:{color:"#d4af37"}}, "⚖️ Discipline avant volume. "),
+          "Hermès attend la reprise des compétitions sérieuses. Tant qu'aucun match ne passe notre checklist 6 points, ",
+          React.createElement("em", null, "aucun pick aveugle ne sera publié"),
+          ". Mieux vaut zéro pari qu'un pari faible."
+        ),
+
         /* Marché + Cote */
         isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
           React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"5px 14px",color:"#d4af37",fontSize:"12px",fontWeight:"600",letterSpacing:"0.04em"}}, pickDuJour[2]),
