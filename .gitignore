@@ -21,3 +21,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Runtime caches
+scripts/clubelo_cache.json
+scripts/today_pick.json
