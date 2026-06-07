@@ -178,12 +178,22 @@ function gitPush(message) {
 
 // ─── Rebuild le site ──────────────────────────────────────────────────────────
 function rebuildSite() {
+  const root = path.join(__dirname, "..");
   try {
     console.log("   🔨 Rebuild en cours...");
-    execSync(`cd ${path.join(__dirname, "..")} && npm run build && cp -r build/. /var/www/touslesmatchs/`, { stdio: "pipe", timeout: 120000 });
-    console.log("   ✅ Site mis à jour sur /var/www/touslesmatchs/");
+    execSync(`cd ${root} && npm run build && cp -r build/. /var/www/touslesmatchs/`, { stdio: "pipe", timeout: 120000 });
+    console.log("   ✅ Fichiers copiés dans /var/www/touslesmatchs/");
   } catch (e) {
     console.error("   ⚠️  Rebuild échoué :", e.message.slice(0, 200));
+    return;
+  }
+  // Redémarrer le container site pour qu'il serve les nouveaux fichiers
+  try {
+    execSync(`cd ${root} && docker compose restart site`, { stdio: "pipe", timeout: 30000 });
+    console.log("   🔄 Container site redémarré");
+  } catch (e) {
+    // Pas de container site = Caddy sert directement depuis /var/www/ — ok
+    console.log("   ℹ️  Pas de container site (Caddy direct)");
   }
 }
 
