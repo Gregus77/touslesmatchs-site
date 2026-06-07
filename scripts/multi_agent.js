@@ -6,6 +6,8 @@ const path = require("path");
 const { buildInlineKeyboard } = require("./bookmakers.config");
 const { getElo: getClubElo } = require("./clubelo");
 const { getMatchOdds, getEventsForSport, hasKey: hasOddsKey } = require("./oddsapi");
+const { getMlbElo } = require("./mlb_strength");
+const { getLeagueInfo, isSeriousCompetition } = require("./football_leagues");
 
 // Mapping nos compétitions → sport keys The Odds API
 const ODDS_SPORTS = [
@@ -239,7 +241,8 @@ async function scanMatchesRealAPI(targetISO) {
   let matches = [];
   let arjelCount = 0, premiumCount = 0;
   // Ligues majeures internationales (toujours considérées même hors ARJEL pour premium)
-  const LIGUES_INTERNATIONALES = new Set([914609, 344, 928683, ...LIGUES_ARJEL]);
+  // Inclut Nations League (9469), World Cup Qualifying (928683), Champions League (42), etc.
+  const LIGUES_INTERNATIONALES = new Set([9469, 914609, 344, 928683, 42, 73, 100, 4, 77, ...LIGUES_ARJEL]);
   for (const fx of fixtures) {
     if (fx.status?.finished || fx.status?.cancelled || !fx.home?.name || !fx.away?.name) continue;
     // On garde tous les matchs des ligues internationales/majeures
@@ -248,6 +251,12 @@ async function scanMatchesRealAPI(targetISO) {
     if (arjel) arjelCount++; else premiumCount++;
     let heure = "20h00";
     if (fx.status?.utcTime) { const d = new Date(fx.status.utcTime); if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h"); }
+    // Vérification du sérieux de la compétition (rejet auto des amicaux)
+    const leagueInfo = getLeagueInfo(fx.leagueId);
+    if (!leagueInfo.serious) {
+      console.log(`   ⛔ Rejeté (${leagueInfo.name}) : ${fx.home.name} vs ${fx.away.name}`);
+      continue;
+    }
     // ELO réel via ClubElo API + cotes réelles via The Odds API
     const [home_elo, away_elo, realOdds] = await Promise.all([
       getClubElo(fx.home.name),
@@ -256,7 +265,20 @@ async function scanMatchesRealAPI(targetISO) {
     ]);
     const cote_domicile = realOdds?.cote_domicile ?? 1.6;
     const cote_exterieur = realOdds?.cote_exterieur ?? 1.8;
-    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo, away_elo, cote_domicile, cote_exterieur, arjel, real_odds: !!realOdds });
+    matches.push({
+      sport: "Foot",
+      home: fx.home.name,
+      away: fx.away.name,
+      heure,
+      home_elo,
+      away_elo,
+      cote_domicile,
+      cote_exterieur,
+      arjel,
+      real_odds: !!realOdds,
+      league: leagueInfo.name,
+      league_type: leagueInfo.type || "club",
+    });
   }
   console.log(`✅ ${arjelCount} matchs ARJEL (gratuit) + ${premiumCount} matchs HORS-ARJEL (premium)`);
   return matches;
@@ -273,18 +295,22 @@ async function scanOddsApiSports(targetISO) {
       if (!odds) continue;
       const isHockey = sportKey.includes("hockey");
       const heure = formatHeure(ev.commence_time);
+      const isBaseball = sportKey.includes("baseball");
+      const home_elo = isBaseball ? getMlbElo(ev.home_team) : 1700;
+      const away_elo = isBaseball ? getMlbElo(ev.away_team) : 1700;
       matches.push({
         sport: isHockey ? "Hockey" : "Baseball",
         home: ev.home_team,
         away: ev.away_team,
         heure,
-        home_elo: 1700,
-        away_elo: 1700,
+        home_elo,
+        away_elo,
         cote_domicile: odds.cote_domicile,
         cote_exterieur: odds.cote_exterieur,
         arjel: false,
         real_odds: true,
-        league: sportKey,
+        league: isHockey ? "NHL" : "MLB",
+        league_type: isHockey ? "nhl" : "mlb",
       });
     }
   }
