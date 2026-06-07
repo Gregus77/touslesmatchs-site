@@ -4,6 +4,7 @@ const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 const { buildInlineKeyboard } = require("./bookmakers.config");
+const { getElo: getClubElo } = require("./clubelo");
 
 const GROQ_KEY = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
@@ -220,7 +221,12 @@ async function scanMatchesRealAPI(targetISO) {
     if (arjel) arjelCount++; else premiumCount++;
     let heure = "20h00";
     if (fx.status?.utcTime) { const d = new Date(fx.status.utcTime); if (!isNaN(d)) heure = d.toLocaleTimeString("fr-FR", {hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"}).replace(":","h"); }
-    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo: 1700, away_elo: 1700, cote_domicile: 1.6, cote_exterieur: 1.8, arjel });
+    // ELO réel via ClubElo API (cache 24h, fallback 1500 si inconnu)
+    const [home_elo, away_elo] = await Promise.all([
+      getClubElo(fx.home.name),
+      getClubElo(fx.away.name)
+    ]);
+    matches.push({ sport: "Foot", home: fx.home.name, away: fx.away.name, heure, home_elo, away_elo, cote_domicile: 1.6, cote_exterieur: 1.8, arjel });
   }
   console.log(`✅ ${arjelCount} matchs ARJEL (gratuit) + ${premiumCount} matchs HORS-ARJEL (premium)`);
   return matches;
