@@ -7,8 +7,13 @@
 >
 > ## ⚡ AU DÉBUT DE CHAQUE SESSION CLAUDE CODE (Mobile OU Desktop)
 >
-> **Étape obligatoire** : `git pull origin main`
-> Cela synchronise le code + ce CLAUDE.md avec la dernière version.
+> **Étapes obligatoires** :
+> 1. `git pull origin main` — synchronise code + CLAUDE.md
+> 2. `git log --oneline -5` — vérifie les 5 derniers commits pour voir si une autre session a avancé
+> 3. Lis ce fichier en entier pour connaître l'état exact
+>
+> **⚠️ IMPORTANT MULTI-APPAREILS** : Le projet avance depuis téléphone ET ordinateur.
+> Avant tout développement, vérifier `git log` pour ne pas refaire ce qui est déjà fait.
 >
 > Ensuite **lis ce fichier en entier** pour connaître :
 > - Où en est le projet
@@ -35,13 +40,24 @@
 
 ## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
 
-**06/06/2026 — Status**:
-- ✅ Fix responsive mobile (commit b5b1377)
-- ✅ Bot Telegram refait — navigation + bouton 🔙 retour
-- ✅ RÈGLE ANTI-AMICAUX ajoutée dans multi_agent.js (voir ci-dessous)
-- 🚧 Déployer sur VPS : `git pull origin main && docker compose restart bot api`
-- 🚧 Implémenter les 7 tâches UX/pricing (voir prompt d'audit)
-- 🚧 Stripe (clés manquantes)
+**08/06/2026 — Status**:
+- ✅ Analyse Live V2 — matchs cliquables, fallback multi-IA sans clés
+- ✅ Picks HORS-ARJEL visibles avec badge orange + CTA Pinnacle
+- ✅ Abonnements — bouton Premium 9.90€ en or (distinct du grisé)
+- ✅ Drapeaux desktop — emoji + texte + bordure visible
+- ✅ Bandeau dernier résultat quand aucun pick actif
+- ✅ Étoiles ★★★★★ à la place des trophées
+- ✅ Workflows CI/CD deploy-site + deploy-api créés
+- ✅ **ANIMATIONS DYNAMIQUES** (commit cdb5f9d) :
+  - Countdown temps réel H:MIN:SEC jusqu'à 11h59
+  - Compteurs animés (éasing cubique) pour les stats
+  - Ticker horizontal des derniers résultats
+  - Pick card pulsation dorée quand actif
+  - Feu animé sur série de victoires
+  - Dots IA Concile respirent en décalé
+- 🚧 Stripe (clés manquantes — PRIORITÉ NEXT)
+- 🚧 Capture email (lead magnet)
+- 🚧 Canal Telegram premium privé
 
 ---
 
