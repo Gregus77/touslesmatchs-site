@@ -141,6 +141,8 @@ export default function App() {
   var emailDone = emailDoneState[0]; var setEmailDone = emailDoneState[1];
   var emailLoadingState = React.useState(false);
   var emailLoading = emailLoadingState[0]; var setEmailLoading = emailLoadingState[1];
+  var langMenuState = React.useState(false);
+  var langMenuOpen = langMenuState[0]; var setLangMenuOpen = langMenuState[1];
 
   function changeLang(newLang) {
     setLang(newLang);
@@ -349,19 +351,41 @@ export default function App() {
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
-      React.createElement("div",{className:"lang-flags",style:{display:"flex",gap:"4px",marginLeft:"4px",alignItems:"center"}},
-        [["fr","🇫🇷","FR"],["en","🇬🇧","EN"],["es","🇪🇸","ES"],["pt","🇵🇹","PT"],["ru","🇷🇺","RU"]].map(function(x){
-          var active = lang===x[0];
-          return React.createElement("button",{key:x[0],title:x[0],onClick:function(){changeLang(x[0]);},style:{
-            background: active ? "rgba(0,255,136,0.18)" : "rgba(255,255,255,0.07)",
-            border:"1px solid "+(active?"#00FF88":"rgba(255,255,255,0.22)"),
-            borderRadius:"5px",padding:"4px 8px",cursor:"pointer",
-            display:"flex",alignItems:"center",gap:"4px"
-          }},
-            React.createElement("span",{style:{fontSize:"15px",lineHeight:"1"}},x[1]),
-            React.createElement("span",{style:{fontSize:"10px",fontWeight:"600",color:active?"#00FF88":"#999",fontFamily:"'Jost',sans-serif",letterSpacing:"0.05em"}},x[2])
-          );
-        })
+      React.createElement("div",{style:{position:"relative",marginLeft:"4px"}},
+        React.createElement("button",{
+          onClick:function(){setLangMenuOpen(!langMenuOpen);},
+          style:{
+            background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.15)",
+            borderRadius:"8px",padding:"6px 10px",cursor:"pointer",
+            display:"flex",alignItems:"center",gap:"5px",color:"#94A3B8"
+          }
+        },
+          React.createElement("span",{style:{fontSize:"16px",lineHeight:"1"}},"🌍"),
+          React.createElement("span",{style:{fontSize:"10px",fontWeight:"600",color:"#94A3B8",fontFamily:"'Jost',sans-serif"}},lang.toUpperCase()),
+          React.createElement("span",{style:{fontSize:"9px",color:"#64748B"}},langMenuOpen?"▲":"▼")
+        ),
+        langMenuOpen && React.createElement("div",{style:{
+          position:"absolute",top:"calc(100% + 6px)",right:0,
+          background:"#0B1117",border:"1px solid rgba(0,255,136,0.15)",
+          borderRadius:"10px",padding:"6px",zIndex:200,
+          display:"flex",flexDirection:"column",gap:"2px",minWidth:"148px",
+          boxShadow:"0 8px 28px rgba(0,0,0,0.5)"
+        }},
+          [["fr","🇫🇷","Français"],["en","🇬🇧","English"],["es","🇪🇸","Español"],["pt","🇵🇹","Português"],["ru","🇷🇺","Русский"]].map(function(x){
+            var active = lang===x[0];
+            return React.createElement("button",{key:x[0],onClick:function(){changeLang(x[0]);setLangMenuOpen(false);},style:{
+              background:active?"rgba(0,255,136,0.10)":"transparent",
+              border:"1px solid "+(active?"rgba(0,255,136,0.2)":"transparent"),
+              borderRadius:"6px",padding:"8px 10px",cursor:"pointer",
+              display:"flex",alignItems:"center",gap:"10px",width:"100%",
+              color:active?"#00FF88":"#94A3B8",fontFamily:"'Jost',sans-serif",
+              fontSize:"13px",fontWeight:active?"600":"400",textAlign:"left"
+            }},
+              React.createElement("span",{style:{fontSize:"18px"}},x[1]),
+              x[2]
+            );
+          })
+        )
       )
     )
   );
@@ -527,6 +551,21 @@ export default function App() {
             React.createElement("div", {className:"countdown-lbl"}, "SEC")
           )
         )
+      ),
+      /* ── CTA 3 plans — visible immédiatement ── */
+      React.createElement("div",{style:{display:"flex",gap:"10px",justifyContent:"center",flexWrap:"wrap",marginTop:"28px",padding:"0 10px"}},
+        React.createElement("button",{
+          onClick:function(){window.open(TELEGRAM_LINK,"_blank");if(window.gtag)window.gtag("event","click_cta_free");},
+          style:{background:"transparent",border:"1px solid rgba(255,255,255,0.12)",borderRadius:"10px",padding:"11px 18px",color:"#94A3B8",fontSize:"13px",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:"500",whiteSpace:"nowrap"}
+        },"⚡ Gratuit — 0€/mois"),
+        React.createElement("button",{
+          onClick:function(){setPage("subscription");if(window.gtag)window.gtag("event","click_cta_premium");},
+          style:{background:"rgba(0,255,136,0.07)",border:"1px solid rgba(0,255,136,0.35)",borderRadius:"10px",padding:"11px 18px",color:"#00FF88",fontSize:"13px",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:"600",whiteSpace:"nowrap"}
+        },"⭐ Premium — 9,90€/mois"),
+        React.createElement("button",{
+          onClick:function(){setPage("subscription");if(window.gtag)window.gtag("event","click_cta_premium_plus");},
+          style:{background:"linear-gradient(135deg,#00FF88,#00D4FF)",border:"none",borderRadius:"10px",padding:"11px 18px",color:"#05070A",fontSize:"13px",cursor:"pointer",fontFamily:"'Jost',sans-serif",fontWeight:"700",whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(0,255,136,0.2)"}
+        },"💎 Premium Plus — 19,90€/mois")
       )
     ),
     /* ── Résultats récents — ticker horizontal ── */

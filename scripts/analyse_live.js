@@ -7,7 +7,10 @@
 
 const https  = require("https");
 const http   = require("http");
+const crypto = require("crypto");
 const { handleLogin, handleRegister, handleStripeCheckout } = require("./api_auth");
+const { verifyStripeSignature, handleStripeEvent } = require("./stripe_webhook");
+const store  = require("./subscriptions_store");
 
 const GROQ_KEY      = process.env.GROQ_API_KEY || "";
 const FOOTBALL_KEY  = process.env.FOOTBALL_DATA_KEY || "";
@@ -161,6 +164,51 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200);
         res.end(JSON.stringify({ ok: true, home, away, ...analyse }));
       } catch(e) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      }
+    });
+    return;
+  }
+
+  // ── POST /stripe/webhook — Stripe lifecycle events ──────
+  if (req.method === "POST" && url.pathname === "/stripe/webhook") {
+    const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+    let rawBody = Buffer.alloc(0);
+    req.on("data", chunk => { rawBody = Buffer.concat([rawBody, chunk]); });
+    req.on("end", async () => {
+      try {
+        const sigHeader = req.headers["stripe-signature"] || "";
+        const event = verifyStripeSignature(rawBody, sigHeader, WEBHOOK_SECRET);
+        await handleStripeEvent(event);
+        res.writeHead(200);
+        res.end(JSON.stringify({ received: true }));
+      } catch (err) {
+        console.error("[WEBHOOK] Erreur:", err.message);
+        res.writeHead(400);
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // ── POST /subscribe — Capture email ──────────────────────
+  if (req.method === "POST" && url.pathname === "/subscribe") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", () => {
+      try {
+        const { email } = JSON.parse(body);
+        if (!email || !email.includes("@")) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ ok: false, error: "Email invalide" }));
+          return;
+        }
+        const isNew = store.addEmail(email.toLowerCase().trim());
+        console.log(`[SUBSCRIBE] ${email} — ${isNew ? "nouveau" : "déjà inscrit"}`);
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, new: isNew }));
+      } catch (e) {
         res.writeHead(400);
         res.end(JSON.stringify({ ok: false, error: e.message }));
       }

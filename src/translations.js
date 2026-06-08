@@ -1,6 +1,6 @@
 const translations = {
   fr: {
-    nav_choix: "Choix",
+    nav_choix: "Accueil",
     nav_preuves: "Preuves",
     nav_bookmakers: "Les bookmakers",
     nav_analyse: "🔮 Analyse Live",
