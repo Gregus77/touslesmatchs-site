@@ -130,6 +130,18 @@ export default function App() {
     gtag("config", "G-ME2T7G7PSK");
   }, []);
 
+  // ═══ TRI PAR DATE DÉCROISSANTE (plus récent en premier) ═══
+  function parseDateFR(d) {
+    var parts = d.split(" au ");
+    var dateStr = parts[parts.length - 1].trim();
+    var dd_mm = dateStr.split("/");
+    if (dd_mm.length < 2) return new Date(0);
+    return new Date(2026, parseInt(dd_mm[1]) - 1, parseInt(dd_mm[0]));
+  }
+  picks = picks.slice().sort(function(a, b) {
+    return parseDateFR(b[0]) - parseDateFR(a[0]);
+  });
+
   // ═══ DÉDUPLICATION : 1 seul pick par date ═══
   var seenDates = {};
   picks = picks.filter(function(p){
@@ -158,11 +170,17 @@ export default function App() {
   });
   var roiPct = Math.round((gainsCumules / bankrollDepart) * 100);
 
-  // ═══ SÉRIE DE VICTOIRES EN COURS ═══
+  // ═══ SÉRIE DE VICTOIRES EN COURS + MEILLEURE SÉRIE HISTORIQUE ═══
   var serieEnCours = 0;
   for (var i = 0; i < picks.length; i++) {
     if (picks[i][5] === "GAGNE") serieEnCours++;
     else if (picks[i][5] === "PERDU") break;
+  }
+  // Meilleure série : parcourir dans l'ordre chronologique (du plus ancien au plus récent)
+  var meilleuresSerie = 0, tempSerie = 0;
+  for (var j = picks.length - 1; j >= 0; j--) {
+    if (picks[j][5] === "GAGNE") { tempSerie++; if (tempSerie > meilleuresSerie) meilleuresSerie = tempSerie; }
+    else if (picks[j][5] === "PERDU") { tempSerie = 0; }
   }
 
   // Trouver le pick du JOUR en priorité (date d'aujourd'hui), puis le prochain à venir
@@ -347,7 +365,7 @@ export default function App() {
         t("seuil_minimum"), React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
       ),
       React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
-        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:losses+" "+t("perdu")+" sur "+total},{label:t("serie"),value:serieEnCours+" "+t("victoires"),sub:"consécutives 🔥"}].map(function(s,i){
+        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:losses+" "+t("perdu")+" sur "+total},{label:t("serie"),value:serieEnCours+" "+t("victoires"),sub:"🏆 Meilleure : "+meilleuresSerie+" victoires"}].map(function(s,i){
           return React.createElement("div", {key:i, style:{padding:"18px 8px",borderRight:(i%2===0)?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none",textAlign:"center"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
             React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),

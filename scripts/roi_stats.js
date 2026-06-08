@@ -49,6 +49,13 @@ function computeStats() {
     else break;
   }
 
+  // Meilleure série de victoires historique (ordre chronologique = reverse du tableau)
+  let bestStreak = 0, tempStreak = 0;
+  for (const p of [...resolved].reverse()) {
+    if (p.status === "GAGNE") { tempStreak++; if (tempStreak > bestStreak) bestStreak = tempStreak; }
+    else if (p.status === "PERDU") { tempStreak = 0; }
+  }
+
   // Par sport
   const bySport = {};
   for (const p of resolved) {
@@ -78,6 +85,7 @@ function computeStats() {
     currentStreak: streak > 0
       ? `${streak} ${streakType === "GAGNE" ? "victoire(s)" : "défaite(s)"} consécutive(s)`
       : "N/A",
+    bestStreak,
     bySport,
     recentPicks: resolved.slice(0, 10).map(p => ({
       date: p.date, match: p.match, bet: p.bet, odds: p.odds,
@@ -126,6 +134,7 @@ if (require.main === module) {
   console.log(`   ROI           : ${s.roi}`);
   console.log(`   Profit        : ${s.profit}`);
   console.log(`   Série         : ${s.currentStreak}`);
+  console.log(`   Meilleure     : ${s.bestStreak} victoires consécutives`);
   if (Object.keys(s.bySport).length) {
     console.log("   Par sport :");
     for (const [sport, b] of Object.entries(s.bySport)) {
