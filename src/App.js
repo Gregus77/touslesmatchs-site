@@ -164,6 +164,46 @@ export default function App() {
     gtag("config", "G-ME2T7G7PSK");
   }, []);
 
+  // ═══ COUNTDOWN TO NEXT PICK (11h59) ═══
+  var cdState = React.useState(["--","--","--"]);
+  var cdArr = cdState[0]; var setCdArr = cdState[1];
+  React.useEffect(function(){
+    function tick(){
+      var now = new Date();
+      var t = new Date(); t.setHours(11,59,0,0);
+      if(now >= t) t.setDate(t.getDate()+1);
+      var d = t - now;
+      var h = Math.floor(d/3600000);
+      var m = Math.floor((d%3600000)/60000);
+      var s = Math.floor((d%60000)/1000);
+      setCdArr([String(h).padStart(2,'0'), String(m).padStart(2,'0'), String(s).padStart(2,'0')]);
+    }
+    tick();
+    var id = setInterval(tick, 1000);
+    return function(){ clearInterval(id); };
+  }, []);
+
+  // ═══ ANIMATED STATS COUNTERS ═══
+  var animState = React.useState({wr:0, roi:0, serie:0, rec:0, done:false});
+  var anim = animState[0]; var setAnim = animState[1];
+  React.useEffect(function(){
+    var t0 = Date.now(), dur = 1600;
+    var targets = {wr: winrate, roi: Math.abs(roiPct), serie: serieEnCours, rec: meilleureSerieHist};
+    function step(){
+      var t = Math.min(1, (Date.now()-t0)/dur);
+      var e = 1 - Math.pow(1-t, 3);
+      setAnim({
+        wr:    Math.round(targets.wr*e),
+        roi:   Math.round(targets.roi*e),
+        serie: Math.round(targets.serie*e),
+        rec:   Math.round(targets.rec*e),
+        done:  t >= 1
+      });
+      if(t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }, []);
+
   // ═══ DÉDUPLICATION : 1 seul pick par date ═══
   var seenDates = {};
   picks = picks.filter(function(p){
@@ -413,13 +453,73 @@ export default function App() {
         t("seuil_minimum"), React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
       ),
       React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"10px",overflow:"hidden"}},
-        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("serie"),value:serieEnCours+" 🔥",sub:"victoires consécutives"},{label:"RECORD",value:meilleureSerieHist+" 🏆",sub:"meilleure série"}].map(function(s,i){
+        [
+          {label:t("taux_reussite"), value: anim.wr+"%", sub:total+" paris analysés"},
+          {label:t("bankroll"),      value: (roiPct>=0?"+":"")+anim.roi+"%", sub:"depuis le début"},
+          {label:t("serie"),         value: null, rawSerie:true, sub:"victoires consécutives"},
+          {label:"RECORD",           value: anim.rec, sub:"meilleure série", icon:"🏆"}
+        ].map(function(s,i){
+          var isFlash = anim.done;
           return React.createElement("div", {key:i, style:{padding:"22px 12px",borderRight:(i%2===0)?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none",textAlign:"center"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"6px"}}, s.label),
-            React.createElement("div", {style:{fontSize:"24px",fontWeight:"bold",color:"#d4af37"}}, s.value),
+            s.rawSerie
+              ? React.createElement("div", {style:{fontSize:"24px",fontWeight:"bold",color:"#d4af37",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px"}},
+                  React.createElement("span", {className:isFlash?"shimmer-text":""}, anim.serie),
+                  serieEnCours >= 3
+                    ? React.createElement("span", {className:"streak-fire-anim",style:{fontSize:"20px"}}, "🔥")
+                    : React.createElement("span", null, " 🔥")
+                )
+              : React.createElement("div", {style:{fontSize:"24px",fontWeight:"bold",color:"#d4af37",display:"flex",alignItems:"center",justifyContent:"center",gap:"4px"}},
+                  React.createElement("span", {className:isFlash?"shimmer-text":""}, s.value),
+                  s.icon ? React.createElement("span", {style:{fontSize:"18px"}}, " "+s.icon) : null
+                ),
             React.createElement("div", {style:{fontSize:"11px",color:"#444",marginTop:"5px"}}, s.sub)
           );
         })
+      ),
+      /* ── Countdown to next pick ── */
+      !isEnAttente && React.createElement("div", {style:{textAlign:"center",marginTop:"20px"}},
+        React.createElement("div", {className:"countdown-box",style:{display:"inline-flex",alignItems:"center",gap:"6px"}},
+          React.createElement("span", {style:{fontSize:"11px",letterSpacing:"3px",color:"#555",fontWeight:"600",marginRight:"6px",whiteSpace:"nowrap"}}, "PROCHAIN PICK"),
+          React.createElement("div", {className:"countdown-unit"},
+            React.createElement("div", {className:"countdown-num"}, cdArr[0]),
+            React.createElement("div", {className:"countdown-lbl"}, "H")
+          ),
+          React.createElement("span", {className:"countdown-colon"}, ":"),
+          React.createElement("div", {className:"countdown-unit"},
+            React.createElement("div", {className:"countdown-num"}, cdArr[1]),
+            React.createElement("div", {className:"countdown-lbl"}, "MIN")
+          ),
+          React.createElement("span", {className:"countdown-colon"}, ":"),
+          React.createElement("div", {className:"countdown-unit"},
+            React.createElement("div", {className:"countdown-num"}, cdArr[2]),
+            React.createElement("div", {className:"countdown-lbl"}, "SEC")
+          )
+        )
+      )
+    ),
+    /* ── Résultats récents — ticker horizontal ── */
+    React.createElement("div", {style:{
+      borderTop:"1px solid rgba(255,255,255,0.04)",
+      borderBottom:"1px solid rgba(255,255,255,0.04)",
+      padding:"10px 0", marginBottom:"0",
+      background:"rgba(255,255,255,0.012)"
+    }},
+      React.createElement("div", {className:"ticker-wrap"},
+        React.createElement("div", {className:"ticker-track"},
+          picks.filter(function(p){return p[5]==="GAGNE"||p[5]==="PERDU";}).slice(0,8).concat(
+            picks.filter(function(p){return p[5]==="GAGNE"||p[5]==="PERDU";}).slice(0,8)
+          ).map(function(p,i){
+            return React.createElement("div", {key:i, className:"ticker-item"},
+              React.createElement("span", {style:{fontSize:"13px"}},(p[6]?sportEmoji(p[6]):"⚽")),
+              React.createElement("span", {style:{color:"rgba(255,255,255,0.55)"}},[p[1].split(" vs ")[0]," vs ",p[1].split(" vs ")[1]||p[1]].join("")),
+              React.createElement("span", {style:{fontWeight:"700",color:"#d4af37"}}, p[3]),
+              React.createElement("span", {className: p[5]==="GAGNE"?"ticker-win":"ticker-loss", style:{fontWeight:"700",fontSize:"11px",letterSpacing:"1px"}},
+                p[5]==="GAGNE" ? "✓ GAGNÉ" : "✗ PERDU"
+              )
+            );
+          })
+        )
       )
     ),
     // ════ PICK DU JOUR — au-dessus de la ligne de flottaison ════
@@ -508,11 +608,14 @@ export default function App() {
         )
 
       /* ── CAS 2 : Pick en attente → afficher normalement ── */
-      ) : React.createElement("div", {style:{
-        background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(212,175,55,0.06)",
-        border: "1px solid " + (isNoPick ? "rgba(100,100,100,0.25)" : pickBorderColor),
-        borderRadius:"14px", padding:"28px 26px", position:"relative", overflow:"hidden"
-      }},
+      ) : React.createElement("div", {
+        className: isEnAttente ? "pick-active" : "",
+        style:{
+          background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(212,175,55,0.06)",
+          border: "1px solid " + (isNoPick ? "rgba(100,100,100,0.25)" : pickBorderColor),
+          borderRadius:"14px", padding:"28px 26px", position:"relative", overflow:"hidden"
+        }
+      },
         /* Bandeau coloré en haut de la carte selon le niveau */
         !isNoPick && React.createElement("div", {style:{
           position:"absolute", top:0, left:0, right:0, height:"3px",
@@ -590,7 +693,11 @@ export default function App() {
                 border:"1px solid rgba(255,255,255,0.08)",
                 borderRadius:"5px", padding:"5px 10px"
               }},
-                React.createElement("div", {style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.color,flexShrink:0}}),
+                React.createElement("div", {
+                  className:"dot-live",
+                  style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.color,flexShrink:0,
+                    animationDelay:(i*0.33)+"s"}
+                }),
                 React.createElement("span", {style:{fontSize:"13px",color:"#ccc",fontWeight:"600"}}, ia.nom),
                 React.createElement("span", {style:{fontSize:"11px",color:"#555",marginLeft:"3px"}}, ia.role),
                 React.createElement("span", {style:{fontSize:"13px",color:"#22c55e",marginLeft:"5px",fontWeight:"700"}}, "GO")
