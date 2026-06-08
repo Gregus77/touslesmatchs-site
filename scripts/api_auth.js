@@ -1,65 +1,38 @@
-// ═══════════════════════════════════════════════════════
-// API AUTH ENDPOINTS — /api/auth/login, /api/auth/register
-// ═══════════════════════════════════════════════════════
-
-const UsersManager = require("./users_manager");
-const users = new UsersManager();
+// api_auth.js — Auth endpoints + Stripe Checkout
+// Login/Register : stubs Phase 4 (JWT à implémenter)
+// handleStripeCheckout : fonctionnel dès maintenant
 
 const https = require("https");
 
-// POST /api/auth/login
-async function handleLogin(req, res, body) {
-  try {
-    const { email, password } = JSON.parse(body);
-    const result = users.authenticateUser(email, password);
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
 
-    if (result.ok) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, user: result.user }));
-    } else {
-      res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: false, error: result.error }));
-    }
-  } catch (e) {
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: false, error: e.message }));
-  }
+function cors(res) {
+  res.setHeader("Content-Type", "application/json");
 }
 
-// POST /api/auth/register
-async function handleRegister(req, res, body) {
-  try {
-    const { email, password } = JSON.parse(body);
-    const result = users.createUser(email, password, "free");
-
-    if (result.ok) {
-      res.writeHead(201, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: true, user: result.user }));
-    } else {
-      res.writeHead(409, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: false, error: result.error }));
-    }
-  } catch (e) {
-    res.writeHead(400, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ok: false, error: e.message }));
-  }
+function handleLogin(req, res, body) {
+  cors(res);
+  res.writeHead(503);
+  res.end(JSON.stringify({ ok: false, error: "Authentification bientôt disponible" }));
 }
 
-// POST /api/stripe/create-checkout
-async function handleStripeCheckout(req, res, body) {
-  try {
-    const { price_id, user_id } = JSON.parse(body);
-    const user = users.getUserById(user_id);
+function handleRegister(req, res, body) {
+  cors(res);
+  res.writeHead(503);
+  res.end(JSON.stringify({ ok: false, error: "Inscription bientôt disponible" }));
+}
 
-    if (!user) {
-      res.writeHead(404, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ ok: false, error: "User not found" }));
+function handleStripeCheckout(req, res, body) {
+  cors(res);
+  try {
+    const { price_id } = JSON.parse(body);
+    if (!price_id) {
+      res.writeHead(400);
+      res.end(JSON.stringify({ ok: false, error: "price_id requis" }));
       return;
     }
-
-    const STRIPE_KEY = process.env.STRIPE_SECRET_KEY;
-    if (!STRIPE_KEY || !price_id) {
-      res.writeHead(500, { "Content-Type": "application/json" });
+    if (!STRIPE_KEY) {
+      res.writeHead(500);
       res.end(JSON.stringify({ ok: false, error: "Stripe non configuré" }));
       return;
     }
@@ -69,11 +42,9 @@ async function handleStripeCheckout(req, res, body) {
       "mode": "subscription",
       "line_items[0][price]": price_id,
       "line_items[0][quantity]": "1",
-      "success_url": "https://www.touslesmatchs.com?premium=success&user_id=" + user_id,
+      "success_url": "https://www.touslesmatchs.com?premium=success",
       "cancel_url": "https://www.touslesmatchs.com?premium=cancel",
-      "allow_promotion_codes": "true",
-      "client_reference_id": user_id,
-      "customer_email": user.email,
+      "allow_promotion_codes": "true"
     }).toString();
 
     const stripeReq = https.request({
@@ -81,45 +52,39 @@ async function handleStripeCheckout(req, res, body) {
       path: "/v1/checkout/sessions",
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${STRIPE_KEY}`,
+        "Authorization": "Bearer " + STRIPE_KEY,
         "Content-Type": "application/x-www-form-urlencoded",
-        "Content-Length": Buffer.byteLength(stripeBody),
-      },
+        "Content-Length": Buffer.byteLength(stripeBody)
+      }
     }, stripeRes => {
-      let d = "";
-      stripeRes.on("data", c => d += c);
+      let d = ""; stripeRes.on("data", c => d += c);
       stripeRes.on("end", () => {
         try {
           const session = JSON.parse(d);
           if (session.url) {
-            res.writeHead(200, { "Content-Type": "application/json" });
+            res.writeHead(200);
             res.end(JSON.stringify({ ok: true, url: session.url }));
           } else {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ ok: false, error: session.error?.message || "Erreur Stripe" }));
+            res.writeHead(400);
+            res.end(JSON.stringify({ ok: false, error: session.error && session.error.message || "Erreur Stripe" }));
           }
         } catch (e) {
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: false, error: "Erreur parsing Stripe" }));
+          res.writeHead(500);
+          res.end(JSON.stringify({ ok: false, error: "Erreur parsing réponse Stripe" }));
         }
       });
     });
 
     stripeReq.on("error", () => {
-      res.writeHead(500, { "Content-Type": "application/json" });
+      res.writeHead(500);
       res.end(JSON.stringify({ ok: false, error: "Connexion Stripe échouée" }));
     });
-
     stripeReq.write(stripeBody);
     stripeReq.end();
   } catch (e) {
-    res.writeHead(400, { "Content-Type": "application/json" });
+    res.writeHead(400);
     res.end(JSON.stringify({ ok: false, error: e.message }));
   }
 }
 
-module.exports = {
-  handleLogin,
-  handleRegister,
-  handleStripeCheckout,
-};
+module.exports = { handleLogin, handleRegister, handleStripeCheckout };
