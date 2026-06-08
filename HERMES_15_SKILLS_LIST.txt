@@ -1,0 +1,195 @@
+================================================================================
+  HERMÈS SKILLS LAB — 15 SKILLS OPTIMALES POUR TOUSLESMATCHS
+================================================================================
+
+TIER 1: CRITIQUE (5 SKILLS) — SANS CES 5, AUCUN REVENU
+────────────────────────────────────────────────────────
+
+1️⃣  AGENTIC ORCHESTRATOR — Multi-IA Fallback
+   Status: 🟡 Partial (DeepSeek working, OpenRouter/Gemini/Mistral need config)
+   Action: Add API keys to .env VPS (2h)
+   Impact: 0 API timeouts, robustness core
+   Pattern: Fallback routing (DeepSeek → OpenRouter → Gemini → Mistral)
+
+2️⃣  RAPIDAPI DATA FETCHER — Scraping matches
+   Status: ✅ Stable
+   Action: Monitor + cache optimization (ongoing)
+   Impact: Daily match data, 100% coverage
+   Pattern: Observable data (no hallucination)
+
+3️⃣  GROQ ODDS ENRICHER — Cotes probabilistes
+   Status: ✅ Stable
+   Action: Benchmark vs Pinnacle (weekly)
+   Impact: Quality predictions, confidence scoring
+   Pattern: Observation loop (detect anomalies)
+
+4️⃣  PICK SELECTION AI — Chef (DeepSeek)
+   Status: ✅ Stable (78% winrate)
+   Action: Extend to 50+ ligues (Phase 3)
+   Impact: Main business, 1 pick/day
+   Pattern: Three-file contract (evaluator/impl/direction)
+
+5️⃣  TELEGRAM BROADCASTER — Multi-channel
+   Status: ✅ Stable (FR/EN/ES/IT/RU)
+   Action: Add Premium canal privé (post-Stripe)
+   Impact: User engagement, 100% delivery
+   Pattern: Observable notifications (audit log)
+
+────────────────────────────────────────────────────────────────────────────
+
+TIER 2: HAUTE PRIORITÉ (4 SKILLS) — PHASES 3-5 (2-4 SEMAINES)
+──────────────────────────────────────────────────────────────
+
+6️⃣  ANALYSE LIVE V2 — Probs Over/BTTS/1X2 temps-réel
+   Status: 🔄 In progress (Phase 3)
+   Action: API /analyse-live + WebSocket + UI redesign (1 week)
+   Impact: Premium feature, user engagement
+   Pattern: Plan→Execute→Observe loop (live data)
+
+7️⃣  USER ACCOUNTS MANAGER — Inscription/auth/statuts
+   Status: ⏳ Planned (Phase 4)
+   Action: Schema MongoDB + API CRUD (1 week)
+   Impact: Authentication, Free/Premium/VIP tracking
+   Pattern: Three-file contract (schema immutable)
+
+8️⃣  STRIPE PAYMENT ENGINE — Abonnement 19.90€
+   Status: ⏳ Planned (Phase 5)
+   Action: Checkout + webhook + DB integration (1 week)
+   Impact: Monetization, recurring revenue
+   Pattern: Three-file contract (transactions immutable)
+
+9️⃣  ANALYTICS & METRICS — GA4 + Custom events
+   Status: 🟡 Partial (GA4 basic, custom events missing)
+   Action: GA4 events custom + dashboard Looker Studio (1 week)
+   Impact: Measurement, user behavior insights
+   Pattern: Observable metrics (audit log immutable)
+
+🔟 QUOTA MANAGER — Limiter par tier
+   Status: ⏳ Planned (Phase 6)
+   Action: Redis counter + Express middleware (2 days)
+   Impact: Freemium model enforcement, revenue protection
+   Pattern: Observable counter (Redis immutable)
+
+────────────────────────────────────────────────────────────────────────────
+
+TIER 3: FUTUR (6 SKILLS) — CROISSANCE + STABILITÉ (1-3 MOIS)
+──────────────────────────────────────────────────────────────
+
+1️⃣1️⃣ AUTORESEARCH LEARNING — Agent apprentissage
+   Status: 🟡 Partial (hermes_learn.js exists)
+   Action: Daily cronjob + win/loss analysis (ongoing)
+   Impact: Winrate improve +1-2%/month, new profitable leagues
+   Pattern: AutoResearch (experiment→evaluate→iterate)
+
+1️⃣2️⃣ SEO & CONTENT OPTIMIZER — Articles blog
+   Status: ❌ Not started
+   Action: Blog starters (top 10 ligues) + keyword research (2 weeks)
+   Impact: Trafic organique +20%/quarter, top 3 Google
+   Pattern: Observable SEO metrics (PageSpeed, Core Web Vitals)
+
+1️⃣3️⃣ TIKTOK AUTO-POSTER — Vidéos buts 5-8s daily
+   Status: ❌ Not started
+   Action: Video API + scheduler + automation (3 weeks)
+   Impact: Viral growth, 100K followers target, 2% CTR to site
+   Pattern: Observable social metrics (views, shares, follows)
+
+1️⃣4️⃣ MONITORING & ALERTING — Supervision 24/7
+   Status: 🟡 Partial (basic health checks)
+   Action: Anomaly detection + alerting rules + runbooks (ongoing)
+   Impact: Reliability, <10min response time
+   Pattern: Observable alerts (health check logs)
+
+1️⃣5️⃣ PARALLEL EXECUTOR (MCP) — Agents en parallèle
+   Status: ❌ Not started
+   Action: MCP server + worker pool (4 workers max) (3 weeks)
+   Impact: Speed x3-5, latency 30s vs 60s+
+   Pattern: Token optimization (parallelization)
+
+────────────────────────────────────────────────────────────────────────────
+
+📊 STATUS SUMMARY TABLE
+
+Skill #  | Status | Effort | Impact  | Next Action
+─────────────────────────────────────────────────────────
+1 Orch   | 🟡     | 2h     | CRITIC  | Add API keys
+2 Data   | ✅     | -      | CRITIC  | Monitor
+3 Odds   | ✅     | -      | CRITIC  | Benchmark
+4 Pick   | ✅     | -      | CRITIC  | Extend ligues
+5 Tele   | ✅     | -      | CRITIC  | Add premium
+6 Live   | 🔄     | 1w     | HIGH    | Deploy
+7 Auth   | ⏳     | 1w     | HIGH    | Start
+8 Stripe | ⏳     | 1w     | HIGH    | Config
+9 GA4    | 🟡     | 1w     | HIGH    | Events custom
+10 Quota | ⏳     | 2d     | HIGH    | Start
+11 Learn | 🟡     | -      | FUTURE  | Daily run
+12 SEO   | ❌     | 2w     | FUTURE  | Keyword research
+13 TikTok| ❌     | 3w     | FUTURE  | Video API
+14 Monitor| 🟡    | -      | FUTURE  | Extend rules
+15 MCP   | ❌     | 3w     | FUTURE  | Worker pool
+
+Legend: ✅ = Stable | 🟡 = Partial | 🔄 = In Progress | ⏳ = Planned | ❌ = Not Started
+
+────────────────────────────────────────────────────────────────────────────
+
+🎯 IMMEDIATE ACTIONS (Cette semaine — 2h total)
+
+PRIORITY 1 (TODAY):
+  □ Add OPENROUTER_API_KEY to .env VPS
+  □ Add GEMINI_API_KEY to .env VPS
+  □ Add MISTRAL_API_KEY to .env VPS
+  □ Run: node scripts/verify_apis.js (test all providers)
+  → Validates Agentic Orchestrator (#1)
+
+PRIORITY 2 (THIS WEEK):
+  □ GA4: Add event "pick_viewed"
+  □ GA4: Add event "subscribe_clicked"
+  □ Figma: Design Analyse Live V2 (mock UI)
+  □ Slack/Discord: Share this list with team
+  → Validates GA4 Integration (#9) + Analyse Live prep (#6)
+
+PRIORITY 3 (NEXT WEEK):
+  □ Deploy Analyse Live V2 API endpoint
+  □ Start User Accounts schema design
+  □ SEO: Keyword research for blog
+  → Starts Phase 3 (Analyse Live) + Phase 4 prep
+
+────────────────────────────────────────────────────────────────────────────
+
+📈 3-MONTH ROADMAP
+
+WEEK 1-2 (10-24 juin):
+  ✓ Skills #1, #9 → Config multi-IA + GA4 custom events
+
+WEEK 3-4 (25 juin-8 juillet):
+  ✓ Skills #6 → Analyse Live V2 deployed
+  ✓ Skills #12 → SEO articles first batch (5 posts)
+
+WEEK 5-8 (9-31 juillet):
+  ✓ Skills #7, #8, #10 → User auth + Stripe + Quotas
+
+WEEK 9-12 (1-31 août):
+  ✓ Skills #11, #13, #14, #15 → Learning + TikTok + Monitoring + Parallel
+
+RESULT EXPECTED (31 août):
+  • Winrate 80%+ (via learning loop #11)
+  • 1K premium subscribers (Stripe #8)
+  • Trafic organique +30% (SEO #12)
+  • TikTok 100K followers (viral #13)
+  • Latency halved (parallels #15)
+
+────────────────────────────────────────────────────────────────────────────
+
+💾 DOCUMENTATION GENERATED
+
+  ✅ HERMES_SKILLS_AUDIT.md         ← Full audit (15 skills detail)
+  ✅ HERMES_QUICK_SUMMARY.md        ← Quick reference
+  ✅ HERMES_KARPATHY_PATTERNS.md    ← Pattern examples
+  ✅ HERMES_15_SKILLS_LIST.txt      ← This file (ultra-compact)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+Questions? Read HERMES_SKILLS_AUDIT.md for full details.
+Questions about patterns? Read HERMES_KARPATHY_PATTERNS.md.
+Want quick summary? Read HERMES_QUICK_SUMMARY.md.
+
+Hermès Skills Lab — 08/06/2026
