@@ -20,7 +20,8 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["09/06","PAS DE PARI - Match amical rejeté (Greece vs Italy)","---","---","---","NOPICK","",0,8],
+  ["10/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
+  ["09/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["08/06","Philadelphia Phillies vs Chicago White Sox","Philadelphia Phillies ML","1.59","WIN","GAGNE","Baseball",8.5,8],
   ["07/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","PERDU","Foot",7,7],

@@ -261,13 +261,23 @@
       "result": "WIN",
       "sport": "Foot",
       "added": "2026-06-07T10:12:29.626Z"
+    },
+    {
+      "date": "08/06",
+      "match": "Philadelphia Phillies vs Chicago White Sox",
+      "bet": "Philadelphia Phillies ML",
+      "odds": 1.59,
+      "score": "WIN",
+      "result": "WIN",
+      "sport": "Baseball",
+      "added": "2026-06-08T12:14:06.730Z"
     }
   ],
   "shadow_bets": [],
   "ia_stats": {
     "deepseek": {
-      "total": 26,
-      "wins": 21,
+      "total": 27,
+      "wins": 22,
       "losses": 5,
       "roi": 0,
       "by_sport": {
@@ -282,12 +292,16 @@
         "Hockey": {
           "total": 11,
           "wins": 10
+        },
+        "Baseball": {
+          "total": 1,
+          "wins": 1
         }
       },
       "by_market": {
         "moneyline": {
-          "total": 23,
-          "wins": 19
+          "total": 24,
+          "wins": 20
         },
         "over": {
           "total": 3,
