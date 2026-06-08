@@ -58,18 +58,13 @@ var preuves = [
   {date:"03/05/2026", match:"Colorado Avalanche vs Minnesota", gain:"+15.40 EUR", img:"/preuves/colorado-3mai.png"},
 ];
 
-var temoignages = [
-  {nom:"Thomas R.", ville:"Lyon", txt:"9 wins consécutifs, je suis bluffé. Le seul tipster que je suis vraiment.", gains:"+47 EUR"},
-  {nom:"Karim B.", ville:"Paris", txt:"Le pick du jour est devenu mon rituel du matin. Simple, clair, efficace.", gains:"+31 EUR"},
-  {nom:"Julien M.", ville:"Bordeaux", txt:"Le seuil 8/10 ça change tout. Moins de picks mais beaucoup plus de qualité.", gains:"+28 EUR"},
-];
 
 var faqs = [
   {q:"C'est vraiment gratuit ?", a:"Oui, 100% gratuit. Nous sommes rémunérés via les liens d'affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez à maintenir le service — merci."},
   {q:"Comment votre IA analyse les matchs ?", a:"Notre modèle Hermès croise la forme récente, les blessures, les confrontations directes, les stats domicile/extérieur et d'autres variables. Seuls les picks avec un score de confiance ≥ 7/10 sont publiés — jamais de match amical ou sans enjeu réel."},
   {q:"Combien de picks par jour ?", a:"Un seul pick par jour, maximum. Qualité plutôt que quantité. Les jours sans pick valable sont indiqués clairement : on ne force jamais un pari."},
   {q:"Quel bankroll est recommandé ?", a:"Ne misez jamais plus de 2 à 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques — jouez de façon responsable."},
-  {q:"Qu'est-ce que le plan Premium ?", a:"Le plan Premium à 19,90€/mois donne accès à un pick HORS-ARJEL supplémentaire chaque jour, sur Pinnacle et PS3838 où les cotes sont souvent supérieures. Idéal pour les parieurs qui cherchent de la valeur sur les compétitions internationales."},
+  {q:"Qu'est-ce que le plan Premium ?", a:"Le plan Premium à 9,90€/mois donne accès au pick Premium du jour (seuil 7/10), aux picks des 3 prochains jours et au canal Telegram Premium privé. Le plan Premium Plus à 19,90€/mois ajoute un pick HORS-ARJEL sur Pinnacle avec des cotes supérieures."},
 ];
 
 var bookmakers = [
@@ -238,7 +233,7 @@ export default function App() {
   });
 
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
-  var losses = picks.filter(function(p){return p[5]==="PERDU";}).length;
+  var _losses = picks.filter(function(p){return p[5]==="PERDU";}).length; void _losses;
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
   var winrate = total > 0 ? Math.round((wins/total)*100) : 0;
 
@@ -279,7 +274,7 @@ export default function App() {
   var prochainPick = pickAujourdhui || picks.slice().reverse().find(function(p){ return p[5]==="EN ATTENTE"; });
   var pickDuJour = prochainPick || picks[0];
   var isNoPick = !prochainPick && (picks[0][5]==="NOPICK" || picks[0][5]==="GAGNE" || picks[0][5]==="PERDU");
-  var isEnCours = pickDuJour[5]==="EN COURS";
+  var _isEnCours = pickDuJour[5]==="EN COURS"; void _isEnCours;
   var isEnAttente = pickDuJour[5]==="EN ATTENTE";
   var isToday = pickDuJour[0] === todayStr;
   var pickLabel = isEnAttente ? (isToday ? t("pick_du_jour") : t("prochain_match")) : isNoPick ? t("pas_de_match") : t("pick_du_jour");
