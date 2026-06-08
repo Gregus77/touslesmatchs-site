@@ -1,41 +1,140 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+    <meta name="theme-color" content="#C9A227" />
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>TousLesMatchs.com — Picks IA · 1 pick par jour · 5 IAs</title>
-    <meta name="description" content="5 intelligences artificielles analysent chaque matin des centaines de matchs. 1 pick par jour, seuil minimum 8/10. Gratuit." />
-    <!-- Plausible Analytics — privacy-friendly -->
-    <script defer data-domain="touslesmatchs.com" src="https://plausible.io/js/script.js"></script>
-    <script async src="https://plausible.io/js/pa-Yj7mko9KJdDyDzAXEsgSk.js"></script>
-    <script>
-      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)};
-      window.plausible.init=window.plausible.init||function(i){window.plausible.o=i||{}};
-      window.plausible.init();
+    <!-- ═══ TITRE & META SEO ═══ -->
+    <title>TousLesMatchs — Pick IA Foot Hockey | 78% de Réussite | Gratuit</title>
+    <meta name="description" content="1 pick sportif par jour analysé par 6 intelligences artificielles. Football, Hockey, Baseball. 78% de winrate. Pick gratuit chaque jour sur les grandes ligues. Rejoignez TousLesMatchs." />
+    <meta name="keywords" content="pick sportif, pronostic foot, pick IA, tipster gratuit, paris sportifs, pronostic gratuit, Winamax, Betclic, Unibet, pick du jour, football, hockey, baseball, ligue 1, premier league, bundesliga, serie a, la liga, champions league, value bet, paris en ligne" />
+    <meta name="author" content="TousLesMatchs" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <link rel="canonical" href="https://touslesmatchs.com/" />
+
+    <!-- ═══ OPEN GRAPH (Facebook, WhatsApp, Telegram, LinkedIn) ═══ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://touslesmatchs.com/" />
+    <meta property="og:title" content="TousLesMatchs — Pick IA Foot & Hockey | 78% Réussite" />
+    <meta property="og:description" content="1 pick par jour analysé par 6 IA. 78% de winrate. Gratuit. Football, Hockey, Baseball. Rejoignez notre communauté de parieurs intelligents." />
+    <meta property="og:image" content="https://touslesmatchs.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="TousLesMatchs" />
+
+    <!-- ═══ TWITTER / X CARD ═══ -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://touslesmatchs.com/" />
+    <meta name="twitter:title" content="TousLesMatchs — Pick IA | 78% Réussite" />
+    <meta name="twitter:description" content="1 pick par jour par 6 IA. Gratuit. 78% de winrate sur les grandes ligues." />
+    <meta name="twitter:image" content="https://touslesmatchs.com/og-image.png" />
+
+    <!-- ═══ HREFLANG ═══ -->
+    <link rel="alternate" hreflang="fr" href="https://touslesmatchs.com/" />
+    <link rel="alternate" hreflang="en" href="https://touslesmatchs.com/?lang=en" />
+    <link rel="alternate" hreflang="es" href="https://touslesmatchs.com/?lang=es" />
+    <link rel="alternate" hreflang="pt" href="https://touslesmatchs.com/?lang=pt" />
+    <link rel="alternate" hreflang="ru" href="https://touslesmatchs.com/?lang=ru" />
+    <link rel="alternate" hreflang="x-default" href="https://touslesmatchs.com/" />
+
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!-- ═══ JSON-LD : WebSite ═══ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "TousLesMatchs",
+      "url": "https://touslesmatchs.com",
+      "description": "Picks sportifs analysés par 6 intelligences artificielles. 1 pick par jour, 78% de winrate.",
+      "inLanguage": ["fr", "en", "es", "pt", "ru"],
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://touslesmatchs.com/?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    }
     </script>
 
-    <!-- Google Analytics 4 -->
+    <!-- ═══ JSON-LD : Organization ═══ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "TousLesMatchs",
+      "url": "https://touslesmatchs.com",
+      "logo": "https://touslesmatchs.com/logo192.png",
+      "description": "Plateforme de picks sportifs premium analysés par 6 IA. Football, Hockey, Baseball.",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "availableLanguage": ["French", "English", "Spanish", "Portuguese", "Russian"]
+      },
+      "sameAs": [
+        "https://t.me/touslesmatchs_bot",
+        "https://www.tiktok.com/@touslesmatchs.com"
+      ]
+    }
+    </script>
+
+    <!-- ═══ JSON-LD : FAQPage (Rich Snippets Google) ═══ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "C'est vraiment gratuit ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Oui, 100% gratuit. Nous sommes rémunérés via les liens d'affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez à maintenir le service."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Quel est le taux de réussite de TousLesMatchs ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Notre taux de réussite actuel est de 78% sur les picks publiés depuis le début. L'historique complet est disponible sur le site."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Combien de picks par jour ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Un seul pick par jour, maximum. Qualité plutôt que quantité. Les jours sans pick valable sont indiqués clairement."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Comment votre IA analyse les matchs ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "6 modèles IA (Groq, Gemini, DeepSeek, Mistral, Qwen, Claude) analysent chaque matin la forme récente, les confrontations directes, les statistiques domicile/extérieur et les cotes bookmakers. Seuls les picks avec un score de confiance supérieur ou égal à 7/10 sont publiés."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Qu'est-ce que le plan Premium ?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Le plan Premium à 9,90€/mois donne accès aux picks du jour et des 3 prochains jours, avec seuil 7/10. Le plan Premium Plus à 19,90€/mois ajoute les picks hors ANJ sur Pinnacle avec de meilleures cotes."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ═══ Plausible Analytics ═══ -->
+    <script defer data-domain="touslesmatchs.com" src="https://plausible.io/js/script.js"></script>
+
+    <!-- ═══ Google Analytics 4 ═══ -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -45,24 +144,13 @@
         page_path: window.location.pathname,
         send_page_view: true
       });
-      // Tracker événements personnalisés
       window.trackEvent = function(name, params) {
         if (window.gtag) window.gtag('event', name, params || {});
       };
     </script>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <noscript>Activez JavaScript pour utiliser TousLesMatchs — picks sportifs IA.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>

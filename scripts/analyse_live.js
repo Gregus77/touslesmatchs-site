@@ -385,6 +385,53 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // POST /subscribe — capture email + notification Telegram admin
+  if (req.method === "POST" && url.pathname === "/subscribe") {
+    let body = "";
+    req.on("data", c => body += c);
+    req.on("end", async () => {
+      cors(res);
+      try {
+        const { email } = JSON.parse(body);
+        if (!email || !email.includes("@") || email.length > 200) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ ok: false, error: "Email invalide" }));
+          return;
+        }
+        // Save to file
+        const fs = require("fs");
+        const path = require("path");
+        const dataDir = path.join(__dirname, "../data");
+        if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+        const subsFile = path.join(dataDir, "subscribers.json");
+        let subs = [];
+        try { subs = JSON.parse(fs.readFileSync(subsFile, "utf8")); } catch(e) {}
+        const exists = subs.find(function(s){ return s.email === email; });
+        if (!exists) {
+          subs.push({ email, date: new Date().toISOString(), source: "site" });
+          fs.writeFileSync(subsFile, JSON.stringify(subs, null, 2));
+          // Notifier admin Telegram
+          const BOT = process.env.TELEGRAM_BOT_TOKEN;
+          const CHAT = process.env.TELEGRAM_CHAT_ID;
+          if (BOT && CHAT) {
+            const msg = encodeURIComponent(`📧 Nouvel abonné email !\n\n📧 ${email}\n📅 ${new Date().toLocaleString("fr-FR")}\n📊 Source: site web\n👥 Total: ${subs.length} abonnés`);
+            httpsRequest({
+              hostname:"api.telegram.org",
+              path:`/bot${BOT}/sendMessage?chat_id=${CHAT}&text=${msg}`,
+              method:"GET"
+            }).catch(function(){});
+          }
+        }
+        res.writeHead(200);
+        res.end(JSON.stringify({ ok: true, success: true }));
+      } catch(e) {
+        res.writeHead(500);
+        res.end(JSON.stringify({ ok: false, error: "Erreur serveur" }));
+      }
+    });
+    return;
+  }
+
   // Health check
   if (url.pathname === "/health") {
     res.writeHead(200);

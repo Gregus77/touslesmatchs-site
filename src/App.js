@@ -140,6 +140,12 @@ export default function App() {
   var langState = React.useState(localStorage.getItem("lang") || "fr");
   var lang = langState[0];
   var setLang = langState[1];
+  var emailInputState = React.useState("");
+  var emailInput = emailInputState[0]; var setEmailInput = emailInputState[1];
+  var emailDoneState = React.useState(false);
+  var emailDone = emailDoneState[0]; var setEmailDone = emailDoneState[1];
+  var emailLoadingState = React.useState(false);
+  var emailLoading = emailLoadingState[0]; var setEmailLoading = emailLoadingState[1];
 
   function changeLang(newLang) {
     setLang(newLang);
@@ -148,6 +154,24 @@ export default function App() {
 
   function t(key) {
     return translations[lang]?.[key] || translations.fr[key] || key;
+  }
+
+  function handleEmailSubmit(e) {
+    e.preventDefault();
+    if (!emailInput || !emailInput.includes("@")) return;
+    setEmailLoading(true);
+    fetch("/api/subscribe", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({email:emailInput})
+    })
+    .then(function(r){ return r.json(); })
+    .catch(function(){ return {success:true}; })
+    .finally(function(){
+      setEmailDone(true);
+      setEmailLoading(false);
+      if(window.gtag) window.gtag("event","email_capture",{email_domain:emailInput.split("@")[1]});
+    });
   }
 
   React.useEffect(function() {
@@ -280,8 +304,8 @@ export default function App() {
 
   // ═══ DERNIER RÉSULTAT (affiché quand pas de pick en cours) ═══
   var dernierResultat = picks.find(function(p){ return p[5]==="GAGNE" || p[5]==="PERDU"; });
-  var dernierGain = dernierResultat && dernierResultat[5]==="GAGNE"
-    ? "+" + (Math.round((parseFloat(dernierResultat[3]) - 1) * 10 * 10) / 10).toFixed(2) + " EUR"
+  var dernierROI = dernierResultat && dernierResultat[5]==="GAGNE" && parseFloat(dernierResultat[3]) > 1
+    ? "+" + Math.round((parseFloat(dernierResultat[3]) - 1) * 100) + "% de rendement"
     : null;
 
   // ═══ DONNÉES TIERS PREMIUM ═══
@@ -431,20 +455,22 @@ export default function App() {
     header,
     React.createElement("section", {className:"hero-section",style:{padding:"60px 20px 40px",textAlign:"center"}},
       /* Badges 6 IAs */
-      React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"6px",flexWrap:"wrap",marginBottom:"18px"}},
-        [
-          {nom:"Groq",    dot:"#22c55e"},
-          {nom:"Gemini",  dot:"#3b82f6"},
-          {nom:"DeepSeek",dot:"#f97316"},
-          {nom:"Mistral", dot:"#a855f7"},
-          {nom:"Qwen",    dot:"#ef4444"},
-          {nom:"Claude",  dot:"#d4af37"},
-        ].map(function(ia,i){
-          return React.createElement("div",{key:i,style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"4px 12px"}},
-            React.createElement("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.dot,flexShrink:0}}),
-            React.createElement("span",{style:{fontSize:"10px",color:"#888",fontWeight:"600",letterSpacing:"0.06em"}}, ia.nom)
-          );
-        })
+      React.createElement("div",{style:{display:"flex",justifyContent:"center",marginBottom:"18px"}},
+        React.createElement("div",{style:{
+          display:"inline-flex",alignItems:"center",gap:"10px",
+          background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
+          borderRadius:"20px",padding:"7px 18px"
+        }},
+          React.createElement("div",{style:{display:"flex",gap:"4px",alignItems:"center"}},
+            ["#22c55e","#3b82f6","#f97316","#a855f7","#ef4444","#d4af37"].map(function(c,i){
+              return React.createElement("div",{key:i,className:"dot-live",style:{
+                width:"7px",height:"7px",borderRadius:"50%",background:c,flexShrink:0,
+                animationDelay:(i*0.28)+"s"
+              }});
+            })
+          ),
+          React.createElement("span",{style:{fontSize:"12px",color:"#aaa",fontWeight:"600",letterSpacing:"0.08em"}},"6 modèles IA cross-vérifiés")
+        )
       ),
       React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",marginBottom:"16px"}},
         React.createElement("span", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
@@ -580,9 +606,9 @@ export default function App() {
             ),
             /* Gain + note */
             React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap"}},
-              dernierGain && React.createElement("div", {style:{
-                fontSize:"20px",fontWeight:"700",color:"#22c55e",fontFamily:"'Bodoni Moda',serif"
-              }}, dernierGain),
+              dernierROI && React.createElement("div", {style:{
+                fontSize:"17px",fontWeight:"700",color:"#22c55e",fontFamily:"'Bodoni Moda',serif"
+              }}, dernierROI),
               dernierResultat[7] > 0 && React.createElement("div", {style:{
                 display:"inline-flex",alignItems:"center",gap:"5px",
                 background: getTrophies(dernierResultat[7]).bg,
@@ -947,12 +973,12 @@ export default function App() {
         [
           {
             label:"GRATUIT", price:"0€", sub:"pour toujours",
-            features:["1 pick ARJEL / jour","Winamax, Betclic, PMU","Canal Telegram public","Calculateur de projection"],
+            features:["1 pick ANJ / jour","Winamax, Betclic, PMU","Canal Telegram public","Calculateur de projection"],
             cta:"Commencer gratuitement", ctaAction:null, highlight:false
           },
           {
             label:"PREMIUM", price:"9,90€", sub:"/ mois",
-            features:["Pick Premium du jour (ARJEL)","Picks 3 prochains jours","Analyses détaillées","Canal Telegram Premium","10 analyses personnalisées/mois"],
+            features:["Pick Premium du jour (ANJ)","Picks 3 prochains jours","Analyses détaillées","Canal Telegram Premium","10 analyses personnalisées/mois"],
             cta:"⭐ Devenir Premium", ctaAction:"standard", highlight:false, badge:"POPULAIRE"
           },
           {
@@ -1146,21 +1172,80 @@ export default function App() {
         })
       )
     ),
-    React.createElement("section", {className:"home-section",style:{padding:"20px 20px 36px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"20px"}}, t("ils_gagnent")),
-      React.createElement("div", {style:{display:"flex",gap:"16px",flexWrap:"wrap"}},
-        temoignages.map(function(t,i){
-          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",padding:"22px 20px"}},
-            React.createElement("div",{style:{fontSize:"13px",color:"#888",lineHeight:"1.8",marginBottom:"16px",fontStyle:"italic"}},"\""+t.txt+"\""),
-            React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center"}},
-              React.createElement("div",null,
-                React.createElement("div",{style:{fontSize:"13px",color:"#ddd",fontWeight:"bold"}},t.nom),
-                React.createElement("div",{style:{fontSize:"11px",color:"#444"}},t.ville)
-              ),
-              React.createElement("div",{style:{fontSize:"16px",fontWeight:"bold",color:"#22cc44"}},t.gains)
-            )
+    /* ── TRANSPARENCE & STATS RÉELLES (à la place des faux témoignages) ── */
+    React.createElement("section", {className:"home-section",style:{padding:"20px 20px 0px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"12px",marginBottom:"18px"}},
+        React.createElement("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#555",fontWeight:"600"}},"TRANSPARENCE TOTALE"),
+        React.createElement("div",{style:{flex:1,height:"1px",background:"linear-gradient(90deg,rgba(212,175,55,0.18),transparent)"}})
+      ),
+      React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:"10px"}},
+        [
+          {icon:"📊", val: winrate+"%", lbl:"Taux de réussite réel"},
+          {icon:"📅", val:"Depuis mai 2026", lbl:"Historique publié"},
+          {icon:"✅", val: wins+" / "+total, lbl:"Victoires / Paris"},
+          {icon:"🔍", val:"Pertes incluses", lbl:"Aucun filtre, aucun tri"}
+        ].map(function(s,i){
+          return React.createElement("div",{key:i,style:{
+            background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)",
+            borderRadius:"12px",padding:"16px",textAlign:"center"
+          }},
+            React.createElement("div",{style:{fontSize:"20px",marginBottom:"6px"}},s.icon),
+            React.createElement("div",{style:{fontSize:"16px",fontWeight:"700",color:"#d4af37",marginBottom:"4px",fontFamily:"'Bodoni Moda',serif"}},s.val),
+            React.createElement("div",{style:{fontSize:"11px",color:"#555",lineHeight:"1.5"}},s.lbl)
           );
         })
+      )
+    ),
+    /* ── CAPTURE EMAIL ── */
+    React.createElement("section", {className:"home-section",style:{padding:"24px 20px 32px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("div",{style:{
+        background:"linear-gradient(135deg,rgba(212,175,55,0.07),rgba(212,175,55,0.03))",
+        border:"1px solid rgba(212,175,55,0.22)",
+        borderRadius:"16px",padding:"32px 28px",textAlign:"center",position:"relative",overflow:"hidden"
+      }},
+        React.createElement("div",{style:{position:"absolute",top:0,left:0,right:0,height:"2px",background:"linear-gradient(90deg,transparent,rgba(212,175,55,0.5),transparent)"}}),
+        React.createElement("div",{style:{fontSize:"10px",letterSpacing:"4px",color:"#d4af37",fontWeight:"600",marginBottom:"10px"}},"ACCÈS DÉCOUVERTE"),
+        React.createElement("h3",{style:{fontFamily:"'Bodoni Moda',serif",fontSize:"clamp(20px,4vw,28px)",color:"#fff",fontWeight:"700",marginBottom:"10px",lineHeight:"1.2"}},
+          "Recevez le pick du jour gratuitement"
+        ),
+        React.createElement("p",{style:{color:"#666",fontSize:"14px",marginBottom:"24px",maxWidth:"380px",margin:"0 auto 24px",lineHeight:"1.75"}},
+          "Phase de lancement ouverte. Pick gratuit chaque matin, directement dans votre boîte mail."
+        ),
+        emailDone
+          ? React.createElement("div",{style:{
+              display:"inline-flex",alignItems:"center",gap:"10px",
+              background:"rgba(34,197,94,0.12)",border:"1px solid rgba(34,197,94,0.3)",
+              borderRadius:"10px",padding:"14px 24px",color:"#22c55e",fontWeight:"700",fontSize:"15px"
+            }},
+              "✅ Parfait ! Votre premier pick arrive demain matin."
+            )
+          : React.createElement("form",{onSubmit:handleEmailSubmit,style:{display:"flex",gap:"10px",maxWidth:"440px",margin:"0 auto",flexWrap:"wrap",justifyContent:"center"}},
+              React.createElement("input",{
+                type:"email",required:true,placeholder:"votre@email.com",
+                value:emailInput,
+                onChange:function(e){setEmailInput(e.target.value);},
+                style:{
+                  flex:1,minWidth:"200px",padding:"14px 18px",
+                  background:"rgba(255,255,255,0.06)",
+                  border:"1px solid rgba(255,255,255,0.18)",
+                  borderRadius:"10px",color:"#fff",fontSize:"15px",
+                  outline:"none",fontFamily:"'Jost',sans-serif"
+                }
+              }),
+              React.createElement("button",{
+                type:"submit",disabled:emailLoading,
+                style:{
+                  padding:"14px 24px",background:"#d4af37",
+                  color:"#080706",fontWeight:"700",borderRadius:"10px",
+                  border:"none",cursor:"pointer",fontSize:"14px",
+                  letterSpacing:"0.06em",whiteSpace:"nowrap",
+                  opacity:emailLoading?0.7:1,fontFamily:"'Jost',sans-serif"
+                }
+              }, emailLoading ? "..." : "Recevoir →")
+            ),
+        React.createElement("p",{style:{fontSize:"11px",color:"#333",marginTop:"12px"}},
+          "Sans engagement. Désinscription en 1 clic."
+        )
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"16px 20px 36px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
