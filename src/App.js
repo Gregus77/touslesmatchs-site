@@ -101,10 +101,10 @@ function sportEmoji(sport) {
 }
 
 function getTrophies(note) {
-  if (note >= 9.0) return { trophies: "🏆🏆🏆🏆🏆", label: "ELITE", color: "#ffd700" };
-  if (note >= 8.0) return { trophies: "🏆🏆🏆🏆", label: "SOLIDE", color: "#d4af37" };
-  if (note >= 7.0) return { trophies: "🏆🏆🏆", label: "JOUABLE", color: "#f59e0b" };
-  return { trophies: "🏆🏆", label: "NO BET", color: "#666" };
+  if (note >= 9.0) return { trophies: "★★★★★", label: "ELITE",   color: "#ffd700", bg: "rgba(255,215,0,0.1)",    border: "rgba(255,215,0,0.35)" };
+  if (note >= 8.0) return { trophies: "★★★★",  label: "SOLIDE",  color: "#d4af37", bg: "rgba(212,175,55,0.1)",  border: "rgba(212,175,55,0.35)" };
+  if (note >= 7.0) return { trophies: "★★★",   label: "JOUABLE", color: "#f59e0b", bg: "rgba(245,158,11,0.1)",  border: "rgba(245,158,11,0.35)" };
+  return             { trophies: "★★",    label: "NO BET",  color: "#555",    bg: "rgba(100,100,100,0.06)", border: "rgba(100,100,100,0.2)" };
 }
 
 function getConfidence(note) {
@@ -232,11 +232,17 @@ export default function App() {
   var pickValueBet    = (!isNoPick && pickDuJour[3] !== "---") ? getValueBet(pickAiScore, pickDuJour[3]) : null;
   // Badge Elite/Solide/Jouable selon note
   var pickBadge = isNoPick ? "PAS DE MATCH" :
-    pickAiScore >= 9.0 ? "🏆 PICK PREMIUM ELITE" :
-    pickAiScore >= 8.0 ? "⭐ PICK PREMIUM SOLIDE" :
-    pickAiScore >= 7.0 ? "🔔 PICK JOUABLE" : t("pick_standard");
+    pickAiScore >= 9.0 ? "PICK PREMIUM — ELITE" :
+    pickAiScore >= 8.0 ? "PICK PREMIUM — SOLIDE" :
+    pickAiScore >= 7.0 ? "PICK JOUABLE" : t("pick_standard");
   var pickBadgeColor = pickAiScore >= 9.0 ? "#ffd700" : pickAiScore >= 8.0 ? "#d4af37" : "#f59e0b";
   var pickBorderColor = pickAiScore >= 9.0 ? "rgba(255,215,0,0.35)" : isPremium ? "rgba(212,175,55,0.35)" : "rgba(245,158,11,0.5)";
+
+  // ═══ DERNIER RÉSULTAT (affiché quand pas de pick en cours) ═══
+  var dernierResultat = picks.find(function(p){ return p[5]==="GAGNE" || p[5]==="PERDU"; });
+  var dernierGain = dernierResultat && dernierResultat[5]==="GAGNE"
+    ? "+" + (Math.round((parseFloat(dernierResultat[3]) - 1) * 10 * 10) / 10).toFixed(2) + " EUR"
+    : null;
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
@@ -418,7 +424,91 @@ export default function App() {
     ),
     // ════ PICK DU JOUR — au-dessus de la ligne de flottaison ════
     React.createElement("section", {className:"home-section",style:{padding:"16px 20px 32px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("div", {style:{
+
+      /* ── CAS 1 : Pas de pick en attente → afficher le dernier résultat ── */
+      isNoPick && dernierResultat ? React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"12px"}},
+
+        /* Carte résultat */
+        React.createElement("div", {style:{
+          background: dernierResultat[5]==="GAGNE" ? "rgba(34,197,94,0.06)" : "rgba(239,68,68,0.06)",
+          border: "1px solid " + (dernierResultat[5]==="GAGNE" ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"),
+          borderRadius:"14px", overflow:"hidden"
+        }},
+          /* Bandeau coloré haut */
+          React.createElement("div", {style:{
+            height:"3px",
+            background: dernierResultat[5]==="GAGNE"
+              ? "linear-gradient(90deg,transparent,#22c55e,transparent)"
+              : "linear-gradient(90deg,transparent,#ef4444,transparent)"
+          }}),
+          React.createElement("div", {style:{padding:"22px 24px"}},
+            /* Header DERNIER RÉSULTAT */
+            React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"16px",flexWrap:"wrap",gap:"8px"}},
+              React.createElement("div", {style:{fontSize:"10px",letterSpacing:"3px",color:"#555",fontWeight:"600"}}, "DERNIER RÉSULTAT"),
+              React.createElement("div", {style:{
+                display:"inline-flex",alignItems:"center",gap:"6px",
+                background: dernierResultat[5]==="GAGNE" ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)",
+                border: "1px solid " + (dernierResultat[5]==="GAGNE" ? "rgba(34,197,94,0.4)" : "rgba(239,68,68,0.4)"),
+                borderRadius:"6px", padding:"5px 14px"
+              }},
+                React.createElement("span", {style:{fontSize:"14px"}}), dernierResultat[5]==="GAGNE" ? "✅" : "❌",
+                React.createElement("span", {style:{
+                  fontSize:"13px", fontWeight:"700", letterSpacing:"2px",
+                  color: dernierResultat[5]==="GAGNE" ? "#22c55e" : "#ef4444"
+                }}, dernierResultat[5])
+              )
+            ),
+            /* Match */
+            React.createElement("div", {style:{fontSize:"18px",fontWeight:"700",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.3"}},
+              dernierResultat[6] ? sportEmoji(dernierResultat[6]) : "", dernierResultat[1]
+            ),
+            /* Pari + Cote + Score */
+            React.createElement("div", {style:{display:"flex",gap:"12px",flexWrap:"wrap",marginBottom:"12px"}},
+              React.createElement("span", {style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"5px",padding:"4px 10px",color:"#ccc",fontSize:"12px"}}, dernierResultat[2]),
+              React.createElement("span", {style:{color:"#d4af37",fontWeight:"700",fontSize:"14px",alignSelf:"center"}}, "Cote: "+dernierResultat[3]),
+              dernierResultat[4] && dernierResultat[4]!=="---" && dernierResultat[4]!=="—" && React.createElement("span", {style:{color:"#888",fontSize:"13px",alignSelf:"center"}}, "Score: "+dernierResultat[4])
+            ),
+            /* Gain + note */
+            React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"12px",flexWrap:"wrap"}},
+              dernierGain && React.createElement("div", {style:{
+                fontSize:"20px",fontWeight:"700",color:"#22c55e",fontFamily:"'Bodoni Moda',serif"
+              }}, dernierGain),
+              dernierResultat[7] > 0 && React.createElement("div", {style:{
+                display:"inline-flex",alignItems:"center",gap:"5px",
+                background: getTrophies(dernierResultat[7]).bg,
+                border: "1px solid " + getTrophies(dernierResultat[7]).border,
+                borderRadius:"4px",padding:"3px 9px"
+              }},
+                React.createElement("span",{style:{fontSize:"12px",color:getTrophies(dernierResultat[7]).color,fontWeight:"700"}}, getTrophies(dernierResultat[7]).trophies),
+                React.createElement("span",{style:{fontSize:"9px",color:getTrophies(dernierResultat[7]).color,letterSpacing:"2px",fontWeight:"700"}}, getTrophies(dernierResultat[7]).label)
+              ),
+              React.createElement("span",{style:{fontSize:"11px",color:"#555"}}, dernierResultat[0])
+            )
+          )
+        ),
+
+        /* Section prochain pick */
+        React.createElement("div", {style:{
+          background:"rgba(255,255,255,0.02)",
+          border:"1px dashed rgba(255,255,255,0.1)",
+          borderRadius:"12px", padding:"18px 20px",
+          display:"flex", alignItems:"center", gap:"14px"
+        }},
+          React.createElement("div", {style:{
+            width:"36px",height:"36px",borderRadius:"50%",
+            background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.2)",
+            display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",flexShrink:0
+          }}, "⏰"),
+          React.createElement("div", null,
+            React.createElement("div",{style:{fontSize:"11px",letterSpacing:"3px",color:"#555",marginBottom:"4px",fontWeight:"600"}}, "PROCHAIN PICK"),
+            React.createElement("div",{style:{fontSize:"13px",color:"#888",lineHeight:"1.6"}},
+              "Hermès analyse les matchs chaque matin à 12h00. Le prochain pick sera publié ici dès qu'il atteint le seuil de confiance."
+            )
+          )
+        )
+
+      /* ── CAS 2 : Pick en attente → afficher normalement ── */
+      ) : React.createElement("div", {style:{
         background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(212,175,55,0.06)",
         border: "1px solid " + (isNoPick ? "rgba(100,100,100,0.25)" : pickBorderColor),
         borderRadius:"14px", padding:"28px 26px", position:"relative", overflow:"hidden"
@@ -441,12 +531,19 @@ export default function App() {
             fontSize:"10px", fontWeight:"bold", letterSpacing:"2px",
             color: pickBadgeColor
           }}, pickBadge),
-          React.createElement("div", {style:{fontSize:"17px",letterSpacing:"1px",lineHeight:"1"}}, pickTrophyData.trophies),
+          React.createElement("div", {style:{
+            display:"inline-flex", alignItems:"center", gap:"5px",
+            background: pickTrophyData.bg, border: "1px solid " + pickTrophyData.border,
+            borderRadius:"4px", padding:"3px 9px"
+          }},
+            React.createElement("span",{style:{fontSize:"13px",color:pickTrophyData.color,fontWeight:"700",letterSpacing:"0.5px",lineHeight:"1"}}, pickTrophyData.trophies),
+            React.createElement("span",{style:{fontSize:"9px",color:pickTrophyData.color,letterSpacing:"2px",fontWeight:"700"}}, pickTrophyData.label)
+          ),
           pickValueBet && pickValueBet.edge >= 5 && React.createElement("div", {style:{
             display:"inline-flex",alignItems:"center",gap:"4px",
             background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.35)",
             borderRadius:"4px",padding:"4px 10px",fontSize:"9px",fontWeight:"bold",letterSpacing:"1px",color:"#22c55e"
-          }}, "⭐ VALUE BET"),
+          }}, "VALUE BET"),
           isPickHorsARJEL && React.createElement("div", {style:{
             display:"inline-flex",alignItems:"center",gap:"4px",
             background:"rgba(249,115,22,0.12)",border:"1px solid rgba(249,115,22,0.5)",
