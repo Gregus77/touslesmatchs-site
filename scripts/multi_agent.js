@@ -562,9 +562,15 @@ async function generateForDay(day) {
       result.pick = null;
     }
   }
-  // Pick ARJEL → site public (gratuit)
-  if (result?.pick) updateAppJs(result.pick, day.fr);
-  else updateAppJsNoPick(day.fr, "Pas de pick ARJEL aujourd'hui");
+  // Pick ARJEL → site public ; ou HORS-ARJEL si aucun ARJEL disponible
+  if (result?.pick) {
+    updateAppJs(result.pick, day.fr, false);
+  } else if (result?.premium_hors_arjel) {
+    console.log(`  🌍 Aucun pick ARJEL → publication du pick HORS-ARJEL avec badge`);
+    updateAppJs(result.premium_hors_arjel, day.fr, true);
+  } else {
+    updateAppJsNoPick(day.fr, "Pas de pick ARJEL aujourd'hui");
+  }
   return result;
 }
 
@@ -595,7 +601,7 @@ function updateAppJsNoPick(dateStr, reason) {
   fs.writeFileSync(appPath, content);
 }
 
-function updateAppJs(pick, dateStr) {
+function updateAppJs(pick, dateStr, horsARJEL) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
   // PROTECTION : ne JAMAIS écraser un résultat terminé
@@ -603,7 +609,9 @@ function updateAppJs(pick, dateStr) {
     console.log(`🛡️ ${dateStr}: PROTÉGÉ (résultat déjà enregistré — pas d'écrasement)`);
     return;
   }
-  const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}],\n`;
+  // index [9] = true signale un pick hors-ARJEL (badge orange affiché sur le site)
+  const horsFlag = horsARJEL ? ",true" : "";
+  const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}${horsFlag}],\n`;
   const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}",[^\\n]*\\n`, "g");
   const existing = content.match(dateRegex);
   if (existing) {
