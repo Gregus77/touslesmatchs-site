@@ -224,11 +224,11 @@ export default function App() {
   }, []);
 
   // ═══ DÉDUPLICATION : 1 seul pick par date ═══
-  var seenDates = {};
+  var seenMatches = {};
   picks = picks.filter(function(p){
-    var key = p[0] + "|" + p[5]; // date + status
-    if (seenDates[key]) return false;
-    seenDates[key] = true;
+    var key = p[0] + "|" + p[1]; // date + nom du match — évite doublons sans effacer matchs différents le même jour
+    if (seenMatches[key]) return false;
+    seenMatches[key] = true;
     return true;
   });
 

@@ -232,8 +232,8 @@ WINAMAX_LINK=https://www.winamax.fr/parrain?code=77953728
 
 ## 📊 Stats (08/06/2026)
 
-- Picks : 27 | Gagnés : 21 | Perdus : 6
-- Winrate : **78%** | Sports : Foot, Hockey, Baseball
+- Picks réels : 22 | Gagnés : 19 | Perdus : 3
+- Winrate : **86%** | Sports : Foot, Hockey, Baseball
 
 ## 🚨 Sécurité
 
