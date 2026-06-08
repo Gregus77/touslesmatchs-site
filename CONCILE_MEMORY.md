@@ -100,6 +100,97 @@ le test du sommeil PASSE par défaut. Le marché est trop large pour cacher quel
 
 ---
 
+## 🏗️ ARCHITECTURE VPS (état au 08/06/2026)
+
+### Serveur : 72.61.167.175 — /opt/touslesmatchs/
+
+### Containers Docker actifs :
+| Service | Image | Rôle |
+|---|---|---|
+| `site` | `touslesmatchs-site` | React + Caddy HTTPS (Let's Encrypt) |
+| `api` | `touslesmatchs-api` | Backend Node (analyse_live.js — crashe, MODULE_NOT_FOUND: api_auth) |
+| `bot` | `touslesmatchs-bot` | Bot Telegram Free interactif |
+| `hermes-admin` | `touslesmatchs-hermes-admin` | Bot admin Hermès |
+| `stripe-webhook` | `touslesmatchs-stripe-webhook` | Webhook Stripe paiements |
+
+### Branche de développement : `claude/docker-multi-ai-setup-aLpF3`
+⚠️ NE JAMAIS merger dans `main` sans accord de Greg.
+
+### Caddyfile (proxy Caddy) :
+- `/stripe/webhook` → `stripe-webhook:4242`
+- `/api/*` → `api:3001`
+- Tout le reste → React SPA
+
+### Volumes montés :
+- `./scripts:/app/scripts` dans bot ET stripe-webhook (fichiers partagés)
+- `./src/App.js:/app/scripts/App.js:ro` dans bot
+- `./Caddyfile:/etc/caddy/Caddyfile:ro` dans site
+
+---
+
+## 💳 STRIPE — CONFIGURATION (08/06/2026)
+
+### Payment Links actifs :
+- **Standard 9,90€/mois** — URL de succès : `https://t.me/touslesmatchs_bot?start=verify_{CHECKOUT_SESSION_ID}`
+- **Premium 19,90€/mois** (créé le 8 juin à 11:52) — même URL de succès
+
+### Webhook :
+- **Destination** : `touslesmatchs-webhook`
+- **URL** : `https://www.touslesmatchs.com/stripe/webhook`
+- **ID** : `we_1Tg056FtcI38Oqdt09HAEID6`
+- **Événements** : `checkout.session.completed` + `customer.subscription.deleted`
+- **Signing secret** : enregistré dans `.env` → `STRIPE_WEBHOOK_SECRET`
+
+### Flow paiement → accès automatique :
+1. Client paie → Stripe redirige vers `t.me/touslesmatchs_bot?start=verify_{SESSION_ID}`
+2. Webhook reçoit `checkout.session.completed` → sauvegarde session dans `scripts/verify_sessions.json`
+3. Bot reçoit `/start verify_cs_xxx` → vérifie session → génère lien Telegram **à usage unique** (`member_limit: 1`)
+4. Client reçoit le lien en DM → rejoint le canal Premium
+5. Si annulation → `customer.subscription.deleted` → bot expulse automatiquement
+
+---
+
+## 📱 TELEGRAM — ARCHITECTURE (3 entités)
+
+| Entité | Rôle | Géré par |
+|---|---|---|
+| `@touslesmatchs_bot` | Bot Free interactif (menus, pick, stats, bookmakers, upgrade) | `scripts/bot.js` |
+| Canal **TousLesMatchs Premium** (ex-`@touslesmatchs_fr`) | Broadcast picks premium | `multi_agent.js` via `TELEGRAM_PREMIUM_CHAT_ID` |
+| Bot **Hermès Admin** | Usage interne Greg | `hermes-admin` container |
+
+### Bot Free — fonctionnalités :
+- Menu principal avec inline keyboard
+- `/start verify_SESSION` → activation Premium automatique
+- Page Pick, Stats, Premium, Bookmakers
+- Bouton "⬅️ Retour au menu" sur toutes les pages
+- Liens affiliés : Winamax, Betclic, Unibet, PMU, ZEbet, ParionsSport
+- Stripe upgrade buttons sur chaque page
+
+### Fichiers partagés bot ↔ webhook :
+- `scripts/verify_sessions.json` — sessions Stripe en attente de vérification
+- `scripts/users_db.json` — mapping `telegram_id → customer_id` pour expulsions
+
+---
+
+## 🔐 SÉCURITÉ
+
+- **JAMAIS** partager de clés API dans le chat
+- **JAMAIS** merger la branche de dev dans `main`
+- Clés exposées à révoquer : `ODDS_API_KEY` (75cab9...) + `TELEGRAM_ADMIN_BOT_TOKEN` (8986544902:...)
+- `.env` uniquement sur le VPS, jamais dans le repo
+
+---
+
+## 🐛 BUG CONNU À RÉGLER
+
+### `api` container crashe au démarrage
+- **Erreur** : `Cannot find module './api_auth'` dans `analyse_live.js`
+- **Cause** : `api_auth.js` n'existe pas dans le repo
+- **Impact** : les appels `/api/*` depuis le frontend échouent
+- **Fix à faire** : créer `scripts/api_auth.js` (vérification token utilisateur)
+
+---
+
 ## 📌 NOTES DE TRAVAIL POUR LE CONCILE
 
 - L'utilisateur (Greg) n'aime pas devoir vérifier derrière nous.
