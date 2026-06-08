@@ -463,7 +463,7 @@ export default function App() {
           borderRadius:"8px", padding:"12px 16px", marginBottom:"14px"
         }},
           React.createElement("div", {style:{fontSize:"11px",letterSpacing:"3px",color:"#555",marginBottom:"12px",fontWeight:"600"}}, t("concile_title")),
-          React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap",alignItems:"center",marginBottom:"10px"}},
+          React.createElement("div", {className:"mobile-concile-badges",style:{display:"flex",gap:"6px",flexWrap:"wrap",alignItems:"center",marginBottom:"10px"}},
             [
               {nom:"Groq",   color:"#22c55e", role:"Scanner"},
               {nom:"Gemini", color:"#3b82f6", role:"H2H"},
@@ -548,26 +548,40 @@ export default function App() {
         ),
 
         /* CTA */
-        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:isPremium?"linear-gradient(135deg,#d4af37,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, t("parier_winamax"))
+        isNoPick ? null : React.createElement("a", {
+          href:WINAMAX_LINK, target:"_blank",
+          className:"pick-cta",
+          style:{
+            display:"flex", alignItems:"center", justifyContent:"center", gap:"8px",
+            background:isPremium?"linear-gradient(135deg,#d4af37,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",
+            borderRadius:"10px", padding:"14px 28px",
+            color:"#080c14", fontWeight:"bold", textDecoration:"none", fontSize:"14px",
+            letterSpacing:"0.06em", textTransform:"uppercase",
+            width:"100%", boxSizing:"border-box",
+            transition:"opacity 0.2s, transform 0.2s"
+          }
+        }, t("parier_winamax"))
       )
     ),
-    React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
-      React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},
+    React.createElement("div", {className:"section-divider"}),
+    React.createElement("section", {className:"home-section",style:{padding:"32px 20px 40px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"28px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
+      React.createElement("div", {style:{display:"flex",gap:"16px",flexWrap:"wrap"}},
         [{num:t("section_01"),title:t("section_01_title"),desc:t("section_01_desc")},{num:t("section_02"),title:t("section_02_title"),desc:t("section_02_desc")},{num:t("section_03"),title:t("section_03_title"),desc:t("section_03_desc")}].map(function(s,i){
-          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"12px",padding:"22px 20px"}},
-            React.createElement("div",{style:{fontSize:"28px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.num),
-            React.createElement("div",{style:{fontSize:"16px",fontWeight:"600",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif"}},s.title),
-            React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.75"}},s.desc)
+          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"14px",padding:"28px 22px",transition:"border-color 0.3s, box-shadow 0.3s"}},
+            React.createElement("div",{style:{fontSize:"32px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"14px",fontFamily:"'Bodoni Moda',serif"}},s.num),
+            React.createElement("div",{style:{fontSize:"17px",fontWeight:"600",color:"#fff",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.title),
+            React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.85"}},s.desc)
           );
         })
       )
     ),
+    React.createElement("div", {className:"section-divider"}),
     // ════ TARIFS — 3 niveaux ════
-    React.createElement("section", {className:"home-section",style:{padding:"30px 20px",maxWidth:"860px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"8px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
-      React.createElement("p", {style:{color:"#555",fontSize:"13px",textAlign:"center",marginBottom:"24px"}}, "Commencez gratuitement — passez Premium quand vous êtes prêt."),
-      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"14px"}},
+    React.createElement("section", {className:"home-section",style:{padding:"36px 20px 44px",maxWidth:"860px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"10px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
+      React.createElement("p", {style:{color:"#555",fontSize:"14px",textAlign:"center",marginBottom:"28px",lineHeight:"1.7"}}, "Commencez gratuitement — passez Premium quand vous êtes prêt."),
+      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"16px"}},
         [
           {
             label:"GRATUIT", price:"0€", sub:"pour toujours",
@@ -631,11 +645,12 @@ export default function App() {
         })
       )
     ),
-    React.createElement("section", {className:"home-section",style:{padding:"10px 20px 24px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+    React.createElement("div", {className:"section-divider"}),
+    React.createElement("section", {className:"home-section",style:{padding:"32px 20px 36px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("div", {style:{
         background:"linear-gradient(135deg,rgba(0,136,204,0.12) 0%,rgba(0,136,204,0.05) 100%)",
         border:"2px solid rgba(0,136,204,0.5)",
-        borderRadius:"16px",padding:"28px 32px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"16px",
+        borderRadius:"16px",padding:"28px 32px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"20px",
         boxShadow:"0 0 30px rgba(0,136,204,0.12)"
       }},
         React.createElement("div", {style:{flex:1,minWidth:"200px"}},
