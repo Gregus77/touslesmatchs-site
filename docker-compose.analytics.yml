@@ -1,0 +1,54 @@
+# ─────────────────────────────────────────────────────────────
+# Umami Analytics — self-hosted, privacy-friendly
+#
+# DÉMARRAGE :
+#   docker compose -f docker-compose.analytics.yml up -d
+#
+# APRÈS DÉMARRAGE :
+#   1. Ouvre http://TON_VPS_IP:3001 → login admin/umami
+#   2. Ajouter un site → domaine : touslesmatchs.fr
+#   3. Copier le Website ID généré
+#   4. Ajouter dans .env :
+#        REACT_APP_UMAMI_ID=<website-id>
+#        REACT_APP_UMAMI_URL=https://analytics.touslesmatchs.fr
+#   5. Rebuild :  docker compose up -d --build site
+#
+# PROXY CADDY (optionnel) — ajouter dans Caddyfile :
+#   analytics.touslesmatchs.fr {
+#     reverse_proxy umami:3000
+#   }
+# ─────────────────────────────────────────────────────────────
+
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      DATABASE_URL: postgresql://umami:umami_pass@umami_db:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: ${UMAMI_SECRET:-change_this_secret_in_env}
+    depends_on:
+      - umami_db
+    networks:
+      - analytics_net
+
+  umami_db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       umami
+      POSTGRES_USER:     umami
+      POSTGRES_PASSWORD: umami_pass
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    networks:
+      - analytics_net
+
+volumes:
+  umami_db_data:
+
+networks:
+  analytics_net:
+    driver: bridge

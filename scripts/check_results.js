@@ -14,6 +14,7 @@ const https  = require("https");
 const fs     = require("fs");
 const path   = require("path");
 const { execSync } = require("child_process");
+const { computeStats } = require("./roi_stats");
 
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const APP_JS       = path.join(__dirname, "../src/App.js");
@@ -298,6 +299,12 @@ async function main() {
   // Écriture + déploiement
   fs.writeFileSync(APP_JS, content);
   console.log("\n📝 App.js mis à jour");
+
+  // Recalcul des stats ROI
+  try {
+    const stats = computeStats();
+    console.log(`   📊 ROI mis à jour : ${stats.winRate} win rate / ROI ${stats.roi} (${stats.total} picks)`);
+  } catch (e) { console.error("   ⚠️  roi_stats échoué :", e.message); }
 
   const updatedPicks = getPendingPicks(fs.readFileSync(APP_JS, "utf8"));
   const resolvedCount = pending.length - updatedPicks.filter(p =>
