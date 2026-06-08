@@ -21,7 +21,7 @@ var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
   ["08/06","Greece vs Italy","Greece Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
-  ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","PERDU","Foot",7,7],
+  ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","ANNULE","Foot",7,7],
   ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","5-0","GAGNE","Foot",7,7],
   ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","3-0","GAGNE","Foot",7,7],
   ["04/06 au 06/06","PAS DE PARI - Aucun match championnat disponible","---","---","---","NOPICK","",0,8],
@@ -153,7 +153,7 @@ export default function App() {
 
   var wins = picks.filter(function(p){return p[5]==="GAGNE";}).length;
   var losses = picks.filter(function(p){return p[5]==="PERDU";}).length;
-  var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
+  var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE" && p[5]!=="ANNULE";}).length;
   var winrate = total > 0 ? Math.round((wins/total)*100) : 0;
 
   // ═══ CALCUL ROI DYNAMIQUE (basé sur cotes réelles, mise fixe 10€) ═══
@@ -161,6 +161,7 @@ export default function App() {
   var bankrollDepart = 100;
   var gainsCumules = 0;
   picks.forEach(function(p){
+    if (p[5] === "ANNULE") return; // amical ou erreur → non comptabilisé
     if (p[5] === "GAGNE") {
       var cote = parseFloat(p[3]) || 1.5;
       gainsCumules += (cote - 1) * miseFixe;
@@ -173,12 +174,14 @@ export default function App() {
   // ═══ SÉRIE DE VICTOIRES EN COURS + MEILLEURE SÉRIE HISTORIQUE ═══
   var serieEnCours = 0;
   for (var i = 0; i < picks.length; i++) {
+    if (picks[i][5] === "ANNULE") continue; // amical → ignoré dans la série
     if (picks[i][5] === "GAGNE") serieEnCours++;
     else if (picks[i][5] === "PERDU") break;
   }
   // Meilleure série : parcourir dans l'ordre chronologique (du plus ancien au plus récent)
   var meilleuresSerie = 0, tempSerie = 0;
   for (var j = picks.length - 1; j >= 0; j--) {
+    if (picks[j][5] === "ANNULE") continue;
     if (picks[j][5] === "GAGNE") { tempSerie++; if (tempSerie > meilleuresSerie) meilleuresSerie = tempSerie; }
     else if (picks[j][5] === "PERDU") { tempSerie = 0; }
   }
@@ -204,7 +207,7 @@ export default function App() {
   var pickBorderColor = isPremium ? "rgba(212,175,55,0.35)" : "rgba(245,158,11,0.5)";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
-    return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
+    return p[5]==="NOPICK" || p[5]==="ANNULE" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
   });
 
 
@@ -627,11 +630,11 @@ export default function App() {
       ),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"5px"}},
         filtered.map(function(p,i){
-          var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS", ea=p[5]==="EN ATTENTE";
-          var bg=np?"rgba(100,100,100,0.04)":(ec||ea)?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
-          var bd=np?"rgba(100,100,100,0.15)":(ec||ea)?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
-          var dc=np?"#555":(ec||ea)?"#ffa500":g?"#22cc44":"#ff4444";
-          var label=np?"---":ec?t("a_venir"):ea?t("en_attente"):g?t("gagne"):t("perdu");
+          var g=p[5]==="GAGNE", np=p[5]==="NOPICK", ec=p[5]==="EN COURS", ea=p[5]==="EN ATTENTE", an=p[5]==="ANNULE";
+          var bg=np||an?"rgba(100,100,100,0.04)":(ec||ea)?"rgba(255,165,0,0.05)":g?"rgba(34,180,60,0.05)":"rgba(255,60,60,0.05)";
+          var bd=np||an?"rgba(100,100,100,0.15)":(ec||ea)?"rgba(255,165,0,0.3)":g?"rgba(34,180,60,0.2)":"rgba(255,60,60,0.2)";
+          var dc=np||an?"#444":(ec||ea)?"#ffa500":g?"#22cc44":"#ff4444";
+          var label=an?"⚠️ amical":(np?"---":ec?t("a_venir"):ea?t("en_attente"):g?t("gagne"):t("perdu"));
           var matchDisplay=(!np&&p[6])?sportEmoji(p[6])+p[1]:p[1];
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
