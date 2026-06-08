@@ -532,12 +532,12 @@ export default function App() {
           {
             label:"STANDARD", price:"9,90€", sub:"/ mois",
             features:["1 pick ARJEL prioritaire","Alertes Telegram instantanées","Statistiques avancées","Historique complet des picks"],
-            cta:"Essayer Standard", ctaAction:"standard", highlight:false, badge:"NOUVEAU"
+            cta:"Essayer Standard", ctaUrl:"https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00", highlight:false, badge:"NOUVEAU"
           },
           {
             label:"PREMIUM", price:"19,90€", sub:"/ mois",
             features:["Tout Standard inclus","1 pick HORS-ARJEL (Pinnacle)","Cotes supérieures vs France","Canal Telegram privé"],
-            cta:"💎 Devenir Premium", ctaAction:"premium", highlight:true, badge:"MEILLEURE VALEUR"
+            cta:"💎 Devenir Premium", ctaUrl:"https://buy.stripe.com/9B64gzgrW2xe2RK4KW3VC01", highlight:true, badge:"MEILLEURE VALEUR"
           }
         ].map(function(plan,i){
           return React.createElement("div", {key:i, style:{
@@ -568,17 +568,13 @@ export default function App() {
             ),
             React.createElement("button", {
               onClick: function(){
-                if(!plan.ctaAction){return;}
-                if(window.trackEvent) window.trackEvent("click_pricing_cta",{plan:plan.ctaAction});
-                fetch("https://www.touslesmatchs.com/api/create-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:plan.ctaAction})})
-                  .then(function(r){return r.json();})
-                  .then(function(d){if(d.url) window.location.href=d.url; else window.open("https://t.me/touslesmatchs_bot","_blank");})
-                  .catch(function(){window.open("https://t.me/touslesmatchs_bot","_blank");});
+                if(!plan.ctaUrl){return;}
+                window.location.href = plan.ctaUrl;
               },
               style:{
                 width:"100%", padding:"12px", borderRadius:"8px", border:"none", cursor: plan.ctaAction?"pointer":"default",
-                background: plan.highlight ? "linear-gradient(135deg,#d4af37,#f5d76e)" : plan.ctaAction ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
-                color: plan.highlight ? "#000" : "#aaa",
+                background: plan.highlight ? "linear-gradient(135deg,#d4af37,#f5d76e)" : plan.ctaUrl ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+                color: plan.highlight ? "#000" : plan.ctaUrl ? "#fff" : "#444",
                 fontWeight:"bold", fontSize:"13px", letterSpacing:"0.5px"
               }
             }, plan.cta)
