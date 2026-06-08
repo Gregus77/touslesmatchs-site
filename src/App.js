@@ -284,6 +284,16 @@ export default function App() {
     ? "+" + (Math.round((parseFloat(dernierResultat[3]) - 1) * 10 * 10) / 10).toFixed(2) + " EUR"
     : null;
 
+  // ═══ DONNÉES TIERS PREMIUM ═══
+  var lastPremiumJouable = picks.find(function(pk){ return pk[8]===7 && (pk[5]==="GAGNE"||pk[5]==="PERDU"); });
+  var premiumJouableNow  = picks.find(function(pk){ return pk[8]===7 && !pk[9] && (pk[5]==="EN ATTENTE"||pk[5]==="EN COURS"); });
+  var _t3 = new Date();
+  var nextThreeDays = [0,1,2].map(function(di){
+    var _dd = new Date(_t3); _dd.setDate(_t3.getDate()+di);
+    var _ds = String(_dd.getDate()).padStart(2,'0')+"/"+String(_dd.getMonth()+1).padStart(2,'0');
+    return picks.find(function(pk2){ return pk2[0]===_ds; }) || [_ds,"---","---","---","---","NOPICK","",0,8];
+  });
+
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
   });
@@ -507,12 +517,12 @@ export default function App() {
     }},
       React.createElement("div", {className:"ticker-wrap"},
         React.createElement("div", {className:"ticker-track"},
-          picks.filter(function(p){return p[5]==="GAGNE"||p[5]==="PERDU";}).slice(0,8).concat(
-            picks.filter(function(p){return p[5]==="GAGNE"||p[5]==="PERDU";}).slice(0,8)
+          picks.filter(function(p){return p[5]==="GAGNE";}).slice(0,8).concat(
+            picks.filter(function(p){return p[5]==="GAGNE";}).slice(0,8)
           ).map(function(p,i){
             return React.createElement("div", {key:i, className:"ticker-item"},
               React.createElement("span", {style:{fontSize:"13px"}},(p[6]?sportEmoji(p[6]):"⚽")),
-              React.createElement("span", {style:{color:"rgba(255,255,255,0.55)"}},[p[1].split(" vs ")[0]," vs ",p[1].split(" vs ")[1]||p[1]].join("")),
+              React.createElement("span", {style:{color:"rgba(255,255,255,0.55)"}}, p[1]),
               React.createElement("span", {style:{fontWeight:"700",color:"#d4af37"}}, p[3]),
               React.createElement("span", {className: p[5]==="GAGNE"?"ticker-win":"ticker-loss", style:{fontWeight:"700",fontSize:"11px",letterSpacing:"1px"}},
                 p[5]==="GAGNE" ? "✓ GAGNÉ" : "✗ PERDU"
@@ -810,6 +820,109 @@ export default function App() {
             minHeight:"56px"
           }
         }, isPickHorsARJEL ? "🎯 Parier sur Pinnacle →" : t("parier_winamax"))
+      )
+    ),
+    /* ══════════════════════════════════════════════
+       PICKS PREMIUM — TEASERS VERROUILLÉS (FOMO)
+       ══════════════════════════════════════════════ */
+    React.createElement("section", {className:"home-section",style:{padding:"4px 20px 24px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
+
+      /* Header section */
+      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"12px",marginBottom:"14px"}},
+        React.createElement("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#555",fontWeight:"600"}},"ACCÈS PREMIUM"),
+        React.createElement("div",{style:{flex:1,height:"1px",background:"linear-gradient(90deg,rgba(212,175,55,0.18),transparent)"}})
+      ),
+
+      /* ── PREMIUM 9,90€ — pick 7/10 JOUABLE ── */
+      React.createElement("div",{style:{position:"relative",marginBottom:"10px",borderRadius:"14px",overflow:"hidden"}},
+        /* Blurred preview */
+        React.createElement("div",{style:{
+          filter:"blur(5px)",userSelect:"none",pointerEvents:"none",
+          background:"rgba(245,158,11,0.05)",border:"1px solid rgba(245,158,11,0.25)",
+          borderRadius:"14px",padding:"20px 22px"
+        }},
+          React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"10px",flexWrap:"wrap"}},
+            React.createElement("div",{style:{display:"inline-flex",background:"rgba(245,158,11,0.15)",border:"1px solid rgba(245,158,11,0.4)",borderRadius:"4px",padding:"4px 12px",fontSize:"10px",fontWeight:"bold",letterSpacing:"2px",color:"#f59e0b"}},"PICK PREMIUM — 7/10 JOUABLE"),
+            React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:"4px",padding:"3px 9px"}},
+              React.createElement("span",{style:{fontSize:"11px",color:"#f59e0b",fontWeight:"700"}},"★★★"),
+              React.createElement("span",{style:{fontSize:"9px",color:"#f59e0b",letterSpacing:"2px",fontWeight:"700"}},"JOUABLE")
+            )
+          ),
+          React.createElement("div",{style:{fontSize:"17px",fontWeight:"700",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif"}},
+            premiumJouableNow ? sportEmoji(premiumJouableNow[6])+premiumJouableNow[1]
+            : lastPremiumJouable ? sportEmoji(lastPremiumJouable[6])+lastPremiumJouable[1]
+            : "⚽ Match sélectionné par Hermès"
+          ),
+          React.createElement("div",{style:{display:"flex",gap:"12px",alignItems:"center"}},
+            React.createElement("span",{style:{background:"rgba(245,158,11,0.1)",border:"1px solid rgba(245,158,11,0.3)",borderRadius:"6px",padding:"6px 14px",color:"#f59e0b",fontSize:"13px",fontWeight:"600"}},
+              premiumJouableNow ? premiumJouableNow[2] : lastPremiumJouable ? lastPremiumJouable[2] : "Pari analysé"
+            ),
+            React.createElement("span",{style:{color:"#fff",fontWeight:"700",fontSize:"18px",fontFamily:"'Bodoni Moda',serif"}},
+              "Cote: "+(premiumJouableNow ? premiumJouableNow[3] : lastPremiumJouable ? lastPremiumJouable[3] : "x.xx")
+            )
+          )
+        ),
+        /* Lock overlay */
+        React.createElement("div",{style:{
+          position:"absolute",inset:0,display:"flex",flexDirection:"column",
+          alignItems:"center",justifyContent:"center",gap:"8px",
+          background:"rgba(8,7,6,0.75)",backdropFilter:"blur(3px)",
+          borderRadius:"14px",border:"1px solid rgba(245,158,11,0.22)"
+        }},
+          React.createElement("span",{style:{fontSize:"20px"}},"🔒"),
+          React.createElement("div",{style:{fontSize:"12px",color:"#f59e0b",letterSpacing:"2px",fontWeight:"700",textAlign:"center"}},"PICK 9,90€/mois"),
+          React.createElement("div",{style:{fontSize:"11px",color:"#666",textAlign:"center",maxWidth:"200px",lineHeight:"1.7"}},"Seuil 7/10 JOUABLE — disponible aujourd'hui sur ARJEL"),
+          React.createElement("button",{
+            onClick:function(){setPage("subscription");if(window.gtag)window.gtag("event","click_premium_teaser",{tier:"premium"});},
+            style:{marginTop:"2px",background:"rgba(245,158,11,0.12)",border:"1px solid rgba(245,158,11,0.55)",borderRadius:"8px",padding:"9px 22px",color:"#f59e0b",fontWeight:"700",cursor:"pointer",fontSize:"12px",letterSpacing:"1px"}
+          },"⭐ DÉBLOQUER PREMIUM")
+        )
+      ),
+
+      /* ── PREMIUM+ 19,90€ — 3 jours ── */
+      React.createElement("div",{style:{position:"relative",borderRadius:"14px",overflow:"hidden"}},
+        /* Blurred preview */
+        React.createElement("div",{style:{
+          filter:"blur(5px)",userSelect:"none",pointerEvents:"none",
+          background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.2)",
+          borderRadius:"14px",padding:"18px 20px"
+        }},
+          React.createElement("div",{style:{fontSize:"10px",letterSpacing:"3px",color:"#d4af37",marginBottom:"12px",fontWeight:"600"}},"PICKS 3 JOURS — PREMIUM+"),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}},
+            nextThreeDays.map(function(pk3,i3){
+              var hasData = pk3[5]==="EN ATTENTE"||pk3[5]==="EN COURS";
+              var isOk    = pk3[5]==="GAGNE";
+              return React.createElement("div",{key:i3,style:{
+                background: hasData?"rgba(212,175,55,0.08)":isOk?"rgba(34,197,94,0.06)":"rgba(255,255,255,0.025)",
+                border:"1px solid "+(hasData?"rgba(212,175,55,0.28)":isOk?"rgba(34,197,94,0.2)":"rgba(255,255,255,0.06)"),
+                borderRadius:"10px",padding:"13px 10px",textAlign:"center",minWidth:0
+              }},
+                React.createElement("div",{style:{fontSize:"10px",color:"#555",letterSpacing:"1px",marginBottom:"5px"}}, pk3[0]),
+                React.createElement("div",{style:{fontSize:"10px",color:hasData?"#d4af37":isOk?"#22c55e":"#444",fontWeight:"600",lineHeight:"1.4",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%"}},
+                  hasData ? (pk3[6]?sportEmoji(pk3[6]):"")+pk3[2]
+                  : isOk  ? "✅ "+pk3[2]
+                  : "En analyse..."
+                ),
+                (hasData||isOk) && React.createElement("div",{style:{fontSize:"13px",fontWeight:"700",color:"#fff",marginTop:"4px"}},"×"+pk3[3])
+              );
+            })
+          )
+        ),
+        /* Lock overlay */
+        React.createElement("div",{style:{
+          position:"absolute",inset:0,display:"flex",flexDirection:"column",
+          alignItems:"center",justifyContent:"center",gap:"8px",
+          background:"rgba(8,7,6,0.75)",backdropFilter:"blur(3px)",
+          borderRadius:"14px",border:"1px solid rgba(212,175,55,0.2)"
+        }},
+          React.createElement("span",{style:{fontSize:"20px"}},"💎"),
+          React.createElement("div",{style:{fontSize:"12px",color:"#d4af37",letterSpacing:"2px",fontWeight:"700",textAlign:"center"}},"PICKS 3 JOURS — 19,90€/mois"),
+          React.createElement("div",{style:{fontSize:"11px",color:"#666",textAlign:"center",maxWidth:"240px",lineHeight:"1.7"}},"Aujourd'hui + demain + J+2 — picks dès 12h00, avant tout le monde"),
+          React.createElement("button",{
+            onClick:function(){setPage("subscription");if(window.gtag)window.gtag("event","click_premium_teaser",{tier:"premium_plus"});},
+            style:{marginTop:"2px",background:"linear-gradient(135deg,rgba(212,175,55,0.15),rgba(212,175,55,0.07))",border:"1px solid rgba(212,175,55,0.55)",borderRadius:"8px",padding:"9px 22px",color:"#d4af37",fontWeight:"700",cursor:"pointer",fontSize:"12px",letterSpacing:"1px"}
+          },"💎 DÉBLOQUER PREMIUM+")
+        )
       )
     ),
     React.createElement("div", {className:"section-divider"}),
