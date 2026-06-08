@@ -104,10 +104,19 @@ const TODAY = dateForOffset(0).fr;
 function sendTelegram(pick) {
   if (!TG_TOKEN || !TG_CHAT) return Promise.resolve();
   const text = pick
-    ? `🏆 <b>PICK DU JOUR — ${TODAY}</b>\n\n⚽ ${pick.match}\n💡 Pari : <b>${pick.match.split(" vs ")[0]} Vainqueur</b>\n💰 Cote : <b>${pick.cote}</b>\n🔥 Note : <b>${pick.note}/10</b>\n\n<i>${pick.raison || "Sélectionné par le Conseil Hermès"}</i>\n\n⏩ Joue sur <a href="https://touslesmatchs.com">touslesmatchs.com</a>\n\n⚠️ 18+ — Jeu responsable — Max 2-5% bankroll`
+    ? `🏆 <b>PICK DU JOUR — ${TODAY}</b>\n\n⚽ ${pick.match}\n💡 Pari : <b>${pick.match.split(" vs ")[0]} Vainqueur</b>\n💰 Cote : <b>${pick.cote}</b>\n🔥 Note : <b>${pick.note}/10</b>\n\n<i>${pick.raison || "Sélectionné par le Conseil Hermès"}</i>\n\n⏩ Joue sur <a href="https://touslesmatchs.com">touslesmatchs.com</a>\n\n💎 <b>Canal TousLesMatchs Premium</b> : pick HORS-ARJEL supplémentaire chaque jour sur Pinnacle.\n\n⚠️ 18+ — Jeu responsable — Max 2-5% bankroll`
     : `🔍 <b>ANALYSE DU ${TODAY}</b>\n\n❌ <b>PAS DE PICK AUJOURD'HUI</b>\n\nAucun match n'atteint le seuil de confiance.\nOn préfère ne pas publier plutôt que de forcer un pari incertain.\n\n📈 Winrate maintenu grâce à cette discipline.`;
+  const keyboard = pick
+    ? { inline_keyboard: [
+        [{ text: "⚡ Parier sur Winamax", url: "https://www.winamax.fr/parrain?code=77953728" },
+         { text: "🎯 Parier sur Betclic",  url: "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ" }],
+        [{ text: "⭐ Standard 9,90€/mois", url: "https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" },
+         { text: "💎 Premium 19,90€/mois", url: "https://buy.stripe.com/9B64gzgrW2xe2RK4KW3VC01" }],
+        [{ text: "🌐 Historique complet",   url: "https://touslesmatchs.com" }]
+      ]}
+    : { inline_keyboard: [[{ text: "🌐 touslesmatchs.com", url: "https://touslesmatchs.com" }]] };
   return new Promise((resolve) => {
-    const payload = { chat_id: TG_CHAT, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: { inline_keyboard: buildInlineKeyboard([{ text: "📊 touslesmatchs.com", url: "https://touslesmatchs.com" }]) } };
+    const payload = { chat_id: TG_CHAT, text, parse_mode: "HTML", disable_web_page_preview: true, reply_markup: keyboard };
     const body = JSON.stringify(payload);
     const req = https.request({ hostname: "api.telegram.org", path: `/bot${TG_TOKEN}/sendMessage`, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) } }, res => { res.on("data", ()=>{}); res.on("end", resolve); });
     req.on("error", () => resolve());

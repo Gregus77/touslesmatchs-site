@@ -526,7 +526,7 @@ export default function App() {
         [
           {
             label:"GRATUIT", price:"0€", sub:"pour toujours",
-            features:["1 pick ARJEL / jour","Winamax, Betclic, PMU","Canal Telegram public","Calculateur de projection"],
+            features:["1 pick ARJEL / jour","Winamax, Betclic, PMU","Canal @TousLesMatchs Free","Calculateur de projection"],
             cta:"Commencer gratuitement", ctaAction:null, highlight:false
           },
           {
@@ -536,7 +536,7 @@ export default function App() {
           },
           {
             label:"PREMIUM", price:"19,90€", sub:"/ mois",
-            features:["Tout Standard inclus","1 pick HORS-ARJEL (Pinnacle)","Cotes supérieures vs France","Canal Telegram privé"],
+            features:["Tout Standard inclus","1 pick HORS-ARJEL (Pinnacle)","Cotes supérieures vs France","Canal @TousLesMatchs Premium privé"],
             cta:"💎 Devenir Premium", ctaUrl:"https://buy.stripe.com/9B64gzgrW2xe2RK4KW3VC01", highlight:true, badge:"MEILLEURE VALEUR"
           }
         ].map(function(plan,i){

@@ -16,7 +16,7 @@ const APP_FILE   = path.join(__dirname, "App.js"); // copié dans le container
 const STRIPE_STANDARD = "https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00";
 const STRIPE_PREMIUM  = "https://buy.stripe.com/9B64gzgrW2xe2RK4KW3VC01";
 const SITE_URL        = "https://touslesmatchs.com";
-const TELEGRAM_CHAN   = "https://t.me/touslesmatchs_bot";
+const TELEGRAM_FREE   = "https://t.me/touslesmatchs_bot"; // Canal TousLesMatchs Free
 
 // ─── HTTP helper ─────────────────────────────────────────────
 function tgApi(method, body) {
@@ -47,7 +47,7 @@ function keyboardAbonnement() {
       ],
       [
         { text: "🌐 Voir le site",         url: SITE_URL },
-        { text: "📢 Canal gratuit",         url: TELEGRAM_CHAN }
+        { text: "📢 Canal Free (gratuit)",    url: TELEGRAM_FREE }
       ]
     ]
   };
@@ -136,6 +136,7 @@ async function handlePick(chatId) {
 📈 Cote : <b>${pick.odds}</b>
 🤖 Confiance IA : <b>${pick.confidence}/10</b> ${stars}
 
+💎 <i>Canal TousLesMatchs Premium : pick HORS-ARJEL supplémentaire sur Pinnacle chaque jour.</i>
 ⚠️ <i>Mise recommandée : 2-5% de ton bankroll max.</i>
 🌐 ${SITE_URL}`;
 
@@ -197,7 +198,7 @@ async function handlePremium(chatId) {
 ✓ Tout Standard inclus
 ✓ Pick HORS-ARJEL (Pinnacle, PS3838)
 ✓ Cotes supérieures vs bookmakers FR
-✓ Canal Telegram privé exclusif
+✓ Canal @TousLesMatchs Premium (privé)
 
 <i>Paiement sécurisé par Stripe. Résiliable à tout moment.</i>`;
 
