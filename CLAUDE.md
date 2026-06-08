@@ -3,375 +3,240 @@
 > **🔄 SYNCHRONISATION MULTI-APPAREILS (téléphone ⇄ ordinateur)**
 >
 > Ce fichier est la **source de vérité** pour toutes les sessions Claude Code.
-> Sur mobile ou desktop, ce fichier garde l'état du projet partagé via Git.
 >
-> ## ⚡ AU DÉBUT DE CHAQUE SESSION CLAUDE CODE (Mobile OU Desktop)
+> ## ⚡ AU DÉBUT DE CHAQUE SESSION CLAUDE CODE
 >
 > **Étapes obligatoires** :
 > 1. `git pull origin main` — synchronise code + CLAUDE.md
-> 2. `git log --oneline -5` — vérifie les 5 derniers commits pour voir si une autre session a avancé
-> 3. Lis ce fichier en entier pour connaître l'état exact
->
-> **⚠️ IMPORTANT MULTI-APPAREILS** : Le projet avance depuis téléphone ET ordinateur.
-> Avant tout développement, vérifier `git log` pour ne pas refaire ce qui est déjà fait.
->
-> Ensuite **lis ce fichier en entier** pour connaître :
-> - Où en est le projet
-> - Ce qui marche
-> - Ce qui est en cours
-> - La prochaine action à faire (section "🔥 PROCHAINE ACTION")
->
-> ## 📱 INSTRUCTIONS SPÉCIFIQUES MOBILE
->
-> Si tu es sur Claude Code mobile :
-> 1. Vérifie d'abord `git status` pour voir les modifs en cours
-> 2. Si modifications non commitées : commit + push immédiatement
-> 3. Travaille sur des **petits changements** (mobile = moins de tokens)
-> 4. **Toujours `git push`** à la fin pour synchroniser avec le desktop
->
-> ## 💾 ÉTAT PARTAGÉ
->
-> À la fin de chaque session importante, **mettre à jour** :
-> - Section "🔥 PROCHAINE ACTION" ci-dessous
-> - Section "📅 DERNIÈRE SESSION"
-> - `git add CLAUDE.md && git commit -m "etat: synthese session" && git push`
+> 2. `git log --oneline -5` — vérifie les 5 derniers commits
+> 3. Lis ce fichier en entier avant de toucher quoi que ce soit
 
 ---
 
-## 🔥 PROCHAINE ACTION (à faire au prochain démarrage)
+## 🔥 PROCHAINE ACTION — SESSION PC (08/06/2026 soir)
 
-**08/06/2026 — Status**:
-- ✅ Analyse Live V2 — matchs cliquables, fallback multi-IA sans clés
-- ✅ Picks HORS-ARJEL visibles avec badge orange + CTA Pinnacle
-- ✅ Abonnements — bouton Premium 9.90€ en or (distinct du grisé)
-- ✅ Drapeaux desktop — emoji + texte + bordure visible
-- ✅ Bandeau dernier résultat quand aucun pick actif
-- ✅ Étoiles ★★★★★ à la place des trophées
-- ✅ Workflows CI/CD deploy-site + deploy-api créés
-- ✅ **ANIMATIONS DYNAMIQUES** (commit cdb5f9d) :
-  - Countdown temps réel H:MIN:SEC jusqu'à 11h59
-  - Compteurs animés (éasing cubique) pour les stats
-  - Ticker horizontal des derniers résultats
-  - Pick card pulsation dorée quand actif
-  - Feu animé sur série de victoires
-  - Dots IA Concile respirent en décalé
-- 🚧 Stripe (clés manquantes — PRIORITÉ NEXT)
-- 🚧 Capture email (lead magnet)
-- 🚧 Canal Telegram premium privé
+### PRIORITÉ ABSOLUE — Stripe + Telegram sécurisés
+
+**1. Stripe Dashboard** (dashboard.stripe.com)
+- Créer produit "Premium" → 9,90€/mois récurrent → copier Price ID
+- Créer produit "Premium Plus" → 19,90€/mois récurrent → copier Price ID
+- Créer webhook → URL `https://touslesmatchs.com/api/stripe/webhook` → event `checkout.session.completed` → copier Signing secret
+
+**2. GitHub Secrets** (repo → Settings → Secrets → Actions)
+- `REACT_APP_STRIPE_PRICE_PREMIUM` = price_xxx
+- `REACT_APP_STRIPE_PRICE_VIP` = price_xxx
+- Relancer le workflow `deploy-site` après ajout
+
+**3. VPS via SSH**
+```bash
+ssh user@72.61.167.175
+nano .env
+# Ajouter :
+# STRIPE_SECRET_KEY=sk_live_xxx
+# STRIPE_WEBHOOK_SECRET=whsec_xxx
+# TELEGRAM_PREMIUM_CHAT_ID=-100xxxxxxxxx
+docker-compose restart api
+```
+
+**4. Canal Telegram Premium**
+- Créer canal privé "TousLesMatchs Premium"
+- Ajouter le bot comme admin
+- Récupérer Chat ID via `api.telegram.org/bot<TOKEN>/getUpdates`
+
+**5. Pick HORS-ARJEL ce soir**
+```bash
+ssh user@72.61.167.175
+node scripts/multi_agent.js
+```
+
+---
+
+## ✅ CE QUI A ÉTÉ FAIT — SESSION 08/06/2026
+
+- ✅ **FAILLE SÉCURITÉ CORRIGÉE** (commit bbbaf23) :
+  - Boutons abonnement ne redirigent plus vers Telegram sans paiement
+  - App.js : supprimé fallback Telegram dans `.catch()` — affiche erreur à la place
+  - Subscription.js : `null` (gratuit) vs `undefined` (Stripe manquant) bien distincts
+- ✅ **Section tarifaire en double supprimée** (commit 7dc7e2c) :
+  - Section "NOS FORMULES" supprimée — dupliquait les encarts ACCÈS PREMIUM
+  - Plus de card 19,90€ coupée sur mobile
+- ✅ Stratégie business clarifiée : 2 plans seulement (9,90€ / 19,90€), 29,90€ reporté
+- ✅ Règle 80/20 adoptée : automatiser/convertir avant d'ajouter des features
 
 ---
 
 ## 🚫 RÈGLES ABSOLUES — JAMAIS DE PICK SUR CES MATCHS
 
-> Ces règles ont été établies après des pertes réelles. NE PAS MODIFIER sans validation.
-
-### ❌ AMICAUX INTERNATIONAUX — INTERDICTION TOTALE
+### ❌ AMICAUX — INTERDICTION TOTALE
 **Leçon : Suisse 1-1 Australie (06/06/2026) — pari PERDU**
-- Match amical à San Diego, aucun enjeu, équipes mixées
-- La Suisse menait 1-0 (Ndoye 14') → égalisation Australie (Yengi 56')
-- Filtre corrigé dans `multi_agent.js` : `BANNED_LEAGUE_KEYWORDS` détecte
-  "friendly", "amical", "exhibition", "tour" dans le nom de la ligue
-- **Règle : JAMAIS de pick sur un amical, peu importe la cote ou la confiance**
+- Filtre dans `multi_agent.js` : `BANNED_LEAGUE_KEYWORDS` détecte "friendly", "amical", "exhibition"
+- **Règle : JAMAIS de pick sur un amical**
 
 ### ❌ ÉQUIPES JEUNES / FÉMININES
 - U17, U18, U19, U20, U21, U23 → REJET
 - Women, Femmes, Femenino → REJET
 
 ### ✅ SEULS MATCHS AUTORISÉS
-- Top 5 européens saison régulière (L1, PL, BL, SA, LL)
-- Compétitions FIFA/UEFA officielles avec enjeu réel (Coupe du Monde, Nations League, qualifs)
+- Top 5 européens saison régulière
+- Compétitions FIFA/UEFA officielles avec enjeu réel
+- HORS-ARJEL : Copa Libertadores, Brasileirao, K-League, J-League, MLS (via Pinnacle uniquement)
 
 ---
 
-## 🎯 STRATÉGIE COMPLÈTE TOUSLESMATCHS (à implémenter étape par étape)
+## 💰 MODÈLE FREEMIUM VALIDÉ
 
-### 1️⃣ Flux financier
-- Clients s'inscrivent via affiliés **PMU, Winamax, ParisPortif**
-- Gains reversés vers **Pinnacle**
-- Réinvestissement en **ETFs Trade Republic** via revenus Stripe
+### GRATUIT (0€) — permanent, jamais supprimer
+- 1 pick ANJ / jour (Winamax, Betclic, PMU)
+- Canal Telegram public
+- Calculateur projection
+- **Rôle : acquisition + preuve sociale**
 
-### 2️⃣ Abonnement Stripe
-- Paiement récurrent **5-10€/jour** pour accès picks IA
-- Webhook Stripe pour activation compte client après paiement
-- Plans : Free / Standard 9.90€ / Premium 19.90€
+### PREMIUM (9,90€/mois)
+- Pick Premium ANJ + picks 3 jours à venir
+- 10 analyses personnalisées/mois
+- Canal Telegram Premium privé
 
-### 3️⃣ Calculateur projection interactive (page publique)
-- Client rentre montant initial → voit 3 scénarios sur 6 mois
-- Basé sur stats réelles : 21/23, cote moyenne 1.52, Kelly modéré 1.5x
-- Formule : `Bank finale = Bank initiale × (1 + ROI)^nb_jours`
+### PREMIUM PLUS (19,90€/mois)
+- Tout Premium + pick HORS-ARJEL (Pinnacle)
+- 50 analyses personnalisées/mois
+- Value Bets avancés + sports supplémentaires
 
-### 4️⃣ Gestion mise progressive (Python script)
-- À chaque pari gagné → calcule mise suivante via **Kelly 1.5x**
-- À chaque perte → réduit mise de **-10%**
-- Stop-loss : 3 pertes d'affilée → réduction **-50% pendant 2 jours**
-
-### 5️⃣ Google Analytics 4
-- Implémenter GA4 sur toutes les pages
-- Track : inscriptions, clics Stripe, temps sur calculateur, taux conversion
-
-### 6️⃣ Responsive design + Vidéos
-- Mobile / Tablette / Desktop (en cours d'amélioration)
-- Garder **dark black & or**
-- Ajouter vidéos buts foot/hockey 5-8s en boucle (sources gratuites)
-
-### 7️⃣ Historique paris (logging complet)
-- Chaque pick enregistre : date, cote réelle, résultat, mise
-- Stats mises à jour en direct (déjà partiellement fait)
+> Le plan 29,90€ est reporté jusqu'à 50+ abonnés payants.
 
 ---
 
-## ⚡ ACTIONS IMMÉDIATES (cette session)
+## 🎯 OBJECTIF IMMÉDIAT
 
-1. ✅ Doublons picks corrigés (déduplication runtime)
-2. ✅ Stats dynamiques (+394% remplacé par ROI calculé)
-3. ✅ Bandeau stats grid 2×2 (plus de débordement mobile)
-4. ✅ Header mobile compact (TikTok + drapeaux IT/ES/RU cachés)
-5. ✅ **Calculateur de projection** (page /calculateur) — 3 scénarios réalistes basés sur stats réelles
-6. ✅ **Google Analytics 4** intégré (G-ME2T7G7PSK)
-7. ✅ **FILTRE ARJEL** : ne sélectionne QUE matchs dispo Winamax/Betclic/Unibet
-   - LIGUES_ARJEL : Top 5 européens + UCL + UEL + Nations League
-   - NATIONS_ARJEL : 60+ nations whitelistées (Europe + Amériques + Afrique + Asie majeures)
-   - REJET : Cambodia, Bhutan, Angola, Iraq, Mauritania, etc.
-   - Si aucun match ARJEL → "PAS DE PARI - Aucun match dispo bookmakers FR"
-7. ⏳ Stripe abonnement (priorité prochaine session)
-8. ⏳ Capture email (lead magnet)
-9. ⏳ CTA affiliés optimisés sur chaque pick
-10. ⏳ Vidéos hero (Phase 3)
+**10 premiers abonnés récurrents** — tout le reste est secondaire.
 
-## 💰 MODÈLE FREEMIUM (stratégie validée)
-
-### Tier GRATUIT (0€)
-- ✅ 1 pick/jour ARJEL (Winamax, Betclic, Unibet, PMU)
-- ✅ Site touslesmatchs.com accessible
-- ✅ Canal Telegram public
-- ✅ Calculateur projection
-
-### Tier PREMIUM (19,90€/mois)
-- ✅ 1 pick ARJEL + 1 pick **HORS-ARJEL** (Pinnacle, PS3838)
-- ✅ Cotes supérieures sur matchs internationaux (Asie, Afrique, Amérique latine)
-- ✅ Canal Telegram premium privé
-- ✅ Sans engagement, Stripe sécurisé
-
-### Système implémenté
-- `multi_agent.js` génère maintenant : `pick` (ARJEL gratuit) + `premium_arjel` + `premium_hors_arjel`
-- Encart Premium 19,90€/mois sur la page d'accueil
-- CTA "💎 Devenir Premium" track via GA4 event `click_premium_cta`
-
-## 🗺️ ROADMAP RENTABILITÉ
-
-**Phase 1 (FAIT)**
-- ✅ Calculateur de projection
-- ✅ GA4 (mesurer trafic)
-- ✅ Modèle Freemium ARJEL vs Premium
-- ✅ Encart Premium 19,90€/mois
-
-**Phase 2 (prochaine) — Stripe**
-- 🔄 Page paiement Stripe Checkout
-- 🔄 Webhook activation compte client
-- 🔄 Gestion canal Telegram premium privé (ajout/retrait abonnés)
-
-**Phase 3 — Croissance**
-- TikTok auto-post
-- Vidéos hero foot/hockey
-- SEO optimisé (sitemap, meta tags)
+Tunnel validé :
+```
+TikTok/SEO → Site → Email capture → Pick gratuit → Telegram gratuit
+→ séquence email 7j → CTA Premium → Stripe → Telegram Premium
+```
 
 ---
 
-## 📅 DERNIÈRE SESSION (04/06/2026)
+## 📊 ÉTAT AVANT PUBLICITÉ — CHECKLIST
 
-- ✅ Concile simplifié : Claude/Gemini/Mistral/Qwen SUPPRIMÉS, Groq+DeepSeek actifs
-- ✅ Basketball désactivé (33% réussite vs 87% Hockey)
-- ✅ Anti-doublon : seul le pick avec meilleure note conservé
-- ✅ Build React intégré au workflow GitHub Actions
-- ✅ Skill Antithèse (audit auto) : `scripts/antithese_audit.js`
-- ✅ Script test complet : `scripts/test_all.js`
-- ✅ Responsive mobile amélioré (breakpoints 480px + 360px)
-- ✅ CLAUDE.md enrichi pour sync mobile/desktop
+| Élément | Statut |
+|---|---|
+| Stripe sécurisé | 🔴 À faire ce soir |
+| Telegram sécurisé (webhook) | 🔴 À faire ce soir |
+| Historique réel | ✅ 27 picks, 78% winrate |
+| ROI réel | ✅ Affiché sur le site |
+| Analytics GA4 | ✅ Installé (funnel à configurer) |
+| Capture email | 🟡 Formulaire OK, séquence manquante |
+| Dashboard Admin | 🔴 Non |
+| Mobile optimisé | ✅ |
+| Processus abonnement fiable | 🔴 Stripe manquant |
+
+> NE PAS lancer de publicité payante avant que Stripe + Telegram soient verts.
 
 ---
 
-## 🏗️ Architecture réelle (branche `main` = production)
+## 🗺️ ROADMAP 30 JOURS
 
-### Stack technique
+### Semaine 1 — Sécuriser le tunnel
+- Stripe configuré + webhook → accès Telegram automatique
+- Canal Telegram Premium privé créé
+- Email contact@touslesmatchs.com (Hostinger)
+- Brevo configuré (300 emails/jour gratuit)
+
+### Semaine 2 — Activer l'acquisition organique
+- TikTok : 7 premières vidéos (1/jour)
+- Séquence Brevo : 7 emails automatiques après inscription
+- Page SEO `/pronostic-foot-aujourd-hui`
+- Funnel GA4 configuré
+
+### Semaine 3 — Optimiser la conversion
+- Test complet tunnel A→Z (carte test Stripe 4242...)
+- Premier email envoyé à la liste capturée
+- Objectif : 3 abonnés payants
+
+### Semaine 4 — Mesurer et itérer
+- Lire données GA4 (d'où viennent les visiteurs ?)
+- Analyser picks perdus → ajuster filtres Hermès
+- Objectif : **10 abonnés récurrents**
+
+---
+
+## 🏗️ Architecture
+
 - **Frontend** : React (src/App.js) — buildé et servi par Caddy
-- **Serveur web** : Caddy (Caddyfile) — port 80/443 avec HTTPS auto
-- **Orchestrateur IA** : `scripts/multi_agent.js` (Node.js)
-- **Bot Telegram** : `scripts/bot.js` (Node.js — polling)
-- **Docker** : 3 conteneurs — `site` (Caddy+React), `api` (Node), `bot` (Node)
-- **VPS** : Hostinger — IP `72.61.167.175`
-- **CI/CD** : GitHub Actions → push sur `main` → redéploiement auto VPS
-
-### Agents IA dans multi_agent.js (Phase 2: Multi-IA)
-| Composant | Rôle | Status |
-|-----------|------|--------|
-| RapidAPI | Données matchs foot | ✅ Stable |
-| Groq/Llama3 | Enrichissement cotes | ✅ Actif |
-| **Fallback Router** | Chef — essai séquentiel | ✅ NOUVEAU (Phase 2) |
-| → DeepSeek | 1er choix | ✅ Configuré |
-| → OpenRouter | Fallback 1 | 🟡 À configurer |
-| → Gemini | Fallback 2 | 🟡 À configurer |
-| → Mistral | Fallback 3 | 🟡 À configurer |
-| → Manual | Fallback final | ✅ Toujours disponible |
-
-**Flux Phase 2:**
-```
-RapidAPI → matchs
-  → Groq → cotes
-    → callWithFallback([DeepSeek, OpenRouter, Gemini, Mistral])
-      → premier succès = pick retourné
-      → tous échoués = fallback manuel (best cote)
-```
-
-### Flux quotidien (GitHub Actions, 11h59)
-```
-RapidAPI → matchs du jour (3 jours)
-  → Groq enrichit les cotes
-  → DeepSeek choisit le meilleur pick (note 7-10)
-  → updateAppJs() → src/App.js mis à jour
-  → git commit + push
-  → Telegram canal gratuit notifié
-  → Site React rebuildé sur VPS
-```
+- **Serveur web** : Caddy (Caddyfile) — HTTPS auto
+- **Orchestrateur IA** : `scripts/multi_agent.js` (Node.js, 11h59)
+- **Bot Telegram** : `scripts/bot.js`
+- **Docker** : 3 conteneurs — `site`, `api`, `bot`
+- **VPS** : Hostinger — `72.61.167.175`
+- **CI/CD** : GitHub Actions → push main → redéploiement auto
 
 ---
 
 ## 📁 Fichiers clés
 
 ```
-/
-├── src/App.js              ← Contient le tableau picks[] — MODIFIÉ par Hermès
-├── scripts/
-│   ├── multi_agent.js      ← Orchestrateur principal (RapidAPI+Groq+DeepSeek)
-│   ├── bot.js              ← Bot Telegram (multilingue FR/EN/ES/IT/RU)
-│   ├── hermes_learn.js     ← Apprentissage basé sur résultats passés
-│   ├── antithese_audit.js  ← Vérificateur automatique (l'antithèse)
-│   ├── check_results.js    ← Vérification résultats des picks
-│   ├── analyse_live.js     ← Analyse live (en développement)
-│   └── picks_history.json  ← Historique JSON des picks
-├── Caddyfile               ← Config serveur web (HTTPS auto)
-├── docker-compose.yml      ← 3 services: site + api + bot
-├── .env.example            ← Variables requises
-└── .github/workflows/      ← CI/CD automatique
+src/App.js              ← picks[] + UI — modifié par Hermès à 11h59
+src/Subscription.js     ← page abonnements Stripe
+scripts/multi_agent.js  ← orchestrateur IA (RapidAPI + Groq + DeepSeek)
+scripts/bot.js          ← bot Telegram multilingue
+scripts/analyse_live.js ← serveur API Node (port 3001) + endpoint /subscribe
+scripts/picks_history.json ← historique JSON
+.github/workflows/      ← deploy-site.yml + deploy-api.yml
 ```
 
 ---
 
-## 🔑 Variables d'environnement requises (.env sur VPS)
+## 🔑 Variables .env VPS (jamais dans le repo)
 
 ```env
-# IAs
-GROQ_API_KEY=              # Groq/Llama3 (gratuit)
-DEEPSEEK_API_KEY=          # DeepSeek chef (peu coûteux)
-
-# Sport data
-RAPIDAPI_KEY=              # free-api-live-football-data
-FOOTBALL_DATA_KEY=         # API football secondaire
-
-# Telegram
-TELEGRAM_BOT_TOKEN=        # @BotFather → /newbot
-TELEGRAM_CHAT_ID=          # Canal gratuit (ex: @touslesmatchs)
-TELEGRAM_PREMIUM_CHAT_ID=  # ⬅️ À CRÉER — canal premium privé
-
-# Bookmakers (liens affiliation)
-WINAMAX_LINK=              # ⬅️ À REMPLACER par lien perso (pas WMX8M5)
+GROQ_API_KEY=
+DEEPSEEK_API_KEY=
+RAPIDAPI_KEY=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+TELEGRAM_PREMIUM_CHAT_ID=   ← À créer
+STRIPE_SECRET_KEY=           ← À ajouter
+STRIPE_WEBHOOK_SECRET=       ← À ajouter
+WINAMAX_LINK=https://www.winamax.fr/parrain?code=77953728
 ```
 
 ---
 
-## ✅ Ce qui fonctionne déjà
+## ✅ Ce qui fonctionne
 
-- [x] Génération automatique des picks à 11h59 (GitHub Actions)
-- [x] Mise à jour automatique de src/App.js
-- [x] Anti-doublon : garde le pick avec la meilleure note
-- [x] Bot Telegram multilingue (FR/EN/ES/IT/RU)
-- [x] Notification Telegram canal gratuit après génération
-- [x] Système d'apprentissage Hermes (hermes_learn.js)
-- [x] Vérificateur antithèse (antithese_audit.js)
-- [x] HTTPS automatique via Caddy
-- [x] Filtre : seules les grandes ligues (MAJOR leagues IDs)
-- [x] Lien Winamax perso (code=77953728) — remplacé WMX8M5
-- [x] Picks premium 7-7.9/10 → TELEGRAM_PREMIUM_CHAT_ID (multi_agent.js)
-- [x] Fix responsive mobile — plus de scroll horizontal (commit b5b1377)
+- [x] Génération picks automatique à 11h59 (GitHub Actions)
+- [x] Anti-doublon (meilleure note conservée)
+- [x] Bot Telegram multilingue FR/EN/ES/IT/RU
+- [x] HTTPS automatique (Caddy)
+- [x] Filtre ARJEL/ANJ (60+ nations whitelistées)
+- [x] Filtre anti-amicaux (BANNED_LEAGUE_KEYWORDS)
+- [x] Animations dynamiques (countdown, compteurs, ticker, pulse)
+- [x] Calculateur de projection
+- [x] GA4 intégré
+- [x] SEO (sitemap, robots.txt, JSON-LD, hreflang 5 langues)
+- [x] Faille sécurité abonnements corrigée
 
----
+## ❌ À faire (priorité décroissante)
 
-## ✅ Phases Complétées
-
-- [x] **Phase 0** — Audit complet du projet
-- [x] **Phase 1** — Correction bug 405 Analyse Live (routing Caddy)
-- [x] **Phase 2** — Architecture multi-IA (fallback DeepSeek → OpenRouter → Gemini → Mistral)
-
-## ❌ Ce qui reste à faire (par ordre de priorité)
-
-### Phase 2 (suite) — Configuration multi-IA
-- [ ] Ajouter clés OpenRouter/Gemini/Mistral au `.env` sur VPS
-- [ ] Exécuter `node scripts/verify_apis.js` pour tester chaque API
-- [ ] Vérifier logs de `multi_agent.js` lors de la prochaine génération (11h59)
-
-### Phase 3 — Simplification Analyse Live
-- [ ] Frontend: supprimer champs compétition/score/minute (auto-complétés)
-- [ ] Backend: enrichir auto-fetch de `match_id` via API sport
-- [ ] Affichage : probabilités Over/BTTS/1X2 avec couleurs (vert/jaune/rouge)
-- [ ] Tester page /analyse-live en tant qu'utilisateur
-
-### Phase 4 — Comptes Utilisateurs
-- [ ] Inscription email/pwd
-- [ ] Système de statuts (Free/Premium/VIP/Elite)
-- [ ] Stockage base de données
-
-### Phase 5 — Stripe
-- [ ] Ajouter clés Stripe au `.env` VPS
-- [ ] Tester paiement (checkout + webhook)
-- [ ] Intégration "après paiement → accès Premium"
-
-### Phase 6 — Quotas
-- [ ] Free : 3 analyses
-- [ ] Premium : 10 analyses/jour
-- [ ] VIP : 30 analyses/jour
-
-### Future
-- [ ] Créer canal Telegram premium privé + TELEGRAM_PREMIUM_CHAT_ID
-- [ ] Telegram Admin privé (pilotage depuis Telegram)
-- [ ] Analytics (Plausible + Google Analytics + Search Console)
-- [ ] Base email + email quotidien
-- [ ] Dashboard Admin
-- [ ] Surveillance automatique Hermès (toutes les heures)
-- [ ] Parrainage + Gamification
-- [ ] Croissance (SEO, TikTok, Ads)
+1. Stripe : Price IDs + webhook → accès Telegram automatique
+2. Canal Telegram Premium privé
+3. Email professionnel + séquence Brevo 7 jours
+4. TikTok : 1 vidéo/jour (pick du jour)
+5. Page SEO `/pronostic-foot-aujourd-hui`
+6. Funnel GA4 (events email_capture → click_premium → purchase)
+7. Dashboard Admin simple
+8. Script vidéo TikTok automatique (ffmpeg + template)
 
 ---
 
-## 🔄 Règles de synchronisation téléphone ↔ ordinateur
+## 📊 Stats (08/06/2026)
 
-**Au début de chaque session Claude Code (téléphone OU ordinateur) :**
-```bash
-git pull origin main
-```
+- Picks : 27 | Gagnés : 21 | Perdus : 6
+- Winrate : **78%** | Sports : Foot, Hockey, Baseball
 
-**Toujours travailler sur `main`** — c'est la branche de production.
+## 🚨 Sécurité
 
-> ⚠️ La branche `claude/docker-multi-ai-setup-aLpF3` est une architecture
-> Python parallèle créée en session. Ne pas merger dans `main` — elle
-> écraserait l'architecture Node.js existante.
-
-**Après chaque modification :**
-```bash
-git add -A && git commit -m "description" && git push origin main
-```
-
----
-
-## 📊 Stats actuelles (04/06/2026)
-
-- Picks totaux : 27
-- Gagnés : 21 | Perdus : 6
-- Winrate : **78%**
-- Sports couverts : Foot, Hockey
-
----
-
-## 🚨 Important — sécurité
-
-- Ne jamais partager de clés API dans le chat
-- Les clés exposées (Anthropic + OpenAI) doivent être régénérées
-- Toutes les clés vont dans `.env` sur le VPS uniquement (jamais dans le repo)
+- Clés API uniquement dans `.env` sur VPS — jamais dans le repo
+- Stripe PriceIDs dans GitHub Secrets (REACT_APP_*)
+- Telegram Premium = accès uniquement après webhook Stripe confirmé
