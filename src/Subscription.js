@@ -63,15 +63,15 @@ export default function Subscription() {
   ];
 
   function handleCheckout(plan) {
+    if (plan.priceId === null) {
+      // Explicitly free plan
+      localStorage.setItem("user_status", "free");
+      window.location.href = "/";
+      return;
+    }
     if (!plan.priceId) {
-      // Free tier
-      var userId = localStorage.getItem("user_id");
-      if (userId) {
-        localStorage.setItem("user_status", "free");
-        window.location.href = "/";
-      } else {
-        setError("Veuillez d'abord vous inscrire");
-      }
+      // Stripe env vars not configured
+      setError("Paiement en cours de configuration. Réessayez bientôt ou contactez-nous.");
       return;
     }
 

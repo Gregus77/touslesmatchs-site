@@ -146,6 +146,10 @@ export default function App() {
   var emailDone = emailDoneState[0]; var setEmailDone = emailDoneState[1];
   var emailLoadingState = React.useState(false);
   var emailLoading = emailLoadingState[0]; var setEmailLoading = emailLoadingState[1];
+  var checkoutErrState = React.useState("");
+  var checkoutErr = checkoutErrState[0]; var setCheckoutErr = checkoutErrState[1];
+  var checkoutLoadState = React.useState(false);
+  var checkoutLoad = checkoutLoadState[0]; var setCheckoutLoad = checkoutLoadState[1];
 
   function changeLang(newLang) {
     setLang(newLang);
@@ -969,6 +973,11 @@ export default function App() {
     React.createElement("section", {className:"home-section",style:{padding:"44px 20px 52px",maxWidth:"860px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"12px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
       React.createElement("p", {style:{color:"#555",fontSize:"14px",textAlign:"center",marginBottom:"32px",lineHeight:"1.8"}}, "Commencez gratuitement — passez Premium quand vous êtes prêt."),
+      checkoutErr && React.createElement("div", {style:{
+        background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)",
+        borderRadius:"10px", padding:"12px 16px", marginBottom:"16px",
+        color:"#EF4444", fontSize:"13px", textAlign:"center"
+      }}, "⚠️ " + checkoutErr),
       React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"20px"}},
         [
           {
@@ -1021,23 +1030,32 @@ export default function App() {
               onClick: function(){
                 if(!plan.ctaAction){return;}
                 if(window.trackEvent) window.trackEvent("click_pricing_cta",{plan:plan.ctaAction});
-                fetch("https://www.touslesmatchs.com/api/create-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:plan.ctaAction})})
+                setCheckoutErr(""); setCheckoutLoad(true);
+                fetch("/api/create-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:plan.ctaAction})})
                   .then(function(r){return r.json();})
-                  .then(function(d){if(d.url) window.location.href=d.url; else window.open("https://t.me/touslesmatchs_bot","_blank");})
-                  .catch(function(){window.open("https://t.me/touslesmatchs_bot","_blank");});
+                  .then(function(d){
+                    setCheckoutLoad(false);
+                    if(d.url){ window.location.href=d.url; }
+                    else { setCheckoutErr(d.error||"Paiement temporairement indisponible — veuillez réessayer."); }
+                  })
+                  .catch(function(){
+                    setCheckoutLoad(false);
+                    setCheckoutErr("Paiement temporairement indisponible — veuillez réessayer dans quelques instants.");
+                  });
               },
+              disabled: checkoutLoad && !!plan.ctaAction,
               style:{
                 width:"100%", padding:"14px", borderRadius:"10px",
                 border: plan.highlight ? "none" : isMid ? "1px solid #d4af37" : "none",
-                cursor: plan.ctaAction ? "pointer" : "default",
+                cursor: (plan.ctaAction && !checkoutLoad) ? "pointer" : "default",
                 background: plan.highlight
                   ? "linear-gradient(135deg,#d4af37,#f5d76e)"
                   : isMid ? "transparent" : "rgba(255,255,255,0.03)",
                 color: plan.highlight ? "#000" : isMid ? "#d4af37" : "#444",
                 fontWeight: "bold", fontSize:"14px", letterSpacing:"0.5px",
-                minHeight:"48px"
+                minHeight:"48px", opacity: (checkoutLoad && !!plan.ctaAction) ? 0.6 : 1
               }
-            }, plan.cta)
+            }, checkoutLoad && plan.ctaAction ? "⏳ Chargement..." : plan.cta)
           );
         })
       )
