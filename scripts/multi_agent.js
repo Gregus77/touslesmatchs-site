@@ -14,7 +14,7 @@ const MISTRAL_KEY = process.env.MISTRAL_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
 const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
-const SPORTS_ALLOWED = ["Hockey", "Foot"];
+const SPORTS_ALLOWED = ["Hockey", "Foot", "Baseball", "MLB", "Tennis", "Rugby", "NBA", "NFL"];
 
 // ═══════════════════════════════════════════════════════
 // MULTI-IA PROVIDER INTERFACE — Fallback routing
@@ -428,10 +428,14 @@ Ajoute des points uniquement pour des preuves concrètes :
   −1.5 si l'équipe joue un match important 72h après (rotation probable)
   −2.0 si les deux équipes ont une forme incertaine ou inégale sur la période
 
-Seuil de publication :
-  ≥ 8.0/10 → pick FORT, publié en priorité
-  7.0–7.9  → pick ACCEPTABLE, publié seulement si aucun 8.0+ disponible
-  < 7.0    → NOPICK absolu, quelle que soit la raison
+Classification par note :
+  9.0–10.0 → PICK PREMIUM ELITE 🏆🏆🏆🏆🏆 — Mise pleine (3% bankroll)
+  8.0–8.9  → PICK PREMIUM SOLIDE 🏆🏆🏆🏆 — Mise standard (2% bankroll)
+  7.0–7.9  → PICK JOUABLE 🏆🏆🏆 — Demi-mise (1% bankroll)
+  < 7.0    → NO BET absolu — Ne publie jamais en dessous
+
+Ne plus écarter les 7/10. Les publier clairement labelisés "JOUABLE".
+Tous les picks ≥ 7.0 sont valides. La différence est dans la mise et l'étiquette.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STRATÉGIE DE MISE (Kelly modifié)
