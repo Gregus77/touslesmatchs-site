@@ -407,3 +407,4 @@ server.listen(PORT, () => {
   console.log(`🔮 Hermès Analyse Live V2 — port ${PORT}`);
   console.log(`   Groq: ${GROQ_KEY ? "✓" : "✗"}  DeepSeek: ${DEEPSEEK_KEY ? "✓" : "✗"}  RapidAPI: ${RAPIDAPI_KEY ? "✓" : "✗"}  FootballData: ${FOOTBALL_KEY ? "✓" : "✗"}`);
 });
+
