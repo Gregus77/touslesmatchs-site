@@ -5,13 +5,19 @@
  * Canal Premium : broadcast @touslesmatchs_fr (abonnés payants)
  */
 
-const https = require("https");
-const fs    = require("fs");
-const path  = require("path");
+const https   = require("https");
+const fs      = require("fs");
+const path    = require("path");
 
-const TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
-const APP_FILE = path.join(__dirname, "App.js");
-const PICK_FILE = path.join(__dirname, "today_pick.json");
+const TOKEN           = process.env.TELEGRAM_BOT_TOKEN;
+const PREMIUM_CHANNEL = process.env.TELEGRAM_PREMIUM_CHAT_ID;
+const APP_FILE        = path.join(__dirname, "App.js");
+const PICK_FILE       = path.join(__dirname, "today_pick.json");
+const SESSIONS_FILE   = path.join(__dirname, "verify_sessions.json");
+const USERS_DB_FILE   = path.join(__dirname, "users_db.json");
+
+function loadJson(file, def) { try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return def; } }
+function saveJson(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 
 // ─── Liens ────────────────────────────────────────────────────
 const STRIPE_STANDARD = "https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00";
@@ -238,8 +244,77 @@ Inscris-toi via nos liens pour obtenir ton bonus de bienvenue et soutenir TousLe
   };
 }
 
+// ─── Vérification paiement Stripe + lien invite Premium ───────
+async function handleVerifyPayment(chatId, sessionId, firstName) {
+  const sessions = loadJson(SESSIONS_FILE, {});
+  const session  = sessions[sessionId];
+
+  if (!session) {
+    await send(chatId,
+      `⚠️ <b>Code introuvable</b>\n\nCe lien est invalide ou a déjà été utilisé.\nSi tu viens de payer, attends 30 secondes et réessaie.\nProblème persistant → contacte @HermesAdmin.`,
+      { inline_keyboard: [[{ text: "⬅️ Retour au menu", callback_data: "menu" }]] }
+    );
+    return;
+  }
+
+  if (session.used) {
+    await send(chatId,
+      `✅ <b>Accès déjà activé</b>\n\nCet abonnement a déjà été lié à un compte Telegram.\nSi tu as changé de compte, contacte @HermesAdmin.`,
+      { inline_keyboard: [[{ text: "⬅️ Retour au menu", callback_data: "menu" }]] }
+    );
+    return;
+  }
+
+  // Lien d'invitation à usage unique (expire dans 7 jours)
+  const inviteRes = await tgApi("createChatInviteLink", {
+    chat_id:      PREMIUM_CHANNEL,
+    member_limit: 1,
+    expire_date:  Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
+    name:         `Premium-${chatId}`,
+  });
+
+  if (!inviteRes.ok || !inviteRes.result?.invite_link) {
+    await send(chatId,
+      `❌ Erreur lors de la génération du lien. Contacte @HermesAdmin avec ton email de paiement.`,
+      keyboardBack()
+    );
+    console.error("createChatInviteLink error:", JSON.stringify(inviteRes));
+    return;
+  }
+
+  const inviteLink = inviteRes.result.invite_link;
+
+  // Marquer la session utilisée + sauvegarder l'utilisateur
+  sessions[sessionId].used        = true;
+  sessions[sessionId].telegram_id = String(chatId);
+  saveJson(SESSIONS_FILE, sessions);
+
+  const db = loadJson(USERS_DB_FILE, {});
+  db[String(chatId)] = {
+    customer_id:  session.customer_id,
+    email:        session.customer_email,
+    session_id:   sessionId,
+    activated_at: new Date().toISOString(),
+  };
+  saveJson(USERS_DB_FILE, db);
+
+  await send(chatId,
+    `🎉 <b>Paiement confirmé — Bienvenue !</b>\n\nBonjour <b>${firstName || ""}</b>, ton abonnement Premium est activé.\n\n👇 <b>Clique ici pour rejoindre le canal privé :</b>\n\n⚠️ <i>Ce lien est personnel et à usage unique. Si tu le partages, il sera brûlé et tu ne pourras pas rejoindre.</i>\n\n📲 Une fois dans le canal, tu recevras les picks premium chaque matin.`,
+    { inline_keyboard: [
+      [{ text: "🔐 Rejoindre TousLesMatchs Premium", url: inviteLink }],
+      [{ text: "🌐 Voir le site", url: SITE_URL }],
+    ]}
+  );
+
+  console.log(`✅ Premium activé — Telegram: ${chatId}, Session: ${sessionId}`);
+}
+
 // ─── Handlers ─────────────────────────────────────────────────
-async function handleStart(chatId, firstName) {
+async function handleStart(chatId, firstName, param) {
+  if (param && param.startsWith("verify_")) {
+    await handleVerifyPayment(chatId, param.slice(7), firstName);
+    return;
+  }
   await send(chatId, textMenu(firstName), keyboardMenu());
 }
 
@@ -289,15 +364,20 @@ async function poll() {
     if (!msg || !msg.text) continue;
     const chatId    = msg.chat.id;
     const firstName = msg.from?.first_name || "";
-    const text      = msg.text.split("@")[0].toLowerCase().trim();
+    const rawText   = msg.text.trim();
+    const text      = rawText.split("@")[0].toLowerCase().trim();
 
-    if (text === "/start")            await handleStart(chatId, firstName);
-    else if (text === "/pick")        { const p = textPick();       await send(chatId, p.text, p.keyboard); }
-    else if (text === "/stats")       { const p = textStats();      await send(chatId, p.text, p.keyboard); }
-    else if (text === "/premium")     { const p = textPremium();    await send(chatId, p.text, p.keyboard); }
-    else if (text === "/bookmakers")  { const p = textBookmakers(); await send(chatId, p.text, p.keyboard); }
-    else if (text === "/menu")        await handleStart(chatId, firstName);
-    else                              await handleStart(chatId, firstName);
+    // /start peut contenir un paramètre : /start verify_cs_xxx
+    if (text.startsWith("/start")) {
+      const parts = rawText.split(" ");
+      const param = parts[1] || "";
+      await handleStart(chatId, firstName, param);
+    } else if (text === "/pick")        { const p = textPick();       await send(chatId, p.text, p.keyboard); }
+    else if (text === "/stats")         { const p = textStats();      await send(chatId, p.text, p.keyboard); }
+    else if (text === "/premium")       { const p = textPremium();    await send(chatId, p.text, p.keyboard); }
+    else if (text === "/bookmakers")    { const p = textBookmakers(); await send(chatId, p.text, p.keyboard); }
+    else if (text === "/menu")          await handleStart(chatId, firstName, "");
+    else                                await handleStart(chatId, firstName, "");
   }
 }
 

@@ -12,6 +12,7 @@ services:
       - ./public/preuves:/usr/share/nginx/html/preuves:ro
     depends_on:
       - council
+      - stripe-webhook
     networks:
       - hermes_net
 
@@ -28,11 +29,41 @@ services:
       - SITE_HTML_PATH=/app/site/index.html
       - SITE_TEMPLATE_PATH=/app/site/template.html
       - DB_PATH=/app/data/history.db
-      # Mettre à "true" pour tester au 1er démarrage
       - RUN_ON_START=false
     volumes:
       - ./site:/app/site
       - council_data:/app/data
+    networks:
+      - hermes_net
+
+  # ── Bot Telegram Free (interactif) ─────────────────────────
+  bot:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: node scripts/bot.js
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - bot_data:/app/scripts/data
+    networks:
+      - hermes_net
+
+  # ── Webhook Stripe (paiements + expulsions) ─────────────────
+  stripe-webhook:
+    image: node:20-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: node scripts/stripe_webhook.js
+    env_file:
+      - .env
+    environment:
+      - TZ=Europe/Paris
+    volumes:
+      - ./scripts:/app/scripts
     networks:
       - hermes_net
 
@@ -44,6 +75,7 @@ volumes:
       o: bind
       device: ./site
   council_data:
+  bot_data:
 
 networks:
   hermes_net:
