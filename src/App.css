@@ -280,8 +280,9 @@ body { font-size: 16px; line-height: 1.65; }
   .nav-links { display:none; }
   .nav-burger { display:flex; }
   .hero { padding:100px 16px 60px; }
-  .hero-section { padding: 30px 12px 20px !important; }
-  .home-section { padding-left: 12px !important; padding-right: 12px !important; }
+  /* Sections hero & home : plus d'espace vertical */
+  .hero-section { padding: 48px 18px 32px !important; }
+  .home-section { padding-left: 18px !important; padding-right: 18px !important; }
   .main-nav { gap: 4px !important; flex-wrap: wrap !important; justify-content: center !important; }
   .main-nav button, .main-nav a { font-size: 11px !important; padding: 5px 10px !important; }
   /* TikTok caché sur mobile */
@@ -292,49 +293,339 @@ body { font-size: 16px; line-height: 1.65; }
   /* Stats grid : reste 2×2 (jamais déborder) */
   .stats-grid { grid-template-columns: 1fr 1fr !important; }
   .hero-title { font-size:clamp(34px,11vw,52px); }
-  .hero-sub { font-size:14px; margin-bottom:36px; }
+  .hero-sub { font-size:16px; margin-bottom:44px; line-height:1.9; }
+  /* Stats grid — cellules plus aérées */
   .stats-grid { grid-template-columns:repeat(2,1fr); max-width:100%; border-radius:var(--r); }
-  .stat-card { padding:16px 10px; }
-  .stat-value { font-size:26px; }
-  .ring-wrap { width:58px; height:58px; }
-  .ring-wrap svg { width:58px; height:58px; }
+  .stat-card { padding:24px 14px; gap:10px; }
+  .stat-value { font-size:30px; }
+  .stat-label { font-size:10px; letter-spacing:.2em; }
+  .stat-sub { font-size:12px; }
+  .ring-wrap { width:60px; height:60px; }
+  .ring-wrap svg { width:60px; height:60px; }
   .ring-label { font-size:15px; }
-  .section { padding:64px 0; }
-  .how-grid { grid-template-columns:1fr; gap:10px; }
-  .pick-card { padding:22px 18px; }
-  .pick-badge { width:50px; height:50px; font-size:22px; }
-  .pick-team-name { font-size:12px; }
-  .pick-cta { max-width:100%; }
-  .history-row { grid-template-columns:42px 1fr auto; grid-template-rows:auto auto; padding:12px 14px; }
+  /* Sections globales : padding plus généreux */
+  .section { padding:80px 0; }
+  /* Line-height plus aéré sur mobile */
+  body { line-height: 1.75; }
+  /* "Comment ça marche" — cartes empilées avec beaucoup d'air */
+  .how-grid { grid-template-columns:1fr; gap:18px; }
+  .how-card { padding:32px 24px; }
+  .how-num { font-size:44px; margin-bottom:16px; }
+  .how-title { font-size:20px; margin-bottom:12px; }
+  .how-desc { font-size:15px; line-height:1.9; }
+  /* Pick card — plus d'air interne */
+  .pick-card { padding:28px 22px; }
+  .pick-eyebrow { margin-bottom:22px; }
+  .pick-badge { width:52px; height:52px; font-size:22px; }
+  .pick-team-name { font-size:14px; }
+  .pick-vs-row { margin-bottom:26px; }
+  .pick-meta { gap:10px; margin-bottom:22px; }
+  .pick-tag { padding:8px 16px; font-size:13px; }
+  .pick-conf { margin-bottom:28px; }
+  .pick-cta {
+    max-width:100%;
+    padding:20px 24px;
+    font-size:15px;
+    border-radius:12px;
+    margin-top:8px;
+    min-height:56px;
+  }
+  /* Historique — lignes plus respirantes */
+  .history-row { grid-template-columns:42px 1fr auto; grid-template-rows:auto auto; padding:16px 16px; gap:10px; }
   .history-row .row-date   { grid-column:1; grid-row:1; }
-  .history-row .row-match  { grid-column:2; grid-row:1; font-size:12px; }
+  .history-row .row-match  { grid-column:2; grid-row:1; font-size:13px; }
   .history-row .row-result { grid-column:3; grid-row:1; }
   .history-row .row-pred   { grid-column:2; grid-row:2; }
-  .history-row .row-odds   { grid-column:3; grid-row:2; text-align:right; font-size:12px; }
+  .history-row .row-odds   { grid-column:3; grid-row:2; text-align:right; font-size:13px; }
   .history-row .row-score  { display:none; }
-  .cta-box { padding:48px 18px; border-radius:16px; }
-  .partners-grid { grid-template-columns:1fr; }
-  .bm-card { flex-direction:column; align-items:flex-start; }
+  .cta-box { padding:56px 24px; border-radius:16px; }
+  .partners-grid { grid-template-columns:1fr; gap:16px; }
+  .partner-card { padding:26px 20px; }
+  .bm-card { flex-direction:column; align-items:flex-start; gap:18px; padding:22px 20px; }
   .preuves-grid { grid-template-columns:1fr; }
+  /* Témoignages — plus d'air */
+  .testi-grid { gap:16px; }
+  .testi-card { padding:24px 20px; }
+  .testi-text { font-size:13px; line-height:1.85; }
+  /* FAQ — plus de padding */
+  .faq-q { padding:22px 22px; font-size:15px; line-height:1.6; }
+  .faq-body-inner { padding:18px 22px 26px; font-size:14px; line-height:2.0; }
+  /* Padding bottom pour ne pas être sur la barre légale */
+  .page { padding-bottom: 100px; }
+  /* Boutons CTA plus grands sur mobile */
+  button, .pick-cta, .cta-btn {
+    min-height: 48px;
+  }
+}
+
+/* Classes utilitaires mobile pour App.js */
+.mobile-pick-section {
+  padding: 16px 18px 28px;
+}
+.mobile-section-gap {
+  padding-top: 36px;
+  padding-bottom: 44px;
+}
+/* Panel Concile compacté sur mobile : on cache les badges, on garde barre + score */
+@media (max-width:640px) {
+  .concile-badges-full { display: none !important; }
+  .concile-compact { display: flex !important; }
+  /* Section pick du jour : plus de respiration autour */
+  .pick-section-wrapper { padding: 20px 18px 32px !important; }
+  /* Cartes tarifs : empilées avec gap */
+  .pricing-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+  /* Cartes Value Bets : empilées */
+  .value-bets-grid { flex-direction: column !important; gap: 12px !important; }
+  /* Section historique : padding interne des lignes */
+  .history-item { padding: 14px 14px !important; }
+  /* Témoignages : une colonne */
+  .testi-row { flex-direction: column !important; }
+  /* CTA bookmaker : pleine largeur */
+  .bm-cta-btn { width: 100% !important; text-align: center !important; }
+}
+
+/* Hover glow doré sur les cartes — tous écrans */
+.pick-card:hover,
+.how-card:hover,
+.partner-card:hover {
+  box-shadow: 0 4px 32px rgba(201,162,39,0.12);
+}
+
+/* Séparateur visuel doré entre grandes sections */
+.section-divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,162,39,0.18), transparent);
+  margin: 0 auto;
+  max-width: 780px;
 }
 
 /* PETITS TÉLÉPHONES (iPhone SE, etc.) */
 @media (max-width:480px) {
-  .hero-section { padding: 20px 10px 15px !important; }
-  .home-section { padding-left: 10px !important; padding-right: 10px !important; }
+  .hero-section { padding: 28px 14px 20px !important; }
+  .home-section { padding-left: 14px !important; padding-right: 14px !important; }
   .hero-title { font-size: clamp(28px, 9vw, 40px) !important; }
-  .hero-sub { font-size: 13px !important; }
-  .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 8px !important; }
-  .stat-card { padding: 12px 8px !important; }
-  .stat-value { font-size: 22px !important; }
-  .pick-card { padding: 18px 14px !important; }
+  .hero-sub { font-size: 14px !important; }
+  .stats-grid { grid-template-columns: 1fr 1fr !important; gap: 2px !important; }
+  .stat-card { padding: 18px 10px !important; }
+  .stat-value { font-size: 24px !important; }
+  .pick-card { padding: 22px 16px !important; }
+  .pick-cta { padding: 16px 20px !important; font-size: 14px !important; }
   .main-nav { justify-content: center !important; }
   /* Header plus compact */
   header { padding: 8px 10px !important; }
+  /* Badges IA Concile : cachés sur très petit écran */
+  .mobile-concile-badges { display: none !important; }
 }
 
 /* TRÈS PETITS (Galaxy Fold fermé, etc.) */
 @media (max-width:360px) {
   .main-nav button { font-size: 10px !important; padding: 4px 8px !important; }
   .hero-title { font-size: 26px !important; }
+  .pick-card { padding: 18px 12px !important; }
+}
+
+/* ═══════════════════════════════════════════════
+   ANIMATIONS & DYNAMIC VISUAL EFFECTS
+   ═══════════════════════════════════════════════ */
+
+/* Pulsing gold glow on active pick card */
+@keyframes pulse-glow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+  50% { box-shadow: 0 0 28px 6px rgba(212,175,55,0.15), 0 0 60px 14px rgba(212,175,55,0.05); }
+}
+
+/* Fire flicker for winning streak */
+@keyframes fire-flicker {
+  0%,100% { transform: scale(1) rotate(-1deg); filter: brightness(1); }
+  33%      { transform: scale(1.18) rotate(2deg); filter: brightness(1.25); }
+  66%      { transform: scale(0.93) rotate(-2deg); filter: brightness(0.9); }
+}
+
+/* Breathing dot for live AI status */
+@keyframes dot-breathe {
+  0%,100% { transform: scale(1); opacity: 0.6; }
+  50%     { transform: scale(1.9); opacity: 1; }
+}
+
+/* Colon blink in countdown */
+@keyframes colon-blink {
+  0%,100% { opacity: 1; }
+  50%     { opacity: 0.15; }
+}
+
+/* Shimmer sweep — gold text */
+@keyframes gold-shimmer {
+  0%   { background-position: -250% center; }
+  100% { background-position: 250% center; }
+}
+
+/* Slide up on load */
+@keyframes slide-in-up {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Horizontal ticker scroll */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Floating ambient orbs */
+@keyframes float-orb {
+  0%,100% { transform: translateY(0) translateX(0); opacity: 0.35; }
+  33%     { transform: translateY(-28px) translateX(14px); opacity: 0.6; }
+  66%     { transform: translateY(-14px) translateX(-10px); opacity: 0.45; }
+}
+
+/* Hero background gradient animation */
+@keyframes hero-gradient {
+  0%,100% { background-position: 0% 50%; }
+  50%     { background-position: 100% 50%; }
+}
+
+/* Pick card top-line shimmer */
+@keyframes line-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ── UTILITY CLASSES ── */
+
+.pick-active {
+  animation: pulse-glow 3.5s ease-in-out infinite;
+}
+
+.streak-fire-anim {
+  display: inline-block;
+  animation: fire-flicker 0.75s ease-in-out infinite;
+  transform-origin: bottom center;
+  cursor: default;
+}
+
+.dot-live {
+  animation: dot-breathe 2s ease-in-out infinite;
+}
+
+.countdown-colon {
+  animation: colon-blink 1s step-end infinite;
+  color: rgba(212,175,55,0.45);
+  font-family: 'Bodoni Moda', serif;
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0 1px;
+}
+
+.shimmer-text {
+  background: linear-gradient(90deg,#9b7a10 0%,#d4af37 28%,#fff9d6 50%,#d4af37 72%,#9b7a10 100%);
+  background-size: 250% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gold-shimmer 2.8s linear infinite;
+}
+
+/* Ticker / results scroll bar */
+.ticker-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+  position: relative;
+}
+.ticker-wrap::before,
+.ticker-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 48px;
+  z-index: 2;
+  pointer-events: none;
+}
+.ticker-wrap::before { left:0;  background: linear-gradient(90deg,var(--bg),transparent); }
+.ticker-wrap::after  { right:0; background: linear-gradient(270deg,var(--bg),transparent); }
+.ticker-track {
+  display: inline-flex;
+  gap: 0;
+  animation: ticker-scroll 36s linear infinite;
+}
+.ticker-track:hover { animation-play-state: paused; }
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 28px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ticker-win  { color: var(--win); }
+.ticker-loss { color: var(--loss); }
+
+/* Countdown block */
+.countdown-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(212,175,55,0.05);
+  border: 1px solid rgba(212,175,55,0.18);
+  border-radius: 12px;
+  padding: 12px 20px;
+}
+.countdown-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 40px;
+}
+.countdown-num {
+  font-family: 'Bodoni Moda', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.countdown-lbl {
+  font-size: 8px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dim);
+  font-weight: 600;
+}
+
+/* Ambient orbs in hero */
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float-orb ease-in-out infinite;
+}
+
+/* Page enter animation */
+.page-anim {
+  animation: slide-in-up 0.45s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+/* Animated pick-card top line */
+.pick-line-anim {
+  position: absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent 0%, var(--gold-dark) 30%, var(--gold) 50%, var(--gold-dark) 70%, transparent 100%);
+  background-size: 200% 100%;
+  animation: line-shimmer 2.5s linear infinite;
+}
+
+/* Stats value flash when counter lands */
+.stat-landed {
+  animation: pulse-glow 0.6s ease-out 1;
+}
+
+@media (max-width:640px) {
+  .countdown-num { font-size:20px; }
+  .countdown-box { padding:10px 14px; gap:6px; }
+  .ticker-item { font-size:11px; padding:0 20px; }
 }

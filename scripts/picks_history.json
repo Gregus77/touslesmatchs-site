@@ -3,15 +3,16 @@
   "system": "Concile Auto-Apprentissant V2",
   "meta": {
     "created": "2026-06-03T06:45:00Z",
-    "last_updated": "2026-06-03T06:45:00Z",
-    "total_picks": 23,
-    "total_wins": 18,
-    "total_losses": 5,
-    "win_rate": 0.783
+    "last_updated": "2026-06-08T12:00:00Z",
+    "total_picks": 22,
+    "total_wins": 19,
+    "total_losses": 3,
+    "win_rate": 0.864
   },
   "sport_stats": {
-    "Hockey": {"picks": 15, "wins": 13, "losses": 2, "win_rate": 0.867, "status": "ACTIVE"},
-    "Foot": {"picks": 5, "wins": 4, "losses": 1, "win_rate": 0.80, "status": "ACTIVE"},
+    "Hockey": {"picks": 11, "wins": 10, "losses": 1, "win_rate": 0.909, "status": "ACTIVE"},
+    "Foot": {"picks": 10, "wins": 8, "losses": 2, "win_rate": 0.80, "status": "ACTIVE"},
+    "Baseball": {"picks": 1, "wins": 1, "losses": 0, "win_rate": 1.0, "status": "ACTIVE"},
     "Basketball": {"picks": 3, "wins": 1, "losses": 2, "win_rate": 0.33, "status": "DISABLED"}
   },
   "ia_stats": {

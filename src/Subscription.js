@@ -1,322 +1,245 @@
 import React from "react";
 
-export default function Subscription() {
-  var [selectedPlan, setSelectedPlan] = React.useState(null);
-  var [loading, setLoading] = React.useState(false);
-  var [error, setError] = React.useState("");
+export default function Subscription({ setPage }) {
+  var loadingState = React.useState(false);
+  var loading = loadingState[0]; var setLoading = loadingState[1];
+  var errorState = React.useState("");
+  var error = errorState[0]; var setError = errorState[1];
+  var selectedState = React.useState(null);
+  var selected = selectedState[0]; var setSelected = selectedState[1];
 
   var plans = [
     {
-      name: "Free",
+      id: "free",
+      name: "GRATUIT",
       price: "0€",
-      period: "/mois",
-      color: "#888",
-      features: ["3 analyses/jour", "Accès site public", "Canal Telegram public"],
-      cta: "Gratuit",
+      sub: "pour toujours",
+      color: "#6b6356",
+      highlight: false,
+      features: [
+        "1 pick ANJ / jour",
+        "Winamax, Betclic, PMU",
+        "Canal Telegram public",
+        "Calculateur de projection",
+      ],
+      cta: "Commencer gratuitement",
       priceId: null,
     },
     {
-      name: "Premium",
+      id: "premium",
+      name: "PREMIUM",
       price: "9,90€",
-      period: "/mois",
+      sub: "/ mois",
       color: "#C9A227",
+      highlight: false,
+      badge: "POPULAIRE",
       features: [
-        "10 analyses/jour",
-        "Accès premium site",
-        "Canal Telegram premium",
-        "Support prioritaire",
+        "Pick Premium du jour (ANJ)",
+        "Picks 3 prochains jours",
+        "Analyses détaillées",
+        "Canal Telegram Premium privé",
+        "10 analyses personnalisées/mois",
       ],
-      cta: "Choisir",
+      cta: "⭐ Devenir Premium",
       priceId: process.env.REACT_APP_STRIPE_PRICE_PREMIUM,
-      recommended: true,
     },
     {
-      name: "VIP",
+      id: "premium_plus",
+      name: "PREMIUM PLUS",
       price: "19,90€",
-      period: "/mois",
-      color: "#60A5FA",
+      sub: "/ mois",
+      color: "#d4af37",
+      highlight: true,
+      badge: "MEILLEURE VALEUR",
       features: [
-        "30 analyses/jour",
-        "Accès VIP complet",
-        "Canal Telegram VIP privé",
-        "Analytics détaillés",
-        "Support 24/7",
+        "Tout Premium inclus",
+        "Pick HORS-ARJEL (Pinnacle)",
+        "Cotes supérieures",
+        "50 analyses personnalisées/mois",
+        "Sports supplémentaires + Value Bets",
+        "Analyses prioritaires Hermès",
       ],
-      cta: "Choisir",
+      cta: "💎 Devenir Premium Plus",
       priceId: process.env.REACT_APP_STRIPE_PRICE_VIP,
-    },
-    {
-      name: "Elite",
-      price: "29,90€",
-      period: "/mois",
-      color: "#A78BFA",
-      features: [
-        "Analyses illimitées",
-        "Accès Elite complet",
-        "Canal Telegram Elite privé",
-        "API personnalisée",
-        "Support dédié",
-      ],
-      cta: "Choisir",
-      priceId: process.env.REACT_APP_STRIPE_PRICE_ELITE,
     },
   ];
 
   function handleCheckout(plan) {
-    if (!plan.priceId) {
-      // Free tier
-      var userId = localStorage.getItem("user_id");
-      if (userId) {
-        localStorage.setItem("user_status", "free");
-        window.location.href = "/";
-      } else {
-        setError("Veuillez d'abord vous inscrire");
-      }
+    setSelected(plan.id);
+    if (plan.priceId === null) {
+      if (setPage) setPage("home");
+      else window.location.href = "/";
       return;
     }
-
+    if (!plan.priceId) {
+      setError("Paiement en cours de configuration. Réessayez bientôt.");
+      return;
+    }
     setLoading(true);
     setError("");
-
     fetch("/api/stripe/create-checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        price_id: plan.priceId,
-        user_id: localStorage.getItem("user_id"),
-      }),
+      body: JSON.stringify({ price_id: plan.priceId }),
     })
-      .then((r) => r.json())
-      .then((d) => {
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
         setLoading(false);
         if (d.ok && d.url) {
-          window.location.href = d.url; // Redirect to Stripe Checkout
+          window.location.href = d.url;
         } else {
-          setError(d.error || "Erreur Stripe");
+          setError(d.error || "Erreur lors de la création du paiement.");
         }
       })
-      .catch(() => {
+      .catch(function() {
         setLoading(false);
-        setError("Erreur serveur");
+        setError("Erreur serveur. Veuillez réessayer dans quelques instants.");
       });
   }
 
-  return React.createElement(
-    "div",
-    {
-      style: {
-        minHeight: "100vh",
-        background: "#080706",
-        color: "#F5F0E8",
-        fontFamily: "'Jost',sans-serif",
-        padding: "24px 16px",
-      },
-    },
+  return React.createElement("div", {
+    style: { minHeight:"100vh", background:"#080706", color:"#F5F0E8", fontFamily:"'Jost',sans-serif", padding:"32px 16px 60px" }
+  },
 
-    // Header
-    React.createElement(
-      "div",
-      { style: { textAlign: "center", marginBottom: "48px", maxWidth: "700px", margin: "0 auto 48px" } },
-      React.createElement(
-        "h1",
-        {
-          style: {
-            fontFamily: "'Bodoni Moda',serif",
-            fontSize: "clamp(28px,6vw,48px)",
-            fontWeight: "700",
-            color: "#F5F0E8",
-            margin: "0 0 12px",
-          },
-        },
-        "Choisir votre plan"
-      ),
-      React.createElement(
-        "p",
-        { style: { color: "#6b6356", fontSize: "15px", lineHeight: "1.7" } },
-        "Accédez à plus d'analyses et de fonctionnalités premium"
-      )
+    // Bouton retour
+    React.createElement("div", { style:{ maxWidth:"900px", margin:"0 auto 32px" } },
+      React.createElement("button", {
+        onClick: function(){ if(setPage) setPage("home"); else window.location.href="/"; },
+        style:{ background:"transparent", border:"none", color:"#6b6356", fontSize:"13px", cursor:"pointer", display:"flex", alignItems:"center", gap:"6px", padding:0, fontFamily:"'Jost',sans-serif" }
+      }, "← Retour")
     ),
 
-    error &&
-      React.createElement(
-        "div",
-        {
-          style: {
-            background: "rgba(239,68,68,0.1)",
-            border: "1px solid rgba(239,68,68,0.3)",
-            borderRadius: "10px",
-            padding: "12px",
-            marginBottom: "24px",
-            color: "#EF4444",
-            textAlign: "center",
-          },
+    // Header
+    React.createElement("div", { style:{ textAlign:"center", maxWidth:"600px", margin:"0 auto 48px" } },
+      React.createElement("div", { style:{ fontSize:"11px", letterSpacing:"4px", color:"#d4af37", marginBottom:"12px", fontWeight:"600" } }, "NOS FORMULES"),
+      React.createElement("h1", {
+        style:{ fontFamily:"'Bodoni Moda',serif", fontSize:"clamp(26px,5vw,42px)", fontWeight:"700", color:"#F5F0E8", margin:"0 0 12px", lineHeight:"1.2" }
+      }, "Choisissez votre niveau"),
+      React.createElement("p", {
+        style:{ color:"#6b6356", fontSize:"14px", lineHeight:"1.8", margin:0 }
+      }, "Commencez gratuitement. Passez Premium quand vous êtes convaincu.")
+    ),
+
+    // Erreur
+    error && React.createElement("div", {
+      style:{ maxWidth:"900px", margin:"0 auto 24px", background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)", borderRadius:"10px", padding:"12px 16px", color:"#EF4444", fontSize:"13px", textAlign:"center" }
+    }, "⚠️ " + error),
+
+    // Plans
+    React.createElement("div", {
+      style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:"20px", maxWidth:"900px", margin:"0 auto 40px" }
+    },
+      plans.map(function(plan, i) {
+        var isLoading = loading && selected === plan.id;
+        return React.createElement("div", {
+          key: i,
+          style:{
+            position:"relative",
+            background: plan.highlight
+              ? "linear-gradient(135deg,rgba(212,175,55,0.10),rgba(212,175,55,0.04))"
+              : "rgba(255,255,255,0.03)",
+            border: plan.highlight
+              ? "2px solid rgba(212,175,55,0.5)"
+              : plan.id === "premium"
+                ? "1px solid rgba(212,175,55,0.3)"
+                : "1px solid rgba(255,255,255,0.07)",
+            borderRadius:"16px",
+            padding:"28px 22px",
+            boxShadow: plan.highlight ? "0 0 30px rgba(212,175,55,0.08)" : "none",
+          }
         },
-        error
-      ),
 
-    // Plans grid
-    React.createElement(
-      "div",
-      {
-        style: {
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "20px",
-          maxWidth: "1200px",
-          margin: "0 auto",
-        },
-      },
-      plans.map((plan, i) =>
-        React.createElement(
-          "div",
-          {
-            key: i,
-            style: {
-              background:
-                plan.recommended && plan.name !== "Free"
-                  ? "rgba(201,162,39,0.08)"
-                  : "rgba(255,255,255,0.04)",
-              border:
-                plan.recommended && plan.name !== "Free"
-                  ? "2px solid rgba(201,162,39,0.4)"
-                  : "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "16px",
-              padding: "24px",
-              position: "relative",
-            },
-          },
+          // Badge
+          plan.badge && React.createElement("div", {
+            style:{
+              position:"absolute", top:"-11px", left:"50%", transform:"translateX(-50%)",
+              background: plan.highlight ? "#d4af37" : "rgba(212,175,55,0.15)",
+              border: plan.highlight ? "none" : "1px solid rgba(212,175,55,0.4)",
+              color: plan.highlight ? "#080706" : "#d4af37",
+              padding:"3px 14px", borderRadius:"20px", fontSize:"9px", fontWeight:"700",
+              letterSpacing:"1.5px", whiteSpace:"nowrap"
+            }
+          }, plan.badge),
 
-          // Recommended badge
-          plan.recommended &&
-            React.createElement(
-              "div",
-              {
-                style: {
-                  position: "absolute",
-                  top: "-12px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "#C9A227",
-                  color: "#080706",
-                  padding: "4px 12px",
-                  borderRadius: "20px",
-                  fontSize: "11px",
-                  fontWeight: "700",
-                  letterSpacing: "1px",
-                },
-              },
-              "⭐ RECOMMANDÉ"
-            ),
+          // Nom
+          React.createElement("div", {
+            style:{ fontSize:"10px", letterSpacing:"3px", color:plan.color, marginBottom:"10px", fontWeight:"700" }
+          }, plan.name),
 
-          // Plan name
-          React.createElement(
-            "div",
-            {
-              style: {
-                fontSize: "20px",
-                fontWeight: "700",
-                color: plan.color,
-                marginBottom: "8px",
-              },
-            },
-            plan.name
+          // Prix
+          React.createElement("div", { style:{ display:"flex", alignItems:"baseline", gap:"5px", marginBottom:"18px" } },
+            React.createElement("span", {
+              style:{ fontSize:"36px", fontWeight:"700", color: plan.id==="free" ? "#555" : "#F5F0E8", fontFamily:"'Bodoni Moda',serif" }
+            }, plan.price),
+            React.createElement("span", { style:{ fontSize:"12px", color:"#555" } }, plan.sub)
           ),
 
-          // Price
-          React.createElement(
-            "div",
-            {
-              style: {
-                fontSize: "32px",
-                fontWeight: "700",
-                color: "#F5F0E8",
-                marginBottom: "4px",
-              },
-            },
-            plan.price
-          ),
-          React.createElement(
-            "div",
-            {
-              style: {
-                fontSize: "13px",
-                color: "#6b6356",
-                marginBottom: "20px",
-              },
-            },
-            plan.period
-          ),
+          // Séparateur
+          React.createElement("div", { style:{ borderTop:"1px solid rgba(255,255,255,0.06)", marginBottom:"18px" } }),
 
           // Features
-          React.createElement(
-            "ul",
-            {
-              style: {
-                listStyle: "none",
-                padding: "0",
-                margin: "0 0 20px",
+          React.createElement("ul", { style:{ listStyle:"none", padding:0, margin:"0 0 24px", display:"flex", flexDirection:"column", gap:"10px" } },
+            plan.features.map(function(f, fi) {
+              return React.createElement("li", {
+                key: fi,
+                style:{ display:"flex", alignItems:"flex-start", gap:"10px", fontSize:"13px", color: plan.id==="free" ? "#555" : "#aaa", lineHeight:"1.5" }
               },
-            },
-            plan.features.map((feature, fi) =>
-              React.createElement(
-                "li",
-                {
-                  key: fi,
-                  style: {
-                    fontSize: "13px",
-                    color: "#ccc",
-                    marginBottom: "8px",
-                    paddingLeft: "20px",
-                    position: "relative",
-                  },
-                },
-                React.createElement(
-                  "span",
-                  {
-                    style: {
-                      position: "absolute",
-                      left: "0",
-                      color: plan.color,
-                    },
-                  },
-                  "✓"
-                ),
-                feature
-              )
-            )
+                React.createElement("span", { style:{ color: plan.id==="free" ? "#333" : "#22cc44", flexShrink:0, marginTop:"1px" } }, "✓"),
+                f
+              );
+            })
           ),
 
-          // CTA Button
+          // Bouton CTA
           React.createElement("button", {
-            onClick: () => handleCheckout(plan),
+            onClick: function() { handleCheckout(plan); },
             disabled: loading,
-            style: {
-              width: "100%",
-              padding: "14px",
-              background:
-                loading || selectedPlan === plan.name
-                  ? "#2a2a2a"
-                  : `rgba(${plan.color === "#C9A227" ? "201,162,39" : "100,100,100"},0.2)`,
-              border: `1px solid ${plan.color}`,
-              borderRadius: "10px",
-              color: plan.color,
-              fontSize: "14px",
-              fontWeight: "700",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontFamily: "'Jost',sans-serif",
-              letterSpacing: "0.05em",
-            },
-            children:
-              loading && selectedPlan === plan.name
-                ? "🔄 Chargement..."
-                : plan.cta,
-            onClick: () => {
-              setSelectedPlan(plan.name);
-              handleCheckout(plan);
-            },
-          })
-        )
-      )
+            style:{
+              width:"100%", padding:"14px", borderRadius:"10px",
+              background: plan.highlight
+                ? "linear-gradient(135deg,#d4af37,#f5d76e)"
+                : plan.id === "premium"
+                  ? "transparent"
+                  : "rgba(255,255,255,0.02)",
+              border: plan.highlight
+                ? "none"
+                : plan.id === "premium"
+                  ? "1px solid #C9A227"
+                  : "1px solid rgba(255,255,255,0.08)",
+              color: plan.highlight ? "#080706" : plan.id === "premium" ? "#C9A227" : "#444",
+              fontSize:"14px", fontWeight:"700", cursor: loading ? "wait" : "pointer",
+              fontFamily:"'Jost',sans-serif", letterSpacing:"0.5px",
+              opacity: loading && selected !== plan.id ? 0.5 : 1,
+              transition:"opacity 0.2s"
+            }
+          }, isLoading ? "⏳ Redirection..." : plan.cta)
+        );
+      })
+    ),
+
+    // Garanties
+    React.createElement("div", {
+      style:{ maxWidth:"900px", margin:"0 auto 32px", display:"flex", gap:"24px", flexWrap:"wrap", justifyContent:"center" }
+    },
+      [
+        { icon:"🔒", text:"Paiement sécurisé Stripe" },
+        { icon:"↩️", text:"Résiliable à tout moment" },
+        { icon:"📊", text:"78% de winrate réel" },
+      ].map(function(g, i) {
+        return React.createElement("div", {
+          key:i,
+          style:{ display:"flex", alignItems:"center", gap:"8px", fontSize:"12px", color:"#555" }
+        }, g.icon, " ", g.text);
+      })
+    ),
+
+    // Disclaimer légal
+    React.createElement("div", {
+      style:{ maxWidth:"700px", margin:"0 auto", textAlign:"center", fontSize:"11px", color:"#333", lineHeight:"1.8" }
+    },
+      "🔞 Interdit aux moins de 18 ans | joueurs-info-service.fr | 09 74 75 13 13",
+      React.createElement("br"),
+      "Les paris comportent des risques de perte financière. Pariez de manière responsable."
     )
   );
 }

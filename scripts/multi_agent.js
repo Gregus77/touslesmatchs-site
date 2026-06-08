@@ -2,6 +2,7 @@
 const https = require("https");
 const { execSync } = require("child_process");
 const fs = require("fs");
+const path = require("path");
 const { buildInlineKeyboard } = require("./bookmakers.config");
 
 const GROQ_KEY = process.env.GROQ_API_KEY;
@@ -13,7 +14,7 @@ const MISTRAL_KEY = process.env.MISTRAL_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
 const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
-const SPORTS_ALLOWED = ["Hockey", "Foot"];
+const SPORTS_ALLOWED = ["Hockey", "Foot", "Baseball", "MLB", "Rugby", "NBA", "NFL"];
 
 // ═══════════════════════════════════════════════════════
 // MULTI-IA PROVIDER INTERFACE — Fallback routing
@@ -164,20 +165,62 @@ const NATIONS_ARJEL = new Set([
 const BANNED_KEYWORDS = ["U21", "U20", "U23", "U19", "U18", "U17", "Olympic", "Olympique B",
   "Women", "Femmes", "Femenino", "W ", " W"];
 
+// Mots-clés INTERDITS dans le nom de la ligue — AMICAUX BANNIS définitivement
+const BANNED_LEAGUE_KEYWORDS = [
+  "friendly", "amical", "amistoso", "testspiel", "exhibition",
+  "international friendly", "tour ", " tour", "all-star", "showcase",
+  "kirin", "china cup", "gulf cup", "usmnt tour", "gold cup warm"
+];
+
+// Pour leagueId 914609 (matchs internationaux) : EXIGER un mot-clé officiel
+// Sans ce mot-clé, le match est traité comme amical suspect → REJET
+const OFFICIAL_INTERNATIONAL_KEYWORDS = [
+  "world cup", "coupe du monde", "nations league", "liga de naciones",
+  "qualification", "qualifier", "qualifying", "euro", "copa america",
+  "afcon", "can ", "africa cup", "asian cup", "afc", "concacaf",
+  "conmebol", "fifa", "uefa", "gold cup", "confederations"
+];
+
 function isMatchARJEL(fx) {
   const home = (fx.home?.name || "").trim();
   const away = (fx.away?.name || "").trim();
-  // REJET : équipes jeunes / féminines
+  const leagueName = (fx.leagueName || fx.league?.name || fx.competition?.name || "").toLowerCase();
+
+  // REJET absolu : équipes jeunes / féminines
   for (const kw of BANNED_KEYWORDS) {
     if (home.includes(kw) || away.includes(kw)) return false;
   }
+
+  // REJET absolu : amicaux — vérification large
+  for (const kw of BANNED_LEAGUE_KEYWORDS) {
+    if (leagueName.includes(kw.toLowerCase())) {
+      console.log(`  ❌ AMICAL REJETÉ: ${home} vs ${away} (${leagueName})`);
+      return false;
+    }
+  }
+
   // 1. Ligue Top 5 européen — SAISON RÉGULIÈRE → OK
   if (LIGUES_ARJEL.has(fx.leagueId)) return true;
-  // 2. Match international A (pas U21) : vérifier nations ARJEL
+
+  // 2. Match international A officiel : DOUBLE vérification
+  //    a) Les deux nations doivent être dans NATIONS_ARJEL
+  //    b) ET le nom de la compétition doit contenir un mot-clé officiel
+  //    → Empêche les amicaux internationaux avec des nations connues (ex: Swiss vs Australia)
   if (fx.leagueId === 914609) {
-    return NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
+    const nationsOk = NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
+    const isOfficial = OFFICIAL_INTERNATIONAL_KEYWORDS.some(kw => leagueName.includes(kw));
+    if (!nationsOk) {
+      console.log(`  ❌ NATIONS HORS-ARJEL: ${home} vs ${away}`);
+      return false;
+    }
+    if (!isOfficial) {
+      console.log(`  ⚠️  INTERNATIONAL SUSPECT (pas de mot-clé officiel): ${home} vs ${away} (${leagueName || "ligue inconnue"}) → REJETÉ`);
+      return false;
+    }
+    return true;
   }
-  // 3. Sinon → REJET (Champions League, Europa League, qualifs = haute variance)
+
+  // 3. Sinon → REJET
   return false;
 }
 
@@ -295,56 +338,201 @@ async function callMistral(prompt) {
 //   - premium_arjel (ARJEL ≥7) → Telegram premium (clients abonnés)
 //   - premium_hors_arjel (HORS-ARJEL ≥7) → Telegram premium UNIQUEMENT (Pinnacle/PS3838)
 async function deepseekChef(matches) {
-  console.log("👑 Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
+  console.log("👑 Hermès — Sélection FREEMIUM (ARJEL gratuit + HORS-ARJEL premium)...");
   const valid = matches.filter(m => SPORTS_ALLOWED.includes(m.sport));
   const validArjel = valid.filter(m => m.arjel);
   const validHorsArjel = valid.filter(m => !m.arjel);
   console.log(`   Pool ARJEL: ${validArjel.length} | Pool HORS-ARJEL: ${validHorsArjel.length}`);
   if (!valid.length) return null;
 
-  const prompt = `Système FREEMIUM TousLesMatchs. Analyse 2 catégories de matchs :
+  const prompt = `Tu es HERMÈS, chef suprême du Conseil TousLesMatchs.
 
-POOL ARJEL (jouables Winamax/Betclic/Unibet/PMU): ${JSON.stringify(validArjel)}
+CONTEXTE ABSOLU : Ma réputation — et le bankroll de chaque abonné — repose sur chaque pick que je publie.
+Je traite chaque décision comme si je jouais ma propre vie sur ce pari.
+Quand je doute, je ne joue pas. Le NOPICK est MA valeur par défaut ce matin.
 
-POOL HORS-ARJEL (Pinnacle/PS3838 uniquement - clients premium): ${JSON.stringify(validHorsArjel)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MATCHS À ANALYSER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Règles:
-- Cote acceptable: 1.40-2.20
-- Note 7.0-10 sur chaque match
-- pick = MEILLEUR match ARJEL (publié gratuitement sur site + Telegram public)
-- premium_arjel = 2e meilleur match ARJEL (canal Telegram premium, abonnés payants)
-- premium_hors_arjel = MEILLEUR match HORS-ARJEL (canal premium UNIQUEMENT, gros bookmakers internationaux)
+POOL ARJEL (bookmakers français agréés ANJ — pick public gratuit) :
+${JSON.stringify(validArjel, null, 2)}
 
-Réponds JSON:
+POOL HORS-ARJEL (Pinnacle / PS3838 — pick premium uniquement) :
+${JSON.stringify(validHorsArjel, null, 2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 1 — FILTRAGE AUTOMATIQUE : ÉLIMINE SANS HÉSITER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Tout match contenant l'un de ces signaux est éliminé AVANT toute analyse.
+Aucune note, aussi élevée soit-elle, ne peut sauver un match éliminé ici.
+
+🔴 ELIMINE SI la ligue ou le match contient (insensible à la casse) :
+   "friendly", "amical", "amistoso", "testspiel", "exhibition",
+   "international friendly", "tour", "all-star", "showcase"
+   → LEÇON GRAVÉE : Suisse 1-1 Australie (06/06/2026) — amical San Diego.
+     Équipes mixées, capitaine absent, aucun enjeu. On a perdu. JAMAIS PLUS.
+
+🔴 ELIMINE SI l'une des équipes est :
+   U17 / U18 / U19 / U20 / U21 / U23 / Femmes / Futsal / Beach Soccer
+
+🔴 ELIMINE SI la compétition est :
+   - Un tournoi de préparation d'été (July Series, Summer Cup, Estadio…)
+   - Un dernier match de saison où une équipe est déjà reléguée ET l'autre sans enjeu
+   - Un 2ème tour de coupe avec retour à domicile où l'équipe mène 3+ buts
+   - Un match de gala / cérémonie / hommage
+
+🔴 ELIMINE SI la cote est :
+   - Inférieure à 1.42 (pas de valeur réelle — le bookmaker mange tout)
+   - Supérieure à 2.30 (trop incertain — on n'est pas là pour spéculer)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 2 — CHECKLIST OBLIGATOIRE sur chaque match restant
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Pour chaque match passé l'étape 1, tu DOIS répondre à ces 6 questions.
+Si tu réponds NON ou "je ne sais pas" à UNE SEULE → le match est rejeté.
+
+[ ] 1. ENJEU RÉEL : Les DEUX équipes ont-elles quelque chose à gagner ou perdre
+       dans ce match précis ? (titre, qualification, maintien, ne pas tomber à la 3e place…)
+       NON ou incertain → REJETE.
+
+[ ] 2. FORME RÉCENTE VÉRIFIABLE : Chaque équipe a-t-elle au moins 3 matchs officiels
+       dans les 21 derniers jours ? Si l'une joue après une trêve internationale de
+       plus de 15 jours sans match de club → REJETE.
+
+[ ] 3. AVANTAGE STATISTIQUE CONCRET : Existe-t-il un avantage mesurable
+       (domicile/extérieur, H2H 5 derniers matchs, buts marqués/encaissés, xG, pressing…)
+       qui dépasse le simple ressenti ? Un avantage flou ("ils jouent mieux") = REJET.
+
+[ ] 4. CONTEXTE PROPRE : Y a-t-il des éléments perturbateurs ?
+       - Blessure d'un joueur clé annoncée dans les 48h → note −2.0 (souvent éliminatoire)
+       - Effectif en rotation connue (Ligue des Champions dans 3 jours…) → REJETE
+       - Tension interne / changement d'entraîneur < 2 semaines → REJETE
+       - Terrain neutre sans historique de domicile/extérieur → note −1.5
+
+[ ] 5. TEST DU SOMMEIL : Si je publie ce pick et vais dormir, est-ce que je serais
+       à l'aise ? Si je me pose cette question trop longtemps → NOPICK.
+
+[ ] 6. COTE EN VALEUR : La cote proposée reflète-t-elle une probabilité SOUS-ESTIMÉE
+       par le marché ? Si la cote est "normale" pour le favori évident, il n'y a pas
+       de valeur — cherche un angle moins évident ou abandonne.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ÉTAPE 3 — AUTO-CONTRE-EXAMEN (obligatoire avant validation)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Pour tout match envisagé comme pick, tu dois formuler :
+  → Le MEILLEUR ARGUMENT CONTRE ce pari (en 1 phrase précise)
+  → Pourquoi tu le rejettes malgré tout (ou pourquoi il t'oblige à NOPICK)
+
+Si tu ne trouves pas d'argument contre solide, c'est suspect — les bons picks
+ont toujours un risque identifiable et maîtrisable, pas une certitude aveugle.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+BARÈME DE NOTATION — HERMÈS ACADEMY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Commence à 5.0/10 (incertitude de base de tout match de sport).
+Ajoute des points uniquement pour des preuves concrètes :
+
+  +1.0 si domicile fort (70%+ winrate à domicile cette saison)
+  +1.0 si H2H favorable (4 victoires sur 5 derniers matchs directs)
+  +1.0 si adversaire en mauvaise forme (2+ défaites sur 3 derniers matchs)
+  +1.0 si enjeu vital pour l'équipe favorite du pari (relégation / titre / qualif)
+  +0.5 si xG supérieur sur les 5 derniers matchs
+  +0.5 si gardien adverse en difficulté (5+ buts encaissés / 3 derniers)
+
+  −1.0 si terrain neutre (pas d'avantage domicile)
+  −1.0 si blessure d'un joueur clé révélée < 48h
+  −1.5 si l'équipe joue un match important 72h après (rotation probable)
+  −2.0 si les deux équipes ont une forme incertaine ou inégale sur la période
+
+Classification par note :
+  9.0–10.0 → PICK PREMIUM ELITE 🏆🏆🏆🏆🏆 — Mise pleine (3% bankroll)
+  8.0–8.9  → PICK PREMIUM SOLIDE 🏆🏆🏆🏆 — Mise standard (2% bankroll)
+  7.0–7.9  → PICK JOUABLE 🏆🏆🏆 — Demi-mise (1% bankroll)
+  < 7.0    → NO BET absolu — Ne publie jamais en dessous
+
+Ne plus écarter les 7/10. Les publier clairement labelisés "JOUABLE".
+Tous les picks ≥ 7.0 sont valides. La différence est dans la mise et l'étiquette.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STRATÉGIE DE MISE (Kelly modifié)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Note 7.0–7.9 → 1% du bankroll (pick prudent)
+  Note 8.0–8.9 → 2% du bankroll
+  Note 9.0–9.9 → 3% du bankroll
+  Note 10/10   → 5% du bankroll (rarissime)
+  JAMAIS plus de 5% sur un seul pari, quoi qu'il arrive.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMAT DE RÉPONSE — JSON STRICT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Si un match ARJEL passe TOUS les filtres avec note ≥ 7.0 :
 {
-  "pick": {"match":"X vs Y","cote":1.65,"note":8.5,"raison":"courte"},
-  "premium_arjel": {"match":"A vs B","cote":1.55,"note":7.6,"raison":"courte"},
-  "premium_hors_arjel": {"match":"C vs D","cote":1.70,"note":7.8,"raison":"courte"}
+  "pick": {
+    "match": "Equipe A vs Equipe B",
+    "cote": 1.65,
+    "note": 8.5,
+    "sport": "Foot",
+    "mise_conseillée": "2% bankroll",
+    "raison": "stat concrète en 1 phrase : ex. Bayern 8W/10 à domicile, Chelsea 0 victoire extérieure depuis 4 matchs",
+    "argument_contre": "risque identifié",
+    "pourquoi_validé": "pourquoi ce risque est maîtrisable"
+  },
+  "premium_arjel": { "match":"...","cote":1.55,"note":7.6,"raison":"..." },
+  "premium_hors_arjel": { "match":"...","cote":1.70,"note":7.8,"raison":"..." }
 }
 
-Si pool vide pour une catégorie, mets null.`;
+Si AUCUN match ne passe tous les filtres (réponse correcte dans 60% des cas) :
+{
+  "pick": null,
+  "premium_arjel": null,
+  "premium_hors_arjel": null,
+  "nopick_raison": "raison précise : ex. tous les matchs du jour sont des amicaux, ou aucun n'atteint 7.0 après calcul barème"
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RAPPEL FINAL — LA RÈGLE D'OR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Notre winrate à 78% ne vient pas de nos bons picks.
+Il vient des mauvais picks qu'on N'A PAS publiés.
+Un NOPICK aujourd'hui protège dix bankrolls demain.
+Je préfère un abonné déçu ce soir à un abonné ruiné cette semaine.`;
 
   try {
     const { provider, result } = await callWithFallback(prompt);
     console.log(`   Utilisé: ${provider}`);
     if (result?.pick) {
-      console.log(`   ✓ Pick GRATUIT (site): ${result.pick.match} (note ${result.pick.note})`);
+      console.log(`   ✓ Pick GRATUIT: ${result.pick.match} (note ${result.pick.note}/10)`);
       if (result.premium_arjel) console.log(`   💎 Premium ARJEL: ${result.premium_arjel.match} (note ${result.premium_arjel.note})`);
       if (result.premium_hors_arjel) console.log(`   💎 Premium HORS-ARJEL: ${result.premium_hors_arjel.match} (note ${result.premium_hors_arjel.note})`);
+      // Vérification finale barème Hermès : note < 7.0 → rejet absolu
+      if (result.pick.note < 7.0) {
+        console.log(`   ⛔ Note ${result.pick.note} < 7.0 → Pick REFUSÉ par Hermès (barème insuffisant)`);
+        result.pick = null;
+      }
+      // Log de l'auto-contre-examen si présent
+      if (result.pick?.argument_contre) {
+        console.log(`   ⚖️  Contre-argument : ${result.pick.argument_contre}`);
+        console.log(`   ✅ Validé car : ${result.pick.pourquoi_validé || "—"}`);
+      }
       return result;
     }
+    if (result?.nopick_raison) {
+      console.log(`   🛑 NOPICK décidé par Hermès : ${result.nopick_raison}`);
+    }
+    return result || null;
   } catch(e) { console.error("AI error:", e.message); }
-  // Fallback : utilise UNIQUEMENT matchs ARJEL pour le pick gratuit
-  const arjelCandidates = validArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
-  const horsArjelCandidates = validHorsArjel.filter(m => (m.cote_domicile || 99) >= 1.4 && (m.cote_domicile || 99) <= 2.2);
-  const bestArjel = arjelCandidates.length ? arjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
-  const bestHorsArjel = horsArjelCandidates.length ? horsArjelCandidates.reduce((a,b) => (b.cote_domicile < a.cote_domicile ? b : a)) : null;
-  if (!bestArjel && !bestHorsArjel) return null;
-  return {
-    pick: bestArjel ? { match: `${bestArjel.home} vs ${bestArjel.away}`, cote: bestArjel.cote_domicile, note: 7.0, raison: "Fallback ARJEL" } : null,
-    premium_arjel: null,
-    premium_hors_arjel: bestHorsArjel ? { match: `${bestHorsArjel.home} vs ${bestHorsArjel.away}`, cote: bestHorsArjel.cote_domicile, note: 7.0, raison: "Fallback HORS-ARJEL" } : null
-  };
+
+  // Fallback conservateur : NOPICK plutôt que forcer un pari risqué
+  console.log("   ⚠️ Fallback conservateur → NOPICK (aucun match validé automatiquement)");
+  return { pick: null, premium_arjel: null, premium_hors_arjel: null, nopick_raison: "Fallback conservateur — aucune IA disponible pour valider" };
 }
 
 async function generateForDay(day) {
@@ -361,9 +549,28 @@ async function generateForDay(day) {
     updateAppJsNoPick(day.fr, "Aucun pick fiable détecté");
     return null;
   }
-  // Pick ARJEL → site public (gratuit)
-  if (result?.pick) updateAppJs(result.pick, day.fr);
-  else updateAppJsNoPick(day.fr, "Pas de pick ARJEL - voir Premium");
+  // Validation post-LLM : vérifier que le pick est vraiment ARJEL
+  // Le LLM peut parfois mettre un match HORS-ARJEL dans le champ pick → on le détecte et rejette
+  if (result?.pick) {
+    const pickMatch = result.pick.match || "";
+    const [pickHome, pickAway] = pickMatch.split(" vs ").map(s => s.trim());
+    const arjelOk = LIGUES_ARJEL.has(result.pick.leagueId) ||
+      (NATIONS_ARJEL.has(pickHome) && NATIONS_ARJEL.has(pickAway));
+    if (!arjelOk) {
+      console.log(`  ⚠️  Pick LLM rejeté (nations hors-ARJEL): ${pickMatch} → déplacé en premium`);
+      result.premium_hors_arjel = result.premium_hors_arjel || result.pick;
+      result.pick = null;
+    }
+  }
+  // Pick ARJEL → site public ; ou HORS-ARJEL si aucun ARJEL disponible
+  if (result?.pick) {
+    updateAppJs(result.pick, day.fr, false);
+  } else if (result?.premium_hors_arjel) {
+    console.log(`  🌍 Aucun pick ARJEL → publication du pick HORS-ARJEL avec badge`);
+    updateAppJs(result.premium_hors_arjel, day.fr, true);
+  } else {
+    updateAppJsNoPick(day.fr, "Pas de pick ARJEL aujourd'hui");
+  }
   return result;
 }
 
@@ -394,7 +601,7 @@ function updateAppJsNoPick(dateStr, reason) {
   fs.writeFileSync(appPath, content);
 }
 
-function updateAppJs(pick, dateStr) {
+function updateAppJs(pick, dateStr, horsARJEL) {
   const appPath = "./src/App.js";
   let content = fs.readFileSync(appPath, "utf8");
   // PROTECTION : ne JAMAIS écraser un résultat terminé
@@ -402,7 +609,9 @@ function updateAppJs(pick, dateStr) {
     console.log(`🛡️ ${dateStr}: PROTÉGÉ (résultat déjà enregistré — pas d'écrasement)`);
     return;
   }
-  const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}],\n`;
+  // index [9] = true signale un pick hors-ARJEL (badge orange affiché sur le site)
+  const horsFlag = horsARJEL ? ",true" : "";
+  const newPick = `  ["${dateStr}","${pick.match}","${pick.match.split(" vs ")[0]} Vainqueur","${pick.cote}","—","EN ATTENTE","Foot",${pick.note},${pick.note >= 8 ? 8 : 7}${horsFlag}],\n`;
   const dateRegex = new RegExp(`  \\["${dateStr.replace("/", "\\/")}",[^\\n]*\\n`, "g");
   const existing = content.match(dateRegex);
   if (existing) {
@@ -443,6 +652,19 @@ async function main() {
     await sendTelegram(bestPick);
     console.log("📤 Telegram gratuit envoyé");
 
+    // Sauvegarde pour le bot Telegram
+    const todayPickData = {
+      date: new Date().toLocaleDateString("fr-FR", {day:"2-digit", month:"2-digit"}),
+      match: bestPick.match,
+      bet: bestPick.bet,
+      odds: String(bestPick.cote),
+      sport: bestPick.sport || "Foot",
+      confidence: bestPick.note,
+      nopick: false
+    };
+    fs.writeFileSync(path.join(__dirname, "today_pick.json"), JSON.stringify(todayPickData, null, 2));
+    console.log("💾 today_pick.json mis à jour");
+
     // Canal premium : picks 7-7.9
     if (allPremium.length) {
       await sendTelegramPremium(allPremium);
@@ -453,6 +675,8 @@ async function main() {
   } else {
     console.log("Aucun pick généré aujourd'hui");
     await sendTelegram(null); // envoie message NOPICK
+    // Bot : marquer nopick
+    fs.writeFileSync(path.join(__dirname, "today_pick.json"), JSON.stringify({ nopick: true }, null, 2));
   }
 }
 

@@ -241,19 +241,49 @@
       "result": "WIN",
       "sport": "Foot",
       "added": "2026-06-06T04:18:31.177Z"
+    },
+    {
+      "date": "06/06",
+      "match": "Switzerland vs Australia",
+      "bet": "Switzerland Vainqueur",
+      "odds": 1.6,
+      "score": "1-1",
+      "result": "LOSS",
+      "sport": "Foot",
+      "added": "2026-06-07T10:12:29.148Z"
+    },
+    {
+      "date": "06/06",
+      "match": "Belgium vs Tunisia",
+      "bet": "Belgium Vainqueur",
+      "odds": 1.6,
+      "score": "5-0",
+      "result": "WIN",
+      "sport": "Foot",
+      "added": "2026-06-07T10:12:29.626Z"
+    },
+    {
+      "date": "08/06",
+      "match": "Philadelphia Phillies vs Chicago White Sox",
+      "bet": "Philadelphia Phillies ML",
+      "odds": 1.59,
+      "score": "WIN",
+      "result": "WIN",
+      "sport": "Baseball",
+      "added": "2026-06-08T12:14:06.730Z"
     }
   ],
   "shadow_bets": [],
   "ia_stats": {
     "deepseek": {
-      "total": 24,
-      "wins": 20,
-      "losses": 4,
+      "total": 27,
+      "wins": 22,
+      "losses": 5,
       "roi": 0,
       "by_sport": {
         "Foot": {
-          "total": 9,
-          "wins": 8
+          "total": 11,
+          "wins": 9
         },
         "Basketball": {
           "total": 4,
@@ -262,12 +292,16 @@
         "Hockey": {
           "total": 11,
           "wins": 10
+        },
+        "Baseball": {
+          "total": 1,
+          "wins": 1
         }
       },
       "by_market": {
         "moneyline": {
-          "total": 21,
-          "wins": 18
+          "total": 24,
+          "wins": 20
         },
         "over": {
           "total": 3,
@@ -275,7 +309,7 @@
         }
       },
       "status": "shadow",
-      "winrate": 83
+      "winrate": 81
     }
   },
   "sport_stats": {},
