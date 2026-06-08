@@ -1,65 +1,72 @@
 services:
 
-  # ── Nginx : sert le site statique ──────────────────────────
-  nginx:
-    image: nginx:alpine
+  # ── Site React + Caddy (HTTPS Let's Encrypt) ───────────────
+  site:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: touslesmatchs-site
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+      - "443:443/udp"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - site_data:/usr/share/nginx/html
-      - ./public/preuves:/usr/share/nginx/html/preuves:ro
-    depends_on:
-      - council
-      - stripe-webhook
+      - caddy_data:/data
+      - caddy_config:/config
     networks:
       - hermes_net
 
-  # ── Hermes Council : orchestrateur IA ──────────────────────
-  council:
+  # ── API backend (analyse live) ─────────────────────────────
+  api:
     build:
       context: .
-      dockerfile: council/Dockerfile
+      dockerfile: Dockerfile.api
+    image: touslesmatchs-api
     restart: unless-stopped
-    env_file:
-      - .env
+    env_file: .env
     environment:
       - TZ=Europe/Paris
-      - SITE_HTML_PATH=/app/site/index.html
-      - SITE_TEMPLATE_PATH=/app/site/template.html
-      - DB_PATH=/app/data/history.db
-      - RUN_ON_START=false
-    volumes:
-      - ./site:/app/site
-      - council_data:/app/data
     networks:
       - hermes_net
 
   # ── Bot Telegram Free (interactif) ─────────────────────────
   bot:
-    image: node:20-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    image: touslesmatchs-bot
     restart: unless-stopped
-    working_dir: /app
-    command: node scripts/bot.js
-    env_file:
-      - .env
+    env_file: .env
     environment:
       - TZ=Europe/Paris
     volumes:
-      - ./scripts:/app/scripts:ro
-      - bot_data:/app/scripts/data
+      - ./scripts:/app/scripts
+      - ./src/App.js:/app/scripts/App.js:ro
     networks:
       - hermes_net
 
-  # ── Webhook Stripe (paiements + expulsions) ─────────────────
-  stripe-webhook:
-    image: node:20-alpine
+  # ── Hermès Admin Bot ───────────────────────────────────────
+  hermes-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.hermes
+    image: touslesmatchs-hermes-admin
     restart: unless-stopped
-    working_dir: /app
-    command: node scripts/stripe_webhook.js
-    env_file:
-      - .env
+    env_file: .env
+    environment:
+      - TZ=Europe/Paris
+    networks:
+      - hermes_net
+
+  # ── Webhook Stripe (accès Premium auto + expulsions) ───────
+  stripe-webhook:
+    build:
+      context: .
+      dockerfile: Dockerfile.webhook
+    image: touslesmatchs-stripe-webhook
+    restart: unless-stopped
+    env_file: .env
     environment:
       - TZ=Europe/Paris
     volumes:
@@ -68,14 +75,8 @@ services:
       - hermes_net
 
 volumes:
-  site_data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: ./site
-  council_data:
-  bot_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   hermes_net:

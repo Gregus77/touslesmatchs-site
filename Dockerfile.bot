@@ -1,0 +1,5 @@
+FROM node:20-alpine
+WORKDIR /app
+# Scripts montés via volume docker-compose (./scripts:/app/scripts)
+# App.js monté depuis src/ : ./src/App.js:/app/scripts/App.js
+CMD ["node", "scripts/bot.js"]
