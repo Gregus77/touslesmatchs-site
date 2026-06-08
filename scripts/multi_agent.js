@@ -166,13 +166,19 @@ const BANNED_KEYWORDS = ["U21", "U20", "U23", "U19", "U18", "U17", "Olympic", "O
   "Women", "Femmes", "Femenino", "W ", " W"];
 
 // Mots-clés INTERDITS dans le nom de la ligue — AMICAUX BANNIS définitivement
-// Leçon apprise : Suisse 1-1 Australie (06/06/2026) — amical San Diego → PERDU
-// Les amicaux ont zéro enjeu, équipes mixtes, stats non fiables → JAMAIS de pick
 const BANNED_LEAGUE_KEYWORDS = [
-  "friendly", "Friendly", "amical", "Amical", "FRIENDLY", "AMICAL",
-  "test match", "Test Match", "exhibition", "Exhibition",
-  "international friendly", "International Friendly",
-  "tour ", " tour", "Tour "
+  "friendly", "amical", "amistoso", "testspiel", "exhibition",
+  "international friendly", "tour ", " tour", "all-star", "showcase",
+  "kirin", "china cup", "gulf cup", "usmnt tour", "gold cup warm"
+];
+
+// Pour leagueId 914609 (matchs internationaux) : EXIGER un mot-clé officiel
+// Sans ce mot-clé, le match est traité comme amical suspect → REJET
+const OFFICIAL_INTERNATIONAL_KEYWORDS = [
+  "world cup", "coupe du monde", "nations league", "liga de naciones",
+  "qualification", "qualifier", "qualifying", "euro", "copa america",
+  "afcon", "can ", "africa cup", "asian cup", "afc", "concacaf",
+  "conmebol", "fifa", "uefa", "gold cup", "confederations"
 ];
 
 function isMatchARJEL(fx) {
@@ -185,7 +191,7 @@ function isMatchARJEL(fx) {
     if (home.includes(kw) || away.includes(kw)) return false;
   }
 
-  // REJET absolu : amicaux et matchs sans enjeu — jamais de pick dessus
+  // REJET absolu : amicaux — vérification large
   for (const kw of BANNED_LEAGUE_KEYWORDS) {
     if (leagueName.includes(kw.toLowerCase())) {
       console.log(`  ❌ AMICAL REJETÉ: ${home} vs ${away} (${leagueName})`);
@@ -195,10 +201,25 @@ function isMatchARJEL(fx) {
 
   // 1. Ligue Top 5 européen — SAISON RÉGULIÈRE → OK
   if (LIGUES_ARJEL.has(fx.leagueId)) return true;
-  // 2. Match international A officiel (Coupe du Monde, Nations League, qualifs FIFA/UEFA) : vérifier nations ARJEL
+
+  // 2. Match international A officiel : DOUBLE vérification
+  //    a) Les deux nations doivent être dans NATIONS_ARJEL
+  //    b) ET le nom de la compétition doit contenir un mot-clé officiel
+  //    → Empêche les amicaux internationaux avec des nations connues (ex: Swiss vs Australia)
   if (fx.leagueId === 914609) {
-    return NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
+    const nationsOk = NATIONS_ARJEL.has(home) && NATIONS_ARJEL.has(away);
+    const isOfficial = OFFICIAL_INTERNATIONAL_KEYWORDS.some(kw => leagueName.includes(kw));
+    if (!nationsOk) {
+      console.log(`  ❌ NATIONS HORS-ARJEL: ${home} vs ${away}`);
+      return false;
+    }
+    if (!isOfficial) {
+      console.log(`  ⚠️  INTERNATIONAL SUSPECT (pas de mot-clé officiel): ${home} vs ${away} (${leagueName || "ligue inconnue"}) → REJETÉ`);
+      return false;
+    }
+    return true;
   }
+
   // 3. Sinon → REJET
   return false;
 }
@@ -528,9 +549,22 @@ async function generateForDay(day) {
     updateAppJsNoPick(day.fr, "Aucun pick fiable détecté");
     return null;
   }
+  // Validation post-LLM : vérifier que le pick est vraiment ARJEL
+  // Le LLM peut parfois mettre un match HORS-ARJEL dans le champ pick → on le détecte et rejette
+  if (result?.pick) {
+    const pickMatch = result.pick.match || "";
+    const [pickHome, pickAway] = pickMatch.split(" vs ").map(s => s.trim());
+    const arjelOk = LIGUES_ARJEL.has(result.pick.leagueId) ||
+      (NATIONS_ARJEL.has(pickHome) && NATIONS_ARJEL.has(pickAway));
+    if (!arjelOk) {
+      console.log(`  ⚠️  Pick LLM rejeté (nations hors-ARJEL): ${pickMatch} → déplacé en premium`);
+      result.premium_hors_arjel = result.premium_hors_arjel || result.pick;
+      result.pick = null;
+    }
+  }
   // Pick ARJEL → site public (gratuit)
   if (result?.pick) updateAppJs(result.pick, day.fr);
-  else updateAppJsNoPick(day.fr, "Pas de pick ARJEL - voir Premium");
+  else updateAppJsNoPick(day.fr, "Pas de pick ARJEL aujourd'hui");
   return result;
 }
 

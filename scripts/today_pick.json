@@ -1,9 +1,5 @@
 {
-  "date": "06/06",
-  "match": "Angola vs Mauritania",
-  "bet": "Angola Vainqueur",
-  "odds": "1.60",
-  "sport": "Foot",
-  "confidence": 7.5,
-  "nopick": false
+  "nopick": true,
+  "date": "08/06",
+  "reason": "Aucun match ARJEL disponible aujourd'hui"
 }
