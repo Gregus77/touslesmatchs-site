@@ -10,6 +10,7 @@ on:
       - 'Caddyfile'
       - 'package.json'
       - 'package-lock.json'
+  workflow_dispatch:
 
 jobs:
   deploy-site:
