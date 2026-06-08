@@ -146,10 +146,6 @@ export default function App() {
   var emailDone = emailDoneState[0]; var setEmailDone = emailDoneState[1];
   var emailLoadingState = React.useState(false);
   var emailLoading = emailLoadingState[0]; var setEmailLoading = emailLoadingState[1];
-  var checkoutErrState = React.useState("");
-  var checkoutErr = checkoutErrState[0]; var setCheckoutErr = checkoutErrState[1];
-  var checkoutLoadState = React.useState(false);
-  var checkoutLoad = checkoutLoadState[0]; var setCheckoutLoad = checkoutLoadState[1];
 
   function changeLang(newLang) {
     setLang(newLang);
@@ -964,98 +960,6 @@ export default function App() {
             React.createElement("div",{style:{fontSize:"36px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"16px",fontFamily:"'Bodoni Moda',serif"}},s.num),
             React.createElement("div",{style:{fontSize:"18px",fontWeight:"600",color:"#fff",marginBottom:"12px",fontFamily:"'Bodoni Moda',serif"}},s.title),
             React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.9"}},s.desc)
-          );
-        })
-      )
-    ),
-    React.createElement("div", {className:"section-divider"}),
-    // ════ TARIFS — 3 niveaux ════
-    React.createElement("section", {className:"home-section",style:{padding:"44px 20px 52px",maxWidth:"860px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"12px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
-      React.createElement("p", {style:{color:"#555",fontSize:"14px",textAlign:"center",marginBottom:"32px",lineHeight:"1.8"}}, "Commencez gratuitement — passez Premium quand vous êtes prêt."),
-      checkoutErr && React.createElement("div", {style:{
-        background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.3)",
-        borderRadius:"10px", padding:"12px 16px", marginBottom:"16px",
-        color:"#EF4444", fontSize:"13px", textAlign:"center"
-      }}, "⚠️ " + checkoutErr),
-      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"20px"}},
-        [
-          {
-            label:"GRATUIT", price:"0€", sub:"pour toujours",
-            features:["1 pick ANJ / jour","Winamax, Betclic, PMU","Canal Telegram public","Calculateur de projection"],
-            cta:"Commencer gratuitement", ctaAction:null, highlight:false
-          },
-          {
-            label:"PREMIUM", price:"9,90€", sub:"/ mois",
-            features:["Pick Premium du jour (ANJ)","Picks 3 prochains jours","Analyses détaillées","Canal Telegram Premium","10 analyses personnalisées/mois"],
-            cta:"⭐ Devenir Premium", ctaAction:"standard", highlight:false, badge:"POPULAIRE"
-          },
-          {
-            label:"PREMIUM PLUS", price:"19,90€", sub:"/ mois",
-            features:["Tout Premium inclus","Pick HORS-ARJEL (Pinnacle)","Cotes supérieures","50 analyses personnalisées/mois","Sports supplémentaires + Value Bets","Analyses prioritaires Hermès"],
-            cta:"💎 Devenir Premium Plus", ctaAction:"premium", highlight:true, badge:"MEILLEURE VALEUR"
-          }
-        ].map(function(plan,i){
-          var isMid = plan.ctaAction && !plan.highlight; // PREMIUM 9.90€
-          return React.createElement("div", {key:i, style:{
-            background: plan.highlight
-              ? "linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04))"
-              : isMid ? "rgba(212,175,55,0.04)" : "rgba(255,255,255,0.02)",
-            border: "1px solid " + (plan.highlight ? "#d4af37" : isMid ? "rgba(212,175,55,0.4)" : "rgba(255,255,255,0.07)"),
-            borderRadius:"16px", padding:"28px 22px", position:"relative",
-            boxShadow: plan.highlight ? "0 0 24px rgba(212,175,55,0.1)" : isMid ? "0 0 16px rgba(212,175,55,0.05)" : "none"
-          }},
-            plan.badge && React.createElement("div", {style:{
-              position:"absolute", top:"-10px", left:"50%", transform:"translateX(-50%)",
-              background: plan.highlight ? "#d4af37" : isMid ? "rgba(212,175,55,0.15)" : "rgba(255,255,255,0.1)",
-              border: isMid ? "1px solid rgba(212,175,55,0.4)" : "none",
-              color: plan.highlight ? "#000" : isMid ? "#d4af37" : "#666",
-              padding:"3px 12px", borderRadius:"20px", fontSize:"9px", fontWeight:"bold", letterSpacing:"1px", whiteSpace:"nowrap"
-            }}, plan.badge),
-            React.createElement("div", {style:{fontSize:"10px",color:(plan.highlight||isMid)?"#d4af37":"#555",letterSpacing:"3px",marginBottom:"8px",fontWeight:"600"}}, plan.label),
-            React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:"4px",marginBottom:"4px"}},
-              React.createElement("span", {style:{fontSize:"32px",fontWeight:"700",color:(plan.highlight||isMid)?"#d4af37":"#aaa",fontFamily:"'Bodoni Moda',serif"}}, plan.price),
-              React.createElement("span", {style:{fontSize:"12px",color:"#555"}}, plan.sub)
-            ),
-            React.createElement("div", {style:{borderTop:"1px solid rgba(255,255,255,0.06)",margin:"16px 0"}}),
-            React.createElement("ul", {style:{listStyle:"none",padding:0,margin:"0 0 22px",display:"flex",flexDirection:"column",gap:"10px"}},
-              plan.features.map(function(f,j){
-                return React.createElement("li", {key:j, style:{display:"flex",alignItems:"center",gap:"10px",fontSize:"13px",color:(plan.highlight||isMid)?"#aaa":"#666",lineHeight:"1.5"}},
-                  React.createElement("span", {style:{color:(plan.highlight||isMid)?"#22cc44":"#444",flexShrink:0}}, "✓"),
-                  f
-                );
-              })
-            ),
-            React.createElement("button", {
-              onClick: function(){
-                if(!plan.ctaAction){return;}
-                if(window.trackEvent) window.trackEvent("click_pricing_cta",{plan:plan.ctaAction});
-                setCheckoutErr(""); setCheckoutLoad(true);
-                fetch("/api/create-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:plan.ctaAction})})
-                  .then(function(r){return r.json();})
-                  .then(function(d){
-                    setCheckoutLoad(false);
-                    if(d.url){ window.location.href=d.url; }
-                    else { setCheckoutErr(d.error||"Paiement temporairement indisponible — veuillez réessayer."); }
-                  })
-                  .catch(function(){
-                    setCheckoutLoad(false);
-                    setCheckoutErr("Paiement temporairement indisponible — veuillez réessayer dans quelques instants.");
-                  });
-              },
-              disabled: checkoutLoad && !!plan.ctaAction,
-              style:{
-                width:"100%", padding:"14px", borderRadius:"10px",
-                border: plan.highlight ? "none" : isMid ? "1px solid #d4af37" : "none",
-                cursor: (plan.ctaAction && !checkoutLoad) ? "pointer" : "default",
-                background: plan.highlight
-                  ? "linear-gradient(135deg,#d4af37,#f5d76e)"
-                  : isMid ? "transparent" : "rgba(255,255,255,0.03)",
-                color: plan.highlight ? "#000" : isMid ? "#d4af37" : "#444",
-                fontWeight: "bold", fontSize:"14px", letterSpacing:"0.5px",
-                minHeight:"48px", opacity: (checkoutLoad && !!plan.ctaAction) ? 0.6 : 1
-              }
-            }, checkoutLoad && plan.ctaAction ? "⏳ Chargement..." : plan.cta)
           );
         })
       )
