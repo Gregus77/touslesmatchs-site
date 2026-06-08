@@ -169,7 +169,7 @@ function formatTelegramReport(stats, aiReport, picks) {
   text += `🏆 Meilleure série: <b>${stats.bestSerie}</b>\n\n`;
 
   // Par sport
-  const sports = ["Hockey", "Foot", "Baseball", "Tennis"];
+  const sports = ["Hockey", "Foot", "Baseball", "Rugby", "NBA"];
   text += `🏅 <b>PAR SPORT</b>\n`;
   for (const sport of sports) {
     const w = picks.filter(p => p.sport === sport && p.status === "GAGNE").length;

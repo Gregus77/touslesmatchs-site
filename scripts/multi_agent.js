@@ -14,7 +14,7 @@ const MISTRAL_KEY = process.env.MISTRAL_API_KEY;
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID;          // Canal gratuit
 const TG_PREMIUM = process.env.TELEGRAM_PREMIUM_CHAT_ID; // Canal premium privé
-const SPORTS_ALLOWED = ["Hockey", "Foot", "Baseball", "MLB", "Tennis", "Rugby", "NBA", "NFL"];
+const SPORTS_ALLOWED = ["Hockey", "Foot", "Baseball", "MLB", "Rugby", "NBA", "NFL"];
 
 // ═══════════════════════════════════════════════════════
 // MULTI-IA PROVIDER INTERFACE — Fallback routing
