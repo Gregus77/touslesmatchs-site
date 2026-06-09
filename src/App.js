@@ -21,6 +21,7 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
+  ["11/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["10/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["09/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["08/06","Philadelphia Phillies vs Chicago White Sox","Philadelphia Phillies ML","1.59","WIN","GAGNE","Baseball",8.5,8],
