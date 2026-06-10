@@ -3,12 +3,15 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --green: #4ADE80;
+  --green: #3DFF8F;
   --green-d: #22C55E;
-  --bg: #050d05;
-  --card: #0e0e0e;
-  --border: rgba(255,255,255,0.07);
-  --border2: rgba(255,255,255,0.13);
+  --green-glow: rgba(61,255,143,0.22);
+  --blue: #3B82F6;
+  --blue-glow: rgba(59,130,246,0.12);
+  --bg: #030810;
+  --card: #07090f;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.11);
   --text: #ffffff;
   --muted: rgba(255,255,255,0.55);
   --dim: rgba(255,255,255,0.28);
@@ -27,9 +30,9 @@ body {
 /* ═══ HEADER ══════════════════════════════════════════════ */
 .hdr {
   position: sticky; top: 0; z-index: 200;
-  background: rgba(5,13,5,0.94);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(20px);
+  background: rgba(3,8,16,0.92);
+  border-bottom: 1px solid rgba(61,255,143,0.08);
+  backdrop-filter: blur(24px);
   padding: 0 28px; height: 62px;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
@@ -75,32 +78,46 @@ body {
 /* ═══ HERO ════════════════════════════════════════════════ */
 .hero {
   position: relative; overflow: hidden;
-  min-height: 680px; display: flex; align-items: center;
+  min-height: 100vh; display: flex; align-items: center;
+  background: var(--bg);
 }
 
-/* Terrain de foot en fond */
+/* Lueurs atmosphériques : vert néon bas-gauche + bleu électrique bas-droit */
+.hero::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 70% at -8% 115%, rgba(61,255,143,0.20) 0%, transparent 58%),
+    radial-gradient(ellipse 40% 55% at 108% 108%, rgba(59,130,246,0.13) 0%, transparent 55%),
+    radial-gradient(ellipse 75% 40% at 50% 115%, rgba(61,255,143,0.06) 0%, transparent 50%);
+}
+
+/* Terrain de foot — vue de derrière le but (perspective inclinée) */
 .hero-pitch {
-  position: absolute; inset: 0; z-index: 0;
-  pointer-events: none;
+  position: absolute; inset: 0; z-index: 1;
+  pointer-events: none; overflow: hidden;
 }
 
 .hero-pitch svg {
-  width: 100%; height: 100%;
-  object-fit: cover; opacity: 0.22;
+  width: 120%; height: 160%;
+  position: absolute;
+  bottom: -35%; left: -10%;
+  transform-origin: 50% 100%;
+  transform: perspective(480px) rotateX(32deg);
+  opacity: 0.14;
 }
 
-/* Assombrissement gradient sur le terrain */
+/* Overlay : fondu gauche fort (lisibilité texte) + fondu bas (profondeur) */
 .hero-pitch-overlay {
-  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
   background:
-    linear-gradient(to right, rgba(5,13,5,0.92) 0%, rgba(5,13,5,0.55) 45%, rgba(5,13,5,0.70) 100%),
-    radial-gradient(ellipse 70% 80% at 50% 50%, rgba(0,80,20,0.20) 0%, transparent 70%);
+    linear-gradient(to right,  rgba(3,8,16,0.96) 0%, rgba(3,8,16,0.60) 42%, rgba(3,8,16,0.78) 100%),
+    linear-gradient(to bottom, rgba(3,8,16,0.25) 0%, transparent 25%, transparent 65%, rgba(3,8,16,0.90) 100%);
 }
 
 .hero-inner {
-  position: relative; z-index: 2;
+  position: relative; z-index: 3;
   display: flex; align-items: center; gap: 64px;
-  max-width: 1200px; margin: 0 auto; padding: 80px 40px 80px; width: 100%;
+  max-width: 1200px; margin: 0 auto; padding: 100px 40px; width: 100%;
 }
 
 .hero-left  { flex: 1; min-width: 0; }
@@ -125,11 +142,15 @@ body {
 }
 
 .hero-h1 {
-  font-size: clamp(38px, 5.5vw, 66px);
-  font-weight: 900; line-height: 1.04; letter-spacing: -.035em;
-  color: #fff; margin-bottom: 20px;
+  font-size: clamp(40px, 5.8vw, 72px);
+  font-weight: 900; line-height: 1.03; letter-spacing: -.038em;
+  color: #fff; margin-bottom: 22px;
 }
-.hero-h1 .grn { color: var(--green); }
+/* Néon premium sur les mots verts */
+.hero-h1 .grn {
+  color: var(--green);
+  text-shadow: 0 0 32px rgba(61,255,143,0.45), 0 0 64px rgba(61,255,143,0.18);
+}
 
 .hero-desc {
   font-size: 16px; color: var(--muted); line-height: 1.7;
@@ -171,26 +192,38 @@ body {
 .feat-txt strong { display:block; font-size:13px; font-weight:600; line-height:1.3; }
 .feat-txt span   { font-size:12px; color:var(--dim); }
 
-/* ═══ PHONE — iPhone 15 Pro ════════════════════════════════ */
+/* ═══ PHONE — iPhone 15 Pro (3D perspective) ═══════════════ */
+
+/* Conteneur qui incline le téléphone en 3D */
+.phone-scene {
+  transform: perspective(1100px) rotateY(-9deg) rotateX(4deg);
+  transform-style: preserve-3d;
+}
+
+/* Flottement vertical — séparé de la perspective pour qu'ils ne se marchent pas dessus */
 .phone-wrap {
   width: 300px; position: relative;
   animation: pfloat 6s ease-in-out infinite;
-  filter: drop-shadow(0 40px 70px rgba(0,0,0,0.85)) drop-shadow(0 0 50px rgba(74,222,128,0.14));
+  filter:
+    drop-shadow(0 50px 80px rgba(0,0,0,0.9))
+    drop-shadow(-10px 20px 40px rgba(0,0,0,0.6))
+    drop-shadow(0 0 60px rgba(61,255,143,0.12));
 }
 
 @keyframes pfloat {
-  0%,100% { transform: translateY(0)    rotate(-1.5deg); }
-  50%      { transform: translateY(-18px) rotate(-1.5deg); }
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-20px); }
 }
 
-/* Cadre titane */
+/* Cadre titane avec reflet latéral */
 .phone-frame {
-  background: linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 50%, #2c2c2e 100%);
+  background: linear-gradient(160deg, #48484a 0%, #1c1c1e 45%, #2c2c2e 100%);
   border-radius: 54px; padding: 12px; position: relative;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.20),
-    0 0 0 2px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.12);
+    0 0 0 1px rgba(255,255,255,0.22),
+    0 0 0 2px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.14),
+    inset 0 -1px 0 rgba(0,0,0,0.3);
 }
 
 /* Bouton power (droite) */
@@ -199,9 +232,9 @@ body {
   right:-4px; top:150px; width:4px; height:72px;
   background: linear-gradient(to right, #1c1c1e, #3a3a3c);
   border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 0 0.5px rgba(255,255,255,0.07);
+  box-shadow: 0 0 0 0.5px rgba(255,255,255,0.08);
 }
-/* Boutons volume (gauche, deux boutons via bg gradient) */
+/* Boutons volume gauche (deux via gradient) */
 .phone-frame::before {
   content:''; position:absolute;
   left:-4px; top:115px; width:4px; height:90px;
@@ -212,8 +245,15 @@ body {
   border-radius: 3px 0 0 3px;
 }
 
+/* Écran avec reflet de verre dans le coin haut-gauche */
 .phone-screen {
   background: #000; border-radius: 44px; overflow: hidden;
+  position: relative;
+}
+.phone-screen::after {
+  content: ''; position: absolute; inset: 0; z-index: 50; pointer-events: none;
+  background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 35%);
+  border-radius: 44px;
 }
 
 /* Status bar */
@@ -224,7 +264,7 @@ body {
 .phone-sb-time { font-size: 13px; font-weight: 700; color: #fff; }
 .phone-dynamic-island {
   width: 110px; height: 28px; background: #000;
-  border-radius: 20px; border: 1.5px solid #1a1a1a;
+  border-radius: 20px; border: 1.5px solid #1c1c1e;
 }
 .phone-sb-right { font-size: 10px; color: rgba(255,255,255,0.8); display:flex; gap:4px; align-items:center; }
 
@@ -241,27 +281,31 @@ body {
 .phone-app-nm  { font-size: 12px; font-weight: 700; color: #fff; }
 .phone-app-sub { font-size: 9px; color: var(--dim); }
 .phone-live-badge {
-  margin-left: auto; background: rgba(74,222,128,0.12);
-  border: 1px solid rgba(74,222,128,0.3); border-radius: 6px;
-  font-size: 9px; font-weight: 800; color: var(--green); padding: 2px 6px; letter-spacing:.06em;
+  margin-left: auto;
+  background: rgba(61,255,143,0.10); border: 1px solid rgba(61,255,143,0.28);
+  border-radius: 6px; font-size: 9px; font-weight: 800;
+  color: var(--green); padding: 2px 6px; letter-spacing:.06em;
 }
 
 /* Zone match — gros logos */
 .phone-match-hero {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 20px 14px;
-  background: linear-gradient(to bottom, rgba(74,222,128,0.03), transparent);
+  padding: 16px 18px 12px;
+  background: linear-gradient(to bottom, rgba(61,255,143,0.04), transparent);
 }
 .phone-team-hero { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .phone-team-nm2 { font-size: 10px; font-weight: 600; color: var(--muted); text-align: center; max-width: 66px; line-height: 1.2; }
 .phone-vs-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
 .phone-vs-badge { font-size:13px; font-weight:800; color:rgba(255,255,255,0.18); }
-.phone-conf-mini { font-size:15px; font-weight:900; color:var(--green); letter-spacing:-.03em; }
+.phone-conf-mini {
+  font-size:15px; font-weight:900; color:var(--green); letter-spacing:-.03em;
+  text-shadow: 0 0 16px rgba(61,255,143,0.5);
+}
 
 /* Pick card */
 .phone-pick-card {
-  margin: 0 14px 14px;
-  background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.16);
+  margin: 0 14px 12px;
+  background: rgba(61,255,143,0.05); border: 1px solid rgba(61,255,143,0.15);
   border-radius: 14px; padding: 12px 14px;
 }
 .phone-pick-tag { font-size: 9px; font-weight: 700; color: var(--dim); letter-spacing:.1em; text-transform:uppercase; margin-bottom: 4px; }
@@ -275,6 +319,7 @@ body {
   background: var(--green); color: #000; border: none; border-radius: 12px;
   padding: 12px; font-size: 12px; font-weight: 800; font-family: inherit;
   cursor: pointer; text-align: center; text-decoration: none;
+  box-shadow: 0 4px 20px rgba(61,255,143,0.25);
 }
 
 /* Indicateur home */
@@ -547,7 +592,7 @@ body {
 .ft-bottom { border-top:1px solid var(--border); padding-top:20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
 .ft-copy { font-size:12px; color:var(--dim); }
 
-.legal-bar { position:fixed; bottom:0; left:0; right:0; background:rgba(5,13,5,0.97); border-top:1px solid var(--border); padding:6px 20px; text-align:center; z-index:300; backdrop-filter:blur(10px); }
+.legal-bar { position:fixed; bottom:0; left:0; right:0; background:rgba(3,8,16,0.97); border-top:1px solid var(--border); padding:6px 20px; text-align:center; z-index:300; backdrop-filter:blur(10px); }
 .legal-txt { font-size:10px; color:rgba(255,255,255,0.18); line-height:1.8; }
 
 /* ═══ RESPONSIVE ══════════════════════════════════════════ */

@@ -552,8 +552,9 @@ export default function App() {
           )
         ),
 
-        // Colonne droite — iPhone 15 Pro
+        // Colonne droite — iPhone 15 Pro (incliné 3D via phone-scene)
         React.createElement("div",{className:"hero-right"},
+          React.createElement("div",{className:"phone-scene"},
           React.createElement("div",{className:"phone-wrap"},
             React.createElement("div",{className:"phone-frame"},
               React.createElement("div",{className:"phone-screen"},
@@ -601,7 +602,7 @@ export default function App() {
                 React.createElement("div",{className:"phone-home-bar"})
               )
             )
-          )
+          ))
         )
       )
     ),
