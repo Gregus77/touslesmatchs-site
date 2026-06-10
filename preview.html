@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TousLesMatchs – Aperçu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#4ADE80;--green-d:#22C55E;--bg:#050d05;--card:#0e0e0e;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#ffffff;--muted:rgba(255,255,255,0.55);--dim:rgba(255,255,255,0.28);
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+
+/* ── HEADER ── */
+.hdr{position:sticky;top:0;z-index:200;background:rgba(5,13,5,0.94);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);padding:0 28px;height:62px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.hdr-logo{display:flex;align-items:center;gap:10px;cursor:pointer;text-decoration:none}
+.hdr-logo-icon{width:38px;height:38px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#000}
+.hdr-logo-name{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.02em}
+.hdr-logo-sub{font-size:9px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+.hdr-nav{display:flex;gap:2px}
+.hdr-btn{background:transparent;border:none;color:var(--muted);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;transition:color .15s}
+.hdr-btn:hover,.hdr-btn.on{color:#fff}
+.hdr-btn.on{color:var(--green);font-weight:700}
+.hdr-tg{background:var(--green);color:#000;border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+
+/* ── HERO ── */
+.hero{position:relative;overflow:hidden;min-height:680px;display:flex;align-items:center}
+.hero-pitch{position:absolute;inset:0;z-index:0;pointer-events:none}
+.hero-pitch svg{width:100%;height:100%;opacity:.22}
+.hero-pitch-overlay{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(to right,rgba(5,13,5,0.92) 0%,rgba(5,13,5,0.55) 45%,rgba(5,13,5,0.70) 100%),
+             radial-gradient(ellipse 70% 80% at 50% 50%,rgba(0,80,20,0.20) 0%,transparent 70%)}
+.hero-inner{position:relative;z-index:2;display:flex;align-items:center;gap:64px;max-width:1200px;margin:0 auto;padding:80px 40px;width:100%}
+.hero-left{flex:1;min-width:0}
+.hero-right{flex-shrink:0}
+
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.22);border-radius:100px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--green);margin-bottom:22px}
+.badge-pulse{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;animation:bpulse 2s ease-in-out infinite}
+@keyframes bpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.65)}}
+
+.hero-h1{font-size:clamp(38px,5.5vw,66px);font-weight:900;line-height:1.04;letter-spacing:-.035em;color:#fff;margin-bottom:20px}
+.hero-h1 .grn{color:var(--green)}
+.hero-desc{font-size:16px;color:var(--muted);line-height:1.7;margin-bottom:32px;max-width:480px}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:36px}
+
+.btn-g{background:var(--green);color:#000;border:none;border-radius:12px;padding:14px 28px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:background .15s}
+.btn-g:hover{background:var(--green-d)}
+.btn-o{background:transparent;color:#fff;border:1px solid var(--border2);border-radius:12px;padding:14px 28px;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-o:hover{background:rgba(255,255,255,0.04)}
+
+.hero-feats{display:flex;gap:24px;flex-wrap:wrap}
+.hero-feat{display:flex;align-items:flex-start;gap:10px}
+.feat-icon{width:28px;height:28px;border-radius:8px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.14);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:2px}
+.feat-txt strong{display:block;font-size:13px;font-weight:600;line-height:1.3}
+.feat-txt span{font-size:12px;color:var(--dim)}
+
+/* ── PHONE ── */
+.phone-wrap{width:286px;position:relative;animation:pfloat 6s ease-in-out infinite;
+  filter:drop-shadow(0 30px 60px rgba(0,0,0,0.7)) drop-shadow(0 0 40px rgba(74,222,128,0.12))}
+@keyframes pfloat{0%,100%{transform:translateY(0) rotate(-1.5deg)}50%{transform:translateY(-16px) rotate(-1.5deg)}}
+.phone-frame{background:linear-gradient(145deg,#2a2a2e,#1a1a1e);border-radius:50px;padding:7px;position:relative;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.14),inset 0 1px 0 rgba(255,255,255,0.1)}
+.phone-frame::after{content:'';position:absolute;right:-5px;top:120px;width:5px;height:64px;
+  background:linear-gradient(to right,#1a1a1e,#2a2a2e);border-radius:0 4px 4px 0;box-shadow:0 0 0 1px rgba(255,255,255,0.08)}
+.phone-frame::before{content:'';position:absolute;left:-5px;top:100px;width:5px;height:36px;
+  background:linear-gradient(to left,#1a1a1e,#2a2a2e);border-radius:4px 0 0 4px;box-shadow:0 0 0 1px rgba(255,255,255,0.08)}
+.phone-screen{background:#080808;border-radius:44px;overflow:hidden}
+.phone-sb{background:#080808;padding:14px 22px 8px;display:flex;align-items:center;justify-content:space-between;position:relative}
+.phone-sb-time{font-size:13px;font-weight:700;color:#fff}
+.phone-pill-cam{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:90px;height:22px;background:#000;border-radius:12px}
+.phone-sb-icons{font-size:10px;color:rgba(255,255,255,0.8);display:flex;gap:3px}
+.phone-body{padding:10px 16px 18px}
+.phone-app-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.phone-app-ico{width:34px;height:34px;border-radius:9px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000;flex-shrink:0}
+.phone-app-nm{font-size:13px;font-weight:700;color:#fff}
+.phone-app-sub{font-size:10px;color:var(--dim)}
+.phone-pick-lbl{font-size:12px;font-weight:700;color:#fff;display:flex;align-items:center;gap:5px;margin-bottom:10px}
+.phone-conf-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.phone-conf-lbl{font-size:10px;color:var(--dim)}
+.phone-conf-val{font-size:24px;font-weight:900;color:var(--green);letter-spacing:-.04em}
+.phone-teams{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px;background:rgba(255,255,255,0.03);border-radius:12px;margin-bottom:12px}
+.phone-team{display:flex;flex-direction:column;align-items:center;gap:5px}
+.phone-team-nm{font-size:9px;color:var(--muted);text-align:center;max-width:52px;line-height:1.2}
+.phone-vs{font-size:11px;font-weight:700;color:rgba(255,255,255,0.15)}
+.phone-bet{background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.14);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.phone-bet-nm{font-size:13px;font-weight:700;color:#fff;margin-bottom:3px}
+.phone-bet-sub{font-size:10px;color:var(--dim)}
+.phone-cta{width:100%;background:var(--green);color:#000;border:none;border-radius:10px;padding:11px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer;text-align:center;text-decoration:none;display:block}
+.phone-footer{padding:8px 16px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid rgba(255,255,255,0.04);margin-top:2px}
+.phone-footer-ico{width:22px;height:22px;border-radius:6px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:900;color:#000}
+.phone-footer-txt{font-size:9px;color:var(--muted);line-height:1.3}
+
+/* ── TEAM CIRCLE (labels) ── */
+.team-circle{display:flex;flex-direction:column;align-items:center;gap:6px}
+.team-circle-nm{font-size:12px;font-weight:600;color:var(--muted);text-align:center;max-width:80px;line-height:1.2}
+
+/* ── NEURON SECTION ── */
+.neuron-section{padding:64px 0 60px;position:relative;overflow:hidden}
+.neuron-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(74,222,128,0.04) 0%,transparent 70%);pointer-events:none}
+.neuron-inner{max-width:1200px;margin:0 auto;padding:0 40px;display:flex;align-items:center;gap:60px}
+.neuron-text{flex:1;min-width:0}
+.neuron-eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--green);font-weight:700;margin-bottom:14px}
+.neuron-h2{font-size:clamp(28px,3.5vw,44px);font-weight:900;letter-spacing:-.03em;line-height:1.08;color:#fff;margin-bottom:16px}
+.neuron-h2 .grn{color:var(--green)}
+.neuron-desc{font-size:15px;color:var(--muted);line-height:1.7;max-width:440px;margin-bottom:24px}
+.neuron-chips{display:flex;flex-wrap:wrap;gap:8px}
+.neuron-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:100px;border:1px solid;font-size:11px;font-weight:600;background:rgba(0,0,0,0.4)}
+.chip-dot{width:7px;height:7px;border-radius:50%;animation:bpulse 2s ease-in-out infinite}
+
+/* ── ORBIT ── */
+.neuron-orbit{flex-shrink:0;width:420px;height:420px;position:relative}
+.orbit-ring{position:absolute;border-radius:50%;border:1px solid;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.orbit-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:80px;border-radius:50%;
+  background:#080808;border:2px solid var(--green);display:flex;flex-direction:column;align-items:center;justify-content:center;
+  z-index:10;box-shadow:0 0 20px rgba(74,222,128,0.2);animation:center-pulse 3s ease-in-out infinite}
+@keyframes center-pulse{0%,100%{box-shadow:0 0 20px rgba(74,222,128,0.2)}50%{box-shadow:0 0 40px rgba(74,222,128,0.4)}}
+.orbit-center-nm{font-size:11px;font-weight:800;color:var(--green);line-height:1.1}
+.orbit-center-sub{font-size:9px;color:var(--dim)}
+
+.orbit-arm{position:absolute;top:50%;left:50%;width:170px;height:2px;transform-origin:left center;margin-top:-1px}
+.orbit-arm:nth-child(4){animation:spin 16s linear infinite 0s}
+.orbit-arm:nth-child(5){animation:spin 16s linear infinite -2.67s}
+.orbit-arm:nth-child(6){animation:spin 16s linear infinite -5.33s}
+.orbit-arm:nth-child(7){animation:spin 16s linear infinite -8s}
+.orbit-arm:nth-child(8){animation:spin 16s linear infinite -10.67s}
+.orbit-arm:nth-child(9){animation:spin 16s linear infinite -13.33s}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.orbit-line{position:absolute;top:50%;left:0;width:100%;height:1.5px;transform:translateY(-50%);opacity:.3}
+.orbit-packet{position:absolute;top:50%;left:0%;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%);animation:packet-travel 2s linear infinite}
+@keyframes packet-travel{0%{left:10%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:95%;opacity:0}}
+
+.orbit-node-wrap{position:absolute;right:-26px;top:50%;transform:translateY(-50%)}
+.orbit-arm:nth-child(4)  .orbit-node-wrap{animation:unspin 16s linear infinite 0s}
+.orbit-arm:nth-child(5)  .orbit-node-wrap{animation:unspin 16s linear infinite -2.67s}
+.orbit-arm:nth-child(6)  .orbit-node-wrap{animation:unspin 16s linear infinite -5.33s}
+.orbit-arm:nth-child(7)  .orbit-node-wrap{animation:unspin 16s linear infinite -8s}
+.orbit-arm:nth-child(8)  .orbit-node-wrap{animation:unspin 16s linear infinite -10.67s}
+.orbit-arm:nth-child(9)  .orbit-node-wrap{animation:unspin 16s linear infinite -13.33s}
+@keyframes unspin{to{transform:translateY(-50%) rotate(-360deg)}}
+
+.orbit-node{width:52px;height:52px;border-radius:50%;background:#0A0A0A;border:1.5px solid;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.orbit-node-nm{font-size:9px;font-weight:800;line-height:1.1}
+.orbit-node-role{font-size:7px;color:rgba(255,255,255,0.35);text-align:center;padding:0 3px;line-height:1.2}
+
+/* ── PICK DU JOUR ── */
+.divider{border:none;border-top:1px solid var(--border)}
+.pick-section{padding:40px 0 24px}
+.section-wrap{max-width:1200px;margin:0 auto;padding:0 40px}
+.pick-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.pick-hdr-ttl{font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.badge-free{background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.28);color:var(--green);font-size:10px;font-weight:700;letter-spacing:.08em;padding:3px 10px;border-radius:100px}
+.pick-card{background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:28px 32px;display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.pick-teams-col{display:flex;flex-direction:column;gap:10px;min-width:200px}
+.pick-league{font-size:11px;color:var(--dim);font-weight:500}
+.pick-teams-row{display:flex;align-items:center;gap:16px}
+.pick-vs{font-size:12px;font-weight:700;color:rgba(255,255,255,0.15)}
+.pick-stats{display:flex;gap:28px;flex:1;flex-wrap:wrap}
+.pick-stat{display:flex;flex-direction:column;gap:4px}
+.pick-stat-lbl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.pick-stat-val{font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.pick-stat-val.grn{color:var(--green)}
+.pick-dots{display:flex;gap:4px;margin-top:4px}
+.dot{width:11px;height:11px;border-radius:50%;background:rgba(74,222,128,0.15)}
+.dot.on{background:var(--green)}
+.pick-right{display:flex;flex-direction:column;gap:10px;min-width:220px}
+.pick-bullets{list-style:none;display:flex;flex-direction:column;gap:5px}
+.pick-bullets li{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.pick-bullets li::before{content:'✓';color:var(--green);font-weight:700;font-size:11px;flex-shrink:0}
+.pick-tg-btn{background:var(--green);color:#000;border:none;border-radius:12px;padding:13px 20px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+
+/* ── COMMENT ÇA MARCHE ── */
+.how-section{padding:56px 0}
+.section-title-c{text-align:center;font-size:clamp(20px,3vw,30px);font-weight:800;letter-spacing:-.02em;text-transform:uppercase;margin-bottom:36px}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;position:relative}
+.how-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:28px 24px;position:relative}
+.how-ico{width:50px;height:50px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.12);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px}
+.how-n{position:absolute;top:18px;right:22px;font-size:52px;font-weight:900;color:rgba(255,255,255,0.03);line-height:1;letter-spacing:-.05em}
+.how-ttl{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px}
+.how-dsc{font-size:13px;color:var(--muted);line-height:1.65}
+
+/* ── PRICING ── */
+.pricing-section{padding:56px 0}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch}
+.pricing-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;display:flex;flex-direction:column;position:relative}
+.pricing-card.feat{border-color:rgba(74,222,128,0.4);background:rgba(74,222,128,0.04);transform:scale(1.03)}
+.pop-badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--green);color:#000;font-size:10px;font-weight:800;letter-spacing:.07em;padding:4px 14px;border-radius:100px;white-space:nowrap}
+.pricing-tier{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.pricing-card.feat .pricing-tier{color:var(--green)}
+.pricing-price{font-size:44px;font-weight:900;letter-spacing:-.04em;line-height:1;margin-bottom:4px}
+.pricing-period{font-size:12px;color:var(--dim);margin-bottom:20px}
+.pricing-feats{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:24px;flex:1}
+.pricing-feats li{font-size:13px;color:var(--muted);display:flex;align-items:flex-start;gap:10px;line-height:1.4}
+.ck{color:var(--green);font-weight:700;flex-shrink:0;font-size:12px;margin-top:1px}
+.ck.off{color:rgba(255,255,255,0.1)}
+.pricing-btn{width:100%;padding:13px;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;border:none;text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px}
+.pricing-btn.pg{background:var(--green);color:#000}
+.pricing-btn.po{background:transparent;color:#fff;border:1px solid var(--border2)}
+
+/* ── RÉSULTATS ── */
+.results-section{padding:40px 0 56px}
+.results-grid{display:grid;grid-template-columns:1fr 1.7fr;gap:20px}
+.res-card,.hist-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px}
+.res-ttl{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:22px}
+.res-stats{display:flex;gap:24px;flex-wrap:wrap}
+.res-stat{display:flex;flex-direction:column;gap:2px}
+.res-num{font-size:42px;font-weight:900;letter-spacing:-.04em;color:var(--green);line-height:1}
+.res-lbl{font-size:11px;color:var(--dim);line-height:1.4}
+.hist-ttl{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.hist-tbl{width:100%;border-collapse:collapse;margin-bottom:16px}
+.hist-tbl td{padding:8px;font-size:13px;border-bottom:1px solid var(--border)}
+.hist-tbl td:first-child{color:#fff;font-weight:600}
+.hist-tbl td:last-child{text-align:right;font-size:12px;color:var(--dim)}
+.sbadge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px}
+.sbadge.g{background:rgba(74,222,128,0.10);color:var(--green);border:1px solid rgba(74,222,128,0.2)}
+.sbadge.l{background:rgba(248,113,113,0.10);color:#F87171;border:1px solid rgba(248,113,113,0.2)}
+.sbadge.w{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.12)}
+
+/* ── FOOTER ── */
+.ft{background:var(--card);border-top:1px solid var(--border);padding:48px 0 24px}
+.ft-inner{max-width:1200px;margin:0 auto;padding:0 40px}
+.ft-top{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:40px;margin-bottom:40px}
+.ft-brand{font-size:17px;font-weight:900;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.ft-brand-ico{width:32px;height:32px;background:var(--green);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#000;flex-shrink:0}
+.ft-desc{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px;max-width:240px}
+.ft-col-ttl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;margin-bottom:14px}
+.ft-links{list-style:none;display:flex;flex-direction:column;gap:8px}
+.ft-links li a{color:var(--muted);font-size:13px;text-decoration:none}
+.ft-bottom{border-top:1px solid var(--border);padding-top:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.ft-copy{font-size:12px;color:var(--dim)}
+.legal-bar{background:rgba(5,13,5,0.97);border-top:1px solid var(--border);padding:6px 20px;text-align:center}
+.legal-txt{font-size:10px;color:rgba(255,255,255,0.18);line-height:1.8}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .hero-inner{flex-direction:column-reverse;gap:36px;align-items:center;padding:48px 24px 60px}
+  .hero-left{text-align:center}
+  .hero-btns{justify-content:center}
+  .neuron-inner{flex-direction:column;align-items:center}
+  .neuron-orbit{width:320px;height:320px}
+  .orbit-arm{width:120px}
+  .how-grid{grid-template-columns:1fr;gap:12px}
+  .pricing-grid{grid-template-columns:1fr;max-width:400px;margin:0 auto}
+  .pricing-card.feat{transform:none}
+  .results-grid{grid-template-columns:1fr}
+  .ft-top{grid-template-columns:1fr 1fr;gap:28px}
+}
+@media(max-width:640px){
+  .hdr{padding:0 16px;height:56px}
+  .hero-h1{font-size:36px}
+  .phone-wrap{width:230px}
+  .section-wrap{padding:0 16px}
+  .neuron-inner{padding:0 16px}
+  .ft-inner{padding:0 16px}
+  .ft-top{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">
+    <div class="hdr-logo-icon">⚡</div>
+    <div style="display:flex;flex-direction:column;line-height:1.15">
+      <span class="hdr-logo-name">TousLesMatchs</span>
+      <span class="hdr-logo-sub">Pick IA · Concile Hermès</span>
+    </div>
+  </div>
+  <nav class="hdr-nav">
+    <button class="hdr-btn on">Accueil</button>
+    <button class="hdr-btn">Pick du jour</button>
+    <button class="hdr-btn">Offres</button>
+    <button class="hdr-btn">Résultats</button>
+    <button class="hdr-btn">FAQ</button>
+  </nav>
+  <a href="https://t.me/touslesmatchs_bot" target="_blank" class="hdr-tg">✈ Rejoindre Telegram</a>
+</header>
+
+<!-- HERO avec TERRAIN DE FOOT -->
+<section class="hero">
+
+  <!-- Terrain SVG en fond -->
+  <div class="hero-pitch">
+    <svg viewBox="0 0 1400 680" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <rect width="1400" height="680" fill="#020c02"/>
+      <!-- Bandes de gazon alternées -->
+      <rect x="0"    y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="70"   y="0" width="70" height="680" fill="#031504"/>
+      <rect x="140"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="210"  y="0" width="70" height="680" fill="#031504"/>
+      <rect x="280"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="350"  y="0" width="70" height="680" fill="#031504"/>
+      <rect x="420"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="490"  y="0" width="70" height="680" fill="#031504"/>
+      <rect x="560"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="630"  y="0" width="70" height="680" fill="#031504"/>
+      <rect x="700"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="770"  y="0" width="70" height="680" fill="#031504"/>
+      <rect x="840"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="910"  y="0" width="70" height="680" fill="#031504"/>
+      <rect x="980"  y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="1050" y="0" width="70" height="680" fill="#031504"/>
+      <rect x="1120" y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="1190" y="0" width="70" height="680" fill="#031504"/>
+      <rect x="1260" y="0" width="70" height="680" fill="#020c02"/>
+      <rect x="1330" y="0" width="70" height="680" fill="#031504"/>
+      <defs>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#4ADE80" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
+        </radialGradient>
+        <radialGradient id="dark" cx="50%" cy="50%" r="50%">
+          <stop offset="60%" stop-color="transparent" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#000" stop-opacity="0.7"/>
+        </radialGradient>
+      </defs>
+      <!-- Contour terrain -->
+      <rect x="80" y="50" width="1240" height="580" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
+      <!-- Ligne médiane -->
+      <line x1="700" y1="50" x2="700" y2="630" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
+      <!-- Cercle central -->
+      <circle cx="700" cy="340" r="120" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
+      <circle cx="700" cy="340" r="6" fill="rgba(255,255,255,0.35)"/>
+      <!-- Surface réparation gauche -->
+      <rect x="80"  y="195" width="210" height="290" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2.5"/>
+      <rect x="80"  y="255" width="100" height="170" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <rect x="60"  y="290" width="20"  height="100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+      <!-- Surface réparation droite -->
+      <rect x="1110" y="195" width="210" height="290" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2.5"/>
+      <rect x="1220" y="255" width="100" height="170" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <rect x="1320" y="290" width="20"  height="100" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+      <!-- Points de penalty -->
+      <circle cx="260"  cy="340" r="6" fill="rgba(255,255,255,0.3)"/>
+      <circle cx="1140" cy="340" r="6" fill="rgba(255,255,255,0.3)"/>
+      <!-- Arcs penalty -->
+      <path d="M 290 195 A 110 110 0 0 1 290 485"  fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <path d="M 1110 195 A 110 110 0 0 0 1110 485" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <!-- Coins -->
+      <path d="M 80 50   A 25 25 0 0 1 105 75"  fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <path d="M 1320 50  A 25 25 0 0 0 1295 75" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <path d="M 80 630   A 25 25 0 0 0 105 605" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <path d="M 1320 630 A 25 25 0 0 1 1295 605" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+      <!-- Effets atmosphériques -->
+      <rect width="1400" height="680" fill="url(#glow)"/>
+      <rect width="1400" height="680" fill="url(#dark)"/>
+    </svg>
+  </div>
+  <div class="hero-pitch-overlay"></div>
+
+  <div class="hero-inner">
+    <!-- Colonne gauche -->
+    <div class="hero-left">
+      <div class="hero-badge">
+        <span class="badge-pulse"></span>
+        79% de réussite moyenne
+      </div>
+      <h1 class="hero-h1">
+        LE PICK <span class="grn">IA</span> DU JOUR,<br>
+        SIMPLE, CLAIR,<br>
+        <span class="grn">RENTABLE.</span>
+      </h1>
+      <p class="hero-desc">
+        Chaque jour, notre intelligence artificielle analyse des milliers de données pour ne retenir qu'un seul pari à forte valeur ajoutée.
+      </p>
+      <div class="hero-btns">
+        <a href="#pick-day" class="btn-g">VOIR LE PICK GRATUIT →</a>
+        <a href="#pricing" class="btn-o">DÉCOUVRIR LES OFFRES ⚡</a>
+      </div>
+      <div class="hero-feats">
+        <div class="hero-feat">
+          <div class="feat-icon">✓</div>
+          <div class="feat-txt"><strong>1 seul pick par jour</strong><span>Qualité > Quantité</span></div>
+        </div>
+        <div class="hero-feat">
+          <div class="feat-icon">🤖</div>
+          <div class="feat-txt"><strong>Analyse IA avancée</strong><span>Données en temps réel</span></div>
+        </div>
+        <div class="hero-feat">
+          <div class="feat-icon">✈</div>
+          <div class="feat-txt"><strong>Disponible sur Telegram</strong><span>Rapide & pratique</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- iPhone réaliste -->
+    <div class="hero-right">
+      <div class="phone-wrap">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <!-- Status bar -->
+            <div class="phone-sb">
+              <span class="phone-sb-time">9:41</span>
+              <div class="phone-pill-cam"></div>
+              <span class="phone-sb-icons">▮▮▮ ⚡</span>
+            </div>
+            <!-- Contenu -->
+            <div class="phone-body">
+              <div class="phone-app-row">
+                <div class="phone-app-ico">⚡</div>
+                <div>
+                  <div class="phone-app-nm">3W – TousLesMatchs</div>
+                  <div class="phone-app-sub">Canal officiel · Aujourd'hui</div>
+                </div>
+              </div>
+              <div class="phone-pick-lbl">Pick IA du jour 🔥</div>
+              <div class="phone-conf-row">
+                <span class="phone-conf-lbl">Confiance</span>
+                <span class="phone-conf-val">7.5/10</span>
+              </div>
+              <!-- Teams avec logos SVG circulaires -->
+              <div class="phone-teams">
+                <div class="phone-team">
+                  <!-- Spurs SVG -->
+                  <svg width="40" height="40" viewBox="0 0 60 60" style="flex-shrink:0;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5))">
+                    <defs><clipPath id="cl-spurs"><circle cx="30" cy="30" r="28"/></clipPath></defs>
+                    <circle cx="30" cy="30" r="28" fill="#C4CED4"/>
+                    <rect x="18" y="-5" width="24" height="70" fill="#000000" opacity="0.4" clip-path="url(#cl-spurs)" transform="rotate(-20,30,30)"/>
+                    <circle cx="30" cy="30" r="27" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+                    <text x="30" y="35" text-anchor="middle" fill="#000" font-size="12" font-weight="800" font-family="Inter,sans-serif" letter-spacing="-0.3">SAS</text>
+                  </svg>
+                  <div class="phone-team-nm">Spurs</div>
+                </div>
+                <span class="phone-vs">VS</span>
+                <div class="phone-team">
+                  <!-- Knicks SVG -->
+                  <svg width="40" height="40" viewBox="0 0 60 60" style="flex-shrink:0;filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5))">
+                    <defs><clipPath id="cl-knicks"><circle cx="30" cy="30" r="28"/></clipPath></defs>
+                    <circle cx="30" cy="30" r="28" fill="#006BB6"/>
+                    <rect x="18" y="-5" width="24" height="70" fill="#F58426" opacity="0.4" clip-path="url(#cl-knicks)" transform="rotate(-20,30,30)"/>
+                    <circle cx="30" cy="30" r="27" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+                    <text x="30" y="35" text-anchor="middle" fill="#fff" font-size="12" font-weight="800" font-family="Inter,sans-serif" letter-spacing="-0.3">NYK</text>
+                  </svg>
+                  <div class="phone-team-nm">Knicks</div>
+                </div>
+              </div>
+              <div class="phone-bet">
+                <div class="phone-bet-nm">Spurs ML</div>
+                <div class="phone-bet-sub">🏀 Basket · Cote : 2.05</div>
+              </div>
+              <a href="https://t.me/touslesmatchs_bot" target="_blank" class="phone-cta">VOIR L'ANALYSE COMPLÈTE</a>
+            </div>
+            <div class="phone-footer">
+              <div class="phone-footer-ico">⚡</div>
+              <div class="phone-footer-txt">
+                <div style="font-weight:700;color:#fff;font-size:11px">3W – TousLesMatchs</div>
+                <div>Le bon pick. Tous les jours.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- NEURONE ANIMÉ -->
+<section class="neuron-section">
+  <div class="neuron-inner">
+    <div class="neuron-text">
+      <div class="neuron-eyebrow">6 INTELLIGENCES ARTIFICIELLES · CONCILE V5</div>
+      <h2 class="neuron-h2">Le meilleur <span class="grn">pick</span><br>chaque jour.</h2>
+      <p class="neuron-desc">
+        Groq, Gemini, DeepSeek, Mistral, Qwen et Claude analysent chaque matin des centaines de matchs. Hermès Chief valide le consensus final.
+      </p>
+      <div class="neuron-chips">
+        <span class="neuron-chip" style="border-color:#4ADE8040;color:#4ADE80"><span class="chip-dot" style="background:#4ADE80"></span>Groq</span>
+        <span class="neuron-chip" style="border-color:#60A5FA40;color:#60A5FA"><span class="chip-dot" style="background:#60A5FA"></span>Gemini</span>
+        <span class="neuron-chip" style="border-color:#A78BFA40;color:#A78BFA"><span class="chip-dot" style="background:#A78BFA"></span>DeepSeek</span>
+        <span class="neuron-chip" style="border-color:#34D39940;color:#34D399"><span class="chip-dot" style="background:#34D399"></span>Mistral</span>
+        <span class="neuron-chip" style="border-color:#F9731640;color:#F97316"><span class="chip-dot" style="background:#F97316"></span>Qwen</span>
+        <span class="neuron-chip" style="border-color:#F472B640;color:#F472B6"><span class="chip-dot" style="background:#F472B6"></span>Claude</span>
+      </div>
+    </div>
+
+    <!-- Orbit neurone -->
+    <div class="neuron-orbit">
+      <!-- Rings décoratifs -->
+      <div class="orbit-ring" style="width:340px;height:340px;border-color:rgba(74,222,128,0.07)"></div>
+      <div class="orbit-ring" style="width:200px;height:200px;border-color:rgba(74,222,128,0.05);border-style:dashed"></div>
+      <!-- Centre Hermès -->
+      <div class="orbit-center">
+        <span class="orbit-center-nm">HERMÈS</span>
+        <span class="orbit-center-sub">Chief</span>
+      </div>
+      <!-- 6 bras IA -->
+      <!-- Groq -->
+      <div class="orbit-arm">
+        <div class="orbit-line" style="background:linear-gradient(to right,transparent,#4ADE8055,#4ADE8044)"></div>
+        <div class="orbit-packet" style="background:#4ADE80;box-shadow:0 0 6px #4ADE80;animation-delay:0s"></div>
+        <div class="orbit-node-wrap">
+          <div class="orbit-node" style="border-color:#4ADE80;box-shadow:0 0 12px #4ADE8030">
+            <span class="orbit-node-nm" style="color:#4ADE80">Groq</span>
+            <span class="orbit-node-role">Collecte données</span>
+          </div>
+        </div>
+      </div>
+      <!-- Gemini -->
+      <div class="orbit-arm">
+        <div class="orbit-line" style="background:linear-gradient(to right,transparent,#60A5FA55,#60A5FA44)"></div>
+        <div class="orbit-packet" style="background:#60A5FA;box-shadow:0 0 6px #60A5FA;animation-delay:0.5s"></div>
+        <div class="orbit-node-wrap">
+          <div class="orbit-node" style="border-color:#60A5FA;box-shadow:0 0 12px #60A5FA30">
+            <span class="orbit-node-nm" style="color:#60A5FA">Gemini</span>
+            <span class="orbit-node-role">Stats avancées</span>
+          </div>
+        </div>
+      </div>
+      <!-- DeepSeek -->
+      <div class="orbit-arm">
+        <div class="orbit-line" style="background:linear-gradient(to right,transparent,#A78BFA55,#A78BFA44)"></div>
+        <div class="orbit-packet" style="background:#A78BFA;box-shadow:0 0 6px #A78BFA;animation-delay:1s"></div>
+        <div class="orbit-node-wrap">
+          <div class="orbit-node" style="border-color:#A78BFA;box-shadow:0 0 12px #A78BFA30">
+            <span class="orbit-node-nm" style="color:#A78BFA">DeepSeek</span>
+            <span class="orbit-node-role">Analyse H2H</span>
+          </div>
+        </div>
+      </div>
+      <!-- Mistral -->
+      <div class="orbit-arm">
+        <div class="orbit-line" style="background:linear-gradient(to right,transparent,#34D39955,#34D39944)"></div>
+        <div class="orbit-packet" style="background:#34D399;box-shadow:0 0 6px #34D399;animation-delay:1.5s"></div>
+        <div class="orbit-node-wrap">
+          <div class="orbit-node" style="border-color:#34D399;box-shadow:0 0 12px #34D39930">
+            <span class="orbit-node-nm" style="color:#34D399">Mistral</span>
+            <span class="orbit-node-role">Forme récente</span>
+          </div>
+        </div>
+      </div>
+      <!-- Qwen -->
+      <div class="orbit-arm">
+        <div class="orbit-line" style="background:linear-gradient(to right,transparent,#F9731655,#F9731644)"></div>
+        <div class="orbit-packet" style="background:#F97316;box-shadow:0 0 6px #F97316;animation-delay:2s"></div>
+        <div class="orbit-node-wrap">
+          <div class="orbit-node" style="border-color:#F97316;box-shadow:0 0 12px #F9731630">
+            <span class="orbit-node-nm" style="color:#F97316">Qwen</span>
+            <span class="orbit-node-role">Tendances cotes</span>
+          </div>
+        </div>
+      </div>
+      <!-- Claude -->
+      <div class="orbit-arm">
+        <div class="orbit-line" style="background:linear-gradient(to right,transparent,#F472B655,#F472B644)"></div>
+        <div class="orbit-packet" style="background:#F472B6;box-shadow:0 0 6px #F472B6;animation-delay:2.5s"></div>
+        <div class="orbit-node-wrap">
+          <div class="orbit-node" style="border-color:#F472B6;box-shadow:0 0 12px #F472B630">
+            <span class="orbit-node-nm" style="color:#F472B6">Claude</span>
+            <span class="orbit-node-role">Validation finale</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- PICK DU JOUR -->
+<div class="pick-section" id="pick-day">
+  <div class="section-wrap">
+    <div class="pick-hdr">
+      <span class="pick-hdr-ttl">PICK DU JOUR</span>
+      <span class="badge-free">GRATUIT</span>
+    </div>
+    <div class="pick-card">
+      <div class="pick-teams-col">
+        <div class="pick-league">🏀 10/06</div>
+        <div class="pick-teams-row">
+          <div class="team-circle">
+            <svg width="52" height="52" viewBox="0 0 60 60" style="filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5))">
+              <defs><clipPath id="cl-spurs2"><circle cx="30" cy="30" r="28"/></clipPath></defs>
+              <circle cx="30" cy="30" r="28" fill="#C4CED4"/>
+              <rect x="18" y="-5" width="24" height="70" fill="#000" opacity="0.4" clip-path="url(#cl-spurs2)" transform="rotate(-20,30,30)"/>
+              <circle cx="30" cy="30" r="27" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+              <text x="30" y="35" text-anchor="middle" fill="#000" font-size="12" font-weight="800" font-family="Inter,sans-serif">SAS</text>
+            </svg>
+            <div class="team-circle-nm">Spurs</div>
+          </div>
+          <span class="pick-vs">vs</span>
+          <div class="team-circle">
+            <svg width="52" height="52" viewBox="0 0 60 60" style="filter:drop-shadow(0 3px 8px rgba(0,0,0,0.5))">
+              <defs><clipPath id="cl-knicks2"><circle cx="30" cy="30" r="28"/></clipPath></defs>
+              <circle cx="30" cy="30" r="28" fill="#006BB6"/>
+              <rect x="18" y="-5" width="24" height="70" fill="#F58426" opacity="0.4" clip-path="url(#cl-knicks2)" transform="rotate(-20,30,30)"/>
+              <circle cx="30" cy="30" r="27" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+              <text x="30" y="35" text-anchor="middle" fill="#fff" font-size="12" font-weight="800" font-family="Inter,sans-serif">NYK</text>
+            </svg>
+            <div class="team-circle-nm">Knicks</div>
+          </div>
+        </div>
+      </div>
+      <div class="pick-stats">
+        <div class="pick-stat">
+          <div class="pick-stat-lbl">PRONOSTIC</div>
+          <div class="pick-stat-val" style="font-size:16px;line-height:1.3">Spurs ML</div>
+        </div>
+        <div class="pick-stat">
+          <div class="pick-stat-lbl">COTE</div>
+          <div class="pick-stat-val">2.05</div>
+        </div>
+        <div class="pick-stat">
+          <div class="pick-stat-lbl">CONFIANCE</div>
+          <div class="pick-stat-val grn">7.5/10</div>
+          <div class="pick-dots">
+            <span class="dot on"></span><span class="dot on"></span><span class="dot on"></span>
+            <span class="dot on"></span><span class="dot on"></span><span class="dot on"></span>
+            <span class="dot on"></span>
+          </div>
+        </div>
+      </div>
+      <div class="pick-right">
+        <ul class="pick-bullets">
+          <li>Analyse de 35+ critères</li>
+          <li>Stats en temps réel</li>
+          <li>Forme, H2H, absences, météo...</li>
+        </ul>
+        <a href="https://t.me/touslesmatchs_bot" target="_blank" class="pick-tg-btn">RECEVOIR SUR TELEGRAM ✈</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- COMMENT ÇA MARCHE -->
+<section class="how-section">
+  <div class="section-wrap">
+    <h2 class="section-title-c">COMMENT ÇA MARCHE ?</h2>
+    <div class="how-grid">
+      <div class="how-card">
+        <span class="how-n">1</span>
+        <div class="how-ico">🤖</div>
+        <div class="how-ttl">L'IA ANALYSE</div>
+        <p class="how-dsc">Notre intelligence artificielle analyse des milliers de matchs et de données en temps réel.</p>
+      </div>
+      <div class="how-card">
+        <span class="how-n">2</span>
+        <div class="how-ico">🎯</div>
+        <div class="how-ttl">LE MEILLEUR PICK</div>
+        <p class="how-dsc">L'IA sélectionne le pari à plus forte valeur pour maximiser tes gains.</p>
+      </div>
+      <div class="how-card">
+        <span class="how-n">3</span>
+        <div class="how-ico">✈</div>
+        <div class="how-ttl">TU REÇOIS LE PICK</div>
+        <p class="how-dsc">Le pick est envoyé chaque jour sur Telegram, prêt à être joué.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- PRICING -->
+<section class="pricing-section" id="pricing">
+  <div class="section-wrap">
+    <h2 class="section-title-c">NOS OFFRES</h2>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="pricing-tier">FREE</div>
+        <div class="pricing-price">0€</div>
+        <div class="pricing-period">/mois</div>
+        <ul class="pricing-feats">
+          <li><span class="ck">✓</span>1 pick gratuit par jour</li>
+          <li><span class="ck">✓</span>Analyse IA basique</li>
+          <li><span class="ck">✓</span>Envoi sur Telegram</li>
+          <li><span class="ck off">✗</span><span style="opacity:.35">Picks premium</span></li>
+        </ul>
+        <a href="https://t.me/touslesmatchs_bot" target="_blank" class="pricing-btn po">COMMENCER GRATUITEMENT</a>
+      </div>
+      <div class="pricing-card feat">
+        <div class="pop-badge">LE PLUS POPULAIRE</div>
+        <div class="pricing-tier">PREMIUM</div>
+        <div class="pricing-price">19,90€</div>
+        <div class="pricing-period">/mois</div>
+        <ul class="pricing-feats">
+          <li><span class="ck">✓</span>1 pick fort par jour</li>
+          <li><span class="ck">✓</span>Analyse IA complète</li>
+          <li><span class="ck">✓</span>Historique & statistiques</li>
+          <li><span class="ck">✓</span>Support prioritaire</li>
+        </ul>
+        <a href="https://t.me/touslesmatchs_bot" target="_blank" class="pricing-btn pg">PASSER PREMIUM ⚡</a>
+      </div>
+      <div class="pricing-card">
+        <div class="pricing-tier">FULL ACCESS</div>
+        <div class="pricing-price">49,90€</div>
+        <div class="pricing-period">/mois</div>
+        <ul class="pricing-feats">
+          <li><span class="ck">✓</span>Tous les picks (foot + autres sports)</li>
+          <li><span class="ck">✓</span>Alertes live & changements de cotes</li>
+          <li><span class="ck">✓</span>Stats avancées & filtres</li>
+          <li><span class="ck">✓</span>Accès prioritaire</li>
+        </ul>
+        <a href="https://t.me/touslesmatchs_bot" target="_blank" class="pricing-btn po">PASSER FULL ACCESS</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- RÉSULTATS -->
+<section class="results-section" id="results">
+  <div class="section-wrap">
+    <div class="results-grid">
+      <div class="res-card">
+        <div class="res-ttl">NOS RÉSULTATS PARLENT</div>
+        <div class="res-stats">
+          <div class="res-stat"><div class="res-num">79%</div><div class="res-lbl">Taux de réussite<br>24 paris analysés</div></div>
+          <div class="res-stat"><div class="res-num">+19.2u</div><div class="res-lbl">Bénéfice net<br>depuis le début</div></div>
+          <div class="res-stat"><div class="res-num">19</div><div class="res-lbl">Picks gagnants<br>5 perdus / 24</div></div>
+        </div>
+      </div>
+      <div class="hist-card">
+        <div class="hist-ttl">HISTORIQUE DES 5 DERNIERS PICKS</div>
+        <table class="hist-tbl">
+          <tbody>
+            <tr><td>Spurs vs Knicks</td><td><span class="sbadge w">EN COURS</span></td><td>2.05</td></tr>
+            <tr><td>Belgium vs Tunisia</td><td><span class="sbadge g">GAGNÉ ↑</span></td><td>1.60</td></tr>
+            <tr><td>Russia vs Burkina Faso</td><td><span class="sbadge g">GAGNÉ ↑</span></td><td>1.60</td></tr>
+            <tr><td>Canada vs Uzbekistan</td><td><span class="sbadge g">GAGNÉ ↑</span></td><td>1.58</td></tr>
+            <tr><td>Fribourg vs Aston Villa</td><td><span class="sbadge g">GAGNÉ ↑</span></td><td>1.58</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="ft">
+  <div class="ft-inner">
+    <div class="ft-top">
+      <div>
+        <div class="ft-brand"><div class="ft-brand-ico">⚡</div>TousLesMatchs</div>
+        <p class="ft-desc">Le bon pick. Tous les jours. Grâce à l'intelligence artificielle.</p>
+      </div>
+      <div>
+        <div class="ft-col-ttl">Liens rapides</div>
+        <ul class="ft-links">
+          <li><a href="#">Accueil</a></li>
+          <li><a href="#">Preuves</a></li>
+          <li><a href="https://t.me/touslesmatchs_bot" target="_blank">Telegram</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="ft-col-ttl">Informations</div>
+        <ul class="ft-links">
+          <li><a href="#">CGU</a></li>
+          <li><a href="#">Confidentialité</a></li>
+          <li><a href="#">Mentions légales</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="ft-col-ttl">Jeu responsable</div>
+        <div style="background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:12px;padding:14px">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">⚠ 18+</div>
+          <p style="font-size:11px;color:var(--dim);line-height:1.5">Les jeux d'argent sont interdits aux mineurs. Jouez de manière responsable.</p>
+        </div>
+      </div>
+    </div>
+    <div class="ft-bottom">
+      <span class="ft-copy">© 2024 TousLesMatchs. Tous droits réservés.</span>
+      <span class="ft-copy">JOUER COMPORTE DES RISQUES</span>
+    </div>
+  </div>
+</footer>
+
+<div class="legal-bar">
+  <div class="legal-txt">Les paris sportifs comportent des risques. Jouez de façon responsable. Interdit aux mineurs. 18+</div>
+</div>
+
+</body>
+</html>
