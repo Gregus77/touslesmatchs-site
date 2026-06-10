@@ -21,6 +21,7 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
+  ["12/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["11/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["10/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
   ["09/06","PAS DE PARI - Aucun match disponible","---","---","---","NOPICK","",0,8],
