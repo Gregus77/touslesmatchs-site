@@ -37,12 +37,22 @@
 - **Décision** : `BANNED_LEAGUE_KEYWORDS` inclut désormais tous les termes
   amicaux. Filtrage automatique avant analyse.
 
+### Greece 0-1 Italy — 08/06/2026 — Amical pré-Coupe du Monde (ANNULÉ)
+- **Erreur** : pick "Greece Vainqueur" sur un match amical international.
+- **Cause** : match de préparation avant la Coupe du Monde 2026 (J-3).
+- **Leçon** : les matchs de préparation pré-tournoi SONT des amicaux même
+  sans ce mot explicite. Vérifier le contexte calendrier (2 semaines avant
+  grand tournoi = amical probable).
+- **Décision** : pick marqué ANNULÉ, score 0-1, non comptabilisé dans le ROI.
+
 ---
 
 ## ✅ RÉSULTATS CONFIRMÉS (mises à jour manuelles validées)
 
 | Date     | Match                    | Pari               | Cote | Score | Verdict | Source        |
 |----------|--------------------------|--------------------|------|-------|---------|---------------|
+| 10/06/26 | Spurs vs Knicks (G4)     | Spurs ML           | 2.05 | —     | EN ATTENTE | Pick ce soir 21h30 ET |
+| 08/06/26 | Greece vs Italy          | Greece Vainqueur   | 1.6  | 0-1   | ANNULÉ  | Amical pré-WC2026 |
 | 06/06/26 | Belgium vs Tunisia       | Belgium Vainqueur  | 1.6  | 5-0   | GAGNE   | RapidAPI + utilisateur |
 | 05/06/26 | Russia vs Burkina Faso   | Russia Vainqueur   | 1.60 | 3-0   | GAGNE   | check_results.js |
 

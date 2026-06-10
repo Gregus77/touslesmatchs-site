@@ -20,7 +20,8 @@ var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
-  ["08/06","Greece vs Italy","Greece Vainqueur","1.6","—","EN ATTENTE","Foot",7,7],
+  ["10/06","Spurs vs Knicks","Spurs ML","2.05","—","EN ATTENTE","Basket",7.5,8],
+  ["08/06","Greece vs Italy","Greece Vainqueur","1.6","0-1","ANNULE","Foot",7,7],
   ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","ANNULE","Foot",7,7],
   ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","5-0","GAGNE","Foot",7,7],
   ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","3-0","GAGNE","Foot",7,7],
@@ -332,51 +333,139 @@ export default function App() {
     );
   }
 
-  return React.createElement("div", {style:{background:"linear-gradient(180deg,#0a0906 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0",overflowX:"hidden",width:"100%"}},
+  // ── Découpe équipes pour le mockup téléphone ──
+  var matchTeams = (isNoPick ? "— vs —" : pickDuJour[1]).split(" vs ");
+  var team1 = matchTeams[0] || "";
+  var team2 = matchTeams[1] || "";
+
+  return React.createElement("div", {style:{background:"linear-gradient(180deg,#030804 0%,#050d06 400px,#040a05 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0",overflowX:"hidden",width:"100%"}},
     header,
-    React.createElement("section", {className:"hero-section",style:{padding:"60px 20px 30px",textAlign:"center"}},
-      /* Badges 6 IAs */
-      React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"6px",flexWrap:"wrap",marginBottom:"18px"}},
-        [
-          {nom:"Groq",    dot:"#22c55e"},
-          {nom:"Gemini",  dot:"#3b82f6"},
-          {nom:"DeepSeek",dot:"#f97316"},
-          {nom:"Mistral", dot:"#a855f7"},
-          {nom:"Qwen",    dot:"#ef4444"},
-          {nom:"Claude",  dot:"#d4af37"},
-        ].map(function(ia,i){
-          return React.createElement("div",{key:i,style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"4px 12px"}},
-            React.createElement("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.dot,flexShrink:0}}),
-            React.createElement("span",{style:{fontSize:"10px",color:"#888",fontWeight:"600",letterSpacing:"0.06em"}}, ia.nom)
-          );
-        })
-      ),
-      React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",marginBottom:"16px"}},
-        React.createElement("span", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
-        React.createElement("span", {style:{fontSize:"11px",color:"#555",letterSpacing:"1px"}}, "·"),
-        React.createElement("span", {style:{fontSize:"13px",letterSpacing:"3px",color:"#b89a2a",fontFamily:"'Bodoni Moda',serif",fontStyle:"italic"}}, "Hermès Chief")
-      ),
-      React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
-        lang==="fr" ? "Le meilleur " : lang==="en" ? "The best " : lang==="es" ? "La mejor " : lang==="it" ? "La migliore " : "Лучший ",
-        React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, lang==="fr" ? "pick" : lang==="en" ? "pick" : lang==="es" ? "selección" : lang==="it" ? "scelta" : "прогноз"),
-        lang==="fr" ? " chaque jour." : lang==="en" ? " every day." : lang==="es" ? " cada día." : lang==="it" ? " ogni giorno." : " каждый день."
-      ),
-      React.createElement("p", {style:{color:"#6b6356",fontSize:"17px",maxWidth:"540px",margin:"0 auto 12px",lineHeight:"1.8",fontWeight:"300"}},
-        t("hero_subtitle")
-      ),
-      React.createElement("p", {style:{color:"#4a4438",fontSize:"14px",maxWidth:"480px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"400"}},
-        t("seuil_minimum"), React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
-      ),
-      React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
-        [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:losses+" "+t("perdu")+" sur "+total},{label:t("serie"),value:serieEnCours+" "+t("victoires"),sub:"🏆 Meilleure : "+meilleuresSerie+" victoires"}].map(function(s,i){
-          return React.createElement("div", {key:i, style:{padding:"18px 8px",borderRight:(i%2===0)?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none",textAlign:"center"}},
-            React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
-            React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
-            React.createElement("div", {style:{fontSize:"10px",color:"#444",marginTop:"3px"}}, s.sub)
-          );
-        })
+
+    /* ════ HERO STADIUM ════ */
+    React.createElement("section", {className:"hero-stadium"},
+      React.createElement("div", {className:"hero-field-lines"}),
+
+      React.createElement("div", {className:"hero-content"},
+
+        /* ── Colonne gauche : texte + stats ── */
+        React.createElement("div", {className:"hero-left"},
+          /* Badges 6 IAs */
+          React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"20px"}},
+            [
+              {nom:"Groq",    dot:"#22c55e"},
+              {nom:"Gemini",  dot:"#3b82f6"},
+              {nom:"DeepSeek",dot:"#f97316"},
+              {nom:"Mistral", dot:"#a855f7"},
+              {nom:"Qwen",    dot:"#ef4444"},
+              {nom:"Claude",  dot:"#d4af37"},
+            ].map(function(ia,i){
+              return React.createElement("div",{key:i,style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"4px 12px"}},
+                React.createElement("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.dot,flexShrink:0}}),
+                React.createElement("span",{style:{fontSize:"10px",color:"#888",fontWeight:"600",letterSpacing:"0.06em"}}, ia.nom)
+              );
+            })
+          ),
+          /* Eyebrow */
+          React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"16px"}},
+            React.createElement("span", {style:{fontSize:"13px",letterSpacing:"4px",color:"#22c55e",fontWeight:"600",textTransform:"uppercase"}},"6 Intelligences Artificielles · Concile V5"),
+            React.createElement("span", {style:{fontSize:"11px",color:"#333",letterSpacing:"1px"}},"·"),
+            React.createElement("span", {style:{fontSize:"13px",letterSpacing:"3px",color:"#888",fontFamily:"'Bodoni Moda',serif",fontStyle:"italic"}},"Hermès Chief")
+          ),
+          /* Titre */
+          React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
+            lang==="fr" ? "Le meilleur " : lang==="en" ? "The best " : lang==="es" ? "La mejor " : lang==="it" ? "La migliore " : "Лучший ",
+            React.createElement("em", {style:{color:"#22c55e",fontStyle:"italic"}},
+              lang==="fr" ? "pick" : lang==="en" ? "pick" : lang==="es" ? "selección" : lang==="it" ? "scelta" : "прогноз"
+            ),
+            lang==="fr" ? " chaque jour." : lang==="en" ? " every day." : lang==="es" ? " cada día." : lang==="it" ? " ogni giorno." : " каждый день."
+          ),
+          /* Sous-titre */
+          React.createElement("p", {style:{color:"#6b7a6b",fontSize:"17px",maxWidth:"480px",margin:"0 0 12px",lineHeight:"1.8",fontWeight:"300"}},
+            t("hero_subtitle")
+          ),
+          React.createElement("p", {style:{color:"#3a4a3a",fontSize:"14px",maxWidth:"460px",margin:"0 0 36px",lineHeight:"1.7",fontWeight:"400"}},
+            t("seuil_minimum"), React.createElement("strong",{style:{color:"#22c55e"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#86efac"}},"7/10"), t("pour_garantir")
+          ),
+          /* Stats grid */
+          React.createElement("div", {style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"480px",border:"1px solid rgba(34,197,94,0.15)",borderRadius:"10px",overflow:"hidden"}},
+            [
+              {label:t("taux_reussite"), value:winrate+"%",             sub:total+" paris analysés"},
+              {label:t("bankroll"),      value:(roiPct>=0?"+":"")+roiPct+"%", sub:"depuis le début"},
+              {label:t("resultats"),     value:wins+" "+t("gagne"),     sub:losses+" "+t("perdu")+" sur "+total},
+              {label:t("serie"),         value:serieEnCours+" "+t("victoires"), sub:"🏆 Meilleure : "+meilleuresSerie},
+            ].map(function(s,i){
+              return React.createElement("div", {key:i, style:{
+                padding:"16px 10px",
+                borderRight: (i%2===0) ? "1px solid rgba(34,197,94,0.1)" : "none",
+                borderBottom: i<2 ? "1px solid rgba(34,197,94,0.1)" : "none",
+                textAlign:"center",
+                background: i===0 ? "rgba(34,197,94,0.04)" : "transparent",
+              }},
+                React.createElement("div", {style:{fontSize:"9px",color:"#4a5a4a",letterSpacing:"2px",marginBottom:"4px",textTransform:"uppercase"}}, s.label),
+                React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color: i===0 ? "#22c55e" : "#d4af37"}}, s.value),
+                React.createElement("div", {style:{fontSize:"10px",color:"#3a4a3a",marginTop:"3px"}}, s.sub)
+              );
+            })
+          )
+        ),
+
+        /* ── Colonne droite : mockup téléphone ── */
+        React.createElement("div", {className:"hero-right"},
+          React.createElement("div", {className:"phone-mockup" + (isEnAttente ? " pick-live" : "")},
+            React.createElement("div", {className:"phone-notch"}),
+            React.createElement("div", {className:"phone-screen"},
+
+              /* En-tête téléphone */
+              React.createElement("div", {className:"phone-header"},
+                React.createElement("div", {className:"phone-logo-text"}, "TousLesMatchs"),
+                React.createElement("div", {className:"phone-ai-badge"},
+                  React.createElement("span", {style:{width:"5px",height:"5px",borderRadius:"50%",background:"#22c55e",display:"inline-block"}}),
+                  "HERMÈS CHIEF"
+                )
+              ),
+
+              /* Équipes */
+              React.createElement("div", {className:"phone-teams"},
+                React.createElement("div", {className:"phone-team-name"}, team1 || "—"),
+                React.createElement("div", {className:"phone-vs-sep"}, "VS"),
+                React.createElement("div", {className:"phone-team-name"}, team2 || (isNoPick ? "Aucun pick" : "—"))
+              ),
+
+              /* Pari recommandé */
+              !isNoPick && React.createElement("div", {className:"phone-bet-row"},
+                React.createElement("div", {className:"phone-bet-label"}, "PARI RECOMMANDÉ"),
+                React.createElement("div", {className:"phone-bet-value"}, pickDuJour[2]),
+                React.createElement("div", {className:"phone-odds"}, "Cote : " + pickDuJour[3])
+              ),
+
+              /* Confiance Hermès */
+              !isNoPick && pickAiScore > 0 && React.createElement("div", {className:"phone-conf"},
+                React.createElement("div", {className:"phone-conf-top"},
+                  React.createElement("span", {className:"phone-conf-label"}, "CONFIANCE HERMÈS"),
+                  React.createElement("span", {className:"phone-conf-score"}, pickAiScore+"/10")
+                ),
+                React.createElement("div", {className:"phone-conf-bar"},
+                  React.createElement("div", {className:"phone-conf-fill", style:{width:(pickAiScore/10*100)+"%"}})
+                )
+              ),
+
+              /* CTA */
+              React.createElement("a", {className:"phone-cta-btn", href:WINAMAX_LINK, target:"_blank", rel:"noopener noreferrer"},
+                isNoPick ? "📊 Voir les stats" : "⚡ Parier maintenant"
+              ),
+
+              /* Dots IAs */
+              React.createElement("div", {className:"phone-ia-row"},
+                ["#22c55e","#3b82f6","#f97316","#a855f7","#ef4444","#d4af37"].map(function(c,i){
+                  return React.createElement("div", {key:i, className:"phone-ia-dot", style:{background:c}});
+                })
+              )
+            )
+          )
+        )
       )
     ),
+
     // ════ PICK DU JOUR — au-dessus de la ligne de flottaison ════
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 20px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("div", {style:{
