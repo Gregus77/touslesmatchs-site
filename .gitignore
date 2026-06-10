@@ -27,3 +27,6 @@ scripts/clubelo_cache.json
 scripts/today_pick.json
 scripts/oddsapi_cache.json
 scripts/roi_stats.json
+
+# Claude Code internal
+.claude/worktrees/
