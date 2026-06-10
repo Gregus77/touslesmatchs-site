@@ -83,68 +83,73 @@ function FootballPitch() {
 
 // ─── LOGOS CIRCULAIRES CLUBS ──────────────────────────────────
 // Base de données clubs : bg = couleur principale, stripe = bande/2e couleur, abbr = texte
+var ESP_SOC = "https://a.espncdn.com/i/teamlogos/soccer/500/";
+var ESP_NBA = "https://a.espncdn.com/i/teamlogos/nba/500/";
+var ESP_NHL = "https://a.espncdn.com/i/teamlogos/nhl/500/";
+var FLAG    = "https://flagcdn.com/h80/";
+
 var CLUBS = {
   // Ligue 1
-  "PSG":               {bg:"#001A5E", stripe:"#DA291C", abbr:"PSG",  txt:"#fff"},
-  "Paris Saint-Germain":{bg:"#001A5E",stripe:"#DA291C", abbr:"PSG",  txt:"#fff"},
-  "Marseille":         {bg:"#2563EB", stripe:"#ffffff",  abbr:"OM",   txt:"#fff"},
-  "Olympique de Marseille":{bg:"#2563EB",stripe:"#ffffff",abbr:"OM",  txt:"#fff"},
-  "Lyon":              {bg:"#0032A0", stripe:"#CC0000",  abbr:"OL",   txt:"#fff"},
-  "Monaco":            {bg:"#BD2B34", stripe:"#ffffff",  abbr:"ASM",  txt:"#fff"},
-  "Nice":              {bg:"#CC0000", stripe:"#000000",  abbr:"OGC",  txt:"#fff"},
-  "Lens":              {bg:"#CC0000", stripe:"#E4B01B",  abbr:"RCL",  txt:"#fff"},
+  "PSG":               {bg:"#001A5E",stripe:"#DA291C",abbr:"PSG", txt:"#fff", logo:ESP_SOC+"160.png"},
+  "Paris Saint-Germain":{bg:"#001A5E",stripe:"#DA291C",abbr:"PSG",txt:"#fff", logo:ESP_SOC+"160.png"},
+  "Marseille":         {bg:"#2563EB",stripe:"#ffffff", abbr:"OM",  txt:"#fff", logo:ESP_SOC+"516.png"},
+  "Olympique de Marseille":{bg:"#2563EB",stripe:"#ffffff",abbr:"OM",txt:"#fff",logo:ESP_SOC+"516.png"},
+  "Lyon":              {bg:"#0032A0",stripe:"#CC0000", abbr:"OL",  txt:"#fff", logo:ESP_SOC+"9847.png"},
+  "Monaco":            {bg:"#BD2B34",stripe:"#ffffff", abbr:"ASM", txt:"#fff", logo:ESP_SOC+"162.png"},
+  "Nice":              {bg:"#CC0000",stripe:"#000000", abbr:"OGC", txt:"#fff", logo:ESP_SOC+"521.png"},
+  "Lens":              {bg:"#CC0000",stripe:"#E4B01B", abbr:"RCL", txt:"#fff", logo:ESP_SOC+"520.png"},
   // Liga
-  "Real Madrid":       {bg:"#f5f5f5", stripe:"#003DA5",  abbr:"RMA",  txt:"#003DA5"},
-  "Barcelona":         {bg:"#004D98", stripe:"#A50044",  abbr:"FCB",  txt:"#fff"},
-  "Atletico Madrid":   {bg:"#CC0000", stripe:"#ffffff",  abbr:"ATM",  txt:"#fff"},
-  "Sevilla":           {bg:"#CC0000", stripe:"#ffffff",  abbr:"SEV",  txt:"#fff"},
-  "Villarreal":        {bg:"#FFD700", stripe:"#005C8A",  abbr:"VIL",  txt:"#000"},
-  // PL
-  "Arsenal":           {bg:"#EF0107", stripe:"#ffffff",  abbr:"ARS",  txt:"#fff"},
-  "Chelsea":           {bg:"#034694", stripe:"#ffffff",  abbr:"CHE",  txt:"#fff"},
-  "Liverpool":         {bg:"#C8102E", stripe:"#ffffff",  abbr:"LIV",  txt:"#fff"},
-  "Manchester City":   {bg:"#6CABDD", stripe:"#1C2C5B",  abbr:"MCI",  txt:"#fff"},
-  "Man City":          {bg:"#6CABDD", stripe:"#1C2C5B",  abbr:"MCI",  txt:"#fff"},
-  "Aston Villa":       {bg:"#670E36", stripe:"#95BFE5",  abbr:"AVL",  txt:"#fff"},
-  "Fribourg":          {bg:"#000000", stripe:"#CC0000",  abbr:"SCF",  txt:"#fff"},
+  "Real Madrid":       {bg:"#f5f5f5",stripe:"#003DA5", abbr:"RMA", txt:"#003DA5",logo:ESP_SOC+"86.png"},
+  "Barcelona":         {bg:"#004D98",stripe:"#A50044", abbr:"FCB", txt:"#fff", logo:ESP_SOC+"83.png"},
+  "Atletico Madrid":   {bg:"#CC0000",stripe:"#ffffff", abbr:"ATM", txt:"#fff", logo:ESP_SOC+"1068.png"},
+  "Sevilla":           {bg:"#CC0000",stripe:"#ffffff", abbr:"SEV", txt:"#fff", logo:ESP_SOC+"243.png"},
+  "Villarreal":        {bg:"#FFD700",stripe:"#005C8A", abbr:"VIL", txt:"#000", logo:ESP_SOC+"102.png"},
+  // Premier League
+  "Arsenal":           {bg:"#EF0107",stripe:"#ffffff", abbr:"ARS", txt:"#fff", logo:ESP_SOC+"359.png"},
+  "Chelsea":           {bg:"#034694",stripe:"#ffffff", abbr:"CHE", txt:"#fff", logo:ESP_SOC+"363.png"},
+  "Liverpool":         {bg:"#C8102E",stripe:"#ffffff", abbr:"LIV", txt:"#fff", logo:ESP_SOC+"364.png"},
+  "Manchester City":   {bg:"#6CABDD",stripe:"#1C2C5B", abbr:"MCI", txt:"#fff", logo:ESP_SOC+"382.png"},
+  "Man City":          {bg:"#6CABDD",stripe:"#1C2C5B", abbr:"MCI", txt:"#fff", logo:ESP_SOC+"382.png"},
+  "Aston Villa":       {bg:"#670E36",stripe:"#95BFE5", abbr:"AVL", txt:"#fff", logo:ESP_SOC+"362.png"},
+  "Fribourg":          {bg:"#000000",stripe:"#CC0000", abbr:"SCF", txt:"#fff", logo:ESP_SOC+"3961.png"},
   // Bundesliga
-  "Bayern":            {bg:"#DC052D", stripe:"#0066B2",  abbr:"FCB",  txt:"#fff"},
-  "Bayern Munich":     {bg:"#DC052D", stripe:"#0066B2",  abbr:"FCB",  txt:"#fff"},
-  "Dortmund":          {bg:"#FDE100", stripe:"#000000",  abbr:"BVB",  txt:"#000"},
-  "Leverkusen":        {bg:"#CC0000", stripe:"#000000",  abbr:"B04",  txt:"#fff"},
-  "Stuttgart":         {bg:"#CC0000", stripe:"#ffffff",  abbr:"VFB",  txt:"#fff"},
+  "Bayern":            {bg:"#DC052D",stripe:"#0066B2", abbr:"FCB", txt:"#fff", logo:ESP_SOC+"132.png"},
+  "Bayern Munich":     {bg:"#DC052D",stripe:"#0066B2", abbr:"FCB", txt:"#fff", logo:ESP_SOC+"132.png"},
+  "Dortmund":          {bg:"#FDE100",stripe:"#000000", abbr:"BVB", txt:"#000", logo:ESP_SOC+"124.png"},
+  "Leverkusen":        {bg:"#CC0000",stripe:"#000000", abbr:"B04", txt:"#fff", logo:ESP_SOC+"131.png"},
+  "Stuttgart":         {bg:"#CC0000",stripe:"#ffffff", abbr:"VFB", txt:"#fff", logo:ESP_SOC+"2728.png"},
   // Serie A
-  "Inter Milan":       {bg:"#003DA5", stripe:"#000000",  abbr:"INT",  txt:"#fff"},
-  "Lazio":             {bg:"#87D0DB", stripe:"#ffffff",  abbr:"LAZ",  txt:"#003E8A"},
-  // Sélections nat.
-  "Greece":            {bg:"#0D5EAF", stripe:"#ffffff",  abbr:"GRE",  txt:"#fff"},
-  "Italy":             {bg:"#003E8A", stripe:"#009246",  abbr:"ITA",  txt:"#fff"},
-  "Belgium":           {bg:"#000000", stripe:"#EF3340",  abbr:"BEL",  txt:"#fff"},
-  "Tunisia":           {bg:"#CC0000", stripe:"#ffffff",  abbr:"TUN",  txt:"#fff"},
-  "Switzerland":       {bg:"#CC0000", stripe:"#ffffff",  abbr:"SUI",  txt:"#fff"},
-  "Australia":         {bg:"#00008B", stripe:"#FFD700",  abbr:"AUS",  txt:"#fff"},
-  "Russia":            {bg:"#003DA5", stripe:"#CC0000",  abbr:"RUS",  txt:"#fff"},
-  "Burkina Faso":      {bg:"#009A44", stripe:"#EF2B2D",  abbr:"BFA",  txt:"#fff"},
-  "Canada":            {bg:"#CC0000", stripe:"#ffffff",  abbr:"CAN",  txt:"#fff"},
-  "Uzbekistan":        {bg:"#1EB53A", stripe:"#ffffff",  abbr:"UZB",  txt:"#fff"},
+  "Inter Milan":       {bg:"#003DA5",stripe:"#000000", abbr:"INT", txt:"#fff", logo:ESP_SOC+"110.png"},
+  "Lazio":             {bg:"#87D0DB",stripe:"#ffffff", abbr:"LAZ", txt:"#003E8A",logo:ESP_SOC+"111.png"},
+  // Sélections nationales — drapeaux
+  "Greece":            {bg:"#0D5EAF",stripe:"#ffffff", abbr:"GRE", txt:"#fff", logo:FLAG+"gr.png"},
+  "Italy":             {bg:"#003E8A",stripe:"#009246", abbr:"ITA", txt:"#fff", logo:FLAG+"it.png"},
+  "Belgium":           {bg:"#000000",stripe:"#EF3340", abbr:"BEL", txt:"#fff", logo:FLAG+"be.png"},
+  "Tunisia":           {bg:"#CC0000",stripe:"#ffffff", abbr:"TUN", txt:"#fff", logo:FLAG+"tn.png"},
+  "Switzerland":       {bg:"#CC0000",stripe:"#ffffff", abbr:"SUI", txt:"#fff", logo:FLAG+"ch.png"},
+  "Australia":         {bg:"#00008B",stripe:"#FFD700", abbr:"AUS", txt:"#fff", logo:FLAG+"au.png"},
+  "Russia":            {bg:"#003DA5",stripe:"#CC0000", abbr:"RUS", txt:"#fff", logo:FLAG+"ru.png"},
+  "Burkina Faso":      {bg:"#009A44",stripe:"#EF2B2D", abbr:"BFA", txt:"#fff", logo:FLAG+"bf.png"},
+  "Canada":            {bg:"#CC0000",stripe:"#ffffff", abbr:"CAN", txt:"#fff", logo:FLAG+"ca.png"},
+  "Uzbekistan":        {bg:"#1EB53A",stripe:"#ffffff", abbr:"UZB", txt:"#fff", logo:FLAG+"uz.png"},
   // NBA
-  "Spurs":             {bg:"#C4CED4", stripe:"#000000",  abbr:"SAS",  txt:"#000"},
-  "San Antonio Spurs": {bg:"#C4CED4", stripe:"#000000",  abbr:"SAS",  txt:"#000"},
-  "Knicks":            {bg:"#006BB6", stripe:"#F58426",  abbr:"NYK",  txt:"#fff"},
-  "New York Knicks":   {bg:"#006BB6", stripe:"#F58426",  abbr:"NYK",  txt:"#fff"},
+  "Spurs":             {bg:"#C4CED4",stripe:"#000000", abbr:"SAS", txt:"#000", logo:ESP_NBA+"sa.png"},
+  "San Antonio Spurs": {bg:"#C4CED4",stripe:"#000000", abbr:"SAS", txt:"#000", logo:ESP_NBA+"sa.png"},
+  "Knicks":            {bg:"#006BB6",stripe:"#F58426", abbr:"NYK", txt:"#fff", logo:ESP_NBA+"ny.png"},
+  "New York Knicks":   {bg:"#006BB6",stripe:"#F58426", abbr:"NYK", txt:"#fff", logo:ESP_NBA+"ny.png"},
   // NHL
-  "Carolina":          {bg:"#CC0000", stripe:"#ffffff",  abbr:"CAR",  txt:"#fff"},
-  "Philadelphia":      {bg:"#F74902", stripe:"#ffffff",  abbr:"PHI",  txt:"#fff"},
-  "Colorado":          {bg:"#6F263D", stripe:"#236192",  abbr:"COL",  txt:"#fff"},
-  "Minnesota":         {bg:"#154734", stripe:"#DDCBA4",  abbr:"MIN",  txt:"#fff"},
-  "VGK":               {bg:"#B4975A", stripe:"#000000",  abbr:"VGK",  txt:"#000"},
-  "Anaheim":           {bg:"#FC4C02", stripe:"#000000",  abbr:"ANA",  txt:"#fff"},
-  "Buffalo":           {bg:"#003087", stripe:"#FCB514",  abbr:"BUF",  txt:"#fff"},
-  "Montreal":          {bg:"#AF1E2D", stripe:"#003E7E",  abbr:"MTL",  txt:"#fff"},
-  "Utah":              {bg:"#010101", stripe:"#4ADE80",  abbr:"UTA",  txt:"#fff"},
-  "Boston":            {bg:"#FFB81C", stripe:"#000000",  abbr:"BOS",  txt:"#000"},
-  "Boca Juniors":      {bg:"#003087", stripe:"#FFB81C",  abbr:"BOCA", txt:"#fff"},
-  "Cruzeiro":          {bg:"#0A1172", stripe:"#ffffff",  abbr:"CRU",  txt:"#fff"},
+  "Carolina":          {bg:"#CC0000",stripe:"#ffffff", abbr:"CAR", txt:"#fff", logo:ESP_NHL+"car.png"},
+  "Philadelphia":      {bg:"#F74902",stripe:"#ffffff", abbr:"PHI", txt:"#fff", logo:ESP_NHL+"phi.png"},
+  "Colorado":          {bg:"#6F263D",stripe:"#236192", abbr:"COL", txt:"#fff", logo:ESP_NHL+"col.png"},
+  "Minnesota":         {bg:"#154734",stripe:"#DDCBA4", abbr:"MIN", txt:"#fff", logo:ESP_NHL+"min.png"},
+  "VGK":               {bg:"#B4975A",stripe:"#000000", abbr:"VGK", txt:"#000", logo:ESP_NHL+"vgs.png"},
+  "Anaheim":           {bg:"#FC4C02",stripe:"#000000", abbr:"ANA", txt:"#fff", logo:ESP_NHL+"ana.png"},
+  "Buffalo":           {bg:"#003087",stripe:"#FCB514", abbr:"BUF", txt:"#fff", logo:ESP_NHL+"buf.png"},
+  "Montreal":          {bg:"#AF1E2D",stripe:"#003E7E", abbr:"MTL", txt:"#fff", logo:ESP_NHL+"mon.png"},
+  "Utah":              {bg:"#010101",stripe:"#4ADE80", abbr:"UTA", txt:"#fff", logo:ESP_NHL+"utah.png"},
+  "Boston":            {bg:"#FFB81C",stripe:"#000000", abbr:"BOS", txt:"#000", logo:ESP_NHL+"bos.png"},
+  "Boca Juniors":      {bg:"#003087",stripe:"#FFB81C", abbr:"BOCA",txt:"#fff", logo:ESP_SOC+"1670.png"},
+  "Cruzeiro":          {bg:"#0A1172",stripe:"#ffffff", abbr:"CRU", txt:"#fff", logo:ESP_SOC+"127.png"},
 };
 
 function getClub(name) {
@@ -157,7 +162,7 @@ function getClub(name) {
   return null;
 }
 
-// Logo club circulaire SVG
+// Logo club — image réelle ESPN/flagcdn avec fallback SVG
 function TeamCircle(props) {
   var name = props.name || "";
   var sz   = props.sz || 52;
@@ -168,9 +173,30 @@ function TeamCircle(props) {
   var txtCol = club ? club.txt    : "#fff";
   var uid    = "c"+name.replace(/[^a-zA-Z0-9]/g,"");
 
+  var [imgErr, setImgErr] = React.useState(false);
+
+  if (club && club.logo && !imgErr) {
+    return React.createElement("div", {
+      style:{
+        width:sz, height:sz, borderRadius:"50%",
+        background:bg, overflow:"hidden", flexShrink:0,
+        border:"2px solid rgba(255,255,255,0.18)",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        filter:"drop-shadow(0 3px 10px rgba(0,0,0,0.6))"
+      }
+    },
+      React.createElement("img",{
+        src:club.logo,
+        alt:name,
+        style:{width:"82%",height:"82%",objectFit:"contain"},
+        onError:function(){setImgErr(true);}
+      })
+    );
+  }
+
+  // Fallback SVG avec initiales
   return React.createElement("svg", {
-    width: sz, height: sz,
-    viewBox:"0 0 60 60",
+    width:sz, height:sz, viewBox:"0 0 60 60",
     style:{flexShrink:0,filter:"drop-shadow(0 3px 8px rgba(0,0,0,0.5))"}
   },
     React.createElement("defs",null,
@@ -178,21 +204,14 @@ function TeamCircle(props) {
         React.createElement("circle",{cx:30,cy:30,r:28})
       )
     ),
-    // Fond principal
     React.createElement("circle",{cx:30,cy:30,r:28,fill:bg}),
-    // Bande diagonale (couleur secondaire)
     React.createElement("rect",{x:18,y:-5,width:24,height:70,fill:stripe,opacity:0.4,clipPath:"url(#cl-"+uid+")",transform:"rotate(-20,30,30)"}),
-    // Bord
     React.createElement("circle",{cx:30,cy:30,r:27,fill:"none",stroke:"rgba(255,255,255,0.25)",strokeWidth:"1.5"}),
-    // Texte
     React.createElement("text",{
-      x:30, y: abbr.length>3?33:35,
-      textAnchor:"middle",
-      fill:txtCol,
-      fontSize: abbr.length>3?9:12,
-      fontWeight:"800",
-      fontFamily:"Inter,sans-serif",
-      letterSpacing:"-0.3"
+      x:30, y:abbr.length>3?33:35,
+      textAnchor:"middle", fill:txtCol,
+      fontSize:abbr.length>3?9:12,
+      fontWeight:"800", fontFamily:"Inter,sans-serif", letterSpacing:"-0.3"
     }, abbr)
   );
 }
@@ -533,7 +552,7 @@ export default function App() {
           )
         ),
 
-        // Colonne droite — iPhone réaliste
+        // Colonne droite — iPhone 15 Pro
         React.createElement("div",{className:"hero-right"},
           React.createElement("div",{className:"phone-wrap"},
             React.createElement("div",{className:"phone-frame"},
@@ -541,48 +560,45 @@ export default function App() {
                 // Status bar
                 React.createElement("div",{className:"phone-sb"},
                   React.createElement("span",{className:"phone-sb-time"},"9:41"),
-                  React.createElement("div",{className:"phone-pill-cam"}),
-                  React.createElement("span",{className:"phone-sb-icons"},"▮▮▮ ⚡")
-                ),
-                // Contenu app
-                React.createElement("div",{className:"phone-body"},
-                  React.createElement("div",{className:"phone-app-row"},
-                    React.createElement("div",{className:"phone-app-ico"},"⚡"),
-                    React.createElement("div",null,
-                      React.createElement("div",{className:"phone-app-nm"},"3W – TousLesMatchs"),
-                      React.createElement("div",{className:"phone-app-sub"},"Canal officiel · Aujourd'hui")
-                    )
-                  ),
-                  React.createElement("div",{className:"phone-pick-lbl"},"Pick IA du jour 🔥"),
-                  React.createElement("div",{className:"phone-conf-row"},
-                    React.createElement("span",{className:"phone-conf-lbl"},"Confiance"),
-                    React.createElement("span",{className:"phone-conf-val"},score.toFixed(1)+"/10")
-                  ),
-                  // Teams avec vrais logos circulaires
-                  React.createElement("div",{className:"phone-teams"},
-                    React.createElement("div",{className:"phone-team"},
-                      React.createElement(TeamCircle,{name:t1,sz:40}),
-                      React.createElement("div",{className:"phone-team-nm"},t1)
-                    ),
-                    React.createElement("span",{className:"phone-vs"},"VS"),
-                    React.createElement("div",{className:"phone-team"},
-                      React.createElement(TeamCircle,{name:t2,sz:40}),
-                      React.createElement("div",{className:"phone-team-nm"},t2)
-                    )
-                  ),
-                  React.createElement("div",{className:"phone-bet"},
-                    React.createElement("div",{className:"phone-bet-nm"},pdj[2]),
-                    React.createElement("div",{className:"phone-bet-sub"},sportE(pdj[6]).trim()+" · Cote : "+pdj[3])
-                  ),
-                  React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"phone-cta"},"VOIR L'ANALYSE COMPLÈTE")
-                ),
-                React.createElement("div",{className:"phone-footer"},
-                  React.createElement("div",{className:"phone-footer-ico"},"⚡"),
-                  React.createElement("div",{className:"phone-footer-txt"},
-                    React.createElement("div",{style:{fontWeight:"700",color:"#fff",fontSize:"11px"}},"3W – TousLesMatchs"),
-                    React.createElement("div",null,"Le bon pick. Tous les jours.")
+                  React.createElement("div",{className:"phone-dynamic-island"}),
+                  React.createElement("div",{className:"phone-sb-right"},
+                    React.createElement("span",null,"▮▮▮"),React.createElement("span",null,"⚡")
                   )
-                )
+                ),
+                // En-tête app
+                React.createElement("div",{className:"phone-app-row"},
+                  React.createElement("div",{className:"phone-app-ico"},"⚡"),
+                  React.createElement("div",null,
+                    React.createElement("div",{className:"phone-app-nm"},"3W – TousLesMatchs"),
+                    React.createElement("div",{className:"phone-app-sub"},"Pick IA · Aujourd'hui")
+                  ),
+                  React.createElement("div",{className:"phone-live-badge"},"LIVE")
+                ),
+                // Match hero — gros logos
+                React.createElement("div",{className:"phone-match-hero"},
+                  React.createElement("div",{className:"phone-team-hero"},
+                    React.createElement(TeamCircle,{name:t1,sz:64}),
+                    React.createElement("div",{className:"phone-team-nm2"},t1)
+                  ),
+                  React.createElement("div",{className:"phone-vs-col"},
+                    React.createElement("div",{className:"phone-vs-badge"},"VS"),
+                    React.createElement("div",{className:"phone-conf-mini"},score.toFixed(1)+"/10")
+                  ),
+                  React.createElement("div",{className:"phone-team-hero"},
+                    React.createElement(TeamCircle,{name:t2,sz:64}),
+                    React.createElement("div",{className:"phone-team-nm2"},t2)
+                  )
+                ),
+                // Pick info
+                React.createElement("div",{className:"phone-pick-card"},
+                  React.createElement("div",{className:"phone-pick-tag"},sportE(pdj[6]).trim()+" PRONOSTIC"),
+                  React.createElement("div",{className:"phone-pick-val"},pdj[2]),
+                  React.createElement("div",{className:"phone-pick-odd"},"Cote : "+React.createElement("strong",null,pdj[3]))
+                ),
+                // CTA
+                React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"phone-cta"},"✈  ANALYSE COMPLÈTE"),
+                // Home indicator
+                React.createElement("div",{className:"phone-home-bar"})
               )
             )
           )

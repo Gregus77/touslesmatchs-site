@@ -171,120 +171,117 @@ body {
 .feat-txt strong { display:block; font-size:13px; font-weight:600; line-height:1.3; }
 .feat-txt span   { font-size:12px; color:var(--dim); }
 
-/* ═══ PHONE RÉALISTE ══════════════════════════════════════ */
+/* ═══ PHONE — iPhone 15 Pro ════════════════════════════════ */
 .phone-wrap {
-  width: 286px; position: relative;
+  width: 300px; position: relative;
   animation: pfloat 6s ease-in-out infinite;
-  filter: drop-shadow(0 30px 60px rgba(0,0,0,0.7)) drop-shadow(0 0 40px rgba(74,222,128,0.12));
+  filter: drop-shadow(0 40px 70px rgba(0,0,0,0.85)) drop-shadow(0 0 50px rgba(74,222,128,0.14));
 }
 
 @keyframes pfloat {
-  0%,100% { transform: translateY(0) rotate(-1.5deg); }
-  50%      { transform: translateY(-16px) rotate(-1.5deg); }
+  0%,100% { transform: translateY(0)    rotate(-1.5deg); }
+  50%      { transform: translateY(-18px) rotate(-1.5deg); }
 }
 
+/* Cadre titane */
 .phone-frame {
-  background: linear-gradient(145deg, #2a2a2e, #1a1a1e);
-  border-radius: 50px; padding: 7px; position: relative;
+  background: linear-gradient(160deg, #3a3a3c 0%, #1c1c1e 50%, #2c2c2e 100%);
+  border-radius: 54px; padding: 12px; position: relative;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,0.14),
-    inset 0 1px 0 rgba(255,255,255,0.1);
+    0 0 0 1px rgba(255,255,255,0.20),
+    0 0 0 2px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
-/* Bouton power à droite */
+/* Bouton power (droite) */
 .phone-frame::after {
   content:''; position:absolute;
-  right:-5px; top:120px; width:5px; height:64px;
-  background: linear-gradient(to right, #1a1a1e, #2a2a2e);
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+  right:-4px; top:150px; width:4px; height:72px;
+  background: linear-gradient(to right, #1c1c1e, #3a3a3c);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 0 0.5px rgba(255,255,255,0.07);
 }
-/* Boutons volume à gauche */
+/* Boutons volume (gauche, deux boutons via bg gradient) */
 .phone-frame::before {
   content:''; position:absolute;
-  left:-5px; top:100px; width:5px; height:36px;
-  background: linear-gradient(to left, #1a1a1e, #2a2a2e);
-  border-radius: 4px 0 0 4px;
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.08);
+  left:-4px; top:115px; width:4px; height:90px;
+  background:
+    linear-gradient(to left, #1c1c1e, #3a3a3c) top / 4px 36px no-repeat,
+    transparent center / 4px 18px,
+    linear-gradient(to left, #1c1c1e, #3a3a3c) bottom / 4px 36px no-repeat;
+  border-radius: 3px 0 0 3px;
 }
 
 .phone-screen {
-  background: #080808; border-radius: 44px; overflow: hidden;
+  background: #000; border-radius: 44px; overflow: hidden;
 }
 
+/* Status bar */
 .phone-sb {
-  background: #080808; padding: 14px 22px 8px;
+  background: #000; padding: 16px 20px 8px;
   display: flex; align-items: center; justify-content: space-between;
-  position: relative;
 }
-
 .phone-sb-time { font-size: 13px; font-weight: 700; color: #fff; }
-
-.phone-pill-cam {
-  position: absolute; top:10px; left:50%; transform:translateX(-50%);
-  width: 90px; height: 22px; background: #000; border-radius: 12px;
+.phone-dynamic-island {
+  width: 110px; height: 28px; background: #000;
+  border-radius: 20px; border: 1.5px solid #1a1a1a;
 }
+.phone-sb-right { font-size: 10px; color: rgba(255,255,255,0.8); display:flex; gap:4px; align-items:center; }
 
-.phone-sb-icons { font-size: 10px; color: rgba(255,255,255,0.8); display:flex; gap:3px; }
-
-.phone-body { padding: 10px 16px 18px; }
-
+/* Header app */
 .phone-app-row {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
-  padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px 10px; border-bottom: 1px solid rgba(255,255,255,0.05);
 }
-
 .phone-app-ico {
-  width: 34px; height: 34px; border-radius: 9px;
+  width: 32px; height: 32px; border-radius: 8px;
   background: var(--green); display: flex; align-items: center; justify-content: center;
-  font-size: 14px; font-weight: 900; color: #000; flex-shrink: 0;
+  font-size: 13px; font-weight: 900; color: #000; flex-shrink: 0;
+}
+.phone-app-nm  { font-size: 12px; font-weight: 700; color: #fff; }
+.phone-app-sub { font-size: 9px; color: var(--dim); }
+.phone-live-badge {
+  margin-left: auto; background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.3); border-radius: 6px;
+  font-size: 9px; font-weight: 800; color: var(--green); padding: 2px 6px; letter-spacing:.06em;
 }
 
-.phone-app-nm  { font-size: 13px; font-weight: 700; color: #fff; }
-.phone-app-sub { font-size: 10px; color: var(--dim); }
-
-.phone-pick-lbl {
-  font-size: 12px; font-weight: 700; color: #fff;
-  display: flex; align-items: center; gap: 5px; margin-bottom: 10px;
+/* Zone match — gros logos */
+.phone-match-hero {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px;
+  background: linear-gradient(to bottom, rgba(74,222,128,0.03), transparent);
 }
+.phone-team-hero { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.phone-team-nm2 { font-size: 10px; font-weight: 600; color: var(--muted); text-align: center; max-width: 66px; line-height: 1.2; }
+.phone-vs-col { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.phone-vs-badge { font-size:13px; font-weight:800; color:rgba(255,255,255,0.18); }
+.phone-conf-mini { font-size:15px; font-weight:900; color:var(--green); letter-spacing:-.03em; }
 
-.phone-conf-row {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;
+/* Pick card */
+.phone-pick-card {
+  margin: 0 14px 14px;
+  background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.16);
+  border-radius: 14px; padding: 12px 14px;
 }
-.phone-conf-lbl { font-size: 10px; color: var(--dim); }
-.phone-conf-val { font-size: 24px; font-weight: 900; color: var(--green); letter-spacing: -.04em; }
+.phone-pick-tag { font-size: 9px; font-weight: 700; color: var(--dim); letter-spacing:.1em; text-transform:uppercase; margin-bottom: 4px; }
+.phone-pick-val { font-size: 15px; font-weight: 800; color: #fff; margin-bottom: 3px; }
+.phone-pick-odd { font-size: 11px; color: var(--muted); }
+.phone-pick-odd strong { color: var(--green); }
 
-.phone-teams {
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 10px; background: rgba(255,255,255,0.03); border-radius: 12px; margin-bottom: 12px;
-}
-.phone-team { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.phone-team-nm { font-size: 9px; color: var(--muted); text-align: center; max-width: 52px; line-height: 1.2; }
-.phone-vs { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.15); }
-
-.phone-bet {
-  background: rgba(74,222,128,0.05); border: 1px solid rgba(74,222,128,0.14);
-  border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;
-}
-.phone-bet-nm  { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 3px; }
-.phone-bet-sub { font-size: 10px; color: var(--dim); }
-
+/* CTA */
 .phone-cta {
-  width: 100%; background: var(--green); color: #000; border: none; border-radius: 10px;
-  padding: 11px; font-size: 12px; font-weight: 800; font-family: inherit;
-  cursor: pointer; text-align: center; text-decoration: none; display: block;
+  display: block; margin: 0 14px 10px;
+  background: var(--green); color: #000; border: none; border-radius: 12px;
+  padding: 12px; font-size: 12px; font-weight: 800; font-family: inherit;
+  cursor: pointer; text-align: center; text-decoration: none;
 }
 
-.phone-footer {
-  padding: 8px 16px 14px; display: flex; align-items: center; gap: 8px;
-  border-top: 1px solid rgba(255,255,255,0.04); margin-top: 2px;
+/* Indicateur home */
+.phone-home-bar {
+  width: 120px; height: 5px; background: rgba(255,255,255,0.18);
+  border-radius: 3px; margin: 4px auto 12px;
 }
-.phone-footer-ico {
-  width: 22px; height: 22px; border-radius: 6px;
-  background: var(--green); display: flex; align-items: center;
-  justify-content: center; font-size: 9px; font-weight: 900; color: #000;
-}
-.phone-footer-txt { font-size: 9px; color: var(--muted); line-height: 1.3; }
 
 /* ═══ LOGO CIRCULAIRE CLUB ════════════════════════════════ */
 .team-circle {
