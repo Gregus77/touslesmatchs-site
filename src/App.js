@@ -42,47 +42,30 @@ function FootballPitch() {
       )
     ),
     // ── Lignes du terrain ──
-    // Contour
     React.createElement("rect",{x:80,y:50,width:1240,height:580,fill:"none",stroke:"rgba(255,255,255,0.28)",strokeWidth:"3"}),
-    // Ligne médiane
     React.createElement("line",{x1:700,y1:50,x2:700,y2:630,stroke:"rgba(255,255,255,0.28)",strokeWidth:"3"}),
-    // Cercle central
     React.createElement("circle",{cx:700,cy:340,r:120,fill:"none",stroke:"rgba(255,255,255,0.28)",strokeWidth:"3"}),
-    // Point central
     React.createElement("circle",{cx:700,cy:340,r:6,fill:"rgba(255,255,255,0.35)"}),
-    // Surface de réparation gauche (grand)
     React.createElement("rect",{x:80,y:195,width:210,height:290,fill:"none",stroke:"rgba(255,255,255,0.22)",strokeWidth:"2.5"}),
-    // Surface de but gauche (petit)
     React.createElement("rect",{x:80,y:255,width:100,height:170,fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
-    // But gauche
     React.createElement("rect",{x:60,y:290,width:20,height:100,fill:"none",stroke:"rgba(255,255,255,0.15)",strokeWidth:"2"}),
-    // Surface de réparation droite (grand)
     React.createElement("rect",{x:1110,y:195,width:210,height:290,fill:"none",stroke:"rgba(255,255,255,0.22)",strokeWidth:"2.5"}),
-    // Surface de but droite (petit)
     React.createElement("rect",{x:1220,y:255,width:100,height:170,fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
-    // But droit
     React.createElement("rect",{x:1320,y:290,width:20,height:100,fill:"none",stroke:"rgba(255,255,255,0.15)",strokeWidth:"2"}),
-    // Points de penalty
     React.createElement("circle",{cx:260,cy:340,r:6,fill:"rgba(255,255,255,0.3)"}),
     React.createElement("circle",{cx:1140,cy:340,r:6,fill:"rgba(255,255,255,0.3)"}),
-    // Arcs de cercle penalt gauche
     React.createElement("path",{d:"M 290 195 A 110 110 0 0 1 290 485",fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
-    // Arcs de cercle penalt droit
     React.createElement("path",{d:"M 1110 195 A 110 110 0 0 0 1110 485",fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
-    // Coins
     React.createElement("path",{d:"M 80 50 A 25 25 0 0 1 105 75",fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
     React.createElement("path",{d:"M 1320 50 A 25 25 0 0 0 1295 75",fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
     React.createElement("path",{d:"M 80 630 A 25 25 0 0 0 105 605",fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
     React.createElement("path",{d:"M 1320 630 A 25 25 0 0 1 1295 605",fill:"none",stroke:"rgba(255,255,255,0.18)",strokeWidth:"2"}),
-    // Glow central
     React.createElement("rect",{width:"1400",height:"680",fill:"url(#glow)"}),
-    // Assombrissement bords
     React.createElement("rect",{width:"1400",height:"680",fill:"url(#dark)"})
   );
 }
 
 // ─── LOGOS CIRCULAIRES CLUBS ──────────────────────────────────
-// Base de données clubs : bg = couleur principale, stripe = bande/2e couleur, abbr = texte
 var ESP_SOC = "https://a.espncdn.com/i/teamlogos/soccer/500/";
 var ESP_NBA = "https://a.espncdn.com/i/teamlogos/nba/500/";
 var ESP_NHL = "https://a.espncdn.com/i/teamlogos/nhl/500/";
@@ -228,33 +211,25 @@ var AI_NODES = [
 
 function NeuronOrbit() {
   return React.createElement("div", {className:"neuron-orbit"},
-    // Rings décoratifs
     React.createElement("div",{className:"orbit-ring",style:{width:"340px",height:"340px",borderColor:"rgba(74,222,128,0.07)"}}),
     React.createElement("div",{className:"orbit-ring",style:{width:"200px",height:"200px",borderColor:"rgba(74,222,128,0.05)",borderStyle:"dashed"}}),
-
-    // Centre Hermès
     React.createElement("div",{className:"orbit-center"},
       React.createElement("span",{className:"orbit-center-nm"},"HERMÈS"),
       React.createElement("span",{className:"orbit-center-sub"},"Chief")
     ),
-
-    // 6 bras tournants
     AI_NODES.map(function(ai, i) {
       return React.createElement("div", {
         key:i,
         className:"orbit-arm",
       },
-        // Ligne colorée
         React.createElement("div",{
           className:"orbit-line",
           style:{background:"linear-gradient(to right, transparent, "+ai.color+"55, "+ai.color+"44)"}
         }),
-        // Paquet de données animé
         React.createElement("div",{
           className:"orbit-packet",
           style:{background:ai.color,animationDelay:(i*0.5)+"s",boxShadow:"0 0 6px "+ai.color}
         }),
-        // Noeud IA
         React.createElement("div",{className:"orbit-node-wrap"},
           React.createElement("div",{
             className:"orbit-node",
@@ -517,9 +492,7 @@ export default function App() {
 
     // ── HERO avec TERRAIN DE FOOT ──────────────────────────
     React.createElement("section",{className:"hero"},
-      // Terrain SVG en fond
       React.createElement("div",{className:"hero-pitch"}, React.createElement(FootballPitch,null)),
-      // Overlay assombrissement
       React.createElement("div",{className:"hero-pitch-overlay"}),
 
       React.createElement("div",{className:"hero-inner"},
@@ -652,7 +625,6 @@ export default function App() {
               React.createElement("div",{className:"pick-teams-col"},
                 React.createElement("div",{className:"pick-league"},sportE(pdj[6])+pdj[0]),
                 React.createElement("div",{className:"pick-teams-row"},
-                  // Vrais logos circulaires clubs
                   React.createElement("div",{className:"team-circle"},
                     React.createElement(TeamCircle,{name:t1,sz:52}),
                     React.createElement("div",{className:"team-circle-nm"},t1)
