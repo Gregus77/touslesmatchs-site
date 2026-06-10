@@ -25,12 +25,10 @@ function FootballPitch() {
     viewBox:"0 0 1400 680", xmlns:"http://www.w3.org/2000/svg",
     style:{position:"absolute",inset:0,width:"100%",height:"100%",preserveAspectRatio:"xMidYMid slice"}
   },
-    // Herbe — bandes alternées
     React.createElement("rect",{width:"1400",height:"680",fill:"#020c02"}),
     ...[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19].map(function(i){
       return React.createElement("rect",{key:"s"+i,x:i*70,y:0,width:70,height:680,fill:i%2===0?"#020c02":"#031504",opacity:1});
     }),
-    // Defs pour dégradés
     React.createElement("defs",null,
       React.createElement("radialGradient",{id:"glow",cx:"50%",cy:"50%",r:"50%"},
         React.createElement("stop",{offset:"0%",stopColor:"#4ADE80",stopOpacity:"0.18"}),
@@ -41,7 +39,6 @@ function FootballPitch() {
         React.createElement("stop",{offset:"100%",stopColor:"#000",stopOpacity:"0.7"})
       )
     ),
-    // ── Lignes du terrain ──
     React.createElement("rect",{x:80,y:50,width:1240,height:580,fill:"none",stroke:"rgba(255,255,255,0.28)",strokeWidth:"3"}),
     React.createElement("line",{x1:700,y1:50,x2:700,y2:630,stroke:"rgba(255,255,255,0.28)",strokeWidth:"3"}),
     React.createElement("circle",{cx:700,cy:340,r:120,fill:"none",stroke:"rgba(255,255,255,0.28)",strokeWidth:"3"}),
@@ -72,7 +69,6 @@ var ESP_NHL = "https://a.espncdn.com/i/teamlogos/nhl/500/";
 var FLAG    = "https://flagcdn.com/h80/";
 
 var CLUBS = {
-  // Ligue 1
   "PSG":               {bg:"#001A5E",stripe:"#DA291C",abbr:"PSG", txt:"#fff", logo:ESP_SOC+"160.png"},
   "Paris Saint-Germain":{bg:"#001A5E",stripe:"#DA291C",abbr:"PSG",txt:"#fff", logo:ESP_SOC+"160.png"},
   "Marseille":         {bg:"#2563EB",stripe:"#ffffff", abbr:"OM",  txt:"#fff", logo:ESP_SOC+"516.png"},
@@ -81,13 +77,12 @@ var CLUBS = {
   "Monaco":            {bg:"#BD2B34",stripe:"#ffffff", abbr:"ASM", txt:"#fff", logo:ESP_SOC+"162.png"},
   "Nice":              {bg:"#CC0000",stripe:"#000000", abbr:"OGC", txt:"#fff", logo:ESP_SOC+"521.png"},
   "Lens":              {bg:"#CC0000",stripe:"#E4B01B", abbr:"RCL", txt:"#fff", logo:ESP_SOC+"520.png"},
-  // Liga
   "Real Madrid":       {bg:"#f5f5f5",stripe:"#003DA5", abbr:"RMA", txt:"#003DA5",logo:ESP_SOC+"86.png"},
   "Barcelona":         {bg:"#004D98",stripe:"#A50044", abbr:"FCB", txt:"#fff", logo:ESP_SOC+"83.png"},
   "Atletico Madrid":   {bg:"#CC0000",stripe:"#ffffff", abbr:"ATM", txt:"#fff", logo:ESP_SOC+"1068.png"},
   "Sevilla":           {bg:"#CC0000",stripe:"#ffffff", abbr:"SEV", txt:"#fff", logo:ESP_SOC+"243.png"},
+  "Seville":           {bg:"#CC0000",stripe:"#ffffff", abbr:"SEV", txt:"#fff", logo:ESP_SOC+"243.png"},
   "Villarreal":        {bg:"#FFD700",stripe:"#005C8A", abbr:"VIL", txt:"#000", logo:ESP_SOC+"102.png"},
-  // Premier League
   "Arsenal":           {bg:"#EF0107",stripe:"#ffffff", abbr:"ARS", txt:"#fff", logo:ESP_SOC+"359.png"},
   "Chelsea":           {bg:"#034694",stripe:"#ffffff", abbr:"CHE", txt:"#fff", logo:ESP_SOC+"363.png"},
   "Liverpool":         {bg:"#C8102E",stripe:"#ffffff", abbr:"LIV", txt:"#fff", logo:ESP_SOC+"364.png"},
@@ -95,32 +90,23 @@ var CLUBS = {
   "Man City":          {bg:"#6CABDD",stripe:"#1C2C5B", abbr:"MCI", txt:"#fff", logo:ESP_SOC+"382.png"},
   "Aston Villa":       {bg:"#670E36",stripe:"#95BFE5", abbr:"AVL", txt:"#fff", logo:ESP_SOC+"362.png"},
   "Fribourg":          {bg:"#000000",stripe:"#CC0000", abbr:"SCF", txt:"#fff", logo:ESP_SOC+"3961.png"},
-  // Bundesliga
   "Bayern":            {bg:"#DC052D",stripe:"#0066B2", abbr:"FCB", txt:"#fff", logo:ESP_SOC+"132.png"},
   "Bayern Munich":     {bg:"#DC052D",stripe:"#0066B2", abbr:"FCB", txt:"#fff", logo:ESP_SOC+"132.png"},
   "Dortmund":          {bg:"#FDE100",stripe:"#000000", abbr:"BVB", txt:"#000", logo:ESP_SOC+"124.png"},
   "Leverkusen":        {bg:"#CC0000",stripe:"#000000", abbr:"B04", txt:"#fff", logo:ESP_SOC+"131.png"},
   "Stuttgart":         {bg:"#CC0000",stripe:"#ffffff", abbr:"VFB", txt:"#fff", logo:ESP_SOC+"2728.png"},
-  // Serie A
   "Inter Milan":       {bg:"#003DA5",stripe:"#000000", abbr:"INT", txt:"#fff", logo:ESP_SOC+"110.png"},
   "Lazio":             {bg:"#87D0DB",stripe:"#ffffff", abbr:"LAZ", txt:"#003E8A",logo:ESP_SOC+"111.png"},
-  // Sélections nationales — drapeaux
-  "Greece":            {bg:"#0D5EAF",stripe:"#ffffff", abbr:"GRE", txt:"#fff", logo:FLAG+"gr.png"},
-  "Italy":             {bg:"#003E8A",stripe:"#009246", abbr:"ITA", txt:"#fff", logo:FLAG+"it.png"},
   "Belgium":           {bg:"#000000",stripe:"#EF3340", abbr:"BEL", txt:"#fff", logo:FLAG+"be.png"},
   "Tunisia":           {bg:"#CC0000",stripe:"#ffffff", abbr:"TUN", txt:"#fff", logo:FLAG+"tn.png"},
-  "Switzerland":       {bg:"#CC0000",stripe:"#ffffff", abbr:"SUI", txt:"#fff", logo:FLAG+"ch.png"},
-  "Australia":         {bg:"#00008B",stripe:"#FFD700", abbr:"AUS", txt:"#fff", logo:FLAG+"au.png"},
   "Russia":            {bg:"#003DA5",stripe:"#CC0000", abbr:"RUS", txt:"#fff", logo:FLAG+"ru.png"},
   "Burkina Faso":      {bg:"#009A44",stripe:"#EF2B2D", abbr:"BFA", txt:"#fff", logo:FLAG+"bf.png"},
   "Canada":            {bg:"#CC0000",stripe:"#ffffff", abbr:"CAN", txt:"#fff", logo:FLAG+"ca.png"},
   "Uzbekistan":        {bg:"#1EB53A",stripe:"#ffffff", abbr:"UZB", txt:"#fff", logo:FLAG+"uz.png"},
-  // NBA
   "Spurs":             {bg:"#C4CED4",stripe:"#000000", abbr:"SAS", txt:"#000", logo:ESP_NBA+"sa.png"},
   "San Antonio Spurs": {bg:"#C4CED4",stripe:"#000000", abbr:"SAS", txt:"#000", logo:ESP_NBA+"sa.png"},
   "Knicks":            {bg:"#006BB6",stripe:"#F58426", abbr:"NYK", txt:"#fff", logo:ESP_NBA+"ny.png"},
   "New York Knicks":   {bg:"#006BB6",stripe:"#F58426", abbr:"NYK", txt:"#fff", logo:ESP_NBA+"ny.png"},
-  // NHL
   "Carolina":          {bg:"#CC0000",stripe:"#ffffff", abbr:"CAR", txt:"#fff", logo:ESP_NHL+"car.png"},
   "Philadelphia":      {bg:"#F74902",stripe:"#ffffff", abbr:"PHI", txt:"#fff", logo:ESP_NHL+"phi.png"},
   "Colorado":          {bg:"#6F263D",stripe:"#236192", abbr:"COL", txt:"#fff", logo:ESP_NHL+"col.png"},
@@ -145,7 +131,6 @@ function getClub(name) {
   return null;
 }
 
-// Logo club — image réelle ESPN/flagcdn avec fallback SVG
 function TeamCircle(props) {
   var name = props.name || "";
   var sz   = props.sz || 52;
@@ -155,7 +140,6 @@ function TeamCircle(props) {
   var abbr   = club ? club.abbr   : (name.split(" ").map(function(w){return w[0]||"";}).join("").toUpperCase().slice(0,3)||"?");
   var txtCol = club ? club.txt    : "#fff";
   var uid    = "c"+name.replace(/[^a-zA-Z0-9]/g,"");
-
   var [imgErr, setImgErr] = React.useState(false);
 
   if (club && club.logo && !imgErr) {
@@ -169,15 +153,13 @@ function TeamCircle(props) {
       }
     },
       React.createElement("img",{
-        src:club.logo,
-        alt:name,
+        src:club.logo, alt:name,
         style:{width:"82%",height:"82%",objectFit:"contain"},
         onError:function(){setImgErr(true);}
       })
     );
   }
 
-  // Fallback SVG avec initiales
   return React.createElement("svg", {
     width:sz, height:sz, viewBox:"0 0 60 60",
     style:{flexShrink:0,filter:"drop-shadow(0 3px 8px rgba(0,0,0,0.5))"}
@@ -199,7 +181,7 @@ function TeamCircle(props) {
   );
 }
 
-// ─── NEURONE ANIMÉ (CSS pur — 100% fiable) ───────────────────
+// ─── NEURONE ANIMÉ ───────────────────────────────────────────
 var AI_NODES = [
   {name:"Groq",     role:"Collecte données",  color:"#4ADE80"},
   {name:"Gemini",   role:"Stats avancées",    color:"#60A5FA"},
@@ -218,10 +200,7 @@ function NeuronOrbit() {
       React.createElement("span",{className:"orbit-center-sub"},"Chief")
     ),
     AI_NODES.map(function(ai, i) {
-      return React.createElement("div", {
-        key:i,
-        className:"orbit-arm",
-      },
+      return React.createElement("div", {key:i, className:"orbit-arm"},
         React.createElement("div",{
           className:"orbit-line",
           style:{background:"linear-gradient(to right, transparent, "+ai.color+"55, "+ai.color+"44)"}
@@ -245,10 +224,9 @@ function NeuronOrbit() {
 }
 
 // ─── DATA ─────────────────────────────────────────────────────
+// Les matchs amicaux sont exclus — ne jamais les réintégrer dans cet array
 var picks = [
   ["10/06","Spurs vs Knicks","Spurs ML","2.05","—","EN ATTENTE","Basket",7.5,8],
-  ["08/06","Greece vs Italy","Greece Vainqueur","1.6","0-1","ANNULE","Foot",7,7],
-  ["06/06","Switzerland vs Australia","Switzerland Vainqueur","1.6","1-1","ANNULE","Foot",7,7],
   ["06/06","Belgium vs Tunisia","Belgium Vainqueur","1.6","5-0","GAGNE","Foot",7,7],
   ["05/06","Russia vs Burkina Faso","Russia Vainqueur","1.60","3-0","GAGNE","Foot",7,7],
   ["04/06 au 06/06","PAS DE PARI","---","---","---","NOPICK","",0,8],
@@ -282,15 +260,16 @@ var preuves = [
 ];
 
 var faqs = [
-  {q:"Les pronostics sont-ils garantis ?", a:"Aucun pronostic n'est garanti à 100%. Notre IA maximise les probabilités, mais le sport comporte toujours une part d'incertitude. Nous ne publions que les picks avec un score ≥ 7/10."},
-  {q:"Quels bookmakers utilisez-vous ?", a:"Winamax, Betclic, Unibet, PMU, ZEbet, ParionsSport et NetBet. Nos liens sont affiliés — vous bénéficiez des mêmes bonus officiels."},
-  {q:"Comment recevoir les picks ?", a:"Rejoignez notre canal Telegram @touslesmatchs_bot. Le pick du jour est publié chaque matin entre 9h et 11h (heure Paris)."},
-  {q:"Êtes-vous autorisé en France ?", a:"Oui. Nous opérons sous le cadre légal de l'affiliation bookmakers agréés ARJEL (ANJ). Nos contenus sont à titre informatif uniquement. Jeux interdits aux mineurs."},
+  {q:"Les pronostics sont-ils garantis ?", a:"Non. Aucun pronostic n'est garanti. Notre système IA maximise les probabilités sur la base de données réelles, mais le sport comporte toujours une part d'incertitude. Nous ne publions que les picks avec un score ≥ 7/10. Les performances passées ne garantissent pas les résultats futurs."},
+  {q:"Quels bookmakers recommandez-vous ?", a:"Winamax, Betclic, Unibet, PMU, ZEbet, ParionsSport et NetBet. Nos liens sont affiliés — vous bénéficiez des mêmes bonus officiels en passant par nos liens."},
+  {q:"Comment recevoir les picks chaque jour ?", a:"Rejoignez notre canal Telegram @touslesmatchs_bot. Le pick du jour est publié chaque matin entre 9h et 11h (heure de Paris). Un pick à 7/10 est accompagné d'une recommandation de demi-mise."},
+  {q:"Êtes-vous autorisés en France ?", a:"Oui. Nous opérons dans le cadre légal de l'affiliation avec des bookmakers agréés ANJ (ex-ARJEL). Nos contenus sont à titre informatif uniquement. Jeu interdit aux mineurs."},
+  {q:"Que se passe-t-il si aucun pick fiable n'est disponible ?", a:"Nous n'inventons jamais de pick pour remplir le calendrier. Si aucun match sérieux n'atteint 7/10, nous n'en publions pas et nous en informons les abonnés sur Telegram. La qualité prime toujours sur la quantité."},
 ];
 
 var bookmakers = [
   {nom:"Winamax",badge:"PARTENAIRE N°1",bonus:"Bonus 200 EUR",desc:"Bookmaker français N°1. Cotes excellentes, retrait rapide.",link:WINAMAX_LINK,note:"9.5/10"},
-  {nom:"Betclic",badge:"TOP COTES",bonus:"Bonus 100 EUR",desc:"Cotes très compétitives sur le foot européen.",link:BETCLIC_LINK,note:"9.2/10"},
+  {nom:"Betclic",badge:"TOP COTES",bonus:"Bonus 100 EUR",desc:"Cotes très compétitives sur le football européen.",link:BETCLIC_LINK,note:"9.2/10"},
   {nom:"Unibet",badge:"FIABLE",bonus:"100 EUR remboursé",desc:"Bookmaker international solide. Large choix de sports.",link:UNIBET_LINK,note:"8.8/10"},
   {nom:"PMU",badge:"100% FRANÇAIS",bonus:"Bonus 150 EUR",desc:"L'historique des paris en France.",link:PMU_LINK,note:"8.5/10"},
   {nom:"ZEbet",badge:"COTES ÉLEVÉES",bonus:"100 EUR remboursé",desc:"Spécialiste des cotes boostées.",link:ZEBET_LINK,note:"8.3/10"},
@@ -301,9 +280,10 @@ var bookmakers = [
 function sportE(s){var m={Foot:"⚽",Hockey:"🏒",Tennis:"🎾",Basketball:"🏀",Basket:"🏀",Baseball:"⚾",NFL:"🏈",Rugby:"🏉",MMA:"🥊"};return (m[s]||(s?"🎯":""))+" ";}
 
 export default function App() {
-  var [page, setPage]       = React.useState("home");
-  var [faqOpen, setFaqOpen] = React.useState(null);
-  var [lang, setLang]       = React.useState(localStorage.getItem("lang") || "fr");
+  var [page, setPage]         = React.useState("home");
+  var [faqOpen, setFaqOpen]   = React.useState(null);
+  var [lang, setLang]         = React.useState(localStorage.getItem("lang") || "fr");
+  var [histFilter, setHistFilter] = React.useState("Tous");
 
   function t(key) { return translations[lang]?.[key] || translations.fr[key] || key; }
   function setLangSave(l) { setLang(l); localStorage.setItem("lang",l); }
@@ -329,7 +309,7 @@ export default function App() {
   var total  = picks.filter(function(p){return p[5]!=="NOPICK"&&p[5]!=="EN COURS"&&p[5]!=="EN ATTENTE"&&p[5]!=="ANNULE";}).length;
   var wr     = total>0?Math.round((wins/total)*100):0;
   var gains  = 0;
-  picks.forEach(function(p){if(p[5]==="ANNULE")return;if(p[5]==="GAGNE")gains+=(parseFloat(p[3])-1)*10;else if(p[5]==="PERDU")gains-=10;});
+  picks.forEach(function(p){if(p[5]==="ANNULE"||p[5]==="NOPICK")return;if(p[5]==="GAGNE")gains+=(parseFloat(p[3])-1)*10;else if(p[5]==="PERDU")gains-=10;});
 
   var today  = new Date().toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit"});
   var pAuj   = picks.find(function(p){return p[5]==="EN ATTENTE"&&p[0]===today;});
@@ -339,9 +319,21 @@ export default function App() {
   var score  = pdj[7]||0;
   var teams  = (noPick?"Spurs vs Knicks":pdj[1]).split(" vs ");
   var t1=teams[0]||"Spurs", t2=teams[1]||"Knicks";
-  var recent = picks.filter(function(p){return p[5]!=="NOPICK"&&p[5]!=="ANNULE";}).slice(0,5);
 
-  var flags  = {fr:"🇫🇷",en:"🇬🇧",es:"🇪🇸",it:"🇮🇹",ru:"🇷🇺"};
+  // Historique filtrable : exclut NOPICK et ANNULE
+  var histSports = ["Tous","Foot","Hockey","Basket"];
+  var histPicks  = picks.filter(function(p){
+    if(p[5]==="NOPICK"||p[5]==="ANNULE") return false;
+    if(histFilter==="Tous") return true;
+    return p[6]===histFilter;
+  });
+
+  var flags = {fr:"🇫🇷",en:"🇬🇧",es:"🇪🇸",it:"🇮🇹",ru:"🇷🇺"};
+
+  function scrollTo(id) {
+    var el = document.getElementById(id);
+    if(el) el.scrollIntoView({behavior:"smooth"});
+  }
 
   // ─── HEADER ────────────────────────────────────────────────
   var hdr = React.createElement("header",{className:"hdr"},
@@ -353,7 +345,7 @@ export default function App() {
       )
     ),
     React.createElement("nav",{className:"hdr-nav"},
-      [["home","Accueil"],["pick","Pick du jour"],["offres","Offres"],["resultats","Résultats"],["faq","FAQ"],["preuves","Preuves"],["bookmakers","Bookmakers"]].map(function(item){
+      [["home","Accueil"],["pick","Pick du jour"],["offres","Offres"],["resultats","Historique"],["faq","FAQ"],["preuves","Preuves"],["bookmakers","Bookmakers"]].map(function(item){
         var isPage = item[0]==="preuves"||item[0]==="bookmakers";
         return React.createElement("button",{
           key:item[0],
@@ -363,9 +355,9 @@ export default function App() {
             else{
               setPage("home");
               setTimeout(function(){
-                var ids={home:null,pick:"pick-day",offres:"pricing",resultats:"results",faq:"faq"};
+                var ids={home:null,pick:"pick-day",offres:"pricing",resultats:"historique",faq:"faq"};
                 var id=ids[item[0]];
-                if(id){var el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth"});}
+                if(id) scrollTo(id);
               },100);
             }
           }
@@ -386,46 +378,47 @@ export default function App() {
       React.createElement("div",{className:"ft-top"},
         React.createElement("div",null,
           React.createElement("div",{className:"ft-brand"},React.createElement("div",{className:"ft-brand-ico"},"⚡"),"TousLesMatchs"),
-          React.createElement("p",{className:"ft-desc"},"Le bon pick. Tous les jours. Grâce à l'intelligence artificielle."),
+          React.createElement("p",{className:"ft-desc"},"Un pick clair chaque jour, analysé par 6 intelligences artificielles. Consultez, décidez, jouez de façon responsable."),
           React.createElement("div",{className:"ft-socials"},
             React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"ft-social"},"✈"),
             React.createElement("a",{href:TIKTOK_LINK,target:"_blank",className:"ft-social"},"♪")
           )
         ),
         React.createElement("div",null,
-          React.createElement("div",{className:"ft-col-ttl"},"Liens rapides"),
+          React.createElement("div",{className:"ft-col-ttl"},"Navigation"),
           React.createElement("ul",{className:"ft-links"},
             React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("home");}},"Accueil")),
+            React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("home");setTimeout(function(){scrollTo("pick-day");},100);}},"Pick du jour")),
             React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("preuves");}},"Preuves")),
             React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("bookmakers");}},"Bookmakers")),
-            React.createElement("li",null,React.createElement("a",{href:TELEGRAM_LINK,target:"_blank"},"Telegram"))
+            React.createElement("li",null,React.createElement("a",{href:TELEGRAM_LINK,target:"_blank"},"Canal Telegram"))
           )
         ),
         React.createElement("div",null,
-          React.createElement("div",{className:"ft-col-ttl"},"Informations"),
+          React.createElement("div",{className:"ft-col-ttl"},"Informations légales"),
           React.createElement("ul",{className:"ft-links"},
             React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("cgu");}},"Conditions d'utilisation")),
-            React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("confidentialite");}},"Confidentialité")),
+            React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("confidentialite");}},"Politique de confidentialité")),
             React.createElement("li",null,React.createElement("button",{onClick:function(){setPage("mentions");}},"Mentions légales"))
           )
         ),
         React.createElement("div",null,
           React.createElement("div",{className:"ft-col-ttl"},"Jeu responsable"),
           React.createElement("div",{className:"ft-resp"},
-            React.createElement("div",{className:"ft-resp-ttl"},"⚠ 18+"),
-            React.createElement("p",{className:"ft-resp-txt"},"Les jeux d'argent sont interdits aux mineurs. Jouez de manière responsable.")
+            React.createElement("div",{className:"ft-resp-ttl"},"⚠ 18+ uniquement"),
+            React.createElement("p",{className:"ft-resp-txt"},"Les paris sportifs comportent des risques de perte financière. Jeu interdit aux mineurs. Jouez de manière responsable. Les performances passées ne garantissent pas les résultats futurs.")
           )
         )
       ),
       React.createElement("div",{className:"ft-bottom"},
         React.createElement("span",{className:"ft-copy"},"© 2024 TousLesMatchs. Tous droits réservés."),
-        React.createElement("span",{className:"ft-copy"},"JOUER COMPORTE DES RISQUES")
+        React.createElement("span",{className:"ft-copy"},"LES PARIS SPORTIFS COMPORTENT DES RISQUES")
       )
     )
   );
 
   var legal = React.createElement("div",{className:"legal-bar"},
-    React.createElement("div",{className:"legal-txt"},t("jeu_responsable")),
+    React.createElement("div",{className:"legal-txt"},"Les paris sportifs comportent des risques de perte financière. Jeu interdit aux mineurs. Jouez de manière responsable. Les performances passées ne garantissent pas les résultats futurs."),
     React.createElement("div",{style:{fontSize:"9px",color:"rgba(255,255,255,0.06)",marginTop:"1px"}},t("risques_financiers"))
   );
 
@@ -442,7 +435,8 @@ export default function App() {
     hdr,
     React.createElement("div",{style:{maxWidth:"1000px",margin:"0 auto",padding:"48px 24px"}},
       React.createElement("div",{style:{fontSize:"11px",letterSpacing:".18em",textTransform:"uppercase",color:"#4ADE80",fontWeight:"600",marginBottom:"10px"}},"PREUVES DE PERFORMANCE"),
-      React.createElement("h2",{style:{fontSize:"clamp(28px,4vw,42px)",fontWeight:"800",letterSpacing:"-.02em",marginBottom:"24px"}},t("preuves_title")),
+      React.createElement("h2",{style:{fontSize:"clamp(28px,4vw,42px)",fontWeight:"800",letterSpacing:"-.02em",marginBottom:"8px"}},t("preuves_title")),
+      React.createElement("p",{style:{fontSize:"13px",color:"rgba(255,255,255,0.4)",marginBottom:"28px"}},"Les performances passées ne garantissent pas les résultats futurs."),
       React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:"16px"}},
         preuves.map(function(p,i){
           return React.createElement("div",{key:i,style:{background:"#0e0e0e",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"16px",overflow:"hidden"}},
@@ -485,53 +479,50 @@ export default function App() {
   );
 
   // ════════════════════════════════════════════════════════════
-  //  HOME
+  //  HOME — ordre : Hero → Pick → Stats → IA → How → Pricing → Historique → Telegram → FAQ
   // ════════════════════════════════════════════════════════════
   return React.createElement("div",{style:{background:"#050d05",minHeight:"100vh",fontFamily:"Inter,system-ui,sans-serif",color:"#fff",overflowX:"hidden"}},
     hdr,
 
-    // ── HERO avec TERRAIN DE FOOT ──────────────────────────
+    // ── 1. HERO ────────────────────────────────────────────
     React.createElement("section",{className:"hero"},
       React.createElement("div",{className:"hero-pitch"}, React.createElement(FootballPitch,null)),
       React.createElement("div",{className:"hero-pitch-overlay"}),
 
       React.createElement("div",{className:"hero-inner"},
-        // Colonne gauche
         React.createElement("div",{className:"hero-left"},
           React.createElement("div",{className:"hero-badge"},
             React.createElement("span",{className:"badge-pulse"}),
-            wr+"% de réussite moyenne"
+            wr+"% de réussite · "+total+" paris analysés"
           ),
           React.createElement("h1",{className:"hero-h1"},
             "LE PICK ",React.createElement("span",{className:"grn"},"IA")," DU JOUR,",React.createElement("br",null),
-            "SIMPLE, CLAIR,",React.createElement("br",null),
-            React.createElement("span",{className:"grn"},"RENTABLE.")
+            "CLAIR, ANALYSÉ,",React.createElement("br",null),
+            React.createElement("span",{className:"grn"},"TRANSPARENT.")
           ),
           React.createElement("p",{className:"hero-desc"},
-            "Chaque jour, notre intelligence artificielle analyse des milliers de données pour ne retenir qu'un seul pari à forte valeur ajoutée."
+            "Chaque matin, 6 intelligences artificielles analysent des centaines de matchs. Vous recevez un seul pick sélectionné avec un score minimum de 7/10. Vous consultez l'analyse, puis vous décidez."
           ),
           React.createElement("div",{className:"hero-btns"},
-            React.createElement("a",{href:"#pick-day",className:"btn-g",onClick:function(e){e.preventDefault();var el=document.getElementById("pick-day");if(el)el.scrollIntoView({behavior:"smooth"});}},
-              "VOIR LE PICK GRATUIT →"
+            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"btn-g"},
+              "✈ REJOINDRE TELEGRAM GRATUITEMENT"
             ),
-            React.createElement("a",{href:"#pricing",className:"btn-o",onClick:function(e){e.preventDefault();var el=document.getElementById("pricing");if(el)el.scrollIntoView({behavior:"smooth"});}},
-              "DÉCOUVRIR LES OFFRES ⚡"
+            React.createElement("a",{href:"#pick-day",className:"btn-o",onClick:function(e){e.preventDefault();scrollTo("pick-day");}},
+              "VOIR LE PICK DU JOUR →"
             )
           ),
           React.createElement("div",{className:"hero-feats"},
-            React.createElement("div",{className:"hero-feat"},React.createElement("div",{className:"feat-icon"},"✓"),React.createElement("div",{className:"feat-txt"},React.createElement("strong",null,"1 seul pick par jour"),React.createElement("span",null,"Qualité > Quantité"))),
-            React.createElement("div",{className:"hero-feat"},React.createElement("div",{className:"feat-icon"},"🤖"),React.createElement("div",{className:"feat-txt"},React.createElement("strong",null,"Analyse IA avancée"),React.createElement("span",null,"Données en temps réel"))),
-            React.createElement("div",{className:"hero-feat"},React.createElement("div",{className:"feat-icon"},"✈"),React.createElement("div",{className:"feat-txt"},React.createElement("strong",null,"Disponible sur Telegram"),React.createElement("span",null,"Rapide & pratique")))
+            React.createElement("div",{className:"hero-feat"},React.createElement("div",{className:"feat-icon"},"✓"),React.createElement("div",{className:"feat-txt"},React.createElement("strong",null,"1 pick par jour minimum"),React.createElement("span",null,"Score ≥ 7/10 garanti"))),
+            React.createElement("div",{className:"hero-feat"},React.createElement("div",{className:"feat-icon"},"🤖"),React.createElement("div",{className:"feat-txt"},React.createElement("strong",null,"6 IA en concile"),React.createElement("span",null,"Groq, Gemini, DeepSeek, Mistral, Qwen, Claude"))),
+            React.createElement("div",{className:"hero-feat"},React.createElement("div",{className:"feat-icon"},"✈"),React.createElement("div",{className:"feat-txt"},React.createElement("strong",null,"Canal Telegram gratuit"),React.createElement("span",null,"Pick reçu chaque matin")))
           )
         ),
 
-        // Colonne droite — iPhone 15 Pro (incliné 3D via phone-scene)
         React.createElement("div",{className:"hero-right"},
           React.createElement("div",{className:"phone-scene"},
           React.createElement("div",{className:"phone-wrap"},
             React.createElement("div",{className:"phone-frame"},
               React.createElement("div",{className:"phone-screen"},
-                // Status bar
                 React.createElement("div",{className:"phone-sb"},
                   React.createElement("span",{className:"phone-sb-time"},"9:41"),
                   React.createElement("div",{className:"phone-dynamic-island"}),
@@ -539,16 +530,14 @@ export default function App() {
                     React.createElement("span",null,"▮▮▮"),React.createElement("span",null,"⚡")
                   )
                 ),
-                // En-tête app
                 React.createElement("div",{className:"phone-app-row"},
                   React.createElement("div",{className:"phone-app-ico"},"⚡"),
                   React.createElement("div",null,
-                    React.createElement("div",{className:"phone-app-nm"},"3W – TousLesMatchs"),
+                    React.createElement("div",{className:"phone-app-nm"},"TousLesMatchs"),
                     React.createElement("div",{className:"phone-app-sub"},"Pick IA · Aujourd'hui")
                   ),
                   React.createElement("div",{className:"phone-live-badge"},"LIVE")
                 ),
-                // Match hero — gros logos
                 React.createElement("div",{className:"phone-match-hero"},
                   React.createElement("div",{className:"phone-team-hero"},
                     React.createElement(TeamCircle,{name:t1,sz:64}),
@@ -563,15 +552,12 @@ export default function App() {
                     React.createElement("div",{className:"phone-team-nm2"},t2)
                   )
                 ),
-                // Pick info
                 React.createElement("div",{className:"phone-pick-card"},
                   React.createElement("div",{className:"phone-pick-tag"},sportE(pdj[6]).trim()+" PRONOSTIC"),
                   React.createElement("div",{className:"phone-pick-val"},pdj[2]),
                   React.createElement("div",{className:"phone-pick-odd"},"Cote : "+React.createElement("strong",null,pdj[3]))
                 ),
-                // CTA
-                React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"phone-cta"},"✈  ANALYSE COMPLÈTE"),
-                // Home indicator
+                React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"phone-cta"},"✈  RECEVOIR LE PICK DU JOUR"),
                 React.createElement("div",{className:"phone-home-bar"})
               )
             )
@@ -582,44 +568,19 @@ export default function App() {
 
     React.createElement("hr",{className:"divider"}),
 
-    // ── NEURONE ANIMÉ ─────────────────────────────────────
-    React.createElement("section",{className:"neuron-section"},
-      React.createElement("div",{className:"neuron-inner"},
-        React.createElement("div",{className:"neuron-text"},
-          React.createElement("div",{className:"neuron-eyebrow"},"6 INTELLIGENCES ARTIFICIELLES · CONCILE V5"),
-          React.createElement("h2",{className:"neuron-h2"},
-            "Le meilleur ",React.createElement("span",{className:"grn"},"pick"),
-            React.createElement("br",null),"chaque jour."
-          ),
-          React.createElement("p",{className:"neuron-desc"},
-            "Groq, Gemini, DeepSeek, Mistral, Qwen et Claude analysent chaque matin des centaines de matchs. Hermès Chief valide le consensus final."
-          ),
-          React.createElement("div",{className:"neuron-chips"},
-            AI_NODES.map(function(ai){
-              return React.createElement("span",{key:ai.name,className:"neuron-chip",style:{borderColor:ai.color+"40",color:ai.color}},
-                React.createElement("span",{className:"chip-dot",style:{background:ai.color}}),
-                ai.name
-              );
-            })
-          )
-        ),
-        React.createElement(NeuronOrbit,null)
-      )
-    ),
-
-    React.createElement("hr",{className:"divider"}),
-
-    // ── PICK DU JOUR ────────────────────────────────────────
+    // ── 2. PICK DU JOUR ────────────────────────────────────
     React.createElement("div",{className:"pick-section",id:"pick-day"},
       React.createElement("div",{className:"section-wrap"},
         React.createElement("div",{className:"pick-hdr"},
-          React.createElement("span",{className:"pick-hdr-ttl"}, noPick?"PAS DE MATCH":"PICK DU JOUR"),
+          React.createElement("span",{className:"pick-hdr-ttl"}, noPick?"PAS DE PICK AUJOURD'HUI":"PICK DU JOUR"),
           !noPick&&React.createElement("span",{className:"badge-free"},"GRATUIT")
         ),
         noPick
           ? React.createElement("div",{style:{background:"#0e0e0e",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"20px",padding:"32px",textAlign:"center"}},
               React.createElement("div",{style:{fontSize:"32px",marginBottom:"8px"}},"🎯"),
-              React.createElement("p",{style:{color:"rgba(255,255,255,0.4)",fontSize:"13px"}},"Aucun match ne satisfait nos critères aujourd'hui. On ne force jamais un pari.")
+              React.createElement("p",{style:{color:"rgba(255,255,255,0.55)",fontSize:"14px",fontWeight:"600",marginBottom:"8px"}},"Aucun pick fiable disponible aujourd'hui."),
+              React.createElement("p",{style:{color:"rgba(255,255,255,0.35)",fontSize:"13px"}},"Notre système n'a trouvé aucun match atteignant 7/10 ce jour. Nous ne forçons jamais un pick. Rejoignez Telegram pour être informé dès qu'un pick est publié."),
+              React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",style:{display:"inline-flex",alignItems:"center",gap:"8px",marginTop:"20px",background:"#3DFF8F",color:"#000",borderRadius:"12px",padding:"12px 24px",fontWeight:"700",textDecoration:"none",fontSize:"14px"}},"✈ Accéder au canal Telegram")
             )
           : React.createElement("div",{className:"pick-card"},
               React.createElement("div",{className:"pick-teams-col"},
@@ -650,16 +611,18 @@ export default function App() {
                   React.createElement("div",{className:"pick-stat-val grn"},score.toFixed(1)+"/10"),
                   React.createElement("div",{className:"pick-dots"},
                     [1,2,3,4,5,6,7].map(function(n){return React.createElement("span",{key:n,className:"dot"+(n<=Math.round(score)?" on":"")});})
-                  )
+                  ),
+                  score<8?React.createElement("div",{style:{fontSize:"10px",color:"rgba(255,204,0,0.7)",marginTop:"4px"},title:"Pick 7/10 : demi-mise recommandée"},"⚡ demi-mise conseillée"):null
                 )
               ),
               React.createElement("div",{className:"pick-right"},
                 React.createElement("ul",{className:"pick-bullets"},
-                  React.createElement("li",null,"Analyse de 35+ critères"),
-                  React.createElement("li",null,"Stats en temps réel"),
-                  React.createElement("li",null,"Forme, H2H, absences, météo...")
+                  React.createElement("li",null,"Analyse de 35+ critères IA"),
+                  React.createElement("li",null,"Données en temps réel"),
+                  React.createElement("li",null,"Forme récente, H2H, absences, météo"),
+                  React.createElement("li",null,"Score minimum publié : 7/10")
                 ),
-                React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pick-tg-btn"},"RECEVOIR SUR TELEGRAM ✈")
+                React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pick-tg-btn"},"✈ RECEVOIR LE PICK SUR TELEGRAM")
               )
             )
       )
@@ -667,14 +630,59 @@ export default function App() {
 
     React.createElement("hr",{className:"divider"}),
 
-    // ── COMMENT ÇA MARCHE ───────────────────────────────────
+    // ── 3. STATISTIQUES ────────────────────────────────────
+    React.createElement("section",{className:"results-section"},
+      React.createElement("div",{className:"section-wrap"},
+        React.createElement("div",{className:"res-card",style:{maxWidth:"100%"}},
+          React.createElement("div",{className:"res-ttl"},"NOS RÉSULTATS · MATCHS OFFICIELS UNIQUEMENT"),
+          React.createElement("div",{style:{fontSize:"11px",color:"rgba(255,255,255,0.3)",marginBottom:"20px",fontWeight:"400"}},"Les matchs amicaux sont exclus de toutes les statistiques."),
+          React.createElement("div",{className:"res-stats"},
+            React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},wr+"%"),React.createElement("div",{className:"res-lbl"},"Taux de réussite",React.createElement("br",null),total+" paris analysés")),
+            React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},"+"+(gains/10).toFixed(1)+"u"),React.createElement("div",{className:"res-lbl"},"Bénéfice net",React.createElement("br",null),"base 10€ / pick")),
+            React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},wins),React.createElement("div",{className:"res-lbl"},"Picks gagnants",React.createElement("br",null),losses+" perdu(s) / "+total)),
+            React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},"6"),React.createElement("div",{className:"res-lbl"},"IA en concile",React.createElement("br",null),"Hermès Chief valide"))
+          )
+        )
+      )
+    ),
+
+    React.createElement("hr",{className:"divider"}),
+
+    // ── 4. NEURONE IA ──────────────────────────────────────
+    React.createElement("section",{className:"neuron-section"},
+      React.createElement("div",{className:"neuron-inner"},
+        React.createElement("div",{className:"neuron-text"},
+          React.createElement("div",{className:"neuron-eyebrow"},"6 INTELLIGENCES ARTIFICIELLES · CONCILE HERMÈS V5"),
+          React.createElement("h2",{className:"neuron-h2"},
+            "Comment le ",React.createElement("span",{className:"grn"},"pick"),
+            React.createElement("br",null),"est sélectionné."
+          ),
+          React.createElement("p",{className:"neuron-desc"},
+            "Chaque matin, Groq, Gemini, DeepSeek, Mistral, Qwen et Claude analysent des centaines de matchs sur plusieurs sports. Hermès Chief agrège les votes et ne valide que les picks atteignant le consensus minimum."
+          ),
+          React.createElement("div",{className:"neuron-chips"},
+            AI_NODES.map(function(ai){
+              return React.createElement("span",{key:ai.name,className:"neuron-chip",style:{borderColor:ai.color+"40",color:ai.color}},
+                React.createElement("span",{className:"chip-dot",style:{background:ai.color}}),
+                ai.name
+              );
+            })
+          )
+        ),
+        React.createElement(NeuronOrbit,null)
+      )
+    ),
+
+    React.createElement("hr",{className:"divider"}),
+
+    // ── 5. COMMENT ÇA MARCHE ───────────────────────────────
     React.createElement("section",{className:"how-section"},
       React.createElement("div",{className:"section-wrap"},
         React.createElement("h2",{className:"section-title-c"},"COMMENT ÇA MARCHE ?"),
         React.createElement("div",{className:"how-grid"},
-          [{icon:"🤖",t:"L'IA ANALYSE",d:"Notre intelligence artificielle analyse des milliers de matchs et de données en temps réel.",n:"1"},
-           {icon:"🎯",t:"LE MEILLEUR PICK",d:"L'IA sélectionne le pari à plus forte valeur pour maximiser tes gains.",n:"2"},
-           {icon:"✈",t:"TU REÇOIS LE PICK",d:"Le pick est envoyé chaque jour sur Telegram, prêt à être joué.",n:"3"}
+          [{icon:"🤖",t:"LES 6 IA ANALYSENT",d:"Chaque matin, 6 IA passent en revue des centaines de matchs : foot, hockey, basket, baseball. Chaque IA évalue les données indépendamment.",n:"1"},
+           {icon:"🎯",t:"HERMÈS VALIDE",d:"Hermès Chief consolide les résultats. Seul le pick avec le score de consensus le plus élevé est retenu — minimum 7/10 pour être publié.",n:"2"},
+           {icon:"✈",t:"VOUS RECEVEZ LE PICK",d:"Le pick est envoyé sur Telegram entre 9h et 11h (Paris). Vous consultez l'analyse complète et décidez en toute autonomie si vous souhaitez le suivre.",n:"3"}
           ].map(function(s,i){
             return React.createElement("div",{key:i,className:"how-card"},
               React.createElement("span",{className:"how-n"},s.n),
@@ -690,22 +698,22 @@ export default function App() {
 
     React.createElement("hr",{className:"divider"}),
 
-    // ── PRICING ─────────────────────────────────────────────
+    // ── 6. PRICING ─────────────────────────────────────────
     React.createElement("section",{className:"pricing-section",id:"pricing"},
       React.createElement("div",{className:"section-wrap"},
-        React.createElement("h2",{className:"section-title-c"},"NOS OFFRES"),
+        React.createElement("h2",{className:"section-title-c"},"NOS FORMULES"),
         React.createElement("div",{className:"pricing-grid"},
           React.createElement("div",{className:"pricing-card"},
-            React.createElement("div",{className:"pricing-tier"},"FREE"),
-            React.createElement("div",{className:"pricing-price"},"0€"),
-            React.createElement("div",{className:"pricing-period"},"/mois"),
+            React.createElement("div",{className:"pricing-tier"},"STANDARD"),
+            React.createElement("div",{className:"pricing-price"},"Gratuit"),
+            React.createElement("div",{className:"pricing-period"},"accès libre"),
             React.createElement("ul",{className:"pricing-feats"},
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"1 pick gratuit par jour"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Analyse IA basique"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Envoi sur Telegram"),
-              React.createElement("li",null,React.createElement("span",{className:"ck off"},"✗"),React.createElement("span",{style:{opacity:.35}},"Picks premium"))
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"1 pick par jour (score ≥ 7/10)"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Analyse IA complète"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Envoi via Telegram"),
+              React.createElement("li",null,React.createElement("span",{className:"ck off"},"✗"),React.createElement("span",{style:{opacity:.35}},"Picks premium (8/10+)"))
             ),
-            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pricing-btn po"},"COMMENCER GRATUITEMENT")
+            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pricing-btn po"},"✈ REJOINDRE GRATUITEMENT")
           ),
           React.createElement("div",{className:"pricing-card feat"},
             React.createElement("div",{className:"pop-badge"},"LE PLUS POPULAIRE"),
@@ -713,24 +721,24 @@ export default function App() {
             React.createElement("div",{className:"pricing-price"},"19,90€"),
             React.createElement("div",{className:"pricing-period"},"/mois"),
             React.createElement("ul",{className:"pricing-feats"},
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"1 pick fort par jour"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Analyse IA complète"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Historique & statistiques"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Support prioritaire")
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Pick premium chaque jour (score ≥ 8/10)"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Analyse détaillée + historique complet"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Alertes en temps réel"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Support prioritaire sur Telegram")
             ),
-            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pricing-btn pg"},"PASSER PREMIUM ⚡")
+            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pricing-btn pg"},"✈ DEMANDER L'ACCÈS PREMIUM")
           ),
           React.createElement("div",{className:"pricing-card"},
             React.createElement("div",{className:"pricing-tier"},"FULL ACCESS"),
             React.createElement("div",{className:"pricing-price"},"49,90€"),
             React.createElement("div",{className:"pricing-period"},"/mois"),
             React.createElement("ul",{className:"pricing-feats"},
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Tous les picks (foot + autres sports)"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Alertes live & changements de cotes"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Tous les picks (tous sports)"),
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Alertes cotes & changements live"),
               React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Stats avancées & filtres"),
-              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Accès prioritaire")
+              React.createElement("li",null,React.createElement("span",{className:"ck"},"✓"),"Accès prioritaire & groupe privé")
             ),
-            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pricing-btn po"},"PASSER FULL ACCESS")
+            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"pricing-btn po"},"✈ ACCÉDER AU FULL ACCESS")
           )
         )
       )
@@ -738,44 +746,64 @@ export default function App() {
 
     React.createElement("hr",{className:"divider"}),
 
-    // ── RÉSULTATS ────────────────────────────────────────────
-    React.createElement("section",{className:"results-section",id:"results"},
+    // ── 7. HISTORIQUE FILTRABLE ────────────────────────────
+    React.createElement("section",{className:"results-section",id:"historique"},
       React.createElement("div",{className:"section-wrap"},
-        React.createElement("div",{className:"results-grid"},
-          React.createElement("div",{className:"res-card"},
-            React.createElement("div",{className:"res-ttl"},"NOS RÉSULTATS PARLENT"),
-            React.createElement("div",{className:"res-stats"},
-              React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},wr+"%"),React.createElement("div",{className:"res-lbl"},"Taux de réussite",React.createElement("br",null),total+" paris analysés")),
-              React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},"+"+(gains/10).toFixed(1)+"u"),React.createElement("div",{className:"res-lbl"},"Bénéfice net",React.createElement("br",null),"depuis le début")),
-              React.createElement("div",{className:"res-stat"},React.createElement("div",{className:"res-num"},wins),React.createElement("div",{className:"res-lbl"},"Picks gagnants",React.createElement("br",null),losses+" perdus / "+total))
+        React.createElement("div",{className:"hist-card",style:{maxWidth:"100%"}},
+          React.createElement("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"12px",marginBottom:"20px"}},
+            React.createElement("div",{className:"hist-ttl",style:{margin:0}},"HISTORIQUE DES PICKS · MATCHS OFFICIELS"),
+            React.createElement("div",{className:"hist-filters"},
+              histSports.map(function(sport){
+                return React.createElement("button",{
+                  key:sport,
+                  className:"hist-filter-btn"+(histFilter===sport?" active":""),
+                  onClick:function(){setHistFilter(sport);}
+                },sport);
+              })
             )
           ),
-          React.createElement("div",{className:"hist-card"},
-            React.createElement("div",{className:"hist-ttl"},"HISTORIQUE DES 5 DERNIERS PICKS"),
-            React.createElement("table",{className:"hist-tbl"},
-              React.createElement("tbody",null,
-                recent.map(function(p,i){
-                  var sc=p[5]==="GAGNE"?"g":p[5]==="PERDU"?"l":p[5]==="EN ATTENTE"?"w":"a";
-                  var sl=p[5]==="GAGNE"?"GAGNÉ ↑":p[5]==="PERDU"?"PERDU ↓":p[5]==="EN ATTENTE"?"EN COURS":p[5];
-                  return React.createElement("tr",{key:i},
-                    React.createElement("td",null,p[1]),
-                    React.createElement("td",null,React.createElement("span",{className:"sbadge "+sc},sl)),
-                    React.createElement("td",null,p[3])
-                  );
-                })
-              )
-            ),
-            React.createElement("div",{className:"chart-wrap"},
-              React.createElement("svg",{style:{width:"100%",height:"100%"},viewBox:"0 0 300 60",preserveAspectRatio:"none"},
-                (function(){
-                  var pts=[];var cum=30;
-                  var pl=picks.filter(function(p){return p[5]==="GAGNE"||p[5]==="PERDU";}).slice(-10).reverse();
-                  pl.forEach(function(p,i){if(p[5]==="GAGNE")cum+=8;else cum-=10;pts.push((i*(300/Math.max(pl.length-1,1)))+","+Math.max(4,Math.min(56,60-cum)));});
-                  return React.createElement("polyline",{points:pts.join(" "),fill:"none",stroke:"#4ADE80",strokeWidth:"2",strokeLinejoin:"round"});
-                })()
+          histPicks.length===0
+            ? React.createElement("p",{style:{color:"rgba(255,255,255,0.35)",fontSize:"13px",padding:"16px 0"}},"Aucun pick dans cette catégorie.")
+            : React.createElement("table",{className:"hist-tbl"},
+                React.createElement("thead",null,
+                  React.createElement("tr",null,
+                    React.createElement("th",null,"Date"),
+                    React.createElement("th",null,"Match"),
+                    React.createElement("th",null,"Pronostic"),
+                    React.createElement("th",null,"Cote"),
+                    React.createElement("th",null,"Score"),
+                    React.createElement("th",null,"Résultat"),
+                    React.createElement("th",null,"Statut")
+                  )
+                ),
+                React.createElement("tbody",null,
+                  histPicks.map(function(p,i){
+                    var sc=p[5]==="GAGNE"?"g":p[5]==="PERDU"?"l":p[5]==="EN ATTENTE"?"w":"a";
+                    var sl=p[5]==="GAGNE"?"GAGNÉ ↑":p[5]==="PERDU"?"PERDU ↓":p[5]==="EN ATTENTE"?"EN COURS":p[5];
+                    return React.createElement("tr",{key:i},
+                      React.createElement("td",null,p[0]),
+                      React.createElement("td",{style:{fontWeight:"600"}},p[1]),
+                      React.createElement("td",null,p[2]),
+                      React.createElement("td",null,p[3]),
+                      React.createElement("td",null,p[4]),
+                      React.createElement("td",null,
+                        React.createElement("span",{className:"sbadge "+sc},sl)
+                      ),
+                      React.createElement("td",{style:{fontSize:"12px",color:"rgba(255,255,255,0.4)"}},sportE(p[6]).trim()+" "+p[7].toFixed(1)+"/10")
+                    );
+                  })
+                )
               ),
-              React.createElement("div",{className:"chart-lbl"},"+"+(gains/10).toFixed(1)+"u")
-            )
+          React.createElement("div",{className:"chart-wrap",style:{marginTop:"16px"}},
+            React.createElement("svg",{style:{width:"100%",height:"100%"},viewBox:"0 0 300 60",preserveAspectRatio:"none"},
+              (function(){
+                var pts=[];var cum=30;
+                var pl=picks.filter(function(p){return p[5]==="GAGNE"||p[5]==="PERDU";}).slice(-12).reverse();
+                pl.forEach(function(p,i){if(p[5]==="GAGNE")cum+=8;else cum-=10;pts.push((i*(300/Math.max(pl.length-1,1)))+","+Math.max(4,Math.min(56,60-cum)));});
+                return React.createElement("polyline",{points:pts.join(" "),fill:"none",stroke:"#3DFF8F",strokeWidth:"2",strokeLinejoin:"round"});
+              })()
+            ),
+            React.createElement("div",{className:"chart-lbl"},"+"+(gains/10).toFixed(1)+"u")
           )
         )
       )
@@ -783,7 +811,28 @@ export default function App() {
 
     React.createElement("hr",{className:"divider"}),
 
-    // ── FAQ ──────────────────────────────────────────────────
+    // ── 8. BLOC TELEGRAM CTA ───────────────────────────────
+    React.createElement("section",{className:"tg-cta-section"},
+      React.createElement("div",{className:"section-wrap"},
+        React.createElement("div",{className:"tg-cta-inner"},
+          React.createElement("div",{className:"tg-cta-left"},
+            React.createElement("div",{className:"tg-cta-icon"},"✈"),
+            React.createElement("div",null,
+              React.createElement("h2",{className:"tg-cta-h2"},"Recevez le pick chaque matin sur Telegram"),
+              React.createElement("p",{className:"tg-cta-desc"},"Gratuit, sans inscription préalable. Le pick du jour est publié entre 9h et 11h (Paris) avec l'analyse complète.")
+            )
+          ),
+          React.createElement("div",{className:"tg-cta-btns"},
+            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"tg-cta-btn-main"},"✈ REJOINDRE LE CANAL GRATUIT"),
+            React.createElement("a",{href:TELEGRAM_LINK,target:"_blank",className:"tg-cta-btn-sec"},"Demander l'accès Premium →")
+          )
+        )
+      )
+    ),
+
+    React.createElement("hr",{className:"divider"}),
+
+    // ── 9. FAQ ─────────────────────────────────────────────
     React.createElement("section",{className:"faq-section",id:"faq"},
       React.createElement("div",{className:"section-wrap"},
         React.createElement("h2",{className:"section-title-c"},"QUESTIONS FRÉQUENTES"),
