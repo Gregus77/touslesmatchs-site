@@ -166,7 +166,7 @@ a {
   border-top: 2px solid rgba(140, 255, 26, 0.42);
   border-radius: 50%;
   transform: rotate(-12deg);
-  filter: drop-shadow(0 0 14px rgba(140, 255, 26, 0.35));
+  box-shadow: 0 -8px 22px rgba(140, 255, 26, 0.12);
   opacity: 0.65;
   pointer-events: none;
 }
@@ -174,8 +174,9 @@ a {
 .stadium-light {
   position: absolute;
   border-radius: 999px;
-  filter: blur(20px);
-  opacity: 0.75;
+  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .stadium-light-a {
