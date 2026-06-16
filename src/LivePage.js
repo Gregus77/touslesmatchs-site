@@ -36,7 +36,7 @@ function getFlag(name) {
 
 // ── Agents IA du Conseil ─────────────────────────────────────────────────────
 var AGENTS = [
-  { id:"claude", name:"Claude", color:"#C9A227", bg:"rgba(201,162,39,0.12)", icon:"🧠" },
+  { id:"claude", name:"Claude", color:"#00FF41", bg:"rgba(0,255,65,0.12)", icon:"🧠" },
   { id:"gpt",    name:"GPT-4o", color:"#10a37f", bg:"rgba(16,163,127,0.12)", icon:"🤖" },
   { id:"gemini", name:"Gemini", color:"#4285F4", bg:"rgba(66,133,244,0.12)", icon:"💎" },
   { id:"mistral",name:"Mistral",color:"#FF7000", bg:"rgba(255,112,0,0.12)",  icon:"🌊" },
@@ -218,7 +218,7 @@ function ProbBar({ value, color, height }) {
     style:{ background:"rgba(255,255,255,0.07)", borderRadius:"8px", height: height||"8px", overflow:"hidden" }
   },
     React.createElement("div", {
-      style:{ width: value+"%", height:"100%", background: color||"#C9A227",
+      style:{ width: value+"%", height:"100%", background: color||"#00FF41",
               borderRadius:"8px", transition:"width 1.2s ease" }
     })
   );
@@ -274,12 +274,12 @@ function MatchCard({ match, isPremium, isLocked }) {
     return Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; })[0];
   })();
 
-  var resultColor = { "Domicile":"#C9A227", "Nul":"#888", "Extérieur":"#60A5FA" };
+  var resultColor = { "Domicile":"#00FF41", "Nul":"#888", "Extérieur":"#60A5FA" };
 
   return React.createElement("div", {
     style:{
       background: isLocked ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)",
-      border: isLocked ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(201,162,39,0.15)",
+      border: isLocked ? "1px solid rgba(255,255,255,0.05)" : "1px solid rgba(0,255,65,0.15)",
       borderRadius:"16px", marginBottom:"12px", overflow:"hidden",
       filter: isLocked ? "blur(2px)" : "none",
       pointerEvents: isLocked ? "none" : "auto",
@@ -332,18 +332,18 @@ function MatchCard({ match, isPremium, isLocked }) {
 
       // Conseil agrégé
       React.createElement("div", {
-        style:{ marginTop:"14px", background:"rgba(201,162,39,0.08)", border:"1px solid rgba(201,162,39,0.2)",
+        style:{ marginTop:"14px", background:"rgba(0,255,65,0.08)", border:"1px solid rgba(0,255,65,0.2)",
                 borderRadius:"10px", padding:"10px 14px", display:"flex", alignItems:"center", justifyContent:"space-between" }
       },
         React.createElement("div", { style:{ display:"flex", alignItems:"center", gap:"8px" } },
           React.createElement("span", { style:{ fontSize:"14px" } }, "🧠"),
           React.createElement("div", null,
-            React.createElement("div", { style:{ fontSize:"10px", color:"#C9A227", fontWeight:"700", letterSpacing:"1px" } }, "CONSEIL DES IA"),
+            React.createElement("div", { style:{ fontSize:"10px", color:"#00FF41", fontWeight:"700", letterSpacing:"1px" } }, "CONSEIL DES IA"),
             React.createElement("div", { style:{ fontSize:"13px", fontWeight:"700", color:"#F5F0E8" } }, p.conseil)
           )
         ),
         React.createElement("div", { style:{ textAlign:"right" } },
-          React.createElement("div", { style:{ fontSize:"20px", fontWeight:"900", color:"#C9A227", fontFamily:"monospace" } }, p.confidence+"%"),
+          React.createElement("div", { style:{ fontSize:"20px", fontWeight:"900", color:"#00FF41", fontFamily:"monospace" } }, p.confidence+"%"),
           React.createElement("div", { style:{ fontSize:"10px", color:"#888" } }, "Confiance")
         )
       ),
@@ -353,7 +353,7 @@ function MatchCard({ match, isPremium, isLocked }) {
         [
           { label:"BTTS", val:p.btts, color:"#22C55E" },
           { label:"Over 2.5", val:p.over25, color:"#60A5FA" },
-          { label:"Domicile", val:p.home_win, color:"#C9A227" },
+          { label:"Domicile", val:p.home_win, color:"#00FF41" },
         ].map(function(s) {
           return React.createElement("div", { key:s.label, style:{ background:"rgba(0,0,0,0.3)", borderRadius:"8px", padding:"8px 10px" } },
             React.createElement("div", { style:{ fontSize:"10px", color:"#666", marginBottom:"4px" } }, s.label),
@@ -374,14 +374,14 @@ function MatchCard({ match, isPremium, isLocked }) {
       style:{ borderTop:"1px solid rgba(255,255,255,0.06)", padding:"16px 18px",
               background:"rgba(0,0,0,0.25)" }
     },
-      React.createElement("div", { style:{ fontSize:"11px", letterSpacing:"3px", color:"#C9A227", fontWeight:"700", marginBottom:"14px" } },
+      React.createElement("div", { style:{ fontSize:"11px", letterSpacing:"3px", color:"#00FF41", fontWeight:"700", marginBottom:"14px" } },
         "🤖 VOTE INDIVIDUEL DU CONSEIL"
       ),
 
       // Consensus visuel
       React.createElement("div", { style:{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"8px", marginBottom:"16px" } },
         [
-          { label: match.home, key:"home_win", color:"#C9A227" },
+          { label: match.home, key:"home_win", color:"#00FF41" },
           { label:"Nul",      key:"draw",     color:"#888" },
           { label: match.away, key:"away_win", color:"#60A5FA" },
         ].map(function(r) {
@@ -453,7 +453,7 @@ export default function LivePage({ isPremium }) {
   var liveCount     = matches.filter(function(m){ return m.status === "LIVE"; }).length;
   var upcomingCount = matches.filter(function(m){ return m.status === "UPCOMING"; }).length;
 
-  return React.createElement("div", { style:{ minHeight:"100vh", background:"#080706", color:"#F5F0E8",
+  return React.createElement("div", { style:{ minHeight:"100vh", background:"#050505", color:"#F5F0E8",
     fontFamily:"'Jost',sans-serif", padding:"0 0 60px" } },
 
     // ── Styles animation ──
@@ -464,7 +464,7 @@ export default function LivePage({ isPremium }) {
 
     // ── Hero Live ──
     React.createElement("div", { style:{
-      background:"linear-gradient(135deg,rgba(201,162,39,0.08) 0%,rgba(0,0,0,0) 60%)",
+      background:"linear-gradient(135deg,rgba(0,255,65,0.08) 0%,rgba(0,0,0,0) 60%)",
       borderBottom:"1px solid rgba(255,255,255,0.06)", padding:"32px 24px 24px"
     }},
       React.createElement("div", { style:{ maxWidth:"760px", margin:"0 auto" } },
@@ -476,7 +476,7 @@ export default function LivePage({ isPremium }) {
         ),
         React.createElement("h1", { style:{ fontFamily:"'Bodoni Moda',serif", fontSize:"clamp(26px,5vw,40px)", fontWeight:"700",
           margin:"0 0 8px", color:"#F5F0E8" } },
-          "Analyse Live par le ", React.createElement("em", { style:{ color:"#C9A227" } }, "Conseil des IA")
+          "Analyse Live par le ", React.createElement("em", { style:{ color:"#00FF41" } }, "Conseil des IA")
         ),
         React.createElement("p", { style:{ color:"#6b6356", fontSize:"14px", marginBottom:"20px" } },
           isPremium
@@ -519,8 +519,8 @@ export default function LivePage({ isPremium }) {
             style:{
               flex:1, padding:"10px", borderRadius:"7px", border:"none", cursor:"pointer",
               fontFamily:"'Jost',sans-serif", fontSize:"13px", fontWeight:"600",
-              background: filter===f.key ? "rgba(201,162,39,0.15)" : "transparent",
-              color: filter===f.key ? "#C9A227" : "#666",
+              background: filter===f.key ? "rgba(0,255,65,0.15)" : "transparent",
+              color: filter===f.key ? "#00FF41" : "#666",
               transition:"all 0.2s"
             }
           }, f.label);
@@ -542,19 +542,19 @@ export default function LivePage({ isPremium }) {
               backdropFilter:"blur(6px)", background:"rgba(8,7,6,0.5)", display:"flex",
               alignItems:"center", justifyContent:"center", flexDirection:"column", gap:"8px" } },
               React.createElement("span", { style:{ fontSize:"20px" } }, "🔒"),
-              React.createElement("span", { style:{ fontSize:"12px", color:"#C9A227", fontWeight:"700" } }, "PREMIUM")
+              React.createElement("span", { style:{ fontSize:"12px", color:"#00FF41", fontWeight:"700" } }, "PREMIUM")
             )
           );
         }),
 
         // Upsell card
         React.createElement("div", { style:{
-          background:"linear-gradient(135deg,rgba(201,162,39,0.1),rgba(201,162,39,0.04))",
-          border:"1px solid rgba(201,162,39,0.3)", borderRadius:"16px", padding:"28px 24px",
+          background:"linear-gradient(135deg,rgba(0,255,65,0.1),rgba(0,255,65,0.04))",
+          border:"1px solid rgba(0,255,65,0.3)", borderRadius:"16px", padding:"28px 24px",
           textAlign:"center", marginTop:"16px"
         }},
           React.createElement("div", { style:{ fontSize:"28px", marginBottom:"12px" } }, "🤖"),
-          React.createElement("h3", { style:{ fontFamily:"'Bodoni Moda',serif", fontSize:"22px", color:"#C9A227",
+          React.createElement("h3", { style:{ fontFamily:"'Bodoni Moda',serif", fontSize:"22px", color:"#00FF41",
             fontWeight:"700", marginBottom:"8px" } }, locked.length+" matchs supplémentaires"),
           React.createElement("p", { style:{ color:"#888", fontSize:"14px", lineHeight:"1.7", marginBottom:"20px" } },
             "Débloquez les "+locked.length+" matchs restants analysés par vos 5 agents IA.",
@@ -569,7 +569,7 @@ export default function LivePage({ isPremium }) {
               "✓ Alertes Telegram en temps réel",
             ].map(function(f,i) {
               return React.createElement("div", { key:i,
-                style:{ fontSize:"12px", color:"#C9A227", background:"rgba(201,162,39,0.06)",
+                style:{ fontSize:"12px", color:"#00FF41", background:"rgba(0,255,65,0.06)",
                         borderRadius:"8px", padding:"8px 10px", textAlign:"left" }
               }, f);
             })
@@ -577,8 +577,8 @@ export default function LivePage({ isPremium }) {
           React.createElement("a", {
             href:"https://t.me/touslesmatchs_bot",
             target:"_blank",
-            style:{ display:"block", padding:"16px", background:"linear-gradient(135deg,#C9A227,#E8C14A)",
-              borderRadius:"12px", color:"#080706", fontWeight:"800", fontSize:"15px",
+            style:{ display:"block", padding:"16px", background:"linear-gradient(135deg,#00FF41,#E8C14A)",
+              borderRadius:"12px", color:"#050505", fontWeight:"800", fontSize:"15px",
               textDecoration:"none", letterSpacing:"0.05em" }
           }, "🚀 Passer Premium — 4,90€/mois")
         )
