@@ -184,8 +184,8 @@ export default function App() {
   var isPremium     = pickThreshold >= 8;
   var isStandard7   = pickThreshold === 7;
   var pickBadge     = isPremium ? t("pick_premium") : t("pick_standard");
-  var pickBadgeColor = isPremium ? "#d4af37" : "#f59e0b";
-  var pickBorderColor = isPremium ? "rgba(212,175,55,0.35)" : "rgba(245,158,11,0.5)";
+  var pickBadgeColor = isPremium ? "#00FF41" : "#f59e0b";
+  var pickBorderColor = isPremium ? "rgba(0,255,65,0.35)" : "rgba(245,158,11,0.5)";
 
   var filtered = filter === "ALL" ? picks : picks.filter(function(p){
     return p[5]==="NOPICK" || p[5]==="EN COURS" || p[5]==="EN ATTENTE" || p[6]===filter;
@@ -197,8 +197,8 @@ export default function App() {
     React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}}, t("risques_financiers"))
   );
 
-  var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(212,175,55,0.1)",padding:"28px 30px 90px",textAlign:"center"}},
-    React.createElement("div", {style:{fontSize:"12px",fontWeight:"bold",color:"#d4af37",letterSpacing:"3px",marginBottom:"14px"}}, t("touslesmatchs_com")),
+  var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(0,255,65,0.1)",padding:"28px 30px 90px",textAlign:"center"}},
+    React.createElement("div", {style:{fontSize:"12px",fontWeight:"bold",color:"#00FF41",letterSpacing:"3px",marginBottom:"14px"}}, t("touslesmatchs_com")),
     React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"20px",flexWrap:"wrap",marginBottom:"12px"}},
       React.createElement("button", {onClick:function(){setPage("cgu");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, t("cgu")),
       React.createElement("button", {onClick:function(){setPage("mentions");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, t("mentions_legales")),
@@ -209,9 +209,9 @@ export default function App() {
     React.createElement("div", {style:{fontSize:"10px",color:"#2a2a2a"}}, t("footer_droits"))
   );
 
-  var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"8px",maxWidth:"100%",overflowX:"hidden"}},
+  var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(0,255,65,0.2)",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"8px",maxWidth:"100%",overflowX:"hidden"}},
     React.createElement("div", {style:{cursor:"pointer"},onClick:function(){setPage("home");}},
-      React.createElement("div", {style:{fontSize:"16px",fontWeight:"700",color:"#d4af37",letterSpacing:"0.12em",fontFamily:"'Bodoni Moda',serif",textTransform:"uppercase"}}, "TousLesMatchs"),
+      React.createElement("div", {style:{fontSize:"16px",fontWeight:"700",color:"#00FF41",letterSpacing:"0.12em",fontFamily:"'Bodoni Moda',serif",textTransform:"uppercase"}}, "TousLesMatchs"),
       React.createElement("div", {style:{fontSize:"8px",color:"#4a4438",letterSpacing:"0.22em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}, t("analyse_sous_menu"))
     ),
     React.createElement("nav", {className:"main-nav",style:{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap",flex:1,justifyContent:"flex-end"}},
@@ -221,11 +221,11 @@ export default function App() {
         var isAnalyse = p==="analyse";
         var isCalc    = p==="calculateur";
         var isSpecial = isLive || isAnalyse || isCalc;
-        var activeColor = isLive ? "#EF4444" : "#d4af37";
-        var borderActive = isLive ? "#EF4444" : (isAnalyse||isCalc ? "rgba(201,162,39,0.3)" : "rgba(255,255,255,0.1)");
-        var colorInactive = isSpecial ? (isLive ? "#EF4444" : "#C9A227") : "#666";
+        var activeColor = isLive ? "#EF4444" : "#00FF41";
+        var borderActive = isLive ? "#EF4444" : (isAnalyse||isCalc ? "rgba(0,255,65,0.3)" : "rgba(255,255,255,0.1)");
+        var colorInactive = isSpecial ? (isLive ? "#EF4444" : "#00FF41") : "#666";
         return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{
-          background: page===p ? (isLive?"rgba(239,68,68,0.15)":"rgba(212,175,55,0.15)") : "transparent",
+          background: page===p ? (isLive?"rgba(239,68,68,0.15)":"rgba(0,255,65,0.15)") : "transparent",
           border:"1px solid "+(page===p ? activeColor : borderActive),
           color: page===p ? activeColor : colorInactive,
           padding:"6px 14px", borderRadius:"4px", cursor:"pointer", fontSize:"12px",
@@ -236,11 +236,11 @@ export default function App() {
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
       React.createElement("div",{className:"lang-flags",style:{display:"flex",gap:"4px",marginLeft:"4px",alignItems:"center"}},
-        React.createElement("button",{title:"Français",onClick:function(){changeLang("fr");},style:{background:lang==="fr"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="fr"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇫🇷"),
-        React.createElement("button",{title:"English",onClick:function(){changeLang("en");},style:{background:lang==="en"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="en"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇬🇧"),
-        React.createElement("button",{title:"Español",onClick:function(){changeLang("es");},style:{background:lang==="es"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="es"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇪🇸"),
-        React.createElement("button",{title:"Italiano",onClick:function(){changeLang("it");},style:{background:lang==="it"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="it"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇮🇹"),
-        React.createElement("button",{title:"Русский",onClick:function(){changeLang("ru");},style:{background:lang==="ru"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="ru"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇷🇺")
+        React.createElement("button",{title:"Français",onClick:function(){changeLang("fr");},style:{background:lang==="fr"?"rgba(0,255,65,0.15)":"transparent",border:"1px solid "+(lang==="fr"?"#00FF41":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇫🇷"),
+        React.createElement("button",{title:"English",onClick:function(){changeLang("en");},style:{background:lang==="en"?"rgba(0,255,65,0.15)":"transparent",border:"1px solid "+(lang==="en"?"#00FF41":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇬🇧"),
+        React.createElement("button",{title:"Español",onClick:function(){changeLang("es");},style:{background:lang==="es"?"rgba(0,255,65,0.15)":"transparent",border:"1px solid "+(lang==="es"?"#00FF41":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇪🇸"),
+        React.createElement("button",{title:"Italiano",onClick:function(){changeLang("it");},style:{background:lang==="it"?"rgba(0,255,65,0.15)":"transparent",border:"1px solid "+(lang==="it"?"#00FF41":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇮🇹"),
+        React.createElement("button",{title:"Русский",onClick:function(){changeLang("ru");},style:{background:lang==="ru"?"rgba(0,255,65,0.15)":"transparent",border:"1px solid "+(lang==="ru"?"#00FF41":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇷🇺")
       )
     )
   );
@@ -259,13 +259,13 @@ export default function App() {
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
       header,
       React.createElement("div", {style:{maxWidth:"900px",margin:"0 auto",padding:"40px 30px"}},
-        React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, t("preuves_title")),
+        React.createElement("h2", {style:{color:"#00FF41",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, t("preuves_title")),
         React.createElement("p", {style:{color:"#555",fontSize:"13px",marginBottom:"30px"}}, t("preuves_desc")),
         React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:"16px"}},
           preuves.map(function(p,i){
-            return React.createElement("div", {key:i, style:{background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"10px",overflow:"hidden"}},
+            return React.createElement("div", {key:i, style:{background:"rgba(0,255,65,0.04)",border:"1px solid rgba(0,255,65,0.15)",borderRadius:"10px",overflow:"hidden"}},
               React.createElement("img", {src:p.img,alt:p.match,loading:"lazy",onError:function(e){e.target.style.display="none";e.target.nextSibling.style.display="flex";},style:{width:"100%",height:"320px",objectFit:"contain",background:"rgba(0,0,0,0.4)",display:"block"}}),
-              React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(212,175,55,0.03)",display:"none",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
+              React.createElement("div", {style:{width:"100%",height:"320px",background:"rgba(0,255,65,0.03)",display:"none",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:"8px"}},
                 React.createElement("div", {style:{color:"#444",fontSize:"11px",letterSpacing:"2px"}}, t("capture_a_venir"))
               ),
               React.createElement("div", {style:{padding:"16px"}},
@@ -275,7 +275,7 @@ export default function App() {
                 React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"6px",background:"rgba(34,180,60,0.08)",border:"1px solid rgba(34,180,60,0.22)",borderRadius:"5px",padding:"5px 9px"}},
                   React.createElement("span", {style:{color:"#22cc44",fontSize:"11px",fontWeight:"bold"}}, "✅ Validé par le Concile"),
                   React.createElement("div", {style:{display:"flex",gap:"3px",marginLeft:"auto"}},
-                    ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444","#d4af37"].map(function(c,j){
+                    ["#22c55e","#3b82f6","#f59e0b","#a855f7","#ef4444","#00FF41"].map(function(c,j){
                       return React.createElement("span", {key:j, title:["Groq","Gemini","DeepSeek","Mistral","Qwen","Claude"][j], style:{width:"7px",height:"7px",borderRadius:"50%",background:c,display:"inline-block"}});
                     })
                   )
@@ -284,9 +284,9 @@ export default function App() {
             );
           })
         ),
-        React.createElement("div", {style:{marginTop:"40px",padding:"24px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"10px",textAlign:"center"}},
+        React.createElement("div", {style:{marginTop:"40px",padding:"24px",background:"rgba(0,255,65,0.04)",border:"1px solid rgba(0,255,65,0.15)",borderRadius:"10px",textAlign:"center"}},
           React.createElement("p", {style:{color:"#555",fontSize:"13px",margin:"0 0 16px"}}, t("pariez_avec_nous")),
-          React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"12px 30px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, t("ouvrir_compte"))
+          React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#00FF41,#f5d76e)",borderRadius:"6px",padding:"12px 30px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, t("ouvrir_compte"))
         )
       ),
       footer,
@@ -298,7 +298,7 @@ export default function App() {
     return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
       header,
       React.createElement("div", {style:{maxWidth:"860px",margin:"0 auto",padding:"40px 30px"}},
-        React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, t("bookmakers_title")),
+        React.createElement("h2", {style:{color:"#00FF41",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, t("bookmakers_title")),
         React.createElement("p", {style:{color:"#555",fontSize:"13px",marginBottom:"6px"}}, t("bookmakers_desc")),
         React.createElement("p", {style:{color:"#444",fontSize:"11px",marginBottom:"30px"}}, t("bookmakers_note")),
         React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"12px"}},
@@ -307,14 +307,14 @@ export default function App() {
               React.createElement("div", {style:{flex:1,minWidth:"200px"}},
                 React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"6px",flexWrap:"wrap"}},
                   React.createElement("span", {style:{fontSize:"18px",fontWeight:"bold",color:"#fff"}}, b.nom),
-                  React.createElement("span", {style:{background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:"3px",padding:"2px 7px",color:"#d4af37",fontSize:"9px",letterSpacing:"1px"}}, b.badge),
+                  React.createElement("span", {style:{background:"rgba(0,255,65,0.12)",border:"1px solid rgba(0,255,65,0.25)",borderRadius:"3px",padding:"2px 7px",color:"#00FF41",fontSize:"9px",letterSpacing:"1px"}}, b.badge),
                   React.createElement("span", {style:{background:"rgba(34,180,60,0.1)",border:"1px solid rgba(34,180,60,0.2)",borderRadius:"3px",padding:"2px 7px",color:"#22cc44",fontSize:"9px"}}, b.bonus)
                 ),
                 React.createElement("p", {style:{color:"#555",fontSize:"12px",margin:"0 0 4px",maxWidth:"420px"}}, b.desc),
-                React.createElement("span", {style:{color:"#d4af37",fontSize:"12px",fontWeight:"bold"}}, "Notre note: "+b.note)
+                React.createElement("span", {style:{color:"#00FF41",fontSize:"12px",fontWeight:"bold"}}, "Notre note: "+b.note)
               ),
               React.createElement("div", {style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"6px",flexShrink:0}},
-                React.createElement("a", {href:b.link,target:"_blank",style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"11px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"12px",whiteSpace:"nowrap"}}, t("sinscrire")),
+                React.createElement("a", {href:b.link,target:"_blank",style:{background:"linear-gradient(135deg,#00FF41,#f5d76e)",borderRadius:"6px",padding:"11px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"12px",whiteSpace:"nowrap"}}, t("sinscrire")),
                 React.createElement("span", {style:{color:"#333",fontSize:"9px",letterSpacing:"1px"}}, t("lien_affilie"))
               )
             );
@@ -326,7 +326,7 @@ export default function App() {
     );
   }
 
-  return React.createElement("div", {style:{background:"linear-gradient(180deg,#0a0906 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0",overflowX:"hidden",width:"100%"}},
+  return React.createElement("div", {style:{background:"linear-gradient(180deg,#050505 0%,#0b0d12 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#e8e0d0",overflowX:"hidden",width:"100%"}},
     header,
     React.createElement("section", {className:"hero-section",style:{padding:"60px 20px 30px",textAlign:"center"}},
       /* Badges 6 IAs */
@@ -337,7 +337,7 @@ export default function App() {
           {nom:"DeepSeek",dot:"#f97316"},
           {nom:"Mistral", dot:"#a855f7"},
           {nom:"Qwen",    dot:"#ef4444"},
-          {nom:"Claude",  dot:"#d4af37"},
+          {nom:"Claude",  dot:"#00FF41"},
         ].map(function(ia,i){
           return React.createElement("div",{key:i,style:{display:"inline-flex",alignItems:"center",gap:"5px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"4px 12px"}},
             React.createElement("div",{style:{width:"6px",height:"6px",borderRadius:"50%",background:ia.dot,flexShrink:0}}),
@@ -346,26 +346,26 @@ export default function App() {
         })
       ),
       React.createElement("div", {style:{display:"flex",alignItems:"center",justifyContent:"center",gap:"10px",marginBottom:"16px"}},
-        React.createElement("span", {style:{fontSize:"13px",letterSpacing:"4px",color:"#d4af37",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
+        React.createElement("span", {style:{fontSize:"13px",letterSpacing:"4px",color:"#00FF41",fontFamily:"'Jost',sans-serif",fontWeight:"600",textTransform:"uppercase"}}, t("section_5ia")),
         React.createElement("span", {style:{fontSize:"11px",color:"#555",letterSpacing:"1px"}}, "·"),
         React.createElement("span", {style:{fontSize:"13px",letterSpacing:"3px",color:"#b89a2a",fontFamily:"'Bodoni Moda',serif",fontStyle:"italic"}}, "Hermès Chief")
       ),
       React.createElement("h1", {style:{fontSize:"clamp(36px,5.5vw,64px)",fontWeight:"700",color:"#fff",margin:"0 0 16px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.08",letterSpacing:"-0.02em"}},
         lang==="fr" ? "Le meilleur " : lang==="en" ? "The best " : lang==="es" ? "La mejor " : lang==="it" ? "La migliore " : "Лучший ",
-        React.createElement("em", {style:{color:"#d4af37",fontStyle:"italic"}}, lang==="fr" ? "pick" : lang==="en" ? "pick" : lang==="es" ? "selección" : lang==="it" ? "scelta" : "прогноз"),
+        React.createElement("em", {style:{color:"#00FF41",fontStyle:"italic"}}, lang==="fr" ? "pick" : lang==="en" ? "pick" : lang==="es" ? "selección" : lang==="it" ? "scelta" : "прогноз"),
         lang==="fr" ? " chaque jour." : lang==="en" ? " every day." : lang==="es" ? " cada día." : lang==="it" ? " ogni giorno." : " каждый день."
       ),
       React.createElement("p", {style:{color:"#6b6356",fontSize:"17px",maxWidth:"540px",margin:"0 auto 12px",lineHeight:"1.8",fontWeight:"300"}},
         t("hero_subtitle")
       ),
       React.createElement("p", {style:{color:"#4a4438",fontSize:"14px",maxWidth:"480px",margin:"0 auto 36px",lineHeight:"1.7",fontWeight:"400"}},
-        t("seuil_minimum"), React.createElement("strong",{style:{color:"#d4af37"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
+        t("seuil_minimum"), React.createElement("strong",{style:{color:"#00FF41"}},"8/10"), ". ", t("fallback"), React.createElement("strong",{style:{color:"#f59e0b"}},"7/10"), t("pour_garantir")
       ),
-      React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(212,175,55,0.2)",borderRadius:"8px",overflow:"hidden"}},
+      React.createElement("div", {className:"stats-grid",style:{display:"grid",gridTemplateColumns:"1fr 1fr",maxWidth:"700px",width:"100%",margin:"0 auto",border:"1px solid rgba(0,255,65,0.2)",borderRadius:"8px",overflow:"hidden"}},
         [{label:t("taux_reussite"),value:winrate+"%",sub:total+" paris analysés"},{label:t("bankroll"),value:(roiPct>=0?"+":"")+roiPct+"%",sub:"depuis le début"},{label:t("resultats"),value:wins+" "+t("gagne"),sub:losses+" "+t("perdu")+" sur "+total},{label:t("serie"),value:serieEnCours+" "+t("victoires"),sub:"consécutives 🔥"}].map(function(s,i){
-          return React.createElement("div", {key:i, style:{padding:"18px 8px",borderRight:(i%2===0)?"1px solid rgba(212,175,55,0.15)":"none",borderBottom:i<2?"1px solid rgba(212,175,55,0.15)":"none",textAlign:"center"}},
+          return React.createElement("div", {key:i, style:{padding:"18px 8px",borderRight:(i%2===0)?"1px solid rgba(0,255,65,0.15)":"none",borderBottom:i<2?"1px solid rgba(0,255,65,0.15)":"none",textAlign:"center"}},
             React.createElement("div", {style:{fontSize:"10px",color:"#555",letterSpacing:"2px",marginBottom:"4px"}}, s.label),
-            React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#d4af37"}}, s.value),
+            React.createElement("div", {style:{fontSize:"22px",fontWeight:"bold",color:"#00FF41"}}, s.value),
             React.createElement("div", {style:{fontSize:"10px",color:"#444",marginTop:"3px"}}, s.sub)
           );
         })
@@ -374,7 +374,7 @@ export default function App() {
     // ════ PICK DU JOUR — au-dessus de la ligne de flottaison ════
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 20px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("div", {style:{
-        background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(212,175,55,0.06)",
+        background: isNoPick ? "rgba(100,100,100,0.06)" : isStandard7 ? "rgba(245,158,11,0.05)" : "rgba(0,255,65,0.06)",
         border: "1px solid " + (isNoPick ? "rgba(100,100,100,0.25)" : pickBorderColor),
         borderRadius:"12px", padding:"24px", position:"relative", overflow:"hidden"
       }},
@@ -382,15 +382,15 @@ export default function App() {
         !isNoPick && React.createElement("div", {style:{
           position:"absolute", top:0, left:0, right:0, height:"3px",
           background: isPremium
-            ? "linear-gradient(90deg,transparent,#d4af37,transparent)"
+            ? "linear-gradient(90deg,transparent,#00FF41,transparent)"
             : "linear-gradient(90deg,transparent,#f59e0b,transparent)"
         }}),
 
         /* Badge PREMIUM / STANDARD */
         !isNoPick && React.createElement("div", {style:{
           display:"inline-flex", alignItems:"center", gap:"6px",
-          background: isPremium ? "rgba(212,175,55,0.12)" : "rgba(245,158,11,0.15)",
-          border: "1px solid " + (isPremium ? "rgba(212,175,55,0.4)" : "rgba(245,158,11,0.5)"),
+          background: isPremium ? "rgba(0,255,65,0.12)" : "rgba(245,158,11,0.15)",
+          border: "1px solid " + (isPremium ? "rgba(0,255,65,0.4)" : "rgba(245,158,11,0.5)"),
           borderRadius:"4px", padding:"3px 10px",
           fontSize:"10px", fontWeight:"bold", letterSpacing:"2px",
           color: pickBadgeColor, marginBottom:"12px"
@@ -408,7 +408,7 @@ export default function App() {
 
         /* Marché + Cote */
         isNoPick ? null : React.createElement("div", {style:{display:"flex",gap:"10px",alignItems:"center",flexWrap:"wrap",marginBottom:"16px"}},
-          React.createElement("span", {style:{background:"rgba(212,175,55,0.1)",border:"1px solid rgba(212,175,55,0.3)",borderRadius:"4px",padding:"5px 14px",color:"#d4af37",fontSize:"12px",fontWeight:"600",letterSpacing:"0.04em"}}, pickDuJour[2]),
+          React.createElement("span", {style:{background:"rgba(0,255,65,0.1)",border:"1px solid rgba(0,255,65,0.3)",borderRadius:"4px",padding:"5px 14px",color:"#00FF41",fontSize:"12px",fontWeight:"600",letterSpacing:"0.04em"}}, pickDuJour[2]),
           React.createElement("span", {style:{color:"#fff",fontWeight:"700",fontSize:"18px",fontFamily:"'Bodoni Moda',serif"}}, "Cote: "+pickDuJour[3])
         ),
 
@@ -426,7 +426,7 @@ export default function App() {
               {nom:"DeepSeek",color:"#f97316",role:"Forme"},
               {nom:"Mistral",color:"#a855f7", role:"Contexte"},
               {nom:"Qwen",   color:"#ef4444", role:"Value"},
-              {nom:"Claude", color:"#d4af37", role:"Chef ★"},
+              {nom:"Claude", color:"#00FF41", role:"Chef ★"},
             ].map(function(ia, i){
               return React.createElement("div", {key:i, style:{
                 display:"flex", alignItems:"center", gap:"5px",
@@ -449,11 +449,11 @@ export default function App() {
                 height:"100%", borderRadius:"2px",
                 width: (pickAiScore / 10 * 100)+"%",
                 background: isPremium
-                  ? "linear-gradient(90deg,#9b7a10,#d4af37)"
+                  ? "linear-gradient(90deg,#9b7a10,#00FF41)"
                   : "linear-gradient(90deg,#92400e,#f59e0b)"
               }})
             ),
-            React.createElement("span", {style:{fontSize:"12px",fontWeight:"700",color:isPremium?"#d4af37":"#f59e0b"}}, pickAiScore+"/10")
+            React.createElement("span", {style:{fontSize:"12px",fontWeight:"700",color:isPremium?"#00FF41":"#f59e0b"}}, pickAiScore+"/10")
           )
         ),
 
@@ -480,15 +480,15 @@ export default function App() {
         ),
 
         /* CTA */
-        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:isPremium?"linear-gradient(135deg,#d4af37,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, t("parier_winamax"))
+        isNoPick ? null : React.createElement("a", {href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:isPremium?"linear-gradient(135deg,#00FF41,#f5d76e)":"linear-gradient(135deg,#f59e0b,#fbbf24)",borderRadius:"6px",padding:"10px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px"}}, t("parier_winamax"))
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
+      React.createElement("h2", {style:{color:"#00FF41",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"24px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, t("comment_marche")),
       React.createElement("div", {style:{display:"flex",gap:"14px",flexWrap:"wrap"}},
         [{num:t("section_01"),title:t("section_01_title"),desc:t("section_01_desc")},{num:t("section_02"),title:t("section_02_title"),desc:t("section_02_desc")},{num:t("section_03"),title:t("section_03_title"),desc:t("section_03_desc")}].map(function(s,i){
-          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(212,175,55,0.04)",border:"1px solid rgba(212,175,55,0.12)",borderRadius:"12px",padding:"22px 20px"}},
-            React.createElement("div",{style:{fontSize:"28px",fontWeight:"bold",color:"rgba(212,175,55,0.25)",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.num),
+          return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(0,255,65,0.04)",border:"1px solid rgba(0,255,65,0.12)",borderRadius:"12px",padding:"22px 20px"}},
+            React.createElement("div",{style:{fontSize:"28px",fontWeight:"bold",color:"rgba(0,255,65,0.25)",marginBottom:"10px",fontFamily:"'Bodoni Moda',serif"}},s.num),
             React.createElement("div",{style:{fontSize:"16px",fontWeight:"600",color:"#fff",marginBottom:"8px",fontFamily:"'Bodoni Moda',serif"}},s.title),
             React.createElement("div",{style:{fontSize:"14px",color:"#6b6356",lineHeight:"1.75"}},s.desc)
           );
@@ -497,7 +497,7 @@ export default function App() {
     ),
     // ════ TARIFS — 3 niveaux ════
     React.createElement("section", {className:"home-section",style:{padding:"30px 20px",maxWidth:"860px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"8px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
+      React.createElement("h2", {style:{color:"#00FF41",fontSize:"13px",letterSpacing:"4px",textAlign:"center",marginBottom:"8px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}}, "NOS FORMULES"),
       React.createElement("p", {style:{color:"#555",fontSize:"13px",textAlign:"center",marginBottom:"24px"}}, "Commencez gratuitement — passez Premium quand vous êtes prêt."),
       React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:"14px"}},
         [
@@ -518,20 +518,20 @@ export default function App() {
           }
         ].map(function(plan,i){
           return React.createElement("div", {key:i, style:{
-            background: plan.highlight ? "linear-gradient(135deg,rgba(212,175,55,0.12),rgba(212,175,55,0.04))" : "rgba(255,255,255,0.02)",
-            border: "1px solid " + (plan.highlight ? "#d4af37" : "rgba(255,255,255,0.08)"),
+            background: plan.highlight ? "linear-gradient(135deg,rgba(0,255,65,0.12),rgba(0,255,65,0.04))" : "rgba(255,255,255,0.02)",
+            border: "1px solid " + (plan.highlight ? "#00FF41" : "rgba(255,255,255,0.08)"),
             borderRadius:"14px", padding:"24px 20px", position:"relative",
-            boxShadow: plan.highlight ? "0 0 24px rgba(212,175,55,0.1)" : "none"
+            boxShadow: plan.highlight ? "0 0 24px rgba(0,255,65,0.1)" : "none"
           }},
             plan.badge && React.createElement("div", {style:{
               position:"absolute", top:"-10px", left:"50%", transform:"translateX(-50%)",
-              background: plan.highlight ? "#d4af37" : "rgba(255,255,255,0.12)",
+              background: plan.highlight ? "#00FF41" : "rgba(255,255,255,0.12)",
               color: plan.highlight ? "#000" : "#aaa",
               padding:"3px 12px", borderRadius:"20px", fontSize:"9px", fontWeight:"bold", letterSpacing:"1px", whiteSpace:"nowrap"
             }}, plan.badge),
-            React.createElement("div", {style:{fontSize:"10px",color:plan.highlight?"#d4af37":"#666",letterSpacing:"3px",marginBottom:"8px",fontWeight:"600"}}, plan.label),
+            React.createElement("div", {style:{fontSize:"10px",color:plan.highlight?"#00FF41":"#666",letterSpacing:"3px",marginBottom:"8px",fontWeight:"600"}}, plan.label),
             React.createElement("div", {style:{display:"flex",alignItems:"baseline",gap:"4px",marginBottom:"4px"}},
-              React.createElement("span", {style:{fontSize:"32px",fontWeight:"700",color:plan.highlight?"#d4af37":"#fff",fontFamily:"'Bodoni Moda',serif"}}, plan.price),
+              React.createElement("span", {style:{fontSize:"32px",fontWeight:"700",color:plan.highlight?"#00FF41":"#fff",fontFamily:"'Bodoni Moda',serif"}}, plan.price),
               React.createElement("span", {style:{fontSize:"12px",color:"#555"}}, plan.sub)
             ),
             React.createElement("div", {style:{borderTop:"1px solid rgba(255,255,255,0.06)",margin:"16px 0"}}),
@@ -554,7 +554,7 @@ export default function App() {
               },
               style:{
                 width:"100%", padding:"12px", borderRadius:"8px", border:"none", cursor: plan.ctaAction?"pointer":"default",
-                background: plan.highlight ? "linear-gradient(135deg,#d4af37,#f5d76e)" : plan.ctaAction ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
+                background: plan.highlight ? "linear-gradient(135deg,#00FF41,#f5d76e)" : plan.ctaAction ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)",
                 color: plan.highlight ? "#000" : "#aaa",
                 fontWeight:"bold", fontSize:"13px", letterSpacing:"0.5px"
               }
@@ -598,10 +598,10 @@ export default function App() {
     ),
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"980px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px",flexWrap:"wrap",gap:"8px"}},
-        React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, t("historique_picks")),
+        React.createElement("h2", {style:{color:"#00FF41",fontSize:"12px",letterSpacing:"3px",margin:0}}, t("historique_picks")),
         React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap"}},
           [{key:"ALL",label:t("tous")},{key:"Foot",label:t("foot")},{key:"Hockey",label:t("hockey")},{key:"Basketball",label:t("basket")}].map(function(f){
-            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#d4af37":"rgba(255,255,255,0.1)"),color:filter===f.key?"#d4af37":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
+            return React.createElement("button", {key:f.key,onClick:function(){setFilter(f.key);},style:{background:filter===f.key?"rgba(0,255,65,0.15)":"transparent",border:"1px solid "+(filter===f.key?"#00FF41":"rgba(255,255,255,0.1)"),color:filter===f.key?"#00FF41":"#555",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"12px"}}, f.label);
           })
         )
       ),
@@ -616,7 +616,7 @@ export default function App() {
           return React.createElement("div", {key:i,style:{display:"flex",alignItems:"center",padding:"11px 14px",background:bg,border:"1px solid "+bd,borderRadius:"6px",gap:"10px",flexWrap:"wrap"}},
             React.createElement("span", {style:{color:"#555",fontSize:"11px",minWidth:"40px",flexShrink:0}}, p[0]),
             React.createElement("span", {style:{color:np?"#444":"#ddd",fontSize:"13px",flex:"1",minWidth:"140px",fontStyle:np?"italic":"normal"}}, matchDisplay),
-            React.createElement("span", {style:{background:"rgba(212,175,55,0.07)",border:"1px solid rgba(212,175,55,0.15)",borderRadius:"3px",padding:"2px 7px",color:np?"#333":"#d4af37",fontSize:"10px",minWidth:"75px",textAlign:"center",flexShrink:0}}, p[2]),
+            React.createElement("span", {style:{background:"rgba(0,255,65,0.07)",border:"1px solid rgba(0,255,65,0.15)",borderRadius:"3px",padding:"2px 7px",color:np?"#333":"#00FF41",fontSize:"10px",minWidth:"75px",textAlign:"center",flexShrink:0}}, p[2]),
             React.createElement("span", {style:{color:np?"#222":"#fff",fontWeight:"bold",minWidth:"32px",fontSize:"13px",flexShrink:0}}, p[3]),
             React.createElement("span", {style:{color:"#555",fontSize:"12px",minWidth:"32px",flexShrink:0}}, p[4]),
             React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"5px",minWidth:"80px",flexShrink:0}},
@@ -628,7 +628,7 @@ export default function App() {
       )
     ),
     React.createElement("section", {style:{padding:"20px 30px 30px",maxWidth:"780px",margin:"0 auto"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, t("ils_gagnent")),
+      React.createElement("h2", {style:{color:"#00FF41",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, t("ils_gagnent")),
       React.createElement("div", {style:{display:"flex",gap:"12px",flexWrap:"wrap"}},
         temoignages.map(function(t,i){
           return React.createElement("div",{key:i,style:{flex:1,minWidth:"200px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"10px",padding:"18px 16px"}},
@@ -645,14 +645,14 @@ export default function App() {
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, t("questions_frequentes")),
+      React.createElement("h2", {style:{color:"#00FF41",fontSize:"12px",letterSpacing:"3px",marginBottom:"16px"}}, t("questions_frequentes")),
       React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"6px"}},
         faqs.map(function(f,i){
           var open=faqOpen===i;
           return React.createElement("div",{key:i,style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"8px",overflow:"hidden"}},
             React.createElement("button",{onClick:function(){setFaqOpen(open?null:i);},style:{width:"100%",background:"transparent",border:"none",padding:"14px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",textAlign:"left",fontFamily:"Georgia,serif"}},
               React.createElement("span",{style:{color:"#ddd",fontSize:"13px"}},f.q),
-              React.createElement("span",{style:{color:"#d4af37",fontSize:"18px",fontWeight:"bold",marginLeft:"12px",flexShrink:0}},open?"-":"+")
+              React.createElement("span",{style:{color:"#00FF41",fontSize:"18px",fontWeight:"bold",marginLeft:"12px",flexShrink:0}},open?"-":"+")
             ),
             open ? React.createElement("div",{style:{padding:"0 16px 16px",color:"#666",fontSize:"12px",lineHeight:"1.7"}},f.a) : null
           );
@@ -660,24 +660,24 @@ export default function App() {
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"10px 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("div", {style:{background:"rgba(212,175,55,0.06)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:"12px",padding:"28px",textAlign:"center"}},
-        React.createElement("div",{style:{fontSize:"12px",letterSpacing:"4px",color:"#d4af37",marginBottom:"12px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}},t("pret_gagner")),
+      React.createElement("div", {style:{background:"rgba(0,255,65,0.06)",border:"1px solid rgba(0,255,65,0.25)",borderRadius:"12px",padding:"28px",textAlign:"center"}},
+        React.createElement("div",{style:{fontSize:"12px",letterSpacing:"4px",color:"#00FF41",marginBottom:"12px",fontFamily:"'Jost',sans-serif",fontWeight:"600"}},t("pret_gagner")),
         React.createElement("div",{style:{fontSize:"28px",fontWeight:"700",color:"#fff",marginBottom:"14px",fontFamily:"'Bodoni Moda',serif",lineHeight:"1.2"}},t("rejoignez")),
         React.createElement("p",{style:{color:"#555",fontSize:"12px",marginBottom:"20px",maxWidth:"400px",marginLeft:"auto",marginRight:"auto"}},t("bonus_winamax")),
-        React.createElement("a",{href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"8px",padding:"13px 32px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px",letterSpacing:"1px"}},t("ouvrir_compte_winamax"))
+        React.createElement("a",{href:WINAMAX_LINK,target:"_blank",style:{display:"inline-block",background:"linear-gradient(135deg,#00FF41,#f5d76e)",borderRadius:"8px",padding:"13px 32px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"13px",letterSpacing:"1px"}},t("ouvrir_compte_winamax"))
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"0 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
       React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
-        React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, t("nos_partenaires")),
-        React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:"#d4af37",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"11px"}}, t("voir_tous"))
+        React.createElement("h2", {style:{color:"#00FF41",fontSize:"12px",letterSpacing:"3px",margin:0}}, t("nos_partenaires")),
+        React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"transparent",border:"1px solid rgba(0,255,65,0.3)",color:"#00FF41",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"11px"}}, t("voir_tous"))
       ),
       React.createElement("div", {style:{display:"flex",gap:"10px",flexWrap:"wrap"}},
         bookmakers.slice(0,3).map(function(b,i){
           return React.createElement("a", {key:i,href:b.link,target:"_blank",style:{flex:"1",minWidth:"180px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"8px",padding:"14px 16px",textDecoration:"none",display:"block",textAlign:"center"}},
             React.createElement("div", {style:{fontSize:"15px",fontWeight:"bold",color:"#fff",marginBottom:"4px"}}, b.nom),
-            React.createElement("div", {style:{fontSize:"10px",color:"#d4af37",marginBottom:"8px"}}, b.bonus),
-            React.createElement("div", {style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"4px",padding:"7px",color:"#080c14",fontWeight:"bold",fontSize:"11px"}}, "S inscrire")
+            React.createElement("div", {style:{fontSize:"10px",color:"#00FF41",marginBottom:"8px"}}, b.bonus),
+            React.createElement("div", {style:{background:"linear-gradient(135deg,#00FF41,#f5d76e)",borderRadius:"4px",padding:"7px",color:"#080c14",fontWeight:"bold",fontSize:"11px"}}, "S inscrire")
           );
         })
       )
