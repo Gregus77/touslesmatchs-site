@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <defs>
+    <radialGradient id="g" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#26384a"/>
+      <stop offset="55%" stop-color="#111b27"/>
+      <stop offset="100%" stop-color="#050910"/>
+    </radialGradient>
+  </defs>
+  <circle cx="120" cy="120" r="108" fill="url(#g)" stroke="#8cff1a" stroke-width="8"/>
+  <circle cx="120" cy="120" r="88" fill="none" stroke="#d7b45a" stroke-width="3" opacity=".9"/>
+  <text x="120" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="34" font-weight="900" fill="#ffffff">3W</text>
+  <text x="120" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="900" fill="#8cff1a">HERMES</text>
+  <text x="120" y="152" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="900" fill="#d7b45a">NO PICK</text>
+  <text x="120" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="700" fill="#a9b7c7">VALEUR NON VALIDEE</text>
+</svg>

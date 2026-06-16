@@ -1,0 +1,44 @@
+{
+  "name": "touslesmatchscd",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^13.5.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "react-scripts": "5.0.1",
+    "web-vitals": "^2.1.4"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "hermes:sync": "python3 scripts/sync_pick_to_site.py && node scripts/sync_history_to_app.js && npm run build && docker compose up -d --build site",
+    "hermes:publish": "node scripts/publish_current_pick.js",
+    "hermes:all": "npm run hermes:sync && npm run hermes:publish",
+    "hermes:run": "set -a && . ./.env && set +a && node scripts/multi_agent.js && node scripts/publish_free_nopick.js && node scripts/publish_free_premium_reminder.js && npm run hermes:sync",
+    "email:sequence": "set -a && . ./.env && set +a && node scripts/send_sequence_email.js"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "currentPick": {
+    "date": "2026-06-16",
+    "sport": "",
+    "league": "",
+    "time": "",
+    "home": "Analyse en cours",
+    "away": "",
+    "homeLogo": "",
+    "awayLogo": "",
+    "prono": "Analyse IA en cours",
+    "bet": "EN ATTENTE",
+    "cote": "",
+    "confidence": 0,
+    "confidenceTg": "",
+    "status": "EN ATTENTE",
+    "score": "",
+    "riskLevel": "",
+    "stakeAdvice": "",
+    "publicLabel": "",
+    "publicWarning": ""
+  },
+  "history": [
+    [
+      "2026-06-13",
+      "Real Monarchs vs Portland Timbers II",
+      "Real Monarchs ou nul",
+      "",
+      "4-1",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-06-13",
+      "Atlanta United II vs Chattanooga",
+      "Atlanta United II ou nul",
+      "",
+      "4-4",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-06-14",
+      "Carolina Core vs Crown Legacy",
+      "Carolina Core ou nul",
+      "",
+      "2-0",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-06-14",
+      "Minnesota United II vs Austin II",
+      "Minnesota United II ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-14",
+      "Philadelphia Union II vs New York City II",
+      "Philadelphia Union II ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-14",
+      "Toronto II vs Connecticut FC",
+      "Toronto II ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-15",
+      "Sacachispas vs Argentino Rosario",
+      "Sacachispas ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-15",
+      "Sportivo Barracas vs General Lamadrid",
+      "Sportivo Barracas ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-15",
+      "Fénix vs Leones de Rosario",
+      "Fénix ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-15",
+      "Hartford Athletic W vs New England Mutiny W",
+      "Hartford Athletic W ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-15",
+      "Ferroviária vs Barra",
+      "Ferroviária ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ],
+    [
+      "2026-06-15",
+      "Ypiranga-RS vs Botafogo PB",
+      "Ypiranga-RS ou nul",
+      "",
+      "",
+      "EN ATTENTE",
+      "Football"
+    ]
+  ],
+  "stats": {
+    "gagnes": 3,
+    "perdus": 0,
+    "en_attente": 9,
+    "taux": 100
+  }
+}

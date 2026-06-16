@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <!-- Page d'accueil — pick du jour -->
+  <url>
+    <loc>https://touslesmatchs.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+    <lastmod>2026-06-08</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://touslesmatchs.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://touslesmatchs.com/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://touslesmatchs.com/?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://touslesmatchs.com/?lang=pt"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://touslesmatchs.com/?lang=ru"/>
+  </url>
+
+  <!-- Calculateur de projection -->
+  <url>
+    <loc>https://touslesmatchs.com/#calculateur</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-06-08</lastmod>
+  </url>
+
+  <!-- Analyse Live -->
+  <url>
+    <loc>https://touslesmatchs.com/#analyse</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.7</priority>
+    <lastmod>2026-06-08</lastmod>
+  </url>
+
+  <!-- Historique des picks -->
+  <url>
+    <loc>https://touslesmatchs.com/#historique</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <lastmod>2026-06-08</lastmod>
+  </url>
+
+  <!-- Bookmakers partenaires -->
+  <url>
+    <loc>https://touslesmatchs.com/#bookmakers</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+    <lastmod>2026-06-08</lastmod>
+  </url>
+
+</urlset>
