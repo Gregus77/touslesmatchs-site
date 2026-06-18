@@ -1,10 +1,10 @@
 {
-  "winRate": 86,
-  "won": 18,
-  "lost": 3,
-  "played": 21,
-  "units": "+7.8u",
-  "label": "Taux de réussite (21 picks joués)",
-  "verified": "18V / 3D",
-  "updatedAt": "2026-06-11"
+  "winRate": 100,
+  "won": 3,
+  "lost": 0,
+  "played": 3,
+  "units": "+2.2u",
+  "label": "Taux de réussite (3 picks joués)",
+  "verified": "3V / 0D",
+  "updatedAt": "2026-06-18"
 }

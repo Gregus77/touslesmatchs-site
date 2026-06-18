@@ -9,13 +9,19 @@ import json
 import asyncio
 import logging
 from datetime import datetime
+from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 
-load_dotenv("/app/.env")
+# Détection automatique des chemins (Docker ou local)
+_COUNCIL_DIR = Path(__file__).resolve().parent
+_APP_ROOT = Path("/app") if Path("/app/council").exists() else _COUNCIL_DIR.parent
+
+load_dotenv(str(_APP_ROOT / ".env"))
 
 # Add council dir to path
-sys.path.insert(0, "/app/council")
+if str(_COUNCIL_DIR) not in sys.path:
+    sys.path.insert(0, str(_COUNCIL_DIR))
 
 from tools.history_db import (
     init_db, save_pick, save_premium_pick, mark_premium_sent,
@@ -30,17 +36,19 @@ from tools.telegram_bot import (
 )
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
 
+_log_dir = _APP_ROOT / "data"
+_log_dir.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("/app/data/hermes.log"),
+        logging.FileHandler(str(_log_dir / "hermes.log")),
     ]
 )
 log = logging.getLogger("hermes")
 
-IMPROVEMENT_NOTES_PATH = "/app/data/improvement_notes.txt"
+IMPROVEMENT_NOTES_PATH = str(_APP_ROOT / "data" / "improvement_notes.txt")
 
 
 def load_improvement_notes():
