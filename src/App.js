@@ -7,6 +7,7 @@ import AnalyseLive from "./AnalyseLive";
 import Calculateur from "./Calculateur";
 import Login from "./Login";
 import Subscription from "./Subscription";
+import LiveIA from "./LiveIA";
 import translations from "./translations";
 
 var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
@@ -214,11 +215,12 @@ export default function App() {
       React.createElement("div", {style:{fontSize:"8px",color:"#4a4438",letterSpacing:"0.22em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}, t("analyse_sous_menu"))
     ),
     React.createElement("nav", {className:"main-nav",style:{display:"flex",gap:"6px",alignItems:"center",flexWrap:"wrap",flex:1,justifyContent:"flex-end"}},
-      ["home","preuves","bookmakers","calculateur","analyse"].map(function(p){
-        var labels = {home:t("nav_choix"), preuves:t("nav_preuves"), bookmakers:t("nav_bookmakers"), calculateur:"💰 Calculateur", analyse:t("nav_analyse")};
+      ["home","preuves","bookmakers","calculateur","analyse","live-ia"].map(function(p){
+        var labels = {home:t("nav_choix"), preuves:t("nav_preuves"), bookmakers:t("nav_bookmakers"), calculateur:"💰 Calculateur", analyse:t("nav_analyse"), "live-ia":"🔮 Live IA"};
         var isAnalyse = p==="analyse";
         var isCalc = p==="calculateur";
-        return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?(isAnalyse?"rgba(201,162,39,0.2)":"rgba(212,175,55,0.15)"):"transparent",border:"1px solid "+(page===p?"#d4af37":(isAnalyse||isCalc?"rgba(201,162,39,0.3)":"rgba(255,255,255,0.1)")),color:page===p?"#d4af37":(isAnalyse||isCalc?"#C9A227":"#666"),padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px",fontWeight:(isAnalyse||isCalc)?"600":"400"}}, labels[p]);
+        var isLiveIA = p==="live-ia";
+        return React.createElement("button", {key:p, onClick:function(){setPage(p);}, style:{background:page===p?(isLiveIA?"rgba(201,162,39,0.25)":(isAnalyse?"rgba(201,162,39,0.2)":"rgba(212,175,55,0.15)")):"transparent",border:"1px solid "+(page===p?"#d4af37":(isLiveIA?"rgba(201,162,39,0.5)":(isAnalyse||isCalc?"rgba(201,162,39,0.3)":"rgba(255,255,255,0.1)"))),color:page===p?"#d4af37":(isLiveIA?"#C9A227":(isAnalyse||isCalc?"#C9A227":"#666")),padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"12px",fontWeight:(isLiveIA||isAnalyse||isCalc)?"600":"400"}}, labels[p]);
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
@@ -239,6 +241,7 @@ export default function App() {
   if(page==="mentions") return React.createElement(React.Fragment, null, React.createElement(MentionsLegales, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="confidentialite") return React.createElement(React.Fragment, null, React.createElement(Confidentialite, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal}));
   if(page==="analyse") return React.createElement(React.Fragment, null, header, React.createElement(AnalyseLive, null), footer, bandeauLegal);
+  if(page==="live-ia") return React.createElement(React.Fragment, null, header, React.createElement(LiveIA, null), footer, bandeauLegal);
   if(page==="calculateur") return React.createElement(Calculateur, {setPage:setPage, footer:footer, bandeauLegal:bandeauLegal, header:header, picks:picks});
 
   if(page==="preuves"){

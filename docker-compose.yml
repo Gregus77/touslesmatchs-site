@@ -29,6 +29,11 @@ services:
       - STRIPE_PRICE_ID_PREMIUM=${STRIPE_PRICE_ID_PREMIUM}
       - STRIPE_PRICE_ID_VIP=${STRIPE_PRICE_ID_VIP}
       - STRIPE_PRICE_ID_ELITE=${STRIPE_PRICE_ID_ELITE}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - DB_PATH=/data/tlm.db
+    volumes:
+      - api_data:/data
     networks:
       - web
     expose:
@@ -70,6 +75,7 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  api_data:
 
 networks:
   web:

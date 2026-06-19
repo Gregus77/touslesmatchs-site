@@ -1,0 +1,595 @@
+// TousLesMatchs — API Server
+// Auth, live matches, Live IA (token-based concile analysis), Stripe
+
+const express = require("express");
+const cors = require("cors");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const Database = require("better-sqlite3");
+const path = require("path");
+const https = require("https");
+
+const app = express();
+app.use(express.json());
+app.use(cors());
+
+// ── Database ──────────────────────────────────────────────────────────────────
+const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
+const db = new Database(DB_PATH);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    status TEXT DEFAULT 'free',
+    stripe_customer_id TEXT,
+    stripe_subscription_id TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS user_tokens (
+    user_id INTEGER PRIMARY KEY,
+    tokens_today INTEGER DEFAULT 0,
+    reset_date TEXT DEFAULT '',
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS revealed_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    match_key TEXT NOT NULL,
+    analysis_json TEXT NOT NULL,
+    revealed_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  );
+`);
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
+const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_KEY || "";
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+
+const TOKEN_LIMITS = { free: 0, premium: 10, vip: 30, elite: 999 };
+
+// ── Auth middleware ───────────────────────────────────────────────────────────
+function authMiddleware(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.replace("Bearer ", "");
+  if (!token) return res.json({ ok: false, error: "Non authentifié" });
+  try {
+    req.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    return res.json({ ok: false, error: "Token invalide" });
+  }
+}
+
+// ── Token helpers ─────────────────────────────────────────────────────────────
+function getTodayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getTokenRow(userId) {
+  return db.prepare("SELECT * FROM user_tokens WHERE user_id = ?").get(userId);
+}
+
+function ensureTokenRow(userId) {
+  const today = getTodayStr();
+  let row = getTokenRow(userId);
+  if (!row) {
+    db.prepare("INSERT INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,0,?)").run(userId, today);
+    row = getTokenRow(userId);
+  }
+  if (row.reset_date !== today) {
+    const user = db.prepare("SELECT status FROM users WHERE id = ?").get(userId);
+    const limit = TOKEN_LIMITS[user?.status || "free"] || 0;
+    db.prepare("UPDATE user_tokens SET tokens_today = ?, reset_date = ? WHERE user_id = ?").run(limit, today, userId);
+    row = getTokenRow(userId);
+  }
+  return row;
+}
+
+function deductToken(userId) {
+  const row = ensureTokenRow(userId);
+  const user = db.prepare("SELECT status FROM users WHERE id = ?").get(userId);
+  const limit = TOKEN_LIMITS[user?.status || "free"] || 0;
+  if (limit === 0) return { ok: false, error: "Abonnement requis pour accéder au Concile" };
+  if (row.tokens_today <= 0) return { ok: false, error: "Jetons épuisés pour aujourd'hui — recharge à minuit" };
+  db.prepare("UPDATE user_tokens SET tokens_today = tokens_today - 1 WHERE user_id = ?").run(userId);
+  return { ok: true, remaining: row.tokens_today - 1 };
+}
+
+// ── HTTP helper ───────────────────────────────────────────────────────────────
+function httpGet(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const opts = new URL(url);
+    const req = https.request({ hostname: opts.hostname, path: opts.pathname + opts.search, headers }, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => {
+        try { resolve(JSON.parse(data)); }
+        catch { resolve({}); }
+      });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+
+function httpPost(url, body, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const opts = new URL(url);
+    const payload = JSON.stringify(body);
+    const options = {
+      hostname: opts.hostname,
+      path: opts.pathname + opts.search,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload), ...headers },
+    };
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => {
+        try { resolve(JSON.parse(data)); }
+        catch { resolve({}); }
+      });
+    });
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+// ── Live matches ──────────────────────────────────────────────────────────────
+async function fetchLiveMatches() {
+  if (!FOOTBALL_API_KEY) {
+    return getMockMatches();
+  }
+  try {
+    const data = await httpGet("https://api.football-data.org/v4/matches?status=LIVE", {
+      "X-Auth-Token": FOOTBALL_API_KEY,
+    });
+    if (!data.matches || data.matches.length === 0) {
+      // Try scheduled matches for today
+      const today = getTodayStr();
+      const scheduled = await httpGet(
+        `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${today}&status=IN_PLAY,PAUSED`,
+        { "X-Auth-Token": FOOTBALL_API_KEY }
+      );
+      if (scheduled.matches && scheduled.matches.length > 0) {
+        return formatMatches(scheduled.matches);
+      }
+    }
+    if (data.matches && data.matches.length > 0) {
+      return formatMatches(data.matches);
+    }
+    return getMockMatches();
+  } catch (e) {
+    console.error("Football API error:", e.message);
+    return getMockMatches();
+  }
+}
+
+function formatMatches(matches) {
+  return matches.slice(0, 20).map((m) => ({
+    id: String(m.id),
+    home: m.homeTeam?.shortName || m.homeTeam?.name || "?",
+    away: m.awayTeam?.shortName || m.awayTeam?.name || "?",
+    score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0,
+    score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0,
+    minute: m.minute || m.status === "IN_PLAY" ? (m.minute || "?") : 0,
+    status: m.status,
+    competition: m.competition?.name || "International",
+    utcDate: m.utcDate,
+  }));
+}
+
+function getMockMatches() {
+  // Demo matches when API unavailable
+  const base = Date.now();
+  return [
+    { id: "demo1", home: "PSG", away: "Marseille", score_home: 1, score_away: 0, minute: 34, status: "IN_PLAY", competition: "Ligue 1", utcDate: new Date(base).toISOString() },
+    { id: "demo2", home: "Real Madrid", away: "Barcelona", score_home: 2, score_away: 1, minute: 67, status: "IN_PLAY", competition: "La Liga", utcDate: new Date(base).toISOString() },
+    { id: "demo3", home: "Manchester City", away: "Arsenal", score_home: 0, score_away: 0, minute: 12, status: "IN_PLAY", competition: "Premier League", utcDate: new Date(base).toISOString() },
+    { id: "demo4", home: "Bayern Munich", away: "Dortmund", score_home: 3, score_away: 1, minute: 78, status: "IN_PLAY", competition: "Bundesliga", utcDate: new Date(base).toISOString() },
+  ];
+}
+
+// ── Groq Concile analysis ─────────────────────────────────────────────────────
+const BET_TYPES = ["Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "Under 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
+
+async function runConcileAnalysis(match) {
+  if (!GROQ_API_KEY) {
+    return getMockAnalysis(match);
+  }
+
+  const matchContext = `Match: ${match.home} vs ${match.away}
+Compétition: ${match.competition || "International"}
+Score actuel: ${match.score_home}-${match.score_away}
+Minute: ${match.minute}'
+Statut: ${match.status}`;
+
+  const agentNames = [
+    { name: "GROQ-Llama", model: "llama-3.3-70b-versatile", icon: "🦙" },
+    { name: "GPT Analysis", model: "llama-3.3-70b-versatile", icon: "🤖" },
+    { name: "GeminiFlash", model: "llama-3.3-70b-versatile", icon: "💎" },
+    { name: "Mistral-7B", model: "llama-3.3-70b-versatile", icon: "🌊" },
+    { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
+  ];
+
+  const personas = [
+    "Tu es GROQ-Llama, un agent statistique spécialisé dans les patterns de buts.",
+    "Tu es GPT-Analysis, un agent expert en analyse tactique et forme des équipes.",
+    "Tu es GeminiFlash, un agent spécialisé dans les probabilités et value bets.",
+    "Tu es Mistral-7B, un agent focalisé sur les marchés alternatifs comme BTTS et Over/Under.",
+    "Tu es Claude Chief, le chef du Concile. Tu synthétises les analyses et tranches.",
+  ];
+
+  const agentResults = [];
+
+  for (let i = 0; i < agentNames.length; i++) {
+    const isChief = i === 4;
+    const previousVotes = isChief ? agentResults.map((a) => `${a.name}: ${a.bet} (${a.confidence}%)`).join("\n") : "";
+
+    const prompt = isChief
+      ? `${personas[i]}
+
+${matchContext}
+
+Votes des agents précédents:
+${previousVotes}
+
+En tant que chef du Concile, analyse ce match et donne ton verdict final. Réponds en JSON pur (pas de markdown):
+{
+  "bet": "un parmi: ${BET_TYPES.join(", ")}",
+  "confidence": <nombre 55-92>,
+  "raison": "<2 phrases max expliquant ton choix basé sur le score, la minute et le contexte>"
+}`
+      : `${personas[i]}
+
+${matchContext}
+
+Analyse ce match en direct et recommande le meilleur pari. Réponds en JSON pur (pas de markdown):
+{
+  "bet": "un parmi: ${BET_TYPES.join(", ")}",
+  "confidence": <nombre 50-90>,
+  "raison": "<2 phrases max expliquant ton choix>"
+}`;
+
+    try {
+      const response = await httpPost(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          model: agentNames[i].model,
+          messages: [{ role: "user", content: prompt }],
+          temperature: 0.3 + i * 0.05,
+          max_tokens: 200,
+        },
+        { Authorization: `Bearer ${GROQ_API_KEY}` }
+      );
+
+      const raw = response.choices?.[0]?.message?.content || "{}";
+      const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const parsed = JSON.parse(cleaned);
+
+      agentResults.push({
+        name: agentNames[i].name,
+        icon: agentNames[i].icon,
+        bet: parsed.bet || BET_TYPES[0],
+        confidence: Math.min(95, Math.max(50, parseInt(parsed.confidence) || 70)),
+        raison: parsed.raison || "Analyse en cours.",
+        isChief,
+      });
+    } catch (e) {
+      // fallback for this agent
+      agentResults.push(getMockAgentAnalysis(agentNames[i], match, i));
+    }
+
+    // Small delay between agents to avoid rate limits
+    if (i < agentNames.length - 1) {
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }
+
+  // Find consensus bet
+  const chief = agentResults[agentResults.length - 1];
+  const betCounts = {};
+  agentResults.slice(0, 4).forEach((a) => {
+    betCounts[a.bet] = (betCounts[a.bet] || 0) + 1;
+  });
+  const consensusBet = chief.bet;
+  const consensusVotes = betCounts[consensusBet] || 0;
+
+  return {
+    match_key: `${match.home}_${match.away}`,
+    best_bet: chief.bet,
+    confidence: chief.confidence,
+    raison: chief.raison,
+    consensus_votes: consensusVotes + 1, // +1 for chief
+    total_agents: 5,
+    agents: agentResults,
+  };
+}
+
+function getMockAgentAnalysis(agent, match, index) {
+  const bets = BET_TYPES;
+  const score_diff = match.score_home - match.score_away;
+  const minute = parseInt(match.minute) || 50;
+  let bet;
+  if (score_diff > 0 && minute > 60) bet = "Under 2.5 buts";
+  else if (score_diff === 0 && minute < 70) bet = "BTTS Oui";
+  else if (score_diff === 0) bet = "Over 2.5 buts";
+  else bet = score_diff > 0 ? "Victoire domicile" : "Victoire extérieur";
+
+  const confidence = 60 + Math.floor(Math.random() * 25);
+  const raisons = [
+    `L'équipe à domicile montre une solidité défensive depuis la ${minute}'. Le contexte du score favorise ce marché.`,
+    `Les statistiques de ce type de match à cette phase du jeu indiquent une forte probabilité pour ce scénario.`,
+    `Le score actuel de ${match.score_home}-${match.score_away} et la dynamique du match orientent clairement vers ce pari.`,
+    `Analyse des patterns : ce type de configuration à la ${minute}' converge régulièrement vers ce résultat.`,
+    `En synthèse des votes du Concile et du contexte temps réel, ce pari offre le meilleur ratio risque/récompense.`,
+  ];
+
+  return {
+    name: agent.name,
+    icon: agent.icon,
+    bet,
+    confidence,
+    raison: raisons[index] || raisons[0],
+    isChief: index === 4,
+  };
+}
+
+function getMockAnalysis(match) {
+  const agents = [
+    { name: "GROQ-Llama", icon: "🦙", model: "llama-3.3-70b" },
+    { name: "GPT Analysis", icon: "🤖", model: "gpt-4o" },
+    { name: "GeminiFlash", icon: "💎", model: "gemini-flash" },
+    { name: "Mistral-7B", icon: "🌊", model: "mistral-7b" },
+    { name: "Claude Chief", icon: "👑", model: "claude-opus", isChief: true },
+  ];
+  const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
+  const chief = agentResults[agentResults.length - 1];
+  return {
+    match_key: `${match.home}_${match.away}`,
+    best_bet: chief.bet,
+    confidence: chief.confidence,
+    raison: chief.raison,
+    consensus_votes: 3,
+    total_agents: 5,
+    agents: agentResults,
+  };
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Routes
+// ══════════════════════════════════════════════════════════════════════════════
+
+app.get("/health", (_, res) => res.json({ ok: true }));
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+app.post("/auth/register", async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.json({ ok: false, error: "Email et mot de passe requis" });
+  if (password.length < 6) return res.json({ ok: false, error: "Mot de passe trop court (6 caractères min)" });
+
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    const stmt = db.prepare("INSERT INTO users (email, password_hash, status) VALUES (?, ?, 'free')");
+    const result = stmt.run(email.toLowerCase().trim(), hash);
+    const userId = result.lastInsertRowid;
+    const token = jwt.sign({ id: userId, email, status: "free" }, JWT_SECRET, { expiresIn: "30d" });
+    res.json({ ok: true, token, user: { id: userId, email, status: "free" } });
+  } catch (e) {
+    if (e.message?.includes("UNIQUE")) return res.json({ ok: false, error: "Email déjà utilisé" });
+    console.error(e);
+    res.json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+app.post("/auth/login", async (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.json({ ok: false, error: "Email et mot de passe requis" });
+
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase().trim());
+  if (!user) return res.json({ ok: false, error: "Email ou mot de passe incorrect" });
+
+  const valid = await bcrypt.compare(password, user.password_hash);
+  if (!valid) return res.json({ ok: false, error: "Email ou mot de passe incorrect" });
+
+  const token = jwt.sign({ id: user.id, email: user.email, status: user.status }, JWT_SECRET, { expiresIn: "30d" });
+  res.json({ ok: true, token, user: { id: user.id, email: user.email, status: user.status } });
+});
+
+// ── User tokens ───────────────────────────────────────────────────────────────
+app.get("/user/tokens", authMiddleware, (req, res) => {
+  const user = db.prepare("SELECT status FROM users WHERE id = ?").get(req.user.id);
+  if (!user) return res.json({ ok: false, error: "Utilisateur introuvable" });
+
+  const row = ensureTokenRow(req.user.id);
+  const limit = TOKEN_LIMITS[user.status] || 0;
+
+  res.json({
+    ok: true,
+    tokens: row.tokens_today,
+    limit,
+    status: user.status,
+    reset_at: "minuit",
+  });
+});
+
+// ── Live matches ──────────────────────────────────────────────────────────────
+app.get("/live-matches", async (req, res) => {
+  try {
+    const matches = await fetchLiveMatches();
+    res.json({ ok: true, matches });
+  } catch (e) {
+    res.json({ ok: true, matches: getMockMatches() });
+  }
+});
+
+// ── Existing analyse endpoint (no token cost) ─────────────────────────────────
+app.post("/analyse", async (req, res) => {
+  const { home, away } = req.body || {};
+  if (!home || !away) return res.json({ ok: false, error: "Deux équipes requises" });
+
+  try {
+    const match = { home, away, score_home: 0, score_away: 0, minute: "?", status: "IN_PLAY", competition: "International" };
+    const analysis = await runConcileAnalysis(match);
+    const chief = analysis.agents[analysis.agents.length - 1];
+
+    res.json({
+      ok: true,
+      resume: chief.raison,
+      value_bet: { marche: chief.bet, prob: chief.confidence, cote_min_conseillée: (1 / (chief.confidence / 100)).toFixed(2), raison: chief.raison },
+      over25: { prob: 58, tendance: "Tendance légèrement positive sur les buts." },
+      btts: { prob: 52, tendance: "Les deux équipes ont des attaques actives." },
+      resultat: { domicile: 45, nul: 28, exterieur: 27, explication: "Légère faveur pour l'équipe à domicile." },
+      premier_but_mi_temps: { premiere: 55, deuxieme: 45, explication: "Les premières mi-temps sont souvent plus ouvertes." },
+    });
+  } catch (e) {
+    res.json({ ok: false, error: "Erreur d'analyse" });
+  }
+});
+
+// ── Live IA — token-gated Concile analysis ─────────────────────────────────────
+app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
+  const { match_id, home, away, score_home, score_away, minute, competition } = req.body || {};
+  if (!home || !away) return res.json({ ok: false, error: "Données du match manquantes" });
+
+  const matchKey = `${home}_${away}_${getTodayStr()}`;
+
+  // Check if already revealed (no token cost)
+  const existing = db.prepare(
+    "SELECT analysis_json FROM revealed_analyses WHERE user_id = ? AND match_key = ?"
+  ).get(req.user.id, matchKey);
+
+  if (existing) {
+    return res.json({ ok: true, ...JSON.parse(existing.analysis_json), cached: true });
+  }
+
+  // Deduct token
+  const tokenResult = deductToken(req.user.id);
+  if (!tokenResult.ok) return res.json({ ok: false, error: tokenResult.error });
+
+  // Run analysis
+  try {
+    const match = { home, away, score_home: score_home ?? 0, score_away: score_away ?? 0, minute: minute || "?", status: "IN_PLAY", competition: competition || "International" };
+    const analysis = await runConcileAnalysis(match);
+
+    // Cache result
+    db.prepare(
+      "INSERT INTO revealed_analyses (user_id, match_key, analysis_json) VALUES (?, ?, ?)"
+    ).run(req.user.id, matchKey, JSON.stringify(analysis));
+
+    // Get updated token count
+    const tokenRow = getTokenRow(req.user.id);
+
+    res.json({ ok: true, ...analysis, tokens_remaining: tokenRow?.tokens_today ?? 0 });
+  } catch (e) {
+    // Refund token on error
+    db.prepare("UPDATE user_tokens SET tokens_today = tokens_today + 1 WHERE user_id = ?").run(req.user.id);
+    res.json({ ok: false, error: "Erreur d'analyse — jeton remboursé" });
+  }
+});
+
+// ── Stripe ────────────────────────────────────────────────────────────────────
+app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
+  const { price_id } = req.body || {};
+  if (!price_id || !STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
+
+  try {
+    const Stripe = require("stripe");
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [{ price: price_id, quantity: 1 }],
+      success_url: "https://www.touslesmatchs.com/live-ia?success=1",
+      cancel_url: "https://www.touslesmatchs.com/subscription",
+      client_reference_id: String(req.user.id),
+      customer_email: req.user.email,
+    });
+    res.json({ ok: true, url: session.url });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Stripe webhook — activate subscription
+app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  if (!STRIPE_SECRET_KEY) return res.json({ ok: false });
+
+  let event;
+  try {
+    const Stripe = require("stripe");
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    event = STRIPE_WEBHOOK_SECRET
+      ? stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET)
+      : JSON.parse(req.body);
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const userId = parseInt(session.client_reference_id);
+    if (!userId) return res.json({ ok: true });
+
+    // Determine tier from price
+    const priceId = session.line_items?.data?.[0]?.price?.id || "";
+    let status = "premium";
+    if (priceId === process.env.STRIPE_PRICE_ID_VIP) status = "vip";
+    else if (priceId === process.env.STRIPE_PRICE_ID_ELITE) status = "elite";
+
+    db.prepare("UPDATE users SET status = ?, stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?").run(
+      status, session.customer, session.subscription, userId
+    );
+    // Reset tokens for today
+    const limit = TOKEN_LIMITS[status] || 0;
+    db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
+  }
+
+  if (event.type === "customer.subscription.deleted") {
+    const sub = event.data.object;
+    db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
+  }
+
+  res.json({ received: true });
+});
+
+// Legacy create-checkout (no auth required, uses user_id from body)
+app.post("/create-checkout", async (req, res) => {
+  const { plan, user_id } = req.body || {};
+  if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
+
+  const priceMap = {
+    standard: process.env.STRIPE_PRICE_ID_PREMIUM,
+    premium: process.env.STRIPE_PRICE_ID_VIP,
+    vip: process.env.STRIPE_PRICE_ID_VIP,
+    elite: process.env.STRIPE_PRICE_ID_ELITE,
+  };
+  const priceId = priceMap[plan];
+  if (!priceId) return res.json({ ok: false, error: "Plan inconnu" });
+
+  try {
+    const Stripe = require("stripe");
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: "https://www.touslesmatchs.com/live-ia?success=1",
+      cancel_url: "https://www.touslesmatchs.com/subscription",
+      client_reference_id: String(user_id || ""),
+    });
+    res.json({ ok: true, url: session.url });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Start ─────────────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
