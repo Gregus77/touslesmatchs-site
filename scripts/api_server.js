@@ -45,10 +45,14 @@ db.exec(`
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
-const FOOTBALL_API_KEY = process.env.FOOTBALL_DATA_KEY || "";
+const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.FOOTBALL_DATA_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+
+// Cache live matches 10 minutes to stay under 100 req/day
+let liveMatchesCache = { data: null, ts: 0 };
+const CACHE_TTL = 10 * 60 * 1000;
 
 const TOKEN_LIMITS = { free: 0, premium: 10, vip: 30, elite: 999 };
 
@@ -143,45 +147,40 @@ function httpPost(url, body, headers = {}) {
 
 // ── Live matches ──────────────────────────────────────────────────────────────
 async function fetchLiveMatches() {
-  if (!FOOTBALL_API_KEY) {
+  // Return cache if still fresh
+  if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
+    return liveMatchesCache.data;
+  }
+  if (!API_SPORTS_KEY) {
     return getMockMatches();
   }
   try {
-    const data = await httpGet("https://api.football-data.org/v4/matches?status=LIVE", {
-      "X-Auth-Token": FOOTBALL_API_KEY,
+    const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", {
+      "x-apisports-key": API_SPORTS_KEY,
     });
-    if (!data.matches || data.matches.length === 0) {
-      // Try scheduled matches for today
-      const today = getTodayStr();
-      const scheduled = await httpGet(
-        `https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${today}&status=IN_PLAY,PAUSED`,
-        { "X-Auth-Token": FOOTBALL_API_KEY }
-      );
-      if (scheduled.matches && scheduled.matches.length > 0) {
-        return formatMatches(scheduled.matches);
-      }
-    }
-    if (data.matches && data.matches.length > 0) {
-      return formatMatches(data.matches);
+    if (data.response && data.response.length > 0) {
+      const matches = formatApiSportsMatches(data.response);
+      liveMatchesCache = { data: matches, ts: Date.now() };
+      return matches;
     }
     return getMockMatches();
   } catch (e) {
-    console.error("Football API error:", e.message);
-    return getMockMatches();
+    console.error("API-Sports error:", e.message);
+    return liveMatchesCache.data || getMockMatches();
   }
 }
 
-function formatMatches(matches) {
-  return matches.slice(0, 20).map((m) => ({
-    id: String(m.id),
-    home: m.homeTeam?.shortName || m.homeTeam?.name || "?",
-    away: m.awayTeam?.shortName || m.awayTeam?.name || "?",
-    score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? m.score?.regularTime?.home ?? 0,
-    score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? m.score?.regularTime?.away ?? 0,
-    minute: m.minute != null ? m.minute : (m.status === "IN_PLAY" || m.status === "PAUSED" ? "?" : 0),
-    status: m.status,
-    competition: m.competition?.name || "International",
-    utcDate: m.utcDate,
+function formatApiSportsMatches(fixtures) {
+  return fixtures.slice(0, 30).map((f) => ({
+    id: String(f.fixture.id),
+    home: f.teams.home.name,
+    away: f.teams.away.name,
+    score_home: f.goals.home ?? 0,
+    score_away: f.goals.away ?? 0,
+    minute: f.fixture.status.elapsed ?? "?",
+    status: "IN_PLAY",
+    competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
+    utcDate: f.fixture.date,
   }));
 }
 
