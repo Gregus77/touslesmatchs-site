@@ -1088,18 +1088,21 @@ async function fetchLiveScore(){
       (x.away.toLowerCase().includes('maroc')||x.away.toLowerCase().includes('morocco')) ||
       (x.home.toLowerCase().includes('écosse')||x.home.toLowerCase().includes('scotland')) ||
       (x.away.toLowerCase().includes('écosse')||x.away.toLowerCase().includes('scotland'))
-    ) || d.matches[0];
+    );
     if(!m)return;
     const sA=document.getElementById('sA');
     const sB=document.getElementById('sB');
     if(!sA||!sB)return;
-    const isLive=m.status==='IN_PLAY'||m.status==='PAUSED';
-    if(isLive||m.score_home!==null){
+    const isLive=m.status==='IN_PLAY'||m.status==='PAUSED'||m.status==='LIVE';
+    if(isLive||(m.score_home!==null&&m.score_home!==undefined)){
       sA.textContent=m.score_home??0;sA.classList.remove('pending');
       sB.textContent=m.score_away??0;sB.classList.remove('pending');
       PICK.scoreA=m.score_home;PICK.scoreB=m.score_away;PICK.minute=m.minute;
-      const tagEl=sA.closest('.score-col')?.querySelector('.upcoming-tag,.live-tag');
-      if(tagEl){
+      // Met à jour le tag minute — cherche dans .score-col
+      const scoreCol=document.querySelector('.score-col');
+      if(scoreCol){
+        let tagEl=scoreCol.querySelector('.upcoming-tag,.live-tag');
+        if(!tagEl){tagEl=document.createElement('span');scoreCol.appendChild(tagEl);}
         tagEl.className='live-tag';
         tagEl.textContent='🔴 '+(m.minute?m.minute+"'":"Live");
       }
