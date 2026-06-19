@@ -36,6 +36,7 @@ export default function Login() {
           );
           localStorage.setItem("user_id", d.user.id);
           localStorage.setItem("user_status", d.user.status);
+          localStorage.setItem("user_email", d.user.email);
           if (d.token) localStorage.setItem("auth_token", d.token);
           setTimeout(() => {
             window.location.href = "/";

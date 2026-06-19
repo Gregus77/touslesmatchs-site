@@ -255,6 +255,21 @@ export default function App() {
     React.createElement("div", {style:{fontSize:"10px",color:"#2a2a2a"}}, t("footer_droits"))
   );
 
+  var authToken = localStorage.getItem("auth_token");
+  var userStatus = localStorage.getItem("user_status");
+  var userEmail = localStorage.getItem("user_email");
+  var isLoggedIn = !!authToken;
+
+  function handleLogout() {
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("user_status");
+    localStorage.removeItem("user_email");
+    setPage("home");
+  }
+
+  var statusBadge = {premium:"👑 Premium", vip:"💎 VIP", elite:"⚡ Elite", free:"Gratuit"}[userStatus] || null;
+
   var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"8px",maxWidth:"100%",overflowX:"hidden"}},
     React.createElement("div", {style:{cursor:"pointer"},onClick:function(){setPage("home");}},
       React.createElement("div", {style:{fontSize:"16px",fontWeight:"700",color:"#d4af37",letterSpacing:"0.12em",fontFamily:"'Bodoni Moda',serif",textTransform:"uppercase"}}, "TousLesMatchs"),
@@ -270,6 +285,19 @@ export default function App() {
       }),
       React.createElement("a", {href:TIKTOK_LINK,target:"_blank",style:{background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"6px 14px",color:"#fff",textDecoration:"none",fontSize:"12px"}}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK,target:"_blank",style:{background:"rgba(0,136,204,0.15)",border:"1px solid rgba(0,136,204,0.4)",borderRadius:"4px",padding:"6px 14px",color:"#29b6f6",textDecoration:"none",fontSize:"12px",fontWeight:"bold"}}, "Telegram"),
+
+      // Bouton compte / connexion
+      isLoggedIn
+        ? React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"4px"}},
+            statusBadge && React.createElement("span", {style:{fontSize:"10px",color:"#C9A227",border:"1px solid rgba(201,162,39,0.3)",borderRadius:"4px",padding:"3px 7px",fontWeight:"600"}}, statusBadge),
+            React.createElement("button", {onClick:function(){setPage("live-ia");}, style:{background:"rgba(201,162,39,0.1)",border:"1px solid rgba(201,162,39,0.3)",borderRadius:"4px",padding:"6px 10px",color:"#C9A227",cursor:"pointer",fontSize:"11px",fontWeight:"600"}}, "Mon compte"),
+            React.createElement("button", {onClick:handleLogout, style:{background:"transparent",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"4px",padding:"6px 8px",color:"#444",cursor:"pointer",fontSize:"11px"}}, "✕")
+          )
+        : React.createElement("button", {
+            onClick:function(){setPage("login");},
+            style:{background:"linear-gradient(135deg,#C9A227,#E8C14A)",border:"none",borderRadius:"4px",padding:"7px 14px",color:"#080706",cursor:"pointer",fontSize:"12px",fontWeight:"700",fontFamily:"'Jost',sans-serif"}
+          }, "Se connecter"),
+
       React.createElement("div",{className:"lang-flags",style:{display:"flex",gap:"4px",marginLeft:"4px",alignItems:"center"}},
         React.createElement("button",{title:"Français",onClick:function(){changeLang("fr");},style:{background:lang==="fr"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="fr"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇫🇷"),
         React.createElement("button",{title:"English",onClick:function(){changeLang("en");},style:{background:lang==="en"?"rgba(212,175,55,0.15)":"transparent",border:"1px solid "+(lang==="en"?"#d4af37":"rgba(255,255,255,0.1)"),borderRadius:"4px",padding:"4px 7px",cursor:"pointer",fontSize:"16px",lineHeight:"1"}},"🇬🇧"),
