@@ -14,9 +14,6 @@ var WINAMAX_LINK = "https://www.winamax.fr/parrain?code=77953728";
 var BETCLIC_LINK = "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ";
 var UNIBET_LINK = "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254";
 var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728";
-var ZEBET_LINK = "https://www.zebet.fr/fr/inscription";
-var PARIONSSPORT_LINK = "https://parionssport.lfdj.fr/fr-fr/inscription";
-var NETBET_LINK = "https://www.netbet.fr/inscription";
 var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
@@ -70,13 +67,62 @@ var faqs = [
 ];
 
 var bookmakers = [
-  {nom:"Winamax", badge:"PARTENAIRE N1", bonus:"Bonus jusqu a 200 EUR", desc:"Le bookmaker francais numero 1. Cotes excellentes, interface top, retrait rapide.", color:"#e8b400", link:WINAMAX_LINK, note:"9.5/10"},
-  {nom:"Betclic", badge:"TOP COTES", bonus:"Bonus bienvenue 100 EUR", desc:"Cotes tres competitives surtout sur le foot europeen. Appli mobile excellente.", color:"#00a651", link:BETCLIC_LINK, note:"9.2/10"},
-  {nom:"Unibet", badge:"FIABLE", bonus:"Mise remboursee 100 EUR", desc:"Bookmaker international solide. Large choix de sports et de marches.", color:"#007832", link:UNIBET_LINK, note:"8.8/10"},
-  {nom:"PMU", badge:"100% FRANCAIS", bonus:"Bonus 150 EUR", desc:"L historique des paris en France. Ideal pour le foot et les courses hippiques.", color:"#d4001a", link:PMU_LINK, note:"8.5/10"},
-  {nom:"ZEbet", badge:"COTES ELEVEES", bonus:"Remboursement 100 EUR", desc:"Specialiste des cotes boostees. Souvent les meilleures cotes sur certains matchs.", color:"#ff6600", link:ZEBET_LINK, note:"8.3/10"},
-  {nom:"ParionsSport", badge:"FDJ OFFICIEL", bonus:"Bonus 100 EUR", desc:"Le pari sportif officiel de la FDJ. Securite maximale, ideal pour les debutants.", color:"#005baa", link:PARIONSSPORT_LINK, note:"8.0/10"},
-  {nom:"NetBet", badge:"BONNE VALEUR", bonus:"Bonus 100 EUR", desc:"Bon rapport qualite/cotes. Interface simple et claire. Programme de fidelite interessant.", color:"#c8102e", link:NETBET_LINK, note:"7.8/10"},
+  {
+    nom: "Winamax",
+    badge: "PARTENAIRE N°1",
+    color: "#e8b400",
+    link: WINAMAX_LINK,
+    note: "9.5/10",
+    promo: "3 PREMIERS PARIS REMBOURSÉS",
+    promoDetail: "Si ton premier pari est perdant, Winamax te rembourse jusqu'à 200€ en free bets. Sans condition de cote minimum.",
+    bonus: "Jusqu'à 200€",
+    bonusType: "Remboursement",
+    cta: "Profiter de l'offre →",
+    desc: "Le bookmaker français N°1. Cotes excellentes, interface top, retraits rapides. Le préféré des parieurs pros.",
+    sports: ["⚽ Foot", "🏒 Hockey", "🎾 Tennis", "🏀 Basket"],
+  },
+  {
+    nom: "Betclic",
+    badge: "TOP COTES",
+    color: "#00a651",
+    link: BETCLIC_LINK,
+    note: "9.2/10",
+    promo: "100€ REMBOURSÉS SUR LE 1er PARI",
+    promoDetail: "Ton premier pari remboursé en cash jusqu'à 100€ s'il est perdant. Applicable sur tous les sports dès 1,70 de cote.",
+    bonus: "100€",
+    bonusType: "Remboursement cash",
+    cta: "Obtenir l'offre →",
+    desc: "Cotes très compétitives sur le foot européen. Application mobile excellente, pari en direct fluide.",
+    sports: ["⚽ Foot", "🎾 Tennis", "🏈 NFL", "🏀 Basket"],
+  },
+  {
+    nom: "Unibet",
+    badge: "FIABLE",
+    color: "#007832",
+    link: UNIBET_LINK,
+    note: "8.8/10",
+    promo: "MISE REMBOURSÉE JUSQU'À 100€",
+    promoDetail: "Premier pari remboursé sous forme de free bet si perdant. Large choix de sports et de marchés alternatifs.",
+    bonus: "100€",
+    bonusType: "Free bet",
+    cta: "Récupérer l'offre →",
+    desc: "Bookmaker international solide et fiable. Excellent service client, large choix de sports, marchés alternatifs nombreux.",
+    sports: ["⚽ Foot", "🏒 Hockey", "🏉 Rugby", "🥊 MMA"],
+  },
+  {
+    nom: "PMU",
+    badge: "100% FRANÇAIS",
+    color: "#d4001a",
+    link: PMU_LINK,
+    note: "8.5/10",
+    promo: "150€ DE BONUS + 10€ GRATUITS",
+    promoDetail: "Bonus de bienvenue jusqu'à 150€ sur ton premier dépôt + 10€ de mise gratuite offerts à l'inscription.",
+    bonus: "150€ + 10€",
+    bonusType: "Bonus dépôt",
+    cta: "Saisir l'offre →",
+    desc: "L'historique des paris en France. Idéal pour le foot et les courses hippiques. Sécurité maximale, opérateur agréé ANJ.",
+    sports: ["⚽ Foot", "🏇 Hippisme", "🎾 Tennis", "🏀 Basket"],
+  },
 ];
 
 function sportEmoji(sport) {
@@ -284,31 +330,120 @@ export default function App() {
   }
 
   if(page==="bookmakers"){
-    return React.createElement("div", {style:{background:"linear-gradient(180deg,#131826 0%,#0b1018 500px,#080c14 100%)",minHeight:"100vh",fontFamily:"Georgia,serif",color:"#e8e0d0"}},
+    return React.createElement("div", {style:{background:"#080706",minHeight:"100vh",fontFamily:"'Jost',sans-serif",color:"#F5F0E8"}},
       header,
-      React.createElement("div", {style:{maxWidth:"860px",margin:"0 auto",padding:"40px 30px"}},
-        React.createElement("h2", {style:{color:"#d4af37",letterSpacing:"3px",fontSize:"14px",marginBottom:"8px"}}, t("bookmakers_title")),
-        React.createElement("p", {style:{color:"#555",fontSize:"13px",marginBottom:"6px"}}, t("bookmakers_desc")),
-        React.createElement("p", {style:{color:"#444",fontSize:"11px",marginBottom:"30px"}}, t("bookmakers_note")),
-        React.createElement("div", {style:{display:"flex",flexDirection:"column",gap:"12px"}},
-          bookmakers.map(function(b,i){
-            return React.createElement("div", {key:i, style:{background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"12px",padding:"20px 24px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"16px"}},
-              React.createElement("div", {style:{flex:1,minWidth:"200px"}},
-                React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"6px",flexWrap:"wrap"}},
-                  React.createElement("span", {style:{fontSize:"18px",fontWeight:"bold",color:"#fff"}}, b.nom),
-                  React.createElement("span", {style:{background:"rgba(212,175,55,0.12)",border:"1px solid rgba(212,175,55,0.25)",borderRadius:"3px",padding:"2px 7px",color:"#d4af37",fontSize:"9px",letterSpacing:"1px"}}, b.badge),
-                  React.createElement("span", {style:{background:"rgba(34,180,60,0.1)",border:"1px solid rgba(34,180,60,0.2)",borderRadius:"3px",padding:"2px 7px",color:"#22cc44",fontSize:"9px"}}, b.bonus)
+      React.createElement("div", {style:{maxWidth:"860px",margin:"0 auto",padding:"40px 16px 80px"}},
+
+        // Header section
+        React.createElement("div", {style:{textAlign:"center",marginBottom:"48px",paddingTop:"12px"}},
+          React.createElement("div", {style:{fontSize:"11px",letterSpacing:"4px",color:"#C9A227",marginBottom:"8px",fontWeight:"600"}}, "NOS PARTENAIRES AFFILIÉS"),
+          React.createElement("h1", {style:{fontFamily:"'Bodoni Moda',serif",fontSize:"clamp(30px,5vw,48px)",color:"#F5F0E8",margin:"0 0 12px"}},
+            "Meilleures ", React.createElement("em", {style:{color:"#C9A227",fontStyle:"italic"}}, "offres"), " du moment"
+          ),
+          React.createElement("p", {style:{color:"#6b6356",fontSize:"15px",lineHeight:"1.7",maxWidth:"520px",margin:"0 auto 10px"}},
+            "En vous inscrivant via nos liens, vous bénéficiez des bonus de bienvenue et vous soutenez TousLesMatchs — merci !"
+          ),
+          React.createElement("div", {style:{display:"inline-block",background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.25)",borderRadius:"20px",padding:"4px 16px",fontSize:"11px",color:"#22C55E",letterSpacing:"1px",fontWeight:"600"}}, "✓ Tous ces bookmakers sont agréés ANJ France")
+        ),
+
+        // Bookmaker cards
+        bookmakers.map(function(b, i){
+          var isFirst = i === 0;
+          return React.createElement("div", {
+            key:i,
+            style:{
+              background: isFirst ? "rgba(201,162,39,0.05)" : "rgba(255,255,255,0.02)",
+              border: isFirst ? "2px solid rgba(201,162,39,0.35)" : "1px solid rgba(255,255,255,0.08)",
+              borderRadius:"16px",
+              overflow:"hidden",
+              marginBottom:"20px",
+              position:"relative",
+            }
+          },
+            // N°1 ribbon
+            isFirst && React.createElement("div", {style:{position:"absolute",top:"0",left:"0",background:"#C9A227",color:"#080706",fontSize:"9px",fontWeight:"700",letterSpacing:"2px",padding:"5px 14px",borderBottomRightRadius:"10px"}}, "⭐ PARTENAIRE N°1"),
+
+            React.createElement("div", {style:{padding:"24px 24px 0",display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:"16px",paddingTop:isFirst?"36px":"24px"}},
+
+              // Left block
+              React.createElement("div", {style:{flex:1,minWidth:"220px"}},
+                React.createElement("div", {style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"10px",flexWrap:"wrap"}},
+                  React.createElement("span", {style:{fontSize:"24px",fontWeight:"700",color:b.color,fontFamily:"'Bodoni Moda',serif"}}, b.nom),
+                  React.createElement("span", {style:{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"4px",padding:"2px 8px",color:"#888",fontSize:"9px",letterSpacing:"1px"}}, b.badge),
+                  React.createElement("span", {style:{color:"#C9A227",fontSize:"12px",fontWeight:"700"}}, "★ "+b.note)
                 ),
-                React.createElement("p", {style:{color:"#555",fontSize:"12px",margin:"0 0 4px",maxWidth:"420px"}}, b.desc),
-                React.createElement("span", {style:{color:"#d4af37",fontSize:"12px",fontWeight:"bold"}}, "Notre note: "+b.note)
+                React.createElement("p", {style:{color:"#6b6356",fontSize:"13px",lineHeight:"1.65",margin:"0 0 12px",maxWidth:"400px"}}, b.desc),
+
+                // Sports tags
+                React.createElement("div", {style:{display:"flex",gap:"6px",flexWrap:"wrap",marginBottom:"16px"}},
+                  (b.sports||[]).map(function(s,si){
+                    return React.createElement("span", {key:si, style:{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"20px",padding:"3px 10px",fontSize:"11px",color:"#888"}}, s);
+                  })
+                )
               ),
-              React.createElement("div", {style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"6px",flexShrink:0}},
-                React.createElement("a", {href:b.link,target:"_blank",style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"6px",padding:"11px 24px",color:"#080c14",fontWeight:"bold",textDecoration:"none",fontSize:"12px",whiteSpace:"nowrap"}}, t("sinscrire")),
-                React.createElement("span", {style:{color:"#333",fontSize:"9px",letterSpacing:"1px"}}, t("lien_affilie"))
+
+              // Right block — bonus + CTA
+              React.createElement("div", {style:{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:"10px",flexShrink:0,minWidth:"180px"}},
+                React.createElement("div", {style:{textAlign:"right"}},
+                  React.createElement("div", {style:{fontSize:"11px",color:"#6b6356",letterSpacing:"1px",marginBottom:"2px"}}, b.bonusType),
+                  React.createElement("div", {style:{fontSize:"32px",fontWeight:"700",color:b.color,fontFamily:"'Bodoni Moda',serif",lineHeight:"1"}}, b.bonus)
+                ),
+                React.createElement("a", {
+                  href:b.link,
+                  target:"_blank",
+                  rel:"noopener noreferrer sponsored",
+                  style:{
+                    display:"block",
+                    background:"linear-gradient(135deg,"+b.color+","+b.color+"dd)",
+                    borderRadius:"10px",
+                    padding:"13px 22px",
+                    color:"#080706",
+                    fontWeight:"700",
+                    textDecoration:"none",
+                    fontSize:"13px",
+                    whiteSpace:"nowrap",
+                    textAlign:"center",
+                    letterSpacing:"0.03em",
+                    boxShadow:"0 4px 20px rgba(0,0,0,0.3)",
+                  }
+                }, b.cta),
+                React.createElement("div", {style:{fontSize:"9px",color:"#2a2a2a",letterSpacing:"1px",textAlign:"right"}}, "LIEN AFFILIÉ · BONUS GARANTI")
               )
-            );
-          })
+            ),
+
+            // Promo banner
+            React.createElement("div", {
+              style:{
+                margin:"0 24px 24px",
+                background:"rgba(34,197,94,0.06)",
+                border:"1px solid rgba(34,197,94,0.2)",
+                borderRadius:"10px",
+                padding:"14px 18px",
+                display:"flex",
+                alignItems:"flex-start",
+                gap:"12px",
+              }
+            },
+              React.createElement("div", {style:{flexShrink:0,marginTop:"1px"}},
+                React.createElement("span", {style:{background:"#22C55E",color:"#000",fontSize:"9px",fontWeight:"700",padding:"3px 8px",borderRadius:"4px",letterSpacing:"1px",whiteSpace:"nowrap"}}, "🎁 OFFRE DU MOMENT")
+              ),
+              React.createElement("div", null,
+                React.createElement("div", {style:{fontSize:"13px",fontWeight:"700",color:"#22C55E",marginBottom:"4px"}}, b.promo),
+                React.createElement("div", {style:{fontSize:"12px",color:"#6b6356",lineHeight:"1.55"}}, b.promoDetail)
+              )
+            )
+          );
+        }),
+
+        // Legal note
+        React.createElement("div", {style:{textAlign:"center",padding:"20px",background:"rgba(255,255,255,0.02)",borderRadius:"10px",border:"1px solid rgba(255,255,255,0.04)"}},
+          React.createElement("div", {style:{fontSize:"11px",color:"#333",lineHeight:"1.7"}},
+            "⚠️ Les paris sportifs comportent des risques de perte financière. Jouer comporte des risques : dettes, isolement, dépendance. ",
+            React.createElement("strong", {style:{color:"#444"}}, "Appelez le 09 74 75 13 13"),
+            " (appel non surtaxé)."
+          )
         )
+
       ),
       footer,
       bandeauLegal
@@ -657,16 +792,51 @@ export default function App() {
       )
     ),
     React.createElement("section", {className:"home-section",style:{padding:"0 20px 30px",maxWidth:"780px",margin:"0 auto",width:"100%",boxSizing:"border-box"}},
-      React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}},
-        React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:0}}, t("nos_partenaires")),
-        React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"transparent",border:"1px solid rgba(212,175,55,0.3)",color:"#d4af37",padding:"5px 12px",borderRadius:"4px",cursor:"pointer",fontSize:"11px"}}, t("voir_tous"))
+      React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"14px"}},
+        React.createElement("div", null,
+          React.createElement("h2", {style:{color:"#d4af37",fontSize:"12px",letterSpacing:"3px",margin:"0 0 2px"}}, t("nos_partenaires")),
+          React.createElement("div", {style:{fontSize:"10px",color:"#444",letterSpacing:"1px"}}, "OFFRES EXCLUSIVES · LIENS AFFILIÉS")
+        ),
+        React.createElement("button", {onClick:function(){setPage("bookmakers");},style:{background:"rgba(201,162,39,0.08)",border:"1px solid rgba(212,175,55,0.3)",color:"#d4af37",padding:"6px 14px",borderRadius:"4px",cursor:"pointer",fontSize:"11px",fontWeight:"600"}}, "Voir toutes les offres →")
       ),
-      React.createElement("div", {style:{display:"flex",gap:"10px",flexWrap:"wrap"}},
-        bookmakers.slice(0,3).map(function(b,i){
-          return React.createElement("a", {key:i,href:b.link,target:"_blank",style:{flex:"1",minWidth:"180px",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:"8px",padding:"14px 16px",textDecoration:"none",display:"block",textAlign:"center"}},
-            React.createElement("div", {style:{fontSize:"15px",fontWeight:"bold",color:"#fff",marginBottom:"4px"}}, b.nom),
-            React.createElement("div", {style:{fontSize:"10px",color:"#d4af37",marginBottom:"8px"}}, b.bonus),
-            React.createElement("div", {style:{background:"linear-gradient(135deg,#d4af37,#f5d76e)",borderRadius:"4px",padding:"7px",color:"#080c14",fontWeight:"bold",fontSize:"11px"}}, "S inscrire")
+      React.createElement("div", {style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:"10px"}},
+        bookmakers.slice(0,4).map(function(b,i){
+          return React.createElement("a", {
+            key:i,
+            href:b.link,
+            target:"_blank",
+            rel:"noopener noreferrer sponsored",
+            style:{
+              background:i===0?"rgba(201,162,39,0.06)":"rgba(255,255,255,0.02)",
+              border:i===0?"1px solid rgba(201,162,39,0.25)":"1px solid rgba(255,255,255,0.07)",
+              borderRadius:"10px",
+              padding:"16px 14px",
+              textDecoration:"none",
+              display:"flex",
+              flexDirection:"column",
+              gap:"6px",
+              transition:"border-color 0.2s",
+            }
+          },
+            React.createElement("div", {style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
+              React.createElement("span", {style:{fontSize:"16px",fontWeight:"700",color:b.color,fontFamily:"'Bodoni Moda',serif"}},(b.nom)),
+              i===0 && React.createElement("span", {style:{fontSize:"8px",background:"#C9A227",color:"#080706",padding:"2px 5px",borderRadius:"3px",fontWeight:"700",lineHeight:"1.4"}}, "N°1")
+            ),
+            React.createElement("div", {style:{fontSize:"10px",color:"#22C55E",fontWeight:"700",letterSpacing:"0.3px",lineHeight:"1.3"}}, b.bonusType),
+            React.createElement("div", {style:{fontSize:"18px",fontWeight:"700",color:"#F5F0E8"}},(b.bonus)),
+            React.createElement("div", {
+              style:{
+                marginTop:"4px",
+                background:"linear-gradient(135deg,"+b.color+","+b.color+"bb)",
+                borderRadius:"6px",
+                padding:"8px",
+                color:"#080706",
+                fontWeight:"700",
+                fontSize:"11px",
+                textAlign:"center",
+                letterSpacing:"0.3px",
+              }
+            }, "S'inscrire & récupérer →")
           );
         })
       )
