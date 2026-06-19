@@ -59,11 +59,11 @@ var temoignages = [
 ];
 
 var faqs = [
-  {q:"C'est vraiment gratuit ?", a:"Oui, 100% gratuit. Nous sommes rémunérés via les liens d'affiliation bookmakers. En vous inscrivant via nos liens, vous nous aidez à maintenir le service — merci."},
-  {q:"Comment votre IA analyse les matchs ?", a:"Notre modèle Hermès croise la forme récente, les blessures, les confrontations directes, les stats domicile/extérieur et d'autres variables. Seuls les picks avec un score de confiance ≥ 7/10 sont publiés — jamais de match amical ou sans enjeu réel."},
-  {q:"Combien de picks par jour ?", a:"Un seul pick par jour, maximum. Qualité plutôt que quantité. Les jours sans pick valable sont indiqués clairement : on ne force jamais un pari."},
-  {q:"Quel bankroll est recommandé ?", a:"Ne misez jamais plus de 2 à 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques — jouez de façon responsable."},
-  {q:"Qu'est-ce que le plan Premium ?", a:"Le plan Premium à 19,90€/mois donne accès à un pick HORS-ARJEL supplémentaire chaque jour, sur Pinnacle et PS3838 où les cotes sont souvent supérieures. Idéal pour les parieurs qui cherchent de la valeur sur les compétitions internationales."},
+  {q:"C'est vraiment gratuit ?", a:"Oui, 100% gratuit. Nous sommes rémunérés via les liens partenaires des opérateurs agréés. En vous inscrivant via nos liens, vous nous aidez à maintenir le service — merci."},
+  {q:"Comment votre IA analyse les matchs ?", a:"Notre modèle Hermès croise la forme récente, les blessures, les confrontations directes, les stats domicile/extérieur et d'autres variables. Seuls les signaux avec un score de confiance ≥ 7/10 sont publiés — jamais de match amical ou sans enjeu réel."},
+  {q:"Combien de signaux par jour ?", a:"Un seul signal par jour, maximum. Qualité plutôt que quantité. Les jours sans signal valable sont indiqués clairement : on ne force jamais un pronostic."},
+  {q:"Quel bankroll est recommandé ?", a:"Ne jouez jamais plus de 2 à 5% de votre bankroll total sur un seul signal. Les jeux d'argent comportent des risques — jouez de façon responsable."},
+  {q:"Qu'est-ce que le plan Premium ?", a:"Le plan Premium à 19,90€/mois donne accès à un signal supplémentaire chaque jour, sur des opérateurs où les cotes sont souvent supérieures. Idéal pour les joueurs qui cherchent de la valeur sur les compétitions internationales."},
 ];
 
 var bookmakers = [
@@ -73,12 +73,12 @@ var bookmakers = [
     color: "#e8b400",
     link: WINAMAX_LINK,
     note: "9.5/10",
-    promo: "3 PREMIERS PARIS REMBOURSÉS",
-    promoDetail: "Si ton premier pari est perdant, Winamax te rembourse jusqu'à 200€ en free bets. Sans condition de cote minimum.",
+    promo: "3 PREMIÈRES MISES REMBOURSÉES",
+    promoDetail: "Si ta première mise est perdante, Winamax te rembourse jusqu'à 200€ en free bets. Sans condition de cote minimum.",
     bonus: "Jusqu'à 200€",
     bonusType: "Remboursement",
     cta: "Profiter de l'offre →",
-    desc: "Le bookmaker français N°1. Cotes excellentes, interface top, retraits rapides. Le préféré des parieurs pros.",
+    desc: "L'opérateur français N°1. Cotes excellentes, interface top, retraits rapides. Le préféré des joueurs pros.",
     sports: ["⚽ Foot", "🏒 Hockey", "🎾 Tennis", "🏀 Basket"],
   },
   {
@@ -102,11 +102,11 @@ var bookmakers = [
     link: UNIBET_LINK,
     note: "8.8/10",
     promo: "MISE REMBOURSÉE JUSQU'À 100€",
-    promoDetail: "Premier pari remboursé sous forme de free bet si perdant. Large choix de sports et de marchés alternatifs.",
+    promoDetail: "Première mise remboursée sous forme de free bet si perdante. Large choix de sports et de marchés alternatifs.",
     bonus: "100€",
     bonusType: "Free bet",
     cta: "Récupérer l'offre →",
-    desc: "Bookmaker international solide et fiable. Excellent service client, large choix de sports, marchés alternatifs nombreux.",
+    desc: "Opérateur international solide et fiable. Excellent service client, large choix de sports, marchés alternatifs nombreux.",
     sports: ["⚽ Foot", "🏒 Hockey", "🏉 Rugby", "🥊 MMA"],
   },
   {
@@ -238,12 +238,12 @@ export default function App() {
   });
 
 
-  var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"#000",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:100}},
+  var bandeauLegal = React.createElement("div", {style:{position:"fixed",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.97)",backdropFilter:"blur(8px)",borderTop:"1px solid rgba(255,255,255,0.07)",padding:"7px 20px",textAlign:"center",zIndex:200}},
     React.createElement("div", {style:{fontSize:"10px",color:"#555",lineHeight:"1.8"}}, t("jeu_responsable")),
     React.createElement("div", {style:{fontSize:"9px",color:"#2d2d2d",marginTop:"1px"}}, t("risques_financiers"))
   );
 
-  var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(212,175,55,0.1)",padding:"28px 30px 90px",textAlign:"center"}},
+  var footer = React.createElement("footer", {style:{borderTop:"1px solid rgba(212,175,55,0.1)",padding:"28px 30px 100px",textAlign:"center"}},
     React.createElement("div", {style:{fontSize:"12px",fontWeight:"bold",color:"#d4af37",letterSpacing:"3px",marginBottom:"14px"}}, t("touslesmatchs_com")),
     React.createElement("div", {style:{display:"flex",justifyContent:"center",gap:"20px",flexWrap:"wrap",marginBottom:"12px"}},
       React.createElement("button", {onClick:function(){setPage("cgu");}, style:{background:"transparent",border:"none",color:"#555",fontSize:"11px",cursor:"pointer",textDecoration:"underline",fontFamily:"Georgia,serif"}}, t("cgu")),
@@ -270,7 +270,7 @@ export default function App() {
 
   var statusBadge = {premium:"👑 Premium", vip:"💎 VIP", elite:"⚡ Elite", free:"Gratuit"}[userStatus] || null;
 
-  var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",position:"sticky",top:0,zIndex:50,flexWrap:"wrap",gap:"8px",maxWidth:"100%",overflowX:"hidden"}},
+  var header = React.createElement("header", {style:{borderBottom:"1px solid rgba(212,175,55,0.2)",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(8,12,20,0.98)",backdropFilter:"blur(10px)",position:"sticky",top:0,zIndex:99,flexWrap:"wrap",gap:"8px",maxWidth:"100%",overflowX:"hidden"}},
     React.createElement("div", {style:{cursor:"pointer"},onClick:function(){setPage("home");}},
       React.createElement("div", {style:{fontSize:"16px",fontWeight:"700",color:"#d4af37",letterSpacing:"0.12em",fontFamily:"'Bodoni Moda',serif",textTransform:"uppercase"}}, "TousLesMatchs"),
       React.createElement("div", {style:{fontSize:"8px",color:"#4a4438",letterSpacing:"0.22em",textTransform:"uppercase",fontFamily:"'Jost',sans-serif"}}, t("analyse_sous_menu"))
