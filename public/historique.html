@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Historique des Picks — TousLesMatchs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080f;--bg2:#0d1020;--bg3:#141828;--bg4:#1c2236;
+  --b1:rgba(255,255,255,.05);--b2:rgba(255,255,255,.09);--b3:rgba(255,255,255,.14);
+  --text:#eceaf4;--muted:#7b82a0;--muted2:#a8aec8;
+  --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;--violet2:#9333ea;
+  --cyan:#22d3ee;--cyan2:#06b6d4;--blue:#3b82f6;
+  --green:#10b981;--red:#f43f5e;--amber:#f59e0b;--pink:#ec4899;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%,rgba(79,70,229,.13) 0%,transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 15%,rgba(34,211,238,.10) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%);
+}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.85);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%)}
+.nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
+.nav-center{display:flex;align-items:center;gap:2px}
+.nav-center a{font-size:13px;color:var(--muted2);text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s}
+.nav-center a:hover,.nav-center a.active{color:var(--text);background:rgba(255,255,255,.06)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-live-pill{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:#fb7185;padding:6px 14px;border-radius:20px;text-decoration:none;transition:all .2s}
+.nav-live-dot{width:6px;height:6px;background:#f43f5e;border-radius:50%;animation:pulse-red 1.2s infinite}
+@keyframes pulse-red{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.nav-cta{font-size:13px;font-weight:700;padding:8px 20px;border-radius:9px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;text-decoration:none;display:inline-block;box-shadow:0 4px 20px rgba(79,70,229,.3);transition:all .2s}
+
+.page{position:relative;z-index:1;padding:100px 32px 80px;max-width:1000px;margin:0 auto}
+
+/* STATS SUMMARY */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:48px}
+.stat-card{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:20px;text-align:center}
+.stat-value{font-size:32px;font-weight:900;letter-spacing:-.03em;margin-bottom:4px}
+.stat-value.green{color:var(--green)}
+.stat-value.cyan{background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.stat-value.violet{color:#c084fc}
+.stat-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+/* CHART */
+.chart-wrap{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:28px;margin-bottom:40px}
+.chart-title{font-size:14px;font-weight:700;color:var(--muted2);margin-bottom:20px;letter-spacing:.04em;text-transform:uppercase}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:100px}
+.chart-bar{flex:1;border-radius:4px 4px 0 0;min-height:4px;transition:all .3s;cursor:default;position:relative}
+.chart-bar.win{background:linear-gradient(180deg,var(--green),rgba(16,185,129,.4))}
+.chart-bar.loss{background:linear-gradient(180deg,var(--red),rgba(244,63,94,.4))}
+.chart-bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--b3);padding:4px 8px;border-radius:6px;font-size:11px;white-space:nowrap;color:var(--text);pointer-events:none;z-index:10}
+
+/* PICKS TABLE */
+.section-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+.picks-list{display:grid;gap:10px}
+.pick-row{background:var(--bg2);border:1px solid var(--b2);border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:90px 1fr auto auto;align-items:center;gap:16px;transition:all .2s}
+.pick-row:hover{border-color:var(--b3);background:var(--bg3)}
+.pick-date{font-size:12px;color:var(--muted);font-weight:500}
+.pick-match{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+.pick-comp{font-size:11px;color:var(--muted2);margin-top:2px}
+.pick-info{text-align:right}
+.pick-cote{font-size:13px;font-weight:700;color:var(--cyan)}
+.pick-bet{font-size:11px;color:var(--muted2);margin-top:2px}
+.pick-score{font-size:13px;color:var(--muted2);text-align:center;font-weight:600}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px}
+.badge.win{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.badge.loss{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.25)}
+.badge.pending{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+
+/* TELEGRAM CTA */
+.tg-section{margin-top:56px;background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.06));border:1px solid rgba(99,102,241,.2);border-radius:20px;padding:32px;text-align:center}
+.tg-title{font-size:20px;font-weight:800;margin-bottom:8px}
+.tg-sub{font-size:14px;color:var(--muted2);margin-bottom:24px;line-height:1.6}
+.tg-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.tg-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s}
+.tg-btn.free{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.25)}
+.tg-btn.free:hover{background:rgba(34,211,238,.18);border-color:rgba(34,211,238,.4)}
+.tg-btn.pro{background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.25)}
+.tg-btn.pro:hover{background:rgba(99,102,241,.18);border-color:rgba(99,102,241,.4)}
+.tg-btn.elite{background:rgba(124,58,237,.1);color:#c084fc;border:1px solid rgba(124,58,237,.25)}
+.tg-btn.elite:hover{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.4)}
+
+@media(max-width:640px){
+  nav{padding:0 16px}
+  .nav-center{display:none}
+  .page{padding:90px 16px 60px}
+  .pick-row{grid-template-columns:70px 1fr auto;gap:10px}
+  .pick-score{display:none}
+}
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+<nav>
+  <a href="/" class="nav-brand">TousLesMatchs</a>
+  <div class="nav-center">
+    <a href="/">Accueil</a>
+    <a href="/historique" class="active">Historique</a>
+    <a href="/preuves">Preuves</a>
+    <a href="/live-ia">Live IA</a>
+  </div>
+  <div class="nav-right">
+    <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span>Live</a>
+    <a href="/#plans" class="nav-cta">Rejoindre →</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div style="margin-bottom:40px">
+    <div style="font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px">
+      Historique des <span style="background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">picks</span>
+    </div>
+    <div style="font-size:15px;color:var(--muted2);line-height:1.6">Tous les picks publiés depuis le lancement — résultats vérifiables, aucun pick caché.</div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <!-- CHART -->
+  <div class="chart-wrap">
+    <div class="chart-title">Évolution de la bankroll</div>
+    <div class="chart-bars" id="chart-bars"></div>
+    <div style="display:flex;gap:16px;margin-top:12px">
+      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block"></span>Gain</span>
+      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:var(--red);border-radius:2px;display:inline-block"></span>Perte</span>
+    </div>
+  </div>
+
+  <!-- PICKS LIST -->
+  <div class="section-title" id="picks-count"></div>
+  <div class="picks-list" id="picks-list"></div>
+
+  <!-- TELEGRAM -->
+  <div class="tg-section">
+    <div class="tg-title">📲 Rejoins nos groupes Telegram</div>
+    <div class="tg-sub">Reçois chaque pick en temps réel directement sur ton téléphone.</div>
+    <div class="tg-btns">
+      <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" class="tg-btn free">📢 Gratuit — Canal public</a>
+      <a href="/#plans" class="tg-btn pro">⚡ Pro — Picks premium</a>
+      <a href="/#plans" class="tg-btn elite">👑 Elite — Picks VIP + Live IA</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ DONNÉES PICKS — ajouter les picks ici dans l'ordre chronologique
+const PICKS = [
+  {
+    date:"2026-06-19",
+    competition:"Coupe du Monde 2026 · Groupe F",
+    home:"Maroc",away:"Écosse",
+    pick:"Victoire Maroc (1X2)",
+    cote:1.85,
+    mise:3,
+    result:"win",
+    score:"1-0",
+  },
+  // ← Ajouter les picks suivants ici
+];
+
+// ══ CALCULS
+function computeStats(){
+  let wins=0,losses=0,totalROI=0,streak=0,maxStreak=0,cur=0;
+  PICKS.forEach(p=>{
+    if(p.result==='win'){
+      wins++;
+      totalROI += (p.cote-1)*p.mise;
+      cur++;
+      maxStreak=Math.max(maxStreak,cur);
+    } else if(p.result==='loss'){
+      losses++;
+      totalROI -= p.mise;
+      cur=0;
+    }
+  });
+  const total=wins+losses;
+  const wr=total>0?Math.round(wins/total*100):0;
+  return {wins,losses,total,winrate:wr,roi:totalROI.toFixed(1),maxStreak};
+}
+
+function renderStats(){
+  const s=computeStats();
+  document.getElementById('stats-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-value green">${s.wins}</div><div class="stat-label">Picks gagnants</div></div>
+    <div class="stat-card"><div class="stat-value cyan">${s.winrate}%</div><div class="stat-label">Taux de réussite</div></div>
+    <div class="stat-card"><div class="stat-value violet">+${s.roi}%</div><div class="stat-label">ROI total</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--amber)">${s.total}</div><div class="stat-label">Picks total</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--indigo2)">${s.maxStreak}</div><div class="stat-label">Série max</div></div>
+  `;
+}
+
+function renderChart(){
+  const bars=document.getElementById('chart-bars');
+  const recent=PICKS.filter(p=>p.result==='win'||p.result==='loss').slice(-20);
+  if(recent.length===0){bars.innerHTML='<div style="color:var(--muted);font-size:13px">Aucune donnée</div>';return;}
+  const maxH=Math.max(...recent.map(p=>p.result==='win'?(p.cote-1)*p.mise:p.mise));
+  bars.innerHTML=recent.map(p=>{
+    const h=Math.max(8,Math.round(((p.result==='win'?(p.cote-1)*p.mise:p.mise)/maxH)*96));
+    const tip=`${p.home} vs ${p.away} · @${p.cote} · ${p.result==='win'?'+':'-'}${p.result==='win'?((p.cote-1)*p.mise).toFixed(1):p.mise}%`;
+    return `<div class="chart-bar ${p.result}" style="height:${h}px" data-tip="${tip}"></div>`;
+  }).join('');
+}
+
+function renderPicks(){
+  const el=document.getElementById('picks-list');
+  const cnt=document.getElementById('picks-count');
+  const sorted=[...PICKS].reverse();
+  const finished=sorted.filter(p=>p.result!=='pending');
+  cnt.textContent=`${PICKS.length} pick${PICKS.length>1?'s':''} publiés`;
+  el.innerHTML=sorted.map(p=>`
+    <div class="pick-row">
+      <div class="pick-date">${formatDate(p.date)}</div>
+      <div>
+        <div class="pick-match">${p.home} – ${p.away}</div>
+        <div class="pick-comp">${p.competition}</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--indigo2);font-weight:600">${p.pick}</div>
+      </div>
+      <div class="pick-score">${p.score||'—'}</div>
+      <div class="pick-info">
+        <div class="pick-cote">@${p.cote}</div>
+        <div style="margin-top:6px"><span class="badge ${p.result}">${p.result==='win'?'✅ Gagné':p.result==='loss'?'❌ Perdu':'⏳ En cours'}</span></div>
+      </div>
+    </div>`).join('');
+}
+
+function formatDate(d){
+  const dt=new Date(d);
+  return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'});
+}
+
+renderStats();
+renderChart();
+renderPicks();
+</script>
+</body>
+</html>
