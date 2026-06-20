@@ -357,12 +357,10 @@ function renderMain(){
     </div>`;
   }
 
-  html += `<div id="analysis-zone"></div>`;
   zone.innerHTML = html;
 }
 
 function renderMatchCard(m, i){
-  const verdictClass = m.score_home > m.score_away ? 'win' : m.score_away > m.score_home ? 'win' : 'draw';
   return `<div class="match-card" id="card-${i}" onclick="selectMatch(${i})">
     <div class="match-top">
       <div class="match-comp">${escHtml(m.competition||'')}</div>
@@ -381,7 +379,8 @@ function renderMatchCard(m, i){
     <button class="match-analyze-btn" id="btn-${i}" onclick="event.stopPropagation();analyzeMatch(${i})">
       <span>🧠</span> Analyser avec Le Concile
     </button>
-  </div>`;
+  </div>
+  <div id="analysis-zone-${i}" style="display:none"></div>`;
 }
 
 let currentAnalysis = null;
@@ -401,7 +400,11 @@ async function analyzeMatch(i){
   const btn = document.getElementById('btn-'+i);
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Analyse en cours...'; }
 
-  const zone = document.getElementById('analysis-zone');
+  // Close all other analysis zones
+  document.querySelectorAll('[id^="analysis-zone-"]').forEach(z => { z.style.display='none'; z.innerHTML=''; });
+
+  const zone = document.getElementById('analysis-zone-'+i);
+  zone.style.display='block';
   zone.innerHTML = renderLoadingAnalysis(m);
   zone.scrollIntoView({behavior:'smooth', block:'start'});
 
