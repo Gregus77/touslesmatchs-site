@@ -572,6 +572,47 @@ app.post("/subscribe-email", async (req, res) => {
   }
 });
 
+// ── Forgot code — lookup codes.db by email and send via Brevo ─────────────────
+app.post("/forgot-code", async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !email.includes("@")) return res.json({ ok: false });
+  const emailClean = email.toLowerCase().trim();
+  // Always reply ok to avoid email enumeration
+  res.json({ ok: true });
+  // Async: look up codes and send
+  try {
+    const CODES_DB = "/var/touslesmatchs/codes.db";
+    const cdb = new Database(CODES_DB, { readonly: true });
+    const rows = cdb.prepare(
+      "SELECT code, plan FROM codes WHERE email = ? AND active = 1"
+    ).all(emailClean);
+    cdb.close();
+    if (!rows.length) return;
+    if (!BREVO_API_KEY) return;
+    const codeList = rows.map(r =>
+      `<tr><td style="padding:6px 12px;font-family:monospace;font-size:16px;font-weight:700;letter-spacing:.05em">${r.code}</td><td style="padding:6px 12px;color:#7b82a0;font-size:13px">${r.plan.toUpperCase()}</td></tr>`
+    ).join("");
+    const html = `
+      <div style="font-family:Inter,system-ui,sans-serif;max-width:520px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:12px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px;text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#fff">TousLesMatchs</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.7);margin-top:4px">Récupération de votre code d'accès</div>
+        </div>
+        <div style="padding:32px">
+          <p style="margin:0 0 16px;color:#a8aec8;font-size:14px">Voici votre code d'accès associé à <strong>${emailClean}</strong> :</p>
+          <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:8px;overflow:hidden">
+            ${codeList}
+          </table>
+          <p style="margin:20px 0 0;color:#7b82a0;font-size:12px">Copiez ce code et connectez-vous sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a>.</p>
+        </div>
+      </div>`;
+    await brevoSendEmail(emailClean, "Votre code d'accès TousLesMatchs", html);
+    console.log(`[forgot-code] Code(s) envoyé(s) à ${emailClean}`);
+  } catch (e) {
+    console.error("[forgot-code] error:", e.message);
+  }
+});
+
 // ── Verify code (reads codes.db directly) ────────────────────────────────────
 const CODES_DB_PATH = "/var/touslesmatchs/codes.db";
 

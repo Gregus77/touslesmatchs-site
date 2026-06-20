@@ -728,16 +728,43 @@ footer{
 <div class="modal-bg" id="modal-login">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title" data-i18n="login_title">Accès membre</div>
-    <div class="modal-sub" data-i18n="login_sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
-    <label class="modal-label" data-i18n="login_email">Email</label>
-    <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
-    <label class="modal-label" data-i18n="login_code">Code d'accès</label>
-    <input class="modal-input" id="login-code" type="text" placeholder="PRO-XXXXXX ou ELITE-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
-    <div class="modal-err" id="login-err"></div>
-    <div class="modal-ok" id="login-ok"></div>
-    <button class="modal-btn" id="login-btn" onclick="doLogin()" data-i18n="login_btn">Accéder →</button>
-    <div style="font-size:11px;color:var(--muted);text-align:center">Pas encore de code ? <a href="#plans" onclick="closeModal()" style="color:var(--indigo2);text-decoration:none">Voir les abonnements</a></div>
+
+    <!-- VUE LOGIN -->
+    <div id="modal-view-login">
+      <div class="modal-title" data-i18n="login_title">Accès membre</div>
+      <div class="modal-sub" data-i18n="login_sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
+      <div id="modal-saved-banner" style="display:none;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--green);align-items:center;gap:8px">
+        <span>✓</span><span>Identifiants mémorisés — cliquez sur Accéder pour vous connecter.</span>
+      </div>
+      <label class="modal-label" data-i18n="login_email">Email</label>
+      <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
+      <label class="modal-label" data-i18n="login_code">Code d'accès</label>
+      <input class="modal-input" id="login-code" type="text" placeholder="PRO-XXXXXX ou ELITE-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <input type="checkbox" id="login-remember" style="width:14px;height:14px;accent-color:var(--indigo2);cursor:pointer" checked>
+        <label for="login-remember" style="font-size:12px;color:var(--muted2);cursor:pointer">Se souvenir de moi</label>
+        <span style="flex:1"></span>
+        <button onclick="showForgotView()" style="background:none;border:none;color:var(--indigo2);font-size:12px;cursor:pointer;text-decoration:underline;padding:0">Code oublié ?</button>
+      </div>
+      <div class="modal-err" id="login-err"></div>
+      <div class="modal-ok" id="login-ok"></div>
+      <button class="modal-btn" id="login-btn" onclick="doLogin()" data-i18n="login_btn">Accéder →</button>
+      <div style="font-size:11px;color:var(--muted);text-align:center">Pas encore de code ? <a href="#plans" onclick="closeModal()" style="color:var(--indigo2);text-decoration:none">Voir les abonnements</a></div>
+    </div>
+
+    <!-- VUE CODE OUBLIÉ -->
+    <div id="modal-view-forgot" style="display:none">
+      <div class="modal-title">Code oublié ?</div>
+      <div class="modal-sub">Entrez l'email utilisé lors de votre abonnement. Nous vous renverrons votre code d'accès.</div>
+      <label class="modal-label">Email de votre compte</label>
+      <input class="modal-input" id="forgot-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
+      <div class="modal-err" id="forgot-err"></div>
+      <div class="modal-ok" id="forgot-ok"></div>
+      <button class="modal-btn" id="forgot-btn" onclick="doForgotCode()">Recevoir mon code →</button>
+      <div style="text-align:center">
+        <button onclick="showLoginView()" style="background:none;border:none;color:var(--muted2);font-size:12px;cursor:pointer;text-decoration:underline">← Retour à la connexion</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1454,9 +1481,39 @@ function renderNavAuth(){
 
 function openModal(){
   document.getElementById('modal-login').classList.add('open');
-  setTimeout(()=>document.getElementById('login-email').focus(),100);
+  // Pre-populate from localStorage
+  const savedEmail=localStorage.getItem('tlm_email')||'';
+  const savedCode=localStorage.getItem('tlm_code')||'';
+  const emailEl=document.getElementById('login-email');
+  const codeEl=document.getElementById('login-code');
+  const banner=document.getElementById('modal-saved-banner');
+  emailEl.value=savedEmail;
+  codeEl.value=savedCode;
+  if(savedEmail&&savedCode){
+    banner.style.cssText='display:flex;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--green);align-items:center;gap:8px';
+    setTimeout(()=>document.getElementById('login-btn').focus(),100);
+  } else {
+    banner.style.display='none';
+    setTimeout(()=>emailEl.focus(),100);
+  }
+  showLoginView();
 }
 function closeModal(){document.getElementById('modal-login').classList.remove('open')}
+function showLoginView(){
+  document.getElementById('modal-view-login').style.display='';
+  document.getElementById('modal-view-forgot').style.display='none';
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-ok').style.display='none';
+}
+function showForgotView(){
+  document.getElementById('modal-view-login').style.display='none';
+  document.getElementById('modal-view-forgot').style.display='';
+  document.getElementById('forgot-err').style.display='none';
+  document.getElementById('forgot-ok').style.display='none';
+  const savedEmail=localStorage.getItem('tlm_email')||'';
+  if(savedEmail) document.getElementById('forgot-email').value=savedEmail;
+  setTimeout(()=>document.getElementById('forgot-email').focus(),100);
+}
 document.getElementById('modal-login').addEventListener('click',function(e){if(e.target===this)closeModal()});
 document.getElementById('login-code').addEventListener('input',function(){this.value=this.value.toUpperCase()});
 document.getElementById('login-email').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('login-code').focus()});
@@ -1465,6 +1522,7 @@ document.getElementById('login-code').addEventListener('keydown',function(e){if(
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
   const code=document.getElementById('login-code').value.trim().toUpperCase();
+  const remember=document.getElementById('login-remember').checked;
   const errEl=document.getElementById('login-err');
   const okEl=document.getElementById('login-ok');
   const btn=document.getElementById('login-btn');
@@ -1475,8 +1533,13 @@ async function doLogin(){
     const r=await fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})});
     const d=await r.json();
     if(d.valid){
-      localStorage.setItem('tlm_email',email);
-      localStorage.setItem('tlm_code',code);
+      if(remember){
+        localStorage.setItem('tlm_email',email);
+        localStorage.setItem('tlm_code',code);
+      } else {
+        localStorage.removeItem('tlm_email');
+        localStorage.removeItem('tlm_code');
+      }
       localStorage.setItem('tlm_plan',d.plan);
       okEl.textContent=`✓ Connecté — Plan ${d.plan} · ${d.credits_left} crédit(s) restant(s) aujourd'hui`;
       okEl.style.display='block';
@@ -1488,6 +1551,32 @@ async function doLogin(){
   } catch(e){
     errEl.textContent=i18n.t('login_error');errEl.style.display='block';
     btn.disabled=false;btn.textContent=i18n.t('login_btn');
+  }
+}
+
+async function doForgotCode(){
+  const email=document.getElementById('forgot-email').value.trim().toLowerCase();
+  const errEl=document.getElementById('forgot-err');
+  const okEl=document.getElementById('forgot-ok');
+  const btn=document.getElementById('forgot-btn');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!email||!email.includes('@')){errEl.textContent='Entrez une adresse email valide.';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Envoi en cours…';
+  try{
+    const r=await fetch('/api/forgot-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.ok){
+      okEl.textContent='✓ Si un compte existe, vous recevrez votre code par email dans quelques minutes.';
+      okEl.style.display='block';
+      btn.disabled=true;btn.textContent='Email envoyé';
+    } else {
+      okEl.textContent='✓ Si un compte existe, vous recevrez votre code par email dans quelques minutes.';
+      okEl.style.display='block';
+      btn.disabled=true;btn.textContent='Email envoyé';
+    }
+  } catch(e){
+    errEl.textContent='Erreur réseau. Réessayez.';errEl.style.display='block';
+    btn.disabled=false;btn.textContent='Recevoir mon code →';
   }
 }
 
