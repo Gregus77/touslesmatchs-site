@@ -966,14 +966,35 @@ function renderPick(){
   </div>`:'';
 
 
-  const bars=PICK.ia.map(ia=>`
-    <div class="ia-row">
-      <div class="ia-nm">${ia.name}</div>
-      <div class="ia-track"><div class="ia-fill ${ia.fill}" style="width:0%" data-w="${ia.pct}"></div></div>
-      <div class="ia-pct" style="color:${ia.ok?'var(--green)':'var(--red)'}">${ia.pct}%</div>
-      <div class="ia-chk">${ia.ok?'✅':'❌'}</div>
-    </div>
-    <div class="ia-why">${ia.why}</div>`).join('');
+  // Vérifier si l'utilisateur a un plan payant
+  const _plan = localStorage.getItem('tlm_plan');
+  const _isPaid = _plan && _plan !== 'free';
+
+  // Barres IA — visibles uniquement pour les membres payants
+  const bars = _isPaid
+    ? PICK.ia.map(ia=>`
+        <div class="ia-row">
+          <div class="ia-nm">${ia.name}</div>
+          <div class="ia-track"><div class="ia-fill ${ia.fill}" style="width:0%" data-w="${ia.pct}"></div></div>
+          <div class="ia-pct" style="color:${ia.ok?'var(--green)':'var(--red)'}">${ia.pct}%</div>
+          <div class="ia-chk">${ia.ok?'✅':'❌'}</div>
+        </div>
+        <div class="ia-why">${ia.why}</div>`).join('')
+    : `<div style="position:relative;border-radius:12px;overflow:hidden">
+        <div style="filter:blur(6px);pointer-events:none;user-select:none;opacity:.5">
+          ${PICK.ia.map(ia=>`<div class="ia-row" style="margin-bottom:8px">
+            <div class="ia-nm">${ia.name}</div>
+            <div class="ia-track"><div class="ia-fill ${ia.fill}" style="width:${ia.pct}%"></div></div>
+            <div class="ia-pct">??%</div>
+          </div>`).join('')}
+        </div>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(6,8,15,.6);backdrop-filter:blur(2px)">
+          <div style="font-size:28px">🔒</div>
+          <div style="font-size:14px;font-weight:800;text-align:center">Votes réservés aux membres</div>
+          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · À la carte dès 1€</div>
+          <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">S'abonner →</a>
+        </div>
+      </div>`;
 
   const bmBtns=BM.map(b=>`<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}">${b.name}</a>`).join('');
 
@@ -1026,11 +1047,16 @@ function renderPick(){
               <div class="cl">Cote moyenne</div>
               <div class="cn">${PICK.cote}</div>
             </div>
-            <div class="vblock">
-              <span class="vpill ${vClass}">${PICK.verdictLabel}</span>
-              <span class="mise-txt">Mise : ${PICK.mise}</span>
-            </div>
-          </div>
+            ${_isPaid
+              ? `<div class="vblock">
+                  <span class="vpill ${vClass}">${PICK.verdictLabel}</span>
+                  <span class="mise-txt">Mise : ${PICK.mise}</span>
+                </div>`
+              : `<div class="vblock">
+                  <span class="vpill v-go" style="filter:blur(5px);pointer-events:none;user-select:none">GO — Mise normale</span>
+                  <a href="#plans" style="font-size:11px;color:var(--indigo2);text-decoration:none;font-weight:600;margin-top:4px;display:block">🔒 Voir le verdict →</a>
+                </div>`
+            }</div>
         </div>
         <div class="bm-head">Parier chez</div>
         <div class="bm-grid">${bmBtns}</div>
@@ -1196,13 +1222,20 @@ async function requestPrematchAnalysis() {
   const code  = localStorage.getItem('tlm_code');
   const plan  = localStorage.getItem('tlm_plan');
 
-  if (!email || !code || !plan) {
-    // Non connecté → scroll vers les plans
+  if (!email || !code || !plan || plan === 'free') {
+    // Non connecté ou plan gratuit → scroll vers les plans
     const plSec = document.getElementById('plans');
     plSec.scrollIntoView({ behavior:'smooth' });
     plSec.style.transition='box-shadow .3s';
     plSec.style.boxShadow='0 0 0 2px rgba(99,102,241,.5)';
     setTimeout(()=>plSec.style.boxShadow='',2000);
+    // Message si connecté mais plan free
+    if(email && plan === 'free'){
+      const resultDiv = document.getElementById('np-result');
+      if(resultDiv) resultDiv.innerHTML=`<div style="background:rgba(79,70,229,.1);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:14px 16px;margin-top:12px;font-size:13px;color:var(--muted2)">
+        🔒 L'analyse pré-match est réservée aux plans <strong style="color:var(--indigo2)">Pro et Elite</strong>. Abonne-toi ci-dessous pour déverrouiller.
+      </div>`;
+    }
     return;
   }
 
@@ -1308,7 +1341,7 @@ async function doLogin(){
       localStorage.setItem('tlm_plan',d.plan);
       okEl.textContent=`✓ Connecté — Plan ${d.plan} · ${d.credits_left} crédit(s) restant(s) aujourd'hui`;
       okEl.style.display='block';
-      setTimeout(()=>{closeModal();renderNavAuth();},1200);
+      setTimeout(()=>{closeModal();renderNavAuth();renderPick();},1200);
     } else {
       errEl.textContent=d.error||'Code invalide.';errEl.style.display='block';
       btn.disabled=false;btn.textContent='Accéder →';
@@ -1324,6 +1357,7 @@ function doLogout(){
   localStorage.removeItem('tlm_code');
   localStorage.removeItem('tlm_plan');
   renderNavAuth();
+  renderPick(); // re-render pick to show paywall
 }
 
 // ══ SCORE LIVE — mise à jour automatique toutes les 30s
