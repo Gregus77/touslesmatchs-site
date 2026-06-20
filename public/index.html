@@ -557,6 +557,52 @@ footer{
   border-radius:18px;padding:60px 32px;text-align:center;
 }
 
+/* ══ PICKS FEED ══ */
+.pf-past{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.pf-past-item{display:flex;align-items:center;gap:10px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.15);border-radius:12px;padding:10px 16px;flex-wrap:wrap}
+.pf-past-item.loss{background:rgba(244,63,94,.04);border-color:rgba(244,63,94,.15)}
+.pf-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:7px;white-space:nowrap}
+.pf-badge.win{color:var(--green);background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3)}
+.pf-badge.loss{color:var(--red);background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25)}
+.pf-mn{font-weight:600;color:var(--text);font-size:13px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-sc{font-weight:700;color:var(--muted2);font-size:13px}
+.pf-ct{font-size:11px;color:var(--cyan)}
+.pf-comp{font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ── Next Pick Card ── */
+.np-card{background:var(--bg2);border:1px solid rgba(99,102,241,.25);border-radius:20px;padding:28px;position:relative;overflow:hidden}
+.np-card::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(79,70,229,.14),transparent);pointer-events:none}
+.np-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap}
+.np-tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;background:rgba(79,70,229,.15);color:var(--indigo2);border:1px solid rgba(79,70,229,.3);letter-spacing:.04em}
+.np-timer{font-size:12px;color:var(--amber);font-weight:600}
+.np-teams{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px 0;padding:18px 0;border-top:1px solid var(--b1);border-bottom:1px solid var(--b1)}
+.np-tn{font-size:clamp(20px,5vw,32px);font-weight:900;letter-spacing:-.02em}
+.np-tn.a{text-align:right;flex:1}
+.np-tn.b{text-align:left;flex:1}
+.np-vs{font-size:14px;font-weight:700;color:var(--muted);padding:0 8px;white-space:nowrap}
+.np-meta{font-size:12px;color:var(--muted2);text-align:center;margin-bottom:18px}
+.np-preview{background:rgba(255,255,255,.04);border:1px solid var(--b1);border-radius:12px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px}
+.np-preview-txt{font-size:13px;color:var(--muted2);line-height:1.5}
+.np-preview-lock{font-size:12px;font-weight:600;color:var(--indigo2);margin-top:2px}
+.np-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 24px;border-radius:12px;font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;transition:all .2s;box-shadow:0 4px 24px rgba(79,70,229,.3)}
+.np-btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 32px rgba(79,70,229,.45)}
+.np-btn:disabled{opacity:.6;cursor:default}
+.np-hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px}
+
+/* ── Analysis result inline ── */
+.np-result{margin-top:20px;background:var(--bg3);border:1px solid var(--b2);border-radius:14px;padding:20px;animation:fadeUp .3s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.np-res-hd{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.np-res-bet{font-size:22px;font-weight:900;color:var(--cyan);margin-bottom:4px}
+.np-res-conf{font-size:12px;color:var(--muted2);margin-bottom:12px}
+.np-res-raison{font-size:13px;color:var(--text);line-height:1.65;margin-bottom:16px;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border-left:2px solid var(--indigo2)}
+.np-res-agents{display:grid;gap:6px}
+.np-res-agent{display:flex;align-items:center;gap:8px;font-size:12px}
+.np-res-an{color:var(--muted2);width:100px;flex-shrink:0}
+.np-res-track{flex:1;height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden}
+.np-res-fill{height:100%;background:linear-gradient(90deg,var(--indigo2),var(--cyan));border-radius:3px;width:0%;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.np-res-pct{color:var(--cyan);font-weight:700;width:30px;text-align:right}
+
 @media(max-width:1000px){.plans-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:640px){
   .plans-grid{grid-template-columns:1fr}
@@ -641,6 +687,13 @@ footer{
     <div class="hs"><div class="hs-val c-indigo">5</div><div class="hs-label">IA du Concile</div></div>
     <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label">Sources min.</div></div>
   </div>
+</section>
+
+<!-- PROCHAIN PICK + RÉSULTATS RÉCENTS -->
+<section class="section-wrap" id="next-pick" style="padding-bottom:20px">
+  <div class="s-eyebrow">Concile · Picks en direct</div>
+  <div class="s-title">Résultats &amp; Prochain Pick</div>
+  <div id="pf-root"></div>
 </section>
 
 <!-- PICK DU JOUR -->
@@ -1025,8 +1078,173 @@ function buildChart(){
   });
 }
 
+// ══ PICKS FEED DATA — Admin: modifier ce tableau pour mettre à jour la homepage
+// status: "finished" | "upcoming"
+// Pour ajouter un prochain pick, ajouter un objet avec status:"upcoming" à la fin
+const PICKS_FEED = [
+  {
+    id:"maroc-ecosse",
+    date:"2026-06-19", time:"21:00",
+    competition:"Coupe du Monde 2026 · Groupe F",
+    home:"Maroc", away:"Écosse",
+    pick:"Victoire Maroc (1X2)", cote:1.78,
+    status:"finished", result:"win", score:"1-0"
+  },
+  // Exemple: prochain pick à activer
+  // {
+  //   id:"turquie-paraguay",
+  //   date:"2026-06-20", time:"05:00",
+  //   competition:"Coupe du Monde 2026 · Groupe H",
+  //   home:"Turquie", away:"Paraguay",
+  //   pick:null, cote:null,
+  //   status:"upcoming", result:null
+  // },
+];
+
+function renderPicksFeed() {
+  const root = document.getElementById('pf-root');
+  const past = PICKS_FEED.filter(p => p.status === 'finished');
+  const next = PICKS_FEED.find(p => p.status === 'upcoming');
+  let html = '';
+
+  // Résultats passés (bandeau compact, max 3)
+  if (past.length) {
+    html += '<div class="pf-past">';
+    [...past].reverse().slice(0,3).forEach(p => {
+      const w = p.result === 'win';
+      html += `<div class="pf-past-item${w?'':' loss'}">
+        <span class="pf-badge ${w?'win':'loss'}">${w?'✅ GAGNÉ':'❌ PERDU'}</span>
+        <span class="pf-mn">${p.home} vs ${p.away}</span>
+        <span class="pf-sc">${p.score||'—'}</span>
+        <span class="pf-ct">@${p.cote}</span>
+        <span class="pf-comp">${p.competition.split('·')[0].trim()}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Prochain pick featured
+  if (next) {
+    const kickMs = new Date(next.date+'T'+next.time+':00').getTime();
+    const diff = kickMs - Date.now();
+    const fmtTimer = (ms) => {
+      if (ms <= 0) return '🔴 Match en cours →';
+      const h = Math.floor(ms/3600000);
+      const m = Math.floor((ms%3600000)/60000);
+      const s = Math.floor((ms%60000)/1000);
+      return h > 0 ? `⏱ Coup d'envoi dans ${h}h${String(m).padStart(2,'0')}` : `⏱ Coup d'envoi dans ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    };
+    html += `<div class="np-card" id="np-card">
+      <div class="np-eyebrow">
+        <span class="np-tag">🔮 PROCHAIN PICK</span>
+        <span class="np-timer" id="np-timer">${fmtTimer(diff)}</span>
+      </div>
+      <div class="np-teams">
+        <div class="np-tn a">${next.home}</div>
+        <div class="np-vs">VS</div>
+        <div class="np-tn b">${next.away}</div>
+      </div>
+      <div class="np-meta">${next.competition} · ${next.date.split('-').reverse().join('/')} à ${next.time}</div>
+      <div class="np-preview">
+        <span style="font-size:20px">🎯</span>
+        <div>
+          <div class="np-preview-txt">Le Concile a analysé ce match en profondeur</div>
+          <div class="np-preview-lock">🔒 Recommandation réservée aux membres</div>
+        </div>
+      </div>
+      <button class="np-btn" id="np-btn" onclick="requestPrematchAnalysis()">
+        🔮 Obtenir l'Analyse du Concile →
+      </button>
+      <div class="np-hint">⚡ Accès dès 1€ · À la carte ou abonnement mensuel</div>
+      <div id="np-result"></div>
+    </div>`;
+
+    // Timer live
+    setInterval(() => {
+      const el = document.getElementById('np-timer');
+      if (el) el.textContent = fmtTimer(new Date(next.date+'T'+next.time+':00').getTime() - Date.now());
+    }, 1000);
+  } else {
+    html += `<div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px">
+      Prochain pick bientôt — rejoins le groupe Telegram pour être notifié en premier 🔔
+      <div style="margin-top:14px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Canal gratuit Telegram →</a></div>
+    </div>`;
+  }
+
+  root.innerHTML = html;
+}
+
+async function requestPrematchAnalysis() {
+  const email = localStorage.getItem('tlm_email');
+  const code  = localStorage.getItem('tlm_code');
+  const plan  = localStorage.getItem('tlm_plan');
+
+  if (!email || !code || !plan) {
+    // Non connecté → scroll vers les plans
+    const plSec = document.getElementById('plans');
+    plSec.scrollIntoView({ behavior:'smooth' });
+    plSec.style.transition='box-shadow .3s';
+    plSec.style.boxShadow='0 0 0 2px rgba(99,102,241,.5)';
+    setTimeout(()=>plSec.style.boxShadow='',2000);
+    return;
+  }
+
+  const next = PICKS_FEED.find(p => p.status === 'upcoming');
+  if (!next) return;
+
+  const btn = document.getElementById('np-btn');
+  const resultDiv = document.getElementById('np-result');
+  btn.disabled = true;
+  btn.textContent = '⏳ Le Concile analyse...';
+  resultDiv.innerHTML = '';
+
+  try {
+    const r = await fetch('/api/prematch-analysis', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, code, match:{ home:next.home, away:next.away, competition:next.competition, date:next.date, time:next.time } })
+    });
+    const d = await r.json();
+
+    if (!d.ok) {
+      btn.disabled=false; btn.innerHTML='🔮 Obtenir l\'Analyse du Concile →';
+      resultDiv.innerHTML=`<div style="color:var(--red);font-size:13px;margin-top:12px">⚠️ ${d.error||'Erreur'}</div>`;
+      return;
+    }
+
+    btn.textContent = '✅ Analyse reçue';
+    btn.style.background = 'rgba(16,185,129,.15)';
+    btn.style.color = 'var(--green)';
+    btn.style.boxShadow = 'none';
+
+    const agents = d.agents || [];
+    const agBars = agents.map(a=>`
+      <div class="np-res-agent">
+        <span class="np-res-an">${a.icon||''} ${a.name}</span>
+        <div class="np-res-track"><div class="np-res-fill" data-w="${a.confidence}"></div></div>
+        <span class="np-res-pct">${a.confidence}%</span>
+      </div>`).join('');
+
+    resultDiv.innerHTML=`<div class="np-result">
+      <div class="np-res-hd">Verdict du Concile · Pré-match</div>
+      <div class="np-res-bet">${d.best_bet}</div>
+      <div class="np-res-conf">Confiance : ${d.confidence}% · ${d.consensus_votes}/${d.total_agents} agents convergent</div>
+      <div class="np-res-raison">${d.raison}</div>
+      ${agents.length?'<div class="np-res-agents">'+agBars+'</div>':''}
+    </div>`;
+    setTimeout(()=>{
+      document.querySelectorAll('.np-res-fill[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%'});
+    },100);
+
+  } catch {
+    btn.disabled=false; btn.innerHTML='🔮 Obtenir l\'Analyse du Concile →';
+    resultDiv.innerHTML=`<div style="color:var(--red);font-size:13px;margin-top:12px">⚠️ Erreur serveur — réessaie.</div>`;
+  }
+}
+
 // ══ INIT
 renderPick();
+renderPicksFeed();
 buildChart();
 
 // ══ AUTH — CODE D'ACCÈS

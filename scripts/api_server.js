@@ -600,6 +600,40 @@ app.post("/concile-analysis", async (req, res) => {
   }
 });
 
+// ── Pre-match analysis (homepage pick, avant coup d'envoi) ───────────────────
+app.post("/prematch-analysis", async (req, res) => {
+  const { email, code, match } = req.body || {};
+  if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
+  if (!match || !match.home || !match.away) return res.json({ ok: false, error: "Données du match manquantes" });
+
+  const auth = verifyCode(email, code);
+  if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
+
+  const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || getTodayStr()}`;
+  if (analysisCache.has(cacheKey)) {
+    return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
+  }
+
+  try {
+    const matchData = {
+      home: match.home,
+      away: match.away,
+      score_home: 0,
+      score_away: 0,
+      minute: "Pré-match",
+      status: "SCHEDULED",
+      competition: match.competition || "International",
+    };
+    const analysis = await runConcileAnalysis(matchData);
+    analysisCache.set(cacheKey, analysis);
+    setTimeout(() => analysisCache.delete(cacheKey), 12 * 60 * 60 * 1000);
+    res.json({ ok: true, ...analysis });
+  } catch (e) {
+    console.error("[prematch-analysis]", e.message);
+    res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
+  }
+});
+
 // ── Stripe ────────────────────────────────────────────────────────────────────
 app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
   const { price_id } = req.body || {};
