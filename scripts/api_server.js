@@ -47,7 +47,8 @@ db.exec(`
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
-const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
+const API_SPORTS_KEY = process.env.API_SPORTS_KEY || "";
+const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -168,52 +169,80 @@ function httpPost(url, body, headers = {}) {
   });
 }
 
-// ── Live matches ──────────────────────────────────────────────────────────────
-async function fetchLiveMatches() {
-  // Return cache if still fresh
-  if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
-    return liveMatchesCache.data;
-  }
-  if (!API_SPORTS_KEY) {
-    console.warn("[live-matches] API_SPORTS_KEY not set — no live data");
-    return [];
-  }
+// ── Live matches — football-data.org (gratuit, couvre Coupe du Monde) ─────────
+async function fetchFromFootballData() {
+  if (!FOOTBALL_DATA_KEY) return null;
   try {
-    console.log("[live-matches] Fetching from API-Sports...");
+    console.log("[live-matches] Trying football-data.org...");
+    const data = await httpGet("https://api.football-data.org/v4/matches?status=LIVE", {
+      "X-Auth-Token": FOOTBALL_DATA_KEY,
+    });
+    if (!data.matches || data.matches.length === 0) {
+      console.log("[live-matches] football-data.org: 0 matches live");
+      return [];
+    }
+    console.log(`[live-matches] football-data.org: ${data.matches.length} matches`);
+    return data.matches.map((m) => ({
+      id: String(m.id),
+      home: m.homeTeam.name,
+      away: m.awayTeam.name,
+      score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0,
+      score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0,
+      minute: m.minute ?? null,
+      status: "IN_PLAY",
+      competition: m.competition?.name || "International",
+      utcDate: m.utcDate,
+    }));
+  } catch (e) {
+    console.error("[live-matches] football-data.org error:", e.message);
+    return null;
+  }
+}
+
+// ── Live matches — API-Sports (fallback) ──────────────────────────────────────
+async function fetchFromApiSports() {
+  if (!API_SPORTS_KEY) return null;
+  try {
+    console.log("[live-matches] Trying API-Sports...");
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", {
       "x-apisports-key": API_SPORTS_KEY,
     });
     if (data.errors && Object.keys(data.errors).length > 0) {
-      console.error("[live-matches] API error:", JSON.stringify(data.errors));
-      return liveMatchesCache.data || [];
+      console.error("[live-matches] API-Sports error:", JSON.stringify(data.errors));
+      return null;
     }
-    if (data.response && data.response.length > 0) {
-      console.log(`[live-matches] Got ${data.response.length} live matches`);
-      const matches = formatApiSportsMatches(data.response);
-      liveMatchesCache = { data: matches, ts: Date.now() };
-      return matches;
-    }
-    console.log("[live-matches] API returned 0 matches (no live games right now)");
-    liveMatchesCache = { data: [], ts: Date.now() };
-    return [];
+    if (!data.response || data.response.length === 0) return [];
+    console.log(`[live-matches] API-Sports: ${data.response.length} matches`);
+    return data.response.slice(0, 30).map((f) => ({
+      id: String(f.fixture.id),
+      home: f.teams.home.name,
+      away: f.teams.away.name,
+      score_home: f.goals.home ?? 0,
+      score_away: f.goals.away ?? 0,
+      minute: f.fixture.status.elapsed ?? null,
+      status: "IN_PLAY",
+      competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
+      utcDate: f.fixture.date,
+    }));
   } catch (e) {
-    console.error("[live-matches] Fetch error:", e.message);
-    return liveMatchesCache.data || [];
+    console.error("[live-matches] API-Sports error:", e.message);
+    return null;
   }
 }
 
-function formatApiSportsMatches(fixtures) {
-  return fixtures.slice(0, 30).map((f) => ({
-    id: String(f.fixture.id),
-    home: f.teams.home.name,
-    away: f.teams.away.name,
-    score_home: f.goals.home ?? 0,
-    score_away: f.goals.away ?? 0,
-    minute: f.fixture.status.elapsed ?? "?",
-    status: "IN_PLAY",
-    competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
-    utcDate: f.fixture.date,
-  }));
+async function fetchLiveMatches() {
+  if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
+    return liveMatchesCache.data;
+  }
+  // Try football-data.org first (couvre Coupe du Monde gratuitement)
+  let matches = await fetchFromFootballData();
+  // Fallback to API-Sports
+  if (matches === null) matches = await fetchFromApiSports();
+  // If both failed, return cached or empty
+  if (matches === null) return liveMatchesCache.data || [];
+
+  liveMatchesCache = { data: matches, ts: Date.now() };
+  return matches;
 }
 
 function getMockMatches() {
