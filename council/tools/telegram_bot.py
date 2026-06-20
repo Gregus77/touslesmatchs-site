@@ -17,6 +17,7 @@ PREMIUM_CHANNEL_ID = os.environ.get("TELEGRAM_PREMIUM_CHANNEL_ID", "")
 
 WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr")
 BETCLIC_LINK = os.environ.get("BETCLIC_LINK", "https://www.betclic.fr")
+SITE_URL = os.environ.get("SITE_URL", "https://touslesmatchs.com")
 
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
@@ -73,6 +74,7 @@ def send_free_pick(match, bet, odds, sport, confidence, reasoning=""):
 
 ━━━━━━━━━━━━━━━━━━
 🎯 Jouer sur <a href="{WINAMAX_LINK}">Winamax</a> ou <a href="{BETCLIC_LINK}">Betclic</a>
+🔑 <a href="{SITE_URL}">Se connecter / Voir l'analyse →</a>
 
 ⚠️ Jeu responsable — 18+ — Max 2-5% bankroll
 🤖 Sélectionné par le Conseil Hermes (5 IAs)"""
@@ -117,11 +119,15 @@ def send_premium_pick(match, bet, odds, sport, confidence, reasoning=""):
 📊 Cote : <b>{odds}</b>
 🔥 Confiance : <b>{confidence}/10</b>
 
-📋 Analyse :
-<i>{reasoning[:300] if reasoning else 'Analyse disponible sur le site.'}</i>
+📋 Analyse complète :
+<i>{reasoning[:400] if reasoning else 'Analyse disponible sur le site.'}</i>
 
 ━━━━━━━━━━━━━━━━━━
-🎯 <a href="{WINAMAX_LINK}">Winamax</a> | <a href="{BETCLIC_LINK}">Betclic</a>
+🎯 Parier maintenant :
+  · <a href="{WINAMAX_LINK}">Winamax →</a>
+  · <a href="{BETCLIC_LINK}">Betclic →</a>
+
+🔑 <a href="{SITE_URL}/live-ia.html">Live IA — Analyser les matchs en direct →</a>
 ⚠️ 18+ — Jeu responsable — Max 2-5% bankroll"""
 
     return _send_message(PREMIUM_CHANNEL_ID, text)
@@ -175,4 +181,7 @@ def send_result_update(match, bet, result, score, tier="free"):
 
 def is_configured():
     """Vérifie si le bot Telegram est configuré."""
-    return bool(BOT_TOKEN and FREE_CHANNEL_ID)
+    ok = bool(BOT_TOKEN and FREE_CHANNEL_ID)
+    if not ok:
+        log.warning(f"[Telegram] Config manquante — BOT_TOKEN={'OK' if BOT_TOKEN else 'MANQUANT'}, FREE_CHANNEL_ID={'OK' if FREE_CHANNEL_ID else 'MANQUANT'}")
+    return ok
