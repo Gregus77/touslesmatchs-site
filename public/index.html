@@ -1361,17 +1361,21 @@ function doLogout(){
 }
 
 // ══ SCORE LIVE — mise à jour automatique toutes les 30s
+function normName(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function matchesTeam(apiName,pickName){
+  const a=normName(apiName),p=normName(pickName);
+  return a.includes(p)||p.includes(a);
+}
 async function fetchLiveScore(){
   try{
     const r=await fetch('/api/live-matches');
     if(!r.ok)return;
     const d=await r.json();
     if(!d.ok||!d.matches)return;
+    const tA=PICK.teamA.name,tB=PICK.teamB.name;
     const m=d.matches.find(x=>
-      (x.home.toLowerCase().includes('maroc')||x.home.toLowerCase().includes('morocco')) ||
-      (x.away.toLowerCase().includes('maroc')||x.away.toLowerCase().includes('morocco')) ||
-      (x.home.toLowerCase().includes('écosse')||x.home.toLowerCase().includes('scotland')) ||
-      (x.away.toLowerCase().includes('écosse')||x.away.toLowerCase().includes('scotland'))
+      (matchesTeam(x.home,tA)||matchesTeam(x.away,tA)) &&
+      (matchesTeam(x.home,tB)||matchesTeam(x.away,tB))
     );
     if(!m)return;
     const sA=document.getElementById('sA');
