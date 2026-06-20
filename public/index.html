@@ -955,7 +955,7 @@ function renderEmblem(team) {
 function renderPick(){
   const root=document.getElementById('pick-root');
   if(PICK.status==='no_bet'){
-    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">⛔</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">Aucun pick aujourd'hui</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Le Concile n'a trouvé aucun match passant les filtres de validation.<br>Discipline > Volume. Retour demain à 7h00.</div></div>`;
+    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">⛔</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">${i18n.t('no_pick_today')}</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Le Concile n'a trouvé aucun match passant les filtres de validation.<br>Discipline > Volume. Retour demain à 7h00.</div></div>`;
     return;
   }
   const isResult=PICK.status==='result';
@@ -967,8 +967,8 @@ function renderPick(){
   const resultBanner=isResult?`<div style="background:${isWin?'rgba(16,185,129,.12)':'rgba(244,63,94,.1)'};border:1px solid ${isWin?'rgba(16,185,129,.3)':'rgba(244,63,94,.25)'};border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px">
     <span style="font-size:28px">${isWin?'✅':'❌'}</span>
     <div>
-      <div style="font-size:15px;font-weight:800;color:${isWin?'var(--green)':'var(--red)'}">${isWin?'PICK GAGNANT — +'+((PICK.cote-1)*3).toFixed(1)+'% bankroll':'PICK PERDANT'}</div>
-      <div style="font-size:12px;color:var(--muted2);margin-top:2px">Score final : ${PICK.teamA.name} ${PICK.scoreA}–${PICK.scoreB} ${PICK.teamB.name} · Cote @${PICK.cote}</div>
+      <div style="font-size:15px;font-weight:800;color:${isWin?'var(--green)':'var(--red)'}">${isWin?i18n.t('pick_won')+' — +'+((PICK.cote-1)*3).toFixed(1)+'% bankroll':i18n.t('pick_lost')}</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:2px">${i18n.t('final_score')} : ${PICK.teamA.name} ${PICK.scoreA}–${PICK.scoreB} ${PICK.teamB.name} · Cote @${PICK.cote}</div>
     </div>
   </div>`:'';
 
@@ -997,9 +997,9 @@ function renderPick(){
         </div>
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(6,8,15,.6);backdrop-filter:blur(2px)">
           <div style="font-size:28px">🔒</div>
-          <div style="font-size:14px;font-weight:800;text-align:center">Votes réservés aux membres</div>
+          <div style="font-size:14px;font-weight:800;text-align:center">${i18n.t('locked_votes')}</div>
           <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · À la carte dès 1€</div>
-          <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">S'abonner →</a>
+          <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">${i18n.t('subscribe_cta')}</a>
         </div>
       </div>`;
 
@@ -1010,7 +1010,7 @@ function renderPick(){
       <div class="pick-inner">
         <div class="pick-head">
           <div class="ph-left">
-            <span class="ptag ${isResult?(isWin?'ptag-live':'ptag-nhl'):'ptag-live'}">${isResult?(isWin?'✅ Gagnant':'❌ Perdant'):'Live aujourd\'hui'}</span>
+            <span class="ptag ${isResult?(isWin?'ptag-live':'ptag-nhl'):'ptag-live'}">${isResult?(isWin?'✅ '+i18n.t('pick_won'):'❌ '+i18n.t('pick_lost')):i18n.t('live_today')}</span>
             <span class="ptag ${PICK.tag}">${PICK.sport}</span>
             <span class="ptag-comp">${PICK.competition}</span>
           </div>
@@ -1029,7 +1029,7 @@ function renderPick(){
                 <div class="sep">:</div>
                 <div class="sd${hasScore?'':' pending'}" id="sB">${hasScore?PICK.scoreB:'–'}</div>
               </div>
-              ${PICK.minute?`<span class="live-tag">🔴 ${PICK.minute}</span>`:`<span class="upcoming-tag">À venir</span>`}
+              ${PICK.minute?`<span class="live-tag">🔴 ${PICK.minute}</span>`:`<span class="upcoming-tag">${i18n.t('upcoming')}</span>`}
             </div>
             <div class="team">
               ${renderEmblem(PICK.teamB)}
@@ -1038,34 +1038,34 @@ function renderPick(){
           </div>
           <div class="market-card" style="background:${mc.bg};border:1px solid ${mc.border}">
             <div class="market-card" style="background:none;border:none;padding:0">
-              <div class="mc-type" style="color:${mc.color}">Type de pari · ${PICK.marketType}</div>
+              <div class="mc-type" style="color:${mc.color}">${i18n.t('bet_type')} · ${PICK.marketType}</div>
               <div class="mc-label" style="color:${mc.color}">${PICK.marketLabel}</div>
               <div class="mc-desc">${PICK.marketDesc}</div>
             </div>
             <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${mc.color};border-radius:2px"></div>
           </div>
           <div class="ia-head">
-            <div class="ia-title">Analyse Concile</div>
-            <div class="ia-consensus">${avg}% consensus</div>
+            <div class="ia-title">${i18n.t('pick_analysis_lbl')}</div>
+            <div class="ia-consensus">${avg}% ${i18n.t('consensus')}</div>
           </div>
           <div class="ia-list">${bars}</div>
           <div class="verdict-row">
             <div class="cote-group">
-              <div class="cl">Cote moyenne</div>
+              <div class="cl">${i18n.t('avg_odds')}</div>
               <div class="cn">${PICK.cote}</div>
             </div>
             ${_isPaid
               ? `<div class="vblock">
                   <span class="vpill ${vClass}">${PICK.verdictLabel}</span>
-                  <span class="mise-txt">Mise : ${PICK.mise}</span>
+                  <span class="mise-txt">${i18n.t('stake')} : ${PICK.mise}</span>
                 </div>`
               : `<div class="vblock">
                   <span class="vpill v-go" style="filter:blur(5px);pointer-events:none;user-select:none">GO — Mise normale</span>
-                  <a href="#plans" style="font-size:11px;color:var(--indigo2);text-decoration:none;font-weight:600;margin-top:4px;display:block">🔒 Voir le verdict →</a>
+                  <a href="#plans" style="font-size:11px;color:var(--indigo2);text-decoration:none;font-weight:600;margin-top:4px;display:block">${i18n.t('see_verdict')}</a>
                 </div>`
             }</div>
         </div>
-        <div class="bm-head">Parier chez</div>
+        <div class="bm-head">${i18n.t('bet_at')}</div>
         <div class="bm-grid">${bmBtns}</div>
       </div>
     </div>`;
@@ -1313,10 +1313,10 @@ function renderNavAuth(){
     const isElite=plan==='elite';
     el.innerHTML=`<div class="nav-user">
       <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
-      <button class="nav-logout" onclick="doLogout()" title="Déconnexion">✕</button>
+      <button class="nav-logout" onclick="doLogout()" title="${i18n.t('logout')}">✕</button>
     </div>`;
   } else {
-    el.innerHTML=`<button class="nav-login" onclick="openModal()">Se connecter</button>`;
+    el.innerHTML=`<button class="nav-login" onclick="openModal()">${i18n.t('nav_connect')}</button>`;
   }
 }
 

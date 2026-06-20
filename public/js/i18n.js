@@ -32,6 +32,11 @@ const I18N = {
     login_title:"Accès membre", login_sub:"Entre ton email et ton code d'accès.",
     login_email:"Email", login_code:"Code d'accès", login_btn:"Accéder →",
     logout:"Déconnexion",
+    no_pick_today:"Aucun pick aujourd'hui", pick_won:"PICK GAGNANT", pick_lost:"PICK PERDANT",
+    final_score:"Score final", live_today:"Live aujourd'hui", upcoming:"À venir",
+    locked_votes:"Votes réservés aux membres", pick_analysis_lbl:"Analyse Concile",
+    consensus:"consensus", avg_odds:"Cote moyenne", stake:"Mise", bet_type:"Type de pari", bet_at:"Parier chez",
+    subscribe_cta:"S'abonner →", see_verdict:"🔒 Voir le verdict →",
   },
   en: {
     nav_home:"Home", nav_historique:"History", nav_preuves:"Proof", nav_live:"Live AI",
@@ -62,6 +67,11 @@ const I18N = {
     login_title:"Member access", login_sub:"Enter your email and access code.",
     login_email:"Email", login_code:"Access code", login_btn:"Access →",
     logout:"Sign out",
+    no_pick_today:"No pick today", pick_won:"WINNING PICK", pick_lost:"LOSING PICK",
+    final_score:"Final score", live_today:"Live today", upcoming:"Upcoming",
+    locked_votes:"Votes for members only", pick_analysis_lbl:"Council Analysis",
+    consensus:"consensus", avg_odds:"Average odds", stake:"Stake", bet_type:"Bet type", bet_at:"Bet with",
+    subscribe_cta:"Subscribe →", see_verdict:"🔒 See verdict →",
   },
   es: {
     nav_home:"Inicio", nav_historique:"Historial", nav_preuves:"Pruebas", nav_live:"Live IA",
@@ -92,6 +102,11 @@ const I18N = {
     login_title:"Acceso de miembro", login_sub:"Introduce tu email y código de acceso.",
     login_email:"Email", login_code:"Código de acceso", login_btn:"Acceder →",
     logout:"Cerrar sesión",
+    no_pick_today:"Sin pick hoy", pick_won:"PICK GANADOR", pick_lost:"PICK PERDIDO",
+    final_score:"Resultado final", live_today:"En directo hoy", upcoming:"Próximo",
+    locked_votes:"Votos reservados a miembros", pick_analysis_lbl:"Análisis Concilio",
+    consensus:"consenso", avg_odds:"Cuota media", stake:"Apuesta", bet_type:"Tipo de apuesta", bet_at:"Apostar en",
+    subscribe_cta:"Suscribirse →", see_verdict:"🔒 Ver veredicto →",
   },
   pt: {
     nav_home:"Início", nav_historique:"Histórico", nav_preuves:"Provas", nav_live:"Live IA",
@@ -115,6 +130,11 @@ const I18N = {
     paywall_title:"Apenas para membros Premium", paywall_sub:"A análise do Concílio está disponível a partir do plano Pro.",
     paywall_cta:"Ver planos →", login_title:"Acesso de membro", login_sub:"Introduza o seu email e código.",
     login_email:"Email", login_code:"Código de acesso", login_btn:"Aceder →", logout:"Sair",
+    no_pick_today:"Sem pick hoje", pick_won:"PICK VENCEDOR", pick_lost:"PICK PERDIDO",
+    final_score:"Resultado final", live_today:"Ao vivo hoje", upcoming:"A seguir",
+    locked_votes:"Votos reservados a membros", pick_analysis_lbl:"Análise Concílio",
+    consensus:"consenso", avg_odds:"Cota média", stake:"Aposta", bet_type:"Tipo de aposta", bet_at:"Apostar em",
+    subscribe_cta:"Subscrever →", see_verdict:"🔒 Ver veredicto →",
   },
   de: {
     nav_home:"Startseite", nav_historique:"Verlauf", nav_preuves:"Beweise", nav_live:"Live KI",
@@ -138,6 +158,11 @@ const I18N = {
     paywall_title:"Nur für Premium-Mitglieder", paywall_sub:"Die Konzil-Analyse ist ab dem Pro-Plan verfügbar.",
     paywall_cta:"Pläne ansehen →", login_title:"Mitgliederzugang", login_sub:"Gib deine E-Mail und deinen Zugangscode ein.",
     login_email:"E-Mail", login_code:"Zugangscode", login_btn:"Zugang →", logout:"Abmelden",
+    no_pick_today:"Kein Pick heute", pick_won:"GEWINN-PICK", pick_lost:"VERLUST-PICK",
+    final_score:"Endergebnis", live_today:"Heute live", upcoming:"Demnächst",
+    locked_votes:"Abstimmungen nur für Mitglieder", pick_analysis_lbl:"Konzil-Analyse",
+    consensus:"Konsens", avg_odds:"Durchschnittliche Quote", stake:"Einsatz", bet_type:"Wettart", bet_at:"Wetten bei",
+    subscribe_cta:"Abonnieren →", see_verdict:"🔒 Ergebnis sehen →",
   },
   it: {
     nav_home:"Home", nav_historique:"Storico", nav_preuves:"Prove", nav_live:"Live IA",
@@ -161,6 +186,11 @@ const I18N = {
     paywall_title:"Solo per membri Premium", paywall_sub:"L'analisi del Concilio è disponibile dal piano Pro.",
     paywall_cta:"Vedi piani →", login_title:"Accesso membro", login_sub:"Inserisci la tua email e il codice di accesso.",
     login_email:"Email", login_code:"Codice di accesso", login_btn:"Accedi →", logout:"Esci",
+    no_pick_today:"Nessun pick oggi", pick_won:"PICK VINCENTE", pick_lost:"PICK PERDENTE",
+    final_score:"Risultato finale", live_today:"Live oggi", upcoming:"In arrivo",
+    locked_votes:"Voti riservati ai membri", pick_analysis_lbl:"Analisi Concilio",
+    consensus:"consenso", avg_odds:"Quota media", stake:"Puntata", bet_type:"Tipo di scommessa", bet_at:"Scommetti su",
+    subscribe_cta:"Abbonati →", see_verdict:"🔒 Vedi verdetto →",
   },
   nl: {
     nav_home:"Startpagina", nav_historique:"Geschiedenis", nav_preuves:"Bewijzen", nav_live:"Live AI",
@@ -184,6 +214,11 @@ const I18N = {
     paywall_title:"Alleen voor Premium-leden", paywall_sub:"Raadsanalyse beschikbaar vanaf Pro-plan.",
     paywall_cta:"Plannen bekijken →", login_title:"Ledentoegang", login_sub:"Voer je e-mail en toegangscode in.",
     login_email:"E-mail", login_code:"Toegangscode", login_btn:"Toegang →", logout:"Uitloggen",
+    no_pick_today:"Geen pick vandaag", pick_won:"WINNENDE PICK", pick_lost:"VERLIEZENDE PICK",
+    final_score:"Eindstand", live_today:"Live vandaag", upcoming:"Binnenkort",
+    locked_votes:"Stemmen alleen voor leden", pick_analysis_lbl:"Raadsanalyse",
+    consensus:"consensus", avg_odds:"Gemiddelde odds", stake:"Inzet", bet_type:"Wedtype", bet_at:"Gokken bij",
+    subscribe_cta:"Abonneren →", see_verdict:"🔒 Zie verdict →",
   },
   tr: {
     nav_home:"Ana Sayfa", nav_historique:"Geçmiş", nav_preuves:"Kanıtlar", nav_live:"Canlı YZ",
@@ -207,6 +242,11 @@ const I18N = {
     paywall_title:"Sadece Premium Üyeler", paywall_sub:"Konsey analizi Pro planından itibaren mevcuttur.",
     paywall_cta:"Planları Gör →", login_title:"Üye Girişi", login_sub:"E-postanızı ve erişim kodunuzu girin.",
     login_email:"E-posta", login_code:"Erişim Kodu", login_btn:"Erişim →", logout:"Çıkış",
+    no_pick_today:"Bugün pick yok", pick_won:"KAZANAN PİCK", pick_lost:"KAYBEDEN PİCK",
+    final_score:"Final skoru", live_today:"Bugün canlı", upcoming:"Yakında",
+    locked_votes:"Üyelere özel oylar", pick_analysis_lbl:"Konsey Analizi",
+    consensus:"konsensüs", avg_odds:"Ortalama oran", stake:"Bahis", bet_type:"Bahis türü", bet_at:"Bahis yap",
+    subscribe_cta:"Abone ol →", see_verdict:"🔒 Sonucu gör →",
   },
   ru: {
     nav_home:"Главная", nav_historique:"История", nav_preuves:"Доказательства", nav_live:"Live ИИ",
@@ -230,6 +270,11 @@ const I18N = {
     paywall_title:"Только для Premium-участников", paywall_sub:"Анализ Совета доступен от плана Pro.",
     paywall_cta:"Смотреть планы →", login_title:"Доступ для членов", login_sub:"Введите email и код доступа.",
     login_email:"Email", login_code:"Код доступа", login_btn:"Доступ →", logout:"Выйти",
+    no_pick_today:"Нет пика сегодня", pick_won:"ВЫИГРЫШНЫЙ ПИК", pick_lost:"ПРОИГРЫШНЫЙ ПИК",
+    final_score:"Финальный счёт", live_today:"Сейчас в прямом эфире", upcoming:"Скоро",
+    locked_votes:"Голоса только для участников", pick_analysis_lbl:"Анализ Совета",
+    consensus:"консенсус", avg_odds:"Средний коэффициент", stake:"Ставка", bet_type:"Тип ставки", bet_at:"Делать ставку на",
+    subscribe_cta:"Подписаться →", see_verdict:"🔒 Посмотреть вердикт →",
   },
   zh: {
     nav_home:"主页", nav_historique:"历史", nav_preuves:"证明", nav_live:"实时AI",
@@ -253,6 +298,11 @@ const I18N = {
     paywall_title:"仅限Premium会员", paywall_sub:"委员会分析从Pro计划起可用。",
     paywall_cta:"查看计划 →", login_title:"会员访问", login_sub:"输入您的电子邮件和访问代码。",
     login_email:"电子邮件", login_code:"访问代码", login_btn:"访问 →", logout:"退出",
+    no_pick_today:"今天没有Pick", pick_won:"获胜PICK", pick_lost:"失败PICK",
+    final_score:"最终比分", live_today:"今天直播", upcoming:"即将进行",
+    locked_votes:"仅会员可见投票", pick_analysis_lbl:"委员会分析",
+    consensus:"共识", avg_odds:"平均赔率", stake:"投注", bet_type:"投注类型", bet_at:"在此下注",
+    subscribe_cta:"订阅 →", see_verdict:"🔒 查看裁决 →",
   },
   ar: {
     nav_home:"الرئيسية", nav_historique:"السجل", nav_preuves:"الإثباتات", nav_live:"مباشر AI",
@@ -276,6 +326,11 @@ const I18N = {
     paywall_title:"للأعضاء المميزين فقط", paywall_sub:"تحليل المجلس متاح من خطة Pro.",
     paywall_cta:"عرض الخطط →", login_title:"وصول الأعضاء", login_sub:"أدخل بريدك الإلكتروني ورمز الوصول.",
     login_email:"البريد الإلكتروني", login_code:"رمز الوصول", login_btn:"الوصول →", logout:"تسجيل الخروج",
+    no_pick_today:"لا اختيار اليوم", pick_won:"اختيار رابح", pick_lost:"اختيار خاسر",
+    final_score:"النتيجة النهائية", live_today:"مباشر اليوم", upcoming:"قادم",
+    locked_votes:"التصويت للأعضاء فقط", pick_analysis_lbl:"تحليل المجلس",
+    consensus:"إجماع", avg_odds:"متوسط المعامل", stake:"رهان", bet_type:"نوع الرهان", bet_at:"راهن على",
+    subscribe_cta:"اشترك →", see_verdict:"🔒 انظر الحكم →",
   },
 };
 
@@ -323,8 +378,9 @@ const i18n = {
     if(p) p.classList.remove("open");
     this.apply();
     this.updateToggleBtn();
-    if(typeof render === "function") render();
-    if(typeof renderMain === "function") renderMain();
+    if(typeof renderNavAuth === "function") renderNavAuth();
+    if(typeof renderPick === "function") renderPick();
+    if(typeof renderPicksFeed === "function") renderPicksFeed();
   },
   detect(){
     const saved = localStorage.getItem("tlm_lang");
