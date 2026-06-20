@@ -376,6 +376,25 @@ function getMockAnalysis(match) {
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+// ── Verify code (proxy to webhook container) ──────────────────────────────────
+app.post("/verify-code", async (req, res) => {
+  const { email, code } = req.body || {};
+  if (!email || !code) return res.json({ valid: false, error: "Email et code requis" });
+  try {
+    // Try webhook service (docker service name), then container name fallback
+    let result;
+    try {
+      result = await httpPostInternal("webhook", 5001, "/verify-code", { email, code });
+    } catch {
+      result = await httpPostInternal("touslesmatchs-webhook", 5001, "/verify-code", { email, code });
+    }
+    res.json(result);
+  } catch (e) {
+    console.error("[verify-code] webhook unreachable:", e.message);
+    res.json({ valid: false, error: "Service de vérification indisponible" });
+  }
+});
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 app.post("/auth/register", async (req, res) => {
   const { email, password } = req.body || {};
