@@ -622,6 +622,7 @@ footer{
   .nav-center{display:none}
   .nav-live-pill{display:none}
   .nav-cta{display:none}
+  .nav-login{font-size:11px;padding:6px 10px}
   .nav-hamburger{display:block}
   .section-wrap{padding:60px 16px}
   .pick-body{padding:16px}
@@ -675,7 +676,7 @@ footer{
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
-  <a href="#plans" class="mm-cta" onclick="toggleMenu()" data-i18n="mm_join">Rejoindre → dès 1€</a>
+  <a href="#plan-carte" class="mm-cta" onclick="toggleMenu()">Rejoindre → dès 1€</a>
 </div>
 
 <!-- MODAL LOGIN -->
@@ -766,7 +767,7 @@ footer{
       </div>
       <a href="#pick" class="pc-btn" data-i18n="plan_free_btn">Voir le pick</a>
     </div>
-    <div class="pc">
+    <div class="pc" id="plan-carte">
       <span class="pc-badge b-ct" data-i18n="plan_carte_badge">À la carte</span>
       <div><div class="pc-price">1€<span class="mo">/analyse</span></div><div class="pc-name" style="margin-top:6px" data-i18n="plan_carte_name">Test</div></div>
       <div class="pc-desc" data-i18n="plan_carte_desc">1 crédit = 1 analyse complète sur le match de ton choix en Live IA.</div>
