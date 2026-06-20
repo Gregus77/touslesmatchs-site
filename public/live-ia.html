@@ -190,6 +190,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
   .match-team{font-size:13px}
   .score-num{font-size:20px}
 }
+.tg-float{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0088cc,#006ba6);color:#fff;font-size:13px;font-weight:700;padding:12px 20px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(0,136,204,.45);transition:all .2s;animation:tg-float-in .5s ease}
+.tg-float:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,136,204,.65)}
+@keyframes tg-float-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:640px){.tg-float{bottom:16px;right:12px;padding:10px 14px;font-size:12px;gap:6px}}
 </style>
 </head>
 <body>
@@ -652,5 +656,6 @@ document.addEventListener('click',function(e){
 </script>
 <script src="/js/i18n.js"></script>
 <script>document.addEventListener('DOMContentLoaded', () => i18n.init());</script>
+<a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" class="tg-float">📱 Telegram gratuit</a>
 </body>
 </html>

@@ -29,6 +29,7 @@ from tools.telegram_bot import (
     send_free_pick, send_nopick, send_premium_pick,
     send_premium_stats, is_configured as telegram_ok
 )
+from tools.brevo import send_daily_pick_email, is_configured as brevo_ok
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
 
 logging.basicConfig(
@@ -293,6 +294,22 @@ def run_council():
             log.info("Telegram gratuit : pick du jour envoyé")
     else:
         log.warning("Telegram non configuré — messages non envoyés")
+
+    # 12. Brevo — email pick quotidien aux abonnés
+    if brevo_ok():
+        send_daily_pick_email(
+            match=decision.get("match") if not is_nopick else None,
+            bet=decision.get("bet") if not is_nopick else None,
+            cote=decision.get("odds") if not is_nopick else None,
+            sport=decision.get("sport", "") if not is_nopick else None,
+            confidence=decision.get("confidence", 0),
+            reasoning=decision.get("reasoning", ""),
+            date_str=date_str,
+            is_nopick=is_nopick,
+        )
+        log.info("Brevo : email pick envoyé aux abonnés")
+    else:
+        log.info("Brevo non configuré — emails non envoyés")
 
     log.info("=" * 60)
     log.info("HERMES COUNCIL - Session terminée")

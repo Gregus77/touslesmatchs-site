@@ -547,6 +547,31 @@ setInterval(runExpiryCron, 60 * 60 * 1000);
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+// ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
+app.post("/subscribe-email", async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !email.includes("@")) {
+    return res.json({ ok: false, error: "Email invalide" });
+  }
+  const emailClean = email.toLowerCase().trim();
+  try {
+    if (!BREVO_API_KEY) {
+      console.log(`[subscribe-email] Brevo non configuré — email ignoré: ${emailClean}`);
+      return res.json({ ok: true }); // ne pas bloquer l'UX si Brevo absent
+    }
+    await httpPost(
+      "https://api.brevo.com/v3/contacts",
+      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER" }, updateEnabled: true },
+      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
+    );
+    console.log(`[subscribe-email] Abonné ajouté Brevo: ${emailClean}`);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[subscribe-email] error:", e.message);
+    res.json({ ok: true }); // ne pas montrer l'erreur à l'utilisateur
+  }
+});
+
 // ── Verify code (reads codes.db directly) ────────────────────────────────────
 const CODES_DB_PATH = "/var/touslesmatchs/codes.db";
 
