@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Live IA — TousLesMatchs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080f;--bg2:#0d1020;--bg3:#141828;--bg4:#1c2236;
+  --b1:rgba(255,255,255,.05);--b2:rgba(255,255,255,.09);--b3:rgba(255,255,255,.14);
+  --text:#eceaf4;--muted:#7b82a0;--muted2:#a8aec8;
+  --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;--violet2:#9333ea;
+  --cyan:#22d3ee;--cyan2:#06b6d4;--blue:#3b82f6;
+  --green:#10b981;--red:#f43f5e;--amber:#f59e0b;--pink:#ec4899;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%,rgba(79,70,229,.13) 0%,transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 15%,rgba(34,211,238,.10) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%);
+  animation:mesh-drift 16s ease-in-out infinite alternate;
+}
+@keyframes mesh-drift{0%{opacity:.8;transform:scale(1)}100%{opacity:1;transform:scale(1.03) rotate(.4deg)}}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.75);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%);-webkit-backdrop-filter:blur(20px) saturate(180%)}
+.nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
+.nav-center{display:flex;align-items:center;gap:2px}
+.nav-center a{font-size:13px;color:var(--muted2);text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s}
+.nav-center a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-live-pill{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:#fb7185;padding:6px 14px;border-radius:20px;text-decoration:none;transition:all .2s}
+.nav-live-pill:hover,.nav-live-pill.active{background:rgba(244,63,94,.18);border-color:rgba(244,63,94,.4)}
+.nav-live-dot{width:6px;height:6px;background:#f43f5e;border-radius:50%;animation:pulse-red 1.2s infinite}
+@keyframes pulse-red{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.nav-cta{font-size:13px;font-weight:700;padding:8px 20px;border-radius:9px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;text-decoration:none;display:inline-block;box-shadow:0 4px 20px rgba(79,70,229,.3);transition:all .2s}
+.nav-cta:hover{box-shadow:0 6px 28px rgba(79,70,229,.5);transform:translateY(-1px)}
+.nav-login{font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px;background:transparent;color:#a8aec8;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:all .2s}
+.nav-login:hover{color:var(--text);border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.05)}
+.nav-user{display:flex;align-items:center;gap:8px}
+.nav-plan-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;background:rgba(99,102,241,.12);color:var(--indigo2);border:1px solid rgba(99,102,241,.25)}
+.nav-plan-badge.elite{background:rgba(124,58,237,.12);color:#c084fc;border-color:rgba(124,58,237,.25)}
+.nav-logout{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:5px;transition:color .15s}
+.nav-logout:hover{color:var(--red)}
+
+/* MODAL LOGIN */
+.modal-bg{position:fixed;inset:0;z-index:999;background:rgba(6,8,15,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid rgba(99,102,241,.25);border-radius:20px;padding:32px;width:100%;max-width:400px;box-shadow:0 40px 80px rgba(0,0,0,.6)}
+.modal-title{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted2);margin-bottom:24px;line-height:1.6}
+.modal-label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--indigo2);margin-bottom:6px;display:block}
+.modal-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--b2);border-radius:9px;padding:12px 14px;color:var(--text);font-size:14px;font-family:'Inter',system-ui,sans-serif;margin-bottom:14px;transition:border-color .15s;box-sizing:border-box}
+.modal-input:focus{outline:none;border-color:rgba(99,102,241,.5)}
+.modal-btn{width:100%;padding:13px;border-radius:10px;font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(79,70,229,.3);transition:all .2s;margin-bottom:10px}
+.modal-btn:hover{box-shadow:0 8px 32px rgba(79,70,229,.5);transform:translateY(-1px)}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.modal-err{font-size:12px;color:var(--red);margin-bottom:10px;display:none}
+.modal-ok{font-size:12px;color:var(--green);margin-bottom:10px;display:none}
+.modal-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;float:right;margin-top:-4px}
+
+/* PAGE */
+.page{position:relative;z-index:1;padding:100px 32px 80px;max-width:900px;margin:0 auto}
+.page-header{margin-bottom:40px}
+.page-title{font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px}
+.page-title span{background:linear-gradient(135deg,#f43f5e,var(--violet),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.page-sub{font-size:15px;color:var(--muted2);line-height:1.6}
+.page-meta{display:flex;align-items:center;gap:12px;margin-top:16px;flex-wrap:wrap}
+.meta-pill{font-size:11px;font-weight:600;padding:4px 12px;border-radius:20px;display:flex;align-items:center;gap:6px}
+.meta-pill.live{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:#fb7185}
+.meta-pill.count{background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);color:var(--cyan)}
+.meta-pill.credits{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:var(--indigo2)}
+
+/* ACCÈS BLOQUÉ */
+.gate{background:var(--bg2);border:1px solid rgba(99,102,241,.2);border-radius:20px;padding:48px 32px;text-align:center;margin-bottom:32px}
+.gate-icon{font-size:48px;margin-bottom:16px}
+.gate-title{font-size:22px;font-weight:800;margin-bottom:10px}
+.gate-sub{font-size:14px;color:var(--muted2);margin-bottom:28px;line-height:1.6;max-width:380px;margin-left:auto;margin-right:auto}
+.gate-btn{display:inline-block;padding:12px 28px;border-radius:10px;font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(79,70,229,.3);transition:all .2s;text-decoration:none}
+.gate-btn:hover{box-shadow:0 8px 32px rgba(79,70,229,.5);transform:translateY(-1px)}
+
+/* MATCHS GRID */
+.matches-grid{display:grid;gap:12px}
+.match-card{
+  background:var(--bg2);border:1px solid var(--b2);border-radius:16px;
+  padding:18px 20px;cursor:pointer;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.match-card:hover{border-color:rgba(99,102,241,.4);background:var(--bg3);transform:translateY(-1px);box-shadow:0 8px 32px rgba(0,0,0,.3)}
+.match-card.selected{border-color:rgba(99,102,241,.6);background:var(--bg3);box-shadow:0 0 0 1px rgba(99,102,241,.3),0 8px 32px rgba(79,70,229,.15)}
+.match-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(99,102,241,.04),transparent);pointer-events:none}
+.match-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.match-comp{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.match-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:10px;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.25);color:#fb7185;display:flex;align-items:center;gap:5px}
+.match-dot{width:5px;height:5px;background:#f43f5e;border-radius:50%;animation:pulse-red 1.2s infinite}
+.match-teams{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.match-team{flex:1;font-size:15px;font-weight:700;color:var(--text);line-height:1.3}
+.match-team.away{text-align:right}
+.match-score{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.score-num{font-size:26px;font-weight:900;color:var(--text);min-width:28px;text-align:center;line-height:1}
+.score-sep{font-size:18px;color:var(--muted);font-weight:300}
+.match-minute{font-size:11px;font-weight:600;color:var(--amber);background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);padding:3px 8px;border-radius:8px;margin-top:8px;display:inline-block}
+.match-analyze-btn{
+  margin-top:14px;width:100%;padding:10px;border-radius:9px;font-size:13px;font-weight:700;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  color:#fff;border:none;cursor:pointer;
+  box-shadow:0 4px 16px rgba(79,70,229,.3);transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.match-analyze-btn:hover{box-shadow:0 6px 24px rgba(79,70,229,.5);transform:translateY(-1px)}
+.match-analyze-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ANALYSE PANEL */
+.analysis-panel{
+  background:var(--bg2);border:1px solid rgba(99,102,241,.25);
+  border-radius:20px;padding:28px;margin-top:20px;
+  animation:fade-in .3s ease;
+}
+@keyframes fade-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.analysis-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.analysis-title{font-size:16px;font-weight:800;letter-spacing:-.01em}
+.analysis-meta{font-size:12px;color:var(--muted2)}
+
+/* AGENTS */
+.agents-grid{display:grid;gap:12px;margin-bottom:20px}
+.agent-card{background:var(--bg3);border:1px solid var(--b2);border-radius:12px;padding:16px}
+.agent-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.agent-icon{font-size:20px}
+.agent-name{font-size:13px;font-weight:700;color:var(--text)}
+.agent-model{font-size:11px;color:var(--muted);margin-top:1px}
+.agent-verdict{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;margin-bottom:8px}
+.agent-verdict.win{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.agent-verdict.over{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)}
+.agent-verdict.btts{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.agent-verdict.draw{background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.2)}
+.agent-verdict.other{background:rgba(236,72,153,.1);color:var(--pink);border:1px solid rgba(236,72,153,.2)}
+.agent-confidence{font-size:12px;color:var(--muted2);margin-bottom:6px}
+.conf-bar{height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;margin-bottom:8px}
+.conf-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--indigo2),var(--violet));transition:width .6s ease}
+.agent-reasoning{font-size:12px;color:var(--muted2);line-height:1.6}
+
+/* SYNTHÈSE */
+.synthesis-card{background:linear-gradient(135deg,rgba(79,70,229,.1),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.3);border-radius:14px;padding:20px}
+.synthesis-label{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:12px}
+.synthesis-bet{font-size:22px;font-weight:900;color:var(--text);margin-bottom:6px;letter-spacing:-.02em}
+.synthesis-conf{font-size:13px;color:var(--muted2);margin-bottom:14px}
+.synthesis-reasoning{font-size:13px;color:var(--muted2);line-height:1.6;padding-top:12px;border-top:1px solid var(--b2)}
+
+/* LOADING */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-agents{display:grid;gap:12px}
+.loading-agent{background:var(--bg3);border:1px solid var(--b2);border-radius:12px;padding:16px;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%,100%{opacity:.6}50%{opacity:1}}
+.loading-line{height:12px;background:rgba(255,255,255,.06);border-radius:4px;margin-bottom:8px}
+.loading-line.short{width:40%}
+.loading-line.medium{width:65%}
+.loading-line.long{width:90%}
+
+/* VIDE */
+.empty-state{text-align:center;padding:64px 32px;color:var(--muted)}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.empty-title{font-size:18px;font-weight:700;color:var(--muted2);margin-bottom:8px}
+.empty-sub{font-size:14px;line-height:1.6}
+
+/* REFRESH */
+.refresh-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.refresh-btn{font-size:12px;font-weight:600;padding:6px 14px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid var(--b2);color:var(--muted2);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.refresh-btn:hover{background:rgba(255,255,255,.08);color:var(--text)}
+.last-update{font-size:11px;color:var(--muted)}
+
+@media(max-width:640px){
+  nav{padding:0 16px}
+  .nav-center{display:none}
+  .page{padding:90px 16px 60px}
+  .match-team{font-size:13px}
+  .score-num{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+
+<nav>
+  <a href="/" class="nav-brand">TousLesMatchs</a>
+  <div class="nav-center">
+    <a href="/">Accueil</a>
+    <a href="/#picks">Picks</a>
+    <a href="/#abonnements">Abonnements</a>
+  </div>
+  <div class="nav-right">
+    <a href="/live-ia" class="nav-live-pill active"><span class="nav-live-dot"></span>Live IA</a>
+    <div id="nav-auth"></div>
+  </div>
+</nav>
+
+<!-- MODAL LOGIN -->
+<div class="modal-bg" id="modal-login">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">Accès membre</div>
+    <div class="modal-sub">Entre ton email et ton code d'accès pour débloquer le Concile.</div>
+    <label class="modal-label">Email</label>
+    <input class="modal-input" id="login-email" type="email" placeholder="ton@email.com" autocomplete="email">
+    <label class="modal-label">Code d'accès</label>
+    <input class="modal-input" id="login-code" type="text" placeholder="ELITE-XXXXXX" autocomplete="off">
+    <div class="modal-err" id="login-err"></div>
+    <div class="modal-ok" id="login-ok"></div>
+    <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+  </div>
+</div>
+
+<div class="page">
+  <div class="page-header">
+    <div class="page-title">🔴 <span>Live IA</span></div>
+    <div class="page-sub">Le Concile analyse chaque match en temps réel — 5 agents IA, 1 verdict.</div>
+    <div class="page-meta">
+      <div class="meta-pill live"><span class="match-dot"></span><span id="match-count-pill">— matchs en direct</span></div>
+      <div class="meta-pill credits" id="credits-pill" style="display:none">— crédits</div>
+    </div>
+  </div>
+
+  <!-- Zone principale -->
+  <div id="main-zone"></div>
+</div>
+
+<script>
+// ══ AUTH
+function getAuth(){
+  return {
+    email: localStorage.getItem('tlm_email'),
+    code:  localStorage.getItem('tlm_code'),
+    plan:  localStorage.getItem('tlm_plan'),
+  };
+}
+
+function renderNavAuth(){
+  const el = document.getElementById('nav-auth');
+  const {email, plan} = getAuth();
+  if(email && plan){
+    const isElite = plan === 'elite';
+    el.innerHTML = `<div class="nav-user">
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
+      <button class="nav-logout" onclick="doLogout()" title="Déconnexion">✕</button>
+    </div>`;
+  } else {
+    el.innerHTML = `<button class="nav-login" onclick="openModal()">Se connecter</button>`;
+  }
+}
+
+function openModal(){
+  document.getElementById('modal-login').classList.add('open');
+  setTimeout(()=>document.getElementById('login-email').focus(),100);
+}
+function closeModal(){ document.getElementById('modal-login').classList.remove('open') }
+document.getElementById('modal-login').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.getElementById('login-code').addEventListener('input',function(){this.value=this.value.toUpperCase()});
+document.getElementById('login-email').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('login-code').focus()});
+document.getElementById('login-code').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin()});
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const code  = document.getElementById('login-code').value.trim().toUpperCase();
+  const errEl = document.getElementById('login-err');
+  const okEl  = document.getElementById('login-ok');
+  const btn   = document.getElementById('login-btn');
+  errEl.style.display='none'; okEl.style.display='none';
+  if(!email||!code){ errEl.textContent='Email et code requis.'; errEl.style.display='block'; return; }
+  btn.disabled=true; btn.textContent='Vérification...';
+  try{
+    const r = await fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})});
+    const d = await r.json();
+    if(d.valid){
+      localStorage.setItem('tlm_email', email);
+      localStorage.setItem('tlm_code',  code);
+      localStorage.setItem('tlm_plan',  d.plan);
+      okEl.textContent = `✓ Connecté — Plan ${d.plan} · ${d.credits_left} crédit(s)`;
+      okEl.style.display='block';
+      setTimeout(()=>{ closeModal(); renderNavAuth(); renderCredits(); renderMain(); }, 1000);
+    } else {
+      errEl.textContent = d.error||'Code invalide.'; errEl.style.display='block';
+      btn.disabled=false; btn.textContent='Accéder →';
+    }
+  } catch(e){
+    errEl.textContent='Erreur serveur. Réessaie.'; errEl.style.display='block';
+    btn.disabled=false; btn.textContent='Accéder →';
+  }
+}
+
+function doLogout(){
+  localStorage.removeItem('tlm_email');
+  localStorage.removeItem('tlm_code');
+  localStorage.removeItem('tlm_plan');
+  renderNavAuth();
+  renderCredits();
+  renderMain();
+}
+
+function renderCredits(){
+  const {plan} = getAuth();
+  const pill = document.getElementById('credits-pill');
+  if(!plan){ pill.style.display='none'; return; }
+  pill.style.display='flex';
+  pill.textContent = plan==='elite' ? '👑 Elite — crédits illimités' : `⚡ ${plan}`;
+}
+
+// ══ MATCHES
+let allMatches = [];
+let lastUpdate = null;
+
+async function loadMatches(){
+  try{
+    const r = await fetch('/api/live-matches');
+    const d = await r.json();
+    if(d.ok && d.matches){
+      allMatches = d.matches;
+      lastUpdate = new Date();
+      document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';
+    }
+  } catch(e){ console.error(e); }
+  renderMain();
+}
+
+function renderMain(){
+  const zone = document.getElementById('main-zone');
+  const {email, plan} = getAuth();
+
+  if(!email){
+    zone.innerHTML = `
+      <div class="gate">
+        <div class="gate-icon">🔐</div>
+        <div class="gate-title">Accès réservé aux membres</div>
+        <div class="gate-sub">Connecte-toi avec ton code d'accès pour voir les analyses du Concile en temps réel.</div>
+        <button class="gate-btn" onclick="openModal()">Se connecter →</button>
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="refresh-bar">
+    <div class="last-update">${lastUpdate ? 'Mis à jour : ' + lastUpdate.toLocaleTimeString('fr-FR') : ''}</div>
+    <button class="refresh-btn" onclick="loadMatches()">⟳ Actualiser</button>
+  </div>`;
+
+  if(allMatches.length === 0){
+    html += `<div class="empty-state">
+      <div class="empty-icon">⚽</div>
+      <div class="empty-title">Aucun match en direct</div>
+      <div class="empty-sub">Il n'y a pas de match en cours pour le moment.<br>Reviens plus tard ou actualise la page.</div>
+    </div>`;
+  } else {
+    html += `<div class="matches-grid" id="matches-grid">`;
+    allMatches.forEach((m, i) => {
+      html += renderMatchCard(m, i);
+    });
+    html += `</div>`;
+  }
+
+  html += `<div id="analysis-zone"></div>`;
+  zone.innerHTML = html;
+}
+
+function renderMatchCard(m, i){
+  const verdictClass = m.score_home > m.score_away ? 'win' : m.score_away > m.score_home ? 'win' : 'draw';
+  return `<div class="match-card" id="card-${i}" onclick="selectMatch(${i})">
+    <div class="match-top">
+      <div class="match-comp">${escHtml(m.competition||'')}</div>
+      <div class="match-badge"><span class="match-dot"></span>LIVE ${m.minute?m.minute+"'":''}
+      </div>
+    </div>
+    <div class="match-teams">
+      <div class="match-team">${escHtml(m.home)}</div>
+      <div class="match-score">
+        <span class="score-num">${m.score_home??0}</span>
+        <span class="score-sep">—</span>
+        <span class="score-num">${m.score_away??0}</span>
+      </div>
+      <div class="match-team away">${escHtml(m.away)}</div>
+    </div>
+    <button class="match-analyze-btn" id="btn-${i}" onclick="event.stopPropagation();analyzeMatch(${i})">
+      <span>🧠</span> Analyser avec Le Concile
+    </button>
+  </div>`;
+}
+
+let currentAnalysis = null;
+
+function selectMatch(i){
+  document.querySelectorAll('.match-card').forEach(c=>c.classList.remove('selected'));
+  const card = document.getElementById('card-'+i);
+  if(card) card.classList.add('selected');
+}
+
+async function analyzeMatch(i){
+  const {email, code, plan} = getAuth();
+  if(!email){ openModal(); return; }
+
+  const m = allMatches[i];
+  selectMatch(i);
+  const btn = document.getElementById('btn-'+i);
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Analyse en cours...'; }
+
+  const zone = document.getElementById('analysis-zone');
+  zone.innerHTML = renderLoadingAnalysis(m);
+  zone.scrollIntoView({behavior:'smooth', block:'start'});
+
+  try{
+    const r = await fetch('/api/concile-analysis', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ matchId: m.id, email, code, match: m })
+    });
+    const d = await r.json();
+
+    if(btn){ btn.disabled=false; btn.innerHTML='<span>🧠</span> Ré-analyser'; }
+
+    if(!d.ok){
+      zone.innerHTML = `<div class="analysis-panel">
+        <div style="text-align:center;padding:20px;color:var(--red)">
+          <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+          <div style="font-weight:700;margin-bottom:6px">${escHtml(d.error||'Erreur')}</div>
+          <div style="font-size:13px;color:var(--muted2)">${d.error&&d.error.includes('crédit')?'<a href="/#abonnements" style="color:var(--indigo2)">Voir les abonnements →</a>':''}</div>
+        </div>
+      </div>`;
+      return;
+    }
+
+    zone.innerHTML = renderAnalysis(m, d);
+  } catch(e){
+    if(btn){ btn.disabled=false; btn.innerHTML='<span>🧠</span> Réessayer'; }
+    zone.innerHTML = `<div class="analysis-panel"><div style="text-align:center;padding:20px;color:var(--muted2)">Erreur réseau. Réessaie.</div></div>`;
+  }
+}
+
+function renderLoadingAnalysis(m){
+  return `<div class="analysis-panel">
+    <div class="analysis-header">
+      <div>
+        <div class="analysis-title">🧠 Le Concile analyse…</div>
+        <div class="analysis-meta">${escHtml(m.home)} ${m.score_home??0}–${m.score_away??0} ${escHtml(m.away)} · ${m.minute?m.minute+"'":'Live'}</div>
+      </div>
+    </div>
+    <div class="loading-agents">
+      ${[1,2,3,4,5].map(()=>`<div class="loading-agent">
+        <div class="loading-line short"></div>
+        <div class="loading-line medium"></div>
+        <div class="loading-line long"></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderAnalysis(m, d){
+  const agents = d.agents || [];
+  const synthesis = d.synthesis || {};
+
+  const verdictColors = {
+    'Victoire domicile':'win','Victoire extérieur':'win','Match nul':'draw',
+    'Over 2.5 buts':'over','Under 2.5 buts':'over','BTTS Oui':'btts','BTTS Non':'btts',
+    'Double chance 1X':'win','Double chance X2':'win',
+  };
+
+  const agentsHtml = agents.map(a => {
+    const vc = verdictColors[a.bet] || 'other';
+    const conf = a.confidence || 70;
+    return `<div class="agent-card">
+      <div class="agent-header">
+        <span class="agent-icon">${escHtml(a.icon||'🤖')}</span>
+        <div>
+          <div class="agent-name">${escHtml(a.name)}</div>
+          <div class="agent-model">${escHtml(a.model||'')}</div>
+        </div>
+      </div>
+      <div class="agent-verdict ${vc}">${escHtml(a.bet)}</div>
+      <div class="agent-confidence">${conf}% confiance</div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
+      <div class="agent-reasoning">${escHtml(a.reasoning||'')}</div>
+    </div>`;
+  }).join('');
+
+  const synVc = verdictColors[synthesis.bet] || 'other';
+  const synConf = synthesis.confidence || 75;
+
+  return `<div class="analysis-panel">
+    <div class="analysis-header">
+      <div>
+        <div class="analysis-title">🧠 Analyse du Concile</div>
+        <div class="analysis-meta">${escHtml(m.home)} ${m.score_home??0}–${m.score_away??0} ${escHtml(m.away)} · ${m.minute?m.minute+"'":'Live'} · ${escHtml(m.competition||'')}</div>
+      </div>
+    </div>
+    <div class="agents-grid">${agentsHtml}</div>
+    <div class="synthesis-card">
+      <div class="synthesis-label">Verdict final du Concile</div>
+      <div class="synthesis-bet">${escHtml(synthesis.bet||'—')}</div>
+      <div class="synthesis-conf">${synConf}% de confiance collective</div>
+      <div class="conf-bar"><div class="conf-fill" style="width:${synConf}%"></div></div>
+      <div class="synthesis-reasoning">${escHtml(synthesis.reasoning||'')}</div>
+    </div>
+  </div>`;
+}
+
+function escHtml(s){
+  if(s===null||s===undefined) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══ INIT
+renderNavAuth();
+renderCredits();
+loadMatches();
+setInterval(loadMatches, 60000);
+</script>
+</body>
+</html>

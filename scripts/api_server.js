@@ -8,6 +8,7 @@ const jwt = require("jsonwebtoken");
 const Database = require("better-sqlite3");
 const path = require("path");
 const https = require("https");
+const http  = require("http");
 
 const app = express();
 app.use(express.json());
@@ -490,6 +491,59 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
     // Refund token on error
     db.prepare("UPDATE user_tokens SET tokens_today = tokens_today + 1 WHERE user_id = ?").run(req.user.id);
     res.json({ ok: false, error: "Erreur d'analyse — jeton remboursé" });
+  }
+});
+
+// ── Live IA — code-based auth (no JWT) ────────────────────────────────────────
+function httpPostInternal(host, port, path, body) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify(body);
+    const req = http.request(
+      { hostname: host, port, path, method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) } },
+      (res) => {
+        let data = "";
+        res.on("data", (c) => (data += c));
+        res.on("end", () => { try { resolve(JSON.parse(data)); } catch { resolve({}); } });
+      }
+    );
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function verifyCode(email, code) {
+  try {
+    const d = await httpPostInternal("webhook", 5001, "/verify-code", { email, code });
+    return d;
+  } catch (e) {
+    return { valid: false, error: "Service indisponible" };
+  }
+}
+
+// Cache des analyses de la journée (clé = email+matchId)
+const analysisCache = new Map();
+
+app.post("/concile-analysis", async (req, res) => {
+  const { email, code, match } = req.body || {};
+  if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
+  if (!match || !match.home || !match.away) return res.json({ ok: false, error: "Données du match manquantes" });
+
+  const auth = await verifyCode(email, code);
+  if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
+
+  const cacheKey = `${email}__${match.home}_${match.away}_${new Date().toISOString().slice(0, 10)}`;
+  if (analysisCache.has(cacheKey)) {
+    return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
+  }
+
+  try {
+    const analysis = await runConcileAnalysis(match);
+    analysisCache.set(cacheKey, analysis);
+    setTimeout(() => analysisCache.delete(cacheKey), 6 * 60 * 60 * 1000);
+    res.json({ ok: true, ...analysis });
+  } catch (e) {
+    res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
   }
 });
 

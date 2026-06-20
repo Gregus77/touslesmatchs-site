@@ -5,7 +5,13 @@ www.touslesmatchs.com {
         reverse_proxy api:3001
     }
 
-    # Frontend React
+    # Page Live IA
+    handle /live-ia {
+        rewrite * /live-ia.html
+        file_server
+    }
+
+    # Frontend statique
     root * /srv
     file_server
     try_files {path} /index.html
