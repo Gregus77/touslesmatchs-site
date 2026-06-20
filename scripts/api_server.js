@@ -212,15 +212,16 @@ async function fetchFromFootballData() {
   if (!FOOTBALL_DATA_KEY) return null;
   try {
     const today = new Date().toISOString().slice(0, 10);
-    // Récupère les matchs EN COURS + TERMINÉS aujourd'hui
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    // Matchs EN COURS + TERMINÉS hier et aujourd'hui (couvre les picks de J-1)
     const [liveData, finishedData] = await Promise.all([
       httpGet("https://api.football-data.org/v4/matches?status=LIVE", { "X-Auth-Token": FOOTBALL_DATA_KEY }),
-      httpGet(`https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${today}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
+      httpGet(`https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
     ]);
     const live = (liveData.matches || []).map(formatFDMatch);
     const finished = (finishedData.matches || []).map(formatFDMatch);
     const all = [...live, ...finished];
-    console.log(`[live-matches] football-data.org: ${live.length} live, ${finished.length} finished today`);
+    console.log(`[live-matches] football-data.org: ${live.length} live, ${finished.length} finished (hier+aujourd'hui)`);
     return all;
   } catch (e) {
     console.error("[live-matches] football-data.org error:", e.message);
