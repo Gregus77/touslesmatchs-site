@@ -336,7 +336,7 @@ function renderCredits(){
 let allMatches = [];
 let lastUpdate = null;
 
-// Match du jour — chargé dynamiquement depuis /api/current-pick
+// Match du jour — chargé dynamiquement depuis picks.json
 let PICK_MATCH = null;
 async function loadPickMatch(){
   try{
@@ -344,18 +344,28 @@ async function loadPickMatch(){
     const d=await r.json();
     const p=d.currentPick;
     if(p && p.home && p.home !== 'Analyse en cours' && p.away){
+      // Ignorer les matchs terminés
+      if(p.status==='finished'||p.status==='FINISHED') return;
       let scoreA=null, scoreB=null;
       if(p.score && p.score.includes('-')){
         const parts=p.score.split('-');
-        scoreA=parseInt(parts[0])||0; scoreB=parseInt(parts[1])||0;
+        const a=parseInt(parts[0]), b=parseInt(parts[1]);
+        if(!isNaN(a)) scoreA=a;
+        if(!isNaN(b)) scoreB=b;
       }
+      const isUpcoming=(p.status==='upcoming'||p.status==='UPCOMING'||(!p.status&&!p.score));
       PICK_MATCH={
         id:"pick-live",
         home:p.home, away:p.away,
         score_home:scoreA, score_away:scoreB,
-        minute:null, status:"IN_PLAY",
+        minute:null,
+        status: isUpcoming ? 'upcoming' : 'IN_PLAY',
         competition:p.league||p.sport||"",
-        utcDate:new Date().toISOString()
+        utcDate:p.date ? p.date+'T'+(p.time||'12:00')+':00' : new Date().toISOString(),
+        time:p.time||null,
+        date:p.date||null,
+        bet:p.bet||p.marketLabel||null,
+        cote:p.odds||p.cote||null,
       };
       TEAM_ALIASES_LIVE[p.home.toLowerCase()]=[p.home.toLowerCase()];
       TEAM_ALIASES_LIVE[p.away.toLowerCase()]=[p.away.toLowerCase()];
@@ -386,11 +396,8 @@ async function loadMatches(force){
     const r = await fetch(url);
     const d = await r.json();
     if(d.ok && d.matches){
-      // On n'affiche QUE les matchs en cours — pas les matchs terminés
       allMatches = d.matches.filter(m => m.status !== "FINISHED");
-      // Inject PICK_MATCH si pick en cours et pas déjà dans la liste
-      if(PICK_MATCH && !pickMatchInList(allMatches)){
-        // N'injecter le pick que s'il n'est pas terminé
+      if(PICK_MATCH && PICK_MATCH.status !== 'upcoming' && !pickMatchInList(allMatches)){
         const pickIsFinished = d.matches.some(m =>
           m.status === "FINISHED" &&
           (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&
@@ -403,6 +410,64 @@ async function loadMatches(force){
     }
   } catch(e){ console.error(e); }
   renderMain();
+}
+
+// ── Countdown ─────────────────────────────────────────────────────────────────
+let countdownInterval = null;
+function getCountdownMs(dateStr, timeStr){
+  if(!dateStr) return null;
+  const t = timeStr||'12:00';
+  // Parse as Paris local time (UTC+2 summer / UTC+1 winter) — approx UTC+2 for June
+  const [y,mo,d]=dateStr.split('-').map(Number);
+  const [h,m]=(t||'12:00').split(':').map(Number);
+  const parisOffset = 2; // CEST
+  const matchUtc = Date.UTC(y,mo-1,d,h-parisOffset,m||0);
+  return matchUtc - Date.now();
+}
+function formatCountdown(ms){
+  if(ms<=0) return 'Coup d\'envoi imminent !';
+  const s=Math.floor(ms/1000);
+  const jours=Math.floor(s/86400);
+  const hh=Math.floor((s%86400)/3600);
+  const mm=Math.floor((s%3600)/60);
+  const ss=s%60;
+  if(jours>0) return `${jours}j ${hh}h ${String(mm).padStart(2,'0')}min`;
+  if(hh>0) return `${hh}h ${String(mm).padStart(2,'0')}min ${String(ss).padStart(2,'0')}s`;
+  return `${String(mm).padStart(2,'0')}min ${String(ss).padStart(2,'0')}s`;
+}
+function renderUpcomingCard(p){
+  const ms = getCountdownMs(p.date, p.time);
+  const countdownHtml = ms!==null
+    ? `<div style="text-align:center;margin:18px 0">
+        <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Coup d'envoi dans</div>
+        <div id="countdown-timer" style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${formatCountdown(ms)}</div>
+       </div>`
+    : '';
+  const betHtml = p.bet
+    ? `<div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:14px;padding:10px 16px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);border-radius:8px">
+        <span style="font-size:12px;color:var(--muted2)">Pick du Concile :</span>
+        <span style="font-size:13px;font-weight:700;color:var(--indigo2)">${escHtml(p.bet)}</span>
+        ${p.cote?`<span style="font-size:13px;font-weight:700;color:var(--amber)">@ ${p.cote}</span>`:''}
+       </div>`
+    : '';
+  return `<div class="match-card" style="border-color:rgba(99,102,241,.3);cursor:default">
+    <div class="match-top">
+      <div class="match-comp">${escHtml(p.competition||'Match du Concile')}</div>
+      <div class="match-badge" style="background:rgba(99,102,241,.15);border-color:rgba(99,102,241,.3);color:var(--indigo2)">
+        <span style="display:inline-block;width:6px;height:6px;background:var(--indigo2);border-radius:50%;margin-right:5px"></span>À VENIR
+      </div>
+    </div>
+    <div class="match-teams">
+      <div class="match-team">${escHtml(p.home)}</div>
+      <div class="match-score" style="font-size:14px;color:var(--muted)">VS</div>
+      <div class="match-team away">${escHtml(p.away)}</div>
+    </div>
+    ${countdownHtml}
+    ${betHtml}
+    <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--muted)">
+      L'analyse IA sera disponible dès le coup d'envoi
+    </div>
+  </div>`;
 }
 
 function forceRefresh(){
@@ -423,11 +488,23 @@ function renderMain(){
   </div>`;
 
   if(allMatches.length === 0){
-    html += `<div class="empty-state">
-      <div class="empty-icon">⚽</div>
-      <div class="empty-title">Aucun match en direct</div>
-      <div class="empty-sub">Il n'y a pas de match en cours pour le moment.<br>Reviens plus tard ou actualise la page.</div>
-    </div>`;
+    if(PICK_MATCH && PICK_MATCH.status === 'upcoming'){
+      html += `<div class="matches-grid" id="matches-grid">${renderUpcomingCard(PICK_MATCH)}</div>`;
+      // Start live countdown
+      if(countdownInterval) clearInterval(countdownInterval);
+      countdownInterval = setInterval(()=>{
+        const el=document.getElementById('countdown-timer');
+        if(!el){clearInterval(countdownInterval);return;}
+        const ms=getCountdownMs(PICK_MATCH.date,PICK_MATCH.time);
+        el.textContent=formatCountdown(ms||0);
+      },1000);
+    } else {
+      html += `<div class="empty-state">
+        <div class="empty-icon">⚽</div>
+        <div class="empty-title">Aucun match en direct</div>
+        <div class="empty-sub">Il n'y a pas de match en cours pour le moment.<br>Reviens plus tard ou actualise la page.</div>
+      </div>`;
+    }
   } else {
     html += `<div class="matches-grid" id="matches-grid">`;
     allMatches.forEach((m, i) => {
@@ -461,9 +538,9 @@ function renderMatchCard(m, i){
     <div class="match-teams">
       <div class="match-team">${escHtml(m.home)}</div>
       <div class="match-score">
-        <span class="score-num">${m.score_home??0}</span>
+        <span class="score-num">${m.score_home!==null&&m.score_home!==undefined?m.score_home:'?'}</span>
         <span class="score-sep">—</span>
-        <span class="score-num">${m.score_away??0}</span>
+        <span class="score-num">${m.score_away!==null&&m.score_away!==undefined?m.score_away:'?'}</span>
       </div>
       <div class="match-team away">${escHtml(m.away)}</div>
     </div>
