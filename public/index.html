@@ -1418,9 +1418,32 @@ async function fetchLiveScore(){
   } catch(e){}
 }
 
-renderNavAuth();
-fetchLiveScore();
-setInterval(fetchLiveScore,30000);
+// Charge le pick dynamiquement depuis l'API puis render
+async function initPick(){
+  try{
+    const r=await fetch('/api/current-pick');
+    const d=await r.json();
+    if(d.ok&&d.pick){
+      const p=d.pick;
+      PICK.teamA=p.teamA||PICK.teamA;
+      PICK.teamB=p.teamB||PICK.teamB;
+      PICK.competition=p.competition||PICK.competition;
+      PICK.time=p.time||PICK.time;
+      PICK.marketType=p.marketType||PICK.marketType;
+      PICK.marketLabel=p.marketLabel||PICK.marketLabel;
+      PICK.cote=p.cote||PICK.cote;
+      PICK.status=p.status||PICK.status;
+      PICK.result=p.result??PICK.result;
+      PICK.scoreA=p.scoreA??null;
+      PICK.scoreB=p.scoreB??null;
+    }
+  }catch(e){}
+  renderNavAuth();
+  renderPick();
+  fetchLiveScore();
+  setInterval(fetchLiveScore,30000);
+}
+initPick();
 
 // ══ MENU HAMBURGER
 function toggleMenu(){

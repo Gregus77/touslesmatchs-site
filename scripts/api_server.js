@@ -57,6 +57,29 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 // Preuves storage file
 const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
 const SCORE_PATH = "/var/touslesmatchs/live_score.json";
+const PICK_PATH = "/var/touslesmatchs/current_pick.json";
+
+const DEFAULT_PICK = {
+  teamA: { name: "Turquie", abbr: "TUR", color: "#e30a17" },
+  teamB: { name: "Paraguay", abbr: "PAR", color: "#d52b1e" },
+  competition: "Coupe du Monde 2026 · Groupe H",
+  time: "05:00",
+  marketType: "1X",
+  marketLabel: "Victoire Turquie ou Nul (double chance)",
+  cote: 1.52,
+  status: "upcoming",
+  result: null,
+  scoreA: null,
+  scoreB: null,
+};
+
+function loadPick() {
+  try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return DEFAULT_PICK; }
+}
+function savePick(data) {
+  fs.mkdirSync("/var/touslesmatchs", { recursive: true });
+  fs.writeFileSync(PICK_PATH, JSON.stringify(data, null, 2));
+}
 function loadManualScore() {
   try { return JSON.parse(fs.readFileSync(SCORE_PATH, "utf8")); } catch { return null; }
 }
@@ -602,6 +625,19 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
     status: user.status,
     reset_at: "minuit",
   });
+});
+
+// ── Pick du jour ──────────────────────────────────────────────────────────────
+app.get("/current-pick", (req, res) => {
+  res.json({ ok: true, pick: loadPick() });
+});
+
+app.post("/admin/set-pick", (req, res) => {
+  const { email, code, pick } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!pick || !pick.teamA || !pick.teamB) return res.status(400).json({ ok: false, error: "Données pick incomplètes" });
+  savePick(pick);
+  res.json({ ok: true, pick });
 });
 
 // ── Score manuel (fallback admin) ────────────────────────────────────────────

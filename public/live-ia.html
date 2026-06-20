@@ -332,15 +332,28 @@ function renderCredits(){
 let allMatches = [];
 let lastUpdate = null;
 
-// Match du jour (pick actuel) — injecté si absent de l'API
-const PICK_MATCH = {
-  id:"pick-live",
-  home:"Turquie", away:"Paraguay",
-  score_home:null, score_away:null,
-  minute:null, status:"IN_PLAY",
-  competition:"Coupe du Monde 2026 · Groupe H",
-  utcDate: new Date().toISOString()
-};
+// Match du jour — chargé dynamiquement depuis /api/current-pick
+let PICK_MATCH = null;
+async function loadPickMatch(){
+  try{
+    const r=await fetch('/api/current-pick');
+    const d=await r.json();
+    if(d.ok&&d.pick){
+      PICK_MATCH={
+        id:"pick-live",
+        home:d.pick.teamA.name,
+        away:d.pick.teamB.name,
+        score_home:d.pick.scoreA??null,
+        score_away:d.pick.scoreB??null,
+        minute:null, status:"IN_PLAY",
+        competition:d.pick.competition||"",
+        utcDate:new Date().toISOString()
+      };
+      TEAM_ALIASES_LIVE[d.pick.teamA.name.toLowerCase()]=[d.pick.teamA.name.toLowerCase()];
+      TEAM_ALIASES_LIVE[d.pick.teamB.name.toLowerCase()]=[d.pick.teamB.name.toLowerCase()];
+    }
+  }catch(e){}
+}
 
 const TEAM_ALIASES_LIVE={
   "turquie":["turkey","turkiye","türkiye"],
@@ -367,7 +380,7 @@ async function loadMatches(force){
     if(d.ok && d.matches){
       allMatches = d.matches;
       // Inject PICK_MATCH if not found in API results
-      if(!pickMatchInList(allMatches)){
+      if(PICK_MATCH && !pickMatchInList(allMatches)){
         allMatches = [PICK_MATCH, ...allMatches];
       }
       lastUpdate = new Date();
@@ -606,7 +619,7 @@ function escHtml(s){
 // ══ INIT
 renderNavAuth();
 renderCredits();
-loadMatches();
+loadPickMatch().then(()=>loadMatches());
 setInterval(loadMatches, 60000);
 
 function toggleMenu(){
