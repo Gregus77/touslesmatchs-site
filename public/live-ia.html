@@ -382,10 +382,17 @@ async function loadMatches(force){
     const r = await fetch(url);
     const d = await r.json();
     if(d.ok && d.matches){
-      allMatches = d.matches;
-      // Inject PICK_MATCH if not found in API results
+      // On n'affiche QUE les matchs en cours — pas les matchs terminés
+      allMatches = d.matches.filter(m => m.status !== "FINISHED");
+      // Inject PICK_MATCH si pick en cours et pas déjà dans la liste
       if(PICK_MATCH && !pickMatchInList(allMatches)){
-        allMatches = [PICK_MATCH, ...allMatches];
+        // N'injecter le pick que s'il n'est pas terminé
+        const pickIsFinished = d.matches.some(m =>
+          m.status === "FINISHED" &&
+          (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&
+          (matchTeamLive(m.home,PICK_MATCH.away)||matchTeamLive(m.away,PICK_MATCH.away))
+        );
+        if(!pickIsFinished) allMatches = [PICK_MATCH, ...allMatches];
       }
       lastUpdate = new Date();
       document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';

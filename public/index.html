@@ -623,6 +623,13 @@ footer{
   .nav-live-pill{display:none}
   .nav-login,.nav-cta{display:none}
   .nav-hamburger{display:block}
+  .section-wrap{padding:60px 16px}
+  .pick-body{padding:16px}
+  .teams-block{padding:14px 12px}
+  .sd{font-size:36px;min-width:32px}
+  .score-col{min-width:90px}
+  .cote-group{flex-direction:column;gap:16px;align-items:flex-start}
+  .vblock{align-items:flex-start}
 }
 </style>
 </head>
@@ -1414,7 +1421,15 @@ async function fetchLiveScore(){
       (matchesTeam(x.home,tA)||matchesTeam(x.away,tA)) &&
       (matchesTeam(x.home,tB)||matchesTeam(x.away,tB))
     );
-    if(m) applyScore(m);
+    if(m){
+      // Vérifier si teamA est l'équipe à domicile dans l'API
+      const tAisHome=matchesTeam(m.home,tA);
+      applyScore({
+        ...m,
+        score_home: tAisHome ? m.score_home : m.score_away,
+        score_away: tAisHome ? m.score_away : m.score_home,
+      });
+    }
   } catch(e){}
 }
 
