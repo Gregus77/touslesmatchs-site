@@ -32,6 +32,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .form-input{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;transition:border-color .15s;font-family:inherit}
 .form-input:focus{border-color:var(--indigo)}
 .btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-danger{background:rgba(244,63,94,.15);color:#f43f5e;border:1px solid rgba(244,63,94,.3);border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn-danger:hover{background:rgba(244,63,94,.25)}
 .err{color:var(--red);font-size:12px;margin-top:8px;display:none}
 
 /* DASHBOARD */
@@ -138,6 +140,49 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
       </div>
     </div>
 
+    <!-- SCORE EN DIRECT -->
+    <div class="section">
+      <div class="section-hdr">⚽ Score en direct — Match du jour</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Équipe domicile</label>
+          <input class="form-input" id="sc-home" value="Turquie">
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Score</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="form-input" id="sc-a" type="number" min="0" value="0" style="width:60px;text-align:center;font-size:22px;font-weight:800">
+            <span style="font-size:20px;color:#7b82a0">–</span>
+            <input class="form-input" id="sc-b" type="number" min="0" value="0" style="width:60px;text-align:center;font-size:22px;font-weight:800">
+          </div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Équipe extérieur</label>
+          <input class="form-input" id="sc-away" value="Paraguay">
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+        <div class="form-group" style="margin:0;flex:1">
+          <label class="form-label">Minute</label>
+          <input class="form-input" id="sc-min" type="number" min="0" max="120" placeholder="Ex: 43">
+        </div>
+        <div class="form-group" style="margin:0;flex:1">
+          <label class="form-label">Statut</label>
+          <select class="form-input" id="sc-status">
+            <option value="IN_PLAY">🔴 En cours</option>
+            <option value="HT">⏸ Mi-temps</option>
+            <option value="FT">✅ Terminé</option>
+            <option value="NS">⏳ Pas commencé</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-primary" onclick="setScore()" style="flex:1">💾 Mettre à jour le score</button>
+        <button class="btn-danger" onclick="clearScore()" style="padding:10px 18px">✕ Effacer</button>
+      </div>
+      <div id="score-msg" style="margin-top:10px;font-size:13px;color:#10b981;min-height:20px"></div>
+    </div>
+
     <!-- UPLOAD PREUVES -->
     <div class="section">
       <div class="section-hdr">Ajouter une preuve de gains</div>
@@ -227,6 +272,29 @@ function showDashboard(data){
   loadStats(data);
   loadCodes();
   loadProofs();
+}
+
+async function setScore(){
+  const msg = document.getElementById('score-msg');
+  msg.textContent = '⏳ Enregistrement...'; msg.style.color='#a8aec8';
+  const body = {
+    email: ADMIN_EMAIL, code: ADMIN_CODE,
+    home: document.getElementById('sc-home').value,
+    away: document.getElementById('sc-away').value,
+    scoreA: document.getElementById('sc-a').value,
+    scoreB: document.getElementById('sc-b').value,
+    minute: document.getElementById('sc-min').value || null,
+    status: document.getElementById('sc-status').value,
+  };
+  const r = await fetch('/api/admin/set-score', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d = await r.json();
+  if(d.ok){ msg.textContent = '✅ Score mis à jour — visible sur le site dans 30s'; msg.style.color='#10b981'; }
+  else { msg.textContent = '❌ Erreur: ' + (d.error||'inconnue'); msg.style.color='#f43f5e'; }
+}
+async function clearScore(){
+  const msg = document.getElementById('score-msg');
+  await fetch('/api/admin/set-score', {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:ADMIN_EMAIL,code:ADMIN_CODE})});
+  msg.textContent = '🗑 Score manuel effacé'; msg.style.color='#a8aec8';
 }
 
 async function loadStats(cached){

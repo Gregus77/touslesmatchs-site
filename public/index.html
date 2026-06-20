@@ -1382,8 +1382,29 @@ function matchesTeam(apiName,pickName){
   const aliases=TEAM_ALIASES[p]||[];
   return aliases.some(al=>a.includes(al)||al.includes(a));
 }
+function applyScore(m){
+  const sA=document.getElementById('sA');
+  const sB=document.getElementById('sB');
+  if(!sA||!sB)return;
+  sA.textContent=m.score_home??0; sA.classList.remove('pending');
+  sB.textContent=m.score_away??0; sB.classList.remove('pending');
+  PICK.scoreA=m.score_home; PICK.scoreB=m.score_away; PICK.minute=m.minute;
+  const scoreCol=document.querySelector('.score-col');
+  if(scoreCol){
+    let tagEl=scoreCol.querySelector('.upcoming-tag,.live-tag');
+    if(!tagEl){tagEl=document.createElement('span');scoreCol.appendChild(tagEl);}
+    tagEl.className='live-tag';
+    tagEl.textContent='🔴 '+(m.minute?m.minute+"'":"Live");
+  }
+}
 async function fetchLiveScore(){
   try{
+    // 1. Score manuel (admin) — priorité absolue
+    const rm=await fetch('/api/live-score');
+    if(rm.ok){const dm=await rm.json();if(dm.ok&&dm.score){applyScore(dm.score);return;}}
+  } catch(e){}
+  try{
+    // 2. API-Sports live feed
     const r=await fetch('/api/live-matches');
     if(!r.ok)return;
     const d=await r.json();
@@ -1393,24 +1414,7 @@ async function fetchLiveScore(){
       (matchesTeam(x.home,tA)||matchesTeam(x.away,tA)) &&
       (matchesTeam(x.home,tB)||matchesTeam(x.away,tB))
     );
-    if(!m)return;
-    const sA=document.getElementById('sA');
-    const sB=document.getElementById('sB');
-    if(!sA||!sB)return;
-    const isLive=m.status==='IN_PLAY'||m.status==='PAUSED'||m.status==='LIVE';
-    if(isLive||(m.score_home!==null&&m.score_home!==undefined)){
-      sA.textContent=m.score_home??0;sA.classList.remove('pending');
-      sB.textContent=m.score_away??0;sB.classList.remove('pending');
-      PICK.scoreA=m.score_home;PICK.scoreB=m.score_away;PICK.minute=m.minute;
-      // Met à jour le tag minute — cherche dans .score-col
-      const scoreCol=document.querySelector('.score-col');
-      if(scoreCol){
-        let tagEl=scoreCol.querySelector('.upcoming-tag,.live-tag');
-        if(!tagEl){tagEl=document.createElement('span');scoreCol.appendChild(tagEl);}
-        tagEl.className='live-tag';
-        tagEl.textContent='🔴 '+(m.minute?m.minute+"'":"Live");
-      }
-    }
+    if(m) applyScore(m);
   } catch(e){}
 }
 
