@@ -552,12 +552,25 @@ function httpPostInternal(host, port, path, body) {
   });
 }
 
-async function verifyCode(email, code) {
+function verifyCode(email, code) {
   try {
-    const d = await httpPostInternal("webhook", 5001, "/verify-code", { email, code });
-    return d;
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = codesDb.prepare(
+      "SELECT * FROM codes WHERE code = ? AND email = ? AND active = 1"
+    ).get(code.toUpperCase().trim(), email.toLowerCase().trim());
+    codesDb.close();
+    if (!row) return { valid: false, error: "Code ou email invalide" };
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      return { valid: false, error: "Code expiré" };
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const credits_left = row.credits_date === today
+      ? Math.max(0, row.credits_max - row.credits_used)
+      : row.credits_max;
+    return { valid: true, plan: row.plan, credits_left, email: row.email };
   } catch (e) {
-    return { valid: false, error: "Service indisponible" };
+    console.error("[verifyCode] error:", e.message);
+    return { valid: false, error: "Erreur de vérification" };
   }
 }
 
@@ -569,7 +582,7 @@ app.post("/concile-analysis", async (req, res) => {
   if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
   if (!match || !match.home || !match.away) return res.json({ ok: false, error: "Données du match manquantes" });
 
-  const auth = await verifyCode(email, code);
+  const auth = verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
 
   const cacheKey = `${email}__${match.home}_${match.away}_${new Date().toISOString().slice(0, 10)}`;
