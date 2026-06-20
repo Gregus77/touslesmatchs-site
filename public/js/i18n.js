@@ -331,53 +331,71 @@ const i18n = {
   },
   picker(){
     const langs = Object.keys(LANG_META);
+    const cur = LANG_META[this.current];
     return `<div class="lang-picker" id="lang-picker">
-      <button class="lang-toggle" onclick="toggleLangPicker()" id="lang-toggle-btn">
-        <span>${LANG_META[this.current].flag}</span>
-        <span>${LANG_META[this.current].label}</span>
-        <span style="font-size:10px;opacity:.6">▾</span>
+      <button class="lang-toggle" id="lang-toggle-btn">
+        <span class="lang-flag">${cur.flag}</span>
+        <span class="lang-label">${cur.label}</span>
+        <span class="lang-arrow">▾</span>
       </button>
       <div class="lang-dropdown" id="lang-dropdown">
-        ${langs.map(l=>`<button class="lang-opt${l===this.current?' active':''}" data-lang="${l}" onclick="i18n.set('${l}');closeLangPicker()">${LANG_META[l].flag} ${LANG_META[l].label}</button>`).join('')}
+        ${langs.map(l=>`<button class="lang-opt${l===this.current?' active':''}" data-lang="${l}">${LANG_META[l].flag} ${LANG_META[l].label}</button>`).join('')}
       </div>
     </div>`;
   },
+  updateToggleBtn(){
+    const btn = document.getElementById("lang-toggle-btn");
+    if(!btn) return;
+    const cur = LANG_META[this.current];
+    btn.querySelector(".lang-flag").textContent = cur.flag;
+    btn.querySelector(".lang-label").textContent = cur.label;
+  },
   init(){
     this.detect();
-    // Inject picker CSS if not present
     if(!document.getElementById("i18n-style")){
       const s = document.createElement("style");
       s.id = "i18n-style";
       s.textContent = `
-        .lang-picker{position:relative}
-        .lang-toggle{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text,#eceaf4);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+        .lang-picker{position:relative;display:inline-block}
+        .lang-toggle{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text,#eceaf4);border-radius:8px;padding:5px 10px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;user-select:none}
         .lang-toggle:hover{background:rgba(255,255,255,.1)}
-        .lang-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;background:#0d1020;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:6px;min-width:130px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:300;grid-template-columns:1fr 1fr;gap:3px}
-        .lang-dropdown.open{display:grid}
-        .lang-opt{background:transparent;border:none;color:#a8aec8;font-size:12px;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;text-align:left;font-family:inherit;transition:all .1s;white-space:nowrap}
-        .lang-opt:hover{background:rgba(255,255,255,.06);color:#eceaf4}
-        .lang-opt.active{background:rgba(79,70,229,.15);color:#6366f1}
+        .lang-arrow{font-size:10px;opacity:.6;transition:transform .2s}
+        .lang-picker.open .lang-arrow{transform:rotate(180deg)}
+        .lang-dropdown{display:none;position:absolute;top:calc(100% + 8px);right:0;background:#0d1020;border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:6px;min-width:140px;box-shadow:0 20px 50px rgba(0,0,0,.7);z-index:9999;grid-template-columns:1fr 1fr;gap:3px}
+        .lang-picker.open .lang-dropdown{display:grid}
+        .lang-opt{background:transparent;border:none;color:#a8aec8;font-size:13px;font-weight:600;padding:7px 10px;border-radius:7px;cursor:pointer;text-align:left;font-family:inherit;transition:all .1s;white-space:nowrap;width:100%}
+        .lang-opt:hover{background:rgba(255,255,255,.07);color:#eceaf4}
+        .lang-opt.active{background:rgba(99,102,241,.18);color:#818cf8}
       `;
       document.head.appendChild(s);
     }
-    // Inject picker into nav-right if container exists
     const target = document.getElementById("lang-picker-slot");
-    if(target) target.innerHTML = this.picker();
+    if(target){
+      target.innerHTML = this.picker();
+      // Toggle on button click
+      document.getElementById("lang-toggle-btn").addEventListener("click", e => {
+        e.stopPropagation();
+        document.getElementById("lang-picker").classList.toggle("open");
+      });
+      // Select language on option click
+      target.querySelectorAll(".lang-opt").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const lang = btn.dataset.lang;
+          i18n.set(lang);
+          document.getElementById("lang-picker").classList.remove("open");
+          // update active state
+          target.querySelectorAll(".lang-opt").forEach(b => b.classList.toggle("active", b.dataset.lang === lang));
+          i18n.updateToggleBtn();
+        });
+      });
+    }
     this.apply();
   }
 };
 
-function toggleLangPicker(){
-  const dd = document.getElementById("lang-dropdown");
-  if(dd) dd.classList.toggle("open");
-}
-function closeLangPicker(){
-  const dd = document.getElementById("lang-dropdown");
-  if(dd) dd.classList.remove("open");
-  // Update toggle button text
-  const btn = document.getElementById("lang-toggle-btn");
-  if(btn) btn.innerHTML = `<span>${LANG_META[i18n.current].flag}</span><span>${LANG_META[i18n.current].label}</span><span style="font-size:10px;opacity:.6">▾</span>`;
-}
-document.addEventListener("click", e => {
-  if(!e.target.closest(".lang-picker")) closeLangPicker();
+// Close picker when clicking outside
+document.addEventListener("click", () => {
+  const p = document.getElementById("lang-picker");
+  if(p) p.classList.remove("open");
 });
