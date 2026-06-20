@@ -579,11 +579,11 @@ footer{
   <div class="ticker-inner">
     <span id="t1">⚡ Pick du jour : Maroc vs Écosse — 1 (Maroc) @1.78 · Consensus 80% · Coupe du Monde 2026</span>
     <span>📊 Concile V4.3 · 5 IA · 3 sources minimum · Aucun match inventé</span>
-    <span>🏆 Winrate 71% · ROI cumulé +14.2%</span>
+    <span>🏆 Winrate 72% · ROI cumulé +16.5%</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
     <span id="t2">⚡ Pick du jour : Maroc vs Écosse — 1 (Maroc) @1.78 · Consensus 80% · Coupe du Monde 2026</span>
     <span>📊 Concile V4.3 · 5 IA · 3 sources minimum · Aucun match inventé</span>
-    <span>🏆 Winrate 71% · ROI cumulé +14.2%</span>
+    <span>🏆 Winrate 72% · ROI cumulé +16.5%</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
   </div>
 </div>
@@ -633,8 +633,8 @@ footer{
     <a href="/live-ia" class="cta-ghost">Accès Live IA</a>
   </div>
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green">71%</div><div class="hs-label">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan">+14.2%</div><div class="hs-label">ROI total</div></div>
+    <div class="hs"><div class="hs-val c-green">72%</div><div class="hs-label">Winrate</div></div>
+    <div class="hs"><div class="hs-val c-cyan">+16.5%</div><div class="hs-label">ROI total</div></div>
     <div class="hs"><div class="hs-val c-indigo">5</div><div class="hs-label">IA du Concile</div></div>
     <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label">Sources min.</div></div>
   </div>
@@ -654,8 +654,8 @@ footer{
   <div class="roi-card">
     <div class="roi-header">
       <div class="roi-kpis">
-        <div class="roi-kpi"><div class="val" style="color:var(--green)">+14.2%</div><div class="lbl">ROI total</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--cyan)">71%</div><div class="lbl">Winrate</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--green)">+16.5%</div><div class="lbl">ROI total</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--cyan)">72%</div><div class="lbl">Winrate</div></div>
         <div class="roi-kpi"><div class="val" style="color:var(--indigo2)">42€ → 48€</div><div class="lbl">Bankroll</div></div>
         <div class="roi-kpi"><div class="val" style="color:#a78bfa">18</div><div class="lbl">Picks juin</div></div>
       </div>
@@ -775,12 +775,13 @@ rs();is();ds();window.addEventListener('resize',()=>{rs();is()});
 
 // ══ PICK DATA
 const PICK={
-  status:"pick",
+  status:"result",
+  result:"win",
   sport:"Football",tag:"ptag-foot",
   time:"21:00",competition:"Coupe du Monde 2026 · Groupe F",
   teamA:{name:"Maroc",abbr:"MAR",color:"#c8102e"},
   teamB:{name:"Écosse",abbr:"SCO",color:"#003f87"},
-  scoreA:null,scoreB:null,minute:null,
+  scoreA:3,scoreB:0,minute:"FT",
   marketType:"1",
   marketLabel:"Victoire Maroc (favori)",
   marketDesc:"Le Maroc, demi-finaliste 2022, face à l'Écosse en nette infériorité. Value confirmée vs Pinnacle +7.2%.",
@@ -876,10 +877,20 @@ function renderPick(){
     root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">⛔</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">Aucun pick aujourd'hui</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Le Concile n'a trouvé aucun match passant les filtres de validation.<br>Discipline > Volume. Retour demain à 7h00.</div></div>`;
     return;
   }
+  const isResult=PICK.status==='result';
+  const isWin=PICK.result==='win';
   const avg=Math.round(PICK.ia.reduce((a,b)=>a+b.pct,0)/PICK.ia.length);
   const mc=MC[PICK.marketType]||MC["1"];
   const vClass={go:'v-go',half:'v-half',no_bet:'v-no'}[PICK.verdict]||'v-no';
   const hasScore=PICK.scoreA!==null&&PICK.scoreB!==null;
+  const resultBanner=isResult?`<div style="background:${isWin?'rgba(16,185,129,.12)':'rgba(244,63,94,.1)'};border:1px solid ${isWin?'rgba(16,185,129,.3)':'rgba(244,63,94,.25)'};border-radius:12px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:28px">${isWin?'✅':'❌'}</span>
+    <div>
+      <div style="font-size:15px;font-weight:800;color:${isWin?'var(--green)':'var(--red)'}">${isWin?'PICK GAGNANT — +'+((PICK.cote-1)*3).toFixed(1)+'% bankroll':'PICK PERDANT'}</div>
+      <div style="font-size:12px;color:var(--muted2);margin-top:2px">Score final : ${PICK.teamA.name} ${PICK.scoreA}–${PICK.scoreB} ${PICK.teamB.name} · Cote @${PICK.cote}</div>
+    </div>
+  </div>`:'';
+
 
   const bars=PICK.ia.map(ia=>`
     <div class="ia-row">
@@ -897,13 +908,14 @@ function renderPick(){
       <div class="pick-inner">
         <div class="pick-head">
           <div class="ph-left">
-            <span class="ptag ptag-live">Live aujourd'hui</span>
+            <span class="ptag ${isResult?(isWin?'ptag-live':'ptag-nhl'):'ptag-live'}">${isResult?(isWin?'✅ Gagnant':'❌ Perdant'):'Live aujourd\'hui'}</span>
             <span class="ptag ${PICK.tag}">${PICK.sport}</span>
             <span class="ptag-comp">${PICK.competition}</span>
           </div>
           <div class="ph-right">${PICK.time}</div>
         </div>
         <div class="pick-body">
+          ${resultBanner}
           <div class="teams-block">
             <div class="team">
               ${renderEmblem(PICK.teamA)}
