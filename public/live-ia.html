@@ -344,8 +344,13 @@ async function loadPickMatch(){
     const d=await r.json();
     const p=d.currentPick;
     if(p && p.home && p.home !== 'Analyse en cours' && p.away){
-      // Ignorer les matchs terminés
+      // Ignorer les picks terminés explicitement
       if(p.status==='finished'||p.status==='FINISHED') return;
+      // Ignorer si la date du pick est avant aujourd'hui (heure de Paris)
+      if(p.date){
+        const todayParis=new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
+        if(p.date < todayParis) return;
+      }
       let scoreA=null, scoreB=null;
       if(p.score && p.score.includes('-')){
         const parts=p.score.split('-');
