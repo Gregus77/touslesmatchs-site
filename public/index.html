@@ -867,7 +867,7 @@ footer{
     </div>
     <div class="community-card">
       <div class="community-icon">📱</div>
-      <div class="community-val" style="color:var(--green)">347</div>
+      <div class="community-val" id="tg-member-count" style="color:var(--green)">...</div>
       <div class="community-lbl">Membres Telegram</div>
     </div>
   </div>
@@ -1907,6 +1907,21 @@ document.addEventListener('click',function(e){
 });
 </script>
 <script src="/js/i18n.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => { i18n.init(); buildChart(); });</script>
+<script>document.addEventListener('DOMContentLoaded', () => {
+  i18n.init();
+  buildChart();
+  // Charger le vrai nombre de membres Telegram
+  fetch('/community-stats').then(r=>r.json()).then(d=>{
+    const el=document.getElementById('tg-member-count');
+    if(el && d.ok && d.members){
+      el.textContent=d.members.toLocaleString('fr-FR');
+    } else if(el) {
+      el.textContent='—';
+    }
+  }).catch(()=>{
+    const el=document.getElementById('tg-member-count');
+    if(el) el.textContent='—';
+  });
+});</script>
 </body>
 </html>

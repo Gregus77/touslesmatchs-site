@@ -1149,6 +1149,41 @@ app.post("/create-checkout", async (req, res) => {
   }
 });
 
+// ── Community stats (Telegram member count) ───────────────────────────────────
+let tgMemberCache = { count: null, ts: 0 };
+app.get("/community-stats", async (req, res) => {
+  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "";
+  const CHANNEL_ID = process.env.TELEGRAM_FREE_CHANNEL_ID || process.env.FREE_CHANNEL_ID || "";
+
+  // Cache 10 minutes
+  if (tgMemberCache.count !== null && Date.now() - tgMemberCache.ts < 10 * 60 * 1000) {
+    return res.json({ ok: true, members: tgMemberCache.count });
+  }
+
+  if (!BOT_TOKEN || !CHANNEL_ID) {
+    return res.json({ ok: false, members: null });
+  }
+
+  try {
+    const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatMembersCount?chat_id=${CHANNEL_ID}`;
+    const data = await new Promise((resolve, reject) => {
+      https.get(tgUrl, r => {
+        let body = "";
+        r.on("data", c => body += c);
+        r.on("end", () => { try { resolve(JSON.parse(body)); } catch(e) { reject(e); } });
+      }).on("error", reject);
+    });
+    if (data.ok && data.result) {
+      tgMemberCache = { count: data.result, ts: Date.now() };
+      return res.json({ ok: true, members: data.result });
+    }
+    res.json({ ok: false, members: null });
+  } catch(e) {
+    console.error("[community-stats]", e.message);
+    res.json({ ok: false, members: null });
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 // ── Admin stats ───────────────────────────────────────────────────────────────
 app.get("/admin/stats", (req, res) => {
