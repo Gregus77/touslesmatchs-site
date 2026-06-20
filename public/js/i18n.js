@@ -318,8 +318,11 @@ const i18n = {
     if(!I18N[lang]) return;
     this.current = lang;
     localStorage.setItem("tlm_lang", lang);
+    // Ferme le picker immédiatement avant tout re-render
+    const p = document.getElementById("lang-picker");
+    if(p) p.classList.remove("open");
     this.apply();
-    // Re-render dynamic content if page has a render function
+    this.updateToggleBtn();
     if(typeof render === "function") render();
     if(typeof renderMain === "function") renderMain();
   },
