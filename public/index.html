@@ -1400,8 +1400,13 @@ function applyScore(m){
   if(scoreCol){
     let tagEl=scoreCol.querySelector('.upcoming-tag,.live-tag');
     if(!tagEl){tagEl=document.createElement('span');scoreCol.appendChild(tagEl);}
-    tagEl.className='live-tag';
-    tagEl.textContent='🔴 '+(m.minute?m.minute+"'":"Live");
+    if(m.status==='FINISHED'){
+      tagEl.className='upcoming-tag';
+      tagEl.textContent='✅ Terminé';
+    } else {
+      tagEl.className='live-tag';
+      tagEl.textContent='🔴 '+(m.minute?m.minute+"'":"Live");
+    }
   }
 }
 async function fetchLiveScore(){
@@ -1448,7 +1453,7 @@ async function initPick(){
       PICK.marketType=p.bet||PICK.marketType;
       PICK.marketLabel=p.prono||PICK.marketLabel;
       PICK.cote=parseFloat(p.cote)||PICK.cote;
-      PICK.status=p.status==='GAGNE'?'win':p.status==='PERDU'?'loss':p.status==='EN ATTENTE'&&p.score?'finished':'upcoming';
+      PICK.status=p.status==='GAGNE'||p.status==='PERDU'?'result':'upcoming';
       PICK.result=p.status==='GAGNE'?'win':p.status==='PERDU'?'loss':null;
       // Score depuis picks.json si disponible
       if(p.score && p.score.includes('-')){

@@ -38,6 +38,7 @@ services:
     volumes:
       - api_data:/data
       - /var/touslesmatchs:/var/touslesmatchs
+      - /var/codes:/var/codes:ro
       - /opt/touslesmatchs/public/data:/picks:ro
     networks:
       - web
