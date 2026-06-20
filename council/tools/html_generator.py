@@ -5,7 +5,7 @@ from datetime import datetime
 SITE_HTML_PATH = os.environ.get("SITE_HTML_PATH", "/app/site/index.html")
 SITE_TEMPLATE_PATH = os.environ.get("SITE_TEMPLATE_PATH", "/app/site/template.html")
 
-WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr/parrain?code=WMX8M5")
+WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr/parrainage?code=WMX8M5")
 BETCLIC_LINK = os.environ.get("BETCLIC_LINK", "https://www.betclic.fr/")
 UNIBET_LINK = os.environ.get("UNIBET_LINK", "https://www.unibet.fr/")
 PMU_LINK = os.environ.get("PMU_LINK", "https://www.pmu.fr/")

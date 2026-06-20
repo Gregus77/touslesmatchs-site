@@ -199,8 +199,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
   <a href="/" class="nav-brand">TousLesMatchs</a>
   <div class="nav-center">
     <a href="/">Accueil</a>
-    <a href="/#picks">Picks</a>
-    <a href="/#abonnements">Abonnements</a>
+    <a href="/#pick">Picks</a>
+    <a href="/#plans">Abonnements</a>
   </div>
   <div class="nav-right">
     <a href="/live-ia" class="nav-live-pill active"><span class="nav-live-dot"></span>Live IA</a>
@@ -524,7 +524,7 @@ async function analyzeMatch(i){
         <div style="text-align:center;padding:20px;color:var(--red)">
           <div style="font-size:32px;margin-bottom:12px">⚠️</div>
           <div style="font-weight:700;margin-bottom:6px">${escHtml(d.error||'Erreur')}</div>
-          <div style="font-size:13px;color:var(--muted2)">${d.error&&d.error.includes('crédit')?'<a href="/#abonnements" style="color:var(--indigo2)">Voir les abonnements →</a>':''}</div>
+          <div style="font-size:13px;color:var(--muted2)">${d.error&&d.error.includes('crédit')?'<a href="/#plans" style="color:var(--indigo2)">Voir les abonnements →</a>':''}</div>
         </div>
       </div>`;
       return;

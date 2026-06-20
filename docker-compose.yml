@@ -73,8 +73,11 @@ services:
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID}
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
-      - WINAMAX_LINK=${WINAMAX_LINK:-https://www.winamax.fr}
+      - SITE_URL=${SITE_URL:-https://touslesmatchs.com}
+      - WINAMAX_LINK=${WINAMAX_LINK:-https://www.winamax.fr/parrainage?code=WMX8M5}
       - BETCLIC_LINK=${BETCLIC_LINK:-https://www.betclic.fr}
+      - UNIBET_LINK=${UNIBET_LINK:-https://www.unibet.fr}
+      - PMU_LINK=${PMU_LINK:-https://www.pmu.fr/paris-sportifs}
       - GIT_AUTHOR_NAME=Hermes
       - GIT_AUTHOR_EMAIL=hermes@touslesmatchs.com
       - GIT_COMMITTER_NAME=Hermes
