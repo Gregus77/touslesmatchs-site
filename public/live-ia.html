@@ -39,8 +39,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 @keyframes pulse-red{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
 .nav-cta{font-size:13px;font-weight:700;padding:8px 20px;border-radius:9px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;text-decoration:none;display:inline-block;box-shadow:0 4px 20px rgba(79,70,229,.3);transition:all .2s}
 .nav-cta:hover{box-shadow:0 6px 28px rgba(79,70,229,.5);transform:translateY(-1px)}
-.nav-login{font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px;background:transparent;color:#a8aec8;border:1px solid rgba(255,255,255,.12);cursor:pointer;transition:all .2s}
-.nav-login:hover{color:var(--text);border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.05)}
+.nav-login{font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px;background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.22);cursor:pointer;transition:all .2s}
+.nav-login:hover{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.1)}
 .nav-user{display:flex;align-items:center;gap:8px}
 .nav-plan-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;background:rgba(99,102,241,.12);color:var(--indigo2);border:1px solid rgba(99,102,241,.25)}
 .nav-plan-badge.elite{background:rgba(124,58,237,.12);color:#c084fc;border-color:rgba(124,58,237,.25)}
@@ -329,19 +329,8 @@ function renderMain(){
   const zone = document.getElementById('main-zone');
   const {email, plan} = getAuth();
 
-  if(!email){
-    zone.innerHTML = `
-      <div class="gate">
-        <div class="gate-icon">🔐</div>
-        <div class="gate-title">Accès réservé aux membres</div>
-        <div class="gate-sub">Connecte-toi avec ton code d'accès pour voir les analyses du Concile en temps réel.</div>
-        <button class="gate-btn" onclick="openModal()">Se connecter →</button>
-      </div>`;
-    return;
-  }
-
   let html = `<div class="refresh-bar">
-    <div class="last-update">${lastUpdate ? 'Mis à jour : ' + lastUpdate.toLocaleTimeString('fr-FR') : ''}</div>
+    <div class="last-update">${lastUpdate ? 'Mis à jour : ' + lastUpdate.toLocaleTimeString('fr-FR') : 'Chargement...'}</div>
     <button class="refresh-btn" onclick="loadMatches()">⟳ Actualiser</button>
   </div>`;
 
@@ -357,6 +346,15 @@ function renderMain(){
       html += renderMatchCard(m, i);
     });
     html += `</div>`;
+  }
+
+  if(!email){
+    html += `<div class="gate" style="margin-top:24px">
+      <div class="gate-icon">🧠</div>
+      <div class="gate-title">Débloquer l'analyse du Concile</div>
+      <div class="gate-sub">Connecte-toi avec ton code d'accès pour lancer l'analyse IA sur n'importe quel match en direct.</div>
+      <button class="gate-btn" onclick="openModal()">Se connecter →</button>
+    </div>`;
   }
 
   html += `<div id="analysis-zone"></div>`;
@@ -455,7 +453,12 @@ function renderLoadingAnalysis(m){
 
 function renderAnalysis(m, d){
   const agents = d.agents || [];
-  const synthesis = d.synthesis || {};
+  // API returns best_bet/confidence/raison at the top level
+  const synthesis = {
+    bet: d.best_bet || d.synthesis?.bet || '—',
+    confidence: d.confidence || d.synthesis?.confidence || 75,
+    reasoning: d.raison || d.synthesis?.reasoning || '',
+  };
 
   const verdictColors = {
     'Victoire domicile':'win','Victoire extérieur':'win','Match nul':'draw',
@@ -466,6 +469,8 @@ function renderAnalysis(m, d){
   const agentsHtml = agents.map(a => {
     const vc = verdictColors[a.bet] || 'other';
     const conf = a.confidence || 70;
+    // API returns 'raison', not 'reasoning'
+    const reasoning = a.raison || a.reasoning || '';
     return `<div class="agent-card">
       <div class="agent-header">
         <span class="agent-icon">${escHtml(a.icon||'🤖')}</span>
@@ -477,12 +482,12 @@ function renderAnalysis(m, d){
       <div class="agent-verdict ${vc}">${escHtml(a.bet)}</div>
       <div class="agent-confidence">${conf}% confiance</div>
       <div class="conf-bar"><div class="conf-fill" style="width:${conf}%"></div></div>
-      <div class="agent-reasoning">${escHtml(a.reasoning||'')}</div>
+      <div class="agent-reasoning">${escHtml(reasoning)}</div>
     </div>`;
   }).join('');
 
   const synVc = verdictColors[synthesis.bet] || 'other';
-  const synConf = synthesis.confidence || 75;
+  const synConf = synthesis.confidence;
 
   return `<div class="analysis-panel">
     <div class="analysis-header">
@@ -494,10 +499,10 @@ function renderAnalysis(m, d){
     <div class="agents-grid">${agentsHtml}</div>
     <div class="synthesis-card">
       <div class="synthesis-label">Verdict final du Concile</div>
-      <div class="synthesis-bet">${escHtml(synthesis.bet||'—')}</div>
+      <div class="synthesis-bet">${escHtml(synthesis.bet)}</div>
       <div class="synthesis-conf">${synConf}% de confiance collective</div>
       <div class="conf-bar"><div class="conf-fill" style="width:${synConf}%"></div></div>
-      <div class="synthesis-reasoning">${escHtml(synthesis.reasoning||'')}</div>
+      <div class="synthesis-reasoning">${escHtml(synthesis.reasoning)}</div>
     </div>
   </div>`;
 }
