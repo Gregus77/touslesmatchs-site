@@ -548,7 +548,7 @@ setInterval(runExpiryCron, 60 * 60 * 1000);
 app.get("/health", (_, res) => res.json({ ok: true }));
 
 // ── Verify code (reads codes.db directly) ────────────────────────────────────
-const CODES_DB_PATH = "/var/codes/codes.db";
+const CODES_DB_PATH = "/var/touslesmatchs/codes.db";
 
 app.post("/verify-code", (req, res) => {
   const { email, code } = req.body || {};
