@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — TousLesMatchs</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800;14..32,900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080f;--bg2:#0d1020;--bg3:#141828;--bg4:#1c2236;
+  --b1:rgba(255,255,255,.05);--b2:rgba(255,255,255,.09);--b3:rgba(255,255,255,.14);
+  --text:#eceaf4;--muted:#7b82a0;--muted2:#a8aec8;
+  --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;
+  --cyan:#22d3ee;--green:#10b981;--red:#f43f5e;--amber:#f59e0b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
+.mesh{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 60% at 15% 20%,rgba(79,70,229,.1) 0%,transparent 55%),
+  radial-gradient(ellipse 60% 50% at 85% 15%,rgba(34,211,238,.08) 0%,transparent 55%)}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:56px;background:rgba(6,8,15,.9);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px)}
+.nav-brand{font-size:15px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
+.nav-badge{font-size:11px;font-weight:700;background:rgba(79,70,229,.15);border:1px solid rgba(79,70,229,.3);color:var(--indigo2);padding:3px 10px;border-radius:20px;margin-left:10px}
+.page{position:relative;z-index:1;padding:80px 24px 80px;max-width:960px;margin:0 auto}
+
+/* LOGIN */
+.login-wrap{max-width:380px;margin:80px auto 0;background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:32px}
+.login-title{font-size:20px;font-weight:800;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--muted2);margin-bottom:24px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:600;color:var(--muted2);letter-spacing:.05em;display:block;margin-bottom:6px}
+.form-input{width:100%;background:var(--bg3);border:1px solid var(--b2);border-radius:10px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;transition:border-color .15s;font-family:inherit}
+.form-input:focus{border-color:var(--indigo)}
+.btn-primary{width:100%;padding:12px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.err{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* DASHBOARD */
+#dashboard{display:none}
+.section{margin-bottom:36px}
+.section-hdr{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--b1)}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:32px}
+.kpi{background:var(--bg2);border:1px solid var(--b2);border-radius:14px;padding:18px 16px;text-align:center}
+.kpi-val{font-size:28px;font-weight:900;letter-spacing:-.03em;margin-bottom:4px}
+.kpi-val.g{color:var(--green)} .kpi-val.c{background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.kpi-val.v{color:#c084fc} .kpi-val.a{color:var(--amber)} .kpi-val.r{color:var(--red)}
+.kpi-lbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+
+/* Codes table */
+.codes-table{width:100%;border-collapse:collapse;font-size:12px}
+.codes-table th{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--b2)}
+.codes-table td{padding:10px 12px;border-bottom:1px solid var(--b1)}
+.codes-table tr:hover td{background:var(--bg3)}
+.plan-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+.plan-badge.free{background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.2)}
+.plan-badge.premium{background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.2)}
+.plan-badge.vip{background:rgba(124,58,237,.1);color:#c084fc;border:1px solid rgba(124,58,237,.2)}
+.plan-badge.elite{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--b3);border-radius:16px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg2)}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--indigo);background:rgba(79,70,229,.05)}
+.upload-zone input{display:none}
+.upload-icon{font-size:32px;margin-bottom:10px}
+.upload-hint{font-size:13px;color:var(--muted2);margin-bottom:4px}
+.upload-sub{font-size:11px;color:var(--muted)}
+.upload-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.preview-img{max-width:100%;max-height:180px;border-radius:10px;margin-top:12px;display:none}
+.btn-upload{margin-top:12px;padding:10px 24px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.upload-result{font-size:13px;margin-top:10px;display:none}
+.upload-result.ok{color:var(--green)} .upload-result.err{color:var(--red)}
+
+/* Proofs list */
+.proofs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.proof-card{background:var(--bg2);border:1px solid var(--b2);border-radius:12px;overflow:hidden;position:relative}
+.proof-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;background:var(--bg3)}
+.proof-info{padding:10px 12px}
+.proof-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.proof-date{font-size:10px;color:var(--muted)}
+.proof-del{position:absolute;top:6px;right:6px;background:rgba(244,63,94,.8);color:#fff;border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;opacity:0;transition:opacity .15s}
+.proof-card:hover .proof-del{opacity:1}
+
+@media(max-width:640px){
+  nav{padding:0 16px}
+  .page{padding:70px 12px 60px}
+  .kpi-grid{grid-template-columns:repeat(3,1fr)}
+  .kpi-val{font-size:22px}
+  .upload-meta{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="mesh"></div>
+<nav>
+  <div style="display:flex;align-items:center">
+    <a href="/" class="nav-brand">TousLesMatchs</a>
+    <span class="nav-badge">👑 Admin</span>
+  </div>
+  <div style="font-size:12px;color:var(--muted)" id="nav-user"></div>
+</nav>
+
+<div class="page">
+  <!-- LOGIN -->
+  <div id="login-view">
+    <div class="login-wrap">
+      <div class="login-title">🔐 Accès Admin</div>
+      <div class="login-sub">Réservé aux comptes ELITE-ADMIN</div>
+      <div class="form-group">
+        <label class="form-label">Email admin</label>
+        <input class="form-input" type="email" id="adm-email" placeholder="admin@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Code admin</label>
+        <input class="form-input" type="text" id="adm-code" placeholder="ELITE-ADMIN1" autocomplete="off">
+      </div>
+      <button class="btn-primary" onclick="adminLogin()">Connexion →</button>
+      <div class="err" id="login-err"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard">
+    <div style="font-size:clamp(22px,4vw,36px);font-weight:900;letter-spacing:-.03em;margin-bottom:24px">
+      Tableau de bord
+    </div>
+
+    <!-- KPIs -->
+    <div class="section">
+      <div class="section-hdr">Utilisateurs & Abonnements</div>
+      <div class="kpi-grid" id="kpi-grid">
+        <div class="kpi"><div class="kpi-val c">—</div><div class="kpi-lbl">Total inscrits</div></div>
+        <div class="kpi"><div class="kpi-val g">—</div><div class="kpi-lbl">Gratuits</div></div>
+        <div class="kpi"><div class="kpi-val" style="color:var(--indigo2)">—</div><div class="kpi-lbl">Premium</div></div>
+        <div class="kpi"><div class="kpi-val v">—</div><div class="kpi-lbl">VIP</div></div>
+        <div class="kpi"><div class="kpi-val a">—</div><div class="kpi-lbl">Elite</div></div>
+        <div class="kpi"><div class="kpi-val a">—</div><div class="kpi-lbl">Expire ≤ 3j</div></div>
+        <div class="kpi"><div class="kpi-val r">—</div><div class="kpi-lbl">Expirés</div></div>
+        <div class="kpi"><div class="kpi-val c">—</div><div class="kpi-lbl">Preuves</div></div>
+      </div>
+    </div>
+
+    <!-- UPLOAD PREUVES -->
+    <div class="section">
+      <div class="section-hdr">Ajouter une preuve de gains</div>
+      <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()" ondragover="onDrag(event,true)" ondragleave="onDrag(event,false)" ondrop="onDrop(event)">
+        <input type="file" id="file-input" accept="image/*" onchange="onFile(this)">
+        <div class="upload-icon">📸</div>
+        <div class="upload-hint">Cliquez ou glissez une image ici</div>
+        <div class="upload-sub">JPG, PNG, WEBP — max 15 Mo</div>
+        <img id="preview-img" class="preview-img">
+      </div>
+      <div class="upload-meta">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Titre</label>
+          <input class="form-input" id="proof-title" placeholder="Ex: Winamax — Maroc vs Écosse">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Date</label>
+          <input class="form-input" type="date" id="proof-date">
+        </div>
+        <div class="form-group" style="margin-bottom:0;grid-column:1/-1">
+          <label class="form-label">Description (optionnel)</label>
+          <input class="form-input" id="proof-desc" placeholder="Ex: +8.5u · Cote @1.85 · Mise 10u">
+        </div>
+      </div>
+      <button class="btn-upload" onclick="uploadProof()">Publier la preuve ↑</button>
+      <div class="upload-result" id="upload-result"></div>
+    </div>
+
+    <!-- PREUVES LIST -->
+    <div class="section">
+      <div class="section-hdr" id="proofs-hdr">Preuves publiées (0)</div>
+      <div class="proofs-grid" id="proofs-grid"><div style="color:var(--muted);font-size:13px">Chargement…</div></div>
+    </div>
+
+    <!-- CODES TABLE -->
+    <div class="section">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="section-hdr" style="margin-bottom:0">Codes d'accès</div>
+        <input class="form-input" style="max-width:200px;font-size:12px;padding:6px 10px" id="code-search" placeholder="Rechercher…" oninput="filterCodes()" >
+      </div>
+      <div style="overflow-x:auto"><table class="codes-table" id="codes-table">
+        <thead><tr>
+          <th>Code</th><th>Email</th><th>Plan</th><th>Actif</th><th>Expire le</th><th>Crédits</th>
+        </tr></thead>
+        <tbody id="codes-body"><tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Chargement…</td></tr></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let ADMIN_EMAIL = '', ADMIN_CODE = '';
+let allCodes = [];
+let pendingFileData = null;
+
+// Restore session
+(function(){
+  const s = JSON.parse(localStorage.getItem('tlm_admin') || '{}');
+  if(s.email && s.code){
+    ADMIN_EMAIL = s.email; ADMIN_CODE = s.code;
+    showDashboard();
+  }
+})();
+
+async function adminLogin(){
+  const email = document.getElementById('adm-email').value.trim();
+  const code = document.getElementById('adm-code').value.trim();
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+
+  if(!email || !code){ err.textContent='Email et code requis'; err.style.display='block'; return; }
+
+  const r = await fetch('/api/admin/stats?email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code));
+  const d = await r.json();
+
+  if(!d.ok){ err.textContent = d.error || 'Accès refusé'; err.style.display='block'; return; }
+
+  ADMIN_EMAIL = email; ADMIN_CODE = code;
+  localStorage.setItem('tlm_admin', JSON.stringify({ email, code }));
+  showDashboard(d);
+}
+
+function showDashboard(data){
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('nav-user').textContent = ADMIN_EMAIL;
+  loadStats(data);
+  loadCodes();
+  loadProofs();
+}
+
+async function loadStats(cached){
+  const data = cached || await fetch(`/api/admin/stats?email=${encodeURIComponent(ADMIN_EMAIL)}&code=${encodeURIComponent(ADMIN_CODE)}`).then(r=>r.json());
+  if(!data.ok) return;
+  const u = data.users;
+  const vals = [u.total, u.free, u.premium, u.vip, u.elite, data.expiring_soon, data.expired_total, data.proofs_count];
+  const cells = document.querySelectorAll('#kpi-grid .kpi-val');
+  vals.forEach((v,i) => cells[i] && (cells[i].textContent = v ?? '0'));
+}
+
+async function loadCodes(){
+  const r = await fetch(`/api/admin/codes?email=${encodeURIComponent(ADMIN_EMAIL)}&code=${encodeURIComponent(ADMIN_CODE)}`);
+  const d = await r.json();
+  if(!d.ok) return;
+  allCodes = d.codes;
+  renderCodes(allCodes);
+}
+
+function renderCodes(codes){
+  const body = document.getElementById('codes-body');
+  if(!codes.length){ body.innerHTML='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Aucun code</td></tr>'; return; }
+  body.innerHTML = codes.map(c => {
+    const exp = c.expires_at ? new Date(c.expires_at).toLocaleDateString('fr-FR') : '∞';
+    const isExpired = c.expires_at && new Date(c.expires_at) < new Date();
+    return `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--cyan)">${c.code}</td>
+      <td style="color:var(--muted2);max-width:160px;overflow:hidden;text-overflow:ellipsis">${c.email}</td>
+      <td><span class="plan-badge ${c.plan}">${c.plan}</span></td>
+      <td>${c.active ? '✅' : '❌'}</td>
+      <td style="color:${isExpired?'var(--red)':'var(--muted2)'}">${exp}</td>
+      <td style="color:var(--muted)">${c.credits_max||0}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterCodes(){
+  const q = document.getElementById('code-search').value.toLowerCase();
+  renderCodes(allCodes.filter(c => c.code.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || c.plan.includes(q)));
+}
+
+async function loadProofs(){
+  const r = await fetch('/api/preuves');
+  const d = await r.json();
+  if(!d.ok) return;
+  renderProofs(d.proofs);
+}
+
+function renderProofs(proofs){
+  const grid = document.getElementById('proofs-grid');
+  const hdr = document.getElementById('proofs-hdr');
+  hdr.textContent = `Preuves publiées (${proofs.length})`;
+  if(!proofs.length){ grid.innerHTML='<div style="color:var(--muted);font-size:13px">Aucune preuve publiée.</div>'; return; }
+  grid.innerHTML = proofs.map(p => `
+    <div class="proof-card">
+      <img class="proof-img" src="${p.data}" alt="${p.title}" loading="lazy">
+      <div class="proof-info">
+        <div class="proof-title">${p.title}</div>
+        <div class="proof-date">${p.date} · ${p.description || ''}</div>
+      </div>
+      <button class="proof-del" onclick="deleteProof(${p.id})">✕ Suppr</button>
+    </div>`).join('');
+}
+
+function onDrag(e, on){ e.preventDefault(); document.getElementById('drop-zone').classList.toggle('drag', on); }
+function onDrop(e){
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(file) readFile(file);
+}
+function onFile(input){ if(input.files[0]) readFile(input.files[0]); }
+
+function readFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    pendingFileData = e.target.result;
+    const img = document.getElementById('preview-img');
+    img.src = pendingFileData; img.style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function uploadProof(){
+  const title = document.getElementById('proof-title').value.trim();
+  const date = document.getElementById('proof-date').value;
+  const desc = document.getElementById('proof-desc').value.trim();
+  const res = document.getElementById('upload-result');
+
+  if(!pendingFileData){ showUploadMsg('Sélectionnez une image d\'abord', false); return; }
+  if(!title){ showUploadMsg('Le titre est requis', false); return; }
+
+  showUploadMsg('Publication en cours…', null);
+
+  const r = await fetch('/api/admin/preuves', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: ADMIN_EMAIL, code: ADMIN_CODE, proof: { data: pendingFileData, title, date, description: desc } })
+  });
+  const d = await r.json();
+
+  if(d.ok){
+    showUploadMsg('✅ Preuve publiée !', true);
+    pendingFileData = null;
+    document.getElementById('preview-img').style.display = 'none';
+    document.getElementById('proof-title').value = '';
+    document.getElementById('proof-desc').value = '';
+    document.getElementById('file-input').value = '';
+    loadProofs(); loadStats();
+  } else {
+    showUploadMsg('❌ ' + (d.error || 'Erreur'), false);
+  }
+}
+
+async function deleteProof(id){
+  if(!confirm('Supprimer cette preuve ?')) return;
+  await fetch(`/api/admin/preuves/${id}?email=${encodeURIComponent(ADMIN_EMAIL)}&code=${encodeURIComponent(ADMIN_CODE)}`, { method: 'DELETE' });
+  loadProofs(); loadStats();
+}
+
+function showUploadMsg(msg, ok){
+  const el = document.getElementById('upload-result');
+  el.textContent = msg;
+  el.className = 'upload-result ' + (ok === true ? 'ok' : ok === false ? 'err' : '');
+  el.style.display = 'block';
+}
+
+document.addEventListener('keydown', e => { if(e.key==='Enter') adminLogin(); });
+document.getElementById('proof-date').valueAsDate = new Date();
+</script>
+</body>
+</html>

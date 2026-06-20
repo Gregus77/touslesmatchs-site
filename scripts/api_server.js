@@ -1,5 +1,5 @@
 // TousLesMatchs — API Server
-// Auth, live matches, Live IA (token-based concile analysis), Stripe
+// Auth, live matches, Live IA, Stripe, Brevo, Admin
 
 const express = require("express");
 const cors = require("cors");
@@ -7,11 +7,12 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Database = require("better-sqlite3");
 const path = require("path");
+const fs = require("fs");
 const https = require("https");
 const http  = require("http");
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "20mb" }));
 app.use(cors());
 
 // ── Database ──────────────────────────────────────────────────────────────────
@@ -50,6 +51,19 @@ const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.FOOTBALL_DATA_K
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+
+// Preuves storage file
+const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
+function loadProofs() {
+  try { return JSON.parse(fs.readFileSync(PREUVES_PATH, "utf8")); } catch { return []; }
+}
+function saveProofs(proofs) {
+  try {
+    fs.mkdirSync("/var/touslesmatchs", { recursive: true });
+    fs.writeFileSync(PREUVES_PATH, JSON.stringify(proofs, null, 2));
+  } catch (e) { console.error("[preuves] save error:", e.message); }
+}
 
 // Cache live matches 10 minutes to stay under 100 req/day
 let liveMatchesCache = { data: null, ts: 0 };
@@ -371,6 +385,95 @@ function getMockAnalysis(match) {
   };
 }
 
+// ── Brevo helpers ─────────────────────────────────────────────────────────────
+async function brevoAddContact(email, tag) {
+  if (!BREVO_API_KEY) return;
+  try {
+    await httpPost(
+      "https://api.brevo.com/v3/contacts",
+      { email, attributes: {}, listIds: [], updateEnabled: true },
+      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
+    );
+    await httpPost(
+      `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}/addToList`,
+      {},
+      { "api-key": BREVO_API_KEY }
+    );
+    // Apply tag via attribute
+    await httpPost(
+      `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
+      { attributes: { PLAN: tag } },
+      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
+    );
+    console.log(`[brevo] contact upserted: ${email} tag=${tag}`);
+  } catch (e) {
+    console.error("[brevo] error:", e.message);
+  }
+}
+
+async function brevoSendEmail(to, subject, htmlContent) {
+  if (!BREVO_API_KEY) return;
+  try {
+    await httpPost(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: { name: "TousLesMatchs", email: "noreply@touslesmatchs.com" },
+        to: [{ email: to }],
+        subject,
+        htmlContent,
+      },
+      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
+    );
+  } catch (e) {
+    console.error("[brevo] sendEmail error:", e.message);
+  }
+}
+
+// ── Admin auth helper ─────────────────────────────────────────────────────────
+function isAdmin(email, code) {
+  const auth = verifyCode(email, code);
+  return auth.valid && code.toUpperCase().startsWith("ELITE-ADMIN");
+}
+
+// ── Expiry cron (check every hour) ────────────────────────────────────────────
+function runExpiryCron() {
+  if (!BREVO_API_KEY) return;
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const now = new Date();
+    const rows = codesDb.prepare(
+      "SELECT * FROM codes WHERE active = 1 AND expires_at IS NOT NULL AND plan != 'free'"
+    ).all();
+    codesDb.close();
+
+    rows.forEach(row => {
+      const exp = new Date(row.expires_at);
+      const diff = Math.round((exp - now) / (1000 * 60 * 60 * 24));
+
+      if (diff === 3) {
+        brevoSendEmail(row.email, "Votre abonnement expire dans 3 jours",
+          `<p>Bonjour,</p><p>Votre abonnement TousLesMatchs expire le <strong>${exp.toLocaleDateString("fr-FR")}</strong>.</p>
+          <p>Renouvelez maintenant pour conserver votre accès Premium et vos analyses IA.</p>
+          <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler →</a></p>`
+        );
+      } else if (diff === 1) {
+        brevoSendEmail(row.email, "Dernière chance — abonnement expire demain",
+          `<p>Votre abonnement expire <strong>demain</strong>. Ne perdez pas votre accès aux picks VIP et à l'analyse IA en temps réel.</p>
+          <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler maintenant →</a></p>`
+        );
+      } else if (diff === 0) {
+        brevoSendEmail(row.email, "Votre abonnement expire aujourd'hui",
+          `<p>Votre abonnement expire <strong>aujourd'hui</strong>. Renouvelez pour continuer à recevoir les picks gagnants.</p>
+          <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler →</a></p>`
+        );
+      }
+    });
+  } catch (e) {
+    console.error("[expiry-cron] error:", e.message);
+  }
+}
+setInterval(runExpiryCron, 60 * 60 * 1000);
+
 // ══════════════════════════════════════════════════════════════════════════════
 // Routes
 // ══════════════════════════════════════════════════════════════════════════════
@@ -401,6 +504,10 @@ app.post("/verify-code", (req, res) => {
     const credits_left = row.credits_date === today
       ? Math.max(0, row.credits_max - row.credits_used)
       : row.credits_max;
+
+    // Sync with Brevo asynchronously (don't block the response)
+    const tag = row.plan === "free" ? "FREE" : row.plan === "premium" ? "PREMIUM" : row.plan === "elite" ? "ELITE" : "VIP";
+    brevoAddContact(row.email, tag).catch(() => {});
 
     return res.json({ valid: true, plan: row.plan, credits_left, email: row.email });
   } catch (e) {
@@ -590,6 +697,7 @@ app.post("/concile-analysis", async (req, res) => {
 
   const auth = verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
+  if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
 
   const cacheKey = `${email}__${match.home}_${match.away}_${new Date().toISOString().slice(0, 10)}`;
   if (analysisCache.has(cacheKey)) {
@@ -614,6 +722,7 @@ app.post("/prematch-analysis", async (req, res) => {
 
   const auth = verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
+  if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
 
   const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || getTodayStr()}`;
   if (analysisCache.has(cacheKey)) {
@@ -737,5 +846,96 @@ app.post("/create-checkout", async (req, res) => {
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
+// ── Admin stats ───────────────────────────────────────────────────────────────
+app.get("/admin/stats", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.json({ ok: false, error: "Accès admin requis" });
+
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const all = codesDb.prepare("SELECT plan, active, expires_at FROM codes").all();
+    codesDb.close();
+
+    const now = new Date();
+    const active = all.filter(r => r.active === 1);
+    const counts = { free: 0, premium: 0, vip: 0, elite: 0, total: active.length };
+    active.forEach(r => { if (counts[r.plan] !== undefined) counts[r.plan]++; });
+
+    const expiring3d = active.filter(r => {
+      if (!r.expires_at) return false;
+      const d = Math.round((new Date(r.expires_at) - now) / 86400000);
+      return d >= 0 && d <= 3;
+    }).length;
+
+    const expired = all.filter(r => r.expires_at && new Date(r.expires_at) < now).length;
+
+    const proofs = loadProofs();
+
+    res.json({
+      ok: true,
+      users: counts,
+      expiring_soon: expiring3d,
+      expired_total: expired,
+      proofs_count: proofs.length,
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Admin codes list ──────────────────────────────────────────────────────────
+app.get("/admin/codes", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.json({ ok: false, error: "Accès admin requis" });
+
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const rows = codesDb.prepare(
+      "SELECT code, email, plan, active, expires_at, credits_max, credits_used, credits_date FROM codes ORDER BY plan, email"
+    ).all();
+    codesDb.close();
+    res.json({ ok: true, codes: rows });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Preuves — GET public ──────────────────────────────────────────────────────
+app.get("/preuves", (req, res) => {
+  res.json({ ok: true, proofs: loadProofs() });
+});
+
+// ── Preuves — POST admin upload ───────────────────────────────────────────────
+app.post("/admin/preuves", (req, res) => {
+  const { email, code, proof } = req.body || {};
+  if (!isAdmin(email, code)) return res.json({ ok: false, error: "Accès admin requis" });
+  if (!proof || !proof.data || !proof.title) return res.json({ ok: false, error: "Données manquantes (data + title requis)" });
+
+  const proofs = loadProofs();
+  const newProof = {
+    id: Date.now(),
+    title: proof.title,
+    description: proof.description || "",
+    date: proof.date || new Date().toISOString().slice(0, 10),
+    data: proof.data, // base64 data URI
+    added_at: new Date().toISOString(),
+  };
+  proofs.unshift(newProof);
+  saveProofs(proofs);
+  res.json({ ok: true, proof: { ...newProof, data: "[omitted]" } });
+});
+
+// ── Preuves — DELETE admin ────────────────────────────────────────────────────
+app.delete("/admin/preuves/:id", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.json({ ok: false, error: "Accès admin requis" });
+
+  const id = parseInt(req.params.id);
+  const proofs = loadProofs();
+  const updated = proofs.filter(p => p.id !== id);
+  saveProofs(updated);
+  res.json({ ok: true, deleted: proofs.length - updated.length });
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));

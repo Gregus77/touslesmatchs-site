@@ -205,6 +205,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
   <div class="nav-right">
     <a href="/live-ia" class="nav-live-pill active"><span class="nav-live-dot"></span>Live IA</a>
     <div id="nav-auth"></div>
+    <div id="lang-picker-slot"></div>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
 </nav>
@@ -423,6 +424,17 @@ async function analyzeMatch(i){
   const {email, code, plan} = getAuth();
   if(!email){ openModal(); return; }
 
+  // Bloquer plan gratuit — afficher paywall
+  if(plan === 'free' || !plan){
+    selectMatch(i);
+    document.querySelectorAll('[id^="analysis-zone-"]').forEach(z => { z.style.display='none'; z.innerHTML=''; });
+    const zone = document.getElementById('analysis-zone-'+i);
+    zone.style.display='block';
+    zone.innerHTML = renderPaywall();
+    zone.scrollIntoView({behavior:'smooth', block:'start'});
+    return;
+  }
+
   const m = allMatches[i];
   selectMatch(i);
   const btn = document.getElementById('btn-'+i);
@@ -447,6 +459,9 @@ async function analyzeMatch(i){
     if(btn){ btn.disabled=false; btn.innerHTML='<span>🧠</span> Ré-analyser'; }
 
     if(!d.ok){
+      if(d.error === 'UPGRADE_REQUIRED'){
+        zone.innerHTML = renderPaywall(); return;
+      }
       zone.innerHTML = `<div class="analysis-panel">
         <div style="text-align:center;padding:20px;color:var(--red)">
           <div style="font-size:32px;margin-bottom:12px">⚠️</div>
@@ -462,6 +477,20 @@ async function analyzeMatch(i){
     if(btn){ btn.disabled=false; btn.innerHTML='<span>🧠</span> Réessayer'; }
     zone.innerHTML = `<div class="analysis-panel"><div style="text-align:center;padding:20px;color:var(--muted2)">Erreur réseau. Réessaie.</div></div>`;
   }
+}
+
+function renderPaywall(){
+  return `<div class="analysis-panel" style="text-align:center;padding:32px 24px">
+    <div style="font-size:40px;margin-bottom:14px">🔒</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px">Réservé aux membres Premium</div>
+    <div style="font-size:14px;color:var(--muted2);line-height:1.7;margin-bottom:24px;max-width:320px;margin-left:auto;margin-right:auto">
+      L'analyse du Concile (5 IA en simultané) est disponible à partir du plan <strong style="color:var(--indigo2)">Pro</strong>.<br>
+      Débloquez les votes en temps réel et les picks premium.
+    </div>
+    <a href="/#plans" style="display:inline-flex;align-items:center;gap:8px;padding:13px 28px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 6px 24px rgba(79,70,229,.35)">
+      Voir les abonnements →
+    </a>
+  </div>`;
 }
 
 function renderLoadingAnalysis(m){
@@ -563,5 +592,7 @@ document.addEventListener('click',function(e){
   }
 });
 </script>
+<script src="/js/i18n.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => i18n.init());</script>
 </body>
 </html>

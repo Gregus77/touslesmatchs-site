@@ -656,6 +656,7 @@ footer{
   <div class="nav-right">
     <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span>Live IA</a>
     <div id="nav-auth"></div>
+    <div id="lang-picker-slot"></div>
     <a href="#plans" class="nav-cta">Commencer →</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
@@ -1378,5 +1379,7 @@ document.addEventListener('click',function(e){
   }
 });
 </script>
+<script src="/js/i18n.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => i18n.init());</script>
 </body>
 </html>

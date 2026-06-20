@@ -154,6 +154,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
   </div>
   <div class="nav-right">
     <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span>Live</a>
+    <div id="lang-picker-slot"></div>
     <a href="/#plans" class="nav-cta">Rejoindre →</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
@@ -373,5 +374,7 @@ function render(){
 
 render();
 </script>
+<script src="/js/i18n.js"></script>
+<script>document.addEventListener('DOMContentLoaded', () => i18n.init());</script>
 </body>
 </html>
