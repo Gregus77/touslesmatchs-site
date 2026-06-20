@@ -20,6 +20,7 @@ const ADMIN_USER_ID = "309921562";
 const REPO        = "/repo";
 const PICKS_FILE  = path.join(REPO, "public/data/picks.json");
 const DATA_FILE   = path.join(REPO, "data/picks.json");
+const MEMORY_FILE = path.join(REPO, "data/hermes_memory.json");
 
 if (!TG_TOKEN) { console.error("HERMES_ADMIN_TLM_BOT manquant"); process.exit(1); }
 
@@ -173,9 +174,34 @@ async function fetchTodayMatches() {
   return [];
 }
 
+// ── Mémoire d'apprentissage ───────────────────────────────────────────────────
+function loadMemory() {
+  try { return JSON.parse(fs.readFileSync(MEMORY_FILE, "utf8")); } catch { return null; }
+}
+
+function memoryBlock() {
+  const m = loadMemory();
+  if (!m) return "";
+  const rules = (m.rules_derived || []).join("\n");
+  const stats = m.general ? `Winrate global : ${m.general.winrate}% sur ${m.picks_analysed} picks analysés` : "";
+  return `\nMÉMOIRE HERMÈS (${m.picks_analysed} picks analysés) :\n${stats}\nRÈGLES APPRISES :\n${rules}\n`;
+}
+
+async function cmdLearn(chatId) {
+  await reply(chatId, "🧠 <b>Analyse de l'historique en cours...</b>");
+  try {
+    const { generateMemory, formatForTelegram } = require("./hermes_learn.js");
+    const memory = generateMemory();
+    const msg = formatForTelegram(memory);
+    await reply(chatId, msg);
+  } catch (e) {
+    await reply(chatId, `❌ Erreur lors de l'analyse : ${e.message}`);
+  }
+}
+
 // ── Analyse pick ──────────────────────────────────────────────────────────────
 const HERMES_PROMPT = (matches) => `Tu es HERMÈS, expert en pronostics sportifs pour TousLesMatchs.
-
+${memoryBlock()}
 MATCHS DISPONIBLES AUJOURD'HUI :
 ${JSON.stringify(matches, null, 2)}
 
@@ -355,6 +381,13 @@ async function cmdResult(chatId, status) {
   savePicks(data);
   const emoji = status === "GAGNE" ? "🏆" : "❌";
   await reply(chatId, `${emoji} Pick marqué <b>${status}</b>\n${data.currentPick.home} vs ${data.currentPick.away} — ${data.currentPick.score || "?"}`);
+
+  // Auto-apprentissage après chaque résultat
+  try {
+    const { generateMemory } = require("./hermes_learn.js");
+    generateMemory();
+    console.log("🧠 Mémoire Hermès mise à jour");
+  } catch (e) { console.error("hermes_learn:", e.message); }
 }
 
 async function cmdPublish(chatId) {
@@ -411,6 +444,7 @@ async function cmdHelp(chatId) {
 /setscore 1-0 — Mettre à jour le score
 /win — Marquer le pick comme GAGNÉ
 /lose — Marquer le pick comme PERDU
+/learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public
 /deploy — git pull sur le VPS
 /help — Cette aide`);
@@ -441,6 +475,7 @@ async function handleMessage(msg) {
     case "/setscore": return cmdSetScore(chatId, args);
     case "/win":      return cmdResult(chatId, "GAGNE");
     case "/lose":     return cmdResult(chatId, "PERDU");
+    case "/learn":    return cmdLearn(chatId);
     case "/publish":  return cmdPublish(chatId);
     case "/deploy":   return cmdDeploy(chatId);
     case "/help":
