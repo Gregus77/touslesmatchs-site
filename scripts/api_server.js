@@ -46,7 +46,7 @@ db.exec(`
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
-const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.FOOTBALL_DATA_KEY || "";
+const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -153,20 +153,28 @@ async function fetchLiveMatches() {
     return liveMatchesCache.data;
   }
   if (!API_SPORTS_KEY) {
+    console.warn("[live-matches] API_SPORTS_KEY not set — returning demo data");
     return getMockMatches();
   }
   try {
+    console.log("[live-matches] Fetching from API-Sports...");
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", {
       "x-apisports-key": API_SPORTS_KEY,
     });
+    if (data.errors && Object.keys(data.errors).length > 0) {
+      console.error("[live-matches] API error:", JSON.stringify(data.errors));
+      return liveMatchesCache.data || getMockMatches();
+    }
     if (data.response && data.response.length > 0) {
+      console.log(`[live-matches] Got ${data.response.length} live matches`);
       const matches = formatApiSportsMatches(data.response);
       liveMatchesCache = { data: matches, ts: Date.now() };
       return matches;
     }
-    return getMockMatches();
+    console.log("[live-matches] API returned 0 matches (no live games right now)");
+    return [];
   } catch (e) {
-    console.error("API-Sports error:", e.message);
+    console.error("[live-matches] Fetch error:", e.message);
     return liveMatchesCache.data || getMockMatches();
   }
 }
