@@ -1,15 +1,17 @@
 www.touslesmatchs.com {
-    # API proxy vers le backend
+    # API proxy — must be checked BEFORE try_files rewrites the path
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy api:3001
     }
 
-    # Frontend statique
-    root * /srv
-    encode gzip
-    file_server
-    try_files {path} {path}.html /index.html
+    # Frontend statique — try_files only applies here, never touches /api/*
+    handle {
+        root * /srv
+        encode gzip
+        try_files {path} {path}.html /index.html
+        file_server
+    }
 }
 
 touslesmatchs.com {
