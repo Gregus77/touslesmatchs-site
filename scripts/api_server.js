@@ -153,8 +153,8 @@ async function fetchLiveMatches() {
     return liveMatchesCache.data;
   }
   if (!API_SPORTS_KEY) {
-    console.warn("[live-matches] API_SPORTS_KEY not set — returning demo data");
-    return getMockMatches();
+    console.warn("[live-matches] API_SPORTS_KEY not set — no live data");
+    return [];
   }
   try {
     console.log("[live-matches] Fetching from API-Sports...");
@@ -163,7 +163,7 @@ async function fetchLiveMatches() {
     });
     if (data.errors && Object.keys(data.errors).length > 0) {
       console.error("[live-matches] API error:", JSON.stringify(data.errors));
-      return liveMatchesCache.data || getMockMatches();
+      return liveMatchesCache.data || [];
     }
     if (data.response && data.response.length > 0) {
       console.log(`[live-matches] Got ${data.response.length} live matches`);
@@ -172,10 +172,11 @@ async function fetchLiveMatches() {
       return matches;
     }
     console.log("[live-matches] API returned 0 matches (no live games right now)");
+    liveMatchesCache = { data: [], ts: Date.now() };
     return [];
   } catch (e) {
     console.error("[live-matches] Fetch error:", e.message);
-    return liveMatchesCache.data || getMockMatches();
+    return liveMatchesCache.data || [];
   }
 }
 
@@ -470,7 +471,7 @@ app.get("/live-matches", async (req, res) => {
     const matches = await fetchLiveMatches();
     res.json({ ok: true, matches });
   } catch (e) {
-    res.json({ ok: true, matches: getMockMatches() });
+    res.json({ ok: true, matches: [] });
   }
 });
 

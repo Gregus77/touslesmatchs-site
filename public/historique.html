@@ -34,45 +34,76 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 @keyframes pulse-red{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
 .nav-cta{font-size:13px;font-weight:700;padding:8px 20px;border-radius:9px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;text-decoration:none;display:inline-block;box-shadow:0 4px 20px rgba(79,70,229,.3);transition:all .2s}
 
-.page{position:relative;z-index:1;padding:100px 32px 80px;max-width:1000px;margin:0 auto}
+.page{position:relative;z-index:1;padding:100px 32px 80px;max-width:1100px;margin:0 auto}
 
 /* STATS SUMMARY */
-.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:48px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:40px}
 .stat-card{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:20px;text-align:center}
-.stat-value{font-size:32px;font-weight:900;letter-spacing:-.03em;margin-bottom:4px}
+.stat-value{font-size:30px;font-weight:900;letter-spacing:-.03em;margin-bottom:4px}
 .stat-value.green{color:var(--green)}
 .stat-value.cyan{background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .stat-value.violet{color:#c084fc}
 .stat-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
 
 /* CHART */
-.chart-wrap{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:28px;margin-bottom:40px}
-.chart-title{font-size:14px;font-weight:700;color:var(--muted2);margin-bottom:20px;letter-spacing:.04em;text-transform:uppercase}
-.chart-bars{display:flex;align-items:flex-end;gap:6px;height:100px}
+.chart-wrap{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:28px;margin-bottom:32px}
+.chart-title{font-size:14px;font-weight:700;color:var(--muted2);margin-bottom:16px;letter-spacing:.04em;text-transform:uppercase}
+.chart-bars{display:flex;align-items:flex-end;gap:5px;height:80px}
 .chart-bar{flex:1;border-radius:4px 4px 0 0;min-height:4px;transition:all .3s;cursor:default;position:relative}
 .chart-bar.win{background:linear-gradient(180deg,var(--green),rgba(16,185,129,.4))}
 .chart-bar.loss{background:linear-gradient(180deg,var(--red),rgba(244,63,94,.4))}
 .chart-bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:var(--bg4);border:1px solid var(--b3);padding:4px 8px;border-radius:6px;font-size:11px;white-space:nowrap;color:var(--text);pointer-events:none;z-index:10}
 
+/* FILTERS */
+.filters-row{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.filter-group{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--b2);border-radius:11px;padding:4px}
+.filter-btn{font-size:12px;font-weight:600;padding:6px 14px;border-radius:8px;border:none;cursor:pointer;background:transparent;color:var(--muted2);transition:all .15s}
+.filter-btn.active{background:var(--bg4);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.picks-count-badge{font-size:12px;color:var(--muted);margin-left:auto;font-weight:500}
+
 /* PICKS TABLE */
 .section-title{font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
-.picks-list{display:grid;gap:10px}
-.pick-row{background:var(--bg2);border:1px solid var(--b2);border-radius:14px;padding:16px 20px;display:grid;grid-template-columns:90px 1fr auto auto;align-items:center;gap:16px;transition:all .2s}
+.picks-list{display:grid;gap:8px}
+
+.pick-row{
+  background:var(--bg2);border:1px solid var(--b2);border-radius:14px;
+  padding:14px 18px;
+  display:grid;
+  grid-template-columns:80px auto 1fr 70px 70px 110px;
+  align-items:center;gap:14px;
+  transition:all .2s;
+}
 .pick-row:hover{border-color:var(--b3);background:var(--bg3)}
-.pick-date{font-size:12px;color:var(--muted);font-weight:500}
-.pick-match{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
-.pick-comp{font-size:11px;color:var(--muted2);margin-top:2px}
-.pick-info{text-align:right}
-.pick-cote{font-size:13px;font-weight:700;color:var(--cyan)}
-.pick-bet{font-size:11px;color:var(--muted2);margin-top:2px}
-.pick-score{font-size:13px;color:var(--muted2);text-align:center;font-weight:600}
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px}
+.pick-date{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}
+.pick-teams{display:flex;align-items:center;gap:8px;min-width:0}
+.team-crest{width:26px;height:26px;border-radius:50%;object-fit:contain;flex-shrink:0;background:var(--bg3);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:14px;overflow:hidden}
+.team-crest img{width:100%;height:100%;object-fit:contain}
+.pick-vs{font-size:10px;color:var(--muted);font-weight:600;flex-shrink:0}
+.pick-info-col{min-width:0}
+.pick-match{font-size:13px;font-weight:700;color:var(--text);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-comp{font-size:10px;color:var(--muted2);margin-top:1px}
+.pick-pick{font-size:10px;color:var(--indigo2);font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-score-col{text-align:center;font-size:13px;color:var(--muted2);font-weight:600;white-space:nowrap}
+.pick-ia-col{text-align:center}
+.ia-note{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;font-size:13px;font-weight:800}
+.ia-note.high{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.2)}
+.ia-note.med{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.ia-note.low{background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.2)}
+.pick-result-col{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
 .badge.win{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
 .badge.loss{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.25)}
 .badge.pending{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.profit-tag{font-size:11px;font-weight:700;white-space:nowrap}
+.profit-tag.pos{color:var(--green)}
+.profit-tag.neg{color:var(--red)}
+.profit-tag.zero{color:var(--muted)}
+
+/* Sport badge */
+.sport-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:var(--bg3);border:1px solid var(--b2);color:var(--muted2);flex-shrink:0;white-space:nowrap}
 
 /* TELEGRAM CTA */
-.tg-section{margin-top:56px;background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.06));border:1px solid rgba(99,102,241,.2);border-radius:20px;padding:32px;text-align:center}
+.tg-section{margin-top:48px;background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.06));border:1px solid rgba(99,102,241,.2);border-radius:20px;padding:32px;text-align:center}
 .tg-title{font-size:20px;font-weight:800;margin-bottom:8px}
 .tg-sub{font-size:14px;color:var(--muted2);margin-bottom:24px;line-height:1.6}
 .tg-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
@@ -91,19 +122,23 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .mobile-menu a:hover,.mobile-menu a.active{color:var(--text);background:rgba(255,255,255,.06)}
 .mobile-menu .mm-sep{height:1px;background:var(--b1);margin:8px 0}
 .mobile-menu .mm-cta{margin-top:4px;display:block;text-align:center;padding:13px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:11px;font-weight:700;font-size:14px}
-@media(max-width:640px){
+@media(max-width:768px){
   nav{padding:0 16px}
   .nav-center{display:none}
   .nav-live-pill{display:none}
   .nav-cta{display:none}
   .nav-hamburger{display:block}
   .page{padding:90px 16px 60px}
-  .pick-row{grid-template-columns:1fr auto;gap:10px}
+  .pick-row{grid-template-columns:1fr auto;gap:8px;padding:12px 14px}
   .pick-date{display:none}
-  .pick-score{display:none}
+  .pick-score-col{display:none}
+  .pick-ia-col{display:none}
+  .pick-teams{display:none}
   .stats-grid{grid-template-columns:repeat(3,1fr)}
   .stat-value{font-size:22px}
   .tg-btns{flex-direction:column;align-items:center}
+  .filters-row{gap:6px}
+  .filter-btn{padding:5px 10px;font-size:11px}
 }
 </style>
 </head>
@@ -148,11 +183,11 @@ document.addEventListener('click',function(e){
 </script>
 
 <div class="page">
-  <div style="margin-bottom:40px">
-    <div style="font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px">
+  <div style="margin-bottom:36px">
+    <div style="font-size:clamp(26px,5vw,44px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:10px">
       Historique des <span style="background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">picks</span>
     </div>
-    <div style="font-size:15px;color:var(--muted2);line-height:1.6">Tous les picks publiés depuis le lancement — résultats vérifiables, aucun pick caché.</div>
+    <div style="font-size:14px;color:var(--muted2);line-height:1.6">Tous les picks publiés depuis le lancement — résultats vérifiables, aucun pick caché.</div>
   </div>
 
   <!-- STATS -->
@@ -160,16 +195,32 @@ document.addEventListener('click',function(e){
 
   <!-- CHART -->
   <div class="chart-wrap">
-    <div class="chart-title">Évolution de la bankroll</div>
-    <div class="chart-bars" id="chart-bars"></div>
-    <div style="display:flex;gap:16px;margin-top:12px">
-      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block"></span>Gain</span>
-      <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;background:var(--red);border-radius:2px;display:inline-block"></span>Perte</span>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="chart-title" style="margin-bottom:0">Évolution gains / mise</div>
+      <div style="display:flex;gap:12px">
+        <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:var(--green);border-radius:2px;display:inline-block"></span>Gain</span>
+        <span style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px"><span style="width:9px;height:9px;background:var(--red);border-radius:2px;display:inline-block"></span>Perte</span>
+      </div>
     </div>
+    <div class="chart-bars" id="chart-bars"></div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters-row">
+    <div class="filter-group">
+      <button class="filter-btn active" onclick="setFilter('sport','all',this)">Tous</button>
+      <button class="filter-btn" onclick="setFilter('sport','football',this)">⚽ Football</button>
+      <button class="filter-btn" onclick="setFilter('sport','basketball',this)">🏀 NBA</button>
+    </div>
+    <div class="filter-group">
+      <button class="filter-btn active" onclick="setFilter('period','all',this)">Tout</button>
+      <button class="filter-btn" onclick="setFilter('period','month',this)">Ce mois</button>
+      <button class="filter-btn" onclick="setFilter('period','week',this)">Cette semaine</button>
+    </div>
+    <span class="picks-count-badge" id="picks-count"></span>
   </div>
 
   <!-- PICKS LIST -->
-  <div class="section-title" id="picks-count"></div>
   <div class="picks-list" id="picks-list"></div>
 
   <!-- TELEGRAM -->
@@ -185,90 +236,142 @@ document.addEventListener('click',function(e){
 </div>
 
 <script>
-// ══ DONNÉES PICKS
+// ══ DONNÉES PICKS — sport, ia_note ajoutés
 const PICKS = [
-  { date:"2026-05-13", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", pick:"Victoire Inter (1X2)", cote:1.60, mise:11, result:"win", score:"0-2" },
-  { date:"2026-05-17", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", pick:"Victoire Villarreal (1X2)", cote:1.88, mise:10, result:"win", score:"3-2" },
-  { date:"2026-05-19", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", pick:"Plus de 216.5 pts", cote:1.72, mise:10, result:"win", score:"115-104" },
-  { date:"2026-05-20", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, mise:20, result:"win", score:"0-3" },
-  { date:"2026-06-01", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", pick:"Victoire Canada (1X2)", cote:1.58, mise:5, result:"win", score:"2-0" },
-  { date:"2026-06-10", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, mise:10, result:"win", score:"107-106" },
-  { date:"2026-06-19", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", pick:"Victoire Maroc (1X2)", cote:1.85, mise:10, result:"win", score:"1-0" },
+  { date:"2026-05-13", sport:"football", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", homeFlag:"🇮🇹", awayFlag:"🇮🇹", pick:"Victoire Inter (1X2)", cote:1.60, mise:11, result:"win", score:"0-2", ia_note:8.2 },
+  { date:"2026-05-17", sport:"football", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", homeFlag:"🇪🇸", awayFlag:"🇪🇸", pick:"Victoire Villarreal (1X2)", cote:1.88, mise:10, result:"win", score:"3-2", ia_note:7.8 },
+  { date:"2026-05-19", sport:"basketball", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", homeFlag:"🏀", awayFlag:"🏀", pick:"Plus de 216.5 pts", cote:1.72, mise:10, result:"win", score:"115-104", ia_note:7.5 },
+  { date:"2026-05-20", sport:"football", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", homeFlag:"🇨🇭", awayFlag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿", pick:"Victoire Aston Villa (1X2)", cote:1.58, mise:20, result:"win", score:"0-3", ia_note:8.5 },
+  { date:"2026-06-01", sport:"football", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", homeFlag:"🇨🇦", awayFlag:"🇺🇿", pick:"Victoire Canada (1X2)", cote:1.58, mise:5, result:"win", score:"2-0", ia_note:7.9 },
+  { date:"2026-06-10", sport:"basketball", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", homeFlag:"🏀", awayFlag:"🏀", pick:"Victoire San Antonio (1X2)", cote:2.10, mise:10, result:"win", score:"107-106", ia_note:8.0 },
+  { date:"2026-06-19", sport:"football", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", homeFlag:"🇲🇦", awayFlag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿", pick:"Victoire Maroc (1X2)", cote:1.85, mise:10, result:"win", score:"1-0", ia_note:8.1 },
 ];
 
-// ══ CALCULS
-function computeStats(){
-  let wins=0,losses=0,totalROI=0,streak=0,maxStreak=0,cur=0;
-  PICKS.forEach(p=>{
+// ══ FILTER STATE
+const filters = { sport:'all', period:'all' };
+
+function setFilter(key, val, btn){
+  filters[key] = val;
+  btn.closest('.filter-group').querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+
+function getFiltered(){
+  const now = new Date();
+  return PICKS.filter(p => {
+    if(filters.sport !== 'all' && p.sport !== filters.sport) return false;
+    if(filters.period !== 'all'){
+      const d = new Date(p.date);
+      if(filters.period === 'week'){
+        const weekAgo = new Date(now); weekAgo.setDate(now.getDate()-7);
+        if(d < weekAgo) return false;
+      }
+      if(filters.period === 'month'){
+        const monthAgo = new Date(now); monthAgo.setMonth(now.getMonth()-1);
+        if(d < monthAgo) return false;
+      }
+    }
+    return true;
+  });
+}
+
+function computeStats(picks){
+  let wins=0,losses=0,totalProfit=0,streak=0,maxStreak=0,cur=0;
+  picks.forEach(p=>{
     if(p.result==='win'){
-      wins++;
-      totalROI += (p.cote-1)*p.mise;
-      cur++;
-      maxStreak=Math.max(maxStreak,cur);
+      wins++; totalProfit += (p.cote-1)*p.mise; cur++; maxStreak=Math.max(maxStreak,cur);
     } else if(p.result==='loss'){
-      losses++;
-      totalROI -= p.mise;
-      cur=0;
+      losses++; totalProfit -= p.mise; cur=0;
     }
   });
   const total=wins+losses;
   const wr=total>0?Math.round(wins/total*100):0;
-  return {wins,losses,total,winrate:wr,roi:totalROI.toFixed(1),maxStreak};
+  return {wins,losses,total,winrate:wr,profit:totalProfit.toFixed(1),maxStreak};
 }
 
-function renderStats(){
-  const s=computeStats();
+function renderStats(picks){
+  const s=computeStats(picks);
   document.getElementById('stats-grid').innerHTML=`
     <div class="stat-card"><div class="stat-value green">${s.wins}</div><div class="stat-label">Picks gagnants</div></div>
     <div class="stat-card"><div class="stat-value cyan">${s.winrate}%</div><div class="stat-label">Taux de réussite</div></div>
-    <div class="stat-card"><div class="stat-value violet">+${s.roi}%</div><div class="stat-label">ROI total</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:var(--green)">+${s.profit}u</div><div class="stat-label">Profit total</div></div>
     <div class="stat-card"><div class="stat-value" style="color:var(--amber)">${s.total}</div><div class="stat-label">Picks total</div></div>
     <div class="stat-card"><div class="stat-value" style="color:var(--indigo2)">${s.maxStreak}</div><div class="stat-label">Série max</div></div>
   `;
 }
 
-function renderChart(){
+function renderChart(picks){
   const bars=document.getElementById('chart-bars');
-  const recent=PICKS.filter(p=>p.result==='win'||p.result==='loss').slice(-20);
-  if(recent.length===0){bars.innerHTML='<div style="color:var(--muted);font-size:13px">Aucune donnée</div>';return;}
-  const maxH=Math.max(...recent.map(p=>p.result==='win'?(p.cote-1)*p.mise:p.mise));
-  bars.innerHTML=recent.map(p=>{
-    const h=Math.max(8,Math.round(((p.result==='win'?(p.cote-1)*p.mise:p.mise)/maxH)*96));
-    const tip=`${p.home} vs ${p.away} · @${p.cote} · ${p.result==='win'?'+':'-'}${p.result==='win'?((p.cote-1)*p.mise).toFixed(1):p.mise}%`;
+  const finished=picks.filter(p=>p.result==='win'||p.result==='loss').slice(-20);
+  if(!finished.length){bars.innerHTML='<div style="color:var(--muted);font-size:13px">Aucune donnée</div>';return;}
+  const maxH=Math.max(...finished.map(p=>p.result==='win'?(p.cote-1)*p.mise:p.mise),1);
+  bars.innerHTML=finished.map(p=>{
+    const val=p.result==='win'?(p.cote-1)*p.mise:p.mise;
+    const h=Math.max(6,Math.round((val/maxH)*76));
+    const pf=p.result==='win'?'+'+val.toFixed(1)+'u':'-'+p.mise+'u';
+    const tip=`${p.home} vs ${p.away} · @${p.cote} · ${pf}`;
     return `<div class="chart-bar ${p.result}" style="height:${h}px" data-tip="${tip}"></div>`;
   }).join('');
 }
 
-function renderPicks(){
+function iaClass(n){ return n>=8?'high':n>=7?'med':'low'; }
+function sportIcon(s){ return s==='basketball'?'🏀':'⚽'; }
+
+function pickProfit(p){
+  if(p.result==='win'){
+    const g=((p.cote-1)*p.mise).toFixed(1);
+    return `<span class="profit-tag pos">+${g}u</span>`;
+  }
+  if(p.result==='loss') return `<span class="profit-tag neg">−${p.mise}u</span>`;
+  return `<span class="profit-tag zero">—</span>`;
+}
+
+function renderPicks(picks){
   const el=document.getElementById('picks-list');
   const cnt=document.getElementById('picks-count');
-  const sorted=[...PICKS].reverse();
-  const finished=sorted.filter(p=>p.result!=='pending');
-  cnt.textContent=`${PICKS.length} pick${PICKS.length>1?'s':''} publiés`;
+  const sorted=[...picks].reverse();
+  cnt.textContent=`${sorted.length} pick${sorted.length>1?'s':''}`;
+  if(!sorted.length){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px">Aucun pick pour ce filtre.</div>';
+    return;
+  }
   el.innerHTML=sorted.map(p=>`
     <div class="pick-row">
       <div class="pick-date">${formatDate(p.date)}</div>
-      <div>
+      <div class="pick-teams">
+        <div class="team-crest">${p.homeFlag||'⚽'}</div>
+        <div class="pick-vs">vs</div>
+        <div class="team-crest">${p.awayFlag||'⚽'}</div>
+      </div>
+      <div class="pick-info-col">
         <div class="pick-match">${p.home} – ${p.away}</div>
         <div class="pick-comp">${p.competition}</div>
-        <div style="margin-top:4px;font-size:11px;color:var(--indigo2);font-weight:600">${p.pick}</div>
+        <div class="pick-pick">${p.pick} · @${p.cote}</div>
       </div>
-      <div class="pick-score">${p.score||'—'}</div>
-      <div class="pick-info">
-        <div class="pick-cote">@${p.cote}</div>
-        <div style="margin-top:6px"><span class="badge ${p.result}">${p.result==='win'?'✅ Gagné':p.result==='loss'?'❌ Perdu':'⏳ En cours'}</span></div>
+      <div class="pick-score-col">${p.score||'—'}</div>
+      <div class="pick-ia-col">
+        <div class="ia-note ${iaClass(p.ia_note||7)}" title="Note IA">${p.ia_note||'—'}</div>
+      </div>
+      <div class="pick-result-col">
+        <span class="badge ${p.result}">${p.result==='win'?'✅ Gagné':p.result==='loss'?'❌ Perdu':'⏳ En cours'}</span>
+        ${pickProfit(p)}
       </div>
     </div>`).join('');
 }
 
 function formatDate(d){
-  const dt=new Date(d);
-  return dt.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'});
+  return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'2-digit'});
 }
 
-renderStats();
-renderChart();
-renderPicks();
+function render(){
+  const filtered = getFiltered();
+  renderStats(filtered);
+  renderChart(filtered);
+  renderPicks(filtered);
+}
+
+render();
 </script>
 </body>
 </html>
