@@ -193,29 +193,34 @@ function httpPost(url, body, headers = {}) {
 }
 
 // ── Live matches — football-data.org (gratuit, couvre Coupe du Monde) ─────────
+function formatFDMatch(m) {
+  return {
+    id: String(m.id),
+    home: m.homeTeam.name,
+    away: m.awayTeam.name,
+    score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null,
+    score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null,
+    minute: m.minute ?? null,
+    status: m.status === "FINISHED" ? "FINISHED" : "IN_PLAY",
+    competition: m.competition?.name || "International",
+    utcDate: m.utcDate,
+  };
+}
+
 async function fetchFromFootballData() {
   if (!FOOTBALL_DATA_KEY) return null;
   try {
-    console.log("[live-matches] Trying football-data.org...");
-    const data = await httpGet("https://api.football-data.org/v4/matches?status=LIVE", {
-      "X-Auth-Token": FOOTBALL_DATA_KEY,
-    });
-    if (!data.matches || data.matches.length === 0) {
-      console.log("[live-matches] football-data.org: 0 matches live");
-      return [];
-    }
-    console.log(`[live-matches] football-data.org: ${data.matches.length} matches`);
-    return data.matches.map((m) => ({
-      id: String(m.id),
-      home: m.homeTeam.name,
-      away: m.awayTeam.name,
-      score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? 0,
-      score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? 0,
-      minute: m.minute ?? null,
-      status: "IN_PLAY",
-      competition: m.competition?.name || "International",
-      utcDate: m.utcDate,
-    }));
+    const today = new Date().toISOString().slice(0, 10);
+    // Récupère les matchs EN COURS + TERMINÉS aujourd'hui
+    const [liveData, finishedData] = await Promise.all([
+      httpGet("https://api.football-data.org/v4/matches?status=LIVE", { "X-Auth-Token": FOOTBALL_DATA_KEY }),
+      httpGet(`https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${today}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
+    ]);
+    const live = (liveData.matches || []).map(formatFDMatch);
+    const finished = (finishedData.matches || []).map(formatFDMatch);
+    const all = [...live, ...finished];
+    console.log(`[live-matches] football-data.org: ${live.length} live, ${finished.length} finished today`);
+    return all;
   } catch (e) {
     console.error("[live-matches] football-data.org error:", e.message);
     return null;

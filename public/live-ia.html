@@ -336,21 +336,25 @@ let lastUpdate = null;
 let PICK_MATCH = null;
 async function loadPickMatch(){
   try{
-    const r=await fetch('/api/current-pick');
+    const r=await fetch('/data/picks.json?t='+Date.now());
     const d=await r.json();
-    if(d.ok&&d.pick){
+    const p=d.currentPick;
+    if(p && p.home && p.home !== 'Analyse en cours' && p.away){
+      let scoreA=null, scoreB=null;
+      if(p.score && p.score.includes('-')){
+        const parts=p.score.split('-');
+        scoreA=parseInt(parts[0])||0; scoreB=parseInt(parts[1])||0;
+      }
       PICK_MATCH={
         id:"pick-live",
-        home:d.pick.teamA.name,
-        away:d.pick.teamB.name,
-        score_home:d.pick.scoreA??null,
-        score_away:d.pick.scoreB??null,
+        home:p.home, away:p.away,
+        score_home:scoreA, score_away:scoreB,
         minute:null, status:"IN_PLAY",
-        competition:d.pick.competition||"",
+        competition:p.league||p.sport||"",
         utcDate:new Date().toISOString()
       };
-      TEAM_ALIASES_LIVE[d.pick.teamA.name.toLowerCase()]=[d.pick.teamA.name.toLowerCase()];
-      TEAM_ALIASES_LIVE[d.pick.teamB.name.toLowerCase()]=[d.pick.teamB.name.toLowerCase()];
+      TEAM_ALIASES_LIVE[p.home.toLowerCase()]=[p.home.toLowerCase()];
+      TEAM_ALIASES_LIVE[p.away.toLowerCase()]=[p.away.toLowerCase()];
     }
   }catch(e){}
 }

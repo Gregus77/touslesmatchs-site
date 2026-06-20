@@ -1418,26 +1418,31 @@ async function fetchLiveScore(){
   } catch(e){}
 }
 
-// Charge le pick dynamiquement depuis l'API puis render
+// Charge le pick depuis picks.json (écrit par Hermès automatiquement)
 async function initPick(){
   try{
-    const r=await fetch('/api/current-pick');
+    const r=await fetch('/data/picks.json?t='+Date.now());
     const d=await r.json();
-    if(d.ok&&d.pick){
-      const p=d.pick;
-      PICK.teamA=p.teamA||PICK.teamA;
-      PICK.teamB=p.teamB||PICK.teamB;
-      PICK.competition=p.competition||PICK.competition;
+    const p=d.currentPick;
+    if(p && p.home && p.home !== 'Analyse en cours'){
+      // Adapter le format picks.json → PICK
+      PICK.teamA={name:p.home, abbr:(p.home||'').slice(0,3).toUpperCase(), color:'#4f46e5'};
+      PICK.teamB={name:p.away, abbr:(p.away||'').slice(0,3).toUpperCase(), color:'#7c3aed'};
+      PICK.competition=p.league||p.sport||PICK.competition;
       PICK.time=p.time||PICK.time;
-      PICK.marketType=p.marketType||PICK.marketType;
-      PICK.marketLabel=p.marketLabel||PICK.marketLabel;
-      PICK.cote=p.cote||PICK.cote;
-      PICK.status=p.status||PICK.status;
-      PICK.result=p.result??PICK.result;
-      PICK.scoreA=p.scoreA??null;
-      PICK.scoreB=p.scoreB??null;
+      PICK.marketType=p.bet||PICK.marketType;
+      PICK.marketLabel=p.prono||PICK.marketLabel;
+      PICK.cote=parseFloat(p.cote)||PICK.cote;
+      PICK.status=p.status==='GAGNE'?'win':p.status==='PERDU'?'loss':p.status==='EN ATTENTE'&&p.score?'finished':'upcoming';
+      PICK.result=p.status==='GAGNE'?'win':p.status==='PERDU'?'loss':null;
+      // Score depuis picks.json si disponible
+      if(p.score && p.score.includes('-')){
+        const parts=p.score.split('-');
+        PICK.scoreA=parseInt(parts[0])||0;
+        PICK.scoreB=parseInt(parts[1])||0;
+      }
     }
-  }catch(e){}
+  }catch(e){ console.warn('picks.json non disponible',e); }
   renderNavAuth();
   renderPick();
   fetchLiveScore();
