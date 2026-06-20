@@ -332,6 +332,33 @@ function renderCredits(){
 let allMatches = [];
 let lastUpdate = null;
 
+// Match du jour (pick actuel) — injecté si absent de l'API
+const PICK_MATCH = {
+  id:"pick-live",
+  home:"Turquie", away:"Paraguay",
+  score_home:null, score_away:null,
+  minute:null, status:"IN_PLAY",
+  competition:"Coupe du Monde 2026 · Groupe H",
+  utcDate: new Date().toISOString()
+};
+
+const TEAM_ALIASES_LIVE={
+  "turquie":["turkey","turkiye","türkiye"],
+  "paraguay":["paraguay"],
+};
+function normLive(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
+function matchTeamLive(apiName,pickName){
+  const a=normLive(apiName),p=normLive(pickName);
+  if(a.includes(p)||p.includes(a)) return true;
+  return (TEAM_ALIASES_LIVE[p]||[]).some(al=>a.includes(al));
+}
+function pickMatchInList(matches){
+  return matches.some(m=>
+    (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&
+    (matchTeamLive(m.home,PICK_MATCH.away)||matchTeamLive(m.away,PICK_MATCH.away))
+  );
+}
+
 async function loadMatches(force){
   try{
     const url = force ? '/api/live-matches?force=1' : '/api/live-matches';
@@ -339,6 +366,10 @@ async function loadMatches(force){
     const d = await r.json();
     if(d.ok && d.matches){
       allMatches = d.matches;
+      // Inject PICK_MATCH if not found in API results
+      if(!pickMatchInList(allMatches)){
+        allMatches = [PICK_MATCH, ...allMatches];
+      }
       lastUpdate = new Date();
       document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';
     }

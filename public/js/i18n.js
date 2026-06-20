@@ -352,7 +352,7 @@ const i18n = {
         .lang-picker{position:relative}
         .lang-toggle{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:var(--text,#eceaf4);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
         .lang-toggle:hover{background:rgba(255,255,255,.1)}
-        .lang-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;background:#0d1020;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:6px;min-width:130px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:300;display:grid;grid-template-columns:1fr 1fr;gap:3px}
+        .lang-dropdown{display:none;position:absolute;top:calc(100% + 6px);right:0;background:#0d1020;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:6px;min-width:130px;box-shadow:0 16px 40px rgba(0,0,0,.6);z-index:300;grid-template-columns:1fr 1fr;gap:3px}
         .lang-dropdown.open{display:grid}
         .lang-opt{background:transparent;border:none;color:#a8aec8;font-size:12px;font-weight:600;padding:6px 10px;border-radius:7px;cursor:pointer;text-align:left;font-family:inherit;transition:all .1s;white-space:nowrap}
         .lang-opt:hover{background:rgba(255,255,255,.06);color:#eceaf4}

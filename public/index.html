@@ -1361,10 +1361,26 @@ function doLogout(){
 }
 
 // ══ SCORE LIVE — mise à jour automatique toutes les 30s
+const TEAM_ALIASES={
+  "turquie":["turkey","turkiye","türkiye","türkei"],
+  "paraguay":["paraguay"],
+  "france":["france"],
+  "maroc":["morocco","maroc"],
+  "ecosse":["scotland","ecosse","écosse"],
+  "espagne":["spain","espana","españa"],
+  "allemagne":["germany","deutschland"],
+  "angleterre":["england"],
+  "portugal":["portugal"],
+  "bresil":["brazil","brasil"],
+  "argentine":["argentina"],
+  "usa":["united states","usa","usmnt"],
+};
 function normName(s){return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");}
 function matchesTeam(apiName,pickName){
   const a=normName(apiName),p=normName(pickName);
-  return a.includes(p)||p.includes(a);
+  if(a.includes(p)||p.includes(a)) return true;
+  const aliases=TEAM_ALIASES[p]||[];
+  return aliases.some(al=>a.includes(al)||al.includes(a));
 }
 async function fetchLiveScore(){
   try{
