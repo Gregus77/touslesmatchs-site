@@ -3,7 +3,8 @@ import requests
 import json
 from datetime import datetime
 
-SPORTS_API_KEY = os.environ.get("SPORTS_API_KEY", "")
+# Support both variable names (docker-compose uses API_SPORTS_KEY)
+SPORTS_API_KEY = os.environ.get("SPORTS_API_KEY") or os.environ.get("API_SPORTS_KEY", "")
 SPORTS_API_HOST = os.environ.get("SPORTS_API_HOST", "v3.football.api-sports.io")
 SPORTS_API_PROVIDER = os.environ.get("SPORTS_API_PROVIDER", "api-football")
 
@@ -86,74 +87,94 @@ def _get_odds_api_football(fixture_id):
 
 
 def _fetch_thesportsdb(date):
-    """TheSportsDB free tier."""
-    url = f"https://www.thesportsdb.com/api/v1/json/3/eventsday.php"
-    params = {"d": date, "s": "Soccer"}
-    try:
-        resp = requests.get(url, params=params, timeout=15)
-        data = resp.json()
-        matches = []
-        for event in (data.get("events") or []):
-            matches.append({
-                "id": event.get("idEvent"),
-                "date": event.get("dateEvent"),
-                "home": event.get("strHomeTeam"),
-                "away": event.get("strAwayTeam"),
-                "league": event.get("strLeague"),
-                "country": event.get("strCountry"),
-                "sport": event.get("strSport", "Foot"),
-                "odds": {},
-                "status": "NS",
-            })
-        return matches
-    except Exception as e:
-        print(f"[SportsAPI] TheSportsDB error: {e}")
-        return _get_fallback_matches()
+    """TheSportsDB free tier — multi-sport."""
+    SPORT_MAP = {
+        "Soccer": "Foot",
+        "Basketball": "Basketball",
+        "Ice Hockey": "Hockey",
+        "Tennis": "Tennis",
+        "Baseball": "Baseball",
+        "Rugby": "Rugby",
+        "American Football": "NFL",
+    }
+    all_matches = []
+    for sport_en, sport_fr in SPORT_MAP.items():
+        url = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php"
+        params = {"d": date, "s": sport_en}
+        try:
+            resp = requests.get(url, params=params, timeout=15)
+            data = resp.json()
+            for event in (data.get("events") or []):
+                all_matches.append({
+                    "id": event.get("idEvent"),
+                    "date": event.get("dateEvent"),
+                    "home": event.get("strHomeTeam"),
+                    "away": event.get("strAwayTeam"),
+                    "league": event.get("strLeague"),
+                    "country": event.get("strCountry"),
+                    "sport": sport_fr,
+                    "odds": {},
+                    "status": "NS",
+                })
+        except Exception as e:
+            print(f"[SportsAPI] TheSportsDB/{sport_en} error: {e}")
+    return all_matches if all_matches else _get_fallback_matches()
 
 
 def _fetch_odds_api(date):
-    url = "https://api.the-odds-api.com/v4/sports/upcoming/odds/"
-    params = {
-        "apiKey": SPORTS_API_KEY,
-        "regions": "eu",
-        "markets": "h2h",
-        "dateFormat": "iso",
-        "commenceTimeFrom": f"{date}T00:00:00Z",
-        "commenceTimeTo": f"{date}T23:59:59Z",
+    """The Odds API — multi-sport."""
+    SPORT_KEYS = {
+        "soccer_france_ligue1": "Foot", "soccer_spain_la_liga": "Foot",
+        "soccer_england_league1": "Foot", "soccer_germany_bundesliga": "Foot",
+        "soccer_italy_serie_a": "Foot", "soccer_uefa_champs_league": "Foot",
+        "basketball_nba": "Basketball", "basketball_euroleague": "Basketball",
+        "icehockey_nhl": "Hockey", "icehockey_sweden_hockey_league": "Hockey",
+        "tennis_atp_french_open": "Tennis", "tennis_wta_french_open": "Tennis",
+        "baseball_mlb": "Baseball", "rugbyleague_nrl": "Rugby",
     }
-    try:
-        resp = requests.get(url, params=params, timeout=15)
-        data = resp.json()
-        matches = []
-        for game in data:
-            home = game.get("home_team")
-            away = game.get("away_team")
-            odds = {}
-            for bk in game.get("bookmakers", [])[:1]:
-                for mkt in bk.get("markets", []):
-                    if mkt["key"] == "h2h":
-                        for o in mkt.get("outcomes", []):
-                            if o["name"] == home:
-                                odds["home_win"] = o["price"]
-                            elif o["name"] == away:
-                                odds["away_win"] = o["price"]
-                            else:
-                                odds["draw"] = o["price"]
-            matches.append({
-                "id": game.get("id"),
-                "date": game.get("commence_time"),
-                "home": home,
-                "away": away,
-                "league": game.get("sport_title"),
-                "country": "",
-                "sport": "Foot",
-                "odds": odds,
-                "status": "NS",
-            })
-        return matches
-    except Exception as e:
-        print(f"[SportsAPI] Odds-API error: {e}")
-        return _get_fallback_matches()
+    all_matches = []
+    for sport_key, sport_fr in SPORT_KEYS.items():
+        url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds/"
+        params = {
+            "apiKey": SPORTS_API_KEY,
+            "regions": "eu",
+            "markets": "h2h",
+            "dateFormat": "iso",
+            "commenceTimeFrom": f"{date}T00:00:00Z",
+            "commenceTimeTo": f"{date}T23:59:59Z",
+        }
+        try:
+            resp = requests.get(url, params=params, timeout=10)
+            if resp.status_code != 200:
+                continue
+            for game in resp.json():
+                home = game.get("home_team")
+                away = game.get("away_team")
+                odds = {}
+                for bk in game.get("bookmakers", [])[:1]:
+                    for mkt in bk.get("markets", []):
+                        if mkt["key"] == "h2h":
+                            for o in mkt.get("outcomes", []):
+                                if o["name"] == home:
+                                    odds["home_win"] = o["price"]
+                                elif o["name"] == away:
+                                    odds["away_win"] = o["price"]
+                                else:
+                                    odds["draw"] = o["price"]
+                all_matches.append({
+                    "id": game.get("id"),
+                    "date": game.get("commence_time"),
+                    "home": home,
+                    "away": away,
+                    "league": game.get("sport_title"),
+                    "country": "",
+                    "sport": sport_fr,
+                    "odds": odds,
+                    "status": "NS",
+                })
+        except Exception as e:
+            print(f"[SportsAPI] Odds-API/{sport_key} error: {e}")
+    return all_matches if all_matches else _get_fallback_matches()
 
 
 def _get_fallback_matches():

@@ -418,27 +418,25 @@ nav{
 .mise-txt{font-size:11px;color:var(--muted)}
 
 /* BOOKMAKERS */
-.bm-head{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:0 24px;margin-bottom:10px}
-.bm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:0 24px 24px}
+.bm-head{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:0 24px;margin-bottom:12px}
+.bm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 24px 24px}
 .bm-btn{
-  padding:12px 8px;border-radius:10px;text-align:center;
-  text-decoration:none;font-size:13px;font-weight:700;
-  border:1px solid var(--b2);
-  background:rgba(255,255,255,.03);
-  color:var(--text);
+  padding:14px 8px;border-radius:11px;text-align:center;
+  text-decoration:none;font-size:13px;font-weight:800;
+  border:1px solid;
   transition:all .2s;
-  display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  letter-spacing:.02em;
 }
-.bm-btn:hover{background:rgba(255,255,255,.07);border-color:var(--b3);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
-.bm-w{border-color:rgba(239,68,68,.2);color:#f87171}
-.bm-w:hover{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.07)}
-.bm-b{border-color:rgba(59,130,246,.2);color:#60a5fa}
-.bm-b:hover{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.07)}
-.bm-u{border-color:rgba(16,185,129,.2);color:#34d399}
-.bm-u:hover{border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.07)}
-.bm-p{border-color:rgba(245,158,11,.2);color:#fbbf24}
-.bm-p:hover{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.07)}
+.bm-btn:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.bm-w{border-color:rgba(239,68,68,.4);color:#fff;background:linear-gradient(135deg,rgba(239,68,68,.22),rgba(239,68,68,.08))}
+.bm-w:hover{border-color:rgba(239,68,68,.7);background:linear-gradient(135deg,rgba(239,68,68,.35),rgba(239,68,68,.15))}
+.bm-b{border-color:rgba(59,130,246,.4);color:#fff;background:linear-gradient(135deg,rgba(59,130,246,.22),rgba(59,130,246,.08))}
+.bm-b:hover{border-color:rgba(59,130,246,.7);background:linear-gradient(135deg,rgba(59,130,246,.35),rgba(59,130,246,.15))}
+.bm-u{border-color:rgba(16,185,129,.4);color:#fff;background:linear-gradient(135deg,rgba(16,185,129,.22),rgba(16,185,129,.08))}
+.bm-u:hover{border-color:rgba(16,185,129,.7);background:linear-gradient(135deg,rgba(16,185,129,.35),rgba(16,185,129,.15))}
+.bm-p{border-color:rgba(245,158,11,.4);color:#fff;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(245,158,11,.08))}
+.bm-p:hover{border-color:rgba(245,158,11,.7);background:linear-gradient(135deg,rgba(245,158,11,.35),rgba(245,158,11,.15))}
 
 /* ══ ROI CHART ══ */
 .roi-section{
@@ -1007,7 +1005,7 @@ function renderPick(){
         </div>
       </div>`;
 
-  const bmBtns=BM.map(b=>`<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}">${b.name}</a>`).join('');
+  const bmBtns=BM.map(b=>`<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}">${b.name} →</a>`).join('');
 
   root.innerHTML=`
     <div class="pick-outer">
