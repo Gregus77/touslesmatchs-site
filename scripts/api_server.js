@@ -462,6 +462,11 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
 // ── Live matches ──────────────────────────────────────────────────────────────
 app.get("/live-matches", async (req, res) => {
   try {
+    // ?force=1 vide le cache pour forcer un appel API immédiat
+    if (req.query.force === "1") {
+      liveMatchesCache = { data: null, ts: 0 };
+      console.log("[live-matches] Cache forcé vidé par l'utilisateur");
+    }
     const matches = await fetchLiveMatches();
     res.json({ ok: true, matches });
   } catch (e) {

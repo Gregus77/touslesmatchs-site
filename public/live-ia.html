@@ -331,9 +331,10 @@ function renderCredits(){
 let allMatches = [];
 let lastUpdate = null;
 
-async function loadMatches(){
+async function loadMatches(force){
   try{
-    const r = await fetch('/api/live-matches');
+    const url = force ? '/api/live-matches?force=1' : '/api/live-matches';
+    const r = await fetch(url);
     const d = await r.json();
     if(d.ok && d.matches){
       allMatches = d.matches;
@@ -344,13 +345,21 @@ async function loadMatches(){
   renderMain();
 }
 
+function forceRefresh(){
+  const btn = document.querySelector('.refresh-btn');
+  if(btn){ btn.textContent='⏳ Actualisation...'; btn.disabled=true; }
+  loadMatches(true).then(()=>{
+    if(btn){ btn.innerHTML='⟳ Actualiser'; btn.disabled=false; }
+  });
+}
+
 function renderMain(){
   const zone = document.getElementById('main-zone');
   const {email, plan} = getAuth();
 
   let html = `<div class="refresh-bar">
     <div class="last-update">${lastUpdate ? 'Mis à jour : ' + lastUpdate.toLocaleTimeString('fr-FR') : 'Chargement...'}</div>
-    <button class="refresh-btn" onclick="loadMatches()">⟳ Actualiser</button>
+    <button class="refresh-btn" onclick="forceRefresh()">⟳ Actualiser</button>
   </div>`;
 
   if(allMatches.length === 0){
