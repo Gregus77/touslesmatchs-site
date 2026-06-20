@@ -5,7 +5,7 @@
 const I18N = {
   fr: {
     nav_home:"Accueil", nav_historique:"Historique", nav_preuves:"Preuves", nav_live:"Live IA",
-    nav_join:"Rejoindre →", nav_connect:"Se connecter",
+    nav_join:"Abonnements", nav_cta:"Commencer →", nav_connect:"Se connecter",
     mm_home:"🏠 Accueil", mm_hist:"📊 Historique", mm_preuves:"🏆 Preuves de gains", mm_live:"🔴 Live IA",
     mm_join:"Rejoindre → dès 1€",
     pick_today:"Pick du jour", pick_analysis:"Analyse pré-match", pick_request:"Demander l'analyse IA →",
@@ -35,7 +35,7 @@ const I18N = {
   },
   en: {
     nav_home:"Home", nav_historique:"History", nav_preuves:"Proof", nav_live:"Live AI",
-    nav_join:"Join →", nav_connect:"Sign in",
+    nav_join:"Plans", nav_cta:"Get started →", nav_connect:"Sign in",
     mm_home:"🏠 Home", mm_hist:"📊 History", mm_preuves:"🏆 Proof of gains", mm_live:"🔴 Live AI",
     mm_join:"Join → from €1",
     pick_today:"Pick of the day", pick_analysis:"Pre-match analysis", pick_request:"Request AI analysis →",
@@ -65,7 +65,7 @@ const I18N = {
   },
   es: {
     nav_home:"Inicio", nav_historique:"Historial", nav_preuves:"Pruebas", nav_live:"Live IA",
-    nav_join:"Unirse →", nav_connect:"Conectarse",
+    nav_join:"Planes", nav_cta:"Empezar →", nav_connect:"Conectarse",
     mm_home:"🏠 Inicio", mm_hist:"📊 Historial", mm_preuves:"🏆 Pruebas de ganancias", mm_live:"🔴 Live IA",
     mm_join:"Unirse → desde 1€",
     pick_today:"Pick del día", pick_analysis:"Análisis pre-partido", pick_request:"Solicitar análisis IA →",
@@ -95,7 +95,7 @@ const I18N = {
   },
   pt: {
     nav_home:"Início", nav_historique:"Histórico", nav_preuves:"Provas", nav_live:"Live IA",
-    nav_join:"Entrar →", nav_connect:"Conectar",
+    nav_join:"Planos", nav_cta:"Começar →", nav_connect:"Conectar",
     mm_home:"🏠 Início", mm_hist:"📊 Histórico", mm_preuves:"🏆 Provas de ganhos", mm_live:"🔴 Live IA",
     mm_join:"Entrar → a partir de 1€",
     pick_today:"Pick do dia", pick_analysis:"Análise pré-jogo", pick_request:"Solicitar análise IA →",
@@ -118,7 +118,7 @@ const I18N = {
   },
   de: {
     nav_home:"Startseite", nav_historique:"Verlauf", nav_preuves:"Beweise", nav_live:"Live KI",
-    nav_join:"Beitreten →", nav_connect:"Anmelden",
+    nav_join:"Abos", nav_cta:"Loslegen →", nav_connect:"Anmelden",
     mm_home:"🏠 Startseite", mm_hist:"📊 Verlauf", mm_preuves:"🏆 Gewinnbeweise", mm_live:"🔴 Live KI",
     mm_join:"Beitreten → ab 1€",
     pick_today:"Tages-Pick", pick_analysis:"Vorspiel-Analyse", pick_request:"KI-Analyse anfordern →",
@@ -141,7 +141,7 @@ const I18N = {
   },
   it: {
     nav_home:"Home", nav_historique:"Storico", nav_preuves:"Prove", nav_live:"Live IA",
-    nav_join:"Iscriviti →", nav_connect:"Accedi",
+    nav_join:"Piani", nav_cta:"Inizia →", nav_connect:"Accedi",
     mm_home:"🏠 Home", mm_hist:"📊 Storico", mm_preuves:"🏆 Prove di guadagno", mm_live:"🔴 Live IA",
     mm_join:"Iscriviti → da 1€",
     pick_today:"Pick del giorno", pick_analysis:"Analisi pre-partita", pick_request:"Richiedi analisi IA →",
@@ -164,7 +164,7 @@ const I18N = {
   },
   nl: {
     nav_home:"Startpagina", nav_historique:"Geschiedenis", nav_preuves:"Bewijzen", nav_live:"Live AI",
-    nav_join:"Meedoen →", nav_connect:"Inloggen",
+    nav_join:"Abonnementen", nav_cta:"Beginnen →", nav_connect:"Inloggen",
     mm_home:"🏠 Startpagina", mm_hist:"📊 Geschiedenis", mm_preuves:"🏆 Winstbewijzen", mm_live:"🔴 Live AI",
     mm_join:"Meedoen → vanaf €1",
     pick_today:"Pick van de dag", pick_analysis:"Pre-match analyse", pick_request:"AI-analyse aanvragen →",
@@ -187,7 +187,7 @@ const I18N = {
   },
   tr: {
     nav_home:"Ana Sayfa", nav_historique:"Geçmiş", nav_preuves:"Kanıtlar", nav_live:"Canlı YZ",
-    nav_join:"Katıl →", nav_connect:"Giriş Yap",
+    nav_join:"Planlar", nav_cta:"Başla →", nav_connect:"Giriş Yap",
     mm_home:"🏠 Ana Sayfa", mm_hist:"📊 Geçmiş", mm_preuves:"🏆 Kazanç Kanıtları", mm_live:"🔴 Canlı YZ",
     mm_join:"Katıl → 1€'dan itibaren",
     pick_today:"Günün Seçimi", pick_analysis:"Maç Öncesi Analiz", pick_request:"YZ Analizi İste →",
@@ -210,7 +210,7 @@ const I18N = {
   },
   ru: {
     nav_home:"Главная", nav_historique:"История", nav_preuves:"Доказательства", nav_live:"Live ИИ",
-    nav_join:"Вступить →", nav_connect:"Войти",
+    nav_join:"Планы", nav_cta:"Начать →", nav_connect:"Войти",
     mm_home:"🏠 Главная", mm_hist:"📊 История", mm_preuves:"🏆 Доказательства выигрышей", mm_live:"🔴 Live ИИ",
     mm_join:"Вступить → от 1€",
     pick_today:"Выбор дня", pick_analysis:"Предматчевый анализ", pick_request:"Запросить анализ ИИ →",
@@ -233,7 +233,7 @@ const I18N = {
   },
   zh: {
     nav_home:"主页", nav_historique:"历史", nav_preuves:"证明", nav_live:"实时AI",
-    nav_join:"加入 →", nav_connect:"登录",
+    nav_join:"方案", nav_cta:"开始 →", nav_connect:"登录",
     mm_home:"🏠 主页", mm_hist:"📊 历史记录", mm_preuves:"🏆 盈利证明", mm_live:"🔴 实时AI",
     mm_join:"加入 → 低至1€",
     pick_today:"今日推荐", pick_analysis:"赛前分析", pick_request:"请求AI分析 →",
@@ -256,7 +256,7 @@ const I18N = {
   },
   ar: {
     nav_home:"الرئيسية", nav_historique:"السجل", nav_preuves:"الإثباتات", nav_live:"مباشر AI",
-    nav_join:"الانضمام →", nav_connect:"تسجيل الدخول",
+    nav_join:"الخطط", nav_cta:"ابدأ →", nav_connect:"تسجيل الدخول",
     mm_home:"🏠 الرئيسية", mm_hist:"📊 السجل", mm_preuves:"🏆 إثبات الأرباح", mm_live:"🔴 مباشر AI",
     mm_join:"الانضمام → من €1",
     pick_today:"اختيار اليوم", pick_analysis:"تحليل ما قبل المباراة", pick_request:"طلب تحليل AI →",

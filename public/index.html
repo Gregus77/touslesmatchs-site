@@ -655,41 +655,41 @@ footer{
 <nav>
   <div class="nav-brand">TousLesMatchs</div>
   <div class="nav-center">
-    <a href="#pick">Pick du jour</a>
-    <a href="/historique">Historique</a>
-    <a href="/preuves">Preuves</a>
-    <a href="#plans">Abonnements</a>
+    <a href="#pick" data-i18n="pick_today">Pick du jour</a>
+    <a href="/historique" data-i18n="nav_historique">Historique</a>
+    <a href="/preuves" data-i18n="nav_preuves">Preuves</a>
+    <a href="#plans" data-i18n="nav_join">Abonnements</a>
   </div>
   <div class="nav-right">
-    <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span>Live IA</a>
+    <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
     <div id="nav-auth"></div>
     <div id="lang-picker-slot"></div>
-    <a href="#plans" class="nav-cta">Commencer →</a>
+    <a href="#plans" class="nav-cta" data-i18n="nav_cta">Commencer →</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
 </nav>
 <div class="mobile-menu" id="mmenu">
-  <a href="/">🏠 Accueil</a>
-  <a href="/historique">📊 Historique des picks</a>
-  <a href="/preuves">🏆 Preuves de gains</a>
-  <a href="/live-ia">🔴 Live IA</a>
+  <a href="/" data-i18n="mm_home">🏠 Accueil</a>
+  <a href="/historique" data-i18n="mm_hist">📊 Historique des picks</a>
+  <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de gains</a>
+  <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <div class="mm-sep"></div>
-  <a href="#plans" class="mm-cta" onclick="toggleMenu()">Rejoindre → dès 1€</a>
+  <a href="#plans" class="mm-cta" onclick="toggleMenu()" data-i18n="mm_join">Rejoindre → dès 1€</a>
 </div>
 
 <!-- MODAL LOGIN -->
 <div class="modal-bg" id="modal-login">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
-    <div class="modal-title">Accès membre</div>
-    <div class="modal-sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
-    <label class="modal-label">Email</label>
+    <div class="modal-title" data-i18n="login_title">Accès membre</div>
+    <div class="modal-sub" data-i18n="login_sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
+    <label class="modal-label" data-i18n="login_email">Email</label>
     <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
-    <label class="modal-label">Code d'accès</label>
+    <label class="modal-label" data-i18n="login_code">Code d'accès</label>
     <input class="modal-input" id="login-code" type="text" placeholder="PRO-XXXXXX ou ELITE-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
     <div class="modal-err" id="login-err"></div>
     <div class="modal-ok" id="login-ok"></div>
-    <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <button class="modal-btn" id="login-btn" onclick="doLogin()" data-i18n="login_btn">Accéder →</button>
     <div style="font-size:11px;color:var(--muted);text-align:center">Pas encore de code ? <a href="#plans" onclick="closeModal()" style="color:var(--indigo2);text-decoration:none">Voir les abonnements</a></div>
   </div>
 </div>
@@ -724,7 +724,7 @@ footer{
 <!-- PICK DU JOUR -->
 <section class="section-wrap" id="pick">
   <div class="s-eyebrow">Concile · analyse du jour</div>
-  <div class="s-title">Pick du jour</div>
+  <div class="s-title" data-i18n="pick_today">Pick du jour</div>
   <div id="pick-root"></div>
 </section>
 
