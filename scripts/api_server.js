@@ -376,22 +376,35 @@ function getMockAnalysis(match) {
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
-// ── Verify code (proxy to webhook container) ──────────────────────────────────
-app.post("/verify-code", async (req, res) => {
+// ── Verify code (reads codes.db directly) ────────────────────────────────────
+const CODES_DB_PATH = "/var/codes/codes.db";
+
+app.post("/verify-code", (req, res) => {
   const { email, code } = req.body || {};
   if (!email || !code) return res.json({ valid: false, error: "Email et code requis" });
+
   try {
-    // Try webhook service (docker service name), then container name fallback
-    let result;
-    try {
-      result = await httpPostInternal("webhook", 5001, "/verify-code", { email, code });
-    } catch {
-      result = await httpPostInternal("touslesmatchs-webhook", 5001, "/verify-code", { email, code });
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = codesDb.prepare(
+      "SELECT * FROM codes WHERE code = ? AND email = ? AND active = 1"
+    ).get(code.toUpperCase().trim(), email.toLowerCase().trim());
+    codesDb.close();
+
+    if (!row) return res.json({ valid: false, error: "Code ou email invalide" });
+
+    if (row.expires_at && new Date(row.expires_at) < new Date()) {
+      return res.json({ valid: false, error: "Code expiré" });
     }
-    res.json(result);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const credits_left = row.credits_date === today
+      ? Math.max(0, row.credits_max - row.credits_used)
+      : row.credits_max;
+
+    return res.json({ valid: true, plan: row.plan, credits_left, email: row.email });
   } catch (e) {
-    console.error("[verify-code] webhook unreachable:", e.message);
-    res.json({ valid: false, error: "Service de vérification indisponible" });
+    console.error("[verify-code] error:", e.message);
+    return res.json({ valid: false, error: "Erreur de vérification" });
   }
 });
 

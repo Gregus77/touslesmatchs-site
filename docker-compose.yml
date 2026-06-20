@@ -36,6 +36,7 @@ services:
       - DB_PATH=/data/tlm.db
     volumes:
       - api_data:/data
+      - /var/touslesmatchs:/var/codes:ro
     networks:
       - web
     expose:
