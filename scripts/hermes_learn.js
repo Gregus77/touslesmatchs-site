@@ -50,15 +50,17 @@ function computeStats(history) {
   const perdus  = total - gagnes;
   const winrate = total ? Math.round((gagnes / total) * 100) : 0;
 
-  // ROI : somme des gains/pertes en unités (mise 1 unité par pick)
-  let roi = 0;
+  // ROI : uniquement sur les picks avec une cote renseignée
+  let roi = 0; let roiCount = 0;
   history.forEach(h => {
+    if (!h.cote || h.cote < 1.01) return;
+    roiCount++;
     if (h.status === "GAGNE") roi += (h.cote - 1);
     else roi -= 1;
   });
-  const roiPct = total ? Math.round((roi / total) * 100) : 0;
+  const roiPct = roiCount ? Math.round((roi / roiCount) * 100) : null;
 
-  return { total, gagnes, perdus, winrate, roiPct };
+  return { total, gagnes, perdus, winrate, roiPct, roiCount };
 }
 
 // ── Analyse par catégorie ─────────────────────────────────────────────────────
@@ -76,9 +78,9 @@ function analyzeByField(history, getKey) {
     .map(([key, g]) => {
       const total = g.gagnes + g.perdus;
       const winrate = Math.round((g.gagnes / total) * 100);
-      let roi = 0;
-      g.picks.forEach(p => { roi += p.status === "GAGNE" ? (p.cote - 1) : -1; });
-      const roiPct = Math.round((roi / total) * 100);
+      let roi = 0; let roiC = 0;
+      g.picks.forEach(p => { if (!p.cote || p.cote < 1.01) return; roiC++; roi += p.status === "GAGNE" ? (p.cote - 1) : -1; });
+      const roiPct = roiC ? Math.round((roi / roiC) * 100) : null;
       return { key, total, gagnes: g.gagnes, perdus: g.perdus, winrate, roiPct };
     })
     .filter(g => g.total >= 2)
@@ -208,7 +210,7 @@ function formatForTelegram(memory) {
   let msg = `🧠 <b>MÉMOIRE HERMÈS — Analyse ${memory.picks_analysed} picks</b>\n\n`;
   msg += `📊 <b>Stats générales :</b>\n`;
   msg += `  Winrate : <b>${g.winrate}%</b> (${g.gagnes}G / ${g.perdus}P)\n`;
-  msg += `  ROI : <b>${g.roiPct >= 0 ? '+' : ''}${g.roiPct}%</b>\n\n`;
+  msg += `  ROI : <b>${g.roiPct !== null ? (g.roiPct >= 0 ? '+' : '') + g.roiPct + '%' : 'N/A (cotes manquantes)'}</b>\n\n`;
 
   if (memory.rules_derived.length > 0) {
     msg += `📋 <b>Règles apprises :</b>\n`;

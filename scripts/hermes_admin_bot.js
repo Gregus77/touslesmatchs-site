@@ -205,11 +205,13 @@ ${memoryBlock()}
 MATCHS DISPONIBLES AUJOURD'HUI :
 ${JSON.stringify(matches, null, 2)}
 
-RÈGLES :
-- Rejette amicaux, U20/U21/U23, matchs sans enjeu réel
-- Cote acceptable : 1.42 à 2.30
-- Note minimale pour publier : 7.0/10
-- Barème : commence à 5.0, +1.0 pour chaque avantage concret (forme, domicile, H2H, enjeu vital)
+RÈGLES DE SÉLECTION :
+- ACCEPTER : toutes grandes compétitions officielles (Coupes du Monde, Euro, Copa América, Champions League, championnats nationaux Top 5, Coupe du Monde FIFA toutes phases)
+- REFUSER UNIQUEMENT : matchs amicaux sans enjeu, U17/U18/U20/U23, matchs de gala/exhibition
+- Phase de groupes Coupe du Monde = enjeu réel (qualification en jeu) → ACCEPTER
+- Note minimale pour publier : 6.5/10 (pas 7.0)
+- Barème : commence à 5.5, +0.5 pour chaque avantage concret (forme récente, domicile, H2H, enjeu vital, classement FIFA)
+- La cote estimée doit être dans la fourchette 1.35 à 2.50 selon ton analyse (tu estimes la cote probable)
 
 RÉPONDS EN JSON STRICT :
 {
@@ -221,13 +223,13 @@ RÉPONDS EN JSON STRICT :
     "prono": "Victoire Équipe A",
     "bet": "Victoire Équipe A",
     "cote": 1.65,
-    "note": 8.0,
-    "raison": "Explication en 1 phrase avec stat concrète"
+    "note": 7.5,
+    "raison": "Explication en 1 phrase avec stat concrète (ex: 5 victoires consécutives, classement FIFA)"
   },
   "nopick_raison": null
 }
 
-Si AUCUN match ne passe tous les filtres :
+Si VRAIMENT aucun match ne mérite (uniquement amicaux/U20/etc.) :
 {
   "pick": null,
   "nopick_raison": "Explication précise"
