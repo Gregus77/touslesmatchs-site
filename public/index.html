@@ -64,7 +64,7 @@ nav{
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;
   background-clip:text;
 }
-.nav-center{display:flex;align-items:center;gap:2px}
+.nav-center{display:flex;align-items:center;gap:6px}
 .nav-center a{
   font-size:13px;color:var(--muted2);text-decoration:none;
   padding:6px 16px;border-radius:8px;font-weight:500;
@@ -621,7 +621,7 @@ footer{
   nav{padding:0 16px}
   .nav-center{display:none}
   .nav-live-pill{display:none}
-  .nav-login,.nav-cta{display:none}
+  .nav-cta{display:none}
   .nav-hamburger{display:block}
   .section-wrap{padding:60px 16px}
   .pick-body{padding:16px}
@@ -662,7 +662,7 @@ footer{
   </div>
   <div class="nav-right">
     <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
-    <div id="nav-auth"></div>
+    <div id="nav-auth"><button class="nav-login" onclick="openModal()">Se connecter</button></div>
     <div id="lang-picker-slot"></div>
     <a href="#plans" class="nav-cta" data-i18n="nav_cta">Commencer →</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
@@ -673,6 +673,7 @@ footer{
   <a href="/historique" data-i18n="mm_hist">📊 Historique des picks</a>
   <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de gains</a>
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
+  <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
   <a href="#plans" class="mm-cta" onclick="toggleMenu()" data-i18n="mm_join">Rejoindre → dès 1€</a>
 </div>
@@ -1037,11 +1038,9 @@ function renderPick(){
             </div>
           </div>
           <div class="market-card" style="background:${mc.bg};border:1px solid ${mc.border}">
-            <div class="market-card" style="background:none;border:none;padding:0">
-              <div class="mc-type" style="color:${mc.color}">${i18n.t('bet_type')} · ${PICK.marketType}</div>
-              <div class="mc-label" style="color:${mc.color}">${PICK.marketLabel}</div>
-              <div class="mc-desc">${PICK.marketDesc}</div>
-            </div>
+            <div class="mc-type" style="color:${mc.color}">${i18n.t('bet_type')} · ${PICK.marketType}</div>
+            <div class="mc-label" style="color:${mc.color}">${PICK.marketLabel}</div>
+            <div class="mc-desc">${PICK.marketDesc}</div>
             <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${mc.color};border-radius:2px"></div>
           </div>
           <div class="ia-head">
