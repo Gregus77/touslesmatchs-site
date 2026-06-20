@@ -21,8 +21,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
   background:
     radial-gradient(ellipse 80% 60% at 15% 20%,rgba(79,70,229,.13) 0%,transparent 55%),
     radial-gradient(ellipse 60% 50% at 85% 15%,rgba(34,211,238,.10) 0%,transparent 55%),
-    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%);
+    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 75% 60%,rgba(99,102,241,.06) 0%,transparent 50%);
+  animation:mesh-drift 16s ease-in-out infinite alternate;
 }
+@keyframes mesh-drift{0%{opacity:.8;transform:scale(1)}100%{opacity:1;transform:scale(1.03) rotate(.4deg)}}
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.85);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%)}
 .nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
 .nav-center{display:flex;align-items:center;gap:2px}

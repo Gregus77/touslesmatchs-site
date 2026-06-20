@@ -1293,22 +1293,14 @@ function buildChart(){
 // status: "finished" | "upcoming"
 // Pour ajouter un prochain pick, ajouter un objet avec status:"upcoming" à la fin
 const PICKS_FEED = [
-  {
-    id:"maroc-ecosse",
-    date:"2026-06-19", time:"21:00",
-    competition:"Coupe du Monde 2026 · Groupe F",
-    home:"Maroc", away:"Écosse",
-    pick:"Victoire Maroc (1X2)", cote:1.78,
-    status:"finished", result:"win", score:"1-0"
-  },
-  {
-    id:"turquie-paraguay",
-    date:"2026-06-20", time:"05:00",
-    competition:"Coupe du Monde 2026 · Groupe H",
-    home:"Turquie", away:"Paraguay",
-    pick:"Double chance 1X (Turquie ou Nul)", cote:1.52,
-    status:"upcoming", result:null
-  },
+  { id:"lazio-inter", date:"2026-05-13", time:"20:00", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", pick:"Victoire Inter (1X2)", cote:1.60, status:"finished", result:"win", score:"0-2" },
+  { id:"villarreal-seville", date:"2026-05-17", time:"18:00", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", pick:"Victoire Villarreal (1X2)", cote:1.88, status:"finished", result:"win", score:"3-2" },
+  { id:"knicks-cavaliers", date:"2026-05-19", time:"02:00", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", pick:"Plus de 216.5 pts", cote:1.72, status:"finished", result:"win", score:"115-104" },
+  { id:"fribourg-astonvilla", date:"2026-05-20", time:"21:00", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, status:"finished", result:"win", score:"0-3" },
+  { id:"canada-ouzbekistan", date:"2026-06-01", time:"21:00", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", pick:"Victoire Canada (1X2)", cote:1.58, status:"finished", result:"win", score:"2-0" },
+  { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, status:"finished", result:"win", score:"107-106" },
+  { id:"maroc-ecosse", date:"2026-06-19", time:"21:00", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", pick:"Victoire Maroc (1X2)", cote:1.85, status:"finished", result:"win", score:"1-0" },
+  { id:"turquie-paraguay", date:"2026-06-20", time:"05:00", competition:"Coupe du Monde 2026 · Groupe H", home:"Turquie", away:"Paraguay", pick:"Double chance 1X (Turquie ou Nul)", cote:1.52, status:"upcoming", result:null },
 ];
 
 function renderPicksFeed() {

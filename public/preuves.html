@@ -20,8 +20,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
   background:
     radial-gradient(ellipse 80% 60% at 15% 20%,rgba(79,70,229,.13) 0%,transparent 55%),
     radial-gradient(ellipse 60% 50% at 85% 15%,rgba(34,211,238,.10) 0%,transparent 55%),
-    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%);
+    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 75% 60%,rgba(99,102,241,.06) 0%,transparent 50%);
+  animation:mesh-drift 16s ease-in-out infinite alternate;
 }
+@keyframes mesh-drift{0%{opacity:.8;transform:scale(1)}100%{opacity:1;transform:scale(1.03) rotate(.4deg)}}
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.85);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%)}
 .nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-decoration:none}
 .nav-center{display:flex;align-items:center;gap:2px}
@@ -187,7 +190,7 @@ document.addEventListener('click',function(e){
   <div class="screenshots-grid" id="screenshots-grid"><div style="color:var(--muted);font-size:13px">Chargement…</div></div>
 
   <!-- LIGHTBOX -->
-  <div id="lightbox" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out" onclick="closeLb()">
+  <div id="lightbox" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.9);align-items:center;justify-content:center;padding:20px;cursor:zoom-out" onclick="closeLb()">
     <img id="lb-img" style="max-width:min(900px,95vw);max-height:90vh;border-radius:12px;box-shadow:0 32px 80px rgba(0,0,0,.8)" src="">
     <div id="lb-cap" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;pointer-events:none"></div>
   </div>
@@ -207,11 +210,11 @@ document.addEventListener('click',function(e){
 <script>
 // ══ DONNÉES PICKS (synchronisées avec historique.html)
 const PICKS = [
-  { date:"2026-05-13", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", pick:"Victoire Inter (1X2)", cote:1.60, mise:11, result:"win", score:"0-2", note:"Inter dominant, Lazio sans enjeu en fin de saison." },
+  { date:"2026-05-13", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", pick:"Victoire Inter (1X2)", cote:1.60, mise:10, result:"win", score:"0-2", note:"Inter dominant, Lazio sans enjeu en fin de saison." },
   { date:"2026-05-17", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", pick:"Victoire Villarreal (1X2)", cote:1.88, mise:10, result:"win", score:"3-2" },
   { date:"2026-05-19", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", pick:"Plus de 216.5 pts", cote:1.72, mise:10, result:"win", score:"115-104", note:"Matchup offensif attendu — total dépassé largement." },
-  { date:"2026-05-20", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, mise:20, result:"win", score:"0-3", note:"Aston Villa largement supérieur, domination totale." },
-  { date:"2026-06-01", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", pick:"Victoire Canada (1X2)", cote:1.58, mise:5, result:"win", score:"2-0", note:"Canada solide à domicile au Mondial, Ouzbékistan dépassé." },
+  { date:"2026-05-20", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, mise:10, result:"win", score:"0-3", note:"Aston Villa largement supérieur, domination totale." },
+  { date:"2026-06-01", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", pick:"Victoire Canada (1X2)", cote:1.58, mise:10, result:"win", score:"2-0", note:"Canada solide à domicile au Mondial, Ouzbékistan dépassé." },
   { date:"2026-06-10", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, mise:10, result:"win", score:"107-106", note:"San Antonio retournement incroyable — pick envoyé avant le 4e quart." },
   { date:"2026-06-19", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", pick:"Victoire Maroc (1X2)", cote:1.85, mise:10, result:"win", score:"1-0", note:"Pick envoyé la veille sur le groupe Elite. Maroc dominant dans son groupe." },
 ];
