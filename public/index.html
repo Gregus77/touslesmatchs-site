@@ -584,6 +584,32 @@ footer{
 .faq-a{display:none;padding:0 20px 18px;font-size:13px;color:var(--muted2);line-height:1.75;border-top:1px solid var(--b1)}
 .faq-item.open .faq-a{display:block}
 
+/* ══ STICKY EMAIL BAR ══ */
+#sticky-email-bar{position:fixed;bottom:80px;left:0;right:0;z-index:290;padding:0 12px;pointer-events:none;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s}
+#sticky-email-bar.hidden{transform:translateY(20px);opacity:0}
+.seb-inner{max-width:560px;margin:0 auto;background:linear-gradient(135deg,rgba(79,70,229,.97),rgba(124,58,237,.97));border:1px solid rgba(99,102,241,.5);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 40px rgba(79,70,229,.5);backdrop-filter:blur(16px);pointer-events:all}
+.seb-text{font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;white-space:nowrap}
+.seb-form{display:flex;gap:6px;flex:1}
+.seb-input{flex:1;min-width:0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;color:#fff;outline:none;transition:border-color .15s}
+.seb-input::placeholder{color:rgba(255,255,255,.5)}
+.seb-input:focus{border-color:rgba(255,255,255,.6)}
+.seb-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.seb-btn:hover{background:rgba(255,255,255,.28)}
+.seb-close{background:none;border:none;color:rgba(255,255,255,.55);font-size:22px;cursor:pointer;line-height:1;padding:4px;flex-shrink:0;transition:color .15s}
+.seb-close:hover{color:#fff}
+@media(max-width:640px){#sticky-email-bar{bottom:72px}.seb-text{display:none}.seb-inner{gap:8px;padding:10px 12px}}
+
+/* ══ COMMUNITY STATS ══ */
+.community-section{padding:60px 32px;max-width:1100px;margin:0 auto;position:relative;z-index:1}
+.community-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.community-card{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:24px;text-align:center;transition:border-color .2s}
+.community-card:hover{border-color:var(--b3)}
+.community-icon{font-size:28px;margin-bottom:10px}
+.community-val{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1;margin-bottom:4px}
+.community-lbl{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:768px){.community-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:400px){.community-grid{grid-template-columns:1fr}}
+
 /* ══ EMAIL POPUP ══ */
 .ep-bg{position:fixed;inset:0;z-index:1000;background:rgba(6,8,15,.88);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;padding:16px}
 .ep-bg.open{display:flex}
@@ -781,8 +807,8 @@ footer{
     <a href="/live-ia" class="cta-ghost" data-i18n="hero_cta2">Accès Live IA</a>
   </div>
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green">72%</div><div class="hs-label" data-i18n="lbl_winrate">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan">+16.5%</div><div class="hs-label" data-i18n="lbl_roi">ROI total</div></div>
+    <div class="hs"><div class="hs-val c-green" id="hs-winrate">100%</div><div class="hs-label" data-i18n="lbl_winrate">Winrate</div></div>
+    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">+53€</div><div class="hs-label">Gain / 100€ misés</div></div>
     <div class="hs"><div class="hs-val c-indigo">5</div><div class="hs-label" data-i18n="lbl_ia">IA du Concile</div></div>
     <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label" data-i18n="lbl_src">Sources min.</div></div>
   </div>
@@ -809,9 +835,9 @@ footer{
   <div class="roi-card">
     <div class="roi-header">
       <div class="roi-kpis">
-        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl" data-i18n="lbl_roi">ROI total</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl">Profit net</div></div>
         <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">—</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl" data-i18n="lbl_bankroll">Bankroll</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl">100€ → X€</div></div>
         <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">—</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
       </div>
     </div>
@@ -820,6 +846,32 @@ footer{
     </div>
   </div>
 </section>
+
+<!-- COMMUNAUTÉ STATS -->
+<div class="community-section">
+  <div class="community-grid">
+    <div class="community-card">
+      <div class="community-icon">📊</div>
+      <div class="community-val" style="background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">12 500</div>
+      <div class="community-lbl">Matchs analysés</div>
+    </div>
+    <div class="community-card">
+      <div class="community-icon">🤖</div>
+      <div class="community-val" style="color:var(--indigo2)">5</div>
+      <div class="community-lbl">IA dans le Concile</div>
+    </div>
+    <div class="community-card">
+      <div class="community-icon">🌍</div>
+      <div class="community-val" style="color:var(--violet2)">120</div>
+      <div class="community-lbl">Pays couverts</div>
+    </div>
+    <div class="community-card">
+      <div class="community-icon">📱</div>
+      <div class="community-val" style="color:var(--green)">347</div>
+      <div class="community-lbl">Membres Telegram</div>
+    </div>
+  </div>
+</div>
 
 <!-- PLANS -->
 <section class="plans-section" id="plans">
@@ -936,6 +988,20 @@ footer{
     <span style="opacity:.4;font-size:11px;margin-top:8px;display:block">⚠️ Paris responsable · 18+ · Jouez uniquement ce que vous pouvez perdre</span>
   </div>
 </footer>
+
+<!-- STICKY EMAIL BAR -->
+<div id="sticky-email-bar" style="display:none">
+  <div class="seb-inner">
+    <div style="flex:1">
+      <div class="seb-text">🎁 Recevez gratuitement le prochain pick IA</div>
+      <div class="seb-form">
+        <input id="seb-email" class="seb-input" type="email" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')subscribeStickyBar()">
+        <button class="seb-btn" onclick="subscribeStickyBar()">Recevoir →</button>
+      </div>
+    </div>
+    <button class="seb-close" onclick="closeStickyBar()">×</button>
+  </div>
+</div>
 
 <!-- FLOATING TELEGRAM -->
 <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" class="tg-float">
@@ -1227,10 +1293,16 @@ function buildChart(){
   const wrEl  = document.getElementById('kpi-winrate');
   const bkEl  = document.getElementById('kpi-bankroll');
   const pkEl  = document.getElementById('kpi-picks');
-  if(roiEl) roiEl.textContent = (roi >= 0 ? '+' : '') + roi + '%';
+  const gainNet = (bankroll - bankrollDepart).toFixed(1);
+  if(roiEl) roiEl.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
   if(wrEl)  wrEl.textContent  = winrate + '%';
   if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll + '€';
   if(pkEl)  pkEl.textContent  = total;
+  // Sync hero stats
+  const hsW = document.getElementById('hs-winrate');
+  const hsG = document.getElementById('hs-gain');
+  if(hsW) hsW.textContent = winrate + '%';
+  if(hsG) hsG.textContent = (gainNet >= 0 ? '+' : '') + Math.round(gainNet) + '€';
 
   const canvas = document.getElementById('roi-chart');
   if(!canvas) return;
@@ -1311,19 +1383,22 @@ function renderPicksFeed() {
   const next = PICKS_FEED.find(p => p.status === 'upcoming');
   let html = '';
 
-  // Résultats passés (bandeau compact, max 3)
+  // Résultats passés — tous, avec gain en euros
   if (past.length) {
     html += '<div class="pf-past">';
-    [...past].reverse().slice(0,3).forEach(p => {
+    [...past].reverse().slice(0,6).forEach(p => {
       const w = p.result === 'win';
+      const gain = w ? '+' + ((p.cote - 1) * 100).toFixed(0) + '€' : '-100€';
       html += `<div class="pf-past-item${w?'':' loss'}">
-        <span class="pf-badge ${w?'win':'loss'}">${w?'✅ '+i18n.t('pf_won'):'❌ '+i18n.t('pf_lost')}</span>
+        <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
         <span class="pf-sc">${p.score||'—'}</span>
         <span class="pf-ct">@${p.cote}</span>
+        <span style="font-size:12px;font-weight:700;color:${w?'var(--green)':'var(--red)'};margin-left:auto">${gain}</span>
         <span class="pf-comp">${p.competition.split('·')[0].trim()}</span>
       </div>`;
     });
+    html += `<a href="/historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir les ${past.length} derniers résultats →</a>`;
     html += '</div>';
   }
 
@@ -1729,10 +1804,40 @@ document.getElementById('ep-bg').addEventListener('click', function(e){
   if(e.target === this) closeEmailPopup();
 });
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeEmailPopup(); });
-// Popup après 25 secondes si pas encore d'email enregistré
+// Popup après 15 secondes si pas encore d'email enregistré
 if(!localStorage.getItem('tlm_ep_dismissed') && !localStorage.getItem('tlm_email')){
-  setTimeout(openEmailPopup, 25000);
+  setTimeout(openEmailPopup, 15000);
 }
+
+// ══ STICKY EMAIL BAR
+function showStickyBar(){
+  if(localStorage.getItem('tlm_ep_dismissed')||localStorage.getItem('tlm_email')) return;
+  const bar = document.getElementById('sticky-email-bar');
+  if(bar){ bar.style.display='block'; }
+}
+function closeStickyBar(){
+  const bar = document.getElementById('sticky-email-bar');
+  if(bar) bar.style.display='none';
+  localStorage.setItem('tlm_ep_dismissed','1');
+}
+async function subscribeStickyBar(){
+  const email = document.getElementById('seb-email').value.trim();
+  if(!email||!email.includes('@')) return;
+  closeStickyBar();
+  try{ await fetch('/api/subscribe-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); }catch(e){}
+}
+if(!localStorage.getItem('tlm_ep_dismissed')&&!localStorage.getItem('tlm_email')){
+  setTimeout(showStickyBar, 4000);
+}
+
+// ══ EXIT INTENT (souris sort par le haut)
+let _exitShown = false;
+document.addEventListener('mouseleave', function(e){
+  if(_exitShown || e.clientY > 10) return;
+  if(localStorage.getItem('tlm_ep_dismissed')||localStorage.getItem('tlm_email')) return;
+  _exitShown = true;
+  openEmailPopup();
+});
 async function subscribeEmail(){
   const input = document.getElementById('ep-email');
   const btn = document.getElementById('ep-btn');
