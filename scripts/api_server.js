@@ -55,6 +55,14 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 
 // Preuves storage file
 const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
+const SCORE_PATH = "/var/touslesmatchs/live_score.json";
+function loadManualScore() {
+  try { return JSON.parse(fs.readFileSync(SCORE_PATH, "utf8")); } catch { return null; }
+}
+function saveManualScore(data) {
+  fs.mkdirSync("/var/touslesmatchs", { recursive: true });
+  fs.writeFileSync(SCORE_PATH, JSON.stringify(data, null, 2));
+}
 function loadProofs() {
   try { return JSON.parse(fs.readFileSync(PREUVES_PATH, "utf8")); } catch { return []; }
 }
@@ -565,6 +573,33 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
     status: user.status,
     reset_at: "minuit",
   });
+});
+
+// ── Score manuel (fallback admin) ────────────────────────────────────────────
+app.get("/live-score", (req, res) => {
+  const s = loadManualScore();
+  res.json(s ? { ok: true, score: s } : { ok: false });
+});
+
+app.post("/admin/set-score", (req, res) => {
+  const { email, code, scoreA, scoreB, minute, status, home, away } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  const data = {
+    home: home || "Turquie", away: away || "Paraguay",
+    score_home: Number(scoreA ?? 0), score_away: Number(scoreB ?? 0),
+    minute: minute || null,
+    status: status || "IN_PLAY",
+    updated: new Date().toISOString()
+  };
+  saveManualScore(data);
+  res.json({ ok: true, score: data });
+});
+
+app.delete("/admin/set-score", (req, res) => {
+  const { email, code } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  try { fs.unlinkSync(SCORE_PATH); } catch {}
+  res.json({ ok: true });
 });
 
 // ── Live matches ──────────────────────────────────────────────────────────────
