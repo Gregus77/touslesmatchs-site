@@ -268,7 +268,7 @@ function renderNavAuth(){
       <button class="nav-logout" onclick="doLogout()" title="Déconnexion">✕</button>
     </div>`;
   } else {
-    el.innerHTML = `<button class="nav-login" onclick="openModal()">Se connecter</button>`;
+    el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><a href="/#plan-carte" class="nav-cta">S'abonner →</a><button class="nav-login" onclick="openModal()">Se connecter</button></div>`;
   }
 }
 
@@ -437,7 +437,10 @@ function renderMain(){
       <div class="gate-icon">🧠</div>
       <div class="gate-title">Débloquer l'analyse du Concile</div>
       <div class="gate-sub">Connecte-toi avec ton code d'accès pour lancer l'analyse IA sur n'importe quel match en direct.</div>
-      <button class="gate-btn" onclick="openModal()">Se connecter →</button>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <a href="/#plan-carte" style="display:inline-flex;align-items:center;gap:6px;padding:12px 24px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none;box-shadow:0 4px 18px rgba(79,70,229,.35)">Choisir mon abonnement →</a>
+        <button class="gate-btn" onclick="openModal()">Se connecter →</button>
+      </div>
     </div>`;
   }
 
