@@ -604,6 +604,13 @@ footer{
 .np-res-pct{color:var(--cyan);font-weight:700;width:30px;text-align:right}
 
 @media(max-width:1000px){.plans-grid{grid-template-columns:repeat(2,1fr)}}
+.nav-hamburger{display:none;background:none;border:1px solid rgba(255,255,255,.15);color:var(--text);font-size:18px;padding:6px 10px;border-radius:8px;cursor:pointer;line-height:1}
+.mobile-menu{display:none;position:fixed;top:60px;left:0;right:0;z-index:199;background:rgba(6,8,15,.97);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(20px);padding:12px 16px 20px;flex-direction:column;gap:4px}
+.mobile-menu.open{display:flex}
+.mobile-menu a{font-size:15px;font-weight:600;color:#a8aec8;text-decoration:none;padding:12px 16px;border-radius:10px;transition:all .15s}
+.mobile-menu a:hover{color:#eceaf4;background:rgba(255,255,255,.06)}
+.mobile-menu .mm-sep{height:1px;background:rgba(255,255,255,.06);margin:8px 0}
+.mobile-menu .mm-cta{margin-top:4px;display:block;text-align:center;padding:13px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:11px;font-weight:700;font-size:14px;text-decoration:none}
 @media(max-width:640px){
   .plans-grid{grid-template-columns:1fr}
   .bm-grid{grid-template-columns:repeat(2,1fr)}
@@ -614,7 +621,8 @@ footer{
   nav{padding:0 16px}
   .nav-center{display:none}
   .nav-live-pill{display:none}
-  .nav-login,.nav-cta{font-size:12px;padding:6px 12px}
+  .nav-login,.nav-cta{display:none}
+  .nav-hamburger{display:block}
 }
 </style>
 </head>
@@ -649,8 +657,17 @@ footer{
     <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span>Live IA</a>
     <div id="nav-auth"></div>
     <a href="#plans" class="nav-cta">Commencer →</a>
+    <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
 </nav>
+<div class="mobile-menu" id="mmenu">
+  <a href="/">🏠 Accueil</a>
+  <a href="/historique">📊 Historique des picks</a>
+  <a href="/preuves">🏆 Preuves de gains</a>
+  <a href="/live-ia">🔴 Live IA</a>
+  <div class="mm-sep"></div>
+  <a href="#plans" class="mm-cta" onclick="toggleMenu()">Rejoindre → dès 1€</a>
+</div>
 
 <!-- MODAL LOGIN -->
 <div class="modal-bg" id="modal-login">
@@ -1346,6 +1363,21 @@ async function fetchLiveScore(){
 renderNavAuth();
 fetchLiveScore();
 setInterval(fetchLiveScore,30000);
+
+// ══ MENU HAMBURGER
+function toggleMenu(){
+  const m=document.getElementById('mmenu');
+  const b=document.getElementById('hbtn');
+  const open=m.classList.toggle('open');
+  b.textContent=open?'✕':'☰';
+}
+document.addEventListener('click',function(e){
+  const m=document.getElementById('mmenu');
+  const b=document.getElementById('hbtn');
+  if(m&&b&&m.classList.contains('open')&&!m.contains(e.target)&&!b.contains(e.target)){
+    m.classList.remove('open');b.textContent='☰';
+  }
+});
 </script>
 </body>
 </html>
