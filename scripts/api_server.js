@@ -898,7 +898,13 @@ app.post("/concile-analysis", async (req, res) => {
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
 
-  const cacheKey = `${email}__${match.home}_${match.away}_${new Date().toISOString().slice(0, 10)}`;
+  // Check credits (credits_max=0 means unlimited)
+  const today = new Date().toISOString().slice(0, 10);
+  if (auth.credits_left !== null && auth.credits_left !== undefined && auth.credits_left <= 0) {
+    return res.json({ ok: false, error: "CREDITS_EXHAUSTED", credits_left: 0 });
+  }
+
+  const cacheKey = `${email}__${match.home}_${match.away}_${today}`;
   if (analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
   }
@@ -907,6 +913,24 @@ app.post("/concile-analysis", async (req, res) => {
     const analysis = await runConcileAnalysis(match);
     analysisCache.set(cacheKey, analysis);
     setTimeout(() => analysisCache.delete(cacheKey), 6 * 60 * 60 * 1000);
+
+    // Decrement credits in codes.db (only on real analysis, not cache hit)
+    try {
+      const wdb = new Database(CODES_DB_PATH);
+      const row = wdb.prepare("SELECT credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
+        .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+      if (row && row.credits_max > 0) {
+        if (row.credits_date === today) {
+          wdb.prepare("UPDATE codes SET credits_used = credits_used + 1 WHERE code = ? AND email = ?")
+            .run(code.toUpperCase().trim(), email.toLowerCase().trim());
+        } else {
+          wdb.prepare("UPDATE codes SET credits_used = 1, credits_date = ? WHERE code = ? AND email = ?")
+            .run(today, code.toUpperCase().trim(), email.toLowerCase().trim());
+        }
+      }
+      wdb.close();
+    } catch(ce) { console.error("[concile-analysis] credits error:", ce.message); }
+
     res.json({ ok: true, ...analysis });
   } catch (e) {
     res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
@@ -923,7 +947,12 @@ app.post("/prematch-analysis", async (req, res) => {
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
 
-  const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || getTodayStr()}`;
+  if (auth.credits_left !== null && auth.credits_left !== undefined && auth.credits_left <= 0) {
+    return res.json({ ok: false, error: "CREDITS_EXHAUSTED", credits_left: 0 });
+  }
+
+  const today2 = new Date().toISOString().slice(0, 10);
+  const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || today2}`;
   if (analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
   }
@@ -941,6 +970,24 @@ app.post("/prematch-analysis", async (req, res) => {
     const analysis = await runConcileAnalysis(matchData);
     analysisCache.set(cacheKey, analysis);
     setTimeout(() => analysisCache.delete(cacheKey), 12 * 60 * 60 * 1000);
+
+    // Decrement credits
+    try {
+      const wdb2 = new Database(CODES_DB_PATH);
+      const row2 = wdb2.prepare("SELECT credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
+        .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+      if (row2 && row2.credits_max > 0) {
+        if (row2.credits_date === today2) {
+          wdb2.prepare("UPDATE codes SET credits_used = credits_used + 1 WHERE code = ? AND email = ?")
+            .run(code.toUpperCase().trim(), email.toLowerCase().trim());
+        } else {
+          wdb2.prepare("UPDATE codes SET credits_used = 1, credits_date = ? WHERE code = ? AND email = ?")
+            .run(today2, code.toUpperCase().trim(), email.toLowerCase().trim());
+        }
+      }
+      wdb2.close();
+    } catch(ce2) { console.error("[prematch-analysis] credits error:", ce2.message); }
+
     res.json({ ok: true, ...analysis });
   } catch (e) {
     console.error("[prematch-analysis]", e.message);
@@ -988,21 +1035,79 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
+
+    // ── Récupérer email client et prix ──────────────────────────────────────
+    const customerEmail = (session.customer_details?.email || session.customer_email || "").toLowerCase().trim();
+    let priceId = "";
+    try {
+      const Stripe2 = require("stripe");
+      const stripe2 = Stripe2(STRIPE_SECRET_KEY);
+      const full = await stripe2.checkout.sessions.retrieve(session.id, { expand: ["line_items"] });
+      priceId = full.line_items?.data?.[0]?.price?.id || "";
+    } catch(e) { console.error("[stripe] retrieve error:", e.message); }
+
+    const planMap = {
+      [process.env.STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro" },
+      [process.env.STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP" },
+      [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite" },
+    };
+    const { status = "premium", label: planLabel = "Pro" } = planMap[priceId] || {};
+
+    // ── Mettre à jour users table si userId connu ────────────────────────────
     const userId = parseInt(session.client_reference_id);
-    if (!userId) return res.json({ ok: true });
+    if (userId) {
+      db.prepare("UPDATE users SET status = ?, stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?").run(
+        status, session.customer, session.subscription, userId
+      );
+      const limit = TOKEN_LIMITS[status] || 0;
+      db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
+    }
 
-    // Determine tier from price
-    const priceId = session.line_items?.data?.[0]?.price?.id || "";
-    let status = "premium";
-    if (priceId === process.env.STRIPE_PRICE_ID_VIP) status = "vip";
-    else if (priceId === process.env.STRIPE_PRICE_ID_ELITE) status = "elite";
+    // ── Email de confirmation via Brevo ──────────────────────────────────────
+    if (customerEmail && BREVO_API_KEY) {
+      (async () => {
+        try {
+          // Chercher le code d'accès dans codes.db
+          const cdb = new Database(CODES_DB_PATH, { readonly: true });
+          const codeRows = cdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").all(customerEmail);
+          cdb.close();
 
-    db.prepare("UPDATE users SET status = ?, stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?").run(
-      status, session.customer, session.subscription, userId
-    );
-    // Reset tokens for today
-    const limit = TOKEN_LIMITS[status] || 0;
-    db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
+          let html;
+          if (codeRows.length > 0) {
+            const codeList = codeRows.map(r =>
+              `<tr><td style="padding:8px 16px;font-family:monospace;font-size:18px;font-weight:800;letter-spacing:.08em;color:#eceaf4">${r.code}</td>
+               <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
+            ).join("");
+            html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
+                <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} activé !</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — Le Concile analyse. Tu encaisses.</div>
+              </div>
+              <div style="padding:32px">
+                <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'accès :</p>
+                <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:10px;overflow:hidden;margin-bottom:24px">${codeList}</table>
+                <p style="font-size:13px;color:#7b82a0;margin:0 0 20px">Utilise ce code sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a> → bouton "Se connecter" → entre ton email + ce code.</p>
+                <div style="text-align:center">
+                  <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Accéder au Live IA →</a>
+                </div>
+              </div>
+            </div>`;
+          } else {
+            html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
+                <div style="font-size:24px;font-weight:800;color:#fff">✅ Paiement reçu — Plan ${planLabel}</div>
+              </div>
+              <div style="padding:32px">
+                <p style="font-size:15px;color:#a8aec8">Ton paiement a été validé. Ton code d'accès te sera envoyé sous <strong style="color:#eceaf4">quelques minutes</strong> à cette adresse.</p>
+                <p style="font-size:13px;color:#7b82a0;margin-top:16px">Si tu ne reçois rien dans l'heure, réponds à cet email.</p>
+              </div>
+            </div>`;
+          }
+          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html);
+          console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
+        } catch(e) { console.error("[stripe] email error:", e.message); }
+      })();
+    }
   }
 
   if (event.type === "customer.subscription.deleted") {
