@@ -696,49 +696,49 @@ footer{
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-badge"><span class="badge-dot"></span>Concile V4.3 · Analyse en temps réel</div>
+  <div class="hero-badge"><span class="badge-dot"></span><span data-i18n="hero_badge">Concile V4.3 · Analyse en temps réel</span></div>
   <h1 class="hero-title">
-    <span class="ht1">Le Concile analyse.</span>
-    <span class="ht2">Tu encaisses.</span>
+    <span class="ht1" data-i18n="hero_t1">Le Concile analyse.</span>
+    <span class="ht2" data-i18n="hero_t2">Tu encaisses.</span>
   </h1>
-  <p class="hero-sub">5 intelligences artificielles. 3 sources vérifiées. Un pick par jour, quand et seulement quand les données le justifient.</p>
+  <p class="hero-sub" data-i18n="hero_sub">5 intelligences artificielles. 3 sources vérifiées. Un pick par jour, quand et seulement quand les données le justifient.</p>
   <div class="hero-ctas">
-    <a href="#pick" class="cta-main">Voir le pick du jour →</a>
-    <a href="/live-ia" class="cta-ghost">Accès Live IA</a>
+    <a href="#pick" class="cta-main" data-i18n="hero_cta1">Voir le pick du jour →</a>
+    <a href="/live-ia" class="cta-ghost" data-i18n="hero_cta2">Accès Live IA</a>
   </div>
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green">72%</div><div class="hs-label">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan">+16.5%</div><div class="hs-label">ROI total</div></div>
-    <div class="hs"><div class="hs-val c-indigo">5</div><div class="hs-label">IA du Concile</div></div>
-    <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label">Sources min.</div></div>
+    <div class="hs"><div class="hs-val c-green">72%</div><div class="hs-label" data-i18n="lbl_winrate">Winrate</div></div>
+    <div class="hs"><div class="hs-val c-cyan">+16.5%</div><div class="hs-label" data-i18n="lbl_roi">ROI total</div></div>
+    <div class="hs"><div class="hs-val c-indigo">5</div><div class="hs-label" data-i18n="lbl_ia">IA du Concile</div></div>
+    <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label" data-i18n="lbl_src">Sources min.</div></div>
   </div>
 </section>
 
 <!-- PROCHAIN PICK + RÉSULTATS RÉCENTS -->
 <section class="section-wrap" id="next-pick" style="padding-bottom:20px">
-  <div class="s-eyebrow">Concile · Picks en direct</div>
-  <div class="s-title">Résultats &amp; Prochain Pick</div>
+  <div class="s-eyebrow" data-i18n="sec_next_eye">Concile · Picks en direct</div>
+  <div class="s-title" data-i18n="sec_next_title">Résultats &amp; Prochain Pick</div>
   <div id="pf-root"></div>
 </section>
 
 <!-- PICK DU JOUR -->
 <section class="section-wrap" id="pick">
-  <div class="s-eyebrow">Concile · analyse du jour</div>
+  <div class="s-eyebrow" data-i18n="sec_pick_eye">Concile · analyse du jour</div>
   <div class="s-title" data-i18n="pick_today">Pick du jour</div>
   <div id="pick-root"></div>
 </section>
 
 <!-- ROI CHART -->
 <section class="roi-section" id="roi">
-  <div class="s-eyebrow">Performance</div>
-  <div class="s-title" style="margin-bottom:28px">Résultats réels · tracés pick par pick</div>
+  <div class="s-eyebrow" data-i18n="sec_roi_eye">Performance</div>
+  <div class="s-title" style="margin-bottom:28px" data-i18n="sec_roi_title">Résultats réels · tracés pick par pick</div>
   <div class="roi-card">
     <div class="roi-header">
       <div class="roi-kpis">
-        <div class="roi-kpi"><div class="val" style="color:var(--green)">+16.5%</div><div class="lbl">ROI total</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--cyan)">72%</div><div class="lbl">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)">42€ → 48€</div><div class="lbl">Bankroll</div></div>
-        <div class="roi-kpi"><div class="val" style="color:#a78bfa">18</div><div class="lbl">Picks juin</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--green)">+16.5%</div><div class="lbl" data-i18n="lbl_roi">ROI total</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--cyan)">72%</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)">42€ → 48€</div><div class="lbl" data-i18n="lbl_bankroll">Bankroll</div></div>
+        <div class="roi-kpi"><div class="val" style="color:#a78bfa">18</div><div class="lbl" data-i18n="lbl_picks_month">Picks juin</div></div>
       </div>
     </div>
     <canvas id="roi-chart" height="180"></canvas>
@@ -747,14 +747,14 @@ footer{
 
 <!-- PLANS -->
 <section class="plans-section" id="plans">
-  <div class="s-eyebrow">Abonnements</div>
-  <div class="s-title">Un plan pour chaque niveau d'ambition</div>
-  <div class="s-sub">Du pick gratuit au Live IA complet — accès immédiat après paiement.</div>
+  <div class="s-eyebrow" data-i18n="sec_plans_eye">Abonnements</div>
+  <div class="s-title" data-i18n="sec_plans_title">Un plan pour chaque niveau d'ambition</div>
+  <div class="s-sub" data-i18n="sec_plans_sub">Du pick gratuit au Live IA complet — accès immédiat après paiement.</div>
   <div class="plans-grid">
     <div class="pc">
-      <span class="pc-badge b-fr">Gratuit</span>
-      <div><div class="pc-price">0€<span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Découverte</div></div>
-      <div class="pc-desc">Le meilleur pick du jour, visible sur le site. Aucune inscription.</div>
+      <span class="pc-badge b-fr" data-i18n="plan_free_badge">Gratuit</span>
+      <div><div class="pc-price">0€<span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px" data-i18n="plan_free_name">Découverte</div></div>
+      <div class="pc-desc" data-i18n="plan_free_desc">Le meilleur pick du jour, visible sur le site. Aucune inscription.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>1 pick/jour (site public)</div>
@@ -763,12 +763,12 @@ footer{
         <div class="pcf"><span class="no">✗</span>Live IA</div>
         <div class="pcf"><span class="no">✗</span>% des 5 IA</div>
       </div>
-      <a href="#pick" class="pc-btn">Voir le pick</a>
+      <a href="#pick" class="pc-btn" data-i18n="plan_free_btn">Voir le pick</a>
     </div>
     <div class="pc">
-      <span class="pc-badge b-ct">À la carte</span>
-      <div><div class="pc-price">1€<span class="mo">/analyse</span></div><div class="pc-name" style="margin-top:6px">Test</div></div>
-      <div class="pc-desc">1 crédit = 1 analyse complète sur le match de ton choix en Live IA.</div>
+      <span class="pc-badge b-ct" data-i18n="plan_carte_badge">À la carte</span>
+      <div><div class="pc-price">1€<span class="mo">/analyse</span></div><div class="pc-name" style="margin-top:6px" data-i18n="plan_carte_name">Test</div></div>
+      <div class="pc-desc" data-i18n="plan_carte_desc">1 crédit = 1 analyse complète sur le match de ton choix en Live IA.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>1 analyse Live IA</div>
@@ -781,9 +781,9 @@ footer{
     </div>
     <div class="pc feat">
       <span class="pc-badge b-pr">Pro</span>
-      <span class="b-pop">Populaire</span>
+      <span class="b-pop" data-i18n="plan_pop">Populaire</span>
       <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Pro</div></div>
-      <div class="pc-desc">10 analyses/jour + Telegram Pro + Live IA avec reset à minuit.</div>
+      <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses/jour + Telegram Pro + Live IA avec reset à minuit.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>10 crédits/jour (reset minuit)</div>
@@ -793,12 +793,12 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Alertes instantanées</div>
         <div class="pcf"><span class="no">✗</span>Groupe Elite</div>
       </div>
-      <a href="https://buy.stripe.com/7sYbJ1dfK6NugIAfpA3VC02" target="_blank" rel="noopener noreferrer" id="btn-pro" class="pc-btn prim">S'abonner — 9.90€/mois</a>
+      <a href="https://buy.stripe.com/7sYbJ1dfK6NugIAfpA3VC02" target="_blank" rel="noopener noreferrer" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
     </div>
     <div class="pc">
       <span class="pc-badge b-el">Elite</span>
       <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite</div></div>
-      <div class="pc-desc">30 analyses/jour + Telegram Elite VIP + accès prioritaire + support.</div>
+      <div class="pc-desc" data-i18n="plan_elite_desc">30 analyses/jour + Telegram Elite VIP + accès prioritaire + support.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>30 crédits/jour (reset minuit)</div>
@@ -808,27 +808,27 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Accès prioritaire aux picks</div>
         <div class="pcf"><span class="ok">✓</span>Support direct</div>
       </div>
-      <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" rel="noopener noreferrer" id="btn-elite" class="pc-btn">S'abonner — 19.90€/mois</a>
+      <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" rel="noopener noreferrer" id="btn-elite" class="pc-btn" data-i18n="plan_elite_btn">S'abonner — 19.90€/mois</a>
     </div>
   </div>
 </section>
 
 <!-- HOW IT WORKS -->
 <section class="how-section">
-  <div class="s-eyebrow">Méthode</div>
-  <div class="s-title">Le Concile ne devine pas.</div>
+  <div class="s-eyebrow" data-i18n="sec_how_eye">Méthode</div>
+  <div class="s-title" data-i18n="sec_how_title">Le Concile ne devine pas.</div>
   <div class="steps">
-    <div class="step"><div class="step-n">1</div><div><div class="step-title">Collecte vérifiée à 6h00</div><div class="step-desc">Hermès collecte les matchs via API-SPORTS, puis vérifie chaque donnée sur 3 sources indépendantes : SofaScore, FBref, Transfermarkt. Aucun match non confirmé n'est affiché. Aucun score inventé.</div></div></div>
-    <div class="step"><div class="step-n">2</div><div><div class="step-title">Analyse par les 5 IA du Concile</div><div class="step-desc">Claude, Gemini, DeepSeek, Mistral et Groq analysent forme, H2H, blessés, xG et cotes. Seuil : consensus ≥ 63% + value positive. En dessous → NO BET, sans exception.</div></div></div>
-    <div class="step"><div class="step-n">3</div><div><div class="step-title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro et Elite voient les % de chaque IA + raisonnement en 2 lignes.</div></div></div>
-    <div class="step"><div class="step-n">4</div><div><div class="step-title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
+    <div class="step"><div class="step-n">1</div><div><div class="step-title" data-i18n="step1_title">Collecte vérifiée à 6h00</div><div class="step-desc">Hermès collecte les matchs via API-SPORTS, puis vérifie chaque donnée sur 3 sources indépendantes : SofaScore, FBref, Transfermarkt. Aucun match non confirmé n'est affiché. Aucun score inventé.</div></div></div>
+    <div class="step"><div class="step-n">2</div><div><div class="step-title" data-i18n="step2_title">Analyse par les 5 IA du Concile</div><div class="step-desc">Claude, Gemini, DeepSeek, Mistral et Groq analysent forme, H2H, blessés, xG et cotes. Seuil : consensus ≥ 63% + value positive. En dessous → NO BET, sans exception.</div></div></div>
+    <div class="step"><div class="step-n">3</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro et Elite voient les % de chaque IA + raisonnement en 2 lignes.</div></div></div>
+    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step4_title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 </section>
 
 <footer>
   <div class="foot-logo">TousLesMatchs</div>
   <div class="foot-text">
-    Analyse sportive assistée par IA · Données vérifiées · 0 match inventé<br>
+    <span data-i18n="foot_text">Analyse sportive assistée par IA · Données vérifiées · 0 match inventé</span><br>
     <span style="opacity:.4;font-size:11px;margin-top:8px;display:block">⚠️ Paris responsable · 18+ · Jouez uniquement ce que vous pouvez perdre</span>
   </div>
 </footer>
@@ -1163,7 +1163,7 @@ function renderPicksFeed() {
     [...past].reverse().slice(0,3).forEach(p => {
       const w = p.result === 'win';
       html += `<div class="pf-past-item${w?'':' loss'}">
-        <span class="pf-badge ${w?'win':'loss'}">${w?'✅ GAGNÉ':'❌ PERDU'}</span>
+        <span class="pf-badge ${w?'win':'loss'}">${w?'✅ '+i18n.t('pf_won'):'❌ '+i18n.t('pf_lost')}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
         <span class="pf-sc">${p.score||'—'}</span>
         <span class="pf-ct">@${p.cote}</span>
@@ -1178,15 +1178,15 @@ function renderPicksFeed() {
     const kickMs = new Date(next.date+'T'+next.time+':00').getTime();
     const diff = kickMs - Date.now();
     const fmtTimer = (ms) => {
-      if (ms <= 0) return '🔴 Match en cours →';
+      if (ms <= 0) return '🔴 '+i18n.t('pf_live_now');
       const h = Math.floor(ms/3600000);
       const m = Math.floor((ms%3600000)/60000);
       const s = Math.floor((ms%60000)/1000);
-      return h > 0 ? `⏱ Coup d'envoi dans ${h}h${String(m).padStart(2,'0')}` : `⏱ Coup d'envoi dans ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      const kw=i18n.t('pf_kickoff'); return h > 0 ? `⏱ ${kw} ${h}h${String(m).padStart(2,'0')}` : `⏱ ${kw} ${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     };
     html += `<div class="np-card" id="np-card">
       <div class="np-eyebrow">
-        <span class="np-tag">🔮 PROCHAIN PICK</span>
+        <span class="np-tag">🔮 ${i18n.t('pf_next')}</span>
         <span class="np-timer" id="np-timer">${fmtTimer(diff)}</span>
       </div>
       <div class="np-teams">
@@ -1198,14 +1198,14 @@ function renderPicksFeed() {
       <div class="np-preview">
         <span style="font-size:20px">🎯</span>
         <div>
-          <div class="np-preview-txt">Le Concile a analysé ce match en profondeur</div>
-          <div class="np-preview-lock">🔒 Recommandation réservée aux membres</div>
+          <div class="np-preview-txt">${i18n.t('pf_preview_txt')}</div>
+          <div class="np-preview-lock">🔒 ${i18n.t('pf_preview_lock')}</div>
         </div>
       </div>
       <button class="np-btn" id="np-btn" onclick="requestPrematchAnalysis()">
-        🔮 Obtenir l'Analyse du Concile →
+        ${i18n.t('pf_btn')}
       </button>
-      <div class="np-hint">⚡ Accès dès 1€ · À la carte ou abonnement mensuel</div>
+      <div class="np-hint">${i18n.t('pf_hint')}</div>
       <div id="np-result"></div>
     </div>`;
 
@@ -1337,8 +1337,8 @@ async function doLogin(){
   const okEl=document.getElementById('login-ok');
   const btn=document.getElementById('login-btn');
   errEl.style.display='none';okEl.style.display='none';
-  if(!email||!code){errEl.textContent='Email et code requis.';errEl.style.display='block';return;}
-  btn.disabled=true;btn.textContent='Vérification...';
+  if(!email||!code){errEl.textContent=i18n.t('login_required');errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent=i18n.t('login_checking');
   try{
     const r=await fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})});
     const d=await r.json();
@@ -1350,12 +1350,12 @@ async function doLogin(){
       okEl.style.display='block';
       setTimeout(()=>{closeModal();renderNavAuth();renderPick();},1200);
     } else {
-      errEl.textContent=d.error||'Code invalide.';errEl.style.display='block';
-      btn.disabled=false;btn.textContent='Accéder →';
+      errEl.textContent=d.error||i18n.t('login_invalid');errEl.style.display='block';
+      btn.disabled=false;btn.textContent=i18n.t('login_btn');
     }
   } catch(e){
-    errEl.textContent='Erreur serveur. Réessaie.';errEl.style.display='block';
-    btn.disabled=false;btn.textContent='Accéder →';
+    errEl.textContent=i18n.t('login_error');errEl.style.display='block';
+    btn.disabled=false;btn.textContent=i18n.t('login_btn');
   }
 }
 
@@ -1402,7 +1402,7 @@ function applyScore(m){
     if(!tagEl){tagEl=document.createElement('span');scoreCol.appendChild(tagEl);}
     if(m.status==='FINISHED'){
       tagEl.className='upcoming-tag';
-      tagEl.textContent='✅ Terminé';
+      tagEl.textContent='✅ '+i18n.t('match_done');
     } else {
       tagEl.className='live-tag';
       tagEl.textContent='🔴 '+(m.minute?m.minute+"'":"Live");
