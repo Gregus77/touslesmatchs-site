@@ -737,10 +737,10 @@ footer{
   <div class="roi-card">
     <div class="roi-header">
       <div class="roi-kpis">
-        <div class="roi-kpi"><div class="val" style="color:var(--green)">+16.5%</div><div class="lbl" data-i18n="lbl_roi">ROI total</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--cyan)">72%</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)">42€ → 48€</div><div class="lbl" data-i18n="lbl_bankroll">Bankroll</div></div>
-        <div class="roi-kpi"><div class="val" style="color:#a78bfa">18</div><div class="lbl" data-i18n="lbl_picks_month">Picks juin</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl" data-i18n="lbl_roi">ROI total</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">—</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl" data-i18n="lbl_bankroll">Bankroll</div></div>
+        <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">—</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
       </div>
     </div>
     <canvas id="roi-chart" height="180"></canvas>
@@ -765,7 +765,7 @@ footer{
         <div class="pcf"><span class="no">✗</span>Live IA</div>
         <div class="pcf"><span class="no">✗</span>% des 5 IA</div>
       </div>
-      <a href="#pick" class="pc-btn" data-i18n="plan_free_btn">Voir le pick</a>
+      <a href="#pick" class="pc-btn prim" data-i18n="plan_free_btn">Voir le pick</a>
     </div>
     <div class="pc" id="plan-carte">
       <span class="pc-badge b-ct" data-i18n="plan_carte_badge">À la carte</span>
@@ -1081,13 +1081,52 @@ function renderPick(){
 
 // ══ ROI CHART
 function buildChart(){
-  const labels=['1 juin','3 juin','5 juin','7 juin','9 juin','11 juin','13 juin','15 juin','17 juin','19 juin'];
-  const data=[42,43.2,41.8,44.1,43.5,45.8,44.9,47.1,46.6,48.2];
-  const ctx2=document.getElementById('roi-chart').getContext('2d');
+  // Calcul dynamique depuis PICKS_FEED (vrais picks terminés)
+  const finished = PICKS_FEED.filter(p => p.status === 'finished');
+  const mise = 10, bankrollDepart = 100;
+  let bankroll = bankrollDepart;
+  const labels = ['Départ'];
+  const data = [bankroll];
 
-  const grad=ctx2.createLinearGradient(0,0,0,180);
-  grad.addColorStop(0,'rgba(99,102,241,.25)');
-  grad.addColorStop(1,'rgba(99,102,241,.02)');
+  finished.forEach(p => {
+    if(p.result === 'win') bankroll = parseFloat((bankroll + (p.cote - 1) * mise).toFixed(1));
+    else bankroll = parseFloat((bankroll - mise).toFixed(1));
+    const dateStr = p.date ? p.date.split('-').slice(1).reverse().join('/') : '';
+    labels.push(dateStr + ' ' + p.home.split(' ')[0]);
+    data.push(bankroll);
+  });
+
+  // Mise à jour des KPIs
+  const wins = finished.filter(p => p.result === 'win').length;
+  const total = finished.length;
+  const roi = total > 0 ? ((bankroll - bankrollDepart) / bankrollDepart * 100).toFixed(1) : '0';
+  const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
+  const roiEl = document.getElementById('kpi-roi');
+  const wrEl  = document.getElementById('kpi-winrate');
+  const bkEl  = document.getElementById('kpi-bankroll');
+  const pkEl  = document.getElementById('kpi-picks');
+  if(roiEl) roiEl.textContent = (roi >= 0 ? '+' : '') + roi + '%';
+  if(wrEl)  wrEl.textContent  = winrate + '%';
+  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll + '€';
+  if(pkEl)  pkEl.textContent  = total;
+
+  const canvas = document.getElementById('roi-chart');
+  if(!canvas) return;
+
+  // Pas assez de données : message à la place du graphique
+  if(total < 2){
+    canvas.style.display = 'none';
+    const msg = document.createElement('div');
+    msg.style.cssText = 'text-align:center;padding:32px 16px;color:var(--muted);font-size:13px;line-height:1.8';
+    msg.innerHTML = '📈 Courbe de progression en construction<br><span style="font-size:11px;opacity:.6">Les résultats s\'afficheront ici au fil des picks</span>';
+    canvas.parentNode.insertBefore(msg, canvas);
+    return;
+  }
+
+  const ctx2 = canvas.getContext('2d');
+  const grad = ctx2.createLinearGradient(0, 0, 0, 180);
+  grad.addColorStop(0, 'rgba(99,102,241,.25)');
+  grad.addColorStop(1, 'rgba(99,102,241,.02)');
 
   new Chart(ctx2,{
     type:'line',
@@ -1102,13 +1141,14 @@ function buildChart(){
         pointBackgroundColor:'#6366f1',
         pointBorderColor:'#0d1020',
         pointBorderWidth:2,
-        pointRadius:4,
-        pointHoverRadius:6,
-        tension:.4,fill:true,
+        pointRadius:5,
+        pointHoverRadius:7,
+        tension:.4, fill:true,
       }]
     },
     options:{
       responsive:true,
+      maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
         tooltip:{
@@ -1302,7 +1342,6 @@ async function requestPrematchAnalysis() {
 // ══ INIT
 renderPick();
 renderPicksFeed();
-buildChart();
 
 // ══ AUTH — CODE D'ACCÈS
 function renderNavAuth(){
@@ -1486,6 +1525,6 @@ document.addEventListener('click',function(e){
 });
 </script>
 <script src="/js/i18n.js"></script>
-<script>document.addEventListener('DOMContentLoaded', () => i18n.init());</script>
+<script>document.addEventListener('DOMContentLoaded', () => { i18n.init(); buildChart(); });</script>
 </body>
 </html>
