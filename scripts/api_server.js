@@ -58,6 +58,7 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
 const SCORE_PATH = "/var/touslesmatchs/live_score.json";
 const PICK_PATH = "/var/touslesmatchs/current_pick.json";
+const HERMES_PICKS_PATH = "/picks/picks.json";
 
 const DEFAULT_PICK = {
   teamA: { name: "Turquie", abbr: "TUR", color: "#e30a17" },
@@ -632,8 +633,34 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
   });
 });
 
-// ── Pick du jour ──────────────────────────────────────────────────────────────
+// ── Pick du jour — lit picks.json d'Hermès en priorité ───────────────────────
 app.get("/current-pick", (req, res) => {
+  // 1. Essaie picks.json d'Hermès (source de vérité)
+  try {
+    const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
+    const p = raw.currentPick;
+    if (p && p.home && p.home !== "Analyse en cours") {
+      let scoreA = null, scoreB = null;
+      if (p.score && p.score.includes("-")) {
+        const parts = p.score.split("-");
+        scoreA = parseInt(parts[0]) || 0;
+        scoreB = parseInt(parts[1]) || 0;
+      }
+      return res.json({ ok: true, pick: {
+        teamA: { name: p.home, abbr: (p.home||"").slice(0,3).toUpperCase(), color: "#4f46e5" },
+        teamB: { name: p.away, abbr: (p.away||"").slice(0,3).toUpperCase(), color: "#7c3aed" },
+        competition: p.league || p.sport || "",
+        time: p.time || "",
+        marketType: p.bet || "",
+        marketLabel: p.prono || "",
+        cote: parseFloat(p.cote) || null,
+        status: p.status === "GAGNE" ? "win" : p.status === "PERDU" ? "loss" : "upcoming",
+        result: p.status === "GAGNE" ? "win" : p.status === "PERDU" ? "loss" : null,
+        scoreA, scoreB,
+      }});
+    }
+  } catch (e) { /* picks.json absent ou invalide */ }
+  // 2. Fallback sur le pick manuel admin
   res.json({ ok: true, pick: loadPick() });
 });
 

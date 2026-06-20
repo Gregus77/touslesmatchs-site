@@ -13,6 +13,7 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      - /opt/touslesmatchs/public/data:/srv/data
     networks:
       - web
 
@@ -36,7 +37,8 @@ services:
       - DB_PATH=/data/tlm.db
     volumes:
       - api_data:/data
-      - /var/touslesmatchs:/var/codes:ro
+      - /var/touslesmatchs:/var/touslesmatchs
+      - /opt/touslesmatchs/public/data:/picks:ro
     networks:
       - web
     expose:
