@@ -419,7 +419,8 @@ nav{
 
 /* BOOKMAKERS */
 .bm-head{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:0 24px;margin-bottom:12px}
-.bm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 24px 24px}
+.bm-grid{display:flex;flex-wrap:wrap;gap:10px;padding:0 24px 24px;justify-content:center}
+.bm-btn{flex:1 1 calc(25% - 10px);min-width:120px;max-width:180px}
 .bm-btn{
   padding:14px 8px;border-radius:11px;text-align:center;
   text-decoration:none;font-size:13px;font-weight:800;
@@ -437,6 +438,12 @@ nav{
 .bm-u:hover{border-color:rgba(16,185,129,.7);background:linear-gradient(135deg,rgba(16,185,129,.35),rgba(16,185,129,.15))}
 .bm-p{border-color:rgba(245,158,11,.4);color:#fff;background:linear-gradient(135deg,rgba(245,158,11,.22),rgba(245,158,11,.08))}
 .bm-p:hover{border-color:rgba(245,158,11,.7);background:linear-gradient(135deg,rgba(245,158,11,.35),rgba(245,158,11,.15))}
+.bm-z{border-color:rgba(168,85,247,.4);color:#fff;background:linear-gradient(135deg,rgba(168,85,247,.22),rgba(168,85,247,.08))}
+.bm-z:hover{border-color:rgba(168,85,247,.7);background:linear-gradient(135deg,rgba(168,85,247,.35),rgba(168,85,247,.15))}
+.bm-ps{border-color:rgba(99,102,241,.4);color:#fff;background:linear-gradient(135deg,rgba(99,102,241,.22),rgba(99,102,241,.08))}
+.bm-ps:hover{border-color:rgba(99,102,241,.7);background:linear-gradient(135deg,rgba(99,102,241,.35),rgba(99,102,241,.15))}
+.bm-nb{border-color:rgba(20,184,166,.4);color:#fff;background:linear-gradient(135deg,rgba(20,184,166,.22),rgba(20,184,166,.08))}
+.bm-nb:hover{border-color:rgba(20,184,166,.7);background:linear-gradient(135deg,rgba(20,184,166,.35),rgba(20,184,166,.15))}
 
 /* ══ ROI CHART ══ */
 .roi-section{
@@ -613,7 +620,7 @@ footer{
 .mobile-menu .mm-cta{margin-top:4px;display:block;text-align:center;padding:13px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:11px;font-weight:700;font-size:14px;text-decoration:none}
 @media(max-width:640px){
   .plans-grid{grid-template-columns:1fr}
-  .bm-grid{grid-template-columns:repeat(2,1fr)}
+  .bm-btn{flex:1 1 calc(50% - 10px);max-width:none}
   .hero-stats{flex-wrap:wrap}
   .hs{min-width:50%}
   .ia-row{grid-template-columns:58px 1fr 38px 16px}
@@ -892,10 +899,13 @@ const MC={
 };
 
 const BM=[
-  {name:"Winamax",cls:"bm-w",url:"{{WINAMAX_LINK}}"},
-  {name:"Betclic", cls:"bm-b",url:"{{BETCLIC_LINK}}"},
-  {name:"Unibet",  cls:"bm-u",url:"{{UNIBET_LINK}}"},
-  {name:"PMU",     cls:"bm-p",url:"{{PMU_LINK}}"},
+  {name:"Winamax",     cls:"bm-w",url:"{{WINAMAX_LINK}}"},
+  {name:"Betclic",     cls:"bm-b",url:"{{BETCLIC_LINK}}"},
+  {name:"Unibet",      cls:"bm-u",url:"{{UNIBET_LINK}}"},
+  {name:"PMU",         cls:"bm-p",url:"{{PMU_LINK}}"},
+  {name:"ZeBet",       cls:"bm-z",url:"{{ZEBET_LINK}}"},
+  {name:"ParionsSport",cls:"bm-ps",url:"{{PARIONSSPORT_LINK}}"},
+  {name:"NetBet",      cls:"bm-nb",url:"{{NETBET_LINK}}"},
 ];
 
 

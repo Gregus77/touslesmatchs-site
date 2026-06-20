@@ -15,8 +15,8 @@ BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 FREE_CHANNEL_ID = os.environ.get("TELEGRAM_FREE_CHANNEL_ID", "")
 PREMIUM_CHANNEL_ID = os.environ.get("TELEGRAM_PREMIUM_CHANNEL_ID", "")
 
-WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr")
-BETCLIC_LINK = os.environ.get("BETCLIC_LINK", "https://www.betclic.fr")
+WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr/parrain?code=77953728")
+BETCLIC_LINK = os.environ.get("BETCLIC_LINK", "https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ")
 SITE_URL = os.environ.get("SITE_URL", "https://touslesmatchs.com")
 
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
