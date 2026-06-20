@@ -20,9 +20,10 @@ sys.path.insert(0, "/app/council")
 from tools.history_db import (
     init_db, save_pick, save_premium_pick, mark_premium_sent,
     get_recent_picks, get_stats, get_premium_stats,
-    get_agent_accuracy, save_agent_vote, get_full_analytics
+    get_agent_accuracy, save_agent_vote, get_full_analytics,
+    update_pick_result
 )
-from tools.sports_api import get_todays_matches, format_matches_for_prompt
+from tools.sports_api import get_todays_matches, format_matches_for_prompt, fetch_match_result, evaluate_bet_result
 from tools.html_generator import inject_pick_into_html
 from tools.telegram_bot import (
     send_free_pick, send_nopick, send_premium_pick,
@@ -79,6 +80,47 @@ def run_agent(agent_module, date, matches_text, history_text, stats):
         return agent_module.NAME, {"recommendation": "NOPICK", "confidence": 0, "reasoning": str(e)}
 
 
+def _auto_update_pending_results():
+    """Cherche et met à jour le score des picks récents sans résultat."""
+    import sqlite3
+    from tools.history_db import DB_PATH
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        # Picks sans score des 3 derniers jours
+        c.execute("""
+            SELECT id, date, match, bet FROM picks
+            WHERE (score IS NULL OR score = '' OR result IS NULL OR result = '')
+            AND match IS NOT NULL AND match != '---'
+            ORDER BY created_at DESC LIMIT 10
+        """)
+        pending = c.fetchall()
+        conn.close()
+
+        for row in pending:
+            pid, date, match, bet = row
+            if not match or not bet:
+                continue
+            parts = match.split(" vs ") if " vs " in match else match.split(" - ")
+            if len(parts) < 2:
+                continue
+            home, away = parts[0].strip(), parts[1].strip()
+            log.info(f"[AutoResult] Cherche score: {home} vs {away} ({date})")
+            res = fetch_match_result(home, away, date)
+            if res:
+                result = evaluate_bet_result(bet, res["home_goals"], res["away_goals"])
+                update_pick_result(date, res["score"], result, tier="free")
+                log.info(f"[AutoResult] ✅ {home} vs {away} → {res['score']} → pari '{bet}' = {result.upper()}")
+                # Notif Telegram résultat
+                from tools.telegram_bot import send_result_update, is_configured as tg_ok
+                if tg_ok():
+                    send_result_update(match, bet, result.upper(), res["score"], tier="free")
+            else:
+                log.info(f"[AutoResult] ⏳ Score non disponible encore pour {home} vs {away}")
+    except Exception as e:
+        log.error(f"[AutoResult] Erreur: {e}")
+
+
 def run_council():
     """Main orchestration function."""
     log.info("=" * 60)
@@ -88,6 +130,9 @@ def run_council():
     init_db()
     date_str = datetime.now().strftime("%d/%m/%Y")
     today_display = datetime.now().strftime("%d/%m")
+
+    # 0. Auto-fetch résultats des picks en attente (sans score)
+    _auto_update_pending_results()
 
     # 1. Fetch today's matches
     log.info("Récupération des matchs du jour...")

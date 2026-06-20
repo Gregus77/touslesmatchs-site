@@ -1,7 +1,7 @@
 import os
 import requests
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Support both variable names (docker-compose uses API_SPORTS_KEY)
 SPORTS_API_KEY = os.environ.get("SPORTS_API_KEY") or os.environ.get("API_SPORTS_KEY", "")
@@ -175,6 +175,100 @@ def _fetch_odds_api(date):
         except Exception as e:
             print(f"[SportsAPI] Odds-API/{sport_key} error: {e}")
     return all_matches if all_matches else _get_fallback_matches()
+
+
+def fetch_match_result(home, away, date_str):
+    """
+    Cherche le score final d'un match terminé.
+    Retourne dict {score, home_goals, away_goals} ou None si non trouvé.
+    date_str format: "DD/MM/YYYY"
+    """
+    provider = SPORTS_API_PROVIDER.lower()
+    try:
+        # Convertir date DD/MM/YYYY → YYYY-MM-DD
+        d = datetime.strptime(date_str, "%d/%m/%Y")
+        api_date = d.strftime("%Y-%m-%d")
+    except Exception:
+        api_date = date_str
+
+    if provider == "api-football" and SPORTS_API_KEY:
+        return _fetch_result_api_football(home, away, api_date)
+    elif provider == "thesportsdb":
+        return _fetch_result_thesportsdb(home, away, api_date)
+    else:
+        return _fetch_result_api_football(home, away, api_date)
+
+
+def _fetch_result_api_football(home, away, date):
+    """Cherche le résultat sur api-football (status=FT = Full Time)."""
+    url = f"https://{SPORTS_API_HOST}/fixtures"
+    headers = {"x-rapidapi-key": SPORTS_API_KEY, "x-rapidapi-host": SPORTS_API_HOST}
+    # Chercher aussi la veille et lendemain pour couvrir les fuseaux horaires
+    for offset in [0, -1, 1]:
+        d = (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=offset)).strftime("%Y-%m-%d")
+        params = {"date": d, "status": "FT", "timezone": "Europe/Paris"}
+        try:
+            resp = requests.get(url, headers=headers, params=params, timeout=15)
+            data = resp.json()
+            home_l = home.lower()
+            away_l = away.lower()
+            for f in data.get("response", []):
+                th = f.get("teams", {}).get("home", {}).get("name", "").lower()
+                ta = f.get("teams", {}).get("away", {}).get("name", "").lower()
+                # Match partiel sur le nom (ex: "Turquie" = "Turkey")
+                if (home_l[:4] in th or th[:4] in home_l) and (away_l[:4] in ta or ta[:4] in away_l):
+                    goals = f.get("goals", {})
+                    gh = goals.get("home")
+                    ga = goals.get("away")
+                    if gh is not None and ga is not None:
+                        return {"score": f"{gh}-{ga}", "home_goals": gh, "away_goals": ga}
+        except Exception as e:
+            print(f"[SportsAPI] fetch_result error: {e}")
+    return None
+
+
+def _fetch_result_thesportsdb(home, away, date):
+    """Cherche le résultat sur TheSportsDB."""
+    for sport in ["Soccer", "Basketball", "Ice Hockey", "Tennis"]:
+        url = "https://www.thesportsdb.com/api/v1/json/3/eventsday.php"
+        try:
+            resp = requests.get(url, params={"d": date, "s": sport}, timeout=10)
+            for ev in (resp.json().get("events") or []):
+                h = (ev.get("strHomeTeam") or "").lower()
+                a = (ev.get("strAwayTeam") or "").lower()
+                if home.lower()[:4] in h and away.lower()[:4] in a:
+                    gh = ev.get("intHomeScore")
+                    ga = ev.get("intAwayScore")
+                    if gh is not None and ga is not None:
+                        return {"score": f"{gh}-{ga}", "home_goals": int(gh), "away_goals": int(ga)}
+        except Exception:
+            pass
+    return None
+
+
+def evaluate_bet_result(bet_type, home_goals, away_goals, cote=None):
+    """
+    Détermine si un pari est gagné ou perdu selon le score final.
+    bet_type: "1", "2", "X", "1X", "X2", "Over 2.5", "Under 2.5", "BTTS", etc.
+    Retourne "win" ou "loss".
+    """
+    h, a = int(home_goals), int(away_goals)
+    total = h + a
+    bt = bet_type.strip().upper()
+
+    if bt == "1":      return "win" if h > a else "loss"
+    if bt == "2":      return "win" if a > h else "loss"
+    if bt == "X":      return "win" if h == a else "loss"
+    if bt == "1X":     return "win" if h >= a else "loss"
+    if bt == "X2":     return "win" if a >= h else "loss"
+    if bt == "12":     return "win" if h != a else "loss"
+    if "OVER 2.5" in bt:  return "win" if total > 2 else "loss"
+    if "UNDER 2.5" in bt: return "win" if total < 3 else "loss"
+    if "OVER 1.5" in bt:  return "win" if total > 1 else "loss"
+    if "UNDER 1.5" in bt: return "win" if total < 2 else "loss"
+    if "OVER 3.5" in bt:  return "win" if total > 3 else "loss"
+    if "BTTS" in bt:   return "win" if h > 0 and a > 0 else "loss"
+    return "loss"  # type inconnu = conservateur
 
 
 def _get_fallback_matches():
