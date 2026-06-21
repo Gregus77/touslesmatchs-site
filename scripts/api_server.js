@@ -1745,6 +1745,26 @@ app.get("/admin/analysis-performance", (req, res) => {
   }
 });
 
+// ── Statut de l'auto-analyse ─────────────────────────────────────────────────
+app.get("/admin/auto-analyse-status", (req, res) => {
+  const token = req.headers["x-hermes-token"] || req.query.token;
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!token || token !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Non autorisé" });
+
+  try {
+    const lastAuto = db.prepare(`
+      SELECT home, away, competition, bet, confidence, minute, created_at
+      FROM analysis_log WHERE source='auto'
+      ORDER BY created_at DESC LIMIT 5
+    `).all();
+    const countAuto = db.prepare(`SELECT COUNT(*) as cnt FROM analysis_log WHERE source='auto'`).get();
+    const nextRunMs = AUTO_ANALYSIS_INTERVAL_MS - (Date.now() % AUTO_ANALYSIS_INTERVAL_MS);
+    res.json({ ok: true, total_auto: countAuto.cnt, last_runs: lastAuto, next_run_in_seconds: Math.round(nextRunMs / 1000) });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Résolution manuelle via Hermès ───────────────────────────────────────────
 app.post("/internal/resolve-analysis", (req, res) => {
   const token = req.headers["x-hermes-token"];
@@ -1936,3 +1956,67 @@ app.delete("/admin/preuves/:id", (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
+
+// ── Auto-analyse toutes les 10 minutes ───────────────────────────────────────
+// Analyse chaque match live avec le Concile IA et log dans analysis_log.
+// Construit le dataset historique utilisé par getPerformanceContext().
+const AUTO_ANALYSIS_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const autoAnalysedThisRun = new Set(); // évite de double-analyser le même match dans la même fenêtre
+
+async function runAutoAnalysis() {
+  try {
+    const matches = await fetchLiveMatches();
+    const live = matches.filter(m => m.status === "IN_PLAY" || m.status === "LIVE");
+    if (!live.length) {
+      console.log("[auto-analyse] Aucun match live — skip");
+      return;
+    }
+    console.log(`[auto-analyse] ${live.length} match(s) live détecté(s) — démarrage analyse`);
+
+    for (const match of live) {
+      const key = `${match.home}_${match.away}_${getTodayStr()}_${Math.floor(Date.now() / AUTO_ANALYSIS_INTERVAL_MS)}`;
+      if (autoAnalysedThisRun.has(key)) continue;
+      autoAnalysedThisRun.add(key);
+
+      // Évite d'analyser si score ou minute non disponible (données trop vagues)
+      const minute = Number(match.minute) || estimateMinute(match);
+      if (minute < 5) {
+        console.log(`[auto-analyse] ${match.home} vs ${match.away} — trop tôt (${minute}'), skip`);
+        continue;
+      }
+
+      try {
+        console.log(`[auto-analyse] Analyse: ${match.home} vs ${match.away} (${minute}')`);
+        const result = await runConcileAnalysis(match);
+        // logAnalysis est déjà appelé dans runConcileAnalysis avec source='live-ia'
+        // On met à jour la source pour distinguer les analyses auto
+        try {
+          db.prepare(`UPDATE analysis_log SET source='auto' WHERE match_key=? AND created_at >= datetime('now','-2 minutes')`)
+            .run(`${match.home}_${match.away}_${getTodayStr()}`);
+        } catch(_) {}
+        console.log(`[auto-analyse] ✅ ${match.home} vs ${match.away} → ${result.best_bet} (${result.confidence}%)`);
+      } catch (e) {
+        console.error(`[auto-analyse] ❌ ${match.home} vs ${match.away}:`, e.message);
+      }
+
+      // Petite pause entre les matchs pour ne pas saturer Groq
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
+    // Nettoyer les vieilles clés (garder la fenêtre courante seulement)
+    const currentWindow = Math.floor(Date.now() / AUTO_ANALYSIS_INTERVAL_MS);
+    for (const k of autoAnalysedThisRun) {
+      const parts = k.split('_');
+      const kWindow = parseInt(parts[parts.length - 1]);
+      if (kWindow < currentWindow) autoAnalysedThisRun.delete(k);
+    }
+  } catch (e) {
+    console.error("[auto-analyse] Erreur générale:", e.message);
+  }
+}
+
+// Démarre après 30s pour laisser le serveur s'initialiser
+setTimeout(() => {
+  runAutoAnalysis();
+  setInterval(runAutoAnalysis, AUTO_ANALYSIS_INTERVAL_MS);
+}, 30000);

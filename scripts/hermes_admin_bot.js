@@ -748,6 +748,34 @@ async function cmdMemoire(chatId) {
   }
 }
 
+// ── Statut de l'auto-analyse ─────────────────────────────────────────────────
+async function cmdAutoAnalyse(chatId) {
+  try {
+    const data = await httpGetInternal("/admin/auto-analyse-status", { "x-hermes-token": TG_TOKEN });
+    if (!data.ok) return reply(chatId, `❌ Erreur: ${data.error}`);
+
+    let msg = `🤖 <b>AUTO-ANALYSE — Statut</b>\n\n`;
+    msg += `📊 Analyses automatiques effectuées : <b>${data.total_auto}</b>\n`;
+    const mins = Math.floor(data.next_run_in_seconds / 60);
+    const secs = data.next_run_in_seconds % 60;
+    msg += `⏱️ Prochain run dans : ${mins}m${secs}s\n\n`;
+
+    if (data.last_runs && data.last_runs.length) {
+      msg += `<b>5 dernières analyses auto :</b>\n`;
+      data.last_runs.forEach(r => {
+        msg += `  🔍 ${r.home} vs ${r.away} (${r.minute}') → ${r.bet} (${r.confidence}%)\n`;
+      });
+    } else {
+      msg += `Aucune analyse auto encore effectuée.\n`;
+      msg += `Le premier run se lance 30s après le démarrage du serveur, puis toutes les 10 min.`;
+    }
+
+    await reply(chatId, msg);
+  } catch(e) {
+    await reply(chatId, `❌ Erreur: ${e.message}`);
+  }
+}
+
 // ── Live pick manuel — analyse Concile + publication immédiate ────────────────
 async function cmdLivePick(chatId, args) {
   // Syntaxe : /livepick Japon|Tunisie|FIFA World Cup|4-0|85|Victoire extérieur
@@ -831,6 +859,7 @@ async function cmdHelp(chatId) {
 /lose — Marquer le pick comme PERDU
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /memoire — Statistiques de performance par type de pari/compétition
+/autoanalyse — Statut de l'analyse automatique toutes les 10 min
 /livepick Japon|Tunisie|FIFA WC|4-0|85 — Analyse Concile live + publication immédiate
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
@@ -865,6 +894,7 @@ async function handleMessage(msg) {
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/learn":           return cmdLearn(chatId);
     case "/memoire":         return cmdMemoire(chatId);
+    case "/autoanalyse":     return cmdAutoAnalyse(chatId);
     case "/livepick":        return cmdLivePick(chatId, args);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
