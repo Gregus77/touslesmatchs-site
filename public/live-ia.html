@@ -929,7 +929,7 @@ renderNavAuth();
 renderCredits();
 loadPickMatch().then(()=>loadMatches());
 loadAgentPerformance();
-setInterval(loadMatches, 60000);
+setInterval(() => loadMatches(true), 90000); // force refresh toutes les 90s
 setInterval(loadAgentPerformance, 5*60*1000);
 
 function toggleMenu(){

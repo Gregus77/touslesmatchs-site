@@ -127,9 +127,10 @@ function saveProofs(proofs) {
   } catch (e) { console.error("[preuves] save error:", e.message); }
 }
 
-// Cache live matches 10 minutes to stay under 100 req/day
+// Cache live matches — TTL adaptatif : 2 min si matchs en cours, 10 min sinon
 let liveMatchesCache = { data: null, ts: 0 };
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL_LIVE = 2 * 60 * 1000;   // 2 min quand match en cours
+const CACHE_TTL_IDLE = 10 * 60 * 1000;  // 10 min si aucun match live
 
 const TOKEN_LIMITS = { free: 0, premium: 10, vip: 30, elite: 999 };
 
@@ -316,7 +317,9 @@ async function fetchFromApiSports() {
 }
 
 async function fetchLiveMatches() {
-  if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
+  const hasLive = liveMatchesCache.data?.some(m => m.status === "IN_PLAY" || m.status === "LIVE");
+  const ttl = hasLive ? CACHE_TTL_LIVE : CACHE_TTL_IDLE;
+  if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < ttl) {
     return liveMatchesCache.data;
   }
   // Try football-data.org first (couvre Coupe du Monde gratuitement)
