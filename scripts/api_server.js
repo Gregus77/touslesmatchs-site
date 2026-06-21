@@ -517,11 +517,11 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
   ];
 
   const personas = [
-    "Tu es GROQ-Llama, un agent statistique spécialisé dans les patterns de buts.",
-    "Tu es GPT-Analysis, un agent expert en analyse tactique et forme des équipes.",
-    "Tu es GeminiFlash, un agent spécialisé dans les probabilités et value bets.",
-    "Tu es Mistral-7B, un agent focalisé sur les marchés alternatifs comme BTTS et Over/Under.",
-    "Tu es Claude Chief, le chef du Concile. Tu synthétises les analyses et tranches.",
+    `Tu es GROQ-Llama, agent statistique. Utilise tes connaissances sur ${match.home} et ${match.away} : classement FIFA/ELO, moyenne de buts marqués/encaissés en compétition, forme récente (5 derniers matchs), style de jeu (pressing, possession, contre-attaque). Croise ces stats avec le score live.`,
+    `Tu es GPT-Analysis, expert tactique. Analyse ${match.home} vs ${match.away} en t'appuyant sur ce que tu sais : schéma tactique habituel, force de la défense, pressing, profil des buteurs, résultats récents et H2H historique. Adapte ton analyse au score et à la minute actuelle.`,
+    `Tu es GeminiFlash, spécialiste value bets. Pour ${match.home} vs ${match.away}, estime la vraie probabilité de chaque marché disponible en tenant compte du classement des équipes, de leurs statistiques offensives/défensives connues, et du contexte du tournoi (enjeu, élimination, groupe). Identifie le meilleur rapport probabilité/valeur.`,
+    `Tu es Mistral-7B, expert Over/Under et BTTS. Pour ${match.home} vs ${match.away}, utilise tes connaissances sur le nombre moyen de buts dans ce type de confrontation, le style offensif ou défensif de chaque équipe, et les tendances de la compétition (ex: Coupe du Monde 2026 = moyenne buts). Concentre-toi sur les marchés de buts.`,
+    `Tu es Claude Chief, chef du Concile. Tu synthétises les analyses des agents en pondérant leur fiabilité historique ET tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte du match, enjeux, historique des confrontations).`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -548,21 +548,30 @@ ${matchContext}
 Votes des agents avec leur fiabilité historique:
 ${previousVotes}
 
-En tant que chef du Concile, synthétise ces votes en tenant compte de la fiabilité historique de chaque agent (favorise ceux avec un meilleur winrate si l'historique est suffisant). Donne ton verdict final. Réponds en JSON pur (pas de markdown):
+Synthétise ces votes en tenant compte de :
+1. La fiabilité historique de chaque agent (winrate)
+2. Les contraintes mathématiques du score live
+3. Tes connaissances sur ${match.home} et ${match.away}
+4. Tu DOIS choisir parmi : ${availableBets.join(", ")}
+
+Réponds en JSON pur (pas de markdown):
 {
-  "bet": "un parmi: ${BET_TYPES.join(", ")}",
+  "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 55-92>,
-  "raison": "<2 phrases max expliquant ton choix basé sur le score, la minute, le contexte et les votes pondérés>"
+  "raison": "<2 phrases: 1 sur le score/contexte live, 1 sur les équipes ou l'enjeu>"
 }`
       : `${personas[i]}
 
 ${matchContext}
 
-Analyse ce match en direct et recommande le meilleur pari. Réponds en JSON pur (pas de markdown):
+En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande le meilleur pari.
+Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
+
+Réponds en JSON pur (pas de markdown):
 {
-  "bet": "un parmi: ${BET_TYPES.join(", ")}",
+  "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 50-90>,
-  "raison": "<2 phrases max expliquant ton choix>"
+  "raison": "<2 phrases: 1 donnée concrète sur les équipes, 1 sur le contexte live>"
 }`;
 
     try {
