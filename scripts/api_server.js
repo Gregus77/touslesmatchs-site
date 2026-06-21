@@ -330,6 +330,73 @@ function getMockMatches() {
 // ── Groq Concile analysis ─────────────────────────────────────────────────────
 const BET_TYPES = ["Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "Under 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
 
+// Estime la minute depuis l'heure de début quand l'API ne la fournit pas
+function estimateMinute(match) {
+  const m = parseInt(match.minute);
+  if (!isNaN(m) && m > 0) return m;
+  if (match.status !== "IN_PLAY" && match.status !== "LIVE") return 0;
+  if (match.utcDate) {
+    const elapsed = Math.floor((Date.now() - new Date(match.utcDate).getTime()) / 60000);
+    if (elapsed > 0 && elapsed <= 120) return Math.min(elapsed, 92);
+  }
+  return 50; // fallback mi-match si aucune info
+}
+
+// Filtre les paris mathématiquement impossibles ou déjà perdus
+function computeAvailableBets(match) {
+  const h = Number(match.score_home ?? 0);
+  const a = Number(match.score_away ?? 0);
+  const total = h + a;
+  const minute = estimateMinute(match);
+  const remaining = Math.max(0, 93 - minute);
+  const isLive = minute >= 30 && match.status !== "SCHEDULED";
+
+  let bets = [...BET_TYPES];
+  if (!isLive) return bets;
+
+  // Marchés déjà PERDUS → supprimer
+  if (total > 2.5) bets = bets.filter(b => b !== "Under 2.5 buts");
+  if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts" && b !== "Under 2.5 buts"); // Under 1.5 auto-perdu aussi
+  if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Non");
+
+  // Marchés mathématiquement IMPOSSIBLES → supprimer
+  // Over 2.5 : besoin de (3-total) buts dans remaining minutes
+  const need25 = Math.max(0, 3 - total);
+  if (need25 >= 3 && remaining <= 30) bets = bets.filter(b => b !== "Over 2.5 buts"); // <3% de chance
+  if (need25 >= 2 && remaining <= 15) bets = bets.filter(b => b !== "Over 2.5 buts");
+
+  // BTTS quasi-impossible si une équipe vierge et peu de temps
+  if (h === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
+  if (a === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
+
+  // Victoire impossible si mène +2 et <10 min
+  if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire extérieur");
+  if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire domicile");
+
+  return bets.length > 0 ? bets : BET_TYPES; // safety: toujours au moins 1 choix
+}
+
+// Correction post-IA : si l'IA recommande quand même un pari impossible, on corrige
+function validateAndCorrectBet(bet, match, availableBets) {
+  if (availableBets.includes(bet)) return { bet, corrected: false };
+
+  // Corrections logiques
+  const h = Number(match.score_home ?? 0);
+  const a = Number(match.score_away ?? 0);
+  const total = h + a;
+  const minute = estimateMinute(match);
+  const remaining = Math.max(0, 93 - minute);
+
+  let corrected = bet;
+  if ((bet === "Over 2.5 buts") && availableBets.includes("Under 2.5 buts")) corrected = "Under 2.5 buts";
+  else if ((bet === "Under 2.5 buts") && total > 2.5 && availableBets.includes("Over 2.5 buts")) corrected = "Over 2.5 buts";
+  else if ((bet === "BTTS Non") && h > 0 && a > 0 && availableBets.includes("BTTS Oui")) corrected = "BTTS Oui";
+  else corrected = availableBets[0]; // fallback sur premier pari disponible
+
+  console.log(`[concile] Correction: "${bet}" → "${corrected}" (mathématiquement invalide à ${minute}', score ${h}-${a})`);
+  return { bet: corrected, corrected: true, original: bet };
+}
+
 const NEUTRAL_KEYWORDS = ["world cup","coupe du monde","fifa world","euro ","uefa euro","copa america","gold cup","afcon","africa cup","nations league final","champions league final","europa league final"];
 function isNeutralComp(comp = "") {
   const c = comp.toLowerCase();
@@ -341,10 +408,10 @@ function computeLiveConstraints(match) {
   const h = Number(match.score_home ?? 0);
   const a = Number(match.score_away ?? 0);
   const total = h + a;
-  const minute = parseInt(match.minute) || 0;
-  const isPrematch = !minute || match.status === "SCHEDULED" || match.minute === "Pré-match";
+  const minute = estimateMinute(match); // utilise l'estimation si null
+  const isLive = minute >= 30 && match.status !== "SCHEDULED" && match.minute !== "Pré-match";
 
-  if (isPrematch || minute < 30) return "";
+  if (!isLive) return "";
 
   const remaining = Math.max(0, 93 - minute);
   const goalsPerMin = minute > 0 ? total / minute : 0;
@@ -426,11 +493,20 @@ async function runConcileAnalysis(match) {
     ? `\nSport: ${match.sport}` : "";
   const liveConstraints = computeLiveConstraints(match);
 
+  // Pré-filtrer les paris impossibles du prompt
+  const availableBets = computeAvailableBets(match);
+  const estimatedMin = estimateMinute(match);
+  const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
+
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
-Minute: ${match.minute ? match.minute + "'" : "?"}
-Statut: ${match.status}${neutralNote}${liveConstraints}`;
+Minute: ${minuteDisplay}
+Statut: ${match.status}${neutralNote}${liveConstraints}
+
+IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
+→ ${availableBets.join(", ")}
+Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquement invalide.`;
 
   const agentNames = [
     { name: "GROQ-Llama", model: "llama-3.3-70b-versatile", icon: "🦙" },
@@ -505,13 +581,20 @@ Analyse ce match en direct et recommande le meilleur pari. Réponds en JSON pur 
       const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
 
+      const rawBet = parsed.bet || availableBets[0];
+      const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
+      const raisonFinal = corrected
+        ? `[Corrigé: "${original}" mathématiquement invalide → "${validBet}"] ${parsed.raison || ""}`
+        : (parsed.raison || "Analyse en cours.");
+
       agentResults.push({
         name: agentNames[i].name,
         icon: agentNames[i].icon,
-        bet: parsed.bet || BET_TYPES[0],
+        bet: validBet,
         confidence: Math.min(95, Math.max(50, parseInt(parsed.confidence) || 70)),
-        raison: parsed.raison || "Analyse en cours.",
+        raison: raisonFinal,
         isChief,
+        corrected: corrected || false,
       });
     } catch (e) {
       // fallback for this agent
@@ -1136,15 +1219,19 @@ app.post("/concile-analysis", async (req, res) => {
     return res.json({ ok: false, error: "CREDITS_EXHAUSTED", credits_left: 0 });
   }
 
+  const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   const cacheKey = `${email}__${match.home}_${match.away}_${today}`;
-  if (analysisCache.has(cacheKey)) {
+  if (!forceRefresh && analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
   }
+  if (forceRefresh) analysisCache.delete(cacheKey);
 
   try {
     const analysis = await runConcileAnalysis(match);
     analysisCache.set(cacheKey, analysis);
-    setTimeout(() => analysisCache.delete(cacheKey), 6 * 60 * 60 * 1000);
+    // Cache 30 min pour les matchs live (pas 6h — le score change !)
+    const cacheTTL = match.status === "IN_PLAY" ? 30 * 60 * 1000 : 6 * 60 * 60 * 1000;
+    setTimeout(() => analysisCache.delete(cacheKey), cacheTTL);
 
     // Decrement credits in codes.db (only on real analysis, not cache hit)
     try {

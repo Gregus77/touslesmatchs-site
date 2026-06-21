@@ -623,7 +623,7 @@ async function analyzeMatch(i){
     const r = await fetch('/api/concile-analysis', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ matchId: m.id, email, code, match: m })
+      body: JSON.stringify({ matchId: m.id, email, code, match: m, force: true })
     });
     const d = await r.json();
 
