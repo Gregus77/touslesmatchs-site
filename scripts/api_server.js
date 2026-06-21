@@ -232,32 +232,58 @@ async function fetchFromFootballData() {
 // ── Live matches — API-Sports (fallback) ──────────────────────────────────────
 async function fetchFromApiSports() {
   if (!API_SPORTS_KEY) return null;
+  const results = [];
+
+  // Football live
   try {
-    console.log("[live-matches] Trying API-Sports...");
-    const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", {
-      "x-apisports-key": API_SPORTS_KEY,
-    });
-    if (data.errors && Object.keys(data.errors).length > 0) {
-      console.error("[live-matches] API-Sports error:", JSON.stringify(data.errors));
-      return null;
+    const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!data.errors || Object.keys(data.errors).length === 0) {
+      const items = (data.response || []).slice(0, 20).map((f) => ({
+        id: String(f.fixture.id), sport: "Football",
+        home: f.teams.home.name, away: f.teams.away.name,
+        score_home: f.goals.home ?? 0, score_away: f.goals.away ?? 0,
+        minute: f.fixture.status.elapsed ?? null, status: "IN_PLAY",
+        competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
+        utcDate: f.fixture.date,
+      }));
+      results.push(...items);
+      console.log(`[live-matches] API-Sports football: ${items.length}`);
     }
-    if (!data.response || data.response.length === 0) return [];
-    console.log(`[live-matches] API-Sports: ${data.response.length} matches`);
-    return data.response.slice(0, 30).map((f) => ({
-      id: String(f.fixture.id),
-      home: f.teams.home.name,
-      away: f.teams.away.name,
-      score_home: f.goals.home ?? 0,
-      score_away: f.goals.away ?? 0,
-      minute: f.fixture.status.elapsed ?? null,
-      status: "IN_PLAY",
-      competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
-      utcDate: f.fixture.date,
-    }));
-  } catch (e) {
-    console.error("[live-matches] API-Sports error:", e.message);
-    return null;
-  }
+  } catch(e) { console.error("[live-matches] API-Sports football:", e.message); }
+
+  // Basketball live
+  try {
+    const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const items = (data.response || []).slice(0, 10).map((g) => ({
+      id: "bk-" + g.id, sport: "Basketball",
+      home: g.teams?.home?.name, away: g.teams?.away?.name,
+      score_home: g.scores?.home?.total ?? null, score_away: g.scores?.away?.total ?? null,
+      minute: g.status?.timer ?? null, status: "IN_PLAY",
+      competition: (g.league?.name || "Basketball") + (g.country?.name ? " · " + g.country.name : ""),
+      utcDate: g.date,
+    })).filter(g => g.home && g.away);
+    results.push(...items);
+    if (items.length) console.log(`[live-matches] API-Sports basketball: ${items.length}`);
+  } catch(e) { console.error("[live-matches] API-Sports basketball:", e.message); }
+
+  // Hockey live
+  try {
+    const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const items = (data.response || []).slice(0, 10).map((g) => ({
+      id: "hk-" + g.id, sport: "Hockey",
+      home: g.teams?.home?.name, away: g.teams?.away?.name,
+      score_home: g.scores?.home ?? null, score_away: g.scores?.away ?? null,
+      minute: g.status?.timer ?? null, status: "IN_PLAY",
+      competition: (g.league?.name || "Hockey") + (g.country?.name ? " · " + g.country.name : ""),
+      utcDate: g.date,
+    })).filter(g => g.home && g.away);
+    results.push(...items);
+    if (items.length) console.log(`[live-matches] API-Sports hockey: ${items.length}`);
+  } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
+
+  if (results.length === 0) return null;
+  console.log(`[live-matches] API-Sports total: ${results.length} événements`);
+  return results;
 }
 
 async function fetchLiveMatches() {
@@ -289,16 +315,28 @@ function getMockMatches() {
 // ── Groq Concile analysis ─────────────────────────────────────────────────────
 const BET_TYPES = ["Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "Under 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
 
+const NEUTRAL_KEYWORDS = ["world cup","coupe du monde","fifa world","euro ","uefa euro","copa america","gold cup","afcon","africa cup","nations league final","champions league final","europa league final"];
+function isNeutralComp(comp = "") {
+  const c = comp.toLowerCase();
+  return NEUTRAL_KEYWORDS.some(k => c.includes(k));
+}
+
 async function runConcileAnalysis(match) {
   if (!GROQ_API_KEY) {
     return getMockAnalysis(match);
   }
 
+  const neutralNote = isNeutralComp(match.competition)
+    ? "\n⚠️ TERRAIN NEUTRE — ne PAS mentionner l'avantage domicile, il n'existe pas dans cette compétition."
+    : "";
+  const sportNote = match.sport && match.sport !== "Football"
+    ? `\nSport: ${match.sport}` : "";
+
   const matchContext = `Match: ${match.home} vs ${match.away}
-Compétition: ${match.competition || "International"}
-Score actuel: ${match.score_home}-${match.score_away}
-Minute: ${match.minute}'
-Statut: ${match.status}`;
+Compétition: ${match.competition || "International"}${sportNote}
+Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
+Minute: ${match.minute ? match.minute + "'" : "?"}
+Statut: ${match.status}${neutralNote}`;
 
   const agentNames = [
     { name: "GROQ-Llama", model: "llama-3.3-70b-versatile", icon: "🦙" },
