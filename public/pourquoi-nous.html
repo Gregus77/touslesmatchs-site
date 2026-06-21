@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pourquoi TousLesMatchs ? — Méthode, transparence & résultats vérifiables</title>
+<meta name="description" content="Découvrez la méthode rigoureuse de TousLesMatchs : 5 IA en consensus, données en temps réel, résultats publics. Pas de miracles, une vraie méthode.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#06080f;
+  --bg2:#0d1020;
+  --bg3:#141828;
+  --bg4:#1c2236;
+  --b1:rgba(255,255,255,.05);
+  --b2:rgba(255,255,255,.09);
+  --b3:rgba(255,255,255,.14);
+  --text:#eceaf4;
+  --muted:#7b82a0;
+  --muted2:#a8aec8;
+  --indigo:#4f46e5;
+  --indigo2:#6366f1;
+  --violet:#7c3aed;
+  --violet2:#9333ea;
+  --cyan:#22d3ee;
+  --cyan2:#06b6d4;
+  --green:#10b981;
+  --red:#f43f5e;
+  --amber:#f59e0b;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',system-ui,sans-serif;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+
+/* MESH BACKGROUND */
+.mesh{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%,rgba(79,70,229,.13) 0%,transparent 55%),
+    radial-gradient(ellipse 60% 50% at 85% 15%,rgba(34,211,238,.10) 0%,transparent 55%),
+    radial-gradient(ellipse 50% 70% at 50% 80%,rgba(124,58,237,.08) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 40% at 75% 60%,rgba(99,102,241,.06) 0%,transparent 50%);
+  animation:mesh-drift 16s ease-in-out infinite alternate;
+}
+@keyframes mesh-drift{
+  0%{opacity:.8;transform:scale(1)}
+  100%{opacity:1;transform:scale(1.03) rotate(.4deg)}
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;height:60px;
+  background:rgba(6,8,15,.75);
+  border-bottom:1px solid var(--b1);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+}
+.nav-brand{
+  font-size:16px;font-weight:800;letter-spacing:-.02em;
+  background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  text-decoration:none;
+}
+.nav-center{display:flex;align-items:center;gap:6px}
+.nav-center a{
+  font-size:13px;color:var(--muted2);text-decoration:none;
+  padding:6px 16px;border-radius:8px;font-weight:500;
+  transition:all .15s;
+}
+.nav-center a:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.nav-center a.active{color:var(--text);background:rgba(255,255,255,.06)}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-cta{
+  font-size:13px;font-weight:700;
+  padding:8px 20px;border-radius:9px;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  color:#fff;border:none;cursor:pointer;
+  text-decoration:none;display:inline-block;
+  box-shadow:0 4px 20px rgba(79,70,229,.3);
+  transition:all .2s;
+}
+.nav-cta:hover{box-shadow:0 6px 28px rgba(79,70,229,.5);transform:translateY(-1px)}
+
+/* MAIN CONTENT */
+main{
+  position:relative;z-index:1;
+  padding-top:60px;
+}
+
+/* WRAPPER */
+.wrap{
+  max-width:960px;
+  margin:0 auto;
+  padding:0 32px;
+}
+
+/* HERO SECTION */
+.hero{
+  padding:100px 32px 80px;
+  text-align:center;
+  max-width:960px;
+  margin:0 auto;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--cyan);
+  background:rgba(34,211,238,.07);
+  border:1px solid rgba(34,211,238,.18);
+  padding:7px 18px;border-radius:20px;
+  margin-bottom:32px;
+}
+.hero-badge-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--cyan);
+  animation:pulse-cyan 2s infinite;
+}
+@keyframes pulse-cyan{
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.4;transform:scale(.7)}
+}
+.hero-title{
+  font-size:clamp(36px,6vw,64px);
+  font-weight:900;
+  letter-spacing:-.03em;
+  line-height:1.05;
+  margin-bottom:24px;
+  background:linear-gradient(135deg,var(--indigo2) 0%,var(--violet) 45%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.hero-sub{
+  font-size:18px;
+  color:var(--muted2);
+  line-height:1.7;
+  max-width:640px;
+  margin:0 auto;
+  font-weight:400;
+}
+
+/* SECTIONS */
+section{
+  padding:80px 32px;
+  max-width:960px;
+  margin:0 auto;
+}
+
+.section-label{
+  font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--indigo2);margin-bottom:12px;
+}
+.section-title{
+  font-size:clamp(26px,4vw,40px);
+  font-weight:800;letter-spacing:-.02em;
+  margin-bottom:16px;
+  color:var(--text);
+}
+.section-sub{
+  font-size:16px;color:var(--muted2);line-height:1.7;max-width:600px;
+  margin-bottom:48px;
+}
+
+/* STEPS (Méthode) */
+.steps{
+  display:flex;
+  flex-direction:column;
+  gap:20px;
+}
+.step-card{
+  background:var(--bg2);
+  border:1px solid var(--b2);
+  border-radius:20px;
+  padding:28px 32px;
+  display:flex;
+  align-items:flex-start;
+  gap:24px;
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.step-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--b3);
+  box-shadow:0 12px 40px rgba(0,0,0,.35);
+}
+.step-num{
+  flex-shrink:0;
+  width:40px;height:40px;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:800;color:#fff;
+  box-shadow:0 4px 16px rgba(79,70,229,.3);
+}
+.step-icon{font-size:22px;line-height:1}
+.step-content{}
+.step-title{
+  font-size:17px;font-weight:700;
+  color:var(--text);margin-bottom:6px;
+}
+.step-desc{
+  font-size:14px;color:var(--muted2);line-height:1.6;
+}
+.step-tags{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;
+}
+.step-tag{
+  font-size:11px;font-weight:600;
+  padding:3px 10px;border-radius:6px;
+  background:rgba(99,102,241,.1);
+  color:var(--indigo2);
+  border:1px solid rgba(99,102,241,.2);
+}
+
+/* STATS (Track Record) */
+.stats-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:16px;
+  margin-bottom:32px;
+}
+.stat-card{
+  background:var(--bg2);
+  border:1px solid var(--b2);
+  border-radius:20px;
+  padding:28px 24px;
+  text-align:center;
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.stat-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--b3);
+  box-shadow:0 12px 40px rgba(0,0,0,.35);
+}
+.stat-value{
+  font-size:clamp(32px,5vw,52px);
+  font-weight:900;letter-spacing:-.03em;
+  margin-bottom:4px;
+}
+.stat-value.green{
+  background:linear-gradient(135deg,var(--green),#34d399);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.stat-value.indigo{
+  background:linear-gradient(135deg,var(--indigo2),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.stat-value.amber{
+  background:linear-gradient(135deg,var(--amber),#fbbf24);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.stat-value.violet{
+  background:linear-gradient(135deg,var(--violet),#c084fc);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.stat-label{
+  font-size:13px;color:var(--muted2);font-weight:500;
+}
+.stats-note{
+  background:var(--bg2);
+  border:1px solid var(--b2);
+  border-radius:14px;
+  padding:16px 20px;
+  font-size:13px;color:var(--muted2);
+  line-height:1.6;
+}
+.stats-note a{
+  color:var(--indigo2);text-decoration:none;font-weight:600;
+}
+.stats-note a:hover{text-decoration:underline}
+
+/* TRANSPARENCY */
+.transparency-card{
+  background:var(--bg2);
+  border:1px solid var(--b2);
+  border-radius:20px;
+  padding:36px 40px;
+}
+.transparency-list{
+  list-style:none;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+.transparency-list li{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  font-size:15px;
+  color:var(--muted2);
+  line-height:1.6;
+}
+.check-icon{
+  flex-shrink:0;
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(16,185,129,.12);
+  border:1px solid rgba(16,185,129,.25);
+  display:flex;align-items:center;justify-content:center;
+  margin-top:2px;
+}
+.check-icon svg{
+  width:12px;height:12px;stroke:var(--green);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;
+}
+
+/* AI CARDS */
+.ai-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:16px;
+}
+.ai-card{
+  background:var(--bg2);
+  border:1px solid var(--b2);
+  border-radius:20px;
+  padding:28px 24px;
+  text-align:center;
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.ai-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--b3);
+  box-shadow:0 12px 40px rgba(0,0,0,.35);
+}
+.ai-icon{
+  font-size:36px;margin-bottom:16px;display:block;
+  line-height:1;
+}
+.ai-title{
+  font-size:16px;font-weight:700;
+  color:var(--text);margin-bottom:8px;
+}
+.ai-desc{
+  font-size:13px;color:var(--muted2);line-height:1.6;
+}
+
+/* CTA SECTION */
+.cta-section{
+  padding:80px 32px;
+  max-width:960px;
+  margin:0 auto;
+  text-align:center;
+}
+.cta-box{
+  background:var(--bg2);
+  border:1px solid var(--b2);
+  border-radius:24px;
+  padding:60px 40px;
+  position:relative;
+  overflow:hidden;
+}
+.cta-box::before{
+  content:'';
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 50% 0%,rgba(79,70,229,.12) 0%,transparent 60%);
+  pointer-events:none;
+}
+.cta-label{
+  font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--indigo2);margin-bottom:16px;
+}
+.cta-title{
+  font-size:clamp(28px,4vw,42px);
+  font-weight:900;letter-spacing:-.02em;
+  margin-bottom:16px;
+  color:var(--text);
+}
+.cta-sub{
+  font-size:16px;color:var(--muted2);margin-bottom:36px;line-height:1.6;
+}
+.cta-btns{
+  display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:15px;font-weight:700;
+  padding:14px 28px;border-radius:12px;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  color:#fff;text-decoration:none;
+  box-shadow:0 6px 28px rgba(79,70,229,.35);
+  transition:all .2s;
+}
+.btn-primary:hover{box-shadow:0 10px 36px rgba(79,70,229,.55);transform:translateY(-2px)}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:15px;font-weight:700;
+  padding:14px 28px;border-radius:12px;
+  background:rgba(34,211,238,.08);
+  color:var(--cyan);
+  border:1px solid rgba(34,211,238,.2);
+  text-decoration:none;
+  transition:all .2s;
+}
+.btn-secondary:hover{background:rgba(34,211,238,.14);border-color:rgba(34,211,238,.35);transform:translateY(-2px)}
+
+/* FOOTER */
+footer{
+  border-top:1px solid var(--b1);
+  padding:28px 40px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;z-index:1;
+}
+.footer-brand{
+  font-size:14px;font-weight:700;
+  background:linear-gradient(135deg,#fff 40%,var(--cyan) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.footer-links{
+  display:flex;gap:20px;
+}
+.footer-links a{
+  font-size:12px;color:var(--muted);text-decoration:none;transition:color .15s;
+}
+.footer-links a:hover{color:var(--muted2)}
+.footer-copy{
+  font-size:12px;color:var(--muted);
+}
+
+/* DIVIDER */
+.section-divider{
+  border:none;
+  border-top:1px solid var(--b1);
+  margin:0 32px;
+}
+
+/* RESPONSIVE */
+@media(max-width:640px){
+  nav{padding:0 20px}
+  .nav-center{display:none}
+  .hero{padding:80px 20px 60px}
+  section{padding:60px 20px}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .ai-grid{grid-template-columns:1fr}
+  .step-card{flex-direction:column;gap:14px;padding:22px 20px}
+  .transparency-card{padding:24px 20px}
+  .cta-box{padding:40px 24px}
+  .cta-btns{flex-direction:column;align-items:stretch}
+  .btn-primary,.btn-secondary{justify-content:center}
+  footer{flex-direction:column;gap:12px;text-align:center;padding:24px 20px}
+  .footer-links{justify-content:center;flex-wrap:wrap;gap:12px}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="mesh"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="/" class="nav-brand">TousLesMatchs</a>
+  <div class="nav-center">
+    <a href="/">Pick du jour</a>
+    <a href="/live-ia">Live IA</a>
+    <a href="/#plans">Abonnements</a>
+    <a href="/pourquoi-nous.html" class="active">Pourquoi nous ?</a>
+  </div>
+  <div class="nav-right">
+    <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener" class="nav-cta">Rejoindre Telegram</a>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ══ HERO ══ -->
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Transparence & Méthode
+    </div>
+    <h1 class="hero-title">Pourquoi TousLesMatchs&nbsp;?</h1>
+    <p class="hero-sub">Nous ne promettons pas des miracles. Nous promettons une méthode rigoureuse, des IA auditées, et des résultats vérifiables.</p>
+  </div>
+
+  <hr class="section-divider">
+
+  <!-- ══ METHODOLOGY ══ -->
+  <section>
+    <div class="section-label">Fonctionnement</div>
+    <h2 class="section-title">Notre Méthode</h2>
+    <p class="section-sub">Chaque pick passe par trois étapes non négociables — aucun raccourci, aucune intuition.</p>
+
+    <div class="steps">
+
+      <div class="step-card">
+        <div class="step-num"><span class="step-icon">📡</span></div>
+        <div class="step-content">
+          <div class="step-title">Collection de données</div>
+          <div class="step-desc">
+            Avant chaque analyse, nos systèmes agrègent les données des sources les plus fiables du monde du sport : statistiques de matchs, forme récente, blessures, confrontations directes, cotes de marché.
+          </div>
+          <div class="step-tags">
+            <span class="step-tag">football-data.org</span>
+            <span class="step-tag">API-Sports</span>
+            <span class="step-tag">Statistiques historiques</span>
+            <span class="step-tag">Odds live</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num"><span class="step-icon">🧠</span></div>
+        <div class="step-content">
+          <div class="step-title">Concile des 5 IA</div>
+          <div class="step-desc">
+            Cinq modèles d'intelligence artificielle indépendants analysent les données simultanément. Chacun émet un verdict. Un consensus est exigé — si les IA ne s'accordent pas, le pick est rejeté.
+          </div>
+          <div class="step-tags">
+            <span class="step-tag">Groq-Llama</span>
+            <span class="step-tag">GPT-Analysis</span>
+            <span class="step-tag">GeminiFlash</span>
+            <span class="step-tag">Mistral-7B</span>
+            <span class="step-tag">Claude Chief</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-card">
+        <div class="step-num"><span class="step-icon">✅</span></div>
+        <div class="step-content">
+          <div class="step-title">Validation mathématique</div>
+          <div class="step-desc">
+            Le pick final passe un dernier filtre algorithmique : contraintes de matchs, vérification de l'edge positif par rapport aux cotes de marché, seuil de confiance minimum. En dessous du seuil, pas de pick.
+          </div>
+          <div class="step-tags">
+            <span class="step-tag">Contraintes de matchs</span>
+            <span class="step-tag">Filtre edge positif</span>
+            <span class="step-tag">Seuil de confiance</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══ TRACK RECORD ══ -->
+  <section>
+    <div class="section-label">Performance</div>
+    <h2 class="section-title">Résultats Vérifiables</h2>
+    <p class="section-sub">Des chiffres publics. Pas de sélection, pas de suppression. Tout est archivé.</p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value green">100%</div>
+        <div class="stat-label">Winrate (7 picks / 7 gagnés)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value indigo">+53€</div>
+        <div class="stat-label">Profit sur base 10€/pick</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value amber">1</div>
+        <div class="stat-label">Seul pick par jour maximum</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value violet">5 IA</div>
+        <div class="stat-label">En consensus obligatoire</div>
+      </div>
+    </div>
+
+    <div class="stats-note">
+      Tous les résultats sont publics et vérifiables. Consultez <a href="/historique">l'historique complet</a> ou les <a href="/preuves">preuves de gains</a> avec captures d'écran sur bookmakers.
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══ TRANSPARENCY ══ -->
+  <section>
+    <div class="section-label">Engagement</div>
+    <h2 class="section-title">Une transparence totale</h2>
+    <p class="section-sub">Nous n'avons rien à cacher. C'est pourquoi nous publions tout.</p>
+
+    <div class="transparency-card">
+      <ul class="transparency-list">
+        <li>
+          <span class="check-icon">
+            <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+          </span>
+          <span>Chaque pick est publié avec la cote exacte, le niveau de confiance des IA et la raison détaillée de l'analyse.</span>
+        </li>
+        <li>
+          <span class="check-icon">
+            <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+          </span>
+          <span>Les résultats sont archivés publiquement sans exception — aucune suppression, même en cas de pick perdant.</span>
+        </li>
+        <li>
+          <span class="check-icon">
+            <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+          </span>
+          <span>Des captures d'écran de gains réels sur bookmakers sont publiées dans la section <a href="/preuves" style="color:var(--indigo2);font-weight:600;text-decoration:none;">Preuves</a>.</span>
+        </li>
+        <li>
+          <span class="check-icon">
+            <svg viewBox="0 0 12 12"><polyline points="2,6 5,9 10,3"/></svg>
+          </span>
+          <span>Aucun pick inventé : si aucun edge positif n'est identifié par le Concile, nous ne jouons pas ce jour-là.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══ WHY AI ══ -->
+  <section>
+    <div class="section-label">Avantage</div>
+    <h2 class="section-title">Pourquoi l'IA ?</h2>
+    <p class="section-sub">L'IA ne remplace pas l'expertise humaine — elle élimine les biais qui coûtent de l'argent.</p>
+
+    <div class="ai-grid">
+
+      <div class="ai-card">
+        <span class="ai-icon">🚫</span>
+        <div class="ai-title">Pas d'émotions</div>
+        <div class="ai-desc">
+          Aucun bias sur une équipe favorite, aucune euphorie après un enchaînement de victoires, aucune panique après une défaite. L'IA analyse, point.
+        </div>
+      </div>
+
+      <div class="ai-card">
+        <span class="ai-icon">📊</span>
+        <div class="ai-title">Analyse en temps réel</div>
+        <div class="ai-desc">
+          Les données live sont intégrées pendant le match. La cote bouge ? Nos modèles l'intègrent immédiatement dans leur calcul d'edge.
+        </div>
+      </div>
+
+      <div class="ai-card">
+        <span class="ai-icon">🔄</span>
+        <div class="ai-title">Apprentissage continu</div>
+        <div class="ai-desc">
+          Chaque résultat — gain comme perte — est réinjecté dans les modèles. Le Concile s'améliore à chaque pick, match après match.
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="section-divider">
+
+  <!-- ══ CTA ══ -->
+  <div class="cta-section">
+    <div class="cta-box">
+      <div class="cta-label">Prêt à commencer ?</div>
+      <h2 class="cta-title">Rejoignez le Concile</h2>
+      <p class="cta-sub">Accédez au pick du jour, aux analyses IA en direct et aux résultats vérifiables.</p>
+      <div class="cta-btns">
+        <a href="/" class="btn-primary">Voir le pick du jour →</a>
+        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener" class="btn-secondary">
+          Canal Telegram gratuit
+        </a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-brand">TousLesMatchs</span>
+  <div class="footer-links">
+    <a href="/">Pick du jour</a>
+    <a href="/live-ia">Live IA</a>
+    <a href="/historique">Historique</a>
+    <a href="/preuves">Preuves</a>
+    <a href="/pourquoi-nous.html">Pourquoi nous ?</a>
+  </div>
+  <span class="footer-copy">© 2025 TousLesMatchs</span>
+</footer>
+
+<script>
+// Nav scroll behavior — add shadow on scroll
+(function(){
+  const nav = document.querySelector('nav');
+  if(!nav) return;
+  window.addEventListener('scroll', function(){
+    if(window.scrollY > 10){
+      nav.style.boxShadow = '0 4px 24px rgba(0,0,0,.4)';
+    } else {
+      nav.style.boxShadow = 'none';
+    }
+  }, {passive:true});
+})();
+</script>
+
+</body>
+</html>

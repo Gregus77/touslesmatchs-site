@@ -1,14 +1,16 @@
 // HERMÈS ADMIN BOT — Bot Telegram d'administration TousLesMatchs
-// Commandes admin : /status /analyse /setpick /setscore /win /lose /publish /help
+// Commandes admin : /status /analyse /setpick /setscore /win /lose /publish /publishpremium /help
 "use strict";
 const https = require("https");
+const http  = require("http");
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const TG_TOKEN    = process.env.HERMES_ADMIN_TLM_BOT;
-const ADMIN_CHAT  = process.env.TELEGRAM_ADMIN_CHAT_ID;
+const TG_TOKEN          = process.env.HERMES_ADMIN_TLM_BOT;
+const ADMIN_CHAT        = process.env.TELEGRAM_ADMIN_CHAT_ID;
+const PREMIUM_CHANNEL   = process.env.TELEGRAM_PREMIUM_CHANNEL_ID;
 const GROQ_KEY    = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 const FD_KEY      = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY;
@@ -444,9 +446,21 @@ async function runAnalyse(chatId) {
 📊 Note : <b>${p.note}/10</b>${probStr}${edgeStr}
 💡 ${p.raison || ""}${altsStr}
 
-✅ Pick sauvegardé. Tape /publish pour envoyer sur le canal public.`;
+✅ Pick sauvegardé. Tape /publish pour le canal public · /publishpremium pour Premium.`;
 
   await reply(chatId, msg);
+
+  // Notification email automatique aux abonnés payants
+  try {
+    const emailResult = await notifyPickByEmail(data.currentPick);
+    if (emailResult.ok) {
+      await reply(chatId, `📧 Emails envoyés à <b>${emailResult.sent || 0}</b> abonné(s)`);
+    } else if (emailResult.error && emailResult.error !== "timeout") {
+      console.error("[hermes] pick-notify email:", emailResult.error);
+    }
+  } catch (e) {
+    console.error("[hermes] notifyPickByEmail:", e.message);
+  }
 }
 
 // ── Commandes ─────────────────────────────────────────────────────────────────
@@ -567,6 +581,67 @@ async function cmdPublish(chatId) {
   await reply(chatId, `✅ Pick publié sur ${PUBLIC_CHAT}`);
 }
 
+async function cmdPublishPremium(chatId) {
+  if (!TG_TOKEN) { await reply(chatId, "❌ Token Telegram manquant"); return; }
+  if (!PREMIUM_CHANNEL) { await reply(chatId, "❌ TELEGRAM_PREMIUM_CHANNEL_ID manquant"); return; }
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier"); return; }
+
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
+  const probStr = p.probabilite_estimee ? `\n📈 Proba estimée : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
+  const text = `🏆 <b>Pick PREMIUM du jour — ${today}</b>
+
+🏟️ <b>${p.home} vs ${p.away}</b>
+🏆 ${p.league || ""}
+🕒 ${p.time || ""}
+
+🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
+📊 <b>Cote :</b> <b>${p.cote || ""}</b>
+✅ <b>Confiance Concile :</b> ${p.confidenceTg || ""}${probStr}
+${p.raison ? `\n💡 <i>${p.raison}</i>` : ""}
+
+🔎 Analyse complète : https://www.touslesmatchs.com/live-ia
+
+⚠️ 18+ uniquement. Jeu responsable.`;
+
+  const body = JSON.stringify({ chat_id: PREMIUM_CHANNEL, text, parse_mode: "HTML", disable_web_page_preview: false });
+  let ok = false;
+  await new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TG_TOKEN}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { ok = JSON.parse(d).ok; } catch {} resolve(); }); });
+    req.on("error", resolve);
+    req.write(body); req.end();
+  });
+  await reply(chatId, ok ? `✅ Pick publié sur le canal Premium (${PREMIUM_CHANNEL})` : "❌ Erreur publication Premium — vérifie TELEGRAM_PREMIUM_CHANNEL_ID et que le bot est admin du canal");
+}
+
+async function notifyPickByEmail(pick) {
+  const API_HOST = "touslesmatchs-api";
+  const API_PORT = 3001;
+  const body = JSON.stringify({ pick, secret: TG_TOKEN });
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: API_HOST,
+      port: API_PORT,
+      path: "/internal/pick-notify",
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); resolve({ ok: false, error: "timeout" }); });
+    req.on("error", () => resolve({ ok: false }));
+    req.write(body); req.end();
+  });
+}
+
 async function cmdDeploy(chatId) {
   await reply(chatId, "🔄 <b>Déploiement en cours...</b>");
   try {
@@ -587,7 +662,8 @@ async function cmdHelp(chatId) {
 /win — Marquer le pick comme GAGNÉ
 /lose — Marquer le pick comme PERDU
 /learn — Analyser l'historique et mettre à jour la mémoire IA
-/publish — Publier sur le canal Telegram public
+/publish — Publier sur le canal Telegram public (gratuit)
+/publishpremium — Publier sur le canal Telegram Premium
 /deploy — git pull sur le VPS
 /help — Cette aide`);
 }
@@ -615,11 +691,12 @@ async function handleMessage(msg) {
     case "/pick":     return runAnalyse(chatId);
     case "/setpick":  return cmdSetPick(chatId, args);
     case "/setscore": return cmdSetScore(chatId, args);
-    case "/win":      return cmdResult(chatId, "GAGNE");
-    case "/lose":     return cmdResult(chatId, "PERDU");
-    case "/learn":    return cmdLearn(chatId);
-    case "/publish":  return cmdPublish(chatId);
-    case "/deploy":   return cmdDeploy(chatId);
+    case "/win":             return cmdResult(chatId, "GAGNE");
+    case "/lose":            return cmdResult(chatId, "PERDU");
+    case "/learn":           return cmdLearn(chatId);
+    case "/publish":         return cmdPublish(chatId);
+    case "/publishpremium":  return cmdPublishPremium(chatId);
+    case "/deploy":          return cmdDeploy(chatId);
     case "/help":
     default:          return cmdHelp(chatId);
   }

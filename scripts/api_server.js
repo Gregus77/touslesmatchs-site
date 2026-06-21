@@ -1602,6 +1602,74 @@ app.get("/admin/codes", (req, res) => {
   }
 });
 
+// ── Internal pick notify — called by Hermès after /analyse ───────────────────
+// Secured by HERMES_ADMIN_TLM_BOT token as shared secret
+app.post("/internal/pick-notify", async (req, res) => {
+  const { pick, secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) {
+    return res.status(403).json({ ok: false, error: "Forbidden" });
+  }
+  if (!pick || !pick.home) return res.json({ ok: false, error: "pick manquant" });
+  if (!BREVO_API_KEY) return res.json({ ok: false, error: "BREVO_API_KEY non configuré", sent: 0 });
+
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const rows = codesDb.prepare(
+      "SELECT email FROM codes WHERE active = 1 AND plan != 'free' AND email IS NOT NULL AND email != ''"
+    ).all();
+    codesDb.close();
+
+    const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const gainPotentiel = pick.cote ? Math.round(100 * parseFloat(pick.cote)) : "?";
+    const htmlContent = `
+<div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">LE CONCILE ANALYSE. TU ENCAISSES.</div>
+  </div>
+  <div style="background:#0d1020;border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:24px;margin-bottom:20px">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#22d3ee;margin-bottom:12px">🎯 Pick du ${today}</div>
+    <div style="font-size:22px;font-weight:900;color:#eceaf4;margin-bottom:8px">${pick.home} vs ${pick.away}</div>
+    <div style="font-size:13px;color:#a8aec8;margin-bottom:16px">🏆 ${pick.league || ""} · 🕐 ${pick.time || ""}</div>
+    <div style="background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:13px;color:#a8aec8;margin-bottom:4px">Pronostic du Concile</div>
+      <div style="font-size:20px;font-weight:800;color:#eceaf4">${pick.prono || pick.bet || ""}</div>
+      <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap">
+        <span style="font-size:13px;color:#22d3ee">📊 Cote : <strong>${pick.cote}</strong></span>
+        <span style="font-size:13px;color:#10b981">✅ Confiance : <strong>${pick.confidenceTg || pick.confidence+"/10" || ""}</strong></span>
+      </div>
+    </div>
+    ${pick.raison ? `<div style="font-size:13px;color:#a8aec8;line-height:1.6;font-style:italic;border-left:2px solid rgba(99,102,241,.4);padding-left:12px">${pick.raison}</div>` : ""}
+  </div>
+  <div style="text-align:center;margin-bottom:20px">
+    <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">💰 Gain potentiel sur 100€ misés : <strong style="color:#10b981">+${gainPotentiel}€</strong></div>
+    <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir l'analyse complète →</a>
+  </div>
+  <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
+    TousLesMatchs — Analyse IA · <a href="https://www.touslesmatchs.com" style="color:#6366f1;text-decoration:none">touslesmatchs.com</a><br>
+    ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable.
+  </div>
+</div>`;
+
+    let sent = 0;
+    const emails = [...new Set(rows.map(r => r.email).filter(Boolean))];
+    for (const email of emails) {
+      try {
+        await brevoSendEmail(email, `🎯 Pick du ${today} — ${pick.home} vs ${pick.away} @${pick.cote}`, htmlContent);
+        sent++;
+      } catch (e) {
+        console.error(`[pick-notify] email to ${email}:`, e.message);
+      }
+    }
+    console.log(`[pick-notify] Emails envoyés : ${sent}/${emails.length}`);
+    res.json({ ok: true, sent, total: emails.length });
+  } catch (e) {
+    console.error("[pick-notify]", e.message);
+    res.json({ ok: false, error: e.message, sent: 0 });
+  }
+});
+
 // ── Preuves — GET public ──────────────────────────────────────────────────────
 app.get("/preuves", (req, res) => {
   res.json({ ok: true, proofs: loadProofs() });

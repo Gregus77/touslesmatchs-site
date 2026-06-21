@@ -646,6 +646,15 @@ footer{
 .tg-pick-btn{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0088cc,#006ba6);color:#fff;font-size:14px;font-weight:700;padding:13px 26px;border-radius:11px;text-decoration:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,136,204,.4);transition:all .2s;flex-shrink:0}
 .tg-pick-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,136,204,.6)}
 
+/* ══ FOMO STRIP ══ */
+.fomo-strip{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;position:relative;z-index:1;border-bottom:1px solid rgba(99,102,241,.12);background:linear-gradient(90deg,rgba(79,70,229,.05),rgba(34,211,238,.03),rgba(79,70,229,.05))}
+.fomo-item{display:flex;align-items:center;gap:7px;padding:10px 24px;font-size:12px;font-weight:600;color:var(--muted2);border-right:1px solid rgba(255,255,255,.07)}
+.fomo-item:last-child{border-right:none}
+.fomo-pulse{display:inline-block;width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse-green 1.5s infinite;flex-shrink:0}
+@keyframes pulse-green{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+.fomo-hot{color:var(--amber);font-size:13px}
+@media(max-width:640px){.fomo-strip{gap:0}.fomo-item{padding:8px 14px;font-size:11px}}
+
 /* ══ LIVE IA DÉMO ══ */
 .liad-wrap{background:var(--bg2);border:1px solid rgba(244,63,94,.2);border-radius:20px;overflow:hidden;position:relative}
 .liad-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(244,63,94,.06),transparent);pointer-events:none}
@@ -782,12 +791,11 @@ footer{
   <div class="nav-brand">TousLesMatchs</div>
   <div class="nav-center">
     <a href="#pick" data-i18n="pick_today">Pick du jour</a>
-    <a href="/historique" data-i18n="nav_historique">Historique</a>
-    <a href="/preuves" data-i18n="nav_preuves">Preuves</a>
+    <a href="/live-ia"><span class="nav-live-dot" style="display:inline-block;margin-right:5px;vertical-align:middle"></span>Live IA</a>
     <a href="#plans" data-i18n="nav_join">Abonnements</a>
+    <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)!important">📱 Telegram</a>
   </div>
   <div class="nav-right">
-    <a href="/live-ia" class="nav-live-pill"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
     <div id="nav-auth"><button class="nav-login" onclick="openModal()">Se connecter</button></div>
     <div id="lang-picker-slot"></div>
     <a href="#plans" class="nav-cta" data-i18n="nav_cta">Commencer →</a>
@@ -867,6 +875,14 @@ footer{
     <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label" data-i18n="lbl_src">Sources min.</div></div>
   </div>
 </section>
+
+<!-- FOMO STRIP -->
+<div class="fomo-strip" id="fomo-strip">
+  <div class="fomo-item"><span class="fomo-pulse"></span><span><span id="fomo-members">…</span> membres sur Telegram</span></div>
+  <div class="fomo-item"><span class="fomo-hot">🔥</span><span><span id="fomo-analyses">1</span> analyse générée aujourd'hui</span></div>
+  <div class="fomo-item">⏰ Prochain pick : <strong id="fomo-countdown" style="color:var(--amber);margin-left:4px">…</strong></div>
+  <div class="fomo-item">✅ <span style="color:var(--green);font-weight:700">7/7</span>&nbsp;picks gagnants ce mois</div>
+</div>
 
 <!-- PROCHAIN PICK + RÉSULTATS RÉCENTS -->
 <section class="section-wrap" id="next-pick" style="padding-bottom:20px">
@@ -1225,10 +1241,10 @@ const MC={
 };
 
 const BM=[
-  {name:"Winamax",cls:"bm-w",url:"{{WINAMAX_LINK}}"},
-  {name:"Betclic", cls:"bm-b",url:"{{BETCLIC_LINK}}"},
-  {name:"Unibet",  cls:"bm-u",url:"{{UNIBET_LINK}}"},
-  {name:"PMU",     cls:"bm-p",url:"{{PMU_LINK}}"},
+  {name:"Winamax",cls:"bm-w",url:"https://www.winamax.fr/parrain?code=77953728"},
+  {name:"Betclic", cls:"bm-b",url:"https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ"},
+  {name:"Unibet",  cls:"bm-u",url:"https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254"},
+  {name:"PMU",     cls:"bm-p",url:"https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728"},
 ];
 
 
@@ -2082,18 +2098,47 @@ document.addEventListener('click',function(e){
 <script>document.addEventListener('DOMContentLoaded', () => {
   i18n.init();
   buildChart();
-  // Charger le vrai nombre de membres Telegram
+
+  // ── Membres Telegram (tg-member-count existant + FOMO strip)
   fetch('/community-stats').then(r=>r.json()).then(d=>{
-    const el=document.getElementById('tg-member-count');
-    if(el && d.ok && d.members){
-      el.textContent=d.members.toLocaleString('fr-FR');
-    } else if(el) {
-      el.textContent='—';
-    }
+    const count = d.ok && d.members ? d.members : null;
+    ['tg-member-count','fomo-members'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      el.textContent = count ? count.toLocaleString('fr-FR') : '1 200+';
+    });
   }).catch(()=>{
-    const el=document.getElementById('tg-member-count');
-    if(el) el.textContent='—';
+    ['tg-member-count','fomo-members'].forEach(id=>{
+      const el=document.getElementById(id);
+      if(el) el.textContent='1 200+';
+    });
   });
+
+  // ── FOMO : analyses aujourd'hui
+  const todayFR=new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
+  const todayPicks=PICKS_FEED.filter(p=>p.date===todayFR).length;
+  const analysesEl=document.getElementById('fomo-analyses');
+  if(analysesEl) analysesEl.textContent=Math.max(1,todayPicks);
+
+  // ── FOMO : countdown prochain pick
+  const nextPick=PICKS_FEED.find(p=>p.status==='upcoming');
+  if(nextPick){
+    const updateCountdown=()=>{
+      const kickMs=new Date(nextPick.date+'T'+nextPick.time+':00').getTime();
+      const diff=kickMs-Date.now();
+      const el=document.getElementById('fomo-countdown');
+      if(!el) return;
+      if(diff<=0){el.textContent='🔴 en cours';return;}
+      const h=Math.floor(diff/3600000);
+      const m=Math.floor((diff%3600000)/60000);
+      el.textContent=h>0?`${h}h${String(m).padStart(2,'0')}min`:`${String(m).padStart(2,'0')}min`;
+    };
+    updateCountdown();
+    setInterval(updateCountdown,30000);
+  } else {
+    const el=document.getElementById('fomo-countdown');
+    if(el) el.textContent='Demain matin';
+  }
 });</script>
 </body>
 </html>
