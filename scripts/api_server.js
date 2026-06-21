@@ -336,6 +336,57 @@ function isNeutralComp(comp = "") {
   return NEUTRAL_KEYWORDS.some(k => c.includes(k));
 }
 
+// Calcule les contraintes mathématiques live pour éviter les paris impossibles
+function computeLiveConstraints(match) {
+  const h = Number(match.score_home ?? 0);
+  const a = Number(match.score_away ?? 0);
+  const total = h + a;
+  const minute = parseInt(match.minute) || 0;
+  const isPrematch = !minute || match.status === "SCHEDULED" || match.minute === "Pré-match";
+
+  if (isPrematch || minute < 30) return "";
+
+  const remaining = Math.max(0, 93 - minute); // 90 + ~3 arrêts de jeu
+  const lines = ["\n🔢 CONTRAINTES MATHÉMATIQUES LIVE — respecte-les impérativement:"];
+
+  // Over/Under 2.5
+  const neededOver25 = Math.max(0, 3 - total);
+  if (neededOver25 === 0) {
+    lines.push(`  → Over 2.5 DÉJÀ ATTEINT (${total} buts au total) — pari potentiellement gagné.`);
+    lines.push(`  → Under 2.5 DÉJÀ PERDU — ne PAS recommander Under 2.5.`);
+  } else if (neededOver25 >= 3 && remaining <= 25) {
+    lines.push(`  → Over 2.5 QUASI IMPOSSIBLE: besoin de ${neededOver25} but(s) en ~${remaining} min — probabilité <5%.`);
+    lines.push(`  → Under 2.5 TRÈS PROBABLE (${100 - 5}%+ de probabilité) — c'est le pari logique.`);
+  } else if (neededOver25 >= 2 && remaining <= 20) {
+    lines.push(`  → Over 2.5 TRÈS DIFFICILE: besoin de ${neededOver25} but(s) en ~${remaining} min.`);
+    lines.push(`  → Under 2.5 favori clair.`);
+  } else if (neededOver25 === 1 && remaining <= 15) {
+    lines.push(`  → Over 2.5: 1 but nécessaire en ~${remaining} min — incertain.`);
+  }
+
+  // BTTS
+  if (h === 0 && remaining <= 20) {
+    lines.push(`  → BTTS Oui IMPOSSIBLE si ${match.home} ne marque pas dans ~${remaining} min — risqué.`);
+  }
+  if (a === 0 && remaining <= 20) {
+    lines.push(`  → BTTS Oui IMPOSSIBLE si ${match.away} ne marque pas dans ~${remaining} min — risqué.`);
+  }
+  if (h > 0 && a > 0) {
+    lines.push(`  → BTTS Oui DÉJÀ ATTEINT (les deux équipes ont marqué).`);
+    lines.push(`  → BTTS Non DÉJÀ PERDU — ne PAS recommander BTTS Non.`);
+  }
+
+  // Résultat final 1X2
+  if (minute >= 75) {
+    if (h > a) lines.push(`  → ${match.home} mène ${h}-${a} à la ${minute}' : Victoire domicile très probable — retournement rare.`);
+    else if (a > h) lines.push(`  → ${match.away} mène ${a}-${h} à la ${minute}' : Victoire extérieur très probable — retournement rare.`);
+    else lines.push(`  → Match nul ${h}-${h} à la ${minute}' : nul ou coup de théâtre dans ~${remaining} min.`);
+  }
+
+  lines.push("  → BASE TES RECOMMANDATIONS SUR CES DONNÉES, pas sur les stats pré-match.");
+  return lines.join("\n");
+}
+
 async function runConcileAnalysis(match) {
   if (!GROQ_API_KEY) {
     return getMockAnalysis(match);
@@ -346,12 +397,13 @@ async function runConcileAnalysis(match) {
     : "";
   const sportNote = match.sport && match.sport !== "Football"
     ? `\nSport: ${match.sport}` : "";
+  const liveConstraints = computeLiveConstraints(match);
 
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${match.minute ? match.minute + "'" : "?"}
-Statut: ${match.status}${neutralNote}`;
+Statut: ${match.status}${neutralNote}${liveConstraints}`;
 
   const agentNames = [
     { name: "GROQ-Llama", model: "llama-3.3-70b-versatile", icon: "🦙" },
