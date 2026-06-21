@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - claude/busy-bardeen-793p0k
+  workflow_dispatch:
 
 jobs:
   deploy:
