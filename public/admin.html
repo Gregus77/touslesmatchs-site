@@ -140,6 +140,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
       </div>
     </div>
 
+    <!-- REVENUE & PERFORMANCE -->
+    <div class="section">
+      <div class="section-hdr">💰 Revenus & Performance</div>
+      <div class="kpi-grid" id="revenue-grid">
+        <div class="kpi"><div class="kpi-val g" id="rev-mrr">—</div><div class="kpi-lbl">MRR estimé (€)</div></div>
+        <div class="kpi"><div class="kpi-val a" id="rev-arr">—</div><div class="kpi-lbl">ARR estimé (€)</div></div>
+        <div class="kpi"><div class="kpi-val c" id="rev-paying">—</div><div class="kpi-lbl">Abonnés payants</div></div>
+        <div class="kpi"><div class="kpi-val v" id="rev-tg">—</div><div class="kpi-lbl">Membres Telegram</div></div>
+        <div class="kpi"><div class="kpi-val g" id="pick-winrate">—</div><div class="kpi-lbl">Winrate picks</div></div>
+        <div class="kpi"><div class="kpi-val c" id="pick-roi">—</div><div class="kpi-lbl">ROI picks (€ sur 10€/pick)</div></div>
+      </div>
+    </div>
+
     <!-- PICK DU JOUR -->
     <div class="section">
       <div class="section-hdr">🎯 Pick du jour — Changer le match</div>
@@ -381,6 +394,8 @@ async function clearScore(){
   msg.textContent = '🗑 Score manuel effacé'; msg.style.color='#a8aec8';
 }
 
+const PLAN_PRICES = { premium: 9, vip: 19, elite: 39 };
+
 async function loadStats(cached){
   const data = cached || await fetch(`/api/admin/stats?email=${encodeURIComponent(ADMIN_EMAIL)}&code=${encodeURIComponent(ADMIN_CODE)}`).then(r=>r.json());
   if(!data.ok) return;
@@ -388,6 +403,40 @@ async function loadStats(cached){
   const vals = [u.total, u.free, u.premium, u.vip, u.elite, data.expiring_soon, data.expired_total, data.proofs_count];
   const cells = document.querySelectorAll('#kpi-grid .kpi-val');
   vals.forEach((v,i) => cells[i] && (cells[i].textContent = v ?? '0'));
+
+  // Revenue KPIs
+  const paying = (u.premium||0) + (u.vip||0) + (u.elite||0);
+  const mrr = (u.premium||0)*PLAN_PRICES.premium + (u.vip||0)*PLAN_PRICES.vip + (u.elite||0)*PLAN_PRICES.elite;
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('rev-mrr', mrr + '€');
+  set('rev-arr', (mrr * 12) + '€');
+  set('rev-paying', paying);
+
+  // Picks ROI from picks.json history
+  try {
+    const pr = await fetch('/data/picks.json');
+    const pd = await pr.json();
+    const history = pd.history || [];
+    const finished = history.filter(p => p.status === 'GAGNE' || p.status === 'PERDU');
+    const wins = finished.filter(p => p.status === 'GAGNE').length;
+    const total = finished.length;
+    const winrate = total > 0 ? Math.round(wins/total*100) : 0;
+    let bankroll = 0;
+    finished.forEach(p => {
+      const cote = parseFloat(p.cote) || 1;
+      if(p.status === 'GAGNE') bankroll += (cote-1)*10;
+      else bankroll -= 10;
+    });
+    set('pick-winrate', total > 0 ? winrate + '%' : '—');
+    set('pick-roi', total > 0 ? (bankroll >= 0 ? '+' : '') + bankroll.toFixed(1) + '€' : '—');
+  } catch {}
+
+  // Telegram members
+  try {
+    const tr = await fetch('/api/community-stats');
+    const td = await tr.json();
+    set('rev-tg', td.ok && td.members ? td.members.toLocaleString('fr-FR') : '—');
+  } catch { set('rev-tg', '—'); }
 }
 
 async function loadCodes(){
