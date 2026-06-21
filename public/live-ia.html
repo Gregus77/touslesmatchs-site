@@ -286,6 +286,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
     </div>
   </div>
 
+  <!-- Indicateur de confiance global Concile -->
+  <div id="concile-confidence" style="display:none;align-items:center;gap:8px;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);border-radius:10px;padding:10px 16px;margin:0 0 12px 0;font-size:13px;color:#c4b5fd"></div>
+
   <!-- Leaderboard agents IA -->
   <div id="agent-leaderboard"></div>
 
@@ -877,6 +880,7 @@ function escHtml(s){
 
 // ══ AGENT PERFORMANCE LEADERBOARD
 let agentPerfData = {};
+let concileGlobalWinrate = null;
 const AGENT_LIST = [
   { name: 'GROQ-Llama', icon: '🦙' },
   { name: 'GPT Analysis', icon: '🤖' },
@@ -889,9 +893,25 @@ async function loadAgentPerformance() {
   try {
     const r = await fetch('/api/agent-performance');
     const d = await r.json();
-    if(d.ok){ agentPerfData = d.performance || {}; }
+    if(d.ok){
+      agentPerfData = d.performance || {};
+      concileGlobalWinrate = d.concile_winrate ?? null;
+    }
     renderLeaderboard();
+    renderConcileIndicator();
   } catch(e) { renderLeaderboard(); }
+}
+
+function renderConcileIndicator() {
+  const el = document.getElementById('concile-confidence');
+  if(!el) return;
+  if(concileGlobalWinrate === null){
+    el.style.display = 'none'; return;
+  }
+  const icon = concileGlobalWinrate >= 65 ? '🔥' : concileGlobalWinrate >= 55 ? '✅' : concileGlobalWinrate >= 45 ? '⚠️' : '📉';
+  const label = concileGlobalWinrate >= 65 ? 'En grande forme' : concileGlobalWinrate >= 55 ? 'Bonne précision' : concileGlobalWinrate >= 45 ? 'Forme correcte' : 'Période difficile';
+  el.style.display = 'flex';
+  el.innerHTML = `${icon} <b>Concile IA — ${concileGlobalWinrate}% de réussite</b> sur 30 jours &nbsp;·&nbsp; ${label}`;
 }
 
 function renderLeaderboard() {

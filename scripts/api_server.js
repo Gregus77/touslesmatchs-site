@@ -654,9 +654,18 @@ Tu ne votes pas — tu DÉCIDES. Ton verdict est le verdict du Concile.`,
     const previousVotes = isChief ? agentResults.map((a) => {
       const p = agentPerf[a.name];
       const resolved = p ? p.resolved : 0;
-      const perfNote = resolved >= 5
-        ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus)`
-        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser)` : ` — (sans historique)`;
+      const resolved14 = p ? (p.resolved14 || 0) : 0;
+      // Winrate récent (14j) pèse 2x plus que l'historique global
+      let perfNote = "";
+      if (resolved14 >= 3) {
+        const weight = p.winrate14 >= 65 ? "⭐ FORT" : p.winrate14 >= 50 ? "correct" : "⚠️ FAIBLE";
+        perfNote = ` — 14j: ${p.winrate14}%WR (${p.wins14}W/${p.losses14}L) [${weight}]`;
+        if (resolved >= 5) perfNote += ` | global: ${p.winrate}%WR`;
+      } else if (resolved >= 5) {
+        perfNote = ` — global: ${p.winrate}%WR (${p.wins}W/${p.losses}L)`;
+      } else {
+        perfNote = resolved > 0 ? ` — (${resolved} préd., pas assez pour peser)` : ` — (sans historique)`;
+      }
       return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
     }).join("\n") : "";
 
@@ -665,11 +674,16 @@ Tu ne votes pas — tu DÉCIDES. Ton verdict est le verdict du Concile.`,
 
 ${matchContext}
 
-Votes des agents avec leur fiabilité historique:
+Votes des agents avec leur fiabilité (le winrate 14j est PRIORITAIRE sur le global) :
 ${previousVotes}
 
-Synthétise ces votes en tenant compte de :
-1. La fiabilité historique de chaque agent (winrate)
+Règle de pondération :
+- Agent ⭐ FORT sur 14j → son vote compte double
+- Agent ⚠️ FAIBLE sur 14j → son vote compte moitié moins
+- Sans historique → vote neutre
+
+Synthétise en tenant compte de :
+1. La fiabilité RÉCENTE de chaque agent (14 derniers jours en priorité)
 2. Les contraintes mathématiques du score live
 3. Tes connaissances sur ${match.home} et ${match.away}
 4. Tu DOIS choisir parmi : ${availableBets.join(", ")}
@@ -827,6 +841,26 @@ function getAgentPerformance() {
       FROM agent_predictions
       GROUP BY agent_name
     `).all();
+
+    // Winrate récent (14 derniers jours) — pour pondération dynamique du Chief
+    const recent = db.prepare(`
+      SELECT agent_name,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins14,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses14
+      FROM agent_predictions
+      WHERE created_at >= datetime('now', '-14 days') AND outcome IS NOT NULL
+      GROUP BY agent_name
+    `).all();
+    const recentMap = {};
+    recent.forEach(r => {
+      const res = r.wins14 + r.losses14;
+      recentMap[r.agent_name] = {
+        wins14: r.wins14, losses14: r.losses14,
+        winrate14: res > 0 ? Math.round(r.wins14 / res * 100) : null,
+        resolved14: res,
+      };
+    });
+
     const perf = {};
     rows.forEach(r => {
       const resolved = r.wins + r.losses;
@@ -835,6 +869,8 @@ function getAgentPerformance() {
         pending: r.pending,
         winrate: resolved > 0 ? Math.round(r.wins / resolved * 100) : null,
         resolved,
+        // Données récentes (14j) — utilisées pour pondérer le Chief
+        ...( recentMap[r.agent_name] || { wins14: 0, losses14: 0, winrate14: null, resolved14: 0 }),
       };
     });
     return perf;
@@ -1782,14 +1818,30 @@ app.get("/community-stats", async (req, res) => {
 // ── Agent performance — classement public ────────────────────────────────────
 app.get("/agent-performance", (req, res) => {
   const perf = getAgentPerformance();
-  // Ajouter les prédictions en attente par match (pour info)
   try {
     const pending = db.prepare(
       "SELECT match_key, home, away, COUNT(*) as n FROM agent_predictions WHERE outcome IS NULL GROUP BY match_key ORDER BY created_at DESC LIMIT 5"
     ).all();
-    res.json({ ok: true, performance: perf, pending_matches: pending });
+
+    // Winrate global du Concile (chef seul, 30 derniers jours) — pour l'indicateur Live IA
+    const concileStats = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM agent_predictions
+      WHERE agent_name='Claude Chief' AND outcome IS NOT NULL
+        AND created_at >= datetime('now', '-30 days')
+    `).get();
+
+    const resolved = (concileStats.wins || 0) + (concileStats.losses || 0);
+    const concileWinrate = resolved >= 5
+      ? Math.round(concileStats.wins / resolved * 100)
+      : null;
+
+    res.json({ ok: true, performance: perf, pending_matches: pending, concile_winrate: concileWinrate, concile_resolved: resolved });
   } catch(e) {
-    res.json({ ok: true, performance: perf, pending_matches: [] });
+    res.json({ ok: true, performance: perf, pending_matches: [], concile_winrate: null, concile_resolved: 0 });
   }
 });
 
