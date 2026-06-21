@@ -190,6 +190,30 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
   .match-team{font-size:13px}
   .score-num{font-size:20px}
 }
+/* LEADERBOARD AGENTS */
+.lb-section{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:18px 20px;margin-bottom:24px}
+.lb-title{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lb-title-badge{font-weight:400;color:var(--muted);font-size:10px;background:rgba(255,255,255,.04);border:1px solid var(--b1);padding:2px 8px;border-radius:6px}
+.lb-agents{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.lb-agent{background:var(--bg3);border:1px solid var(--b2);border-radius:10px;padding:10px 12px;transition:border-color .15s}
+.lb-agent:hover{border-color:rgba(99,102,241,.3)}
+.lb-agent-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.lb-agent-name{font-size:11px;font-weight:700;color:var(--text)}
+.lb-agent-icon{font-size:14px}
+.lb-agent-stat{font-size:10px;color:var(--muted2);margin-bottom:5px}
+.lb-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+.lb-bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.lb-bar-fill.good{background:linear-gradient(90deg,#10b981,#22d3ee)}
+.lb-bar-fill.mid{background:linear-gradient(90deg,#f59e0b,#6366f1)}
+.lb-bar-fill.bad{background:linear-gradient(90deg,#f43f5e,#f59e0b)}
+.lb-rank{font-size:10px;color:var(--muted);font-weight:600}
+/* PERF BADGE in agent cards */
+.agent-perf-badge{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;margin-left:6px;vertical-align:middle}
+.agent-perf-badge.good{background:rgba(16,185,129,.12);color:#10b981;border:1px solid rgba(16,185,129,.2)}
+.agent-perf-badge.mid{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2)}
+.agent-perf-badge.bad{background:rgba(244,63,94,.1);color:#f43f5e;border:1px solid rgba(244,63,94,.2)}
+.agent-perf-badge.new{background:rgba(99,102,241,.08);color:var(--muted);border:1px solid var(--b1)}
+
 .tg-float{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0088cc,#006ba6);color:#fff;font-size:13px;font-weight:700;padding:12px 20px;border-radius:50px;text-decoration:none;box-shadow:0 4px 20px rgba(0,136,204,.45);transition:all .2s;animation:tg-float-in .5s ease}
 .tg-float:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,136,204,.65)}
 @keyframes tg-float-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -247,6 +271,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
       <div class="meta-pill credits" id="credits-pill" style="display:none">— crédits</div>
     </div>
   </div>
+
+  <!-- Leaderboard agents IA -->
+  <div id="agent-leaderboard"></div>
 
   <!-- Zone principale -->
   <div id="main-zone"></div>
@@ -670,16 +697,29 @@ function renderAnalysis(m, d){
     'Double chance 1X':'win','Double chance X2':'win',
   };
 
+  // Fusionner les perfs de l'API et celles chargées en local
+  const perfMap = d.agent_performance || agentPerfData || {};
+
   const agentsHtml = agents.map(a => {
     const vc = verdictColors[a.bet] || 'other';
     const conf = a.confidence || 70;
-    // API returns 'raison', not 'reasoning'
     const reasoning = a.raison || a.reasoning || '';
+    // Badge de performance historique
+    const p = perfMap[a.name];
+    const resolved = p ? ((p.wins||0) + (p.losses||0)) : 0;
+    let perfBadge = '';
+    if(p && resolved >= 3){
+      const wr = p.winrate;
+      const cls = wr >= 60 ? 'good' : wr >= 45 ? 'mid' : 'bad';
+      perfBadge = `<span class="agent-perf-badge ${cls}">📈 ${wr}%</span>`;
+    } else if(p && p.total > 0){
+      perfBadge = `<span class="agent-perf-badge new">nouveau</span>`;
+    }
     return `<div class="agent-card">
       <div class="agent-header">
         <span class="agent-icon">${escHtml(a.icon||'🤖')}</span>
         <div>
-          <div class="agent-name">${escHtml(a.name)}</div>
+          <div class="agent-name">${escHtml(a.name)}${perfBadge}</div>
           <div class="agent-model">${escHtml(a.model||'')}</div>
         </div>
       </div>
@@ -716,11 +756,88 @@ function escHtml(s){
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ══ AGENT PERFORMANCE LEADERBOARD
+let agentPerfData = {};
+const AGENT_LIST = [
+  { name: 'GROQ-Llama', icon: '🦙' },
+  { name: 'GPT Analysis', icon: '🤖' },
+  { name: 'GeminiFlash', icon: '💎' },
+  { name: 'Mistral-7B', icon: '🌊' },
+  { name: 'Claude Chief', icon: '👑' },
+];
+
+async function loadAgentPerformance() {
+  try {
+    const r = await fetch('/api/agent-performance');
+    const d = await r.json();
+    if(d.ok){ agentPerfData = d.performance || {}; }
+    renderLeaderboard();
+  } catch(e) { renderLeaderboard(); }
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('agent-leaderboard');
+  if(!el) return;
+
+  const withData = AGENT_LIST.map(a => ({
+    ...a,
+    ...(agentPerfData[a.name] || { total: 0, wins: 0, losses: 0, pending: 0, winrate: null, resolved: 0 })
+  }));
+  const hasAny = withData.some(a => a.total > 0);
+
+  if(!hasAny){
+    el.innerHTML = `<div class="lb-section">
+      <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">se remplit au fil des matchs</span></div>
+      <div style="font-size:12px;color:var(--muted);text-align:center;padding:6px 0">Lance une première analyse pour démarrer le tracking !</div>
+    </div>`;
+    return;
+  }
+
+  // Tri par winrate desc, puis total desc
+  const sorted = [...withData].sort((a,b) => {
+    if(b.winrate !== null && a.winrate !== null) return b.winrate - a.winrate;
+    if(b.winrate !== null) return 1;
+    if(a.winrate !== null) return -1;
+    return b.total - a.total;
+  });
+
+  const medals = ['🥇','🥈','🥉','',''];
+  const cards = sorted.map((a, rank) => {
+    const resolved = (a.wins||0) + (a.losses||0);
+    const wr = a.winrate;
+    const fillPct = wr !== null ? wr : 50;
+    const fillCls = wr === null ? 'mid' : wr >= 60 ? 'good' : wr >= 45 ? 'mid' : 'bad';
+    const medal = rank < 3 && wr !== null ? medals[rank]+' ' : '';
+    const statTxt = wr !== null
+      ? `${wr}% — ${a.wins}/${resolved} correct${resolved>1?'s':''}`
+      : a.pending > 0 ? `${a.pending} en attente` : 'Aucune donnée';
+    return `<div class="lb-agent">
+      <div class="lb-agent-header">
+        <div class="lb-agent-icon">${escHtml(a.icon)}</div>
+        <div class="lb-rank">${medal}${rank+1}</div>
+      </div>
+      <div class="lb-agent-name">${escHtml(a.name)}</div>
+      <div class="lb-agent-stat">${statTxt}</div>
+      <div class="lb-bar"><div class="lb-bar-fill ${fillCls}" style="width:${fillPct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // Total predictions tracked
+  const totalPreds = withData.reduce((s,a) => s + a.total, 0);
+  const totalResolved = withData.reduce((s,a) => s + (a.resolved||0), 0);
+  el.innerHTML = `<div class="lb-section">
+    <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">${totalPreds} prédictions · ${totalResolved} résolues</span></div>
+    <div class="lb-agents">${cards}</div>
+  </div>`;
+}
+
 // ══ INIT
 renderNavAuth();
 renderCredits();
 loadPickMatch().then(()=>loadMatches());
+loadAgentPerformance();
 setInterval(loadMatches, 60000);
+setInterval(loadAgentPerformance, 5*60*1000);
 
 function toggleMenu(){
   const m=document.getElementById('mmenu');

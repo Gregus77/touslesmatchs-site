@@ -43,6 +43,18 @@ db.exec(`
     revealed_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY(user_id) REFERENCES users(id)
   );
+  CREATE TABLE IF NOT EXISTS agent_predictions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    bet TEXT NOT NULL,
+    confidence INTEGER DEFAULT 70,
+    outcome TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(match_key, agent_name)
+  );
 `);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -297,6 +309,9 @@ async function fetchLiveMatches() {
   // If both failed, return cached or empty
   if (matches === null) return liveMatchesCache.data || [];
 
+  // Auto-résoudre les prédictions des matchs terminés
+  matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
+
   liveMatchesCache = { data: matches, ts: Date.now() };
   return matches;
 }
@@ -354,25 +369,35 @@ Statut: ${match.status}${neutralNote}`;
     "Tu es Claude Chief, le chef du Concile. Tu synthétises les analyses et tranches.",
   ];
 
+  // Charger les performances historiques pour pondérer le verdict du Chief
+  const agentPerf = getAgentPerformance();
+
   const agentResults = [];
 
   for (let i = 0; i < agentNames.length; i++) {
     const isChief = i === 4;
-    const previousVotes = isChief ? agentResults.map((a) => `${a.name}: ${a.bet} (${a.confidence}%)`).join("\n") : "";
+    const previousVotes = isChief ? agentResults.map((a) => {
+      const p = agentPerf[a.name];
+      const resolved = p ? p.resolved : 0;
+      const perfNote = resolved >= 5
+        ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus)`
+        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser)` : ` — (sans historique)`;
+      return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
+    }).join("\n") : "";
 
     const prompt = isChief
       ? `${personas[i]}
 
 ${matchContext}
 
-Votes des agents précédents:
+Votes des agents avec leur fiabilité historique:
 ${previousVotes}
 
-En tant que chef du Concile, analyse ce match et donne ton verdict final. Réponds en JSON pur (pas de markdown):
+En tant que chef du Concile, synthétise ces votes en tenant compte de la fiabilité historique de chaque agent (favorise ceux avec un meilleur winrate si l'historique est suffisant). Donne ton verdict final. Réponds en JSON pur (pas de markdown):
 {
   "bet": "un parmi: ${BET_TYPES.join(", ")}",
   "confidence": <nombre 55-92>,
-  "raison": "<2 phrases max expliquant ton choix basé sur le score, la minute et le contexte>"
+  "raison": "<2 phrases max expliquant ton choix basé sur le score, la minute, le contexte et les votes pondérés>"
 }`
       : `${personas[i]}
 
@@ -429,6 +454,9 @@ Analyse ce match en direct et recommande le meilleur pari. Réponds en JSON pur 
   const consensusBet = chief.bet;
   const consensusVotes = betCounts[consensusBet] || 0;
 
+  // Sauvegarder les prédictions pour le tracking de performance
+  saveAgentPredictions(match, agentResults);
+
   return {
     match_key: `${match.home}_${match.away}`,
     best_bet: chief.bet,
@@ -437,6 +465,7 @@ Analyse ce match en direct et recommande le meilleur pari. Réponds en JSON pur 
     consensus_votes: consensusVotes + 1, // +1 for chief
     total_agents: 5,
     agents: agentResults,
+    agent_performance: agentPerf,
   };
 }
 
@@ -488,6 +517,92 @@ function getMockAnalysis(match) {
     total_agents: 5,
     agents: agentResults,
   };
+}
+
+// ── Agent performance tracking ────────────────────────────────────────────────
+function getAgentPerformance() {
+  try {
+    const rows = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending
+      FROM agent_predictions
+      GROUP BY agent_name
+    `).all();
+    const perf = {};
+    rows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      perf[r.agent_name] = {
+        total: r.total, wins: r.wins, losses: r.losses,
+        pending: r.pending,
+        winrate: resolved > 0 ? Math.round(r.wins / resolved * 100) : null,
+        resolved,
+      };
+    });
+    return perf;
+  } catch(e) {
+    console.error("[agent-perf] load:", e.message);
+    return {};
+  }
+}
+
+function saveAgentPredictions(match, agentResults) {
+  const matchKey = `${match.home}_${match.away}_${getTodayStr()}`;
+  try {
+    const stmt = db.prepare(
+      "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence) VALUES (?,?,?,?,?,?)"
+    );
+    agentResults.forEach(a => {
+      stmt.run(matchKey, match.home, match.away, a.name, a.bet, a.confidence || 70);
+    });
+    console.log(`[agent-perf] ${agentResults.length} prédictions sauvegardées: ${match.home} vs ${match.away}`);
+  } catch(e) { console.error("[agent-perf] save:", e.message); }
+}
+
+function autoResolvePredictions(match) {
+  const { home, away, score_home, score_away } = match;
+  if (score_home === null || score_home === undefined || score_away === null || score_away === undefined) return;
+
+  const h = Number(score_home), a = Number(score_away);
+  const total = h + a;
+  const betResults = {};
+
+  // Marchés buts
+  betResults["Over 2.5 buts"] = total > 2.5 ? "win" : "loss";
+  betResults["Under 2.5 buts"] = total < 2.5 ? "win" : "loss";
+
+  // 1X2 et double chance
+  if (h > a) {
+    betResults["Victoire domicile"] = "win"; betResults["Victoire extérieur"] = "loss"; betResults["Match nul"] = "loss";
+    betResults["Double chance 1X"] = "win"; betResults["Double chance X2"] = "loss";
+  } else if (a > h) {
+    betResults["Victoire extérieur"] = "win"; betResults["Victoire domicile"] = "loss"; betResults["Match nul"] = "loss";
+    betResults["Double chance 1X"] = "loss"; betResults["Double chance X2"] = "win";
+  } else {
+    betResults["Match nul"] = "win"; betResults["Victoire domicile"] = "loss"; betResults["Victoire extérieur"] = "loss";
+    betResults["Double chance 1X"] = "win"; betResults["Double chance X2"] = "win";
+  }
+
+  // BTTS
+  betResults["BTTS Oui"] = (h > 0 && a > 0) ? "win" : "loss";
+  betResults["BTTS Non"] = (h > 0 && a > 0) ? "loss" : "win";
+
+  try {
+    const firstWord = home.split(' ')[0];
+    const pending = db.prepare(
+      "SELECT * FROM agent_predictions WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
+    ).all(`%${firstWord}%`, `%${away.split(' ')[0]}%`);
+
+    if (!pending.length) return;
+    const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
+    pending.forEach(p => {
+      const outcome = betResults[p.bet] || null;
+      if (outcome) updateStmt.run(outcome, p.id);
+    });
+    console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
+  } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
@@ -1226,6 +1341,31 @@ app.get("/community-stats", async (req, res) => {
     console.error("[community-stats]", e.message);
     res.json({ ok: false, members: null });
   }
+});
+
+// ── Agent performance — classement public ────────────────────────────────────
+app.get("/agent-performance", (req, res) => {
+  const perf = getAgentPerformance();
+  // Ajouter les prédictions en attente par match (pour info)
+  try {
+    const pending = db.prepare(
+      "SELECT match_key, home, away, COUNT(*) as n FROM agent_predictions WHERE outcome IS NULL GROUP BY match_key ORDER BY created_at DESC LIMIT 5"
+    ).all();
+    res.json({ ok: true, performance: perf, pending_matches: pending });
+  } catch(e) {
+    res.json({ ok: true, performance: perf, pending_matches: [] });
+  }
+});
+
+// ── Admin — forcer résolution manuelle d'un match ────────────────────────────
+app.post("/admin/resolve-match", (req, res) => {
+  const { email, code, home, away, score_home, score_away } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!home || !away || score_home === undefined || score_away === undefined) {
+    return res.json({ ok: false, error: "home, away, score_home, score_away requis" });
+  }
+  autoResolvePredictions({ home, away, score_home: Number(score_home), score_away: Number(score_away), status: "FINISHED" });
+  res.json({ ok: true, message: `Résolution lancée pour ${home} vs ${away} (${score_home}-${score_away})` });
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
