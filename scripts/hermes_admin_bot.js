@@ -96,6 +96,21 @@ function httpGetInternal(apiPath, headers = {}) {
   });
 }
 
+function httpPostInternal(apiPath, body, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = http.request({
+      hostname: "touslesmatchs-api", port: 3001, path: apiPath, method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data), ...headers }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { reject(new Error("parse")); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error("timeout")); });
+    req.on("error", reject); req.write(data); req.end();
+  });
+}
+
 function httpGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
@@ -776,6 +791,47 @@ async function cmdAutoAnalyse(chatId) {
   }
 }
 
+// ── Résolution manuelle d'un match terminé ────────────────────────────────────
+// Syntaxe : /resolve Japon|Tunisie|4|0
+async function cmdResolve(chatId, args) {
+  const parts = args.split("|").map(s => s.trim());
+  if (parts.length < 4) {
+    return reply(chatId, `❌ Syntaxe : <code>/resolve Equipe1|Equipe2|score1|score2</code>\nExemple : <code>/resolve Japon|Tunisie|4|0</code>`);
+  }
+  const [home, away, sh, sa] = parts;
+  const score_home = parseInt(sh), score_away = parseInt(sa);
+  if (isNaN(score_home) || isNaN(score_away)) {
+    return reply(chatId, `❌ Scores invalides : "${sh}" et "${sa}" doivent être des nombres.`);
+  }
+
+  try {
+    const data = await httpPostInternal("/internal/resolve-analysis",
+      { home, away, score_home, score_away },
+      { "x-hermes-token": TG_TOKEN }
+    );
+    if (!data.ok) return reply(chatId, `❌ Erreur: ${data.error}`);
+
+    // Afficher ce qui a été résolu
+    const total = score_home + score_away;
+    const bets = {
+      "Over 2.5 buts": total > 2.5 ? "✅ WIN" : "❌ LOSS",
+      "Under 2.5 buts": total < 2.5 ? "✅ WIN" : "❌ LOSS",
+      "Over 1.5 buts": total > 1.5 ? "✅ WIN" : "❌ LOSS",
+      "Under 1.5 buts": total < 1.5 ? "✅ WIN" : "❌ LOSS",
+      "BTTS Oui": (score_home > 0 && score_away > 0) ? "✅ WIN" : "❌ LOSS",
+      "BTTS Non": !(score_home > 0 && score_away > 0) ? "✅ WIN" : "❌ LOSS",
+    };
+    let msg = `✅ <b>Résolution enregistrée</b>\n`;
+    msg += `⚽ ${home} ${score_home}-${score_away} ${away}\n\n`;
+    msg += `<b>Résultats automatiques :</b>\n`;
+    Object.entries(bets).forEach(([k, v]) => { msg += `  ${v} ${k}\n`; });
+    msg += `\n📊 Les stats /memoire sont mises à jour.`;
+    await reply(chatId, msg);
+  } catch(e) {
+    await reply(chatId, `❌ Erreur: ${e.message}`);
+  }
+}
+
 // ── Live pick manuel — analyse Concile + publication immédiate ────────────────
 async function cmdLivePick(chatId, args) {
   // Syntaxe : /livepick Japon|Tunisie|FIFA World Cup|4-0|85|Victoire extérieur
@@ -860,6 +916,7 @@ async function cmdHelp(chatId) {
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /memoire — Statistiques de performance par type de pari/compétition
 /autoanalyse — Statut de l'analyse automatique toutes les 10 min
+/resolve Japon|Tunisie|4|0 — Enregistrer le score final d'un match terminé
 /livepick Japon|Tunisie|FIFA WC|4-0|85 — Analyse Concile live + publication immédiate
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
@@ -895,6 +952,7 @@ async function handleMessage(msg) {
     case "/learn":           return cmdLearn(chatId);
     case "/memoire":         return cmdMemoire(chatId);
     case "/autoanalyse":     return cmdAutoAnalyse(chatId);
+    case "/resolve":         return cmdResolve(chatId, args);
     case "/livepick":        return cmdLivePick(chatId, args);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
