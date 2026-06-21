@@ -131,47 +131,106 @@ async function callAI(prompt) {
 }
 
 // ── Match fetching ────────────────────────────────────────────────────────────
+const FINISHED_STATUS = {
+  football:   ["FT","AET","PEN","CANC","PST","ABD","INT","AWD","WO"],
+  basketball: ["FT","AOT","CANC","PST","ABD","INT","WO"],
+  hockey:     ["FT","AOT","SO","CANC","PST","ABD","INT"],
+  rugby:      ["FT","CANC","PST","ABD","INT"],
+  baseball:   ["FT","CANC","PST","ABD","INT"],
+  handball:   ["FT","CANC","PST","ABD","INT"],
+  volleyball: ["FT","CANC","PST","ABD","INT"],
+};
+
+async function fetchSport(sport, today) {
+  if (!SPORTS_KEY) return [];
+  const hosts = {
+    football:   "v3.football.api-sports.io",
+    basketball: "v1.basketball.api-sports.io",
+    hockey:     "v1.hockey.api-sports.io",
+    rugby:      "v1.rugby.api-sports.io",
+    baseball:   "v1.baseball.api-sports.io",
+    handball:   "v1.handball.api-sports.io",
+    volleyball: "v1.volleyball.api-sports.io",
+  };
+  const paths = {
+    football:   `/fixtures?date=${today}`,
+    basketball: `/games?date=${today}`,
+    hockey:     `/games?date=${today}`,
+    rugby:      `/games?date=${today}`,
+    baseball:   `/games?date=${today}`,
+    handball:   `/games?date=${today}`,
+    volleyball: `/games?date=${today}`,
+  };
+  const done = FINISHED_STATUS[sport] || ["FT","CANC"];
+  try {
+    const d = await httpGet(`https://${hosts[sport]}${paths[sport]}`, { "x-apisports-key": SPORTS_KEY });
+    const items = (d.response || []);
+    if (sport === "football") {
+      return items
+        .filter(f => !done.includes(f.fixture?.status?.short))
+        .map(f => ({
+          sport: "Football", home: f.teams?.home?.name, away: f.teams?.away?.name,
+          heure: f.fixture?.date ? new Date(f.fixture.date).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
+          competition: f.league?.name || "Football", arjel: true
+        }));
+    } else {
+      const sportLabel = { basketball:"Basketball", hockey:"Hockey", rugby:"Rugby", baseball:"Baseball", handball:"Handball", volleyball:"Volleyball" }[sport] || sport;
+      return items
+        .filter(g => !done.includes(g.status?.short || g.game?.status?.short))
+        .map(g => {
+          const home = g.teams?.home?.name || g.home?.name;
+          const away = g.teams?.away?.name || g.away?.name;
+          const league = g.league?.name || g.country?.name || sportLabel;
+          const dt = g.date || g.time || g.game?.date;
+          const heure = dt ? new Date(dt).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?";
+          if (!home || !away) return null;
+          return { sport: sportLabel, home, away, heure, competition: league, arjel: true };
+        })
+        .filter(Boolean);
+    }
+  } catch(e) { console.error(`  API-Sports ${sport}:`, e.message); return []; }
+}
+
 async function fetchTodayMatches() {
   const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  let allMatches = [];
 
-  // football-data.org
+  // football-data.org (football uniquement)
   if (FD_KEY) {
     try {
       const d = await httpGet(`https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${tomorrow}`, { "X-Auth-Token": FD_KEY });
       const matches = (d.matches || []).filter(m => !["FINISHED","CANCELLED","POSTPONED"].includes(m.status));
       if (matches.length) {
-        console.log(`  football-data.org: ${matches.length} match(s)`);
-        return matches.map(m => ({
-          home: m.homeTeam.name, away: m.awayTeam.name,
-          heure: m.utcDate ? new Date(m.utcDate).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }).replace(":", "h") : "?",
-          competition: m.competition?.name || "Football",
-          leagueId: m.competition?.id || 0,
-          arjel: true
+        const formatted = matches.map(m => ({
+          sport: "Football", home: m.homeTeam.name, away: m.awayTeam.name,
+          heure: m.utcDate ? new Date(m.utcDate).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
+          competition: m.competition?.name || "Football", arjel: true
         }));
+        allMatches.push(...formatted);
+        console.log(`  football-data.org: ${formatted.length} match(s)`);
       }
-    } catch (e) { console.error("  football-data.org:", e.message); }
+    } catch(e) { console.error("  football-data.org:", e.message); }
   }
 
-  // API-Sports fallback
+  // API-Sports : tous les sports en parallèle
   if (SPORTS_KEY) {
-    try {
-      const d = await httpGet(`https://v3.football.api-sports.io/fixtures?date=${today}`, { "x-apisports-key": SPORTS_KEY });
-      const fixtures = (d.response || []).filter(f => !["FT","AET","PEN","CANC","PST","ABD","INT"].includes(f.fixture?.status?.short));
-      if (fixtures.length) {
-        console.log(`  API-Sports: ${fixtures.length} match(s)`);
-        return fixtures.map(f => ({
-          home: f.teams?.home?.name, away: f.teams?.away?.name,
-          heure: f.fixture?.date ? new Date(f.fixture.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris" }).replace(":", "h") : "?",
-          competition: f.league?.name || "Football",
-          leagueId: f.league?.id || 0,
-          arjel: true
-        }));
+    const sports = ["football","basketball","hockey","rugby","handball","volleyball"];
+    const results = await Promise.allSettled(sports.map(s => fetchSport(s, today)));
+    for (let i = 0; i < sports.length; i++) {
+      const r = results[i];
+      if (r.status === "fulfilled" && r.value.length) {
+        // dédoublonner le football si football-data.org a déjà répondu
+        const filtered = sports[i] === "football" && allMatches.length
+          ? [] : r.value;
+        allMatches.push(...filtered);
+        if (filtered.length) console.log(`  API-Sports ${sports[i]}: ${filtered.length} match(s)`);
       }
-    } catch (e) { console.error("  API-Sports:", e.message); }
+    }
   }
 
-  return [];
+  console.log(`  TOTAL multi-sport: ${allMatches.length} event(s)`);
+  return allMatches;
 }
 
 // ── Mémoire d'apprentissage ───────────────────────────────────────────────────
@@ -226,13 +285,15 @@ MATCHS DISPONIBLES AUJOURD'HUI :
 ${JSON.stringify(matches, null, 2)}
 ${neutralWarning(matches)}
 RÈGLES DE SÉLECTION :
-- ACCEPTER : toutes grandes compétitions officielles (Coupes du Monde, Euro, Copa América, Champions League, championnats nationaux Top 5, Coupe du Monde FIFA toutes phases)
-- REFUSER UNIQUEMENT : matchs amicaux sans enjeu, U17/U18/U20/U23, matchs de gala/exhibition
-- Phase de groupes Coupe du Monde = enjeu réel (qualification en jeu) → ACCEPTER
+- SPORTS COUVERTS : Football, Basketball (NBA, EuroLeague, etc.), Hockey (NHL, KHL, etc.), Rugby, Handball, Volleyball, Baseball
+- ACCEPTER : grandes compétitions officielles dans tous ces sports (Coupe du Monde, championnats nationaux majeurs, playoffs NBA, NHL, etc.)
+- REFUSER : matchs amicaux, jeunes catégories (U17-U23), matches de gala/exhibition, ligues régionales inconnues
+- CHOISIR le match avec le meilleur ratio confiance/cote parmi TOUS les sports disponibles ce jour
 - Note minimale pour publier : 6.5/10 (pas 7.0)
-- Barème : commence à 5.5, +0.5 pour chaque avantage concret (forme récente, H2H, enjeu vital, classement FIFA)
-- Avantage domicile (+0.5) : UNIQUEMENT pour championnats nationaux (Ligue 1, Premier League, etc.) — JAMAIS pour Coupe du Monde, Euro, Copa América ou toute compétition sur terrain neutre
+- Barème : commence à 5.5, +0.5 pour chaque avantage concret (forme récente, H2H, enjeu vital, classement)
+- Avantage domicile (+0.5) : UNIQUEMENT pour championnats nationaux joués chez l'équipe — JAMAIS pour Coupe du Monde, Euro, Copa América, ou finale sur terrain neutre
 - La cote estimée doit être dans la fourchette 1.35 à 2.50 selon ton analyse (tu estimes la cote probable)
+- Dans le champ "raison", précise toujours le sport et une stat concrète (ex: "NBA — 8 victoires consécutives à domicile")
 
 RÉPONDS EN JSON STRICT :
 {
