@@ -55,6 +55,23 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(match_key, agent_name)
   );
+  CREATE TABLE IF NOT EXISTS analysis_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    score_home INTEGER DEFAULT 0,
+    score_away INTEGER DEFAULT 0,
+    minute INTEGER DEFAULT 0,
+    bet TEXT NOT NULL,
+    confidence INTEGER DEFAULT 70,
+    raison TEXT DEFAULT '',
+    consensus_votes INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'live-ia',
+    outcome TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -313,7 +330,10 @@ async function fetchLiveMatches() {
   }
 
   // Auto-résoudre les prédictions des matchs terminés
-  matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
+  matches.filter(m => m.status === "FINISHED").forEach(m => {
+    autoResolvePredictions(m);
+    autoResolveAnalysisLog(m);
+  });
 
   liveMatchesCache = { data: matches, ts: Date.now() };
   return matches;
@@ -480,6 +500,18 @@ function computeLiveConstraints(match) {
     else lines.push(`  → 0-0 ou égalité à la ${minute}' : Match nul probable (~45%) ou but décisif dans ~${remaining} min.`);
   }
 
+  // ── Momentum — équipe qui court après le score
+  if (minute >= 55 && total < 3) {
+    const losingTeam = h < a ? match.home : (a < h ? match.away : null);
+    const leadingTeam = h > a ? match.home : (a > h ? match.away : null);
+    if (losingTeam && leadingTeam) {
+      lines.push(`  → MOMENTUM : ${losingTeam} court après le score (${h}-${a}) depuis la ${minute}'. L'équipe qui perd pousse en bloc offensif → probabilité de but concédé augmente → Over ${total + 1}.5 plus probable que les stats statiques ne l'indiquent. Ne sous-estime pas ce facteur.`);
+    }
+    if (losingTeam && minute >= 70 && total === 1) {
+      lines.push(`  → À la ${minute}', score 1-0 : l'équipe menante peut reculer → BTTS Oui et Over 1.5 restent possibles si ${losingTeam} crée des occasions de l'égalisation.`);
+    }
+  }
+
   lines.push("  → PRIORISE ces contraintes LIVE sur toute stat pré-match. Ne recommande PAS un pari mathématiquement contraire.");
   return lines.join("\n");
 }
@@ -501,11 +533,13 @@ async function runConcileAnalysis(match) {
   const estimatedMin = estimateMinute(match);
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
+  const perfContext = getPerformanceContext(match);
+
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${liveConstraints}
+Statut: ${match.status}${neutralNote}${liveConstraints}${perfContext}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
@@ -631,7 +665,7 @@ Réponds en JSON pur (pas de markdown):
   // Sauvegarder les prédictions pour le tracking de performance
   saveAgentPredictions(match, agentResults);
 
-  return {
+  const result = {
     match_key: `${match.home}_${match.away}`,
     best_bet: chief.bet,
     confidence: chief.confidence,
@@ -641,6 +675,11 @@ Réponds en JSON pur (pas de markdown):
     agents: agentResults,
     agent_performance: agentPerf,
   };
+
+  // Enregistrer dans la mémoire Hermès pour apprentissage
+  logAnalysis(match, result, 'live-ia');
+
+  return result;
 }
 
 function getMockAgentAnalysis(agent, match, index) {
@@ -777,6 +816,110 @@ function autoResolvePredictions(match) {
     });
     console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
+}
+
+// ── Analysis memory system ────────────────────────────────────────────────────
+function logAnalysis(match, chief, source = 'live-ia') {
+  try {
+    const matchKey = `${match.home}_${match.away}_${getTodayStr()}`;
+    db.prepare(`
+      INSERT OR REPLACE INTO analysis_log
+        (match_key, home, away, competition, score_home, score_away, minute, bet, confidence, raison, consensus_votes, source)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      matchKey, match.home, match.away,
+      match.competition || '', Number(match.score_home ?? 0), Number(match.score_away ?? 0),
+      Number(match.minute) || 0,
+      chief.best_bet || chief.bet, chief.confidence, chief.raison,
+      chief.consensus_votes || 0, source
+    );
+    console.log(`[analysis-log] Analyse enregistrée: ${match.home} vs ${match.away} → ${chief.best_bet || chief.bet}`);
+  } catch(e) { console.error("[analysis-log] save:", e.message); }
+}
+
+function getPerformanceContext(match) {
+  try {
+    const comp = (match.competition || '').toLowerCase();
+    const rows = db.prepare(`
+      SELECT bet, outcome, COUNT(*) as cnt,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM analysis_log
+      WHERE outcome IS NOT NULL
+      GROUP BY bet
+      HAVING cnt >= 3
+      ORDER BY cnt DESC
+    `).all();
+
+    if (!rows.length) return "";
+
+    const lines = ["\n📊 MÉMOIRE HERMÈS — Performances historiques des paris (toutes analyses résolues):"];
+    rows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      if (resolved < 3) return;
+      const wr = Math.round(r.wins / resolved * 100);
+      const trend = wr >= 65 ? "✅ fort" : wr >= 50 ? "⚠️ moyen" : "❌ faible";
+      lines.push(`  → ${r.bet}: ${wr}% winrate (${r.wins}W/${r.losses}L sur ${resolved} analyses) ${trend}`);
+    });
+
+    // Compétition similaire
+    const compRows = db.prepare(`
+      SELECT bet, COUNT(*) as cnt,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM analysis_log
+      WHERE outcome IS NOT NULL AND lower(competition) LIKE ?
+      GROUP BY bet HAVING cnt >= 2
+    `).all(`%${comp.split(' ')[0]}%`);
+
+    if (compRows.length) {
+      lines.push(`  → Dans "${match.competition || 'cette compétition'}": ${compRows.map(r => {
+        const resolved = r.wins + r.losses;
+        return resolved > 0 ? `${r.bet} ${Math.round(r.wins/resolved*100)}%WR` : null;
+      }).filter(Boolean).join(', ')}`);
+    }
+
+    lines.push("  → Pondère ces performances dans ton verdict final.");
+    return lines.join("\n");
+  } catch(e) {
+    console.error("[perf-context]", e.message);
+    return "";
+  }
+}
+
+function autoResolveAnalysisLog(match) {
+  if (match.score_home === null || match.score_home === undefined) return;
+  const h = Number(match.score_home), a = Number(match.score_away);
+  const total = h + a;
+  const betOutcomes = {
+    "Over 2.5 buts": total > 2.5 ? "win" : "loss",
+    "Under 2.5 buts": total < 2.5 ? "win" : "loss",
+    "Over 1.5 buts": total > 1.5 ? "win" : "loss",
+    "Under 1.5 buts": total < 1.5 ? "win" : "loss",
+    "Over 3.5 buts": total > 3.5 ? "win" : "loss",
+    "Under 3.5 buts": total < 3.5 ? "win" : "loss",
+    "BTTS Oui": (h > 0 && a > 0) ? "win" : "loss",
+    "BTTS Non": (h > 0 && a > 0) ? "loss" : "win",
+    "Victoire domicile": h > a ? "win" : "loss",
+    "Victoire extérieur": a > h ? "win" : "loss",
+    "Match nul": h === a ? "win" : "loss",
+    "Double chance 1X": h >= a ? "win" : "loss",
+    "Double chance X2": a >= h ? "win" : "loss",
+  };
+  try {
+    const firstWord = match.home.split(' ')[0];
+    const pending = db.prepare(
+      "SELECT * FROM analysis_log WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
+    ).all(`%${firstWord}%`, `%${match.away.split(' ')[0]}%`);
+    if (!pending.length) return;
+    const upd = db.prepare("UPDATE analysis_log SET outcome=? WHERE id=?");
+    let resolved = 0;
+    pending.forEach(p => {
+      const outcome = betOutcomes[p.bet] || null;
+      if (outcome) { upd.run(outcome, p.id); resolved++; }
+    });
+    if (resolved) console.log(`[analysis-log] Auto-résolu ${resolved} analyses: ${match.home} vs ${match.away} (${h}-${a})`);
+  } catch(e) { console.error("[analysis-log] auto-resolve:", e.message); }
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
@@ -1539,6 +1682,68 @@ app.get("/agent-performance", (req, res) => {
   }
 });
 
+// ── Mémoire Hermès — statistiques d'analyses ─────────────────────────────────
+app.get("/admin/analysis-performance", (req, res) => {
+  const token = req.headers["x-hermes-token"] || req.query.token;
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!token || token !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Non autorisé" });
+
+  try {
+    const byBet = db.prepare(`
+      SELECT bet,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending
+      FROM analysis_log
+      GROUP BY bet ORDER BY total DESC
+    `).all();
+
+    const byCompetition = db.prepare(`
+      SELECT competition,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM analysis_log
+      WHERE outcome IS NOT NULL AND competition != ''
+      GROUP BY competition ORDER BY total DESC LIMIT 10
+    `).all();
+
+    const recent = db.prepare(`
+      SELECT home, away, competition, score_home, score_away, minute, bet, confidence, outcome, created_at
+      FROM analysis_log ORDER BY created_at DESC LIMIT 20
+    `).all();
+
+    const totals = db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending
+      FROM analysis_log
+    `).get();
+
+    res.json({ ok: true, totals, byBet, byCompetition, recent });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Résolution manuelle via Hermès ───────────────────────────────────────────
+app.post("/internal/resolve-analysis", (req, res) => {
+  const token = req.headers["x-hermes-token"];
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!token || token !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Non autorisé" });
+
+  const { home, away, score_home, score_away } = req.body || {};
+  if (!home || !away || score_home === undefined || score_away === undefined) {
+    return res.json({ ok: false, error: "home, away, score_home, score_away requis" });
+  }
+  const resolved = { home, away, score_home: Number(score_home), score_away: Number(score_away), status: "FINISHED" };
+  autoResolvePredictions(resolved);
+  autoResolveAnalysisLog(resolved);
+  res.json({ ok: true, message: `Résolution: ${home} vs ${away} (${score_home}-${score_away})` });
+});
+
 // ── Admin — forcer résolution manuelle d'un match ────────────────────────────
 app.post("/admin/resolve-match", (req, res) => {
   const { email, code, home, away, score_home, score_away } = req.body || {};
@@ -1546,7 +1751,9 @@ app.post("/admin/resolve-match", (req, res) => {
   if (!home || !away || score_home === undefined || score_away === undefined) {
     return res.json({ ok: false, error: "home, away, score_home, score_away requis" });
   }
-  autoResolvePredictions({ home, away, score_home: Number(score_home), score_away: Number(score_away), status: "FINISHED" });
+  const resolved = { home, away, score_home: Number(score_home), score_away: Number(score_away), status: "FINISHED" };
+  autoResolvePredictions(resolved);
+  autoResolveAnalysisLog(resolved);
   res.json({ ok: true, message: `Résolution lancée pour ${home} vs ${away} (${score_home}-${score_away})` });
 });
 

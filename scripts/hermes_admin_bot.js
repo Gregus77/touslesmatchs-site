@@ -78,7 +78,21 @@ function archiveCurrentPick(data) {
   if (data.history.length > 60) data.history = data.history.slice(0, 60);
 }
 
-// ── HTTP GET helper ───────────────────────────────────────────────────────────
+// ── HTTP helpers ──────────────────────────────────────────────────────────────
+function httpGetInternal(apiPath, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({
+      hostname: "touslesmatchs-api", port: 3001, path: apiPath, method: "GET",
+      headers: { "Content-Type": "application/json", ...headers }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { reject(new Error("parse")); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error("timeout")); });
+    req.on("error", reject); req.end();
+  });
+}
+
 function httpGet(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
@@ -652,6 +666,54 @@ async function cmdDeploy(chatId) {
   }
 }
 
+async function cmdMemoire(chatId) {
+  await reply(chatId, "🧠 <b>Chargement de la mémoire Hermès...</b>");
+  try {
+    const data = await httpGetInternal("/admin/analysis-performance", { "x-hermes-token": TG_TOKEN });
+    if (!data.ok) return reply(chatId, `❌ Erreur: ${data.error}`);
+
+    const { totals, byBet, byCompetition, recent } = data;
+    const resolved = (totals.wins || 0) + (totals.losses || 0);
+    const globalWR = resolved > 0 ? Math.round(totals.wins / resolved * 100) : "—";
+
+    let msg = `🧠 <b>MÉMOIRE HERMÈS — Performances</b>\n\n`;
+    msg += `📊 <b>Global :</b> ${totals.total} analyses — ${totals.wins}W / ${totals.losses}L / ${totals.pending} en attente\n`;
+    msg += `🎯 <b>Winrate global :</b> ${globalWR}%\n\n`;
+
+    if (byBet && byBet.length) {
+      msg += `<b>Par type de pari :</b>\n`;
+      byBet.forEach(r => {
+        const res = (r.wins || 0) + (r.losses || 0);
+        const wr = res > 0 ? Math.round(r.wins / res * 100) : "—";
+        const icon = wr >= 65 ? "✅" : wr >= 50 ? "⚠️" : (wr === "—" ? "⏳" : "❌");
+        msg += `${icon} ${r.bet}: ${wr}% (${r.wins}W/${r.losses}L, ${r.pending} en att.)\n`;
+      });
+    }
+
+    if (byCompetition && byCompetition.length) {
+      msg += `\n<b>Par compétition :</b>\n`;
+      byCompetition.forEach(r => {
+        const res = (r.wins || 0) + (r.losses || 0);
+        const wr = res > 0 ? Math.round(r.wins / res * 100) : "—";
+        msg += `  ${r.competition}: ${wr}% (${res} résolus)\n`;
+      });
+    }
+
+    if (recent && recent.length) {
+      msg += `\n<b>Dernières analyses :</b>\n`;
+      recent.slice(0, 5).forEach(r => {
+        const icon = r.outcome === "win" ? "✅" : r.outcome === "loss" ? "❌" : "⏳";
+        const score = r.outcome ? `${r.score_home}-${r.score_away}` : `${r.score_home}-${r.score_away}@${r.minute}'`;
+        msg += `${icon} ${r.home} vs ${r.away} (${score}) → ${r.bet}\n`;
+      });
+    }
+
+    await reply(chatId, msg);
+  } catch(e) {
+    await reply(chatId, `❌ Erreur mémoire: ${e.message}`);
+  }
+}
+
 async function cmdHelp(chatId) {
   await reply(chatId, `🤖 <b>HERMÈS — Commandes disponibles</b>
 
@@ -662,6 +724,7 @@ async function cmdHelp(chatId) {
 /win — Marquer le pick comme GAGNÉ
 /lose — Marquer le pick comme PERDU
 /learn — Analyser l'historique et mettre à jour la mémoire IA
+/memoire — Statistiques de performance par type de pari/compétition
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
 /deploy — git pull sur le VPS
@@ -694,6 +757,7 @@ async function handleMessage(msg) {
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/learn":           return cmdLearn(chatId);
+    case "/memoire":         return cmdMemoire(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
     case "/deploy":          return cmdDeploy(chatId);
