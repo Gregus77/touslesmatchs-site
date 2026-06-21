@@ -764,8 +764,8 @@ Réponds en JSON pur (pas de markdown):
         corrected: corrected || false,
       });
     } catch (e) {
-      // fallback for this agent
-      agentResults.push(getMockAgentAnalysis(agentNames[i], match, i));
+      // fallback for this agent — passer availableBets pour éviter les paris impossibles
+      agentResults.push(getMockAgentAnalysis(agentNames[i], match, i, availableBets));
     }
 
     // Small delay between agents to avoid rate limits
@@ -803,15 +803,24 @@ Réponds en JSON pur (pas de markdown):
   return result;
 }
 
-function getMockAgentAnalysis(agent, match, index) {
-  const bets = BET_TYPES;
-  const score_diff = match.score_home - match.score_away;
+function getMockAgentAnalysis(agent, match, index, availableBets) {
+  const validBets = availableBets || computeAvailableBets(match);
+  const h = Number(match.score_home ?? 0);
+  const a = Number(match.score_away ?? 0);
+  const score_diff = h - a;
   const minute = parseInt(match.minute) || 50;
+  const vHome = `Victoire ${match.home}`;
+  const vAway = `Victoire ${match.away}`;
+
   let bet;
-  if (score_diff > 0 && minute > 60) bet = "Under 2.5 buts";
-  else if (score_diff === 0 && minute < 70) bet = "BTTS Oui";
-  else if (score_diff === 0) bet = "Over 2.5 buts";
-  else bet = score_diff > 0 ? "Victoire domicile" : "Victoire extérieur";
+  // Choisir un pari logique ET mathématiquement possible
+  if (score_diff > 0 && minute > 60 && validBets.includes("Under 2.5 buts")) bet = "Under 2.5 buts";
+  else if (score_diff === 0 && minute < 70 && validBets.includes("BTTS Oui")) bet = "BTTS Oui";
+  else if (score_diff === 0 && validBets.includes("Over 2.5 buts")) bet = "Over 2.5 buts";
+  else if (score_diff > 0 && validBets.includes(vHome)) bet = vHome;
+  else if (score_diff < 0 && validBets.includes(vAway)) bet = vAway;
+  // Fallback : premier pari valide disponible
+  if (!bet || !validBets.includes(bet)) bet = validBets[0];
 
   const confidence = 60 + Math.floor(Math.random() * 25);
   const raisons = [
@@ -840,7 +849,8 @@ function getMockAnalysis(match) {
     { name: "Mistral-7B", icon: "🌊", model: "mistral-7b" },
     { name: "Claude Chief", icon: "👑", model: "claude-opus", isChief: true },
   ];
-  const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
+  const validBets = computeAvailableBets(match);
+  const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i, validBets));
   const chief = agentResults[agentResults.length - 1];
   return {
     match_key: `${match.home}_${match.away}`,
