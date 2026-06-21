@@ -346,44 +346,71 @@ function computeLiveConstraints(match) {
 
   if (isPrematch || minute < 30) return "";
 
-  const remaining = Math.max(0, 93 - minute); // 90 + ~3 arrêts de jeu
+  const remaining = Math.max(0, 93 - minute);
+  const goalsPerMin = minute > 0 ? total / minute : 0;
+  const projectedTotal = Math.round(goalsPerMin * 90 * 10) / 10;
+
   const lines = ["\n🔢 CONTRAINTES MATHÉMATIQUES LIVE — respecte-les impérativement:"];
 
-  // Over/Under 2.5
-  const neededOver25 = Math.max(0, 3 - total);
-  if (neededOver25 === 0) {
-    lines.push(`  → Over 2.5 DÉJÀ ATTEINT (${total} buts au total) — pari potentiellement gagné.`);
-    lines.push(`  → Under 2.5 DÉJÀ PERDU — ne PAS recommander Under 2.5.`);
-  } else if (neededOver25 >= 3 && remaining <= 25) {
-    lines.push(`  → Over 2.5 QUASI IMPOSSIBLE: besoin de ${neededOver25} but(s) en ~${remaining} min — probabilité <5%.`);
-    lines.push(`  → Under 2.5 TRÈS PROBABLE (${100 - 5}%+ de probabilité) — c'est le pari logique.`);
-  } else if (neededOver25 >= 2 && remaining <= 20) {
-    lines.push(`  → Over 2.5 TRÈS DIFFICILE: besoin de ${neededOver25} but(s) en ~${remaining} min.`);
-    lines.push(`  → Under 2.5 favori clair.`);
-  } else if (neededOver25 === 1 && remaining <= 15) {
-    lines.push(`  → Over 2.5: 1 but nécessaire en ~${remaining} min — incertain.`);
+  // ── Marchés déjà gagnés
+  const won = [];
+  if (total > 3.5) won.push("Over 3.5 ✅");
+  if (total > 2.5) won.push("Over 2.5 ✅");
+  if (total > 1.5) won.push("Over 1.5 ✅");
+  if (h > 0 && a > 0) won.push("BTTS Oui ✅");
+  if (won.length) lines.push(`  → DÉJÀ GAGNÉS : ${won.join(", ")} — ne propose pas leurs opposés.`);
+
+  // ── Marchés déjà perdus
+  const lost = [];
+  if (total > 3.5) lost.push("Under 3.5 ❌");
+  if (total > 2.5) lost.push("Under 2.5 ❌");
+  if (total > 1.5) lost.push("Under 1.5 ❌");
+  if (h > 0 && a > 0) lost.push("BTTS Non ❌");
+  if (lost.length) lines.push(`  → DÉJÀ PERDUS — ne PAS recommander : ${lost.join(", ")}`);
+
+  // ── Over 2.5 faisabilité
+  if (total < 3) {
+    const need25 = 3 - total;
+    if (need25 >= 3 && remaining <= 25) {
+      lines.push(`  → Over 2.5 QUASI IMPOSSIBLE : ${need25} but(s) en ~${remaining} min → probabilité <5% → recommande Under 2.5.`);
+    } else if (need25 >= 2 && remaining <= 20) {
+      lines.push(`  → Over 2.5 TRÈS DIFFICILE : ${need25} but(s) en ~${remaining} min → Under 2.5 favori.`);
+    } else if (need25 === 1 && remaining <= 12) {
+      lines.push(`  → Over 2.5 : 1 but en ~${remaining} min — incertain, préfère Under 2.5.`);
+    }
   }
 
-  // BTTS
+  // ── Over 1.5 faisabilité
+  if (total < 2) {
+    const need15 = 2 - total;
+    if (need15 >= 2 && remaining <= 15) {
+      lines.push(`  → Over 1.5 QUASI IMPOSSIBLE : 2 buts en ~${remaining} min.`);
+    } else if (need15 === 1 && remaining <= 8) {
+      lines.push(`  → Over 1.5 : 1 but en ~${remaining} min — très serré.`);
+    }
+  }
+
+  // ── Rythme de buts (extrapolation)
+  if (minute >= 45) {
+    lines.push(`  → Rythme actuel : ${total} but(s) en ${minute}' → extrapolation : ~${projectedTotal} buts à 90'.`);
+  }
+
+  // ── BTTS faisabilité
   if (h === 0 && remaining <= 20) {
-    lines.push(`  → BTTS Oui IMPOSSIBLE si ${match.home} ne marque pas dans ~${remaining} min — risqué.`);
+    lines.push(`  → BTTS Oui : ${match.home} n'a PAS marqué — risqué avec seulement ~${remaining} min restantes.`);
   }
   if (a === 0 && remaining <= 20) {
-    lines.push(`  → BTTS Oui IMPOSSIBLE si ${match.away} ne marque pas dans ~${remaining} min — risqué.`);
-  }
-  if (h > 0 && a > 0) {
-    lines.push(`  → BTTS Oui DÉJÀ ATTEINT (les deux équipes ont marqué).`);
-    lines.push(`  → BTTS Non DÉJÀ PERDU — ne PAS recommander BTTS Non.`);
+    lines.push(`  → BTTS Oui : ${match.away} n'a PAS marqué — risqué avec seulement ~${remaining} min restantes.`);
   }
 
-  // Résultat final 1X2
+  // ── Résultat 1X2 en fin de match
   if (minute >= 75) {
-    if (h > a) lines.push(`  → ${match.home} mène ${h}-${a} à la ${minute}' : Victoire domicile très probable — retournement rare.`);
-    else if (a > h) lines.push(`  → ${match.away} mène ${a}-${h} à la ${minute}' : Victoire extérieur très probable — retournement rare.`);
-    else lines.push(`  → Match nul ${h}-${h} à la ${minute}' : nul ou coup de théâtre dans ~${remaining} min.`);
+    if (h > a) lines.push(`  → ${match.home} mène ${h}-${a} à la ${minute}' : Victoire domicile TRÈS PROBABLE. Retournement <8%.`);
+    else if (a > h) lines.push(`  → ${match.away} mène ${a}-${h} à la ${minute}' : Victoire extérieur TRÈS PROBABLE. Retournement <8%.`);
+    else lines.push(`  → 0-0 ou égalité à la ${minute}' : Match nul probable (~45%) ou but décisif dans ~${remaining} min.`);
   }
 
-  lines.push("  → BASE TES RECOMMANDATIONS SUR CES DONNÉES, pas sur les stats pré-match.");
+  lines.push("  → PRIORISE ces contraintes LIVE sur toute stat pré-match. Ne recommande PAS un pari mathématiquement contraire.");
   return lines.join("\n");
 }
 

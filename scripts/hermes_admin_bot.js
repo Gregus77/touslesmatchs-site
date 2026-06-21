@@ -279,21 +279,64 @@ function neutralWarning(matches) {
   return `\n⚠️ TERRAIN NEUTRE DÉTECTÉ (${comps}) :\n- L'étiquette "domicile/extérieur" est arbitraire (calendrier FIFA), PAS un avantage réel\n- NE PAS ajouter de points pour "domicile" sur ces matchs\n- Baser l'analyse uniquement sur : forme récente, classement FIFA/UEFA, H2H, enjeu, effectif\n`;
 }
 
-const HERMES_PROMPT = (matches) => `Tu es HERMÈS, expert en pronostics sportifs pour TousLesMatchs.
+const HERMES_PROMPT = (matches) => `Tu es HERMÈS, expert en pronostics sportifs avec une approche mathématique rigoureuse pour TousLesMatchs.
 ${memoryBlock()}
 MATCHS DISPONIBLES AUJOURD'HUI :
 ${JSON.stringify(matches, null, 2)}
 ${neutralWarning(matches)}
-RÈGLES DE SÉLECTION :
-- SPORTS COUVERTS : Football, Basketball (NBA, EuroLeague, etc.), Hockey (NHL, KHL, etc.), Rugby, Handball, Volleyball, Baseball
-- ACCEPTER : grandes compétitions officielles dans tous ces sports (Coupe du Monde, championnats nationaux majeurs, playoffs NBA, NHL, etc.)
-- REFUSER : matchs amicaux, jeunes catégories (U17-U23), matches de gala/exhibition, ligues régionales inconnues
-- CHOISIR le match avec le meilleur ratio confiance/cote parmi TOUS les sports disponibles ce jour
-- Note minimale pour publier : 6.5/10 (pas 7.0)
-- Barème : commence à 5.5, +0.5 pour chaque avantage concret (forme récente, H2H, enjeu vital, classement)
-- Avantage domicile (+0.5) : UNIQUEMENT pour championnats nationaux joués chez l'équipe — JAMAIS pour Coupe du Monde, Euro, Copa América, ou finale sur terrain neutre
-- La cote estimée doit être dans la fourchette 1.35 à 2.50 selon ton analyse (tu estimes la cote probable)
-- Dans le champ "raison", précise toujours le sport et une stat concrète (ex: "NBA — 8 victoires consécutives à domicile")
+
+━━━ ÉTAPE 1 — FILTRER ━━━
+- ACCEPTER : grandes compétitions officielles (Coupe du Monde, championnats nationaux Top 5, NBA, NHL playoffs, EuroLeague, etc.)
+- REFUSER : matchs amicaux, U17-U23, exhibitions, ligues régionales inconnues, qualifications lointaines sans enjeu
+
+━━━ ÉTAPE 2 — ANALYSER MATHÉMATIQUEMENT chaque match candidat ━━━
+Pour chaque match retenu, estime :
+  a) Ta probabilité réelle pour chaque marché disponible (1X2, Double chance, Over/Under 1.5 / 2.5 / 3.5, BTTS, Handicap)
+  b) La cote implicite = 1 / probabilité (ex: 70% → cote implicite = 1.43)
+  c) Edge = (ta_probabilité × cote_estimée_bookmaker) - 1 → positif = value bet
+
+━━━ ÉTAPE 3 — CHOISIR le meilleur value bet ━━━
+- Sélectionne le marché avec l'edge le plus élevé (pas forcément le vainqueur)
+- Probabilité minimale requise : 58% pour un pari simple
+- Cote fourchette acceptable : 1.30 à 2.80
+- Ne jamais choisir un pari sans edge positif, même sur un favori "évident"
+
+━━━ RÈGLES PAR SPORT ━━━
+Football :
+  - Forme 5 derniers matchs + H2H + buts/match moyen
+  - Éliminatoire → moins de buts (préfère Under ou DC)
+  - Domicile +0.5 note UNIQUEMENT en championnat national — JAMAIS terrain neutre
+
+Basketball (NBA/EuroLeague) :
+  - Back-to-back game (2e match consécutif) → équipe fatiguée, -4 pts de marge moyenne
+  - Domicile +4 pts d'avantage statistique en NBA
+  - Préfère les totaux de points (Over/Under) aux victoires en playoffs
+
+Hockey (NHL/KHL) :
+  - Gardien = facteur #1, Under 5.5 buts si deux top-gardiens
+  - Overtime fréquent en playoffs → évite victoire régulière si match serré
+  - Domicile moins décisif qu'au football
+
+Rugby :
+  - Conditions météo cruciales (vent/pluie → moins de points)
+  - Force mêlée + ligne arrière = bons indicateurs
+  - Double chance ou handicap + plutôt que vainqueur sec
+
+━━━ ANTI-PATTERNS — à ne JAMAIS faire ━━━
+- Ne pas parier Over 2.5 si les deux équipes ont moins de 2.0 buts/match en moyenne
+- Ne pas parier Victoire domicile sur terrain neutre (Coupe du Monde, Euro, Copa, finales)
+- Ne pas parier BTTS Oui si une équipe n'a pas marqué dans ses 4 derniers matchs
+- Ne pas parier sur la prolongation ou penalties en coup à élimination directe
+- Ne pas Over 3.5 si moins de 3.5 buts/match combiné pour les deux équipes
+- Ne jamais parier si edge négatif ou < 2%, même sur un match "sûr"
+
+━━━ BARÈME DE NOTATION ━━━
+- Commence à 5.0
+- +0.5 par avantage concret : forme récente, H2H favorable, enjeu vital, classement
+- +0.5 si domicile en championnat national (jamais terrain neutre)
+- +1.0 si probabilité estimée > 70% avec edge > 10%
+- -1.0 si terrain neutre ou contexte très incertain
+- Publie UNIQUEMENT si note ≥ 6.5
 
 RÉPONDS EN JSON STRICT :
 {
@@ -301,20 +344,26 @@ RÉPONDS EN JSON STRICT :
     "home": "Équipe A",
     "away": "Équipe B",
     "league": "Nom de la compétition",
+    "sport": "Football",
     "time": "20h45",
     "prono": "Victoire Équipe A",
     "bet": "Victoire Équipe A",
     "cote": 1.65,
+    "probabilite_estimee": 72,
+    "edge": 0.19,
     "note": 7.5,
-    "raison": "Explication en 1 phrase avec stat concrète (ex: 5 victoires consécutives, classement FIFA)"
+    "raison": "1 phrase avec stat concrète + pourquoi ce marché (ex: 'Over 2.5 — 3.2 buts/match combinés, Over 2.5 sorti dans 8/10 derniers H2H')"
   },
+  "alternatives": [
+    {"bet": "Double chance 1X", "cote_estimee": 1.25, "probabilite_estimee": 85, "edge": 0.06}
+  ],
   "nopick_raison": null
 }
 
-Si VRAIMENT aucun match ne mérite (uniquement amicaux/U20/etc.) :
+Si VRAIMENT aucun match ne mérite :
 {
   "pick": null,
-  "nopick_raison": "Explication précise"
+  "nopick_raison": "Explication précise du pourquoi"
 }`;
 
 async function runAnalyse(chatId) {
@@ -359,6 +408,7 @@ async function runAnalyse(chatId) {
   }
 
   const p = result.pick;
+  const alts = result.alternatives || [];
   const data = loadPicks();
   archiveCurrentPick(data);
   data.currentPick = {
@@ -366,10 +416,13 @@ async function runAnalyse(chatId) {
     home: p.home || "",
     away: p.away || "",
     league: p.league || "Football",
+    sport: p.sport || "Football",
     time: p.time || "",
     prono: p.prono || `Victoire ${p.home}`,
     bet: p.bet || p.prono || `Victoire ${p.home}`,
     cote: String(p.cote || ""),
+    probabilite_estimee: p.probabilite_estimee || null,
+    edge: p.edge || null,
     confidence: p.note || 0,
     confidenceTg: `${p.note || ""}/10`,
     status: "EN ATTENTE",
@@ -377,16 +430,21 @@ async function runAnalyse(chatId) {
   };
   savePicks(data);
 
+  const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
+  const probStr = p.probabilite_estimee ? ` · Proba: ${p.probabilite_estimee}%` : "";
+  const altsStr = alts.length
+    ? "\n📌 <b>Alternatives :</b> " + alts.map(alt => `${alt.bet} @${alt.cote_estimee} (${alt.probabilite_estimee}%)`).join(", ")
+    : "";
+
   const msg = `✅ <b>PICK GÉNÉRÉ par ${provider}</b>
 
 ⚽ <b>${p.home} vs ${p.away}</b>
 🏆 ${p.league || ""}  🕐 ${p.time || ""}
 🎯 <b>${p.prono || p.bet}</b> @ <b>${p.cote}</b>
-📊 Note Hermès : <b>${p.note}/10</b>
-💡 ${p.raison || ""}
+📊 Note : <b>${p.note}/10</b>${probStr}${edgeStr}
+💡 ${p.raison || ""}${altsStr}
 
-✅ Pick sauvegardé dans picks.json
-Tape /publish pour envoyer sur le canal public.`;
+✅ Pick sauvegardé. Tape /publish pour envoyer sur le canal public.`;
 
   await reply(chatId, msg);
 }
