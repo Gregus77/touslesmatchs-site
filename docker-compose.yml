@@ -36,6 +36,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - DB_PATH=/data/tlm.db
       - BREVO_API_KEY=${BREVO_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID}
     volumes:
       - api_data:/data
       - /var/touslesmatchs:/var/touslesmatchs
