@@ -656,33 +656,122 @@ footer{
 @media(max-width:640px){.fomo-strip{gap:0}.fomo-item{padding:8px 14px;font-size:11px}}
 
 /* ══ LIVE IA DÉMO ══ */
-.liad-wrap{background:var(--bg2);border:1px solid rgba(244,63,94,.2);border-radius:20px;overflow:hidden;position:relative}
-.liad-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(244,63,94,.06),transparent);pointer-events:none}
-.liad-header{padding:20px 24px;background:rgba(244,63,94,.06);border-bottom:1px solid rgba(244,63,94,.15);display:flex;flex-direction:column;align-items:center;gap:8px}
-.liad-match{display:flex;align-items:center;gap:20px;justify-content:center}
-.liad-team{font-size:18px;font-weight:800;letter-spacing:-.01em;min-width:120px}
+/* ══ LIVE IA DEMO ══ */
+.liad-wrap{
+  background:var(--bg2);
+  border:1px solid rgba(99,102,241,.22);
+  border-radius:22px;overflow:hidden;position:relative;
+  box-shadow:0 0 80px rgba(79,70,229,.08),0 0 40px rgba(34,211,238,.04);
+}
+.liad-wrap::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 30% at 50% 0%,rgba(79,70,229,.09),transparent),
+    radial-gradient(ellipse 40% 20% at 80% 100%,rgba(34,211,238,.05),transparent);
+}
+.liad-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(245,158,11,.09);border:1px solid rgba(245,158,11,.22);
+  border-radius:7px;padding:4px 12px;
+  font-size:10px;font-weight:700;color:var(--amber);letter-spacing:.10em;text-transform:uppercase;
+}
+.liad-header{
+  padding:24px 28px 20px;
+  background:rgba(255,255,255,.02);
+  border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+}
+.liad-match{display:flex;align-items:center;gap:24px;justify-content:center}
+.liad-team{
+  font-size:clamp(15px,3vw,20px);font-weight:800;letter-spacing:-.02em;
+  color:var(--text);min-width:110px;
+}
 .liad-team:first-child{text-align:right}
 .liad-team:last-child{text-align:left}
-.liad-score{text-align:center;min-width:80px}
-.liad-score-num{font-size:36px;font-weight:900;line-height:1;letter-spacing:-.04em}
-.liad-min{font-size:11px;font-weight:700;color:#fb7185;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px}
-.liad-meta{font-size:12px;color:var(--muted2)}
-.liad-agents{padding:20px 24px;display:grid;gap:10px}
-.liad-agent{background:var(--bg3);border:1px solid var(--b2);border-radius:12px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px}
-.liad-agent-icon{font-size:22px;flex-shrink:0;margin-top:2px}
-.liad-agent-name{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted2);margin-bottom:4px}
-.liad-agent-bet{font-size:15px;font-weight:800;color:var(--cyan);margin-bottom:4px}
-.liad-agent-why{font-size:12px;color:var(--muted2);line-height:1.5}
-.liad-agent-conf{font-size:11px;font-weight:700;color:var(--green);margin-top:4px}
-.liad-verdict{margin:0 24px 24px;background:linear-gradient(135deg,rgba(79,70,229,.15),rgba(124,58,237,.1));border:1px solid rgba(99,102,241,.3);border-radius:14px;padding:18px 20px;display:flex;align-items:center;gap:14px}
-.liad-verdict-crown{font-size:28px;flex-shrink:0}
-.liad-verdict-name{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--indigo2);margin-bottom:4px}
-.liad-verdict-bet{font-size:20px;font-weight:900;color:#c4b5fd;margin-bottom:4px}
-.liad-verdict-why{font-size:12px;color:var(--muted2);line-height:1.5}
-.liad-cta{padding:0 24px 24px;display:flex;gap:12px;flex-wrap:wrap}
-.liad-try-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:15px 24px;background:linear-gradient(135deg,var(--red),#c2185b);color:#fff;font-size:15px;font-weight:700;border-radius:12px;text-decoration:none;box-shadow:0 4px 20px rgba(244,63,94,.35);transition:all .2s;white-space:nowrap}
-.liad-try-btn:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(244,63,94,.55)}
-.liad-note{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:6px;align-self:center}
+.liad-score-col{text-align:center;min-width:90px}
+.liad-score-num{
+  font-size:clamp(32px,6vw,52px);font-weight:900;
+  letter-spacing:-.04em;line-height:1;color:var(--text);
+}
+.liad-min-pill{
+  display:inline-flex;align-items:center;gap:5px;margin-top:6px;
+  background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.25);
+  border-radius:20px;padding:3px 11px;
+  font-size:11px;font-weight:700;color:var(--indigo2);
+}
+.liad-min-dot{width:6px;height:6px;background:var(--indigo2);border-radius:50%;animation:pulse-cyan 1.5s infinite}
+.liad-meta{font-size:12px;color:var(--muted);letter-spacing:.04em}
+
+/* Agent cards */
+.liad-agents{padding:20px 24px;display:grid;gap:10px;position:relative;z-index:1}
+.liad-agent{
+  background:rgba(255,255,255,.028);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;padding:14px 16px 14px 20px;
+  display:grid;grid-template-columns:1fr auto;gap:8px;
+  position:relative;overflow:hidden;transition:border-color .2s;
+}
+.liad-agent:hover{border-color:rgba(255,255,255,.13)}
+.liad-agent::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:0 2px 2px 0}
+.liad-agent.a1::before{background:linear-gradient(180deg,#4f46e5,#818cf8)}
+.liad-agent.a2::before{background:linear-gradient(180deg,#0891b2,#22d3ee)}
+.liad-agent.a3::before{background:linear-gradient(180deg,#7c3aed,#a78bfa)}
+.liad-agent.a4::before{background:linear-gradient(180deg,#059669,#34d399)}
+.liad-agent-left{}
+.liad-agent-tag{
+  font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px;
+}
+.liad-agent-bet{font-size:14px;font-weight:800;color:var(--text);margin-bottom:3px;letter-spacing:-.01em}
+.liad-agent-why{font-size:12px;color:var(--muted2);line-height:1.55}
+.liad-agent-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:54px}
+.liad-conf-num{font-size:18px;font-weight:900;letter-spacing:-.02em}
+.liad-agent.a1 .liad-conf-num{color:#818cf8}
+.liad-agent.a2 .liad-conf-num{color:var(--cyan)}
+.liad-agent.a3 .liad-conf-num{color:#a78bfa}
+.liad-agent.a4 .liad-conf-num{color:#34d399}
+.liad-conf-bar{width:44px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.liad-conf-fill{height:100%;border-radius:2px}
+.liad-agent.a1 .liad-conf-fill{background:linear-gradient(90deg,#4f46e5,#818cf8);width:84%}
+.liad-agent.a2 .liad-conf-fill{background:linear-gradient(90deg,#0891b2,#22d3ee);width:81%}
+.liad-agent.a3 .liad-conf-fill{background:linear-gradient(90deg,#7c3aed,#a78bfa);width:79%}
+.liad-agent.a4 .liad-conf-fill{background:linear-gradient(90deg,#059669,#34d399);width:91%}
+
+/* Verdict */
+.liad-verdict{
+  margin:4px 24px 20px;
+  background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(234,179,8,.04));
+  border:1px solid rgba(245,158,11,.25);
+  border-radius:14px;padding:18px 22px;
+  display:flex;align-items:flex-start;gap:14px;
+  position:relative;overflow:hidden;
+}
+.liad-verdict::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(245,158,11,.5),transparent);
+}
+.liad-verdict-icon{
+  width:40px;height:40px;border-radius:10px;flex-shrink:0;
+  background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);
+  display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.liad-verdict-tag{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--amber);margin-bottom:6px;opacity:.8}
+.liad-verdict-bet{font-size:20px;font-weight:900;color:var(--text);letter-spacing:-.02em;margin-bottom:5px}
+.liad-verdict-why{font-size:12px;color:var(--muted2);line-height:1.6}
+
+/* CTA */
+.liad-cta{padding:0 24px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.liad-try-btn{
+  flex:1;display:flex;align-items:center;justify-content:center;gap:9px;
+  padding:14px 24px;min-height:52px;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  color:#fff;font-size:14px;font-weight:700;
+  border-radius:12px;text-decoration:none;
+  box-shadow:0 4px 24px rgba(79,70,229,.35);transition:all .2s;
+  letter-spacing:-.01em;
+}
+.liad-try-btn:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(79,70,229,.55)}
+.liad-note{font-size:11px;color:var(--muted);line-height:1.6}
 
 /* ══ TG PLANS BANNER ══ */
 .tg-plans-cta{background:linear-gradient(135deg,rgba(0,136,204,.1),rgba(0,85,170,.06));border:1px solid rgba(0,136,204,.22);border-radius:14px;padding:24px;text-align:center;margin-top:32px}
@@ -911,71 +1000,87 @@ footer{
 
 <!-- LIVE IA DÉMO -->
 <section class="section-wrap" style="padding-top:0;padding-bottom:80px">
-  <div class="s-eyebrow">Live IA · Comment ça marche</div>
-  <div class="s-title">Ce que vous obtenez en 30 secondes</div>
-  <div class="s-sub">Lancez une analyse sur n'importe quel match en cours. Voici un exemple du rendu — 5 IA votent, Claude Chief tranche.</div>
+  <div class="s-eyebrow">Live IA · Démonstration</div>
+  <div class="s-title">5 IA. 1 verdict. 30 secondes.</div>
+  <div class="s-sub" style="margin-bottom:28px">Chaque match en cours est analysé en temps réel. Voici ce que le Concile produit — sur n'importe quel match que vous choisissez.</div>
+
   <div class="liad-wrap">
+    <!-- HEADER MATCH -->
     <div class="liad-header">
-      <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:4px 12px;font-size:11px;font-weight:700;color:var(--amber);letter-spacing:.08em;margin-bottom:14px">📋 EXEMPLE D'ANALYSE — DONNÉES ILLUSTRATIVES</div>
+      <div class="liad-badge">📋 Exemple d'analyse — données illustratives</div>
       <div class="liad-match">
-        <div class="liad-team">🇲🇦 Équipe A</div>
-        <div class="liad-score">
+        <div class="liad-team">Équipe A</div>
+        <div class="liad-score-col">
           <div class="liad-score-num">1 — 0</div>
-          <div class="liad-min">⏱ 67e minute</div>
+          <div class="liad-min-pill"><span class="liad-min-dot"></span> 67e min</div>
         </div>
-        <div class="liad-team">🏴󠁧󠁢󠁳󠁣󠁴󠁿 Équipe B</div>
+        <div class="liad-team">Équipe B</div>
       </div>
       <div class="liad-meta">Compétition internationale · Groupe F</div>
     </div>
+
+    <!-- AGENTS -->
     <div class="liad-agents">
-      <div class="liad-agent">
-        <div class="liad-agent-icon">📊</div>
-        <div>
-          <div class="liad-agent-name">GROQ-Llama · Statistique</div>
+      <div class="liad-agent a1">
+        <div class="liad-agent-left">
+          <div class="liad-agent-tag">GROQ-Llama · Statistique</div>
           <div class="liad-agent-bet">Victoire Équipe A (1X2)</div>
-          <div class="liad-agent-why">Équipe A 13e FIFA, invaincue sur ses 8 derniers matchs. Équipe B 0 victoire en phase de poules. xG : 1.8 vs 0.4.</div>
-          <div class="liad-agent-conf">Confiance 84%</div>
+          <div class="liad-agent-why">Équipe A 13e FIFA, invaincue sur 8 matchs. xG 1.8 vs 0.4. Équipe B 0 victoire en phase de poules.</div>
+        </div>
+        <div class="liad-agent-right">
+          <div class="liad-conf-num">84%</div>
+          <div class="liad-conf-bar"><div class="liad-conf-fill"></div></div>
         </div>
       </div>
-      <div class="liad-agent">
-        <div class="liad-agent-icon">♟️</div>
-        <div>
-          <div class="liad-agent-name">GPT-Analysis · Tactique</div>
+      <div class="liad-agent a2">
+        <div class="liad-agent-left">
+          <div class="liad-agent-tag">GPT-Analysis · Tactique</div>
           <div class="liad-agent-bet">Victoire Équipe A (1X2)</div>
           <div class="liad-agent-why">Bloc défensif à 5 depuis le 1-0. Équipe B 0 tir cadré en 67 min — incapable de percer.</div>
-          <div class="liad-agent-conf">Confiance 81%</div>
+        </div>
+        <div class="liad-agent-right">
+          <div class="liad-conf-num">81%</div>
+          <div class="liad-conf-bar"><div class="liad-conf-fill"></div></div>
         </div>
       </div>
-      <div class="liad-agent">
-        <div class="liad-agent-icon">💎</div>
-        <div>
-          <div class="liad-agent-name">GeminiFlash · Value Bets</div>
+      <div class="liad-agent a3">
+        <div class="liad-agent-left">
+          <div class="liad-agent-tag">GeminiFlash · Value Bets</div>
           <div class="liad-agent-bet">Victoire Équipe A (1X2)</div>
-          <div class="liad-agent-why">Cote @1.32 sous-évaluée — probabilité réelle estimée à 80%. Edge +5.6% vs marché bookmakers.</div>
-          <div class="liad-agent-conf">Confiance 79%</div>
+          <div class="liad-agent-why">Cote @1.32 sous-évaluée — proba réelle 80%. Edge +5.6% vs marché bookmakers.</div>
+        </div>
+        <div class="liad-agent-right">
+          <div class="liad-conf-num">79%</div>
+          <div class="liad-conf-bar"><div class="liad-conf-fill"></div></div>
         </div>
       </div>
-      <div class="liad-agent">
-        <div class="liad-agent-icon">🎯</div>
-        <div>
-          <div class="liad-agent-name">Mistral-7B · Over/Under</div>
+      <div class="liad-agent a4">
+        <div class="liad-agent-left">
+          <div class="liad-agent-tag">Mistral-7B · Over / Under</div>
           <div class="liad-agent-bet">Under 2.5 buts</div>
-          <div class="liad-agent-why">1-0 à 67' → rythme 0.9 but/match. Le Concile écarte Over 2.5 mathématiquement — contrainte appliquée.</div>
-          <div class="liad-agent-conf">Confiance 91%</div>
+          <div class="liad-agent-why">1-0 à 67' → rythme 0.9 but/match. Over 2.5 écarté mathématiquement — contrainte live appliquée.</div>
+        </div>
+        <div class="liad-agent-right">
+          <div class="liad-conf-num">91%</div>
+          <div class="liad-conf-bar"><div class="liad-conf-fill"></div></div>
         </div>
       </div>
     </div>
+
+    <!-- VERDICT CLAUDE CHIEF -->
     <div class="liad-verdict">
-      <div class="liad-verdict-crown">👑</div>
+      <div class="liad-verdict-icon">👑</div>
       <div>
-        <div class="liad-verdict-name">Claude Chief · Verdict Final</div>
+        <div class="liad-verdict-tag">Claude Chief · Verdict final</div>
         <div class="liad-verdict-bet">Victoire Équipe A (1X2) @1.32</div>
-        <div class="liad-verdict-why">Consensus 4/4 agents. Domination statistique et tactique confirmée. Edge +5.6% vs marché. Mise recommandée : 4% bankroll.</div>
+        <div class="liad-verdict-why">Consensus 4/4 agents · Edge +5.6% vs marché · Mise recommandée : 4% bankroll · Probabilité réelle estimée à 80%.</div>
       </div>
     </div>
+
+    <!-- CTA -->
     <div class="liad-cta">
-      <a href="/live-ia" class="liad-try-btn">🔴 Analyser un vrai match en direct →</a>
-      <div class="liad-note">⚡ Résultat en ~30 secondes · Disponible Pro &amp; Elite</div>
+      <a href="/live-ia" class="liad-try-btn">Analyser un vrai match maintenant →</a>
+      <div class="liad-note">⚡ Résultat en ~30 secondes<br>Disponible plans Pro &amp; Elite</div>
     </div>
   </div>
 </section>
