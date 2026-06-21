@@ -391,18 +391,25 @@ function computeAvailableBets(match) {
   const remaining = Math.max(0, 93 - minute);
   const isLive = minute >= 30 && match.status !== "SCHEDULED";
 
-  let bets = [...BET_TYPES];
+  // Noms des équipes dans les paris 1X2 (toujours, pas juste terrain neutre)
+  const vHome = `Victoire ${match.home}`;
+  const vAway = `Victoire ${match.away}`;
+  const dc1X  = `Double chance ${match.home}/Nul`;
+  const dcX2  = `Double chance ${match.away}/Nul`;
+
+  let bets = ["Over 2.5 buts", "Under 2.5 buts", "Over 1.5 buts", "Under 1.5 buts",
+              "BTTS Oui", "BTTS Non", vHome, vAway, "Match nul", dc1X, dcX2];
+
   if (!isLive) return bets;
 
   // Marchés déjà PERDUS → supprimer
   if (total > 2.5) bets = bets.filter(b => b !== "Under 2.5 buts");
-  if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts" && b !== "Under 2.5 buts"); // Under 1.5 auto-perdu aussi
+  if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts");
   if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Non");
 
   // Marchés mathématiquement IMPOSSIBLES → supprimer
-  // Over 2.5 : besoin de (3-total) buts dans remaining minutes
   const need25 = Math.max(0, 3 - total);
-  if (need25 >= 3 && remaining <= 30) bets = bets.filter(b => b !== "Over 2.5 buts"); // <3% de chance
+  if (need25 >= 3 && remaining <= 30) bets = bets.filter(b => b !== "Over 2.5 buts");
   if (need25 >= 2 && remaining <= 15) bets = bets.filter(b => b !== "Over 2.5 buts");
 
   // BTTS quasi-impossible si une équipe vierge et peu de temps
@@ -410,10 +417,10 @@ function computeAvailableBets(match) {
   if (a === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
 
   // Victoire impossible si mène +2 et <10 min
-  if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire extérieur");
-  if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire domicile");
+  if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== vAway && b !== dcX2);
+  if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== vHome && b !== dc1X);
 
-  return bets.length > 0 ? bets : BET_TYPES; // safety: toujours au moins 1 choix
+  return bets.length > 0 ? bets : ["Over 1.5 buts", vHome, vAway, "Match nul"];
 }
 
 // Correction post-IA : si l'IA recommande quand même un pari impossible, on corrige
@@ -930,41 +937,52 @@ function teamsMatch(a, b) {
   return false;
 }
 
+function resolveBetOutcome(bet, home, away, h, a) {
+  const total = h + a;
+  // Marchés buts (fixes)
+  if (bet === "Over 2.5 buts") return total > 2.5 ? "win" : "loss";
+  if (bet === "Under 2.5 buts") return total < 2.5 ? "win" : "loss";
+  if (bet === "Over 1.5 buts") return total > 1.5 ? "win" : "loss";
+  if (bet === "Under 1.5 buts") return total < 1.5 ? "win" : "loss";
+  if (bet === "Over 3.5 buts") return total > 3.5 ? "win" : "loss";
+  if (bet === "Under 3.5 buts") return total < 3.5 ? "win" : "loss";
+  if (bet === "BTTS Oui") return (h > 0 && a > 0) ? "win" : "loss";
+  if (bet === "BTTS Non") return (h > 0 && a > 0) ? "loss" : "win";
+  if (bet === "Match nul") return h === a ? "win" : "loss";
+
+  // Anciens formats fixes (rétrocompatibilité)
+  if (bet === "Victoire domicile") return h > a ? "win" : "loss";
+  if (bet === "Victoire extérieur") return a > h ? "win" : "loss";
+  if (bet === "Double chance 1X") return h >= a ? "win" : "loss";
+  if (bet === "Double chance X2") return a >= h ? "win" : "loss";
+
+  // Nouveau format avec noms d'équipes : "Victoire Uruguay", "Victoire Cape Verde Islands"
+  if (bet.startsWith("Victoire ")) {
+    const teamInBet = bet.replace("Victoire ", "");
+    if (teamsMatch(teamInBet, home)) return h > a ? "win" : "loss";
+    if (teamsMatch(teamInBet, away)) return a > h ? "win" : "loss";
+  }
+  // Double chance avec noms : "Double chance Uruguay/Nul", "Double chance Cape Verde/Nul"
+  if (bet.startsWith("Double chance ")) {
+    const teamInBet = bet.replace("Double chance ", "").replace("/Nul", "");
+    if (teamsMatch(teamInBet, home)) return h >= a ? "win" : "loss";
+    if (teamsMatch(teamInBet, away)) return a >= h ? "win" : "loss";
+  }
+
+  return null;
+}
+
 function autoResolvePredictions(match) {
   const { home, away, score_home, score_away } = match;
   if (score_home === null || score_home === undefined || score_away === null || score_away === undefined) return;
 
   const h = Number(score_home), a = Number(score_away);
-  const total = h + a;
-  const betResults = {};
-
-  // Marchés buts
-  betResults["Over 2.5 buts"] = total > 2.5 ? "win" : "loss";
-  betResults["Under 2.5 buts"] = total < 2.5 ? "win" : "loss";
-
-  // 1X2 et double chance
-  if (h > a) {
-    betResults["Victoire domicile"] = "win"; betResults["Victoire extérieur"] = "loss"; betResults["Match nul"] = "loss";
-    betResults["Double chance 1X"] = "win"; betResults["Double chance X2"] = "loss";
-  } else if (a > h) {
-    betResults["Victoire extérieur"] = "win"; betResults["Victoire domicile"] = "loss"; betResults["Match nul"] = "loss";
-    betResults["Double chance 1X"] = "loss"; betResults["Double chance X2"] = "win";
-  } else {
-    betResults["Match nul"] = "win"; betResults["Victoire domicile"] = "loss"; betResults["Victoire extérieur"] = "loss";
-    betResults["Double chance 1X"] = "win"; betResults["Double chance X2"] = "win";
-  }
-
-  // BTTS
-  betResults["BTTS Oui"] = (h > 0 && a > 0) ? "win" : "loss";
-  betResults["BTTS Non"] = (h > 0 && a > 0) ? "loss" : "win";
 
   try {
-    // Récupère toutes les prédictions en attente, puis filtre par correspondance fuzzy
-    // (gère les différences de langue : Japon/Japan, Tunisie/Tunisia, etc.)
     const allPending = db.prepare("SELECT * FROM agent_predictions WHERE outcome IS NULL").all();
     const pending = allPending.filter(p =>
       (teamsMatch(p.home, home) && teamsMatch(p.away, away)) ||
-      (teamsMatch(p.home, away) && teamsMatch(p.away, home)) // cas équipes inversées
+      (teamsMatch(p.home, away) && teamsMatch(p.away, home))
     );
 
     if (!pending.length) {
@@ -972,11 +990,12 @@ function autoResolvePredictions(match) {
       return;
     }
     const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
+    let resolved = 0;
     pending.forEach(p => {
-      const outcome = betResults[p.bet] || null;
-      if (outcome) updateStmt.run(outcome, p.id);
+      const outcome = resolveBetOutcome(p.bet, home, away, h, a);
+      if (outcome) { updateStmt.run(outcome, p.id); resolved++; }
     });
-    console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
+    console.log(`[agent-perf] Auto-résolu ${resolved}/${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
 }
 
@@ -1053,21 +1072,6 @@ function autoResolveAnalysisLog(match) {
   if (match.score_home === null || match.score_home === undefined) return;
   const h = Number(match.score_home), a = Number(match.score_away);
   const total = h + a;
-  const betOutcomes = {
-    "Over 2.5 buts": total > 2.5 ? "win" : "loss",
-    "Under 2.5 buts": total < 2.5 ? "win" : "loss",
-    "Over 1.5 buts": total > 1.5 ? "win" : "loss",
-    "Under 1.5 buts": total < 1.5 ? "win" : "loss",
-    "Over 3.5 buts": total > 3.5 ? "win" : "loss",
-    "Under 3.5 buts": total < 3.5 ? "win" : "loss",
-    "BTTS Oui": (h > 0 && a > 0) ? "win" : "loss",
-    "BTTS Non": (h > 0 && a > 0) ? "loss" : "win",
-    "Victoire domicile": h > a ? "win" : "loss",
-    "Victoire extérieur": a > h ? "win" : "loss",
-    "Match nul": h === a ? "win" : "loss",
-    "Double chance 1X": h >= a ? "win" : "loss",
-    "Double chance X2": a >= h ? "win" : "loss",
-  };
   try {
     // Correspondance fuzzy : gère Japon/Japan, Tunisie/Tunisia, etc.
     const allPending = db.prepare("SELECT * FROM analysis_log WHERE outcome IS NULL").all();
@@ -1079,7 +1083,7 @@ function autoResolveAnalysisLog(match) {
     const upd = db.prepare("UPDATE analysis_log SET outcome=? WHERE id=?");
     let resolved = 0;
     pending.forEach(p => {
-      const outcome = betOutcomes[p.bet] || null;
+      const outcome = resolveBetOutcome(p.bet, match.home, match.away, h, a);
       if (outcome) { upd.run(outcome, p.id); resolved++; }
     });
     if (resolved) console.log(`[analysis-log] Auto-résolu ${resolved} analyses: ${match.home} vs ${match.away} (${h}-${a})`);
