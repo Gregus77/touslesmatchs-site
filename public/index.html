@@ -2117,45 +2117,51 @@ function renderFAQ(){
 }
 renderFAQ();
 
-// ══ EMAIL POPUP
+// ══ EMAIL POPUP — version 2 (réinitialise l'ancien dismissed v1)
+const EP_VERSION = 'v2';
+if(localStorage.getItem('tlm_ep_dismissed') === '1') {
+  localStorage.removeItem('tlm_ep_dismissed'); // reset pour les anciens visiteurs bloqués
+}
 let _epDismissed = false;
 function openEmailPopup(){
-  if(_epDismissed || localStorage.getItem('tlm_ep_dismissed')) return;
+  if(_epDismissed || localStorage.getItem('tlm_ep_dismissed') === EP_VERSION) return;
+  if(localStorage.getItem('tlm_email')) return;
   document.getElementById('ep-bg').classList.add('open');
 }
 function closeEmailPopup(){
   _epDismissed = true;
-  localStorage.setItem('tlm_ep_dismissed','1');
+  localStorage.setItem('tlm_ep_dismissed', EP_VERSION);
   document.getElementById('ep-bg').classList.remove('open');
 }
 document.getElementById('ep-bg').addEventListener('click', function(e){
   if(e.target === this) closeEmailPopup();
 });
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeEmailPopup(); });
-// Popup après 15 secondes si pas encore d'email enregistré
-if(!localStorage.getItem('tlm_ep_dismissed') && !localStorage.getItem('tlm_email')){
-  setTimeout(openEmailPopup, 15000);
+// Popup après 20 secondes si pas encore d'email enregistré
+if(localStorage.getItem('tlm_ep_dismissed') !== EP_VERSION && !localStorage.getItem('tlm_email')){
+  setTimeout(openEmailPopup, 20000);
 }
 
 // ══ STICKY EMAIL BAR
 function showStickyBar(){
-  if(localStorage.getItem('tlm_ep_dismissed')||localStorage.getItem('tlm_email')) return;
+  if(localStorage.getItem('tlm_ep_dismissed') === EP_VERSION || localStorage.getItem('tlm_email')) return;
   const bar = document.getElementById('sticky-email-bar');
   if(bar){ bar.style.display='block'; }
 }
 function closeStickyBar(){
   const bar = document.getElementById('sticky-email-bar');
   if(bar) bar.style.display='none';
-  localStorage.setItem('tlm_ep_dismissed','1');
+  localStorage.setItem('tlm_ep_dismissed', EP_VERSION);
 }
 async function subscribeStickyBar(){
   const email = document.getElementById('seb-email').value.trim();
   if(!email||!email.includes('@')) return;
   closeStickyBar();
   try{ await fetch('/api/subscribe-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); }catch(e){}
+  localStorage.setItem('tlm_ep_dismissed', EP_VERSION);
 }
-if(!localStorage.getItem('tlm_ep_dismissed')&&!localStorage.getItem('tlm_email')){
-  setTimeout(showStickyBar, 4000);
+if(localStorage.getItem('tlm_ep_dismissed') !== EP_VERSION && !localStorage.getItem('tlm_email')){
+  setTimeout(showStickyBar, 5000);
 }
 
 // ══ EXIT INTENT (souris sort par le haut)
@@ -2187,7 +2193,7 @@ async function subscribeEmail(){
     });
     okEl.textContent = '✓ Inscrit ! Vous recevrez le prochain pick par email.';
     okEl.style.display='block';
-    localStorage.setItem('tlm_ep_dismissed','1');
+    localStorage.setItem('tlm_ep_dismissed', EP_VERSION);
     setTimeout(closeEmailPopup, 2500);
   } catch(e) {
     okEl.textContent = '✓ Inscrit ! Vous recevrez le prochain pick.';

@@ -561,10 +561,13 @@ async function cmdResult(chatId, status) {
 }
 
 async function cmdPublish(chatId) {
-  if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "❌ TELEGRAM_BOT_TOKEN manquant"); return; }
+  if (!PUBLIC_BOT_TOKEN) {
+    await reply(chatId, "❌ <b>TELEGRAM_BOT_TOKEN manquant</b>\nAjoute <code>TELEGRAM_BOT_TOKEN=xxx</code> dans le .env puis rebuild hermes-admin.");
+    return;
+  }
   const data = loadPicks();
   const p = data.currentPick;
-  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier"); return; }
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier — définis-en un avec /setpick"); return; }
 
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
   const text = `🔥 <b>Pick IA du jour — ${today}</b>
@@ -582,17 +585,33 @@ async function cmdPublish(chatId) {
 ⚠️ 18+ uniquement. Jeu responsable.`;
 
   const body = JSON.stringify({ chat_id: PUBLIC_CHAT, text, parse_mode: "HTML", disable_web_page_preview: false });
+  let tgResult = {};
   await new Promise((resolve) => {
     const req = https.request({
       hostname: "api.telegram.org",
       path: `/bot${PUBLIC_BOT_TOKEN}/sendMessage`,
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
-    }, res => { res.on("data", () => {}); res.on("end", resolve); });
-    req.on("error", resolve);
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => { try { tgResult = JSON.parse(d); } catch {} resolve(); });
+    });
+    req.on("error", (e) => { tgResult = { ok: false, description: e.message }; resolve(); });
     req.write(body); req.end();
   });
-  await reply(chatId, `✅ Pick publié sur ${PUBLIC_CHAT}`);
+
+  if (tgResult.ok) {
+    await reply(chatId, `✅ Pick publié sur <b>${PUBLIC_CHAT}</b>`);
+  } else {
+    const errCode = tgResult.error_code || "";
+    const errDesc = tgResult.description || "Erreur inconnue";
+    let hint = "";
+    if (errCode === 400 && errDesc.includes("chat not found")) hint = "\n→ Le canal <code>TELEGRAM_CHAT_ID</code> est introuvable. Vérifie le nom (@moncanal) dans le .env";
+    else if (errCode === 403) hint = "\n→ Le bot n'est pas <b>admin</b> du canal. Va dans les paramètres du canal → Ajouter admin → ajoute le bot.";
+    else if (!tgResult.ok && !errCode) hint = "\n→ Token invalide ? Vérifie <code>TELEGRAM_BOT_TOKEN</code> dans le .env";
+    await reply(chatId, `❌ <b>Erreur Telegram ${errCode}</b> : ${errDesc}${hint}`);
+  }
 }
 
 async function cmdPublishPremium(chatId) {
