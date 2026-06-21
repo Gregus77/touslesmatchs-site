@@ -38,6 +38,7 @@ services:
       - BREVO_API_KEY=${BREVO_API_KEY}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID}
+      - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT}
     volumes:
       - api_data:/data
       - /var/touslesmatchs:/var/touslesmatchs

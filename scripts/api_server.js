@@ -1152,20 +1152,26 @@ app.post("/create-checkout", async (req, res) => {
 // ── Community stats (Telegram member count) ───────────────────────────────────
 let tgMemberCache = { count: null, ts: 0 };
 app.get("/community-stats", async (req, res) => {
-  const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.BOT_TOKEN || "";
-  const CHANNEL_ID = process.env.TELEGRAM_FREE_CHANNEL_ID || process.env.FREE_CHANNEL_ID || "";
+  // Try multiple bot tokens — whichever is admin of the free channel
+  const BOT_TOKEN = process.env.HERMES_ADMIN_TLM_BOT
+    || process.env.TELEGRAM_BOT_TOKEN
+    || process.env.BOT_TOKEN
+    || "";
+  const CHANNEL_ID = process.env.TELEGRAM_FREE_CHANNEL_ID
+    || process.env.TELEGRAM_CHAT_ID
+    || "@touslesmatchs_fr";
 
   // Cache 10 minutes
   if (tgMemberCache.count !== null && Date.now() - tgMemberCache.ts < 10 * 60 * 1000) {
     return res.json({ ok: true, members: tgMemberCache.count });
   }
 
-  if (!BOT_TOKEN || !CHANNEL_ID) {
+  if (!BOT_TOKEN) {
     return res.json({ ok: false, members: null });
   }
 
   try {
-    const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatMembersCount?chat_id=${CHANNEL_ID}`;
+    const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/getChatMembersCount?chat_id=${encodeURIComponent(CHANNEL_ID)}`;
     const data = await new Promise((resolve, reject) => {
       https.get(tgUrl, r => {
         let body = "";
