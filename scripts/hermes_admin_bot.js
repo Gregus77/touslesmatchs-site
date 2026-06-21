@@ -200,17 +200,38 @@ async function cmdLearn(chatId) {
 }
 
 // ── Analyse pick ──────────────────────────────────────────────────────────────
+// Compétitions jouées sur terrain neutre — avantage domicile = 0
+const NEUTRAL_VENUE_KEYWORDS = [
+  "world cup","coupe du monde","fifa world","mundial",
+  "euro ","uefa euro","european championship",
+  "copa america","gold cup","afcon","africa cup","can 20",
+  "nations league final","ligue des nations final",
+  "champions league final","europa league final","conference league final",
+  "supercup","super cup","supercoupe","trophée des champions"
+];
+function isNeutralVenue(competition = "") {
+  const c = competition.toLowerCase();
+  return NEUTRAL_VENUE_KEYWORDS.some(k => c.includes(k));
+}
+function neutralWarning(matches) {
+  const neutral = matches.filter(m => isNeutralVenue(m.competition));
+  if (!neutral.length) return "";
+  const comps = [...new Set(neutral.map(m => m.competition))].join(", ");
+  return `\n⚠️ TERRAIN NEUTRE DÉTECTÉ (${comps}) :\n- L'étiquette "domicile/extérieur" est arbitraire (calendrier FIFA), PAS un avantage réel\n- NE PAS ajouter de points pour "domicile" sur ces matchs\n- Baser l'analyse uniquement sur : forme récente, classement FIFA/UEFA, H2H, enjeu, effectif\n`;
+}
+
 const HERMES_PROMPT = (matches) => `Tu es HERMÈS, expert en pronostics sportifs pour TousLesMatchs.
 ${memoryBlock()}
 MATCHS DISPONIBLES AUJOURD'HUI :
 ${JSON.stringify(matches, null, 2)}
-
+${neutralWarning(matches)}
 RÈGLES DE SÉLECTION :
 - ACCEPTER : toutes grandes compétitions officielles (Coupes du Monde, Euro, Copa América, Champions League, championnats nationaux Top 5, Coupe du Monde FIFA toutes phases)
 - REFUSER UNIQUEMENT : matchs amicaux sans enjeu, U17/U18/U20/U23, matchs de gala/exhibition
 - Phase de groupes Coupe du Monde = enjeu réel (qualification en jeu) → ACCEPTER
 - Note minimale pour publier : 6.5/10 (pas 7.0)
-- Barème : commence à 5.5, +0.5 pour chaque avantage concret (forme récente, domicile, H2H, enjeu vital, classement FIFA)
+- Barème : commence à 5.5, +0.5 pour chaque avantage concret (forme récente, H2H, enjeu vital, classement FIFA)
+- Avantage domicile (+0.5) : UNIQUEMENT pour championnats nationaux (Ligue 1, Premier League, etc.) — JAMAIS pour Coupe du Monde, Euro, Copa América ou toute compétition sur terrain neutre
 - La cote estimée doit être dans la fourchette 1.35 à 2.50 selon ton analyse (tu estimes la cote probable)
 
 RÉPONDS EN JSON STRICT :
