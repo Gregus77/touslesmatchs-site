@@ -1,0 +1,64 @@
+name: Deploy automatique sur VPS
+
+on:
+  push:
+    branches:
+      - claude/busy-bardeen-793p0k
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Deploy sur VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/touslesmatchs
+
+            echo "📥 Pull des dernières modifications..."
+            git fetch origin claude/busy-bardeen-793p0k
+            git reset --hard origin/claude/busy-bardeen-793p0k
+
+            echo "🐳 Rebuild et redémarrage des containers modifiés..."
+
+            # Détecter quels fichiers ont changé pour rebuild seulement ce qui est nécessaire
+            CHANGED=$(git diff --name-only HEAD@{1} HEAD 2>/dev/null || echo "all")
+
+            REBUILD_API=false
+            REBUILD_SITE=false
+            REBUILD_HERMES=false
+
+            if echo "$CHANGED" | grep -q "scripts/api_server.js"; then
+              REBUILD_API=true
+            fi
+            if echo "$CHANGED" | grep -q "public/\|Caddyfile\|docker-compose"; then
+              REBUILD_SITE=true
+            fi
+            if echo "$CHANGED" | grep -q "scripts/hermes_admin_bot.js"; then
+              REBUILD_HERMES=true
+            fi
+            if [ "$CHANGED" = "all" ]; then
+              REBUILD_API=true; REBUILD_SITE=true; REBUILD_HERMES=true
+            fi
+
+            SERVICES=""
+            [ "$REBUILD_API" = true ]    && SERVICES="$SERVICES api"
+            [ "$REBUILD_SITE" = true ]   && SERVICES="$SERVICES site"
+            [ "$REBUILD_HERMES" = true ] && SERVICES="$SERVICES hermes-admin"
+
+            if [ -z "$SERVICES" ]; then
+              echo "✅ Aucun service à rebuilder (seuls .github/ ou .claude/ ont changé)"
+              exit 0
+            fi
+
+            echo "🔨 Rebuild :$SERVICES"
+            docker compose up -d --build $SERVICES
+
+            echo "✅ Déploiement terminé :$SERVICES"
