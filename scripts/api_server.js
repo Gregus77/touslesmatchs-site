@@ -791,6 +791,26 @@ function saveAgentPredictions(match, agentResults) {
   } catch(e) { console.error("[agent-perf] save:", e.message); }
 }
 
+// Normalise un nom d'équipe pour comparaison floue : minuscules, sans accents, 3 premiers chars
+function normTeam(s) {
+  return (s || '').toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+}
+// Vérifie si deux noms d'équipes correspondent (même langue ou non)
+// Ex: "Japon" ↔ "Japan", "Corée du Sud" ↔ "Korea Republic"
+function teamsMatch(a, b) {
+  const na = normTeam(a), nb = normTeam(b);
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  // Correspondance sur les 4 premiers caractères (couvre Japon/Japan, Espagne/Spain, etc.)
+  if (na.length >= 4 && nb.length >= 4 && na.slice(0, 4) === nb.slice(0, 4)) return true;
+  // Correspondance sur le premier mot
+  const wa = na.split(/[^a-z]/)[0], wb = nb.split(/[^a-z]/)[0];
+  if (wa.length >= 3 && wb.length >= 3 && wa.slice(0, 3) === wb.slice(0, 3)) return true;
+  return false;
+}
+
 function autoResolvePredictions(match) {
   const { home, away, score_home, score_away } = match;
   if (score_home === null || score_home === undefined || score_away === null || score_away === undefined) return;
@@ -820,12 +840,18 @@ function autoResolvePredictions(match) {
   betResults["BTTS Non"] = (h > 0 && a > 0) ? "loss" : "win";
 
   try {
-    const firstWord = home.split(' ')[0];
-    const pending = db.prepare(
-      "SELECT * FROM agent_predictions WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
-    ).all(`%${firstWord}%`, `%${away.split(' ')[0]}%`);
+    // Récupère toutes les prédictions en attente, puis filtre par correspondance fuzzy
+    // (gère les différences de langue : Japon/Japan, Tunisie/Tunisia, etc.)
+    const allPending = db.prepare("SELECT * FROM agent_predictions WHERE outcome IS NULL").all();
+    const pending = allPending.filter(p =>
+      (teamsMatch(p.home, home) && teamsMatch(p.away, away)) ||
+      (teamsMatch(p.home, away) && teamsMatch(p.away, home)) // cas équipes inversées
+    );
 
-    if (!pending.length) return;
+    if (!pending.length) {
+      console.log(`[agent-perf] Aucune prédiction en attente pour: ${home} vs ${away}`);
+      return;
+    }
     const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
     pending.forEach(p => {
       const outcome = betResults[p.bet] || null;
@@ -924,10 +950,12 @@ function autoResolveAnalysisLog(match) {
     "Double chance X2": a >= h ? "win" : "loss",
   };
   try {
-    const firstWord = match.home.split(' ')[0];
-    const pending = db.prepare(
-      "SELECT * FROM analysis_log WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
-    ).all(`%${firstWord}%`, `%${match.away.split(' ')[0]}%`);
+    // Correspondance fuzzy : gère Japon/Japan, Tunisie/Tunisia, etc.
+    const allPending = db.prepare("SELECT * FROM analysis_log WHERE outcome IS NULL").all();
+    const pending = allPending.filter(p =>
+      (teamsMatch(p.home, match.home) && teamsMatch(p.away, match.away)) ||
+      (teamsMatch(p.home, match.away) && teamsMatch(p.away, match.home))
+    );
     if (!pending.length) return;
     const upd = db.prepare("UPDATE analysis_log SET outcome=? WHERE id=?");
     let resolved = 0;
