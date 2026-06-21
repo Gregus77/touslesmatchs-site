@@ -162,10 +162,24 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .loading-line.long{width:90%}
 
 /* VIDE */
-.empty-state{text-align:center;padding:64px 32px;color:var(--muted)}
+.empty-state{text-align:center;padding:32px 32px 24px;color:var(--muted)}
 .empty-icon{font-size:48px;margin-bottom:16px}
 .empty-title{font-size:18px;font-weight:700;color:var(--muted2);margin-bottom:8px}
-.empty-sub{font-size:14px;line-height:1.6}
+.empty-sub{font-size:14px;line-height:1.6;margin-bottom:24px}
+
+/* SAISIE MANUELLE */
+.manual-entry{background:var(--bg2);border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:22px 22px 20px;margin-top:4px}
+.me-title{font-size:13px;font-weight:700;color:var(--indigo2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px}
+.me-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.me-row input{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--b2);color:var(--text);padding:9px 12px;border-radius:9px;font-size:13px;font-family:inherit;outline:none;transition:border .15s}
+.me-row input:focus{border-color:rgba(99,102,241,.5)}
+.me-row input::placeholder{color:var(--muted)}
+.me-score{display:flex;gap:8px;align-items:center;flex:0 0 auto}
+.me-score input{width:52px;text-align:center;flex:none}
+.me-score span{color:var(--muted);font-weight:700}
+.me-btn{width:100%;padding:11px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.me-btn:hover{opacity:.88}
+.me-btn:disabled{opacity:.5;cursor:not-allowed}
 
 /* REFRESH */
 .refresh-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
@@ -513,6 +527,72 @@ function renderUpcomingCard(p){
   </div>`;
 }
 
+function renderManualEntry(){
+  return `<div class="manual-entry" id="manual-entry">
+    <div class="me-title">🎯 Analyser un match maintenant</div>
+    <div class="me-row">
+      <input id="me-home" placeholder="Équipe domicile (ex: Japon)" autocomplete="off">
+      <input id="me-away" placeholder="Équipe extérieur (ex: Espagne)" autocomplete="off">
+    </div>
+    <div class="me-row" style="align-items:center;gap:16px">
+      <div class="me-score">
+        <input id="me-sh" type="number" min="0" max="20" placeholder="0">
+        <span>—</span>
+        <input id="me-sa" type="number" min="0" max="20" placeholder="0">
+      </div>
+      <input id="me-min" type="number" min="1" max="120" placeholder="Minute (ex: 67)" style="flex:1;min-width:140px">
+      <input id="me-comp" placeholder="Compétition (optionnel)" style="flex:2;min-width:140px">
+    </div>
+    <button class="me-btn" onclick="addManualMatch()">🧠 Lancer l'analyse du Concile →</button>
+  </div>
+  <div id="manual-analysis-zone"></div>`;
+}
+
+async function addManualMatch(){
+  const home = document.getElementById('me-home')?.value?.trim();
+  const away = document.getElementById('me-away')?.value?.trim();
+  if(!home || !away){ alert('Renseigne les deux équipes.'); return; }
+  const sh = parseInt(document.getElementById('me-sh')?.value) || 0;
+  const sa = parseInt(document.getElementById('me-sa')?.value) || 0;
+  const min = parseInt(document.getElementById('me-min')?.value) || null;
+  const comp = document.getElementById('me-comp')?.value?.trim() || 'Match en direct';
+
+  const {email, code, plan} = getAuth();
+  if(!email){ openModal(); return; }
+  if(plan === 'free' || !plan){
+    document.getElementById('manual-analysis-zone').innerHTML = renderPaywall();
+    document.getElementById('manual-analysis-zone').scrollIntoView({behavior:'smooth'});
+    return;
+  }
+
+  const btn = document.querySelector('.me-btn');
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Analyse en cours...'; }
+
+  const match = { id:'manual-'+Date.now(), home, away, score_home:sh, score_away:sa, minute:min, status:'IN_PLAY', competition:comp };
+  const zone = document.getElementById('manual-analysis-zone');
+  zone.innerHTML = renderLoadingAnalysis(match);
+  zone.scrollIntoView({behavior:'smooth', block:'start'});
+
+  try{
+    const r = await fetch('/api/concile-analysis', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email, code, match, force:true })
+    });
+    const d = await r.json();
+    if(btn){ btn.disabled=false; btn.innerHTML='🧠 Lancer l\'analyse du Concile →'; }
+    if(!d.ok){
+      if(d.error==='UPGRADE_REQUIRED'){ zone.innerHTML=renderPaywall(); return; }
+      zone.innerHTML=`<div class="analysis-panel" style="padding:20px;text-align:center;color:var(--red)">${escHtml(d.error||'Erreur')}</div>`;
+      return;
+    }
+    zone.innerHTML = renderAnalysis(match, d);
+  } catch(e){
+    if(btn){ btn.disabled=false; btn.innerHTML='🧠 Lancer l\'analyse du Concile →'; }
+    zone.innerHTML=`<div class="analysis-panel" style="padding:20px;text-align:center;color:var(--muted2)">Erreur réseau. Réessaie.</div>`;
+  }
+}
+
 function forceRefresh(){
   const btn = document.querySelector('.refresh-btn');
   if(btn){ btn.textContent='⏳ Actualisation...'; btn.disabled=true; }
@@ -544,16 +624,18 @@ function renderMain(){
     } else {
       html += `<div class="empty-state">
         <div class="empty-icon">⚽</div>
-        <div class="empty-title">Aucun match en direct</div>
-        <div class="empty-sub">Il n'y a pas de match en cours pour le moment.<br>Reviens plus tard ou actualise la page.</div>
-      </div>`;
+        <div class="empty-title">Aucun match détecté via l'API</div>
+        <div class="empty-sub">Entre les équipes manuellement — le Concile analyse en 30 secondes.</div>
+      </div>
+      ${renderManualEntry()}`;
     }
   } else {
     html += `<div class="matches-grid" id="matches-grid">`;
     allMatches.forEach((m, i) => {
       html += renderMatchCard(m, i);
     });
-    html += `</div>`;
+    html += `</div>
+    <div style="margin-top:16px">${renderManualEntry()}</div>`;
   }
 
   if(!email){

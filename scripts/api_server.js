@@ -306,8 +306,11 @@ async function fetchLiveMatches() {
   let matches = await fetchFromFootballData();
   // Fallback to API-Sports
   if (matches === null) matches = await fetchFromApiSports();
-  // If both failed, return cached or empty
-  if (matches === null) return liveMatchesCache.data || [];
+  // No API keys configured — return empty (frontend has manual entry)
+  if (matches === null) {
+    console.log("[live-matches] Aucune clé API configurée — tableau vide retourné");
+    return liveMatchesCache.data || [];
+  }
 
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
