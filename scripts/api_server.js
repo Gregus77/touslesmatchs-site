@@ -715,20 +715,37 @@ Réponds en JSON pur (pas de markdown):
           model: agentNames[i].model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3 + i * 0.05,
-          max_tokens: 200,
+          max_tokens: 250,
         },
         { Authorization: `Bearer ${GROQ_API_KEY}` }
       );
 
-      const raw = response.choices?.[0]?.message?.content || "{}";
+      // Détecter les erreurs Groq (rate limit, quota, clé invalide)
+      if (response.error) {
+        const errMsg = response.error.message || JSON.stringify(response.error);
+        console.error(`[concile] Agent ${agentNames[i].name} — Groq API error: ${errMsg}`);
+        throw new Error(`Groq error: ${errMsg}`);
+      }
+      if (!response.choices || !response.choices[0]) {
+        console.error(`[concile] Agent ${agentNames[i].name} — réponse Groq vide:`, JSON.stringify(response).slice(0, 200));
+        throw new Error("Groq: no choices in response");
+      }
+
+      const raw = response.choices[0].message?.content || "{}";
       const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
 
-      const rawBet = parsed.bet || availableBets[0];
+      // Si bet manquant, c'est que le modèle n'a pas suivi le format JSON
+      if (!parsed.bet) {
+        console.warn(`[concile] Agent ${agentNames[i].name} — JSON incomplet:`, cleaned.slice(0, 100));
+        throw new Error("Groq: bet missing in response");
+      }
+
+      const rawBet = parsed.bet;
       const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
       const raisonFinal = corrected
-        ? `[Corrigé: "${original}" mathématiquement invalide → "${validBet}"] ${parsed.raison || ""}`
-        : (parsed.raison || "Analyse en cours.");
+        ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || ""}`
+        : (parsed.raison || "Analyse basée sur le contexte live.");
 
       agentResults.push({
         name: agentNames[i].name,
@@ -2106,7 +2123,7 @@ app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
 // ── Auto-analyse toutes les 10 minutes ───────────────────────────────────────
 // Analyse chaque match live avec le Concile IA et log dans analysis_log.
 // Construit le dataset historique utilisé par getPerformanceContext().
-const AUTO_ANALYSIS_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const AUTO_ANALYSIS_INTERVAL_MS = 20 * 60 * 1000; // 20 minutes (protège le quota Groq)
 const autoAnalysedThisRun = new Set(); // évite de double-analyser le même match dans la même fenêtre
 
 async function runAutoAnalysis() {
@@ -2124,10 +2141,14 @@ async function runAutoAnalysis() {
       if (autoAnalysedThisRun.has(key)) continue;
       autoAnalysedThisRun.add(key);
 
-      // Évite d'analyser si score ou minute non disponible (données trop vagues)
+      // Analyser seulement les phases intéressantes (30'–82') pour économiser le quota Groq
       const minute = Number(match.minute) || estimateMinute(match);
-      if (minute < 5) {
+      if (minute < 30) {
         console.log(`[auto-analyse] ${match.home} vs ${match.away} — trop tôt (${minute}'), skip`);
+        continue;
+      }
+      if (minute > 82) {
+        console.log(`[auto-analyse] ${match.home} vs ${match.away} — trop tard (${minute}'), skip`);
         continue;
       }
 
