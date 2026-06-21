@@ -335,6 +335,15 @@ async function fetchLiveMatches() {
     autoResolveAnalysisLog(m);
   });
 
+  // Enrichir chaque match IN_PLAY avec la minute estimée si null
+  matches = matches.map(m => {
+    if ((m.status === "IN_PLAY" || m.status === "LIVE") && !m.minute) {
+      const est = estimateMinute(m);
+      if (est > 0) return { ...m, minute: est, minuteEstimated: true };
+    }
+    return m;
+  });
+
   liveMatchesCache = { data: matches, ts: Date.now() };
   return matches;
 }
@@ -359,8 +368,13 @@ function estimateMinute(match) {
   if (!isNaN(m) && m > 0) return m;
   if (match.status !== "IN_PLAY" && match.status !== "LIVE") return 0;
   if (match.utcDate) {
-    const elapsed = Math.floor((Date.now() - new Date(match.utcDate).getTime()) / 60000);
-    if (elapsed > 0 && elapsed <= 120) return Math.min(elapsed, 92);
+    const wallClock = Math.floor((Date.now() - new Date(match.utcDate).getTime()) / 60000);
+    if (wallClock > 0 && wallClock <= 130) {
+      // Le mur-horloge inclut la mi-temps (~17 min réelles) que le chrono match ne compte pas.
+      // En 2ème mi-temps (wallClock > 57 min), on soustrait la pause mi-temps.
+      const gameMinute = wallClock > 57 ? Math.max(45, wallClock - 17) : wallClock;
+      return Math.min(gameMinute, 92);
+    }
   }
   return 50; // fallback mi-match si aucune info
 }

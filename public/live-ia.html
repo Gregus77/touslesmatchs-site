@@ -657,7 +657,7 @@ function renderMatchCard(m, i){
   return `<div class="match-card" id="card-${i}" onclick="selectMatch(${i})">
     <div class="match-top">
       <div class="match-comp">${escHtml(m.competition||'')}</div>
-      <div class="match-badge"><span class="match-dot"></span>LIVE ${m.minute?m.minute+"'":''}
+      <div class="match-badge"><span class="match-dot"></span>LIVE ${m.minute?(m.minuteEstimated?'~':'')+m.minute+"'":''}
       </div>
     </div>
     <div class="match-teams">
