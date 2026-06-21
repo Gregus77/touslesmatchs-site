@@ -748,6 +748,78 @@ async function cmdMemoire(chatId) {
   }
 }
 
+// ── Live pick manuel — analyse Concile + publication immédiate ────────────────
+async function cmdLivePick(chatId, args) {
+  // Syntaxe : /livepick Japon|Tunisie|FIFA World Cup|4-0|85|Victoire extérieur
+  // Champs : home|away|compétition|score|minute|pari (pari optionnel → Concile décide)
+  const parts = args.split("|").map(s => s.trim());
+  if (parts.length < 2) {
+    await reply(chatId, `❌ Syntaxe : <code>/livepick Japon|Tunisie|FIFA World Cup|4-0|85</code>\nLe Concile choisit le pari automatiquement.`);
+    return;
+  }
+  const [home, away, competition = "International", scoreStr = "0-0", minuteStr = "50"] = parts;
+  const [sh, sa] = scoreStr.split("-").map(Number);
+  const minute = parseInt(minuteStr) || 50;
+
+  await reply(chatId, `🧠 <b>Concile Live en cours...</b>\n⚽ ${home} vs ${away} (${sh}-${sa} à la ${minute}')`);
+
+  // Appel API interne Concile
+  const matchBody = JSON.stringify({
+    email: "hermes@admin", code: "internal",
+    match: { home, away, competition, score_home: sh, score_away: sa, minute, status: "IN_PLAY" },
+    force: true
+  });
+
+  let analysis = null;
+  await new Promise((resolve) => {
+    const req = http.request({
+      hostname: "touslesmatchs-api", port: 3001,
+      path: "/concile-analysis", method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(matchBody) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { analysis = JSON.parse(d); } catch {} resolve(); });
+    });
+    req.setTimeout(60000, () => { req.destroy(); resolve(); });
+    req.on("error", () => resolve());
+    req.write(matchBody); req.end();
+  });
+
+  if (!analysis?.ok) {
+    await reply(chatId, `❌ Concile échoué : ${analysis?.error || "Timeout ou API indisponible"}`);
+    return;
+  }
+
+  const a = analysis;
+  const votes = a.agents?.map(ag => `${ag.icon} ${ag.name}: <b>${ag.bet}</b> (${ag.confidence}%)`).join("\n") || "";
+  const consensus = a.consensus_votes || 0;
+
+  await reply(chatId, `✅ <b>CONCILE LIVE — ${home} vs ${away} (${sh}-${sa} à ${minute}')</b>
+
+🎯 <b>Verdict : ${a.best_bet}</b> — ${a.confidence}% confiance
+🗳️ Consensus : ${consensus}/5 agents d'accord
+💡 ${a.raison || ""}
+
+${votes}`);
+
+  // Construire un pick synthétique et publier sur les deux canaux
+  const livePick = {
+    home, away,
+    league: competition,
+    time: `${minute}'`,
+    prono: a.best_bet,
+    bet: a.best_bet,
+    cote: "",
+    confidenceTg: `${a.confidence}%`,
+    raison: a.raison,
+    status: "EN ATTENTE"
+  };
+
+  await reply(chatId, "📤 <b>Publication sur les canaux...</b>");
+  await doPublishFree(livePick, chatId);
+  await doPublishPremium(livePick, chatId);
+}
+
 async function cmdHelp(chatId) {
   await reply(chatId, `🤖 <b>HERMÈS — Commandes disponibles</b>
 
@@ -759,6 +831,7 @@ async function cmdHelp(chatId) {
 /lose — Marquer le pick comme PERDU
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /memoire — Statistiques de performance par type de pari/compétition
+/livepick Japon|Tunisie|FIFA WC|4-0|85 — Analyse Concile live + publication immédiate
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
 /deploy — git pull sur le VPS
@@ -792,6 +865,7 @@ async function handleMessage(msg) {
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/learn":           return cmdLearn(chatId);
     case "/memoire":         return cmdMemoire(chatId);
+    case "/livepick":        return cmdLivePick(chatId, args);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
     case "/deploy":          return cmdDeploy(chatId);
