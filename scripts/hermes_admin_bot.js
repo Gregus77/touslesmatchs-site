@@ -13,6 +13,9 @@ const ADMIN_CHAT        = process.env.TELEGRAM_ADMIN_CHAT_ID;
 const PREMIUM_CHANNEL   = process.env.TELEGRAM_PREMIUM_CHANNEL_ID;
 const GROQ_KEY    = process.env.GROQ_API_KEY;
 const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
+
+// ── Liens bookmakers (affiliation) ───────────────────────────────────────────
+const BOOKMAKERS_MSG = `\n\n🎰 <b>Pariez maintenant :</b>\n<a href="https://www.winamax.fr/parrain?code=77953728">🔴 Winamax</a> · <a href="https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ">🔵 Betclic</a> · <a href="https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254">🟢 Unibet</a> · <a href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728">🟡 PMU</a>`;
 const FD_KEY      = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY;
 const SPORTS_KEY  = process.env.API_SPORTS_KEY;
 const PUBLIC_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -464,13 +467,16 @@ async function runAnalyse(chatId) {
 
   await reply(chatId, msg);
 
+  // Publication automatique sur les deux canaux Telegram
+  await reply(chatId, "📤 <b>Publication automatique en cours...</b>");
+  await doPublishFree(data.currentPick, chatId);
+  await doPublishPremium(data.currentPick, chatId);
+
   // Notification email automatique aux abonnés payants
   try {
     const emailResult = await notifyPickByEmail(data.currentPick);
-    if (emailResult.ok) {
-      await reply(chatId, `📧 Emails envoyés à <b>${emailResult.sent || 0}</b> abonné(s)`);
-    } else if (emailResult.error && emailResult.error !== "timeout") {
-      console.error("[hermes] pick-notify email:", emailResult.error);
+    if (emailResult.ok && emailResult.sent > 0) {
+      await reply(chatId, `📧 Emails envoyés à <b>${emailResult.sent}</b> abonné(s) payant(s)`);
     }
   } catch (e) {
     console.error("[hermes] notifyPickByEmail:", e.message);
@@ -518,7 +524,9 @@ async function cmdSetPick(chatId, args) {
     cote: String(cote), status: "EN ATTENTE", score: ""
   };
   savePicks(data);
-  await reply(chatId, `✅ <b>Pick défini manuellement</b>\n\n⚽ <b>${home} vs ${away}</b>\n🏆 ${league}  🕐 ${time}\n🎯 ${prono} @ ${cote}`);
+  await reply(chatId, `✅ <b>Pick défini manuellement</b>\n\n⚽ <b>${home} vs ${away}</b>\n🏆 ${league}  🕐 ${time}\n🎯 ${prono} @ ${cote}\n\n📤 Publication sur les canaux...`);
+  await doPublishFree(data.currentPick, chatId);
+  await doPublishPremium(data.currentPick, chatId);
 }
 
 async function cmdSetScore(chatId, args) {
@@ -560,98 +568,105 @@ async function cmdResult(chatId, status) {
   } catch (e) { console.error("hermes_learn:", e.message); }
 }
 
-async function cmdPublish(chatId) {
-  if (!PUBLIC_BOT_TOKEN) {
-    await reply(chatId, "❌ <b>TELEGRAM_BOT_TOKEN manquant</b>\nAjoute <code>TELEGRAM_BOT_TOKEN=xxx</code> dans le .env puis rebuild hermes-admin.");
-    return;
-  }
-  const data = loadPicks();
-  const p = data.currentPick;
-  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier — définis-en un avec /setpick"); return; }
-
-  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-  const text = `🔥 <b>Pick IA du jour — ${today}</b>
-
-🏟️ <b>${p.home} vs ${p.away}</b>
-🏆 ${p.league || ""}
-🕒 ${p.time || ""}
-
-🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
-📊 <b>Cote :</b> ${p.cote || ""}
-✅ <b>Confiance Hermès :</b> ${p.confidenceTg || ""}
-
-🔎 Analyse complète : https://www.touslesmatchs.com
-
-⚠️ 18+ uniquement. Jeu responsable.`;
-
-  const body = JSON.stringify({ chat_id: PUBLIC_CHAT, text, parse_mode: "HTML", disable_web_page_preview: false });
-  let tgResult = {};
-  await new Promise((resolve) => {
+// ── Envoi Telegram générique (retourne {ok, error_code, description}) ─────────
+async function tgSend(botToken, targetChat, text) {
+  const body = JSON.stringify({ chat_id: targetChat, text, parse_mode: "HTML", disable_web_page_preview: true });
+  return new Promise((resolve) => {
     const req = https.request({
       hostname: "api.telegram.org",
-      path: `/bot${PUBLIC_BOT_TOKEN}/sendMessage`,
+      path: `/bot${botToken}/sendMessage`,
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
     }, res => {
       let d = "";
       res.on("data", c => d += c);
-      res.on("end", () => { try { tgResult = JSON.parse(d); } catch {} resolve(); });
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({ ok: false, description: "parse error" }); } });
     });
-    req.on("error", (e) => { tgResult = { ok: false, description: e.message }; resolve(); });
+    req.on("error", (e) => resolve({ ok: false, description: e.message }));
     req.write(body); req.end();
   });
-
-  if (tgResult.ok) {
-    await reply(chatId, `✅ Pick publié sur <b>${PUBLIC_CHAT}</b>`);
-  } else {
-    const errCode = tgResult.error_code || "";
-    const errDesc = tgResult.description || "Erreur inconnue";
-    let hint = "";
-    if (errCode === 400 && errDesc.includes("chat not found")) hint = "\n→ Le canal <code>TELEGRAM_CHAT_ID</code> est introuvable. Vérifie le nom (@moncanal) dans le .env";
-    else if (errCode === 403) hint = "\n→ Le bot n'est pas <b>admin</b> du canal. Va dans les paramètres du canal → Ajouter admin → ajoute le bot.";
-    else if (!tgResult.ok && !errCode) hint = "\n→ Token invalide ? Vérifie <code>TELEGRAM_BOT_TOKEN</code> dans le .env";
-    await reply(chatId, `❌ <b>Erreur Telegram ${errCode}</b> : ${errDesc}${hint}`);
-  }
 }
 
-async function cmdPublishPremium(chatId) {
-  if (!TG_TOKEN) { await reply(chatId, "❌ Token Telegram manquant"); return; }
-  if (!PREMIUM_CHANNEL) { await reply(chatId, "❌ TELEGRAM_PREMIUM_CHANNEL_ID manquant"); return; }
-  const data = loadPicks();
-  const p = data.currentPick;
-  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier"); return; }
+function tgHint(r) {
+  if (!r || r.ok) return "";
+  const code = r.error_code || "";
+  const desc = r.description || "Erreur inconnue";
+  if (code === 400 && desc.includes("chat not found")) return "\n→ Canal introuvable — vérifie TELEGRAM_CHAT_ID dans le .env";
+  if (code === 403) return "\n→ Bot pas admin du canal — ajoute-le comme admin dans les paramètres du canal";
+  if (!code) return "\n→ Token invalide ? Vérifie le .env";
+  return `\n→ ${desc}`;
+}
 
+// ── Publication pick GRATUIT ───────────────────────────────────────────────────
+async function doPublishFree(p, adminChatId) {
+  if (!PUBLIC_BOT_TOKEN) {
+    if (adminChatId) await reply(adminChatId, "⚠️ Canal public : <code>TELEGRAM_BOT_TOKEN</code> manquant dans le .env");
+    return { ok: false, reason: "no_token" };
+  }
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  const text = `🔥 <b>Pick IA du jour — ${today}</b>
+
+🏟️ <b>${p.home} vs ${p.away}</b>
+🏆 ${p.league || ""}  🕒 ${p.time || ""}
+
+🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
+📊 <b>Cote :</b> ${p.cote || ""}
+✅ <b>Confiance Hermès :</b> ${p.confidenceTg || ""}
+
+🔎 Analyse complète : https://www.touslesmatchs.com${BOOKMAKERS_MSG}
+
+⚠️ 18+ uniquement. Jeu responsable.`;
+
+  const r = await tgSend(PUBLIC_BOT_TOKEN, PUBLIC_CHAT, text);
+  if (adminChatId) {
+    if (r.ok) await reply(adminChatId, `✅ Pick publié sur le canal gratuit <b>${PUBLIC_CHAT}</b>`);
+    else await reply(adminChatId, `❌ Canal gratuit — Erreur ${r.error_code || "?"} : ${r.description || "?"}${tgHint(r)}`);
+  }
+  return r;
+}
+
+// ── Publication pick PREMIUM ───────────────────────────────────────────────────
+async function doPublishPremium(p, adminChatId) {
+  if (!PREMIUM_CHANNEL) {
+    if (adminChatId) await reply(adminChatId, "⚠️ Canal premium : <code>TELEGRAM_PREMIUM_CHANNEL_ID</code> manquant dans le .env");
+    return { ok: false, reason: "no_channel" };
+  }
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
   const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
   const probStr = p.probabilite_estimee ? `\n📈 Proba estimée : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
   const text = `🏆 <b>Pick PREMIUM du jour — ${today}</b>
 
 🏟️ <b>${p.home} vs ${p.away}</b>
-🏆 ${p.league || ""}
-🕒 ${p.time || ""}
+🏆 ${p.league || ""}  🕒 ${p.time || ""}
 
 🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
 📊 <b>Cote :</b> <b>${p.cote || ""}</b>
 ✅ <b>Confiance Concile :</b> ${p.confidenceTg || ""}${probStr}
 ${p.raison ? `\n💡 <i>${p.raison}</i>` : ""}
-
-🔎 Analyse complète : https://www.touslesmatchs.com/live-ia
+🔎 Analyse complète : https://www.touslesmatchs.com/live-ia${BOOKMAKERS_MSG}
 
 ⚠️ 18+ uniquement. Jeu responsable.`;
 
-  const body = JSON.stringify({ chat_id: PREMIUM_CHANNEL, text, parse_mode: "HTML", disable_web_page_preview: false });
-  let ok = false;
-  await new Promise((resolve) => {
-    const req = https.request({
-      hostname: "api.telegram.org",
-      path: `/bot${TG_TOKEN}/sendMessage`,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
-    }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { ok = JSON.parse(d).ok; } catch {} resolve(); }); });
-    req.on("error", resolve);
-    req.write(body); req.end();
-  });
-  await reply(chatId, ok ? `✅ Pick publié sur le canal Premium (${PREMIUM_CHANNEL})` : "❌ Erreur publication Premium — vérifie TELEGRAM_PREMIUM_CHANNEL_ID et que le bot est admin du canal");
+  const r = await tgSend(TG_TOKEN, PREMIUM_CHANNEL, text);
+  if (adminChatId) {
+    if (r.ok) await reply(adminChatId, `✅ Pick publié sur le canal Premium <b>${PREMIUM_CHANNEL}</b>`);
+    else await reply(adminChatId, `❌ Canal premium — Erreur ${r.error_code || "?"} : ${r.description || "?"}${tgHint(r)}`);
+  }
+  return r;
+}
+
+async function cmdPublish(chatId) {
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier — définis-en un avec /setpick ou /analyse"); return; }
+  await doPublishFree(p, chatId);
+}
+
+async function cmdPublishPremium(chatId) {
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier"); return; }
+  await doPublishPremium(p, chatId);
 }
 
 async function notifyPickByEmail(pick) {
