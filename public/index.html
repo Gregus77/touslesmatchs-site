@@ -2168,7 +2168,7 @@ if(localStorage.getItem('tlm_ep_dismissed') !== EP_VERSION && !localStorage.getI
 let _exitShown = false;
 document.addEventListener('mouseleave', function(e){
   if(_exitShown || e.clientY > 10) return;
-  if(localStorage.getItem('tlm_ep_dismissed')||localStorage.getItem('tlm_email')) return;
+  if(localStorage.getItem('tlm_ep_dismissed') === EP_VERSION || localStorage.getItem('tlm_email')) return;
   _exitShown = true;
   openEmailPopup();
 });
