@@ -535,26 +535,52 @@ function renderManualEntry(){
       <input id="me-away" placeholder="Équipe extérieur (ex: Espagne)" autocomplete="off">
     </div>
     <div class="me-row" style="align-items:center;gap:16px">
-      <div class="me-score">
-        <input id="me-sh" type="number" min="0" max="20" placeholder="0">
-        <span>—</span>
-        <input id="me-sa" type="number" min="0" max="20" placeholder="0">
+      <div class="me-score" style="flex-direction:column;align-items:flex-start;gap:4px">
+        <span style="font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.5px">⚽ SCORE ACTUEL</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input id="me-sh" type="number" min="0" max="20" placeholder="?" style="width:56px;text-align:center" oninput="scoreChanged()">
+          <span>—</span>
+          <input id="me-sa" type="number" min="0" max="20" placeholder="?" style="width:56px;text-align:center" oninput="scoreChanged()">
+        </div>
       </div>
       <input id="me-min" type="number" min="1" max="120" placeholder="Minute (ex: 67)" style="flex:1;min-width:140px">
       <input id="me-comp" placeholder="Compétition (optionnel)" style="flex:2;min-width:140px">
+    </div>
+    <div id="me-score-warn" style="display:none;background:#ff9800;color:#000;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;margin-bottom:4px">
+      ⚠️ Le score est 0-0 — si le match a déjà commencé, mets le score actuel avant de lancer l'analyse !
     </div>
     <button class="me-btn" onclick="addManualMatch()">🧠 Lancer l'analyse du Concile →</button>
   </div>
   <div id="manual-analysis-zone"></div>`;
 }
 
+function scoreChanged(){
+  const sh = document.getElementById('me-sh')?.value;
+  const sa = document.getElementById('me-sa')?.value;
+  const min = parseInt(document.getElementById('me-min')?.value) || 0;
+  const warn = document.getElementById('me-score-warn');
+  // Afficher avertissement si la minute est > 10 et le score semble non renseigné
+  if(warn && min > 10 && (sh===''||sh==='0') && (sa===''||sa==='0')) {
+    warn.style.display = 'block';
+  } else if(warn) {
+    warn.style.display = 'none';
+  }
+}
+
 async function addManualMatch(){
   const home = document.getElementById('me-home')?.value?.trim();
   const away = document.getElementById('me-away')?.value?.trim();
   if(!home || !away){ alert('Renseigne les deux équipes.'); return; }
-  const sh = parseInt(document.getElementById('me-sh')?.value) || 0;
-  const sa = parseInt(document.getElementById('me-sa')?.value) || 0;
+  const shVal = document.getElementById('me-sh')?.value;
+  const saVal = document.getElementById('me-sa')?.value;
+  const sh = shVal === '' ? null : (parseInt(shVal) ?? 0);
+  const sa = saVal === '' ? null : (parseInt(saVal) ?? 0);
   const min = parseInt(document.getElementById('me-min')?.value) || null;
+  // Alerte si score vide et match avancé
+  if(min && min > 15 && (sh===null||sh===0) && (sa===null||sa===0)){
+    const ok = confirm(`⚠️ Le score est 0-0 à la ${min}e minute.\n\nEst-ce bien le score actuel ? Clique OK pour confirmer, ou Annuler pour corriger.`);
+    if(!ok) return;
+  }
   const comp = document.getElementById('me-comp')?.value?.trim() || 'Match en direct';
 
   const {email, code, plan} = getAuth();
@@ -568,7 +594,7 @@ async function addManualMatch(){
   const btn = document.querySelector('.me-btn');
   if(btn){ btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Analyse en cours...'; }
 
-  const match = { id:'manual-'+Date.now(), home, away, score_home:sh, score_away:sa, minute:min, status:'IN_PLAY', competition:comp };
+  const match = { id:'manual-'+Date.now(), home, away, score_home:sh??0, score_away:sa??0, minute:min, status:'IN_PLAY', competition:comp };
   const zone = document.getElementById('manual-analysis-zone');
   zone.innerHTML = renderLoadingAnalysis(match);
   zone.scrollIntoView({behavior:'smooth', block:'start'});
