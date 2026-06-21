@@ -1012,6 +1012,57 @@ async function handleMessage(msg) {
 }
 
 // ── Long polling loop ─────────────────────────────────────────────────────────
+// ── Rapport hebdomadaire automatique (lundi 8h00) ────────────────────────────
+async function sendWeeklyStats() {
+  if (!ADMIN_CHAT) return;
+  try {
+    const data = await httpGetInternal("/admin/analysis-performance", { "x-hermes-token": TG_TOKEN });
+    if (!data.ok) return;
+
+    const { totals, byBet } = data;
+    const resolved = (totals.wins || 0) + (totals.losses || 0);
+    const wr = resolved > 0 ? Math.round(totals.wins / resolved * 100) : 0;
+    const trend = wr >= 65 ? "🔥 Excellente semaine !" : wr >= 55 ? "✅ Bonne semaine" : wr >= 45 ? "⚠️ Semaine mitigée" : "📉 Semaine difficile";
+
+    let msg = `📊 <b>RAPPORT HEBDOMADAIRE HERMÈS</b>\n`;
+    msg += `Semaine du ${new Date(Date.now() - 7 * 86400000).toLocaleDateString('fr-FR')} au ${new Date().toLocaleDateString('fr-FR')}\n\n`;
+    msg += `🎯 <b>Résultats :</b> ${totals.wins}W / ${totals.losses}L — <b>${wr}% winrate</b>\n`;
+    msg += `${trend}\n\n`;
+
+    if (byBet && byBet.length) {
+      msg += `<b>Meilleurs paris de la semaine :</b>\n`;
+      byBet
+        .map(r => ({ ...r, res: (r.wins || 0) + (r.losses || 0), wr: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : 0 }))
+        .filter(r => r.res >= 2)
+        .sort((a, b) => b.wr - a.wr)
+        .slice(0, 5)
+        .forEach(r => {
+          const icon = r.wr >= 65 ? "✅" : r.wr >= 50 ? "⚠️" : "❌";
+          msg += `  ${icon} ${r.bet}: ${r.wr}% (${r.wins}W/${r.losses}L)\n`;
+        });
+    }
+
+    msg += `\n📈 Total analyses : ${totals.total} | En attente : ${totals.pending}`;
+    await reply(ADMIN_CHAT, msg);
+  } catch(e) {
+    console.error("[weekly-stats]", e.message);
+  }
+}
+
+function scheduleWeeklyStats() {
+  const now = new Date();
+  // Prochain lundi à 8h00 (heure Paris = UTC+2)
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + ((1 + 7 - now.getDay()) % 7 || 7));
+  nextMonday.setHours(6, 0, 0, 0); // 8h Paris = 6h UTC
+  const msUntilMonday = nextMonday.getTime() - now.getTime();
+  console.log(`[weekly-stats] Prochain rapport lundi dans ${Math.round(msUntilMonday / 3600000)}h`);
+  setTimeout(() => {
+    sendWeeklyStats();
+    setInterval(sendWeeklyStats, 7 * 24 * 3600 * 1000);
+  }, msUntilMonday);
+}
+
 async function poll() {
   let offset = 0;
   console.log("🚀 Hermès Admin Bot démarré");
@@ -1024,6 +1075,9 @@ async function poll() {
   if (ADMIN_CHAT) {
     await reply(ADMIN_CHAT, "🟢 <b>Hermès Admin Bot démarré</b>\nTape /help pour voir les commandes.").catch(() => {});
   }
+
+  // Planifier le rapport hebdomadaire automatique
+  scheduleWeeklyStats();
 
   while (true) {
     try {

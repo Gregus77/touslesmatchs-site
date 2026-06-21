@@ -1,0 +1,118 @@
+name: Auto-résolution matchs terminés
+
+on:
+  schedule:
+    # Toutes les heures entre 8h et minuit UTC (matchs se jouent surtout le soir)
+    - cron: '15 8-23 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Date à résoudre (YYYY-MM-DD, défaut: aujourd hui)'
+        required: false
+
+jobs:
+  resolve-finished-matches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Récupérer matchs terminés et résoudre les prédictions
+        env:
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+          VPS_RESOLVE_URL: ${{ secrets.VPS_RESOLVE_URL }}
+          HERMES_TOKEN: ${{ secrets.HERMES_ADMIN_TLM_BOT }}
+        run: |
+          TARGET_DATE="${{ github.event.inputs.date }}"
+          if [ -z "$TARGET_DATE" ]; then
+            TARGET_DATE=$(date -u +%Y-%m-%d)
+          fi
+          YESTERDAY=$(date -u -d "yesterday" +%Y-%m-%d 2>/dev/null || date -u -v-1d +%Y-%m-%d)
+
+          echo "📅 Résolution matchs terminés : $YESTERDAY → $TARGET_DATE"
+
+          if [ -z "$FOOTBALL_DATA_KEY" ]; then
+            echo "⚠️ FOOTBALL_DATA_KEY non configuré — skip"
+            exit 0
+          fi
+
+          # Récupérer les matchs terminés d'hier et aujourd'hui
+          RESPONSE=$(curl -s \
+            -H "X-Auth-Token: $FOOTBALL_DATA_KEY" \
+            "https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=$YESTERDAY&dateTo=$TARGET_DATE")
+
+          MATCH_COUNT=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          try:
+              data = json.load(sys.stdin)
+              matches = data.get('matches', [])
+              print(len(matches))
+          except:
+              print(0)
+          ")
+
+          echo "🏟️ $MATCH_COUNT match(s) terminé(s) trouvé(s)"
+
+          if [ "$MATCH_COUNT" -eq 0 ]; then
+            echo "Aucun match à résoudre"
+            exit 0
+          fi
+
+          if [ -z "$VPS_RESOLVE_URL" ] || [ -z "$HERMES_TOKEN" ]; then
+            echo "⚠️ VPS_RESOLVE_URL ou HERMES_TOKEN non configuré — affichage seulement"
+            echo "$RESPONSE" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          for m in data.get('matches', []):
+              h = m.get('score', {}).get('fullTime', {}).get('home', '?')
+              a = m.get('score', {}).get('fullTime', {}).get('away', '?')
+              print(f\"  {m['homeTeam']['name']} {h}-{a} {m['awayTeam']['name']}\")
+          "
+            exit 0
+          fi
+
+          # Pour chaque match terminé, appeler l'API de résolution
+          echo "$RESPONSE" | python3 -c "
+          import sys, json, urllib.request, urllib.parse
+
+          data = json.load(sys.stdin)
+          vps_url = '$VPS_RESOLVE_URL'
+          token = '$HERMES_TOKEN'
+
+          resolved = 0
+          errors = 0
+
+          for m in data.get('matches', []):
+              home = m['homeTeam']['name']
+              away = m['awayTeam']['name']
+              score = m.get('score', {}).get('fullTime', {})
+              sh = score.get('home')
+              sa = score.get('away')
+
+              if sh is None or sa is None:
+                  print(f'  ⏭ {home} vs {away} — score indisponible')
+                  continue
+
+              payload = json.dumps({'home': home, 'away': away, 'score_home': sh, 'score_away': sa}).encode()
+              req = urllib.request.Request(
+                  vps_url,
+                  data=payload,
+                  headers={
+                      'Content-Type': 'application/json',
+                      'x-hermes-token': token
+                  },
+                  method='POST'
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=10) as resp:
+                      result = json.loads(resp.read())
+                      if result.get('ok'):
+                          print(f'  ✅ Résolu: {home} {sh}-{sa} {away}')
+                          resolved += 1
+                      else:
+                          print(f'  ⚠️ {home} vs {away}: {result.get(\"message\", \"pas de prédiction\")}')
+              except Exception as e:
+                  print(f'  ❌ Erreur {home} vs {away}: {e}')
+                  errors += 1
+
+          print(f'\n📊 Résumé: {resolved} résolus, {errors} erreurs')
+          "
