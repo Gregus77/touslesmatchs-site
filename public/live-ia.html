@@ -430,12 +430,23 @@ async function loadMatches(force){
     if(d.ok && d.matches){
       allMatches = d.matches.filter(m => m.status !== "FINISHED");
       if(PICK_MATCH && PICK_MATCH.status !== 'upcoming' && !pickMatchInList(allMatches)){
-        const pickIsFinished = d.matches.some(m =>
+        // Cherche la version terminée dans l'API (noms anglais vs français possible)
+        const finishedVersion = d.matches.find(m =>
           m.status === "FINISHED" &&
           (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&
           (matchTeamLive(m.home,PICK_MATCH.away)||matchTeamLive(m.away,PICK_MATCH.away))
         );
-        if(!pickIsFinished) allMatches = [PICK_MATCH, ...allMatches];
+        if(finishedVersion){
+          // Récupère le score final depuis l'API, ne pas afficher (terminé)
+          PICK_MATCH.score_home = finishedVersion.score_home;
+          PICK_MATCH.score_away = finishedVersion.score_away;
+          PICK_MATCH.status = 'FINISHED';
+        } else {
+          // Fallback temporel : 130 min après le début = probablement terminé
+          const startTime = PICK_MATCH.utcDate ? new Date(PICK_MATCH.utcDate).getTime() : null;
+          const probablyFinished = startTime && (Date.now() - startTime > 130 * 60 * 1000);
+          if(!probablyFinished) allMatches = [PICK_MATCH, ...allMatches];
+        }
       }
       lastUpdate = new Date();
       document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';
