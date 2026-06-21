@@ -1200,9 +1200,13 @@ function verifyCode(email, code) {
       return { valid: false, error: "Code expiré" };
     }
     const today = new Date().toISOString().slice(0, 10);
-    const credits_left = row.credits_date === today
-      ? Math.max(0, row.credits_max - row.credits_used)
-      : row.credits_max;
+    // Les codes ELITE-ADMIN ont des crédits illimités
+    const isAdminCode = code.toUpperCase().startsWith('ELITE-ADMIN');
+    const credits_left = isAdminCode
+      ? 999999
+      : (row.credits_date === today
+          ? Math.max(0, row.credits_max - row.credits_used)
+          : row.credits_max);
     return { valid: true, plan: row.plan, credits_left, email: row.email };
   } catch (e) {
     console.error("[verifyCode] error:", e.message);
