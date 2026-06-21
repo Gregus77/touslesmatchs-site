@@ -805,28 +805,77 @@ async function cmdResolve(chatId, args) {
   }
 
   try {
+    // 1. Résoudre dans la DB
     const data = await httpPostInternal("/internal/resolve-analysis",
       { home, away, score_home, score_away },
       { "x-hermes-token": TG_TOKEN }
     );
     if (!data.ok) return reply(chatId, `❌ Erreur: ${data.error}`);
 
-    // Afficher ce qui a été résolu
-    const total = score_home + score_away;
-    const bets = {
-      "Over 2.5 buts": total > 2.5 ? "✅ WIN" : "❌ LOSS",
-      "Under 2.5 buts": total < 2.5 ? "✅ WIN" : "❌ LOSS",
-      "Over 1.5 buts": total > 1.5 ? "✅ WIN" : "❌ LOSS",
-      "Under 1.5 buts": total < 1.5 ? "✅ WIN" : "❌ LOSS",
-      "BTTS Oui": (score_home > 0 && score_away > 0) ? "✅ WIN" : "❌ LOSS",
-      "BTTS Non": !(score_home > 0 && score_away > 0) ? "✅ WIN" : "❌ LOSS",
-    };
-    let msg = `✅ <b>Résolution enregistrée</b>\n`;
-    msg += `⚽ ${home} ${score_home}-${score_away} ${away}\n\n`;
-    msg += `<b>Résultats automatiques :</b>\n`;
-    Object.entries(bets).forEach(([k, v]) => { msg += `  ${v} ${k}\n`; });
-    msg += `\n📊 Les stats /memoire sont mises à jour.`;
-    await reply(chatId, msg);
+    // 2. Récupérer les prédictions résolues pour ce match (uniquement les paris prédits)
+    const perfData = await httpGetInternal(
+      `/admin/analysis-performance`,
+      { "x-hermes-token": TG_TOKEN }
+    );
+
+    // Trouver dans les analyses récentes ce match spécifiquement
+    const matchPreds = (perfData.recent || []).filter(r =>
+      r.home.toLowerCase().includes(home.toLowerCase().split(' ')[0]) ||
+      r.away.toLowerCase().includes(away.toLowerCase().split(' ')[0])
+    );
+
+    // Construire le rapport : uniquement les paris qui ont été prédits
+    let adminMsg = `✅ <b>Résolution enregistrée</b>\n`;
+    adminMsg += `⚽ <b>${home} ${score_home}–${score_away} ${away}</b>\n\n`;
+
+    if (matchPreds.length > 0) {
+      adminMsg += `<b>Prédictions du Concile :</b>\n`;
+      matchPreds.forEach(r => {
+        const icon = r.outcome === 'win' ? '✅ GAGNÉ' : r.outcome === 'loss' ? '❌ PERDU' : '⏳ en attente';
+        adminMsg += `  ${icon} — ${r.bet} (${r.confidence}%) [${r.source}]\n`;
+      });
+    } else {
+      adminMsg += `ℹ️ Aucune prédiction enregistrée trouvée pour ce match.\n`;
+    }
+    adminMsg += `\n📊 Stats /memoire mises à jour.`;
+    await reply(chatId, adminMsg);
+
+    // 3. Publier le résultat sur les canaux Telegram (gratuit + premium)
+    const wins = matchPreds.filter(r => r.outcome === 'win');
+    const losses = matchPreds.filter(r => r.outcome === 'loss');
+
+    if (matchPreds.length > 0) {
+      // Prendre la prédiction la plus confiante
+      const mainPred = [...matchPreds].sort((a,b) => b.confidence - a.confidence)[0];
+      const isWin = mainPred.outcome === 'win';
+      const resultIcon = isWin ? '✅' : '❌';
+      const resultLabel = isWin ? 'GAGNÉ !' : 'PERDU';
+
+      const pubMsg = `${resultIcon} <b>RÉSULTAT — ${home} vs ${away}</b>\n\n` +
+        `⚽ Score final : <b>${score_home}–${score_away}</b>\n` +
+        `🎯 Notre pari : <b>${mainPred.bet}</b>\n` +
+        `📊 Confiance Concile : ${mainPred.confidence}%\n\n` +
+        `<b>${resultIcon} ${resultLabel}</b>\n\n` +
+        (isWin
+          ? `💰 Félicitations à tous ceux qui ont suivi le Concile !\n`
+          : `📉 Pas de chance cette fois. Le Concile analyse pour mieux prédire.\n`) +
+        BOOKMAKERS_MSG;
+
+      // Publier sur canal gratuit
+      if (PUBLIC_BOT_TOKEN) {
+        const rFree = await tgSend(PUBLIC_BOT_TOKEN, PUBLIC_CHAT, pubMsg);
+        await reply(chatId, rFree.ok
+          ? `✅ Résultat publié sur le canal gratuit ${PUBLIC_CHAT}`
+          : `❌ Canal gratuit — ${rFree.description || 'erreur'}${tgHint(rFree)}`);
+      }
+      // Publier sur canal premium
+      if (PREMIUM_CHANNEL) {
+        const rPrem = await tgSend(TG_TOKEN, PREMIUM_CHANNEL, pubMsg);
+        await reply(chatId, rPrem.ok
+          ? `✅ Résultat publié sur le canal premium ${PREMIUM_CHANNEL}`
+          : `❌ Canal premium — ${rPrem.description || 'erreur'}${tgHint(rPrem)}`);
+      }
+    }
   } catch(e) {
     await reply(chatId, `❌ Erreur: ${e.message}`);
   }
