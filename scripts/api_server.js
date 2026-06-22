@@ -55,6 +55,25 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(match_key, agent_name)
   );
+  CREATE TABLE IF NOT EXISTS concile_analyses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    analysed_at TEXT DEFAULT (datetime('now')),
+    minute_at_analysis INTEGER DEFAULT NULL,
+    score_home_at_analysis INTEGER DEFAULT NULL,
+    score_away_at_analysis INTEGER DEFAULT NULL,
+    stats_status TEXT DEFAULT 'unavailable',
+    best_bet TEXT NOT NULL,
+    confidence INTEGER DEFAULT 70,
+    raison TEXT DEFAULT '',
+    consensus_votes INTEGER DEFAULT 0,
+    agents_json TEXT DEFAULT '[]',
+    pick_bet TEXT DEFAULT NULL,
+    outcome TEXT DEFAULT NULL
+  );
 `);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -890,17 +909,24 @@ Réponds en JSON pur (pas de markdown):
   // Sauvegarder les prédictions pour le tracking de performance
   saveAgentPredictions(match, agentResults);
 
-  return {
+  const analysisResult = {
     match_key: `${match.home}_${match.away}`,
     best_bet: chief.bet,
     confidence: chief.confidence,
     raison: chief.raison,
-    consensus_votes: consensusVotes + 1, // +1 for chief
+    consensus_votes: consensusVotes + 1,
     total_agents: 5,
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
   };
+
+  // Tracer l'analyse pour la boucle d'apprentissage
+  const pick = loadPick();
+  const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
+  saveConcileAnalysis(match, analysisResult, pickBet);
+
+  return analysisResult;
 }
 
 function getMockAgentAnalysis(agent, match, index) {
@@ -953,6 +979,148 @@ function getMockAnalysis(match) {
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
   };
+}
+
+// ── Concile analysis trace ────────────────────────────────────────────────────
+function saveConcileAnalysis(match, result, pickBet) {
+  try {
+    const minute = parseInt(match.minute) || null;
+    const statsStatus = result.statsStatus?.status || "unavailable";
+    db.prepare(`
+      INSERT INTO concile_analyses
+        (match_key, home, away, competition, minute_at_analysis,
+         score_home_at_analysis, score_away_at_analysis, stats_status,
+         best_bet, confidence, raison, consensus_votes, agents_json, pick_bet)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      `${match.home}_${match.away}_${new Date().toISOString().slice(0,10)}`,
+      match.home, match.away,
+      match.competition || match.league || "",
+      minute,
+      match.score_home ?? null,
+      match.score_away ?? null,
+      statsStatus,
+      result.best_bet,
+      result.confidence,
+      result.raison || "",
+      result.consensus_votes || 0,
+      JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
+      pickBet || null
+    );
+  } catch(e) { console.error("[concile-trace] save:", e.message); }
+}
+
+function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
+  if (scoreHome === null || scoreHome === undefined || scoreAway === null || scoreAway === undefined) return;
+  const h = Number(scoreHome), a = Number(scoreAway);
+  const total = h + a;
+
+  function betOutcome(bet) {
+    if (!bet) return null;
+    if (bet === "Over 2.5 buts") return total > 2.5 ? "win" : "loss";
+    if (bet === "Under 2.5 buts") return total < 2.5 ? "win" : "loss";
+    if (bet === "BTTS Oui") return (h > 0 && a > 0) ? "win" : "loss";
+    if (bet === "BTTS Non") return (h > 0 && a > 0) ? "loss" : "win";
+    if (bet.includes("domicile") || bet === "1") return h > a ? "win" : "loss";
+    if (bet.includes("extérieur") || bet === "2") return a > h ? "win" : "loss";
+    if (bet === "Match nul" || bet === "X") return h === a ? "win" : "loss";
+    if (bet === "1X" || bet.includes("1X")) return h >= a ? "win" : "loss";
+    if (bet === "X2" || bet.includes("X2")) return a >= h ? "win" : "loss";
+    if (bet === "12" || bet.includes("12")) return h !== a ? "win" : "loss";
+    return null;
+  }
+
+  try {
+    const first = home.split(' ')[0];
+    const pending = db.prepare(
+      "SELECT * FROM concile_analyses WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
+    ).all(`%${first}%`, `%${away.split(' ')[0]}%`);
+
+    if (!pending.length) return;
+    const upd = db.prepare("UPDATE concile_analyses SET outcome = ? WHERE id = ?");
+    pending.forEach(r => {
+      const out = betOutcome(r.best_bet);
+      if (out) upd.run(out, r.id);
+    });
+    console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
+  } catch(e) { console.error("[concile-trace] resolve:", e.message); }
+}
+
+function getConcilePerformance() {
+  try {
+    const byAgent = db.prepare(`
+      SELECT ap.agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN ap.outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN ap.outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM agent_predictions ap
+      WHERE ap.outcome IS NOT NULL
+      GROUP BY ap.agent_name
+    `).all().map(r => ({
+      agent: r.agent_name,
+      total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null
+    }));
+
+    const byBet = db.prepare(`
+      SELECT best_bet,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL
+      GROUP BY best_bet
+      ORDER BY total DESC
+    `).all().map(r => ({
+      bet: r.best_bet, total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null
+    }));
+
+    const byStats = db.prepare(`
+      SELECT stats_status,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL
+      GROUP BY stats_status
+    `).all().map(r => ({
+      stats: r.stats_status, total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null
+    }));
+
+    const byMinute = db.prepare(`
+      SELECT
+        CASE
+          WHEN minute_at_analysis < 30 THEN '0-29'
+          WHEN minute_at_analysis < 46 THEN '30-45'
+          WHEN minute_at_analysis < 60 THEN '46-59'
+          WHEN minute_at_analysis < 75 THEN '60-74'
+          ELSE '75+'
+        END as minute_range,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL AND minute_at_analysis IS NOT NULL
+      GROUP BY minute_range
+      ORDER BY minute_range
+    `).all().map(r => ({
+      minute: r.minute_range, total: r.total, wins: r.wins,
+      winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : null
+    }));
+
+    const recent = db.prepare(`
+      SELECT home, away, best_bet, confidence, minute_at_analysis,
+             score_home_at_analysis, score_away_at_analysis, outcome, analysed_at
+      FROM concile_analyses
+      ORDER BY analysed_at DESC LIMIT 10
+    `).all();
+
+    return { byAgent, byBet, byStats, byMinute, recent };
+  } catch(e) {
+    console.error("[concile-perf]", e.message);
+    return { byAgent: [], byBet: [], byStats: [], byMinute: [], recent: [] };
+  }
 }
 
 // ── Agent performance tracking ────────────────────────────────────────────────
@@ -1039,6 +1207,9 @@ function autoResolvePredictions(match) {
     });
     console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
+
+  // Résoudre aussi les traces Concile
+  resolveConcileAnalyses(home, away, score_home, score_away);
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
@@ -1792,6 +1963,11 @@ app.get("/community-stats", async (req, res) => {
     console.error("[community-stats]", e.message);
     res.json({ ok: false, members: null });
   }
+});
+
+// ── Concile performance — boucle d'apprentissage ──────────────────────────────
+app.get("/concile-performance", (req, res) => {
+  res.json({ ok: true, ...getConcilePerformance() });
 });
 
 // ── Agent performance — classement public ────────────────────────────────────
