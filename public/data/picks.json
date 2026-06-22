@@ -22,6 +22,24 @@
   },
   "history": [
     [
+      "2026-06-22",
+      "Shamrock Rovers vs Derry City",
+      "Les deux equipes marquent",
+      "1.85",
+      "1-1",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-06-20",
+      "Turquie vs Paraguay",
+      "Double chance 1X (Turquie ou Nul)",
+      "1.52",
+      "0-1",
+      "PERDU",
+      "Football"
+    ],
+    [
       "2026-06-13",
       "Real Monarchs vs Portland Timbers II",
       "Real Monarchs ou nul",
@@ -131,9 +149,9 @@
     ]
   ],
   "stats": {
-    "gagnes": 3,
-    "perdus": 0,
+    "gagnes": 4,
+    "perdus": 1,
     "en_attente": 9,
-    "taux": 100
+    "taux": 80
   }
 }

@@ -1,7 +1,9 @@
 "use strict";
 
 const assert = require("assert");
+const fs = require("fs");
 const Module = require("module");
+const path = require("path");
 
 process.env.DB_PATH = process.env.DB_PATH || ":memory:";
 
@@ -257,6 +259,16 @@ function testLostPickKeepsNilAwayWinScore() {
   assert.equal(pick.scoreB, 1);
 }
 
+function testStaticHistoryHasTurkeyParaguayLoss() {
+  const picksPath = path.join(__dirname, "..", "public", "data", "picks.json");
+  const data = JSON.parse(fs.readFileSync(picksPath, "utf8"));
+  const row = (data.history || []).find(item => item[1] === "Turquie vs Paraguay");
+
+  assert.ok(row, "Turquie vs Paraguay doit rester dans l'historique public");
+  assert.equal(row[4], "0-1");
+  assert.equal(row[5], "PERDU");
+}
+
 function testUnknownScoresDoNotBecomeNilNilConstraints() {
   assert.deepEqual(__liveContractTest.readKnownScore({ score_home: null, score_away: null }), null);
   assert.deepEqual(__liveContractTest.readKnownScore({ score_home: 0, score_away: 0 }), { home: 0, away: 0, total: 0 });
@@ -323,6 +335,7 @@ testHermesNopickCurrentPickNormalizesToNoPick();
 testAdminCurrentPickNormalizationDefaultsProvenance();
 testCurrentPickExposesLiveAvailabilityFlag();
 testLostPickKeepsNilAwayWinScore();
+testStaticHistoryHasTurkeyParaguayLoss();
 testUnknownScoresDoNotBecomeNilNilConstraints();
 testAvailableBetsStayNeutralWithoutKnownScore();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();
