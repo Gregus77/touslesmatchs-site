@@ -643,15 +643,17 @@ async function notifyPickByEmail(pick) {
 }
 
 async function cmdDeploy(chatId) {
-  await reply(chatId, "🔄 <b>Déploiement en cours...</b>");
-  try {
-    execSync("cd /repo && git pull origin $(git branch --show-current) 2>&1", { timeout: 30000 });
-    await reply(chatId, "✅ git pull OK\n⚠️ Rebuild Docker non disponible depuis ce container.\nFais : <code>docker compose up -d --build site api</code> depuis le VPS");
-  } catch (e) {
-    await reply(chatId, `❌ git pull échoué :\n<code>${e.message.slice(0, 300)}</code>`);
-  }
+  await reply(chatId,
+    "\u{1F512} <b>D\u00E9ploiement verrouill\u00E9</b>\n\n" +
+    "Hermes ne lance plus git pull ni rebuild automatiquement.\n" +
+    "Branche autoris\u00E9e : <code>claude/happy-bell-h9zj83</code>\n\n" +
+    "Commande humaine sur VPS apr\u00E8s validation :\n" +
+    "<code>cd /opt/touslesmatchs\n" +
+    "git fetch origin claude/happy-bell-h9zj83\n" +
+    "git reset --hard origin/claude/happy-bell-h9zj83\n" +
+    "docker compose up -d --build [site|api|hermes-admin]</code>"
+  );
 }
-
 async function cmdHelp(chatId) {
   await reply(chatId, `🤖 <b>HERMÈS — Commandes disponibles</b>
 
@@ -664,7 +666,7 @@ async function cmdHelp(chatId) {
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
-/deploy — git pull sur le VPS
+/deploy — guidance de déploiement verrouillée
 /help — Cette aide`);
 }
 
