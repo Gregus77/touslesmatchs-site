@@ -104,7 +104,7 @@ const DEFAULT_PICK = {
 };
 
 function loadPick() {
-  try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return DEFAULT_PICK; }
+  try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return null; }
 }
 function savePick(data) {
   fs.mkdirSync("/var/touslesmatchs", { recursive: true });
@@ -1525,18 +1525,22 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
 
 // ── Pick du jour — lit picks.json d'Hermès en priorité ───────────────────────
 app.get("/current-pick", (req, res) => {
-  // 1. Essaie picks.json d'Hermès (source de vérité)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  // 1. picks.json d'Hermès (source de vérité)
   try {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
-    if (p && p.home && p.home !== "Analyse en cours") {
+    if (p && p.home && p.home !== "Analyse en cours" && p.home !== "PAS DE PICK") {
       let scoreA = null, scoreB = null;
       if (p.score && p.score.includes("-")) {
         const parts = p.score.split("-");
         scoreA = parseInt(parts[0]) || 0;
         scoreB = parseInt(parts[1]) || 0;
       }
+      const isToday = p.date === todayStr;
       return res.json({ ok: true, pick: {
+        date: p.date || null,
+        isToday,
         teamA: { name: p.home, abbr: (p.home||"").slice(0,3).toUpperCase(), color: "#4f46e5" },
         teamB: { name: p.away, abbr: (p.away||"").slice(0,3).toUpperCase(), color: "#7c3aed" },
         competition: p.league || p.sport || "",
@@ -1550,8 +1554,10 @@ app.get("/current-pick", (req, res) => {
       }});
     }
   } catch (e) { /* picks.json absent ou invalide */ }
-  // 2. Fallback sur le pick manuel admin
-  res.json({ ok: true, pick: loadPick() });
+  // 2. Fallback pick manuel admin
+  const manual = loadPick();
+  if (!manual || !manual.teamA) return res.json({ ok: true, pick: null });
+  res.json({ ok: true, pick: { ...manual, isToday: false } });
 });
 
 app.post("/admin/set-pick", (req, res) => {

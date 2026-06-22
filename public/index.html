@@ -2253,16 +2253,59 @@ document.addEventListener('click',function(e){
 <script src="/js/i18n.js"></script>
 <script>document.addEventListener('DOMContentLoaded', () => {
   i18n.init();
-  renderPick();
+  // renderPick() est appelé après le fetch API (voir ci-dessous)
+  document.getElementById('pick-root').innerHTML='<div style="text-align:center;padding:64px 16px;color:var(--muted);font-size:14px">⏳ Chargement du pick…</div>';
   renderPicksFeed();
   renderNavAuth();
   fillKPIs();
   try { buildChart(); } catch(e) { console.warn('buildChart error', e); }
 
-  // ── Pick réel depuis l'API — ticker + carte upcoming + FOMO countdown
+  // ── Pick réel depuis l'API — rendu principal + ticker + carte upcoming + FOMO
   fetch('/current-pick').then(r=>r.json()).then(d=>{
-    if(!d.ok || !d.pick) return;
+    const todayStr = new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
+
+    if(!d.ok || !d.pick || !d.pick.teamA) {
+      // Aucun pick — afficher message neutre
+      window.PICK = { status: 'no_bet' };
+      renderPick();
+      return;
+    }
+
     const p = d.pick;
+    const apiStatus = p.status; // "win", "loss", "upcoming"
+    const isToday = p.isToday || p.date === todayStr;
+    // IA bars : réutilise les données hardcodées si même match, sinon placeholders
+    const sameTeams = PICK.teamA && PICK.teamA.name === p.teamA.name;
+    const iaData = sameTeams ? PICK.ia : [
+      {name:"Claude",   pct:77,ok:true,fill:"f-claude",   why:"Analyse Concile disponible pour les membres Pro & Elite."},
+      {name:"Gemini",   pct:75,ok:true,fill:"f-gemini",   why:"Données de forme et H2H intégrées."},
+      {name:"DeepSeek", pct:76,ok:true,fill:"f-deepseek", why:"Statistiques ELO et classement FIFA analysés."},
+      {name:"Mistral",  pct:74,ok:true,fill:"f-mistral",  why:"Value calculée par rapport aux cotes Pinnacle."},
+      {name:"Groq",     pct:73,ok:true,fill:"f-groq",     why:"Historique face-à-face et domicile/extérieur."}
+    ];
+
+    // Statut : si pick ancien et "upcoming" → l'afficher comme résultat en attente
+    const mappedStatus = (apiStatus === 'win' || apiStatus === 'loss') ? 'result'
+                       : (apiStatus === 'upcoming' && isToday) ? 'upcoming'
+                       : 'result'; // vieux pick upcoming → montrer comme résultat sans score
+
+    window.PICK = {
+      status: mappedStatus,
+      result: apiStatus === 'win' ? 'win' : apiStatus === 'loss' ? 'loss' : null,
+      sport:'Football', tag:'ptag-foot',
+      time: p.time || '—',
+      competition: p.competition || '',
+      teamA: { name: p.teamA.name, abbr:(p.teamA.name||'').slice(0,3).toUpperCase(), color: p.teamA.color||'#4f46e5' },
+      teamB: { name: p.teamB.name, abbr:(p.teamB.name||'').slice(0,3).toUpperCase(), color: p.teamB.color||'#7c3aed' },
+      scoreA: p.scoreA, scoreB: p.scoreB, minute: null,
+      marketType: p.marketType || '—',
+      marketLabel: p.marketLabel || '—',
+      marketDesc: '',
+      cote: p.cote || '—',
+      ia: iaData,
+      verdict:'go', verdictLabel:'GO — Mise normale', mise:'3% de ta bankroll'
+    };
+    renderPick();
     const isUpcoming = p.status === 'upcoming';
     const home = p.teamA?.name || '';
     const away = p.teamB?.name || '';
@@ -2327,7 +2370,9 @@ document.addEventListener('click',function(e){
       }
     }
   }).catch(()=>{
-    // Fallback ticker : dernier pick gagné depuis PICKS_FEED
+    // API injoignable — fallback sur le PICK hardcodé
+    renderPick();
+    // Ticker : dernier pick gagné depuis PICKS_FEED
     const lastWin = [...PICKS_FEED].reverse().find(p=>p.status==='finished'&&p.result==='win');
     if(lastWin){
       const txt = `⚡ Dernier pick : ${lastWin.home} vs ${lastWin.away} — ${lastWin.pick} @${lastWin.cote}`;
