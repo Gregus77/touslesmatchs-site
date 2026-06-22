@@ -1049,6 +1049,28 @@ async function sendWeeklyStats() {
   }
 }
 
+function scheduleDailyPick() {
+  const now = new Date();
+  // Prochain 10h00 heure Paris (UTC+2 été / UTC+1 hiver → on utilise 8h UTC)
+  const next = new Date(now);
+  next.setUTCHours(8, 0, 0, 0);
+  if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
+  const msUntil = next.getTime() - now.getTime();
+  console.log(`[daily-pick] Prochain pick automatique dans ${Math.round(msUntil / 3600000)}h (${next.toISOString()})`);
+  setTimeout(async () => {
+    console.log("[daily-pick] Lancement analyse automatique du pick du jour...");
+    if (ADMIN_CHAT) {
+      await reply(ADMIN_CHAT, "⏰ <b>Pick du jour automatique</b>\nLancement de l'analyse...").catch(() => {});
+    }
+    await runAnalyse(ADMIN_CHAT).catch(e => console.error("[daily-pick] Erreur:", e.message));
+    // Relancer chaque 24h
+    setInterval(async () => {
+      console.log("[daily-pick] Lancement analyse automatique du pick du jour...");
+      await runAnalyse(ADMIN_CHAT).catch(e => console.error("[daily-pick] Erreur:", e.message));
+    }, 24 * 3600 * 1000);
+  }, msUntil);
+}
+
 function scheduleWeeklyStats() {
   const now = new Date();
   // Prochain lundi à 8h00 (heure Paris = UTC+2)
@@ -1076,6 +1098,8 @@ async function poll() {
     await reply(ADMIN_CHAT, "🟢 <b>Hermès Admin Bot démarré</b>\nTape /help pour voir les commandes.").catch(() => {});
   }
 
+  // Planifier le pick quotidien automatique à 10h Paris
+  scheduleDailyPick();
   // Planifier le rapport hebdomadaire automatique
   scheduleWeeklyStats();
 
