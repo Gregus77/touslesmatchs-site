@@ -1706,7 +1706,6 @@ const PICKS_FEED = [
   { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, status:"finished", result:"win", score:"107-106" },
   { id:"maroc-ecosse", date:"2026-06-19", time:"21:00", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", pick:"Victoire Maroc (1X2)", cote:1.85, status:"finished", result:"win", score:"1-0" },
   { id:"turquie-paraguay", date:"2026-06-20", time:"05:00", competition:"Coupe du Monde 2026 · Groupe H", home:"Turquie", away:"Paraguay", pick:"Double chance 1X (Turquie ou Nul)", cote:1.52, status:"finished", result:"win", score:"1-0" },
-  { id:"espagne-japon", date:"2026-06-22", time:"19:00", competition:"Coupe du Monde 2026 · Huitième de finale", home:"Espagne", away:"Japon", pick:"Victoire Espagne (1X2)", cote:1.65, status:"upcoming", result:null },
 ];
 
 function renderPicksFeed() {
@@ -2260,17 +2259,81 @@ document.addEventListener('click',function(e){
   fillKPIs();
   try { buildChart(); } catch(e) { console.warn('buildChart error', e); }
 
-  // ── Ticker dynamique : affiche le prochain pick ou le dernier pick gagné
-  (function updateTicker(){
-    const upcoming = PICKS_FEED.find(p => p.status === 'upcoming');
-    const lastWin  = [...PICKS_FEED].reverse().find(p => p.status === 'finished' && p.result === 'win');
-    const ref = upcoming || lastWin;
-    if(ref){
-      const label = upcoming ? 'Pick du jour' : 'Dernier pick';
-      const pickText = `⚡ ${label} : ${ref.home} vs ${ref.away} — ${ref.pick} @${ref.cote}`;
-      ['t1','t2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=pickText;});
+  // ── Pick réel depuis l'API — ticker + carte upcoming + FOMO countdown
+  fetch('/current-pick').then(r=>r.json()).then(d=>{
+    if(!d.ok || !d.pick) return;
+    const p = d.pick;
+    const isUpcoming = p.status === 'upcoming';
+    const home = p.teamA?.name || '';
+    const away = p.teamB?.name || '';
+    const label = isUpcoming ? 'Pick du jour' : 'Dernier pick';
+    const pickTxt = `⚡ ${label} : ${home} vs ${away}${p.marketLabel?' — '+p.marketLabel:''}${p.cote?' @'+p.cote:''}`;
+    ['t1','t2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=pickTxt;});
+
+    if(isUpcoming){
+      // Injecter la carte "prochain pick" dans #pf-root si absente
+      const pfRoot = document.getElementById('pf-root');
+      if(pfRoot && !pfRoot.querySelector('#np-card')){
+        const kickTime = p.time || '20:00';
+        const todayStr = new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
+        const kickMs = new Date(todayStr+'T'+kickTime+':00').getTime();
+        const fmtTimer = (ms) => {
+          if(ms<=0) return '🔴 en cours';
+          const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000);
+          return h>0?`⏱ Coup d'envoi ${h}h${String(m).padStart(2,'0')}`:`⏱ Coup d'envoi ${String(m).padStart(2,'0')}min`;
+        };
+        const card = document.createElement('div');
+        card.innerHTML = `<div class="np-card" id="np-card">
+          <div class="np-eyebrow">
+            <span class="np-tag">🔮 Prochain pick</span>
+            <span class="np-timer" id="np-timer">${fmtTimer(kickMs-Date.now())}</span>
+          </div>
+          <div class="np-teams">
+            <div class="np-tn a">${home}</div>
+            <div class="np-vs">VS</div>
+            <div class="np-tn b">${away}</div>
+          </div>
+          <div class="np-meta">${p.competition||''} · Aujourd'hui à ${kickTime}</div>
+          <div class="np-preview">
+            <span style="font-size:20px">🎯</span>
+            <div>
+              <div class="np-preview-txt">Analyse Concile disponible en avant-première</div>
+              <div class="np-preview-lock">🔒 Réservé aux membres Pro & Elite</div>
+            </div>
+          </div>
+          <button class="np-btn" id="np-btn" onclick="requestPrematchAnalysis()">Lancer l'analyse →</button>
+          <div id="np-result"></div>
+        </div>`;
+        pfRoot.appendChild(card.firstElementChild);
+        // Countdown live
+        const timerEl = document.getElementById('np-timer');
+        setInterval(()=>{ if(timerEl) timerEl.textContent=fmtTimer(kickMs-Date.now()); },30000);
+      }
+      // FOMO countdown
+      const fomoEl = document.getElementById('fomo-countdown');
+      if(fomoEl){
+        const kickTime = p.time||'20:00';
+        const todayStr = new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
+        const kickMs = new Date(todayStr+'T'+kickTime+':00').getTime();
+        const updateFomo=()=>{
+          const diff=kickMs-Date.now();
+          if(!fomoEl) return;
+          if(diff<=0){fomoEl.textContent='🔴 en cours';return;}
+          const h=Math.floor(diff/3600000), m=Math.floor((diff%3600000)/60000);
+          fomoEl.textContent=h>0?`${h}h${String(m).padStart(2,'0')}min`:`${String(m).padStart(2,'0')}min`;
+        };
+        updateFomo();
+        setInterval(updateFomo,30000);
+      }
     }
-  })();
+  }).catch(()=>{
+    // Fallback ticker : dernier pick gagné depuis PICKS_FEED
+    const lastWin = [...PICKS_FEED].reverse().find(p=>p.status==='finished'&&p.result==='win');
+    if(lastWin){
+      const txt = `⚡ Dernier pick : ${lastWin.home} vs ${lastWin.away} — ${lastWin.pick} @${lastWin.cote}`;
+      ['t1','t2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=txt;});
+    }
+  });
 
   // ── Membres Telegram (tg-member-count existant + FOMO strip)
   fetch('/community-stats').then(r=>r.json()).then(d=>{
@@ -2297,25 +2360,9 @@ document.addEventListener('click',function(e){
   const analysesEl=document.getElementById('fomo-analyses');
   if(analysesEl) analysesEl.textContent=Math.max(1,todayPicks);
 
-  // ── FOMO : countdown prochain pick
-  const nextPick=PICKS_FEED.find(p=>p.status==='upcoming');
-  if(nextPick){
-    const updateCountdown=()=>{
-      const kickMs=new Date(nextPick.date+'T'+nextPick.time+':00').getTime();
-      const diff=kickMs-Date.now();
-      const el=document.getElementById('fomo-countdown');
-      if(!el) return;
-      if(diff<=0){el.textContent='🔴 en cours';return;}
-      const h=Math.floor(diff/3600000);
-      const m=Math.floor((diff%3600000)/60000);
-      el.textContent=h>0?`${h}h${String(m).padStart(2,'0')}min`:`${String(m).padStart(2,'0')}min`;
-    };
-    updateCountdown();
-    setInterval(updateCountdown,30000);
-  } else {
-    const el=document.getElementById('fomo-countdown');
-    if(el) el.textContent='Demain matin';
-  }
+  // FOMO countdown : défaut avant réponse API
+  const fomoDefault=document.getElementById('fomo-countdown');
+  if(fomoDefault) fomoDefault.textContent='Demain matin';
 
   // ── Floating Telegram button
   const tgFloat=document.getElementById('tg-float');
