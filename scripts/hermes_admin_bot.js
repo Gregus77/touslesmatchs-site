@@ -103,12 +103,38 @@ function appendImprovementLog(pick) {
   }
 }
 
+function historyMatchName(row) {
+  if (Array.isArray(row)) return row[1] || "";
+  return `${row.home || ""} vs ${row.away || ""}`.trim();
+}
+
+function historyDate(row) {
+  return Array.isArray(row) ? row[0] : row?.date;
+}
+
+function historyRowFromPick(pick) {
+  return [
+    pick.date || new Date().toISOString().slice(0, 10),
+    `${pick.home || ""} vs ${pick.away || ""}`.trim(),
+    pick.prono || pick.bet || "",
+    String(pick.cote || ""),
+    pick.score || "",
+    pick.status || "EN ATTENTE",
+    pick.sport || "Football"
+  ];
+}
+
+function sameHistoryPick(row, pick) {
+  const match = `${pick.home || ""} vs ${pick.away || ""}`.trim().toLowerCase();
+  return historyDate(row) === pick.date && historyMatchName(row).toLowerCase() === match;
+}
+
 function archiveCurrentPick(data) {
   const p = data.currentPick;
   if (!p || !p.home || p.home === "Analyse en cours") return;
   if (!data.history) data.history = [];
-  const exists = data.history.find(h => h.date === p.date && h.home === p.home && h.away === p.away);
-  if (!exists) data.history.unshift({ ...p });
+  const exists = data.history.find(h => sameHistoryPick(h, p));
+  if (!exists) data.history.unshift(historyRowFromPick(p));
   if (data.history.length > 60) data.history = data.history.slice(0, 60);
 }
 
@@ -620,9 +646,10 @@ async function cmdResult(chatId, status) {
   data.currentPick.resolvedAt = new Date().toISOString();
   // Archive avec résultat
   if (!data.history) data.history = [];
-  const idx = data.history.findIndex(h => h.date === data.currentPick.date && h.home === data.currentPick.home);
-  if (idx >= 0) data.history[idx] = { ...data.currentPick };
-  else data.history.unshift({ ...data.currentPick });
+  const idx = data.history.findIndex(h => sameHistoryPick(h, data.currentPick));
+  const row = historyRowFromPick(data.currentPick);
+  if (idx >= 0) data.history[idx] = row;
+  else data.history.unshift(row);
   savePicks(data);
   appendImprovementLog(data.currentPick);
   const emoji = status === "GAGNE" ? "🏆" : "❌";

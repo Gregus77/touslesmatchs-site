@@ -264,9 +264,15 @@ function testStaticHistoryHasTurkeyParaguayLoss() {
   const data = JSON.parse(fs.readFileSync(picksPath, "utf8"));
   const row = (data.history || []).find(item => item[1] === "Turquie vs Paraguay");
 
+  assert.ok((data.history || []).length >= 20, "L'historique public ne doit pas etre remplace par seulement quelques lignes");
   assert.ok(row, "Turquie vs Paraguay doit rester dans l'historique public");
   assert.equal(row[4], "0-1");
   assert.equal(row[5], "PERDU");
+
+  const ireland = (data.history || []).find(item => item[1] === "Shamrock Rovers vs Derry City");
+  assert.ok(ireland, "Le BTTS Irlande doit rester dans l'historique public");
+  assert.equal(ireland[4], "1-1");
+  assert.equal(ireland[5], "GAGNE");
 }
 
 function testUnknownScoresDoNotBecomeNilNilConstraints() {

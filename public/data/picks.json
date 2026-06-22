@@ -40,6 +40,69 @@
       "Football"
     ],
     [
+      "2026-06-19",
+      "Maroc vs Ecosse",
+      "Victoire Maroc (1X2)",
+      "1.85",
+      "1-0",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-06-10",
+      "NY Knicks vs San Antonio Spurs",
+      "Victoire San Antonio (1X2)",
+      "2.10",
+      "107-106",
+      "GAGNE",
+      "Basketball"
+    ],
+    [
+      "2026-06-01",
+      "Canada vs Ouzbekistan",
+      "Victoire Canada (1X2)",
+      "1.58",
+      "2-0",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-05-20",
+      "Fribourg vs Aston Villa",
+      "Victoire Aston Villa (1X2)",
+      "1.58",
+      "0-3",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-05-19",
+      "NY Knicks vs Cleveland Cavaliers",
+      "Plus de 216.5 pts",
+      "1.72",
+      "115-104",
+      "GAGNE",
+      "Basketball"
+    ],
+    [
+      "2026-05-17",
+      "Villarreal vs FC Seville",
+      "Victoire Villarreal (1X2)",
+      "1.88",
+      "3-2",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-05-13",
+      "Lazio vs Inter Milan",
+      "Victoire Inter (1X2)",
+      "1.60",
+      "0-2",
+      "GAGNE",
+      "Football"
+    ],
+    [
       "2026-06-13",
       "Real Monarchs vs Portland Timbers II",
       "Real Monarchs ou nul",
@@ -149,9 +212,9 @@
     ]
   ],
   "stats": {
-    "gagnes": 4,
+    "gagnes": 11,
     "perdus": 1,
     "en_attente": 9,
-    "taux": 80
+    "taux": 92
   }
 }
