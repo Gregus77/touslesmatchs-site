@@ -443,8 +443,19 @@ async function loadMatches(force){
       }
       lastUpdate = new Date();
       document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';
+    } else {
+      allMatches = [];
+      lastUpdate = new Date();
+      const pill = document.getElementById('match-count-pill');
+      if(pill) pill.textContent = '0 match en direct';
     }
-  } catch(e){ console.error(e); }
+  } catch(e){
+    console.error(e);
+    allMatches = [];
+    lastUpdate = new Date();
+    const pill = document.getElementById('match-count-pill');
+    if(pill) pill.textContent = '0 match en direct';
+  }
   renderMain();
 }
 
