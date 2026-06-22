@@ -7,7 +7,7 @@ Checks run:
 - `node --check scripts/api_server.js` -> exit 0
 - `node --check scripts/hermes_admin_bot.js` -> exit 0
 - `python -m py_compile council/tools/sports_api.py` -> exit 0
-- `git status --short --branch` -> run during final verification before commit
+- `git status --short --branch` -> `## claude/happy-bell-h9zj83...origin/claude/happy-bell-h9zj83 [ahead 20]` plus only `.superpowers/sdd/task-8-report.md` modified locally; `.superpowers/` is ignored scratch and was not included in the smoke report commit.
 
 Expected production behavior after deploy:
 - No demo match appears as a live match.
