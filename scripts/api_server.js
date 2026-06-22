@@ -561,6 +561,70 @@ function computeLiveConstraints(match) {
   return lines.join("\n");
 }
 
+async function runDebateRound(agentResults, match, matchContext, availableBets, groqKey, model) {
+  try {
+    // Trouver les 2 agents avec des paris différents (le plus de divergence)
+    const betGroups = {};
+    agentResults.forEach(a => {
+      if (!betGroups[a.bet]) betGroups[a.bet] = [];
+      betGroups[a.bet].push(a);
+    });
+    const uniqueBets = Object.keys(betGroups);
+
+    // Pas de débat si consensus total
+    if (uniqueBets.length <= 1) return "";
+
+    // Trouver les 2 paris les plus représentés (ou les plus opposés)
+    const sorted = Object.entries(betGroups).sort((a, b) => b[1].length - a[1].length);
+    const [betA, agentsA] = sorted[0];
+    const [betB, agentsB] = sorted[1];
+    const advocateA = agentsA[0];
+    const advocateB = agentsB[0];
+
+    console.log(`[débat] ${advocateA.name} (${betA}) vs ${advocateB.name} (${betB})`);
+
+    const debatePrompt = (advocate, ownBet, opponentBet, opponentName) =>
+      `Tu es ${advocate.name} dans le Concile IA. Tu as voté "${ownBet}".
+${matchContext}
+
+${advocateB.name} a voté "${opponentBet}" à la place. Tu dois défendre ta position comme un AVOCAT :
+1. Donne 2 arguments concrets et factuels pourquoi "${ownBet}" est le bon pari ICI et MAINTENANT
+2. Réfute en 1 argument pourquoi "${opponentBet}" est risqué dans ce contexte précis
+3. Cite un fait spécifique : score, minute, style d'équipe, ou statistique
+
+Sois direct, précis, 3 phrases maximum. Pas de JSON.`;
+
+    // Lancer les 2 plaidoiries en parallèle
+    const [respA, respB] = await Promise.all([
+      httpPost(
+        "https://api.groq.com/openai/v1/chat/completions",
+        { model, messages: [{ role: "user", content: debatePrompt(advocateA, betA, betB, advocateB.name) }], temperature: 0.4, max_tokens: 200 },
+        { Authorization: `Bearer ${groqKey}` }
+      ).catch(() => null),
+      httpPost(
+        "https://api.groq.com/openai/v1/chat/completions",
+        { model, messages: [{ role: "user", content: debatePrompt(advocateB, betB, betA, advocateA.name) }], temperature: 0.4, max_tokens: 200 },
+        { Authorization: `Bearer ${groqKey}` }
+      ).catch(() => null),
+    ]);
+
+    const argA = respA?.choices?.[0]?.message?.content?.trim() || "";
+    const argB = respB?.choices?.[0]?.message?.content?.trim() || "";
+
+    if (!argA && !argB) return "";
+
+    let debate = `\n⚖️ DÉBAT DU CONCILE — Les agents s'affrontent :\n`;
+    if (argA) debate += `\n${advocateA.icon || "🔵"} ${advocateA.name} défend "${betA}" :\n${argA}\n`;
+    if (argB) debate += `\n${advocateB.icon || "🔴"} ${advocateB.name} défend "${betB}" :\n${argB}\n`;
+    debate += `\nChief, tranche : quel avocat a l'argument le plus solide compte tenu du contexte live ?\n`;
+
+    return debate;
+  } catch(e) {
+    console.error("[débat] Erreur:", e.message);
+    return "";
+  }
+}
+
 async function runConcileAnalysis(match) {
   if (!GROQ_API_KEY) {
     return getMockAnalysis(match);
@@ -651,10 +715,21 @@ Ta méthode de synthèse pour ${match.home} vs ${match.away} :
 Tu ne votes pas — tu DÉCIDES. Ton verdict est le verdict du Concile.`,
   ];
 
+  // Checklist de vérification obligatoire — chaque agent DOIT cocher avant de voter
+  const CHECKLIST = `
+AVANT de donner ton verdict, vérifie OBLIGATOIREMENT ces 5 points :
+☑ 1. Score (${match.score_home ?? 0}-${match.score_away ?? 0}) + minute (${match.minute || '?'}') → quels paris sont encore mathématiquement possibles ?
+☑ 2. Qui mène / qui perd → quel est le momentum actuel, qui va pousser ?
+☑ 3. Terrain : ${isNeutralComp(match.competition) ? 'NEUTRE (pas d\'avantage domicile)' : `${match.home} joue à DOMICILE`} → impact sur le style de jeu ?
+☑ 4. Rythme de buts : ${match.score_home ?? 0 + (match.score_away ?? 0)} buts en ${match.minute || '?'}' → projeté sur 90min = ${Math.round(((Number(match.score_home??0)+Number(match.score_away??0))/(Math.max(parseInt(match.minute)||50,1)))*90*10)/10} buts → Over ou Under ?
+☑ 5. Enjeu du match : est-ce une finale, une qualification décisive → les équipes défendent-elles ou attaquent-elles à tout prix ?
+Seulement après avoir vérifié ces 5 points, donne ton verdict.`;
+
   // Charger les performances historiques pour pondérer le verdict du Chief
   const agentPerf = getAgentPerformance();
 
   const agentResults = [];
+  let debateContext = ""; // Sera rempli après les 4 votes si désaccord
 
   for (let i = 0; i < agentNames.length; i++) {
     const isChief = i === 4;
@@ -683,7 +758,7 @@ ${matchContext}
 
 Votes des agents avec leur fiabilité (le winrate 14j est PRIORITAIRE sur le global) :
 ${previousVotes}
-
+${debateContext}
 Règle de pondération :
 - Agent ⭐ FORT sur 14j → son vote compte double
 - Agent ⚠️ FAIBLE sur 14j → son vote compte moitié moins
@@ -691,9 +766,10 @@ Règle de pondération :
 
 Synthétise en tenant compte de :
 1. La fiabilité RÉCENTE de chaque agent (14 derniers jours en priorité)
-2. Les contraintes mathématiques du score live
-3. Tes connaissances sur ${match.home} et ${match.away}
-4. Tu DOIS choisir parmi : ${availableBets.join(", ")}
+2. Les arguments du débat ci-dessus (si présents) — quel avocat a les arguments les plus solides ?
+3. Les contraintes mathématiques du score live
+4. Tes connaissances sur ${match.home} et ${match.away}
+5. Tu DOIS choisir parmi : ${availableBets.join(", ")}
 
 Réponds en JSON pur (pas de markdown):
 {
@@ -704,6 +780,7 @@ Réponds en JSON pur (pas de markdown):
       : `${personas[i]}
 
 ${matchContext}
+${CHECKLIST}
 
 En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande le meilleur pari.
 Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
@@ -766,6 +843,11 @@ Réponds en JSON pur (pas de markdown):
     } catch (e) {
       // fallback for this agent — passer availableBets pour éviter les paris impossibles
       agentResults.push(getMockAgentAnalysis(agentNames[i], match, i, availableBets));
+    }
+
+    // Après les 4 agents, lancer le débat si divergence avant le Chief
+    if (i === 3 && agentResults.length === 4) {
+      debateContext = await runDebateRound(agentResults, match, matchContext, availableBets, GROQ_API_KEY, agentNames[0].model);
     }
 
     // Small delay between agents to avoid rate limits
