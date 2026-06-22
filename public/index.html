@@ -864,11 +864,11 @@ footer{
 <!-- TICKER -->
 <div class="ticker">
   <div class="ticker-inner">
-    <span id="t1">⚡ Pick du jour : Turquie vs Paraguay — 1X @1.52 · Consensus 78% · Coupe du Monde 2026</span>
+    <span id="t1">⚡ Prochain pick bientôt disponible — restez connectés</span>
     <span>📊 Concile V4.3 · 5 IA · 3 sources minimum · Aucun match inventé</span>
     <span id="tw1">🏆 Winrate 100% · 7 picks · Profit +53€ sur 10€/pick</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
-    <span id="t2">⚡ Pick du jour : Turquie vs Paraguay — 1X @1.52 · Consensus 78% · Coupe du Monde 2026</span>
+    <span id="t2">⚡ Prochain pick bientôt disponible — restez connectés</span>
     <span>📊 Concile V4.3 · 5 IA · 3 sources minimum · Aucun match inventé</span>
     <span id="tw2">🏆 Winrate 100% · 7 picks · Profit +53€ sur 10€/pick</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
@@ -1310,28 +1310,9 @@ function ds(){
 }
 rs();is();ds();window.addEventListener('resize',()=>{rs();is()});
 
-// ══ PICK DATA
-const PICK={
-  status:"upcoming",
-  result:null,
-  sport:"Football",tag:"ptag-foot",
-  time:"05:00",competition:"Coupe du Monde 2026 · Groupe H",
-  teamA:{name:"Turquie",abbr:"TUR",color:"#e30a17"},
-  teamB:{name:"Paraguay",abbr:"PAR",color:"#d52b1e"},
-  scoreA:null,scoreB:null,minute:null,
-  marketType:"1X",
-  marketLabel:"Victoire Turquie ou Nul (double chance)",
-  marketDesc:"La Turquie, solide défensivement, affronte un Paraguay limité offensivement. Double chance 1X couvre les deux scénarios les plus probables. Value confirmée +5.8%.",
-  cote:1.52,
-  ia:[
-    {name:"Claude",   pct:81,ok:true, fill:"f-claude",   why:"Turquie 32e FIFA vs Paraguay 57e — écart ELO 145 pts en faveur des Turcs."},
-    {name:"Gemini",   pct:78,ok:true, fill:"f-gemini",   why:"Paraguay 0 victoire en 4 matchs amicaux pré-tournoi — manque de forme évident."},
-    {name:"DeepSeek", pct:79,ok:true, fill:"f-deepseek", why:"Turquie invaincue en match d'ouverture de groupe depuis 2008."},
-    {name:"Mistral",  pct:77,ok:true, fill:"f-mistral",  why:"Value +5.8% vs Pinnacle 1.44 — double chance 1X sous-cotée."},
-    {name:"Groq",     pct:75,ok:true, fill:"f-groq",     why:"H2H : Turquie 2 victoires, 1 nul sur les 3 dernières confrontations."}
-  ],
-  verdict:"go",verdictLabel:"GO — Mise normale",mise:"3% de ta bankroll"
-};
+// ══ PICK DATA — chargé dynamiquement depuis /current-pick
+// Pas de fallback hardcodé : si Hermès n'a pas fourni de pick, on affiche "Pas de pick aujourd'hui"
+const PICK={ status:"no_bet" };
 
 const MC={
   "1":      {color:"#10b981",bg:"rgba(16,185,129,.08)",border:"rgba(16,185,129,.2)",bar:"rgba(16,185,129,.6)"},
@@ -1658,7 +1639,7 @@ const PICKS_FEED = [
   { id:"canada-ouzbekistan", date:"2026-06-01", time:"21:00", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", pick:"Victoire Canada (1X2)", cote:1.58, status:"finished", result:"win", score:"2-0" },
   { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, status:"finished", result:"win", score:"107-106" },
   { id:"maroc-ecosse", date:"2026-06-19", time:"21:00", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", pick:"Victoire Maroc (1X2)", cote:1.85, status:"finished", result:"win", score:"1-0" },
-  { id:"turquie-paraguay", date:"2026-06-20", time:"05:00", competition:"Coupe du Monde 2026 · Groupe H", home:"Turquie", away:"Paraguay", pick:"Double chance 1X (Turquie ou Nul)", cote:1.52, status:"upcoming", result:null },
+  { id:"turquie-paraguay", date:"2026-06-20", time:"05:00", competition:"Coupe du Monde 2026 · Groupe H", home:"Turquie", away:"Paraguay", pick:"Double chance 1X (Turquie ou Nul)", cote:1.52, status:"finished", result:"loss", score:"0-1" },
 ];
 
 function renderPicksFeed() {

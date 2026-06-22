@@ -72,22 +72,8 @@ const SCORE_PATH = "/var/touslesmatchs/live_score.json";
 const PICK_PATH = "/var/touslesmatchs/current_pick.json";
 const HERMES_PICKS_PATH = "/picks/picks.json";
 
-const DEFAULT_PICK = {
-  teamA: { name: "Turquie", abbr: "TUR", color: "#e30a17" },
-  teamB: { name: "Paraguay", abbr: "PAR", color: "#d52b1e" },
-  competition: "Coupe du Monde 2026 · Groupe H",
-  time: "05:00",
-  marketType: "1X",
-  marketLabel: "Victoire Turquie ou Nul (double chance)",
-  cote: 1.52,
-  status: "upcoming",
-  result: null,
-  scoreA: null,
-  scoreB: null,
-};
-
 function loadPick() {
-  try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return DEFAULT_PICK; }
+  try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return null; }
 }
 function savePick(data) {
   fs.mkdirSync("/var/touslesmatchs", { recursive: true });
@@ -1073,7 +1059,7 @@ app.post("/admin/set-score", (req, res) => {
   const { email, code, scoreA, scoreB, minute, status, home, away } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   const data = {
-    home: home || "Turquie", away: away || "Paraguay",
+    home: home || "", away: away || "",
     score_home: Number(scoreA ?? 0), score_away: Number(scoreB ?? 0),
     minute: minute || null,
     status: status || "IN_PLAY",
