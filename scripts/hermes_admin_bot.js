@@ -1129,13 +1129,39 @@ function scheduleDailyPick() {
   const msUntil = next.getTime() - now.getTime();
   console.log(`[daily-pick] Prochain pick automatique dans ${Math.round(msUntil / 3600000)}h (${next.toISOString()})`);
   setTimeout(async () => {
-    console.log("[daily-pick] Lancement analyse automatique du pick du jour...");
-    if (ADMIN_CHAT) {
-      await reply(ADMIN_CHAT, "⏰ <b>Pick du jour automatique</b>\nLancement de l'analyse...").catch(() => {});
+    console.log("[daily-pick] Vérification du pick du jour...");
+
+    // Ne pas écraser un pick déjà défini pour aujourd'hui
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const existing = loadPicks().currentPick;
+    const hasValidPick = existing && existing.date === todayStr
+      && existing.home && existing.home !== "Analyse en cours" && existing.home !== "PAS DE PICK"
+      && existing.status !== "NOPICK";
+
+    if (hasValidPick) {
+      console.log(`[daily-pick] Pick déjà défini pour aujourd'hui : ${existing.home} vs ${existing.away} → pas d'écrasement.`);
+      if (ADMIN_CHAT) {
+        await reply(ADMIN_CHAT, `⏰ <b>Pick automatique</b>\n✅ Pick déjà défini pour aujourd'hui : <b>${existing.home} vs ${existing.away}</b>\nAucun écrasement.`).catch(() => {});
+      }
+    } else {
+      console.log("[daily-pick] Lancement analyse automatique du pick du jour...");
+      if (ADMIN_CHAT) {
+        await reply(ADMIN_CHAT, "⏰ <b>Pick du jour automatique</b>\nLancement de l'analyse...").catch(() => {});
+      }
+      await runAnalyse(ADMIN_CHAT).catch(e => console.error("[daily-pick] Erreur:", e.message));
     }
-    await runAnalyse(ADMIN_CHAT).catch(e => console.error("[daily-pick] Erreur:", e.message));
+
     // Relancer chaque 24h
     setInterval(async () => {
+      const todayNow = new Date().toISOString().slice(0, 10);
+      const cur = loadPicks().currentPick;
+      const already = cur && cur.date === todayNow
+        && cur.home && cur.home !== "Analyse en cours" && cur.home !== "PAS DE PICK"
+        && cur.status !== "NOPICK";
+      if (already) {
+        console.log(`[daily-pick] Pick déjà défini (${cur.home} vs ${cur.away}) → pas d'écrasement.`);
+        return;
+      }
       console.log("[daily-pick] Lancement analyse automatique du pick du jour...");
       await runAnalyse(ADMIN_CHAT).catch(e => console.error("[daily-pick] Erreur:", e.message));
     }, 24 * 3600 * 1000);
