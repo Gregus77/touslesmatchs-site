@@ -1615,9 +1615,25 @@ app.post("/analyse", async (req, res) => {
   const { home, away } = req.body || {};
   if (!home || !away) return res.json({ ok: false, error: "Deux équipes requises" });
 
+  const today0 = new Date().toISOString().slice(0, 10);
+  const ck0 = `free__${home}_${away}_${today0}`;
+  if (analysisCache.has(ck0)) {
+    const cached = analysisCache.get(ck0);
+    const chief = cached.agents[cached.agents.length - 1];
+    return res.json({ ok: true, cached: true, resume: chief.raison,
+      value_bet: { marche: chief.bet, prob: chief.confidence, cote_min_conseillée: (1/(chief.confidence/100)).toFixed(2), raison: chief.raison },
+      over25:{prob:58,tendance:"Tendance légèrement positive sur les buts."},
+      btts:{prob:52,tendance:"Les deux équipes ont des attaques actives."},
+      resultat:{domicile:45,nul:28,exterieur:27,explication:"Légère faveur pour l'équipe à domicile."},
+      premier_but_mi_temps:{premiere:55,deuxieme:45,explication:"Les premières mi-temps sont souvent plus ouvertes."}
+    });
+  }
+
   try {
     const match = { home, away, score_home: 0, score_away: 0, minute: "?", status: "IN_PLAY", competition: "International" };
     const analysis = await runConcileAnalysis(match);
+    analysisCache.set(ck0, analysis);
+    setTimeout(() => analysisCache.delete(ck0), 6 * 60 * 60 * 1000); // expire 6h
     const chief = analysis.agents[analysis.agents.length - 1];
 
     res.json({
@@ -1722,6 +1738,18 @@ function verifyCode(email, code) {
 // Cache des analyses de la journée (clé = email+matchId)
 const analysisCache = new Map();
 
+// Clé de cache partagée (tous utilisateurs confondus)
+function makeCacheKey(match, today) {
+  const isLive = match.status === "IN_PLAY" || match.status === "LIVE";
+  if (isLive) {
+    // Live : renouveler si score change OU toutes les 10 min de jeu
+    const min = parseInt(match.minute) || 0;
+    const minBucket = Math.floor(min / 10) * 10;
+    return `live__${match.home}_${match.away}_${match.score_home}-${match.score_away}_${minBucket}`;
+  }
+  return `prematch__${match.home}_${match.away}_${today}`;
+}
+
 app.post("/concile-analysis", async (req, res) => {
   const { email, code, match } = req.body || {};
   if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
@@ -1738,7 +1766,7 @@ app.post("/concile-analysis", async (req, res) => {
   }
 
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
-  const cacheKey = `${email}__${match.home}_${match.away}_${today}`;
+  const cacheKey = makeCacheKey(match, today);
   if (!forceRefresh && analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
   }
@@ -1789,7 +1817,7 @@ app.post("/prematch-analysis", async (req, res) => {
   }
 
   const today2 = new Date().toISOString().slice(0, 10);
-  const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || today2}`;
+  const cacheKey = `prematch__${match.home}_${match.away}_${match.date || today2}`;
   if (analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
   }
