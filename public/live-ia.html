@@ -621,7 +621,13 @@ async function addManualMatch(){
     zone.innerHTML = renderAnalysis(match, d);
   } catch(e){
     if(btn){ btn.disabled=false; btn.innerHTML='🧠 Lancer l\'analyse du Concile →'; }
-    zone.innerHTML=`<div class="analysis-panel" style="padding:20px;text-align:center;color:var(--muted2)">Erreur réseau. Réessaie.</div>`;
+    const offline = !navigator.onLine;
+    zone.innerHTML=`<div class="analysis-panel" style="padding:24px;text-align:center">
+      <div style="font-size:32px;margin-bottom:10px">${offline?'📡':'⚡'}</div>
+      <div style="font-weight:700;margin-bottom:6px">${offline?'Pas de connexion internet':'Analyse temporairement indisponible'}</div>
+      <div style="font-size:13px;color:var(--muted2);margin-bottom:16px">${offline?'Vérifie ton réseau puis réessaie.':'Le serveur met du temps à répondre. Réessaie dans quelques secondes.'}</div>
+      <button onclick="document.querySelector('.concile-btn')?.click()" style="padding:10px 22px;background:var(--indigo);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">🔄 Réessayer</button>
+    </div>`;
   }
 }
 
@@ -771,7 +777,13 @@ async function analyzeMatch(i){
     zone.innerHTML = renderAnalysis(m, d);
   } catch(e){
     if(btn){ btn.disabled=false; btn.innerHTML='<span>🧠</span> Réessayer'; }
-    zone.innerHTML = `<div class="analysis-panel"><div style="text-align:center;padding:20px;color:var(--muted2)">Erreur réseau. Réessaie.</div></div>`;
+    const offline = !navigator.onLine;
+    zone.innerHTML = `<div class="analysis-panel"><div style="text-align:center;padding:24px">
+      <div style="font-size:32px;margin-bottom:10px">${offline?'📡':'⚡'}</div>
+      <div style="font-weight:700;margin-bottom:6px">${offline?'Pas de connexion internet':'Analyse temporairement indisponible'}</div>
+      <div style="font-size:13px;color:var(--muted2);margin-bottom:16px">${offline?'Vérifie ton réseau puis réessaie.':'Le serveur met du temps à répondre. Réessaie dans quelques secondes.'}</div>
+      <button onclick="this.closest('.analysis-panel').querySelector('button')?.click()||location.reload()" style="padding:10px 22px;background:var(--indigo);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer">🔄 Réessayer</button>
+    </div></div>`;
   }
 }
 
