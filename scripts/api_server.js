@@ -928,17 +928,63 @@ function saveAgentPredictions(match, agentResults) {
 }
 
 // Normalise un nom d'équipe pour comparaison floue : minuscules, sans accents, 3 premiers chars
+// Alias des équipes nationales et clubs souvent désignés différemment selon la langue/source
+const TEAM_ALIASES = {
+  // Équipes nationales — Coupe du Monde 2026
+  'usa': ['united states', 'us soccer', 'etats unis', 'estados unidos'],
+  'korea republic': ['south korea', 'coree du sud', 'coree', 'korea', 'republiquedecoree'],
+  'korea dpr': ['north korea', 'coree du nord'],
+  'ivory coast': ['cote divoire', 'cote d ivoire', 'coted ivoire'],
+  'cape verde': ['cap vert', 'cape verde islands', 'capvert'],
+  'iran': ['ir iran', 'islamic republic of iran'],
+  'czechia': ['czech republic', 'republique tcheque', 'tcheque'],
+  'north macedonia': ['macedonia', 'macedoine'],
+  'bosnia herzegovina': ['bosnia', 'bosnie'],
+  'trinidad tobago': ['trinidad and tobago', 'trinite'],
+  'new zealand': ['nouvelle zelande', 'nz'],
+  'saudi arabia': ['arabie saoudite', 'ksa'],
+  'uae': ['united arab emirates', 'emirats arabes unis'],
+  'central african republic': ['centrafrique'],
+  'dr congo': ['congo dr', 'democratic republic of congo', 'rdc'],
+  'republic of ireland': ['ireland', 'irlande', 'rep of ireland'],
+  // Clubs fréquents
+  'paris saint germain': ['psg', 'paris sg', 'paris saint-germain'],
+  'manchester united': ['man united', 'man utd', 'manchester utd'],
+  'manchester city': ['man city'],
+  'atletico madrid': ['atletico de madrid', 'atl madrid'],
+  'inter milan': ['inter', 'internazionale', 'fc inter'],
+  'ac milan': ['milan', 'associazione calcio milan'],
+  'borussia dortmund': ['bvb', 'dortmund'],
+  'rb leipzig': ['rasenballsport leipzig', 'leipzig'],
+  'bayer leverkusen': ['leverkusen'],
+};
+
 function normTeam(s) {
   return (s || '').toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]/g, '');
 }
+
+function getTeamCanonical(norm) {
+  for (const [canonical, aliases] of Object.entries(TEAM_ALIASES)) {
+    const normCanonical = normTeam(canonical);
+    if (norm === normCanonical) return normCanonical;
+    for (const alias of aliases) {
+      if (norm === normTeam(alias)) return normCanonical;
+    }
+  }
+  return norm;
+}
+
 // Vérifie si deux noms d'équipes correspondent (même langue ou non)
-// Ex: "Japon" ↔ "Japan", "Corée du Sud" ↔ "Korea Republic"
+// Ex: "Japon" ↔ "Japan", "USA" ↔ "United States", "PSG" ↔ "Paris Saint-Germain"
 function teamsMatch(a, b) {
   const na = normTeam(a), nb = normTeam(b);
   if (na === nb) return true;
   if (na.includes(nb) || nb.includes(na)) return true;
+  // Résolution via dictionnaire d'alias
+  const ca = getTeamCanonical(na), cb = getTeamCanonical(nb);
+  if (ca === cb) return true;
   // Correspondance sur les 4 premiers caractères (couvre Japon/Japan, Espagne/Spain, etc.)
   if (na.length >= 4 && nb.length >= 4 && na.slice(0, 4) === nb.slice(0, 4)) return true;
   // Correspondance sur le premier mot
