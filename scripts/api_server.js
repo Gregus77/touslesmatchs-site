@@ -402,30 +402,51 @@ function computeAvailableBets(match) {
   const minute = estimateMinute(match);
   const remaining = Math.max(0, 93 - minute);
   const isLive = minute >= 30 && match.status !== "SCHEDULED";
+  const isNeutral = isNeutralComp(match.competition || "");
 
   let bets = [...BET_TYPES];
+
+  // Terrain neutre (Coupe du Monde, Euro, etc.) → remplacer domicile/extérieur par noms réels
+  // Les termes "Victoire domicile/extérieur" n'ont pas de sens sans avantage terrain
+  if (isNeutral) {
+    bets = bets.map(b => {
+      if (b === "Victoire domicile") return `Victoire ${match.home}`;
+      if (b === "Victoire extérieur") return `Victoire ${match.away}`;
+      if (b === "Double chance 1X") return `Double chance ${match.home} ou Nul`;
+      if (b === "Double chance X2") return `Double chance ${match.away} ou Nul`;
+      return b;
+    });
+  }
+
   if (!isLive) return bets;
 
   // Marchés déjà PERDUS → supprimer
   if (total > 2.5) bets = bets.filter(b => b !== "Under 2.5 buts");
-  if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts" && b !== "Under 2.5 buts"); // Under 1.5 auto-perdu aussi
+  if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts" && b !== "Under 2.5 buts");
   if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Non");
 
-  // Marchés mathématiquement IMPOSSIBLES → supprimer
-  // Over 2.5 : besoin de (3-total) buts dans remaining minutes
+  // Over 2.5 : projection mathématique basée sur le rythme actuel
   const need25 = Math.max(0, 3 - total);
-  if (need25 >= 3 && remaining <= 30) bets = bets.filter(b => b !== "Over 2.5 buts"); // <3% de chance
+  const projectedGoals = minute > 0 ? (total / minute) * 90 : 0;
+  if (need25 >= 3 && remaining <= 30) bets = bets.filter(b => b !== "Over 2.5 buts");
   if (need25 >= 2 && remaining <= 15) bets = bets.filter(b => b !== "Over 2.5 buts");
+  // Nouveau : si projection < 2.0 après 45 min → Over 2.5 statistiquement improbable
+  if (minute >= 45 && need25 >= 2 && projectedGoals < 2.0) bets = bets.filter(b => b !== "Over 2.5 buts");
 
   // BTTS quasi-impossible si une équipe vierge et peu de temps
   if (h === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
   if (a === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
 
   // Victoire impossible si mène +2 et <10 min
-  if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire extérieur");
-  if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire domicile");
+  if (isNeutral) {
+    if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== `Victoire ${match.away}`);
+    if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== `Victoire ${match.home}`);
+  } else {
+    if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire extérieur");
+    if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire domicile");
+  }
 
-  return bets.length > 0 ? bets : BET_TYPES; // safety: toujours au moins 1 choix
+  return bets.length > 0 ? bets : BET_TYPES;
 }
 
 // Correction post-IA : si l'IA recommande quand même un pari impossible, on corrige
@@ -509,9 +530,14 @@ function computeLiveConstraints(match) {
     }
   }
 
-  // ── Rythme de buts (extrapolation)
-  if (minute >= 45) {
+  // ── Rythme de buts (extrapolation + recommandation)
+  if (minute >= 30) {
     lines.push(`  → Rythme actuel : ${total} but(s) en ${minute}' → extrapolation : ~${projectedTotal} buts à 90'.`);
+    if (projectedTotal < 2.0 && total < 3) {
+      lines.push(`  → ⚠️ PROJECTION FAIBLE (${projectedTotal} buts) : Over 2.5 peu probable au rythme actuel → préfère Under 2.5.`);
+    } else if (projectedTotal >= 2.5 && total < 3) {
+      lines.push(`  → Projection compatible avec Over 2.5 (${projectedTotal} buts estimés).`);
+    }
   }
 
   // ── BTTS faisabilité
@@ -641,7 +667,7 @@ Réponds en JSON pur (pas de markdown):
           model: agentNames[i].model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3 + i * 0.05,
-          max_tokens: 200,
+          max_tokens: isChief ? 400 : 200,
         },
         { Authorization: `Bearer ${GROQ_API_KEY}` }
       );
@@ -652,9 +678,13 @@ Réponds en JSON pur (pas de markdown):
 
       const rawBet = parsed.bet || availableBets[0];
       const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
+      // Fallback raison : synthèse des votes si Chief n'a pas produit d'analyse
+      const fallbackRaison = isChief && agentResults.length > 0
+        ? `Consensus des agents : ${agentResults.map(a => a.bet).join(", ")}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`
+        : `Score actuel ${match.score_home}-${match.score_away}, analyse basée sur le rythme du match.`;
       const raisonFinal = corrected
-        ? `[Corrigé: "${original}" mathématiquement invalide → "${validBet}"] ${parsed.raison || ""}`
-        : (parsed.raison || "Analyse en cours.");
+        ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
+        : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
 
       agentResults.push({
         name: agentNames[i].name,
