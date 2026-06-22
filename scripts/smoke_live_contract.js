@@ -131,6 +131,52 @@ function testHermesCurrentPickNormalization() {
   assert.equal(pick.scoreB, 1);
 }
 
+function testHermesPendingCurrentPickNormalizesToUpcoming() {
+  const pick = __liveContractTest.normalizeCurrentPick({
+    home: "France",
+    away: "Brazil",
+    league: "World Cup",
+    time: "19:00",
+    bet: "1X2",
+    prono: "Victoire France",
+    cote: "1.95",
+    status: "EN ATTENTE",
+    score: "",
+    source: "hermes",
+    updatedAt: "2026-06-22T19:05:00.000Z",
+    sourceMatchId: "fd-123",
+    fixtureId: "987",
+  }, "hermes");
+
+  assert.equal(pick.status, "upcoming");
+  assert.equal(pick.result, null);
+  assert.equal(pick.source, "hermes");
+  assert.equal(pick.updatedAt, "2026-06-22T19:05:00.000Z");
+  assert.equal(pick.sourceMatchId, "fd-123");
+  assert.equal(pick.fixtureId, "987");
+}
+
+function testHermesNopickCurrentPickNormalizesToUpcoming() {
+  const pick = __liveContractTest.normalizeCurrentPick({
+    home: "PAS DE PICK",
+    away: "",
+    league: "",
+    time: "",
+    prono: "Aucun pick aujourd'hui",
+    bet: "",
+    cote: "",
+    status: "NOPICK",
+    score: "",
+    source: "hermes",
+    updatedAt: "2026-06-22T00:00:00.000Z",
+  }, "hermes");
+
+  assert.equal(pick.status, "upcoming");
+  assert.equal(pick.result, null);
+  assert.equal(pick.source, "hermes");
+  assert.equal(pick.updatedAt, "2026-06-22T00:00:00.000Z");
+}
+
 function testAdminCurrentPickNormalizationDefaultsProvenance() {
   const pick = __liveContractTest.normalizeCurrentPick({
     teamA: { name: "Maroc", abbr: "MAR", color: "#4f46e5" },
@@ -163,6 +209,8 @@ testApiSportsFixtureCanFetchStats();
 testStatsStatusIsExplicitWhenUnavailable();
 testVerifiedFixtureRejectsNonNumericIds();
 testHermesCurrentPickNormalization();
+testHermesPendingCurrentPickNormalizesToUpcoming();
+testHermesNopickCurrentPickNormalizesToUpcoming();
 testAdminCurrentPickNormalizationDefaultsProvenance();
 
 console.log("smoke_live_contract: ok");

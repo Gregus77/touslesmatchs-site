@@ -114,7 +114,7 @@ function parsePickScore(rawScore, rawScoreA, rawScoreB) {
 function normalizePickStatus(status) {
   if (status === "GAGNE" || status === "win") return { status: "win", result: "win" };
   if (status === "PERDU" || status === "loss") return { status: "loss", result: "loss" };
-  return { status: status || "upcoming", result: null };
+  return { status: "upcoming", result: null };
 }
 
 function normalizeCurrentPick(p, defaultSource) {
