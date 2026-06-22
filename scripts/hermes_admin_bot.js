@@ -954,11 +954,56 @@ ${votes}`);
   await doPublishPremium(livePick, chatId);
 }
 
+async function cmdPreview(chatId) {
+  const data = await loadPicks();
+  const p = data.currentPick;
+  if (!p || !p.home) return reply(chatId, "⚠️ Aucun pick actuel. Lance /analyse d'abord.");
+
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
+  const probStr = p.probabilite_estimee ? `\n📈 Proba estimée : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
+
+  const freeMsg = `📋 <b>APERÇU — Canal Gratuit (${PUBLIC_CHAT})</b>
+
+🔥 <b>Pick IA du jour — ${today}</b>
+
+🏟️ <b>${p.home} vs ${p.away}</b>
+🏆 ${p.league || ""}  🕒 ${p.time || ""}
+
+🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
+📊 <b>Cote :</b> ${p.cote || ""}
+✅ <b>Confiance Hermès :</b> ${p.confidenceTg || ""}
+
+🔎 Analyse complète : https://www.touslesmatchs.com${BOOKMAKERS_MSG}
+
+⚠️ 18+ uniquement. Jeu responsable.`;
+
+  const premiumMsg = `📋 <b>APERÇU — Canal Premium (${PREMIUM_CHANNEL})</b>
+
+🏆 <b>Pick PREMIUM du jour — ${today}</b>
+
+🏟️ <b>${p.home} vs ${p.away}</b>
+🏆 ${p.league || ""}  🕒 ${p.time || ""}
+
+🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
+📊 <b>Cote :</b> <b>${p.cote || ""}</b>
+✅ <b>Confiance Concile :</b> ${p.confidenceTg || ""}${probStr}
+${p.raison ? `\n💡 <i>${p.raison}</i>` : ""}
+🔎 Analyse complète : https://www.touslesmatchs.com/live-ia${BOOKMAKERS_MSG}
+
+⚠️ 18+ uniquement. Jeu responsable.`;
+
+  await reply(chatId, freeMsg);
+  await reply(chatId, premiumMsg);
+  await reply(chatId, `👆 Aperçu uniquement — rien n'a été envoyé.\nUtilise /publish et /publishpremium pour envoyer.`);
+}
+
 async function cmdHelp(chatId) {
   await reply(chatId, `🤖 <b>HERMÈS — Commandes disponibles</b>
 
 /status — État actuel (pick + containers)
 /analyse — Générer le pick du jour via IA
+/preview — Prévisualiser les messages sans publier
 /setpick A|B|Ligue|Heure|Prono|Cote — Définir pick manuellement
 /setscore 1-0 — Mettre à jour le score
 /win — Marquer le pick comme GAGNÉ
@@ -1006,6 +1051,7 @@ async function handleMessage(msg) {
     case "/autoanalyse":     return cmdAutoAnalyse(chatId);
     case "/resolve":         return cmdResolve(chatId, args);
     case "/livepick":        return cmdLivePick(chatId, args);
+    case "/preview":         return cmdPreview(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
     case "/deploy":          return cmdDeploy(chatId);
