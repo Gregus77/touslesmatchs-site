@@ -227,7 +227,7 @@ async function loadScreenshots(){
   const grid = document.getElementById('screenshots-grid');
   const title = document.getElementById('sc-title');
   try {
-    const r = await fetch('/api/preuves');
+    const r = await fetch('/preuves');
     const d = await r.json();
     const proofs = d.proofs || [];
     title.textContent = `Captures d'écran (${proofs.length})`;

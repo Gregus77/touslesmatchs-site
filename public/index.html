@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TousLesMatchs — Le Concile analyse. Tu encaisses.</title>
+<title>TousLesMatchs — Le Concile analyse. Tu gardes l'avantage.</title>
+<meta name="description" content="TousLesMatchs : 5 IA analysent chaque match ensemble. Un pick par jour, seulement quand les données le justifient. Accès gratuit ou Elite avec Live IA.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -973,7 +974,7 @@ footer{
   <div class="hero-badge"><span class="badge-dot"></span><span data-i18n="hero_badge">Concile V4.3 · Analyse en temps réel</span></div>
   <h1 class="hero-title">
     <span class="ht1" data-i18n="hero_t1">Le Concile analyse.</span>
-    <span class="ht2" data-i18n="hero_t2">Tu encaisses.</span>
+    <span class="ht2" data-i18n="hero_t2">Tu gardes l'avantage.</span>
   </h1>
   <div class="concile-explain">Le Concile = 5 IA qui votent ensemble — consensus ≥ 63% requis avant chaque pick</div>
   <p class="hero-sub" data-i18n="hero_sub">5 intelligences artificielles. 3 sources vérifiées. Un pick par jour, quand et seulement quand les données le justifient.</p>
@@ -1588,9 +1589,37 @@ function renderPick(){
   document.getElementById('t2').textContent=t;
 }
 
+// ══ KPIs — calcul indépendant du graphique
+function fillKPIs(){
+  const finished = PICKS_FEED.filter(p => p.status === 'finished');
+  const mise = 10, bankrollDepart = 100;
+  let bankroll = bankrollDepart;
+  finished.forEach(p => {
+    if(p.result === 'win') bankroll = parseFloat((bankroll + (p.cote - 1) * mise).toFixed(1));
+    else bankroll = parseFloat((bankroll - mise).toFixed(1));
+  });
+  const wins = finished.filter(p => p.result === 'win').length;
+  const total = finished.length;
+  const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
+  const gainNet = (bankroll - bankrollDepart).toFixed(1);
+  const roiEl = document.getElementById('kpi-roi');
+  const wrEl  = document.getElementById('kpi-winrate');
+  const bkEl  = document.getElementById('kpi-bankroll');
+  const pkEl  = document.getElementById('kpi-picks');
+  if(roiEl) roiEl.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
+  if(wrEl)  wrEl.textContent  = winrate + '%';
+  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll + '€';
+  if(pkEl)  pkEl.textContent  = total;
+  const hsW = document.getElementById('hs-winrate');
+  const hsG = document.getElementById('hs-gain');
+  if(hsW) hsW.textContent = winrate + '%';
+  if(hsG) hsG.textContent = (gainNet >= 0 ? '+' : '') + Math.round(gainNet) + '€';
+  const tickerStr = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur 10€/pick`;
+  ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=tickerStr;});
+}
+
 // ══ ROI CHART
 function buildChart(){
-  // Calcul dynamique depuis PICKS_FEED (vrais picks terminés)
   const finished = PICKS_FEED.filter(p => p.status === 'finished');
   const mise = 10, bankrollDepart = 100;
   let bankroll = bankrollDepart;
@@ -1604,29 +1633,7 @@ function buildChart(){
     labels.push(dateStr + ' ' + p.home.split(' ')[0]);
     data.push(bankroll);
   });
-
-  // Mise à jour des KPIs
-  const wins = finished.filter(p => p.result === 'win').length;
   const total = finished.length;
-  const roi = total > 0 ? ((bankroll - bankrollDepart) / bankrollDepart * 100).toFixed(1) : '0';
-  const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
-  const roiEl = document.getElementById('kpi-roi');
-  const wrEl  = document.getElementById('kpi-winrate');
-  const bkEl  = document.getElementById('kpi-bankroll');
-  const pkEl  = document.getElementById('kpi-picks');
-  const gainNet = (bankroll - bankrollDepart).toFixed(1);
-  if(roiEl) roiEl.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
-  if(wrEl)  wrEl.textContent  = winrate + '%';
-  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll + '€';
-  if(pkEl)  pkEl.textContent  = total;
-  // Sync hero stats
-  const hsW = document.getElementById('hs-winrate');
-  const hsG = document.getElementById('hs-gain');
-  if(hsW) hsW.textContent = winrate + '%';
-  if(hsG) hsG.textContent = (gainNet >= 0 ? '+' : '') + Math.round(gainNet) + '€';
-  // Sync ticker avec les vraies stats calculées
-  const tickerStr = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur 10€/pick`;
-  ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=tickerStr;});
 
   const canvas = document.getElementById('roi-chart');
   if(!canvas) return;
@@ -2250,21 +2257,38 @@ document.addEventListener('click',function(e){
   renderPick();
   renderPicksFeed();
   renderNavAuth();
+  fillKPIs();
   try { buildChart(); } catch(e) { console.warn('buildChart error', e); }
+
+  // ── Ticker dynamique : affiche le prochain pick ou le dernier pick gagné
+  (function updateTicker(){
+    const upcoming = PICKS_FEED.find(p => p.status === 'upcoming');
+    const lastWin  = [...PICKS_FEED].reverse().find(p => p.status === 'finished' && p.result === 'win');
+    const ref = upcoming || lastWin;
+    if(ref){
+      const label = upcoming ? 'Pick du jour' : 'Dernier pick';
+      const pickText = `⚡ ${label} : ${ref.home} vs ${ref.away} — ${ref.pick} @${ref.cote}`;
+      ['t1','t2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=pickText;});
+    }
+  })();
 
   // ── Membres Telegram (tg-member-count existant + FOMO strip)
   fetch('/community-stats').then(r=>r.json()).then(d=>{
     const count = d.ok && d.members ? d.members : null;
-    ['tg-member-count','fomo-members'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(!el) return;
-      el.textContent = count ? count.toLocaleString('fr-FR') : '1 200+';
-    });
+    const fomoEl = document.getElementById('fomo-members');
+    const tgEl = document.getElementById('tg-member-count');
+    if(count){
+      if(fomoEl) fomoEl.textContent = count.toLocaleString('fr-FR');
+      if(tgEl) tgEl.textContent = count.toLocaleString('fr-FR');
+    } else {
+      if(fomoEl) fomoEl.closest('.fomo-item')?.remove();
+      if(tgEl) tgEl.closest('.community-card')?.remove();
+    }
   }).catch(()=>{
-    ['tg-member-count','fomo-members'].forEach(id=>{
-      const el=document.getElementById(id);
-      if(el) el.textContent='1 200+';
-    });
+    const fomoEl = document.getElementById('fomo-members');
+    const tgEl = document.getElementById('tg-member-count');
+    if(fomoEl) fomoEl.closest('.fomo-item')?.remove();
+    if(tgEl) tgEl.closest('.community-card')?.remove();
   });
 
   // ── FOMO : analyses aujourd'hui
