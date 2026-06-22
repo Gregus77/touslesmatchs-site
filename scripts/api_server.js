@@ -1962,7 +1962,22 @@ app.get("/admin/analysis-performance", (req, res) => {
       FROM analysis_log
     `).get();
 
-    res.json({ ok: true, totals, byBet, byCompetition, recent });
+    const byAgent = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending
+      FROM agent_predictions
+      WHERE outcome IS NOT NULL
+      GROUP BY agent_name ORDER BY wins DESC
+    `).all().map(r => ({
+      ...r,
+      resolved: r.wins + r.losses,
+      winrate: (r.wins + r.losses) > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null,
+    }));
+
+    res.json({ ok: true, totals, byBet, byCompetition, byAgent, recent });
   } catch(e) {
     res.json({ ok: false, error: e.message });
   }

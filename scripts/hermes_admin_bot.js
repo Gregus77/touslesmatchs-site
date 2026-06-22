@@ -1091,6 +1091,26 @@ async function sendWeeklyStats() {
         });
     }
 
+    if (data.byAgent && data.byAgent.length) {
+      const topAgents = data.byAgent.filter(a => a.resolved >= 3).sort((a, b) => b.winrate - a.winrate);
+      if (topAgents.length) {
+        msg += `\n<b>🤖 Classement agents (matchs résolus) :</b>\n`;
+        topAgents.forEach((a, i) => {
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '  ';
+          const flag = a.winrate >= 70 ? ' 🔥' : a.winrate >= 60 ? ' ✅' : a.winrate < 45 ? ' ⚠️' : '';
+          msg += `  ${medal} ${a.agent_name}: ${a.winrate}% (${a.wins}W/${a.losses}L)${flag}\n`;
+        });
+      }
+
+      // Alerte si un agent dépasse 70% pour la première fois (≥5 prédictions résolues)
+      const stars = data.byAgent.filter(a => a.winrate >= 70 && a.resolved >= 5);
+      if (stars.length) {
+        msg += `\n⭐ <b>ALERTE PERFORMANCE</b> — Ces agents dépassent 70% !\n`;
+        stars.forEach(a => { msg += `  🔥 ${a.agent_name}: <b>${a.winrate}%</b> sur ${a.resolved} prédictions\n`; });
+        msg += `Envisage de booster leur poids dans le Concile.`;
+      }
+    }
+
     msg += `\n📈 Total analyses : ${totals.total} | En attente : ${totals.pending}`;
     await reply(ADMIN_CHAT, msg);
   } catch(e) {
