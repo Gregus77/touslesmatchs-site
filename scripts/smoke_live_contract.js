@@ -237,6 +237,26 @@ function testCurrentPickExposesLiveAvailabilityFlag() {
   assert.equal(available.liveUnavailable, false);
 }
 
+function testLostPickKeepsNilAwayWinScore() {
+  const pick = __liveContractTest.normalizeCurrentPick({
+    home: "Turquie",
+    away: "Paraguay",
+    league: "Coupe du Monde 2026",
+    time: "05:00",
+    bet: "Double chance 1X",
+    prono: "Turquie ou nul",
+    cote: "1.52",
+    status: "PERDU",
+    score: "0-1",
+    source: "hermes",
+  }, "hermes");
+
+  assert.equal(pick.status, "loss");
+  assert.equal(pick.result, "loss");
+  assert.equal(pick.scoreA, 0);
+  assert.equal(pick.scoreB, 1);
+}
+
 function testUnknownScoresDoNotBecomeNilNilConstraints() {
   assert.deepEqual(__liveContractTest.readKnownScore({ score_home: null, score_away: null }), null);
   assert.deepEqual(__liveContractTest.readKnownScore({ score_home: 0, score_away: 0 }), { home: 0, away: 0, total: 0 });
@@ -302,6 +322,7 @@ testHermesPendingCurrentPickNormalizesToUpcoming();
 testHermesNopickCurrentPickNormalizesToNoPick();
 testAdminCurrentPickNormalizationDefaultsProvenance();
 testCurrentPickExposesLiveAvailabilityFlag();
+testLostPickKeepsNilAwayWinScore();
 testUnknownScoresDoNotBecomeNilNilConstraints();
 testAvailableBetsStayNeutralWithoutKnownScore();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();

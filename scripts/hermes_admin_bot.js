@@ -24,6 +24,10 @@ const PICKS_FILE  = path.join(REPO, "public/data/picks.json");
 const DATA_FILE   = path.join(REPO, "data/picks.json");
 const MEMORY_FILE = path.join(REPO, "data/hermes_memory.json");
 const IMPROVEMENT_LOG_FILE = path.join(REPO, "data/hermes_improvement_log.json");
+const DAILY_RUN_FILE = path.join(REPO, "data/hermes_daily_run.json");
+const AUTO_DAILY_PICK = process.env.HERMES_AUTO_DAILY_PICK !== "0";
+const AUTO_DAILY_PICK_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_HOUR || 0);
+const AUTO_DAILY_PICK_MINUTE = Number(process.env.HERMES_AUTO_DAILY_PICK_MINUTE || 5);
 
 if (!TG_TOKEN) { console.error("HERMES_ADMIN_TLM_BOT manquant"); process.exit(1); }
 
@@ -772,6 +776,71 @@ async function cmdDeploy(chatId) {
     "docker compose up -d --build [site|api|hermes-admin]</code>"
   );
 }
+
+function parisNowParts() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).formatToParts(new Date()).reduce((acc, part) => {
+    acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    hour: Number(parts.hour),
+    minute: Number(parts.minute)
+  };
+}
+
+function loadDailyRunState() {
+  try { return JSON.parse(fs.readFileSync(DAILY_RUN_FILE, "utf8")); } catch { return {}; }
+}
+
+function saveDailyRunState(state) {
+  try {
+    fs.mkdirSync(path.dirname(DAILY_RUN_FILE), { recursive: true });
+    fs.writeFileSync(DAILY_RUN_FILE, JSON.stringify(state, null, 2), "utf8");
+  } catch {}
+}
+
+function hasPickForDate(date) {
+  const data = loadPicks();
+  return data.currentPick?.date === date && data.currentPick?.status !== "NOPICK";
+}
+
+let dailyAutoPickRunning = false;
+async function maybeRunDailyAutoPick() {
+  if (!AUTO_DAILY_PICK || !ADMIN_CHAT || dailyAutoPickRunning) return;
+
+  const now = parisNowParts();
+  const targetMinute = (AUTO_DAILY_PICK_HOUR * 60) + AUTO_DAILY_PICK_MINUTE;
+  const currentMinute = (now.hour * 60) + now.minute;
+  if (currentMinute < targetMinute || currentMinute > targetMinute + 20) return;
+
+  const state = loadDailyRunState();
+  if (state.lastRunDate === now.date || hasPickForDate(now.date)) return;
+
+  dailyAutoPickRunning = true;
+  state.lastRunDate = now.date;
+  state.startedAt = new Date().toISOString();
+  saveDailyRunState(state);
+
+  try {
+    await reply(ADMIN_CHAT, `Auto-pick quotidien ${now.date} : lancement de l'analyse.`);
+    await runAnalyse(ADMIN_CHAT);
+    saveDailyRunState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: true });
+  } catch (e) {
+    saveDailyRunState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: false, error: e.message });
+    await reply(ADMIN_CHAT, `Auto-pick quotidien en erreur : ${e.message}`).catch(() => {});
+  } finally {
+    dailyAutoPickRunning = false;
+  }
+}
 async function cmdHelp(chatId) {
   await reply(chatId, `🤖 <b>HERMÈS — Commandes disponibles</b>
 
@@ -835,6 +904,11 @@ async function poll() {
   if (ADMIN_CHAT) {
     await reply(ADMIN_CHAT, "🟢 <b>Hermès Admin Bot démarré</b>\nTape /help pour voir les commandes.").catch(() => {});
   }
+
+  maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
+  setInterval(() => {
+    maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
+  }, 60 * 1000);
 
   while (true) {
     try {

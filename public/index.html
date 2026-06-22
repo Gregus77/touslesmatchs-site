@@ -2008,29 +2008,34 @@ async function fetchLiveScore(){
 // Charge le pick depuis picks.json (écrit par Hermès automatiquement)
 async function initPick(){
   try{
-    const r=await fetch('/data/picks.json?t='+Date.now());
+    const r=await fetch('/current-pick?t='+Date.now());
     const d=await r.json();
-    const p=d.currentPick;
-    if(p && p.home && p.home !== 'Analyse en cours'){
+    const p=d.pick;
+    const home=p?.teamA?.name||p?.home;
+    const away=p?.teamB?.name||p?.away;
+    if(p && home && home !== 'Analyse en cours' && p.status !== 'no_pick'){
       // Adapter le format picks.json → PICK
-      PICK.teamA={name:p.home, abbr:(p.home||'').slice(0,3).toUpperCase(), color:'#4f46e5'};
-      PICK.teamB={name:p.away, abbr:(p.away||'').slice(0,3).toUpperCase(), color:'#7c3aed'};
-      PICK.competition=p.league||p.sport||PICK.competition;
+      PICK.teamA={name:home, abbr:(p.teamA?.abbr||home||'').slice(0,3).toUpperCase(), color:p.teamA?.color||'#4f46e5'};
+      PICK.teamB={name:away, abbr:(p.teamB?.abbr||away||'').slice(0,3).toUpperCase(), color:p.teamB?.color||'#7c3aed'};
+      PICK.competition=p.competition||p.league||p.sport||PICK.competition;
       PICK.time=p.time||PICK.time;
-      PICK.marketType=p.bet||PICK.marketType;
-      PICK.marketLabel=p.prono||PICK.marketLabel;
+      PICK.marketType=p.marketType||p.bet||PICK.marketType;
+      PICK.marketLabel=p.marketLabel||p.prono||PICK.marketLabel;
       PICK.cote=parseFloat(p.cote)||PICK.cote;
-      PICK.status=p.status==='GAGNE'||p.status==='PERDU'?'result':'upcoming';
-      PICK.result=p.status==='GAGNE'?'win':p.status==='PERDU'?'loss':null;
+      PICK.status=p.status==='win'||p.status==='loss'||p.status==='GAGNE'||p.status==='PERDU'?'result':'upcoming';
+      PICK.result=p.result||(p.status==='win'||p.status==='GAGNE'?'win':p.status==='loss'||p.status==='PERDU'?'loss':null);
       // Score depuis picks.json si disponible
+      if(p.scoreA!==null&&p.scoreA!==undefined) PICK.scoreA=p.scoreA;
+      if(p.scoreB!==null&&p.scoreB!==undefined) PICK.scoreB=p.scoreB;
       if(p.score && p.score.includes('-')){
         const parts=p.score.split('-');
-        PICK.scoreA=parseInt(parts[0])||0;
-        PICK.scoreB=parseInt(parts[1])||0;
+        const a=parseInt(parts[0],10), b=parseInt(parts[1],10);
+        if(!isNaN(a)) PICK.scoreA=a;
+        if(!isNaN(b)) PICK.scoreB=b;
       }
       // Si le pick date d'avant aujourd'hui et n'a pas encore de résultat officiel
       // → forcer le statut "result" pour déclencher la recherche du score final
-      if(p.date && PICK.status === 'upcoming'){
+      if(p.allowAutoResolve === true && p.date && PICK.status === 'upcoming'){
         const todayParis = new Date().toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'});
         if(p.date < todayParis){
           PICK.status = 'result';
@@ -2038,11 +2043,13 @@ async function initPick(){
         }
       }
     }
-  }catch(e){ console.warn('picks.json non disponible',e); }
+  }catch(e){ console.warn('/current-pick non disponible',e); }
   renderNavAuth();
   renderPick();
-  fetchLiveScore();
-  setInterval(fetchLiveScore,30000);
+  if(PICK.status!=='no_bet'){
+    fetchLiveScore();
+    setInterval(fetchLiveScore,30000);
+  }
 }
 initPick();
 
