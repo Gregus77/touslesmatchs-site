@@ -507,7 +507,9 @@ async function cmdSetPick(chatId, args) {
   data.currentPick = {
     date: new Date().toISOString().slice(0, 10),
     home, away, league, time, prono, bet: prono,
-    cote: String(cote), status: "EN ATTENTE", score: ""
+    cote: String(cote), status: "EN ATTENTE", score: "",
+    source: "hermes",
+    updatedAt: new Date().toISOString()
   };
   savePicks(data);
   await reply(chatId, `✅ <b>Pick défini manuellement</b>\n\n⚽ <b>${home} vs ${away}</b>\n🏆 ${league}  🕐 ${time}\n🎯 ${prono} @ ${cote}`);

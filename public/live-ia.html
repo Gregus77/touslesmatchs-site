@@ -690,7 +690,7 @@ function renderLoadingAnalysis(m){
     <div class="analysis-header">
       <div>
         <div class="analysis-title">🧠 Le Concile analyse…</div>
-        <div class="analysis-meta">${escHtml(m.home)} ${m.score_home??0}–${m.score_away??0} ${escHtml(m.away)} · ${m.minute?m.minute+"'":'Live'}</div>
+        <div class="analysis-meta">${escHtml(m.home)} ${formatScorePair(m)} ${escHtml(m.away)} · ${m.minute?m.minute+"'":'Live'}</div>
       </div>
     </div>
     <div class="loading-agents">
@@ -758,7 +758,7 @@ function renderAnalysis(m, d){
     <div class="analysis-header">
       <div>
         <div class="analysis-title">🧠 Analyse du Concile</div>
-        <div class="analysis-meta">${escHtml(m.home)} ${m.score_home??0}–${m.score_away??0} ${escHtml(m.away)} · ${m.minute?m.minute+"'":'Live'} · ${escHtml(m.competition||'')}</div>
+        <div class="analysis-meta">${escHtml(m.home)} ${formatScorePair(m)} ${escHtml(m.away)} · ${m.minute?m.minute+"'":'Live'} · ${escHtml(m.competition||'')}</div>
       </div>
     </div>
     <div class="agents-grid">${agentsHtml}</div>
@@ -778,6 +778,12 @@ function escHtml(s){
 }
 
 // ══ AGENT PERFORMANCE LEADERBOARD
+function formatScorePair(m){
+  const home = m.score_home === null || m.score_home === undefined ? '-' : m.score_home;
+  const away = m.score_away === null || m.score_away === undefined ? '-' : m.score_away;
+  return `${home}-${away}`;
+}
+
 let agentPerfData = {};
 const AGENT_LIST = [
   { name: 'GROQ-Llama', icon: '🦙' },

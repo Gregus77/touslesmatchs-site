@@ -156,7 +156,7 @@ function testHermesPendingCurrentPickNormalizesToUpcoming() {
   assert.equal(pick.fixtureId, "987");
 }
 
-function testHermesNopickCurrentPickNormalizesToUpcoming() {
+function testHermesNopickCurrentPickNormalizesToNoPick() {
   const pick = __liveContractTest.normalizeCurrentPick({
     home: "PAS DE PICK",
     away: "",
@@ -171,7 +171,7 @@ function testHermesNopickCurrentPickNormalizesToUpcoming() {
     updatedAt: "2026-06-22T00:00:00.000Z",
   }, "hermes");
 
-  assert.equal(pick.status, "upcoming");
+  assert.equal(pick.status, "no_pick");
   assert.equal(pick.result, null);
   assert.equal(pick.source, "hermes");
   assert.equal(pick.updatedAt, "2026-06-22T00:00:00.000Z");
@@ -204,14 +204,74 @@ function testAdminCurrentPickNormalizationDefaultsProvenance() {
   assert.equal(pick.fixtureId, "fixture-42");
 }
 
+function testUnknownScoresDoNotBecomeNilNilConstraints() {
+  assert.deepEqual(__liveContractTest.readKnownScore({ score_home: null, score_away: null }), null);
+  assert.deepEqual(__liveContractTest.readKnownScore({ score_home: 0, score_away: 0 }), { home: 0, away: 0, total: 0 });
+  assert.equal(
+    __liveContractTest.computeLiveConstraints({
+      home: "France",
+      away: "Brazil",
+      score_home: null,
+      score_away: null,
+      minute: 78,
+      status: "IN_PLAY",
+    }),
+    ""
+  );
+}
+
+function testAvailableBetsStayNeutralWithoutKnownScore() {
+  const bets = __liveContractTest.computeAvailableBets({
+    home: "France",
+    away: "Brazil",
+    score_home: null,
+    score_away: null,
+    minute: 84,
+    status: "IN_PLAY",
+  });
+
+  assert.ok(bets.includes("Over 2.5 buts"));
+  assert.ok(bets.includes("BTTS Oui"));
+}
+
+function testVerifiedLiveMatchIsResolvedFromServerListOnly() {
+  const live = [{
+    id: "fd-123",
+    source: "football-data",
+    sourceId: "123",
+    fixtureId: null,
+    home: "France",
+    away: "Brazil",
+    score_home: null,
+    score_away: null,
+    minute: 64,
+    status: "IN_PLAY",
+    competition: "World Cup",
+  }];
+
+  assert.equal(__liveContractTest.resolveVerifiedLiveMatch({ id: "fake", home: "France", away: "Brazil" }, live).id, "fd-123");
+  assert.equal(__liveContractTest.resolveVerifiedLiveMatch({ id: "fake", home: "Spain", away: "Brazil" }, live), null);
+}
+
+function testExpiredLiveCacheIsNotReturnedWhenApisFail() {
+  assert.deepEqual(
+    __liveContractTest.resolveLiveMatchesAfterFetchFailure({ data: [{ id: "old-live" }], ts: Date.now() - 999999 }),
+    []
+  );
+}
+
 testFootballDataProvenance();
 testApiSportsFixtureCanFetchStats();
 testStatsStatusIsExplicitWhenUnavailable();
 testVerifiedFixtureRejectsNonNumericIds();
 testHermesCurrentPickNormalization();
 testHermesPendingCurrentPickNormalizesToUpcoming();
-testHermesNopickCurrentPickNormalizesToUpcoming();
+testHermesNopickCurrentPickNormalizesToNoPick();
 testAdminCurrentPickNormalizationDefaultsProvenance();
+testUnknownScoresDoNotBecomeNilNilConstraints();
+testAvailableBetsStayNeutralWithoutKnownScore();
+testVerifiedLiveMatchIsResolvedFromServerListOnly();
+testExpiredLiveCacheIsNotReturnedWhenApisFail();
 
 console.log("smoke_live_contract: ok");
 process.exit(0);

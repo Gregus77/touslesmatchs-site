@@ -112,6 +112,7 @@ function parsePickScore(rawScore, rawScoreA, rawScoreB) {
 }
 
 function normalizePickStatus(status) {
+  if (status === "NOPICK" || status === "no_pick") return { status: "no_pick", result: null };
   if (status === "GAGNE" || status === "win") return { status: "win", result: "win" };
   if (status === "PERDU" || status === "loss") return { status: "loss", result: "loss" };
   return { status: "upcoming", result: null };
@@ -402,8 +403,8 @@ async function fetchLiveMatches() {
   let matches = await fetchFromFootballData();
   // Fallback to API-Sports
   if (matches === null) matches = await fetchFromApiSports();
-  // If both failed, return cached or empty
-  if (matches === null) return liveMatchesCache.data || [];
+  // If both failed, do not keep stale live matches on screen.
+  if (matches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
 
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
@@ -424,6 +425,35 @@ function getMockMatches() {
 }
 
 // ── Statistiques live par match (api-sports.io) ───────────────────────────────
+function resolveLiveMatchesAfterFetchFailure() {
+  return [];
+}
+
+function normalizeMatchName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function resolveVerifiedLiveMatch(input, liveMatches) {
+  const matches = Array.isArray(liveMatches) ? liveMatches : [];
+  const inputId = input?.id || input?.match_id || input?.sourceMatchId || input?.sourceId || input?.fixtureId;
+  if (inputId) {
+    const wanted = String(inputId);
+    const byId = matches.find((m) => [m.id, m.sourceMatchId, m.sourceId, m.fixtureId].filter(Boolean).map(String).includes(wanted));
+    if (byId) return byId;
+  }
+
+  const home = normalizeMatchName(input?.home);
+  const away = normalizeMatchName(input?.away);
+  if (!home || !away) return null;
+
+  return matches.find((m) => normalizeMatchName(m.home) === home && normalizeMatchName(m.away) === away) || null;
+}
+
+async function requireVerifiedLiveMatch(input) {
+  const matches = await fetchLiveMatches();
+  return resolveVerifiedLiveMatch(input, matches);
+}
+
 const matchStatsCache = new Map();
 
 async function fetchMatchStats(fixtureId) {
@@ -515,10 +545,22 @@ function estimateMinute(match) {
 }
 
 // Filtre les paris mathématiquement impossibles ou déjà perdus
+function readKnownScore(match) {
+  if (match.score_home === null || match.score_home === undefined || match.score_away === null || match.score_away === undefined) {
+    return null;
+  }
+  const home = Number(match.score_home);
+  const away = Number(match.score_away);
+  if (!Number.isFinite(home) || !Number.isFinite(away)) return null;
+  return { home, away, total: home + away };
+}
+
 function computeAvailableBets(match) {
-  const h = Number(match.score_home ?? 0);
-  const a = Number(match.score_away ?? 0);
-  const total = h + a;
+  const score = readKnownScore(match);
+  if (!score) return [...BET_TYPES];
+  const h = score.home;
+  const a = score.away;
+  const total = score.total;
   const minute = estimateMinute(match);
   const remaining = Math.max(0, 93 - minute);
   const isLive = minute >= 30 && match.status !== "SCHEDULED";
@@ -574,16 +616,17 @@ function validateAndCorrectBet(bet, match, availableBets) {
   if (availableBets.includes(bet)) return { bet, corrected: false };
 
   // Corrections logiques
-  const h = Number(match.score_home ?? 0);
-  const a = Number(match.score_away ?? 0);
-  const total = h + a;
+  const score = readKnownScore(match);
+  const h = score ? score.home : null;
+  const a = score ? score.away : null;
+  const total = score ? score.total : null;
   const minute = estimateMinute(match);
   const remaining = Math.max(0, 93 - minute);
 
   let corrected = bet;
-  if ((bet === "Over 2.5 buts") && availableBets.includes("Under 2.5 buts")) corrected = "Under 2.5 buts";
-  else if ((bet === "Under 2.5 buts") && total > 2.5 && availableBets.includes("Over 2.5 buts")) corrected = "Over 2.5 buts";
-  else if ((bet === "BTTS Non") && h > 0 && a > 0 && availableBets.includes("BTTS Oui")) corrected = "BTTS Oui";
+  if (score && (bet === "Over 2.5 buts") && availableBets.includes("Under 2.5 buts")) corrected = "Under 2.5 buts";
+  else if (score && (bet === "Under 2.5 buts") && total > 2.5 && availableBets.includes("Over 2.5 buts")) corrected = "Over 2.5 buts";
+  else if (score && (bet === "BTTS Non") && h > 0 && a > 0 && availableBets.includes("BTTS Oui")) corrected = "BTTS Oui";
   else corrected = availableBets[0]; // fallback sur premier pari disponible
 
   console.log(`[concile] Correction: "${bet}" → "${corrected}" (mathématiquement invalide à ${minute}', score ${h}-${a})`);
@@ -598,9 +641,11 @@ function isNeutralComp(comp = "") {
 
 // Calcule les contraintes mathématiques live pour éviter les paris impossibles
 function computeLiveConstraints(match) {
-  const h = Number(match.score_home ?? 0);
-  const a = Number(match.score_away ?? 0);
-  const total = h + a;
+  const score = readKnownScore(match);
+  if (!score) return "";
+  const h = score.home;
+  const a = score.away;
+  const total = score.total;
   const minute = estimateMinute(match); // utilise l'estimation si null
   const isLive = minute >= 30 && match.status !== "SCHEDULED" && match.minute !== "Pré-match";
 
@@ -1326,14 +1371,15 @@ function checkAnalysisRate(ip) {
 }
 
 app.post("/analyse", async (req, res) => {
-  const { home, away } = req.body || {};
+  const { home, away, match_id } = req.body || {};
   if (!home || !away) return res.json({ ok: false, error: "Deux équipes requises" });
   const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
   if (!checkAnalysisRate(ip)) return res.status(429).json({ ok: false, error: "Trop de requêtes, attends 1 minute." });
 
   try {
-    const match = { home, away, score_home: 0, score_away: 0, minute: "?", status: "IN_PLAY", competition: "International" };
-    const analysis = await runConcileAnalysis(match);
+    const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
+    if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
+    const analysis = await runConcileAnalysis(verifiedMatch);
     const chief = analysis.agents[analysis.agents.length - 1];
 
     res.json({
@@ -1355,7 +1401,10 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
   const { match_id, home, away, score_home, score_away, minute, competition } = req.body || {};
   if (!home || !away) return res.json({ ok: false, error: "Données du match manquantes" });
 
-  const matchKey = `${home}_${away}_${getTodayStr()}`;
+  const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
+  if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
+
+  const matchKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${getTodayStr()}`;
 
   // Check if already revealed (no token cost)
   const existing = db.prepare(
@@ -1372,8 +1421,7 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
 
   // Run analysis
   try {
-    const match = { home, away, score_home: score_home ?? 0, score_away: score_away ?? 0, minute: minute || "?", status: "IN_PLAY", competition: competition || "International" };
-    const analysis = await runConcileAnalysis(match);
+    const analysis = await runConcileAnalysis(verifiedMatch);
 
     // Cache result
     db.prepare(
@@ -1453,18 +1501,21 @@ app.post("/concile-analysis", async (req, res) => {
     return res.json({ ok: false, error: "CREDITS_EXHAUSTED", credits_left: 0 });
   }
 
+  const verifiedMatch = await requireVerifiedLiveMatch(match);
+  if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
+
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
-  const cacheKey = `${email}__${match.home}_${match.away}_${today}`;
+  const cacheKey = `${email}__${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}`;
   if (!forceRefresh && analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
   }
   if (forceRefresh) analysisCache.delete(cacheKey);
 
   try {
-    const analysis = await runConcileAnalysis(match);
+    const analysis = await runConcileAnalysis(verifiedMatch);
     analysisCache.set(cacheKey, analysis);
     // Cache 30 min pour les matchs live (pas 6h — le score change !)
-    const cacheTTL = match.status === "IN_PLAY" ? 30 * 60 * 1000 : 6 * 60 * 60 * 1000;
+    const cacheTTL = verifiedMatch.status === "IN_PLAY" ? 30 * 60 * 1000 : 6 * 60 * 60 * 1000;
     setTimeout(() => analysisCache.delete(cacheKey), cacheTTL);
 
     // Decrement credits in codes.db (only on real analysis, not cache hit)
@@ -1939,4 +1990,9 @@ module.exports.__liveContractTest = {
   getVerifiedFixtureId,
   buildStatsStatus,
   normalizeCurrentPick,
+  readKnownScore,
+  computeAvailableBets,
+  computeLiveConstraints,
+  resolveVerifiedLiveMatch,
+  resolveLiveMatchesAfterFetchFailure,
 };
