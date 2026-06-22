@@ -102,10 +102,68 @@ function testVerifiedFixtureRejectsNonNumericIds() {
   assert.equal(__liveContractTest.getVerifiedFixtureId({ source: "api-sports", sport: "Football", fixtureId: "123" }), "123");
 }
 
+function testHermesCurrentPickNormalization() {
+  const pick = __liveContractTest.normalizeCurrentPick({
+    home: "France",
+    away: "Brazil",
+    league: "World Cup",
+    time: "19:00",
+    bet: "1X2",
+    prono: "Victoire France",
+    cote: "1.95",
+    status: "GAGNE",
+    score: "2-1",
+    source: "hermes",
+    updatedAt: "2026-06-22T19:05:00.000Z",
+    sourceMatchId: "fd-123",
+    fixtureId: "987",
+  }, "hermes");
+
+  assert.equal(pick.teamA.name, "France");
+  assert.equal(pick.teamB.name, "Brazil");
+  assert.equal(pick.source, "hermes");
+  assert.equal(pick.updatedAt, "2026-06-22T19:05:00.000Z");
+  assert.equal(pick.sourceMatchId, "fd-123");
+  assert.equal(pick.fixtureId, "987");
+  assert.equal(pick.status, "win");
+  assert.equal(pick.result, "win");
+  assert.equal(pick.scoreA, 2);
+  assert.equal(pick.scoreB, 1);
+}
+
+function testAdminCurrentPickNormalizationDefaultsProvenance() {
+  const pick = __liveContractTest.normalizeCurrentPick({
+    teamA: { name: "Maroc", abbr: "MAR", color: "#4f46e5" },
+    teamB: { name: "Espagne", abbr: "ESP", color: "#7c3aed" },
+    competition: "Friendly",
+    time: "21:00",
+    marketType: "BTTS",
+    marketLabel: "Les deux équipes marquent",
+    cote: 1.8,
+    status: "upcoming",
+    scoreA: null,
+    scoreB: null,
+    updatedAt: "2026-06-22T21:00:00.000Z",
+    sourceMatchId: "manual-42",
+    fixtureId: "fixture-42",
+  }, "manual-admin");
+
+  assert.equal(pick.teamA.name, "Maroc");
+  assert.equal(pick.teamB.name, "Espagne");
+  assert.equal(pick.marketType, "BTTS");
+  assert.equal(pick.marketLabel, "Les deux équipes marquent");
+  assert.equal(pick.source, "manual-admin");
+  assert.equal(pick.updatedAt, "2026-06-22T21:00:00.000Z");
+  assert.equal(pick.sourceMatchId, "manual-42");
+  assert.equal(pick.fixtureId, "fixture-42");
+}
+
 testFootballDataProvenance();
 testApiSportsFixtureCanFetchStats();
 testStatsStatusIsExplicitWhenUnavailable();
 testVerifiedFixtureRejectsNonNumericIds();
+testHermesCurrentPickNormalization();
+testAdminCurrentPickNormalizationDefaultsProvenance();
 
 console.log("smoke_live_contract: ok");
 process.exit(0);

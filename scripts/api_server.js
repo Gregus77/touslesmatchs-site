@@ -79,6 +79,71 @@ function savePick(data) {
   fs.mkdirSync("/var/touslesmatchs", { recursive: true });
   fs.writeFileSync(PICK_PATH, JSON.stringify(data, null, 2));
 }
+
+function buildPickTeam(team, fallbackName, fallbackColor) {
+  if (team && typeof team === "object") {
+    const name = team.name || fallbackName || "";
+    return {
+      name,
+      abbr: team.abbr || (name || "").slice(0, 3).toUpperCase(),
+      color: team.color || fallbackColor,
+    };
+  }
+  const name = team || fallbackName || "";
+  return {
+    name,
+    abbr: (name || "").slice(0, 3).toUpperCase(),
+    color: fallbackColor,
+  };
+}
+
+function parsePickScore(rawScore, rawScoreA, rawScoreB) {
+  if (rawScore && typeof rawScore === "string" && rawScore.includes("-")) {
+    const parts = rawScore.split("-");
+    return {
+      scoreA: parseInt(parts[0], 10) || 0,
+      scoreB: parseInt(parts[1], 10) || 0,
+    };
+  }
+  return {
+    scoreA: rawScoreA ?? null,
+    scoreB: rawScoreB ?? null,
+  };
+}
+
+function normalizePickStatus(status) {
+  if (status === "GAGNE" || status === "win") return { status: "win", result: "win" };
+  if (status === "PERDU" || status === "loss") return { status: "loss", result: "loss" };
+  return { status: status || "upcoming", result: null };
+}
+
+function normalizeCurrentPick(p, defaultSource) {
+  if (!p) return null;
+
+  const score = parsePickScore(p.score, p.scoreA, p.scoreB);
+  const normalizedStatus = normalizePickStatus(p.status);
+  const homeName = p.home || p.teamA?.name || p.teamA || "";
+  const awayName = p.away || p.teamB?.name || p.teamB || "";
+
+  return {
+    teamA: buildPickTeam(p.teamA, homeName, "#4f46e5"),
+    teamB: buildPickTeam(p.teamB, awayName, "#7c3aed"),
+    competition: p.competition || p.league || p.sport || "",
+    time: p.time || "",
+    source: p.source || defaultSource || "hermes",
+    updatedAt: p.updatedAt || null,
+    sourceMatchId: p.sourceMatchId || null,
+    fixtureId: p.fixtureId || null,
+    marketType: p.marketType || p.bet || "",
+    marketLabel: p.marketLabel || p.prono || "",
+    cote: p.cote === "" || p.cote === null || p.cote === undefined ? null : (parseFloat(p.cote) || null),
+    status: normalizedStatus.status,
+    result: normalizedStatus.result,
+    scoreA: score.scoreA,
+    scoreB: score.scoreB,
+  };
+}
+
 function loadManualScore() {
   try { return JSON.parse(fs.readFileSync(SCORE_PATH, "utf8")); } catch { return null; }
 }
@@ -1186,32 +1251,11 @@ app.get("/current-pick", (req, res) => {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
     if (p && p.home && p.home !== "Analyse en cours") {
-      let scoreA = null, scoreB = null;
-      if (p.score && p.score.includes("-")) {
-        const parts = p.score.split("-");
-        scoreA = parseInt(parts[0]) || 0;
-        scoreB = parseInt(parts[1]) || 0;
-      }
-      return res.json({ ok: true, pick: {
-        teamA: { name: p.home, abbr: (p.home||"").slice(0,3).toUpperCase(), color: "#4f46e5" },
-        teamB: { name: p.away, abbr: (p.away||"").slice(0,3).toUpperCase(), color: "#7c3aed" },
-        competition: p.league || p.sport || "",
-        time: p.time || "",
-        source: p.source || "hermes",
-        updatedAt: p.updatedAt || null,
-        sourceMatchId: p.sourceMatchId || null,
-        fixtureId: p.fixtureId || null,
-        marketType: p.bet || "",
-        marketLabel: p.prono || "",
-        cote: parseFloat(p.cote) || null,
-        status: p.status === "GAGNE" ? "win" : p.status === "PERDU" ? "loss" : "upcoming",
-        result: p.status === "GAGNE" ? "win" : p.status === "PERDU" ? "loss" : null,
-        scoreA, scoreB,
-      }});
+      return res.json({ ok: true, pick: normalizeCurrentPick(p, "hermes") });
     }
   } catch (e) { /* picks.json absent ou invalide */ }
   // 2. Fallback sur le pick manuel admin
-  res.json({ ok: true, pick: loadPick() });
+  res.json({ ok: true, pick: normalizeCurrentPick(loadPick(), "manual-admin") });
 });
 
 app.post("/admin/set-pick", (req, res) => {
@@ -1894,4 +1938,5 @@ module.exports.__liveContractTest = {
   normalizeApiSportsFootballFixture,
   getVerifiedFixtureId,
   buildStatsStatus,
+  normalizeCurrentPick,
 };
