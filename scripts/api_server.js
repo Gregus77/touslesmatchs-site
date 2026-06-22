@@ -206,6 +206,44 @@ function formatFDMatch(m) {
   };
 }
 
+function normalizeFootballDataMatch(m) {
+  return formatFDMatch(m);
+}
+
+function normalizeApiSportsFootballFixture(f) {
+  return {
+    id: String(f.fixture.id),
+    fixtureId: String(f.fixture.id),
+    source: "api-sports",
+    sourceId: String(f.fixture.id),
+    sport: "Football",
+    home: f.teams.home.name,
+    away: f.teams.away.name,
+    score_home: f.goals.home ?? null,
+    score_away: f.goals.away ?? null,
+    minute: f.fixture.status.elapsed ?? null,
+    status: "IN_PLAY",
+    competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
+    utcDate: f.fixture.date,
+  };
+}
+
+function getVerifiedFixtureId(match) {
+  if (!match || match.source !== "api-sports" || match.sport !== "Football") return null;
+  if (!match.fixtureId || String(match.fixtureId).startsWith("demo")) return null;
+  return String(match.fixtureId);
+}
+
+function buildStatsStatus(match, stats, reason) {
+  return {
+    available: !!stats,
+    source: stats ? "api-sports" : null,
+    fixtureId: getVerifiedFixtureId(match),
+    reason: stats ? null : reason,
+    stats: stats || null,
+  };
+}
+
 async function fetchFromFootballData() {
   if (!FOOTBALL_DATA_KEY) return null;
   try {
@@ -1811,4 +1849,13 @@ app.delete("/admin/preuves/:id", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
+}
+
+module.exports.__liveContractTest = {
+  normalizeFootballDataMatch,
+  normalizeApiSportsFootballFixture,
+  getVerifiedFixtureId,
+  buildStatsStatus,
+};
