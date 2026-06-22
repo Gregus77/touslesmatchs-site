@@ -907,8 +907,13 @@ async function loadAgentPerformance() {
 function renderConcileIndicator() {
   const el = document.getElementById('concile-confidence');
   if(!el) return;
-  if(concileGlobalWinrate === null){
-    el.style.display = 'none'; return;
+  if(concileGlobalWinrate === null){ el.style.display = 'none'; return; }
+  const { plan } = getAuth();
+  const isElite = plan === 'elite';
+  if(!isElite && concileGlobalWinrate < 80){
+    el.style.display = 'flex';
+    el.innerHTML = `🔬 <b>Concile IA — Calibration en cours</b> &nbsp;·&nbsp; Statistiques disponibles à 80% de réussite`;
+    return;
   }
   const icon = concileGlobalWinrate >= 65 ? '🔥' : concileGlobalWinrate >= 55 ? '✅' : concileGlobalWinrate >= 45 ? '⚠️' : '📉';
   const label = concileGlobalWinrate >= 65 ? 'En grande forme' : concileGlobalWinrate >= 55 ? 'Bonne précision' : concileGlobalWinrate >= 45 ? 'Forme correcte' : 'Période difficile';
@@ -919,6 +924,19 @@ function renderConcileIndicator() {
 function renderLeaderboard() {
   const el = document.getElementById('agent-leaderboard');
   if(!el) return;
+
+  const { plan } = getAuth();
+  const isElite = plan === 'elite';
+  if(!isElite && (concileGlobalWinrate === null || concileGlobalWinrate < 80)){
+    el.innerHTML = `<div class="lb-section">
+      <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">calibration en cours</span></div>
+      <div style="font-size:13px;color:var(--muted);text-align:center;padding:12px 0;line-height:1.6">
+        🔬 Le Concile est en phase de calibration.<br>
+        Les statistiques seront visibles quand le taux de réussite atteindra <b>80%</b>.
+      </div>
+    </div>`;
+    return;
+  }
 
   const withData = AGENT_LIST.map(a => ({
     ...a,
