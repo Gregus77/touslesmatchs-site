@@ -47,7 +47,27 @@
   - `getVerifiedFixtureId(match: object): string | null`
   - `buildStatsStatus(match: object, stats: object | null, reason: string): object`
 
-- [ ] **Step 1: Add exports without changing runtime behavior**
+- [ ] **Step 1: Make `api_server.js` importable without starting the server**
+
+Replace the final server start:
+
+```js
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
+```
+
+with:
+
+```js
+const PORT = process.env.PORT || 3001;
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
+}
+```
+
+This preserves runtime behavior when the file is launched with `node`, and allows smoke tests to import pure helpers without opening a listening server.
+
+- [ ] **Step 2: Add exports without changing runtime behavior**
 
 At the end of `scripts/api_server.js`, before or after `app.listen(...)`, expose the helper names that will be implemented in Task 2. If helper functions do not exist yet, define temporary stubs above the export block so this test can fail on behavior rather than module loading.
 
@@ -98,7 +118,7 @@ module.exports.__liveContractTest = {
 };
 ```
 
-- [ ] **Step 2: Create the failing smoke test**
+- [ ] **Step 3: Create the failing smoke test**
 
 Create `scripts/smoke_live_contract.js`:
 
@@ -165,13 +185,13 @@ testStatsStatusIsExplicitWhenUnavailable();
 console.log("smoke_live_contract: ok");
 ```
 
-- [ ] **Step 3: Run test and verify it fails**
+- [ ] **Step 4: Run test and verify it fails**
 
 Run: `node scripts/smoke_live_contract.js`
 
 Expected: FAIL before Task 2 because `normalizeFootballDataMatch` does not yet attach `source`, `sourceId`, and `fixtureId`.
 
-- [ ] **Step 4: Commit the failing test and explicit contract exports**
+- [ ] **Step 5: Commit the failing test and explicit contract exports**
 
 ```bash
 git add scripts/api_server.js scripts/smoke_live_contract.js
