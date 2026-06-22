@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Tu démarres une session TousLesMatchs. Lance automatiquement le skill /boucle : effectue l audit initial (Phase 0) puis propose la prochaine amélioration prioritaire.\"}}'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
