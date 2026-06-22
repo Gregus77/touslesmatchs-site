@@ -567,11 +567,12 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquement invalide.`;
 
+  // Agents légers sur llama-3.1-8b-instant (~3x moins de tokens), Chief sur le grand modèle
   const agentNames = [
-    { name: "GROQ-Llama", model: "llama-3.3-70b-versatile", icon: "🦙" },
-    { name: "GPT Analysis", model: "llama-3.3-70b-versatile", icon: "🤖" },
-    { name: "GeminiFlash", model: "llama-3.3-70b-versatile", icon: "💎" },
-    { name: "Mistral-7B", model: "llama-3.3-70b-versatile", icon: "🌊" },
+    { name: "GROQ-Llama", model: "llama-3.1-8b-instant", icon: "🦙" },
+    { name: "GPT Analysis", model: "llama-3.1-8b-instant", icon: "🤖" },
+    { name: "GeminiFlash", model: "llama-3.1-8b-instant", icon: "💎" },
+    { name: "Mistral-7B", model: "llama-3.1-8b-instant", icon: "🌊" },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
 
@@ -1165,9 +1166,22 @@ app.get("/live-matches", async (req, res) => {
 });
 
 // ── Existing analyse endpoint (no token cost) ─────────────────────────────────
+// Rate limiter simple : max 3 analyses/min par IP
+const analysisRateLimit = new Map();
+function checkAnalysisRate(ip) {
+  const now = Date.now();
+  const entry = analysisRateLimit.get(ip) || { count: 0, resetAt: now + 60000 };
+  if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 60000; }
+  entry.count++;
+  analysisRateLimit.set(ip, entry);
+  return entry.count <= 3;
+}
+
 app.post("/analyse", async (req, res) => {
   const { home, away } = req.body || {};
   if (!home || !away) return res.json({ ok: false, error: "Deux équipes requises" });
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  if (!checkAnalysisRate(ip)) return res.status(429).json({ ok: false, error: "Trop de requêtes, attends 1 minute." });
 
   try {
     const match = { home, away, score_home: 0, score_away: 0, minute: "?", status: "IN_PLAY", competition: "International" };
