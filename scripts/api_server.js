@@ -1077,46 +1077,68 @@ function logAnalysis(match, chief, source = 'live-ia') {
 function getPerformanceContext(match) {
   try {
     const comp = (match.competition || '').toLowerCase();
+
+    // Performances globales (≥3 résolues)
     const rows = db.prepare(`
-      SELECT bet, outcome, COUNT(*) as cnt,
+      SELECT bet,
         SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
         SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
       FROM analysis_log
       WHERE outcome IS NOT NULL
       GROUP BY bet
-      HAVING cnt >= 3
-      ORDER BY cnt DESC
+      HAVING (wins + losses) >= 3
     `).all();
 
     if (!rows.length) return "";
 
-    const lines = ["\n📊 MÉMOIRE HERMÈS — Performances historiques des paris (toutes analyses résolues):"];
-    rows.forEach(r => {
-      const resolved = r.wins + r.losses;
-      if (resolved < 3) return;
-      const wr = Math.round(r.wins / resolved * 100);
-      const trend = wr >= 65 ? "✅ fort" : wr >= 50 ? "⚠️ moyen" : "❌ faible";
-      lines.push(`  → ${r.bet}: ${wr}% winrate (${r.wins}W/${r.losses}L sur ${resolved} analyses) ${trend}`);
+    // Tendance récente (14 derniers jours)
+    const recent14 = db.prepare(`
+      SELECT bet,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins14,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses14
+      FROM analysis_log
+      WHERE outcome IS NOT NULL AND created_at >= datetime('now', '-14 days')
+      GROUP BY bet
+      HAVING (wins14 + losses14) >= 2
+    `).all();
+    const recentMap = {};
+    recent14.forEach(r => {
+      const res = r.wins14 + r.losses14;
+      recentMap[r.bet] = { wr14: Math.round(r.wins14 / res * 100), n: res };
     });
+
+    const lines = ["\n📊 MÉMOIRE HERMÈS — Performances des paris (toutes analyses résolues):"];
+    rows
+      .map(r => ({ ...r, resolved: r.wins + r.losses, wr: Math.round(r.wins / (r.wins + r.losses) * 100) }))
+      .sort((a, b) => b.wr - a.wr)
+      .forEach(r => {
+        const trend = r.wr >= 65 ? "✅ fort" : r.wr >= 50 ? "⚠️ moyen" : "❌ faible";
+        const rec = recentMap[r.bet];
+        const trendArrow = rec
+          ? (rec.wr14 > r.wr + 8 ? " 📈 EN HAUSSE" : rec.wr14 < r.wr - 8 ? " 📉 EN BAISSE" : "")
+          : "";
+        const recentNote = rec ? ` [14j: ${rec.wr14}%/${rec.n} paris${trendArrow}]` : "";
+        lines.push(`  → ${r.bet}: ${r.wr}% global (${r.wins}W/${r.losses}L) ${trend}${recentNote}`);
+      });
 
     // Compétition similaire
     const compRows = db.prepare(`
-      SELECT bet, COUNT(*) as cnt,
+      SELECT bet,
         SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
         SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
       FROM analysis_log
       WHERE outcome IS NOT NULL AND lower(competition) LIKE ?
-      GROUP BY bet HAVING cnt >= 2
+      GROUP BY bet HAVING (wins + losses) >= 2
     `).all(`%${comp.split(' ')[0]}%`);
 
     if (compRows.length) {
-      lines.push(`  → Dans "${match.competition || 'cette compétition'}": ${compRows.map(r => {
-        const resolved = r.wins + r.losses;
-        return resolved > 0 ? `${r.bet} ${Math.round(r.wins/resolved*100)}%WR` : null;
-      }).filter(Boolean).join(', ')}`);
+      const compSummary = compRows
+        .map(r => { const res = r.wins + r.losses; return res > 0 ? `${r.bet} ${Math.round(r.wins/res*100)}%WR` : null; })
+        .filter(Boolean).join(', ');
+      lines.push(`  → Spécifique à "${match.competition || 'cette compétition'}": ${compSummary}`);
     }
 
-    lines.push("  → Pondère ces performances dans ton verdict final.");
+    lines.push("  → Favorise les paris EN HAUSSE et ✅ fort. Méfie-toi des paris EN BAISSE ou ❌ faible.");
     return lines.join("\n");
   } catch(e) {
     console.error("[perf-context]", e.message);
