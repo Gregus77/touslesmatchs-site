@@ -1953,9 +1953,15 @@ function applyScore(m){
   const sA=document.getElementById('sA');
   const sB=document.getElementById('sB');
   if(!sA||!sB)return;
-  sA.textContent=m.score_home??0; sA.classList.remove('pending');
-  sB.textContent=m.score_away??0; sB.classList.remove('pending');
-  PICK.scoreA=m.score_home; PICK.scoreB=m.score_away; PICK.minute=m.minute;
+  const hasHomeScore=m.score_home!==null&&m.score_home!==undefined;
+  const hasAwayScore=m.score_away!==null&&m.score_away!==undefined;
+  sA.textContent=hasHomeScore?m.score_home:'?';
+  sB.textContent=hasAwayScore?m.score_away:'?';
+  sA.classList.toggle('pending',!hasHomeScore);
+  sB.classList.toggle('pending',!hasAwayScore);
+  if(hasHomeScore) PICK.scoreA=m.score_home;
+  if(hasAwayScore) PICK.scoreB=m.score_away;
+  PICK.minute=m.minute;
   const scoreCol=document.querySelector('.score-col');
   if(scoreCol){
     let tagEl=scoreCol.querySelector('.upcoming-tag,.live-tag');
