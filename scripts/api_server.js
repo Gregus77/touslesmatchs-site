@@ -780,7 +780,31 @@ Réponds en JSON pur (pas de markdown):
   agentResults.slice(0, 4).forEach((a) => {
     betCounts[a.bet] = (betCounts[a.bet] || 0) + 1;
   });
-  const consensusBet = chief.bet;
+
+  // Règle de supermajorité : si 3+ agents sur 4 votent le même pari,
+  // ce pari s'impose au Chief — empêche les hallucinations du LLM
+  let finalBet = chief.bet;
+  let finalRaison = chief.raison;
+  let majorityOverride = false;
+  const majorityEntry = Object.entries(betCounts).find(([, count]) => count >= 3);
+  if (majorityEntry && majorityEntry[0] !== chief.bet) {
+    finalBet = majorityEntry[0];
+    finalRaison = `[Supermajorité: ${majorityEntry[1]}/4 agents] ${chief.raison}`;
+    majorityOverride = true;
+    console.log(`[concile] Supermajorité override: Chief disait "${chief.bet}", 4 agents disaient "${finalBet}" (${majorityEntry[1]}/4)`);
+  }
+  // Sécurité : si le bet du Chief n'est pas dans availableBets, prendre le bet majoritaire
+  if (!availableBets.includes(finalBet)) {
+    const topBet = Object.entries(betCounts).sort((a, b) => b[1] - a[1])[0];
+    if (topBet && availableBets.includes(topBet[0])) {
+      console.log(`[concile] Bet Chief "${finalBet}" invalide → forcé sur bet majoritaire "${topBet[0]}"`);
+      finalBet = topBet[0];
+      finalRaison = `[Corrigé: pari invalide → majoritaire] ${chief.raison}`;
+      majorityOverride = true;
+    }
+  }
+
+  const consensusBet = finalBet;
   const consensusVotes = betCounts[consensusBet] || 0;
 
   // Sauvegarder les prédictions pour le tracking de performance
@@ -788,10 +812,11 @@ Réponds en JSON pur (pas de markdown):
 
   const result = {
     match_key: `${match.home}_${match.away}`,
-    best_bet: chief.bet,
+    best_bet: finalBet,
     confidence: chief.confidence,
-    raison: chief.raison,
+    raison: finalRaison,
     consensus_votes: consensusVotes + 1, // +1 for chief
+    majority_override: majorityOverride,
     total_agents: 5,
     agents: agentResults,
     agent_performance: agentPerf,
