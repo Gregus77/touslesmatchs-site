@@ -385,6 +385,16 @@ async function fetchMatchStats(fixtureId) {
   }
 }
 
+async function fetchMatchStatsForMatch(match) {
+  const fixtureId = getVerifiedFixtureId(match);
+  if (!API_SPORTS_KEY) return buildStatsStatus(match, null, "api_sports_key_missing");
+  if (!fixtureId) return buildStatsStatus(match, null, "missing_api_sports_fixture");
+
+  const stats = await fetchMatchStats(fixtureId);
+  if (!stats) return buildStatsStatus({ ...match, fixtureId }, null, "api_sports_stats_unavailable");
+  return buildStatsStatus({ ...match, fixtureId }, stats, null);
+}
+
 function parseMatchStats(data) {
   if (!data?.response?.length) return null;
   const home = data.response[0]?.statistics || [];
@@ -618,10 +628,17 @@ async function runConcileAnalysis(match) {
 
   // Récupérer les statistiques live si disponibles (football uniquement)
   const isLiveMatch = match.status === "IN_PLAY" || match.status === "LIVE";
-  const liveStats = isLiveMatch ? await fetchMatchStats(match.id) : null;
+  const statsStatus = isLiveMatch
+    ? await fetchMatchStatsForMatch(match)
+    : buildStatsStatus(match, null, "match_not_live");
+  const liveStats = statsStatus.available ? statsStatus.stats : null;
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
 
-  if (liveStats) console.log(`[concile] Stats live récupérées pour ${match.home} vs ${match.away}`);
+  if (statsStatus.available) {
+    console.log(`[concile] Stats live récupérées pour ${match.home} vs ${match.away} fixture=${statsStatus.fixtureId}`);
+  } else {
+    console.log(`[concile] Stats live indisponibles pour ${match.home} vs ${match.away}: ${statsStatus.reason}`);
+  }
 
   // Pré-filtrer les paris impossibles du prompt
   const availableBets = computeAvailableBets(match);
@@ -771,6 +788,7 @@ Réponds en JSON pur (pas de markdown):
     consensus_votes: consensusVotes + 1, // +1 for chief
     total_agents: 5,
     agents: agentResults,
+    statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
   };
 }
@@ -805,6 +823,7 @@ function getMockAgentAnalysis(agent, match, index) {
 }
 
 function getMockAnalysis(match) {
+  const statsStatus = buildStatsStatus(match, null, "mock_or_unavailable");
   const agents = [
     { name: "GROQ-Llama", icon: "🦙", model: "llama-3.3-70b" },
     { name: "GPT Analysis", icon: "🤖", model: "gpt-4o" },
@@ -822,6 +841,7 @@ function getMockAnalysis(match) {
     consensus_votes: 3,
     total_agents: 5,
     agents: agentResults,
+    statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
   };
 }
 

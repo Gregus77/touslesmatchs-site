@@ -96,9 +96,16 @@ function testStatsStatusIsExplicitWhenUnavailable() {
   });
 }
 
+function testVerifiedFixtureRejectsNonNumericIds() {
+  assert.equal(__liveContractTest.getVerifiedFixtureId({ source: "api-sports", sport: "Football", fixtureId: "demo1" }), null);
+  assert.equal(__liveContractTest.getVerifiedFixtureId({ source: "api-sports", sport: "Basketball", fixtureId: "123" }), null);
+  assert.equal(__liveContractTest.getVerifiedFixtureId({ source: "api-sports", sport: "Football", fixtureId: "123" }), "123");
+}
+
 testFootballDataProvenance();
 testApiSportsFixtureCanFetchStats();
 testStatsStatusIsExplicitWhenUnavailable();
+testVerifiedFixtureRejectsNonNumericIds();
 
 console.log("smoke_live_contract: ok");
 process.exit(0);
