@@ -1009,6 +1009,7 @@ async function cmdHelp(chatId) {
 /win — Marquer le pick comme GAGNÉ
 /lose — Marquer le pick comme PERDU
 /learn — Analyser l'historique et mettre à jour la mémoire IA
+/stats — Rapport de performance immédiat (winrate agents + paris)
 /memoire — Statistiques de performance par type de pari/compétition
 /autoanalyse — Statut de l'analyse automatique toutes les 10 min
 /resolve Japon|Tunisie|4|0 — Enregistrer le score final d'un match terminé
@@ -1051,6 +1052,7 @@ async function handleMessage(msg) {
     case "/autoanalyse":     return cmdAutoAnalyse(chatId);
     case "/resolve":         return cmdResolve(chatId, args);
     case "/livepick":        return cmdLivePick(chatId, args);
+    case "/stats":           return sendWeeklyStats();
     case "/preview":         return cmdPreview(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
