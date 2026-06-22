@@ -101,3 +101,4 @@ testApiSportsFixtureCanFetchStats();
 testStatsStatusIsExplicitWhenUnavailable();
 
 console.log("smoke_live_contract: ok");
+process.exit(0);

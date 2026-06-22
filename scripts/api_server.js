@@ -194,7 +194,11 @@ function httpPost(url, body, headers = {}) {
 // ── Live matches — football-data.org (gratuit, couvre Coupe du Monde) ─────────
 function formatFDMatch(m) {
   return {
-    id: String(m.id),
+    id: `fd-${m.id}`,
+    source: "football-data",
+    sourceId: String(m.id),
+    fixtureId: null,
+    sport: "Football",
     home: m.homeTeam.name,
     away: m.awayTeam.name,
     score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null,
@@ -211,11 +215,12 @@ function normalizeFootballDataMatch(m) {
 }
 
 function normalizeApiSportsFootballFixture(f) {
+  const fixtureId = String(f.fixture.id);
   return {
-    id: String(f.fixture.id),
-    fixtureId: String(f.fixture.id),
+    id: fixtureId,
     source: "api-sports",
-    sourceId: String(f.fixture.id),
+    sourceId: fixtureId,
+    fixtureId,
     sport: "Football",
     home: f.teams.home.name,
     away: f.teams.away.name,
@@ -230,8 +235,11 @@ function normalizeApiSportsFootballFixture(f) {
 
 function getVerifiedFixtureId(match) {
   if (!match || match.source !== "api-sports" || match.sport !== "Football") return null;
-  if (!match.fixtureId || String(match.fixtureId).startsWith("demo")) return null;
-  return String(match.fixtureId);
+  const fixtureId = match.fixtureId || match.sourceId || match.id;
+  if (!fixtureId) return null;
+  const id = String(fixtureId);
+  if (!/^\d+$/.test(id)) return null;
+  return id;
 }
 
 function buildStatsStatus(match, stats, reason) {
@@ -274,14 +282,7 @@ async function fetchFromApiSports() {
   try {
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!data.errors || Object.keys(data.errors).length === 0) {
-      const items = (data.response || []).slice(0, 20).map((f) => ({
-        id: String(f.fixture.id), sport: "Football",
-        home: f.teams.home.name, away: f.teams.away.name,
-        score_home: f.goals.home ?? 0, score_away: f.goals.away ?? 0,
-        minute: f.fixture.status.elapsed ?? null, status: "IN_PLAY",
-        competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
-        utcDate: f.fixture.date,
-      }));
+      const items = (data.response || []).slice(0, 20).map(normalizeApiSportsFootballFixture);
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
     }
@@ -292,6 +293,9 @@ async function fetchFromApiSports() {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
+      source: "api-sports",
+      sourceId: String(g.id),
+      fixtureId: null,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       score_home: g.scores?.home?.total ?? null, score_away: g.scores?.away?.total ?? null,
       minute: g.status?.timer ?? null, status: "IN_PLAY",
@@ -307,6 +311,9 @@ async function fetchFromApiSports() {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
+      source: "api-sports",
+      sourceId: String(g.id),
+      fixtureId: null,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       score_home: g.scores?.home ?? null, score_away: g.scores?.away ?? null,
       minute: g.status?.timer ?? null, status: "IN_PLAY",
