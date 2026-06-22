@@ -1477,9 +1477,9 @@ function renderPick(){
             </div>
             <div class="score-col">
               <div class="score-digits">
-                <div class="sd${hasScore?'':' pending'}" id="sA">${hasScore?PICK.scoreA:'–'}</div>
+                <div class="sd${hasScore?'':' pending'}" id="sA">${hasScore?PICK.scoreA:'?'}</div>
                 <div class="sep">:</div>
-                <div class="sd${hasScore?'':' pending'}" id="sB">${hasScore?PICK.scoreB:'–'}</div>
+                <div class="sd${hasScore?'':' pending'}" id="sB">${hasScore?PICK.scoreB:'?'}</div>
               </div>
               ${PICK.minute?`<span class="live-tag">🔴 ${PICK.minute}</span>`:`<span class="upcoming-tag">${i18n.t('upcoming')}</span>`}
             </div>
