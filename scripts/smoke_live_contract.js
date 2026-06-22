@@ -204,6 +204,39 @@ function testAdminCurrentPickNormalizationDefaultsProvenance() {
   assert.equal(pick.fixtureId, "fixture-42");
 }
 
+function testCurrentPickExposesLiveAvailabilityFlag() {
+  const unavailable = __liveContractTest.normalizeCurrentPick({
+    home: "Shamrock Rovers",
+    away: "Derry City",
+    league: "Ireland Premier",
+    time: "21:00",
+    bet: "Over 2.5",
+    prono: "Over 2.5 buts",
+    cote: "1.85",
+    status: "EN ATTENTE",
+    liveUnavailable: true,
+    liveAvailabilityReason: "Match non couvert par l'API live",
+  }, "hermes");
+
+  const available = __liveContractTest.normalizeCurrentPick({
+    home: "France",
+    away: "Brazil",
+    league: "World Cup",
+    time: "19:00",
+    bet: "1X2",
+    prono: "Victoire France",
+    cote: "1.95",
+    status: "EN ATTENTE",
+    liveUnavailable: false,
+    sourceMatchId: "fd-123",
+    fixtureId: "987",
+  }, "hermes");
+
+  assert.equal(unavailable.liveUnavailable, true);
+  assert.equal(unavailable.liveAvailabilityReason, "Match non couvert par l'API live");
+  assert.equal(available.liveUnavailable, false);
+}
+
 function testUnknownScoresDoNotBecomeNilNilConstraints() {
   assert.deepEqual(__liveContractTest.readKnownScore({ score_home: null, score_away: null }), null);
   assert.deepEqual(__liveContractTest.readKnownScore({ score_home: 0, score_away: 0 }), { home: 0, away: 0, total: 0 });
@@ -268,6 +301,7 @@ testHermesCurrentPickNormalization();
 testHermesPendingCurrentPickNormalizesToUpcoming();
 testHermesNopickCurrentPickNormalizesToNoPick();
 testAdminCurrentPickNormalizationDefaultsProvenance();
+testCurrentPickExposesLiveAvailabilityFlag();
 testUnknownScoresDoNotBecomeNilNilConstraints();
 testAvailableBetsStayNeutralWithoutKnownScore();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();

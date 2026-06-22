@@ -367,10 +367,12 @@ let lastUpdate = null;
 let PICK_MATCH = null;
 async function loadPickMatch(){
   try{
-    const r=await fetch('/data/picks.json?t='+Date.now());
+    const r=await fetch('/current-pick?t='+Date.now());
     const d=await r.json();
-    const p=d.currentPick;
-    if(p && p.home && p.home !== 'Analyse en cours' && p.away){
+    const p=d.pick;
+    const home=p?.teamA?.name||p?.home;
+    const away=p?.teamB?.name||p?.away;
+    if(p && home && home !== 'Analyse en cours' && away){
       // Ignorer les picks terminés explicitement
       if(p.status==='finished'||p.status==='FINISHED') return;
       // Ignorer si la date du pick est avant aujourd'hui (heure de Paris)
@@ -388,19 +390,21 @@ async function loadPickMatch(){
       const isUpcoming=(p.status==='upcoming'||p.status==='UPCOMING'||(!p.status&&!p.score));
       PICK_MATCH={
         id:"pick-live",
-        home:p.home, away:p.away,
-        score_home:scoreA, score_away:scoreB,
+        home, away,
+        score_home:scoreA??p.scoreA??null, score_away:scoreB??p.scoreB??null,
         minute:null,
         status: isUpcoming ? 'upcoming' : 'IN_PLAY',
-        competition:p.league||p.sport||"",
+        competition:p.competition||p.league||p.sport||"",
         utcDate:p.date ? p.date+'T'+(p.time||'12:00')+':00' : new Date().toISOString(),
         time:p.time||null,
         date:p.date||null,
-        bet:p.bet||p.marketLabel||null,
+        bet:p.bet||p.marketLabel||p.marketType||null,
         cote:p.odds||p.cote||null,
+        liveUnavailable:p.liveUnavailable===true,
+        liveAvailabilityReason:p.liveAvailabilityReason||null,
       };
-      TEAM_ALIASES_LIVE[p.home.toLowerCase()]=[p.home.toLowerCase()];
-      TEAM_ALIASES_LIVE[p.away.toLowerCase()]=[p.away.toLowerCase()];
+      TEAM_ALIASES_LIVE[home.toLowerCase()]=[home.toLowerCase()];
+      TEAM_ALIASES_LIVE[away.toLowerCase()]=[away.toLowerCase()];
     }
   }catch(e){}
 }
@@ -534,8 +538,14 @@ function renderMain(){
     <button class="refresh-btn" onclick="forceRefresh()">⟳ Actualiser</button>
   </div>`;
 
+  if(PICK_MATCH && PICK_MATCH.liveUnavailable){
+    html += renderLiveUnavailableCard(PICK_MATCH);
+  }
+
   if(allMatches.length === 0){
-    if(PICK_MATCH && PICK_MATCH.status === 'upcoming'){
+    if(PICK_MATCH && PICK_MATCH.liveUnavailable){
+      // Le message explicite est deja affiche au-dessus.
+    } else if(PICK_MATCH && PICK_MATCH.status === 'upcoming'){
       html += `<div class="matches-grid" id="matches-grid">${renderUpcomingCard(PICK_MATCH)}</div>`;
       // Start live countdown
       if(countdownInterval) clearInterval(countdownInterval);
@@ -602,6 +612,18 @@ function renderMatchCard(m, i){
     </button>
   </div>
   <div id="analysis-zone-${i}" style="display:none"></div>`;
+}
+
+function renderLiveUnavailableCard(m){
+  return `<div class="empty-state">
+    <div class="empty-icon">⚠</div>
+    <div class="empty-title">Analyse Live IA non disponible</div>
+    <div class="empty-sub">
+      Le pick officiel ${escHtml(m.home)} vs ${escHtml(m.away)} est bien enregistré, mais ce match n'est pas couvert par l'API live.<br>
+      ${escHtml(m.liveAvailabilityReason || "Aucune analyse live ne sera affichée pour ce pick.")}
+    </div>
+    <div style="margin-top:16px;font-size:13px;color:var(--text);font-weight:700">${escHtml(m.bet||'Pick du jour')} ${m.cote?`@ ${escHtml(m.cote)}`:''}</div>
+  </div>`;
 }
 
 let currentAnalysis = null;

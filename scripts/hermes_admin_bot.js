@@ -23,6 +23,7 @@ const REPO        = "/repo";
 const PICKS_FILE  = path.join(REPO, "public/data/picks.json");
 const DATA_FILE   = path.join(REPO, "data/picks.json");
 const MEMORY_FILE = path.join(REPO, "data/hermes_memory.json");
+const IMPROVEMENT_LOG_FILE = path.join(REPO, "data/hermes_improvement_log.json");
 
 if (!TG_TOKEN) { console.error("HERMES_ADMIN_TLM_BOT manquant"); process.exit(1); }
 
@@ -67,6 +68,35 @@ function savePicks(data) {
   const json = JSON.stringify(data, null, 2);
   fs.writeFileSync(PICKS_FILE, json, "utf8");
   try { fs.mkdirSync(path.join(REPO, "data"), { recursive: true }); fs.writeFileSync(DATA_FILE, json, "utf8"); } catch {}
+}
+
+function appendImprovementLog(pick) {
+  try {
+    fs.mkdirSync(path.dirname(IMPROVEMENT_LOG_FILE), { recursive: true });
+    let rows = [];
+    try { rows = JSON.parse(fs.readFileSync(IMPROVEMENT_LOG_FILE, "utf8")); } catch {}
+    if (!Array.isArray(rows)) rows = [];
+    rows.unshift({
+      date: pick.date || new Date().toISOString().slice(0, 10),
+      resolvedAt: pick.resolvedAt || new Date().toISOString(),
+      status: pick.status || null,
+      score: pick.score || null,
+      sport: pick.sport || "Football",
+      competition: pick.league || pick.competition || null,
+      bet: pick.prono || pick.bet || null,
+      cote: pick.cote || null,
+      liveUnavailable: pick.liveUnavailable === true,
+      source: pick.source || "hermes",
+      sourceMatchId: pick.sourceMatchId || null,
+      fixtureId: pick.fixtureId || null,
+      lesson: pick.status === "GAGNE"
+        ? "Conserver les criteres qui ont valide ce pick."
+        : "Analyser pourquoi ce type de pari n'a pas valide.",
+    });
+    fs.writeFileSync(IMPROVEMENT_LOG_FILE, JSON.stringify(rows.slice(0, 500), null, 2), "utf8");
+  } catch (e) {
+    console.error("[hermes] improvement log:", e.message);
+  }
 }
 
 function archiveCurrentPick(data) {
@@ -233,6 +263,43 @@ async function fetchTodayMatches() {
 
   console.log(`  TOTAL multi-sport: ${allMatches.length} event(s)`);
   return allMatches;
+}
+
+function normalizeTeamName(value) {
+  return String(value || "").trim().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function findCoveredLiveMatch(pick, matches) {
+  const home = normalizeTeamName(pick.home);
+  const away = normalizeTeamName(pick.away);
+  if (!home || !away || !Array.isArray(matches)) return null;
+  const sameTeam = (a, b) => a === b || a.includes(b) || b.includes(a);
+  return matches.find((m) => {
+    const mh = normalizeTeamName(m.home);
+    const ma = normalizeTeamName(m.away);
+    return (sameTeam(mh, home) && sameTeam(ma, away)) || (sameTeam(mh, away) && sameTeam(ma, home));
+  }) || null;
+}
+
+function stampLiveAvailability(pick, matches) {
+  const covered = findCoveredLiveMatch(pick, matches);
+  if (!covered) {
+    return {
+      ...pick,
+      liveUnavailable: true,
+      liveAvailabilityReason: "Match non couvert par l'API live",
+      sourceMatchId: pick.sourceMatchId || null,
+      fixtureId: pick.fixtureId || null,
+    };
+  }
+  return {
+    ...pick,
+    liveUnavailable: false,
+    liveAvailabilityReason: null,
+    sourceMatchId: pick.sourceMatchId || covered.sourceMatchId || covered.sourceId || covered.id || null,
+    fixtureId: pick.fixtureId || covered.fixtureId || null,
+  };
 }
 
 // ── Mémoire d'apprentissage ───────────────────────────────────────────────────
@@ -415,7 +482,7 @@ async function runAnalyse(chatId) {
   const alts = result.alternatives || [];
   const data = loadPicks();
   archiveCurrentPick(data);
-  data.currentPick = {
+  data.currentPick = stampLiveAvailability({
     date: new Date().toISOString().slice(0, 10),
     home: p.home || "",
     away: p.away || "",
@@ -433,9 +500,10 @@ async function runAnalyse(chatId) {
     score: "",
     source: "hermes",
     updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString(),
     sourceMatchId: p.sourceMatchId || p.fixtureId || null,
     fixtureId: p.fixtureId || null,
-  };
+  }, matches);
   savePicks(data);
 
   const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
@@ -455,6 +523,9 @@ async function runAnalyse(chatId) {
 ✅ Pick sauvegardé. Tape /publish pour le canal public · /publishpremium pour Premium.`;
 
   await reply(chatId, msg);
+  if (data.currentPick.liveUnavailable) {
+    await reply(chatId, "Analyse Live IA indisponible : ce match n'est pas couvert par l'API live.");
+  }
 
   // Notification email automatique aux abonnés payants
   try {
@@ -502,17 +573,22 @@ async function cmdSetPick(chatId, args) {
     return;
   }
   const [home, away, league, time, prono, cote] = parts;
+  const matches = await fetchTodayMatches();
   const data = loadPicks();
   archiveCurrentPick(data);
-  data.currentPick = {
+  data.currentPick = stampLiveAvailability({
     date: new Date().toISOString().slice(0, 10),
     home, away, league, time, prono, bet: prono,
     cote: String(cote), status: "EN ATTENTE", score: "",
     source: "hermes",
-    updatedAt: new Date().toISOString()
-  };
+    updatedAt: new Date().toISOString(),
+    publishedAt: new Date().toISOString()
+  }, matches);
   savePicks(data);
   await reply(chatId, `✅ <b>Pick défini manuellement</b>\n\n⚽ <b>${home} vs ${away}</b>\n🏆 ${league}  🕐 ${time}\n🎯 ${prono} @ ${cote}`);
+  if (data.currentPick.liveUnavailable) {
+    await reply(chatId, "Analyse Live IA indisponible : ce match n'est pas couvert par l'API live.");
+  }
 }
 
 async function cmdSetScore(chatId, args) {
@@ -537,14 +613,27 @@ async function cmdResult(chatId, status) {
   const data = loadPicks();
   if (!data.currentPick?.home) { await reply(chatId, "❌ Aucun pick actif"); return; }
   data.currentPick.status = status;
+  data.currentPick.resolvedAt = new Date().toISOString();
   // Archive avec résultat
   if (!data.history) data.history = [];
   const idx = data.history.findIndex(h => h.date === data.currentPick.date && h.home === data.currentPick.home);
   if (idx >= 0) data.history[idx] = { ...data.currentPick };
   else data.history.unshift({ ...data.currentPick });
   savePicks(data);
+  appendImprovementLog(data.currentPick);
   const emoji = status === "GAGNE" ? "🏆" : "❌";
   await reply(chatId, `${emoji} Pick marqué <b>${status}</b>\n${data.currentPick.home} vs ${data.currentPick.away} — ${data.currentPick.score || "?"}`);
+
+  try {
+    const emailResult = await notifyResultByEmail(data.currentPick);
+    if (emailResult.ok) {
+      await reply(chatId, `Email resultat envoye a <b>${emailResult.sent || 0}</b> abonne(s)`);
+    } else if (emailResult.error && emailResult.error !== "timeout") {
+      console.error("[hermes] result email:", emailResult.error);
+    }
+  } catch (e) {
+    console.error("[hermes] notifyResultByEmail:", e.message);
+  }
 
   // Auto-apprentissage après chaque résultat
   try {
@@ -638,6 +727,27 @@ async function notifyPickByEmail(pick) {
       hostname: API_HOST,
       port: API_PORT,
       path: "/internal/pick-notify",
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); resolve({ ok: false, error: "timeout" }); });
+    req.on("error", () => resolve({ ok: false }));
+    req.write(body); req.end();
+  });
+}
+
+async function notifyResultByEmail(pick) {
+  const API_HOST = "touslesmatchs-api";
+  const API_PORT = 3001;
+  const body = JSON.stringify({ pick, secret: TG_TOKEN });
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: API_HOST,
+      port: API_PORT,
+      path: "/internal/pick-result-notify",
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
     }, res => {
