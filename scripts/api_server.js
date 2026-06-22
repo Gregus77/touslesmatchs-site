@@ -1197,6 +1197,10 @@ app.get("/current-pick", (req, res) => {
         teamB: { name: p.away, abbr: (p.away||"").slice(0,3).toUpperCase(), color: "#7c3aed" },
         competition: p.league || p.sport || "",
         time: p.time || "",
+        source: p.source || "hermes",
+        updatedAt: p.updatedAt || null,
+        sourceMatchId: p.sourceMatchId || null,
+        fixtureId: p.fixtureId || null,
         marketType: p.bet || "",
         marketLabel: p.prono || "",
         cote: parseFloat(p.cote) || null,
@@ -1214,8 +1218,13 @@ app.post("/admin/set-pick", (req, res) => {
   const { email, code, pick } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   if (!pick || !pick.teamA || !pick.teamB) return res.status(400).json({ ok: false, error: "Données pick incomplètes" });
-  savePick(pick);
-  res.json({ ok: true, pick });
+  const manualPick = {
+    ...pick,
+    source: pick.source || "manual-admin",
+    updatedAt: new Date().toISOString(),
+  };
+  savePick(manualPick);
+  res.json({ ok: true, pick: manualPick });
 });
 
 // ── Score manuel (fallback admin) ────────────────────────────────────────────

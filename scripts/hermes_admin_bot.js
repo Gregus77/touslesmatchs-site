@@ -403,7 +403,9 @@ async function runAnalyse(chatId) {
       cote: "",
       status: "NOPICK",
       score: "",
-      nopick_raison: raison
+      nopick_raison: raison,
+      source: "hermes",
+      updatedAt: new Date().toISOString(),
     };
     savePicks(data);
     return;
@@ -428,7 +430,11 @@ async function runAnalyse(chatId) {
     confidence: p.note || 0,
     confidenceTg: `${p.note || ""}/10`,
     status: "EN ATTENTE",
-    score: ""
+    score: "",
+    source: "hermes",
+    updatedAt: new Date().toISOString(),
+    sourceMatchId: p.sourceMatchId || p.fixtureId || null,
+    fixtureId: p.fixtureId || null,
   };
   savePicks(data);
 
