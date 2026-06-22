@@ -313,6 +313,72 @@ function getMockMatches() {
   ];
 }
 
+// ── Statistiques live par match (api-sports.io) ───────────────────────────────
+const matchStatsCache = new Map();
+
+async function fetchMatchStats(fixtureId) {
+  if (!API_SPORTS_KEY || !fixtureId) return null;
+  const id = String(fixtureId);
+  // Seulement pour les fixtures football (pas bk-, hk-, etc.)
+  if (id.startsWith("bk-") || id.startsWith("hk-") || id.startsWith("demo")) return null;
+
+  const ck = `stats_${id}`;
+  const cached = matchStatsCache.get(ck);
+  if (cached && Date.now() - cached.ts < 60000) return cached.data;
+
+  try {
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const stats = parseMatchStats(data);
+    matchStatsCache.set(ck, { data: stats, ts: Date.now() });
+    return stats;
+  } catch (e) {
+    console.error("[match-stats] Erreur:", e.message);
+    return null;
+  }
+}
+
+function parseMatchStats(data) {
+  if (!data?.response?.length) return null;
+  const home = data.response[0]?.statistics || [];
+  const away = data.response[1]?.statistics || [];
+  const get = (arr, name) => {
+    const s = arr.find(s => s.type === name);
+    return s?.value ?? null;
+  };
+  return {
+    possession_home: get(home, "Ball Possession"),
+    possession_away: get(away, "Ball Possession"),
+    shots_on_goal_home: get(home, "Shots on Goal"),
+    shots_on_goal_away: get(away, "Shots on Goal"),
+    total_shots_home: get(home, "Total Shots"),
+    total_shots_away: get(away, "Total Shots"),
+    dangerous_attacks_home: get(home, "Dangerous Attacks"),
+    dangerous_attacks_away: get(away, "Dangerous Attacks"),
+    yellow_cards_home: get(home, "Yellow Cards") || 0,
+    yellow_cards_away: get(away, "Yellow Cards") || 0,
+    red_cards_home: get(home, "Red Cards") || 0,
+    red_cards_away: get(away, "Red Cards") || 0,
+    corners_home: get(home, "Corner Kicks"),
+    corners_away: get(away, "Corner Kicks"),
+  };
+}
+
+function buildStatsBlock(stats, home, away) {
+  if (!stats) return "";
+  const lines = ["\n📊 STATISTIQUES TEMPS RÉEL (données live api-sports.io) :"];
+  if (stats.possession_home) lines.push(`  Possession    : ${home} ${stats.possession_home} — ${away} ${stats.possession_away}`);
+  if (stats.shots_on_goal_home !== null) lines.push(`  Tirs cadrés   : ${home} ${stats.shots_on_goal_home} — ${away} ${stats.shots_on_goal_away}`);
+  if (stats.total_shots_home !== null) lines.push(`  Tirs totaux   : ${home} ${stats.total_shots_home} — ${away} ${stats.total_shots_away}`);
+  if (stats.dangerous_attacks_home !== null) lines.push(`  Att. dang.    : ${home} ${stats.dangerous_attacks_home} — ${away} ${stats.dangerous_attacks_away}`);
+  if (stats.corners_home !== null) lines.push(`  Corners       : ${home} ${stats.corners_home} — ${away} ${stats.corners_away}`);
+  if (stats.yellow_cards_home > 0 || stats.yellow_cards_away > 0) lines.push(`  Cartons jaunes: ${home} ${stats.yellow_cards_home} — ${away} ${stats.yellow_cards_away}`);
+  if (stats.red_cards_home > 0 || stats.red_cards_away > 0) lines.push(`  ⚠️ CARTONS ROUGES: ${home} ${stats.red_cards_home} — ${away} ${stats.red_cards_away} (infériorité numérique!)`);
+  return lines.join("\n");
+}
+
 // ── Groq Concile analysis ─────────────────────────────────────────────────────
 const BET_TYPES = ["Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "Under 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
 
@@ -479,6 +545,13 @@ async function runConcileAnalysis(match) {
     ? `\nSport: ${match.sport}` : "";
   const liveConstraints = computeLiveConstraints(match);
 
+  // Récupérer les statistiques live si disponibles (football uniquement)
+  const isLiveMatch = match.status === "IN_PLAY" || match.status === "LIVE";
+  const liveStats = isLiveMatch ? await fetchMatchStats(match.id) : null;
+  const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
+
+  if (liveStats) console.log(`[concile] Stats live récupérées pour ${match.home} vs ${match.away}`);
+
   // Pré-filtrer les paris impossibles du prompt
   const availableBets = computeAvailableBets(match);
   const estimatedMin = estimateMinute(match);
@@ -488,7 +561,7 @@ async function runConcileAnalysis(match) {
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${liveConstraints}
+Statut: ${match.status}${neutralNote}${statsBlock}${liveConstraints}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
