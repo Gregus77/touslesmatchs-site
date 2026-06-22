@@ -940,7 +940,7 @@ footer{
       <label class="modal-label" data-i18n="login_email">Email</label>
       <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
       <label class="modal-label" data-i18n="login_code">Code d'accès</label>
-      <input class="modal-input" id="login-code" type="text" placeholder="PRO-XXXXXX ou ELITE-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
+      <input class="modal-input" id="login-code" type="password" placeholder="Code d'accès" autocomplete="new-password" name="tlm-code" style="letter-spacing:.08em">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
         <input type="checkbox" id="login-remember" style="width:14px;height:14px;accent-color:var(--indigo2);cursor:pointer" checked>
         <label for="login-remember" style="font-size:12px;color:var(--muted2);cursor:pointer">Se souvenir de moi</label>
@@ -1485,19 +1485,19 @@ function renderPick(){
           <div class="ia-chk">${ia.ok?'✅':'❌'}</div>
         </div>
         <div class="ia-why">${ia.why}</div>`).join('')
-    : `<div style="position:relative;border-radius:12px;overflow:hidden">
-        <div style="filter:blur(6px);pointer-events:none;user-select:none;opacity:.5">
-          ${PICK.ia.map(ia=>`<div class="ia-row" style="margin-bottom:8px">
+    : `<div style="position:relative;border-radius:12px;overflow:hidden;min-height:180px">
+        <div style="filter:blur(6px);pointer-events:none;user-select:none;opacity:.4;padding:8px 0">
+          ${PICK.ia.map(ia=>`<div class="ia-row" style="margin-bottom:10px">
             <div class="ia-nm">${ia.name}</div>
             <div class="ia-track"><div class="ia-fill ${ia.fill}" style="width:${ia.pct}%"></div></div>
             <div class="ia-pct">??%</div>
           </div>`).join('')}
         </div>
-        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(6,8,15,.6);backdrop-filter:blur(2px)">
-          <div style="font-size:28px">🔒</div>
-          <div style="font-size:14px;font-weight:800;text-align:center">${i18n.t('locked_votes')}</div>
-          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · À la carte dès 1€</div>
-          <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">${i18n.t('subscribe_cta')}</a>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,8,15,.75);backdrop-filter:blur(4px);padding:24px;box-sizing:border-box">
+          <div style="font-size:32px">🔒</div>
+          <div style="font-size:15px;font-weight:800;text-align:center;color:#fff">${i18n.t('locked_votes')}</div>
+          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:240px;line-height:1.5">Votes des 5 IA réservés aux membres<br><strong style="color:var(--indigo2)">Pro · Elite · À la carte dès 1€</strong></div>
+          <a href="#plans" style="margin-top:4px;padding:10px 28px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap">${i18n.t('subscribe_cta')}</a>
         </div>
       </div>`;
 
@@ -1913,13 +1913,13 @@ function showForgotView(){
   setTimeout(()=>document.getElementById('forgot-email').focus(),100);
 }
 document.getElementById('modal-login').addEventListener('click',function(e){if(e.target===this)closeModal()});
-document.getElementById('login-code').addEventListener('input',function(){this.value=this.value.toUpperCase()});
+// code field is type=password, uppercase applied at submit
 document.getElementById('login-email').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('login-code').focus()});
 document.getElementById('login-code').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin()});
 
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
-  const code=document.getElementById('login-code').value.trim().toUpperCase();
+  const code=document.getElementById('login-code').value.trim().toUpperCase().replace(/\s+/g,'');
   const remember=document.getElementById('login-remember').checked;
   const errEl=document.getElementById('login-err');
   const okEl=document.getElementById('login-ok');
@@ -1983,8 +1983,28 @@ function doLogout(){
   localStorage.removeItem('tlm_code');
   localStorage.removeItem('tlm_plan');
   renderNavAuth();
-  renderPick(); // re-render pick to show paywall
+  renderPick();
 }
+
+// Auto-vérification silencieuse au chargement (remember me)
+(function autoVerify(){
+  const email = localStorage.getItem('tlm_email');
+  const code  = localStorage.getItem('tlm_code');
+  if(!email || !code) return;
+  fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})})
+    .then(r=>r.json()).then(d=>{
+      if(d.valid){
+        localStorage.setItem('tlm_plan', d.plan);
+        renderNavAuth();
+      } else {
+        // Code révoqué ou expiré → déconnexion propre
+        localStorage.removeItem('tlm_email');
+        localStorage.removeItem('tlm_code');
+        localStorage.removeItem('tlm_plan');
+        renderNavAuth();
+      }
+    }).catch(()=>{}); // silencieux si hors ligne
+})();
 
 // ══ SCORE LIVE — mise à jour automatique toutes les 30s
 const TEAM_ALIASES={
@@ -2265,16 +2285,27 @@ document.addEventListener('click',function(e){
     const todayStr = new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
 
     if(!d.ok || !d.pick || !d.pick.teamA) {
-      // Aucun pick — afficher message neutre
       window.PICK = { status: 'no_bet' };
       renderPick();
       return;
     }
 
     const p = d.pick;
-    const apiStatus = p.status; // "win", "loss", "upcoming"
+    const apiStatus = p.status;
     const isToday = p.isToday || p.date === todayStr;
-    // IA bars : réutilise les données hardcodées si même match, sinon placeholders
+
+    // Pick pas d'aujourd'hui → pas de pick du jour à afficher
+    if(!isToday) {
+      window.PICK = { status: 'no_bet' };
+      renderPick();
+      // Ticker : dernier résultat connu
+      if(p.teamA?.name) {
+        const txt = `⚡ Dernier pick : ${p.teamA.name} vs ${p.teamB.name}${p.marketLabel?' — '+p.marketLabel:''}${p.cote?' @'+p.cote:''}`;
+        ['t1','t2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=txt;});
+      }
+      return;
+    }
+
     const sameTeams = PICK.teamA && PICK.teamA.name === p.teamA.name;
     const iaData = sameTeams ? PICK.ia : [
       {name:"Claude",   pct:77,ok:true,fill:"f-claude",   why:"Analyse Concile disponible pour les membres Pro & Elite."},
@@ -2284,10 +2315,7 @@ document.addEventListener('click',function(e){
       {name:"Groq",     pct:73,ok:true,fill:"f-groq",     why:"Historique face-à-face et domicile/extérieur."}
     ];
 
-    // Statut : si pick ancien et "upcoming" → l'afficher comme résultat en attente
-    const mappedStatus = (apiStatus === 'win' || apiStatus === 'loss') ? 'result'
-                       : (apiStatus === 'upcoming' && isToday) ? 'upcoming'
-                       : 'result'; // vieux pick upcoming → montrer comme résultat sans score
+    const mappedStatus = (apiStatus === 'win' || apiStatus === 'loss') ? 'result' : 'upcoming';
 
     window.PICK = {
       status: mappedStatus,
