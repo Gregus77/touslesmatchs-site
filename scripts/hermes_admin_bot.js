@@ -986,7 +986,9 @@ async function handleMessage(msg) {
     return;
   }
 
-  const [cmd, ...rest] = text.split(" ");
+  const [rawCmd, ...rest] = text.split(" ");
+  // Gérer /commande@botname (Telegram ajoute parfois le @botname)
+  const cmd = rawCmd.split("@")[0];
   const args = rest.join(" ");
 
   console.log(`[CMD] ${cmd} ${args}`);
