@@ -227,13 +227,14 @@ async function fetchSport(sport, today) {
 
 async function fetchTodayMatches() {
   const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  // Pas de dateTo=tomorrow : on ne veut que les matchs d'aujourd'hui
+  // (évite de picker un match de demain qui serait ensuite marqué GAGNÉ par l'auto-resolve)
   let allMatches = [];
 
   // football-data.org (football uniquement)
   if (FD_KEY) {
     try {
-      const d = await httpGet(`https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${tomorrow}`, { "X-Auth-Token": FD_KEY });
+      const d = await httpGet(`https://api.football-data.org/v4/matches?dateFrom=${today}&dateTo=${today}`, { "X-Auth-Token": FD_KEY });
       const matches = (d.matches || []).filter(m => !["FINISHED","CANCELLED","POSTPONED"].includes(m.status));
       if (matches.length) {
         const formatted = matches.map(m => ({
