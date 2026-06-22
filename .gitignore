@@ -19,6 +19,9 @@ dist.backup*/
 logs/
 *.log
 
+# agent scratch
+.superpowers/
+
 # secrets
 **/__pycache__/
 *.pyc
