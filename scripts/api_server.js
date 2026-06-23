@@ -1860,7 +1860,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
               <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
                 <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} activé !</div>
-                <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — Le Concile analyse. Tu encaisses.</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 5 IA analysent. Tu décides avec plus de données.</div>
               </div>
               <div style="padding:32px">
                 <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'accès :</p>
@@ -2081,7 +2081,7 @@ app.post("/internal/pick-notify", async (req, res) => {
 <div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="text-align:center;margin-bottom:24px">
     <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
-    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">LE CONCILE ANALYSE. TU ENCAISSES.</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">5 IA ANALYSENT. TU DECIDES AVEC PLUS DE DONNEES.</div>
   </div>
   <div style="background:#0d1020;border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:24px;margin-bottom:20px">
     <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#22d3ee;margin-bottom:12px">🎯 Pick du ${today}</div>
