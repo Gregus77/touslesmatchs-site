@@ -9,6 +9,9 @@ www.touslesmatchs.com {
     handle {
         root * /srv
         encode gzip
+        header {
+            Cache-Control "no-store, max-age=0"
+        }
         try_files {path} {path}.html /index.html
         file_server
     }
