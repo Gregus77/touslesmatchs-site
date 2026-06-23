@@ -91,6 +91,7 @@ const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
 const SCORE_PATH = "/var/touslesmatchs/live_score.json";
 const PICK_PATH = "/var/touslesmatchs/current_pick.json";
 const HERMES_PICKS_PATH = "/picks/picks.json";
+const LEADS_PATH = "/var/touslesmatchs/leads.json";
 
 function loadPick() {
   try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return null; }
@@ -98,6 +99,18 @@ function loadPick() {
 function savePick(data) {
   fs.mkdirSync("/var/touslesmatchs", { recursive: true });
   fs.writeFileSync(PICK_PATH, JSON.stringify(data, null, 2));
+}
+function loadLeads() {
+  try {
+    const data = JSON.parse(fs.readFileSync(LEADS_PATH, "utf8"));
+    return Array.isArray(data.leads) ? data : { leads: [] };
+  } catch {
+    return { leads: [] };
+  }
+}
+function saveLeads(data) {
+  fs.mkdirSync("/var/touslesmatchs", { recursive: true });
+  fs.writeFileSync(LEADS_PATH, JSON.stringify(data, null, 2));
 }
 
 function buildPickTeam(team, fallbackName, fallbackColor) {
@@ -1347,6 +1360,22 @@ async function brevoSendEmail(to, subject, htmlContent) {
   }
 }
 
+function leadLang(email, leadMap) {
+  return String(leadMap.get(String(email).toLowerCase())?.lang || "fr").slice(0, 2).toLowerCase();
+}
+
+function pickEmailText(lang) {
+  const t = {
+    fr: ["Pick du jour", "Pronostic du Concile", "Voir l'analyse complete", "Paris sportifs reserves aux +18 ans. Jeu responsable."],
+    en: ["Today's pick", "Council prediction", "See the full analysis", "Sports betting is 18+ only. Gamble responsibly."],
+    es: ["Pick del dia", "Pronostico del Consejo", "Ver el analisis completo", "Apuestas deportivas solo para mayores de 18. Juega con responsabilidad."],
+    pt: ["Pick do dia", "Prognostico do Conselho", "Ver a analise completa", "Apostas desportivas apenas para maiores de 18. Jogue com responsabilidade."],
+    de: ["Tipp des Tages", "Prognose des Councils", "Vollstandige Analyse ansehen", "Sportwetten nur ab 18. Spiele verantwortungsvoll."],
+    it: ["Pick del giorno", "Pronostico del Consiglio", "Vedi l'analisi completa", "Scommesse sportive solo 18+. Gioca responsabilmente."],
+  };
+  return t[lang] || t.fr;
+}
+
 // ── Admin auth helper ─────────────────────────────────────────────────────────
 function isAdmin(email, code) {
   const auth = verifyCode(email, code);
@@ -1400,30 +1429,50 @@ app.get("/health", (_, res) => res.json({ ok: true }));
 
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
 app.post("/subscribe-email", async (req, res) => {
-  const { email } = req.body || {};
+  const { email, lang, ageRange, source, referrer, landingPage, utm } = req.body || {};
   if (!email || !email.includes("@")) {
     return res.json({ ok: false, error: "Email invalide" });
   }
   const emailClean = email.toLowerCase().trim();
+  const langHeader = String(lang || req.headers["accept-language"] || "fr").slice(0, 16);
+  const langCountry = (langHeader.match(/[-_]([A-Za-z]{2})/) || [])[1] || "";
+  const country = String(req.headers["cf-ipcountry"] || req.headers["x-vercel-ip-country"] || req.headers["x-country-code"] || langCountry || "").slice(0, 2).toUpperCase();
+  const lead = {
+    email: emailClean,
+    created_at: new Date().toISOString(),
+    lang: langHeader,
+    country: country || "unknown",
+    age_range: String(ageRange || "unknown").slice(0, 24),
+    source: String(source || "direct").slice(0, 64),
+    referrer: String(referrer || req.headers.referer || "").slice(0, 300),
+    landing_page: String(landingPage || "").slice(0, 300),
+    utm: utm && typeof utm === "object" ? utm : {},
+  };
   try {
+    const leadsData = loadLeads();
+    const existing = leadsData.leads.find(l => String(l.email).toLowerCase() === emailClean);
+    if (existing) Object.assign(existing, lead, { created_at: existing.created_at || lead.created_at, updated_at: lead.created_at });
+    else leadsData.leads.push(lead);
+    saveLeads(leadsData);
+
     if (!BREVO_API_KEY) {
-      console.log(`[subscribe-email] Brevo non configuré — email ignoré: ${emailClean}`);
-      return res.json({ ok: true }); // ne pas bloquer l'UX si Brevo absent
+      console.log(`[subscribe-email] Brevo non configure - lead sauvegarde: ${emailClean}`);
+      return res.json({ ok: true });
     }
     await httpPost(
       "https://api.brevo.com/v3/contacts",
       { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER" }, updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    console.log(`[subscribe-email] Abonné ajouté Brevo: ${emailClean}`);
+    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} lang=${lead.lang} country=${lead.country}`);
     res.json({ ok: true });
   } catch (e) {
     console.error("[subscribe-email] error:", e.message);
-    res.json({ ok: true }); // ne pas montrer l'erreur à l'utilisateur
+    res.json({ ok: true });
   }
 });
 
-// ── Forgot code — lookup codes.db by email and send via Brevo ─────────────────
+// Forgot code - lookup codes.db by email and send via Brevo
 app.post("/forgot-code", async (req, res) => {
   const { email } = req.body || {};
   if (!email || !email.includes("@")) return res.json({ ok: false });
@@ -2193,6 +2242,8 @@ app.post("/internal/pick-notify", async (req, res) => {
       "SELECT email FROM codes WHERE active = 1 AND plan != 'free' AND email IS NOT NULL AND email != ''"
     ).all();
     codesDb.close();
+    const leadRows = loadLeads().leads || [];
+    const leadMap = new Map(leadRows.map(l => [String(l.email || "").toLowerCase(), l]));
 
     const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
     const gainPotentiel = pick.cote ? Math.round(100 * parseFloat(pick.cote)) : "?";
@@ -2231,10 +2282,11 @@ app.post("/internal/pick-notify", async (req, res) => {
 </div>`;
 
     let sent = 0;
-    const emails = [...new Set(rows.map(r => r.email).filter(Boolean))];
+    const emails = [...new Set([...rows.map(r => r.email), ...leadRows.map(l => l.email)].filter(Boolean))];
     for (const email of emails) {
       try {
-        await brevoSendEmail(email, `🎯 Pick du ${today} — ${pick.home} vs ${pick.away} @${pick.cote}`, htmlContent);
+        const [subjectPrefix] = pickEmailText(leadLang(email, leadMap));
+        await brevoSendEmail(email, `🎯 ${subjectPrefix} — ${pick.home} vs ${pick.away} @${pick.cote}`, htmlContent);
         sent++;
       } catch (e) {
         console.error(`[pick-notify] email to ${email}:`, e.message);
@@ -2264,6 +2316,7 @@ app.post("/internal/pick-result-notify", async (req, res) => {
       "SELECT email FROM codes WHERE active = 1 AND plan != 'free' AND email IS NOT NULL AND email != ''"
     ).all();
     codesDb.close();
+    const leadRows = loadLeads().leads || [];
 
     const won = pick.status === "GAGNE" || pick.status === "win";
     const title = won ? "Pick gagnant" : "Résultat du pick";
@@ -2287,7 +2340,7 @@ app.post("/internal/pick-result-notify", async (req, res) => {
 </div>`;
 
     let sent = 0;
-    const emails = [...new Set(rows.map(r => r.email).filter(Boolean))];
+    const emails = [...new Set([...rows.map(r => r.email), ...leadRows.map(l => l.email)].filter(Boolean))];
     for (const email of emails) {
       try {
         await brevoSendEmail(email, `${won ? "🏆" : "📊"} ${title} — ${pick.home} vs ${pick.away}`, htmlContent);

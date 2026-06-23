@@ -8,6 +8,9 @@
 <link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com">
 <meta property="og:title" content="TousLesMatchs — Pronostics sportifs IA & Live IA">
 <meta property="og:description" content="Picks vérifiés, historique transparent, Live IA et jeu responsable.">
 <meta property="og:type" content="website">
@@ -1304,6 +1307,14 @@ footer{
     <div style="font-size:20px;font-weight:800;letter-spacing:-.02em;text-align:center;margin-bottom:8px">Recevez le prochain pick<br><span style="color:var(--cyan)">gratuitement par email</span></div>
     <div style="font-size:13px;color:var(--muted2);text-align:center;margin-bottom:22px;line-height:1.6">Chaque jour à 11h59, le Concile Hermès analyse les matchs.<br>Recevez le pick + les liens bookmakers directement.</div>
     <input class="ep-input" id="ep-email" type="email" placeholder="votre@email.com" autocomplete="email">
+    <select class="ep-input" id="ep-age" style="margin-top:10px">
+      <option value="">Votre âge</option>
+      <option value="18-24">18-24 ans</option>
+      <option value="25-34">25-34 ans</option>
+      <option value="35-44">35-44 ans</option>
+      <option value="45-54">45-54 ans</option>
+      <option value="55+">55 ans et plus</option>
+    </select>
     <div id="ep-err" style="color:var(--red);font-size:12px;margin:6px 0 6px;display:none"></div>
     <div id="ep-ok" style="color:var(--green);font-size:12px;margin:6px 0 6px;display:none"></div>
     <button class="ep-btn" id="ep-btn" onclick="subscribeEmail()" style="margin:10px 0">Recevoir mon pick gratuit →</button>
@@ -2128,9 +2139,9 @@ document.getElementById('ep-bg').addEventListener('click', function(e){
   if(e.target === this) closeEmailPopup();
 });
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeEmailPopup(); });
-// Popup après 15 secondes si pas encore d'email enregistré
+// Popup premiere visite apres le rendu initial si pas encore d'email enregistre
 if(!localStorage.getItem('tlm_ep_dismissed') && !localStorage.getItem('tlm_email')){
-  setTimeout(openEmailPopup, 15000);
+  setTimeout(openEmailPopup, 1200);
 }
 
 // ══ STICKY EMAIL BAR
@@ -2144,11 +2155,37 @@ function closeStickyBar(){
   if(bar) bar.style.display='none';
   localStorage.setItem('tlm_ep_dismissed','1');
 }
+function leadSource(){
+  const qs = new URLSearchParams(location.search);
+  const ref = document.referrer || '';
+  if(qs.get('utm_source')) return qs.get('utm_source');
+  if(/t\.me|telegram/i.test(ref)) return 'telegram';
+  if(/facebook|instagram|tiktok|twitter|x\.com|youtube/i.test(ref)) return 'social';
+  if(/google|bing|duckduckgo|yahoo/i.test(ref)) return 'search';
+  return ref ? 'referral' : 'direct';
+}
+function leadPayload(email, ageRange){
+  const qs = new URLSearchParams(location.search);
+  return {
+    email,
+    ageRange: ageRange || '',
+    lang: (navigator.language || 'fr').slice(0, 16),
+    source: leadSource(),
+    referrer: document.referrer || '',
+    landingPage: location.href,
+    utm: {
+      source: qs.get('utm_source') || '',
+      medium: qs.get('utm_medium') || '',
+      campaign: qs.get('utm_campaign') || '',
+      content: qs.get('utm_content') || '',
+    },
+  };
+}
 async function subscribeStickyBar(){
   const email = document.getElementById('seb-email').value.trim();
   if(!email||!email.includes('@')) return;
   closeStickyBar();
-  try{ await fetch('/api/subscribe-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})}); }catch(e){}
+  try{ await fetch('/api/subscribe-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(leadPayload(email,''))}); }catch(e){}
 }
 if(!localStorage.getItem('tlm_ep_dismissed')&&!localStorage.getItem('tlm_email')){
   setTimeout(showStickyBar, 4000);
@@ -2168,6 +2205,7 @@ async function subscribeEmail(){
   const errEl = document.getElementById('ep-err');
   const okEl = document.getElementById('ep-ok');
   const email = input.value.trim().toLowerCase();
+  const ageRange = (document.getElementById('ep-age')?.value || '').trim();
   errEl.style.display='none'; okEl.style.display='none';
   if(!email || !email.includes('@')){
     errEl.textContent='Veuillez entrer un email valide.';
@@ -2179,7 +2217,7 @@ async function subscribeEmail(){
     await fetch('/api/subscribe-email', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email})
+      body: JSON.stringify(leadPayload(email, ageRange))
     });
     okEl.textContent = '✓ Inscrit ! Vous recevrez le prochain pick par email.';
     okEl.style.display='block';
