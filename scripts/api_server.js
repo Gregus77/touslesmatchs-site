@@ -1931,6 +1931,10 @@ app.post("/create-checkout", async (req, res) => {
 // ── Community stats (Telegram member count) ───────────────────────────────────
 let tgMemberCache = { count: null, ts: 0 };
 app.get("/community-stats", async (req, res) => {
+  if (process.env.SHOW_TELEGRAM_MEMBER_COUNT !== "true") {
+    return res.json({ ok: false, members: null, hidden: true });
+  }
+
   // Try multiple bot tokens — whichever is admin of the free channel
   const BOT_TOKEN = process.env.HERMES_ADMIN_TLM_BOT
     || process.env.TELEGRAM_BOT_TOKEN

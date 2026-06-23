@@ -177,7 +177,8 @@ Match en cours (score + minute + stats live)
 - Ne pas remettre "Tu encaisses" ou "Preuves de gains" dans les textes publics. Preferer analyse, donnees verifiees, preuves de resultats.
 - Ne pas afficher `React App` : title, manifest, meta SEO et sitemap doivent rester marques TousLesMatchs.
 - Les stats publiques doivent provenir des picks termines uniquement et rester coherentes entre ticker, hero, ROI et communaute.
-- Pick France Over 2.5 gagne 3-0 signale par Greg : ne pas l'ajouter tant que l'adversaire exact, la date et la cote ne sont pas confirmes.
+- Pick France vs Irak Over 2.75 gagne 3-0 ajoute a l'historique public comme resultat sportif verifie. La preuve vient d'un operateur hors ARJEL/ANJ : ne pas afficher le bookmaker, le solde, le lien ou une capture de gain en public. Garder la preuve en interne/admin uniquement.
+- Ne pas afficher automatiquement les membres Telegram tant que `SHOW_TELEGRAM_MEMBER_COUNT=true` n'est pas volontairement active en production.
 
 ---
 

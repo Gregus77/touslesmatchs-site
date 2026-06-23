@@ -23,6 +23,15 @@
   "history": [
     [
       "2026-06-22",
+      "France vs Irak",
+      "Plus de 2.75 buts (demi-gain)",
+      "1.476",
+      "3-0",
+      "GAGNE",
+      "Football"
+    ],
+    [
+      "2026-06-22",
       "Shamrock Rovers vs Derry City",
       "Les deux equipes marquent",
       "1.85",
@@ -212,7 +221,7 @@
     ]
   ],
   "stats": {
-    "gagnes": 11,
+    "gagnes": 12,
     "perdus": 1,
     "en_attente": 9,
     "taux": 92

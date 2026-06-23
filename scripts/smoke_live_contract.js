@@ -273,6 +273,12 @@ function testStaticHistoryHasTurkeyParaguayLoss() {
   assert.ok(ireland, "Le BTTS Irlande doit rester dans l'historique public");
   assert.equal(ireland[4], "1-1");
   assert.equal(ireland[5], "GAGNE");
+
+  const franceIraq = (data.history || []).find(item => item[1] === "France vs Irak");
+  assert.ok(franceIraq, "Le pick France vs Irak doit rester dans l'historique public");
+  assert.equal(franceIraq[2], "Plus de 2.75 buts (demi-gain)");
+  assert.equal(franceIraq[4], "3-0");
+  assert.equal(franceIraq[5], "GAGNE");
 }
 
 function testUnknownScoresDoNotBecomeNilNilConstraints() {
