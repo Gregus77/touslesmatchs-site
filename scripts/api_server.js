@@ -1283,6 +1283,20 @@ function saveAgentPredictions(match, agentResults) {
   } catch(e) { console.error("[agent-perf] save:", e.message); }
 }
 
+function getFinalScoreFromPick(pick) {
+  if (!pick) return null;
+  const directHome = pick.score_home ?? pick.home_score;
+  const directAway = pick.score_away ?? pick.away_score;
+  if (directHome !== undefined && directHome !== null && directAway !== undefined && directAway !== null) {
+    const h = Number(directHome);
+    const a = Number(directAway);
+    if (Number.isFinite(h) && Number.isFinite(a)) return { score_home: h, score_away: a };
+  }
+  const match = String(pick.score || "").trim().match(/(\d+)\s*[-:]\s*(\d+)/);
+  if (!match) return null;
+  return { score_home: Number(match[1]), score_away: Number(match[2]) };
+}
+
 function autoResolvePredictions(match) {
   const { home, away, score_home, score_away } = match;
   if (score_home === null || score_home === undefined || score_away === null || score_away === undefined) return;
@@ -1317,13 +1331,14 @@ function autoResolvePredictions(match) {
       "SELECT * FROM agent_predictions WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
     ).all(`%${firstWord}%`, `%${away.split(' ')[0]}%`);
 
-    if (!pending.length) return;
-    const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
-    pending.forEach(p => {
-      const outcome = betResults[p.bet] || null;
-      if (outcome) updateStmt.run(outcome, p.id);
-    });
-    console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
+    if (pending.length) {
+      const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
+      pending.forEach(p => {
+        const outcome = betResults[p.bet] || null;
+        if (outcome) updateStmt.run(outcome, p.id);
+      });
+      console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
+    }
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
 
   // Résoudre aussi les traces Concile
@@ -2322,6 +2337,16 @@ app.post("/internal/pick-result-notify", async (req, res) => {
     return res.status(403).json({ ok: false, error: "Forbidden" });
   }
   if (!pick || !pick.home) return res.json({ ok: false, error: "pick manquant" });
+  const finalScore = getFinalScoreFromPick(pick);
+  if (finalScore && pick.home && pick.away) {
+    autoResolvePredictions({
+      home: pick.home,
+      away: pick.away,
+      score_home: finalScore.score_home,
+      score_away: finalScore.score_away,
+      status: "FINISHED",
+    });
+  }
   if (!BREVO_API_KEY) return res.json({ ok: false, error: "BREVO_API_KEY non configuré", sent: 0 });
 
   try {
