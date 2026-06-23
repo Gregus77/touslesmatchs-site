@@ -311,6 +311,54 @@ function testAvailableBetsStayNeutralWithoutKnownScore() {
   assert.ok(bets.includes("BTTS Oui"));
 }
 
+function testAlreadyWonMarketsAreNotAvailableLive() {
+  const bets = __liveContractTest.computeAvailableBets({
+    home: "Portugal",
+    away: "Uzbekistan",
+    score_home: 3,
+    score_away: 0,
+    minute: 40,
+    status: "IN_PLAY",
+    competition: "FIFA World Cup",
+  });
+
+  assert.ok(!bets.includes("Over 2.5 buts"), "Over 2.5 deja gagne ne doit plus etre propose");
+  assert.ok(!bets.includes("Under 2.5 buts"), "Under 2.5 deja perdu ne doit plus etre propose");
+}
+
+function testApiSportsLiveScoreOverridesFootballDataLiveScore() {
+  const merged = __liveContractTest.mergeLiveMatchSources(
+    [{
+      id: "fd-1",
+      source: "football-data",
+      sport: "Football",
+      home: "Portugal",
+      away: "Uzbekistan",
+      score_home: 2,
+      score_away: 1,
+      minute: null,
+      status: "IN_PLAY",
+    }],
+    [{
+      id: "987",
+      source: "api-sports",
+      sport: "Football",
+      fixtureId: "987",
+      home: "Portugal",
+      away: "Uzbekistan",
+      score_home: 3,
+      score_away: 0,
+      minute: 40,
+      status: "IN_PLAY",
+    }]
+  );
+
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].source, "api-sports");
+  assert.equal(merged[0].score_home, 3);
+  assert.equal(merged[0].score_away, 0);
+}
+
 function testVerifiedLiveMatchIsResolvedFromServerListOnly() {
   const live = [{
     id: "fd-123",
@@ -350,6 +398,8 @@ testLostPickKeepsNilAwayWinScore();
 testStaticHistoryHasTurkeyParaguayLoss();
 testUnknownScoresDoNotBecomeNilNilConstraints();
 testAvailableBetsStayNeutralWithoutKnownScore();
+testAlreadyWonMarketsAreNotAvailableLive();
+testApiSportsLiveScoreOverridesFootballDataLiveScore();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();
 testExpiredLiveCacheIsNotReturnedWhenApisFail();
 

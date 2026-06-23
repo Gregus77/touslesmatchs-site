@@ -418,16 +418,35 @@ async function fetchFromApiSports() {
   return results;
 }
 
+function sameLiveTeams(a, b) {
+  return normalizeMatchName(a?.home) === normalizeMatchName(b?.home)
+    && normalizeMatchName(a?.away) === normalizeMatchName(b?.away);
+}
+
+function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) {
+  const merged = [...footballDataMatches];
+  for (const apiMatch of apiSportsMatches) {
+    const existingIndex = merged.findIndex((m) => sameLiveTeams(m, apiMatch) && m.status !== "FINISHED");
+    if (existingIndex >= 0 && apiMatch.sport === "Football") {
+      merged[existingIndex] = apiMatch;
+    } else {
+      merged.push(apiMatch);
+    }
+  }
+  return merged;
+}
+
 async function fetchLiveMatches() {
   if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
     return liveMatchesCache.data;
   }
-  // Try football-data.org first (couvre Coupe du Monde gratuitement)
-  let matches = await fetchFromFootballData();
-  // Fallback to API-Sports
-  if (matches === null) matches = await fetchFromApiSports();
+  const [footballDataMatches, apiSportsMatches] = await Promise.all([
+    fetchFromFootballData(),
+    fetchFromApiSports(),
+  ]);
   // If both failed, do not keep stale live matches on screen.
-  if (matches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
+  if (footballDataMatches === null && apiSportsMatches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
+  const matches = mergeLiveMatchSources(footballDataMatches || [], apiSportsMatches || []);
 
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
@@ -609,6 +628,9 @@ function computeAvailableBets(match) {
   if (total > 2.5) bets = bets.filter(b => b !== "Under 2.5 buts");
   if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts" && b !== "Under 2.5 buts");
   if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Non");
+  // Marchés déjà gagnés : ne jamais proposer un pari dont l'issue est déjà acquise.
+  if (total > 2.5) bets = bets.filter(b => b !== "Over 2.5 buts");
+  if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Oui");
 
   // Over 2.5 : projection mathématique basée sur le rythme actuel
   const need25 = Math.max(0, 3 - total);
@@ -2246,6 +2268,7 @@ module.exports.__liveContractTest = {
   readKnownScore,
   computeAvailableBets,
   computeLiveConstraints,
+  mergeLiveMatchSources,
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
 };

@@ -437,16 +437,29 @@ async function loadMatches(force){
     const d = await r.json();
     if(d.ok && d.matches){
       allMatches = d.matches.filter(m => m.status !== "FINISHED");
-      if(PICK_MATCH && PICK_MATCH.status !== 'upcoming' && !pickMatchInList(allMatches)){
-        const finishedVersion = d.matches.find(m =>
-          m.status === "FINISHED" &&
+      if(PICK_MATCH && PICK_MATCH.status !== 'upcoming'){
+        const liveVersion = allMatches.find(m =>
           (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&
           (matchTeamLive(m.home,PICK_MATCH.away)||matchTeamLive(m.away,PICK_MATCH.away))
         );
-        if(finishedVersion){
-          PICK_MATCH.score_home = finishedVersion.score_home;
-          PICK_MATCH.score_away = finishedVersion.score_away;
-          PICK_MATCH.status = 'FINISHED';
+        if(liveVersion){
+          PICK_MATCH.score_home = liveVersion.score_home;
+          PICK_MATCH.score_away = liveVersion.score_away;
+          PICK_MATCH.minute = liveVersion.minute;
+          PICK_MATCH.status = liveVersion.status;
+          PICK_MATCH.source = liveVersion.source;
+          PICK_MATCH.id = liveVersion.id;
+        } else if(!pickMatchInList(allMatches)){
+          const finishedVersion = d.matches.find(m =>
+          m.status === "FINISHED" &&
+          (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&
+          (matchTeamLive(m.home,PICK_MATCH.away)||matchTeamLive(m.away,PICK_MATCH.away))
+          );
+          if(finishedVersion){
+            PICK_MATCH.score_home = finishedVersion.score_home;
+            PICK_MATCH.score_away = finishedVersion.score_away;
+            PICK_MATCH.status = 'FINISHED';
+          }
         }
       }
       lastUpdate = new Date();
