@@ -28,6 +28,8 @@ const DAILY_RUN_FILE = path.join(REPO, "data/hermes_daily_run.json");
 const AUTO_DAILY_PICK = process.env.HERMES_AUTO_DAILY_PICK !== "0";
 const AUTO_DAILY_PICK_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_HOUR || 0);
 const AUTO_DAILY_PICK_MINUTE = Number(process.env.HERMES_AUTO_DAILY_PICK_MINUTE || 5);
+const AUTO_PUBLISH_FREE = process.env.HERMES_AUTO_PUBLISH_FREE !== "0";
+const AUTO_PUBLISH_PREMIUM = process.env.HERMES_AUTO_PUBLISH_PREMIUM !== "0";
 
 if (!TG_TOKEN) { console.error("HERMES_ADMIN_TLM_BOT manquant"); process.exit(1); }
 
@@ -550,7 +552,7 @@ async function runAnalyse(chatId) {
 📊 Note : <b>${p.note}/10</b>${probStr}${edgeStr}
 💡 ${p.raison || ""}${altsStr}
 
-✅ Pick sauvegardé. Tape /publish pour le canal public · /publishpremium pour Premium.`;
+✅ Pick sauvegardé. Publication Telegram/email automatique en cours.`;
 
   await reply(chatId, msg);
   if (data.currentPick.liveUnavailable) {
@@ -564,9 +566,18 @@ async function runAnalyse(chatId) {
       await reply(chatId, `📧 Emails envoyés à <b>${emailResult.sent || 0}</b> abonné(s)`);
     } else if (emailResult.error && emailResult.error !== "timeout") {
       console.error("[hermes] pick-notify email:", emailResult.error);
+      await reply(chatId, `Email pick non envoye : ${emailResult.error}`);
     }
   } catch (e) {
     console.error("[hermes] notifyPickByEmail:", e.message);
+    await reply(chatId, `Email pick non envoye : ${e.message}`).catch(() => {});
+  }
+
+  if (AUTO_PUBLISH_FREE) {
+    await cmdPublish(chatId, { automatic: true });
+  }
+  if (AUTO_PUBLISH_PREMIUM && PREMIUM_CHANNEL) {
+    await cmdPublishPremium(chatId, { automatic: true });
   }
 }
 
@@ -674,7 +685,7 @@ async function cmdResult(chatId, status) {
   } catch (e) { console.error("hermes_learn:", e.message); }
 }
 
-async function cmdPublish(chatId) {
+async function cmdPublish(chatId, opts = {}) {
   if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "❌ TELEGRAM_BOT_TOKEN manquant"); return; }
   const data = loadPicks();
   const p = data.currentPick;
@@ -696,20 +707,35 @@ async function cmdPublish(chatId) {
 ⚠️ 18+ uniquement. Jeu responsable.`;
 
   const body = JSON.stringify({ chat_id: PUBLIC_CHAT, text, parse_mode: "HTML", disable_web_page_preview: false });
+  let ok = false;
+  let err = "";
   await new Promise((resolve) => {
     const req = https.request({
       hostname: "api.telegram.org",
       path: `/bot${PUBLIC_BOT_TOKEN}/sendMessage`,
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
-    }, res => { res.on("data", () => {}); res.on("end", resolve); });
-    req.on("error", resolve);
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(d);
+          ok = !!parsed.ok;
+          err = parsed.description || "";
+        } catch {
+          err = d;
+        }
+        resolve();
+      });
+    });
+    req.on("error", e => { err = e.message; resolve(); });
     req.write(body); req.end();
   });
-  await reply(chatId, `✅ Pick publié sur ${PUBLIC_CHAT}`);
+  await reply(chatId, ok ? `✅ Pick publié sur ${PUBLIC_CHAT}` : `❌ Erreur publication Telegram Free (${PUBLIC_CHAT}) : ${err || "réponse inconnue"}`);
 }
 
-async function cmdPublishPremium(chatId) {
+async function cmdPublishPremium(chatId, opts = {}) {
   if (!TG_TOKEN) { await reply(chatId, "❌ Token Telegram manquant"); return; }
   if (!PREMIUM_CHANNEL) { await reply(chatId, "❌ TELEGRAM_PREMIUM_CHANNEL_ID manquant"); return; }
   const data = loadPicks();
@@ -736,17 +762,18 @@ ${p.raison ? `\n💡 <i>${p.raison}</i>` : ""}
 
   const body = JSON.stringify({ chat_id: PREMIUM_CHANNEL, text, parse_mode: "HTML", disable_web_page_preview: false });
   let ok = false;
+  let err = "";
   await new Promise((resolve) => {
     const req = https.request({
       hostname: "api.telegram.org",
       path: `/bot${TG_TOKEN}/sendMessage`,
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
-    }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { ok = JSON.parse(d).ok; } catch {} resolve(); }); });
-    req.on("error", resolve);
+    }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { const parsed = JSON.parse(d); ok = !!parsed.ok; err = parsed.description || ""; } catch { err = d; } resolve(); }); });
+    req.on("error", e => { err = e.message; resolve(); });
     req.write(body); req.end();
   });
-  await reply(chatId, ok ? `✅ Pick publié sur le canal Premium (${PREMIUM_CHANNEL})` : "❌ Erreur publication Premium — vérifie TELEGRAM_PREMIUM_CHANNEL_ID et que le bot est admin du canal");
+  await reply(chatId, ok ? `✅ Pick publié sur le canal Premium (${PREMIUM_CHANNEL})` : `❌ Erreur publication Premium (${PREMIUM_CHANNEL}) : ${err || "vérifie que le bot est admin du canal"}`);
 }
 
 async function notifyPickByEmail(pick) {
