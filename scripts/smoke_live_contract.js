@@ -357,6 +357,11 @@ function testApiSportsLiveScoreOverridesFootballDataLiveScore() {
   assert.equal(merged[0].source, "api-sports");
   assert.equal(merged[0].score_home, 3);
   assert.equal(merged[0].score_away, 0);
+  assert.equal(merged[0].scoreConflict, true);
+  assert.deepEqual(merged[0].scoreConflictSources, {
+    footballData: "2-1",
+    apiSports: "3-0",
+  });
 }
 
 function testVerifiedLiveMatchIsResolvedFromServerListOnly() {

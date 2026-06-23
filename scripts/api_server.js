@@ -423,17 +423,48 @@ function sameLiveTeams(a, b) {
     && normalizeMatchName(a?.away) === normalizeMatchName(b?.away);
 }
 
+function hasKnownScore(match) {
+  return match?.score_home !== null && match?.score_home !== undefined
+    && match?.score_away !== null && match?.score_away !== undefined;
+}
+
+function scoresDiffer(a, b) {
+  if (!hasKnownScore(a) || !hasKnownScore(b)) return false;
+  return Number(a.score_home) !== Number(b.score_home) || Number(a.score_away) !== Number(b.score_away);
+}
+
 function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) {
   const merged = [...footballDataMatches];
   for (const apiMatch of apiSportsMatches) {
     const existingIndex = merged.findIndex((m) => sameLiveTeams(m, apiMatch) && m.status !== "FINISHED");
     if (existingIndex >= 0 && apiMatch.sport === "Football") {
-      merged[existingIndex] = apiMatch;
+      const previous = merged[existingIndex];
+      merged[existingIndex] = scoresDiffer(previous, apiMatch)
+        ? {
+            ...apiMatch,
+            scoreConflict: true,
+            scoreConflictSources: {
+              footballData: `${previous.score_home}-${previous.score_away}`,
+              apiSports: `${apiMatch.score_home}-${apiMatch.score_away}`,
+            },
+          }
+        : apiMatch;
     } else {
       merged.push(apiMatch);
     }
   }
   return merged;
+}
+
+function rejectScoreConflict(match, res) {
+  if (!match?.scoreConflict) return false;
+  const sources = match.scoreConflictSources || {};
+  res.json({
+    ok: false,
+    error: `Score live contradictoire entre les APIs (${sources.footballData || "?"} vs ${sources.apiSports || "?"}). Analyse bloquee jusqu'a confirmation.`,
+    scoreConflict: true,
+  });
+  return true;
 }
 
 async function fetchLiveMatches() {
@@ -1586,6 +1617,7 @@ app.post("/analyse", async (req, res) => {
   try {
     const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
     if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
+    if (rejectScoreConflict(verifiedMatch, res)) return;
     const analysis = await runConcileAnalysis(verifiedMatch);
     const chief = analysis.agents[analysis.agents.length - 1];
 
@@ -1610,6 +1642,7 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
 
   const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
+  if (rejectScoreConflict(verifiedMatch, res)) return;
 
   const matchKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${getTodayStr()}`;
 
@@ -1710,6 +1743,7 @@ app.post("/concile-analysis", async (req, res) => {
 
   const verifiedMatch = await requireVerifiedLiveMatch(match);
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
+  if (rejectScoreConflict(verifiedMatch, res)) return;
 
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   const cacheKey = `${email}__${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}`;
