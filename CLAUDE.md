@@ -67,7 +67,7 @@ STRIPE_PRICE_ID_ELITE=⚠️ MANQUANT
 
 ### ✅ Ce qui fonctionne
 - Site design + navigation
-- Concile IA (5 agents, stats live, contraintes math, terrain neutre)
+- Concile IA (4 agents specialises + 1 Chief, stats live, contraintes math, terrain neutre)
 - Auth codes (vérification, remember me)
 - API live matches (football-data.org + api-sports.io)
 - Rate limiter Concile (3 req/min/IP)
@@ -179,6 +179,8 @@ Match en cours (score + minute + stats live)
 - Les stats publiques doivent provenir des picks termines uniquement et rester coherentes entre ticker, hero, ROI et communaute.
 - Pick France vs Irak Over 2.75 gagne 3-0 ajoute a l'historique public comme resultat sportif verifie. La preuve vient d'un operateur hors ARJEL/ANJ : ne pas afficher le bookmaker, le solde, le lien ou une capture de gain en public. Garder la preuve en interne/admin uniquement.
 - Ne pas afficher automatiquement les membres Telegram tant que `SHOW_TELEGRAM_MEMBER_COUNT=true` n'est pas volontairement active en production.
+- Formulation publique du Concile : dire "4 agents IA specialises + 1 Chief" plutot que laisser croire que 5 IA produisent toutes un rapport complet. Le public voit consensus, signaux cles, objections et verdict; les prompts, rapports complets et arbitrages internes restent proprietaires.
+- Le Chief doit arbitrer les desaccords, expliquer pourquoi une objection minoritaire est acceptee ou rejetee, et adapter la grille au sport (football, basket, hockey, baseball) si les donnees live sont fiables.
 
 ---
 

@@ -755,8 +755,16 @@ async function runConcileAnalysis(match) {
   const neutralNote = isNeutralComp(match.competition)
     ? "\n⚠️ TERRAIN NEUTRE — ne PAS mentionner l'avantage domicile, il n'existe pas dans cette compétition."
     : "";
-  const sportNote = match.sport && match.sport !== "Football"
-    ? `\nSport: ${match.sport}` : "";
+  const sport = String(match.sport || "Football");
+  const sportNote = sport !== "Football"
+    ? `\nSport: ${sport}` : "";
+  const sportRules = sport === "Basketball"
+    ? "\nRègle sport: basket — privilégier moneyline/vainqueur et handicap prudent; éviter les gros over/under points sauf données très solides."
+    : sport === "Hockey"
+      ? "\nRègle sport: hockey — privilégier vainqueur/double chance; over/under seulement si rythme et tirs sont très solides."
+      : sport === "Baseball"
+        ? "\nRègle sport: baseball — privilégier moneyline/vainqueur; éviter les marchés joueurs ou exotiques au début."
+        : "\nRègle sport: football — marchés autorisés: vainqueur, double chance, draw no bet, BTTS, over/under prudents, but équipe.";
   const liveConstraints = computeLiveConstraints(match);
 
   // Récupérer les statistiques live si disponibles (football uniquement)
@@ -782,7 +790,7 @@ async function runConcileAnalysis(match) {
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${statsBlock}${liveConstraints}
+Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${liveConstraints}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
@@ -802,7 +810,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
     `Tu es GPT-Analysis, expert tactique. Analyse ${match.home} vs ${match.away} en t'appuyant sur ce que tu sais : schéma tactique habituel, force de la défense, pressing, profil des buteurs, résultats récents et H2H historique. Adapte ton analyse au score et à la minute actuelle.`,
     `Tu es GeminiFlash, spécialiste value bets. Pour ${match.home} vs ${match.away}, estime la vraie probabilité de chaque marché disponible en tenant compte du classement des équipes, de leurs statistiques offensives/défensives connues, et du contexte du tournoi (enjeu, élimination, groupe). Identifie le meilleur rapport probabilité/valeur.`,
     `Tu es Mistral-7B, expert Over/Under et BTTS. Pour ${match.home} vs ${match.away}, utilise tes connaissances sur le nombre moyen de buts dans ce type de confrontation, le style offensif ou défensif de chaque équipe, et les tendances de la compétition (ex: Coupe du Monde 2026 = moyenne buts). Concentre-toi sur les marchés de buts.`,
-    `Tu es Claude Chief, chef du Concile. Tu synthétises les analyses des agents en pondérant leur fiabilité historique ET tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte du match, enjeux, historique des confrontations).`,
+    `Tu es Claude Chief, arbitre du Concile. Tu ne fais pas une moyenne simple: tu compares les 4 agents, identifies les désaccords utiles, rejettes les signaux faibles, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte, enjeux, historique).`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -833,13 +841,15 @@ Synthétise ces votes en tenant compte de :
 1. La fiabilité historique de chaque agent (winrate)
 2. Les contraintes mathématiques du score live
 3. Tes connaissances sur ${match.home} et ${match.away}
-4. Tu DOIS choisir parmi : ${availableBets.join(", ")}
+4. Les objections des agents minoritaires: explique pourquoi tu les acceptes ou les rejettes
+5. Les règles propres au sport: ${sport}
+6. Tu DOIS choisir parmi : ${availableBets.join(", ")}
 
 Réponds en JSON pur (pas de markdown):
 {
   "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 55-92>,
-  "raison": "<2 phrases: 1 sur le score/contexte live, 1 sur les équipes ou l'enjeu>"
+  "raison": "<2 phrases max: verdict + raison principale; objection minoritaire acceptée/rejetée si elle existe>"
 }`
       : `${personas[i]}
 
@@ -1860,7 +1870,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
               <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
                 <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} activé !</div>
-                <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 5 IA analysent. Tu décides avec plus de données.</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
               </div>
               <div style="padding:32px">
                 <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'accès :</p>
@@ -2085,7 +2095,7 @@ app.post("/internal/pick-notify", async (req, res) => {
 <div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
   <div style="text-align:center;margin-bottom:24px">
     <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
-    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">5 IA ANALYSENT. TU DECIDES AVEC PLUS DE DONNEES.</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">4 AGENTS IA + 1 CHIEF. TU DECIDES AVEC PLUS DE DONNEES.</div>
   </div>
   <div style="background:#0d1020;border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:24px;margin-bottom:20px">
     <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#22d3ee;margin-bottom:12px">🎯 Pick du ${today}</div>
