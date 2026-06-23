@@ -2177,14 +2177,20 @@ app.get("/agent-performance", (req, res) => {
   const { email, code } = req.query;
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
   const perf = getAgentPerformance();
-  // Ajouter les prédictions en attente par match (pour info)
   try {
+    const meta = db.prepare(`
+      SELECT
+        COUNT(DISTINCT match_key) as matches_tracked,
+        COUNT(*) as predictions_tracked,
+        SUM(CASE WHEN outcome IS NOT NULL THEN 1 ELSE 0 END) as predictions_resolved
+      FROM agent_predictions
+    `).get();
     const pending = db.prepare(
       "SELECT match_key, home, away, COUNT(*) as n FROM agent_predictions WHERE outcome IS NULL GROUP BY match_key ORDER BY created_at DESC LIMIT 5"
     ).all();
-    res.json({ ok: true, performance: perf, pending_matches: pending });
+    res.json({ ok: true, performance: perf, meta, pending_matches: pending });
   } catch(e) {
-    res.json({ ok: true, performance: perf, pending_matches: [] });
+    res.json({ ok: true, performance: perf, meta: {}, pending_matches: [] });
   }
 });
 

@@ -890,6 +890,7 @@ function formatScorePair(m){
 }
 
 let agentPerfData = {};
+let agentPerfMeta = {};
 const AGENT_LIST = [
   { name: 'GROQ-Llama', icon: '🦙' },
   { name: 'GPT Analysis', icon: '🤖' },
@@ -902,6 +903,7 @@ async function loadAgentPerformance() {
   const el = document.getElementById('agent-leaderboard');
   if(!isAdminSession()){
     agentPerfData = {};
+    agentPerfMeta = {};
     if(el) el.innerHTML = '';
     return;
   }
@@ -910,7 +912,10 @@ async function loadAgentPerformance() {
     const qs = new URLSearchParams({ email, code });
     const r = await fetch(`/api/agent-performance?${qs.toString()}`);
     const d = await r.json();
-    if(d.ok){ agentPerfData = d.performance || {}; }
+    if(d.ok){
+      agentPerfData = d.performance || {};
+      agentPerfMeta = d.meta || {};
+    }
     renderLeaderboard();
   } catch(e) { renderLeaderboard(); }
 }
@@ -963,12 +968,17 @@ function renderLeaderboard() {
   }).join('');
 
   // Total predictions tracked
-  const totalPreds = withData.reduce((s,a) => s + a.total, 0);
-  const totalResolved = withData.reduce((s,a) => s + (a.resolved||0), 0);
+  const totalPreds = Number(agentPerfMeta.predictions_tracked) || withData.reduce((s,a) => s + a.total, 0);
+  const totalResolved = Number(agentPerfMeta.predictions_resolved) || withData.reduce((s,a) => s + (a.resolved||0), 0);
+  const totalMatches = Number(agentPerfMeta.matches_tracked) || Math.ceil(totalPreds / Math.max(AGENT_LIST.length, 1));
   el.innerHTML = `<div class="lb-section">
     <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">${totalPreds} prédictions · ${totalResolved} résolues</span></div>
     <div class="lb-agents">${cards}</div>
   </div>`;
+  const badge = el.querySelector('.lb-title-badge');
+  if (badge) {
+    badge.textContent = `${totalMatches} match${totalMatches>1?'s':''} analyse${totalMatches>1?'s':''} · ${totalPreds} predictions · ${totalResolved} resolues`;
+  }
 }
 
 // ══ INIT
