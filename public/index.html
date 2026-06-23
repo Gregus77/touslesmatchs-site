@@ -201,12 +201,12 @@ nav{
 @keyframes pulse-cyan{0%,100%{opacity:1}50%{opacity:.25}}
 
 .hero-title{
-  font-size:clamp(44px,7.5vw,96px);
+  font-size:clamp(38px,5.8vw,82px);
   font-weight:900;
-  line-height:.92;
+  line-height:.98;
   letter-spacing:-.04em;
   margin-bottom:28px;
-  max-width:960px;
+  max-width:1180px;
 }
 .ht1{color:var(--text);display:block}
 .ht2{
@@ -227,6 +227,7 @@ nav{
   max-width:540px;line-height:1.7;
   margin-bottom:44px;font-weight:400;
 }
+.hero-sub:empty{display:none}
 .hero-ctas{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:64px}
 .cta-main{
   background:linear-gradient(135deg,var(--indigo),var(--violet));
@@ -969,8 +970,9 @@ footer{
   <div class="hero-badge"><span class="badge-dot"></span><span data-i18n="hero_badge">Concile V4.3 · Analyse en temps réel</span></div>
   <h1 class="hero-title">
     <span class="ht1">Le Conseil des IA analyse chaque match.</span>
+    <span class="ht1">Quand plusieurs IA voient le même signal, tu décides avec une longueur d’avance. 🔥</span>
   </h1>
-  <p class="hero-sub">Quand plusieurs IA voient le même signal, tu décides avec une longueur d’avance. 🔥</p>
+  <p class="hero-sub"></p>
   <div class="hero-ctas">
     <a href="#pick" class="cta-main" data-i18n="hero_cta1">Voir le pick du jour →</a>
     <a href="/live-ia" class="cta-ghost" data-i18n="hero_cta2">Accès Live IA</a>
