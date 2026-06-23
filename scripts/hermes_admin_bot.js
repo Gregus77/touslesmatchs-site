@@ -1008,17 +1008,7 @@ async function cmdHelp(chatId) {
 }
 
 // ── Message router ────────────────────────────────────────────────────────────
-async function handleMessage(msg) {
-  const chatId = String(msg.chat?.id);
-  const fromId = String(msg.from?.id);
-  const text   = (msg.text || "").trim();
-
-  // Sécurité : seulement l'admin
-  if (fromId !== ADMIN_USER_ID) {
-    console.log(`  ⚠️ Message ignoré de user ${fromId}`);
-    return;
-  }
-
+async function handleCommandLine(chatId, text) {
   const [cmd, ...rest] = text.split(" ");
   const args = rest.join(" ");
 
@@ -1040,6 +1030,29 @@ async function handleMessage(msg) {
     case "/deploy":          return cmdDeploy(chatId);
     case "/help":
     default:          return cmdHelp(chatId);
+  }
+}
+
+async function handleMessage(msg) {
+  const chatId = String(msg.chat?.id);
+  const fromId = String(msg.from?.id);
+  const text   = (msg.text || "").trim();
+
+  // Sécurité : seulement l'admin
+  if (fromId !== ADMIN_USER_ID) {
+    console.log(`  ⚠️ Message ignoré de user ${fromId}`);
+    return;
+  }
+
+  const commandLines = text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line.startsWith("/"));
+
+  if (!commandLines.length) return cmdHelp(chatId);
+
+  for (const line of commandLines) {
+    await handleCommandLine(chatId, line);
   }
 }
 
