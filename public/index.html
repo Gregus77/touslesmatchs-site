@@ -5,17 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TousLesMatchs — Pronostics sportifs IA & Live IA</title>
 <meta name="description" content="Analyse sportive assistée par IA, picks vérifiés, historique transparent et Live IA. TousLesMatchs publie uniquement quand les données disponibles le justifient.">
-<link rel="canonical" href="https://touslesmatchs.com/">
+<link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
 <meta property="og:title" content="TousLesMatchs — Pronostics sportifs IA & Live IA">
 <meta property="og:description" content="Picks vérifiés, historique transparent, Live IA et jeu responsable.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://touslesmatchs.com/">
-<meta property="og:image" content="https://touslesmatchs.com/logo512.png">
+<meta property="og:url" content="https://www.touslesmatchs.com/">
+<meta property="og:image" content="https://www.touslesmatchs.com/og-image.png?v=20260623">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="TousLesMatchs - Pronostics sportifs IA et Live IA">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TousLesMatchs — Pronostics sportifs IA & Live IA">
 <meta name="twitter:description" content="Analyse sportive assistée par IA, historique transparent et Live IA.">
+<meta name="twitter:image" content="https://www.touslesmatchs.com/og-image.png?v=20260623">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -1307,7 +1311,7 @@ footer{
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>
 // ══ ÉTOILES
 const cv=document.getElementById('cosmos'),cx=cv.getContext('2d');
@@ -1326,7 +1330,11 @@ function ds(){
   });
   requestAnimationFrame(ds);
 }
-rs();is();ds();window.addEventListener('resize',()=>{rs();is()});
+if(window.matchMedia('(max-width: 700px)').matches || window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  cv.style.display='none';
+}else{
+  rs();is();ds();window.addEventListener('resize',()=>{rs();is()});
+}
 
 // ══ PICK DATA — chargé dynamiquement depuis /current-pick
 // Pas de fallback hardcodé : si Hermès n'a pas fourni de pick, on affiche "Pas de pick aujourd'hui"
@@ -1594,6 +1602,10 @@ function buildChart(){
 
   const canvas = document.getElementById('roi-chart');
   if(!canvas) return;
+  if(typeof Chart === 'undefined'){
+    canvas.style.display = 'none';
+    return;
+  }
 
   // Pas assez de données : message à la place du graphique
   if(total < 2){

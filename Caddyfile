@@ -9,9 +9,16 @@ www.touslesmatchs.com {
     handle {
         root * /srv
         encode gzip
-        header {
-            Cache-Control "no-store, max-age=0"
-        }
+
+        @static path *.js *.css *.png *.jpg *.jpeg *.webp *.svg *.ico *.woff2
+        header @static Cache-Control "public, max-age=86400"
+
+        @html path / *.html
+        header @html Cache-Control "no-store, max-age=0"
+
+        @manifest path /manifest.json
+        header @manifest Cache-Control "no-cache, max-age=0"
+
         try_files {path} {path}.html /index.html
         file_server
     }
