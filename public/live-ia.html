@@ -301,6 +301,11 @@ function getAuth(){
   };
 }
 
+function isAdminSession(){
+  const {code} = getAuth();
+  return !!code && code.toUpperCase().startsWith('ELITE-ADMIN');
+}
+
 function renderNavAuth(){
   const el = document.getElementById('nav-auth');
   const {email, plan} = getAuth();
@@ -343,7 +348,7 @@ async function doLogin(){
       localStorage.setItem('tlm_plan',  d.plan);
       okEl.textContent = `✓ Connecté — Plan ${d.plan} · ${d.credits_left} crédit(s)`;
       okEl.style.display='block';
-      setTimeout(()=>{ closeModal(); renderNavAuth(); renderCredits(); renderMain(); }, 1000);
+      setTimeout(()=>{ closeModal(); renderNavAuth(); renderCredits(); loadAgentPerformance(); renderMain(); }, 1000);
     } else {
       errEl.textContent = d.error||'Code invalide.'; errEl.style.display='block';
       btn.disabled=false; btn.textContent='Accéder →';
@@ -360,6 +365,7 @@ function doLogout(){
   localStorage.removeItem('tlm_plan');
   renderNavAuth();
   renderCredits();
+  loadAgentPerformance();
   renderMain();
 }
 
@@ -863,8 +869,16 @@ const AGENT_LIST = [
 ];
 
 async function loadAgentPerformance() {
+  const el = document.getElementById('agent-leaderboard');
+  if(!isAdminSession()){
+    agentPerfData = {};
+    if(el) el.innerHTML = '';
+    return;
+  }
+  const {email, code} = getAuth();
   try {
-    const r = await fetch('/api/agent-performance');
+    const qs = new URLSearchParams({ email, code });
+    const r = await fetch(`/api/agent-performance?${qs.toString()}`);
     const d = await r.json();
     if(d.ok){ agentPerfData = d.performance || {}; }
     renderLeaderboard();

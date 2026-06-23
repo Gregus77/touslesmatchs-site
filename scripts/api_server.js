@@ -1676,7 +1676,7 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
   ).get(req.user.id, matchKey);
 
   if (existing) {
-    return res.json({ ok: true, ...JSON.parse(existing.analysis_json), cached: true });
+    return res.json({ ok: true, ...sanitizeAnalysisForClient(JSON.parse(existing.analysis_json)), cached: true });
   }
 
   // Deduct token
@@ -1695,7 +1695,7 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
     // Get updated token count
     const tokenRow = getTokenRow(req.user.id);
 
-    res.json({ ok: true, ...analysis, tokens_remaining: tokenRow?.tokens_today ?? 0 });
+    res.json({ ok: true, ...sanitizeAnalysisForClient(analysis), tokens_remaining: tokenRow?.tokens_today ?? 0 });
   } catch (e) {
     // Refund token on error
     db.prepare("UPDATE user_tokens SET tokens_today = tokens_today + 1 WHERE user_id = ?").run(req.user.id);
@@ -1748,6 +1748,25 @@ function verifyCode(email, code) {
 }
 
 // Cache des analyses de la journée (clé = email+matchId)
+function isAdminAccess(email, code) {
+  if (!email || !code) return false;
+  return isAdmin(email, code) || code.toUpperCase().trim().startsWith("ELITE-ADMIN");
+}
+
+function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
+  if (allowAdminFields) return analysis;
+  const clean = { ...analysis };
+  delete clean.agent_performance;
+  if (Array.isArray(clean.agents)) {
+    clean.agents = clean.agents.map((agent, index) => ({
+      ...agent,
+      name: `Agent IA ${index + 1}`,
+      model: "",
+    }));
+  }
+  return clean;
+}
+
 const analysisCache = new Map();
 
 app.post("/concile-analysis", async (req, res) => {
@@ -1758,6 +1777,7 @@ app.post("/concile-analysis", async (req, res) => {
   const auth = verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
+  const allowAdminFields = isAdminAccess(email, code);
 
   // Check credits (credits_max=0 means unlimited)
   const today = new Date().toISOString().slice(0, 10);
@@ -1772,7 +1792,7 @@ app.post("/concile-analysis", async (req, res) => {
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   const cacheKey = `${email}__${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}`;
   if (!forceRefresh && analysisCache.has(cacheKey)) {
-    return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
+    return res.json({ ok: true, ...sanitizeAnalysisForClient(analysisCache.get(cacheKey), allowAdminFields), cached: true });
   }
   if (forceRefresh) analysisCache.delete(cacheKey);
 
@@ -1800,7 +1820,7 @@ app.post("/concile-analysis", async (req, res) => {
       wdb.close();
     } catch(ce) { console.error("[concile-analysis] credits error:", ce.message); }
 
-    res.json({ ok: true, ...analysis });
+    res.json({ ok: true, ...sanitizeAnalysisForClient(analysis, allowAdminFields) });
   } catch (e) {
     res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
   }
@@ -1815,6 +1835,7 @@ app.post("/prematch-analysis", async (req, res) => {
   const auth = verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
+  const allowAdminFields = isAdminAccess(email, code);
 
   if (auth.credits_left !== null && auth.credits_left !== undefined && auth.credits_left <= 0) {
     return res.json({ ok: false, error: "CREDITS_EXHAUSTED", credits_left: 0 });
@@ -1823,7 +1844,7 @@ app.post("/prematch-analysis", async (req, res) => {
   const today2 = new Date().toISOString().slice(0, 10);
   const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || today2}`;
   if (analysisCache.has(cacheKey)) {
-    return res.json({ ok: true, ...analysisCache.get(cacheKey), cached: true });
+    return res.json({ ok: true, ...sanitizeAnalysisForClient(analysisCache.get(cacheKey), allowAdminFields), cached: true });
   }
 
   try {
@@ -1857,7 +1878,7 @@ app.post("/prematch-analysis", async (req, res) => {
       wdb2.close();
     } catch(ce2) { console.error("[prematch-analysis] credits error:", ce2.message); }
 
-    res.json({ ok: true, ...analysis });
+    res.json({ ok: true, ...sanitizeAnalysisForClient(analysis, allowAdminFields) });
   } catch (e) {
     console.error("[prematch-analysis]", e.message);
     res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
@@ -2068,11 +2089,15 @@ app.get("/community-stats", async (req, res) => {
 
 // ── Concile performance — boucle d'apprentissage ──────────────────────────────
 app.get("/concile-performance", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
   res.json({ ok: true, ...getConcilePerformance() });
 });
 
 // ── Agent performance — classement public ────────────────────────────────────
 app.get("/agent-performance", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
   const perf = getAgentPerformance();
   // Ajouter les prédictions en attente par match (pour info)
   try {
