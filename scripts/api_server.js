@@ -83,6 +83,7 @@ const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
+const STRIPE_PRICE_ID_CARTE = process.env.STRIPE_PRICE_ID_CARTE || process.env.STRIPE_PRICE_CARTE || "";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 
 // Preuves storage file
@@ -1892,7 +1893,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     } catch(e) { console.error("[stripe] retrieve error:", e.message); }
 
     const planMap = {
-      [process.env.STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro" },
+      [STRIPE_PRICE_ID_CARTE]:               { status: "carte",   label: "Analyse 1 euro" },
       [process.env.STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro" },
       [process.env.STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP" },
       [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite" },
@@ -1970,7 +1971,7 @@ app.post("/create-checkout", async (req, res) => {
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
   const priceMap = {
-    carte: process.env.STRIPE_PRICE_ID_CARTE,
+    carte: STRIPE_PRICE_ID_CARTE,
     standard: process.env.STRIPE_PRICE_ID_PREMIUM,
     premium: process.env.STRIPE_PRICE_ID_PREMIUM,
     vip: process.env.STRIPE_PRICE_ID_VIP,
