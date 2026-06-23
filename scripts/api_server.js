@@ -76,6 +76,18 @@ db.exec(`
   );
 `);
 
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  if (!columns.includes(column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
+ensureColumn("concile_analyses", "final_score_home", "INTEGER DEFAULT NULL");
+ensureColumn("concile_analyses", "final_score_away", "INTEGER DEFAULT NULL");
+ensureColumn("concile_analyses", "resolved_at", "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "result_source", "TEXT DEFAULT NULL");
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || "";
@@ -1179,10 +1191,18 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
     ).all(`%${first}%`, `%${away.split(' ')[0]}%`);
 
     if (!pending.length) return;
-    const upd = db.prepare("UPDATE concile_analyses SET outcome = ? WHERE id = ?");
+    const upd = db.prepare(`
+      UPDATE concile_analyses
+      SET outcome = ?,
+          final_score_home = ?,
+          final_score_away = ?,
+          resolved_at = datetime('now'),
+          result_source = ?
+      WHERE id = ?
+    `);
     pending.forEach(r => {
-      const out = betOutcome(r.best_bet);
-      if (out) upd.run(out, r.id);
+      const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
+      if (out) upd.run(out, h, a, "api_finished_match", r.id);
     });
     console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
   } catch(e) { console.error("[concile-trace] resolve:", e.message); }
@@ -1291,6 +1311,47 @@ function getAgentPerformance() {
   } catch(e) {
     console.error("[agent-perf] load:", e.message);
     return {};
+  }
+}
+
+function getPublicHistoryItems() {
+  try {
+    return db.prepare(`
+      SELECT
+        match_key,
+        home,
+        away,
+        competition,
+        best_bet,
+        confidence,
+        outcome,
+        final_score_home,
+        final_score_away,
+        stats_status,
+        result_source,
+        resolved_at,
+        analysed_at
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+        AND final_score_home IS NOT NULL
+        AND final_score_away IS NOT NULL
+      ORDER BY COALESCE(resolved_at, analysed_at) DESC
+      LIMIT 80
+    `).all().map(row => ({
+      id: row.match_key,
+      home: row.home,
+      away: row.away,
+      competition: row.competition || "Match verifie",
+      bet: row.best_bet,
+      confidence: row.confidence,
+      score: `${row.final_score_home}-${row.final_score_away}`,
+      outcome: row.outcome,
+      resolvedAt: row.resolved_at || row.analysed_at,
+      source: row.result_source || (row.stats_status === "manual_verified" ? "manual_verified" : "api_verified"),
+    }));
+  } catch (e) {
+    console.error("[public-history]", e.message);
+    return [];
   }
 }
 
@@ -2276,6 +2337,10 @@ app.get("/agent-performance", (req, res) => {
 });
 
 // ── Admin — forcer résolution manuelle d'un match ────────────────────────────
+app.get("/public-history", (req, res) => {
+  res.json({ ok: true, items: getPublicHistoryItems() });
+});
+
 app.post("/admin/resolve-match", (req, res) => {
   const { email, code, home, away, score_home, score_away } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
@@ -2536,6 +2601,16 @@ app.post("/internal/record-concile-result", (req, res) => {
       "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence, outcome) VALUES (?,?,?,?,?,?,?)"
     ).run(matchKey, record.home, record.away, record.agent || "Claude Chief", record.bet, confidence, outcome);
 
+    db.prepare(`
+      UPDATE concile_analyses
+      SET final_score_home = ?,
+          final_score_away = ?,
+          resolved_at = datetime('now'),
+          result_source = ?
+      WHERE match_key = ?
+    `).run(h, a, "manual_verified", matchKey);
+
+    console.log(`[record-concile-result] ${record.home} vs ${record.away} ${record.bet} ${h}-${a} => ${outcome}`);
     res.json({ ok: true, outcome, match_key: matchKey });
   } catch (e) {
     console.error("[record-concile-result]", e.message);

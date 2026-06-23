@@ -52,6 +52,13 @@ function reply(chatId, text, extra = {}) {
   return tgRequest("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...extra });
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 async function getUpdates(offset) {
   return new Promise((resolve) => {
     const req = https.request({
@@ -701,6 +708,33 @@ async function cmdResult(chatId, status) {
   } catch (e) { console.error("hermes_learn:", e.message); }
 }
 
+async function cmdResultPreview(chatId) {
+  const data = loadPicks();
+  const p = data.currentPick || {};
+  const status = String(p.status || "").toUpperCase();
+  if (!p.home || !p.away) {
+    await reply(chatId, "❌ Aucun pick actif.");
+    return;
+  }
+  if (!["GAGNE", "PERDU", "WIN", "LOSS"].includes(status) || !p.score) {
+    await reply(chatId, "❌ Résultat non publiable : score final ou statut fiable manquant. Utilise /setscore puis /win ou /lose, ou valide avec /record.");
+    return;
+  }
+  const won = status === "GAGNE" || status === "WIN";
+  const message = `${won ? "✅" : "📊"} Résultat du pick du jour
+
+${p.home} vs ${p.away}
+🎯 ${p.prono || p.bet || "Pick officiel"}
+Score final : ${p.score}
+Résultat : ${won ? "GAGNÉ" : "PERDU"}
+
+${won ? "Le Conseil des IA avait vu juste." : "Résultat enregistré. On garde la donnée pour améliorer le modèle."}
+
+https://www.touslesmatchs.com`;
+
+  await reply(chatId, `<b>Message prêt à publier :</b>\n\n<code>${escapeHtml(message)}</code>`);
+}
+
 async function cmdPublish(chatId, opts = {}) {
   if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "❌ TELEGRAM_BOT_TOKEN manquant"); return; }
   const data = loadPicks();
@@ -964,6 +998,7 @@ async function cmdHelp(chatId) {
 /setscore 1-0 — Mettre à jour le score
 /win — Marquer le pick comme GAGNÉ
 /lose — Marquer le pick comme PERDU
+/result — Préparer le message résultat Telegram sans publier
 /record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0 — Ajouter une prédiction vérifiée aux stats Concile
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public (gratuit)
@@ -997,6 +1032,7 @@ async function handleMessage(msg) {
     case "/setscore": return cmdSetScore(chatId, args);
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
+    case "/result":          return cmdResultPreview(chatId);
     case "/record":          return cmdRecord(chatId, args);
     case "/learn":           return cmdLearn(chatId);
     case "/publish":         return cmdPublish(chatId);

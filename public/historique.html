@@ -249,7 +249,7 @@ document.addEventListener('click',function(e){
 
 <script>
 // ══ DONNÉES PICKS — sport, ia_note ajoutés
-const PICKS = [
+let PICKS = [
   { date:"2026-05-13", sport:"football", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", homeFlag:"🇮🇹", awayFlag:"🇮🇹", pick:"Victoire Inter (1X2)", cote:1.60, mise:11, result:"win", score:"0-2", ia_note:8.2 },
   { date:"2026-05-17", sport:"football", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", homeFlag:"🇪🇸", awayFlag:"🇪🇸", pick:"Victoire Villarreal (1X2)", cote:1.88, mise:10, result:"win", score:"3-2", ia_note:7.8 },
   { date:"2026-05-19", sport:"basketball", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", homeFlag:"🏀", awayFlag:"🏀", pick:"Plus de 216.5 pts", cote:1.72, mise:10, result:"win", score:"115-104", ia_note:7.5 },
@@ -386,7 +386,44 @@ function render(){
   renderPicks(filtered);
 }
 
-render();
+function normalizeApiHistoryItem(item){
+  const outcome = item.outcome === 'win' ? 'win' : item.outcome === 'loss' ? 'loss' : 'pending';
+  return {
+    date: item.resolvedAt ? String(item.resolvedAt).slice(0,10) : new Date().toISOString().slice(0,10),
+    sport: 'football',
+    competition: item.competition || 'Match verifie',
+    home: item.home || '',
+    away: item.away || '',
+    homeFlag: '⚽',
+    awayFlag: '⚽',
+    pick: item.bet || '',
+    cote: Number(item.cote || 1.8),
+    mise: 10,
+    result: outcome,
+    score: item.score || '',
+    ia_note: Math.max(1, Math.min(10, Math.round(Number(item.confidence || 70) / 10))),
+    source: item.source || 'api_verified'
+  };
+}
+
+async function loadVerifiedHistory(){
+  render();
+  try{
+    const r = await fetch('/api/public-history', { cache: 'no-store' });
+    const data = await r.json();
+    if(data && data.ok && Array.isArray(data.items) && data.items.length){
+      const apiPicks = data.items.map(normalizeApiHistoryItem);
+      const existingKeys = new Set(apiPicks.map(p => `${p.home}|${p.away}|${p.pick}|${p.score}`.toLowerCase()));
+      const fallbackKept = PICKS.filter(p => !existingKeys.has(`${p.home}|${p.away}|${p.pick}|${p.score}`.toLowerCase()));
+      PICKS = [...apiPicks, ...fallbackKept].slice(0, 120);
+      render();
+    }
+  }catch(e){
+    console.warn('[history] API indisponible, fallback local conserve');
+  }
+}
+
+loadVerifiedHistory();
 </script>
 <script src="/js/i18n.js?v=concile-chief-20260623"></script>
 <script>document.addEventListener('DOMContentLoaded', () => i18n.init());</script>
