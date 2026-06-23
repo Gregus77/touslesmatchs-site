@@ -323,6 +323,21 @@ function normalizeApiSportsFootballFixture(f) {
   };
 }
 
+const LOW_TRUST_COMPETITION_KEYWORDS = [
+  "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
+  "u17", "u18", "u19", "u20", "u21", "u23",
+  "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
+  "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
+];
+
+function isLowTrustCompetition(matchOrCompetition = "") {
+  const raw = typeof matchOrCompetition === "string"
+    ? matchOrCompetition
+    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+  const value = String(raw || "").toLowerCase();
+  return LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword));
+}
+
 function getVerifiedFixtureId(match) {
   if (!match || match.source !== "api-sports" || match.sport !== "Football") return null;
   const fixtureId = match.fixtureId || match.sourceId || match.id;
@@ -352,8 +367,8 @@ async function fetchFromFootballData() {
       httpGet("https://api.football-data.org/v4/matches?status=LIVE", { "X-Auth-Token": FOOTBALL_DATA_KEY }),
       httpGet(`https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
     ]);
-    const live = (liveData.matches || []).map(formatFDMatch);
-    const finished = (finishedData.matches || []).map(formatFDMatch);
+    const live = (liveData.matches || []).map(formatFDMatch).filter((m) => !isLowTrustCompetition(m));
+    const finished = (finishedData.matches || []).map(formatFDMatch).filter((m) => !isLowTrustCompetition(m));
     const all = [...live, ...finished];
     console.log(`[live-matches] football-data.org: ${live.length} live, ${finished.length} finished (hier+aujourd'hui)`);
     return all;
@@ -372,7 +387,7 @@ async function fetchFromApiSports() {
   try {
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!data.errors || Object.keys(data.errors).length === 0) {
-      const items = (data.response || []).slice(0, 20).map(normalizeApiSportsFootballFixture);
+      const items = (data.response || []).slice(0, 20).map(normalizeApiSportsFootballFixture).filter((m) => !isLowTrustCompetition(m));
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
     }
@@ -2300,6 +2315,7 @@ if (require.main === module) {
 module.exports.__liveContractTest = {
   normalizeFootballDataMatch,
   normalizeApiSportsFootballFixture,
+  isLowTrustCompetition,
   getVerifiedFixtureId,
   buildStatsStatus,
   normalizeCurrentPick,

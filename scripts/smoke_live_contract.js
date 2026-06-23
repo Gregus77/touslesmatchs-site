@@ -370,6 +370,13 @@ function testPaidPlanTokenLimitsMatchOffer() {
   assert.equal(__liveContractTest.TOKEN_LIMITS.elite, 30);
 }
 
+function testLowTrustCompetitionsAreRejected() {
+  assert.equal(__liveContractTest.isLowTrustCompetition("International Friendly"), true);
+  assert.equal(__liveContractTest.isLowTrustCompetition("UEFA U21 Championship"), true);
+  assert.equal(__liveContractTest.isLowTrustCompetition({ competition: "Japan Youth League", home: "Tokyo U20", away: "Osaka" }), true);
+  assert.equal(__liveContractTest.isLowTrustCompetition("Ireland Premier Division"), false);
+}
+
 function testVerifiedLiveMatchIsResolvedFromServerListOnly() {
   const live = [{
     id: "fd-123",
@@ -412,6 +419,7 @@ testAvailableBetsStayNeutralWithoutKnownScore();
 testAlreadyWonMarketsAreNotAvailableLive();
 testApiSportsLiveScoreOverridesFootballDataLiveScore();
 testPaidPlanTokenLimitsMatchOffer();
+testLowTrustCompetitionsAreRejected();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();
 testExpiredLiveCacheIsNotReturnedWhenApisFail();
 

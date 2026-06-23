@@ -204,6 +204,19 @@ const FINISHED_STATUS = {
   handball:   ["FT","CANC","PST","ABD","INT"],
   volleyball: ["FT","CANC","PST","ABD","INT"],
 };
+const LOW_TRUST_COMPETITION_KEYWORDS = [
+  "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
+  "u17", "u18", "u19", "u20", "u21", "u23",
+  "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
+  "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
+];
+function isLowTrustCompetition(matchOrCompetition = "") {
+  const raw = typeof matchOrCompetition === "string"
+    ? matchOrCompetition
+    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+  const value = String(raw || "").toLowerCase();
+  return LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword));
+}
 
 async function fetchSport(sport, today) {
   if (!SPORTS_KEY) return [];
@@ -236,7 +249,8 @@ async function fetchSport(sport, today) {
           sport: "Football", home: f.teams?.home?.name, away: f.teams?.away?.name,
           heure: f.fixture?.date ? new Date(f.fixture.date).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
           competition: f.league?.name || "Football", arjel: true
-        }));
+        }))
+        .filter(m => !isLowTrustCompetition(m));
     } else {
       const sportLabel = { basketball:"Basketball", hockey:"Hockey", rugby:"Rugby", baseball:"Baseball", handball:"Handball", volleyball:"Volleyball" }[sport] || sport;
       return items
@@ -250,7 +264,8 @@ async function fetchSport(sport, today) {
           if (!home || !away) return null;
           return { sport: sportLabel, home, away, heure, competition: league, arjel: true };
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter(m => !isLowTrustCompetition(m));
     }
   } catch(e) { console.error(`  API-Sports ${sport}:`, e.message); return []; }
 }
@@ -270,7 +285,7 @@ async function fetchTodayMatches() {
           sport: "Football", home: m.homeTeam.name, away: m.awayTeam.name,
           heure: m.utcDate ? new Date(m.utcDate).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
           competition: m.competition?.name || "Football", arjel: true
-        }));
+        })).filter(m => !isLowTrustCompetition(m));
         allMatches.push(...formatted);
         console.log(`  football-data.org: ${formatted.length} match(s)`);
       }
