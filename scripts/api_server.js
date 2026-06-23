@@ -189,7 +189,7 @@ function saveProofs(proofs) {
 let liveMatchesCache = { data: null, ts: 0 };
 const CACHE_TTL = 10 * 60 * 1000;
 
-const TOKEN_LIMITS = { free: 0, premium: 10, vip: 30, elite: 999 };
+const TOKEN_LIMITS = { free: 0, carte: 1, premium: 10, vip: 30, elite: 30 };
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
@@ -1892,6 +1892,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     } catch(e) { console.error("[stripe] retrieve error:", e.message); }
 
     const planMap = {
+      [process.env.STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro" },
       [process.env.STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro" },
       [process.env.STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP" },
       [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite" },
@@ -1969,8 +1970,9 @@ app.post("/create-checkout", async (req, res) => {
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
   const priceMap = {
+    carte: process.env.STRIPE_PRICE_ID_CARTE,
     standard: process.env.STRIPE_PRICE_ID_PREMIUM,
-    premium: process.env.STRIPE_PRICE_ID_VIP,
+    premium: process.env.STRIPE_PRICE_ID_PREMIUM,
     vip: process.env.STRIPE_PRICE_ID_VIP,
     elite: process.env.STRIPE_PRICE_ID_ELITE,
   };
@@ -1980,8 +1982,9 @@ app.post("/create-checkout", async (req, res) => {
   try {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
+    const mode = plan === "carte" ? "payment" : "subscription";
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode,
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: "https://www.touslesmatchs.com/live-ia?success=1",
@@ -2303,6 +2306,7 @@ module.exports.__liveContractTest = {
   computeAvailableBets,
   computeLiveConstraints,
   mergeLiveMatchSources,
+  TOKEN_LIMITS,
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
 };

@@ -364,6 +364,12 @@ function testApiSportsLiveScoreOverridesFootballDataLiveScore() {
   });
 }
 
+function testPaidPlanTokenLimitsMatchOffer() {
+  assert.equal(__liveContractTest.TOKEN_LIMITS.carte, 1);
+  assert.equal(__liveContractTest.TOKEN_LIMITS.premium, 10);
+  assert.equal(__liveContractTest.TOKEN_LIMITS.elite, 30);
+}
+
 function testVerifiedLiveMatchIsResolvedFromServerListOnly() {
   const live = [{
     id: "fd-123",
@@ -405,6 +411,7 @@ testUnknownScoresDoNotBecomeNilNilConstraints();
 testAvailableBetsStayNeutralWithoutKnownScore();
 testAlreadyWonMarketsAreNotAvailableLive();
 testApiSportsLiveScoreOverridesFootballDataLiveScore();
+testPaidPlanTokenLimitsMatchOffer();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();
 testExpiredLiveCacheIsNotReturnedWhenApisFail();
 
