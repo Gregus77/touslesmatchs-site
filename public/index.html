@@ -3,7 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TousLesMatchs — Le Concile analyse. Tu encaisses.</title>
+<title>TousLesMatchs — Pronostics sportifs IA & Live IA</title>
+<meta name="description" content="Analyse sportive assistée par IA, picks vérifiés, historique transparent et Live IA. TousLesMatchs publie uniquement quand les données disponibles le justifient.">
+<link rel="canonical" href="https://touslesmatchs.com/">
+<meta property="og:title" content="TousLesMatchs — Pronostics sportifs IA & Live IA">
+<meta property="og:description" content="Picks vérifiés, historique transparent, Live IA et jeu responsable.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://touslesmatchs.com/">
+<meta property="og:image" content="https://touslesmatchs.com/logo512.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TousLesMatchs — Pronostics sportifs IA & Live IA">
+<meta name="twitter:description" content="Analyse sportive assistée par IA, historique transparent et Live IA.">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -866,11 +876,11 @@ footer{
   <div class="ticker-inner">
     <span id="t1">⚡ Prochain pick bientôt disponible — restez connectés</span>
     <span>📊 Concile V4.3 · 5 IA · 3 sources minimum · Aucun match inventé</span>
-    <span id="tw1">🏆 Winrate 100% · 7 picks · Profit +53€ sur 10€/pick</span>
+    <span id="tw1">Statistiques en cours de synchronisation</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
     <span id="t2">⚡ Prochain pick bientôt disponible — restez connectés</span>
     <span>📊 Concile V4.3 · 5 IA · 3 sources minimum · Aucun match inventé</span>
-    <span id="tw2">🏆 Winrate 100% · 7 picks · Profit +53€ sur 10€/pick</span>
+    <span id="tw2">Statistiques en cours de synchronisation</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
   </div>
 </div>
@@ -894,7 +904,7 @@ footer{
 <div class="mobile-menu" id="mmenu">
   <a href="/" data-i18n="mm_home">🏠 Accueil</a>
   <a href="/historique" data-i18n="mm_hist">📊 Historique des picks</a>
-  <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de gains</a>
+  <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
@@ -950,7 +960,7 @@ footer{
   <div class="hero-badge"><span class="badge-dot"></span><span data-i18n="hero_badge">Concile V4.3 · Analyse en temps réel</span></div>
   <h1 class="hero-title">
     <span class="ht1" data-i18n="hero_t1">Le Concile analyse.</span>
-    <span class="ht2" data-i18n="hero_t2">Tu encaisses.</span>
+    <span class="ht2" data-i18n="hero_t2">Tu décides avec plus de données.</span>
   </h1>
   <p class="hero-sub" data-i18n="hero_sub">5 intelligences artificielles. 3 sources vérifiées. Un pick par jour, quand et seulement quand les données le justifient.</p>
   <div class="hero-ctas">
@@ -958,8 +968,8 @@ footer{
     <a href="/live-ia" class="cta-ghost" data-i18n="hero_cta2">Accès Live IA</a>
   </div>
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green" id="hs-winrate">100%</div><div class="hs-label" data-i18n="lbl_winrate">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">+53€</div><div class="hs-label">Gain / 100€ misés</div></div>
+    <div class="hs"><div class="hs-val c-green" id="hs-winrate">Sync</div><div class="hs-label" data-i18n="lbl_winrate">Winrate</div></div>
+    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">Sync</div><div class="hs-label">Profit simule</div></div>
     <div class="hs"><div class="hs-val c-indigo">5</div><div class="hs-label" data-i18n="lbl_ia">IA du Concile</div></div>
     <div class="hs"><div class="hs-val c-violet">3</div><div class="hs-label" data-i18n="lbl_src">Sources min.</div></div>
   </div>
@@ -967,10 +977,10 @@ footer{
 
 <!-- FOMO STRIP -->
 <div class="fomo-strip" id="fomo-strip">
-  <div class="fomo-item"><span class="fomo-pulse"></span><span><span id="fomo-members">…</span> membres sur Telegram</span></div>
+  <div class="fomo-item"><span class="fomo-pulse"></span><span><span id="fomo-members">Communaute en lancement</span></span></div>
   <div class="fomo-item"><span class="fomo-hot">🔥</span><span><span id="fomo-analyses">1</span> analyse générée aujourd'hui</span></div>
   <div class="fomo-item">⏰ Prochain pick : <strong id="fomo-countdown" style="color:var(--amber);margin-left:4px">…</strong></div>
-  <div class="fomo-item">✅ <span style="color:var(--green);font-weight:700">7/7</span>&nbsp;picks gagnants ce mois</div>
+  <div class="fomo-item" id="fomo-record">Statistiques calculees sur les picks termines uniquement</div>
 </div>
 
 <!-- PROCHAIN PICK + RÉSULTATS RÉCENTS -->
@@ -1109,8 +1119,8 @@ footer{
   <div class="community-grid">
     <div class="community-card">
       <div class="community-icon">📊</div>
-      <div class="community-val" style="background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">12 500</div>
-      <div class="community-lbl">Matchs analysés</div>
+      <div class="community-val" id="community-picks-played" style="background:linear-gradient(135deg,var(--cyan),var(--indigo2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Sync</div>
+      <div class="community-lbl">Picks termines suivis</div>
     </div>
     <div class="community-card">
       <div class="community-icon">🤖</div>
@@ -1119,13 +1129,13 @@ footer{
     </div>
     <div class="community-card">
       <div class="community-icon">🌍</div>
-      <div class="community-val" style="color:var(--violet2)">120</div>
-      <div class="community-lbl">Pays couverts</div>
+      <div class="community-val" style="color:var(--violet2)">3+</div>
+      <div class="community-lbl">Sources verifiees</div>
     </div>
     <div class="community-card">
       <div class="community-icon">📱</div>
-      <div class="community-val" id="tg-member-count" style="color:var(--green)">...</div>
-      <div class="community-lbl">Membres Telegram</div>
+      <div class="community-val" id="tg-member-count" style="color:var(--green)">Lancement</div>
+      <div class="community-lbl">Communaute Telegram</div>
     </div>
   </div>
 </div>
@@ -1251,7 +1261,8 @@ footer{
   <div class="foot-logo">TousLesMatchs</div>
   <div class="foot-text">
     <span data-i18n="foot_text">Analyse sportive assistée par IA · Données vérifiées · 0 match inventé</span><br>
-    <span style="opacity:.4;font-size:11px;margin-top:8px;display:block">⚠️ Paris responsable · 18+ · Jouez uniquement ce que vous pouvez perdre · Joueurs Info Service : 09 74 75 13 13</span>
+    <span style="opacity:.75;font-size:11px;margin-top:8px;display:block">LES JEUX D'ARGENT ET DE HASARD PEUVENT ETRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr - 09 74 75 13 13, appel non surtaxe.</span>
+    <span style="opacity:.55;font-size:11px;margin-top:6px;display:block">18+ - TousLesMatchs ne garantit aucun gain - Analyses informatives - Jouez uniquement ce que vous pouvez perdre.</span>
     <span style="display:block;margin-top:10px">
       <a href="/mentions-legales.html" style="color:var(--muted);font-size:11px;text-decoration:none;opacity:.6">Mentions légales & CGV</a>
       <span style="margin:0 6px;opacity:.3">·</span>
@@ -1574,6 +1585,10 @@ function buildChart(){
   // Sync ticker avec les vraies stats calculées
   const tickerStr = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur 10€/pick`;
   ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=tickerStr;});
+  const communityPlayed = document.getElementById('community-picks-played');
+  if(communityPlayed) communityPlayed.textContent = String(total);
+  const fomoRecord = document.getElementById('fomo-record');
+  if(fomoRecord) fomoRecord.textContent = `Stats: ${wins} gagnés / ${total - wins} perdus · ${total} picks terminés`;
 
   const canvas = document.getElementById('roi-chart');
   if(!canvas) return;
@@ -2181,7 +2196,7 @@ function computeRealGains(){
   const wrap = heroStats.parentNode;
   const el = document.createElement('div');
   el.style.cssText = 'margin-top:16px;font-size:13px;color:var(--green);font-weight:600;text-align:center;opacity:.9';
-  el.textContent = `📈 100€ misés sur chaque pick auraient généré +${gain}€ de profit`;
+  el.textContent = `Simulation historique : +${gain}€ sur une base de 100€ par pick terminé`;
   wrap.insertBefore(el, heroStats.nextSibling);
 })();
 
@@ -2211,12 +2226,12 @@ document.addEventListener('click',function(e){
     ['tg-member-count','fomo-members'].forEach(id=>{
       const el=document.getElementById(id);
       if(!el) return;
-      el.textContent = count ? count.toLocaleString('fr-FR') : '1 200+';
+      el.textContent = count ? count.toLocaleString('fr-FR') : 'Communauté en lancement';
     });
   }).catch(()=>{
     ['tg-member-count','fomo-members'].forEach(id=>{
       const el=document.getElementById(id);
-      if(el) el.textContent='1 200+';
+      if(el) el.textContent='Communauté en lancement';
     });
   });
 

@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Preuves de Gains — TousLesMatchs</title>
+<title>Preuves de résultats — TousLesMatchs</title>
+<meta name="description" content="Résultats vérifiés, captures disponibles, historique et suivi transparent des performances TousLesMatchs.">
+<link rel="canonical" href="https://touslesmatchs.com/preuves.html">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -143,7 +145,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 <div class="mobile-menu" id="mmenu">
   <a href="/">🏠 Accueil</a>
   <a href="/historique">📊 Historique</a>
-  <a href="/preuves" class="active">🏆 Preuves de gains</a>
+  <a href="/preuves" class="active">🏆 Preuves de résultats</a>
   <a href="/live-ia">🔴 Live IA</a>
   <div class="mm-sep"></div>
   <a href="/#plans" class="mm-cta">Rejoindre → dès 1€</a>
@@ -167,7 +169,7 @@ document.addEventListener('click',function(e){
 <div class="page">
   <div style="margin-bottom:40px">
     <div style="font-size:clamp(28px,5vw,48px);font-weight:900;letter-spacing:-.03em;line-height:1.1;margin-bottom:12px">
-      Preuves de <span style="background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">gains</span>
+      Preuves de <span style="background:linear-gradient(135deg,var(--green),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">résultats</span>
     </div>
     <div style="font-size:15px;color:var(--muted2);line-height:1.6">Transparence totale — chaque pick est documenté, chaque résultat vérifiable.</div>
   </div>
@@ -187,7 +189,7 @@ document.addEventListener('click',function(e){
 
   <!-- SCREENSHOTS dynamiques depuis l'API admin -->
   <div style="font-size:13px;font-weight:700;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:48px;margin-bottom:20px" id="sc-title">Captures d'écran</div>
-  <div class="screenshots-grid" id="screenshots-grid"><div style="color:var(--muted);font-size:13px">Chargement…</div></div>
+  <div class="screenshots-grid" id="screenshots-grid"><div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:14px;line-height:1.7">Les preuves détaillées sont en cours d'ajout. En attendant, l'historique complet des picks terminés est disponible avec score final, cote et résultat.</div></div>
 
   <!-- LIGHTBOX -->
   <div id="lightbox" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.9);align-items:center;justify-content:center;padding:20px;cursor:zoom-out" onclick="closeLb()">
@@ -229,7 +231,7 @@ async function loadScreenshots(){
     const proofs = d.proofs || [];
     title.textContent = `Captures d'écran (${proofs.length})`;
     if(!proofs.length){
-      grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:14px">Les captures seront ajoutées bientôt.</div>`;
+      grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:14px;line-height:1.7">Les preuves détaillées sont en cours d'ajout. En attendant, l'historique complet des picks terminés est disponible avec score final, cote et résultat.</div>`;
       return;
     }
     grid.innerHTML = proofs.map(p => `
@@ -241,7 +243,7 @@ async function loadScreenshots(){
         </div>
       </div>`).join('');
   } catch {
-    grid.innerHTML=`<div style="color:var(--muted);font-size:13px">Les captures seront ajoutées bientôt.</div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:14px;line-height:1.7">Les preuves détaillées sont en cours d'ajout. En attendant, l'historique complet des picks terminés est disponible avec score final, cote et résultat.</div>`;
   }
 }
 function openLb(src,cap){
@@ -325,7 +327,7 @@ function renderTimeline(){
 function renderScreenshots(){
   const grid=document.getElementById('screenshots-grid');
   if(SCREENSHOTS.length===0){
-    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:14px">Les captures d'écran seront ajoutées prochainement.</div>`;
+    grid.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:14px;line-height:1.7">Les preuves détaillées sont en cours d'ajout. En attendant, l'historique complet des picks terminés est disponible avec score final, cote et résultat.</div>`;
     return;
   }
   grid.innerHTML=SCREENSHOTS.map(s=>`

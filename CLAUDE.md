@@ -172,6 +172,15 @@ Match en cours (score + minute + stats live)
 
 ---
 
+### Codex - 2026-06-23 audit confiance publique
+- Ne pas remettre de chiffre Telegram invente (`1 200+`, etc.). Si l'API ne donne pas de valeur fiable, afficher "Communaute en lancement".
+- Ne pas remettre "Tu encaisses" ou "Preuves de gains" dans les textes publics. Preferer analyse, donnees verifiees, preuves de resultats.
+- Ne pas afficher `React App` : title, manifest, meta SEO et sitemap doivent rester marques TousLesMatchs.
+- Les stats publiques doivent provenir des picks termines uniquement et rester coherentes entre ticker, hero, ROI et communaute.
+- Pick France Over 2.5 gagne 3-0 signale par Greg : ne pas l'ajouter tant que l'adversaire exact, la date et la cote ne sont pas confirmes.
+
+---
+
 ## GITHUB
 
 - **Repo** : `Gregus77/touslesmatchs-site`
