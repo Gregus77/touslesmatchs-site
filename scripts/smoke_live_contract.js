@@ -374,6 +374,8 @@ function testLowTrustCompetitionsAreRejected() {
   assert.equal(__liveContractTest.isLowTrustCompetition("International Friendly"), true);
   assert.equal(__liveContractTest.isLowTrustCompetition("UEFA U21 Championship"), true);
   assert.equal(__liveContractTest.isLowTrustCompetition({ competition: "Japan Youth League", home: "Tokyo U20", away: "Osaka" }), true);
+  assert.equal(__liveContractTest.isLowTrustCompetition("Copa Rio · Brazil"), true);
+  assert.equal(__liveContractTest.isLowTrustCompetition("Svenska Cupen · Sweden"), true);
   assert.equal(__liveContractTest.isLowTrustCompetition("Ireland Premier Division"), false);
 }
 

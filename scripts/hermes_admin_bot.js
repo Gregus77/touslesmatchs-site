@@ -209,6 +209,7 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "u17", "u18", "u19", "u20", "u21", "u23",
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
+  "copa rio", "copa chile", "svenska cupen", "regional cup", "state cup",
 ];
 function isLowTrustCompetition(matchOrCompetition = "") {
   const raw = typeof matchOrCompetition === "string"
