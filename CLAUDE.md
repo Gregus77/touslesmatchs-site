@@ -181,6 +181,7 @@ Match en cours (score + minute + stats live)
 - Ne pas afficher automatiquement les membres Telegram tant que `SHOW_TELEGRAM_MEMBER_COUNT=true` n'est pas volontairement active en production.
 - Formulation publique du Concile : dire "4 agents IA specialises + 1 Chief" plutot que laisser croire que 5 IA produisent toutes un rapport complet. Le public voit consensus, signaux cles, objections et verdict; les prompts, rapports complets et arbitrages internes restent proprietaires.
 - Le Chief doit arbitrer les desaccords, expliquer pourquoi une objection minoritaire est acceptee ou rejetee, et adapter la grille au sport (football, basket, hockey, baseball) si les donnees live sont fiables.
+- Claude Chief reste arbitre final, mais il doit etre assiste par le role interne "GPT-Codex Challenger" avant chaque verdict: tester plusieurs marches alternatifs (BTTS, double chance, over/under, vainqueur/nul), contredire l'intuition dominante, verifier le contexte risque (domicile/exterieur, enjeu, amical/officiel, blessures seulement si source fiable) et ne jamais inventer une donnee manquante.
 
 ---
 

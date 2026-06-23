@@ -932,7 +932,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
     `Tu es GPT-Analysis, expert tactique. Analyse ${match.home} vs ${match.away} en t'appuyant sur ce que tu sais : schéma tactique habituel, force de la défense, pressing, profil des buteurs, résultats récents et H2H historique. Adapte ton analyse au score et à la minute actuelle.`,
     `Tu es GeminiFlash, spécialiste value bets. Pour ${match.home} vs ${match.away}, estime la vraie probabilité de chaque marché disponible en tenant compte du classement des équipes, de leurs statistiques offensives/défensives connues, et du contexte du tournoi (enjeu, élimination, groupe). Identifie le meilleur rapport probabilité/valeur.`,
     `Tu es Mistral-7B, expert Over/Under et BTTS. Pour ${match.home} vs ${match.away}, utilise tes connaissances sur le nombre moyen de buts dans ce type de confrontation, le style offensif ou défensif de chaque équipe, et les tendances de la compétition (ex: Coupe du Monde 2026 = moyenne buts). Concentre-toi sur les marchés de buts.`,
-    `Tu es Claude Chief, arbitre du Concile. Tu ne fais pas une moyenne simple: tu compares les 4 agents, identifies les désaccords utiles, rejettes les signaux faibles, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte, enjeux, historique).`,
+    `Tu es Claude Chief, arbitre du Concile. Tu ne fais pas une moyenne simple: tu compares les 4 agents, identifies les désaccords utiles, rejettes les signaux faibles, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte, enjeux, historique). Tu es assisté par GPT-Codex Challenger: avant ton verdict, tu dois te demander si ton intuition est trop dominante, si un autre marché est plus solide, et quelle objection rationnelle pourrait te faire changer d'avis.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -964,8 +964,10 @@ Synthétise ces votes en tenant compte de :
 2. Les contraintes mathématiques du score live
 3. Tes connaissances sur ${match.home} et ${match.away}
 4. Les objections des agents minoritaires: explique pourquoi tu les acceptes ou les rejettes
-5. Les règles propres au sport: ${sport}
-6. Tu DOIS choisir parmi : ${availableBets.join(", ")}
+5. Le contrôle GPT-Codex Challenger: teste au moins 3 marchés alternatifs (BTTS, double chance, over/under, vainqueur ou nul selon disponibilité), puis rejette ceux dont le signal est moins robuste
+6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
+7. Les règles propres au sport: ${sport}
+8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
 
 Réponds en JSON pur (pas de markdown):
 {
