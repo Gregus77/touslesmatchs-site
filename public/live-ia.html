@@ -453,13 +453,26 @@ function pickMatchInList(matches){
   );
 }
 
+function liveMinuteValue(minute){
+  if(minute===null||minute===undefined) return null;
+  const n=parseInt(String(minute).replace(/[^\d]/g,''),10);
+  return Number.isFinite(n)?n:null;
+}
+function isVisibleLiveMatch(m){
+  const status=String(m?.status||'').toUpperCase();
+  if(['FINISHED','FT','AET','PEN','ENDED','CANCELLED','POSTPONED'].includes(status)) return false;
+  const minute=liveMinuteValue(m?.minute);
+  if(m?.sport==='Football'&&minute!==null&&minute>=85) return false;
+  return true;
+}
+
 async function loadMatches(force){
   try{
     const url = force ? '/api/live-matches?force=1' : '/api/live-matches';
     const r = await fetch(url);
     const d = await r.json();
     if(d.ok && d.matches){
-      allMatches = d.matches.filter(m => m.status !== "FINISHED");
+      allMatches = d.matches.filter(isVisibleLiveMatch);
       if(PICK_MATCH && PICK_MATCH.status !== 'upcoming'){
         const liveVersion = allMatches.find(m =>
           (matchTeamLive(m.home,PICK_MATCH.home)||matchTeamLive(m.away,PICK_MATCH.home)) &&

@@ -465,6 +465,19 @@ function hasKnownScore(match) {
     && match?.score_away !== null && match?.score_away !== undefined;
 }
 
+function parseLiveMinuteValue(minute) {
+  if (minute === null || minute === undefined) return null;
+  const parsed = parseInt(String(minute).replace(/[^\d]/g, ""), 10);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function isFinishedOrTooLateForLiveIa(match) {
+  const status = String(match?.status || "").toUpperCase();
+  if (["FINISHED", "FT", "AET", "PEN", "ENDED", "CANCELLED", "POSTPONED"].includes(status)) return true;
+  const minute = parseLiveMinuteValue(match?.minute);
+  return match?.sport === "Football" && minute !== null && minute >= 85;
+}
+
 function scoresDiffer(a, b) {
   if (!hasKnownScore(a) || !hasKnownScore(b)) return false;
   return Number(a.score_home) !== Number(b.score_home) || Number(a.score_away) !== Number(b.score_away);
@@ -519,8 +532,9 @@ async function fetchLiveMatches() {
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
 
-  liveMatchesCache = { data: matches, ts: Date.now() };
-  return matches;
+  const visibleMatches = matches.filter(m => !isFinishedOrTooLateForLiveIa(m));
+  liveMatchesCache = { data: visibleMatches, ts: Date.now() };
+  return visibleMatches;
 }
 
 function getMockMatches() {
