@@ -971,13 +971,14 @@ function renderLeaderboard() {
   const totalPreds = Number(agentPerfMeta.predictions_tracked) || withData.reduce((s,a) => s + a.total, 0);
   const totalResolved = Number(agentPerfMeta.predictions_resolved) || withData.reduce((s,a) => s + (a.resolved||0), 0);
   const totalMatches = Number(agentPerfMeta.matches_tracked) || Math.ceil(totalPreds / Math.max(AGENT_LIST.length, 1));
+  const totalSnapshots = Number(agentPerfMeta.snapshots_tracked) || totalMatches;
   el.innerHTML = `<div class="lb-section">
     <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">${totalPreds} prédictions · ${totalResolved} résolues</span></div>
     <div class="lb-agents">${cards}</div>
   </div>`;
   const badge = el.querySelector('.lb-title-badge');
   if (badge) {
-    badge.textContent = `${totalMatches} match${totalMatches>1?'s':''} analyse${totalMatches>1?'s':''} · ${totalPreds} predictions · ${totalResolved} resolues`;
+    badge.textContent = `${totalMatches} match${totalMatches>1?'s':''} · ${totalSnapshots} snapshot${totalSnapshots>1?'s':''} · ${totalPreds} predictions · ${totalResolved} resolues`;
   }
 }
 

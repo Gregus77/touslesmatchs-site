@@ -223,6 +223,12 @@ function getTodayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
+const AUTO_CONCILE_OBSERVER = process.env.AUTO_CONCILE_OBSERVER !== "0";
+const AUTO_CONCILE_INTERVAL_MS = Math.max(5, Number(process.env.AUTO_CONCILE_INTERVAL_MIN || 10)) * 60 * 1000;
+const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX_MATCHES || 2));
+const AUTO_CONCILE_MIN_MINUTE = Math.max(1, Number(process.env.AUTO_CONCILE_MIN_MINUTE || 10));
+const AUTO_CONCILE_BUCKET_MINUTES = Math.max(5, Number(process.env.AUTO_CONCILE_BUCKET_MINUTES || 15));
+
 function getTokenRow(userId) {
   return db.prepare("SELECT * FROM user_tokens WHERE user_id = ?").get(userId);
 }
@@ -1111,7 +1117,7 @@ function saveConcileAnalysis(match, result, pickBet) {
          best_bet, confidence, raison, consensus_votes, agents_json, pick_bet)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
-      `${match.home}_${match.away}_${new Date().toISOString().slice(0,10)}`,
+      getPredictionSnapshotKey(match),
       match.home, match.away,
       match.competition || match.league || "",
       minute,
@@ -1270,8 +1276,16 @@ function getAgentPerformance() {
   }
 }
 
+function getPredictionSnapshotKey(match) {
+  const minute = parseLiveMinuteValue(match?.minute);
+  const bucket = minute === null ? "prematch" : `${Math.floor(minute / AUTO_CONCILE_BUCKET_MINUTES) * AUTO_CONCILE_BUCKET_MINUTES}`;
+  const score = `${match?.score_home ?? "x"}-${match?.score_away ?? "x"}`;
+  const id = match?.id || match?.fixtureId || match?.sourceMatchId || `${match?.home}_${match?.away}`;
+  return `${id}_${getTodayStr()}_${bucket}_${score}`;
+}
+
 function saveAgentPredictions(match, agentResults) {
-  const matchKey = `${match.home}_${match.away}_${getTodayStr()}`;
+  const matchKey = getPredictionSnapshotKey(match);
   try {
     const stmt = db.prepare(
       "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence) VALUES (?,?,?,?,?,?)"
@@ -1343,6 +1357,54 @@ function autoResolvePredictions(match) {
 
   // Résoudre aussi les traces Concile
   resolveConcileAnalyses(home, away, score_home, score_away);
+}
+
+let autoConcileObserverRunning = false;
+
+function shouldAutoObserveMatch(match) {
+  if (!match || match.scoreConflict) return false;
+  const status = String(match.status || "").toUpperCase();
+  if (!["IN_PLAY", "LIVE"].includes(status)) return false;
+  if (isFinishedOrTooLateForLiveIa(match)) return false;
+  if (isLowTrustCompetition(match)) return false;
+  const minute = parseLiveMinuteValue(match.minute);
+  return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
+}
+
+function hasPredictionSnapshot(match) {
+  const key = getPredictionSnapshotKey(match);
+  try {
+    const row = db.prepare("SELECT 1 FROM agent_predictions WHERE match_key = ? LIMIT 1").get(key);
+    return !!row;
+  } catch (e) {
+    console.error("[auto-concile] snapshot check:", e.message);
+    return true;
+  }
+}
+
+async function runAutoConcileObserver() {
+  if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
+  autoConcileObserverRunning = true;
+  try {
+    const matches = await fetchLiveMatches();
+    const candidates = matches
+      .filter(shouldAutoObserveMatch)
+      .filter(m => !hasPredictionSnapshot(m))
+      .slice(0, AUTO_CONCILE_MAX_MATCHES);
+
+    for (const match of candidates) {
+      try {
+        console.log(`[auto-concile] analyse snapshot: ${match.home} vs ${match.away} ${match.minute || ""}`);
+        await runConcileAnalysis(match);
+      } catch (e) {
+        console.error("[auto-concile] analyse:", e.message);
+      }
+    }
+  } catch (e) {
+    console.error("[auto-concile] cycle:", e.message);
+  } finally {
+    autoConcileObserverRunning = false;
+  }
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
@@ -2180,7 +2242,8 @@ app.get("/agent-performance", (req, res) => {
   try {
     const meta = db.prepare(`
       SELECT
-        COUNT(DISTINCT match_key) as matches_tracked,
+        COUNT(DISTINCT home || '|' || away || '|' || date(created_at)) as matches_tracked,
+        COUNT(DISTINCT match_key) as snapshots_tracked,
         COUNT(*) as predictions_tracked,
         SUM(CASE WHEN outcome IS NOT NULL THEN 1 ELSE 0 END) as predictions_resolved
       FROM agent_predictions
@@ -2440,7 +2503,14 @@ app.delete("/admin/preuves/:id", (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`TousLesMatchs API running on :${PORT}`));
+  app.listen(PORT, () => {
+    console.log(`TousLesMatchs API running on :${PORT}`);
+    if (AUTO_CONCILE_OBSERVER) {
+      console.log(`[auto-concile] enabled: every ${Math.round(AUTO_CONCILE_INTERVAL_MS / 60000)} min, max ${AUTO_CONCILE_MAX_MATCHES} match(es)`);
+      setTimeout(runAutoConcileObserver, 30000);
+      setInterval(runAutoConcileObserver, AUTO_CONCILE_INTERVAL_MS);
+    }
+  });
 }
 
 module.exports.__liveContractTest = {
