@@ -379,6 +379,18 @@ function testLowTrustCompetitionsAreRejected() {
   assert.equal(__liveContractTest.isLowTrustCompetition("Ireland Premier Division"), false);
 }
 
+function testLowTrustLiveMatchIsFlaggedNotRemoved() {
+  const match = __liveContractTest.normalizeApiSportsFootballFixture({
+    fixture: { id: 555, status: { elapsed: 51 }, date: "2026-06-23T17:45:00Z" },
+    teams: { home: { name: "Cabofriense" }, away: { name: "Bonsucesso" } },
+    goals: { home: 0, away: 0 },
+    league: { name: "Copa Rio", country: "Brazil" },
+  });
+
+  assert.equal(match.lowTrustCompetition, true);
+  assert.equal(match.home, "Cabofriense");
+}
+
 function testVerifiedLiveMatchIsResolvedFromServerListOnly() {
   const live = [{
     id: "fd-123",
@@ -422,6 +434,7 @@ testAlreadyWonMarketsAreNotAvailableLive();
 testApiSportsLiveScoreOverridesFootballDataLiveScore();
 testPaidPlanTokenLimitsMatchOffer();
 testLowTrustCompetitionsAreRejected();
+testLowTrustLiveMatchIsFlaggedNotRemoved();
 testVerifiedLiveMatchIsResolvedFromServerListOnly();
 testExpiredLiveCacheIsNotReturnedWhenApisFail();
 

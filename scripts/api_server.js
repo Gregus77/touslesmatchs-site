@@ -306,7 +306,7 @@ function normalizeFootballDataMatch(m) {
 
 function normalizeApiSportsFootballFixture(f) {
   const fixtureId = String(f.fixture.id);
-  return {
+  const match = {
     id: fixtureId,
     source: "api-sports",
     sourceId: fixtureId,
@@ -321,6 +321,7 @@ function normalizeApiSportsFootballFixture(f) {
     competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
     utcDate: f.fixture.date,
   };
+  return { ...match, lowTrustCompetition: isLowTrustCompetition(match) };
 }
 
 const LOW_TRUST_COMPETITION_KEYWORDS = [
@@ -368,8 +369,14 @@ async function fetchFromFootballData() {
       httpGet("https://api.football-data.org/v4/matches?status=LIVE", { "X-Auth-Token": FOOTBALL_DATA_KEY }),
       httpGet(`https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
     ]);
-    const live = (liveData.matches || []).map(formatFDMatch).filter((m) => !isLowTrustCompetition(m));
-    const finished = (finishedData.matches || []).map(formatFDMatch).filter((m) => !isLowTrustCompetition(m));
+    const live = (liveData.matches || []).map((m) => {
+      const match = formatFDMatch(m);
+      return { ...match, lowTrustCompetition: isLowTrustCompetition(match) };
+    });
+    const finished = (finishedData.matches || []).map((m) => {
+      const match = formatFDMatch(m);
+      return { ...match, lowTrustCompetition: isLowTrustCompetition(match) };
+    });
     const all = [...live, ...finished];
     console.log(`[live-matches] football-data.org: ${live.length} live, ${finished.length} finished (hier+aujourd'hui)`);
     return all;
@@ -388,7 +395,7 @@ async function fetchFromApiSports() {
   try {
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!data.errors || Object.keys(data.errors).length === 0) {
-      const items = (data.response || []).slice(0, 20).map(normalizeApiSportsFootballFixture).filter((m) => !isLowTrustCompetition(m));
+      const items = (data.response || []).slice(0, 20).map(normalizeApiSportsFootballFixture);
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
     }
