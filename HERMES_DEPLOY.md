@@ -1,6 +1,6 @@
 # INSTRUCTIONS DE DÉPLOIEMENT — TousLesMatchs.com
-# Branche : claude/busy-bardeen-793p0k
-# Date : 2026-06-19
+# Branche : claude/happy-bell-h9zj83
+# Date : 2026-06-23
 
 ---
 
@@ -51,8 +51,8 @@ du Concile (5 IA) sur chaque match en direct.
 ```bash
 cd /opt/touslesmatchs
 git fetch origin
-git checkout claude/busy-bardeen-793p0k
-git pull origin claude/busy-bardeen-793p0k
+git checkout claude/happy-bell-h9zj83
+git reset --hard origin/claude/happy-bell-h9zj83
 ```
 
 ### ÉTAPE 2 — Vérifier le fichier .env
@@ -184,5 +184,5 @@ docker volume inspect touslesmatchs_api_data
 ## RÉSUMÉ EN UNE LIGNE
 
 ```bash
-cd /opt/touslesmatchs && git pull origin claude/busy-bardeen-793p0k && docker-compose up -d --build
+cd /opt/touslesmatchs && git fetch origin claude/happy-bell-h9zj83 && git reset --hard origin/claude/happy-bell-h9zj83 && docker compose up -d --build site api hermes-admin
 ```

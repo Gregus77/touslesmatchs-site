@@ -3,10 +3,12 @@ set -e
 echo "=== DEPLOIEMENT TousLesMatchs ==="
 cd /opt/touslesmatchs
 
-echo "[1/5] Pull derniere version..."
+BRANCH="${DEPLOY_BRANCH:-claude/happy-bell-h9zj83}"
+
+echo "[1/5] Pull derniere version (${BRANCH})..."
 git fetch origin
-git checkout claude/busy-bardeen-793p0k
-git pull origin claude/busy-bardeen-793p0k
+git checkout "${BRANCH}"
+git reset --hard "origin/${BRANCH}"
 
 echo "[2/5] Installation dependances..."
 npm install --silent
@@ -15,8 +17,8 @@ echo "[3/5] Build React..."
 npm run build
 
 echo "[4/5] Rebuild containers..."
-docker compose build --no-cache site api
-docker compose up -d
+docker compose build --no-cache site api hermes-admin
+docker compose up -d site api hermes-admin
 
 echo "[5/5] Verification..."
 sleep 3
