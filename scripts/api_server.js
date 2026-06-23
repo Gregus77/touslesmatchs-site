@@ -1134,6 +1134,24 @@ function saveConcileAnalysis(match, result, pickBet) {
   } catch(e) { console.error("[concile-trace] save:", e.message); }
 }
 
+function getBetOutcomeForScore(bet, h, a) {
+  const value = String(bet || "").trim();
+  const normalized = value.toLowerCase();
+  const total = Number(h) + Number(a);
+  if (!value) return null;
+  if (normalized.includes("over 2.5") || normalized.includes("plus de 2.5")) return total > 2.5 ? "win" : "loss";
+  if (normalized.includes("under 2.5") || normalized.includes("moins de 2.5")) return total < 2.5 ? "win" : "loss";
+  if (normalized.includes("btts oui") || normalized.includes("les deux equipes marquent") || normalized.includes("les deux équipes marquent")) return (h > 0 && a > 0) ? "win" : "loss";
+  if (normalized.includes("btts non")) return (h > 0 && a > 0) ? "loss" : "win";
+  if (value === "Match nul" || value === "X" || normalized.includes("nul")) return h === a ? "win" : "loss";
+  if (value === "1X" || normalized.includes("1x")) return h >= a ? "win" : "loss";
+  if (value === "X2" || normalized.includes("x2")) return a >= h ? "win" : "loss";
+  if (value === "12" || normalized.includes("12")) return h !== a ? "win" : "loss";
+  if (normalized.includes("domicile") || value === "1") return h > a ? "win" : "loss";
+  if (normalized.includes("extérieur") || normalized.includes("exterieur") || value === "2") return a > h ? "win" : "loss";
+  return null;
+}
+
 function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
   if (scoreHome === null || scoreHome === undefined || scoreAway === null || scoreAway === undefined) return;
   const h = Number(scoreHome), a = Number(scoreAway);
@@ -2462,6 +2480,66 @@ app.post("/internal/pick-result-notify", async (req, res) => {
   } catch (e) {
     console.error("[pick-result-notify]", e.message);
     res.json({ ok: false, error: e.message, sent: 0 });
+  }
+});
+
+app.post("/internal/record-concile-result", (req, res) => {
+  const { record, secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) {
+    return res.status(403).json({ ok: false, error: "Forbidden" });
+  }
+  if (!record || !record.home || !record.away || !record.bet) {
+    return res.json({ ok: false, error: "home, away, bet requis" });
+  }
+  const score = getFinalScoreFromPick(record);
+  if (!score) return res.json({ ok: false, error: "score final requis, exemple 0-0" });
+
+  const h = Number(score.score_home);
+  const a = Number(score.score_away);
+  const outcome = getBetOutcomeForScore(record.bet, h, a);
+  if (!outcome) return res.json({ ok: false, error: `Marche non reconnu: ${record.bet}` });
+
+  const confidence = Math.max(1, Math.min(100, Number(record.confidence || 70)));
+  const minute = record.minute !== undefined && record.minute !== null && record.minute !== ""
+    ? Number(record.minute)
+    : null;
+  const matchKey = `manual_${record.home}_${record.away}_${getTodayStr()}_${record.bet}_${h}-${a}`.replace(/\s+/g, "_");
+  const agents = [{ name: record.agent || "Claude Chief", bet: record.bet, confidence }];
+
+  try {
+    db.prepare(`
+      INSERT OR IGNORE INTO concile_analyses
+        (match_key, home, away, competition, minute_at_analysis,
+         score_home_at_analysis, score_away_at_analysis, stats_status,
+         best_bet, confidence, raison, consensus_votes, agents_json, pick_bet, outcome)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      matchKey,
+      record.home,
+      record.away,
+      record.competition || record.league || "Manuel",
+      Number.isFinite(minute) ? minute : null,
+      h,
+      a,
+      record.stats_status || "manual_verified",
+      record.bet,
+      confidence,
+      record.reason || "Prediction verifiee manuellement par admin.",
+      Number(record.consensus_votes || 1),
+      JSON.stringify(agents),
+      record.pick_bet || null,
+      outcome
+    );
+
+    db.prepare(
+      "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence, outcome) VALUES (?,?,?,?,?,?,?)"
+    ).run(matchKey, record.home, record.away, record.agent || "Claude Chief", record.bet, confidence, outcome);
+
+    res.json({ ok: true, outcome, match_key: matchKey });
+  } catch (e) {
+    console.error("[record-concile-result]", e.message);
+    res.json({ ok: false, error: e.message });
   }
 });
 

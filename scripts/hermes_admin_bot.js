@@ -834,6 +834,50 @@ async function notifyResultByEmail(pick) {
   });
 }
 
+async function recordConcileResult(record) {
+  const API_HOST = "touslesmatchs-api";
+  const API_PORT = 3001;
+  const body = JSON.stringify({ record, secret: TG_TOKEN });
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: API_HOST,
+      port: API_PORT,
+      path: "/internal/record-concile-result",
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); resolve({ ok: false, error: "timeout" }); });
+    req.on("error", () => resolve({ ok: false }));
+    req.write(body); req.end();
+  });
+}
+
+async function cmdRecord(chatId, args) {
+  const parts = args.split("|").map(s => s.trim()).filter(Boolean);
+  if (parts.length < 7) {
+    await reply(chatId, "❌ Syntaxe : <code>/record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0</code>");
+    return;
+  }
+  const [home, away, competition, minute, bet, confidence, score] = parts;
+  if (!/^\d+\s*[-:]\s*\d+$/.test(score)) {
+    await reply(chatId, "❌ Score final invalide. Exemple : <code>0-0</code>");
+    return;
+  }
+  const result = await recordConcileResult({
+    home, away, competition, minute, bet, confidence, score,
+    reason: "Prediction du Concile verifiee apres match par Gregory.",
+    agent: "Claude Chief",
+  });
+  if (!result.ok) {
+    await reply(chatId, `❌ Enregistrement impossible : ${result.error || "erreur inconnue"}`);
+    return;
+  }
+  await reply(chatId, `✅ Prédiction enregistrée dans les stats Concile\n\n${home} vs ${away} — ${score}\n🎯 ${bet} → <b>${result.outcome === "win" ? "GAGNÉ" : "PERDU"}</b>`);
+}
+
 async function cmdDeploy(chatId) {
   await reply(chatId,
     "\u{1F512} <b>D\u00E9ploiement verrouill\u00E9</b>\n\n" +
@@ -920,6 +964,7 @@ async function cmdHelp(chatId) {
 /setscore 1-0 — Mettre à jour le score
 /win — Marquer le pick comme GAGNÉ
 /lose — Marquer le pick comme PERDU
+/record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0 — Ajouter une prédiction vérifiée aux stats Concile
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
@@ -952,6 +997,7 @@ async function handleMessage(msg) {
     case "/setscore": return cmdSetScore(chatId, args);
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
+    case "/record":          return cmdRecord(chatId, args);
     case "/learn":           return cmdLearn(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
