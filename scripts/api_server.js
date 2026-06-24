@@ -1378,6 +1378,86 @@ function getStrategyDashboard() {
   };
 }
 
+function getStrongSignalAlerts(options = {}) {
+  const threshold = Math.max(60, Math.min(95, Number(options.threshold || 80)));
+  const minResolved = Math.max(1, Number(options.minResolved || 5));
+  const maxItems = Math.max(1, Math.min(20, Number(options.limit || 10)));
+  try {
+    const rows = db.prepare(`
+      SELECT
+        ca.match_key,
+        ca.home,
+        ca.away,
+        ca.competition,
+        ca.minute_at_analysis,
+        ca.score_home_at_analysis,
+        ca.score_away_at_analysis,
+        ca.stats_status,
+        ca.best_bet,
+        ca.confidence,
+        ca.raison,
+        ca.consensus_votes,
+        ca.analysed_at,
+        ms.total as market_total,
+        ms.wins as market_wins,
+        ms.losses as market_losses
+      FROM concile_analyses ca
+      LEFT JOIN (
+        SELECT best_bet,
+          COUNT(*) as total,
+          SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+          SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+        FROM concile_analyses
+        WHERE outcome IN ('win','loss')
+        GROUP BY best_bet
+      ) ms ON ms.best_bet = ca.best_bet
+      WHERE ca.outcome IS NULL
+        AND ca.confidence >= ?
+        AND ca.analysed_at >= datetime('now','-3 hours')
+      ORDER BY ca.confidence DESC, ca.analysed_at DESC
+      LIMIT 50
+    `).all(threshold);
+
+    return rows
+      .filter(r => !isLowTrustCompetition({ competition: r.competition || "" }))
+      .map(r => {
+        const total = Number(r.market_total || 0);
+        const wins = Number(r.market_wins || 0);
+        const losses = Number(r.market_losses || 0);
+        const marketWinrate = wins + losses > 0 ? Math.round(wins / (wins + losses) * 100) : null;
+        const sampleOk = total >= minResolved;
+        return {
+          id: r.match_key,
+          home: r.home,
+          away: r.away,
+          competition: r.competition || "Inconnue",
+          minute: r.minute_at_analysis,
+          score: `${r.score_home_at_analysis ?? "?"}-${r.score_away_at_analysis ?? "?"}`,
+          bet: r.best_bet,
+          confidence: r.confidence,
+          consensusVotes: r.consensus_votes,
+          reason: r.raison,
+          analysedAt: r.analysed_at,
+          statsStatus: r.stats_status,
+          market: {
+            total,
+            wins,
+            losses,
+            winrate: marketWinrate,
+            sampleOk,
+          },
+          eligible: sampleOk,
+          blockReason: sampleOk ? null : `historique insuffisant sur ce marché (${total}/${minResolved})`,
+        };
+      })
+      .filter(r => r.eligible)
+      .slice(0, maxItems);
+  } catch (e) {
+    console.error("[strong-signals]", e.message);
+    return [];
+  }
+}
+
 function getAgentPerformance() {
   try {
     const rows = db.prepare(`
@@ -2419,6 +2499,20 @@ app.post("/internal/strategy-report", (req, res) => {
     return res.status(403).json({ ok: false, error: "Forbidden" });
   }
   res.json({ ok: true, ...getStrategyDashboard() });
+});
+
+app.post("/internal/strong-signals", (req, res) => {
+  const { secret, threshold, minResolved, limit } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) {
+    return res.status(403).json({ ok: false, error: "Forbidden" });
+  }
+  res.json({
+    ok: true,
+    threshold: Number(threshold || 80),
+    minResolved: Number(minResolved || 5),
+    signals: getStrongSignalAlerts({ threshold, minResolved, limit }),
+  });
 });
 
 app.get("/agent-performance", (req, res) => {

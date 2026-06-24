@@ -26,12 +26,18 @@ const MEMORY_FILE = path.join(REPO, "data/hermes_memory.json");
 const IMPROVEMENT_LOG_FILE = path.join(REPO, "data/hermes_improvement_log.json");
 const DAILY_RUN_FILE = path.join(REPO, "data/hermes_daily_run.json");
 const DAILY_STRATEGY_FILE = path.join(REPO, "data/hermes_daily_strategy.json");
+const STRONG_ALERTS_FILE = path.join(REPO, "data/hermes_strong_alerts.json");
 const AUTO_DAILY_PICK = process.env.HERMES_AUTO_DAILY_PICK !== "0";
 const AUTO_DAILY_PICK_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_HOUR || 0);
 const AUTO_DAILY_PICK_MINUTE = Number(process.env.HERMES_AUTO_DAILY_PICK_MINUTE || 5);
 const AUTO_DAILY_STRATEGY = process.env.HERMES_AUTO_DAILY_STRATEGY !== "0";
 const AUTO_DAILY_STRATEGY_HOUR = Number(process.env.HERMES_AUTO_DAILY_STRATEGY_HOUR || 8);
 const AUTO_DAILY_STRATEGY_MINUTE = Number(process.env.HERMES_AUTO_DAILY_STRATEGY_MINUTE || 30);
+const STRONG_ALERTS_ENABLED = process.env.HERMES_STRONG_ALERTS !== "0";
+const STRONG_ALERTS_THRESHOLD = Number(process.env.HERMES_STRONG_ALERTS_THRESHOLD || 80);
+const STRONG_ALERTS_MIN_RESOLVED = Number(process.env.HERMES_STRONG_ALERTS_MIN_RESOLVED || 5);
+const STRONG_ALERTS_MAX_PER_DAY = Number(process.env.HERMES_STRONG_ALERTS_MAX_PER_DAY || 3);
+const STRONG_ALERTS_INTERVAL_MS = Math.max(5, Number(process.env.HERMES_STRONG_ALERTS_INTERVAL_MIN || 10)) * 60 * 1000;
 const AUTO_PUBLISH_FREE = process.env.HERMES_AUTO_PUBLISH_FREE !== "0";
 const AUTO_PUBLISH_PREMIUM = process.env.HERMES_AUTO_PUBLISH_PREMIUM !== "0";
 
@@ -914,6 +920,49 @@ async function fetchStrategyReport() {
   });
 }
 
+async function fetchStrongSignals() {
+  const API_HOST = "touslesmatchs-api";
+  const API_PORT = 3001;
+  const body = JSON.stringify({
+    secret: TG_TOKEN,
+    threshold: STRONG_ALERTS_THRESHOLD,
+    minResolved: STRONG_ALERTS_MIN_RESOLVED,
+    limit: STRONG_ALERTS_MAX_PER_DAY,
+  });
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: API_HOST,
+      port: API_PORT,
+      path: "/internal/strong-signals",
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); resolve({ ok: false, error: "timeout" }); });
+    req.on("error", () => resolve({ ok: false }));
+    req.write(body); req.end();
+  });
+}
+
+function formatStrongSignal(signal) {
+  return `<b>🚨 Signal fort détecté</b>
+
+<b>Match</b> : ${escapeHtml(signal.home)} vs ${escapeHtml(signal.away)}
+<b>Compétition</b> : ${escapeHtml(signal.competition)}
+<b>Score/minute</b> : ${escapeHtml(signal.score)}${signal.minute ? ` à ${signal.minute}'` : ""}
+<b>Marché</b> : ${escapeHtml(signal.bet)}
+<b>Probabilité Concile</b> : ${signal.confidence}%
+<b>Historique marché</b> : ${signal.market?.winrate ?? "?"}% (${signal.market?.wins ?? 0}/${signal.market?.total ?? 0})
+
+<b>Pourquoi</b>
+${escapeHtml(signal.reason || "Signal élevé détecté par le Concile.")}
+
+<b>Action</b>
+À vérifier avant publication ou mise.`;
+}
+
 function formatStrategyTop(rows) {
   return (rows || []).slice(0, 5).map((r, i) =>
     `${i + 1}. ${r.label}: ${r.winrate ?? "?"}% (${r.wins}/${r.total})${r.confidence === "sample_faible" ? " — échantillon faible" : ""}`
@@ -938,6 +987,51 @@ ${escapeHtml(report.note || "Pas assez de données pour conclure.")}
 
 <b>IA</b>
 <code>${escapeHtml(formatStrategyTop(report.top?.agents))}</code>`);
+}
+
+async function scanStrongSignals({ manual = false } = {}) {
+  if (!STRONG_ALERTS_ENABLED && !manual) return;
+  if (!ADMIN_CHAT) return;
+
+  const today = parisNowParts().date;
+  const state = loadStrongAlertsState();
+  const sent = Array.isArray(state.sent) ? state.sent : [];
+  const sentToday = sent.filter(a => a.date === today);
+
+  if (!manual && sentToday.length >= STRONG_ALERTS_MAX_PER_DAY) return;
+
+  const result = await fetchStrongSignals();
+  if (!result.ok) {
+    if (manual) await reply(ADMIN_CHAT, `❌ Radar signaux forts indisponible : ${result.error || "erreur inconnue"}`);
+    return;
+  }
+
+  const already = new Set(sent.map(a => a.id));
+  const candidates = (result.signals || []).filter(s => s.id && !already.has(s.id));
+  if (!candidates.length) {
+    if (manual) await reply(ADMIN_CHAT, "Aucun nouveau signal fort pour le moment.");
+    return;
+  }
+
+  const remaining = Math.max(0, STRONG_ALERTS_MAX_PER_DAY - sentToday.length);
+  const toSend = candidates.slice(0, manual ? candidates.length : remaining);
+  for (const signal of toSend) {
+    await reply(ADMIN_CHAT, formatStrongSignal(signal));
+    sent.unshift({
+      id: signal.id,
+      date: today,
+      sentAt: new Date().toISOString(),
+      home: signal.home,
+      away: signal.away,
+      bet: signal.bet,
+      confidence: signal.confidence,
+    });
+  }
+  saveStrongAlertsState({ sent: sent.slice(0, 300) });
+}
+
+async function cmdAlerts(chatId) {
+  await scanStrongSignals({ manual: true });
 }
 
 async function cmdRecord(chatId, args) {
@@ -1018,6 +1112,22 @@ function saveDailyStrategyState(state) {
   } catch {}
 }
 
+function loadStrongAlertsState() {
+  try {
+    const data = JSON.parse(fs.readFileSync(STRONG_ALERTS_FILE, "utf8"));
+    return data && typeof data === "object" ? data : { sent: [] };
+  } catch {
+    return { sent: [] };
+  }
+}
+
+function saveStrongAlertsState(state) {
+  try {
+    fs.mkdirSync(path.dirname(STRONG_ALERTS_FILE), { recursive: true });
+    fs.writeFileSync(STRONG_ALERTS_FILE, JSON.stringify(state, null, 2), "utf8");
+  } catch {}
+}
+
 function hasPickForDate(date) {
   const data = loadPicks();
   return data.currentPick?.date === date && data.currentPick?.status !== "NOPICK";
@@ -1088,6 +1198,7 @@ async function cmdHelp(chatId) {
 /result — Préparer le message résultat Telegram sans publier
 /record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0 — Ajouter une prédiction vérifiée aux stats Concile
 /strategy — Rapport Codex Prono Hunter (marchés, IA, compétitions)
+/alerts — Scanner maintenant les signaux forts privés
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
@@ -1113,6 +1224,7 @@ async function handleCommandLine(chatId, text) {
     case "/result":          return cmdResultPreview(chatId);
     case "/record":          return cmdRecord(chatId, args);
     case "/strategy":        return cmdStrategy(chatId);
+    case "/alerts":          return cmdAlerts(chatId);
     case "/learn":           return cmdLearn(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
@@ -1161,10 +1273,14 @@ async function poll() {
 
   maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
   maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
+  scanStrongSignals().catch(e => console.error("strong signals:", e.message));
   setInterval(() => {
     maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
     maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
   }, 60 * 1000);
+  setInterval(() => {
+    scanStrongSignals().catch(e => console.error("strong signals:", e.message));
+  }, STRONG_ALERTS_INTERVAL_MS);
 
   while (true) {
     try {
