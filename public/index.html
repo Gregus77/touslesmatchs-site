@@ -180,23 +180,6 @@ nav{
   padding:0 44px;color:var(--cyan);opacity:.85;
 }
 @keyframes ticker-move{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.mirela-banner{
-  position:fixed;top:60px;left:0;right:0;z-index:320;
-  min-height:78px;padding:15px 24px;
-  display:flex;align-items:center;justify-content:center;text-align:center;
-  background:linear-gradient(90deg,#991b1b,#ef4444,#991b1b);
-  border-bottom:1px solid rgba(255,255,255,.28);
-  box-shadow:0 18px 48px rgba(185,28,28,.34);
-  color:#fff;font-size:clamp(24px,4.4vw,46px);font-weight:950;letter-spacing:.01em;
-}
-body.mirela-mode .ticker{top:138px}
-body.mirela-mode .hero{padding-top:112px}
-@media(max-width:640px){
-  .mirela-banner{min-height:90px;padding:14px 18px;font-size:30px;line-height:1.12}
-  body.mirela-mode .ticker{top:150px}
-  body.mirela-mode .hero{padding-top:132px}
-}
-
 /* ══ HERO ══ */
 .hero{
   min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -2333,14 +2316,6 @@ document.addEventListener('click',function(e){
 <script>document.addEventListener('DOMContentLoaded', () => {
   i18n.init();
   buildChart();
-  const mirelaParams = new URLSearchParams(window.location.search);
-  if(mirelaParams.get('mirela') === '1'){
-    document.body.classList.add('mirela-mode');
-    const banner = document.createElement('div');
-    banner.className = 'mirela-banner';
-    banner.textContent = 'Mirela, tu viens quand en France ?';
-    document.body.prepend(banner);
-  }
 
   // ── Membres Telegram (tg-member-count existant + FOMO strip)
   fetch('/community-stats').then(r=>r.json()).then(d=>{
