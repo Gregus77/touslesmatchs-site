@@ -25,9 +25,13 @@ const DATA_FILE   = path.join(REPO, "data/picks.json");
 const MEMORY_FILE = path.join(REPO, "data/hermes_memory.json");
 const IMPROVEMENT_LOG_FILE = path.join(REPO, "data/hermes_improvement_log.json");
 const DAILY_RUN_FILE = path.join(REPO, "data/hermes_daily_run.json");
+const DAILY_STRATEGY_FILE = path.join(REPO, "data/hermes_daily_strategy.json");
 const AUTO_DAILY_PICK = process.env.HERMES_AUTO_DAILY_PICK !== "0";
 const AUTO_DAILY_PICK_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_HOUR || 0);
 const AUTO_DAILY_PICK_MINUTE = Number(process.env.HERMES_AUTO_DAILY_PICK_MINUTE || 5);
+const AUTO_DAILY_STRATEGY = process.env.HERMES_AUTO_DAILY_STRATEGY !== "0";
+const AUTO_DAILY_STRATEGY_HOUR = Number(process.env.HERMES_AUTO_DAILY_STRATEGY_HOUR || 8);
+const AUTO_DAILY_STRATEGY_MINUTE = Number(process.env.HERMES_AUTO_DAILY_STRATEGY_MINUTE || 30);
 const AUTO_PUBLISH_FREE = process.env.HERMES_AUTO_PUBLISH_FREE !== "0";
 const AUTO_PUBLISH_PREMIUM = process.env.HERMES_AUTO_PUBLISH_PREMIUM !== "0";
 
@@ -1003,6 +1007,17 @@ function saveDailyRunState(state) {
   } catch {}
 }
 
+function loadDailyStrategyState() {
+  try { return JSON.parse(fs.readFileSync(DAILY_STRATEGY_FILE, "utf8")); } catch { return {}; }
+}
+
+function saveDailyStrategyState(state) {
+  try {
+    fs.mkdirSync(path.dirname(DAILY_STRATEGY_FILE), { recursive: true });
+    fs.writeFileSync(DAILY_STRATEGY_FILE, JSON.stringify(state, null, 2), "utf8");
+  } catch {}
+}
+
 function hasPickForDate(date) {
   const data = loadPicks();
   return data.currentPick?.date === date && data.currentPick?.status !== "NOPICK";
@@ -1034,6 +1049,31 @@ async function maybeRunDailyAutoPick() {
     await reply(ADMIN_CHAT, `Auto-pick quotidien en erreur : ${e.message}`).catch(() => {});
   } finally {
     dailyAutoPickRunning = false;
+  }
+}
+
+let dailyStrategyRunning = false;
+async function maybeRunDailyStrategy() {
+  if (!AUTO_DAILY_STRATEGY || !ADMIN_CHAT || dailyStrategyRunning) return;
+
+  const now = parisNowParts();
+  const targetMinute = (AUTO_DAILY_STRATEGY_HOUR * 60) + AUTO_DAILY_STRATEGY_MINUTE;
+  const currentMinute = (now.hour * 60) + now.minute;
+  if (currentMinute < targetMinute || currentMinute > targetMinute + 20) return;
+
+  const state = loadDailyStrategyState();
+  if (state.lastRunDate === now.date) return;
+
+  dailyStrategyRunning = true;
+  saveDailyStrategyState({ lastRunDate: now.date, startedAt: new Date().toISOString() });
+  try {
+    await cmdStrategy(ADMIN_CHAT);
+    saveDailyStrategyState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: true });
+  } catch (e) {
+    saveDailyStrategyState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: false, error: e.message });
+    await reply(ADMIN_CHAT, `Rapport stratégie quotidien en erreur : ${e.message}`).catch(() => {});
+  } finally {
+    dailyStrategyRunning = false;
   }
 }
 async function cmdHelp(chatId) {
@@ -1120,8 +1160,10 @@ async function poll() {
   }
 
   maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
+  maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
   setInterval(() => {
     maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
+    maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
   }, 60 * 1000);
 
   while (true) {
