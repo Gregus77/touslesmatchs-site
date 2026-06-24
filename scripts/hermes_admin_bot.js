@@ -889,6 +889,53 @@ async function recordConcileResult(record) {
   });
 }
 
+async function fetchStrategyReport() {
+  const API_HOST = "touslesmatchs-api";
+  const API_PORT = 3001;
+  const body = JSON.stringify({ secret: TG_TOKEN });
+  return new Promise((resolve) => {
+    const req = http.request({
+      hostname: API_HOST,
+      port: API_PORT,
+      path: "/internal/strategy-report",
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = ""; res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.setTimeout(15000, () => { req.destroy(); resolve({ ok: false, error: "timeout" }); });
+    req.on("error", () => resolve({ ok: false }));
+    req.write(body); req.end();
+  });
+}
+
+function formatStrategyTop(rows) {
+  return (rows || []).slice(0, 5).map((r, i) =>
+    `${i + 1}. ${r.label}: ${r.winrate ?? "?"}% (${r.wins}/${r.total})${r.confidence === "sample_faible" ? " — échantillon faible" : ""}`
+  ).join("\n") || "Pas assez de données.";
+}
+
+async function cmdStrategy(chatId) {
+  const report = await fetchStrategyReport();
+  if (!report.ok) {
+    await reply(chatId, `❌ Rapport stratégie indisponible : ${report.error || "erreur inconnue"}`);
+    return;
+  }
+  await reply(chatId, `<b>🎯 Codex Prono Hunter — note du jour</b>
+
+${escapeHtml(report.note || "Pas assez de données pour conclure.")}
+
+<b>Marchés</b>
+<code>${escapeHtml(formatStrategyTop(report.top?.markets))}</code>
+
+<b>Compétitions</b>
+<code>${escapeHtml(formatStrategyTop(report.top?.competitions))}</code>
+
+<b>IA</b>
+<code>${escapeHtml(formatStrategyTop(report.top?.agents))}</code>`);
+}
+
 async function cmdRecord(chatId, args) {
   const parts = args.split("|").map(s => s.trim()).filter(Boolean);
   if (parts.length < 7) {
@@ -1000,6 +1047,7 @@ async function cmdHelp(chatId) {
 /lose — Marquer le pick comme PERDU
 /result — Préparer le message résultat Telegram sans publier
 /record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0 — Ajouter une prédiction vérifiée aux stats Concile
+/strategy — Rapport Codex Prono Hunter (marchés, IA, compétitions)
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
@@ -1024,6 +1072,7 @@ async function handleCommandLine(chatId, text) {
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/result":          return cmdResultPreview(chatId);
     case "/record":          return cmdRecord(chatId, args);
+    case "/strategy":        return cmdStrategy(chatId);
     case "/learn":           return cmdLearn(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);

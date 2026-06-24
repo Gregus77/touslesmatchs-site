@@ -1288,6 +1288,96 @@ function getConcilePerformance() {
 }
 
 // ── Agent performance tracking ────────────────────────────────────────────────
+function summarizeStrategyRows(rows, labelKey) {
+  return (rows || [])
+    .filter(r => Number(r.total || 0) > 0)
+    .map(r => ({
+      label: r[labelKey] || "Inconnu",
+      total: Number(r.total || 0),
+      wins: Number(r.wins || 0),
+      losses: Number(r.losses || 0),
+      winrate: r.winrate,
+      confidence: Number(r.total || 0) >= 5 ? "usable" : "sample_faible",
+    }))
+    .sort((a, b) => {
+      const ar = a.total >= 5 ? a.winrate : -1;
+      const br = b.total >= 5 ? b.winrate : -1;
+      return br - ar || b.total - a.total;
+    });
+}
+
+function getStrategyDashboard() {
+  const perf = getConcilePerformance();
+  const agents = summarizeStrategyRows(perf.byAgent, "agent");
+  const markets = summarizeStrategyRows(perf.byBet, "bet");
+  const statsSources = summarizeStrategyRows(perf.byStats, "stats");
+  const minutes = summarizeStrategyRows(perf.byMinute, "minute");
+
+  let competitions = [];
+  try {
+    competitions = db.prepare(`
+      SELECT competition,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL
+      GROUP BY competition
+      ORDER BY total DESC
+      LIMIT 25
+    `).all().map(r => ({
+      competition: r.competition || "Inconnue",
+      total: r.total,
+      wins: r.wins,
+      losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null,
+    }));
+  } catch (e) {
+    console.error("[strategy-dashboard] competitions:", e.message);
+  }
+  const leagues = summarizeStrategyRows(competitions, "competition");
+
+  const bestMarket = markets.find(r => r.total >= 5 && r.winrate >= 60) || markets[0] || null;
+  const weakMarket = markets.find(r => r.total >= 5 && r.winrate < 45) || markets.slice().reverse().find(r => r.total >= 5) || null;
+  const bestLeague = leagues.find(r => r.total >= 5 && r.winrate >= 60) || leagues[0] || null;
+  const bestAgent = agents.find(r => r.total >= 8) || agents[0] || null;
+  const sampleWarning = (markets[0]?.total || 0) < 5
+    ? "Échantillon encore faible: on observe, on ne conclut pas."
+    : null;
+
+  const focus = bestMarket && bestMarket.total >= 5
+    ? `${bestMarket.label} (${bestMarket.winrate}% sur ${bestMarket.total})`
+    : "continuer à accumuler des données avant de forcer un marché";
+  const avoid = weakMarket
+    ? `${weakMarket.label} (${weakMarket.winrate}% sur ${weakMarket.total})`
+    : "amicaux, U20/U21 et matchs sans stats live fiables";
+  const leagueLine = bestLeague && bestLeague.total >= 5
+    ? `Priorité compétition: ${bestLeague.label} (${bestLeague.winrate}% sur ${bestLeague.total}).`
+    : "Priorité compétition: surveiller Irlande/Japon/Corée/Brésil, mais attendre plus de résultats vérifiés.";
+  const agentLine = bestAgent
+    ? `IA à écouter davantage: ${bestAgent.label} (${bestAgent.winrate ?? "?"}% sur ${bestAgent.total}).`
+    : "IA à écouter davantage: pas encore assez de données.";
+
+  const note = [
+    `Signal principal: ${focus}.`,
+    `À éviter: ${avoid}.`,
+    `${leagueLine} ${agentLine}`,
+  ].filter(Boolean).join("\n");
+
+  return {
+    generatedAt: new Date().toISOString(),
+    note: sampleWarning ? `${sampleWarning}\n${note}` : note,
+    top: {
+      agents: agents.slice(0, 8),
+      markets: markets.slice(0, 10),
+      competitions: leagues.slice(0, 10),
+      minutes: minutes.slice(0, 8),
+      statsSources: statsSources.slice(0, 8),
+    },
+    recommendations: { focus, avoid, sampleWarning },
+  };
+}
+
 function getAgentPerformance() {
   try {
     const rows = db.prepare(`
@@ -2316,6 +2406,21 @@ app.get("/concile-performance", (req, res) => {
 });
 
 // ── Agent performance — classement public ────────────────────────────────────
+app.get("/strategy-dashboard", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
+  res.json({ ok: true, ...getStrategyDashboard() });
+});
+
+app.post("/internal/strategy-report", (req, res) => {
+  const { secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) {
+    return res.status(403).json({ ok: false, error: "Forbidden" });
+  }
+  res.json({ ok: true, ...getStrategyDashboard() });
+});
+
 app.get("/agent-performance", (req, res) => {
   const { email, code } = req.query;
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
