@@ -191,6 +191,9 @@ function normalizeCurrentPick(p, defaultSource) {
     result: normalizedStatus.result,
     scoreA: score.scoreA,
     scoreB: score.scoreB,
+    confidence: p.confidence != null ? Number(p.confidence) : null,
+    raison: p.raison || null,
+    sport: p.sport || "Football",
   };
 }
 

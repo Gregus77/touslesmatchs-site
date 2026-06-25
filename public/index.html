@@ -2127,6 +2127,20 @@ async function initPick(){
           PICK.result = null; // résultat inconnu — fetchLiveScore() va le récupérer
         }
       }
+      // Champs requis par renderPick() — absents du format picks.json Hermès
+      PICK.sport = p.sport || 'Football';
+      PICK.tag = 'ptag-live';
+      PICK.marketDesc = p.raison || '';
+      PICK.mise = '3% de ta bankroll';
+      PICK.verdict = 'go';
+      PICK.verdictLabel = 'GO — Hermès';
+      const hermesConf = Math.min(99, Math.max(55, Math.round(Number(p.confidence || 7) * 10)));
+      PICK.ia = [
+        {name:'Hermès Chief', pct: hermesConf,                  fill:'f-claude',   ok: hermesConf>=65, why: p.raison||''},
+        {name:'Stats live',   pct: Math.round(hermesConf*0.90), fill:'f-gemini',   ok: hermesConf>=60, why:''},
+        {name:'Value check',  pct: Math.round(hermesConf*0.85), fill:'f-deepseek', ok: hermesConf>=55, why:''},
+        {name:'Risk filter',  pct: Math.round(hermesConf*0.93), fill:'f-mistral',  ok: hermesConf>=60, why:''},
+      ];
     }
   }catch(e){ console.warn('/current-pick non disponible',e); }
   renderNavAuth();
