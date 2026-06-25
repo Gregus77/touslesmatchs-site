@@ -32,6 +32,8 @@ const DAILY_RUN_FILE = path.join(REPO, "data/hermes_daily_run.json");
 const DAILY_STRATEGY_FILE = path.join(REPO, "data/hermes_daily_strategy.json");
 const STRONG_ALERTS_FILE = path.join(REPO, "data/hermes_strong_alerts.json");
 const AUTO_DAILY_PICK = process.env.HERMES_AUTO_DAILY_PICK !== "0";
+const HERMES_PICK_ALLOWED_SPORTS = (process.env.HERMES_PICK_ALLOWED_SPORTS || "Football")
+  .split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 const AUTO_DAILY_PICK_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_HOUR || 0);
 const AUTO_DAILY_PICK_MINUTE = Number(process.env.HERMES_AUTO_DAILY_PICK_MINUTE || 5);
 const AUTO_DAILY_PICK_CATCHUP_UNTIL_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_CATCHUP_UNTIL_HOUR || 12);
@@ -203,6 +205,10 @@ async function generateMatchVisual(pick) {
     return publicUrl;
   } catch (e) {
     console.error("[visual] generation failed:", e.message);
+    // Notifier l'admin Telegram de l'échec OpenAI image
+    if (ADMIN_CHAT) {
+      reply(ADMIN_CHAT, `⚠️ <b>Image OpenAI échouée</b>\n${e.message}`).catch(() => {});
+    }
     return "";
   }
 }
@@ -432,7 +438,8 @@ async function fetchSport(sport, today) {
         .map(f => ({
           sport: "Football", home: f.teams?.home?.name, away: f.teams?.away?.name,
           heure: f.fixture?.date ? new Date(f.fixture.date).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
-          competition: f.league?.name || "Football", arjel: true
+          competition: f.league?.name || "Football", arjel: true,
+          matchId: String(f.fixture?.id || ""), source: "api-sports.io"
         }))
         .filter(m => !isLowTrustCompetition(m));
     } else {
@@ -446,7 +453,8 @@ async function fetchSport(sport, today) {
           const dt = g.date || g.time || g.game?.date;
           const heure = dt ? new Date(dt).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?";
           if (!home || !away) return null;
-          return { sport: sportLabel, home, away, heure, competition: league, arjel: true };
+          return { sport: sportLabel, home, away, heure, competition: league, arjel: true,
+            matchId: String(g.id || g.game?.id || ""), source: "api-sports.io" };
         })
         .filter(Boolean)
         .filter(m => !isLowTrustCompetition(m));
@@ -468,7 +476,8 @@ async function fetchTodayMatches() {
         const formatted = matches.map(m => ({
           sport: "Football", home: m.homeTeam.name, away: m.awayTeam.name,
           heure: m.utcDate ? new Date(m.utcDate).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
-          competition: m.competition?.name || "Football", arjel: true
+          competition: m.competition?.name || "Football", arjel: true,
+          matchId: String(m.id || ""), source: "football-data.org"
         })).filter(m => !isLowTrustCompetition(m));
         allMatches.push(...formatted);
         console.log(`  football-data.org: ${formatted.length} match(s)`);
@@ -533,6 +542,23 @@ function stampLiveAvailability(pick, matches) {
   };
 }
 
+// ── Vérification pick vs liste API ────────────────────────────────────────────
+function verifyPickMatchesAPI(pick, matches) {
+  if (!pick?.home || !pick?.away || !Array.isArray(matches) || !matches.length) return false;
+  // 1. matchId exact (le plus fiable)
+  if (pick.matchId) {
+    if (matches.some(m => m.matchId && String(m.matchId) === String(pick.matchId))) return true;
+  }
+  // 2. noms d'équipes normalisés
+  const ph = normalizeTeamName(pick.home);
+  const pa = normalizeTeamName(pick.away);
+  return matches.some(m => {
+    const mh = normalizeTeamName(m.home || "");
+    const ma = normalizeTeamName(m.away || "");
+    return mh === ph && ma === pa;
+  });
+}
+
 // ── Mémoire d'apprentissage ───────────────────────────────────────────────────
 function loadMemory() {
   try { return JSON.parse(fs.readFileSync(MEMORY_FILE, "utf8")); } catch { return null; }
@@ -581,9 +607,11 @@ function neutralWarning(matches) {
 
 const HERMES_PROMPT = (matches) => `Tu es HERMÈS, expert en pronostics sportifs avec une approche mathématique rigoureuse pour TousLesMatchs.
 ${memoryBlock()}
-MATCHS DISPONIBLES AUJOURD'HUI :
+MATCHS DISPONIBLES AUJOURD'HUI (chaque match a un matchId unique) :
 ${JSON.stringify(matches, null, 2)}
 ${neutralWarning(matches)}
+
+⚠️ RÈGLE ANTI-INVENTION : Tu ne peux choisir QUE parmi les matchs listés ci-dessus. Tu dois recopier exactement le champ "matchId" du match choisi dans ta réponse JSON. Si matchId est vide (""), utilise les noms d'équipes exacts tels qu'écrits dans la liste.
 
 ━━━ ÉTAPE 1 — FILTRER ━━━
 - ACCEPTER : grandes compétitions officielles (Coupe du Monde, championnats nationaux Top 5, NBA, NHL playoffs, EuroLeague, etc.)
@@ -641,8 +669,9 @@ Rugby :
 RÉPONDS EN JSON STRICT :
 {
   "pick": {
-    "home": "Équipe A",
-    "away": "Équipe B",
+    "matchId": "RECOPIE ICI le matchId exact du match choisi dans la liste ci-dessus",
+    "home": "Équipe A — copie exacte de la liste",
+    "away": "Équipe B — copie exacte de la liste",
     "league": "Nom de la compétition",
     "sport": "Football",
     "time": "20h45",
@@ -669,9 +698,14 @@ Si VRAIMENT aucun match ne mérite :
 async function runAnalyse(chatId) {
   await reply(chatId, "🔍 <b>Analyse en cours...</b>\nRécupération des matchs du jour...");
 
-  const matches = await fetchTodayMatches();
+  const allMatches = await fetchTodayMatches();
+  // Filtrer par sport autorisé (Football par défaut)
+  const matches = allMatches.filter(m =>
+    HERMES_PICK_ALLOWED_SPORTS.includes((m.sport || "Football").toLowerCase())
+  );
   if (!matches.length) {
-    await reply(chatId, "⚠️ <b>Aucun match disponible</b>\nLes APIs ne retournent pas de matchs pour aujourd'hui.\nUtilise /setpick pour définir manuellement.");
+    const sportsLabel = HERMES_PICK_ALLOWED_SPORTS.join(", ");
+    await reply(chatId, `⚠️ <b>Aucun match disponible (${sportsLabel})</b>\nLes APIs ne retournent pas de matchs pour aujourd'hui.\nUtilise /setpick pour définir manuellement.`);
     return;
   }
 
@@ -706,6 +740,13 @@ async function runAnalyse(chatId) {
       updatedAt: new Date().toISOString(),
     };
     savePicks(data);
+    return;
+  }
+
+  // ── Vérification anti-invention : le pick doit correspondre à un match API réel ──
+  if (!verifyPickMatchesAPI(result.pick, matches)) {
+    const homeAway = `${result.pick?.home || "?"} vs ${result.pick?.away || "?"}`;
+    await reply(chatId, `🚫 <b>Pick refusé : match non vérifié</b>\n\nL'IA a proposé <b>${homeAway}</b> mais ce match ne figure pas dans les ${matches.length} matchs récupérés depuis l'API.\n\nAucun pick n'a été sauvegardé. Relance /analyse ou utilise /setpick pour définir manuellement.`);
     return;
   }
 
@@ -1434,7 +1475,49 @@ async function cmdHelp(chatId) {
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
 /deploy — guidance de déploiement verrouillée
+/diagtelegram — Diagnostiquer la connexion Telegram (canaux, tokens)
 /help — Cette aide`);
+}
+
+async function cmdDiagTelegram(chatId) {
+  let msg = "🔎 <b>DIAG TELEGRAM</b>\n\n";
+  // Tokens
+  msg += `• HERMES_ADMIN_TLM_BOT : ${TG_TOKEN ? "✅ défini" : "❌ manquant"}\n`;
+  msg += `• TELEGRAM_BOT_TOKEN (public) : ${PUBLIC_BOT_TOKEN ? "✅ défini" : "❌ manquant"}\n`;
+  msg += `• TELEGRAM_FREE_CHANNEL_ID : ${PUBLIC_CHAT ? `✅ ${PUBLIC_CHAT}` : "❌ manquant"}\n`;
+  msg += `• TELEGRAM_PREMIUM_CHANNEL_ID : ${PREMIUM_CHANNEL ? `✅ ${PREMIUM_CHANNEL}` : "❌ manquant — publishpremium désactivé"}\n`;
+  msg += `• TELEGRAM_ADMIN_CHAT_ID : ${ADMIN_CHAT ? `✅ ${ADMIN_CHAT}` : "⚠️ non défini"}\n\n`;
+  // Teste le canal public
+  if (PUBLIC_BOT_TOKEN && PUBLIC_CHAT) {
+    try {
+      const r = await tgRequestWithToken(PUBLIC_BOT_TOKEN, "getChat", { chat_id: PUBLIC_CHAT });
+      msg += r.ok ? `• Canal public ✅ (${r.result?.title || PUBLIC_CHAT})\n` : `• Canal public ❌ : ${r.description || "erreur inconnue"}\n`;
+    } catch (e) { msg += `• Canal public ❌ : ${e.message}\n`; }
+  }
+  // Teste le canal premium
+  if (TG_TOKEN && PREMIUM_CHANNEL) {
+    try {
+      const r = await tgRequest("getChat", { chat_id: PREMIUM_CHANNEL });
+      msg += r.ok ? `• Canal premium ✅ (${r.result?.title || PREMIUM_CHANNEL})\n` : `• Canal premium ❌ : ${r.description || "erreur inconnue"}\n`;
+    } catch (e) { msg += `• Canal premium ❌ : ${e.message}\n`; }
+  }
+  msg += `\n• OPENAI_API_KEY : ${OPENAI_API_KEY ? "✅ défini" : "⚠️ manquant (images désactivées)"}\n`;
+  msg += `• Sports autorisés (pick) : ${HERMES_PICK_ALLOWED_SPORTS.join(", ")}`;
+  await reply(chatId, msg);
+}
+
+function tgRequestWithToken(token, method, body) {
+  return new Promise((resolve) => {
+    const data = JSON.stringify(body);
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${token}/${method}`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) }
+    }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } }); });
+    req.on("error", () => resolve({}));
+    req.write(data); req.end();
+  });
 }
 
 // ── Message router ────────────────────────────────────────────────────────────
@@ -1461,6 +1544,7 @@ async function handleCommandLine(chatId, text) {
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
     case "/deploy":          return cmdDeploy(chatId);
+    case "/diagtelegram":    return cmdDiagTelegram(chatId);
     case "/help":
     default:          return cmdHelp(chatId);
   }

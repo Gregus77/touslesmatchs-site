@@ -1493,23 +1493,62 @@ function getAgentPerformance() {
   }
 }
 
+function normalizeHistoryKey(s) {
+  return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 24);
+}
+
+function loadHermesHistoryItems() {
+  const items = [];
+  for (const p of [HERMES_PICKS_PATH, "/data/picks.json"]) {
+    try {
+      const raw = JSON.parse(fs.readFileSync(p, "utf8"));
+      const hist = raw.history || [];
+      for (const h of hist) {
+        let entry;
+        if (Array.isArray(h)) {
+          const [date, match, prono, cote, score, status] = h;
+          const parts = (match || "").split(" vs ");
+          entry = { date, home: parts[0] || "", away: parts[1] || "", bet: prono || "", score, status };
+        } else {
+          entry = {
+            date: h.date || "",
+            home: h.home || "",
+            away: h.away || "",
+            bet: h.prono || h.bet || "",
+            score: h.score || "",
+            status: h.status || "",
+            league: h.league || h.competition || "",
+          };
+        }
+        const s = (entry.status || "").toUpperCase();
+        if (!["GAGNE", "PERDU", "WIN", "LOSS"].includes(s)) continue;
+        if (!entry.home || !entry.away) continue;
+        items.push({
+          id: `hermes_${entry.date}_${normalizeHistoryKey(entry.home)}_${normalizeHistoryKey(entry.away)}`,
+          home: entry.home,
+          away: entry.away,
+          competition: entry.league || "Football",
+          bet: entry.bet,
+          score: entry.score || null,
+          outcome: ["GAGNE", "WIN"].includes(s) ? "win" : "loss",
+          resolvedAt: entry.date,
+          source: "hermes",
+        });
+      }
+      break;
+    } catch { /* fichier absent ou invalide */ }
+  }
+  return items;
+}
+
 function getPublicHistoryItems() {
   try {
-    return db.prepare(`
+    // 1. Picks Concile (SQLite)
+    const concileItems = db.prepare(`
       SELECT
-        match_key,
-        home,
-        away,
-        competition,
-        best_bet,
-        confidence,
-        outcome,
-        final_score_home,
-        final_score_away,
-        stats_status,
-        result_source,
-        resolved_at,
-        analysed_at
+        match_key, home, away, competition, best_bet, confidence,
+        outcome, final_score_home, final_score_away, stats_status,
+        result_source, resolved_at, analysed_at
       FROM concile_analyses
       WHERE outcome IN ('win','loss')
         AND final_score_home IS NOT NULL
@@ -1528,6 +1567,25 @@ function getPublicHistoryItems() {
       resolvedAt: row.resolved_at || row.analysed_at,
       source: row.result_source || (row.stats_status === "manual_verified" ? "manual_verified" : "api_verified"),
     }));
+
+    // 2. Picks Hermès (picks.json history)
+    const hermesItems = loadHermesHistoryItems();
+
+    // 3. Fusion + déduplication par date+équipes+pari
+    const seen = new Set();
+    const merged = [];
+    for (const item of [...concileItems, ...hermesItems]) {
+      const key = `${(item.resolvedAt || "").slice(0, 10)}_${normalizeHistoryKey(item.home)}_${normalizeHistoryKey(item.away)}_${normalizeHistoryKey(item.bet)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(item);
+      }
+    }
+
+    // 4. Tri par date décroissante
+    return merged
+      .sort((a, b) => (b.resolvedAt || "").localeCompare(a.resolvedAt || ""))
+      .slice(0, 100);
   } catch (e) {
     console.error("[public-history]", e.message);
     return [];
