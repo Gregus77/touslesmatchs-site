@@ -237,7 +237,7 @@ function getTodayStr() {
 
 const AUTO_CONCILE_OBSERVER = process.env.AUTO_CONCILE_OBSERVER !== "0";
 const AUTO_CONCILE_INTERVAL_MS = Math.max(5, Number(process.env.AUTO_CONCILE_INTERVAL_MIN || 10)) * 60 * 1000;
-const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX_MATCHES || 2));
+const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX_MATCHES || 8));
 const AUTO_CONCILE_MIN_MINUTE = Math.max(1, Number(process.env.AUTO_CONCILE_MIN_MINUTE || 10));
 const AUTO_CONCILE_BUCKET_MINUTES = Math.max(5, Number(process.env.AUTO_CONCILE_BUCKET_MINUTES || 15));
 
@@ -1124,6 +1124,7 @@ function saveConcileAnalysis(match, result, pickBet) {
   try {
     const minute = parseInt(match.minute) || null;
     const statsStatus = result.statsStatus?.status || "unavailable";
+    const matchKey = getPredictionSnapshotKey(match);
     db.prepare(`
       INSERT INTO concile_analyses
         (match_key, home, away, competition, minute_at_analysis,
@@ -1131,7 +1132,7 @@ function saveConcileAnalysis(match, result, pickBet) {
          best_bet, confidence, raison, consensus_votes, agents_json, pick_bet)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
-      getPredictionSnapshotKey(match),
+      matchKey,
       match.home, match.away,
       match.competition || match.league || "",
       minute,
@@ -1144,6 +1145,12 @@ function saveConcileAnalysis(match, result, pickBet) {
       result.consensus_votes || 0,
       JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
       pickBet || null
+    );
+    console.log(
+      `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
+      `${match.home} vs ${match.away} | minute=${minute ?? "?"} | ` +
+      `score=${match.score_home ?? "?"}-${match.score_away ?? "?"} | ` +
+      `bet=${result.best_bet} | confidence=${result.confidence} | reason=${String(result.raison || "").slice(0, 180)}`
     );
   } catch(e) { console.error("[concile-trace] save:", e.message); }
 }
@@ -1638,14 +1645,22 @@ async function runAutoConcileObserver() {
   autoConcileObserverRunning = true;
   try {
     const matches = await fetchLiveMatches();
-    const candidates = matches
+    const observed = matches
       .filter(shouldAutoObserveMatch)
-      .filter(m => !hasPredictionSnapshot(m))
-      .slice(0, AUTO_CONCILE_MAX_MATCHES);
+      .filter(m => !hasPredictionSnapshot(m));
+    const candidates = observed.slice(0, AUTO_CONCILE_MAX_MATCHES);
+    console.log(
+      `[auto-concile] live=${matches.length} eligible=${observed.length} analysed_this_cycle=${candidates.length} ` +
+      `skipped_low_trust=${matches.filter(isLowTrustCompetition).length}`
+    );
 
     for (const match of candidates) {
       try {
-        console.log(`[auto-concile] analyse snapshot: ${match.home} vs ${match.away} ${match.minute || ""}`);
+        console.log(
+          `[auto-concile] analyse snapshot: ${match.competition || "competition inconnue"} | ` +
+          `${match.home} vs ${match.away} | minute=${match.minute || "?"} | ` +
+          `score=${match.score_home ?? "?"}-${match.score_away ?? "?"}`
+        );
         await runConcileAnalysis(match);
       } catch (e) {
         console.error("[auto-concile] analyse:", e.message);
