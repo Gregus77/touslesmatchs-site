@@ -321,7 +321,7 @@ function renderNavAuth(){
   if(email && plan){
     const isElite = plan === 'elite';
     el.innerHTML = `<div class="nav-user">
-      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Premium':'⚡ Pro'}</span>
       <button class="nav-logout" onclick="doLogout()" title="Déconnexion">✕</button>
     </div>`;
   } else {
@@ -383,7 +383,7 @@ function renderCredits(){
   const pill = document.getElementById('credits-pill');
   if(!plan){ pill.style.display='none'; return; }
   pill.style.display='flex';
-  pill.textContent = plan==='elite' ? '👑 Elite — crédits illimités' : `⚡ ${plan}`;
+  pill.textContent = plan==='elite' ? '👑 Premium — 30 analyses/jour + signaux forts' : `⚡ ${plan}`;
 }
 
 // ══ MATCHES

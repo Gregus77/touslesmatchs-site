@@ -2435,7 +2435,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       [STRIPE_PRICE_ID_CARTE]:               { status: "carte",   label: "Analyse 1 euro" },
       [process.env.STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro" },
       [process.env.STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP" },
-      [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite" },
+      [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Premium" },
     };
     const { status = "premium", label: planLabel = "Pro" } = planMap[priceId] || {};
 
