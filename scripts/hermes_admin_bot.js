@@ -225,7 +225,7 @@ async function publishTelegramPick({ token, chatId, text, pick }) {
     if (photoResult.ok) return photoResult;
     console.error("[telegram] sendPhoto fallback:", photoResult.description || photoResult.error || "unknown");
   }
-  return sendTelegramWithToken(token, chatId, text, { disable_web_page_preview: false });
+  return sendTelegramWithToken(token, chatId, text, { disable_web_page_preview: true });
 }
 
 function escapeHtml(value) {
