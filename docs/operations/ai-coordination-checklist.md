@@ -16,6 +16,7 @@
 - [ ] Codex Daily Auditor controle securite, performance, SEO, conversion, coherence stats.
 - [ ] Codex Spend Guard indique depense reelle ou `inconnue - source usage manquante`.
 - [ ] TLM AI Lab garde les IA experimentales invisibles aux clients.
+- [ ] Les alertes fortes admin restent privees; une alerte client peut etre publiee avec `/publishalert` sans stats internes.
 
 ## Avant Toute Mise En Production
 
@@ -34,6 +35,7 @@
 - [ ] Enregistrer la source score/stats.
 - [ ] Enregistrer disponibilite PS3838: confirmee, non trouvee, a verifier.
 - [ ] A la fin du match, resoudre GAGNE/PERDU et recalculer les stats.
+- [ ] Si une alerte forte a ete publiee, publier ensuite le resultat client: GAGNE en vert ou PERDU, sans divulguer le tableau interne.
 
 ## Escalade
 

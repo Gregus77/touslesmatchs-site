@@ -38,6 +38,9 @@ const STRONG_ALERTS_THRESHOLD = Number(process.env.HERMES_STRONG_ALERTS_THRESHOL
 const STRONG_ALERTS_MIN_RESOLVED = Number(process.env.HERMES_STRONG_ALERTS_MIN_RESOLVED || 5);
 const STRONG_ALERTS_MAX_PER_DAY = Number(process.env.HERMES_STRONG_ALERTS_MAX_PER_DAY || 3);
 const STRONG_ALERTS_INTERVAL_MS = Math.max(5, Number(process.env.HERMES_STRONG_ALERTS_INTERVAL_MIN || 10)) * 60 * 1000;
+const STRONG_ALERTS_CLIENT_AUTO = process.env.HERMES_STRONG_ALERTS_CLIENT_AUTO === "1";
+const STRONG_ALERTS_CLIENT_CHANNEL = process.env.HERMES_STRONG_ALERTS_CLIENT_CHANNEL || PREMIUM_CHANNEL || PUBLIC_CHAT;
+const STRONG_ALERTS_CLIENT_TOKEN = process.env.HERMES_STRONG_ALERTS_CLIENT_TOKEN || TG_TOKEN;
 const AUTO_PUBLISH_FREE = process.env.HERMES_AUTO_PUBLISH_FREE !== "0";
 const AUTO_PUBLISH_PREMIUM = process.env.HERMES_AUTO_PUBLISH_PREMIUM !== "0";
 
@@ -60,6 +63,28 @@ function tgRequest(method, body) {
 
 function reply(chatId, text, extra = {}) {
   return tgRequest("sendMessage", { chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...extra });
+}
+
+function sendTelegramWithToken(token, chatId, text, extra = {}) {
+  return new Promise((resolve) => {
+    if (!token || !chatId) return resolve({ ok: false, description: "token ou channel manquant" });
+    const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true, ...extra });
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${token}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try { resolve(JSON.parse(d)); }
+        catch { resolve({ ok: false, description: d }); }
+      });
+    });
+    req.on("error", e => resolve({ ok: false, description: e.message }));
+    req.write(body); req.end();
+  });
 }
 
 function escapeHtml(value) {
@@ -963,6 +988,21 @@ ${escapeHtml(signal.reason || "Signal élevé détecté par le Concile.")}
 À vérifier avant publication ou mise.`;
 }
 
+function formatClientStrongSignal(signal) {
+  return `<b>Alerte Concile IA</b>
+
+<b>Match</b> : ${escapeHtml(signal.home)} vs ${escapeHtml(signal.away)}
+<b>Competition</b> : ${escapeHtml(signal.competition)}
+<b>Moment</b> : ${signal.minute ? `${signal.minute}'` : "Live"}
+
+<b>Signal</b> : ${escapeHtml(signal.bet)}
+<b>Confiance</b> : signal fort valide par le Concile
+
+Analyse : https://www.touslesmatchs.com/live-ia
+
+18+ uniquement. Jeu responsable. Aucun gain garanti.`;
+}
+
 function formatStrategyTop(rows) {
   return (rows || []).slice(0, 5).map((r, i) =>
     `${i + 1}. ${r.label}: ${r.winrate ?? "?"}% (${r.wins}/${r.total})${r.confidence === "sample_faible" ? " — échantillon faible" : ""}`
@@ -996,6 +1036,7 @@ async function scanStrongSignals({ manual = false } = {}) {
   const today = parisNowParts().date;
   const state = loadStrongAlertsState();
   const sent = Array.isArray(state.sent) ? state.sent : [];
+  const clientSent = Array.isArray(state.clientSent) ? state.clientSent : [];
   const sentToday = sent.filter(a => a.date === today);
 
   if (!manual && sentToday.length >= STRONG_ALERTS_MAX_PER_DAY) return;
@@ -1023,15 +1064,70 @@ async function scanStrongSignals({ manual = false } = {}) {
       sentAt: new Date().toISOString(),
       home: signal.home,
       away: signal.away,
+      competition: signal.competition,
+      score: signal.score,
+      minute: signal.minute,
       bet: signal.bet,
       confidence: signal.confidence,
+      reason: signal.reason,
+      market: signal.market,
     });
+
+    if (STRONG_ALERTS_CLIENT_AUTO && !clientSent.some(a => a.id === signal.id)) {
+      const published = await publishClientStrongSignal(signal, { silentAdmin: true });
+      if (published.ok) {
+        clientSent.unshift({ id: signal.id, date: today, sentAt: new Date().toISOString(), channel: STRONG_ALERTS_CLIENT_CHANNEL });
+      }
+    }
   }
-  saveStrongAlertsState({ sent: sent.slice(0, 300) });
+  saveStrongAlertsState({ sent: sent.slice(0, 300), clientSent: clientSent.slice(0, 300) });
 }
 
 async function cmdAlerts(chatId) {
   await scanStrongSignals({ manual: true });
+}
+
+async function publishClientStrongSignal(signal, { silentAdmin = false } = {}) {
+  if (!signal?.id) return { ok: false, error: "signal manquant" };
+  const sent = await sendTelegramWithToken(
+    STRONG_ALERTS_CLIENT_TOKEN,
+    STRONG_ALERTS_CLIENT_CHANNEL,
+    formatClientStrongSignal(signal)
+  );
+  if (!silentAdmin && ADMIN_CHAT) {
+    await reply(
+      ADMIN_CHAT,
+      sent.ok
+        ? `Alerte client publiee sur ${STRONG_ALERTS_CLIENT_CHANNEL}`
+        : `Publication alerte client impossible : ${escapeHtml(sent.description || sent.error || "erreur inconnue")}`
+    );
+  }
+  return sent.ok ? { ok: true } : { ok: false, error: sent.description || sent.error || "erreur inconnue" };
+}
+
+async function cmdPublishAlert(chatId, args) {
+  const state = loadStrongAlertsState();
+  const sent = Array.isArray(state.sent) ? state.sent : [];
+  const clientSent = Array.isArray(state.clientSent) ? state.clientSent : [];
+  const wanted = String(args || "").trim();
+  const signal = wanted
+    ? sent.find(s => s.id === wanted || `${s.home} ${s.away}`.toLowerCase().includes(wanted.toLowerCase()))
+    : sent.find(s => !clientSent.some(c => c.id === s.id)) || sent[0];
+
+  if (!signal) {
+    await reply(chatId, "Aucune alerte forte disponible. Lance d'abord /alerts.");
+    return;
+  }
+  if (clientSent.some(c => c.id === signal.id)) {
+    await reply(chatId, "Cette alerte a deja ete publiee cote client.");
+    return;
+  }
+
+  const result = await publishClientStrongSignal(signal);
+  if (result.ok) {
+    clientSent.unshift({ id: signal.id, date: parisNowParts().date, sentAt: new Date().toISOString(), channel: STRONG_ALERTS_CLIENT_CHANNEL });
+    saveStrongAlertsState({ ...state, clientSent: clientSent.slice(0, 300) });
+  }
 }
 
 async function cmdRecord(chatId, args) {
@@ -1225,6 +1321,7 @@ async function handleCommandLine(chatId, text) {
     case "/record":          return cmdRecord(chatId, args);
     case "/strategy":        return cmdStrategy(chatId);
     case "/alerts":          return cmdAlerts(chatId);
+    case "/publishalert":    return cmdPublishAlert(chatId, args);
     case "/learn":           return cmdLearn(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);

@@ -12,6 +12,7 @@ Codex est entre dans la partie comme garde-fou architecture, securite, donnees, 
 - Envoyer les messages Telegram et Brevo prevus.
 - Produire le rapport `/strategy`.
 - Relayer les signaux forts a Gregory, sans promettre de gain certain.
+- Publier une alerte forte cote client uniquement avec `/publishalert`, sauf si `HERMES_STRONG_ALERTS_CLIENT_AUTO=1` est explicitement active.
 
 ## Interdictions
 
@@ -19,6 +20,7 @@ Codex est entre dans la partie comme garde-fou architecture, securite, donnees, 
 - Ne modifie jamais les fichiers critiques du Concile IA sans validation.
 - Ne lance jamais de `git reset --hard`, suppression, migration ou changement de secrets sans confirmation.
 - Ne publie jamais une statistique ou un score sans source.
+- Ne publie jamais le tableau interne des IA, winrates ou historiques aux clients.
 - Ne montre jamais de secret, token, cle API ou cle Stripe.
 
 ## Deploiement Autorise
@@ -45,4 +47,3 @@ Services:
 Erreur:
 Prochaine verification:
 ```
-

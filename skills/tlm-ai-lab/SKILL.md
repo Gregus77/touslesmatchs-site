@@ -25,8 +25,9 @@ Tester seulement si une cle/API fiable est configuree:
 - Groq petits modeles;
 - DeepSeek;
 - Mistral;
+- Perplexity, seulement si la source web/API est verifiable et le cout maitrise;
 - Qwen ou autre modele via fournisseur compatible;
-- modeles locaux si le VPS peut suivre.
+- Ollama/modeles locaux si le VPS peut suivre sans ralentir le site.
 
 ## Promotion
 
@@ -44,4 +45,3 @@ A couper: [nom ou aucun]
 Signal utile: [marche/competition/minute]
 Decision proposee: [garder/tester/couper]
 ```
-
