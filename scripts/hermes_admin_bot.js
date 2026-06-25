@@ -96,6 +96,10 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;");
 }
 
+function addChatGptCredit(text) {
+  return `${text}\n\nVisuel genere par ChatGPT pour TousLesMatchs.`;
+}
+
 async function getUpdates(offset) {
   return new Promise((resolve) => {
     const req = https.request({
@@ -793,7 +797,7 @@ async function cmdPublish(chatId, opts = {}) {
 
 ⚠️ 18+ uniquement. Jeu responsable.`;
 
-  const body = JSON.stringify({ chat_id: PUBLIC_CHAT, text, parse_mode: "HTML", disable_web_page_preview: false });
+  const body = JSON.stringify({ chat_id: PUBLIC_CHAT, text: addChatGptCredit(text), parse_mode: "HTML", disable_web_page_preview: false });
   let ok = false;
   let err = "";
   await new Promise((resolve) => {
@@ -847,7 +851,7 @@ ${p.raison ? `\n💡 <i>${p.raison}</i>` : ""}
 
 ⚠️ 18+ uniquement. Jeu responsable.`;
 
-  const body = JSON.stringify({ chat_id: PREMIUM_CHANNEL, text, parse_mode: "HTML", disable_web_page_preview: false });
+  const body = JSON.stringify({ chat_id: PREMIUM_CHANNEL, text: addChatGptCredit(text), parse_mode: "HTML", disable_web_page_preview: false });
   let ok = false;
   let err = "";
   await new Promise((resolve) => {
@@ -1094,7 +1098,7 @@ async function publishClientStrongSignal(signal, { silentAdmin = false } = {}) {
   const sent = await sendTelegramWithToken(
     STRONG_ALERTS_CLIENT_TOKEN,
     STRONG_ALERTS_CLIENT_CHANNEL,
-    formatClientStrongSignal(signal)
+    addChatGptCredit(formatClientStrongSignal(signal))
   );
   if (!silentAdmin && ADMIN_CHAT) {
     await reply(
