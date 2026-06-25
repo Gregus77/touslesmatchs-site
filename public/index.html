@@ -1322,7 +1322,7 @@ footer{
         <div class="pcf"><span class="no">✗</span>Groupe Telegram</div>
         <div class="pcf"><span class="no">✗</span>Accès illimité</div>
       </div>
-      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" rel="noopener noreferrer" id="btn-carte" class="pc-btn prim">1 analyse — 1&euro;</a>
+      <a href="#" onclick="startCheckout('carte', event)" id="btn-carte" class="pc-btn prim">1 analyse — 1&euro;</a>
     </div>
     <div class="pc feat">
       <span class="pc-badge b-pr">Pro</span>
@@ -1336,24 +1336,24 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Live IA — analysez chaque match en direct</div>
         <div class="pcf"><span class="ok">✓</span>Consensus, objections et verdict Chief</div>
         <div class="pcf"><span class="ok">✓</span>Alertes avant que les cotes bougent</div>
-        <div class="pcf"><span class="no">✗</span>Groupe Elite VIP</div>
+        <div class="pcf"><span class="no">✗</span>Groupe Premium</div>
       </div>
-      <a href="https://buy.stripe.com/7sYbJ1dfK6NugIAfpA3VC02" target="_blank" rel="noopener noreferrer" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
+      <a href="#" onclick="startCheckout('premium', event)" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
     </div>
     <div class="pc">
-      <span class="pc-badge b-el">Elite</span>
-      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite</div></div>
-      <div class="pc-desc" data-i18n="plan_elite_desc">30 analyses/jour + Telegram Elite VIP + accès prioritaire + support.</div>
+      <span class="pc-badge b-el">Premium</span>
+      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Premium</div></div>
+      <div class="pc-desc" data-i18n="plan_elite_desc">30 analyses/jour + Telegram Premium + accès prioritaire + support.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>Jusqu'à 30 paris identifiés par jour</div>
-        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Elite VIP (picks premium)</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Premium (picks prioritaires)</div>
         <div class="pcf"><span class="ok">✓</span>Live IA accès illimité toutes compétitions</div>
         <div class="pcf"><span class="ok">✓</span>Synthèse avancée, sans prompts internes</div>
         <div class="pcf"><span class="ok">✓</span>Picks en avant-première avant le site</div>
         <div class="pcf"><span class="ok">✓</span>Support direct + canal dédié</div>
       </div>
-      <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" rel="noopener noreferrer" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner — 19.90€/mois</a>
+      <a href="#" onclick="startCheckout('elite', event)" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner — 19.90€/mois</a>
     </div>
   </div>
 </section>
@@ -2307,7 +2307,7 @@ const FAQ_DATA = [
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite VIP + support direct. Reset automatique à minuit."},
+  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Premium (19.90€/mois) = 30 analyses/jour + Telegram Premium + support direct. Reset automatique à minuit."},
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);
@@ -2326,6 +2326,34 @@ function renderFAQ(){
     </div>`).join('');
 }
 renderFAQ();
+
+// ══ STRIPE CHECKOUT — utilise les Price IDs actifs du serveur
+async function startCheckout(plan, event){
+  if(event) event.preventDefault();
+  const btn = event?.currentTarget;
+  const oldText = btn ? btn.textContent : "";
+  if(btn){
+    btn.textContent = "Redirection Stripe...";
+    btn.style.pointerEvents = "none";
+  }
+  try{
+    const r = await fetch('/api/create-checkout', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ plan, user_id: localStorage.getItem('tlm_email') || '' })
+    });
+    const data = await r.json();
+    if(!data.ok || !data.url) throw new Error(data.error || "Checkout indisponible");
+    location.href = data.url;
+  }catch(e){
+    alert("Paiement indisponible pour le moment. Réessayez dans quelques secondes.");
+    console.error("[checkout]", e);
+    if(btn){
+      btn.textContent = oldText;
+      btn.style.pointerEvents = "";
+    }
+  }
+}
 
 // ══ EMAIL POPUP
 let _epDismissed = false;
