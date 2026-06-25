@@ -30,6 +30,8 @@ const STRONG_ALERTS_FILE = path.join(REPO, "data/hermes_strong_alerts.json");
 const AUTO_DAILY_PICK = process.env.HERMES_AUTO_DAILY_PICK !== "0";
 const AUTO_DAILY_PICK_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_HOUR || 0);
 const AUTO_DAILY_PICK_MINUTE = Number(process.env.HERMES_AUTO_DAILY_PICK_MINUTE || 5);
+const AUTO_DAILY_PICK_CATCHUP_UNTIL_HOUR = Number(process.env.HERMES_AUTO_DAILY_PICK_CATCHUP_UNTIL_HOUR || 12);
+const AUTO_DAILY_PICK_RETRY_MINUTES = Math.max(15, Number(process.env.HERMES_AUTO_DAILY_PICK_RETRY_MIN || 60));
 const AUTO_DAILY_STRATEGY = process.env.HERMES_AUTO_DAILY_STRATEGY !== "0";
 const AUTO_DAILY_STRATEGY_HOUR = Number(process.env.HERMES_AUTO_DAILY_STRATEGY_HOUR || 8);
 const AUTO_DAILY_STRATEGY_MINUTE = Number(process.env.HERMES_AUTO_DAILY_STRATEGY_MINUTE || 30);
@@ -1229,6 +1231,13 @@ function hasPickForDate(date) {
   return data.currentPick?.date === date && data.currentPick?.status !== "NOPICK";
 }
 
+function minutesSinceIso(value) {
+  if (!value) return Infinity;
+  const ts = new Date(value).getTime();
+  if (!Number.isFinite(ts)) return Infinity;
+  return Math.floor((Date.now() - ts) / 60000);
+}
+
 let dailyAutoPickRunning = false;
 async function maybeRunDailyAutoPick() {
   if (!AUTO_DAILY_PICK || !ADMIN_CHAT || dailyAutoPickRunning) return;
@@ -1236,22 +1245,37 @@ async function maybeRunDailyAutoPick() {
   const now = parisNowParts();
   const targetMinute = (AUTO_DAILY_PICK_HOUR * 60) + AUTO_DAILY_PICK_MINUTE;
   const currentMinute = (now.hour * 60) + now.minute;
-  if (currentMinute < targetMinute || currentMinute > targetMinute + 20) return;
 
   const state = loadDailyRunState();
-  if (state.lastRunDate === now.date || hasPickForDate(now.date)) return;
+  if (hasPickForDate(now.date)) return;
+
+  const inPrimaryWindow = currentMinute >= targetMinute && currentMinute <= targetMinute + 20;
+  const inCatchupWindow = currentMinute > targetMinute + 20 && now.hour < AUTO_DAILY_PICK_CATCHUP_UNTIL_HOUR;
+  if (!inPrimaryWindow && !inCatchupWindow) return;
+
+  if (inCatchupWindow && minutesSinceIso(state.lastAttemptAt) < AUTO_DAILY_PICK_RETRY_MINUTES) return;
 
   dailyAutoPickRunning = true;
-  state.lastRunDate = now.date;
+  state.lastAttemptDate = now.date;
   state.startedAt = new Date().toISOString();
+  state.lastAttemptAt = state.startedAt;
   saveDailyRunState(state);
 
   try {
-    await reply(ADMIN_CHAT, `Auto-pick quotidien ${now.date} : lancement de l'analyse.`);
+    const mode = inCatchupWindow ? "rattrapage" : "quotidien";
+    await reply(ADMIN_CHAT, `Auto-pick ${mode} ${now.date} : lancement de l'analyse.`);
     await runAnalyse(ADMIN_CHAT);
-    saveDailyRunState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: true });
+    const saved = hasPickForDate(now.date);
+    saveDailyRunState({
+      lastAttemptDate: now.date,
+      lastAttemptAt: state.lastAttemptAt,
+      lastRunDate: saved ? now.date : state.lastRunDate || null,
+      finishedAt: new Date().toISOString(),
+      ok: saved,
+      retryReason: saved ? null : "aucun pick reel publie, retry possible"
+    });
   } catch (e) {
-    saveDailyRunState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: false, error: e.message });
+    saveDailyRunState({ lastAttemptDate: now.date, lastAttemptAt: state.lastAttemptAt, finishedAt: new Date().toISOString(), ok: false, error: e.message });
     await reply(ADMIN_CHAT, `Auto-pick quotidien en erreur : ${e.message}`).catch(() => {});
   } finally {
     dailyAutoPickRunning = false;
