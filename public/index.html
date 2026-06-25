@@ -1471,10 +1471,12 @@ function renderEmblem(team) {
 
 function renderPick(){
   const root=document.getElementById('pick-root');
+  if(!root) return;
   if(PICK.status==='no_bet'){
-    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">⛔</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">${i18n.t('no_pick_today')}</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Le Concile n'a trouvé aucun match passant les filtres de validation.<br>Discipline > Volume. Retour demain à 7h00.</div></div>`;
+    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">🕐</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">Prochain pick bientôt disponible</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Le Concile analyse les matchs du jour. Retour ce soir à 20h00.</div></div>`;
     return;
   }
+  if(!PICK.ia||!PICK.ia.length||!PICK.teamA||!PICK.teamB) return;
   const isResult=PICK.status==='result';
   const isWin=PICK.result==='win';
   const isPending=isResult&&PICK.result===null; // match joué, résultat non encore connu
@@ -2092,59 +2094,94 @@ async function fetchLiveScore(){
 
 // Charge le pick depuis picks.json (écrit par Hermès automatiquement)
 async function initPick(){
+  let rawPick = null;
   try{
-    const r=await fetch('/api/current-pick?t='+Date.now());
-    const d=await r.json();
-    const p=d.pick;
-    const home=p?.teamA?.name||p?.home;
-    const away=p?.teamB?.name||p?.away;
-    if(p && home && home !== 'Analyse en cours' && p.status !== 'no_pick'){
-      // Adapter le format picks.json → PICK
-      PICK.teamA={name:home, abbr:(p.teamA?.abbr||home||'').slice(0,3).toUpperCase(), color:p.teamA?.color||'#4f46e5'};
-      PICK.teamB={name:away, abbr:(p.teamB?.abbr||away||'').slice(0,3).toUpperCase(), color:p.teamB?.color||'#7c3aed'};
-      PICK.competition=p.competition||p.league||p.sport||PICK.competition;
-      PICK.time=p.time||PICK.time;
-      PICK.marketType=p.marketType||p.bet||PICK.marketType;
-      PICK.marketLabel=p.marketLabel||p.prono||PICK.marketLabel;
-      PICK.cote=parseFloat(p.cote)||PICK.cote;
-      PICK.status=p.status==='win'||p.status==='loss'||p.status==='GAGNE'||p.status==='PERDU'?'result':'upcoming';
-      PICK.result=p.result||(p.status==='win'||p.status==='GAGNE'?'win':p.status==='loss'||p.status==='PERDU'?'loss':null);
-      // Score depuis picks.json si disponible
-      if(p.scoreA!==null&&p.scoreA!==undefined) PICK.scoreA=p.scoreA;
-      if(p.scoreB!==null&&p.scoreB!==undefined) PICK.scoreB=p.scoreB;
-      if(p.score && p.score.includes('-')){
-        const parts=p.score.split('-');
-        const a=parseInt(parts[0],10), b=parseInt(parts[1],10);
-        if(!isNaN(a)) PICK.scoreA=a;
-        if(!isNaN(b)) PICK.scoreB=b;
-      }
-      // Si le pick date d'avant aujourd'hui et n'a pas encore de résultat officiel
-      // → forcer le statut "result" pour déclencher la recherche du score final
-      if(p.allowAutoResolve === true && p.date && PICK.status === 'upcoming'){
-        const todayParis = new Date().toLocaleDateString('fr-CA', {timeZone:'Europe/Paris'});
-        if(p.date < todayParis){
-          PICK.status = 'result';
-          PICK.result = null; // résultat inconnu — fetchLiveScore() va le récupérer
-        }
-      }
-      // Champs requis par renderPick() — absents du format picks.json Hermès
-      PICK.sport = p.sport || 'Football';
-      PICK.tag = 'ptag-live';
-      PICK.marketDesc = p.raison || '';
-      PICK.mise = '3% de ta bankroll';
-      PICK.verdict = 'go';
-      PICK.verdictLabel = 'GO — Hermès';
-      const hermesConf = Math.min(99, Math.max(55, Math.round(Number(p.confidence || 7) * 10)));
-      PICK.ia = [
-        {name:'Hermès Chief', pct: hermesConf,                  fill:'f-claude',   ok: hermesConf>=65, why: p.raison||''},
-        {name:'Stats live',   pct: Math.round(hermesConf*0.90), fill:'f-gemini',   ok: hermesConf>=60, why:''},
-        {name:'Value check',  pct: Math.round(hermesConf*0.85), fill:'f-deepseek', ok: hermesConf>=55, why:''},
-        {name:'Risk filter',  pct: Math.round(hermesConf*0.93), fill:'f-mistral',  ok: hermesConf>=60, why:''},
-      ];
+    const r = await fetch('/api/current-pick?t='+Date.now());
+    const d = await r.json();
+    rawPick = d.pick || d.currentPick || (d.home ? d : null);
+  }catch(e){ console.error('[initPick] fetch error:', e); }
+
+  const p = rawPick;
+  const home = p?.teamA?.name || p?.home || '';
+  const away = p?.teamB?.name || p?.away || '';
+  const isNoPick = !p || !home || home === 'Analyse en cours'
+    || p.status === 'no_pick' || p.status === 'NOPICK';
+
+  if(!isNoPick){
+    PICK.teamA = {name:home, abbr:(p.teamA?.abbr||home||'').slice(0,3).toUpperCase(), color:p.teamA?.color||'#4f46e5'};
+    PICK.teamB = {name:away, abbr:(p.teamB?.abbr||away||'').slice(0,3).toUpperCase(), color:p.teamB?.color||'#7c3aed'};
+    PICK.competition = p.competition||p.league||p.sport||PICK.competition;
+    PICK.time = p.time||PICK.time;
+    PICK.marketType = p.marketType||p.bet||PICK.marketType;
+    PICK.marketLabel = p.marketLabel||p.prono||PICK.marketLabel;
+    PICK.cote = parseFloat(p.cote)||PICK.cote;
+    PICK.status = (p.status==='win'||p.status==='loss'||p.status==='GAGNE'||p.status==='PERDU') ? 'result' : 'upcoming';
+    PICK.result = p.result||(p.status==='win'||p.status==='GAGNE'?'win':p.status==='loss'||p.status==='PERDU'?'loss':null);
+    if(p.scoreA!=null) PICK.scoreA=p.scoreA;
+    if(p.scoreB!=null) PICK.scoreB=p.scoreB;
+    if(p.score && p.score.includes('-')){
+      const pts=p.score.split('-');
+      const a=parseInt(pts[0],10),b=parseInt(pts[1],10);
+      if(!isNaN(a))PICK.scoreA=a;
+      if(!isNaN(b))PICK.scoreB=b;
     }
-  }catch(e){ console.warn('/current-pick non disponible',e); }
+    if(p.allowAutoResolve===true && p.date && PICK.status==='upcoming'){
+      const td=new Date().toLocaleDateString('fr-CA',{timeZone:'Europe/Paris'});
+      if(p.date<td){PICK.status='result';PICK.result=null;}
+    }
+    PICK.sport = p.sport||'Football';
+    PICK.tag = 'ptag-live';
+    PICK.marketDesc = p.raison||'';
+    PICK.mise = '3% de ta bankroll';
+    PICK.verdict = 'go';
+    PICK.verdictLabel = 'GO — Hermès';
+    const conf = Math.min(99, Math.max(55, Math.round(Number(p.confidence||7)*10)));
+    PICK.ia = [
+      {name:'Hermès Chief', pct:conf,                  fill:'f-claude',   ok:conf>=65, why:p.raison||''},
+      {name:'Stats live',   pct:Math.round(conf*0.90), fill:'f-gemini',   ok:conf>=60, why:''},
+      {name:'Value check',  pct:Math.round(conf*0.85), fill:'f-deepseek', ok:conf>=55, why:''},
+      {name:'Risk filter',  pct:Math.round(conf*0.93), fill:'f-mistral',  ok:conf>=60, why:''},
+    ];
+  }
+
   renderNavAuth();
-  renderPick();
+
+  // renderPick() wrapped — si crash, on affiche une carte minimale directement
+  try{
+    renderPick();
+  }catch(e){
+    console.error('[renderPick] crash, fallback:', e);
+    const root = document.getElementById('pick-root');
+    if(root){
+      if(!isNoPick && PICK.teamA && PICK.teamB){
+        const mc = MC[PICK.marketType]||MC['1'];
+        root.innerHTML=`<div class="pick-outer"><div class="pick-inner">
+          <div class="pick-head">
+            <div class="ph-left"><span class="ptag ptag-live">⚡ Pick du jour</span><span class="ptag-comp">${PICK.competition||''}</span></div>
+            <div class="ph-right">${PICK.time||''}</div>
+          </div>
+          <div class="pick-body">
+            <div class="teams-block">
+              <div class="team"><div class="team-nm">${PICK.teamA.name}</div></div>
+              <div class="score-col"><span class="upcoming-tag">À venir</span></div>
+              <div class="team"><div class="team-nm">${PICK.teamB.name}</div></div>
+            </div>
+            <div class="market-card" style="background:${mc.bg};border:1px solid ${mc.border};position:relative">
+              <div class="mc-type" style="color:${mc.color}">${PICK.marketType||''}</div>
+              <div class="mc-label" style="color:${mc.color}">${PICK.marketLabel||''}</div>
+              <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${mc.color};border-radius:2px"></div>
+            </div>
+            <div class="pick-insight">
+              <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Cote</div><div class="pi-val c-green">${PICK.cote||'—'}</div></div></div>
+              <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise</div><div class="pi-val">${PICK.mise||'3% bankroll'}</div></div></div>
+            </div>
+          </div></div></div>`;
+      } else {
+        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">🕐</div><div style="font-size:16px;font-weight:700">Prochain pick bientôt disponible</div></div>`;
+      }
+    }
+  }
+
   if(PICK.status!=='no_bet'){
     fetchLiveScore();
     setInterval(fetchLiveScore,30000);
