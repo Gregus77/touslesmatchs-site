@@ -386,6 +386,115 @@ nav{
 .mc-label{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
 .mc-desc{font-size:12px;color:var(--muted2);line-height:1.5}
 
+/* Fallback pick card populated from /api/current-pick */
+.tlm-live-pick{
+  padding:28px;
+  display:grid;
+  gap:22px;
+}
+.tlm-live-match{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:22px;
+  padding:22px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(255,255,255,.045),rgba(255,255,255,.018));
+}
+.tlm-live-team{
+  min-width:0;
+}
+.tlm-live-team:last-child{
+  text-align:right;
+}
+.tlm-live-team-name{
+  font-size:clamp(24px,3vw,38px);
+  font-weight:900;
+  letter-spacing:-.04em;
+  line-height:.95;
+  color:var(--text);
+}
+.tlm-live-team-abbr{
+  margin-top:8px;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.tlm-live-vs{
+  width:50px;
+  height:50px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:50%;
+  color:var(--cyan);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+  border:1px solid rgba(34,211,238,.25);
+  background:rgba(34,211,238,.08);
+  box-shadow:0 0 28px rgba(34,211,238,.12);
+}
+.tlm-live-market{
+  display:grid;
+  grid-template-columns:1fr auto auto;
+  gap:14px;
+  align-items:center;
+  padding:18px 20px;
+  border-radius:16px;
+  border:1px solid rgba(245,158,11,.22);
+  background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(124,58,237,.08));
+}
+.tlm-live-label{
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.16em;
+  text-transform:uppercase;
+  color:var(--amber);
+  margin-bottom:6px;
+}
+.tlm-live-prono{
+  font-size:22px;
+  line-height:1.05;
+  font-weight:900;
+  letter-spacing:-.03em;
+  color:var(--text);
+}
+.tlm-live-pill{
+  min-width:92px;
+  padding:10px 14px;
+  border-radius:12px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(6,8,15,.45);
+}
+.tlm-live-pill span{
+  display:block;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.tlm-live-pill strong{
+  display:block;
+  font-size:16px;
+  font-weight:900;
+  color:var(--text);
+}
+@media(max-width:720px){
+  .tlm-live-pick{padding:18px}
+  .tlm-live-match{grid-template-columns:1fr;gap:14px;text-align:left}
+  .tlm-live-team:last-child{text-align:left}
+  .tlm-live-vs{width:42px;height:42px}
+  .tlm-live-market{grid-template-columns:1fr}
+  .tlm-live-pill{text-align:left}
+}
+
 /* IA BARS */
 .ia-head{
   display:flex;align-items:center;justify-content:space-between;
@@ -2424,22 +2533,24 @@ document.addEventListener('click',function(e){
     if(!home || home === 'Analyse en cours' || p.status === 'no_pick' || p.status === 'NOPICK') return;
     var market=p.marketLabel||p.prono||p.marketType||p.bet||'Pronostic du Concile';
     var confidence=p.confidenceTg || (p.confidence ? (p.confidence + '/10') : '7/10');
+    var homeAbbr=((p.teamA&&p.teamA.abbr)||home).slice(0,3).toUpperCase();
+    var awayAbbr=((p.teamB&&p.teamB.abbr)||away).slice(0,3).toUpperCase();
     root.innerHTML =
-      '<div class="pick-outer"><div class="pick-inner">' +
+      '<div class="pick-outer"><div class="pick-inner tlm-live-pick-card">' +
         '<div class="pick-head">' +
           '<div class="ph-left"><span class="ptag ptag-live">Pick du jour</span><span class="ptag-comp">'+esc(p.competition||p.league||p.sport||'Football')+'</span></div>' +
           '<div class="ph-right">'+esc(p.time||'')+'</div>' +
         '</div>' +
-        '<div class="pick-body">' +
-          '<div class="teams-block">' +
-            '<div class="team"><div class="team-nm">'+esc(home)+'</div></div>' +
-            '<div class="vs">VS</div>' +
-            '<div class="team"><div class="team-nm">'+esc(away)+'</div></div>' +
+        '<div class="tlm-live-pick">' +
+          '<div class="tlm-live-match">' +
+            '<div class="tlm-live-team"><div class="tlm-live-team-name">'+esc(home)+'</div><div class="tlm-live-team-abbr">'+esc(homeAbbr)+'</div></div>' +
+            '<div class="tlm-live-vs">VS</div>' +
+            '<div class="tlm-live-team"><div class="tlm-live-team-name">'+esc(away)+'</div><div class="tlm-live-team-abbr">'+esc(awayAbbr)+'</div></div>' +
           '</div>' +
-          '<div class="market-card">' +
-            '<div class="mk-label">Pronostic</div>' +
-            '<div class="mk-title">'+esc(market)+'</div>' +
-            '<div class="mk-sub">Cote @'+esc(p.cote||'-')+' · Confiance '+esc(confidence)+'</div>' +
+          '<div class="tlm-live-market">' +
+            '<div><div class="tlm-live-label">Pronostic du Concile</div><div class="tlm-live-prono">'+esc(market)+'</div></div>' +
+            '<div class="tlm-live-pill"><span>Cote</span><strong>@'+esc(p.cote||'-')+'</strong></div>' +
+            '<div class="tlm-live-pill"><span>Confiance</span><strong>'+esc(confidence)+'</strong></div>' +
           '</div>' +
         '</div>' +
       '</div></div>';
