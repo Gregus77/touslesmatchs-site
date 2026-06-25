@@ -2093,7 +2093,7 @@ async function fetchLiveScore(){
 // Charge le pick depuis picks.json (écrit par Hermès automatiquement)
 async function initPick(){
   try{
-    const r=await fetch('/current-pick?t='+Date.now());
+    const r=await fetch('/api/current-pick?t='+Date.now());
     const d=await r.json();
     const p=d.pick;
     const home=p?.teamA?.name||p?.home;
@@ -2331,7 +2331,7 @@ document.addEventListener('click',function(e){
   buildChart();
 
   // ── Membres Telegram (tg-member-count existant + FOMO strip)
-  fetch('/community-stats').then(r=>r.json()).then(d=>{
+  fetch('/api/community-stats').then(r=>r.json()).then(d=>{
     const count = d.ok && d.members ? d.members : null;
     ['tg-member-count','fomo-members'].forEach(id=>{
       const el=document.getElementById(id);
