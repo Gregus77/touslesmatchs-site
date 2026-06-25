@@ -6,6 +6,7 @@ const http  = require("http");
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
+const { buildInlineKeyboard } = require("./bookmakers.config");
 
 // ── Config ──────────────────────────────────────────────────────────────────
 const TG_TOKEN          = process.env.HERMES_ADMIN_TLM_BOT;
@@ -117,6 +118,14 @@ function sendTelegramPhotoWithToken(token, chatId, photo, caption, extra = {}) {
   });
 }
 
+function bookmakerReplyMarkup(extraRows = []) {
+  return {
+    reply_markup: {
+      inline_keyboard: buildInlineKeyboard(extraRows),
+    },
+  };
+}
+
 function normalizePublicImageUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -223,15 +232,15 @@ async function ensurePickVisual(pick) {
   return visualUrl;
 }
 
-async function publishTelegramPick({ token, chatId, text, pick }) {
+async function publishTelegramPick({ token, chatId, text, pick, extra = {} }) {
   await ensurePickVisual(pick);
   const visualUrl = pickVisualUrl(pick);
   if (visualUrl) {
-    const photoResult = await sendTelegramPhotoWithToken(token, chatId, visualUrl, text);
+    const photoResult = await sendTelegramPhotoWithToken(token, chatId, visualUrl, text, extra);
     if (photoResult.ok) return photoResult;
     console.error("[telegram] sendPhoto fallback:", photoResult.description || photoResult.error || "unknown");
   }
-  return sendTelegramWithToken(token, chatId, text, { disable_web_page_preview: true });
+  return sendTelegramWithToken(token, chatId, text, { disable_web_page_preview: true, ...extra });
 }
 
 function escapeHtml(value) {
@@ -983,7 +992,16 @@ Analyse complete : https://www.touslesmatchs.com
 
 18+ uniquement. Jeu responsable.`;
 
-  const sent = await publishTelegramPick({ token: PUBLIC_BOT_TOKEN, chatId: PUBLIC_CHAT, text, pick: p });
+  const sent = await publishTelegramPick({
+    token: PUBLIC_BOT_TOKEN,
+    chatId: PUBLIC_CHAT,
+    text,
+    pick: p,
+    extra: bookmakerReplyMarkup([
+      { text: "Voir l'analyse TousLesMatchs", url: "https://www.touslesmatchs.com" },
+      { text: "Passer Pro/Premium", url: "https://www.touslesmatchs.com/#plans" },
+    ]),
+  });
   const ok = !!sent.ok;
   const err = sent.description || sent.error || "";
   await reply(chatId, ok ? `Pick publie sur ${PUBLIC_CHAT}` : `Erreur publication Telegram Free (${PUBLIC_CHAT}) : ${err || "reponse inconnue"}`);
@@ -1016,7 +1034,15 @@ Analyse complete : https://www.touslesmatchs.com/live-ia
 
 18+ uniquement. Jeu responsable.`;
 
-  const sent = await publishTelegramPick({ token: TG_TOKEN, chatId: PREMIUM_CHANNEL, text, pick: p });
+  const sent = await publishTelegramPick({
+    token: TG_TOKEN,
+    chatId: PREMIUM_CHANNEL,
+    text,
+    pick: p,
+    extra: bookmakerReplyMarkup([
+      { text: "Live IA TousLesMatchs", url: "https://www.touslesmatchs.com/live-ia" },
+    ]),
+  });
   const ok = !!sent.ok;
   const err = sent.description || sent.error || "";
   await reply(chatId, ok ? `Pick publie sur le canal Premium (${PREMIUM_CHANNEL})` : `Erreur publication Premium (${PREMIUM_CHANNEL}) : ${err || "verifie que le bot est admin du canal"}`);
@@ -1218,7 +1244,9 @@ async function scanStrongSignals({ manual = false } = {}) {
   const remaining = Math.max(0, STRONG_ALERTS_MAX_PER_DAY - sentToday.length);
   const toSend = candidates.slice(0, manual ? candidates.length : remaining);
   for (const signal of toSend) {
-    await reply(ADMIN_CHAT, formatStrongSignal(signal));
+    await reply(ADMIN_CHAT, formatStrongSignal(signal), bookmakerReplyMarkup([
+      { text: "Voir Live IA", url: "https://www.touslesmatchs.com/live-ia" },
+    ]));
     sent.unshift({
       id: signal.id,
       date: today,
@@ -1253,7 +1281,10 @@ async function publishClientStrongSignal(signal, { silentAdmin = false } = {}) {
   const sent = await sendTelegramWithToken(
     STRONG_ALERTS_CLIENT_TOKEN,
     STRONG_ALERTS_CLIENT_CHANNEL,
-    formatClientStrongSignal(signal)
+    formatClientStrongSignal(signal),
+    bookmakerReplyMarkup([
+      { text: "Voir l'analyse Live IA", url: "https://www.touslesmatchs.com/live-ia" },
+    ])
   );
   if (!silentAdmin && ADMIN_CHAT) {
     await reply(

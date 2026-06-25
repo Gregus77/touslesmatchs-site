@@ -10,6 +10,7 @@ const path = require("path");
 const fs = require("fs");
 const https = require("https");
 const http  = require("http");
+const { bookmakerButtons } = require("./bookmakers.config");
 
 const app = express();
 app.use(express.json({ limit: "20mb" }));
@@ -99,6 +100,21 @@ const STRIPE_PRICE_ID_CARTE = process.env.STRIPE_PRICE_ID_CARTE || process.env.S
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
+
+function bookmakerEmailHtml() {
+  const colors = ["#ef4444", "#3b82f6", "#22c55e", "#06b6d4"];
+  return `
+  <div style="background:#0d1020;border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:18px;margin:20px 0">
+    <div style="font-size:11px;color:#f8d37a;letter-spacing:.12em;text-transform:uppercase;font-weight:900;margin-bottom:10px">Comparer la cote</div>
+    <div style="font-size:13px;color:#a8aec8;line-height:1.5;margin-bottom:14px">La cote finale se vérifie toujours sur le bookmaker. 18+ uniquement, jeu responsable.</div>
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">
+      ${bookmakerButtons.map((b, i) => `
+        <a href="${b.url}" style="display:block;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:1px solid ${colors[i] || "#64748b"};color:#fff;padding:12px 10px;border-radius:10px;text-decoration:none;font-weight:800;font-size:13px">
+          ${b.text}
+        </a>`).join("")}
+    </div>
+  </div>`;
+}
 
 // Preuves storage file
 const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
@@ -2761,6 +2777,7 @@ app.post("/internal/pick-notify", async (req, res) => {
     <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">💰 Gain potentiel sur 100€ misés : <strong style="color:#10b981">+${gainPotentiel}€</strong></div>
     <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir l'analyse complète →</a>
   </div>
+  ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
     TousLesMatchs — Analyse IA · <a href="https://www.touslesmatchs.com" style="color:#6366f1;text-decoration:none">touslesmatchs.com</a><br>
     ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable.
@@ -2833,6 +2850,7 @@ app.post("/internal/pick-result-notify", async (req, res) => {
   <div style="text-align:center">
     <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir TousLesMatchs</a>
   </div>
+  ${bookmakerEmailHtml()}
 </div>`;
 
     let sent = 0;

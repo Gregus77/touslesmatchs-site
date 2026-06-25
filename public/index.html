@@ -1240,7 +1240,7 @@ footer{
     <!-- CTA -->
     <div class="liad-cta">
       <a href="/live-ia" class="liad-try-btn">Analyser un vrai match maintenant →</a>
-      <div class="liad-note">⚡ Résultat en ~30 secondes<br>Disponible plans Pro &amp; Elite</div>
+      <div class="liad-note">⚡ Résultat en ~30 secondes<br>Disponible plans Pro &amp; Premium</div>
     </div>
   </div>
 </section>
@@ -2007,7 +2007,7 @@ function renderNavAuth(){
   if(email&&plan){
     const isElite=plan==='elite';
     el.innerHTML=`<div class="nav-user">
-      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Premium':'⚡ Pro'}</span>
       <button class="nav-logout" onclick="doLogout()" title="${i18n.t('logout')}">✕</button>
     </div>`;
   } else {
