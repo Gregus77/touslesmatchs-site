@@ -18,10 +18,14 @@ const SPORTS_KEY  = process.env.API_SPORTS_KEY;
 const PUBLIC_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const PUBLIC_CHAT = process.env.TELEGRAM_CHAT_ID || "@touslesmatchs_fr";
 const ADMIN_USER_ID = "309921562";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || "gpt-image-1";
 
 const REPO        = "/repo";
 const PICKS_FILE  = path.join(REPO, "public/data/picks.json");
 const DATA_FILE   = path.join(REPO, "data/picks.json");
+const GENERATED_DIR = path.join(REPO, "public/generated/picks");
+const GENERATED_PUBLIC_PATH = "/generated/picks";
 const MEMORY_FILE = path.join(REPO, "data/hermes_memory.json");
 const IMPROVEMENT_LOG_FILE = path.join(REPO, "data/hermes_improvement_log.json");
 const DAILY_RUN_FILE = path.join(REPO, "data/hermes_daily_run.json");
@@ -129,7 +133,92 @@ function pickVisualUrl(pick) {
   );
 }
 
+function slugify(value) {
+  return String(value || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90) || "match";
+}
+
+function buildMatchVisualPrompt(pick) {
+  return [
+    "Create a premium sports betting match poster for TousLesMatchs.",
+    "Style: dark luxury football stadium, neon green accents, clean modern typography, high contrast, professional Telegram preview.",
+    `Match: ${pick.home || "Home"} vs ${pick.away || "Away"}.`,
+    `Competition: ${pick.league || pick.competition || "Football"}.`,
+    `Prediction: ${pick.prono || pick.bet || "Pick IA"}.`,
+    `Odds: ${pick.cote || "N/A"}. Confidence: ${pick.confidenceTg || pick.confidence || "N/A"}.`,
+    "Include team names large, VS in the center, prediction/odds/confidence at the bottom.",
+    "Do not include bookmaker logos. Do not include guaranteed win wording. No real person photo."
+  ].join(" ");
+}
+
+async function downloadBinary(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`download_image_${res.status}`);
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function generateMatchVisual(pick) {
+  if (!OPENAI_API_KEY) return "";
+  if (!pick?.home || !pick?.away) return "";
+
+  const date = pick.date || new Date().toISOString().slice(0, 10);
+  const fileName = `${date}-${slugify(pick.home)}-vs-${slugify(pick.away)}.png`;
+  const filePath = path.join(GENERATED_DIR, fileName);
+  const publicUrl = `https://www.touslesmatchs.com${GENERATED_PUBLIC_PATH}/${fileName}`;
+
+  if (fs.existsSync(filePath)) return publicUrl;
+
+  const body = {
+    model: OPENAI_IMAGE_MODEL,
+    prompt: buildMatchVisualPrompt(pick),
+    size: "1536x1024",
+    n: 1
+  };
+
+  try {
+    fs.mkdirSync(GENERATED_DIR, { recursive: true });
+    const res = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error?.message || `openai_image_${res.status}`);
+
+    const item = json.data?.[0] || {};
+    const bytes = item.b64_json
+      ? Buffer.from(item.b64_json, "base64")
+      : item.url ? await downloadBinary(item.url) : null;
+    if (!bytes) throw new Error("openai_image_empty");
+
+    fs.writeFileSync(filePath, bytes);
+    console.log(`[visual] generated ${publicUrl}`);
+    return publicUrl;
+  } catch (e) {
+    console.error("[visual] generation failed:", e.message);
+    return "";
+  }
+}
+
+async function ensurePickVisual(pick) {
+  if (!pick || pickVisualUrl(pick)) return pickVisualUrl(pick);
+  const visualUrl = await generateMatchVisual(pick);
+  if (visualUrl) {
+    pick.telegramImageUrl = visualUrl;
+    pick.visualUrl = visualUrl;
+  }
+  return visualUrl;
+}
+
 async function publishTelegramPick({ token, chatId, text, pick }) {
+  await ensurePickVisual(pick);
   const visualUrl = pickVisualUrl(pick);
   if (visualUrl) {
     const photoResult = await sendTelegramPhotoWithToken(token, chatId, visualUrl, text);
@@ -646,6 +735,7 @@ async function runAnalyse(chatId) {
     sourceMatchId: p.sourceMatchId || p.fixtureId || null,
     fixtureId: p.fixtureId || null,
   }, matches);
+  await ensurePickVisual(data.currentPick);
   savePicks(data);
 
   const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
@@ -827,6 +917,8 @@ async function cmdPublish(chatId, opts = {}) {
   const data = loadPicks();
   const p = data.currentPick;
   if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick a publier"); return; }
+  await ensurePickVisual(p);
+  savePicks(data);
 
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
   const text = `<b>Pick IA du jour - ${today}</b>
@@ -855,6 +947,8 @@ async function cmdPublishPremium(chatId, opts = {}) {
   const data = loadPicks();
   const p = data.currentPick;
   if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick a publier"); return; }
+  await ensurePickVisual(p);
+  savePicks(data);
 
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
   const edgeStr = p.edge ? ` - Edge: +${Math.round(p.edge * 100)}%` : "";
