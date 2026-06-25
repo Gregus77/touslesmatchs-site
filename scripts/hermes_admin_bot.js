@@ -89,6 +89,56 @@ function sendTelegramWithToken(token, chatId, text, extra = {}) {
   });
 }
 
+function sendTelegramPhotoWithToken(token, chatId, photo, caption, extra = {}) {
+  return new Promise((resolve) => {
+    if (!token || !chatId || !photo) return resolve({ ok: false, description: "token, channel ou photo manquant" });
+    const body = JSON.stringify({ chat_id: chatId, photo, caption, parse_mode: "HTML", ...extra });
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${token}/sendPhoto`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => {
+        try { resolve(JSON.parse(d)); }
+        catch { resolve({ ok: false, description: d }); }
+      });
+    });
+    req.on("error", e => resolve({ ok: false, description: e.message }));
+    req.write(body); req.end();
+  });
+}
+
+function normalizePublicImageUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/")) return `https://www.touslesmatchs.com${raw}`;
+  return "";
+}
+
+function pickVisualUrl(pick) {
+  return normalizePublicImageUrl(
+    pick?.telegramImageUrl ||
+    pick?.visualUrl ||
+    pick?.imageUrl ||
+    pick?.previewImage ||
+    pick?.visual
+  );
+}
+
+async function publishTelegramPick({ token, chatId, text, pick }) {
+  const visualUrl = pickVisualUrl(pick);
+  if (visualUrl) {
+    const photoResult = await sendTelegramPhotoWithToken(token, chatId, visualUrl, text);
+    if (photoResult.ok) return photoResult;
+    console.error("[telegram] sendPhoto fallback:", photoResult.description || photoResult.error || "unknown");
+  }
+  return sendTelegramWithToken(token, chatId, text, { disable_web_page_preview: false });
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -773,94 +823,61 @@ https://www.touslesmatchs.com`;
 }
 
 async function cmdPublish(chatId, opts = {}) {
-  if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "❌ TELEGRAM_BOT_TOKEN manquant"); return; }
+  if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "TELEGRAM_BOT_TOKEN manquant"); return; }
   const data = loadPicks();
   const p = data.currentPick;
-  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier"); return; }
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick a publier"); return; }
 
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-  const text = `🔥 <b>Pick IA du jour — ${today}</b>
+  const text = `<b>Pick IA du jour - ${today}</b>
 
-🏟️ <b>${p.home} vs ${p.away}</b>
-🏆 ${p.league || ""}
-🕒 ${p.time || ""}
+<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+${escapeHtml(p.league || "")}
+${escapeHtml(p.time || "")}
 
-🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
-📊 <b>Cote :</b> ${p.cote || ""}
-✅ <b>Confiance Hermès :</b> ${p.confidenceTg || ""}
+<b>Pronostic :</b> ${escapeHtml(p.prono || p.bet || "")}
+<b>Cote :</b> ${escapeHtml(p.cote || "")}
+<b>Confiance Hermes :</b> ${escapeHtml(p.confidenceTg || "")}
 
-🔎 Analyse complète : https://www.touslesmatchs.com
+Analyse complete : https://www.touslesmatchs.com
 
-⚠️ 18+ uniquement. Jeu responsable.`;
+18+ uniquement. Jeu responsable.`;
 
-  const body = JSON.stringify({ chat_id: PUBLIC_CHAT, text, parse_mode: "HTML", disable_web_page_preview: false });
-  let ok = false;
-  let err = "";
-  await new Promise((resolve) => {
-    const req = https.request({
-      hostname: "api.telegram.org",
-      path: `/bot${PUBLIC_BOT_TOKEN}/sendMessage`,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
-    }, res => {
-      let d = "";
-      res.on("data", c => d += c);
-      res.on("end", () => {
-        try {
-          const parsed = JSON.parse(d);
-          ok = !!parsed.ok;
-          err = parsed.description || "";
-        } catch {
-          err = d;
-        }
-        resolve();
-      });
-    });
-    req.on("error", e => { err = e.message; resolve(); });
-    req.write(body); req.end();
-  });
-  await reply(chatId, ok ? `✅ Pick publié sur ${PUBLIC_CHAT}` : `❌ Erreur publication Telegram Free (${PUBLIC_CHAT}) : ${err || "réponse inconnue"}`);
+  const sent = await publishTelegramPick({ token: PUBLIC_BOT_TOKEN, chatId: PUBLIC_CHAT, text, pick: p });
+  const ok = !!sent.ok;
+  const err = sent.description || sent.error || "";
+  await reply(chatId, ok ? `Pick publie sur ${PUBLIC_CHAT}` : `Erreur publication Telegram Free (${PUBLIC_CHAT}) : ${err || "reponse inconnue"}`);
 }
 
 async function cmdPublishPremium(chatId, opts = {}) {
-  if (!TG_TOKEN) { await reply(chatId, "❌ Token Telegram manquant"); return; }
-  if (!PREMIUM_CHANNEL) { await reply(chatId, "❌ TELEGRAM_PREMIUM_CHANNEL_ID manquant"); return; }
+  if (!TG_TOKEN) { await reply(chatId, "Token Telegram manquant"); return; }
+  if (!PREMIUM_CHANNEL) { await reply(chatId, "TELEGRAM_PREMIUM_CHANNEL_ID manquant"); return; }
   const data = loadPicks();
   const p = data.currentPick;
-  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "❌ Aucun pick à publier"); return; }
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick a publier"); return; }
 
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-  const edgeStr = p.edge ? ` · Edge: +${Math.round(p.edge * 100)}%` : "";
-  const probStr = p.probabilite_estimee ? `\n📈 Proba estimée : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
-  const text = `🏆 <b>Pick PREMIUM du jour — ${today}</b>
+  const edgeStr = p.edge ? ` - Edge: +${Math.round(p.edge * 100)}%` : "";
+  const probStr = p.probabilite_estimee ? `\nProba estimee : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
+  const text = `<b>Pick PREMIUM du jour - ${today}</b>
 
-🏟️ <b>${p.home} vs ${p.away}</b>
-🏆 ${p.league || ""}
-🕒 ${p.time || ""}
+<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+${escapeHtml(p.league || "")}
+${escapeHtml(p.time || "")}
 
-🎯 <b>Pronostic :</b> ${p.prono || p.bet || ""}
-📊 <b>Cote :</b> <b>${p.cote || ""}</b>
-✅ <b>Confiance Concile :</b> ${p.confidenceTg || ""}${probStr}
-${p.raison ? `\n💡 <i>${p.raison}</i>` : ""}
+<b>Pronostic :</b> ${escapeHtml(p.prono || p.bet || "")}
+<b>Cote :</b> <b>${escapeHtml(p.cote || "")}</b>
+<b>Confiance Concile :</b> ${escapeHtml(p.confidenceTg || "")}${probStr}
+${p.raison ? `\n<i>${escapeHtml(p.raison)}</i>` : ""}
 
-🔎 Analyse complète : https://www.touslesmatchs.com/live-ia
+Analyse complete : https://www.touslesmatchs.com/live-ia
 
-⚠️ 18+ uniquement. Jeu responsable.`;
+18+ uniquement. Jeu responsable.`;
 
-  const body = JSON.stringify({ chat_id: PREMIUM_CHANNEL, text, parse_mode: "HTML", disable_web_page_preview: false });
-  let ok = false;
-  let err = "";
-  await new Promise((resolve) => {
-    const req = https.request({
-      hostname: "api.telegram.org",
-      path: `/bot${TG_TOKEN}/sendMessage`,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
-    }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { const parsed = JSON.parse(d); ok = !!parsed.ok; err = parsed.description || ""; } catch { err = d; } resolve(); }); });
-    req.on("error", e => { err = e.message; resolve(); });
-    req.write(body); req.end();
-  });
-  await reply(chatId, ok ? `✅ Pick publié sur le canal Premium (${PREMIUM_CHANNEL})` : `❌ Erreur publication Premium (${PREMIUM_CHANNEL}) : ${err || "vérifie que le bot est admin du canal"}`);
+  const sent = await publishTelegramPick({ token: TG_TOKEN, chatId: PREMIUM_CHANNEL, text, pick: p });
+  const ok = !!sent.ok;
+  const err = sent.description || sent.error || "";
+  await reply(chatId, ok ? `Pick publie sur le canal Premium (${PREMIUM_CHANNEL})` : `Erreur publication Premium (${PREMIUM_CHANNEL}) : ${err || "verifie que le bot est admin du canal"}`);
 }
 
 async function notifyPickByEmail(pick) {
