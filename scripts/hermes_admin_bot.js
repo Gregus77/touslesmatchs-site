@@ -256,13 +256,20 @@ async function getUpdates(offset) {
 
 // ── Picks helpers ─────────────────────────────────────────────────────────────
 function loadPicks() {
-  try { return JSON.parse(fs.readFileSync(PICKS_FILE, "utf8")); } catch { return { currentPick: {}, history: [] }; }
+  for (const file of [DATA_FILE, PICKS_FILE]) {
+    try {
+      const data = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (data && typeof data === "object") return data;
+    } catch {}
+  }
+  return { currentPick: {}, history: [] };
 }
 
 function savePicks(data) {
   const json = JSON.stringify(data, null, 2);
+  try { fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true }); fs.writeFileSync(DATA_FILE, json, "utf8"); } catch {}
+  fs.mkdirSync(path.dirname(PICKS_FILE), { recursive: true });
   fs.writeFileSync(PICKS_FILE, json, "utf8");
-  try { fs.mkdirSync(path.join(REPO, "data"), { recursive: true }); fs.writeFileSync(DATA_FILE, json, "utf8"); } catch {}
 }
 
 function appendImprovementLog(pick) {

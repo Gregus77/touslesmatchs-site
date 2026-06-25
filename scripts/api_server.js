@@ -97,6 +97,8 @@ const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE = process.env.STRIPE_PRICE_ID_CARTE || process.env.STRIPE_PRICE_CARTE || "";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
+const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 
 // Preuves storage file
 const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
@@ -307,6 +309,36 @@ function httpPost(url, body, headers = {}) {
       res.on("end", () => {
         try { resolve(JSON.parse(data)); }
         catch { resolve({}); }
+      });
+    });
+    req.on("error", reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
+function httpPostStrict(url, body, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const opts = new URL(url);
+    const payload = JSON.stringify(body);
+    const options = {
+      hostname: opts.hostname,
+      path: opts.pathname + opts.search,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload), ...headers },
+    };
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => {
+        let parsed = {};
+        try { parsed = data ? JSON.parse(data) : {}; } catch { parsed = { raw: data }; }
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          const detail = typeof parsed === "object" ? JSON.stringify(parsed).slice(0, 500) : String(data).slice(0, 500);
+          reject(new Error(`HTTP ${res.statusCode}: ${detail}`));
+          return;
+        }
+        resolve(parsed);
       });
     });
     req.on("error", reject);
@@ -1761,21 +1793,17 @@ async function brevoAddContact(email, tag) {
 }
 
 async function brevoSendEmail(to, subject, htmlContent) {
-  if (!BREVO_API_KEY) return;
-  try {
-    await httpPost(
-      "https://api.brevo.com/v3/smtp/email",
-      {
-        sender: { name: "TousLesMatchs", email: "noreply@touslesmatchs.com" },
-        to: [{ email: to }],
-        subject,
-        htmlContent,
-      },
-      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
-    );
-  } catch (e) {
-    console.error("[brevo] sendEmail error:", e.message);
-  }
+  if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
+  return httpPostStrict(
+    "https://api.brevo.com/v3/smtp/email",
+    {
+      sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+      to: [{ email: to }],
+      subject,
+      htmlContent,
+    },
+    { "api-key": BREVO_API_KEY, "content-type": "application/json" }
+  );
 }
 
 function leadLang(email, leadMap) {

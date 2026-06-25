@@ -39,13 +39,15 @@ services:
       - JWT_SECRET=${JWT_SECRET:-}
       - DB_PATH=/data/tlm.db
       - BREVO_API_KEY=${BREVO_API_KEY:-}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL:-}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-TousLesMatchs}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID:-}
       - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT:-}
     volumes:
       - api_data:/data
       - /var/touslesmatchs:/var/touslesmatchs
-      - /opt/touslesmatchs/public/data:/picks:ro
+      - /opt/touslesmatchs/data:/picks:ro
     networks:
       - web
     expose:
