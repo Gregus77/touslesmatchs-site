@@ -2408,5 +2408,54 @@ document.addEventListener('click',function(e){
     if(el) el.textContent='Demain matin';
   }
 });</script>
+<script>
+(function ensureCurrentPickVisible(){
+  function text(v){ return (v === null || v === undefined || v === '') ? '-' : String(v); }
+  function esc(v){
+    return text(v).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+    });
+  }
+  function drawPick(p){
+    var root=document.getElementById('pick-root');
+    if(!root || !p) return;
+    var home=(p.teamA&&p.teamA.name)||p.home;
+    var away=(p.teamB&&p.teamB.name)||p.away;
+    if(!home || home === 'Analyse en cours' || p.status === 'no_pick' || p.status === 'NOPICK') return;
+    var market=p.marketLabel||p.prono||p.marketType||p.bet||'Pronostic du Concile';
+    var confidence=p.confidenceTg || (p.confidence ? (p.confidence + '/10') : '7/10');
+    root.innerHTML =
+      '<div class="pick-outer"><div class="pick-inner">' +
+        '<div class="pick-head">' +
+          '<div class="ph-left"><span class="ptag ptag-live">Pick du jour</span><span class="ptag-comp">'+esc(p.competition||p.league||p.sport||'Football')+'</span></div>' +
+          '<div class="ph-right">'+esc(p.time||'')+'</div>' +
+        '</div>' +
+        '<div class="pick-body">' +
+          '<div class="teams-block">' +
+            '<div class="team"><div class="team-nm">'+esc(home)+'</div></div>' +
+            '<div class="vs">VS</div>' +
+            '<div class="team"><div class="team-nm">'+esc(away)+'</div></div>' +
+          '</div>' +
+          '<div class="market-card">' +
+            '<div class="mk-label">Pronostic</div>' +
+            '<div class="mk-title">'+esc(market)+'</div>' +
+            '<div class="mk-sub">Cote @'+esc(p.cote||'-')+' · Confiance '+esc(confidence)+'</div>' +
+          '</div>' +
+        '</div>' +
+      '</div></div>';
+  }
+  async function loadPick(){
+    try{
+      var r=await fetch('/api/current-pick?t='+Date.now(), {cache:'no-store'});
+      var d=await r.json();
+      drawPick(d.pick||d.currentPick||(d.home?d:null));
+    }catch(e){
+      console.warn('[ensureCurrentPickVisible] failed', e);
+    }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadPick);
+  else loadPick();
+})();
+</script>
 </body>
 </html>
