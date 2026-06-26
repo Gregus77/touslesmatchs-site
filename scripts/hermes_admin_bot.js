@@ -1543,6 +1543,7 @@ async function cmdHelp(chatId) {
 /record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0 — Ajouter une prédiction vérifiée aux stats Concile
 /strategy — Rapport Codex Prono Hunter (marchés, IA, compétitions)
 /alerts — Scanner maintenant les signaux forts privés
+/publishalert — Publier manuellement la dernière alerte forte dans le groupe Premium
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Premium
