@@ -293,6 +293,8 @@ function appendImprovementLog(pick) {
       status: pick.status || null,
       score: pick.score || null,
       sport: pick.sport || "Football",
+      home: pick.home || pick.teamA?.name || null,
+      away: pick.away || pick.teamB?.name || null,
       competition: pick.league || pick.competition || null,
       bet: pick.prono || pick.bet || null,
       cote: pick.cote || null,
@@ -586,6 +588,26 @@ function memoryBlock() {
   const rules = (m.rules_derived || []).join("\n");
   const stats = m.general ? `Winrate global : ${m.general.winrate}% sur ${m.picks_analysed} picks analysés` : "";
   return `\nMÉMOIRE HERMÈS (${m.picks_analysed} picks analysés) :\n${stats}\nRÈGLES APPRISES :\n${rules}\n`;
+}
+
+async function refreshHermesMemory(chatId, reason = "resultat") {
+  try {
+    delete require.cache[require.resolve("./hermes_learn.js")];
+    const { generateMemory } = require("./hermes_learn.js");
+    const memory = generateMemory();
+    if (!memory) {
+      if (chatId) await reply(chatId, "Mémoire Hermès non mise à jour : pas encore assez de résultats propres.");
+      return null;
+    }
+    const msg = `Mémoire Hermès mise à jour (${reason}) : ${memory.picks_analysed} picks analysés, winrate ${memory.general?.winrate ?? 0}%.`;
+    console.log(`[hermes_learn] ${msg}`);
+    if (chatId) await reply(chatId, msg);
+    return memory;
+  } catch (e) {
+    console.error("[hermes_learn]", e.message);
+    if (chatId) await reply(chatId, `Erreur mémoire Hermès : ${e.message}`);
+    return null;
+  }
 }
 
 async function cmdLearn(chatId) {
@@ -935,11 +957,7 @@ async function cmdResult(chatId, status) {
   }
 
   // Auto-apprentissage après chaque résultat
-  try {
-    const { generateMemory } = require("./hermes_learn.js");
-    generateMemory();
-    console.log("🧠 Mémoire Hermès mise à jour");
-  } catch (e) { console.error("hermes_learn:", e.message); }
+  await refreshHermesMemory(chatId, status.toLowerCase());
 }
 
 async function cmdResultPreview(chatId) {
@@ -1342,7 +1360,22 @@ async function cmdRecord(chatId, args) {
     await reply(chatId, `❌ Enregistrement impossible : ${result.error || "erreur inconnue"}`);
     return;
   }
+  appendImprovementLog({
+    date: new Date().toISOString().slice(0, 10),
+    resolvedAt: new Date().toISOString(),
+    status: result.outcome === "win" ? "GAGNE" : "PERDU",
+    score,
+    sport: "Football",
+    home,
+    away,
+    league: competition,
+    prono: bet,
+    bet,
+    cote: null,
+    source: "manual_record",
+  });
   await reply(chatId, `✅ Prédiction enregistrée dans les stats Concile\n\n${home} vs ${away} — ${score}\n🎯 ${bet} → <b>${result.outcome === "win" ? "GAGNÉ" : "PERDU"}</b>`);
+  await refreshHermesMemory(chatId, "record");
 }
 
 async function cmdDeploy(chatId) {

@@ -6,6 +6,32 @@ const path = require("path");
 
 const PICKS_FILE   = process.env.PICKS_FILE   || "/repo/public/data/picks.json";
 const MEMORY_FILE  = process.env.MEMORY_FILE  || "/repo/data/hermes_memory.json";
+const IMPROVEMENT_LOG_FILE = process.env.IMPROVEMENT_LOG_FILE || "/repo/data/hermes_improvement_log.json";
+
+function cleanText(value) {
+  return String(value || "").trim();
+}
+
+function normalizeStatus(value) {
+  const s = cleanText(value).toUpperCase();
+  if (["GAGNE", "WIN", "WON"].includes(s)) return "GAGNE";
+  if (["PERDU", "LOSS", "LOST"].includes(s)) return "PERDU";
+  return "";
+}
+
+function isUsefulKey(value) {
+  const v = cleanText(value);
+  return v && !["inconnu", "unknown", "n/a", "na", "null", "undefined"].includes(v.toLowerCase());
+}
+
+function isResolvedPick(h) {
+  return (
+    (h.status === "GAGNE" || h.status === "PERDU") &&
+    isUsefulKey(h.home) &&
+    isUsefulKey(h.away) &&
+    isUsefulKey(h.prono)
+  );
+}
 
 // ── Charger l'historique ──────────────────────────────────────────────────────
 function loadHistory() {
@@ -21,26 +47,64 @@ function loadHistory() {
         const [date, match, prono, cote, score, status, sport] = h;
         const parts = (match || "").split(" vs ");
         return {
-          date, sport: sport || "Football",
-          home: parts[0] || "", away: parts[1] || "",
+          date: cleanText(date), sport: cleanText(sport) || "Football",
+          home: cleanText(parts[0]), away: cleanText(parts[1]),
           league: "", prono: prono || "",
           cote: parseFloat(cote) || 0,
-          score: score || "", status: status || ""
+          score: cleanText(score), status: normalizeStatus(status)
         };
       }
       return {
-        date: h.date || "", sport: h.sport || "Football",
-        home: h.home || "", away: h.away || "",
-        league: h.league || h.competition || "",
-        prono: h.prono || h.bet || "",
+        date: cleanText(h.date), sport: cleanText(h.sport) || "Football",
+        home: cleanText(h.home), away: cleanText(h.away),
+        league: cleanText(h.league || h.competition),
+        prono: cleanText(h.prono || h.bet),
         cote: parseFloat(h.cote) || 0,
-        score: h.score || "", status: h.status || ""
+        score: cleanText(h.score), status: normalizeStatus(h.status)
       };
-    }).filter(h => h.status === "GAGNE" || h.status === "PERDU");
+    }).filter(isResolvedPick);
   } catch (e) {
     console.error("Impossible de lire picks.json:", e.message);
     return [];
   }
+}
+
+function loadImprovementHistory() {
+  try {
+    const rows = JSON.parse(fs.readFileSync(IMPROVEMENT_LOG_FILE, "utf8"));
+    if (!Array.isArray(rows)) return [];
+    return rows.map(r => ({
+      date: cleanText(r.date || cleanText(r.resolvedAt).slice(0, 10)),
+      sport: cleanText(r.sport) || "Football",
+      home: cleanText(r.home),
+      away: cleanText(r.away),
+      league: cleanText(r.competition || r.league),
+      prono: cleanText(r.bet || r.prono),
+      cote: parseFloat(r.cote) || 0,
+      score: cleanText(r.score),
+      status: normalizeStatus(r.status)
+    })).filter(isResolvedPick);
+  } catch {
+    return [];
+  }
+}
+
+function loadAllResolvedHistory() {
+  const merged = [...loadHistory(), ...loadImprovementHistory()];
+  const seen = new Set();
+  return merged.filter(h => {
+    const key = [
+      h.date,
+      h.home.toLowerCase(),
+      h.away.toLowerCase(),
+      h.prono.toLowerCase(),
+      h.score,
+      h.status
+    ].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // ── Statistiques générales ────────────────────────────────────────────────────
@@ -67,7 +131,8 @@ function computeStats(history) {
 function analyzeByField(history, getKey) {
   const groups = {};
   history.forEach(h => {
-    const key = getKey(h) || "Inconnu";
+    const key = cleanText(getKey(h));
+    if (!isUsefulKey(key)) return;
     if (!groups[key]) groups[key] = { gagnes: 0, perdus: 0, picks: [] };
     groups[key].picks.push(h);
     if (h.status === "GAGNE") groups[key].gagnes++;
@@ -133,7 +198,7 @@ function topPatterns(byField, n = 3) {
 
 // ── Générer le profil mémoire ─────────────────────────────────────────────────
 function generateMemory() {
-  const history = loadHistory();
+  const history = loadAllResolvedHistory();
 
   if (history.length < 3) {
     console.log(`⚠️ Pas assez de données (${history.length} picks résolus). Minimum 3 requis.`);
@@ -143,7 +208,7 @@ function generateMemory() {
   const general     = computeStats(history);
   const byCote      = analyzeByField(history, getCoteRange);
   const byProno     = analyzeByField(history, getPronoType);
-  const byLeague    = analyzeByField(history, h => h.league || "Inconnu");
+  const byLeague    = analyzeByField(history, h => h.league);
   const errors      = recentErrors(history);
   const coterPat    = topPatterns(byCote);
   const pronoPat    = topPatterns(byProno);
@@ -183,6 +248,14 @@ function generateMemory() {
     generated_at: new Date().toISOString(),
     picks_analysed: history.length,
     general,
+    data_quality: {
+      with_league: history.filter(h => isUsefulKey(h.league)).length,
+      with_cote: history.filter(h => h.cote && h.cote >= 1.01).length,
+      sources: {
+        picks_history: loadHistory().length,
+        improvement_log: loadImprovementHistory().length
+      }
+    },
     rules_derived: rules,
     by_cote_range: byCote,
     by_prono_type: byProno,
@@ -237,9 +310,11 @@ function formatForTelegram(memory) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-const memory = generateMemory();
-if (memory) {
-  console.log("\n" + formatForTelegram(memory));
+if (require.main === module) {
+  const memory = generateMemory();
+  if (memory) {
+    console.log("\n" + formatForTelegram(memory));
+  }
 }
 
-module.exports = { generateMemory, formatForTelegram, loadHistory };
+module.exports = { generateMemory, formatForTelegram, loadHistory, loadImprovementHistory, loadAllResolvedHistory };
