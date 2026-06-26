@@ -394,7 +394,7 @@ let lastUpdate = null;
 let PICK_MATCH = null;
 async function loadPickMatch(){
   try{
-    const r=await fetch('/current-pick?t='+Date.now());
+    const r=await fetch('/api/current-pick?t='+Date.now(), {cache:'no-store'});
     const d=await r.json();
     const p=d.pick;
     const home=p?.teamA?.name||p?.home;
@@ -414,7 +414,8 @@ async function loadPickMatch(){
         if(!isNaN(a)) scoreA=a;
         if(!isNaN(b)) scoreB=b;
       }
-      const isUpcoming=(p.status==='upcoming'||p.status==='UPCOMING'||(!p.status&&!p.score));
+      const statusText=String(p.status||'').toUpperCase();
+      const isUpcoming=(statusText==='UPCOMING'||statusText==='EN ATTENTE'||statusText==='PENDING'||(!p.status&&!p.score));
       PICK_MATCH={
         id:"pick-live",
         home, away,
@@ -497,6 +498,9 @@ async function loadMatches(force){
             PICK_MATCH.status = 'FINISHED';
           }
         }
+      }
+      if(PICK_MATCH && PICK_MATCH.status === 'upcoming' && !pickMatchInList(allMatches)){
+        allMatches.unshift(PICK_MATCH);
       }
       lastUpdate = new Date();
       document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';
