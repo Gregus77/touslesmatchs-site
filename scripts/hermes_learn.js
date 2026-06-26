@@ -33,6 +33,37 @@ function isResolvedPick(h) {
   );
 }
 
+function inferLeague(h) {
+  const home = cleanText(h.home).toLowerCase();
+  const away = cleanText(h.away).toLowerCase();
+  const match = `${home} ${away}`;
+  const prono = cleanText(h.prono).toLowerCase();
+
+  if (match.includes("shamrock") || match.includes("derry city")) return "Ireland Premier";
+  if (match.includes("france") && match.includes("irak")) return "FIFA - Coupe du monde";
+  if (match.includes("turquie") && match.includes("paraguay")) return "Coupe du Monde 2026";
+  if (match.includes("maroc") && (match.includes("ecosse") || match.includes("écosse"))) return "Coupe du Monde 2026";
+  if (match.includes("canada") && match.includes("ouzbekistan")) return "Coupe du Monde 2026";
+  if (match.includes("argentina") || match.includes("argentine")) return "FIFA - Coupe du monde";
+  if (match.includes("ny knicks") || match.includes("san antonio") || prono.includes("pts")) return "NBA";
+  return "";
+}
+
+function normalizePick(raw) {
+  const h = { ...raw };
+  h.date = cleanText(h.date);
+  h.sport = cleanText(h.sport) || "Football";
+  h.home = cleanText(h.home);
+  h.away = cleanText(h.away);
+  h.league = cleanText(h.league || h.competition);
+  h.prono = cleanText(h.prono || h.bet);
+  h.cote = parseFloat(h.cote) || 0;
+  h.score = cleanText(h.score);
+  h.status = normalizeStatus(h.status);
+  if (!isUsefulKey(h.league)) h.league = inferLeague(h);
+  return h;
+}
+
 // ── Charger l'historique ──────────────────────────────────────────────────────
 function loadHistory() {
   try {
@@ -44,24 +75,11 @@ function loadHistory() {
     // Format objet  : { date, home, away, prono, cote, score, status, league }
     return hist.map(h => {
       if (Array.isArray(h)) {
-        const [date, match, prono, cote, score, status, sport] = h;
+        const [date, match, prono, cote, score, status, sport, league] = h;
         const parts = (match || "").split(" vs ");
-        return {
-          date: cleanText(date), sport: cleanText(sport) || "Football",
-          home: cleanText(parts[0]), away: cleanText(parts[1]),
-          league: "", prono: prono || "",
-          cote: parseFloat(cote) || 0,
-          score: cleanText(score), status: normalizeStatus(status)
-        };
+        return normalizePick({ date, sport, home: parts[0], away: parts[1], league, prono, cote, score, status });
       }
-      return {
-        date: cleanText(h.date), sport: cleanText(h.sport) || "Football",
-        home: cleanText(h.home), away: cleanText(h.away),
-        league: cleanText(h.league || h.competition),
-        prono: cleanText(h.prono || h.bet),
-        cote: parseFloat(h.cote) || 0,
-        score: cleanText(h.score), status: normalizeStatus(h.status)
-      };
+      return normalizePick(h);
     }).filter(isResolvedPick);
   } catch (e) {
     console.error("Impossible de lire picks.json:", e.message);
@@ -73,16 +91,16 @@ function loadImprovementHistory() {
   try {
     const rows = JSON.parse(fs.readFileSync(IMPROVEMENT_LOG_FILE, "utf8"));
     if (!Array.isArray(rows)) return [];
-    return rows.map(r => ({
-      date: cleanText(r.date || cleanText(r.resolvedAt).slice(0, 10)),
-      sport: cleanText(r.sport) || "Football",
-      home: cleanText(r.home),
-      away: cleanText(r.away),
-      league: cleanText(r.competition || r.league),
-      prono: cleanText(r.bet || r.prono),
-      cote: parseFloat(r.cote) || 0,
-      score: cleanText(r.score),
-      status: normalizeStatus(r.status)
+    return rows.map(r => normalizePick({
+      date: r.date || cleanText(r.resolvedAt).slice(0, 10),
+      sport: r.sport,
+      home: r.home,
+      away: r.away,
+      league: r.competition || r.league,
+      prono: r.bet || r.prono,
+      cote: r.cote,
+      score: r.score,
+      status: r.status
     })).filter(isResolvedPick);
   } catch {
     return [];
@@ -91,8 +109,8 @@ function loadImprovementHistory() {
 
 function loadAllResolvedHistory() {
   const merged = [...loadHistory(), ...loadImprovementHistory()];
-  const seen = new Set();
-  return merged.filter(h => {
+  const byKey = new Map();
+  for (const h of merged) {
     const key = [
       h.date,
       h.home.toLowerCase(),
@@ -101,10 +119,20 @@ function loadAllResolvedHistory() {
       h.score,
       h.status
     ].join("|");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, h);
+      continue;
+    }
+    byKey.set(key, {
+      ...current,
+      ...h,
+      league: isUsefulKey(h.league) ? h.league : current.league,
+      cote: h.cote || current.cote,
+      sport: h.sport || current.sport
+    });
+  }
+  return [...byKey.values()];
 }
 
 // ── Statistiques générales ────────────────────────────────────────────────────

@@ -329,7 +329,8 @@ function historyRowFromPick(pick) {
     String(pick.cote || ""),
     pick.score || "",
     pick.status || "EN ATTENTE",
-    pick.sport || "Football"
+    pick.sport || "Football",
+    pick.league || pick.competition || ""
   ];
 }
 

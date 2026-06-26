@@ -138,6 +138,11 @@ start_hermes() {
   local running
   running="$(docker inspect --format '{{.State.Running}}' touslesmatchs-hermes-admin 2>/dev/null || true)"
   [ "$running" = "true" ] || fail "Hermes container is not running."
+  local restarts started
+  restarts="$(docker inspect --format '{{.RestartCount}}' touslesmatchs-hermes-admin 2>/dev/null || echo 0)"
+  started="$(docker inspect --format '{{.State.StartedAt}}' touslesmatchs-hermes-admin 2>/dev/null || echo unknown)"
+  echo "Hermes restart_count=$restarts"
+  echo "Hermes started_at=$started"
   ok "Hermes container is running"
 }
 
