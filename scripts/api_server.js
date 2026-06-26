@@ -88,6 +88,9 @@ ensureColumn("concile_analyses", "final_score_home", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "final_score_away", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "resolved_at", "TEXT DEFAULT NULL");
 ensureColumn("concile_analyses", "result_source", "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "sport", "TEXT DEFAULT 'Football'");
+ensureColumn("concile_analyses", "learning_tier", "TEXT DEFAULT 'learning'");
+ensureColumn("concile_analyses", "learning_note", "TEXT DEFAULT ''");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
@@ -518,6 +521,26 @@ async function fetchFromApiSports() {
     results.push(...items);
     if (items.length) console.log(`[live-matches] API-Sports hockey: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
+
+  // Baseball live - apprentissage uniquement tant que les stats ne prouvent pas le sport
+  try {
+    const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const items = (data.response || []).slice(0, 10).map((g) => ({
+      id: "bb-" + g.id, sport: "Baseball",
+      source: "api-sports",
+      sourceId: String(g.id),
+      fixtureId: null,
+      home: g.teams?.home?.name, away: g.teams?.away?.name,
+      score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
+      score_away: g.scores?.away?.total ?? g.scores?.away ?? null,
+      minute: g.status?.long || g.status?.short || null,
+      status: "IN_PLAY",
+      competition: (g.league?.name || "Baseball") + (g.country?.name ? " · " + g.country.name : ""),
+      utcDate: g.date,
+    })).filter(g => g.home && g.away);
+    results.push(...items);
+    if (items.length) console.log(`[live-matches] API-Sports baseball: ${items.length}`);
+  } catch(e) { console.error("[live-matches] API-Sports baseball:", e.message); }
 
   if (results.length === 0) return null;
   console.log(`[live-matches] API-Sports total: ${results.length} événements`);
@@ -1171,17 +1194,85 @@ function getMockAnalysis(match) {
 }
 
 // ── Concile analysis trace ────────────────────────────────────────────────────
+function summarizeOutcomeRows(rows) {
+  const total = rows.reduce((n, r) => n + Number(r.total || 0), 0);
+  const wins = rows.reduce((n, r) => n + Number(r.wins || 0), 0);
+  const losses = rows.reduce((n, r) => n + Number(r.losses || 0), 0);
+  const resolved = wins + losses;
+  return { total, wins, losses, resolved, winrate: resolved ? Math.round((wins / resolved) * 100) : null };
+}
+
+function getLearningProfile({ sport = "Football", competition = "", bet = "" } = {}) {
+  const s = String(sport || "Football");
+  const c = String(competition || "");
+  const b = String(bet || "");
+  const empty = { total: 0, wins: 0, losses: 0, resolved: 0, winrate: null };
+  try {
+    const sportRows = db.prepare(`
+      SELECT COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM concile_analyses
+      WHERE sport = ? AND outcome IN ('win','loss')
+    `).all(s);
+    const marketRows = db.prepare(`
+      SELECT COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM concile_analyses
+      WHERE sport = ? AND best_bet = ? AND outcome IN ('win','loss')
+    `).all(s, b);
+    const competitionRows = db.prepare(`
+      SELECT COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM concile_analyses
+      WHERE sport = ? AND competition = ? AND outcome IN ('win','loss')
+    `).all(s, c);
+    return {
+      sport: s,
+      competition: c,
+      bet: b,
+      sportStats: summarizeOutcomeRows(sportRows),
+      marketStats: summarizeOutcomeRows(marketRows),
+      competitionStats: summarizeOutcomeRows(competitionRows),
+    };
+  } catch (e) {
+    console.error("[learning-profile]", e.message);
+    return { sport: s, competition: c, bet: b, sportStats: empty, marketStats: empty, competitionStats: empty };
+  }
+}
+
+function assessLearningProfile(profile, minResolved = 5) {
+  const reasons = [];
+  if (!profile) return { tier: "learning", score: 0, clientSafe: false, reasons: ["profil absent"] };
+  const sportResolved = profile.sportStats?.resolved || 0;
+  const marketResolved = profile.marketStats?.resolved || 0;
+  const sportWinrate = profile.sportStats?.winrate;
+  const marketWinrate = profile.marketStats?.winrate;
+  if (sportResolved < Math.max(3, minResolved)) reasons.push(`historique sport insuffisant (${sportResolved}/${Math.max(3, minResolved)})`);
+  if (marketResolved < minResolved) reasons.push(`historique marche insuffisant (${marketResolved}/${minResolved})`);
+  if (sportWinrate !== null && sportWinrate < 50) reasons.push(`sport sous 50% (${sportWinrate}%)`);
+  if (marketWinrate !== null && marketWinrate < 55) reasons.push(`marche sous 55% (${marketWinrate}%)`);
+  const clientSafe = reasons.length === 0;
+  return { tier: clientSafe ? "elite_candidate" : "learning", score: clientSafe ? 100 : Math.max(0, 70 - reasons.length * 15), clientSafe, reasons };
+}
+
 function saveConcileAnalysis(match, result, pickBet) {
   try {
     const minute = parseInt(match.minute) || null;
     const statsStatus = result.statsStatus?.status || "unavailable";
     const matchKey = getPredictionSnapshotKey(match);
+    const sport = match.sport || "Football";
+    const learningProfile = getLearningProfile({ sport, competition: match.competition || match.league || "", bet: result.best_bet });
+    const learningAssessment = assessLearningProfile(learningProfile, 5);
     db.prepare(`
       INSERT INTO concile_analyses
         (match_key, home, away, competition, minute_at_analysis,
          score_home_at_analysis, score_away_at_analysis, stats_status,
-         best_bet, confidence, raison, consensus_votes, agents_json, pick_bet)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
+         sport, learning_tier, learning_note)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       matchKey,
       match.home, match.away,
@@ -1195,7 +1286,10 @@ function saveConcileAnalysis(match, result, pickBet) {
       result.raison || "",
       result.consensus_votes || 0,
       JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
-      pickBet || null
+      pickBet || null,
+      sport,
+      learningAssessment.tier,
+      learningAssessment.reasons.join("; ")
     );
     console.log(
       `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
@@ -1311,6 +1405,20 @@ function getConcilePerformance() {
       winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null
     }));
 
+    const bySport = db.prepare(`
+      SELECT sport,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL
+      GROUP BY sport
+      ORDER BY total DESC
+    `).all().map(r => ({
+      sport: r.sport || "Football", total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null
+    }));
+
     const byMinute = db.prepare(`
       SELECT
         CASE
@@ -1338,10 +1446,10 @@ function getConcilePerformance() {
       ORDER BY analysed_at DESC LIMIT 10
     `).all();
 
-    return { byAgent, byBet, byStats, byMinute, recent };
+    return { byAgent, byBet, byStats, byMinute, bySport, recent };
   } catch(e) {
     console.error("[concile-perf]", e.message);
-    return { byAgent: [], byBet: [], byStats: [], byMinute: [], recent: [] };
+    return { byAgent: [], byBet: [], byStats: [], byMinute: [], bySport: [], recent: [] };
   }
 }
 
@@ -1370,6 +1478,7 @@ function getStrategyDashboard() {
   const markets = summarizeStrategyRows(perf.byBet, "bet");
   const statsSources = summarizeStrategyRows(perf.byStats, "stats");
   const minutes = summarizeStrategyRows(perf.byMinute, "minute");
+  const sports = summarizeStrategyRows(perf.bySport, "sport");
 
   let competitions = [];
   try {
@@ -1429,6 +1538,7 @@ function getStrategyDashboard() {
       agents: agents.slice(0, 8),
       markets: markets.slice(0, 10),
       competitions: leagues.slice(0, 10),
+      sports: sports.slice(0, 10),
       minutes: minutes.slice(0, 8),
       statsSources: statsSources.slice(0, 8),
     },
@@ -1447,6 +1557,7 @@ function getStrongSignalAlerts(options = {}) {
         ca.home,
         ca.away,
         ca.competition,
+        ca.sport,
         ca.minute_at_analysis,
         ca.score_home_at_analysis,
         ca.score_away_at_analysis,
@@ -1483,11 +1594,18 @@ function getStrongSignalAlerts(options = {}) {
         const wins = Number(r.market_wins || 0);
         const losses = Number(r.market_losses || 0);
         const marketWinrate = wins + losses > 0 ? Math.round(wins / (wins + losses) * 100) : null;
-        const sampleOk = total >= minResolved;
+        const profile = getLearningProfile({
+          sport: r.sport || "Football",
+          competition: r.competition || "",
+          bet: r.best_bet || "",
+        });
+        const assessment = assessLearningProfile(profile, minResolved);
+        const sampleOk = total >= minResolved && assessment.clientSafe;
         return {
           id: r.match_key,
           home: r.home,
           away: r.away,
+          sport: r.sport || "Football",
           competition: r.competition || "Inconnue",
           minute: r.minute_at_analysis,
           score: `${r.score_home_at_analysis ?? "?"}-${r.score_away_at_analysis ?? "?"}`,
@@ -1734,6 +1852,7 @@ function shouldAutoObserveMatch(match) {
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (isLowTrustCompetition(match)) return false;
+  if (String(match.sport || "Football") !== "Football") return true;
   const minute = parseLiveMinuteValue(match.minute);
   return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
 }

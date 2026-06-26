@@ -1245,6 +1245,7 @@ function formatStrongSignal(signal) {
   return `<b>🚨 Signal fort détecté</b>
 
 <b>Match</b> : ${escapeHtml(signal.home)} vs ${escapeHtml(signal.away)}
+<b>Sport</b> : ${escapeHtml(signal.sport || "Football")}
 <b>Compétition</b> : ${escapeHtml(signal.competition)}
 <b>Score/minute</b> : ${escapeHtml(signal.score)}${signal.minute ? ` à ${signal.minute}'` : ""}
 <b>Marché</b> : ${escapeHtml(signal.bet)}
@@ -1294,6 +1295,9 @@ ${escapeHtml(report.note || "Pas assez de données pour conclure.")}
 
 <b>Compétitions</b>
 <code>${escapeHtml(formatStrategyTop(report.top?.competitions))}</code>
+
+<b>Sports</b>
+<code>${escapeHtml(formatStrategyTop(report.top?.sports))}</code>
 
 <b>IA</b>
 <code>${escapeHtml(formatStrategyTop(report.top?.agents))}</code>`);
