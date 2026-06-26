@@ -14,6 +14,7 @@ RUN npm install --save \
 RUN mkdir -p /data
 
 COPY scripts/api_server.js ./server.js
+COPY scripts/bookmakers.config.js ./bookmakers.config.js
 
 EXPOSE 3001
 CMD ["node", "server.js"]
