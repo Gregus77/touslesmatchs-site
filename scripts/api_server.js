@@ -1862,7 +1862,7 @@ function runExpiryCron() {
       if (diff === 3) {
         brevoSendEmail(row.email, "Votre abonnement expire dans 3 jours",
           `<p>Bonjour,</p><p>Votre abonnement TousLesMatchs expire le <strong>${exp.toLocaleDateString("fr-FR")}</strong>.</p>
-          <p>Renouvelez maintenant pour conserver votre accès Premium et vos analyses IA.</p>
+          <p>Renouvelez maintenant pour conserver votre accès Elite et vos analyses IA.</p>
           <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler →</a></p>`
         );
       } else if (diff === 1) {
@@ -2451,7 +2451,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       [STRIPE_PRICE_ID_CARTE]:               { status: "carte",   label: "Analyse 1 euro" },
       [process.env.STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro" },
       [process.env.STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP" },
-      [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Premium" },
+      [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite" },
     };
     const { status = "premium", label: planLabel = "Pro" } = planMap[priceId] || {};
 

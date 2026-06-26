@@ -946,6 +946,13 @@ async function cmdResult(chatId, status) {
   const emoji = status === "GAGNE" ? "🏆" : "❌";
   await reply(chatId, `${emoji} Pick marqué <b>${status}</b>\n${data.currentPick.home} vs ${data.currentPick.away} — ${data.currentPick.score || "?"}`);
 
+  const pub = await publishPickResultToChannels(data.currentPick);
+  if (pub.sent > 0) {
+    data.currentPick.resultPublishedAt = new Date().toISOString();
+    savePicks(data);
+    await reply(chatId, `Resultat publie sur ${pub.sent} canal(aux).`);
+  }
+
   try {
     const emailResult = await notifyResultByEmail(data.currentPick);
     if (emailResult.ok) {
@@ -988,11 +995,64 @@ https://www.touslesmatchs.com`;
   await reply(chatId, `<b>Message prêt à publier :</b>\n\n<code>${escapeHtml(message)}</code>`);
 }
 
+async function publishPickResultToChannels(p) {
+  const status = String(p?.status || "").toUpperCase();
+  if (!p?.home || !p?.away || !p?.score || !["GAGNE", "PERDU", "WIN", "LOSS"].includes(status)) {
+    return { ok: false, sent: 0, error: "resultat incomplet" };
+  }
+  if (p.resultPublishedAt) return { ok: true, sent: 0, skipped: true };
+  const won = status === "GAGNE" || status === "WIN";
+  const text = `<b>${won ? "✅" : "📊"} Resultat du pick du jour</b>
+
+<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+${escapeHtml(p.league || "")}
+🎯 ${escapeHtml(p.prono || p.bet || "Pick officiel")}
+Score final : <b>${escapeHtml(p.score)}</b>
+Resultat : <b>${won ? "GAGNE" : "PERDU"}</b>
+
+${won ? "Le Conseil des IA avait vu juste." : "Resultat enregistre. On garde la donnee pour ameliorer le modele."}
+
+Historique : https://www.touslesmatchs.com/historique
+18+ uniquement. Jeu responsable.`;
+
+  let sent = 0;
+  if (PUBLIC_BOT_TOKEN && PUBLIC_CHAT) {
+    const r = await sendTelegramWithToken(PUBLIC_BOT_TOKEN, PUBLIC_CHAT, text);
+    if (r.ok) sent++;
+  }
+  if (TG_TOKEN && PREMIUM_CHANNEL) {
+    const r = await sendTelegramWithToken(TG_TOKEN, PREMIUM_CHANNEL, text);
+    if (r.ok) sent++;
+  }
+  return { ok: sent > 0, sent };
+}
+
+async function cmdPublishResult(chatId) {
+  const data = loadPicks();
+  const p = data.currentPick || {};
+  const result = await publishPickResultToChannels(p);
+  if (result.skipped) {
+    await reply(chatId, "Resultat deja publie.");
+    return;
+  }
+  if (!result.ok) {
+    await reply(chatId, `Publication resultat impossible : ${escapeHtml(result.error || "verifie score/statut")}`);
+    return;
+  }
+  data.currentPick.resultPublishedAt = new Date().toISOString();
+  savePicks(data);
+  await reply(chatId, `Resultat publie sur ${result.sent} canal(aux).`);
+}
+
 async function cmdPublish(chatId, opts = {}) {
   if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "TELEGRAM_BOT_TOKEN manquant"); return; }
   const data = loadPicks();
   const p = data.currentPick;
   if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick a publier"); return; }
+  if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(String(p.status || "").toUpperCase())) {
+    await reply(chatId, "Pick deja termine : utilise /result pour preparer le message resultat.");
+    return;
+  }
   await ensurePickVisual(p);
   savePicks(data);
 
@@ -1018,7 +1078,7 @@ Analyse complete : https://www.touslesmatchs.com
     pick: p,
     extra: bookmakerReplyMarkup([
       { text: "Voir l'analyse TousLesMatchs", url: "https://www.touslesmatchs.com" },
-      { text: "Passer Pro/Premium", url: "https://www.touslesmatchs.com/#plans" },
+      { text: "Passer Pro/Elite", url: "https://www.touslesmatchs.com/#plans" },
     ]),
   });
   const ok = !!sent.ok;
@@ -1032,6 +1092,10 @@ async function cmdPublishPremium(chatId, opts = {}) {
   const data = loadPicks();
   const p = data.currentPick;
   if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick a publier"); return; }
+  if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(String(p.status || "").toUpperCase())) {
+    await reply(chatId, "Pick deja termine : utilise /result pour preparer le message resultat.");
+    return;
+  }
   await ensurePickVisual(p);
   savePicks(data);
 
@@ -1064,7 +1128,7 @@ Analyse complete : https://www.touslesmatchs.com/live-ia
   });
   const ok = !!sent.ok;
   const err = sent.description || sent.error || "";
-  await reply(chatId, ok ? `Pick publie sur le canal Premium (${PREMIUM_CHANNEL})` : `Erreur publication Premium (${PREMIUM_CHANNEL}) : ${err || "verifie que le bot est admin du canal"}`);
+  await reply(chatId, ok ? `Pick publie sur le canal Elite (${PREMIUM_CHANNEL})` : `Erreur publication Elite (${PREMIUM_CHANNEL}) : ${err || "verifie que le bot est admin du canal"}`);
 }
 
 async function notifyPickByEmail(pick) {
@@ -1543,10 +1607,11 @@ async function cmdHelp(chatId) {
 /record Portugal|Ghana|Coupe du Monde|90|Match nul|80|0-0 — Ajouter une prédiction vérifiée aux stats Concile
 /strategy — Rapport Codex Prono Hunter (marchés, IA, compétitions)
 /alerts — Scanner maintenant les signaux forts privés
-/publishalert — Publier manuellement la dernière alerte forte dans le groupe Premium
+/publishalert — Republier manuellement la dernière alerte forte dans le groupe Elite
 /learn — Analyser l'historique et mettre à jour la mémoire IA
+/publishresult — Publier le résultat validé sur les canaux
 /publish — Publier sur le canal Telegram public (gratuit)
-/publishpremium — Publier sur le canal Telegram Premium
+/publishpremium — Publier sur le canal Telegram Elite
 /deploy — guidance de déploiement verrouillée
 /diagtelegram — Diagnostiquer la connexion Telegram (canaux, tokens)
 /help — Cette aide`);
@@ -1609,6 +1674,7 @@ async function handleCommandLine(chatId, text) {
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/result":          return cmdResultPreview(chatId);
+    case "/publishresult":   return cmdPublishResult(chatId);
     case "/record":          return cmdRecord(chatId, args);
     case "/strategy":        return cmdStrategy(chatId);
     case "/alerts":          return cmdAlerts(chatId);

@@ -13,9 +13,9 @@ Codex est entre dans la partie comme garde-fou architecture, securite, donnees, 
 - Produire le rapport `/strategy`.
 - Relayer les signaux forts a Gregory, sans promettre de gain certain.
 - Seuil signaux forts: `80/100` minimum, football uniquement au lancement.
-- Offre commerciale: `Premium 19,90 EUR/mois` = signaux forts du Concile + 30 analyses/jour.
-- Phase de rodage: les signaux forts vont d'abord au groupe admin; Gregory publie aux clients avec `/publishalert`.
-- Publier une alerte forte cote client uniquement avec `/publishalert`, sauf si `HERMES_STRONG_ALERTS_CLIENT_AUTO=1` est explicitement active.
+- Offre commerciale: `Elite 19,90 EUR/mois` = signaux forts du Concile + 30 analyses/jour.
+- Phase actuelle: les signaux forts vont au groupe admin et sont publies automatiquement cote client quand `HERMES_STRONG_ALERTS_CLIENT_AUTO=1`.
+- `/publishalert` reste disponible uniquement pour republier manuellement une alerte deja validee.
 
 ## Interdictions
 

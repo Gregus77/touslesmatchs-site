@@ -321,7 +321,7 @@ function renderNavAuth(){
   if(email && plan){
     const isElite = plan === 'elite';
     el.innerHTML = `<div class="nav-user">
-      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Premium':'⚡ Pro'}</span>
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
       <button class="nav-logout" onclick="doLogout()" title="Déconnexion">✕</button>
     </div>`;
   } else {
@@ -383,7 +383,7 @@ function renderCredits(){
   const pill = document.getElementById('credits-pill');
   if(!plan){ pill.style.display='none'; return; }
   pill.style.display='flex';
-  pill.textContent = plan==='elite' ? '👑 Premium — 30 analyses/jour + signaux forts' : `⚡ ${plan}`;
+  pill.textContent = plan==='elite' ? '👑 Elite — 30 analyses/jour + signaux forts' : `⚡ ${plan}`;
 }
 
 // ══ MATCHES
@@ -757,7 +757,7 @@ async function analyzeMatch(i){
 function renderPaywall(){
   return `<div class="analysis-panel" style="text-align:center;padding:32px 24px">
     <div style="font-size:40px;margin-bottom:14px">🔒</div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:8px">Réservé aux membres Premium</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px">Réservé aux membres Pro et Elite</div>
     <div style="font-size:14px;color:var(--muted2);line-height:1.7;margin-bottom:24px;max-width:320px;margin-left:auto;margin-right:auto">
       L'analyse du Concile (4 agents spécialisés + 1 Chief) est disponible à partir du plan <strong style="color:var(--indigo2)">Pro</strong>.<br>
       Débloquez les votes en temps réel et les picks premium.

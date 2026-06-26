@@ -1,15 +1,15 @@
-# Politique Premium - Signaux forts
+# Politique Elite - Signaux forts
 
 Decision validee:
 
-- Nom commercial: Premium.
+- Nom commercial: Elite.
 - Prix: 19,90 EUR / mois.
 - Produit vendu: alertes fortes du Concile + 30 analyses Live IA par jour.
 - Seuil: 80/100 minimum.
 - Sport au lancement: football uniquement.
 - Exclusions: tennis, amicaux, U20/U21, ligues trop volatiles, donnees insuffisantes.
-- Publication client: manuelle au debut avec `/publishalert`.
-- Publication automatique client: interdite sauf `HERMES_STRONG_ALERTS_CLIENT_AUTO=1`.
+- Publication client: automatique quand `HERMES_STRONG_ALERTS_CLIENT_AUTO=1`.
+- Canal historique: la variable technique reste `TELEGRAM_PREMIUM_CHANNEL_ID`, mais le nom commercial client est Elite.
 
 Regles de communication:
 
@@ -22,6 +22,6 @@ Workflow:
 
 1. Hermes detecte un signal >= 80/100.
 2. Hermes l'envoie au Telegram admin.
-3. Gregory verifie la disponibilite bookmaker.
-4. Gregory publie avec `/publishalert` si le signal est exploitable.
+3. Hermes publie automatiquement cote client si le signal passe le seuil Elite.
+4. Gregory peut aussi republier manuellement avec `/publishalert` si necessaire.
 5. Resultat final enregistre pour apprentissage.

@@ -1240,7 +1240,7 @@ footer{
     <!-- CTA -->
     <div class="liad-cta">
       <a href="/live-ia" class="liad-try-btn">Analyser un vrai match maintenant →</a>
-      <div class="liad-note">⚡ Résultat en ~30 secondes<br>Disponible plans Pro &amp; Premium</div>
+      <div class="liad-note">⚡ Résultat en ~30 secondes<br>Disponible plans Pro &amp; Elite</div>
     </div>
   </div>
 </section>
@@ -1336,18 +1336,18 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Consensus IA + verdict Chief</div>
         <div class="pcf"><span class="ok">✓</span>Analyse des matchs en direct</div>
         <div class="pcf"><span class="ok">✓</span>Historique et suivi des performances</div>
-        <div class="pcf"><span class="no">✗</span>Groupe Premium</div>
+        <div class="pcf"><span class="no">✗</span>Alertes Elite</div>
       </div>
       <a href="#" onclick="startCheckout('premium', event)" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
     </div>
     <div class="pc">
-      <span class="pc-badge b-el">Premium</span>
-      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Premium</div></div>
-      <div class="pc-desc" data-i18n="plan_elite_desc">30 analyses Live IA par jour + alertes Premium quand le Concile détecte un signal très fort.</div>
+      <span class="pc-badge b-el">Elite</span>
+      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite</div></div>
+      <div class="pc-desc" data-i18n="plan_elite_desc">30 analyses Live IA par jour + alertes Elite quand le Concile détecte un signal très fort.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>30 analyses Live IA par jour</div>
-        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Premium (picks prioritaires)</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Elite (picks prioritaires)</div>
         <div class="pcf"><span class="ok">✓</span>Alertes signal fort quand la note dépasse 8/10</div>
         <div class="pcf"><span class="ok">✓</span>Synthèse avancée, sans prompts internes</div>
         <div class="pcf"><span class="ok">✓</span>Picks en avant-première avant le site</div>
@@ -1384,7 +1384,7 @@ footer{
   <div class="steps">
     <div class="step"><div class="step-n">1</div><div><div class="step-title" data-i18n="step1_title">Collecte vérifiée à 6h00</div><div class="step-desc">Hermès collecte les matchs via API-SPORTS, puis vérifie chaque donnée sur 3 sources indépendantes : SofaScore, FBref, Transfermarkt. Aucun match non confirmé n'est affiché. Aucun score inventé.</div></div></div>
     <div class="step"><div class="step-n">2</div><div><div class="step-title" data-i18n="step2_title">4 agents spécialisés + 1 Chief</div><div class="step-desc">Les agents analysent stats, tactique, value et marchés selon le sport. Le Chief arbitre les désaccords : si les objections sont trop fortes ou les données faibles, la décision devient NO BET.</div></div></div>
-    <div class="step"><div class="step-n">3</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro débloque les analyses Live IA ; Premium reçoit aussi les alertes de signal fort.</div></div></div>
+    <div class="step"><div class="step-n">3</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro débloque les analyses Live IA ; Elite reçoit aussi les alertes de signal fort.</div></div></div>
     <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step4_title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 </section>
@@ -1404,7 +1404,7 @@ footer{
       <a href="https://t.me/+I4mDxIa-1YBhM2U8" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.25);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s"
          onmouseover="this.style.background='rgba(99,102,241,.2)'" onmouseout="this.style.background='rgba(99,102,241,.1)'">
-        ⚡ Pro &amp; Premium
+        ⚡ Pro &amp; Elite
       </a>
       <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=community_footer&utm_campaign=prospection" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(255,0,80,.16),rgba(139,92,246,.14));color:#fb7185;border:1px solid rgba(251,113,133,.32);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:800;text-decoration:none;transition:all .2s"
@@ -1586,8 +1586,8 @@ function renderPick(){
     return;
   }
   if(!PICK.ia||!PICK.ia.length||!PICK.teamA||!PICK.teamB) return;
-  const isResult=PICK.status==='result';
-  const isWin=PICK.result==='win';
+  const isResult=PICK.status==='result'||PICK.status==='win'||PICK.status==='loss'||PICK.result==='win'||PICK.result==='loss';
+  const isWin=PICK.result==='win'||PICK.status==='win';
   const isPending=isResult&&PICK.result===null; // match joué, résultat non encore connu
   const avg=Math.round(PICK.ia.reduce((a,b)=>a+b.pct,0)/PICK.ia.length);
   const mc=MC[PICK.marketType]||MC["1"];
@@ -1637,12 +1637,26 @@ function renderPick(){
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(6,8,15,.6);backdrop-filter:blur(2px)">
           <div style="font-size:28px">🔒</div>
           <div style="font-size:14px;font-weight:800;text-align:center">${i18n.t('locked_votes')}</div>
-          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Premium · À la carte dès 1€</div>
+          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · À la carte dès 1€</div>
           <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">${i18n.t('subscribe_cta')}</a>
         </div>
       </div>`;
 
   const bmBtns=BM.map(b=>`<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}">${b.name} →</a>`).join('');
+  const insightHtml=isResult
+    ? `<div class="pick-insight">
+        <div class="pi-item"><span class="pi-ico">${isWin?'✅':'❌'}</span><div><div class="pi-lbl">Statut final</div><div class="pi-val ${isWin?'c-green':'c-red'}">${isWin?'Gagné':'Perdu'}</div></div></div>
+        <div class="pi-item"><span class="pi-ico">⚽</span><div><div class="pi-lbl">Score final</div><div class="pi-val">${PICK.teamA.name} ${hasScoreA?PICK.scoreA:'?'}-${hasScoreB?PICK.scoreB:'?'} ${PICK.teamB.name}</div></div></div>
+        <div class="pi-item"><span class="pi-ico">📚</span><div><div class="pi-lbl">Historique</div><div class="pi-val">Résultat enregistré</div></div></div>
+      </div>`
+    : `<div class="pick-insight">
+        <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${(avg/10).toFixed(1)}/10</div></div></div>
+        <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">100€ → ${Math.round(100*PICK.cote)}€</div></div></div>
+        <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise recommandée</div><div class="pi-val">${PICK.mise||'3% de ta bankroll'}</div></div></div>
+      </div>`;
+  const bookmakerHtml=isResult
+    ? `<div class="bm-head">Résultat archivé</div><div class="bm-grid"><a href="/historique" class="bm-btn" style="grid-column:1/-1">Voir l'historique des picks →</a></div>`
+    : `<div class="bm-head">${i18n.t('bet_at')}</div><div class="bm-grid">${bmBtns}</div>`;
 
   root.innerHTML=`
     <div class="pick-outer">
@@ -1681,11 +1695,7 @@ function renderPick(){
             <div class="mc-desc">${PICK.marketDesc}</div>
             <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${mc.color};border-radius:2px"></div>
           </div>
-          <div class="pick-insight">
-            <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${(avg/10).toFixed(1)}/10</div></div></div>
-            <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">100€ → ${Math.round(100*PICK.cote)}€</div></div></div>
-            <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise recommandée</div><div class="pi-val">${PICK.mise||'3% de ta bankroll'}</div></div></div>
-          </div>
+          ${insightHtml}
           <div class="ia-head">
             <div class="ia-title">${i18n.t('pick_analysis_lbl')}</div>
             <div class="ia-consensus">${avg}% ${i18n.t('consensus')}</div>
@@ -1707,8 +1717,7 @@ function renderPick(){
                 </div>`
             }</div>
         </div>
-        <div class="bm-head">${i18n.t('bet_at')}</div>
-        <div class="bm-grid">${bmBtns}</div>
+        ${bookmakerHtml}
       </div>
     </div>`;
 
@@ -1716,7 +1725,9 @@ function renderPick(){
     document.querySelectorAll('.ia-fill[data-w]').forEach(el=>{el.style.width=el.dataset.w+'%'});
   },180);
 
-  const t=`⚡ Pick du jour : ${PICK.teamA.name} vs ${PICK.teamB.name} — ${PICK.marketType} @${PICK.cote} · Consensus ${avg}%`;
+  const t=isResult
+    ? `Résultat du pick : ${PICK.teamA.name} vs ${PICK.teamB.name} — ${isWin?'gagné':'perdu'} ${hasScoreA?PICK.scoreA:'?'}-${hasScoreB?PICK.scoreB:'?'}`
+    : `⚡ Pick du jour : ${PICK.teamA.name} vs ${PICK.teamB.name} — ${PICK.marketType} @${PICK.cote} · Consensus ${avg}%`;
   document.getElementById('t1').textContent=t;
   document.getElementById('t2').textContent=t;
 }
@@ -1936,7 +1947,7 @@ async function requestPrematchAnalysis() {
     if(email && plan === 'free'){
       const resultDiv = document.getElementById('np-result');
       if(resultDiv) resultDiv.innerHTML=`<div style="background:rgba(79,70,229,.1);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:14px 16px;margin-top:12px;font-size:13px;color:var(--muted2)">
-        🔒 L'analyse pré-match est réservée aux plans <strong style="color:var(--indigo2)">Pro et Premium</strong>. Abonne-toi ci-dessous pour déverrouiller.
+        🔒 L'analyse pré-match est réservée aux plans <strong style="color:var(--indigo2)">Pro et Elite</strong>. Abonne-toi ci-dessous pour déverrouiller.
       </div>`;
     }
     return;
@@ -2007,7 +2018,7 @@ function renderNavAuth(){
   if(email&&plan){
     const isElite=plan==='elite';
     el.innerHTML=`<div class="nav-user">
-      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Premium':'⚡ Pro'}</span>
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
       <button class="nav-logout" onclick="doLogout()" title="${i18n.t('logout')}">✕</button>
     </div>`;
   } else {
@@ -2302,12 +2313,12 @@ initPick();
 const FAQ_DATA = [
   {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 4 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
   {q:"Comment est choisi le pick du jour ?", a:"Le système compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
-  {q:"Est-ce que je peux recevoir les picks sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit le pick du jour. Pro débloque les analyses Live IA et le groupe Pro. Premium ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
+  {q:"Est-ce que je peux recevoir les picks sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit le pick du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
   {q:"Comment puis-je parier avec vos liens ?", a:"Cliquez directement sur les boutons Winamax, Betclic, Unibet ou PMU sous le pick du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Premium (19.90€/mois) = 30 analyses/jour + Telegram Premium + support direct. Reset automatique à minuit."},
+  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit."},
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);
