@@ -22,6 +22,15 @@
   },
   "history": [
     [
+      "2026-06-29",
+      "Brésil vs Japon",
+      "Moins de 2.5 buts",
+      "1.65",
+      "2-1",
+      "PERDU",
+      "Football"
+    ],
+    [
       "2026-06-22",
       "France vs Irak",
       "Plus de 2.75 buts (demi-gain)",
@@ -222,8 +231,8 @@
   ],
   "stats": {
     "gagnes": 12,
-    "perdus": 1,
+    "perdus": 2,
     "en_attente": 9,
-    "taux": 92
+    "taux": 86
   }
 }

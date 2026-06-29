@@ -960,7 +960,7 @@ async function cmdExpiring(chatId) {
   }
 }
 
-async function cmdCheckResult(chatId) {
+async function cmdCheckResult(chatId, autoApply = false) {
   const data = loadPicks();
   const p = data.currentPick;
   if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick actif à vérifier"); return; }
@@ -1043,25 +1043,44 @@ async function cmdCheckResult(chatId) {
     fs.writeFileSync("/var/touslesmatchs/live_score.json", JSON.stringify({ home: scoreHome, away: scoreAway, source }, null, 2));
   } catch {}
 
-  // Évaluer le résultat probable en fonction du pari
+  // Évaluer le résultat probable en fonction du pari.
+  // IMPORTANT : les marchés over/under/btts/double-chance contiennent souvent
+  // des chiffres ("2.5", "+2.5"...) qui matchaient à tort les anciens tests
+  // bet.includes("1")/bet.includes("2") (ex: "Moins de 2.5 buts" → mal classé
+  // comme "victoire extérieur" car il contient "2"). On teste donc en premier
+  // les marchés spécifiques (over/under/btts/double chance/handicap), et on
+  // ne teste 1/X/2 qu'en dernier recours, avec une correspondance stricte.
   const bet = String(p.prono || p.bet || "").toLowerCase();
+  const totalGoals = scoreHome + scoreAway;
   let autoResult = null;
-  if (bet.includes("1") || bet.includes("domicile") || bet.includes("home") || bet.includes(normalizeTeamName(p.home))) {
-    autoResult = scoreHome > scoreAway ? "GAGNE" : "PERDU";
-  } else if (bet.includes("2") || bet.includes("extérieur") || bet.includes("away") || bet.includes(normalizeTeamName(p.away))) {
-    autoResult = scoreAway > scoreHome ? "GAGNE" : "PERDU";
-  } else if (bet.includes("nul") || bet.includes("draw") || bet.includes("x")) {
-    autoResult = scoreHome === scoreAway ? "GAGNE" : "PERDU";
-  } else if (bet.includes("over 2.5") || bet.includes("+2.5") || bet.includes("plus de 2")) {
-    autoResult = (scoreHome + scoreAway) > 2.5 ? "GAGNE" : "PERDU";
-  } else if (bet.includes("under 2.5") || bet.includes("-2.5") || bet.includes("moins de 3")) {
-    autoResult = (scoreHome + scoreAway) < 2.5 ? "GAGNE" : "PERDU";
-  } else if (bet.includes("btts") || bet.includes("les deux") || bet.includes("both")) {
+  if (/over\s*2[.,]5|plus\s*de\s*2[.,]?5?\s*buts|\+\s*2[.,]5/.test(bet)) {
+    autoResult = totalGoals > 2.5 ? "GAGNE" : "PERDU";
+  } else if (/under\s*2[.,]5|moins\s*de\s*(2[.,]?5?|3)\s*buts|-\s*2[.,]5/.test(bet)) {
+    autoResult = totalGoals < 2.5 ? "GAGNE" : "PERDU";
+  } else if (/\bbtts\b|les deux équipes marquent|both teams to score/.test(bet)) {
     autoResult = (scoreHome > 0 && scoreAway > 0) ? "GAGNE" : "PERDU";
-  } else if (bet.includes("1x") || bet.includes("double chance")) {
+  } else if (/\b1x\b|double chance.*(1|domicile).*(nul|x)/.test(bet)) {
     autoResult = scoreHome >= scoreAway ? "GAGNE" : "PERDU";
-  } else if (bet.includes("x2")) {
+  } else if (/\bx2\b|double chance.*(nul|x).*(2|extérieur)/.test(bet)) {
     autoResult = scoreAway >= scoreHome ? "GAGNE" : "PERDU";
+  } else if (/\b12\b/.test(bet)) {
+    autoResult = scoreHome !== scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bnul\b|\bdraw\b|\bmatch nul\b/.test(bet) || bet === "x") {
+    autoResult = scoreHome === scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bdomicile\b|\bhome\b|\b1\b/.test(bet) || bet.includes(normalizeTeamName(p.home))) {
+    autoResult = scoreHome > scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bextérieur\b|\baway\b|\b2\b/.test(bet) || bet.includes(normalizeTeamName(p.away))) {
+    autoResult = scoreAway > scoreHome ? "GAGNE" : "PERDU";
+  }
+
+  // Mode automatique (cron) : si le résultat est déduit avec confiance, on l'applique
+  // directement (archive + publication + email) au lieu d'attendre une confirmation
+  // manuelle — c'est le but du check auto, sinon Grégory doit confirmer tous les jours.
+  if (autoApply && autoResult) {
+    const emoji = autoResult === "GAGNE" ? "✅" : "❌";
+    await reply(chatId, `${emoji} <b>Résultat auto-détecté</b> (via ${source}) : <b>${score}</b> — ${escapeHtml(p.home)} vs ${escapeHtml(p.away)}\n📌 ${escapeHtml(p.prono || p.bet || "—")} → <b>${autoResult}</b>\n\nApplication automatique...`);
+    await cmdResult(chatId, autoResult);
+    return;
   }
 
   let msg = `📊 <b>Résultat trouvé</b> (via ${source})\n\n`;
@@ -2390,7 +2409,7 @@ async function maybeAutoCheckResult() {
   try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(state)); } catch {}
 
   console.log(`[auto-result] Vérification score pour ${p.home} vs ${p.away}`);
-  await cmdCheckResult(ADMIN_CHAT).catch(e => console.error("[auto-result]", e.message));
+  await cmdCheckResult(ADMIN_CHAT, true).catch(e => console.error("[auto-result]", e.message));
 }
 
 // ── Long polling loop ─────────────────────────────────────────────────────────
