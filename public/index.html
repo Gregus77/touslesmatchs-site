@@ -2228,8 +2228,8 @@ async function initPick(){
     || p.status === 'no_pick' || p.status === 'NOPICK';
 
   if(!isNoPick){
-    PICK.teamA = {name:home, abbr:(p.teamA?.abbr||home||'').slice(0,3).toUpperCase(), color:p.teamA?.color||'#4f46e5'};
-    PICK.teamB = {name:away, abbr:(p.teamB?.abbr||away||'').slice(0,3).toUpperCase(), color:p.teamB?.color||'#7c3aed'};
+    PICK.teamA = {name:home, abbr:(p.teamA?.abbr||home||'').slice(0,3).toUpperCase(), color:p.teamA?.color||'#4f46e5', logo:p.home_logo||p.teamA?.logo||null};
+    PICK.teamB = {name:away, abbr:(p.teamB?.abbr||away||'').slice(0,3).toUpperCase(), color:p.teamB?.color||'#7c3aed', logo:p.away_logo||p.teamB?.logo||null};
     PICK.competition = p.competition||p.league||p.sport||PICK.competition;
     PICK.time = p.time||PICK.time;
     PICK.marketType = p.marketType||p.bet||PICK.marketType;
@@ -2574,6 +2574,10 @@ document.addEventListener('click',function(e){
     var confidence=p.confidenceTg || (p.confidence ? (p.confidence + '/10') : '7/10');
     var homeAbbr=((p.teamA&&p.teamA.abbr)||home).slice(0,3).toUpperCase();
     var awayAbbr=((p.teamB&&p.teamB.abbr)||away).slice(0,3).toUpperCase();
+    var homeLogo=p.home_logo||(p.teamA&&p.teamA.logo)||null;
+    var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
+    var homeBadge=homeLogo?'<img src="'+homeLogo+'" alt="'+esc(home)+'" style="width:44px;height:44px;object-fit:contain;border-radius:6px" onerror="this.style.display=\'none\'">':'<div class="tlm-live-team-abbr">'+esc(homeAbbr)+'</div>';
+    var awayBadge=awayLogo?'<img src="'+awayLogo+'" alt="'+esc(away)+'" style="width:44px;height:44px;object-fit:contain;border-radius:6px" onerror="this.style.display=\'none\'">':'<div class="tlm-live-team-abbr">'+esc(awayAbbr)+'</div>';
     root.innerHTML =
       '<div class="pick-outer"><div class="pick-inner tlm-live-pick-card">' +
         '<div class="pick-head">' +
@@ -2582,9 +2586,9 @@ document.addEventListener('click',function(e){
         '</div>' +
         '<div class="tlm-live-pick">' +
           '<div class="tlm-live-match">' +
-            '<div class="tlm-live-team"><div class="tlm-live-team-name">'+esc(home)+'</div><div class="tlm-live-team-abbr">'+esc(homeAbbr)+'</div></div>' +
+            '<div class="tlm-live-team">'+homeBadge+'<div class="tlm-live-team-name">'+esc(home)+'</div></div>' +
             '<div class="tlm-live-vs">VS</div>' +
-            '<div class="tlm-live-team"><div class="tlm-live-team-name">'+esc(away)+'</div><div class="tlm-live-team-abbr">'+esc(awayAbbr)+'</div></div>' +
+            '<div class="tlm-live-team">'+awayBadge+'<div class="tlm-live-team-name">'+esc(away)+'</div></div>' +
           '</div>' +
           '<div class="tlm-live-market">' +
             '<div><div class="tlm-live-label">Pronostic du Concile</div><div class="tlm-live-prono">'+esc(market)+'</div></div>' +

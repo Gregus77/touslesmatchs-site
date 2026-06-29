@@ -660,13 +660,13 @@ function renderMatchCard(m, i){
     <div style="font-size:10px;color:var(--muted);margin-top:4px">${escHtml(sourceLabel)}</div>
     ${trustWarning}
     <div class="match-teams">
-      <div class="match-team">${escHtml(m.home)}</div>
+      <div class="match-team" style="display:flex;align-items:center;gap:8px">${m.home_logo?`<img src="${m.home_logo}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">`:''}<span>${escHtml(m.home)}</span></div>
       <div class="match-score">
         <span class="score-num">${m.score_home!==null&&m.score_home!==undefined?m.score_home:'?'}</span>
         <span class="score-sep">—</span>
         <span class="score-num">${m.score_away!==null&&m.score_away!==undefined?m.score_away:'?'}</span>
       </div>
-      <div class="match-team away">${escHtml(m.away)}</div>
+      <div class="match-team away" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span>${escHtml(m.away)}</span>${m.away_logo?`<img src="${m.away_logo}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">`:''}</div>
     </div>
     <button class="match-analyze-btn" id="btn-${i}" onclick="event.stopPropagation();analyzeMatch(${i})">
       <span>🧠</span> Analyser avec Le Concile

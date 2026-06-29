@@ -91,6 +91,8 @@ ensureColumn("concile_analyses", "result_source", "TEXT DEFAULT NULL");
 ensureColumn("concile_analyses", "sport", "TEXT DEFAULT 'Football'");
 ensureColumn("concile_analyses", "learning_tier", "TEXT DEFAULT 'learning'");
 ensureColumn("concile_analyses", "learning_note", "TEXT DEFAULT ''");
+ensureColumn("concile_analyses", "home_logo", "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "away_logo", "TEXT DEFAULT NULL");
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
@@ -215,6 +217,8 @@ function normalizeCurrentPick(p, defaultSource) {
     confidence: p.confidence != null ? Number(p.confidence) : null,
     raison: p.raison || null,
     sport: p.sport || "Football",
+    home_logo: p.home_logo || p.teamA?.logo || null,
+    away_logo: p.away_logo || p.teamB?.logo || null,
   };
 }
 
@@ -376,6 +380,8 @@ function formatFDMatch(m) {
     sport: "Football",
     home: m.homeTeam.name,
     away: m.awayTeam.name,
+    home_logo: m.homeTeam?.crest || null,
+    away_logo: m.awayTeam?.crest || null,
     score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null,
     score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null,
     minute: m.minute ?? null,
@@ -399,6 +405,8 @@ function normalizeApiSportsFootballFixture(f) {
     sport: "Football",
     home: f.teams.home.name,
     away: f.teams.away.name,
+    home_logo: f.teams.home.logo || null,
+    away_logo: f.teams.away.logo || null,
     score_home: f.goals.home ?? null,
     score_away: f.goals.away ?? null,
     minute: f.fixture.status.elapsed ?? null,
@@ -495,6 +503,7 @@ async function fetchFromApiSports() {
       sourceId: String(g.id),
       fixtureId: null,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
+      home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? null, score_away: g.scores?.away?.total ?? null,
       minute: g.status?.timer ?? null, status: "IN_PLAY",
       competition: (g.league?.name || "Basketball") + (g.country?.name ? " · " + g.country.name : ""),
@@ -513,6 +522,7 @@ async function fetchFromApiSports() {
       sourceId: String(g.id),
       fixtureId: null,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
+      home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home ?? null, score_away: g.scores?.away ?? null,
       minute: g.status?.timer ?? null, status: "IN_PLAY",
       competition: (g.league?.name || "Hockey") + (g.country?.name ? " · " + g.country.name : ""),
@@ -531,6 +541,7 @@ async function fetchFromApiSports() {
       sourceId: String(g.id),
       fixtureId: null,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
+      home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
       score_away: g.scores?.away?.total ?? g.scores?.away ?? null,
       minute: g.status?.long || g.status?.short || null,
@@ -1271,8 +1282,8 @@ function saveConcileAnalysis(match, result, pickBet) {
         (match_key, home, away, competition, minute_at_analysis,
          score_home_at_analysis, score_away_at_analysis, stats_status,
          best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
-         sport, learning_tier, learning_note)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         sport, learning_tier, learning_note, home_logo, away_logo)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       matchKey,
       match.home, match.away,
@@ -1289,7 +1300,9 @@ function saveConcileAnalysis(match, result, pickBet) {
       pickBet || null,
       sport,
       learningAssessment.tier,
-      learningAssessment.reasons.join("; ")
+      learningAssessment.reasons.join("; "),
+      match.home_logo || null,
+      match.away_logo || null
     );
     console.log(
       `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
@@ -1567,6 +1580,8 @@ function getStrongSignalAlerts(options = {}) {
         ca.raison,
         ca.consensus_votes,
         ca.analysed_at,
+        ca.home_logo,
+        ca.away_logo,
         ms.total as market_total,
         ms.wins as market_wins,
         ms.losses as market_losses
@@ -1629,6 +1644,8 @@ function getStrongSignalAlerts(options = {}) {
           },
           eligible,
           blockReason: eligible ? null : `historique insuffisant sur ce marché (${total}/${minResolved})`,
+          home_logo: r.home_logo || null,
+          away_logo: r.away_logo || null,
         };
       })
       .filter(r => r.eligible)

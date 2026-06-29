@@ -228,8 +228,12 @@ async function ensurePickVisual(pick) {
   if (visualUrl) {
     pick.telegramImageUrl = visualUrl;
     pick.visualUrl = visualUrl;
+  } else if (pick.home_logo) {
+    // Fallback : blason de l'équipe domicile depuis l'API
+    pick.telegramImageUrl = pick.home_logo;
+    pick.visualUrl = pick.home_logo;
   }
-  return visualUrl;
+  return pickVisualUrl(pick);
 }
 
 async function publishTelegramPick({ token, chatId, text, pick, extra = {} }) {
@@ -456,6 +460,7 @@ async function fetchSport(sport, today) {
         .filter(f => !done.includes(f.fixture?.status?.short))
         .map(f => ({
           sport: "Football", home: f.teams?.home?.name, away: f.teams?.away?.name,
+          home_logo: f.teams?.home?.logo || null, away_logo: f.teams?.away?.logo || null,
           heure: f.fixture?.date ? new Date(f.fixture.date).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
           competition: f.league?.name || "Football", arjel: true,
           matchId: String(f.fixture?.id || ""), source: "api-sports.io"
@@ -473,6 +478,7 @@ async function fetchSport(sport, today) {
           const heure = dt ? new Date(dt).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?";
           if (!home || !away) return null;
           return { sport: sportLabel, home, away, heure, competition: league, arjel: true,
+            home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
             matchId: String(g.id || g.game?.id || ""), source: "api-sports.io" };
         })
         .filter(Boolean)
@@ -494,6 +500,7 @@ async function fetchTodayMatches() {
       if (matches.length) {
         const formatted = matches.map(m => ({
           sport: "Football", home: m.homeTeam.name, away: m.awayTeam.name,
+          home_logo: m.homeTeam?.crest || null, away_logo: m.awayTeam?.crest || null,
           heure: m.utcDate ? new Date(m.utcDate).toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit", timeZone:"Europe/Paris" }).replace(":","h") : "?",
           competition: m.competition?.name || "Football", arjel: true,
           matchId: String(m.id || ""), source: "football-data.org"
@@ -791,12 +798,19 @@ async function runAnalyse(chatId) {
 
   const p = result.pick;
   const alts = result.alternatives || [];
+  // Récupérer les logos depuis la liste des matchs API
+  const matchedM = matches.find(m => {
+    const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return norm(m.home).includes(norm(p.home).slice(0,4)) || norm(p.home).includes(norm(m.home).slice(0,4));
+  });
   const data = loadPicks();
   archiveCurrentPick(data);
   data.currentPick = stampLiveAvailability({
     date: new Date().toISOString().slice(0, 10),
     home: p.home || "",
     away: p.away || "",
+    home_logo: matchedM?.home_logo || null,
+    away_logo: matchedM?.away_logo || null,
     league: p.league || "Football",
     sport: p.sport || "Football",
     time: p.time || "",
@@ -1365,14 +1379,17 @@ async function cmdAlerts(chatId) {
 
 async function publishClientStrongSignal(signal, { silentAdmin = false } = {}) {
   if (!signal?.id) return { ok: false, error: "signal manquant" };
-  const sent = await sendTelegramWithToken(
-    STRONG_ALERTS_CLIENT_TOKEN,
-    STRONG_ALERTS_CLIENT_CHANNEL,
-    formatClientStrongSignal(signal),
-    bookmakerReplyMarkup([
-      { text: "Voir l'analyse Live IA", url: "https://www.touslesmatchs.com/live-ia" },
-    ])
-  );
+  const caption = formatClientStrongSignal(signal);
+  const markup = bookmakerReplyMarkup([{ text: "Voir l'analyse Live IA", url: "https://www.touslesmatchs.com/live-ia" }]);
+  // Envoyer avec le blason si disponible
+  const logoUrl = signal.home_logo || signal.away_logo || null;
+  let sent;
+  if (logoUrl) {
+    sent = await sendTelegramPhotoWithToken(STRONG_ALERTS_CLIENT_TOKEN, STRONG_ALERTS_CLIENT_CHANNEL, logoUrl, caption, markup);
+    if (!sent.ok) sent = await sendTelegramWithToken(STRONG_ALERTS_CLIENT_TOKEN, STRONG_ALERTS_CLIENT_CHANNEL, caption, { disable_web_page_preview: true, ...markup });
+  } else {
+    sent = await sendTelegramWithToken(STRONG_ALERTS_CLIENT_TOKEN, STRONG_ALERTS_CLIENT_CHANNEL, caption, { disable_web_page_preview: true, ...markup });
+  }
 
   // Teaser canal public (Hermès free) — version courte sans le signal détaillé
   if (PUBLIC_BOT_TOKEN && PUBLIC_CHAT && STRONG_ALERTS_CLIENT_CHANNEL !== PUBLIC_CHAT) {
