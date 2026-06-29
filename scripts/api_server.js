@@ -128,6 +128,7 @@ const SCORE_PATH = "/var/touslesmatchs/live_score.json";
 const PICK_PATH = "/var/touslesmatchs/current_pick.json";
 const HERMES_PICKS_PATH = "/picks/picks.json";
 const LEADS_PATH = "/var/touslesmatchs/leads.json";
+const REFERRALS_PATH = "/var/touslesmatchs/referrals.json";
 
 function loadPick() {
   try { return JSON.parse(fs.readFileSync(PICK_PATH, "utf8")); } catch { return null; }
@@ -1988,6 +1989,152 @@ function pickEmailText(lang) {
   return t[lang] || t.fr;
 }
 
+// ── Referral system ───────────────────────────────────────────────────────────
+function loadReferrals() {
+  try { return JSON.parse(fs.readFileSync(REFERRALS_PATH, "utf8")); } catch { return { refs: {}, byEmail: {} }; }
+}
+function saveReferrals(data) {
+  fs.mkdirSync("/var/touslesmatchs", { recursive: true });
+  fs.writeFileSync(REFERRALS_PATH, JSON.stringify(data, null, 2));
+}
+function makeRefCode(email) {
+  const slug = email.replace(/@.*/, "").replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `REF-${slug}-${rand}`;
+}
+function getOrCreateRefCode(email) {
+  const data = loadReferrals();
+  if (data.byEmail[email]) return data.byEmail[email];
+  const code = makeRefCode(email);
+  data.refs[code] = { ownerEmail: email, created_at: new Date().toISOString(), referrals: [], monthsEarned: 0 };
+  data.byEmail[email] = code;
+  saveReferrals(data);
+  return code;
+}
+function creditReferrer(refCode, newSubscriberEmail) {
+  const data = loadReferrals();
+  const ref = data.refs[refCode];
+  if (!ref) return false;
+  if (ref.referrals.includes(newSubscriberEmail)) return false; // déjà crédité
+  ref.referrals.push(newSubscriberEmail);
+  ref.monthsEarned = (ref.monthsEarned || 0) + 1;
+  saveReferrals(data);
+  // Prolonger l'abonnement du parrain de 30 jours
+  try {
+    const codesDb = new Database(CODES_DB_PATH);
+    const row = codesDb.prepare("SELECT expires_at FROM codes WHERE email = ? AND active = 1").get(ref.ownerEmail);
+    if (row) {
+      const base = row.expires_at ? new Date(row.expires_at) : new Date();
+      if (base < new Date()) base.setTime(Date.now());
+      base.setDate(base.getDate() + 30);
+      codesDb.prepare("UPDATE codes SET expires_at = ? WHERE email = ? AND active = 1").run(base.toISOString(), ref.ownerEmail);
+    }
+    codesDb.close();
+  } catch (e) { console.error("[referral] extend:", e.message); }
+  // Email au parrain
+  if (BREVO_API_KEY) {
+    brevoSendEmail(ref.ownerEmail, "🎉 Tu viens de gagner 1 mois offert !",
+      `<div style="background:#06080f;padding:32px;font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#eceaf4">
+        <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px">TousLesMatchs</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:10px">🎉 ${newSubscriberEmail.replace(/@.*/, "***@***")} a rejoint grâce à toi !</div>
+        <div style="color:#a8aec8;line-height:1.6;margin-bottom:20px">Ton abonnement vient d'être prolongé de <strong style="color:#10b981">30 jours</strong> automatiquement. Merci de faire confiance à TousLesMatchs et de le partager autour de toi.</div>
+        <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700">Voir mes picks →</a>
+      </div>`
+    ).catch(() => {});
+  }
+  return true;
+}
+
+// ── Monthly stats for renewal email ───────────────────────────────────────────
+function getMonthlyPickStats() {
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  try {
+    const rows = db.prepare(`
+      SELECT home, away, competition, best_bet, confidence, outcome,
+             final_score_home, final_score_away, resolved_at, home_logo, sport
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss') AND resolved_at > ?
+      ORDER BY resolved_at DESC LIMIT 20
+    `).all(since);
+    const wins = rows.filter(r => r.outcome === "win").length;
+    const losses = rows.filter(r => r.outcome === "loss").length;
+    const total = wins + losses;
+    const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
+    // ROI simulé : mise 10u, cote moyenne 1.80
+    const roi = total > 0 ? Math.round((wins * 8 - losses * 10) / (total * 10) * 100) : 0;
+    return { wins, losses, total, winrate, roi, recent: rows.slice(0, 5) };
+  } catch { return { wins: 0, losses: 0, total: 0, winrate: 0, roi: 0, recent: [] }; }
+}
+
+function renewalEmailHtml(row, daysLeft, stats) {
+  const planLabel = row.plan === "elite" ? "Elite" : "Pro";
+  const expDate = new Date(row.expires_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
+  const urgency = daysLeft <= 1 ? "🔴 DERNIER JOUR" : daysLeft <= 3 ? "🟡 Plus que " + daysLeft + " jours" : "📅 Dans " + daysLeft + " jours";
+  const pickRows = stats.recent.map(p => {
+    const icon = p.outcome === "win" ? "✅" : "❌";
+    const gain = p.outcome === "win" ? `+8u` : `-10u`;
+    const gainColor = p.outcome === "win" ? "#10b981" : "#f43f5e";
+    return `<tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+      <td style="padding:8px 6px;font-size:13px;color:#eceaf4">${p.home} vs ${p.away}</td>
+      <td style="padding:8px 6px;font-size:12px;color:#a8aec8">${p.best_bet}</td>
+      <td style="padding:8px 6px;font-size:13px;font-weight:700;color:${gainColor};text-align:right">${icon} ${gain}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+<div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:28px">
+    <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">CONCILE IA — RÉSULTATS DU MOIS</div>
+  </div>
+
+  <div style="background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.25);border-radius:14px;padding:16px 20px;margin-bottom:24px;text-align:center">
+    <div style="font-size:13px;font-weight:700;color:#fb7185">${urgency}</div>
+    <div style="font-size:14px;color:#a8aec8;margin-top:4px">Ton abonnement <strong style="color:#eceaf4">${planLabel}</strong> expire le <strong>${expDate}</strong></div>
+  </div>
+
+  ${stats.total > 0 ? `
+  <div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:16px;padding:24px;margin-bottom:20px">
+    <div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6366f1;margin-bottom:16px">📊 CE QUE TU AURAIS GAGNÉ CE MOIS</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+      <div style="text-align:center;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px">
+        <div style="font-size:26px;font-weight:900;color:#10b981">${stats.wins}</div>
+        <div style="font-size:11px;color:#7b82a0;text-transform:uppercase;letter-spacing:.05em">Gagnés</div>
+      </div>
+      <div style="text-align:center;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:14px">
+        <div style="font-size:26px;font-weight:900;color:#6366f1">${stats.winrate}%</div>
+        <div style="font-size:11px;color:#7b82a0;text-transform:uppercase;letter-spacing:.05em">Réussite</div>
+      </div>
+      <div style="text-align:center;background:${stats.roi >= 0 ? "rgba(16,185,129,.08)" : "rgba(244,63,94,.08)"};border:1px solid ${stats.roi >= 0 ? "rgba(16,185,129,.2)" : "rgba(244,63,94,.2)"};border-radius:10px;padding:14px">
+        <div style="font-size:26px;font-weight:900;color:${stats.roi >= 0 ? "#10b981" : "#f43f5e"}">${stats.roi >= 0 ? "+" : ""}${stats.roi}%</div>
+        <div style="font-size:11px;color:#7b82a0;text-transform:uppercase;letter-spacing:.05em">ROI estimé</div>
+      </div>
+    </div>
+    ${pickRows ? `<table style="width:100%;border-collapse:collapse">
+      <tr style="border-bottom:1px solid rgba(255,255,255,.08)">
+        <th style="text-align:left;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Match</th>
+        <th style="text-align:left;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Paris</th>
+        <th style="text-align:right;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Résultat</th>
+      </tr>
+      ${pickRows}
+    </table>` : ""}
+  </div>
+  <div style="text-align:center;font-size:13px;color:#a8aec8;margin-bottom:20px">Sur 10€ misés par pick, tu aurais <strong style="color:${stats.roi >= 0 ? "#10b981" : "#f43f5e"}">${stats.roi >= 0 ? "gagné" : "perdu"} ${Math.abs(stats.roi * stats.total / 10).toFixed(0)}€</strong> sur ${stats.total} picks ce mois.</div>
+  ` : `<div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:16px;padding:20px;text-align:center;margin-bottom:20px;color:#a8aec8">Le Concile continue d'affiner ses analyses — les résultats s'accumulent pick après pick.</div>`}
+
+  <div style="text-align:center;margin-bottom:24px">
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:11px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">🔄 Renouveler mon abonnement ${planLabel}</a>
+    <div style="font-size:11px;color:#7b82a0;margin-top:10px">Accès immédiat après paiement · Code envoyé par email</div>
+  </div>
+
+  ${bookmakerEmailHtml()}
+  <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6;margin-top:16px">
+    TousLesMatchs · <a href="https://www.touslesmatchs.com" style="color:#6366f1;text-decoration:none">touslesmatchs.com</a><br>
+    ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable. Le ROI passé ne garantit pas les résultats futurs.
+  </div>
+</div>`;
+}
+
 // ── Admin auth helper ─────────────────────────────────────────────────────────
 function isAdmin(email, code) {
   const auth = verifyCode(email, code);
@@ -1995,43 +2142,65 @@ function isAdmin(email, code) {
 }
 
 // ── Expiry cron (check every hour) ────────────────────────────────────────────
+// Tracks which emails got which reminder to avoid duplicate sends per day
+const _expirySentToday = new Map(); // email → Set of diffs sent
+
 function runExpiryCron() {
   if (!BREVO_API_KEY) return;
   try {
-    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const codesDb = new Database(CODES_DB_PATH);
     const now = new Date();
     const rows = codesDb.prepare(
-      "SELECT * FROM codes WHERE active = 1 AND expires_at IS NOT NULL AND plan != 'free'"
+      "SELECT * FROM codes WHERE plan != 'free' AND expires_at IS NOT NULL"
     ).all();
-    codesDb.close();
 
     rows.forEach(row => {
       const exp = new Date(row.expires_at);
       const diff = Math.round((exp - now) / (1000 * 60 * 60 * 24));
 
-      if (diff === 3) {
-        brevoSendEmail(row.email, "Votre abonnement expire dans 3 jours",
-          `<p>Bonjour,</p><p>Votre abonnement TousLesMatchs expire le <strong>${exp.toLocaleDateString("fr-FR")}</strong>.</p>
-          <p>Renouvelez maintenant pour conserver votre accès Elite et vos analyses IA.</p>
-          <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler →</a></p>`
-        );
-      } else if (diff === 1) {
-        brevoSendEmail(row.email, "Dernière chance — abonnement expire demain",
-          `<p>Votre abonnement expire <strong>demain</strong>. Ne perdez pas votre accès aux picks VIP et à l'analyse IA en temps réel.</p>
-          <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler maintenant →</a></p>`
-        );
-      } else if (diff === 0) {
-        brevoSendEmail(row.email, "Votre abonnement expire aujourd'hui",
-          `<p>Votre abonnement expire <strong>aujourd'hui</strong>. Renouvelez pour continuer à recevoir les picks gagnants.</p>
-          <p><a href="https://www.touslesmatchs.com/#plans" style="background:#4f46e5;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none">Renouveler →</a></p>`
-        );
+      // Auto-deactivation: code expired yesterday or before → désactiver
+      if (diff < 0 && row.active === 1) {
+        codesDb.prepare("UPDATE codes SET active = 0 WHERE code = ?").run(row.code);
+        console.log(`[expiry-cron] Désactivé: ${row.email} (expiré il y a ${Math.abs(diff)}j)`);
+        return;
+      }
+
+      if (!row.active || !row.email) return;
+
+      const sentKey = row.email;
+      const sentSet = _expirySentToday.get(sentKey) || new Set();
+
+      const stats = getMonthlyPickStats();
+
+      if ([7, 3, 1].includes(diff) && !sentSet.has(diff)) {
+        const subjects = {
+          7: `📊 Dans 7 jours — voici ce que tu aurais gagné ce mois sur TousLesMatchs`,
+          3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "elite" ? "Elite" : "Pro"}`,
+          1: `🔴 Dernier jour — ton accès TousLesMatchs expire demain`,
+        };
+        brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats))
+          .then(() => {
+            sentSet.add(diff);
+            _expirySentToday.set(sentKey, sentSet);
+            console.log(`[expiry-cron] Email J-${diff} envoyé: ${row.email}`);
+          })
+          .catch(e => console.error(`[expiry-cron] email J-${diff} to ${row.email}:`, e.message));
+      }
+
+      if (diff === 0 && !sentSet.has(0)) {
+        brevoSendEmail(row.email, `🔴 Ton abonnement expire aujourd'hui — dernière chance`, renewalEmailHtml(row, 0, stats))
+          .then(() => { sentSet.add(0); _expirySentToday.set(sentKey, sentSet); })
+          .catch(e => console.error(`[expiry-cron] email J-0 to ${row.email}:`, e.message));
       }
     });
+    codesDb.close();
   } catch (e) {
     console.error("[expiry-cron] error:", e.message);
   }
 }
 setInterval(runExpiryCron, 60 * 60 * 1000);
+// Reset the "sent today" tracker at midnight
+setInterval(() => _expirySentToday.clear(), 24 * 60 * 60 * 1000);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Routes
@@ -2980,6 +3149,32 @@ app.post("/internal/pick-notify", async (req, res) => {
     console.error("[pick-notify]", e.message);
     res.json({ ok: false, error: e.message, sent: 0 });
   }
+});
+
+// ── Referral routes ───────────────────────────────────────────────────────────
+app.get("/ref/:code", (req, res) => {
+  const code = String(req.params.code || "").replace(/[^A-Z0-9\-]/gi, "").toUpperCase().slice(0, 24);
+  res.redirect(302, `/?ref=${encodeURIComponent(code)}#plans`);
+});
+
+app.post("/referral/get-link", (req, res) => {
+  const { email, code } = req.body || {};
+  const auth = verifyCode(email, code);
+  if (!auth.valid) return res.status(401).json({ ok: false, error: "Code invalide" });
+  const refCode = getOrCreateRefCode(email.toLowerCase().trim());
+  const link = `https://www.touslesmatchs.com/ref/${refCode}`;
+  const data = loadReferrals();
+  const ref = data.refs[refCode] || {};
+  res.json({ ok: true, refCode, link, referrals: (ref.referrals || []).length, monthsEarned: ref.monthsEarned || 0 });
+});
+
+app.post("/referral/confirm", (req, res) => {
+  const { refCode, newEmail, secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
+  if (!refCode || !newEmail) return res.json({ ok: false, error: "refCode et newEmail requis" });
+  const credited = creditReferrer(refCode.toUpperCase(), newEmail.toLowerCase().trim());
+  res.json({ ok: credited, message: credited ? "Parrain crédité de 30 jours" : "Déjà crédité ou code invalide" });
 });
 
 // ── Internal signal notify — strong signal email to premium subscribers ───────

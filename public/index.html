@@ -1364,20 +1364,75 @@ footer{
 </section>
 
 <!-- PARRAINAGE / REFERRAL SECTION -->
-<div style="max-width:960px;margin:0 auto;padding:0 32px 40px;position:relative;z-index:1">
-  <div style="background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(79,70,229,.07));border:1px solid rgba(16,185,129,.22);border-radius:20px;padding:32px;text-align:center">
-    <div style="font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:10px">💸 Programme parrainage</div>
-    <div style="font-size:22px;font-weight:900;color:var(--text);margin-bottom:10px">Gagne 1 mois offert par filleul abonné</div>
-    <div style="font-size:14px;color:var(--muted2);line-height:1.7;margin-bottom:24px;max-width:520px;margin-left:auto;margin-right:auto">
-      Tu connais quelqu'un qui parie ? Partage ton lien perso. Pour chaque ami qui s'abonne à Pro ou Elite, tu reçois <strong style="color:#10b981">1 mois d'abonnement offert</strong>.<br>
-      <span style="font-size:12px;color:var(--muted)">Écris-nous par email ou Telegram pour obtenir ton lien de parrainage personnalisé.</span>
+<div id="referral-section" style="max-width:960px;margin:0 auto;padding:0 32px 40px;position:relative;z-index:1">
+  <div style="background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(79,70,229,.07));border:1px solid rgba(16,185,129,.22);border-radius:20px;padding:32px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:260px">
+        <div style="font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:8px">💸 Programme parrainage</div>
+        <div style="font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px">1 mois offert par filleul abonné</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.6">
+          Partage ton lien perso. Chaque ami qui s'abonne à Pro ou Elite te rapporte <strong style="color:#10b981">30 jours gratuits</strong>, automatiquement.
+        </div>
+      </div>
+      <div id="ref-link-zone" style="flex:1;min-width:260px">
+        <div id="ref-link-loading" style="color:var(--muted);font-size:13px;text-align:center;padding:20px">
+          <span id="ref-link-cta">
+            <a href="#plans" onclick="closeModal && closeModal()" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:11px 22px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none">S'abonner pour obtenir mon lien →</a>
+          </span>
+        </div>
+        <div id="ref-link-display" style="display:none">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Mon lien de parrainage</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="ref-link-input" type="text" readonly style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:10px 12px;color:var(--text);font-size:12px;font-family:monospace">
+            <button onclick="copyRefLink()" style="background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#10b981;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700;cursor:pointer">Copier</button>
+          </div>
+          <div id="ref-stats" style="margin-top:10px;font-size:12px;color:var(--muted2)"></div>
+        </div>
+      </div>
     </div>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <a href="mailto:contact@touslesmatchs.com?subject=Je%20veux%20mon%20lien%20parrainage" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:13px 28px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none">📩 Obtenir mon lien parrainage</a>
-      <a href="https://t.me/+I4mDxIa-1YBhM2U8" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,136,204,.12);color:#22d3ee;border:1px solid rgba(0,136,204,.25);padding:13px 28px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none">📱 Telegram Premium</a>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,.06)">
+      <div style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px"><span style="color:#10b981;font-weight:700">✓</span>Crédit automatique en 24h</div>
+      <div style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px"><span style="color:#10b981;font-weight:700">✓</span>Email de confirmation au parrain</div>
+      <div style="font-size:12px;color:var(--muted2);display:flex;align-items:center;gap:6px"><span style="color:#10b981;font-weight:700">✓</span>Filleuls illimités</div>
     </div>
   </div>
 </div>
+<script>
+(function initReferral(){
+  const email = localStorage.getItem('tlm_email');
+  const code  = localStorage.getItem('tlm_code');
+  const plan  = localStorage.getItem('tlm_plan');
+  if(!email || !code || plan==='free' || !plan) return;
+  document.getElementById('ref-link-cta') && (document.getElementById('ref-link-cta').style.display='none');
+  fetch('/api/referral/get-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code})})
+    .then(r=>r.json()).then(d=>{
+      if(!d.ok) return;
+      const display=document.getElementById('ref-link-display');
+      const input=document.getElementById('ref-link-input');
+      const stats=document.getElementById('ref-stats');
+      if(input) input.value = d.link;
+      if(stats) stats.textContent = d.referrals
+        ? `${d.referrals} filleul${d.referrals>1?'s':''} • ${d.monthsEarned} mois gagné${d.monthsEarned>1?'s':''}`
+        : 'Pas encore de filleul — partage ton lien !';
+      if(display) display.style.display='block';
+      document.getElementById('ref-link-loading') && (document.getElementById('ref-link-loading').style.display='none');
+    }).catch(()=>{});
+})();
+function copyRefLink(){
+  const input=document.getElementById('ref-link-input');
+  if(!input) return;
+  navigator.clipboard.writeText(input.value).then(()=>{
+    const btn=event.target; btn.textContent='✓ Copié!'; btn.style.color='#10b981';
+    setTimeout(()=>{btn.textContent='Copier';btn.style.color='';},2000);
+  });
+}
+// Capture ref param à l'arrivée sur le site
+(function captureRef(){
+  const p=new URLSearchParams(location.search);
+  const ref=p.get('ref');
+  if(ref && /^REF-[A-Z0-9\-]{4,20}$/.test(ref)) localStorage.setItem('tlm_ref',ref);
+})();
+</script>
 
 <!-- TELEGRAM CTA AFTER PLANS -->
 <div style="max-width:960px;margin:0 auto;padding:0 32px 60px;position:relative;z-index:1">

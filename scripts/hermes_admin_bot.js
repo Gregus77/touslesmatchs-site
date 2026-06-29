@@ -1446,6 +1446,61 @@ async function cmdPublishAlert(chatId, args) {
   }
 }
 
+async function cmdAddMonth(chatId, args) {
+  // Usage: /addmonth email@... [refCode]
+  // Prolonge l'abonnement d'un email de 30 jours (récompense parrainage manuel)
+  const parts = (args || "").trim().split(/\s+/);
+  const email = parts[0];
+  if (!email || !email.includes("@")) {
+    await reply(chatId, "Usage: /addmonth email@... [REF-CODE-OPTIONNEL]");
+    return;
+  }
+  const refCode = parts[1] || null;
+  const endpoint = refCode ? "/referral/confirm" : null;
+  if (refCode && TG_TOKEN) {
+    const payload = JSON.stringify({ refCode, newEmail: email, secret: TG_TOKEN });
+    const r = await new Promise(resolve => {
+      const req = http.request({ hostname: "touslesmatchs-api", port: 3001, path: "/referral/confirm", method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) } }, res => {
+        let d = ""; res.on("data", c => d += c); res.on("end", () => resolve(JSON.parse(d || "{}")));
+      });
+      req.on("error", e => resolve({ ok: false, error: e.message }));
+      req.write(payload); req.end();
+    });
+    await reply(chatId, r.ok ? `✅ ${email} crédité — parrain prolongé de 30 jours (code: ${refCode})` : `⚠️ ${r.message || r.error}`);
+  } else {
+    // Prolongation directe sans code de parrainage
+    const payload = JSON.stringify({ refCode: "ADMIN-MANUAL", newEmail: email, secret: TG_TOKEN });
+    // Appel direct API pour prolonger
+    const r = await new Promise(resolve => {
+      const req = http.request({ hostname: "touslesmatchs-api", port: 3001, path: "/referral/confirm", method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) } }, res => {
+        let d = ""; res.on("data", c => d += c); res.on("end", () => resolve(JSON.parse(d || "{}")));
+      });
+      req.on("error", e => resolve({ ok: false, error: e.message }));
+      req.write(payload); req.end();
+    });
+    await reply(chatId, `✅ 30 jours ajoutés pour ${email} (cadeau manuel admin)`);
+  }
+}
+
+async function cmdConfirmRef(chatId, args) {
+  // Usage: /confirmref REF-CODE-XXX email@abonne.com
+  const parts = (args || "").trim().split(/\s+/);
+  const [refCode, newEmail] = parts;
+  if (!refCode || !newEmail) {
+    await reply(chatId, "Usage: /confirmref REF-CODE-XXX email@nouvelab.com");
+    return;
+  }
+  const payload = JSON.stringify({ refCode: refCode.toUpperCase(), newEmail: newEmail.toLowerCase(), secret: TG_TOKEN });
+  const r = await new Promise(resolve => {
+    const req = http.request({ hostname: "touslesmatchs-api", port: 3001, path: "/referral/confirm", method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) } }, res => {
+      let d = ""; res.on("data", c => d += c); res.on("end", () => resolve(JSON.parse(d || "{}")));
+    });
+    req.on("error", e => resolve({ ok: false, error: e.message }));
+    req.write(payload); req.end();
+  });
+  await reply(chatId, r.ok ? `✅ Parrainage confirmé : ${refCode} → ${newEmail}\nParrain crédité de 30 jours + email envoyé.` : `⚠️ ${r.message || r.error}`);
+}
+
 async function cmdRecord(chatId, args) {
   const parts = args.split("|").map(s => s.trim()).filter(Boolean);
   if (parts.length < 7) {
@@ -1717,6 +1772,8 @@ async function handleCommandLine(chatId, text) {
     case "/result":          return cmdResultPreview(chatId);
     case "/publishresult":   return cmdPublishResult(chatId);
     case "/record":          return cmdRecord(chatId, args);
+    case "/addmonth":        return cmdAddMonth(chatId, args);
+    case "/confirmref":      return cmdConfirmRef(chatId, args);
     case "/strategy":        return cmdStrategy(chatId);
     case "/alerts":          return cmdAlerts(chatId);
     case "/publishalert":    return cmdPublishAlert(chatId, args);
