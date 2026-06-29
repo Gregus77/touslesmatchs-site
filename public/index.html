@@ -1015,6 +1015,64 @@ footer{
 </style>
 </head>
 <body>
+<!-- ══ SPLASH PREMIUM (remplace le logo TLM brut au chargement) ══ -->
+<style>
+#boot-splash{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:30px;
+  background:radial-gradient(120% 120% at 50% 35%,#0d1020 0%,#06080f 70%);
+  transition:opacity .6s ease,visibility .6s ease}
+#boot-splash.bs-hide{opacity:0;visibility:hidden;pointer-events:none}
+.bs-ring{position:relative;width:128px;height:128px;display:flex;align-items:center;justify-content:center}
+.bs-ring::before{content:"";position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,#22d3ee,#6366f1,#9333ea,#ec4899,#22d3ee);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));
+          mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));
+  animation:bs-spin 1.1s linear infinite;filter:drop-shadow(0 0 18px rgba(99,102,241,.55))}
+.bs-ring::after{content:"";position:absolute;inset:14px;border-radius:50%;
+  background:radial-gradient(circle at 50% 40%,rgba(34,211,238,.18),transparent 70%);
+  animation:bs-pulse 1.8s ease-in-out infinite}
+.bs-core{position:relative;font-size:34px;font-weight:900;line-height:1;
+  background:linear-gradient(135deg,#22d3ee,#9333ea);-webkit-background-clip:text;
+  background-clip:text;color:transparent;letter-spacing:-1px}
+.bs-word{font-size:26px;font-weight:800;letter-spacing:-.5px;
+  background:linear-gradient(90deg,#eceaf4 0%,#22d3ee 45%,#9333ea 70%,#eceaf4 100%);
+  background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;
+  animation:bs-shine 2.4s linear infinite}
+.bs-tag{font-size:12.5px;color:#7b82a0;font-weight:600;letter-spacing:.3px;margin-top:-16px}
+.bs-bar{width:170px;height:4px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.bs-bar i{display:block;height:100%;width:40%;border-radius:4px;
+  background:linear-gradient(90deg,#22d3ee,#9333ea);animation:bs-load 1.3s ease-in-out infinite}
+@keyframes bs-spin{to{transform:rotate(360deg)}}
+@keyframes bs-pulse{0%,100%{opacity:.4;transform:scale(.92)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes bs-shine{to{background-position:-220% center}}
+@keyframes bs-load{0%{transform:translateX(-120%)}100%{transform:translateX(320%)}}
+@media (prefers-reduced-motion:reduce){.bs-ring::before,.bs-ring::after,.bs-word,.bs-bar i{animation-duration:6s}}
+</style>
+<div id="boot-splash" role="status" aria-label="Chargement TousLesMatchs">
+  <div class="bs-ring"><span class="bs-core">TLM</span></div>
+  <div class="bs-word">TousLesMatchs</div>
+  <div class="bs-tag">Le Concile des IA prépare ton analyse…</div>
+  <div class="bs-bar"><i></i></div>
+</div>
+<script>
+(function(){
+  function hideSplash(){
+    var s=document.getElementById('boot-splash');
+    if(!s||s.classList.contains('bs-hide'))return;
+    s.classList.add('bs-hide');
+    setTimeout(function(){ if(s&&s.parentNode) s.parentNode.removeChild(s); },700);
+  }
+  // Cache le splash dès que le DOM est prêt, + filet de sécurité 3s pour
+  // ne JAMAIS rester bloqué sur le logo même si un script plante.
+  if(document.readyState==='complete'||document.readyState==='interactive'){
+    setTimeout(hideSplash,400);
+  } else {
+    document.addEventListener('DOMContentLoaded',function(){ setTimeout(hideSplash,400); });
+  }
+  window.addEventListener('load',hideSplash);
+  setTimeout(hideSplash,3000);
+})();
+</script>
 <canvas id="cosmos"></canvas>
 <div class="mesh"></div>
 
