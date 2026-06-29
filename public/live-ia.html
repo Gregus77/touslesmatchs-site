@@ -298,6 +298,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
     <div class="page-sub">Le Conseil des IA analyse chaque match.<br>Quand plusieurs IA voient le même signal, tu décides avec une longueur d’avance. 🔥</div>
     <div class="page-meta">
       <div class="meta-pill live"><span class="match-dot"></span><span id="match-count-pill">— matchs en direct</span></div>
+      <div class="meta-pill" id="global-precision-pill" style="display:none;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:#10b981">🎯 <span id="global-precision-val">—</span> de précision</div>
       <div class="meta-pill credits" id="credits-pill" style="display:none">— crédits</div>
     </div>
   </div>
@@ -1033,6 +1034,22 @@ function renderLeaderboard() {
   const badge = el.querySelector('.lb-title-badge');
   if (badge) {
     badge.textContent = `${totalMatches} match${totalMatches>1?'s':''} · ${totalSnapshots} snapshot${totalSnapshots>1?'s':''} · ${totalPreds} predictions · ${totalResolved} resolues`;
+  }
+
+  // Indicateur de précision globale dans le header
+  const allResolved = withData.reduce((s,a) => s + ((a.wins||0)+(a.losses||0)), 0);
+  const allWins = withData.reduce((s,a) => s + (a.wins||0), 0);
+  if(allResolved >= 5) {
+    const globalWr = Math.round(allWins / allResolved * 100);
+    const pill = document.getElementById('global-precision-pill');
+    const val = document.getElementById('global-precision-val');
+    if(pill && val) {
+      val.textContent = `${globalWr}%`;
+      pill.style.display = '';
+      pill.style.background = globalWr >= 60 ? 'rgba(16,185,129,.1)' : globalWr >= 50 ? 'rgba(245,158,11,.1)' : 'rgba(244,63,94,.1)';
+      pill.style.borderColor = globalWr >= 60 ? 'rgba(16,185,129,.3)' : globalWr >= 50 ? 'rgba(245,158,11,.3)' : 'rgba(244,63,94,.3)';
+      pill.style.color = globalWr >= 60 ? '#10b981' : globalWr >= 50 ? '#f59e0b' : '#f43f5e';
+    }
   }
 }
 
