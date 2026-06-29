@@ -52,6 +52,8 @@ const STRONG_ALERTS_CLIENT_CHANNEL = process.env.HERMES_STRONG_ALERTS_CLIENT_CHA
 const STRONG_ALERTS_CLIENT_TOKEN = process.env.HERMES_STRONG_ALERTS_CLIENT_TOKEN || TG_TOKEN;
 const AUTO_PUBLISH_FREE = process.env.HERMES_AUTO_PUBLISH_FREE !== "0";
 const AUTO_PUBLISH_PREMIUM = process.env.HERMES_AUTO_PUBLISH_PREMIUM !== "0";
+const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
+const API_BASE_URL = process.env.API_BASE_URL || "http://touslesmatchs-api:3001";
 
 if (!TG_TOKEN) { console.error("HERMES_ADMIN_TLM_BOT manquant"); process.exit(1); }
 
@@ -1853,6 +1855,87 @@ function tgRequestWithToken(token, method, body) {
   });
 }
 
+// ── Vérification paiement Stripe pour les clients ─────────────────────────────
+async function stripeGet(path) {
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.stripe.com",
+      path,
+      method: "GET",
+      headers: { "Authorization": `Bearer ${STRIPE_KEY}` }
+    }, res => {
+      let d = "";
+      res.on("data", c => d += c);
+      res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+    });
+    req.on("error", () => resolve({}));
+    req.end();
+  });
+}
+
+async function cmdVerifyPayment(chatId, sessionId) {
+  if (!STRIPE_KEY) {
+    return reply(chatId, "⚠️ Vérification indisponible. Contacte le support sur @touslesmatchs_fr");
+  }
+  await reply(chatId, "⏳ Vérification de ton paiement en cours...");
+  try {
+    const session = await stripeGet(`/v1/checkout/sessions/${sessionId}?expand[]=line_items`);
+    if (!session || session.error) {
+      return reply(chatId, "❌ Session introuvable. Si tu viens de payer, attends 1 minute et tape /start verify_" + sessionId);
+    }
+    if (session.payment_status !== "paid") {
+      return reply(chatId, "❌ Paiement non confirmé. Si tu viens de payer, attends quelques secondes puis réessaie en cliquant à nouveau sur le lien dans le mail de confirmation Stripe.");
+    }
+    const customerEmail = (session.customer_details?.email || "").toLowerCase().trim();
+    if (!customerEmail) {
+      return reply(chatId, "⚠️ Email non trouvé dans la session. Contacte le support.");
+    }
+
+    // Demander à l'API de créer le code si pas encore fait
+    const apiRes = await new Promise((resolve) => {
+      const data = JSON.stringify({ session_id: sessionId, email: customerEmail });
+      const req = http.request({
+        hostname: "touslesmatchs-api",
+        port: 3001,
+        path: "/internal/stripe-verify",
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data),
+          "x-internal-secret": TG_TOKEN }
+      }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } }); });
+      req.on("error", () => resolve({ ok: false }));
+      req.write(data); req.end();
+    });
+
+    const code = apiRes.code || "";
+    const plan = apiRes.plan || "premium";
+    const planLabels = { carte: "Analyse 1€", premium: "Pro", vip: "VIP", elite: "Elite" };
+    const planLabel = planLabels[plan] || plan;
+
+    if (code) {
+      await reply(chatId,
+        `✅ <b>Paiement confirmé — Plan ${planLabel} !</b>\n\n` +
+        `📧 Compte : <b>${customerEmail}</b>\n` +
+        `🔑 Ton code d'accès : <code>${code}</code>\n\n` +
+        `<b>Comment l'utiliser :</b>\n` +
+        `1. Va sur <a href="https://touslesmatchs.com">touslesmatchs.com</a>\n` +
+        `2. Clique sur "Se connecter"\n` +
+        `3. Entre ton email + ce code\n\n` +
+        `Un email de confirmation a aussi été envoyé à ${customerEmail}.\n` +
+        `Bienvenue dans l'équipe ! 🚀`
+      );
+    } else {
+      await reply(chatId,
+        `✅ Paiement bien reçu pour <b>${customerEmail}</b> !\n\n` +
+        `Ton code d'accès arrive par email dans quelques minutes.\n` +
+        `Si tu ne reçois rien dans 10 minutes, contacte le support.`
+      );
+    }
+  } catch(e) {
+    console.error("[verify-payment]", e.message);
+    await reply(chatId, "⚠️ Erreur technique. Ton paiement est bien enregistré — contacte le support si tu n'as pas reçu ton code.");
+  }
+}
+
 // ── Message router ────────────────────────────────────────────────────────────
 async function handleCommandLine(chatId, text) {
   const [cmd, ...rest] = text.split(" ");
@@ -1893,7 +1976,13 @@ async function handleMessage(msg) {
   const fromId = String(msg.from?.id);
   const text   = (msg.text || "").trim();
 
-  // Sécurité : seulement l'admin
+  // Vérification paiement Stripe — accessible à tous les utilisateurs
+  const verifyMatch = text.match(/^\/start\s+verify_(.+)$/);
+  if (verifyMatch) {
+    return cmdVerifyPayment(chatId, verifyMatch[1].trim());
+  }
+
+  // Sécurité : seulement l'admin pour les autres commandes
   if (fromId !== ADMIN_USER_ID) {
     console.log(`  ⚠️ Message ignoré de user ${fromId}`);
     return;

@@ -3857,6 +3857,57 @@ app.get("/admin/codes", (req, res) => {
 
 // ── Internal pick notify — called by Hermès after /analyse ───────────────────
 // Secured by HERMES_ADMIN_TLM_BOT token as shared secret
+// Route appelée par Hermès bot après vérification Stripe paiement client
+app.post("/internal/stripe-verify", async (req, res) => {
+  const { session_id, email } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  const secret = req.headers["x-internal-secret"];
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false });
+  if (!session_id || !email) return res.json({ ok: false, error: "session_id et email requis" });
+
+  try {
+    // Vérifier session Stripe
+    if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Stripe non configuré" });
+    const Stripe = require("stripe");
+    const stripe = Stripe(STRIPE_SECRET_KEY);
+    const session = await stripe.checkout.sessions.retrieve(session_id, { expand: ["line_items"] });
+    if (!session || session.payment_status !== "paid") return res.json({ ok: false, error: "Paiement non confirmé" });
+
+    const priceId = session.line_items?.data?.[0]?.price?.id || "";
+    const planMap = {
+      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
+      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
+      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
+    };
+    const { status = "premium", durationDays = 32, creditsMax = 10 } = planMap[priceId] || {};
+
+    // Chercher code existant
+    const cdbr = new Database(CODES_DB_PATH, { readonly: true });
+    let codeRow = cdbr.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get(email);
+    cdbr.close();
+
+    if (!codeRow) {
+      // Créer le code
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const newCode = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
+      const cdbw = new Database(CODES_DB_PATH);
+      cdbw.prepare(
+        "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+      ).run(newCode, email, status, expiresAt, creditsMax, getTodayStr());
+      cdbw.close();
+      codeRow = { code: newCode, plan: status };
+      console.log(`[stripe-verify] Code créé: ${newCode} pour ${email} plan ${status}`);
+    }
+
+    res.json({ ok: true, code: codeRow.code, plan: codeRow.plan });
+  } catch(e) {
+    console.error("[stripe-verify]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 app.post("/internal/pick-notify", async (req, res) => {
   const { pick, secret } = req.body || {};
   const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
