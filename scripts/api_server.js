@@ -3511,12 +3511,12 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     } catch(e) { console.error("[stripe] retrieve error:", e.message); }
 
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:               { status: "carte",   label: "Analyse 1 euro" },
-      [process.env.STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro" },
-      [process.env.STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP" },
-      [process.env.STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite" },
+      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro", durationDays: 1 },
+      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro",            durationDays: 32 },
+      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP",            durationDays: 32 },
+      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite",          durationDays: 32 },
     };
-    const { status = "premium", label: planLabel = "Pro" } = planMap[priceId] || {};
+    const { status = "premium", label: planLabel = "Pro", durationDays = 32 } = planMap[priceId] || {};
 
     // ── Mettre à jour users table si userId connu ────────────────────────────
     const userId = parseInt(session.client_reference_id);
@@ -3528,46 +3528,53 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
     }
 
+    // ── Créer code d'accès dans codes.db si pas encore existant ─────────────
+    if (customerEmail) {
+      try {
+        const codeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        const newCode = Array.from({ length: 8 }, () => codeChars[Math.floor(Math.random() * codeChars.length)]).join("");
+        const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
+        const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
+        const cdbw = new Database(CODES_DB_PATH);
+        const existing = cdbw.prepare("SELECT code FROM codes WHERE email = ? AND plan = ? AND active = 1").get(customerEmail, status);
+        if (!existing) {
+          cdbw.prepare(
+            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+          ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr());
+          console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}`);
+        }
+        cdbw.close();
+      } catch(e) { console.error("[stripe] code creation error:", e.message); }
+    }
+
     // ── Email de confirmation via Brevo ──────────────────────────────────────
     if (customerEmail && BREVO_API_KEY) {
       (async () => {
         try {
-          // Chercher le code d'accès dans codes.db
           const cdb = new Database(CODES_DB_PATH, { readonly: true });
           const codeRows = cdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").all(customerEmail);
           cdb.close();
 
-          let html;
-          if (codeRows.length > 0) {
-            const codeList = codeRows.map(r =>
-              `<tr><td style="padding:8px 16px;font-family:monospace;font-size:18px;font-weight:800;letter-spacing:.08em;color:#eceaf4">${r.code}</td>
-               <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
-            ).join("");
-            html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
-              <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
-                <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} activé !</div>
-                <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+          const codeList = codeRows.map(r =>
+            `<tr><td style="padding:8px 16px;font-family:monospace;font-size:18px;font-weight:800;letter-spacing:.08em;color:#eceaf4">${r.code}</td>
+             <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
+          ).join("");
+
+          const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
+              <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} activé !</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+            </div>
+            <div style="padding:32px">
+              <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'accès :</p>
+              <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:10px;overflow:hidden;margin-bottom:24px">${codeList}</table>
+              <p style="font-size:13px;color:#7b82a0;margin:0 0 20px">Utilise ce code sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a> → bouton "Se connecter" → entre ton email + ce code.</p>
+              <div style="text-align:center">
+                <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Accéder au Live IA →</a>
               </div>
-              <div style="padding:32px">
-                <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'accès :</p>
-                <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:10px;overflow:hidden;margin-bottom:24px">${codeList}</table>
-                <p style="font-size:13px;color:#7b82a0;margin:0 0 20px">Utilise ce code sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a> → bouton "Se connecter" → entre ton email + ce code.</p>
-                <div style="text-align:center">
-                  <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Accéder au Live IA →</a>
-                </div>
-              </div>
-            </div>`;
-          } else {
-            html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
-              <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
-                <div style="font-size:24px;font-weight:800;color:#fff">✅ Paiement reçu — Plan ${planLabel}</div>
-              </div>
-              <div style="padding:32px">
-                <p style="font-size:15px;color:#a8aec8">Ton paiement a été validé. Ton code d'accès te sera envoyé sous <strong style="color:#eceaf4">quelques minutes</strong> à cette adresse.</p>
-                <p style="font-size:13px;color:#7b82a0;margin-top:16px">Si tu ne reçois rien dans l'heure, réponds à cet email.</p>
-              </div>
-            </div>`;
-          }
+            </div>
+          </div>`;
+
           await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html);
           console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
         } catch(e) { console.error("[stripe] email error:", e.message); }
@@ -3583,17 +3590,16 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
   res.json({ received: true });
 });
 
-// Legacy create-checkout (no auth required, uses user_id from body)
-app.post("/create-checkout", async (req, res) => {
+async function handleCreateCheckout(req, res) {
   const { plan, user_id } = req.body || {};
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
   const priceMap = {
-    carte: STRIPE_PRICE_ID_CARTE,
-    standard: process.env.STRIPE_PRICE_ID_PREMIUM,
-    premium: process.env.STRIPE_PRICE_ID_PREMIUM,
-    vip: process.env.STRIPE_PRICE_ID_VIP,
-    elite: process.env.STRIPE_PRICE_ID_ELITE,
+    carte:    STRIPE_PRICE_ID_CARTE,
+    standard: STRIPE_PRICE_ID_PREMIUM,
+    premium:  STRIPE_PRICE_ID_PREMIUM,
+    vip:      STRIPE_PRICE_ID_VIP,
+    elite:    STRIPE_PRICE_ID_ELITE,
   };
   const priceId = priceMap[plan];
   if (!priceId) return res.json({ ok: false, error: "Plan inconnu" });
@@ -3614,7 +3620,11 @@ app.post("/create-checkout", async (req, res) => {
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
-});
+}
+
+// Legacy create-checkout accessible via /create-checkout et /api/create-checkout
+app.post("/create-checkout", handleCreateCheckout);
+app.post("/api/create-checkout", handleCreateCheckout);
 
 // ── Community stats (Telegram member count) ───────────────────────────────────
 let tgMemberCache = { count: null, ts: 0 };
