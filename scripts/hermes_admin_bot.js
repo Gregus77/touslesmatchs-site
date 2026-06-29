@@ -1373,6 +1373,14 @@ async function publishClientStrongSignal(signal, { silentAdmin = false } = {}) {
       { text: "Voir l'analyse Live IA", url: "https://www.touslesmatchs.com/live-ia" },
     ])
   );
+
+  // Teaser canal public (Hermès free) — version courte sans le signal détaillé
+  if (PUBLIC_BOT_TOKEN && PUBLIC_CHAT && STRONG_ALERTS_CLIENT_CHANNEL !== PUBLIC_CHAT) {
+    const sport = signal.sport ? ` · ${escapeHtml(signal.sport)}` : "";
+    const publicText = `🚨 <b>Signal fort détecté par le Concile IA</b>\n\n<b>${escapeHtml(signal.home)} vs ${escapeHtml(signal.away)}</b>${sport}\n${signal.minute ? `⏱ ${signal.minute}'` : "🔴 En direct"}\n\n<i>Confiance élevée — détails réservés aux abonnés Premium</i>\n\n📊 <a href="https://www.touslesmatchs.com/live-ia">Voir l'analyse Live IA</a>`;
+    await sendTelegramWithToken(PUBLIC_BOT_TOKEN, PUBLIC_CHAT, publicText).catch(() => {});
+  }
+
   if (!silentAdmin && ADMIN_CHAT) {
     await reply(
       ADMIN_CHAT,

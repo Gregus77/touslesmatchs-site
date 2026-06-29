@@ -522,7 +522,7 @@ async function fetchFromApiSports() {
     if (items.length) console.log(`[live-matches] API-Sports hockey: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
-  // Baseball live - apprentissage uniquement tant que les stats ne prouvent pas le sport
+  // Baseball live
   try {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     const items = (data.response || []).slice(0, 10).map((g) => ({
@@ -1601,11 +1601,16 @@ function getStrongSignalAlerts(options = {}) {
         });
         const assessment = assessLearningProfile(profile, minResolved);
         const sampleOk = total >= minResolved && assessment.clientSafe;
+        const sport = r.sport || "Football";
+        // Pour les sports non-Football (basket, hockey, baseball) : signal éligible dès 85% de confiance
+        // même sans historique suffisant (sport récent sur la plateforme)
+        const highConfidence = r.confidence >= 85 && sport !== "Football";
+        const eligible = sampleOk || highConfidence;
         return {
           id: r.match_key,
           home: r.home,
           away: r.away,
-          sport: r.sport || "Football",
+          sport,
           competition: r.competition || "Inconnue",
           minute: r.minute_at_analysis,
           score: `${r.score_home_at_analysis ?? "?"}-${r.score_away_at_analysis ?? "?"}`,
@@ -1622,8 +1627,8 @@ function getStrongSignalAlerts(options = {}) {
             winrate: marketWinrate,
             sampleOk,
           },
-          eligible: sampleOk,
-          blockReason: sampleOk ? null : `historique insuffisant sur ce marché (${total}/${minResolved})`,
+          eligible,
+          blockReason: eligible ? null : `historique insuffisant sur ce marché (${total}/${minResolved})`,
         };
       })
       .filter(r => r.eligible)
