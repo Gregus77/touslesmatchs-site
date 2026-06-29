@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Tu démarres une session TousLesMatchs. Lance automatiquement le skill /autopilote : effectue la Phase 0 (audit santé) puis propose la prochaine amélioration prioritaire parmi : /seo /analyse-matchs /boucle-amelioration /tunnel-vente /support-client /telegram /growth-engine.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Tu démarres une session TousLesMatchs. Lance immédiatement /pilote : Phase 0 santé du code, puis identifie et implémente la tâche prioritaire (0=bloquants Stripe, 1=conversion, 2=qualité produit, 3=croissance, 4=maintenance). Commite et push sans attendre d instruction. Skills disponibles : /pilote /growth-engine /boucle /verifier /hermes-audit /shadow-eval.\"}}'",
             "timeout": 5
           }
         ]

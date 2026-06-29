@@ -164,6 +164,27 @@ Match en cours (score + minute + stats live)
 - Turquie/Paraguay corrigé : 0-1 loss (plus de données hardcodées)
 - DEFAULT_PICK supprimé de api_server.js
 
+### Claude Code — 2026-06-29 — Concile v3 + Growth Engine
+- Concile v3 : 4 familles IA vraiment différentes (Perplexity/web, DeepSeek/contrarian, Mistral/MoE, Cohere/RAG) + Chief Groq
+- Shadow eval : 5 IAs testées en parallèle pendant 15 jours (table `shadow_evals`)
+- Pinned signals : match épinglé 90 min quand signal fort Telegram → plus de match invisible
+- Lien Telegram avec ?match= param pour auto-scroll vers le match épinglé
+- Tracking complet des pronos : sport, pays, championnat, type de pari, confiance, matrice agent×bet
+- Hero redesigné : email capture visible sans scroll, titre clair "analysé par 4 IAs"
+- Tunnel conversion : Telegram gratuit masque maintenant le pari (→ CTA Pro/Elite)
+- Séquence email nurturing J+1 (preuve) + J+3 (urgence) automatique après inscription
+- Skills créés : `/pilote` (orchestrateur autonome), `/growth-engine` (croissance Stripe)
+
+### BLOQUANTS STRIPE (Grégory doit agir sur le VPS)
+```bash
+# Sur le VPS — clés à ajouter dans /opt/touslesmatchs/.env
+STRIPE_SECRET_KEY=sk_live_...         # ← CRITIQUE — sans ça 0 vente
+STRIPE_PRICE_ID_PREMIUM=price_...
+STRIPE_PRICE_ID_VIP=price_...
+STRIPE_PRICE_ID_ELITE=price_...
+PERPLEXITY_API_KEY=pplx-...           # Pour Concile v3 (agent web search)
+```
+
 ### À faire pour Codex
 - [ ] Déboguer et fiabiliser la chaîne Hermès → picks.json → frontend
 - [ ] Câbler Stripe complet (paiement → code → email)
