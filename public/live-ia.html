@@ -946,6 +946,7 @@ function formatScorePair(m){
 
 let agentPerfData = {};
 let agentPerfMeta = {};
+// Agents actuels du Concile v3 (utilisés comme placeholder si la base est vide)
 const AGENT_LIST = [
   { name: 'Perplexity-Web', icon: '🌐' },
   { name: 'DeepSeek-V3', icon: '🔮' },
@@ -953,6 +954,16 @@ const AGENT_LIST = [
   { name: 'Cohere-Command', icon: '🧬' },
   { name: 'Claude Chief', icon: '👑' },
 ];
+
+// Icônes par nom d'agent — couvre les noms actuels ET historiques pour que
+// les anciennes données (Mistral-7B, GROQ-Llama...) restent affichées même
+// après un renommage des agents. Tout agent inconnu reçoit une icône par défaut.
+const AGENT_ICONS = {
+  'Perplexity-Web': '🌐', 'DeepSeek-V3': '🔮', 'Mistral-Large': '🌊',
+  'Cohere-Command': '🧬', 'Claude Chief': '👑',
+  'Mistral-7B': '🌊', 'GROQ-Llama': '🦙', 'GPT Analysis': '🤖', 'GeminiFlash': '💎',
+};
+function agentIcon(name){ return AGENT_ICONS[name] || '🤖'; }
 
 async function loadAgentPerformance() {
   const el = document.getElementById('agent-leaderboard');
@@ -979,9 +990,16 @@ function renderLeaderboard() {
   const el = document.getElementById('agent-leaderboard');
   if(!el) return;
 
-  const withData = AGENT_LIST.map(a => ({
-    ...a,
-    ...(agentPerfData[a.name] || { total: 0, wins: 0, losses: 0, pending: 0, winrate: null, resolved: 0 })
+  // Construire la liste depuis les agents RÉELLEMENT présents dans la base
+  // (clés de agentPerfData), pas depuis une liste figée — sinon un renommage
+  // d'agent fait disparaître tout l'historique. Si la base est vide, on retombe
+  // sur AGENT_LIST comme placeholder.
+  const dataNames = Object.keys(agentPerfData || {});
+  const names = dataNames.length ? dataNames : AGENT_LIST.map(a => a.name);
+  const withData = names.map(name => ({
+    name,
+    icon: agentIcon(name),
+    ...(agentPerfData[name] || { total: 0, wins: 0, losses: 0, pending: 0, winrate: null, resolved: 0 })
   }));
   const hasAny = withData.some(a => a.total > 0);
 
