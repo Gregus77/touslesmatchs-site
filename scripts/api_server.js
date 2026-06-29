@@ -91,8 +91,19 @@ ensureColumn("concile_analyses", "result_source", "TEXT DEFAULT NULL");
 ensureColumn("concile_analyses", "sport", "TEXT DEFAULT 'Football'");
 ensureColumn("concile_analyses", "learning_tier", "TEXT DEFAULT 'learning'");
 ensureColumn("concile_analyses", "learning_note", "TEXT DEFAULT ''");
-ensureColumn("concile_analyses", "home_logo", "TEXT DEFAULT NULL");
-ensureColumn("concile_analyses", "away_logo", "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "home_logo",       "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "away_logo",       "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "bet_category",    "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "country",         "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "is_neutral",      "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "home_form",       "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "away_form",       "TEXT DEFAULT NULL");
+ensureColumn("concile_analyses", "home_goals_avg",  "REAL DEFAULT NULL");
+ensureColumn("concile_analyses", "away_goals_avg",  "REAL DEFAULT NULL");
+ensureColumn("concile_analyses", "home_shots",      "INTEGER DEFAULT NULL");
+ensureColumn("concile_analyses", "away_shots",      "INTEGER DEFAULT NULL");
+ensureColumn("concile_analyses", "home_possession", "INTEGER DEFAULT NULL");
+ensureColumn("concile_analyses", "away_possession", "INTEGER DEFAULT NULL");
 
 // ── Shadow eval table ─────────────────────────────────────────────────────────
 db.exec(`
@@ -1623,40 +1634,72 @@ function assessLearningProfile(profile, minResolved = 5) {
   return { tier: clientSafe ? "elite_candidate" : "learning", score: clientSafe ? 100 : Math.max(0, 70 - reasons.length * 15), clientSafe, reasons };
 }
 
+function extractCountry(competition) {
+  if (!competition) return null;
+  const map = {
+    "France": ["Ligue 1","Ligue 2","Coupe de France","National"],
+    "Espagne": ["La Liga","Liga","Segunda","Copa del Rey","LaLiga"],
+    "Angleterre": ["Premier League","Championship","FA Cup","EFL","League One","League Two"],
+    "Allemagne": ["Bundesliga","2. Bundesliga","DFB","3. Liga"],
+    "Italie": ["Serie A","Serie B","Serie C","Coppa Italia"],
+    "Portugal": ["Primeira Liga","Liga Portugal","Taça de Portugal"],
+    "Pays-Bas": ["Eredivisie","Eerste Divisie","KNVB"],
+    "Belgique": ["Pro League","First Division","Division 1"],
+    "Turquie": ["Süper Lig","Super Lig","TFF"],
+    "Brésil": ["Brasileirao","Serie A Brazil","Serie B Brazil","Serie C"],
+    "USA": ["MLS","USL","NWSL","MLS Next"],
+    "Chili": ["Primera Division","Copa Chile","Segunda Division"],
+    "Argentine": ["Liga Profesional","Primera Nacional","Copa Argentina"],
+    "International": ["World Cup","Copa América","Euro","Champions League","Europa League","Nations League","AFC","CAF","CONCACAF","FIFA"],
+  };
+  const comp = competition.toLowerCase();
+  for (const [country, keywords] of Object.entries(map)) {
+    if (keywords.some(k => comp.includes(k.toLowerCase()))) return country;
+  }
+  return null;
+}
+
 function saveConcileAnalysis(match, result, pickBet) {
   try {
     const minute = parseInt(match.minute) || null;
     const statsStatus = result.statsStatus?.status || "unavailable";
     const matchKey = getPredictionSnapshotKey(match);
     const sport = match.sport || "Football";
-    const learningProfile = getLearningProfile({ sport, competition: match.competition || match.league || "", bet: result.best_bet });
+    const competition = match.competition || match.league || "";
+    const learningProfile = getLearningProfile({ sport, competition, bet: result.best_bet });
     const learningAssessment = assessLearningProfile(learningProfile, 5);
+    const betCat = categorizeBet(result.best_bet);
+    const country = extractCountry(competition);
+    const neutral = isNeutralComp(competition) ? 1 : 0;
+
+    // Extraire les stats live si disponibles
+    const liveStats = result.statsStatus?.stats || null;
+    const homePoss = liveStats?.possession?.home ?? null;
+    const awayPoss = liveStats?.possession?.away ?? null;
+    const homeShots = liveStats?.shots?.home ?? liveStats?.shots_on_goal?.home ?? null;
+    const awayShots = liveStats?.shots?.away ?? liveStats?.shots_on_goal?.away ?? null;
+
     db.prepare(`
       INSERT INTO concile_analyses
         (match_key, home, away, competition, minute_at_analysis,
          score_home_at_analysis, score_away_at_analysis, stats_status,
          best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
-         sport, learning_tier, learning_note, home_logo, away_logo)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+         sport, learning_tier, learning_note, home_logo, away_logo,
+         bet_category, country, is_neutral,
+         home_possession, away_possession, home_shots, away_shots)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       matchKey,
-      match.home, match.away,
-      match.competition || match.league || "",
-      minute,
-      match.score_home ?? null,
-      match.score_away ?? null,
-      statsStatus,
-      result.best_bet,
-      result.confidence,
-      result.raison || "",
+      match.home, match.away, competition, minute,
+      match.score_home ?? null, match.score_away ?? null, statsStatus,
+      result.best_bet, result.confidence, result.raison || "",
       result.consensus_votes || 0,
       JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
-      pickBet || null,
-      sport,
-      learningAssessment.tier,
-      learningAssessment.reasons.join("; "),
-      match.home_logo || null,
-      match.away_logo || null
+      pickBet || null, sport,
+      learningAssessment.tier, learningAssessment.reasons.join("; "),
+      match.home_logo || null, match.away_logo || null,
+      betCat, country, neutral,
+      homePoss, awayPoss, homeShots, awayShots
     );
     console.log(
       `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
@@ -1843,6 +1886,216 @@ function summarizeStrategyRows(rows, labelKey) {
       const br = b.total >= 5 ? b.winrate : -1;
       return br - ar || b.total - a.total;
     });
+}
+
+function categorizeBet(bet) {
+  const b = String(bet || "").toLowerCase().trim();
+  if (!b || b === "no bet") return "NO BET";
+  if (b.includes("over") || b.includes("under") || b.includes("plus de") || b.includes("moins de")) return "Over/Under";
+  if (b.includes("btts") || b.includes("les deux")) return "BTTS";
+  if (b === "1x" || b === "x2" || b === "12" || b.includes("double chance")) return "Double Chance";
+  if (b.includes("nul") || b === "x" || b.includes("draw")) return "Match Nul";
+  if (b.includes("domicile") || b === "1" || b.includes("home") || b.includes("victoire") && b.includes("dom")) return "Victoire Domicile";
+  if (b.includes("extérieur") || b.includes("exterieur") || b === "2" || b.includes("away")) return "Victoire Extérieur";
+  return "Autre";
+}
+
+function getPronoStats() {
+  try {
+    // Toutes les analyses résolues avec catégorie de pari
+    const allResolved = db.prepare(`
+      SELECT best_bet, confidence, outcome, agents_json, sport, competition,
+             home, away, analysed_at, minute_at_analysis, score_home_at_analysis, score_away_at_analysis
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL
+      ORDER BY analysed_at DESC
+    `).all();
+
+    // Grouper par catégorie de pari
+    const byCategory = {};
+    for (const row of allResolved) {
+      const cat = categorizeBet(row.best_bet);
+      if (cat === "NO BET") continue;
+      if (!byCategory[cat]) byCategory[cat] = { total: 0, wins: 0, losses: 0, bets: {} };
+      byCategory[cat].total++;
+      if (row.outcome === "win") byCategory[cat].wins++;
+      else byCategory[cat].losses++;
+      // Sous-catégorie par pari exact
+      const b = row.best_bet;
+      if (!byCategory[cat].bets[b]) byCategory[cat].bets[b] = { total: 0, wins: 0 };
+      byCategory[cat].bets[b].total++;
+      if (row.outcome === "win") byCategory[cat].bets[b].wins++;
+    }
+
+    const categoryStats = Object.entries(byCategory).map(([cat, d]) => ({
+      category: cat,
+      total: d.total,
+      wins: d.wins,
+      losses: d.losses,
+      winrate: d.wins + d.losses > 0 ? Math.round(d.wins / (d.wins + d.losses) * 100) : null,
+      bets: Object.entries(d.bets)
+        .map(([bet, s]) => ({ bet, total: s.total, wins: s.wins, winrate: s.total > 0 ? Math.round(s.wins / s.total * 100) : null }))
+        .sort((a, b) => b.total - a.total),
+    })).sort((a, b) => (b.winrate || 0) - (a.winrate || 0));
+
+    // Croisement agent × catégorie de pari
+    const agentRows = db.prepare(`
+      SELECT ap.agent_name, ap.bet, ap.outcome
+      FROM agent_predictions ap
+      WHERE ap.outcome IS NOT NULL
+    `).all();
+
+    const agentByCategory = {};
+    for (const row of agentRows) {
+      const cat = categorizeBet(row.bet);
+      if (cat === "NO BET") continue;
+      if (!agentByCategory[row.agent_name]) agentByCategory[row.agent_name] = {};
+      if (!agentByCategory[row.agent_name][cat]) agentByCategory[row.agent_name][cat] = { total: 0, wins: 0 };
+      agentByCategory[row.agent_name][cat].total++;
+      if (row.outcome === "win") agentByCategory[row.agent_name][cat].wins++;
+    }
+
+    const agentMatrix = Object.entries(agentByCategory).map(([agent, cats]) => ({
+      agent,
+      categories: Object.entries(cats).map(([cat, d]) => ({
+        category: cat,
+        total: d.total,
+        wins: d.wins,
+        winrate: d.total > 0 ? Math.round(d.wins / d.total * 100) : null,
+      })).sort((a, b) => b.total - a.total),
+      best_category: Object.entries(cats)
+        .filter(([, d]) => d.total >= 5)
+        .map(([cat, d]) => ({ cat, winrate: Math.round(d.wins / d.total * 100) }))
+        .sort((a, b) => b.winrate - a.winrate)[0] || null,
+    }));
+
+    // Meilleur agent par catégorie
+    const bestAgentPerCategory = {};
+    for (const { agent, categories } of agentMatrix) {
+      for (const { category, total, wins, winrate } of categories) {
+        if (total < 5 || winrate === null) continue;
+        if (!bestAgentPerCategory[category] || winrate > bestAgentPerCategory[category].winrate) {
+          bestAgentPerCategory[category] = { agent, winrate, total };
+        }
+      }
+    }
+
+    // Tendance : 7 jours vs 30 jours
+    const last7 = allResolved.filter(r => new Date(r.analysed_at) > new Date(Date.now() - 7 * 86400000));
+    const last30 = allResolved.filter(r => new Date(r.analysed_at) > new Date(Date.now() - 30 * 86400000));
+    const trend = (rows) => {
+      const w = rows.filter(r => r.outcome === "win").length;
+      return { total: rows.length, wins: w, winrate: rows.length > 0 ? Math.round(w / rows.length * 100) : null };
+    };
+
+    // Stats par pays
+    const byCountry = db.prepare(`
+      SELECT country, COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL AND country IS NOT NULL
+      GROUP BY country ORDER BY total DESC
+    `).all().map(r => ({
+      country: r.country, total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null,
+    }));
+
+    // Stats par championnat (top 15)
+    const byChampionship = db.prepare(`
+      SELECT competition, sport, country, COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL AND competition != ''
+      GROUP BY competition ORDER BY total DESC LIMIT 15
+    `).all().map(r => ({
+      competition: r.competition, sport: r.sport, country: r.country,
+      total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null,
+    }));
+
+    // Stats terrain neutre vs domicile/extérieur
+    const byNeutral = db.prepare(`
+      SELECT is_neutral, COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
+      FROM concile_analyses WHERE outcome IS NOT NULL GROUP BY is_neutral
+    `).all().map(r => ({
+      context: r.is_neutral ? "Terrain neutre" : "Domicile/Extérieur",
+      total: r.total, wins: r.wins,
+      winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : null,
+    }));
+
+    // Stats par niveau de confiance
+    const byConfidence = db.prepare(`
+      SELECT
+        CASE WHEN confidence >= 85 THEN '85-100%'
+             WHEN confidence >= 80 THEN '80-84%'
+             WHEN confidence >= 70 THEN '70-79%'
+             ELSE '<70%' END as conf_range,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
+      FROM concile_analyses WHERE outcome IS NOT NULL
+      GROUP BY conf_range ORDER BY conf_range DESC
+    `).all().map(r => ({
+      confidence: r.conf_range, total: r.total, wins: r.wins,
+      winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : null,
+    }));
+
+    // Les 20 derniers pronos avec résultat
+    const allResolvedFull = db.prepare(`
+      SELECT home, away, sport, competition, country, best_bet, bet_category,
+             confidence, outcome, minute_at_analysis,
+             score_home_at_analysis, score_away_at_analysis,
+             home_possession, away_possession, home_shots, away_shots,
+             is_neutral, analysed_at, agents_json
+      FROM concile_analyses WHERE outcome IS NOT NULL
+      ORDER BY analysed_at DESC LIMIT 20
+    `).all();
+
+    const recentPronos = allResolvedFull.map(r => {
+      let agents = [];
+      try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+      return {
+        home: r.home, away: r.away, sport: r.sport,
+        competition: r.competition, country: r.country,
+        bet: r.best_bet, category: r.bet_category || categorizeBet(r.best_bet),
+        confidence: r.confidence, outcome: r.outcome,
+        minute: r.minute_at_analysis,
+        score: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        stats: {
+          possession_home: r.home_possession, possession_away: r.away_possession,
+          shots_home: r.home_shots, shots_away: r.away_shots,
+        },
+        neutral: r.is_neutral === 1,
+        date: r.analysed_at?.slice(0, 10),
+        agents: agents.map(a => ({ name: a.name, bet: a.bet, category: categorizeBet(a.bet) })),
+      };
+    });
+
+    return {
+      summary: {
+        total_resolved: allResolved.length,
+        total_wins: allResolved.filter(r => r.outcome === "win").length,
+        winrate_global: allResolved.length > 0
+          ? Math.round(allResolved.filter(r => r.outcome === "win").length / allResolved.length * 100)
+          : null,
+        trend_7j: trend(last7),
+        trend_30j: trend(last30),
+      },
+      by_category: categoryStats,
+      by_country: byCountry,
+      by_championship: byChampionship,
+      by_neutral: byNeutral,
+      by_confidence: byConfidence,
+      best_agent_per_category: bestAgentPerCategory,
+      agent_matrix: agentMatrix,
+      recent: recentPronos,
+    };
+  } catch (e) {
+    console.error("[prono-stats]", e.message);
+    return { error: e.message };
+  }
 }
 
 function getStrategyDashboard() {
@@ -3338,6 +3591,20 @@ app.get("/concile-performance", (req, res) => {
 });
 
 // ── Shadow eval — classement des IAs candidates ───────────────────────────────
+// ── Prono stats — classement par type de pari + agent ────────────────────────
+app.get("/admin/prono-stats", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
+  res.json({ ok: true, ...getPronoStats() });
+});
+
+app.post("/internal/prono-stats", (req, res) => {
+  const { secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
+  res.json({ ok: true, ...getPronoStats() });
+});
+
 app.get("/admin/shadow-perf", (req, res) => {
   const { email, code } = req.query;
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });

@@ -1294,6 +1294,83 @@ function formatStrategyTop(rows) {
   ).join("\n") || "Pas assez de données.";
 }
 
+async function cmdPronoStats(chatId) {
+  try {
+    const payload = JSON.stringify({ secret: TG_TOKEN });
+    const raw = await new Promise((resolve, reject) => {
+      const req = http.request(
+        { hostname: "touslesmatchs-api", port: 3001, path: "/internal/prono-stats", method: "POST",
+          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) } },
+        res => { let d = ""; res.on("data", c => d += c); res.on("end", () => resolve(d)); }
+      );
+      req.on("error", reject);
+      req.write(payload); req.end();
+    });
+    const data = JSON.parse(raw);
+    if (!data.ok) { await reply(chatId, `❌ Prono stats : ${data.error}`); return; }
+
+    const s = data.summary;
+    const win = v => v != null ? `${v}%` : "—";
+
+    // Résumé global
+    let msg = `📊 <b>PRONO STATS — TousLesMatchs</b>\n\n`;
+    msg += `🎯 Global : <b>${s.total_resolved}</b> pronos résolus — winrate <b>${win(s.winrate_global)}</b>\n`;
+    msg += `📅 7 derniers jours : ${s.trend_7j.total} pronos → <b>${win(s.trend_7j.winrate)}</b>\n`;
+    msg += `📅 30 derniers jours : ${s.trend_30j.total} pronos → <b>${win(s.trend_30j.winrate)}</b>\n\n`;
+
+    // Par type de pari
+    msg += `<b>🏷 Par type de pari</b>\n`;
+    (data.by_category || []).filter(c => c.total >= 3).slice(0, 6).forEach(c => {
+      const bar = c.winrate >= 60 ? "✅" : c.winrate >= 50 ? "⚠️" : "❌";
+      msg += `${bar} <b>${c.category}</b> : ${win(c.winrate)} (${c.wins}/${c.total})\n`;
+    });
+
+    // Par pays
+    if ((data.by_country || []).length > 0) {
+      msg += `\n<b>🌍 Par pays</b>\n`;
+      (data.by_country || []).filter(c => c.total >= 3).slice(0, 5).forEach(c => {
+        const bar = c.winrate >= 60 ? "✅" : c.winrate >= 50 ? "⚠️" : "❌";
+        msg += `${bar} ${c.country} : ${win(c.winrate)} (${c.wins}/${c.total})\n`;
+      });
+    }
+
+    // Par niveau de confiance
+    if ((data.by_confidence || []).length > 0) {
+      msg += `\n<b>🎯 Par confiance</b>\n`;
+      (data.by_confidence || []).forEach(c => {
+        const bar = c.winrate >= 60 ? "✅" : c.winrate >= 50 ? "⚠️" : "❌";
+        msg += `${bar} ${c.confidence} : ${win(c.winrate)} (${c.wins}/${c.total})\n`;
+      });
+    }
+
+    // Meilleur agent par type de pari
+    const bap = data.best_agent_per_category || {};
+    if (Object.keys(bap).length > 0) {
+      msg += `\n<b>🤖 Meilleur agent par marché</b>\n`;
+      Object.entries(bap).slice(0, 6).forEach(([cat, info]) => {
+        msg += `• ${cat} → <b>${info.agent}</b> ${win(info.winrate)} (${info.total} pronos)\n`;
+      });
+    }
+
+    await reply(chatId, msg);
+
+    // Derniers pronos
+    if ((data.recent || []).length > 0) {
+      let recent = `<b>📋 Derniers pronos résolus</b>\n\n`;
+      data.recent.slice(0, 8).forEach(p => {
+        const ico = p.outcome === "win" ? "✅" : "❌";
+        recent += `${ico} <b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>\n`;
+        recent += `   ${p.bet || "—"} · ${p.confidence}% · ${p.category || "?"} · ${p.date || "?"}\n`;
+        if (p.competition) recent += `   🏆 ${escapeHtml(p.competition)}${p.country ? " · " + p.country : ""}\n`;
+        recent += "\n";
+      });
+      await reply(chatId, recent);
+    }
+  } catch (e) {
+    await reply(chatId, `❌ Erreur prono-stats : ${e.message}`);
+  }
+}
+
 async function cmdStrategy(chatId) {
   const report = await fetchStrategyReport();
   if (!report.ok) {
@@ -1778,6 +1855,8 @@ async function handleCommandLine(chatId, text) {
     case "/addmonth":        return cmdAddMonth(chatId, args);
     case "/confirmref":      return cmdConfirmRef(chatId, args);
     case "/strategy":        return cmdStrategy(chatId);
+    case "/pronos":
+    case "/pronostats":      return cmdPronoStats(chatId);
     case "/alerts":          return cmdAlerts(chatId);
     case "/publishalert":    return cmdPublishAlert(chatId, args);
     case "/learn":           return cmdLearn(chatId);
