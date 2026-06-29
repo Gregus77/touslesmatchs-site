@@ -99,6 +99,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || "";
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE = process.env.STRIPE_PRICE_ID_CARTE || process.env.STRIPE_PRICE_CARTE || "";
@@ -1003,11 +1004,11 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquement invalide.`;
 
-  // Agents légers sur llama-3.1-8b-instant (~3x moins de tokens), Chief sur le grand modèle
+  // Agents légers sur llama-3.1-8b-instant, agent 2 sur DeepSeek-V3 (API séparée), Chief sur le grand modèle
   const agentNames = [
     { name: "GROQ-Llama", model: "llama-3.1-8b-instant", icon: "🦙" },
     { name: "GPT Analysis", model: "llama-3.1-8b-instant", icon: "🤖" },
-    { name: "GeminiFlash", model: "llama-3.1-8b-instant", icon: "💎" },
+    { name: "DeepSeek-V3", model: "deepseek-chat", icon: "🔮", useDeepseek: true },
     { name: "Mistral-7B", model: "llama-3.1-8b-instant", icon: "🌊" },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
@@ -1015,7 +1016,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
   const personas = [
     `Tu es GROQ-Llama, agent statistique. Utilise tes connaissances sur ${match.home} et ${match.away} : classement FIFA/ELO, moyenne de buts marqués/encaissés en compétition, forme récente (5 derniers matchs), style de jeu (pressing, possession, contre-attaque). Croise ces stats avec le score live.`,
     `Tu es GPT-Analysis, expert tactique. Analyse ${match.home} vs ${match.away} en t'appuyant sur ce que tu sais : schéma tactique habituel, force de la défense, pressing, profil des buteurs, résultats récents et H2H historique. Adapte ton analyse au score et à la minute actuelle.`,
-    `Tu es GeminiFlash, spécialiste value bets. Pour ${match.home} vs ${match.away}, estime la vraie probabilité de chaque marché disponible en tenant compte du classement des équipes, de leurs statistiques offensives/défensives connues, et du contexte du tournoi (enjeu, élimination, groupe). Identifie le meilleur rapport probabilité/valeur.`,
+    `Tu es DeepSeek-V3, agent contrarian et risque. Ton rôle est de CONTREDIRE l'intuition dominante sur ${match.home} vs ${match.away} : cherche ce que les autres agents ignorent (fatigue, enjeu stratégique, historique H2H défavorable, équipe qui protège son résultat). Si le contexte live suggère une issue différente de la logique pré-match, dis-le clairement. Ne choisis un pari que si tu peux l'argumenter avec au moins 1 fait concret, pas juste une intuition.`,
     `Tu es Mistral-7B, expert Over/Under et BTTS. Pour ${match.home} vs ${match.away}, utilise tes connaissances sur le nombre moyen de buts dans ce type de confrontation, le style offensif ou défensif de chaque équipe, et les tendances de la compétition (ex: Coupe du Monde 2026 = moyenne buts). Concentre-toi sur les marchés de buts.`,
     `Tu es Claude Chief, arbitre du Concile. Tu ne fais pas une moyenne simple: tu compares les 4 agents, identifies les désaccords utiles, rejettes les signaux faibles, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte, enjeux, historique). Tu es assisté par GPT-Codex Challenger: avant ton verdict, tu dois te demander si ton intuition est trop dominante, si un autre marché est plus solide, et quelle objection rationnelle pourrait te faire changer d'avis.`,
   ];
@@ -1075,15 +1076,20 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
     try {
+      const useDeepseek = agentNames[i].useDeepseek && DEEPSEEK_API_KEY;
+      const apiUrl = useDeepseek
+        ? "https://api.deepseek.com/v1/chat/completions"
+        : "https://api.groq.com/openai/v1/chat/completions";
+      const apiKey = useDeepseek ? DEEPSEEK_API_KEY : GROQ_API_KEY;
       const response = await httpPost(
-        "https://api.groq.com/openai/v1/chat/completions",
+        apiUrl,
         {
           model: agentNames[i].model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3 + i * 0.05,
           max_tokens: isChief ? 400 : 200,
         },
-        { Authorization: `Bearer ${GROQ_API_KEY}` }
+        { Authorization: `Bearer ${apiKey}` }
       );
 
       const raw = response.choices?.[0]?.message?.content || "{}";
@@ -1186,7 +1192,7 @@ function getMockAnalysis(match) {
   const agents = [
     { name: "GROQ-Llama", icon: "🦙", model: "llama-3.3-70b" },
     { name: "GPT Analysis", icon: "🤖", model: "gpt-4o" },
-    { name: "GeminiFlash", icon: "💎", model: "gemini-flash" },
+    { name: "DeepSeek-V3", icon: "🔮", model: "deepseek-chat" },
     { name: "Mistral-7B", icon: "🌊", model: "mistral-7b" },
     { name: "Claude Chief", icon: "👑", model: "claude-opus", isChief: true },
   ];
