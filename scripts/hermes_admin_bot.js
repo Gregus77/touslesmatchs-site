@@ -1641,16 +1641,49 @@ async function cmdRecord(chatId, args) {
 }
 
 async function cmdDeploy(chatId) {
-  await reply(chatId,
-    "\u{1F512} <b>D\u00E9ploiement verrouill\u00E9</b>\n\n" +
-    "Hermes ne lance plus git pull ni rebuild automatiquement.\n" +
-    "Branche autoris\u00E9e : <code>claude/happy-bell-h9zj83</code>\n\n" +
-    "Commande humaine sur VPS apr\u00E8s validation :\n" +
-    "<code>cd /opt/touslesmatchs\n" +
-    "git fetch origin claude/happy-bell-h9zj83\n" +
-    "git reset --hard origin/claude/happy-bell-h9zj83\n" +
-    "docker compose up -d --build [site|api|hermes-admin]</code>"
-  );
+  await reply(chatId, "\uD83D\uDE80 <b>D\u00E9ploiement en cours...</b>\nJe r\u00E9cup\u00E8re la derni\u00E8re version de Claude, \u00E7a prend 1-2 minutes.");
+  try {
+    const repoPath = "/opt/touslesmatchs";
+    const branch = "claude/happy-bell-h9zj83";
+
+    const fetch = execSync(
+      `cd ${repoPath} && git fetch origin ${branch} 2>&1`,
+      { timeout: 30000 }
+    ).toString().trim();
+
+    const reset = execSync(
+      `cd ${repoPath} && git reset --hard origin/${branch} 2>&1`,
+      { timeout: 30000 }
+    ).toString().trim();
+
+    const lastCommit = execSync(
+      `cd ${repoPath} && git log --oneline -1`,
+      { timeout: 10000 }
+    ).toString().trim();
+
+    await reply(chatId,
+      `\u2705 <b>Code mis \u00E0 jour !</b>\n\n` +
+      `\uD83D\uDCE6 Dernier commit : <code>${lastCommit}</code>\n\n` +
+      `\uD83D\uDD04 Red\u00E9marrage des services...`
+    );
+
+    // Rebuild en arri\u00E8re-plan pour ne pas bloquer le bot
+    const { exec } = require("child_process");
+    exec(
+      `cd ${repoPath} && docker compose up -d --force-recreate site api 2>&1`,
+      { timeout: 120000 },
+      async (err, stdout) => {
+        if (err) {
+          await reply(chatId, `\u26A0\uFE0F Rebuild site/api :\n<code>${String(err.message).slice(0, 300)}</code>`).catch(() => {});
+        } else {
+          await reply(chatId, `\u2705 <b>Site et API red\u00E9marr\u00E9s !</b>\n\n\uD83C\uDF10 touslesmatchs.com est \u00E0 jour.`).catch(() => {});
+        }
+      }
+    );
+
+  } catch(e) {
+    await reply(chatId, `\u274C Erreur d\u00E9ploiement :\n<code>${String(e.message).slice(0, 400)}</code>`);
+  }
 }
 
 function parisNowParts() {
