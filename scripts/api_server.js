@@ -13,7 +13,14 @@ const http  = require("http");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 const app = express();
-app.use(express.json({ limit: "20mb" }));
+// IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
+// la signature. On exclut donc /stripe/webhook du parser JSON global, sinon
+// constructEvent échoue → le client paie mais ne reçoit jamais son code/email.
+const jsonParser = express.json({ limit: "20mb" });
+app.use((req, res, next) => {
+  if (req.originalUrl === "/stripe/webhook") return next();
+  return jsonParser(req, res, next);
+});
 app.use(cors());
 
 // ── Database ──────────────────────────────────────────────────────────────────
