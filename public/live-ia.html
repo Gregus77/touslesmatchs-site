@@ -642,29 +642,53 @@ function renderMain(){
   zone.innerHTML = html;
 }
 
+const SPORT_ICONS = { Football:'⚽', Basketball:'🏀', Hockey:'🏒', Baseball:'⚾', Rugby:'🏉', Handball:'🤾', Volleyball:'🏐' };
+
+function fmtKickoff(utcDate){
+  if(!utcDate) return null;
+  try{
+    const d = new Date(utcDate);
+    return d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Paris'});
+  }catch(e){ return null; }
+}
+
+function confidenceColor(pct){
+  if(pct>=85) return '#10b981';
+  if(pct>=70) return '#f59e0b';
+  return '#6b7280';
+}
+
 function renderMatchCard(m, i){
-  const sourceLabel = m.source === 'api-sports'
-    ? 'Source: API-Sports'
-    : m.source === 'football-data'
-      ? 'Source: football-data.org'
-      : 'Source non verifiee';
+  const sportIcon = SPORT_ICONS[m.sport] || '🎯';
+  const sportLabel = m.sport || 'Sport';
+  const kickoff = fmtKickoff(m.utcDate);
   const trustWarning = m.lowTrustCompetition
-    ? '<div style="font-size:11px;color:#fbbf24;margin-top:6px">⚠️ Compétition volatile : analyse prudente, pas prioritaire pour le pick du jour</div>'
+    ? '<div style="font-size:11px;color:#fbbf24;margin-top:6px">⚠️ Compétition volatile — analyse prudente</div>'
     : '';
+  const minuteBadge = m.minute != null
+    ? `<span class="match-dot"></span>${m.minute}'`
+    : '<span class="match-dot"></span>LIVE';
   return `<div class="match-card" id="card-${i}" onclick="selectMatch(${i})">
-    <div class="match-top">
-      <div class="match-comp">${escHtml(m.competition||'')}</div>
-      <div class="match-badge"><span class="match-dot"></span>LIVE ${m.minute?m.minute+"'":''}
+    <div class="match-top" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span style="font-size:18px;line-height:1">${sportIcon}</span>
+          <span class="match-comp" style="font-size:11px;font-weight:700;color:var(--indigo2);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(m.competition||sportLabel)}</span>
+        </div>
+        ${kickoff ? `<div style="font-size:10px;color:var(--muted2)">Début ${kickoff} · <span style="color:var(--cyan)">${m.minute != null ? m.minute+"' en cours" : "En cours"}</span></div>` : `<div style="font-size:10px;color:var(--cyan)">${m.minute != null ? m.minute+"' en cours" : "En cours"}</div>`}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+        <div class="match-badge">${minuteBadge}</div>
+        <div id="conf-badge-${i}" style="display:none;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;border:1px solid currentColor"></div>
       </div>
     </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:4px">${escHtml(sourceLabel)}</div>
     ${trustWarning}
-    <div class="match-teams">
+    <div class="match-teams" style="margin-top:10px">
       <div class="match-team" style="display:flex;align-items:center;gap:8px">${m.home_logo?`<img src="${m.home_logo}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">`:''}<span>${escHtml(m.home)}</span></div>
       <div class="match-score">
-        <span class="score-num">${m.score_home!==null&&m.score_home!==undefined?m.score_home:'?'}</span>
+        <span class="score-num">${m.score_home!=null&&m.score_home!==undefined?m.score_home:'?'}</span>
         <span class="score-sep">—</span>
-        <span class="score-num">${m.score_away!==null&&m.score_away!==undefined?m.score_away:'?'}</span>
+        <span class="score-num">${m.score_away!=null&&m.score_away!==undefined?m.score_away:'?'}</span>
       </div>
       <div class="match-team away" style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span>${escHtml(m.away)}</span>${m.away_logo?`<img src="${m.away_logo}" alt="" style="width:32px;height:32px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">`:''}</div>
     </div>
@@ -673,6 +697,17 @@ function renderMatchCard(m, i){
     </button>
   </div>
   <div id="analysis-zone-${i}" style="display:none"></div>`;
+}
+
+function updateConfidenceBadge(i, pct){
+  const badge = document.getElementById('conf-badge-'+i);
+  if(!badge || !pct) return;
+  const col = confidenceColor(pct);
+  badge.style.display = 'inline-block';
+  badge.style.color = col;
+  badge.style.borderColor = col;
+  badge.style.background = col+'18';
+  badge.textContent = pct+'% confiance';
 }
 
 function renderLiveUnavailableCard(m){
@@ -748,6 +783,7 @@ async function analyzeMatch(i){
     }
 
     zone.innerHTML = renderAnalysis(m, d);
+    if(d.confidence) updateConfidenceBadge(i, d.confidence);
   } catch(e){
     if(btn){ btn.disabled=false; btn.innerHTML='<span>🧠</span> Réessayer'; }
     zone.innerHTML = `<div class="analysis-panel"><div style="text-align:center;padding:20px;color:var(--muted2)">Erreur réseau. Réessaie.</div></div>`;
