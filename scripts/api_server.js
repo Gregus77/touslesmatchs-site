@@ -2051,6 +2051,35 @@ app.post("/subscribe-email", async (req, res) => {
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
     console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} lang=${lead.lang} country=${lead.country}`);
+
+    // Email de bienvenue uniquement pour les nouveaux inscrits
+    if (!existing) {
+      const welcomeHtml = `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+  <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
+    <div style="font-size:26px;font-weight:900;color:#fff">Bienvenue sur TousLesMatchs</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+  </div>
+  <div style="padding:32px">
+    <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
+    <div style="background:#0d1020;border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:20px;margin-bottom:24px">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#22d3ee;margin-bottom:12px">Ce que tu vas recevoir</div>
+      <div style="font-size:14px;color:#a8aec8;line-height:1.8">
+        ✅ Pick du jour validé par le Concile IA<br>
+        ✅ Cote + probabilité + raison analytique<br>
+        ✅ Alertes résultat (gagné/perdu)<br>
+        ✅ Accès aux picks live sur le site
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:24px">
+      <a href="https://www.touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Voir l'analyse Live IA →</a>
+    </div>
+    <p style="font-size:12px;color:#7b82a0;text-align:center">⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable.<br>TousLesMatchs · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Mentions légales</a></p>
+  </div>
+</div>`;
+      brevoSendEmail(emailClean, "Bienvenue sur TousLesMatchs — ton premier pick arrive bientôt 🎯", welcomeHtml)
+        .catch(e => console.error("[subscribe-email] welcome email:", e.message));
+    }
+
     res.json({ ok: true });
   } catch (e) {
     console.error("[subscribe-email] error:", e.message);
