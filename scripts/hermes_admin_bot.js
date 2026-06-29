@@ -256,6 +256,49 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;");
 }
 
+// ── Drapeaux équipes ───────────────────────────────────────────────────────────
+// Nom de pays (FR + EN) → code ISO2, pour générer le drapeau emoji.
+// Les clubs (non trouvés) reçoivent ⚽ par défaut.
+const COUNTRY_ISO = {
+  "france": "FR", "bresil": "BR", "brazil": "BR", "bresil": "BR", "japon": "JP", "japan": "JP",
+  "allemagne": "DE", "germany": "DE", "paraguay": "PY", "argentine": "AR", "argentina": "AR",
+  "espagne": "ES", "spain": "ES", "italie": "IT", "italy": "IT", "angleterre": "GB-ENG", "england": "GB-ENG",
+  "portugal": "PT", "pays-bas": "NL", "hollande": "NL", "netherlands": "NL", "belgique": "BE", "belgium": "BE",
+  "croatie": "HR", "croatia": "HR", "maroc": "MA", "morocco": "MA", "ecosse": "GB-SCT", "scotland": "GB-SCT",
+  "uruguay": "UY", "mexique": "MX", "mexico": "MX", "etats-unis": "US", "usa": "US", "united states": "US",
+  "canada": "CA", "ouzbekistan": "UZ", "uzbekistan": "UZ", "turquie": "TR", "turkey": "TR",
+  "suisse": "CH", "switzerland": "CH", "danemark": "DK", "denmark": "DK", "pologne": "PL", "poland": "PL",
+  "senegal": "SN", "cameroun": "CM", "cameroon": "CM", "ghana": "GH", "nigeria": "NG", "nigéria": "NG",
+  "coree du sud": "KR", "south korea": "KR", "australie": "AU", "australia": "AU", "iran": "IR",
+  "arabie saoudite": "SA", "saudi arabia": "SA", "qatar": "QA", "equateur": "EC", "ecuador": "EC",
+  "colombie": "CO", "colombia": "CO", "perou": "PE", "peru": "PE", "chili": "CL", "chile": "CL",
+  "serbie": "RS", "serbia": "RS", "suede": "SE", "sweden": "SE", "norvege": "NO", "norway": "NO",
+  "autriche": "AT", "austria": "AT", "grece": "GR", "greece": "GR", "irak": "IQ", "iraq": "IQ",
+  "irlande": "IE", "ireland": "IE", "republique tcheque": "CZ", "czech republic": "CZ",
+  "ukraine": "UA", "russie": "RU", "russia": "RU", "egypte": "EG", "egypt": "EG", "tunisie": "TN",
+  "algerie": "DZ", "algeria": "DZ", "cote d'ivoire": "CI", "ivory coast": "CI",
+};
+// Drapeaux régionaux non couverts par ISO2 standard (nations britanniques)
+const SPECIAL_FLAGS = {
+  "GB-ENG": "🏴󠁧󠁢󠁥󠁮󠁧󠁿", "GB-SCT": "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "GB-WLS": "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+};
+function iso2ToFlag(iso2) {
+  if (SPECIAL_FLAGS[iso2]) return SPECIAL_FLAGS[iso2];
+  if (!/^[A-Z]{2}$/.test(iso2)) return "";
+  return String.fromCodePoint(...[...iso2].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+function teamFlag(name) {
+  const key = String(name || "").toLowerCase().trim()
+    .normalize("NFD").replace(/[̀-ͯ]/g, ""); // enlève les accents
+  const iso = COUNTRY_ISO[key];
+  if (iso) return iso2ToFlag(iso);
+  return "⚽"; // club ou pays inconnu
+}
+// "France vs Brésil" → "🇫🇷 France vs 🇯🇵 Japon" (avec drapeaux)
+function matchWithFlags(home, away) {
+  return `${teamFlag(home)} ${escapeHtml(home)} vs ${teamFlag(away)} ${escapeHtml(away)}`;
+}
+
 async function getUpdates(offset) {
   return new Promise((resolve) => {
     const req = https.request({
@@ -1193,7 +1236,7 @@ async function publishPickResultToChannels(p) {
   const won = status === "GAGNE" || status === "WIN";
   const text = `<b>${won ? "✅" : "📊"} Resultat du pick du jour</b>
 
-<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+<b>${matchWithFlags(p.home, p.away)}</b>
 ${escapeHtml(p.league || "")}
 🎯 ${escapeHtml(p.prono || p.bet || "Pick officiel")}
 Score final : <b>${escapeHtml(p.score)}</b>
@@ -1246,7 +1289,7 @@ async function cmdPreview(chatId) {
 
   const freeMsg = `${signalEmoji} <b>Pick du jour — ${today}</b>
 
-<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+<b>${matchWithFlags(p.home, p.away)}</b>
 📋 ${escapeHtml(p.league || "Compétition")}
 🕐 ${escapeHtml(p.time || "")}
 
@@ -1272,7 +1315,7 @@ Confiance : <b>${escapeHtml(String(conf))}</b>
 
   const premiumMsg = `⚡ <b>PICK PREMIUM — ${todayLong}</b>
 
-<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+<b>${matchWithFlags(p.home, p.away)}</b>
 📋 ${escapeHtml(p.league || "Compétition")}
 🕐 ${escapeHtml(p.time || "")}
 
@@ -1313,7 +1356,7 @@ async function cmdPublish(chatId, opts = {}) {
 
   const text = `${signalEmoji} <b>Pick du jour — ${today}</b>
 
-<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+<b>${matchWithFlags(p.home, p.away)}</b>
 📋 ${escapeHtml(p.league || "Compétition")}
 🕐 ${escapeHtml(p.time || "")}
 
@@ -1366,7 +1409,7 @@ async function cmdPublishPremium(chatId, opts = {}) {
   const bankrollSugg = conf >= 85 ? "3-5%" : conf >= 75 ? "2-3%" : "1-2%";
   const text = `⚡ <b>PICK PREMIUM — ${today}</b>
 
-<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+<b>${matchWithFlags(p.home, p.away)}</b>
 📋 ${escapeHtml(p.league || "Compétition")}
 🕐 ${escapeHtml(p.time || "")}
 
