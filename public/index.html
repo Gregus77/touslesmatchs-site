@@ -1627,6 +1627,7 @@ function copyRefLink(){
 </div>
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/js/i18n.js?v=concile-chief-20260623"></script>
 <script>
 // ══ ÉTOILES
 const cv=document.getElementById('cosmos'),cx=cv.getContext('2d');
@@ -2183,8 +2184,8 @@ async function requestPrematchAnalysis() {
 }
 
 // ══ INIT
-renderPick();
-renderPicksFeed();
+try{ renderPick(); }catch(e){ console.error('[renderPick] init crash:', e); }
+try{ renderPicksFeed(); }catch(e){ console.error('[renderPicksFeed] init crash:', e); }
 
 // ══ AUTH — CODE D'ACCÈS
 function renderNavAuth(){
@@ -2746,7 +2747,6 @@ document.addEventListener('click',function(e){
   }
 });
 </script>
-<script src="/js/i18n.js?v=concile-chief-20260623"></script>
 <script>document.addEventListener('DOMContentLoaded', () => {
   i18n.init();
   buildChart();
