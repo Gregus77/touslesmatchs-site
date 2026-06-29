@@ -1294,42 +1294,53 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquement invalide.`;
 
-  // Concile v2 — 4 cerveaux distincts + Chief
-  // Agent 0 : Perplexity-Web (accès web temps réel) ou Groq-70B fallback
-  // Agent 1 : DeepSeek-V3 (contrarian, API séparée)
-  // Agent 2 : Groq-70B (llama-3.3-70b-versatile — 9× plus puissant que 8b)
-  // Agent 3 : Together-70B (Llama-3.3-70b via Together AI — cerveau indépendant) ou Groq-70B fallback
-  // Agent 4 : Chief (llama-3.3-70b-versatile, arbitre final)
+  // Concile v3 — 4 familles d'IA radicalement différentes + Chief
+  // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
+  // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
+  // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
+  // Agent 3 : Cohere-Command  → spécialiste RAG/données structurées (architecture ≠ tout le reste)
+  // Agent 4 : Chief           → arbitre Llama-70b (Groq, rapide)
   const usePerplexity = !!PERPLEXITY_API_KEY;
-  const useTogether   = !!TOGETHER_API_KEY;
+  const useMistral    = !!MISTRAL_API_KEY;
+  const useCohere     = !!COHERE_API_KEY;
+
   const agentNames = [
     {
       name: "Perplexity-Web",
       model: usePerplexity ? "sonar-pro" : "llama-3.3-70b-versatile",
       icon: "🌐",
-      usePerplexity: usePerplexity,
+      usePerplexity,
     },
     { name: "DeepSeek-V3", model: "deepseek-chat", icon: "🔮", useDeepseek: true },
-    { name: "Groq-70B",    model: "llama-3.3-70b-versatile", icon: "💪" },
     {
-      name: "Together-70B",
-      model: useTogether ? "meta-llama/Llama-3.3-70B-Instruct-Turbo" : "llama-3.3-70b-versatile",
-      icon: "🤝",
-      useTogether: useTogether,
+      name: "Mistral-Large",
+      model: useMistral ? "mistral-large-latest" : "llama-3.3-70b-versatile",
+      icon: "🌊",
+      useMistral,
+    },
+    {
+      name: "Cohere-Command",
+      model: useCohere ? "command-r-plus" : "llama-3.3-70b-versatile",
+      icon: "🧬",
+      useCohere,
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
 
   const webSearchNote = usePerplexity
-    ? `\nTu as accès aux données web en temps réel. Cherche : forme récente ${match.home} et ${match.away}, blessures confirmées, H2H récents, cotes bookmakers actuelles. Utilise UNIQUEMENT des faits vérifiés, pas d'inventions.`
+    ? `\nATTENTION : tu as accès aux données web en temps réel. Cherche impérativement : forme récente de ${match.home} et ${match.away} (5 derniers matchs), blessures confirmées, confrontations directes récentes, et cotes actuelles chez les bookmakers. Cite tes sources. N'invente RIEN.`
     : "";
 
   const personas = [
-    `Tu es Perplexity-Web, agent data temps réel.${webSearchNote} Pour ${match.home} vs ${match.away} : exploite toutes les données disponibles (forme récente, classement, blessures, cotes) et croise-les avec le score live actuel. Si tu n'as pas de données fiables sur un élément, dis-le explicitement plutôt que d'inventer.`,
-    `Tu es DeepSeek-V3, agent contrarian et risque. Ton rôle est de CONTREDIRE l'intuition dominante sur ${match.home} vs ${match.away} : cherche ce que les autres agents ignorent (fatigue, enjeu stratégique, historique H2H défavorable, équipe qui protège son résultat). Si le contexte live suggère une issue différente de la logique pré-match, dis-le clairement. Ne choisis un pari que si tu peux l'argumenter avec au moins 1 fait concret, pas juste une intuition.`,
-    `Tu es Groq-70B, expert statistique et tactique. Analyse ${match.home} vs ${match.away} avec ton meilleur niveau de raisonnement : classement FIFA/ELO, style de jeu, forme sur 5 matchs, H2H historique, pression du score live. Fournis une analyse en profondeur avec les données les plus précises que tu connais. Sois explicite sur ta confiance dans chaque donnée.`,
-    `Tu es Together-70B, expert marchés et probabilités. Pour ${match.home} vs ${match.away}, raisonne en termes de probabilités et de valeur de cote : quel marché offre le meilleur ratio signal/bruit ? Analyse Over/Under, BTTS, double chance et résultat simple — et recommande celui avec la plus forte probabilité objective, pas forcément l'évident.`,
-    `Tu es Claude Chief, arbitre du Concile v2. Tu compares les 4 agents (Perplexity-Web, DeepSeek-V3, Groq-70B, Together-70B), pèses leur fiabilité historique, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away}. Avant ton verdict : teste 3 marchés alternatifs, rejette ceux dont le signal est faible, explique pourquoi tu acceptes ou rejettes les objections minoritaires. Ne jamais inventer une statistique — si une donnée est absente, dis-le.`,
+    `Tu es Perplexity-Web, agent data temps réel.${webSearchNote} Mission : apporter des FAITS vérifiés sur ${match.home} vs ${match.away}. Si tu n'as pas de données fiables sur un point, dis-le. Tu es le seul agent avec accès aux données du jour — c'est ton avantage unique.`,
+
+    `Tu es DeepSeek-V3, agent contrarian. Ton rôle est de CONTREDIRE l'intuition dominante sur ${match.home} vs ${match.away}. Cherche : fatigue en fin de saison, enjeu stratégique (équipe qui se qualifie déjà), H2H défavorable à la logique, équipe qui protège un résultat. Si le score live suggère une issue contre-intuitive, dis-le. N'accepte un pari que si tu as un argument concret — pas juste une intuition.`,
+
+    `Tu es Mistral-Large, expert tactique européen. Analyse ${match.home} vs ${match.away} avec rigueur logique : systèmes tactiques, force défensive vs offensive, pression psychologique du score, historique des équipes dans ce type de configuration (match équilibré / en avance / en retard). Raisonne structurellement — schema → données → conclusion.`,
+
+    `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away}, ton rôle est d'identifier le marché avec la MEILLEURE valeur objective : compare résultat, double chance, BTTS et over/under — lequel offre le meilleur signal par rapport au bruit ? Raisonne en probabilités implicites et edge. Évite les marchés évidents surpricés.`,
+
+    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 4 votes de familles d'IA radicalement différentes (Perplexity/web, DeepSeek/contrarian, Mistral/tactique, Cohere/marchés). Ta mission : peser chaque vote selon son winrate historique, identifier le vrai consensus vs le bruit, et trancher. Avant ton verdict : teste 3 marchés alternatifs, rejette les paris sans conviction solide, explique pourquoi tu retiens ou écarte les objections. Ne jamais inventer une donnée absente.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -1388,32 +1399,46 @@ Réponds en JSON pur (pas de markdown):
 
     try {
       const agCfg = agentNames[i];
-      let apiUrl, apiKey, extraHeaders = {};
+      let apiUrl, apiKey;
       if (agCfg.useDeepseek && DEEPSEEK_API_KEY) {
         apiUrl = "https://api.deepseek.com/v1/chat/completions";
         apiKey = DEEPSEEK_API_KEY;
       } else if (agCfg.usePerplexity && PERPLEXITY_API_KEY) {
         apiUrl = "https://api.perplexity.ai/chat/completions";
         apiKey = PERPLEXITY_API_KEY;
-      } else if (agCfg.useTogether && TOGETHER_API_KEY) {
-        apiUrl = "https://api.together.xyz/v1/chat/completions";
-        apiKey = TOGETHER_API_KEY;
+      } else if (agCfg.useMistral && MISTRAL_API_KEY) {
+        apiUrl = "https://api.mistral.ai/v1/chat/completions";
+        apiKey = MISTRAL_API_KEY;
+      } else if (agCfg.useCohere && COHERE_API_KEY) {
+        // Cohere utilise un endpoint différent — géré séparément
+        apiUrl = null; // flag pour appel Cohere natif
+        apiKey = COHERE_API_KEY;
       } else {
         apiUrl = "https://api.groq.com/openai/v1/chat/completions";
         apiKey = GROQ_API_KEY;
       }
-      const response = await httpPost(
-        apiUrl,
-        {
-          model: agCfg.model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.3 + i * 0.05,
-          max_tokens: isChief ? 400 : 200,
-        },
-        { Authorization: `Bearer ${apiKey}`, ...extraHeaders }
-      );
-
-      const raw = response.choices?.[0]?.message?.content || "{}";
+      let raw;
+      if (agCfg.useCohere && COHERE_API_KEY) {
+        // Cohere endpoint natif /v1/chat
+        const cohereResp = await httpPost(
+          "https://api.cohere.ai/v1/chat",
+          { model: agCfg.model, message: prompt, max_tokens: isChief ? 400 : 200, temperature: 0.3 + i * 0.05 },
+          { Authorization: `Bearer ${COHERE_API_KEY}` }
+        );
+        raw = cohereResp.text || cohereResp.chat_history?.slice(-1)[0]?.message || "{}";
+      } else {
+        const response = await httpPost(
+          apiUrl,
+          {
+            model: agCfg.model,
+            messages: [{ role: "user", content: prompt }],
+            temperature: 0.3 + i * 0.05,
+            max_tokens: isChief ? 400 : 200,
+          },
+          { Authorization: `Bearer ${apiKey}` }
+        );
+        raw = response.choices?.[0]?.message?.content || "{}";
+      }
       const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
 
