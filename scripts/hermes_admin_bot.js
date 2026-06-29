@@ -1398,6 +1398,18 @@ async function publishClientStrongSignal(signal, { silentAdmin = false } = {}) {
     await sendTelegramWithToken(PUBLIC_BOT_TOKEN, PUBLIC_CHAT, publicText).catch(() => {});
   }
 
+  // Email Brevo aux abonnés premium via API
+  if (sent.ok && TG_TOKEN) {
+    const apiPayload = JSON.stringify({ signal, secret: TG_TOKEN });
+    const req = http.request({ hostname: "touslesmatchs-api", port: 3001, path: "/internal/signal-notify", method: "POST", headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(apiPayload) } }, res => {
+      res.resume();
+      console.log(`[signal-notify] email HTTP ${res.statusCode}`);
+    });
+    req.on("error", e => console.error("[signal-notify] email:", e.message));
+    req.write(apiPayload);
+    req.end();
+  }
+
   if (!silentAdmin && ADMIN_CHAT) {
     await reply(
       ADMIN_CHAT,

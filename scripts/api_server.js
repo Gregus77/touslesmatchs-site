@@ -1737,9 +1737,9 @@ function getPublicHistoryItems() {
     // 1. Picks Concile (SQLite)
     const concileItems = db.prepare(`
       SELECT
-        match_key, home, away, competition, best_bet, confidence,
+        match_key, home, away, competition, sport, best_bet, confidence,
         outcome, final_score_home, final_score_away, stats_status,
-        result_source, resolved_at, analysed_at
+        result_source, resolved_at, analysed_at, home_logo, away_logo
       FROM concile_analyses
       WHERE outcome IN ('win','loss')
         AND final_score_home IS NOT NULL
@@ -1751,12 +1751,15 @@ function getPublicHistoryItems() {
       home: row.home,
       away: row.away,
       competition: row.competition || "Match verifie",
+      sport: row.sport || "Football",
       bet: row.best_bet,
       confidence: row.confidence,
       score: `${row.final_score_home}-${row.final_score_away}`,
       outcome: row.outcome,
       resolvedAt: row.resolved_at || row.analysed_at,
       source: row.result_source || (row.stats_status === "manual_verified" ? "manual_verified" : "api_verified"),
+      home_logo: row.home_logo || null,
+      away_logo: row.away_logo || null,
     }));
 
     // 2. Picks Hermès (picks.json history)
@@ -2969,6 +2972,78 @@ app.post("/internal/pick-notify", async (req, res) => {
     res.json({ ok: true, sent, total: emails.length });
   } catch (e) {
     console.error("[pick-notify]", e.message);
+    res.json({ ok: false, error: e.message, sent: 0 });
+  }
+});
+
+// ── Internal signal notify — strong signal email to premium subscribers ───────
+app.post("/internal/signal-notify", async (req, res) => {
+  const { signal, secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
+  if (!signal || !signal.home) return res.json({ ok: false, error: "signal manquant" });
+  if (!BREVO_API_KEY) return res.json({ ok: false, error: "BREVO_API_KEY non configuré", sent: 0 });
+
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const rows = codesDb.prepare(
+      "SELECT email FROM codes WHERE active = 1 AND plan IN ('premium','elite','vip') AND email IS NOT NULL AND email != ''"
+    ).all();
+    codesDb.close();
+
+    const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Rugby:"🏉", Handball:"🤾", Volleyball:"🏐" };
+    const sportIcon = sportIcons[signal.sport] || "🎯";
+    const conf = signal.confidence || "?";
+    const confColor = conf >= 85 ? "#10b981" : conf >= 80 ? "#f59e0b" : "#6366f1";
+    const logoHtml = signal.home_logo ? `<img src="${signal.home_logo}" alt="" style="width:40px;height:40px;object-fit:contain;border-radius:6px;vertical-align:middle;margin-right:8px">` : "";
+
+    const htmlContent = `
+<div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">ALERTE SIGNAL FORT — CONCILE IA</div>
+  </div>
+  <div style="background:#0d1020;border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:24px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:28px">${sportIcon}</span>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981">🚨 Signal fort détecté</div>
+        <div style="font-size:11px;color:#7b82a0">${signal.competition || signal.sport || ""}</div>
+      </div>
+      <div style="margin-left:auto;background:${confColor}18;border:1px solid ${confColor};border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:${confColor}">${conf}%</div>
+    </div>
+    <div style="font-size:20px;font-weight:900;color:#eceaf4;margin-bottom:6px">${logoHtml}${signal.home} vs ${signal.away}</div>
+    ${signal.minute ? `<div style="font-size:12px;color:#22d3ee;margin-bottom:12px">⏱ ${signal.minute}' en cours${signal.score_home != null ? " · Score : " + signal.score_home + "-" + signal.score_away : ""}</div>` : ""}
+    <div style="background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:14px;margin-bottom:16px">
+      <div style="font-size:13px;color:#a8aec8;margin-bottom:4px">Signal Concile</div>
+      <div style="font-size:18px;font-weight:800;color:#eceaf4">${signal.bet || ""}</div>
+      ${signal.reason ? `<div style="font-size:12px;color:#a8aec8;margin-top:8px;font-style:italic;border-left:2px solid rgba(99,102,241,.4);padding-left:10px">${signal.reason}</div>` : ""}
+    </div>
+    <div style="text-align:center">
+      <a href="https://www.touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir l'analyse Live IA →</a>
+    </div>
+  </div>
+  ${bookmakerEmailHtml()}
+  <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
+    TousLesMatchs — Signal automatique Concile IA<br>
+    ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable. Cotes à vérifier sur les plateformes.
+  </div>
+</div>`;
+
+    let sent = 0;
+    const emails = [...new Set(rows.map(r => r.email).filter(Boolean))];
+    for (const email of emails) {
+      try {
+        await brevoSendEmail(email, `🚨 Signal fort ${conf}% — ${signal.home} vs ${signal.away} (${signal.sport || "Sport"})`, htmlContent);
+        sent++;
+      } catch (e) {
+        console.error(`[signal-notify] email to ${email}:`, e.message);
+      }
+    }
+    console.log(`[signal-notify] Emails signal fort envoyés : ${sent}/${emails.length}`);
+    res.json({ ok: true, sent, total: emails.length });
+  } catch (e) {
+    console.error("[signal-notify]", e.message);
     res.json({ ok: false, error: e.message, sent: 0 });
   }
 });

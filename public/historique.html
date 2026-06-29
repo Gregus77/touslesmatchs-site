@@ -331,7 +331,8 @@ function renderChart(picks){
 }
 
 function iaClass(n){ return n>=8?'high':n>=7?'med':'low'; }
-function sportIcon(s){ return s==='basketball'?'🏀':'⚽'; }
+const SPORT_ICONS_H = { Football:'⚽', Basketball:'🏀', Hockey:'🏒', Baseball:'⚾', Rugby:'🏉', Handball:'🤾', Volleyball:'🏐' };
+function sportIcon(s){ return SPORT_ICONS_H[s] || (s&&s.toLowerCase()==='basketball'?'🏀':'⚽'); }
 
 function pickProfit(p){
   if(p.result==='win'){
@@ -361,7 +362,7 @@ function renderPicks(picks){
       </div>
       <div class="pick-info-col">
         <div class="pick-match">${p.home} – ${p.away}</div>
-        <div class="pick-comp">${p.competition}</div>
+        <div class="pick-comp">${sportIcon(p.sport)} ${p.competition}</div>
         <div class="pick-pick">${p.pick} · @${p.cote}</div>
       </div>
       <div class="pick-score-col">${p.score||'—'}</div>
@@ -388,14 +389,16 @@ function render(){
 
 function normalizeApiHistoryItem(item){
   const outcome = item.outcome === 'win' ? 'win' : item.outcome === 'loss' ? 'loss' : 'pending';
+  const sport = item.sport || 'Football';
+  const icon = sportIcon(sport);
   return {
     date: item.resolvedAt ? String(item.resolvedAt).slice(0,10) : new Date().toISOString().slice(0,10),
-    sport: 'football',
+    sport,
     competition: item.competition || 'Match verifie',
     home: item.home || '',
     away: item.away || '',
-    homeFlag: '⚽',
-    awayFlag: '⚽',
+    homeFlag: item.home_logo ? `<img src="${item.home_logo}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">` : icon,
+    awayFlag: item.away_logo ? `<img src="${item.away_logo}" alt="" style="width:28px;height:28px;object-fit:contain;border-radius:4px" onerror="this.style.display='none'">` : icon,
     pick: item.bet || '',
     cote: Number(item.cote || 1.8),
     mise: 10,
