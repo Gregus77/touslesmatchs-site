@@ -1154,6 +1154,17 @@ footer{
     </a>
   </div>
 
+  <!-- Badge dernier pick gagnant — affiché dynamiquement -->
+  <div id="hero-last-win" style="display:none;margin-bottom:18px">
+    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:10px 20px">
+      <span style="font-size:18px">✅</span>
+      <div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#10b981;margin-bottom:2px">Dernier pick</div>
+        <div id="hero-last-win-text" style="font-size:13px;font-weight:700;color:#eceaf4"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Stats bar -->
   <div class="hero-stats">
     <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Taux de réussite</div></div>
@@ -1830,12 +1841,36 @@ function renderPick(){
               <div class="team-nm">${PICK.teamB.name}</div>
             </div>
           </div>
-          <div class="market-card" style="background:${mc.bg};border:1px solid ${mc.border}">
-            <div class="mc-type" style="color:${mc.color}">${i18n.t('bet_type')} · ${PICK.marketType}</div>
-            <div class="mc-label" style="color:${mc.color}">${PICK.marketLabel}</div>
-            <div class="mc-desc">${PICK.marketDesc}</div>
-            <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${mc.color};border-radius:2px"></div>
-          </div>
+          ${_isPaid
+            ? `<div class="market-card" style="background:${mc.bg};border:1px solid ${mc.border}">
+                <div class="mc-type" style="color:${mc.color}">${i18n.t('bet_type')} · ${PICK.marketType}</div>
+                <div class="mc-label" style="color:${mc.color}">${PICK.marketLabel}</div>
+                <div class="mc-desc">${PICK.marketDesc}</div>
+                <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${mc.color};border-radius:2px"></div>
+              </div>`
+            : `<div style="position:relative;border-radius:12px;overflow:hidden;margin-bottom:22px">
+                <div style="filter:blur(7px);pointer-events:none;user-select:none;opacity:.45;background:${mc.bg};border:1px solid ${mc.border};padding:16px 18px;border-radius:12px">
+                  <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;color:${mc.color}">${i18n.t('bet_type')} · ████████</div>
+                  <div style="font-size:18px;font-weight:800;margin-bottom:4px;color:${mc.color}">█████ █████ ████</div>
+                  <div style="font-size:12px;color:#a8aec8">██████ ████████████ ██████</div>
+                </div>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,8,15,.72);backdrop-filter:blur(2px);border-radius:12px;padding:18px">
+                  <div style="font-size:20px">🔒</div>
+                  <div style="font-size:14px;font-weight:800;text-align:center;letter-spacing:-.01em">Le pari du Concile est réservé aux membres</div>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%;max-width:340px">
+                    <input type="email" id="gate-email-input" placeholder="votre@email.com"
+                      style="flex:1;min-width:140px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 13px;color:#eceaf4;font-size:13px;font-family:inherit;outline:none"
+                      onkeydown="if(event.key==='Enter')gateEmailCapture()">
+                    <button onclick="gateEmailCapture()"
+                      style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap"
+                      id="gate-email-btn">Voir le pick →</button>
+                  </div>
+                  <div id="gate-email-ok" style="display:none;color:#10b981;font-size:12px;font-weight:600">✓ Inscrit ! Le pick vous sera envoyé par email.</div>
+                  <div style="font-size:11px;color:#7b82a0">Gratuit · 0 spam · Désabonnement en 1 clic</div>
+                  <div style="margin-top:2px"><a href="#plans" style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600">Déjà membre ? Se connecter →</a></div>
+                </div>
+              </div>`
+          }
           ${insightHtml}
           <div class="ia-head">
             <div class="ia-title">${i18n.t('pick_analysis_lbl')}</div>
@@ -2582,6 +2617,26 @@ document.addEventListener('mouseleave', function(e){
   _exitShown = true;
   openEmailPopup();
 });
+async function gateEmailCapture(){
+  const input = document.getElementById('gate-email-input');
+  const btn = document.getElementById('gate-email-btn');
+  const okEl = document.getElementById('gate-email-ok');
+  const email = (input?.value || '').trim().toLowerCase();
+  if(!email || !email.includes('@')){ if(input) input.focus(); return; }
+  btn.disabled=true; btn.textContent='…';
+  try {
+    await fetch('/api/subscribe-email',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(leadPayload(email,''))
+    });
+  } catch(_){}
+  okEl.style.display='block';
+  btn.textContent='✓';
+  input.value='';
+  // Reload pick en mode gratuit avec message "check your email"
+  setTimeout(()=>{ renderPick(); }, 100);
+}
+
 async function heroEmailCapture(){
   const input = document.getElementById('hero-email-input');
   const btn = document.getElementById('hero-email-btn');
@@ -2640,6 +2695,20 @@ async function subscribeEmail(){
 }
 
 // ══ GAINS RÉELS — calcul depuis PICKS_FEED
+// Badge dernier pick gagnant dans le hero
+(function showLastWinBadge(){
+  const finished = (window.PICKS_FEED || []).filter(p => p.status === 'finished');
+  const lastWin = finished.slice().reverse().find(p => p.result === 'win');
+  if(!lastWin) return;
+  const badge = document.getElementById('hero-last-win');
+  const txt = document.getElementById('hero-last-win-text');
+  if(!badge || !txt) return;
+  const bet = lastWin.bet || lastWin.prono || '';
+  const cote = lastWin.cote ? ` @${lastWin.cote}` : '';
+  txt.textContent = `${lastWin.home} vs ${lastWin.away} — ${bet}${cote} ✅ GAGNÉ`;
+  badge.style.display = 'block';
+})();
+
 function computeRealGains(){
   const mise = 100;
   let totalGain = 0;
