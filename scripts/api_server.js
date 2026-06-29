@@ -135,6 +135,8 @@ const MISTRAL_API_KEY    = process.env.MISTRAL_API_KEY    || "";
 const CEREBRAS_API_KEY   = process.env.CEREBRAS_API_KEY   || "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
 const COHERE_API_KEY     = process.env.COHERE_API_KEY     || "";
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "";
+const TOGETHER_API_KEY   = process.env.TOGETHER_API_KEY   || "";
 
 const SHADOW_AGENTS = [
   {
@@ -1292,21 +1294,42 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquement invalide.`;
 
-  // Agents légers sur llama-3.1-8b-instant, agent 2 sur DeepSeek-V3 (API séparée), Chief sur le grand modèle
+  // Concile v2 — 4 cerveaux distincts + Chief
+  // Agent 0 : Perplexity-Web (accès web temps réel) ou Groq-70B fallback
+  // Agent 1 : DeepSeek-V3 (contrarian, API séparée)
+  // Agent 2 : Groq-70B (llama-3.3-70b-versatile — 9× plus puissant que 8b)
+  // Agent 3 : Together-70B (Llama-3.3-70b via Together AI — cerveau indépendant) ou Groq-70B fallback
+  // Agent 4 : Chief (llama-3.3-70b-versatile, arbitre final)
+  const usePerplexity = !!PERPLEXITY_API_KEY;
+  const useTogether   = !!TOGETHER_API_KEY;
   const agentNames = [
-    { name: "GROQ-Llama", model: "llama-3.1-8b-instant", icon: "🦙" },
-    { name: "GPT Analysis", model: "llama-3.1-8b-instant", icon: "🤖" },
+    {
+      name: "Perplexity-Web",
+      model: usePerplexity ? "sonar-pro" : "llama-3.3-70b-versatile",
+      icon: "🌐",
+      usePerplexity: usePerplexity,
+    },
     { name: "DeepSeek-V3", model: "deepseek-chat", icon: "🔮", useDeepseek: true },
-    { name: "Mistral-7B", model: "llama-3.1-8b-instant", icon: "🌊" },
+    { name: "Groq-70B",    model: "llama-3.3-70b-versatile", icon: "💪" },
+    {
+      name: "Together-70B",
+      model: useTogether ? "meta-llama/Llama-3.3-70B-Instruct-Turbo" : "llama-3.3-70b-versatile",
+      icon: "🤝",
+      useTogether: useTogether,
+    },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
 
+  const webSearchNote = usePerplexity
+    ? `\nTu as accès aux données web en temps réel. Cherche : forme récente ${match.home} et ${match.away}, blessures confirmées, H2H récents, cotes bookmakers actuelles. Utilise UNIQUEMENT des faits vérifiés, pas d'inventions.`
+    : "";
+
   const personas = [
-    `Tu es GROQ-Llama, agent statistique. Utilise tes connaissances sur ${match.home} et ${match.away} : classement FIFA/ELO, moyenne de buts marqués/encaissés en compétition, forme récente (5 derniers matchs), style de jeu (pressing, possession, contre-attaque). Croise ces stats avec le score live.`,
-    `Tu es GPT-Analysis, expert tactique. Analyse ${match.home} vs ${match.away} en t'appuyant sur ce que tu sais : schéma tactique habituel, force de la défense, pressing, profil des buteurs, résultats récents et H2H historique. Adapte ton analyse au score et à la minute actuelle.`,
+    `Tu es Perplexity-Web, agent data temps réel.${webSearchNote} Pour ${match.home} vs ${match.away} : exploite toutes les données disponibles (forme récente, classement, blessures, cotes) et croise-les avec le score live actuel. Si tu n'as pas de données fiables sur un élément, dis-le explicitement plutôt que d'inventer.`,
     `Tu es DeepSeek-V3, agent contrarian et risque. Ton rôle est de CONTREDIRE l'intuition dominante sur ${match.home} vs ${match.away} : cherche ce que les autres agents ignorent (fatigue, enjeu stratégique, historique H2H défavorable, équipe qui protège son résultat). Si le contexte live suggère une issue différente de la logique pré-match, dis-le clairement. Ne choisis un pari que si tu peux l'argumenter avec au moins 1 fait concret, pas juste une intuition.`,
-    `Tu es Mistral-7B, expert Over/Under et BTTS. Pour ${match.home} vs ${match.away}, utilise tes connaissances sur le nombre moyen de buts dans ce type de confrontation, le style offensif ou défensif de chaque équipe, et les tendances de la compétition (ex: Coupe du Monde 2026 = moyenne buts). Concentre-toi sur les marchés de buts.`,
-    `Tu es Claude Chief, arbitre du Concile. Tu ne fais pas une moyenne simple: tu compares les 4 agents, identifies les désaccords utiles, rejettes les signaux faibles, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away} (classement, contexte, enjeux, historique). Tu es assisté par GPT-Codex Challenger: avant ton verdict, tu dois te demander si ton intuition est trop dominante, si un autre marché est plus solide, et quelle objection rationnelle pourrait te faire changer d'avis.`,
+    `Tu es Groq-70B, expert statistique et tactique. Analyse ${match.home} vs ${match.away} avec ton meilleur niveau de raisonnement : classement FIFA/ELO, style de jeu, forme sur 5 matchs, H2H historique, pression du score live. Fournis une analyse en profondeur avec les données les plus précises que tu connais. Sois explicite sur ta confiance dans chaque donnée.`,
+    `Tu es Together-70B, expert marchés et probabilités. Pour ${match.home} vs ${match.away}, raisonne en termes de probabilités et de valeur de cote : quel marché offre le meilleur ratio signal/bruit ? Analyse Over/Under, BTTS, double chance et résultat simple — et recommande celui avec la plus forte probabilité objective, pas forcément l'évident.`,
+    `Tu es Claude Chief, arbitre du Concile v2. Tu compares les 4 agents (Perplexity-Web, DeepSeek-V3, Groq-70B, Together-70B), pèses leur fiabilité historique, et arbitres avec tes propres connaissances sur ${match.home} et ${match.away}. Avant ton verdict : teste 3 marchés alternatifs, rejette ceux dont le signal est faible, explique pourquoi tu acceptes ou rejettes les objections minoritaires. Ne jamais inventer une statistique — si une donnée est absente, dis-le.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -1364,20 +1387,30 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
     try {
-      const useDeepseek = agentNames[i].useDeepseek && DEEPSEEK_API_KEY;
-      const apiUrl = useDeepseek
-        ? "https://api.deepseek.com/v1/chat/completions"
-        : "https://api.groq.com/openai/v1/chat/completions";
-      const apiKey = useDeepseek ? DEEPSEEK_API_KEY : GROQ_API_KEY;
+      const agCfg = agentNames[i];
+      let apiUrl, apiKey, extraHeaders = {};
+      if (agCfg.useDeepseek && DEEPSEEK_API_KEY) {
+        apiUrl = "https://api.deepseek.com/v1/chat/completions";
+        apiKey = DEEPSEEK_API_KEY;
+      } else if (agCfg.usePerplexity && PERPLEXITY_API_KEY) {
+        apiUrl = "https://api.perplexity.ai/chat/completions";
+        apiKey = PERPLEXITY_API_KEY;
+      } else if (agCfg.useTogether && TOGETHER_API_KEY) {
+        apiUrl = "https://api.together.xyz/v1/chat/completions";
+        apiKey = TOGETHER_API_KEY;
+      } else {
+        apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+        apiKey = GROQ_API_KEY;
+      }
       const response = await httpPost(
         apiUrl,
         {
-          model: agentNames[i].model,
+          model: agCfg.model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.3 + i * 0.05,
           max_tokens: isChief ? 400 : 200,
         },
-        { Authorization: `Bearer ${apiKey}` }
+        { Authorization: `Bearer ${apiKey}`, ...extraHeaders }
       );
 
       const raw = response.choices?.[0]?.message?.content || "{}";
@@ -1404,11 +1437,10 @@ Réponds en JSON pur (pas de markdown):
         corrected: corrected || false,
       });
     } catch (e) {
-      // fallback for this agent
+      console.error(`[concile] agent ${agentNames[i].name} erreur:`, e.message);
       agentResults.push(getMockAgentAnalysis(agentNames[i], match, i));
     }
 
-    // Small delay between agents to avoid rate limits
     if (i < agentNames.length - 1) {
       await new Promise((r) => setTimeout(r, 300));
     }
