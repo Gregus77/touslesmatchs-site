@@ -175,6 +175,15 @@ Match en cours (score + minute + stats live)
 - Séquence email nurturing J+1 (preuve) + J+3 (urgence) automatique après inscription
 - Skills créés : `/pilote` (orchestrateur autonome), `/growth-engine` (croissance Stripe)
 
+### Claude Code — 2026-06-29 (nuit) — Hermès amélioré + SEO + Auto-résolution
+- `/preview` : prévisualiser pick gratuit + premium avant publication (texte exact)
+- `/checkresult` : vérifier score final via football-data.org + api-sports.io, déduit WIN/LOSE
+- `/expiring` : liste abonnés expirant dans 7j (via /internal/expiring-codes sécurisé)
+- Auto-check résultat : Hermès vérifie le score toutes les 60 min après fin probable du match
+- SEO : preuves.html og tags + canonical www · mentions-legales canonical + noindex
+- docker-compose : passe STRIPE_PRICE_PRO/VIP/ELITE dans l'env api (correction fallback Stripe)
+- Route /internal/expiring-codes dans api_server.js (auth interne par token Hermès)
+
 ### BLOQUANTS STRIPE (Grégory doit agir sur le VPS)
 ```bash
 # Sur le VPS — clés à ajouter dans /opt/touslesmatchs/.env
