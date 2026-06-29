@@ -962,7 +962,19 @@ function resolveLiveMatchesAfterFetchFailure() {
 }
 
 function normalizeMatchName(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "").trim().toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/\bman(chester)?\b/g, "man")
+    .replace(/\b(united|utd)\b/g, "utd")
+    .replace(/\bcity\b/g, "city")
+    .replace(/\bparis\s*(saint|st)[\s-]*germain\b/g, "psg")
+    .replace(/\bp\.?\s*s\.?\s*g\.?\b/g, "psg")
+    .replace(/\bbayern\s*munich\b/g, "bayern")
+    .replace(/\binter\s*milan\b/g, "inter")
+    .replace(/\bac\s*milan\b/g, "milan")
+    .replace(/\breal\s*madrid\b/g, "real madrid")
+    .replace(/\batletic[o]?\b/g, "atletico")
+    .replace(/\s+/g, " ").trim();
 }
 
 function resolveVerifiedLiveMatch(input, liveMatches) {
