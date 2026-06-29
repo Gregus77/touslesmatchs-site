@@ -1657,19 +1657,16 @@ async function cmdDeploy(chatId) {
       `\uD83D\uDD04 Red\u00E9marrage des services site et api...`
     );
 
-    // Utiliser le Docker socket si mont\u00E9, sinon signaler
+    // Docker socket mont\u00E9 dans le container \u2014 docker-compose.yml est \u00E0 /repo
     const { exec } = require("child_process");
-    const dockerCmd = "docker compose -f /opt/touslesmatchs/docker-compose.yml up -d --force-recreate site api 2>&1";
-    exec(dockerCmd, { timeout: 120000 }, async (err, stdout) => {
+    const dockerCmd = "docker compose -f /repo/docker-compose.yml up -d --force-recreate site api 2>&1";
+    exec(dockerCmd, { timeout: 120000 }, async (err, stdout, stderr) => {
       if (err) {
-        // Docker socket probablement pas mont\u00E9 \u2014 le code est quand m\u00EAme \u00E0 jour
         await reply(chatId,
-          `\u26A0\uFE0F Code mis \u00E0 jour mais red\u00E9marrage Docker impossible depuis le container.\n\n` +
-          `Lance manuellement sur le VPS :\n` +
-          `<code>cd /opt/touslesmatchs && docker compose up -d --force-recreate site api</code>`
+          `\u26A0\uFE0F Red\u00E9marrage \u00E9chou\u00E9 :\n<code>${String(err.message).slice(0, 300)}</code>`
         ).catch(() => {});
       } else {
-        await reply(chatId, `\u2705 <b>Site et API red\u00E9marr\u00E9s !</b>\n\uD83C\uDF10 touslesmatchs.com est \u00E0 jour.`).catch(() => {});
+        await reply(chatId, `\u2705 <b>D\u00E9ploiement termin\u00E9 !</b>\n\uD83C\uDF10 touslesmatchs.com est \u00E0 jour.`).catch(() => {});
       }
     });
 
