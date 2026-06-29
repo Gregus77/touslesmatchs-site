@@ -928,6 +928,38 @@ async function cmdSetPick(chatId, args) {
   }
 }
 
+async function cmdExpiring(chatId) {
+  await reply(chatId, "🔍 Récupération des abonnements expirant sous 7 jours...");
+  try {
+    const d = await new Promise((resolve, reject) => {
+      const req = http.request({
+        hostname: "touslesmatchs-api",
+        port: 3001,
+        path: "/internal/expiring-codes?days=7",
+        method: "GET",
+        headers: { "x-internal-secret": TG_TOKEN }
+      }, res => {
+        let body = ""; res.on("data", c => body += c);
+        res.on("end", () => { try { resolve(JSON.parse(body)); } catch { resolve({}); } });
+      });
+      req.setTimeout(10000, () => { req.destroy(); reject(new Error("timeout")); });
+      req.on("error", reject); req.end();
+    });
+
+    if (!d.ok) { await reply(chatId, `❌ Erreur API: ${d.error || "inconnue"}`); return; }
+    if (!d.count) { await reply(chatId, "✅ Aucun abonnement n'expire dans les 7 prochains jours."); return; }
+
+    let msg = `⏰ <b>${d.count} abonnement(s) expirant sous 7 jours</b>\n\n`;
+    for (const r of d.expiring) {
+      const emoji = r.daysLeft <= 1 ? "🔴" : r.daysLeft <= 3 ? "🟠" : "🟡";
+      msg += `${emoji} <b>${escapeHtml(r.plan)}</b> — ${escapeHtml(r.email)}\n   Expire : ${r.expires_at} (J-${r.daysLeft})\n\n`;
+    }
+    await reply(chatId, msg);
+  } catch(e) {
+    await reply(chatId, `❌ Erreur: ${e.message}`);
+  }
+}
+
 async function cmdCheckResult(chatId) {
   const data = loadPicks();
   const p = data.currentPick;
@@ -2011,6 +2043,7 @@ async function cmdHelp(chatId) {
 /publishalert — Republier manuellement la dernière alerte forte dans le groupe Elite
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publishresult — Publier le résultat validé sur les canaux
+/expiring — Lister les abonnements expirant dans les 7 prochains jours
 /checkresult — Vérifier le score final via API et proposer /win ou /lose
 /preview — Prévisualiser les messages avant publication (gratuit + premium)
 /publish — Publier sur le canal Telegram public (gratuit)
@@ -2156,6 +2189,7 @@ async function handleCommandLine(chatId, text) {
     case "/setpick":  return cmdSetPick(chatId, args);
     case "/setscore": return cmdSetScore(chatId, args);
     case "/checkresult":    return cmdCheckResult(chatId);
+    case "/expiring":       return cmdExpiring(chatId);
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/result":          return cmdResultPreview(chatId);

@@ -4272,6 +4272,30 @@ app.delete("/admin/preuves/:id", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
+// ── Internal — liste abonnés expirant dans N jours (pour Hermès) ─────────────
+app.get("/internal/expiring-codes", (req, res) => {
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  const secret = req.headers["x-internal-secret"];
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false });
+  const days = parseInt(req.query.days) || 7;
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + days * 86400000).toISOString().slice(0, 10);
+    const rows = codesDb.prepare(
+      "SELECT email, plan, expires_at FROM codes WHERE active = 1 AND plan != 'free' AND expires_at IS NOT NULL AND expires_at <= ? ORDER BY expires_at"
+    ).all(cutoff);
+    codesDb.close();
+    const withDiff = rows.map(r => ({
+      ...r,
+      daysLeft: Math.round((new Date(r.expires_at) - now) / 86400000)
+    }));
+    res.json({ ok: true, count: withDiff.length, expiring: withDiff });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
