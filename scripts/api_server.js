@@ -94,6 +94,28 @@ ensureColumn("concile_analyses", "learning_note", "TEXT DEFAULT ''");
 ensureColumn("concile_analyses", "home_logo", "TEXT DEFAULT NULL");
 ensureColumn("concile_analyses", "away_logo", "TEXT DEFAULT NULL");
 
+// ── Shadow eval table ─────────────────────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shadow_evals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    sport TEXT DEFAULT 'Football',
+    agent_name TEXT NOT NULL,
+    bet TEXT NOT NULL,
+    confidence INTEGER DEFAULT 70,
+    raison TEXT DEFAULT '',
+    outcome TEXT DEFAULT NULL,
+    final_score_home INTEGER DEFAULT NULL,
+    final_score_away INTEGER DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    resolved_at TEXT DEFAULT NULL,
+    UNIQUE(match_key, agent_name)
+  );
+`);
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || "";
@@ -106,6 +128,253 @@ const STRIPE_PRICE_ID_CARTE = process.env.STRIPE_PRICE_ID_CARTE || process.env.S
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
+
+// ── Shadow agents (banc d'essai — free tiers) ─────────────────────────────────
+const GEMINI_API_KEY     = process.env.GEMINI_API_KEY     || "";
+const MISTRAL_API_KEY    = process.env.MISTRAL_API_KEY    || "";
+const CEREBRAS_API_KEY   = process.env.CEREBRAS_API_KEY   || "";
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
+const COHERE_API_KEY     = process.env.COHERE_API_KEY     || "";
+
+const SHADOW_AGENTS = [
+  {
+    name: "Gemini-Flash",
+    icon: "🌟",
+    enabled: () => !!GEMINI_API_KEY,
+    call: (prompt) => callGemini(prompt),
+  },
+  {
+    name: "Mistral-Small",
+    icon: "🌊",
+    enabled: () => !!MISTRAL_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://api.mistral.ai/v1/chat/completions",
+      key: MISTRAL_API_KEY,
+      model: "mistral-small-latest",
+    }),
+  },
+  {
+    name: "Cerebras-Llama",
+    icon: "⚡",
+    enabled: () => !!CEREBRAS_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://api.cerebras.ai/v1/chat/completions",
+      key: CEREBRAS_API_KEY,
+      model: "llama3.1-8b",
+    }),
+  },
+  {
+    name: "OR-Mistral7B",
+    icon: "🔓",
+    enabled: () => !!OPENROUTER_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: OPENROUTER_API_KEY,
+      model: "mistralai/mistral-7b-instruct:free",
+    }),
+  },
+  {
+    name: "Cohere-Command",
+    icon: "🧬",
+    enabled: () => !!COHERE_API_KEY,
+    call: (prompt) => callCohere(prompt),
+  },
+];
+
+// ── Shadow API helpers ────────────────────────────────────────────────────────
+function callOpenAICompat(prompt, { url, key, model }) {
+  return new Promise((resolve) => {
+    const body = JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 200,
+      temperature: 0.3,
+    });
+    const u = new URL(url);
+    const options = {
+      hostname: u.hostname,
+      path: u.pathname,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${key}`,
+        "HTTP-Referer": "https://touslesmatchs.com",
+        "X-Title": "TousLesMatchs Shadow Eval",
+      },
+      timeout: 15000,
+    };
+    const mod = u.protocol === "https:" ? https : http;
+    const req = mod.request(options, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          const text = json.choices?.[0]?.message?.content || "";
+          resolve({ ok: true, text });
+        } catch { resolve({ ok: false, text: "" }); }
+      });
+    });
+    req.on("error", () => resolve({ ok: false, text: "" }));
+    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "" }); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function callGemini(prompt) {
+  return new Promise((resolve) => {
+    if (!GEMINI_API_KEY) return resolve({ ok: false, text: "" });
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
+    });
+    const path = `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const options = {
+      hostname: "generativelanguage.googleapis.com",
+      path,
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      timeout: 15000,
+    };
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          resolve({ ok: true, text });
+        } catch { resolve({ ok: false, text: "" }); }
+      });
+    });
+    req.on("error", () => resolve({ ok: false, text: "" }));
+    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "" }); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function callCohere(prompt) {
+  return new Promise((resolve) => {
+    if (!COHERE_API_KEY) return resolve({ ok: false, text: "" });
+    const body = JSON.stringify({
+      model: "command-r",
+      message: prompt,
+      max_tokens: 200,
+      temperature: 0.3,
+    });
+    const options = {
+      hostname: "api.cohere.ai",
+      path: "/v1/chat",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${COHERE_API_KEY}`,
+      },
+      timeout: 15000,
+    };
+    const req = https.request(options, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          const text = json.text || json.chat_history?.slice(-1)[0]?.message || "";
+          resolve({ ok: true, text });
+        } catch { resolve({ ok: false, text: "" }); }
+      });
+    });
+    req.on("error", () => resolve({ ok: false, text: "" }));
+    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "" }); });
+    req.write(body);
+    req.end();
+  });
+}
+
+function parseShadowResponse(text) {
+  const t = text.trim();
+  const betMatch = t.match(/(?:PARI|BET|PRONOSTIC)\s*:\s*([^\n|]+)/i);
+  const confMatch = t.match(/(?:CONFIANCE|CONFIDENCE)\s*:\s*(\d+)/i);
+  const raisonMatch = t.match(/(?:RAISON|REASON|POURQUOI)\s*:\s*([^\n]+)/i);
+  let bet = betMatch ? betMatch[1].trim() : null;
+  if (!bet) {
+    const known = ["Over 2.5", "Under 2.5", "BTTS Oui", "BTTS Non", "Match nul", "Victoire domicile", "Victoire extérieur", "1X", "X2", "12", "NO BET"];
+    for (const k of known) {
+      if (t.toLowerCase().includes(k.toLowerCase())) { bet = k; break; }
+    }
+  }
+  return {
+    bet: bet || "NO BET",
+    confidence: confMatch ? Math.min(100, Math.max(0, parseInt(confMatch[1]))) : 70,
+    raison: raisonMatch ? raisonMatch[1].trim().slice(0, 300) : t.slice(0, 200),
+  };
+}
+
+function buildShadowPrompt(match) {
+  const scoreStr = (match.score_home != null && match.score_away != null)
+    ? `\nScore actuel : ${match.score_home}-${match.score_away}${match.minute ? ` (${match.minute}')` : ""}`
+    : "";
+  return `Tu es un analyste sportif expert. Analyse ce match et donne ta recommandation de pari.
+
+Match : ${match.home} vs ${match.away}
+Compétition : ${match.competition || match.league || "inconnue"}
+Sport : ${match.sport || "Football"}${scoreStr}
+
+Réponds UNIQUEMENT dans ce format :
+PARI : [ex: Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
+CONFIANCE : [0-100]
+RAISON : [1 phrase maximum]
+
+Ne mets rien d'autre. Si tu n'es pas sûr, réponds NO BET.`;
+}
+
+async function runShadowEvaluation(match) {
+  const prompt = buildShadowPrompt(match);
+  const matchKey = `${(match.home || "").replace(/\s+/g, "_")}_${(match.away || "").replace(/\s+/g, "_")}_${(match.date || match.utcDate || "").slice(0, 10)}`;
+  const activeAgents = SHADOW_AGENTS.filter(a => a.enabled());
+  if (activeAgents.length === 0) return;
+
+  for (const agent of activeAgents) {
+    try {
+      const existing = db.prepare("SELECT 1 FROM shadow_evals WHERE match_key = ? AND agent_name = ?").get(matchKey, agent.name);
+      if (existing) continue;
+
+      const result = await agent.call(prompt);
+      if (!result.ok || !result.text) continue;
+
+      const parsed = parseShadowResponse(result.text);
+      db.prepare(`
+        INSERT OR IGNORE INTO shadow_evals
+          (match_key, home, away, competition, sport, agent_name, bet, confidence, raison)
+        VALUES (?,?,?,?,?,?,?,?,?)
+      `).run(
+        matchKey,
+        match.home || "", match.away || "",
+        match.competition || match.league || "",
+        match.sport || "Football",
+        agent.name,
+        parsed.bet, parsed.confidence, parsed.raison
+      );
+      console.log(`[shadow] ${agent.icon} ${agent.name} → ${parsed.bet} (${parsed.confidence}%) pour ${match.home} vs ${match.away}`);
+    } catch (e) {
+      console.error(`[shadow] ${agent.name} erreur:`, e.message);
+    }
+  }
+}
+
+function resolveShadowOutcomes(matchKey, scoreHome, scoreAway) {
+  try {
+    const rows = db.prepare("SELECT id, bet FROM shadow_evals WHERE match_key = ? AND outcome IS NULL").all(matchKey);
+    for (const row of rows) {
+      const outcome = getBetOutcomeForScore(row.bet, scoreHome, scoreAway);
+      if (outcome) {
+        db.prepare(`UPDATE shadow_evals SET outcome = ?, final_score_home = ?, final_score_away = ?, resolved_at = datetime('now') WHERE id = ?`)
+          .run(outcome, scoreHome, scoreAway, row.id);
+      }
+    }
+  } catch (e) { console.error("[shadow] resolve:", e.message); }
+}
 
 function bookmakerEmailHtml() {
   const colors = ["#ef4444", "#3b82f6", "#22c55e", "#06b6d4"];
@@ -1156,6 +1425,9 @@ Réponds en JSON pur (pas de markdown):
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
+  // Évaluation shadow en parallèle (sans bloquer la réponse Concile)
+  runShadowEvaluation(match).catch(e => console.error("[shadow] bg:", e.message));
+
   return analysisResult;
 }
 
@@ -1379,6 +1651,12 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
       if (out) upd.run(out, h, a, "api_finished_match", r.id);
     });
     console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
+
+    // Résoudre aussi les shadow evals pour ce match
+    if (pending.length > 0) {
+      const matchKey = pending[0].match_key;
+      resolveShadowOutcomes(matchKey, h, a);
+    }
   } catch(e) { console.error("[concile-trace] resolve:", e.message); }
 }
 
@@ -2951,6 +3229,47 @@ app.get("/concile-performance", (req, res) => {
   const { email, code } = req.query;
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
   res.json({ ok: true, ...getConcilePerformance() });
+});
+
+// ── Shadow eval — classement des IAs candidates ───────────────────────────────
+app.get("/admin/shadow-perf", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
+  try {
+    const byAgent = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending,
+        ROUND(AVG(confidence),1) as avg_confidence,
+        MIN(created_at) as first_eval,
+        MAX(created_at) as last_eval
+      FROM shadow_evals
+      GROUP BY agent_name
+      ORDER BY wins DESC
+    `).all();
+
+    const withStats = byAgent.map(r => ({
+      ...r,
+      winrate: r.total > 0 ? Math.round((r.wins / Math.max(1, r.wins + r.losses)) * 100) : null,
+      resolved: r.wins + r.losses,
+      days_active: r.first_eval ? Math.ceil((Date.now() - new Date(r.first_eval).getTime()) / 86400000) : 0,
+    }));
+
+    const recentEvals = db.prepare(`
+      SELECT agent_name, home, away, competition, bet, confidence, outcome, created_at
+      FROM shadow_evals
+      ORDER BY created_at DESC
+      LIMIT 50
+    `).all();
+
+    const activeAgents = SHADOW_AGENTS.map(a => ({ name: a.name, icon: a.icon, active: a.enabled() }));
+
+    res.json({ ok: true, agents: withStats, recent: recentEvals, configured: activeAgents });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 // ── Agent performance — classement public ────────────────────────────────────
