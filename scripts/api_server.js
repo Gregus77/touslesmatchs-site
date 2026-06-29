@@ -3376,7 +3376,9 @@ app.post("/concile-analysis", async (req, res) => {
   if (rejectScoreConflict(verifiedMatch, res)) return;
 
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
-  const cacheKey = `${email}__${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}`;
+  // Cache partagé par match+état (pas par user) pour économiser les tokens Groq
+  const scoreState = verifiedMatch.score_home !== null ? `${verifiedMatch.score_home}-${verifiedMatch.score_away}_${Math.floor((verifiedMatch.minute || 0) / 15)}` : "prematch";
+  const cacheKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}_${scoreState}`;
   if (!forceRefresh && analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...sanitizeAnalysisForClient(analysisCache.get(cacheKey), allowAdminFields), cached: true });
   }
@@ -3428,7 +3430,8 @@ app.post("/prematch-analysis", async (req, res) => {
   }
 
   const today2 = new Date().toISOString().slice(0, 10);
-  const cacheKey = `prematch__${email}__${match.home}_${match.away}_${match.date || today2}`;
+  // Cache partagé par match+jour (pas par user) pour économiser les tokens Groq
+  const cacheKey = `prematch__${match.home}_${match.away}_${match.date || today2}`;
   if (analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...sanitizeAnalysisForClient(analysisCache.get(cacheKey), allowAdminFields), cached: true });
   }
