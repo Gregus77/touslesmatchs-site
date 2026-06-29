@@ -2335,6 +2335,24 @@ async function maybeRunWeeklyBilan() {
       if (ADMIN_CHAT) await reply(ADMIN_CHAT, "✅ Bilan hebdomadaire publié sur le canal gratuit.").catch(() => {});
     }
   } catch(e) { console.error("[weekly-bilan]", e.message); }
+
+  // Alerte admin si un agent dépasse 70% winrate sur 10+ picks (privé, admin seulement)
+  if (ADMIN_CHAT) {
+    try {
+      const d = await httpGet(`http://touslesmatchs-api:3001/agent-performance`).catch(() => null);
+      if (d?.agents) {
+        const stars = d.agents.filter(a => a.resolved >= 10 && a.winrate >= 70);
+        if (stars.length) {
+          let alertMsg = `🌟 <b>Alerte performance Concile</b>\n\n`;
+          for (const a of stars) {
+            alertMsg += `${a.winrate >= 80 ? "🔥🔥" : "🔥"} <b>${escapeHtml(a.name)}</b> : ${a.winrate}% winrate (${a.wins}/${a.resolved} picks)\n`;
+          }
+          alertMsg += `\nCes agents performent exceptionnellement — consider aligning the Chief to weight them higher.`;
+          await reply(ADMIN_CHAT, alertMsg).catch(() => {});
+        }
+      }
+    } catch(e) { console.error("[weekly-bilan agent alert]", e.message); }
+  }
 }
 
 async function maybeAutoCheckResult() {
