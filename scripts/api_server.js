@@ -396,6 +396,24 @@ const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
 const SCORE_PATH = "/var/touslesmatchs/live_score.json";
 const PICK_PATH = "/var/touslesmatchs/current_pick.json";
 const HERMES_PICKS_PATH = "/picks/picks.json";
+const PINNED_SIGNALS_PATH = "/var/touslesmatchs/pinned_signals.json";
+
+function loadPinnedSignals() {
+  try { return JSON.parse(fs.readFileSync(PINNED_SIGNALS_PATH, "utf8")); } catch { return []; }
+}
+function savePinnedSignals(signals) {
+  try { fs.writeFileSync(PINNED_SIGNALS_PATH, JSON.stringify(signals, null, 2)); } catch {}
+}
+function addPinnedSignal(signal) {
+  const signals = loadPinnedSignals().filter(s => s.id !== signal.id);
+  const expireAt = Date.now() + 90 * 60 * 1000; // 90 minutes
+  signals.unshift({ ...signal, expireAt, pinnedAt: new Date().toISOString() });
+  savePinnedSignals(signals.slice(0, 20));
+}
+function getActivePinnedSignals() {
+  const now = Date.now();
+  return loadPinnedSignals().filter(s => s.expireAt > now);
+}
 const LEADS_PATH = "/var/touslesmatchs/leads.json";
 const REFERRALS_PATH = "/var/touslesmatchs/referrals.json";
 
@@ -2745,16 +2763,47 @@ app.delete("/admin/set-score", (req, res) => {
 // ── Live matches ──────────────────────────────────────────────────────────────
 app.get("/live-matches", async (req, res) => {
   try {
-    // ?force=1 vide le cache pour forcer un appel API immédiat
     if (req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
     const matches = await fetchLiveMatches();
+
+    // Injecter les signaux épinglés si le match n'est plus dans l'API
+    const pinned = getActivePinnedSignals();
+    for (const ps of pinned) {
+      const alreadyLive = matches.some(m =>
+        m.home?.toLowerCase().includes(ps.home?.toLowerCase().split(" ")[0]) &&
+        m.away?.toLowerCase().includes(ps.away?.toLowerCase().split(" ")[0])
+      );
+      if (!alreadyLive) {
+        matches.unshift({
+          id: ps.id,
+          home: ps.home, away: ps.away,
+          competition: ps.competition || ps.league || "",
+          sport: ps.sport || "Football",
+          status: "PINNED_SIGNAL",
+          minute: ps.minute,
+          score_home: ps.score_home ?? null,
+          score_away: ps.score_away ?? null,
+          home_logo: ps.home_logo || null,
+          away_logo: ps.away_logo || null,
+          pinnedSignal: true,
+          pinnedBet: ps.bet,
+          pinnedConfidence: ps.confidence,
+          pinnedReason: ps.reason,
+        });
+      }
+    }
+
     res.json({ ok: true, matches });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
+});
+
+app.get("/pinned-signals", (req, res) => {
+  res.json({ ok: true, signals: getActivePinnedSignals() });
 });
 
 // ── Existing analyse endpoint (no token cost) ─────────────────────────────────
@@ -3561,6 +3610,23 @@ app.post("/internal/signal-notify", async (req, res) => {
       }
     }
     console.log(`[signal-notify] Emails signal fort envoyés : ${sent}/${emails.length}`);
+
+    // Épingler le signal 90 min sur Live IA pour que le lien Telegram mène au bon match
+    addPinnedSignal({
+      id: signal.id || `${signal.home}_${signal.away}_${Date.now()}`,
+      home: signal.home, away: signal.away,
+      competition: signal.competition || signal.sport || "",
+      sport: signal.sport || "Football",
+      minute: signal.minute,
+      score_home: signal.score_home,
+      score_away: signal.score_away,
+      home_logo: signal.home_logo || null,
+      away_logo: signal.away_logo || null,
+      bet: signal.bet,
+      confidence: signal.confidence,
+      reason: signal.reason,
+    });
+
     res.json({ ok: true, sent, total: emails.length });
   } catch (e) {
     console.error("[signal-notify]", e.message);

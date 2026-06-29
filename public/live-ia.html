@@ -460,6 +460,7 @@ function liveMinuteValue(minute){
   return Number.isFinite(n)?n:null;
 }
 function isVisibleLiveMatch(m){
+  if(m?.pinnedSignal) return true; // toujours afficher les matchs épinglés depuis Telegram
   const status=String(m?.status||'').toUpperCase();
   if(['FINISHED','FT','AET','PEN','ENDED','CANCELLED','POSTPONED'].includes(status)) return false;
   const minute=liveMinuteValue(m?.minute);
@@ -662,13 +663,17 @@ function renderMatchCard(m, i){
   const sportIcon = SPORT_ICONS[m.sport] || '🎯';
   const sportLabel = m.sport || 'Sport';
   const kickoff = fmtKickoff(m.utcDate);
-  const trustWarning = m.lowTrustCompetition
-    ? '<div style="font-size:11px;color:#fbbf24;margin-top:6px">⚠️ Compétition volatile — analyse prudente</div>'
-    : '';
+  const isPinned = m.pinnedSignal === true;
+  const trustWarning = isPinned
+    ? `<div style="font-size:11px;color:#10b981;margin-top:6px;font-weight:800">🚨 Signal fort ${m.pinnedConfidence ? m.pinnedConfidence + '% confiance' : ''} — Concile IA</div>`
+    : m.lowTrustCompetition
+      ? '<div style="font-size:11px;color:#fbbf24;margin-top:6px">⚠️ Compétition volatile — analyse prudente</div>'
+      : '';
+  const pinnedBorder = isPinned ? 'border:2px solid #10b981;box-shadow:0 0 18px rgba(16,185,129,.25);' : '';
   const minuteBadge = m.minute != null
     ? `<span class="match-dot"></span>${m.minute}'`
     : '<span class="match-dot"></span>LIVE';
-  return `<div class="match-card" id="card-${i}" onclick="selectMatch(${i})">
+  return `<div class="match-card" id="card-${i}" onclick="selectMatch(${i})" style="${pinnedBorder}">
     <div class="match-top" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
@@ -1025,7 +1030,23 @@ function renderLeaderboard() {
 // ══ INIT
 renderNavAuth();
 renderCredits();
-loadPickMatch().then(()=>loadMatches());
+
+// Param ?match= depuis un lien Telegram : auto-highlight + scroll vers le match
+const _urlMatchParam = new URLSearchParams(window.location.search).get('match');
+function highlightMatchFromParam(){
+  if(!_urlMatchParam || !allMatches.length) return;
+  const q = _urlMatchParam.toLowerCase();
+  const idx = allMatches.findIndex(m =>
+    (m.home + ' ' + m.away).toLowerCase().includes(q.split(' vs ')[0]?.trim()) ||
+    (m.home + ' vs ' + m.away).toLowerCase().includes(q.toLowerCase())
+  );
+  if(idx === -1) return;
+  selectMatch(idx);
+  const card = document.getElementById('card-' + idx);
+  if(card) setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'center'}), 300);
+}
+
+loadPickMatch().then(()=>loadMatches().then(highlightMatchFromParam));
 loadAgentPerformance();
 setInterval(loadMatches, 60000);
 setInterval(loadAgentPerformance, 5*60*1000);
