@@ -175,6 +175,28 @@ Match en cours (score + minute + stats live)
 - Séquence email nurturing J+1 (preuve) + J+3 (urgence) automatique après inscription
 - Skills créés : `/pilote` (orchestrateur autonome), `/growth-engine` (croissance Stripe)
 
+### Claude Code — 2026-06-29 (soir) — UX/SEO/Hermès + auto-résolution réelle
+- **Splash premium** : overlay animé (anneau gradient + wordmark + barre) remplace le logo TLM brut au chargement. Filet de sécurité 3s → ne reste jamais bloqué (fix bug Android "logo puis erreur").
+- **Fix crash Android** : ordre de chargement i18n.js corrigé (était chargé après le script qui l'utilise → ReferenceError bloquant) + try/catch de secours.
+- **Gemini retiré partout** : démo Live IA, leaderboard, SHADOW_AGENTS, getMockAnalysis. ⚠️ Le site PROD affiche encore Gemini tant que le VPS n'est pas redéployé.
+- **Leaderboard IA robuste** : se construit depuis les agents réellement en base (clés agentPerfData) au lieu d'une liste figée → un renommage d'agent ne fait plus disparaître l'historique (ex: Mistral-7B).
+- **Drapeaux équipes Telegram** : teamFlag()/matchWithFlags() — "🇩🇪 Germany vs 🇵🇾 Paraguay". ~70 pays FR+EN, ⚽ pour les clubs.
+- **Auto-résolution résultats** : maybeAutoCheckResult → cmdCheckResult(chatId, autoApply=true) applique cmdResult() automatiquement quand le résultat est déductible. Plus besoin de /win /lose manuel chaque jour.
+- **Fix classification paris** : "Moins de 2.5 buts" était mal classé (contient "2" → match marché victoire extérieur). Ordre regex corrigé : over/under/btts/double-chance avant 1X2.
+- **SEO index.html** : JSON-LD @graph (Organization + WebSite + FAQPage rich results) + meta robots/theme-color/og:site_name/og:locale.
+- Brésil/Japon 29/06 (Moins 2.5, 2-1) ajouté PERDU dans picks.json + index + historique. Stats 12W/2L 86%.
+
+### 🔴 BLOQUANT N°1 POUR LES PREMIÈRES VENTES (Grégory doit agir sur le VPS)
+Le tunnel (capture email, nurturing, masquage pari, CTA, SEO) est prêt, MAIS aucun
+paiement n'est possible sans les clés Stripe dans `/opt/touslesmatchs/.env` :
+```
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_PRICE_ID_PREMIUM=price_...
+STRIPE_PRICE_ID_VIP=price_...
+STRIPE_PRICE_ID_ELITE=price_...
+```
+Sans ça : trafic + inscriptions possibles, mais 0€ encaissé. C'est LE point à débloquer pour la première vente.
+
 ### Claude Code — 2026-06-29 (nuit) — Hermès amélioré + SEO + Auto-résolution
 - `/preview` : prévisualiser pick gratuit + premium avant publication (texte exact)
 - `/checkresult` : vérifier score final via football-data.org + api-sports.io, déduit WIN/LOSE
