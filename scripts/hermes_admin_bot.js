@@ -2303,6 +2303,44 @@ async function maybeRunWeeklyBilan() {
   } catch(e) { console.error("[weekly-bilan]", e.message); }
 }
 
+async function maybeAutoCheckResult() {
+  if (!ADMIN_CHAT) return;
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") return;
+  const status = String(p.status || "").toUpperCase();
+  if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(status)) return;
+
+  // Vérifier si l'heure estimée de fin du match est passée (heure + 2h30)
+  const now = parisNowParts();
+  const timeStr = p.time || "";
+  const timeMatch = timeStr.match(/(\d{1,2})[h:H](\d{2})?/);
+  if (!timeMatch) return; // Pas d'heure définie, on ne peut pas savoir
+  const matchHour = parseInt(timeMatch[1]);
+  const matchMin = parseInt(timeMatch[2] || "0");
+  const endHour = matchHour + 2; // Match + 2h = fin probable avec débordements
+  const currentMinutes = now.hour * 60 + now.minute;
+  const endMinutes = endHour * 60 + matchMin;
+  if (currentMinutes < endMinutes) return; // Match pas encore terminé
+
+  // Ne pas relancer si déjà vérifié dans les 90 dernières minutes
+  const stateFile = path.join(REPO, "data/hermes_autoresult.json");
+  let state = {};
+  try { state = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch {}
+  const pickKey = `${p.home}|${p.away}|${p.date}`;
+  if (state.lastCheck === pickKey && state.checkedAt) {
+    const minsSince = (Date.now() - new Date(state.checkedAt).getTime()) / 60000;
+    if (minsSince < 90) return;
+  }
+
+  state.lastCheck = pickKey;
+  state.checkedAt = new Date().toISOString();
+  try { fs.mkdirSync(path.dirname(stateFile), { recursive: true }); fs.writeFileSync(stateFile, JSON.stringify(state)); } catch {}
+
+  console.log(`[auto-result] Vérification score pour ${p.home} vs ${p.away}`);
+  await cmdCheckResult(ADMIN_CHAT).catch(e => console.error("[auto-result]", e.message));
+}
+
 // ── Long polling loop ─────────────────────────────────────────────────────────
 async function poll() {
   let offset = 0;
@@ -2325,6 +2363,7 @@ async function poll() {
     maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
     maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
     maybeRunWeeklyBilan().catch(e => console.error("weekly bilan:", e.message));
+    maybeAutoCheckResult().catch(e => console.error("auto-result:", e.message));
   }, 60 * 1000);
   setInterval(() => {
     scanStrongSignals().catch(e => console.error("strong signals:", e.message));
