@@ -2879,6 +2879,9 @@ app.post("/subscribe-email", async (req, res) => {
 </div>`;
       brevoSendEmail(emailClean, "Bienvenue sur TousLesMatchs — ton premier pick arrive bientôt 🎯", welcomeHtml)
         .catch(e => console.error("[subscribe-email] welcome email:", e.message));
+
+      // Séquence nurturing : J+1 (preuve) et J+3 (urgence)
+      scheduleNurturingEmails(emailClean);
     }
 
     res.json({ ok: true });
@@ -2887,6 +2890,78 @@ app.post("/subscribe-email", async (req, res) => {
     res.json({ ok: true });
   }
 });
+
+function scheduleNurturingEmails(email) {
+  // J+1 — Email preuve : résultats récents pour déclencher l'envie
+  setTimeout(async () => {
+    try {
+      let pickLine = "";
+      try {
+        const picks = JSON.parse(fs.readFileSync("/var/touslesmatchs/picks.json", "utf8"));
+        const p = picks.currentPick;
+        if (p?.status && ["GAGNE","WIN"].includes(String(p.status).toUpperCase())) {
+          pickLine = `<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:16px;margin-bottom:20px">
+            <div style="color:#10b981;font-weight:800;font-size:14px;margin-bottom:4px">✅ Dernier pick : GAGNÉ</div>
+            <div style="color:#a8aec8;font-size:13px">${p.home} vs ${p.away} · ${p.prono || p.bet} @${p.cote}</div>
+          </div>`;
+        }
+      } catch (_) {}
+      const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:30px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">Le Concile IA a encore frappé</div>
+        </div>
+        <div style="padding:32px">
+          <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Depuis ton inscription hier, le Concile a publié son pick du jour.</p>
+          ${pickLine}
+          <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Tu veux recevoir l'analyse <strong style="color:#eceaf4">complète</strong> — le pari exact, la cote, la mise suggérée et la raison du Concile — directement dans ta boite mail et sur Telegram ?</p>
+          <div style="text-align:center;margin-bottom:20px">
+            <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
+          </div>
+          <div style="text-align:center;margin-bottom:20px">
+            <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€ →</a>
+          </div>
+          <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
+        </div>
+      </div>`;
+      await brevoSendEmail(email, "✅ Le Concile vient de publier — voici ce que tu as manqué", html);
+    } catch (e) { console.error("[nurturing J+1]", e.message); }
+  }, 24 * 60 * 60 * 1000); // 24h
+
+  // J+3 — Email urgence : bilan des derniers picks
+  setTimeout(async () => {
+    try {
+      const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:30px;text-align:center">
+          <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">3 picks publiés depuis ton inscription</div>
+        </div>
+        <div style="padding:32px">
+          <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Tu t'es inscrit il y a 3 jours. Le Concile a travaillé chaque matin.</p>
+          <div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:20px;margin-bottom:24px">
+            <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22d3ee;margin-bottom:12px">Ce que tu as vu</div>
+            <div style="font-size:14px;color:#a8aec8;line-height:2">
+              ✅ Match + compétition<br>
+              ✅ Niveau de confiance du Concile<br>
+              🔒 Le pari exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
+              🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
+              🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
+            </div>
+          </div>
+          <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Pro.</p>
+          <div style="text-align:center;margin-bottom:12px">
+            <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
+          </div>
+          <div style="text-align:center;margin-bottom:24px">
+            <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Tester 1 analyse pour 1€</a>
+          </div>
+          <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
+        </div>
+      </div>`;
+      await brevoSendEmail(email, "🔒 Tu vois le signal, pas le pari — voici comment changer ça", html);
+    } catch (e) { console.error("[nurturing J+3]", e.message); }
+  }, 3 * 24 * 60 * 60 * 1000); // 72h
+}
 
 // Forgot code - lookup codes.db by email and send via Brevo
 app.post("/forgot-code", async (req, res) => {

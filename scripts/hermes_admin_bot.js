@@ -1071,19 +1071,29 @@ async function cmdPublish(chatId, opts = {}) {
   savePicks(data);
 
   const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-  const text = `<b>Pick IA du jour - ${today}</b>
+  const conf = p.confidenceTg || p.confidence || "";
+  const confNum = parseInt(conf) || 0;
+  const signalEmoji = confNum >= 80 ? "🔥" : confNum >= 70 ? "⚡" : "📊";
+  const signalLabel = confNum >= 80 ? "FORT" : confNum >= 70 ? "BON" : "MODÉRÉ";
+
+  const text = `${signalEmoji} <b>Pick du jour — ${today}</b>
 
 <b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
-${escapeHtml(p.league || "")}
-${escapeHtml(p.time || "")}
+📋 ${escapeHtml(p.league || "Compétition")}
+🕐 ${escapeHtml(p.time || "")}
 
-<b>Pronostic :</b> ${escapeHtml(p.prono || p.bet || "")}
-<b>Cote :</b> ${escapeHtml(p.cote || "")}
-<b>Confiance Hermes :</b> ${escapeHtml(p.confidenceTg || "")}
+━━━━━━━━━━━━━━━
+🤖 <b>Le Concile a analysé ce match</b>
+Signal : <b>${signalLabel}</b> ${signalEmoji}
+Confiance : <b>${escapeHtml(String(conf))}</b>
 
-Analyse complete : https://www.touslesmatchs.com
+🔒 <i>Le pari retenu par le Chief est réservé aux membres Pro & Elite</i>
+━━━━━━━━━━━━━━━
 
-18+ uniquement. Jeu responsable.`;
+📈 Rejoins <b>+de 50 membres</b> qui reçoivent le pick complet chaque matin.
+👉 <a href="https://www.touslesmatchs.com/#plans">Voir les abonnements →</a>
+
+<i>18+ · Jeu responsable · 09 74 75 13 13</i>`;
 
   const sent = await publishTelegramPick({
     token: PUBLIC_BOT_TOKEN,
@@ -1091,8 +1101,8 @@ Analyse complete : https://www.touslesmatchs.com
     text,
     pick: p,
     extra: bookmakerReplyMarkup([
-      { text: "Voir l'analyse TousLesMatchs", url: "https://www.touslesmatchs.com" },
-      { text: "Passer Pro/Elite", url: "https://www.touslesmatchs.com/#plans" },
+      { text: "🔓 Voir le pick complet (Pro/Elite)", url: "https://www.touslesmatchs.com/#plans" },
+      { text: "📊 Voir l'analyse Live IA", url: "https://www.touslesmatchs.com/live-ia" },
     ]),
   });
   const ok = !!sent.ok;
@@ -1113,23 +1123,32 @@ async function cmdPublishPremium(chatId, opts = {}) {
   await ensurePickVisual(p);
   savePicks(data);
 
-  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
-  const edgeStr = p.edge ? ` - Edge: +${Math.round(p.edge * 100)}%` : "";
-  const probStr = p.probabilite_estimee ? `\nProba estimee : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
-  const text = `<b>Pick PREMIUM du jour - ${today}</b>
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", weekday: "long" });
+  const edgeStr = p.edge ? ` · Edge +${Math.round(p.edge * 100)}%` : "";
+  const probStr = p.probabilite_estimee ? `\n📐 Probabilité estimée : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
+  const conf = parseInt(p.confidenceTg || p.confidence || 0);
+  const confEmoji = conf >= 85 ? "🔥🔥" : conf >= 75 ? "🔥" : "⚡";
+  const bankrollSugg = conf >= 85 ? "3-5%" : conf >= 75 ? "2-3%" : "1-2%";
+  const text = `⚡ <b>PICK PREMIUM — ${today}</b>
 
 <b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
-${escapeHtml(p.league || "")}
-${escapeHtml(p.time || "")}
+📋 ${escapeHtml(p.league || "Compétition")}
+🕐 ${escapeHtml(p.time || "")}
 
-<b>Pronostic :</b> ${escapeHtml(p.prono || p.bet || "")}
-<b>Cote :</b> <b>${escapeHtml(p.cote || "")}</b>
-<b>Confiance Concile :</b> ${escapeHtml(p.confidenceTg || "")}${probStr}
-${p.raison ? `\n<i>${escapeHtml(p.raison)}</i>` : ""}
+━━━ VERDICT CONCILE ━━━
+📌 <b>Pari : ${escapeHtml(p.prono || p.bet || "")}</b>
+💰 Cote : <b>${escapeHtml(p.cote || "")}</b>
+${confEmoji} Confiance : <b>${escapeHtml(String(p.confidenceTg || p.confidence || ""))}</b>${probStr}
+💼 Mise suggérée : <b>${bankrollSugg} bankroll</b>
 
-Analyse complete : https://www.touslesmatchs.com/live-ia
+━━━ ANALYSE CHIEF ━━━
+${p.raison ? `<i>${escapeHtml(p.raison)}</i>` : "<i>Analyse disponible sur Live IA</i>"}
 
-18+ uniquement. Jeu responsable.`;
+━━━━━━━━━━━━━━━
+📊 Analyse complète → <a href="https://www.touslesmatchs.com/live-ia">Live IA</a>
+🤝 1 ami abonné = 1 mois offert → <a href="https://www.touslesmatchs.com/#plans">Partager</a>
+
+<i>18+ · Jeu responsable · 09 74 75 13 13</i>`;
 
   const sent = await publishTelegramPick({
     token: TG_TOKEN,
