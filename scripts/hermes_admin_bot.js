@@ -1060,6 +1060,66 @@ async function cmdPublishResult(chatId) {
   await reply(chatId, `Resultat publie sur ${result.sent} canal(aux).`);
 }
 
+async function cmdPreview(chatId) {
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick défini pour le preview"); return; }
+
+  const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+  const conf = p.confidenceTg || p.confidence || "";
+  const confNum = parseInt(conf) || 0;
+  const signalEmoji = confNum >= 80 ? "🔥" : confNum >= 70 ? "⚡" : "📊";
+  const signalLabel = confNum >= 80 ? "FORT" : confNum >= 70 ? "BON" : "MODÉRÉ";
+
+  const freeMsg = `${signalEmoji} <b>Pick du jour — ${today}</b>
+
+<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+📋 ${escapeHtml(p.league || "Compétition")}
+🕐 ${escapeHtml(p.time || "")}
+
+━━━━━━━━━━━━━━━
+🤖 <b>Le Concile a analysé ce match</b>
+Signal : <b>${signalLabel}</b> ${signalEmoji}
+Confiance : <b>${escapeHtml(String(conf))}</b>
+
+🔒 <i>Le pari retenu par le Chief est réservé aux membres Pro & Elite</i>
+━━━━━━━━━━━━━━━
+
+📈 Rejoins <b>+de 50 membres</b> qui reçoivent le pick complet chaque matin.
+👉 <a href="https://www.touslesmatchs.com/#plans">Voir les abonnements →</a>
+
+<i>18+ · Jeu responsable · 09 74 75 13 13</i>`;
+
+  const todayLong = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", weekday: "long" });
+  const edgeStr = p.edge ? ` · Edge +${Math.round(p.edge * 100)}%` : "";
+  const probStr = p.probabilite_estimee ? `\n📐 Probabilité estimée : <b>${p.probabilite_estimee}%</b>${edgeStr}` : "";
+  const confNum2 = parseInt(p.confidenceTg || p.confidence || 0);
+  const confEmoji = confNum2 >= 85 ? "🔥🔥" : confNum2 >= 75 ? "🔥" : "⚡";
+  const bankrollSugg = confNum2 >= 85 ? "3-5%" : confNum2 >= 75 ? "2-3%" : "1-2%";
+
+  const premiumMsg = `⚡ <b>PICK PREMIUM — ${todayLong}</b>
+
+<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>
+📋 ${escapeHtml(p.league || "Compétition")}
+🕐 ${escapeHtml(p.time || "")}
+
+━━━ VERDICT CONCILE ━━━
+📌 <b>Pari : ${escapeHtml(p.prono || p.bet || "")}</b>
+💰 Cote : <b>${escapeHtml(p.cote || "")}</b>
+${confEmoji} Confiance : <b>${escapeHtml(String(p.confidenceTg || p.confidence || ""))}</b>${probStr}
+💼 Mise suggérée : <b>${bankrollSugg} bankroll</b>
+
+━━━ ANALYSE CHIEF ━━━
+${p.raison ? `<i>${escapeHtml(p.raison)}</i>` : "<i>Analyse disponible sur Live IA</i>"}
+
+━━━━━━━━━━━━━━━
+📊 Analyse complète → <a href="https://www.touslesmatchs.com/live-ia">Live IA</a>
+
+<i>18+ · Jeu responsable · 09 74 75 13 13</i>`;
+
+  await reply(chatId, `📋 <b>PREVIEW — Canal GRATUIT</b>\n\n${freeMsg}\n\n─────\n\n📋 <b>PREVIEW — Canal PREMIUM</b>\n\n${premiumMsg}\n\n─────\n✅ <b>Envoie /publish pour le gratuit, /publishpremium pour le premium</b>`);
+}
+
 async function cmdPublish(chatId, opts = {}) {
   if (!PUBLIC_BOT_TOKEN) { await reply(chatId, "TELEGRAM_BOT_TOKEN manquant"); return; }
   const data = loadPicks();
@@ -1829,6 +1889,7 @@ async function cmdHelp(chatId) {
 /publishalert — Republier manuellement la dernière alerte forte dans le groupe Elite
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publishresult — Publier le résultat validé sur les canaux
+/preview — Prévisualiser les messages avant publication (gratuit + premium)
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Elite
 /deploy — guidance de déploiement verrouillée
@@ -1984,6 +2045,7 @@ async function handleCommandLine(chatId, text) {
     case "/alerts":          return cmdAlerts(chatId);
     case "/publishalert":    return cmdPublishAlert(chatId, args);
     case "/learn":           return cmdLearn(chatId);
+    case "/preview":         return cmdPreview(chatId);
     case "/publish":         return cmdPublish(chatId);
     case "/publishpremium":  return cmdPublishPremium(chatId);
     case "/deploy":          return cmdDeploy(chatId);
