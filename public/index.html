@@ -526,7 +526,7 @@ nav{
   filter:blur(2px);
 }
 .f-claude  {background:linear-gradient(90deg,#4f46e5,#818cf8)}
-.f-gemini  {background:linear-gradient(90deg,#0891b2,#22d3ee)}
+.f-perplexity  {background:linear-gradient(90deg,#0891b2,#22d3ee)}
 .f-deepseek{background:linear-gradient(90deg,#7c3aed,#a78bfa)}
 .f-mistral {background:linear-gradient(90deg,#059669,#34d399)}
 .f-groq    {background:linear-gradient(90deg,#d97706,#fbbf24)}
@@ -1235,7 +1235,7 @@ footer{
     <div class="liad-agents">
       <div class="liad-agent a1">
         <div class="liad-agent-left">
-          <div class="liad-agent-tag">GROQ-Llama · Statistique</div>
+          <div class="liad-agent-tag">Perplexity-Web · Données live</div>
           <div class="liad-agent-bet">Victoire Équipe A (1X2)</div>
           <div class="liad-agent-why">Signal clé : forme récente + avantage statistique.</div>
         </div>
@@ -1246,7 +1246,7 @@ footer{
       </div>
       <div class="liad-agent a2">
         <div class="liad-agent-left">
-          <div class="liad-agent-tag">GPT-Analysis · Tactique</div>
+          <div class="liad-agent-tag">DeepSeek-V3 · Contrarian</div>
           <div class="liad-agent-bet">Victoire Équipe A (1X2)</div>
           <div class="liad-agent-why">Signal clé : lecture tactique favorable au leader.</div>
         </div>
@@ -1257,7 +1257,7 @@ footer{
       </div>
       <div class="liad-agent a3">
         <div class="liad-agent-left">
-          <div class="liad-agent-tag">GeminiFlash · Value Bets</div>
+          <div class="liad-agent-tag">Cohere-Command · Value Bets</div>
           <div class="liad-agent-bet">Victoire Équipe A (1X2)</div>
           <div class="liad-agent-why">Signal clé : value positive face au marché.</div>
         </div>
@@ -1268,7 +1268,7 @@ footer{
       </div>
       <div class="liad-agent a4">
         <div class="liad-agent-left">
-          <div class="liad-agent-tag">Mistral-7B · Over / Under</div>
+          <div class="liad-agent-tag">Mistral-Large · Over / Under</div>
           <div class="liad-agent-bet">Under 2.5 buts</div>
           <div class="liad-agent-why">Objection : le marché buts reste risqué à ce rythme.</div>
         </div>
@@ -2434,7 +2434,7 @@ async function initPick(){
     const conf = Math.min(99, Math.max(55, Math.round(Number(p.confidence||7)*10)));
     PICK.ia = [
       {name:'Hermès Chief', pct:conf,                  fill:'f-claude',   ok:conf>=65, why:p.raison||''},
-      {name:'Stats live',   pct:Math.round(conf*0.90), fill:'f-gemini',   ok:conf>=60, why:''},
+      {name:'Stats live',   pct:Math.round(conf*0.90), fill:'f-perplexity',   ok:conf>=60, why:''},
       {name:'Value check',  pct:Math.round(conf*0.85), fill:'f-deepseek', ok:conf>=55, why:''},
       {name:'Risk filter',  pct:Math.round(conf*0.93), fill:'f-mistral',  ok:conf>=60, why:''},
     ];

@@ -144,7 +144,6 @@ const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmat
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 
 // ── Shadow agents (banc d'essai — free tiers) ─────────────────────────────────
-const GEMINI_API_KEY     = process.env.GEMINI_API_KEY     || "";
 const MISTRAL_API_KEY    = process.env.MISTRAL_API_KEY    || "";
 const CEREBRAS_API_KEY   = process.env.CEREBRAS_API_KEY   || "";
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
@@ -153,12 +152,6 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "";
 const TOGETHER_API_KEY   = process.env.TOGETHER_API_KEY   || "";
 
 const SHADOW_AGENTS = [
-  {
-    name: "Gemini-Flash",
-    icon: "🌟",
-    enabled: () => !!GEMINI_API_KEY,
-    call: (prompt) => callGemini(prompt),
-  },
   {
     name: "Mistral-Small",
     icon: "🌊",
@@ -227,39 +220,6 @@ function callOpenAICompat(prompt, { url, key, model }) {
         try {
           const json = JSON.parse(data);
           const text = json.choices?.[0]?.message?.content || "";
-          resolve({ ok: true, text });
-        } catch { resolve({ ok: false, text: "" }); }
-      });
-    });
-    req.on("error", () => resolve({ ok: false, text: "" }));
-    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "" }); });
-    req.write(body);
-    req.end();
-  });
-}
-
-function callGemini(prompt) {
-  return new Promise((resolve) => {
-    if (!GEMINI_API_KEY) return resolve({ ok: false, text: "" });
-    const body = JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 200, temperature: 0.3 },
-    });
-    const path = `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-    const options = {
-      hostname: "generativelanguage.googleapis.com",
-      path,
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      timeout: 15000,
-    };
-    const req = https.request(options, (res) => {
-      let data = "";
-      res.on("data", d => data += d);
-      res.on("end", () => {
-        try {
-          const json = JSON.parse(data);
-          const text = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
           resolve({ ok: true, text });
         } catch { resolve({ ok: false, text: "" }); }
       });
@@ -1564,11 +1524,11 @@ function getMockAgentAnalysis(agent, match, index) {
 function getMockAnalysis(match) {
   const statsStatus = buildStatsStatus(match, null, "mock_or_unavailable");
   const agents = [
-    { name: "GROQ-Llama", icon: "🦙", model: "llama-3.3-70b" },
-    { name: "GPT Analysis", icon: "🤖", model: "gpt-4o" },
+    { name: "Perplexity-Web", icon: "🌐", model: "sonar-pro" },
     { name: "DeepSeek-V3", icon: "🔮", model: "deepseek-chat" },
-    { name: "Mistral-7B", icon: "🌊", model: "mistral-7b" },
-    { name: "Claude Chief", icon: "👑", model: "claude-opus", isChief: true },
+    { name: "Mistral-Large", icon: "🌊", model: "mistral-large-latest" },
+    { name: "Cohere-Command", icon: "🧬", model: "command-r-plus" },
+    { name: "Claude Chief", icon: "👑", model: "llama-3.3-70b-versatile", isChief: true },
   ];
   const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
   const chief = agentResults[agentResults.length - 1];
