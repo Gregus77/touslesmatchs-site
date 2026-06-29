@@ -2000,6 +2000,101 @@ async function handleMessage(msg) {
   }
 }
 
+// ── Bilan hebdomadaire automatique (lundi matin) ──────────────────────────────
+const WEEKLY_BILAN_FILE = path.join(REPO, "data/hermes_weekly_bilan.json");
+
+async function maybeRunWeeklyBilan() {
+  const now = new Date();
+  if (now.getDay() !== 1) return; // 1 = lundi
+  const hour = now.getHours();
+  if (hour < 9 || hour > 10) return; // entre 9h et 10h
+
+  let state = {};
+  try { state = JSON.parse(fs.readFileSync(WEEKLY_BILAN_FILE, "utf8")); } catch {}
+  const todayStr = now.toISOString().slice(0, 10);
+  if (state.lastBilanDate === todayStr) return;
+
+  // Marquer comme envoyé
+  try {
+    fs.mkdirSync(path.dirname(WEEKLY_BILAN_FILE), { recursive: true });
+    fs.writeFileSync(WEEKLY_BILAN_FILE, JSON.stringify({ lastBilanDate: todayStr }));
+  } catch {}
+
+  // Lire l'historique
+  let picks = [];
+  try {
+    const data = loadPicks();
+    picks = Array.isArray(data.history) ? data.history : [];
+  } catch {}
+
+  // Filtrer les 7 derniers jours
+  const since = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const week = picks.filter(p => {
+    const d = historyDate(p);
+    return d && d >= since;
+  });
+
+  const wins = week.filter(p => {
+    const s = (Array.isArray(p) ? p[5] : p?.result || p?.status || "");
+    return s === "GAGNE" || s === "win";
+  });
+  const losses = week.filter(p => {
+    const s = (Array.isArray(p) ? p[5] : p?.result || p?.status || "");
+    return s === "PERDU" || s === "loss";
+  });
+  const pending = week.length - wins.length - losses.length;
+  const total = wins.length + losses.length;
+  const winrate = total > 0 ? Math.round(wins.length / total * 100) : null;
+
+  const emoji = winrate === null ? "📊" : winrate >= 60 ? "🔥" : winrate >= 50 ? "✅" : "📉";
+
+  let msg = `${emoji} <b>Bilan de la semaine — TousLesMatchs</b>\n\n`;
+
+  if (week.length === 0) {
+    msg += `Aucun pick cette semaine.\n`;
+  } else {
+    msg += `📅 Du ${since} au ${todayStr}\n\n`;
+    msg += `✅ Gagnés : <b>${wins.length}</b>\n`;
+    msg += `❌ Perdus : <b>${losses.length}</b>\n`;
+    if (pending > 0) msg += `⏳ En attente : <b>${pending}</b>\n`;
+    if (winrate !== null) msg += `\n🎯 Winrate : <b>${winrate}%</b> (${total} picks résolus)\n`;
+
+    // Meilleur pick de la semaine
+    const bestWin = wins.reduce((best, p) => {
+      const cote = parseFloat(Array.isArray(p) ? p[3] : p?.cote) || 0;
+      return cote > (parseFloat(Array.isArray(best) ? best[3] : best?.cote) || 0) ? p : best;
+    }, wins[0]);
+    if (bestWin) {
+      const name = historyMatchName(bestWin);
+      const cote = Array.isArray(bestWin) ? bestWin[3] : bestWin?.cote;
+      if (name) msg += `\n⭐ Meilleur pick : <b>${name}</b>${cote ? ` @${cote}` : ""}\n`;
+    }
+  }
+
+  msg += `\n🤖 Analysé par 4 agents IA + 1 Chief\n`;
+  msg += `📲 Picks complets → <a href="https://www.touslesmatchs.com/#plans">touslesmatchs.com</a>`;
+
+  try {
+    const token = PUBLIC_BOT_TOKEN || TG_TOKEN;
+    const chat = PUBLIC_CHAT;
+    if (token && chat) {
+      await new Promise((resolve) => {
+        const data = JSON.stringify({ chat_id: chat, text: msg, parse_mode: "HTML", disable_web_page_preview: true });
+        const req = https.request({
+          hostname: "api.telegram.org",
+          path: `/bot${token}/sendMessage`,
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) }
+        }, res => { let d = ""; res.on("data", c => d += c); res.on("end", () => resolve(JSON.parse(d))); });
+        req.on("error", () => resolve({}));
+        req.write(data); req.end();
+      });
+      console.log("[weekly-bilan] Publié sur le canal gratuit");
+      if (ADMIN_CHAT) await reply(ADMIN_CHAT, "✅ Bilan hebdomadaire publié sur le canal gratuit.").catch(() => {});
+    }
+  } catch(e) { console.error("[weekly-bilan]", e.message); }
+}
+
 // ── Long polling loop ─────────────────────────────────────────────────────────
 async function poll() {
   let offset = 0;
@@ -2017,9 +2112,11 @@ async function poll() {
   maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
   maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
   scanStrongSignals().catch(e => console.error("strong signals:", e.message));
+  maybeRunWeeklyBilan().catch(e => console.error("weekly bilan:", e.message));
   setInterval(() => {
     maybeRunDailyAutoPick().catch(e => console.error("daily auto-pick:", e.message));
     maybeRunDailyStrategy().catch(e => console.error("daily strategy:", e.message));
+    maybeRunWeeklyBilan().catch(e => console.error("weekly bilan:", e.message));
   }, 60 * 1000);
   setInterval(() => {
     scanStrongSignals().catch(e => console.error("strong signals:", e.message));

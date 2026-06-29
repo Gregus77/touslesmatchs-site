@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TousLesMatchs — Le pick IA du jour (vu sur TikTok)</title>
+  <meta name="description" content="4 intelligences artificielles analysent les matchs du jour. Reçois le pick gratuit maintenant.">
+  <meta property="og:title" content="TousLesMatchs — Le pick IA du jour">
+  <meta property="og:description" content="4 IA analysent, 1 Chief arbitre. Reçois le pick du jour gratuitement.">
+  <meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
+  <meta name="robots" content="noindex">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#06080f;color:#eceaf4;font-family:Inter,system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+    .wrap{max-width:440px;width:100%;text-align:center}
+
+    .logo{font-size:13px;font-weight:700;letter-spacing:.12em;color:#6366f1;text-transform:uppercase;margin-bottom:32px}
+
+    .badge{display:inline-flex;align-items:center;gap:6px;background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);border-radius:20px;padding:6px 14px;font-size:12px;color:#a5b4fc;margin-bottom:20px}
+
+    h1{font-size:clamp(26px,6vw,38px);font-weight:900;line-height:1.15;margin-bottom:12px}
+    h1 span{background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+
+    .sub{font-size:15px;color:#9ca3af;margin-bottom:32px;line-height:1.5}
+
+    /* IAs bar */
+    .ias{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:32px}
+    .ia-chip{background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:8px;padding:6px 12px;font-size:12px;color:#a5b4fc}
+
+    /* Email form */
+    .form-box{background:#0d1020;border:1px solid rgba(99,102,241,.25);border-radius:16px;padding:28px 24px;margin-bottom:20px}
+    .form-box label{display:block;font-size:13px;color:#9ca3af;margin-bottom:8px;text-align:left}
+    .form-box input{width:100%;background:#060810;border:1.5px solid rgba(99,102,241,.3);border-radius:10px;padding:14px 16px;font-size:15px;color:#eceaf4;outline:none;margin-bottom:14px;transition:border .2s}
+    .form-box input:focus{border-color:#6366f1}
+    .form-box button{width:100%;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;border-radius:10px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;transition:opacity .2s}
+    .form-box button:hover{opacity:.9}
+    .form-box button:disabled{opacity:.6;cursor:not-allowed}
+    .privacy{font-size:11px;color:#6b7280;margin-top:8px}
+
+    /* Pick reveal */
+    .pick-box{display:none;background:#0d1020;border:1.5px solid rgba(99,102,241,.4);border-radius:16px;padding:28px 24px;margin-bottom:20px;text-align:left}
+    .pick-box.show{display:block;animation:fadein .4s}
+    @keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .pick-label{font-size:11px;font-weight:700;letter-spacing:.1em;color:#6366f1;text-transform:uppercase;margin-bottom:12px}
+    .pick-match{font-size:20px;font-weight:800;margin-bottom:6px}
+    .pick-league{font-size:12px;color:#6b7280;margin-bottom:18px}
+    .pick-bet{background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.1));border:1px solid rgba(99,102,241,.3);border-radius:12px;padding:16px;margin-bottom:14px}
+    .pick-bet-label{font-size:11px;color:#9ca3af;margin-bottom:4px}
+    .pick-bet-value{font-size:22px;font-weight:900;color:#a5b4fc}
+    .pick-meta{display:flex;gap:12px;flex-wrap:wrap}
+    .pick-meta-item{background:#060810;border-radius:8px;padding:8px 12px;font-size:12px}
+    .pick-meta-item span{display:block;color:#6b7280;font-size:10px;margin-bottom:2px}
+    .pick-meta-item b{color:#eceaf4}
+    .pick-cta{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+    .pick-cta a{display:block;text-align:center;padding:13px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none}
+    .btn-tg{background:#0088cc;color:#fff}
+    .btn-pro{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff}
+
+    /* Social proof */
+    .proof{display:flex;justify-content:center;gap:24px;flex-wrap:wrap;padding:20px 0;border-top:1px solid rgba(255,255,255,.06);border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:24px}
+    .proof-item{text-align:center}
+    .proof-item b{display:block;font-size:20px;font-weight:900;color:#eceaf4}
+    .proof-item span{font-size:11px;color:#6b7280}
+
+    .footer-note{font-size:11px;color:#4b5563;text-align:center}
+    .footer-note a{color:#6366f1;text-decoration:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">TousLesMatchs</div>
+
+  <div class="badge">⚡ Vu sur TikTok</div>
+
+  <h1>Le pick IA<br>du jour <span>gratuit</span></h1>
+
+  <p class="sub">4 intelligences artificielles analysent les matchs.<br>1 Chief IA arbitre. Tu reçois le verdict.</p>
+
+  <div class="ias">
+    <span class="ia-chip">🔍 Recherche web</span>
+    <span class="ia-chip">🧠 Analyse contrarienne</span>
+    <span class="ia-chip">⚖️ Modèle d'ensemble</span>
+    <span class="ia-chip">📚 Analyse contextuelle</span>
+    <span class="ia-chip">👑 Chief arbitre</span>
+  </div>
+
+  <!-- Email form -->
+  <div class="form-box" id="form-box">
+    <label>Ton email pour recevoir le pick :</label>
+    <input type="email" id="tk-email" placeholder="prenom@gmail.com" autocomplete="email">
+    <button id="tk-btn" onclick="tiktokCapture()">Voir le pick du jour →</button>
+    <div class="privacy">Gratuit · Pas de spam · Désinscription en 1 clic</div>
+  </div>
+
+  <!-- Pick révélé -->
+  <div class="pick-box" id="pick-box">
+    <div class="pick-label">✅ Pick du jour — analysé par 4 IA</div>
+    <div class="pick-match" id="pk-match">—</div>
+    <div class="pick-league" id="pk-league">—</div>
+    <div class="pick-bet">
+      <div class="pick-bet-label">Pari retenu par le Chief IA</div>
+      <div class="pick-bet-value" id="pk-bet">—</div>
+    </div>
+    <div class="pick-meta">
+      <div class="pick-meta-item"><span>Cote</span><b id="pk-cote">—</b></div>
+      <div class="pick-meta-item"><span>Heure</span><b id="pk-time">—</b></div>
+      <div class="pick-meta-item"><span>Confiance IA</span><b id="pk-conf">—</b></div>
+    </div>
+    <div class="pick-cta">
+      <a href="https://t.me/touslesmatchs_fr" target="_blank" class="btn-tg">📢 Rejoindre le canal Telegram gratuit</a>
+      <a href="https://www.touslesmatchs.com/#plans" class="btn-pro">⚡ Analyses Live IA — Pro dès 9.90€/mois</a>
+    </div>
+  </div>
+
+  <div class="proof">
+    <div class="proof-item"><b id="pf-winrate">—</b><span>Winrate IA</span></div>
+    <div class="proof-item"><b id="pf-picks">—</b><span>Picks publiés</span></div>
+    <div class="proof-item"><b id="pf-roi">—</b><span>ROI moyen</span></div>
+  </div>
+
+  <div class="footer-note">
+    <a href="https://www.touslesmatchs.com">touslesmatchs.com</a> ·
+    <a href="https://www.touslesmatchs.com/mentions-legales.html">Mentions légales</a> ·
+    Jeu responsable — 18+
+  </div>
+</div>
+
+<script>
+const API = "https://www.touslesmatchs.com/api";
+
+// Load stats
+(async () => {
+  try {
+    const r = await fetch(`${API}/public-history`, { cache: "no-store" });
+    const d = await r.json();
+    const rows = d.history || d || [];
+    const done = rows.filter(r => r.result === "win" || r.result === "loss" || r.result === "GAGNE" || r.result === "PERDU");
+    const wins = done.filter(r => r.result === "win" || r.result === "GAGNE");
+    if (done.length > 0) {
+      document.getElementById("pf-winrate").textContent = Math.round(wins.length / done.length * 100) + "%";
+      document.getElementById("pf-picks").textContent = done.length + "+";
+      const roi = rows.reduce((s, r) => {
+        if (r.result === "win" || r.result === "GAGNE") return s + ((r.cote || 1) - 1);
+        if (r.result === "loss" || r.result === "PERDU") return s - 1;
+        return s;
+      }, 0);
+      document.getElementById("pf-roi").textContent = (roi >= 0 ? "+" : "") + roi.toFixed(1) + "u";
+    }
+  } catch {}
+})();
+
+async function tiktokCapture() {
+  const email = document.getElementById("tk-email").value.trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    document.getElementById("tk-email").focus();
+    return;
+  }
+  const btn = document.getElementById("tk-btn");
+  btn.textContent = "Chargement…";
+  btn.disabled = true;
+
+  // Subscribe
+  try {
+    await fetch(`${API}/subscribe-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, source: "tiktok" })
+    });
+  } catch {}
+
+  // Load pick
+  try {
+    const r = await fetch(`${API}/current-pick`, { cache: "no-store" });
+    const d = await r.json();
+    const p = d.currentPick || d;
+    if (p && p.home) {
+      document.getElementById("pk-match").textContent = `${p.home} — ${p.away}`;
+      document.getElementById("pk-league").textContent = p.league || p.competition || "";
+      document.getElementById("pk-bet").textContent = p.prono || p.bet || "—";
+      document.getElementById("pk-cote").textContent = p.cote ? `@${p.cote}` : "—";
+      document.getElementById("pk-time").textContent = p.time || p.date || "—";
+      document.getElementById("pk-conf").textContent = p.confidence ? `${p.confidence}%` : "Élevée";
+    } else {
+      document.getElementById("pk-match").textContent = "Pick en préparation";
+      document.getElementById("pk-league").textContent = "Reviens dans quelques heures";
+      document.getElementById("pk-bet").textContent = "En attente d'analyse IA";
+    }
+  } catch {
+    document.getElementById("pk-match").textContent = "Pick en préparation";
+    document.getElementById("pk-bet").textContent = "Reviens bientôt";
+  }
+
+  document.getElementById("form-box").style.display = "none";
+  document.getElementById("pick-box").classList.add("show");
+}
+</script>
+</body>
+</html>
