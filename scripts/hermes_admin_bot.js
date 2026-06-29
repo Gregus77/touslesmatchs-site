@@ -928,6 +928,128 @@ async function cmdSetPick(chatId, args) {
   }
 }
 
+async function cmdCheckResult(chatId) {
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick actif à vérifier"); return; }
+  if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(String(p.status || "").toUpperCase())) {
+    await reply(chatId, `Pick déjà résolu : <b>${p.status}</b>`); return;
+  }
+
+  await reply(chatId, `🔍 Recherche du score pour <b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>...`);
+
+  let found = null;
+
+  // Chercher dans football-data.org (matchs d'hier + aujourd'hui, inclus FINISHED)
+  if (FD_KEY) {
+    try {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+      const d = await httpGet(`https://api.football-data.org/v4/matches?dateFrom=${yesterday}&dateTo=${today}`, { "X-Auth-Token": FD_KEY });
+      const finished = (d.matches || []).filter(m => m.status === "FINISHED");
+      const homeN = normalizeTeamName(p.home);
+      const awayN = normalizeTeamName(p.away);
+      const sameTeam = (a, b) => a === b || a.includes(b) || b.includes(a);
+      const match = finished.find(m => {
+        const mh = normalizeTeamName(m.homeTeam?.name || "");
+        const ma = normalizeTeamName(m.awayTeam?.name || "");
+        return (sameTeam(mh, homeN) && sameTeam(ma, awayN)) || (sameTeam(mh, awayN) && sameTeam(ma, homeN));
+      });
+      if (match) {
+        const sh = match.score?.fullTime?.home ?? match.score?.fullTime?.homeTeam ?? null;
+        const sa = match.score?.fullTime?.away ?? match.score?.fullTime?.awayTeam ?? null;
+        if (sh !== null && sa !== null) {
+          const reversed = normalizeTeamName(match.homeTeam?.name || "").includes(awayN) || normalizeTeamName(match.awayTeam?.name || "").includes(homeN);
+          found = { scoreHome: reversed ? sa : sh, scoreAway: reversed ? sh : sa, source: "football-data.org", competition: match.competition?.name };
+        }
+      }
+    } catch(e) { console.error("[checkresult] football-data:", e.message); }
+  }
+
+  // Fallback : api-sports.io
+  if (!found && SPORTS_KEY) {
+    try {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const today = new Date().toISOString().slice(0, 10);
+      for (const date of [today, yesterday]) {
+        const d = await httpGet(`https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`, { "x-rapidapi-key": SPORTS_KEY, "x-rapidapi-host": "v3.football.api-sports.io" });
+        const fixtures = d.response || [];
+        const homeN = normalizeTeamName(p.home);
+        const awayN = normalizeTeamName(p.away);
+        const sameTeam = (a, b) => a === b || a.includes(b) || b.includes(a);
+        const match = fixtures.find(f => {
+          const mh = normalizeTeamName(f.teams?.home?.name || "");
+          const ma = normalizeTeamName(f.teams?.away?.name || "");
+          return (sameTeam(mh, homeN) && sameTeam(ma, awayN)) || (sameTeam(mh, awayN) && sameTeam(ma, homeN));
+        });
+        if (match) {
+          const sh = match.goals?.home ?? null;
+          const sa = match.goals?.away ?? null;
+          if (sh !== null && sa !== null) {
+            const reversed = normalizeTeamName(match.teams?.home?.name || "").includes(awayN);
+            found = { scoreHome: reversed ? sa : sh, scoreAway: reversed ? sh : sa, source: "api-sports.io", competition: match.league?.name };
+            break;
+          }
+        }
+      }
+    } catch(e) { console.error("[checkresult] api-sports:", e.message); }
+  }
+
+  if (!found) {
+    await reply(chatId, `⏳ Match pas encore terminé ou introuvable dans les APIs.\n\nTu peux mettre le score manuellement : <code>/setscore 1-0</code> puis <code>/win</code> ou <code>/lose</code>`);
+    return;
+  }
+
+  const { scoreHome, scoreAway, source, competition } = found;
+  const score = `${scoreHome}-${scoreAway}`;
+
+  // Mettre à jour le score dans les picks
+  data.currentPick.score = score;
+  savePicks(data);
+  try {
+    fs.mkdirSync("/var/touslesmatchs", { recursive: true });
+    fs.writeFileSync("/var/touslesmatchs/live_score.json", JSON.stringify({ home: scoreHome, away: scoreAway, source }, null, 2));
+  } catch {}
+
+  // Évaluer le résultat probable en fonction du pari
+  const bet = String(p.prono || p.bet || "").toLowerCase();
+  let autoResult = null;
+  if (bet.includes("1") || bet.includes("domicile") || bet.includes("home") || bet.includes(normalizeTeamName(p.home))) {
+    autoResult = scoreHome > scoreAway ? "GAGNE" : "PERDU";
+  } else if (bet.includes("2") || bet.includes("extérieur") || bet.includes("away") || bet.includes(normalizeTeamName(p.away))) {
+    autoResult = scoreAway > scoreHome ? "GAGNE" : "PERDU";
+  } else if (bet.includes("nul") || bet.includes("draw") || bet.includes("x")) {
+    autoResult = scoreHome === scoreAway ? "GAGNE" : "PERDU";
+  } else if (bet.includes("over 2.5") || bet.includes("+2.5") || bet.includes("plus de 2")) {
+    autoResult = (scoreHome + scoreAway) > 2.5 ? "GAGNE" : "PERDU";
+  } else if (bet.includes("under 2.5") || bet.includes("-2.5") || bet.includes("moins de 3")) {
+    autoResult = (scoreHome + scoreAway) < 2.5 ? "GAGNE" : "PERDU";
+  } else if (bet.includes("btts") || bet.includes("les deux") || bet.includes("both")) {
+    autoResult = (scoreHome > 0 && scoreAway > 0) ? "GAGNE" : "PERDU";
+  } else if (bet.includes("1x") || bet.includes("double chance")) {
+    autoResult = scoreHome >= scoreAway ? "GAGNE" : "PERDU";
+  } else if (bet.includes("x2")) {
+    autoResult = scoreAway >= scoreHome ? "GAGNE" : "PERDU";
+  }
+
+  let msg = `📊 <b>Résultat trouvé</b> (via ${source})\n\n`;
+  msg += `<b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>\n`;
+  msg += `🏆 Score : <b>${score}</b>`;
+  if (competition) msg += ` — ${escapeHtml(competition)}`;
+  msg += `\n\n📌 Pari : <i>${escapeHtml(p.prono || p.bet || "—")}</i>\n`;
+
+  if (autoResult) {
+    const emoji = autoResult === "GAGNE" ? "✅" : "❌";
+    msg += `\n${emoji} Résultat probable : <b>${autoResult}</b>\n\n`;
+    msg += `Confirme avec <code>/${autoResult === "GAGNE" ? "win" : "lose"}</code>`;
+  } else {
+    msg += `\n⚠️ Impossible de déduire le résultat automatiquement.\n`;
+    msg += `Utilise <code>/win</code> ou <code>/lose</code> manuellement.`;
+  }
+
+  await reply(chatId, msg);
+}
+
 async function cmdSetScore(chatId, args) {
   const score = args.trim();
   if (!score.match(/^\d+-\d+$/)) {
@@ -1889,6 +2011,7 @@ async function cmdHelp(chatId) {
 /publishalert — Republier manuellement la dernière alerte forte dans le groupe Elite
 /learn — Analyser l'historique et mettre à jour la mémoire IA
 /publishresult — Publier le résultat validé sur les canaux
+/checkresult — Vérifier le score final via API et proposer /win ou /lose
 /preview — Prévisualiser les messages avant publication (gratuit + premium)
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Elite
@@ -2032,6 +2155,7 @@ async function handleCommandLine(chatId, text) {
     case "/pick":     return runAnalyse(chatId);
     case "/setpick":  return cmdSetPick(chatId, args);
     case "/setscore": return cmdSetScore(chatId, args);
+    case "/checkresult":    return cmdCheckResult(chatId);
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
     case "/result":          return cmdResultPreview(chatId);
