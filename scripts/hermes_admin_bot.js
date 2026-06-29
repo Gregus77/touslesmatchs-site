@@ -1643,43 +1643,35 @@ async function cmdRecord(chatId, args) {
 async function cmdDeploy(chatId) {
   await reply(chatId, "\uD83D\uDE80 <b>D\u00E9ploiement en cours...</b>\nJe r\u00E9cup\u00E8re la derni\u00E8re version de Claude, \u00E7a prend 1-2 minutes.");
   try {
-    const repoPath = "/opt/touslesmatchs";
+    const repoPath = REPO; // /repo dans le container
     const branch = "claude/happy-bell-h9zj83";
 
-    const fetch = execSync(
-      `cd ${repoPath} && git fetch origin ${branch} 2>&1`,
-      { timeout: 30000 }
-    ).toString().trim();
+    execSync(`git -C ${repoPath} fetch origin ${branch} 2>&1`, { timeout: 30000 });
+    execSync(`git -C ${repoPath} reset --hard origin/${branch} 2>&1`, { timeout: 30000 });
 
-    const reset = execSync(
-      `cd ${repoPath} && git reset --hard origin/${branch} 2>&1`,
-      { timeout: 30000 }
-    ).toString().trim();
-
-    const lastCommit = execSync(
-      `cd ${repoPath} && git log --oneline -1`,
-      { timeout: 10000 }
-    ).toString().trim();
+    const lastCommit = execSync(`git -C ${repoPath} log --oneline -1`, { timeout: 10000 }).toString().trim();
 
     await reply(chatId,
       `\u2705 <b>Code mis \u00E0 jour !</b>\n\n` +
       `\uD83D\uDCE6 Dernier commit : <code>${lastCommit}</code>\n\n` +
-      `\uD83D\uDD04 Red\u00E9marrage des services...`
+      `\uD83D\uDD04 Red\u00E9marrage des services site et api...`
     );
 
-    // Rebuild en arri\u00E8re-plan pour ne pas bloquer le bot
+    // Utiliser le Docker socket si mont\u00E9, sinon signaler
     const { exec } = require("child_process");
-    exec(
-      `cd ${repoPath} && docker compose up -d --force-recreate site api 2>&1`,
-      { timeout: 120000 },
-      async (err, stdout) => {
-        if (err) {
-          await reply(chatId, `\u26A0\uFE0F Rebuild site/api :\n<code>${String(err.message).slice(0, 300)}</code>`).catch(() => {});
-        } else {
-          await reply(chatId, `\u2705 <b>Site et API red\u00E9marr\u00E9s !</b>\n\n\uD83C\uDF10 touslesmatchs.com est \u00E0 jour.`).catch(() => {});
-        }
+    const dockerCmd = "docker compose -f /opt/touslesmatchs/docker-compose.yml up -d --force-recreate site api 2>&1";
+    exec(dockerCmd, { timeout: 120000 }, async (err, stdout) => {
+      if (err) {
+        // Docker socket probablement pas mont\u00E9 \u2014 le code est quand m\u00EAme \u00E0 jour
+        await reply(chatId,
+          `\u26A0\uFE0F Code mis \u00E0 jour mais red\u00E9marrage Docker impossible depuis le container.\n\n` +
+          `Lance manuellement sur le VPS :\n` +
+          `<code>cd /opt/touslesmatchs && docker compose up -d --force-recreate site api</code>`
+        ).catch(() => {});
+      } else {
+        await reply(chatId, `\u2705 <b>Site et API red\u00E9marr\u00E9s !</b>\n\uD83C\uDF10 touslesmatchs.com est \u00E0 jour.`).catch(() => {});
       }
-    );
+    });
 
   } catch(e) {
     await reply(chatId, `\u274C Erreur d\u00E9ploiement :\n<code>${String(e.message).slice(0, 400)}</code>`);
