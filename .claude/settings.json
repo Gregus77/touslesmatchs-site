@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Tu démarres une session TousLesMatchs. Lance automatiquement le skill /boucle : effectue l audit initial (Phase 0) puis propose la prochaine amélioration prioritaire.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Tu démarres une session TousLesMatchs. Lance automatiquement le skill /autopilote : effectue la Phase 0 (audit santé) puis propose la prochaine amélioration prioritaire parmi : /seo /analyse-matchs /boucle-amelioration /tunnel-vente /support-client /telegram.\"}}'",
             "timeout": 5
           }
         ]
