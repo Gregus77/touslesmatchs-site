@@ -178,6 +178,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
         <tbody id="matrix-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Chargement…</td></tr></tbody>
       </table></div>
       <div style="font-size:11px;color:var(--muted);margin-top:8px">Chaque cellule : winrate% (gagnés/résolus). Les avis se résolvent automatiquement après chaque match.</div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="btn-primary" style="width:auto;padding:9px 18px;font-size:13px" onclick="forceResolveStale()" id="force-resolve-btn">🔄 Forcer le rattrapage des matchs en attente</button>
+        <span id="force-resolve-msg" style="font-size:12px;color:var(--muted)">Si un match reste bloqué sur "en attente" plus de 3h, clique ici pour forcer la vérification du score.</span>
+      </div>
     </div>
 
     <!-- PICK DU JOUR -->
@@ -387,6 +391,34 @@ async function loadShadowPerf(){
        <td>${a.avg_confidence ?? '—'}</td><td>${a.days_active}j</td></tr>`
     ).join('');
   }catch(e){ /* silencieux */ }
+}
+
+async function forceResolveStale(){
+  const btn = document.getElementById('force-resolve-btn');
+  const msg = document.getElementById('force-resolve-msg');
+  btn.disabled = true; btn.textContent = '⏳ Vérification en cours…';
+  msg.style.color = 'var(--muted)';
+  try{
+    const r = await fetch('/api/admin/resolve-stale', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email: ADMIN_EMAIL, code: ADMIN_CODE })
+    });
+    const d = await r.json();
+    btn.disabled = false; btn.textContent = '🔄 Forcer le rattrapage des matchs en attente';
+    if(d.ok){
+      msg.textContent = d.resolved > 0
+        ? `✅ ${d.resolved} prédiction(s) résolue(s) (${d.pending_after} encore en attente — matchs pas encore finis ou non trouvés dans les APIs).`
+        : `ℹ️ Rien à résoudre pour l'instant (${d.pending_after} en attente — probablement des matchs pas encore terminés).`;
+      msg.style.color = d.resolved > 0 ? '#10b981' : 'var(--muted)';
+      loadShadowPerf(); loadMarketMatrix();
+    } else {
+      msg.textContent = '❌ Erreur : ' + (d.error || 'inconnue');
+      msg.style.color = '#f43f5e';
+    }
+  } catch(e){
+    btn.disabled = false; btn.textContent = '🔄 Forcer le rattrapage des matchs en attente';
+    msg.textContent = '❌ Erreur réseau, réessaie.'; msg.style.color = '#f43f5e';
+  }
 }
 
 async function loadMarketMatrix(){

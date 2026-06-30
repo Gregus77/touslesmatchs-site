@@ -717,6 +717,8 @@ function normalizeApiSportsFootballFixture(f) {
     away_logo: f.teams.away.logo || null,
     score_home: f.goals.home ?? null,
     score_away: f.goals.away ?? null,
+    ht_home: f.score?.halftime?.home ?? null,
+    ht_away: f.score?.halftime?.away ?? null,
     minute: f.fixture.status.elapsed ?? null,
     status: "IN_PLAY",
     competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
@@ -2594,7 +2596,7 @@ function autoResolvePredictions(match) {
 // Sans ça, une prédiction reste "en attente" pour toujours → leaderboard faussé.
 let staleResolveRunning = false;
 async function resolveStalePredictions() {
-  if (staleResolveRunning || !FOOTBALL_DATA_KEY) return;
+  if (staleResolveRunning || (!FOOTBALL_DATA_KEY && !API_SPORTS_KEY)) return;
   staleResolveRunning = true;
   try {
     const stale = db.prepare(`
@@ -2607,15 +2609,37 @@ async function resolveStalePredictions() {
     `).all();
     if (!stale.length) return;
 
-    // Une seule requête football-data couvre tous les matchs finis sur 7 jours
-    const to = new Date().toISOString().slice(0, 10);
-    const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-    const d = await httpGet(
-      `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${from}&dateTo=${to}`,
-      { "X-Auth-Token": FOOTBALL_DATA_KEY }
-    );
-    const finished = (d.matches || []).map(formatFDMatch)
-      .filter(m => m.score_home !== null && m.score_away !== null);
+    const finished = [];
+
+    // Source 1 : football-data — une requête couvre 7 jours de matchs finis
+    if (FOOTBALL_DATA_KEY) {
+      try {
+        const to = new Date().toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        const d = await httpGet(
+          `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${from}&dateTo=${to}`,
+          { "X-Auth-Token": FOOTBALL_DATA_KEY }
+        );
+        finished.push(...(d.matches || []).map(formatFDMatch).filter(m => m.score_home !== null && m.score_away !== null));
+      } catch (e) { console.error("[catch-up] football-data:", e.message); }
+    }
+
+    // Source 2 : api-sports — complète les compétitions absentes de football-data
+    // (ligues mineures, certaines compétitions). Couvre hier + aujourd'hui.
+    if (API_SPORTS_KEY) {
+      for (const date of [new Date().toISOString().slice(0, 10), new Date(Date.now() - 86400000).toISOString().slice(0, 10)]) {
+        try {
+          const d = await httpGet(
+            `https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`,
+            { "x-apisports-key": API_SPORTS_KEY }
+          );
+          const items = (d.response || []).map(normalizeApiSportsFootballFixture)
+            .filter(m => m.score_home !== null && m.score_away !== null);
+          finished.push(...items);
+        } catch (e) { console.error("[catch-up] api-sports:", e.message); }
+      }
+    }
+
     if (!finished.length) return;
 
     let resolvedMatches = 0;
@@ -2641,7 +2665,7 @@ async function resolveStalePredictions() {
         resolvedMatches++;
       }
     }
-    if (resolvedMatches) console.log(`[catch-up] ${resolvedMatches}/${stale.length} matchs en attente résolus (rattrapage 7j)`);
+    if (resolvedMatches) console.log(`[catch-up] ${resolvedMatches}/${stale.length} matchs en attente résolus (football-data + api-sports)`);
   } catch (e) {
     console.error("[catch-up] resolveStalePredictions:", e.message);
   } finally {
@@ -4007,9 +4031,13 @@ app.post("/admin/resolve-match", (req, res) => {
 app.post("/admin/resolve-stale", async (req, res) => {
   const { email, code } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
-  const before = db.prepare("SELECT COUNT(*) n FROM agent_predictions WHERE outcome IS NULL").get().n;
+  const countPending = () => db.prepare(`
+    SELECT (SELECT COUNT(*) FROM agent_predictions WHERE outcome IS NULL)
+         + (SELECT COUNT(*) FROM agent_market_predictions WHERE outcome IS NULL) AS n
+  `).get().n;
+  const before = countPending();
   await resolveStalePredictions();
-  const after = db.prepare("SELECT COUNT(*) n FROM agent_predictions WHERE outcome IS NULL").get().n;
+  const after = countPending();
   res.json({ ok: true, resolved: before - after, pending_before: before, pending_after: after });
 });
 
