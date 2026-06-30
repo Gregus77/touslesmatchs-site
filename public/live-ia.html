@@ -1034,18 +1034,24 @@ function renderLeaderboard() {
     const statTxt = wr !== null
       ? `${wr}% — ${a.wins}/${resolved} correct${resolved>1?'s':''}`
       : 'Analyse en cours…';
-    // Type de paris + taux de réussite par marché, sous chaque IA
-    const shortLabel = { buts:'O/U 2.5', btts:'BTTS', resultat:'1X2', mt1:'But 1re MT' };
+    // Type de paris + taux de réussite par marché, sous chaque IA.
+    // On affiche TOUJOURS les 4 marchés (même à blanc) pour voir la structure.
+    const LINES = [['buts','O/U 2.5'],['btts','BTTS'],['resultat','1X2'],['mt1','But 1re MT']];
     const mkt = agentMarketMatrix[a.name] || {};
-    const mktChips = Object.keys(mkt)
-      .map(line => ({ line, ...mkt[line] }))
-      .filter(m => m.resolved > 0 && m.winrate !== null)
-      .sort((x,y) => y.winrate - x.winrate)
-      .map(m => {
+    const mktChips = LINES.map(([line,label]) => {
+      const m = mkt[line];
+      let inner;
+      if (m && m.resolved > 0) {
         const col = m.winrate >= 60 ? 'var(--green)' : m.winrate >= 45 ? 'var(--amber)' : 'var(--red)';
-        return `<span style="display:inline-block;font-size:10px;padding:2px 7px;margin:2px 3px 0 0;border-radius:20px;background:var(--bg3);border:1px solid var(--b1)">${shortLabel[m.line]||m.line} <b style="color:${col}">${m.winrate}%</b></span>`;
-      }).join('');
-    const mktRow = mktChips ? `<div class="lb-agent-markets" style="margin-top:8px;line-height:1.5">${mktChips}</div>` : '';
+        inner = `<b style="color:${col}">${m.wins}/${m.resolved}</b> <span style="color:var(--muted)">(${m.winrate}%)</span>`;
+      } else if (m && m.pending > 0) {
+        inner = `<span style="color:var(--muted)">${m.pending} en attente</span>`;
+      } else {
+        inner = `<span style="color:var(--muted)">—</span>`;
+      }
+      return `<span style="display:inline-block;font-size:10px;padding:2px 7px;margin:3px 4px 0 0;border-radius:20px;background:var(--bg3);border:1px solid var(--b1)">${label} ${inner}</span>`;
+    }).join('');
+    const mktRow = `<div class="lb-agent-markets" style="margin-top:8px;line-height:1.8">${mktChips}</div>`;
     return `<div class="lb-agent">
       <div class="lb-agent-header">
         <div class="lb-agent-icon">${escHtml(a.icon)}</div>
