@@ -2452,17 +2452,79 @@ function autoResolvePredictions(match) {
 
     if (pending.length) {
       const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
+      let resolved = 0;
       pending.forEach(p => {
-        const outcome = betResults[p.bet] || null;
-        if (outcome) updateStmt.run(outcome, p.id);
+        // getBetOutcomeForScore gère bien plus de variantes de libellés
+        // ("Plus de 2.5", "moins de 2.5", domicile/extérieur, 1X/X2/12...).
+        // betResults reste un filet de secours pour les libellés exacts.
+        const outcome = getBetOutcomeForScore(p.bet, h, a) || betResults[p.bet] || null;
+        if (outcome) { updateStmt.run(outcome, p.id); resolved++; }
       });
-      console.log(`[agent-perf] Auto-résolu ${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
+      console.log(`[agent-perf] Auto-résolu ${resolved}/${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
     }
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
 
   // Résoudre aussi les traces Concile
   resolveConcileAnalyses(home, away, score_home, score_away);
 }
+
+// ── Rattrapage : résout les prédictions en attente dont le match est fini mais
+// qui sont sorties de la fenêtre live (matchs de plus de quelques heures/jours).
+// Sans ça, une prédiction reste "en attente" pour toujours → leaderboard faussé.
+let staleResolveRunning = false;
+async function resolveStalePredictions() {
+  if (staleResolveRunning || !FOOTBALL_DATA_KEY) return;
+  staleResolveRunning = true;
+  try {
+    const stale = db.prepare(`
+      SELECT DISTINCT home, away FROM agent_predictions
+      WHERE outcome IS NULL AND created_at <= datetime('now','-3 hours')
+      LIMIT 80
+    `).all();
+    if (!stale.length) return;
+
+    // Une seule requête football-data couvre tous les matchs finis sur 7 jours
+    const to = new Date().toISOString().slice(0, 10);
+    const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const d = await httpGet(
+      `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${from}&dateTo=${to}`,
+      { "X-Auth-Token": FOOTBALL_DATA_KEY }
+    );
+    const finished = (d.matches || []).map(formatFDMatch)
+      .filter(m => m.score_home !== null && m.score_away !== null);
+    if (!finished.length) return;
+
+    let resolvedMatches = 0;
+    for (const s of stale) {
+      const hw = String(s.home || "").split(" ")[0].toLowerCase();
+      const aw = String(s.away || "").split(" ")[0].toLowerCase();
+      if (!hw || !aw) continue;
+      const m = finished.find(f => {
+        const fh = String(f.home || "").toLowerCase();
+        const fa = String(f.away || "").toLowerCase();
+        return (fh.includes(hw) && fa.includes(aw)) || (fh.includes(aw) && fa.includes(hw));
+      });
+      if (m) {
+        // Réordonne le score si le match a été trouvé dans le sens inverse
+        const reversed = String(m.home || "").toLowerCase().includes(aw);
+        autoResolvePredictions({
+          home: s.home, away: s.away,
+          score_home: reversed ? m.score_away : m.score_home,
+          score_away: reversed ? m.score_home : m.score_away,
+        });
+        resolvedMatches++;
+      }
+    }
+    if (resolvedMatches) console.log(`[catch-up] ${resolvedMatches}/${stale.length} matchs en attente résolus (rattrapage 7j)`);
+  } catch (e) {
+    console.error("[catch-up] resolveStalePredictions:", e.message);
+  } finally {
+    staleResolveRunning = false;
+  }
+}
+// Toutes les heures + un premier passage 30s après le démarrage
+setInterval(resolveStalePredictions, 60 * 60 * 1000);
+setTimeout(resolveStalePredictions, 30 * 1000);
 
 let autoConcileObserverRunning = false;
 
@@ -3780,6 +3842,16 @@ app.post("/admin/resolve-match", (req, res) => {
   }
   autoResolvePredictions({ home, away, score_home: Number(score_home), score_away: Number(score_away), status: "FINISHED" });
   res.json({ ok: true, message: `Résolution lancée pour ${home} vs ${away} (${score_home}-${score_away})` });
+});
+
+// Forcer le rattrapage de TOUTES les prédictions en attente (matchs finis)
+app.post("/admin/resolve-stale", async (req, res) => {
+  const { email, code } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  const before = db.prepare("SELECT COUNT(*) n FROM agent_predictions WHERE outcome IS NULL").get().n;
+  await resolveStalePredictions();
+  const after = db.prepare("SELECT COUNT(*) n FROM agent_predictions WHERE outcome IS NULL").get().n;
+  res.json({ ok: true, resolved: before - after, pending_before: before, pending_after: after });
 });
 
 // ── Start ─────────────────────────────────────────────────────────────────────
