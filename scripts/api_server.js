@@ -172,6 +172,27 @@ const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "";
 const TOGETHER_API_KEY   = process.env.TOGETHER_API_KEY   || "";
 
 const SHADOW_AGENTS = [
+  // ── IA gratuites immédiates (clé Groq déjà configurée, aucun ajout requis) ──
+  {
+    name: "Groq-Llama70B",
+    icon: "🦙",
+    enabled: () => !!GROQ_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: GROQ_API_KEY,
+      model: "llama-3.3-70b-versatile",
+    }),
+  },
+  {
+    name: "Groq-Llama8B",
+    icon: "🐎",
+    enabled: () => !!GROQ_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://api.groq.com/openai/v1/chat/completions",
+      key: GROQ_API_KEY,
+      model: "llama-3.1-8b-instant",
+    }),
+  },
   {
     name: "Mistral-Small",
     icon: "🌊",
