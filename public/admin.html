@@ -431,19 +431,26 @@ async function loadMarketMatrix(){
     document.getElementById('matrix-best').innerHTML = Object.keys(best).length
       ? Object.values(best).map(b => `<span style="font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(99,102,241,.15);color:#a5b4fc">🏆 ${b.label} : <b>${b.agent}</b> ${b.winrate}% (${b.resolved})</span>`).join('')
       : '<span style="color:var(--muted);font-size:12px">Pas encore assez de données (min 5 résolus par marché).</span>';
-    // Tableau matrice
+    // Tableau matrice — classé par performance moyenne globale (meilleure IA en haut)
     const lines = ['buts','btts','resultat','mt1'];
     const matrix = d.matrix || {};
-    const agents = Object.keys(matrix);
+    const agentScore = (name) => {
+      let wins = 0, resolved = 0;
+      lines.forEach(line => { const c = matrix[name][line]; if(c && c.resolved){ wins += c.wins; resolved += c.resolved; } });
+      return resolved > 0 ? wins / resolved : -1; // -1 = pas encore de données, relégué en bas
+    };
+    const agents = Object.keys(matrix).sort((a,b) => agentScore(b) - agentScore(a));
     const body = document.getElementById('matrix-body');
     if(!agents.length){ body.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Aucun avis marché encore — se remplit après les prochains matchs analysés.</td></tr>'; return; }
-    body.innerHTML = agents.map(name => {
+    const medals = ['🥇','🥈','🥉'];
+    body.innerHTML = agents.map((name, rank) => {
       const cells = lines.map(line => {
         const c = matrix[name][line];
         if(!c || c.resolved === 0) return `<td style="color:var(--muted)">${c ? c.pending+' att.' : '—'}</td>`;
         return `<td style="color:${wrColor(c.winrate)};font-weight:700">${wrPct(c.winrate)} <span style="color:var(--muted);font-weight:400;font-size:10px">(${c.wins}/${c.resolved})</span></td>`;
       }).join('');
-      return `<tr><td><b>${name}</b></td>${cells}</tr>`;
+      const rankIcon = agentScore(name) >= 0 && rank < 3 ? medals[rank]+' ' : '';
+      return `<tr><td>${rankIcon}<b>${name}</b></td>${cells}</tr>`;
     }).join('');
   }catch(e){ /* silencieux */ }
 }

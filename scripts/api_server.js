@@ -3902,7 +3902,6 @@ app.get("/admin/shadow-perf", (req, res) => {
         MAX(created_at) as last_eval
       FROM shadow_evals
       GROUP BY agent_name
-      ORDER BY wins DESC
     `).all();
 
     const withStats = byAgent.map(r => ({
@@ -3910,7 +3909,15 @@ app.get("/admin/shadow-perf", (req, res) => {
       winrate: r.total > 0 ? Math.round((r.wins / Math.max(1, r.wins + r.losses)) * 100) : null,
       resolved: r.wins + r.losses,
       days_active: r.first_eval ? Math.ceil((Date.now() - new Date(r.first_eval).getTime()) / 86400000) : 0,
-    }));
+    }))
+      // Classement par taux de réussite (pas par nombre brut de victoires) :
+      // une IA à 90% sur 10 paris doit passer avant une IA à 50% sur 30 paris.
+      .sort((a, b) => {
+        if (a.winrate !== null && b.winrate !== null) return b.winrate - a.winrate;
+        if (a.winrate !== null) return -1;
+        if (b.winrate !== null) return 1;
+        return b.total - a.total;
+      });
 
     const recentEvals = db.prepare(`
       SELECT agent_name, home, away, competition, bet, confidence, outcome, created_at
