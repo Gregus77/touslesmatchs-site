@@ -63,6 +63,19 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(match_key, agent_name)
   );
+  CREATE TABLE IF NOT EXISTS agent_market_predictions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    market_line TEXT NOT NULL,
+    bet TEXT NOT NULL,
+    confidence INTEGER DEFAULT 60,
+    outcome TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(match_key, agent_name, market_line)
+  );
   CREATE TABLE IF NOT EXISTS concile_analyses (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     match_key TEXT NOT NULL,
@@ -656,6 +669,8 @@ function formatFDMatch(m) {
     away_logo: m.awayTeam?.crest || null,
     score_home: m.score?.fullTime?.home ?? m.score?.halfTime?.home ?? null,
     score_away: m.score?.fullTime?.away ?? m.score?.halfTime?.away ?? null,
+    ht_home: m.score?.halfTime?.home ?? null,
+    ht_away: m.score?.halfTime?.away ?? null,
     minute: m.minute ?? null,
     status: m.status === "FINISHED" ? "FINISHED" : "IN_PLAY",
     competition: m.competition?.name || "International",
@@ -1340,6 +1355,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
   const agentPerf = getAgentPerformance();
 
   const agentResults = [];
+  const agentMarketList = []; // avis multi-marchés de chaque agent (hors Chief)
 
   for (let i = 0; i < agentNames.length; i++) {
     const isChief = i === 4;
@@ -1383,11 +1399,18 @@ ${matchContext}
 En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande le meilleur pari.
 Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
 
+Donne AUSSI ton avis rapide sur chaque marché (objet "marches", codes courts + confiance 40-90) :
+- buts: "o2.5" (plus de 2.5) ou "u2.5" (moins de 2.5)
+- btts: "oui" ou "non" (les deux équipes marquent)
+- resultat: "dom", "ext" ou "nul"
+- mt1: "oui" ou "non" (au moins un but en 1ère mi-temps)
+
 Réponds en JSON pur (pas de markdown):
 {
   "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 50-90>,
-  "raison": "<2 phrases: 1 donnée concrète sur les équipes, 1 sur le contexte live>"
+  "raison": "<2 phrases: 1 donnée concrète sur les équipes, 1 sur le contexte live>",
+  "marches": {"buts":{"p":"o2.5","c":70},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55}}
 }`;
 
     try {
@@ -1415,7 +1438,7 @@ Réponds en JSON pur (pas de markdown):
         // Cohere endpoint natif /v1/chat
         const cohereResp = await httpPost(
           "https://api.cohere.ai/v1/chat",
-          { model: agCfg.model, message: prompt, max_tokens: isChief ? 400 : 200, temperature: 0.3 + i * 0.05 },
+          { model: agCfg.model, message: prompt, max_tokens: isChief ? 400 : 300, temperature: 0.3 + i * 0.05 },
           { Authorization: `Bearer ${COHERE_API_KEY}` }
         );
         raw = cohereResp.text || cohereResp.chat_history?.slice(-1)[0]?.message || "{}";
@@ -1426,7 +1449,7 @@ Réponds en JSON pur (pas de markdown):
             model: agCfg.model,
             messages: [{ role: "user", content: prompt }],
             temperature: 0.3 + i * 0.05,
-            max_tokens: isChief ? 400 : 200,
+            max_tokens: isChief ? 400 : 300,
           },
           { Authorization: `Bearer ${apiKey}` }
         );
@@ -1436,6 +1459,11 @@ Réponds en JSON pur (pas de markdown):
       const parsed = JSON.parse(cleaned);
 
       const rawBet = parsed.bet || availableBets[0];
+      // Avis multi-marchés (mode économe) : on garde ce que pense l'agent sur
+      // chaque marché, séparément du pari envoyé au Concile.
+      if (!isChief && parsed.marches && typeof parsed.marches === "object") {
+        agentMarketList.push({ name: agentNames[i].name, marches: parsed.marches });
+      }
       const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
       // Fallback raison : synthèse des votes si Chief n'a pas produit d'analyse
       const fallbackRaison = isChief && agentResults.length > 0
@@ -1475,6 +1503,7 @@ Réponds en JSON pur (pas de markdown):
 
   // Sauvegarder les prédictions pour le tracking de performance
   saveAgentPredictions(match, agentResults);
+  saveAgentMarketPredictions(match, agentMarketList);
 
   const analysisResult = {
     match_key: `${match.home}_${match.away}`,
@@ -2389,6 +2418,71 @@ function getPredictionSnapshotKey(match) {
   return `${id}_${getTodayStr()}_${bucket}_${score}`;
 }
 
+// ── Multi-marchés par agent ────────────────────────────────────────────────
+// Chaque agent se prononce sur TOUS les marchés (pas seulement son meilleur pari
+// envoyé au Concile). On stocke tout pour découvrir quelle IA est forte sur quel
+// type de pari (matrice agent × marché).
+function canonicalMarketBet(line, code) {
+  const c = String(code || "").toLowerCase();
+  if (line === "buts")     return /o|over|plus|\+/.test(c) ? "Over 2.5 buts" : "Under 2.5 buts";
+  if (line === "btts")     return /^o|oui|yes/.test(c) ? "BTTS Oui" : "BTTS Non";
+  if (line === "resultat") return /^d|dom/.test(c) ? "Victoire domicile" : /^e|ext/.test(c) ? "Victoire extérieur" : "Match nul";
+  if (line === "mt1")      return /^o|oui|yes/.test(c) ? "But en 1ère mi-temps" : "Aucun but en 1ère mi-temps";
+  return null;
+}
+
+function resolveMarketBet(bet, h, a, htTotal) {
+  const total = h + a;
+  switch (bet) {
+    case "Over 2.5 buts":  return total > 2.5 ? "win" : "loss";
+    case "Under 2.5 buts": return total < 2.5 ? "win" : "loss";
+    case "BTTS Oui":       return (h > 0 && a > 0) ? "win" : "loss";
+    case "BTTS Non":       return (h > 0 && a > 0) ? "loss" : "win";
+    case "Victoire domicile":  return h > a ? "win" : "loss";
+    case "Victoire extérieur": return a > h ? "win" : "loss";
+    case "Match nul":      return h === a ? "win" : "loss";
+    case "But en 1ère mi-temps":       return htTotal == null ? null : (htTotal > 0 ? "win" : "loss");
+    case "Aucun but en 1ère mi-temps": return htTotal == null ? null : (htTotal === 0 ? "win" : "loss");
+    default: return getBetOutcomeForScore(bet, h, a);
+  }
+}
+
+function saveAgentMarketPredictions(match, agentMarketList) {
+  if (!agentMarketList || !agentMarketList.length) return;
+  const matchKey = getPredictionSnapshotKey(match);
+  try {
+    const stmt = db.prepare(
+      "INSERT OR IGNORE INTO agent_market_predictions (match_key, home, away, agent_name, market_line, bet, confidence) VALUES (?,?,?,?,?,?,?)"
+    );
+    agentMarketList.forEach(am => {
+      const m = am.marches || {};
+      [["buts", m.buts], ["btts", m.btts], ["resultat", m.resultat], ["mt1", m.mt1]].forEach(([line, val]) => {
+        if (!val) return;
+        const code = typeof val === "object" ? val.p : val;
+        const conf = typeof val === "object" ? (parseInt(val.c) || 60) : 60;
+        const bet = canonicalMarketBet(line, code);
+        if (bet) stmt.run(matchKey, match.home, match.away, am.name, line, bet, Math.min(95, Math.max(40, conf)));
+      });
+    });
+  } catch (e) { console.error("[agent-market] save:", e.message); }
+}
+
+function resolveAgentMarketPredictions(home, away, h, a, htTotal) {
+  try {
+    const hw = String(home || "").split(" ")[0];
+    const aw = String(away || "").split(" ")[0];
+    if (!hw || !aw) return;
+    const pending = db.prepare(
+      "SELECT * FROM agent_market_predictions WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
+    ).all(`%${hw}%`, `%${aw}%`);
+    if (!pending.length) return;
+    const upd = db.prepare("UPDATE agent_market_predictions SET outcome = ? WHERE id = ?");
+    let n = 0;
+    pending.forEach(p => { const o = resolveMarketBet(p.bet, h, a, htTotal); if (o) { upd.run(o, p.id); n++; } });
+    if (n) console.log(`[agent-market] résolu ${n}/${pending.length} avis marché: ${home} vs ${away}`);
+  } catch (e) { console.error("[agent-market] resolve:", e.message); }
+}
+
 function saveAgentPredictions(match, agentResults) {
   const matchKey = getPredictionSnapshotKey(match);
   try {
@@ -2464,6 +2558,12 @@ function autoResolvePredictions(match) {
     }
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
 
+  // Résoudre aussi les avis multi-marchés de chaque agent
+  const htTotal = (match.ht_home != null && match.ht_away != null)
+    ? Number(match.ht_home) + Number(match.ht_away)
+    : (match.ht_total != null ? Number(match.ht_total) : null);
+  resolveAgentMarketPredictions(home, away, h, a, htTotal);
+
   // Résoudre aussi les traces Concile
   resolveConcileAnalyses(home, away, score_home, score_away);
 }
@@ -2477,8 +2577,11 @@ async function resolveStalePredictions() {
   staleResolveRunning = true;
   try {
     const stale = db.prepare(`
-      SELECT DISTINCT home, away FROM agent_predictions
-      WHERE outcome IS NULL AND created_at <= datetime('now','-3 hours')
+      SELECT DISTINCT home, away FROM (
+        SELECT home, away, created_at FROM agent_predictions WHERE outcome IS NULL
+        UNION ALL
+        SELECT home, away, created_at FROM agent_market_predictions WHERE outcome IS NULL
+      ) WHERE created_at <= datetime('now','-3 hours')
       LIMIT 80
     `).all();
     if (!stale.length) return;
@@ -2511,6 +2614,8 @@ async function resolveStalePredictions() {
           home: s.home, away: s.away,
           score_home: reversed ? m.score_away : m.score_home,
           score_away: reversed ? m.score_home : m.score_away,
+          ht_home: reversed ? m.ht_away : m.ht_home,
+          ht_away: reversed ? m.ht_home : m.ht_away,
         });
         resolvedMatches++;
       }
@@ -3827,6 +3932,39 @@ app.get("/agent-performance", (req, res) => {
   } catch(e) {
     res.json({ ok: true, performance: perf, meta: {}, pending_matches: [] });
   }
+});
+
+// ── Matrice IA × marché — quelle IA est forte sur quel type de pari ──────────
+app.get("/agent-market-matrix", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
+  try {
+    const rows = db.prepare(`
+      SELECT agent_name, market_line,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) pending
+      FROM agent_market_predictions
+      GROUP BY agent_name, market_line
+    `).all();
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+    const matrix = {};
+    const bestByLine = {};
+    rows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      const winrate = resolved > 0 ? Math.round(r.wins / resolved * 100) : null;
+      if (!matrix[r.agent_name]) matrix[r.agent_name] = {};
+      matrix[r.agent_name][r.market_line] = { label: lineLabels[r.market_line] || r.market_line, total: r.total, wins: r.wins, losses: r.losses, pending: r.pending, resolved, winrate };
+      // Meilleure IA par marché (min 5 résolus)
+      if (resolved >= 5 && winrate !== null) {
+        if (!bestByLine[r.market_line] || winrate > bestByLine[r.market_line].winrate) {
+          bestByLine[r.market_line] = { agent: r.agent_name, winrate, resolved, label: lineLabels[r.market_line] || r.market_line };
+        }
+      }
+    });
+    res.json({ ok: true, matrix, best_by_market: bestByLine });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
 // ── Admin — forcer résolution manuelle d'un match ────────────────────────────
