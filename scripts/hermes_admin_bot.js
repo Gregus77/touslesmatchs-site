@@ -174,9 +174,14 @@ async function downloadBinary(url) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+// Quand OpenAI est en limite de facturation/quota, on coupe la génération
+// d'image pour un moment au lieu de réessayer (et spammer l'admin) à chaque pick.
+let imageGenDisabledUntil = 0;
+
 async function generateMatchVisual(pick) {
   if (!OPENAI_API_KEY) return "";
   if (!pick?.home || !pick?.away) return "";
+  if (Date.now() < imageGenDisabledUntil) return ""; // quota épuisé → fallback silencieux
 
   const date = pick.date || new Date().toISOString().slice(0, 10);
   const fileName = `${date}-${slugify(pick.home)}-vs-${slugify(pick.away)}.png`;
@@ -216,10 +221,16 @@ async function generateMatchVisual(pick) {
     return publicUrl;
   } catch (e) {
     console.error("[visual] generation failed:", e.message);
-    // Notifier l'admin Telegram de l'échec OpenAI image
-    if (ADMIN_CHAT) {
-      reply(ADMIN_CHAT, `⚠️ <b>Image OpenAI échouée</b>\n${e.message}`).catch(() => {});
+    // Erreur de facturation/quota → on désactive 6h et on prévient UNE seule fois.
+    const isQuota = /billing|quota|hard limit|insufficient|exceeded|429/i.test(e.message || "");
+    if (isQuota) {
+      const wasActive = Date.now() >= imageGenDisabledUntil;
+      imageGenDisabledUntil = Date.now() + 6 * 60 * 60 * 1000;
+      if (wasActive && ADMIN_CHAT) {
+        reply(ADMIN_CHAT, `ℹ️ Génération d'image OpenAI en pause 6h (quota atteint). Les picks partent normalement avec le blason de l'équipe — aucune action requise.`).catch(() => {});
+      }
     }
+    // Sinon (erreur ponctuelle) : pas de notification, fallback silencieux.
     return "";
   }
 }
