@@ -153,6 +153,33 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
       </div>
     </div>
 
+    <!-- BANC D'ESSAI IA -->
+    <div class="section">
+      <div class="section-hdr" style="display:flex;justify-content:space-between;align-items:center">
+        <span>🧪 Banc d'essai IA — agents en test</span>
+        <button class="btn-primary" style="font-size:12px;padding:6px 14px;width:auto;background:rgba(255,255,255,.08)" onclick="loadShadowPerf()">↻ Actualiser</button>
+      </div>
+      <div id="shadow-configured" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      <div style="overflow-x:auto"><table class="codes-table" id="shadow-table">
+        <thead><tr><th>Agent</th><th>Winrate</th><th>Gagnés</th><th>Perdus</th><th>En attente</th><th>Conf. moy.</th><th>Jours actif</th></tr></thead>
+        <tbody id="shadow-body"><tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Chargement…</td></tr></tbody>
+      </table></div>
+    </div>
+
+    <!-- MATRICE IA × MARCHÉ -->
+    <div class="section">
+      <div class="section-hdr" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📊 Matrice IA × marché — qui est fort sur quel pari</span>
+        <button class="btn-primary" style="font-size:12px;padding:6px 14px;width:auto;background:rgba(255,255,255,.08)" onclick="loadMarketMatrix()">↻ Actualiser</button>
+      </div>
+      <div id="matrix-best" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px"></div>
+      <div style="overflow-x:auto"><table class="codes-table" id="matrix-table">
+        <thead><tr><th>Agent IA</th><th>Over/Under 2.5</th><th>BTTS</th><th>Résultat 1X2</th><th>But 1ère MT</th></tr></thead>
+        <tbody id="matrix-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Chargement…</td></tr></tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">Chaque cellule : winrate% (gagnés/résolus). Les avis se résolvent automatiquement après chaque match.</div>
+    </div>
+
     <!-- PICK DU JOUR -->
     <div class="section">
       <div class="section-hdr">🎯 Pick du jour — Changer le match</div>
@@ -333,6 +360,60 @@ function showDashboard(data){
   loadStats(data);
   loadCodes();
   loadProofs();
+  loadShadowPerf();
+  loadMarketMatrix();
+}
+
+function wrPct(wr){ return wr === null || wr === undefined ? '—' : wr + '%'; }
+function wrColor(wr){ if(wr===null||wr===undefined) return 'var(--muted)'; return wr>=60?'#10b981':wr>=45?'#f59e0b':'#f43f5e'; }
+
+async function loadShadowPerf(){
+  try{
+    const r = await fetch('/api/admin/shadow-perf?email='+encodeURIComponent(ADMIN_EMAIL)+'&code='+encodeURIComponent(ADMIN_CODE));
+    const d = await r.json();
+    if(!d.ok) return;
+    // Chips d'agents configurés (actif/inactif)
+    document.getElementById('shadow-configured').innerHTML = (d.configured||[]).map(a =>
+      `<span style="font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--b2);background:${a.active?'rgba(16,185,129,.12)':'var(--bg3)'};color:${a.active?'#10b981':'var(--muted)'}">${a.icon||'🤖'} ${a.name} ${a.active?'· actif':'· clé manquante'}</span>`
+    ).join('') || '<span style="color:var(--muted);font-size:12px">Aucun agent configuré</span>';
+    // Tableau perf
+    const rows = (d.agents||[]).filter(a => a.total > 0);
+    const body = document.getElementById('shadow-body');
+    if(!rows.length){ body.innerHTML = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">Aucune analyse encore — le banc d\'essai se remplit au fil des matchs.</td></tr>'; return; }
+    body.innerHTML = rows.map(a =>
+      `<tr><td><b>${a.agent_name}</b></td>
+       <td style="color:${wrColor(a.winrate)};font-weight:800">${wrPct(a.winrate)}</td>
+       <td>${a.wins}</td><td>${a.losses}</td><td style="color:var(--muted)">${a.pending}</td>
+       <td>${a.avg_confidence ?? '—'}</td><td>${a.days_active}j</td></tr>`
+    ).join('');
+  }catch(e){ /* silencieux */ }
+}
+
+async function loadMarketMatrix(){
+  try{
+    const r = await fetch('/api/agent-market-matrix?email='+encodeURIComponent(ADMIN_EMAIL)+'&code='+encodeURIComponent(ADMIN_CODE));
+    const d = await r.json();
+    if(!d.ok) return;
+    // Meilleure IA par marché
+    const best = d.best_by_market || {};
+    document.getElementById('matrix-best').innerHTML = Object.keys(best).length
+      ? Object.values(best).map(b => `<span style="font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(99,102,241,.15);color:#a5b4fc">🏆 ${b.label} : <b>${b.agent}</b> ${b.winrate}% (${b.resolved})</span>`).join('')
+      : '<span style="color:var(--muted);font-size:12px">Pas encore assez de données (min 5 résolus par marché).</span>';
+    // Tableau matrice
+    const lines = ['buts','btts','resultat','mt1'];
+    const matrix = d.matrix || {};
+    const agents = Object.keys(matrix);
+    const body = document.getElementById('matrix-body');
+    if(!agents.length){ body.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px">Aucun avis marché encore — se remplit après les prochains matchs analysés.</td></tr>'; return; }
+    body.innerHTML = agents.map(name => {
+      const cells = lines.map(line => {
+        const c = matrix[name][line];
+        if(!c || c.resolved === 0) return `<td style="color:var(--muted)">${c ? c.pending+' att.' : '—'}</td>`;
+        return `<td style="color:${wrColor(c.winrate)};font-weight:700">${wrPct(c.winrate)} <span style="color:var(--muted);font-weight:400;font-size:10px">(${c.wins}/${c.resolved})</span></td>`;
+      }).join('');
+      return `<tr><td><b>${name}</b></td>${cells}</tr>`;
+    }).join('');
+  }catch(e){ /* silencieux */ }
 }
 
 async function loadCurrentPick(){
