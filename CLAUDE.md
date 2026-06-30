@@ -175,6 +175,21 @@ Match en cours (score + minute + stats live)
 - Séquence email nurturing J+1 (preuve) + J+3 (urgence) automatique après inscription
 - Skills créés : `/pilote` (orchestrateur autonome), `/growth-engine` (croissance Stripe)
 
+### Claude Code — 2026-06-30 — Stripe, résolution permanente, multi-marchés, banc d'essai, acquisition
+- **Stripe webhook FIX CRITIQUE** : `express.json()` global cassait la vérif de signature → le client payait mais ne recevait jamais son code/email. `/stripe/webhook` exclu du parser JSON global (corps brut conservé). ⚠️ Reste à faire côté Grégory : déclarer le webhook dans Stripe + `STRIPE_WEBHOOK_SECRET` dans .env + révoquer la clé sk_live exposée en chat.
+- **Résolution permanente prédictions IA** : cron `resolveStalePredictions` (horaire + 30s au boot) rattrape les matchs sortis de la fenêtre live (football-data 7j). `autoResolvePredictions` utilise `getBetOutcomeForScore` (robuste). Route admin `/admin/resolve-stale`. Fini les "en attente" infinis.
+- **Multi-marchés par IA** : chaque agent (hors Chief) donne son avis sur 6 marchés (O/U 2.5, BTTS, 1X2, but 1re MT) → table `agent_market_predictions` (séparée du Concile). Endpoint `/agent-market-matrix` (winrate IA × marché + meilleure IA par marché). max_tokens agents 200→300. Mode économe.
+- **Banc d'essai** : +2 IA gratuites immédiates Groq-Llama70B/8B (clé Groq existante). Cerebras/OpenRouter/Mistral/Cohere s'activent dès qu'une clé est dans .env.
+- **Page admin** (`admin.html`) : sections visuelles Banc d'essai + Matrice IA × marché (plus besoin de curl).
+- **Splash premium** animé au chargement (anneau gradient + filet sécurité 3s).
+- **Leaderboard live-ia** : "X en attente" → "Analyse en cours…", badge nettoyé, + chips marchés avec winrate sous chaque IA. Reste admin-only (code ELITE-ADMIN).
+- **Drapeaux Telegram** (teamFlag/matchWithFlags) sur tous les messages picks.
+- **Image OpenAI** : pause propre 6h quand quota atteint (1 seul message, fallback blason), fini le spam d'erreur.
+- **SEO** : JSON-LD @graph (Organization+WebSite+FAQPage) sur index, pourquoi-nous indexable (canonical+OG+sitemap).
+- **Acquisition** : lien Telegram mort corrigé sur la landing TikTok (t.me/touslesmatchs_fr → t.me/+qFnIuKg2ZhdlMmY8).
+- **Cohérence** : "4+1 · Agents + Chief" partout (le titre dit 4, la stat disait 5).
+- Audit front↔back : toutes les routes `/api/*` ont leur handler serveur, zéro orpheline.
+
 ### Claude Code — 2026-06-29 (soir) — UX/SEO/Hermès + auto-résolution réelle
 - **Splash premium** : overlay animé (anneau gradient + wordmark + barre) remplace le logo TLM brut au chargement. Filet de sécurité 3s → ne reste jamais bloqué (fix bug Android "logo puis erreur").
 - **Fix crash Android** : ordre de chargement i18n.js corrigé (était chargé après le script qui l'utilise → ReferenceError bloquant) + try/catch de secours.
