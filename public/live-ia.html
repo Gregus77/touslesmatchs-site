@@ -946,6 +946,7 @@ function formatScorePair(m){
 
 let agentPerfData = {};
 let agentPerfMeta = {};
+let agentMarketMatrix = {};
 // Agents actuels du Concile v3 (utilisés comme placeholder si la base est vide)
 const AGENT_LIST = [
   { name: 'Perplexity-Web', icon: '🌐' },
@@ -976,12 +977,16 @@ async function loadAgentPerformance() {
   const {email, code} = getAuth();
   try {
     const qs = new URLSearchParams({ email, code });
-    const r = await fetch(`/api/agent-performance?${qs.toString()}`);
+    const [r, rm] = await Promise.all([
+      fetch(`/api/agent-performance?${qs.toString()}`),
+      fetch(`/api/agent-market-matrix?${qs.toString()}`).catch(() => null),
+    ]);
     const d = await r.json();
     if(d.ok){
       agentPerfData = d.performance || {};
       agentPerfMeta = d.meta || {};
     }
+    if(rm){ try { const dm = await rm.json(); if(dm.ok) agentMarketMatrix = dm.matrix || {}; } catch(e){} }
     renderLeaderboard();
   } catch(e) { renderLeaderboard(); }
 }
@@ -1028,7 +1033,19 @@ function renderLeaderboard() {
     const medal = rank < 3 && wr !== null ? medals[rank]+' ' : '';
     const statTxt = wr !== null
       ? `${wr}% — ${a.wins}/${resolved} correct${resolved>1?'s':''}`
-      : a.pending > 0 ? `${a.pending} en attente` : 'Aucune donnée';
+      : 'Analyse en cours…';
+    // Type de paris + taux de réussite par marché, sous chaque IA
+    const shortLabel = { buts:'O/U 2.5', btts:'BTTS', resultat:'1X2', mt1:'But 1re MT' };
+    const mkt = agentMarketMatrix[a.name] || {};
+    const mktChips = Object.keys(mkt)
+      .map(line => ({ line, ...mkt[line] }))
+      .filter(m => m.resolved > 0 && m.winrate !== null)
+      .sort((x,y) => y.winrate - x.winrate)
+      .map(m => {
+        const col = m.winrate >= 60 ? 'var(--green)' : m.winrate >= 45 ? 'var(--amber)' : 'var(--red)';
+        return `<span style="display:inline-block;font-size:10px;padding:2px 7px;margin:2px 3px 0 0;border-radius:20px;background:var(--bg3);border:1px solid var(--b1)">${shortLabel[m.line]||m.line} <b style="color:${col}">${m.winrate}%</b></span>`;
+      }).join('');
+    const mktRow = mktChips ? `<div class="lb-agent-markets" style="margin-top:8px;line-height:1.5">${mktChips}</div>` : '';
     return `<div class="lb-agent">
       <div class="lb-agent-header">
         <div class="lb-agent-icon">${escHtml(a.icon)}</div>
@@ -1037,6 +1054,7 @@ function renderLeaderboard() {
       <div class="lb-agent-name">${escHtml(a.name)}</div>
       <div class="lb-agent-stat">${statTxt}</div>
       <div class="lb-bar"><div class="lb-bar-fill ${fillCls}" style="width:${fillPct}%"></div></div>
+      ${mktRow}
     </div>`;
   }).join('');
 
@@ -1046,12 +1064,12 @@ function renderLeaderboard() {
   const totalMatches = Number(agentPerfMeta.matches_tracked) || Math.ceil(totalPreds / Math.max(AGENT_LIST.length, 1));
   const totalSnapshots = Number(agentPerfMeta.snapshots_tracked) || totalMatches;
   el.innerHTML = `<div class="lb-section">
-    <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">${totalPreds} prédictions · ${totalResolved} résolues</span></div>
+    <div class="lb-title">📊 Classement des agents IA <span class="lb-title-badge">${totalMatches} match${totalMatches>1?'s':''} analysé${totalMatches>1?'s':''}</span></div>
     <div class="lb-agents">${cards}</div>
   </div>`;
   const badge = el.querySelector('.lb-title-badge');
   if (badge) {
-    badge.textContent = `${totalMatches} match${totalMatches>1?'s':''} · ${totalSnapshots} snapshot${totalSnapshots>1?'s':''} · ${totalPreds} predictions · ${totalResolved} resolues`;
+    badge.textContent = `${totalMatches} match${totalMatches>1?'s':''} analysé${totalMatches>1?'s':''} · ${totalResolved} résultat${totalResolved>1?'s':''} suivi${totalResolved>1?'s':''}`;
   }
 
   // Indicateur de précision globale dans le header
