@@ -1764,7 +1764,14 @@ async function scanStrongSignals({ manual = false } = {}) {
     if (STRONG_ALERTS_CLIENT_AUTO && !clientSent.some(a => a.id === signal.id)) {
       const published = await publishClientStrongSignal(signal, { silentAdmin: true });
       if (published.ok) {
-        clientSent.unshift({ id: signal.id, date: today, sentAt: new Date().toISOString(), channel: STRONG_ALERTS_CLIENT_CHANNEL });
+        // On stocke home/away/bet pour pouvoir poster le résultat plus tard
+        // (preuve sociale : "le signal qu'on t'a montré a gagné").
+        clientSent.unshift({
+          id: signal.id, date: today, sentAt: new Date().toISOString(),
+          channel: STRONG_ALERTS_CLIENT_CHANNEL,
+          home: signal.home, away: signal.away, bet: signal.bet, sport: signal.sport,
+          resultPosted: false,
+        });
       }
     }
   }
@@ -2594,6 +2601,49 @@ async function resolveStaleHistoryPicks() {
   }
 }
 
+// Preuve sociale : quand un signal fort envoyé au groupe Free se termine, on
+// poste le RÉSULTAT (gagné/perdu) — sans révéler le pari exact (qui reste
+// Premium) — pour montrer aux membres gratuits que suivre le groupe aurait
+// donné des paris gagnants. Honnête : on poste aussi les perdants (pas de
+// fausse preuve), mais les gagnants font la démonstration commerciale.
+let clientSignalResultRunning = false;
+async function checkClientSignalResults() {
+  if (clientSignalResultRunning || !PUBLIC_BOT_TOKEN || !PUBLIC_CHAT) return;
+  clientSignalResultRunning = true;
+  try {
+    const state = loadStrongAlertsState();
+    const clientSent = Array.isArray(state.clientSent) ? state.clientSent : [];
+    let changed = false;
+
+    for (const sig of clientSent) {
+      if (sig.resultPosted || !sig.home || !sig.away || !sig.bet) continue;
+      // Laisser le temps au match de finir (au moins ~3h après l'envoi)
+      if (sig.sentAt && (Date.now() - new Date(sig.sentAt).getTime()) < 3 * 60 * 60 * 1000) continue;
+
+      const found = await findFinalScoreForTeams(sig.home, sig.away);
+      if (!found) continue;
+      const outcome = classifyAutoResult(sig.bet, found.scoreHome, found.scoreAway, sig.home);
+      if (!outcome) { sig.resultPosted = true; changed = true; continue; }
+
+      const won = outcome === "GAGNE";
+      const text = won
+        ? `✅ <b>Signal fort GAGNÉ !</b>\n\n<b>${escapeHtml(sig.home)} vs ${escapeHtml(sig.away)}</b> — score final ${found.scoreHome}-${found.scoreAway}\n\nLe signal fort que le Concile a détecté en direct s'est confirmé. 📈\n\n💎 Les abonnés <b>Premium</b> avaient le pari exact + l'analyse complète.\n👉 <a href="https://www.touslesmatchs.com/#plans">Rejoins-les pour ne rien rater →</a>`
+        : `📊 <b>Signal fort — résultat</b>\n\n<b>${escapeHtml(sig.home)} vs ${escapeHtml(sig.away)}</b> — score final ${found.scoreHome}-${found.scoreAway}\n\nCe signal n'est pas passé cette fois. On publie les résultats en toute transparence, gagnants comme perdants.`;
+
+      await sendTelegramWithToken(PUBLIC_BOT_TOKEN, PUBLIC_CHAT, text).catch(() => {});
+      sig.resultPosted = true;
+      sig.outcome = outcome;
+      changed = true;
+    }
+
+    if (changed) saveStrongAlertsState({ sent: state.sent || [], clientSent });
+  } catch (e) {
+    console.error("[signal-result]", e.message);
+  } finally {
+    clientSignalResultRunning = false;
+  }
+}
+
 // ── Long polling loop ─────────────────────────────────────────────────────────
 async function poll() {
   let offset = 0;
@@ -2624,6 +2674,7 @@ async function poll() {
   setTimeout(() => resolveStaleHistoryPicks().catch(e => console.error("history-catchup:", e.message)), 30 * 1000);
   setInterval(() => {
     resolveStaleHistoryPicks().catch(e => console.error("history-catchup:", e.message));
+    checkClientSignalResults().catch(e => console.error("signal-result:", e.message));
   }, 30 * 60 * 1000);
 
   while (true) {
