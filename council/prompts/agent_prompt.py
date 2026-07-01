@@ -8,6 +8,16 @@ RÈGLES STRICTES :
 - Si aucun match n'atteint 8/10, réponds NOPICK
 - Prends en compte : forme récente, confrontations directes, domicile/extérieur, cotes, blessures connues
 
+CALIBRAGE DE LA CONFIANCE (IMPORTANT — n'attribue pas systématiquement 7/10) :
+- Les cotes fournies contiennent une "Proba implicite (sans marge)" : c'est l'estimation du marché.
+- Base ta confiance sur cette proba réelle, PAS sur une valeur par défaut prudente :
+    * proba implicite >= 75% ET cohérente avec la forme  -> confiance 8 à 9
+    * proba implicite 60-75% avec un signal fort (forme, domicile, absents) -> 7.5 à 8.5
+    * proba implicite 50-60%  -> 6.5 à 7.5 (souvent premium, rarement pick principal)
+    * proba implicite < 50% ou incertitude -> < 6.5 ou NOPICK
+- Un pick a de la VALEUR quand ta proba estimée dépasse la proba implicite du marché : dans ce cas, monte la confiance.
+- Utilise toute l'échelle 1-10. Deux picks solides le même jour peuvent légitimement dépasser 8.
+
 LIGUES AUTORISÉES (disponibles sur Winamax/Betclic) :
 Football : Ligue 1, Ligue 2, Premier League, Championship, La Liga, Liga 2, Bundesliga, 2. Bundesliga,
            Serie A, Serie B, Eredivisie, Pro League (Belgique), Liga Portugal, Super Lig (Turquie),

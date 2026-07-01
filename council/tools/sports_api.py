@@ -162,6 +162,26 @@ def _get_fallback_matches():
     return []
 
 
+def _implied_probs(odds):
+    """Convertit les cotes 1X2 en probabilités implicites %, sans la marge du bookmaker."""
+    try:
+        vals = [
+            float(odds.get("home_win") or 0),
+            float(odds.get("draw") or 0),
+            float(odds.get("away_win") or 0),
+        ]
+        inv = [1.0 / v if v > 1 else 0.0 for v in vals]
+        total = sum(inv)
+        if total <= 0:
+            return None
+        pct = [round(x / total * 100) for x in inv]
+        # Ajuste l'arrondi pour garder une somme de 100
+        pct[pct.index(max(pct))] += 100 - sum(pct)
+        return pct
+    except Exception:
+        return None
+
+
 def format_matches_for_prompt(matches):
     """Format match list as readable text for AI prompts."""
     if not matches:
@@ -180,6 +200,9 @@ def format_matches_for_prompt(matches):
                 parts.append(f"2={o['away_win']}")
             if parts:
                 odds_str = f" | Cotes: {', '.join(parts)}"
+                implied = _implied_probs(o)
+                if implied:
+                    odds_str += f" | Proba implicite (sans marge): 1={implied[0]}% X={implied[1]}% 2={implied[2]}%"
         lines.append(
             f"{i}. [{m['sport']}] {m['home']} vs {m['away']} "
             f"- {m.get('league','')} ({m.get('country','')})"

@@ -33,7 +33,7 @@ def analyze(date, matches_text, history_text, stats):
             ],
             response_format={"type": "json_object"},
             temperature=0.3,
-            max_tokens=500,
+            max_tokens=900,
         )
         raw = response.choices[0].message.content
         return json.loads(raw)

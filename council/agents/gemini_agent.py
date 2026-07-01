@@ -17,6 +17,7 @@ def _get_model():
             generation_config=genai.GenerationConfig(
                 response_mime_type="application/json",
                 temperature=0.3,
+                max_output_tokens=900,
             ),
         )
     return _model
