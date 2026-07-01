@@ -1,0 +1,20 @@
+FROM node:20-alpine
+WORKDIR /app
+
+RUN apk add --no-cache python3 make g++
+
+RUN npm install --save \
+  express \
+  cors \
+  bcryptjs \
+  jsonwebtoken \
+  better-sqlite3 \
+  stripe
+
+RUN mkdir -p /data
+
+COPY scripts/api_server.js ./server.js
+COPY scripts/bookmakers.config.js ./bookmakers.config.js
+
+EXPOSE 3001
+CMD ["node", "server.js"]
