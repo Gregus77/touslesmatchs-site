@@ -1,13 +1,37 @@
 import os
 import requests
-import json
+import time
 from datetime import datetime
 
 API_FOOTBALL_KEY = os.environ.get("API_FOOTBALL_KEY") or os.environ.get("SPORTS_API_KEY", "")
 API_FOOTBALL_HOST = "v3.football.api-sports.io"
 
+ALLOWED_LEAGUES = {
+    61, 62,       # Ligue 1, Ligue 2
+    39, 40,       # Premier League, Championship
+    140,          # La Liga
+    78,           # Bundesliga
+    135,          # Serie A
+    88,           # Eredivisie
+    144,          # Pro League (Belgique)
+    94,           # Liga Portugal
+    203,          # Super Lig (Turquie)
+    2, 3, 848,    # Champions League, Europa League, Conference League
+    4, 1,         # Euro, Coupe du Monde
+    253, 262,     # MLS, Liga MX
+    13,           # Copa Libertadores
+}
+
+_last_call = 0
 
 def _api_get(endpoint, params=None):
+    global _last_call
+    # 0.25s minimum between calls to stay well within 300 req/min
+    elapsed = time.time() - _last_call
+    if elapsed < 0.25:
+        time.sleep(0.25 - elapsed)
+    _last_call = time.time()
+
     url = f"https://{API_FOOTBALL_HOST}/{endpoint}"
     headers = {"x-apisports-key": API_FOOTBALL_KEY}
     try:
@@ -30,6 +54,11 @@ def get_todays_matches():
     if not fixtures:
         print(f"[API-Football] Aucun match NS pour {today}")
         return []
+
+    # Filter to allowed leagues before making enrichment calls
+    total = len(fixtures)
+    fixtures = [f for f in fixtures if f.get("league", {}).get("id") in ALLOWED_LEAGUES]
+    print(f"[API-Football] {len(fixtures)} matchs dans les ligues autorisees (sur {total} total)")
 
     matches = []
     for f in fixtures:
