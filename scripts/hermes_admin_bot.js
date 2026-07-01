@@ -1057,7 +1057,7 @@ async function findFinalScoreForTeams(home, away) {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const today = new Date().toISOString().slice(0, 10);
       for (const date of [today, yesterday]) {
-        const d = await httpGet(`https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`, { "x-rapidapi-key": SPORTS_KEY, "x-rapidapi-host": "v3.football.api-sports.io" });
+        const d = await httpGet(`https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`, { "x-apisports-key": SPORTS_KEY });
         const fixtures = d.response || [];
         const match = fixtures.find(f => {
           const mh = normalizeTeamName(f.teams?.home?.name || "");
