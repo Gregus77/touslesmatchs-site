@@ -248,10 +248,25 @@ function computeMarketStrategy(byProno, minSample = STRATEGY_MIN_SAMPLE) {
 // évite ceux qui perdent de l'argent, et s'auto-adapte si les stats changent
 // (pas besoin de coder "Under 2.5" en dur — le marché prioritaire change tout
 // seul dès que les données montrent qu'un autre marché rapporte plus).
+// Marché forcé par défaut tant que les données ne prouvent pas mieux.
+// Configurable via HERMES_FORCED_MARKET (mettre "" pour désactiver le forçage
+// et laisser 100% la stratégie data-driven décider dès qu'il y a des données).
+const FORCED_MARKET = process.env.HERMES_FORCED_MARKET !== undefined
+  ? process.env.HERMES_FORCED_MARKET
+  : "Under 2.5 buts (moins de 2.5 buts)";
+
 function strategyDirective(memory) {
-  if (!memory) return "";
+  if (!memory) {
+    if (!FORCED_MARKET) return "";
+    return forcedMarketDirective();
+  }
   const strat = computeMarketStrategy(memory.by_prono_type);
   if (!strat) {
+    // Pas encore assez de données : on force le marché par défaut (Under 2.5)
+    // au lieu de laisser Hermès choisir librement. Dès qu'un marché atteint
+    // l'échantillon minimum avec un meilleur ROI, la stratégie data-driven
+    // prend automatiquement le relais (bloc "best" ci-dessous).
+    if (FORCED_MARKET) return forcedMarketDirective(memory);
     return `\n━━━ STRATÉGIE DATA-DRIVEN ━━━\nPas encore assez de données par marché (minimum ${STRATEGY_MIN_SAMPLE} picks résolus par catégorie) pour prioriser un marché. Suis les règles générales ci-dessus.\n`;
   }
   const { best, toDisable } = strat;
@@ -263,6 +278,19 @@ function strategyDirective(memory) {
     txt += `→ Ne propose un marché de cette liste QUE si aucun match n'est éligible pour "${best.key}" aujourd'hui, ET seulement si ses statistiques réelles sont redevenues meilleures que celles ci-dessus.\n`;
   }
   return txt;
+}
+
+function forcedMarketDirective(memory) {
+  let stat = "";
+  if (memory && Array.isArray(memory.by_prono_type)) {
+    const u = memory.by_prono_type.find(g => /under|moins de/i.test(g.key));
+    if (u) stat = ` (données actuelles : ${u.winrate}% winrate${u.roiPct !== null ? `, ROI ${u.roiPct >= 0 ? "+" : ""}${u.roiPct}%` : ""} sur ${u.total} picks)`;
+  }
+  return `\n━━━ STRATÉGIE ACTUELLE — MARCHÉ FORCÉ ━━━\n` +
+    `🏆 MARCHÉ PRIORITAIRE IMPOSÉ : "${FORCED_MARKET}"${stat}.\n` +
+    `→ RÈGLE ABSOLUE pour l'instant : ne propose QUE des paris "moins de 2.5 buts" (Under 2.5), et uniquement sur un match qui remplit les critères de qualité (2 équipes à faible moyenne de buts, éliminatoire/enjeu défensif, forme, edge positif).\n` +
+    `→ Si AUCUN match du jour ne convient pour un Under 2.5 solide, réponds NO BET plutôt que de basculer sur un autre marché.\n` +
+    `→ C'est temporaire : ce forçage sera levé automatiquement dès qu'un autre marché prouvera statistiquement un meilleur ROI sur un échantillon suffisant.\n`;
 }
 
 // ── Générer le profil mémoire ─────────────────────────────────────────────────
