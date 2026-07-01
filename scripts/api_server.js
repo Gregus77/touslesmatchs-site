@@ -1488,6 +1488,12 @@ ${matchContext}
 En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande le meilleur pari.
 Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
 
+⚠️ CONFIANCE ARGUMENTÉE — INTERDICTION du 70% générique :
+- Ta "confidence" DOIT refléter la force réelle des données, pas une valeur ronde par défaut.
+- Base-la explicitement sur : la forme récente des 2 équipes, l'historique des confrontations directes (H2H), les blessés/absents connus (uniquement si tu en es sûr), l'enjeu (place à gagner/à défendre au classement), le contexte (domicile/extérieur, terrain neutre), et les stats live ci-dessus.
+- Peu de signaux concordants → confiance basse (50-62). Signaux forts et convergents → confiance haute (78-90). N'utilise 70 QUE si c'est réellement le calcul, jamais par facilité.
+- La "raison" DOIT citer au moins 2 données concrètes distinctes (ex: "3 des 5 derniers H2H sous 2.5 buts, + attaque extérieure à 0.9 but/match") — pas de phrase vague type "analyse basée sur le rythme".
+
 Donne AUSSI ton avis rapide sur chaque marché (objet "marches", codes courts + confiance 40-90) :
 - buts: "o2.5" (plus de 2.5) ou "u2.5" (moins de 2.5)
 - btts: "oui" ou "non" (les deux équipes marquent)
@@ -1497,52 +1503,43 @@ Donne AUSSI ton avis rapide sur chaque marché (objet "marches", codes courts + 
 Réponds en JSON pur (pas de markdown):
 {
   "bet": "un parmi: ${availableBets.join(", ")}",
-  "confidence": <nombre 50-90>,
-  "raison": "<2 phrases: 1 donnée concrète sur les équipes, 1 sur le contexte live>",
+  "confidence": <nombre 50-90 argumenté, PAS 70 par défaut>,
+  "raison": "<2 phrases avec au moins 2 données chiffrées concrètes (forme, H2H, blessés, enjeu, stats)>",
   "marches": {"buts":{"p":"o2.5","c":70},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55}}
 }`;
 
     try {
       const agCfg = agentNames[i];
-      let apiUrl, apiKey;
-      if (agCfg.useDeepseek && DEEPSEEK_API_KEY) {
-        apiUrl = "https://api.deepseek.com/v1/chat/completions";
-        apiKey = DEEPSEEK_API_KEY;
-      } else if (agCfg.usePerplexity && PERPLEXITY_API_KEY) {
-        apiUrl = "https://api.perplexity.ai/chat/completions";
-        apiKey = PERPLEXITY_API_KEY;
-      } else if (agCfg.useMistral && MISTRAL_API_KEY) {
-        apiUrl = "https://api.mistral.ai/v1/chat/completions";
-        apiKey = MISTRAL_API_KEY;
-      } else if (agCfg.useCohere && COHERE_API_KEY) {
-        // Cohere utilise un endpoint différent — géré séparément
-        apiUrl = null; // flag pour appel Cohere natif
-        apiKey = COHERE_API_KEY;
-      } else {
-        apiUrl = "https://api.groq.com/openai/v1/chat/completions";
-        apiKey = GROQ_API_KEY;
-      }
-      let raw;
-      if (agCfg.useCohere && COHERE_API_KEY) {
-        // Cohere endpoint natif /v1/chat
-        const cohereResp = await httpPost(
-          "https://api.cohere.ai/v1/chat",
-          { model: agCfg.model, message: prompt, max_tokens: isChief ? 400 : 300, temperature: 0.3 + i * 0.05 },
-          { Authorization: `Bearer ${COHERE_API_KEY}` }
-        );
-        raw = cohereResp.text || cohereResp.chat_history?.slice(-1)[0]?.message || "{}";
-      } else {
-        const response = await httpPost(
-          apiUrl,
-          {
-            model: agCfg.model,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.3 + i * 0.05,
-            max_tokens: isChief ? 400 : 300,
-          },
-          { Authorization: `Bearer ${apiKey}` }
-        );
-        raw = response.choices?.[0]?.message?.content || "{}";
+      const temp = 0.3 + i * 0.05;
+      const maxTok = isChief ? 400 : 300;
+      // Cascade de fournisseurs : on essaie le fournisseur préféré de l'agent,
+      // puis on bascule sur les autres clés dispo (Groq, OpenRouter, Cerebras)
+      // jusqu'à obtenir une VRAIE réponse — au lieu de tomber sur 70% par défaut
+      // dès qu'un quota est épuisé. Toutes les clés du .env sont exploitées.
+      const providers = [];
+      if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: agCfg.model });
+      if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
+      if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
+      if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
+      if (GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
+      if (OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
+      if (CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+
+      let raw = "{}";
+      for (const pv of providers) {
+        try {
+          if (pv.kind === "cohere") {
+            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` });
+            raw = cr.text || cr.chat_history?.slice(-1)[0]?.message || "{}";
+          } else {
+            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` });
+            raw = rp.choices?.[0]?.message?.content || "{}";
+          }
+          const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+          if (probe && probe !== "{}" && probe.length > 8) break; // vraie réponse obtenue
+        } catch (e) {
+          console.error(`[concile] ${agentNames[i].name} fournisseur échec: ${e.message}`);
+        }
       }
       const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
