@@ -1014,28 +1014,20 @@ async function cmdExpiring(chatId) {
   }
 }
 
-async function cmdCheckResult(chatId, autoApply = false) {
-  const data = loadPicks();
-  const p = data.currentPick;
-  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick actif à vérifier"); return; }
-  if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(String(p.status || "").toUpperCase())) {
-    await reply(chatId, `Pick déjà résolu : <b>${p.status}</b>`); return;
-  }
+// Cherche le score final d'un match (hier + aujourd'hui) via football-data
+// puis api-sports en repli. Réutilisé pour le pick du jour ET le rattrapage
+// des picks archivés dans l'historique (voir resolveStaleHistoryPicks).
+async function findFinalScoreForTeams(home, away) {
+  const homeN = normalizeTeamName(home);
+  const awayN = normalizeTeamName(away);
+  const sameTeam = (a, b) => a === b || a.includes(b) || b.includes(a);
 
-  await reply(chatId, `🔍 Recherche du score pour <b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>...`);
-
-  let found = null;
-
-  // Chercher dans football-data.org (matchs d'hier + aujourd'hui, inclus FINISHED)
   if (FD_KEY) {
     try {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const today = new Date().toISOString().slice(0, 10);
       const d = await httpGet(`https://api.football-data.org/v4/matches?dateFrom=${yesterday}&dateTo=${today}`, { "X-Auth-Token": FD_KEY });
       const finished = (d.matches || []).filter(m => m.status === "FINISHED");
-      const homeN = normalizeTeamName(p.home);
-      const awayN = normalizeTeamName(p.away);
-      const sameTeam = (a, b) => a === b || a.includes(b) || b.includes(a);
       const match = finished.find(m => {
         const mh = normalizeTeamName(m.homeTeam?.name || "");
         const ma = normalizeTeamName(m.awayTeam?.name || "");
@@ -1046,23 +1038,19 @@ async function cmdCheckResult(chatId, autoApply = false) {
         const sa = match.score?.fullTime?.away ?? match.score?.fullTime?.awayTeam ?? null;
         if (sh !== null && sa !== null) {
           const reversed = normalizeTeamName(match.homeTeam?.name || "").includes(awayN) || normalizeTeamName(match.awayTeam?.name || "").includes(homeN);
-          found = { scoreHome: reversed ? sa : sh, scoreAway: reversed ? sh : sa, source: "football-data.org", competition: match.competition?.name };
+          return { scoreHome: reversed ? sa : sh, scoreAway: reversed ? sh : sa, source: "football-data.org", competition: match.competition?.name };
         }
       }
     } catch(e) { console.error("[checkresult] football-data:", e.message); }
   }
 
-  // Fallback : api-sports.io
-  if (!found && SPORTS_KEY) {
+  if (SPORTS_KEY) {
     try {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       const today = new Date().toISOString().slice(0, 10);
       for (const date of [today, yesterday]) {
         const d = await httpGet(`https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`, { "x-rapidapi-key": SPORTS_KEY, "x-rapidapi-host": "v3.football.api-sports.io" });
         const fixtures = d.response || [];
-        const homeN = normalizeTeamName(p.home);
-        const awayN = normalizeTeamName(p.away);
-        const sameTeam = (a, b) => a === b || a.includes(b) || b.includes(a);
         const match = fixtures.find(f => {
           const mh = normalizeTeamName(f.teams?.home?.name || "");
           const ma = normalizeTeamName(f.teams?.away?.name || "");
@@ -1073,13 +1061,58 @@ async function cmdCheckResult(chatId, autoApply = false) {
           const sa = match.goals?.away ?? null;
           if (sh !== null && sa !== null) {
             const reversed = normalizeTeamName(match.teams?.home?.name || "").includes(awayN);
-            found = { scoreHome: reversed ? sa : sh, scoreAway: reversed ? sh : sa, source: "api-sports.io", competition: match.league?.name };
-            break;
+            return { scoreHome: reversed ? sa : sh, scoreAway: reversed ? sh : sa, source: "api-sports.io", competition: match.league?.name };
           }
         }
       }
     } catch(e) { console.error("[checkresult] api-sports:", e.message); }
   }
+  return null;
+}
+
+// Déduit GAGNE/PERDU à partir du texte du pari et du score final.
+// IMPORTANT : les marchés over/under/btts/double-chance contiennent souvent
+// des chiffres ("2.5", "+2.5"...) qui matchaient à tort les anciens tests
+// bet.includes("1")/bet.includes("2") (ex: "Moins de 2.5 buts" → mal classé
+// comme "victoire extérieur" car il contient "2"). On teste donc en premier
+// les marchés spécifiques (over/under/btts/double chance/handicap), et on
+// ne teste 1/X/2 qu'en dernier recours, avec une correspondance stricte.
+function classifyAutoResult(betRaw, scoreHome, scoreAway, home) {
+  const bet = String(betRaw || "").toLowerCase();
+  const totalGoals = scoreHome + scoreAway;
+  if (/over\s*2[.,]5|plus\s*de\s*2[.,]?5?\s*buts|\+\s*2[.,]5/.test(bet)) {
+    return totalGoals > 2.5 ? "GAGNE" : "PERDU";
+  } else if (/under\s*2[.,]5|moins\s*de\s*(2[.,]?5?|3)\s*buts|-\s*2[.,]5/.test(bet)) {
+    return totalGoals < 2.5 ? "GAGNE" : "PERDU";
+  } else if (/\bbtts\b|les deux équipes marquent|both teams to score/.test(bet)) {
+    return (scoreHome > 0 && scoreAway > 0) ? "GAGNE" : "PERDU";
+  } else if (/\b1x\b|double chance.*(1|domicile).*(nul|x)/.test(bet)) {
+    return scoreHome >= scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bx2\b|double chance.*(nul|x).*(2|extérieur)/.test(bet)) {
+    return scoreAway >= scoreHome ? "GAGNE" : "PERDU";
+  } else if (/\b12\b/.test(bet)) {
+    return scoreHome !== scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bnul\b|\bdraw\b|\bmatch nul\b/.test(bet) || bet === "x") {
+    return scoreHome === scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bdomicile\b|\bhome\b|\b1\b/.test(bet) || (home && bet.includes(normalizeTeamName(home)))) {
+    return scoreHome > scoreAway ? "GAGNE" : "PERDU";
+  } else if (/\bextérieur\b|\baway\b|\b2\b/.test(bet)) {
+    return scoreAway > scoreHome ? "GAGNE" : "PERDU";
+  }
+  return null;
+}
+
+async function cmdCheckResult(chatId, autoApply = false) {
+  const data = loadPicks();
+  const p = data.currentPick;
+  if (!p?.home || p.home === "PAS DE PICK") { await reply(chatId, "Aucun pick actif à vérifier"); return; }
+  if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(String(p.status || "").toUpperCase())) {
+    await reply(chatId, `Pick déjà résolu : <b>${p.status}</b>`); return;
+  }
+
+  await reply(chatId, `🔍 Recherche du score pour <b>${escapeHtml(p.home)} vs ${escapeHtml(p.away)}</b>...`);
+
+  const found = await findFinalScoreForTeams(p.home, p.away);
 
   if (!found) {
     await reply(chatId, `⏳ Match pas encore terminé ou introuvable dans les APIs.\n\nTu peux mettre le score manuellement : <code>/setscore 1-0</code> puis <code>/win</code> ou <code>/lose</code>`);
@@ -1097,35 +1130,7 @@ async function cmdCheckResult(chatId, autoApply = false) {
     fs.writeFileSync("/var/touslesmatchs/live_score.json", JSON.stringify({ home: scoreHome, away: scoreAway, source }, null, 2));
   } catch {}
 
-  // Évaluer le résultat probable en fonction du pari.
-  // IMPORTANT : les marchés over/under/btts/double-chance contiennent souvent
-  // des chiffres ("2.5", "+2.5"...) qui matchaient à tort les anciens tests
-  // bet.includes("1")/bet.includes("2") (ex: "Moins de 2.5 buts" → mal classé
-  // comme "victoire extérieur" car il contient "2"). On teste donc en premier
-  // les marchés spécifiques (over/under/btts/double chance/handicap), et on
-  // ne teste 1/X/2 qu'en dernier recours, avec une correspondance stricte.
-  const bet = String(p.prono || p.bet || "").toLowerCase();
-  const totalGoals = scoreHome + scoreAway;
-  let autoResult = null;
-  if (/over\s*2[.,]5|plus\s*de\s*2[.,]?5?\s*buts|\+\s*2[.,]5/.test(bet)) {
-    autoResult = totalGoals > 2.5 ? "GAGNE" : "PERDU";
-  } else if (/under\s*2[.,]5|moins\s*de\s*(2[.,]?5?|3)\s*buts|-\s*2[.,]5/.test(bet)) {
-    autoResult = totalGoals < 2.5 ? "GAGNE" : "PERDU";
-  } else if (/\bbtts\b|les deux équipes marquent|both teams to score/.test(bet)) {
-    autoResult = (scoreHome > 0 && scoreAway > 0) ? "GAGNE" : "PERDU";
-  } else if (/\b1x\b|double chance.*(1|domicile).*(nul|x)/.test(bet)) {
-    autoResult = scoreHome >= scoreAway ? "GAGNE" : "PERDU";
-  } else if (/\bx2\b|double chance.*(nul|x).*(2|extérieur)/.test(bet)) {
-    autoResult = scoreAway >= scoreHome ? "GAGNE" : "PERDU";
-  } else if (/\b12\b/.test(bet)) {
-    autoResult = scoreHome !== scoreAway ? "GAGNE" : "PERDU";
-  } else if (/\bnul\b|\bdraw\b|\bmatch nul\b/.test(bet) || bet === "x") {
-    autoResult = scoreHome === scoreAway ? "GAGNE" : "PERDU";
-  } else if (/\bdomicile\b|\bhome\b|\b1\b/.test(bet) || bet.includes(normalizeTeamName(p.home))) {
-    autoResult = scoreHome > scoreAway ? "GAGNE" : "PERDU";
-  } else if (/\bextérieur\b|\baway\b|\b2\b/.test(bet) || bet.includes(normalizeTeamName(p.away))) {
-    autoResult = scoreAway > scoreHome ? "GAGNE" : "PERDU";
-  }
+  const autoResult = classifyAutoResult(p.prono || p.bet, scoreHome, scoreAway, p.home);
 
   // Mode automatique (cron) : si le résultat est déduit avec confiance, on l'applique
   // directement (archive + publication + email) au lieu d'attendre une confirmation
@@ -2118,6 +2123,7 @@ async function cmdHelp(chatId) {
 /publishresult — Publier le résultat validé sur les canaux
 /expiring — Lister les abonnements expirant dans les 7 prochains jours
 /checkresult — Vérifier le score final via API et proposer /win ou /lose
+/resolvehistory — Forcer la résolution des picks archivés restés "EN ATTENTE"
 /preview — Prévisualiser les messages avant publication (gratuit + premium)
 /publish — Publier sur le canal Telegram public (gratuit)
 /publishpremium — Publier sur le canal Telegram Elite
@@ -2262,6 +2268,7 @@ async function handleCommandLine(chatId, text) {
     case "/setpick":  return cmdSetPick(chatId, args);
     case "/setscore": return cmdSetScore(chatId, args);
     case "/checkresult":    return cmdCheckResult(chatId);
+    case "/resolvehistory": return cmdResolveHistory(chatId);
     case "/expiring":       return cmdExpiring(chatId);
     case "/win":             return cmdResult(chatId, "GAGNE");
     case "/lose":            return cmdResult(chatId, "PERDU");
@@ -2440,13 +2447,21 @@ async function maybeAutoCheckResult() {
   const now = parisNowParts();
   const timeStr = p.time || "";
   const timeMatch = timeStr.match(/(\d{1,2})[h:H](\d{2})?/);
-  if (!timeMatch) return; // Pas d'heure définie, on ne peut pas savoir
-  const matchHour = parseInt(timeMatch[1]);
-  const matchMin = parseInt(timeMatch[2] || "0");
-  const endHour = matchHour + 2; // Match + 2h = fin probable avec débordements
-  const currentMinutes = now.hour * 60 + now.minute;
-  const endMinutes = endHour * 60 + matchMin;
-  if (currentMinutes < endMinutes) return; // Match pas encore terminé
+  if (timeMatch) {
+    const matchHour = parseInt(timeMatch[1]);
+    const matchMin = parseInt(timeMatch[2] || "0");
+    const endHour = matchHour + 2; // Match + 2h = fin probable avec débordements
+    const currentMinutes = now.hour * 60 + now.minute;
+    const endMinutes = endHour * 60 + matchMin;
+    if (currentMinutes < endMinutes) return; // Match pas encore terminé
+  } else if (p.date && p.date >= now.date) {
+    // Pas d'heure exploitable ET le pick date d'aujourd'hui : on ne peut pas
+    // savoir si le match est fini, on attend. Si le pick date d'hier ou avant,
+    // on tente quand même la vérification (mieux que de rester bloqué à vie —
+    // c'est ce qui arrivait avant : un pick sans heure valide n'était PLUS
+    // JAMAIS revérifié).
+    return;
+  }
 
   // Ne pas relancer si déjà vérifié dans les 90 dernières minutes
   const stateFile = path.join(REPO, "data/hermes_autoresult.json");
@@ -2464,6 +2479,71 @@ async function maybeAutoCheckResult() {
 
   console.log(`[auto-result] Vérification score pour ${p.home} vs ${p.away}`);
   await cmdCheckResult(ADMIN_CHAT, true).catch(e => console.error("[auto-result]", e.message));
+}
+
+async function cmdResolveHistory(chatId) {
+  await reply(chatId, "🔍 Vérification des picks archivés encore en attente...");
+  const before = (loadPicks().history || []).filter(r => Array.isArray(r) && !["GAGNE","PERDU","WIN","LOSS"].includes(String(r[5]||"").toUpperCase())).length;
+  await resolveStaleHistoryPicks();
+  const after = (loadPicks().history || []).filter(r => Array.isArray(r) && !["GAGNE","PERDU","WIN","LOSS"].includes(String(r[5]||"").toUpperCase())).length;
+  const resolved = before - after;
+  if (resolved > 0) {
+    await reply(chatId, `✅ ${resolved} pick(s) résolu(s). Détail envoyé ci-dessus.`);
+  } else {
+    await reply(chatId, `ℹ️ Rien à résoudre pour l'instant (${after} en attente — matchs pas encore terminés ou introuvables dans les APIs).`);
+  }
+}
+
+// Rattrapage des picks ARCHIVÉS dans l'historique restés "EN ATTENTE".
+// PROBLÈME CORRIGÉ : maybeAutoCheckResult() ne vérifiait QUE le pick du jour
+// (data.currentPick). Dès qu'un nouveau pick était publié, l'ancien partait
+// dans data.history (archiveCurrentPick) et n'était PLUS JAMAIS revérifié —
+// il restait bloqué "EN ATTENTE" pour toujours, même des semaines après.
+// Cette fonction balaie l'historique et résout ceux qui sont réellement finis.
+let historyResolveRunning = false;
+async function resolveStaleHistoryPicks() {
+  if (historyResolveRunning) return;
+  historyResolveRunning = true;
+  try {
+    const data = loadPicks();
+    if (!Array.isArray(data.history) || !data.history.length) return;
+    const now = parisNowParts();
+    let resolvedCount = 0;
+    const resolvedList = [];
+
+    for (const row of data.history) {
+      if (!Array.isArray(row)) continue; // format inattendu, on ignore
+      const [date, matchName, prono, cote, , status] = row;
+      if (["GAGNE", "PERDU", "WIN", "LOSS"].includes(String(status || "").toUpperCase())) continue;
+      if (!date || date >= now.date) continue; // pas d'hier ou plus ancien → on laisse le temps
+      const parts = String(matchName || "").split(" vs ");
+      if (parts.length !== 2) continue;
+      const [home, away] = parts.map(s => s.trim());
+      if (!home || !away) continue;
+
+      const found = await findFinalScoreForTeams(home, away);
+      if (!found) continue;
+      const autoResult = classifyAutoResult(prono, found.scoreHome, found.scoreAway, home);
+      if (!autoResult) continue;
+
+      row[4] = `${found.scoreHome}-${found.scoreAway}`;
+      row[5] = autoResult;
+      resolvedCount++;
+      resolvedList.push(`${autoResult === "GAGNE" ? "✅" : "❌"} ${matchName} — ${row[4]} (${prono})`);
+    }
+
+    if (resolvedCount > 0) {
+      savePicks(data);
+      if (ADMIN_CHAT) {
+        await reply(ADMIN_CHAT, `🔄 <b>Rattrapage historique</b> — ${resolvedCount} pick(s) archivé(s) résolu(s) :\n\n${resolvedList.join("\n")}`).catch(() => {});
+      }
+      console.log(`[history-catchup] ${resolvedCount} picks résolus`);
+    }
+  } catch (e) {
+    console.error("[history-catchup]", e.message);
+  } finally {
+    historyResolveRunning = false;
+  }
 }
 
 // ── Long polling loop ─────────────────────────────────────────────────────────
@@ -2493,6 +2573,10 @@ async function poll() {
   setInterval(() => {
     scanStrongSignals().catch(e => console.error("strong signals:", e.message));
   }, STRONG_ALERTS_INTERVAL_MS);
+  setTimeout(() => resolveStaleHistoryPicks().catch(e => console.error("history-catchup:", e.message)), 30 * 1000);
+  setInterval(() => {
+    resolveStaleHistoryPicks().catch(e => console.error("history-catchup:", e.message));
+  }, 60 * 60 * 1000);
 
   while (true) {
     try {
