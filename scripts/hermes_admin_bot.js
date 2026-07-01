@@ -2509,14 +2509,16 @@ async function maybeAutoCheckResult() {
     return;
   }
 
-  // Ne pas relancer si déjà vérifié dans les 90 dernières minutes
+  // Ne pas relancer trop souvent — 30 min entre deux tentatives (au lieu de
+  // 90) pour que le résultat soit intégré aux stats/Telegram plus vite une
+  // fois le match terminé, sans spammer les APIs.
   const stateFile = path.join(REPO, "data/hermes_autoresult.json");
   let state = {};
   try { state = JSON.parse(fs.readFileSync(stateFile, "utf8")); } catch {}
   const pickKey = `${p.home}|${p.away}|${p.date}`;
   if (state.lastCheck === pickKey && state.checkedAt) {
     const minsSince = (Date.now() - new Date(state.checkedAt).getTime()) / 60000;
-    if (minsSince < 90) return;
+    if (minsSince < 30) return;
   }
 
   state.lastCheck = pickKey;
@@ -2622,7 +2624,7 @@ async function poll() {
   setTimeout(() => resolveStaleHistoryPicks().catch(e => console.error("history-catchup:", e.message)), 30 * 1000);
   setInterval(() => {
     resolveStaleHistoryPicks().catch(e => console.error("history-catchup:", e.message));
-  }, 60 * 60 * 1000);
+  }, 30 * 60 * 1000);
 
   while (true) {
     try {
