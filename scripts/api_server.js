@@ -2671,8 +2671,12 @@ async function resolveStalePredictions() {
         SELECT home, away, created_at FROM agent_predictions WHERE outcome IS NULL
         UNION ALL
         SELECT home, away, created_at FROM agent_market_predictions WHERE outcome IS NULL
+        UNION ALL
+        SELECT home, away, created_at FROM concile_analyses WHERE outcome IS NULL
+        UNION ALL
+        SELECT home, away, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-3 hours')
-      LIMIT 80
+      LIMIT 120
     `).all();
     if (!stale.length) return;
 
