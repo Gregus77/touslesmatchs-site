@@ -767,12 +767,15 @@ Rugby :
 - Ne pas Over 3.5 si moins de 3.5 buts/match combiné pour les deux équipes
 - Ne jamais parier si edge négatif ou < 2%, même sur un match "sûr"
 
-━━━ BARÈME DE NOTATION ━━━
+━━━ BARÈME DE NOTATION (échelle réaliste, mais un pari exceptionnel doit pouvoir monter haut) ━━━
 - Commence à 5.0
 - +0.5 par avantage concret : forme récente, H2H favorable, enjeu vital, classement
 - +0.5 si domicile en championnat national (jamais terrain neutre)
 - +1.0 si probabilité estimée > 70% avec edge > 10%
+- +1.5 si probabilité estimée > 78% ET edge > 15% ET au moins 3 signaux concordants (forme + H2H + stats buts par ex.) → note jusqu'à 9.0-9.5
+- +0.5 supplémentaire pour un marché statistiquement très solide (ex: Under 2.5 quand les 2 équipes tournent sous 1.2 but/match)
 - -1.0 si terrain neutre ou contexte très incertain
+- N'inflige JAMAIS une note haute sans données concrètes qui la justifient (pas de 9/10 "au feeling")
 - Publie UNIQUEMENT si note ≥ 6.5
 
 RÉPONDS EN JSON STRICT :

@@ -513,6 +513,18 @@ async function loadMatches(force){
       if(PICK_MATCH && PICK_MATCH.status === 'upcoming' && !pickMatchInList(allMatches)){
         allMatches.unshift(PICK_MATCH);
       }
+      // Classement : matchs épinglés en haut, puis compétitions fiables,
+      // amicaux / ligues peu fiables tout en bas de la page.
+      allMatches = allMatches
+        .map((m, i) => ({ m, i }))
+        .sort((a, b) => {
+          const pinA = a.m.pinnedSignal ? 0 : 1, pinB = b.m.pinnedSignal ? 0 : 1;
+          if (pinA !== pinB) return pinA - pinB;
+          const lowA = a.m.lowTrustCompetition ? 1 : 0, lowB = b.m.lowTrustCompetition ? 1 : 0;
+          if (lowA !== lowB) return lowA - lowB;
+          return a.i - b.i; // tri stable
+        })
+        .map(x => x.m);
       lastUpdate = new Date();
       document.getElementById('match-count-pill').textContent = allMatches.length + ' match' + (allMatches.length>1?'s':'') + ' en direct';
     } else {
