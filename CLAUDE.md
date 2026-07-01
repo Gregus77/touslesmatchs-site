@@ -155,6 +155,27 @@ Match en cours (score + minute + stats live)
 
 ## LOG DES MODIFICATIONS RÉCENTES
 
+### Claude Code — 2026-07-01 — Session longue (HANDOFF pour reprise nouvelle conversation)
+**Contexte : session très longue. Tout est commité/poussé sur `claude/happy-bell-h9zj83`. Grégory déploie via terminal Hostinger. Ne PAS faire dépenser de tokens inutilement, agir en un seul jet quand possible.**
+
+**FAIT cette session (tout poussé) :**
+- **Stripe webhook** : `express.json()` global cassait la vérif signature → client payait sans recevoir code/email. `/stripe/webhook` exclu du parser JSON global. ⚠️ Reste côté Grégory : créer le webhook dans Stripe (`https://www.touslesmatchs.com/stripe/webhook`, event `checkout.session.completed`) + `STRIPE_WEBHOOK_SECRET` dans .env + **RÉVOQUER la clé sk_live exposée en chat** (toujours pas fait — URGENT sécurité).
+- **API-SPORTS PRO pris (19$/mois)** par Grégory le 01/07. Débloque toutes compétitions + cotes réelles + 7500 req/j (avant : quota 100/j épuisé = cause majeure des "pas à jour"). Même clé, rien à recâbler.
+- **Fix en-tête api-sports** : `findFinalScoreForTeams` (repli vérif score) utilisait `x-rapidapi-key` sur l'endpoint direct → rejeté → picks bloqués. Corrigé en `x-apisports-key`.
+- **Résolution unifiée** : le cron `resolveStalePredictions` balaie désormais les 4 tables (agent_predictions, agent_market_predictions, concile_analyses, shadow_evals) → tout se résout en même temps. `resolveShadowOutcomes` matchait par match_key incompatible → réécrit par équipes (le banc d'essai n'était jamais résolu).
+- **Picks archivés jamais revérifiés** : `maybeAutoCheckResult` ne vérifiait que currentPick. Ajout `resolveStaleHistoryPicks()` (+ commande `/resolvehistory`) qui rattrape l'historique bloqué "EN ATTENTE". Délais resserrés 90→30 min.
+- **Stratégie ROI data-driven** (hermes_learn.js) : Over/Under séparés (avant fusionnés), `computeMarketStrategy` classe par ROI réel (min 10 picks), `strategyDirective` injectée dans chaque prompt Hermès → priorise le marché n°1 en ROI, s'auto-adapte. Tracking par fournisseur IA. `/learn` affiche classement ROI marché/compétition/cotes/IA. Alerte auto si le marché rentable change. Pondération des agents Concile par winrate réel. ⚠️ Limite : "84% Under 2.5" vient de la matrice IA Concile (agent_market_predictions), PAS de l'historique Hermès (11 picks seulement) → la stratégie Hermès met du temps à basculer. Piste : brancher la matrice Concile sur la stratégie Hermès (proposé, pas encore fait, en attente accord Grégory + cotes réelles PRO).
+- **Multi-marchés étendus au banc d'essai** : toutes les IA (pas juste les 4 Concile) donnent avis par marché.
+- **Signaux forts** : plafond 3→8/jour (couvrir la journée, pas juste la nuit). Résultat des signaux Free posté auto (preuve sociale "signal GAGNÉ" + CTA Premium, perdants postés aussi par transparence/légal — pari exact jamais révélé).
+- **Tennis ATP** ajouté au flux live. Football/basket/hockey/baseball déjà branchés (je m'étais trompé en disant le contraire).
+- **Logo Hermès Admin** créé (PNG 1024², H ailé médaillon) → BotFather /setuserpic.
+- Autres : email hero masqué si connecté, "4+1" cohérent, drapeaux Telegram, splash animé, SEO JSON-LD, page admin (banc d'essai + matrice + bouton rattrapage), image OpenAI pause propre quota, lien Telegram TikTok corrigé.
+
+**À FAIRE / EN ATTENTE :**
+- Grégory : révoquer clé sk_live (URGENT), créer webhook Stripe + secret.
+- Proposition en attente : brancher cotes réelles PRO → ROI par bookmaker + stratégie Hermès sur matrice Concile (dire "vas-y les cotes").
+- Déployer après chaque session : `cd /opt/touslesmatchs && git fetch origin claude/happy-bell-h9zj83 && git reset --hard origin/claude/happy-bell-h9zj83 && docker compose up -d --build site api hermes-admin`
+
 ### Claude Code — 2026-06-22
 - Fix Concile terrain neutre : "Victoire domicile" → "Victoire [équipe]" pour Coupe du Monde
 - Fix Over 2.5 : retiré si projection < 2.0 buts après 45'
