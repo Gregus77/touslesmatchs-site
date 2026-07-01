@@ -1547,6 +1547,26 @@ Réponds en JSON pur (pas de markdown):
       const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
 
+      // Détecter une réponse VIDE (l'IA n'a rien renvoyé → quota épuisé, clé
+      // manquante, ou erreur API). Avant, le code fabriquait un faux
+      // "Victoire domicile 70%" (BET_TYPES[0] + défauts) → toutes les IA
+      // semblaient dire la même chose sans analyser. On le signale désormais.
+      const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
+      if (!isChief && !modelGaveBet) {
+        console.error(`[concile] agent ${agentNames[i].name} : réponse vide (IA non joignable — quota/clé)`);
+        agentResults.push({
+          name: agentNames[i].name,
+          icon: agentNames[i].icon,
+          bet: "—",
+          confidence: null,
+          raison: "⚠️ IA non joignable (quota épuisé ou clé manquante) — non comptée dans le verdict.",
+          isChief: false,
+          failed: true,
+        });
+        if (i < agentNames.length - 1) await new Promise((r) => setTimeout(r, 300));
+        continue;
+      }
+
       const rawBet = parsed.bet || availableBets[0];
       // Avis multi-marchés (mode économe) : on garde ce que pense l'agent sur
       // chaque marché, séparément du pari envoyé au Concile.
