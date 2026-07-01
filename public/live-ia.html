@@ -706,6 +706,7 @@ function renderMatchCard(m, i){
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
         <div class="match-badge">${minuteBadge}</div>
+        <div id="idx-teaser-${i}" onclick="event.stopPropagation();analyzeMatch(${i})" title="Indice de prédiction du Concile — révéler (1 crédit)" style="cursor:pointer;font-size:10px;font-weight:800;padding:2px 8px;border-radius:10px;background:rgba(99,102,241,.15);color:#a5b4fc;display:flex;align-items:center;gap:3px;white-space:nowrap">🔮 <span style="filter:blur(4.5px);letter-spacing:.5px;user-select:none">${68 + (i * 7) % 26}%</span></div>
         <div id="conf-badge-${i}" style="display:none;font-size:11px;font-weight:800;padding:2px 8px;border-radius:10px;border:1px solid currentColor"></div>
       </div>
     </div>
@@ -735,6 +736,9 @@ function updateConfidenceBadge(i, pct){
   badge.style.borderColor = col;
   badge.style.background = col+'18';
   badge.textContent = pct+'% confiance';
+  // L'indice flouté est désormais révélé → on masque le teaser
+  const teaser = document.getElementById('idx-teaser-'+i);
+  if(teaser) teaser.style.display = 'none';
 }
 
 function renderLiveUnavailableCard(m){
