@@ -1443,12 +1443,17 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
 
   for (let i = 0; i < agentNames.length; i++) {
     const isChief = i === 4;
+    // Pondération des agents : le poids reflète leur winrate réel (recalculé
+    // à chaque analyse à partir de agent_predictions, donc toujours à jour —
+    // pas besoin d'attendre un cron hebdomadaire). Neutre (50%) tant que
+    // l'échantillon est trop faible pour être significatif.
     const previousVotes = isChief ? agentResults.map((a) => {
       const p = agentPerf[a.name];
       const resolved = p ? p.resolved : 0;
+      const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
       const perfNote = resolved >= 5
-        ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus)`
-        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser)` : ` — (sans historique)`;
+        ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
+        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
       return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
     }).join("\n") : "";
 
@@ -1461,7 +1466,7 @@ Votes des agents avec leur fiabilité historique:
 ${previousVotes}
 
 Synthétise ces votes en tenant compte de :
-1. La fiabilité historique de chaque agent (winrate)
+1. Le POIDS de chaque agent (indiqué ci-dessus, basé sur son winrate réel) : privilégie fortement les votes des agents à POIDS ≥60%, et ignore largement ceux à POIDS <35% sauf si aucun agent mieux noté ne couvre ce marché
 2. Les contraintes mathématiques du score live
 3. Tes connaissances sur ${match.home} et ${match.away}
 4. Les objections des agents minoritaires: explique pourquoi tu les acceptes ou les rejettes

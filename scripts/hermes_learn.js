@@ -60,6 +60,7 @@ function normalizePick(raw) {
   h.cote = parseFloat(h.cote) || 0;
   h.score = cleanText(h.score);
   h.status = normalizeStatus(h.status);
+  h.provider = cleanText(h.provider);
   if (!isUsefulKey(h.league)) h.league = inferLeague(h);
   return h;
 }
@@ -71,13 +72,13 @@ function loadHistory() {
     const hist = raw.history || [];
 
     // Normaliser les deux formats possibles :
-    // Format tableau : ["date","match","prono","cote","score","status","sport"]
-    // Format objet  : { date, home, away, prono, cote, score, status, league }
+    // Format tableau : ["date","match","prono","cote","score","status","sport","league","provider"]
+    // Format objet  : { date, home, away, prono, cote, score, status, league, provider }
     return hist.map(h => {
       if (Array.isArray(h)) {
-        const [date, match, prono, cote, score, status, sport, league] = h;
+        const [date, match, prono, cote, score, status, sport, league, provider] = h;
         const parts = (match || "").split(" vs ");
-        return normalizePick({ date, sport, home: parts[0], away: parts[1], league, prono, cote, score, status });
+        return normalizePick({ date, sport, home: parts[0], away: parts[1], league, prono, cote, score, status, provider });
       }
       return normalizePick(h);
     }).filter(isResolvedPick);
@@ -192,10 +193,15 @@ function getCoteRange(h) {
 
 function getPronoType(h) {
   const p = (h.prono || "").toLowerCase();
+  // IMPORTANT : Over et Under DOIVENT être des catégories séparées — un marché
+  // peut être excellent (Under 2.5) pendant que l'autre est médiocre (Over 2.5).
+  // Les fusionner sous "Total buts" rendait impossible de détecter ce genre
+  // d'écart, qui est pourtant l'insight clé de la stratégie data-driven.
+  if (/under|moins de/.test(p) && /but/.test(p)) return "Under (moins de X buts)";
+  if (/over|plus de/.test(p) && /but/.test(p)) return "Over (plus de X buts)";
   if (p.includes("1x") || p.includes("double chance") || p.includes("dc")) return "Double chance (1X/X2)";
   if (p.includes("victoire") || p.includes("vainqueur") || p.includes(" 1") || p.includes(" 2")) return "Victoire directe (1/2)";
   if (p.includes("nul") || p.includes("draw") || p.includes(" x")) return "Match nul (X)";
-  if (p.includes("plus de") || p.includes("over") || p.includes("buts")) return "Total buts (Over/Under)";
   if (p.includes("les deux") || p.includes("btts")) return "Les deux équipes marquent";
   if (p.includes("mi-temps") || p.includes("première")) return "Mi-temps";
   return "Autre";
@@ -224,6 +230,41 @@ function topPatterns(byField, n = 3) {
   return { best, worst };
 }
 
+// ── Stratégie data-driven : marché le plus rentable en ROI réel ──────────────
+// L'objectif n'est pas "le plus beau pronostic" mais l'argent gagné sur la
+// durée : on classe par ROI (pas juste winrate), avec un échantillon minimum
+// pour éviter de sur-réagir à 3-4 picks chanceux.
+const STRATEGY_MIN_SAMPLE = 10;
+function computeMarketStrategy(byProno, minSample = STRATEGY_MIN_SAMPLE) {
+  const qualified = byProno.filter(g => g.total >= minSample && g.roiPct !== null);
+  if (!qualified.length) return null;
+  const ranked = [...qualified].sort((a, b) => b.roiPct - a.roiPct);
+  const best = ranked[0];
+  const toDisable = ranked.filter(g => g.roiPct < 0);
+  return { ranked, best, toDisable };
+}
+
+// Texte injecté dans le prompt Hermès : priorise le marché n°1 en ROI réel,
+// évite ceux qui perdent de l'argent, et s'auto-adapte si les stats changent
+// (pas besoin de coder "Under 2.5" en dur — le marché prioritaire change tout
+// seul dès que les données montrent qu'un autre marché rapporte plus).
+function strategyDirective(memory) {
+  if (!memory) return "";
+  const strat = computeMarketStrategy(memory.by_prono_type);
+  if (!strat) {
+    return `\n━━━ STRATÉGIE DATA-DRIVEN ━━━\nPas encore assez de données par marché (minimum ${STRATEGY_MIN_SAMPLE} picks résolus par catégorie) pour prioriser un marché. Suis les règles générales ci-dessus.\n`;
+  }
+  const { best, toDisable } = strat;
+  let txt = `\n━━━ STRATÉGIE DATA-DRIVEN (ROI réel sur données vérifiées — objectif : l'argent, pas le plus beau pronostic) ━━━\n`;
+  txt += `🏆 MARCHÉ PRIORITAIRE ACTUEL : "${best.key}" — ROI ${best.roiPct >= 0 ? "+" : ""}${best.roiPct}%, winrate ${best.winrate}% sur ${best.total} picks résolus.\n`;
+  txt += `→ RÈGLE : si un match éligible aujourd'hui remplit les critères de qualité (probabilité ≥58%, edge positif) pour "${best.key}", CHOISIS-LE en priorité absolue, même si un autre marché semble "plus évident" sur ce match précis.\n`;
+  if (toDisable.length) {
+    txt += `⛔ MARCHÉS À ÉVITER (ROI négatif sur échantillon suffisant) : ${toDisable.map(w => `${w.key} (ROI ${w.roiPct}%, ${w.total} picks)`).join(", ")}.\n`;
+    txt += `→ Ne propose un marché de cette liste QUE si aucun match n'est éligible pour "${best.key}" aujourd'hui, ET seulement si ses statistiques réelles sont redevenues meilleures que celles ci-dessus.\n`;
+  }
+  return txt;
+}
+
 // ── Générer le profil mémoire ─────────────────────────────────────────────────
 function generateMemory() {
   const history = loadAllResolvedHistory();
@@ -237,9 +278,11 @@ function generateMemory() {
   const byCote      = analyzeByField(history, getCoteRange);
   const byProno     = analyzeByField(history, getPronoType);
   const byLeague    = analyzeByField(history, h => h.league);
+  const byProvider  = analyzeByField(history, h => h.provider);
   const errors      = recentErrors(history);
   const coterPat    = topPatterns(byCote);
   const pronoPat    = topPatterns(byProno);
+  const marketStrategy = computeMarketStrategy(byProno);
 
   // Règles déduites automatiquement
   const rules = [];
@@ -288,7 +331,13 @@ function generateMemory() {
     by_cote_range: byCote,
     by_prono_type: byProno,
     by_league: byLeague.slice(0, 10),
+    by_provider: byProvider,
     recent_errors: errors,
+    market_strategy: marketStrategy ? {
+      best: marketStrategy.best,
+      to_disable: marketStrategy.toDisable,
+      min_sample: STRATEGY_MIN_SAMPLE,
+    } : null,
   };
 
   // Sauvegarder
@@ -319,10 +368,48 @@ function formatForTelegram(memory) {
     msg += "\n";
   }
 
+  if (memory.market_strategy?.best) {
+    const b = memory.market_strategy.best;
+    msg += `🏆 <b>Marché prioritaire actuel (ROI réel) :</b>\n`;
+    msg += `  <b>${b.key}</b> — ROI ${b.roiPct >= 0 ? '+' : ''}${b.roiPct}%, winrate ${b.winrate}% sur ${b.total} picks\n`;
+    if (memory.market_strategy.to_disable.length) {
+      msg += `  ⛔ À désactiver (ROI négatif) : ${memory.market_strategy.to_disable.map(w => `${w.key} (${w.roiPct}%)`).join(", ")}\n`;
+    }
+    msg += "\n";
+  }
+
   if (memory.by_prono_type.length > 0) {
-    msg += `🎯 <b>Par type de pari :</b>\n`;
-    memory.by_prono_type.slice(0, 5).forEach(p => {
-      msg += `  ${p.key} : ${p.winrate}% (${p.total} picks)\n`;
+    msg += `🎯 <b>Classement par type de pari (ROI) :</b>\n`;
+    [...memory.by_prono_type].sort((a, b) => (b.roiPct ?? -999) - (a.roiPct ?? -999)).slice(0, 8).forEach(p => {
+      const roi = p.roiPct !== null ? `${p.roiPct >= 0 ? '+' : ''}${p.roiPct}%` : 'N/A';
+      msg += `  ${p.key} : ROI ${roi} · ${p.winrate}% (${p.total} picks)\n`;
+    });
+    msg += "\n";
+  }
+
+  if (memory.by_league.length > 0) {
+    msg += `🏆 <b>Compétitions les plus rentables :</b>\n`;
+    [...memory.by_league].sort((a, b) => (b.roiPct ?? -999) - (a.roiPct ?? -999)).slice(0, 5).forEach(l => {
+      const roi = l.roiPct !== null ? `${l.roiPct >= 0 ? '+' : ''}${l.roiPct}%` : 'N/A';
+      msg += `  ${l.key} : ROI ${roi} · ${l.winrate}% (${l.total} picks)\n`;
+    });
+    msg += "\n";
+  }
+
+  if (memory.by_cote_range.length > 0) {
+    msg += `💰 <b>Plages de cotes les plus rentables :</b>\n`;
+    [...memory.by_cote_range].sort((a, b) => (b.roiPct ?? -999) - (a.roiPct ?? -999)).forEach(c => {
+      const roi = c.roiPct !== null ? `${c.roiPct >= 0 ? '+' : ''}${c.roiPct}%` : 'N/A';
+      msg += `  ${c.key} : ROI ${roi} · ${c.winrate}% (${c.total} picks)\n`;
+    });
+    msg += "\n";
+  }
+
+  if (memory.by_provider.length > 0) {
+    msg += `🤖 <b>IA les plus performantes (pick officiel) :</b>\n`;
+    [...memory.by_provider].sort((a, b) => (b.roiPct ?? -999) - (a.roiPct ?? -999)).forEach(pr => {
+      const roi = pr.roiPct !== null ? `${pr.roiPct >= 0 ? '+' : ''}${pr.roiPct}%` : 'N/A';
+      msg += `  ${pr.key} : ROI ${roi} · ${pr.winrate}% (${pr.total} picks)\n`;
     });
     msg += "\n";
   }
@@ -345,4 +432,11 @@ if (require.main === module) {
   }
 }
 
-module.exports = { generateMemory, formatForTelegram, loadHistory, loadImprovementHistory, loadAllResolvedHistory };
+module.exports = {
+  generateMemory, formatForTelegram, loadHistory, loadImprovementHistory, loadAllResolvedHistory,
+  computeMarketStrategy, strategyDirective, STRATEGY_MIN_SAMPLE,
+};
+
+// Limite honnête : les bookmakers ne sont pas trackés car Hermès estime une
+// cote générique par marché, sans choisir un bookmaker précis pour chaque
+// pick — impossible de calculer un ROI par bookmaker sans cette donnée.

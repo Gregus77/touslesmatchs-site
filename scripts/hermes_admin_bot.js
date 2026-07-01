@@ -390,7 +390,8 @@ function historyRowFromPick(pick) {
     pick.score || "",
     pick.status || "EN ATTENTE",
     pick.sport || "Football",
-    pick.league || pick.competition || ""
+    pick.league || pick.competition || "",
+    pick.provider || ""
   ];
 }
 
@@ -651,7 +652,13 @@ function memoryBlock() {
   if (!m) return "";
   const rules = (m.rules_derived || []).join("\n");
   const stats = m.general ? `Winrate global : ${m.general.winrate}% sur ${m.picks_analysed} picks analysés` : "";
-  return `\nMÉMOIRE HERMÈS (${m.picks_analysed} picks analysés) :\n${stats}\nRÈGLES APPRISES :\n${rules}\n`;
+  let block = `\nMÉMOIRE HERMÈS (${m.picks_analysed} picks analysés) :\n${stats}\nRÈGLES APPRISES :\n${rules}\n`;
+  try {
+    delete require.cache[require.resolve("./hermes_learn.js")];
+    const { strategyDirective } = require("./hermes_learn.js");
+    block += strategyDirective(m);
+  } catch (e) { console.error("[memoryBlock] strategyDirective:", e.message); }
+  return block;
 }
 
 async function refreshHermesMemory(chatId, reason = "resultat") {
@@ -880,6 +887,7 @@ async function runAnalyse(chatId) {
     status: "EN ATTENTE",
     score: "",
     source: "hermes",
+    provider, // DeepSeek ou Groq — pour les stats de performance par IA
     updatedAt: new Date().toISOString(),
     publishedAt: new Date().toISOString(),
     sourceMatchId: p.sourceMatchId || p.fixtureId || null,
@@ -2009,6 +2017,43 @@ function saveDailyStrategyState(state) {
   } catch {}
 }
 
+const STRATEGY_WATCH_FILE = path.join(REPO, "data/hermes_strategy_watch.json");
+function loadStrategyWatchState() {
+  try { return JSON.parse(fs.readFileSync(STRATEGY_WATCH_FILE, "utf8")); } catch { return {}; }
+}
+function saveStrategyWatchState(state) {
+  try {
+    fs.mkdirSync(path.dirname(STRATEGY_WATCH_FILE), { recursive: true });
+    fs.writeFileSync(STRATEGY_WATCH_FILE, JSON.stringify(state, null, 2), "utf8");
+  } catch {}
+}
+
+// Détecte si le marché le plus rentable a changé depuis la dernière fois et
+// alerte Grégory — "Évolution permanente" : Hermès n'a pas besoin qu'on lui
+// dise de changer de stratégie, il le fait tout seul dès que les données le
+// justifient (voir strategyDirective, injectée dans chaque prompt de pick).
+async function checkMarketStrategyShift(chatId) {
+  try {
+    delete require.cache[require.resolve("./hermes_learn.js")];
+    const { generateMemory, computeMarketStrategy } = require("./hermes_learn.js");
+    const memory = generateMemory();
+    if (!memory) return;
+    const strat = computeMarketStrategy(memory.by_prono_type);
+    if (!strat) return;
+
+    const state = loadStrategyWatchState();
+    const newBest = strat.best.key;
+    if (state.currentBest && state.currentBest !== newBest && chatId) {
+      await reply(chatId, `📈 <b>Changement de stratégie détecté</b>\n\nLe marché le plus rentable n'est plus « <b>${escapeHtml(state.currentBest)}</b> » mais « <b>${escapeHtml(newBest)}</b> » (ROI ${strat.best.roiPct >= 0 ? "+" : ""}${strat.best.roiPct}%, ${strat.best.total} picks résolus).\n\nHermès va désormais le prioriser automatiquement dans ses prochains picks.`).catch(() => {});
+    }
+    if (state.currentBest !== newBest) {
+      state.currentBest = newBest;
+      state.updatedAt = new Date().toISOString();
+      saveStrategyWatchState(state);
+    }
+  } catch (e) { console.error("[strategy-watch]", e.message); }
+}
+
 function loadStrongAlertsState() {
   try {
     const data = JSON.parse(fs.readFileSync(STRONG_ALERTS_FILE, "utf8"));
@@ -2097,6 +2142,7 @@ async function maybeRunDailyStrategy() {
   saveDailyStrategyState({ lastRunDate: now.date, startedAt: new Date().toISOString() });
   try {
     await cmdStrategy(ADMIN_CHAT);
+    await checkMarketStrategyShift(ADMIN_CHAT);
     saveDailyStrategyState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: true });
   } catch (e) {
     saveDailyStrategyState({ lastRunDate: now.date, finishedAt: new Date().toISOString(), ok: false, error: e.message });
