@@ -1,3 +1,11 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install
+COPY public/ public/
+COPY src/ src/
+RUN npm run build
+
 FROM caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
-COPY public /srv
+COPY --from=build /app/build /srv
