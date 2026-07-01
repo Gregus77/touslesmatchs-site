@@ -314,6 +314,7 @@ function parseShadowResponse(text) {
   const betMatch = t.match(/(?:PARI|BET|PRONOSTIC)\s*:\s*([^\n|]+)/i);
   const confMatch = t.match(/(?:CONFIANCE|CONFIDENCE)\s*:\s*(\d+)/i);
   const raisonMatch = t.match(/(?:RAISON|REASON|POURQUOI)\s*:\s*([^\n]+)/i);
+  const marchesMatch = t.match(/MARCHES\s*:\s*([^\n]+)/i);
   let bet = betMatch ? betMatch[1].trim() : null;
   if (!bet) {
     const known = ["Over 2.5", "Under 2.5", "BTTS Oui", "BTTS Non", "Match nul", "Victoire domicile", "Victoire extérieur", "1X", "X2", "12", "NO BET"];
@@ -321,10 +322,21 @@ function parseShadowResponse(text) {
       if (t.toLowerCase().includes(k.toLowerCase())) { bet = k; break; }
     }
   }
+  // Parse "buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55" → objet marches
+  let marches = null;
+  if (marchesMatch) {
+    marches = {};
+    marchesMatch[1].split(",").forEach(part => {
+      const m = part.trim().match(/^(buts|btts|resultat|mt1)\s*=\s*([a-z0-9.]+)\s*:\s*(\d+)/i);
+      if (m) marches[m[1].toLowerCase()] = { p: m[2].toLowerCase(), c: parseInt(m[3]) };
+    });
+    if (Object.keys(marches).length === 0) marches = null;
+  }
   return {
     bet: bet || "NO BET",
     confidence: confMatch ? Math.min(100, Math.max(0, parseInt(confMatch[1]))) : 70,
     raison: raisonMatch ? raisonMatch[1].trim().slice(0, 300) : t.slice(0, 200),
+    marches,
   };
 }
 
@@ -342,8 +354,15 @@ Réponds UNIQUEMENT dans ce format :
 PARI : [ex: Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
 CONFIANCE : [0-100]
 RAISON : [1 phrase maximum]
+MARCHES : buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55
 
-Ne mets rien d'autre. Si tu n'es pas sûr, réponds NO BET.`;
+Pour MARCHES (avis rapide sur chaque marché, codes courts + confiance 40-90) :
+- buts : o2.5 (plus de 2.5) ou u2.5 (moins de 2.5)
+- btts : oui ou non (les deux équipes marquent)
+- resultat : dom, ext ou nul
+- mt1 : oui ou non (but en 1ère mi-temps)
+
+Ne mets rien d'autre. Si tu n'es pas sûr du pari principal, réponds NO BET (mais donne quand même MARCHES).`;
 }
 
 async function runShadowEvaluation(match) {
@@ -361,6 +380,12 @@ async function runShadowEvaluation(match) {
       if (!result.ok || !result.text) continue;
 
       const parsed = parseShadowResponse(result.text);
+      // Avis multi-marchés du banc d'essai — même mécanique que les 4 agents
+      // du Concile, pour que TOUTES les IA (pas seulement Perplexity/DeepSeek/
+      // Mistral-Large/Cohere) apparaissent dans la matrice IA × marché.
+      if (parsed.marches) {
+        saveAgentMarketPredictions(match, [{ name: agent.name, marches: parsed.marches }]);
+      }
       db.prepare(`
         INSERT OR IGNORE INTO shadow_evals
           (match_key, home, away, competition, sport, agent_name, bet, confidence, raison)
@@ -380,9 +405,18 @@ async function runShadowEvaluation(match) {
   }
 }
 
-function resolveShadowOutcomes(matchKey, scoreHome, scoreAway) {
+function resolveShadowOutcomes(home, away, scoreHome, scoreAway) {
   try {
-    const rows = db.prepare("SELECT id, bet FROM shadow_evals WHERE match_key = ? AND outcome IS NULL").all(matchKey);
+    // Match par équipes (comme les autres résolveurs) — l'ancien code matchait
+    // par match_key exact, mais le match_key de shadow_evals (home_away_date)
+    // ne correspond JAMAIS à celui de concile_analyses (id_date_bucket_score),
+    // donc les IA du banc d'essai n'étaient quasiment jamais résolues.
+    const hw = String(home || "").split(" ")[0];
+    const aw = String(away || "").split(" ")[0];
+    if (!hw || !aw) return;
+    const rows = db.prepare(
+      "SELECT id, bet FROM shadow_evals WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
+    ).all(`%${hw}%`, `%${aw}%`);
     for (const row of rows) {
       const outcome = getBetOutcomeForScore(row.bet, scoreHome, scoreAway);
       if (outcome) {
@@ -1815,27 +1849,28 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
       "SELECT * FROM concile_analyses WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
     ).all(`%${first}%`, `%${away.split(' ')[0]}%`);
 
-    if (!pending.length) return;
-    const upd = db.prepare(`
-      UPDATE concile_analyses
-      SET outcome = ?,
-          final_score_home = ?,
-          final_score_away = ?,
-          resolved_at = datetime('now'),
-          result_source = ?
-      WHERE id = ?
-    `);
-    pending.forEach(r => {
-      const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
-      if (out) upd.run(out, h, a, "api_finished_match", r.id);
-    });
-    console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
-
-    // Résoudre aussi les shadow evals pour ce match
-    if (pending.length > 0) {
-      const matchKey = pending[0].match_key;
-      resolveShadowOutcomes(matchKey, h, a);
+    if (pending.length) {
+      const upd = db.prepare(`
+        UPDATE concile_analyses
+        SET outcome = ?,
+            final_score_home = ?,
+            final_score_away = ?,
+            resolved_at = datetime('now'),
+            result_source = ?
+        WHERE id = ?
+      `);
+      pending.forEach(r => {
+        const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
+        if (out) upd.run(out, h, a, "api_finished_match", r.id);
+      });
+      console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
     }
+
+    // Résoudre aussi les IA du banc d'essai (shadow_evals) — indépendamment de
+    // concile_analyses : avant, ça ne se déclenchait QUE si ce match avait des
+    // lignes concile_analyses en attente, donc quasiment jamais pour les agents
+    // du banc d'essai (Groq-Llama70B/8B, Cerebras, OpenRouter, Mistral-Small...).
+    resolveShadowOutcomes(home, away, h, a);
   } catch(e) { console.error("[concile-trace] resolve:", e.message); }
 }
 

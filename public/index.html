@@ -2300,6 +2300,18 @@ function renderNavAuth(){
   } else {
     el.innerHTML=`<button class="nav-login" onclick="openModal()">${i18n.t('nav_connect')}</button>`;
   }
+  // Ne pas redemander l'email en hero si la personne est déjà inscrite/connectée
+  const heroBox = document.getElementById('hero-email-box');
+  if(heroBox){
+    if(heroBox.dataset.original === undefined) heroBox.dataset.original = heroBox.innerHTML;
+    if(email && plan){
+      const isElite = plan==='elite';
+      heroBox.innerHTML = `<div style="font-size:15px;font-weight:800;margin-bottom:4px">👋 Content de te revoir${isElite?', membre Elite':''} !</div>
+        <div style="font-size:13px;color:var(--muted2);line-height:1.5">Ton pick du jour est prêt juste en dessous. Bonne analyse !</div>`;
+    } else {
+      heroBox.innerHTML = heroBox.dataset.original;
+    }
+  }
 }
 
 function openModal(){
