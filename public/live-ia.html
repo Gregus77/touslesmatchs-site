@@ -8,7 +8,7 @@
 <link rel="canonical" href="https://www.touslesmatchs.com/live-ia">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Live IA — Analyse de matchs en temps réel | TousLesMatchs">
-<meta property="og:description" content="4 agents IA analysent votre match en direct. Verdict de confiance en 30 secondes. Statistiques live, consensus IA, pick du jour.">
+<meta property="og:description" content="4 agents IA analysent votre match en direct. Verdict de confiance en 30 secondes. Statistiques live, consensus IA, pari du jour.">
 <meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
 <meta property="og:url" content="https://www.touslesmatchs.com/live-ia">
 <meta name="twitter:card" content="summary_large_image">
@@ -749,7 +749,7 @@ function renderLiveUnavailableCard(m){
       Le pick officiel ${escHtml(m.home)} vs ${escHtml(m.away)} est bien enregistré, mais ce match n'est pas couvert par l'API live.<br>
       ${escHtml(m.liveAvailabilityReason || "Aucune analyse live ne sera affichée pour ce pick.")}
     </div>
-    <div style="margin-top:16px;font-size:13px;color:var(--text);font-weight:700">${escHtml(m.bet||'Pick du jour')} ${m.cote?`@ ${escHtml(m.cote)}`:''}</div>
+    <div style="margin-top:16px;font-size:13px;color:var(--text);font-weight:700">${escHtml(m.bet||'Pari du jour')} ${m.cote?`@ ${escHtml(m.cote)}`:''}</div>
   </div>`;
 }
 
