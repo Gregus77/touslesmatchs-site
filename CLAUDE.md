@@ -171,6 +171,12 @@ Match en cours (score + minute + stats live)
 - **Logo Hermès Admin** créé (PNG 1024², H ailé médaillon) → BotFather /setuserpic.
 - Autres : email hero masqué si connecté, "4+1" cohérent, drapeaux Telegram, splash animé, SEO JSON-LD, page admin (banc d'essai + matrice + bouton rattrapage), image OpenAI pause propre quota, lien Telegram TikTok corrigé.
 
+**À FAIRE EN PRIORITÉ (validé par Grégory, à faire au prochain jet) :**
+- **Système mot de passe** : à l'abonnement, email Brevo avec lien sécurisé (token usage unique) → page "Créez votre mot de passe" (changement forcé). Ne PAS supprimer l'auth par code existante (ajouter à côté). Infra déjà partielle : table `users` (email, password_hash, status) ligne 31 api_server.js, bcrypt déjà importé, endpoints register ~3332 / login ~3352, verify-code ~3292, codes créés dans webhook Stripe ~3820. Ajouter champ `first_name`/`pseudo` à users + token set-password + endpoint set-password + page front + wire email webhook.
+- **"Bienvenue [prénom/pseudo]"** au lieu de "Bienvenue membre Elite" : dans renderNavAuth() de public/index.html (le bloc #hero-email-box que j'ai ajouté affiche déjà "Content de te revoir, membre Elite"). Utiliser le prénom/pseudo saisi à l'inscription (vient de la page set-password ci-dessus). Stocker le pseudo en localStorage (tlm_name) + le renvoyer par verify-code/login.
+
+**Fait juste avant restart :** cascade de fournisseurs IA (Groq/OpenRouter/Cerebras en fallback) + prompt confiance argumentée (fini le 70% par défaut) — commité/poussé.
+
 **À FAIRE / EN ATTENTE :**
 - Grégory : révoquer clé sk_live (URGENT), créer webhook Stripe + secret.
 - Proposition en attente : brancher cotes réelles PRO → ROI par bookmaker + stratégie Hermès sur matrice Concile (dire "vas-y les cotes").
