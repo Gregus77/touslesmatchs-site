@@ -1521,6 +1521,9 @@ Réponds en JSON pur (pas de markdown):
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
+      // Fallback: spread agents across different providers to avoid Groq rate-limiting
+      if (!providers.length && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
+      if (!providers.length && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: "mistral-small-latest" });
       if (GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
       if (OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
       if (CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
@@ -3287,7 +3290,27 @@ app.post("/forgot-code", async (req, res) => {
 });
 
 // ── Verify code (reads codes.db directly) ────────────────────────────────────
-const CODES_DB_PATH = "/var/touslesmatchs/codes.db";
+const CODES_DB_PATH = process.env.CODES_DB_PATH || "/data/codes.db";
+
+// Auto-create codes table if it doesn't exist
+try {
+  const _cdb = new Database(CODES_DB_PATH);
+  _cdb.exec(`
+    CREATE TABLE IF NOT EXISTS codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      email TEXT NOT NULL,
+      plan TEXT DEFAULT 'free',
+      active INTEGER DEFAULT 1,
+      expires_at TEXT DEFAULT NULL,
+      credits_max INTEGER DEFAULT 10,
+      credits_used INTEGER DEFAULT 0,
+      credits_date TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+  _cdb.close();
+} catch(e) { console.error("[codes-db] init error:", e.message); }
 
 app.post("/verify-code", (req, res) => {
   const { email, code } = req.body || {};

@@ -32,6 +32,8 @@ services:
       - STRIPE_PRICE_ID_PREMIUM=${STRIPE_PRICE_ID_PREMIUM}
       - STRIPE_PRICE_ID_VIP=${STRIPE_PRICE_ID_VIP}
       - STRIPE_PRICE_ID_ELITE=${STRIPE_PRICE_ID_ELITE}
+    volumes:
+      - api_data:/data
     networks:
       - web
     expose:
@@ -82,6 +84,7 @@ volumes:
   caddy_data:
   caddy_config:
   council_data:
+  api_data:
 
 networks:
   web:
