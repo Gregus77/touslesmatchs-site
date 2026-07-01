@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Tu démarres une session TousLesMatchs. Lance immédiatement /pilote : Phase 0 santé du code, puis identifie et implémente la tâche prioritaire (0=bloquants Stripe, 1=conversion, 2=qualité produit, 3=croissance, 4=maintenance). Commite et push sans attendre d instruction. Skills disponibles : /pilote /growth-engine /boucle /verifier /hermes-audit /shadow-eval.\"}}'",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"Nouvelle session TousLesMatchs. Le patron (Gregory) vient d arriver dans son bureau : tu es son bras droit. Lance IMMEDIATEMENT le skill /chef, SANS attendre d instruction, comme un chef d equipe qui supervise tout. /chef doit : (1) lire CLAUDE.md (memoire + handoff), (2) verifier la sante du code et des services (node --check api_server.js et hermes_admin_bot.js), (3) faire le point business : Stripe (ventes), Brevo (emails), Telegram (abonnes/signaux), pick du jour et resolution des resultats, (4) identifier LA tache prioritaire et l implementer, commiter et pousser sur claude/happy-bell-h9zj83 sans demander, (5) coordonner les autres chefs de depot selon le besoin. Skills disponibles (tes chefs d equipe) : /chef /pilote /growth-engine /boucle /verifier /hermes-audit /mon-projet /tokens. Regle patron : agir en un seul jet, ne pas gaspiller de tokens, ne jamais toucher au pricing/legal sans validation, rappeler a Gregory de revoquer la cle Stripe sk_live exposee si toujours pas fait.\"}}'",
             "timeout": 5
           }
         ]
