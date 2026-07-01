@@ -23,8 +23,11 @@ services:
     container_name: touslesmatchs-api
     restart: unless-stopped
     environment:
+      - API_FOOTBALL_KEY=${API_FOOTBALL_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
-      - FOOTBALL_DATA_KEY=${FOOTBALL_DATA_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_PRICE_ID_PREMIUM=${STRIPE_PRICE_ID_PREMIUM}
       - STRIPE_PRICE_ID_VIP=${STRIPE_PRICE_ID_VIP}

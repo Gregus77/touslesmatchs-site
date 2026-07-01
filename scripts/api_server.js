@@ -58,7 +58,7 @@ db.exec(`
     away TEXT NOT NULL,
     agent_name TEXT NOT NULL,
     bet TEXT NOT NULL,
-    confidence INTEGER DEFAULT 70,
+    confidence INTEGER DEFAULT 0,
     outcome TEXT DEFAULT NULL,
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(match_key, agent_name)
@@ -88,7 +88,7 @@ db.exec(`
     score_away_at_analysis INTEGER DEFAULT NULL,
     stats_status TEXT DEFAULT 'unavailable',
     best_bet TEXT NOT NULL,
-    confidence INTEGER DEFAULT 70,
+    confidence INTEGER DEFAULT 0,
     raison TEXT DEFAULT '',
     consensus_votes INTEGER DEFAULT 0,
     agents_json TEXT DEFAULT '[]',
@@ -136,7 +136,7 @@ db.exec(`
     sport TEXT DEFAULT 'Football',
     agent_name TEXT NOT NULL,
     bet TEXT NOT NULL,
-    confidence INTEGER DEFAULT 70,
+    confidence INTEGER DEFAULT 0,
     raison TEXT DEFAULT '',
     outcome TEXT DEFAULT NULL,
     final_score_home INTEGER DEFAULT NULL,
@@ -149,7 +149,7 @@ db.exec(`
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
-const API_SPORTS_KEY = process.env.API_SPORTS_KEY || "";
+const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.API_FOOTBALL_KEY || "";
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
@@ -334,7 +334,7 @@ function parseShadowResponse(text) {
   }
   return {
     bet: bet || "NO BET",
-    confidence: confMatch ? Math.min(100, Math.max(0, parseInt(confMatch[1]))) : 70,
+    confidence: confMatch ? Math.min(100, Math.max(0, parseInt(confMatch[1]))) : 55,
     raison: raisonMatch ? raisonMatch[1].trim().slice(0, 300) : t.slice(0, 200),
     marches,
   };
@@ -1583,7 +1583,7 @@ Réponds en JSON pur (pas de markdown):
         name: agentNames[i].name,
         icon: agentNames[i].icon,
         bet: validBet,
-        confidence: Math.min(95, Math.max(50, parseInt(parsed.confidence) || 70)),
+        confidence: Math.min(95, Math.max(50, isNaN(parseInt(parsed.confidence)) ? 55 : parseInt(parsed.confidence))),
         raison: raisonFinal,
         isChief,
         corrected: corrected || false,
@@ -2597,7 +2597,7 @@ function saveAgentPredictions(match, agentResults) {
       "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence) VALUES (?,?,?,?,?,?)"
     );
     agentResults.forEach(a => {
-      stmt.run(matchKey, match.home, match.away, a.name, a.bet, a.confidence || 70);
+      stmt.run(matchKey, match.home, match.away, a.name, a.bet, a.confidence ?? 55);
     });
     console.log(`[agent-perf] ${agentResults.length} prédictions sauvegardées: ${match.home} vs ${match.away}`);
   } catch(e) { console.error("[agent-perf] save:", e.message); }
@@ -4518,7 +4518,7 @@ app.post("/internal/record-concile-result", (req, res) => {
   const outcome = getBetOutcomeForScore(record.bet, h, a);
   if (!outcome) return res.json({ ok: false, error: `Marche non reconnu: ${record.bet}` });
 
-  const confidence = Math.max(1, Math.min(100, Number(record.confidence || 70)));
+  const confidence = Math.max(1, Math.min(100, Number(record.confidence ?? 55)));
   const minute = record.minute !== undefined && record.minute !== null && record.minute !== ""
     ? Number(record.minute)
     : null;
