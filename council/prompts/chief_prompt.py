@@ -37,7 +37,7 @@ MATCHS DU JOUR :
 
 RAPPORTS DES AGENTS :
 
-=== Agent GPT-4o Mini ===
+=== Agent DeepSeek ===
 {gpt_report}
 
 === Agent Gemini Flash ===

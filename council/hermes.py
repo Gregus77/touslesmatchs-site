@@ -204,7 +204,7 @@ def run_council():
 
     # 8. Save agent votes for performance tracking
     for key, report in agent_reports.items():
-        agent_name = {"gpt": "GPT-4o Mini", "gemini": "Gemini Flash",
+        agent_name = {"gpt": "DeepSeek", "gemini": "Gemini Flash",
                       "mistral": "Mistral", "groq": "Groq/Llama3"}.get(key, key)
         save_agent_vote(
             agent_name, today_display, json.dumps(report),
