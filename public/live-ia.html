@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live IA — TousLesMatchs</title>
+<meta name="description" content="Matchs en direct analysés par le Concile IA. Football, Basketball, Hockey, Tennis — scores en temps réel.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0c1a;--bg2:#0d1020;--bg3:#131630;--bg4:#1a1e3a;
+  --text:#eceaf4;--muted:#7b82a0;--muted2:#a8aec8;
+  --green:#10b981;--red:#f43f5e;--cyan:#22d3ee;--indigo:#6366f1;--indigo2:#818cf8;
+  --violet:#7c3aed;--amber:#f59e0b;--pink:#ec4899;
+  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.1);
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:100;background:rgba(10,12,26,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--b1);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-size:18px;font-weight:800;color:var(--text);text-decoration:none;letter-spacing:-.02em}
+.nav-logo span{color:var(--indigo2)}
+.nav-links{display:flex;gap:20px;align-items:center}
+.nav-links a{color:var(--muted2);text-decoration:none;font-size:13px;font-weight:600;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.nav-links a.active{color:var(--cyan)}
+.nav-back{color:var(--muted2);text-decoration:none;font-size:13px;font-weight:600}
+
+/* HEADER */
+.page-header{text-align:center;padding:40px 24px 20px}
+.page-title{font-size:clamp(24px,4vw,36px);font-weight:800;letter-spacing:-.03em;margin-bottom:8px}
+.page-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:600px;margin:0 auto}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;animation:pulse-dot 1.5s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(244,63,94,0)}}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px 24px 24px}
+.filter-btn{background:var(--bg3);border:1px solid var(--b1);color:var(--muted2);padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.filter-btn:hover,.filter-btn.active{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.3);color:var(--indigo2)}
+
+/* MATCH GRID */
+.matches-wrap{max-width:900px;margin:0 auto;padding:0 16px 60px}
+.match-card{background:var(--bg3);border:1px solid var(--b1);border-radius:16px;padding:20px;margin-bottom:12px;transition:all .25s;cursor:default}
+.match-card:hover{border-color:rgba(99,102,241,.25);transform:translateY(-1px)}
+.match-card.finished{opacity:.7}
+.match-card.finished:hover{opacity:.9}
+
+/* Match header */
+.mc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mc-sport{display:flex;align-items:center;gap:6px}
+.mc-sport-icon{font-size:16px}
+.mc-comp{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.mc-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px}
+.mc-status.live{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+.mc-status.finished{background:rgba(123,130,160,.08);color:var(--muted);border:1px solid var(--b1)}
+.mc-status.scheduled{background:rgba(34,211,238,.08);color:var(--cyan);border:1px solid rgba(34,211,238,.2)}
+.mc-status .st-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse-dot 1.5s infinite}
+
+/* Match body — teams + score */
+.mc-body{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mc-team{flex:1;display:flex;align-items:center;gap:10px}
+.mc-team.away{flex-direction:row-reverse;text-align:right}
+.mc-logo{width:36px;height:36px;border-radius:8px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden}
+.mc-logo img{width:100%;height:100%;object-fit:contain}
+.mc-name{font-size:15px;font-weight:700;line-height:1.3}
+.mc-score-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:70px}
+.mc-score{font-size:28px;font-weight:900;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.mc-minute{font-size:11px;font-weight:700;color:var(--red);background:rgba(244,63,94,.08);padding:2px 8px;border-radius:6px}
+.mc-minute.done{color:var(--muted);background:rgba(123,130,160,.08)}
+
+/* CTA analyse */
+.mc-cta{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.mc-analyse-btn{flex:1;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(124,58,237,.12));border:1px solid rgba(99,102,241,.25);color:var(--indigo2);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
+.mc-analyse-btn:hover{background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(124,58,237,.2));transform:translateY(-1px)}
+.mc-analyse-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* Analysis result */
+.mc-analysis{margin-top:14px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:12px;padding:16px;display:none}
+.mc-analysis.visible{display:block}
+.mc-analysis-title{font-size:13px;font-weight:700;color:var(--indigo2);margin-bottom:8px}
+.mc-analysis-text{font-size:13px;color:var(--muted2);line-height:1.7}
+.mc-analysis-bet{display:inline-block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-top:8px}
+
+/* Empty state */
+.empty-state{text-align:center;padding:80px 24px}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.empty-title{font-size:20px;font-weight:800;margin-bottom:8px}
+.empty-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:400px;margin:0 auto}
+
+/* Loading */
+.loading{text-align:center;padding:60px 24px}
+.spinner{width:32px;height:32px;border:3px solid var(--b2);border-top-color:var(--indigo2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Auth bar */
+.auth-bar{max-width:900px;margin:0 auto;padding:0 16px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-info{font-size:12px;color:var(--muted2)}
+.auth-info strong{color:var(--green)}
+.auth-login-btn{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:8px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.auth-login-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.3)}
+
+/* Login modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:32px;width:90%;max-width:400px}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6}
+.modal-label{font-size:12px;font-weight:700;color:var(--muted2);display:block;margin-bottom:4px}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--b2);color:var(--text);padding:10px 14px;border-radius:10px;font-size:14px;margin-bottom:12px}
+.modal-input:focus{outline:none;border-color:var(--indigo2)}
+.modal-btn{width:100%;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+.modal-close{position:absolute;top:12px;right:16px;font-size:20px;color:var(--muted);cursor:pointer;background:none;border:none}
+.modal-error{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* Refresh bar */
+.refresh-bar{text-align:center;padding:8px;font-size:11px;color:var(--muted)}
+.refresh-bar button{background:none;border:none;color:var(--cyan);cursor:pointer;font-size:11px;font-weight:700;margin-left:6px}
+
+/* Footer */
+.footer{text-align:center;padding:32px 16px;border-top:1px solid var(--b1);font-size:11px;color:var(--muted);line-height:1.8}
+.footer a{color:var(--muted);text-decoration:none}
+
+/* Responsive */
+@media(max-width:600px){
+  .mc-body{flex-direction:column;gap:8px}
+  .mc-team,.mc-team.away{flex-direction:row;text-align:left;justify-content:flex-start}
+  .mc-score{font-size:22px}
+  .mc-name{font-size:14px}
+  .nav-links{display:none}
+  .filters{padding:8px 12px 16px}
+  .filter-btn{padding:6px 12px;font-size:11px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">TousLes<span>Matchs</span></a>
+  <div class="nav-links">
+    <a href="/">Accueil</a>
+    <a href="/live-ia" class="active"><span class="live-dot"></span>Live IA</a>
+    <a href="/historique">Historique</a>
+    <a href="/#plans">Abonnements</a>
+  </div>
+  <a href="/" class="nav-back" id="mobile-back" style="display:none">← Retour</a>
+</nav>
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="page-title"><span class="live-dot"></span> Live IA</div>
+  <div class="page-sub">Matchs en direct analysés par le Concile IA. Sélectionnez un match pour lancer une analyse en temps réel.</div>
+</div>
+
+<!-- AUTH BAR -->
+<div class="auth-bar" id="auth-bar">
+  <div class="auth-info" id="auth-info">Connecte-toi pour analyser les matchs</div>
+  <button class="auth-login-btn" id="auth-btn" onclick="openLoginModal()">Connexion</button>
+</div>
+
+<!-- FILTERS -->
+<div class="filters" id="filters">
+  <button class="filter-btn active" data-filter="all">Tous</button>
+  <button class="filter-btn" data-filter="Football">&#9917; Football</button>
+  <button class="filter-btn" data-filter="Basketball">&#127936; Basketball</button>
+  <button class="filter-btn" data-filter="Hockey">&#127954; Hockey</button>
+  <button class="filter-btn" data-filter="Tennis">&#127934; Tennis</button>
+  <button class="filter-btn" data-filter="Baseball">&#9918; Baseball</button>
+</div>
+
+<!-- REFRESH -->
+<div class="refresh-bar" id="refresh-bar">
+  Dernière mise à jour : <span id="last-update">—</span>
+  <button onclick="loadMatches(true)">Actualiser</button>
+</div>
+
+<!-- MATCHES -->
+<div class="matches-wrap" id="matches-wrap">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div style="font-size:14px;color:var(--muted2)">Chargement des matchs en direct...</div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="closeLoginModal()">&#10005;</button>
+    <div class="modal-title">Connexion Live IA</div>
+    <div class="modal-sub">Entre ton email et ton code d'accès reçu après paiement.</div>
+    <label class="modal-label">Email</label>
+    <input class="modal-input" type="email" id="login-email" placeholder="ton@email.com">
+    <label class="modal-label">Code d'accès</label>
+    <input class="modal-input" type="text" id="login-code" placeholder="PRO-XXXXXX">
+    <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <div class="modal-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Analyse sportive assistée par IA · Données vérifiées · 0 match inventé<br>
+  LES JEUX D'ARGENT ET DE HASARD PEUVENT ETRE DANGEREUX : pertes d'argent, conflits familiaux, addiction.<br>
+  Conseils sur joueurs-info-service.fr - 09 74 75 13 13, appel non surtaxé.<br>
+  18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives<br>
+  <a href="/mentions-legales.html">Mentions légales</a> · <a href="mailto:gregoryguyot.gg@gmail.com">Contact</a>
+</div>
+
+<script>
+// ── Sport config ──
+const SPORT_ICONS = {
+  Football: "⚽", Basketball: "🏀", Hockey: "🏒",
+  Tennis: "🎾", Baseball: "⚾", Rugby: "🏉"
+};
+
+// ── State ──
+let allMatches = [];
+let currentFilter = "all";
+let userAuth = null;
+
+// ── Init ──
+(function init() {
+  const email = localStorage.getItem("tlm_email");
+  const code = localStorage.getItem("tlm_code");
+  const plan = localStorage.getItem("tlm_plan");
+  if (email && code && plan) {
+    userAuth = { email, code, plan };
+    updateAuthBar();
+  }
+  loadMatches();
+  setInterval(function(){ loadMatches(); }, 60000);
+
+  if (window.innerWidth <= 600) {
+    document.getElementById("mobile-back").style.display = "block";
+  }
+
+  document.getElementById("filters").addEventListener("click", function(e) {
+    var btn = e.target.closest(".filter-btn");
+    if (!btn) return;
+    document.querySelectorAll(".filter-btn").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    currentFilter = btn.dataset.filter;
+    renderMatches();
+  });
+})();
+
+function updateAuthBar() {
+  var info = document.getElementById("auth-info");
+  var btn = document.getElementById("auth-btn");
+  if (userAuth) {
+    var isElite = userAuth.plan === "elite";
+    info.innerHTML = (isElite ? "👑" : "⚡") + " <strong>" + userAuth.plan.charAt(0).toUpperCase() + userAuth.plan.slice(1) + "</strong> — " + userAuth.email;
+    btn.textContent = "Déconnexion";
+    btn.onclick = doLogout;
+  } else {
+    info.textContent = "Connecte-toi pour analyser les matchs";
+    btn.textContent = "Connexion";
+    btn.onclick = openLoginModal;
+  }
+}
+
+// ── Load matches ──
+function loadMatches(force) {
+  var url = "/api/live-matches" + (force ? "?force=1" : "");
+  fetch(url).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok && d.matches) {
+      allMatches = d.matches;
+      renderMatches();
+      document.getElementById("last-update").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    } else {
+      showEmpty();
+    }
+    document.getElementById("loading").style.display = "none";
+  }).catch(function() {
+    document.getElementById("loading").style.display = "none";
+    showEmpty();
+  });
+}
+
+function showEmpty() {
+  var wrap = document.getElementById("matches-wrap");
+  wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🏟️</div><div class="empty-title">Aucun match en direct</div><div class="empty-sub">Il n\'y a pas de match en cours pour le moment. Reviens plus tard ou consulte l\'historique des analyses.</div></div>';
+}
+
+// ── Render ──
+function renderMatches() {
+  var wrap = document.getElementById("matches-wrap");
+  var filtered = currentFilter === "all" ? allMatches : allMatches.filter(function(m){ return m.sport === currentFilter; });
+
+  if (!filtered.length) {
+    if (currentFilter !== "all") {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">' + (SPORT_ICONS[currentFilter] || "🏟️") + '</div><div class="empty-title">Aucun match ' + currentFilter + ' en direct</div><div class="empty-sub">Aucun match de ' + currentFilter + ' en cours. Essaie un autre sport ou reviens plus tard.</div></div>';
+    } else {
+      showEmpty();
+    }
+    return;
+  }
+
+  // Sort: live first, then scheduled, then finished
+  var order = { IN_PLAY: 0, PINNED_SIGNAL: 0, HT: 1, SCHEDULED: 2, TIMED: 2, FINISHED: 3 };
+  filtered.sort(function(a, b) {
+    return (order[a.status] || 1) - (order[b.status] || 1);
+  });
+
+  var html = "";
+  filtered.forEach(function(m) {
+    var isLive = m.status === "IN_PLAY" || m.status === "HT" || m.status === "PINNED_SIGNAL";
+    var isDone = m.status === "FINISHED";
+    var sportIcon = SPORT_ICONS[m.sport] || "⚽";
+    var scoreH = m.score_home !== null && m.score_home !== undefined ? m.score_home : "-";
+    var scoreA = m.score_away !== null && m.score_away !== undefined ? m.score_away : "-";
+
+    var statusClass = isLive ? "live" : (isDone ? "finished" : "scheduled");
+    var statusLabel = isLive ? (m.status === "HT" ? "Mi-temps" : "En direct") : (isDone ? "Terminé" : "À venir");
+    var dotHtml = isLive ? '<span class="st-dot"></span>' : "";
+
+    var minuteHtml = "";
+    if (m.minute && isLive) {
+      minuteHtml = '<div class="mc-minute">' + m.minute + (typeof m.minute === "number" ? "'" : "") + '</div>';
+    } else if (isDone) {
+      minuteHtml = '<div class="mc-minute done">FT</div>';
+    }
+
+    var homeLogo = m.home_logo ? '<img src="' + m.home_logo + '" alt="" loading="lazy">' : sportIcon;
+    var awayLogo = m.away_logo ? '<img src="' + m.away_logo + '" alt="" loading="lazy">' : sportIcon;
+
+    var matchId = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
+
+    html += '<div class="match-card' + (isDone ? " finished" : "") + '" data-id="' + matchId + '">';
+    html += '<div class="mc-header">';
+    html += '  <div class="mc-sport"><span class="mc-sport-icon">' + sportIcon + '</span><span class="mc-comp">' + escHtml(m.competition || m.sport) + '</span></div>';
+    html += '  <div class="mc-status ' + statusClass + '">' + dotHtml + statusLabel + '</div>';
+    html += '</div>';
+    html += '<div class="mc-body">';
+    html += '  <div class="mc-team home"><div class="mc-logo">' + homeLogo + '</div><div class="mc-name">' + escHtml(m.home) + '</div></div>';
+    html += '  <div class="mc-score-col"><div class="mc-score">' + scoreH + ' — ' + scoreA + '</div>' + minuteHtml + '</div>';
+    html += '  <div class="mc-team away"><div class="mc-name">' + escHtml(m.away) + '</div><div class="mc-logo">' + awayLogo + '</div></div>';
+    html += '</div>';
+
+    if (m.pinnedSignal) {
+      html += '<div class="mc-analysis visible">';
+      html += '  <div class="mc-analysis-title">📡 Signal Fort — Analyse épinglée</div>';
+      html += '  <div class="mc-analysis-text">' + escHtml(m.pinnedReason || "") + '</div>';
+      if (m.pinnedBet) html += '<div class="mc-analysis-bet">🎯 ' + escHtml(m.pinnedBet) + (m.pinnedConfidence ? " · " + m.pinnedConfidence + "%" : "") + '</div>';
+      html += '</div>';
+    }
+
+    if (isLive && !isDone) {
+      html += '<div class="mc-cta">';
+      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " disabled title=\"Connecte-toi pour analyser\"" : "") + '>';
+      html += '    🧠 Analyser ce match';
+      html += '  </button>';
+      html += '</div>';
+      html += '<div class="mc-analysis" id="analysis-' + escAttr(matchId) + '"></div>';
+    }
+
+    html += '</div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+// ── Analysis ──
+function requestAnalysis(btn, matchId, home, away) {
+  if (!userAuth) {
+    openLoginModal();
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></div> Analyse en cours...';
+
+  var match = allMatches.find(function(m) { return (m.id || m.home + "_" + m.away) === matchId; });
+
+  fetch("/api/concile-analysis", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: userAuth.email,
+      code: userAuth.code,
+      match: {
+        id: match ? match.id : matchId,
+        home: home,
+        away: away,
+        score_home: match ? match.score_home : null,
+        score_away: match ? match.score_away : null,
+        minute: match ? match.minute : null,
+        competition: match ? match.competition : ""
+      }
+    })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    var el = document.getElementById("analysis-" + matchId);
+    if (d.ok) {
+      var chief = d.agents ? d.agents[d.agents.length - 1] : null;
+      var resumeText = d.resume || (chief ? chief.raison : "Analyse terminée");
+      var betText = d.value_bet ? d.value_bet.marche : (chief ? chief.bet : "");
+      var confText = d.value_bet ? d.value_bet.prob : (chief ? chief.confidence : "");
+
+      var agentsHtml = "";
+      if (d.agents && d.agents.length > 1) {
+        d.agents.forEach(function(ag, i) {
+          if (i === d.agents.length - 1) return;
+          agentsHtml += '<div style="font-size:12px;color:var(--muted2);margin-top:6px;padding:6px 0;border-top:1px solid var(--b1)">';
+          agentsHtml += '<strong style="color:var(--muted)">' + escHtml(ag.model || "Agent " + (i+1)) + '</strong>: ';
+          agentsHtml += escHtml(ag.bet || "") + " · " + (ag.confidence || "?") + "% — ";
+          agentsHtml += '<span style="font-size:11px">' + escHtml(ag.raison || "") + '</span></div>';
+        });
+      }
+
+      el.innerHTML = '<div class="mc-analysis-title">👑 Verdict du Concile</div>'
+        + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
+        + (betText ? '<div class="mc-analysis-bet">🎯 ' + escHtml(betText) + (confText ? " · " + confText + "%" : "") + '</div>' : "")
+        + agentsHtml
+        + (d.tokens_remaining !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">⚡ Crédits restants : ' + d.tokens_remaining + '</div>' : "");
+      el.classList.add("visible");
+      btn.innerHTML = "✅ Analyse terminée";
+    } else {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">⚠️ ' + escHtml(d.error || "Erreur d'analyse") + '</div>';
+      el.classList.add("visible");
+      btn.disabled = false;
+      btn.innerHTML = "🧠 Réessayer";
+    }
+  }).catch(function() {
+    btn.disabled = false;
+    btn.innerHTML = "🧠 Réessayer";
+  });
+}
+
+// ── Auth ──
+function openLoginModal() { document.getElementById("login-modal").classList.add("open"); }
+function closeLoginModal() { document.getElementById("login-modal").classList.remove("open"); }
+
+function doLogin() {
+  var email = document.getElementById("login-email").value.trim();
+  var code = document.getElementById("login-code").value.trim();
+  var errEl = document.getElementById("login-error");
+  var btn = document.getElementById("login-btn");
+  if (!email || !code) { errEl.textContent = "Email et code requis."; errEl.style.display = "block"; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Vérification...";
+
+  fetch("/api/verify-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email, code: code })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.valid) {
+      userAuth = { email: email, code: code, plan: d.plan };
+      localStorage.setItem("tlm_email", email);
+      localStorage.setItem("tlm_code", code);
+      localStorage.setItem("tlm_plan", d.plan);
+      closeLoginModal();
+      updateAuthBar();
+      renderMatches();
+    } else {
+      errEl.textContent = d.error || "Code invalide ou expiré.";
+      errEl.style.display = "block";
+    }
+    btn.disabled = false;
+    btn.textContent = "Accéder →";
+  }).catch(function() {
+    errEl.textContent = "Erreur de connexion.";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Accéder →";
+  });
+}
+
+function doLogout() {
+  userAuth = null;
+  localStorage.removeItem("tlm_email");
+  localStorage.removeItem("tlm_code");
+  localStorage.removeItem("tlm_plan");
+  updateAuthBar();
+  renderMatches();
+}
+
+// ── Utils ──
+function escHtml(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+function escAttr(s) { return String(s || "").replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
+
+// Close modal on backdrop click
+document.getElementById("login-modal").addEventListener("click", function(e) {
+  if (e.target === this) closeLoginModal();
+});
+</script>
+</body>
+</html>
