@@ -179,6 +179,8 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
 const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const _signalSentCache = new Set();
+const _freeSignalDailyDate = { date: "", count: 0 };
+const _freeResultDailyDate = { date: "", count: 0 };
 
 // ── Shadow agents (banc d'essai — free tiers) ─────────────────────────────────
 const MISTRAL_API_KEY    = process.env.MISTRAL_API_KEY    || "";
@@ -1846,7 +1848,14 @@ Réponds en JSON pur (pas de markdown):
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse complète est réservée aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
-      if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
+      const todayStr = new Date().toISOString().slice(0, 10);
+      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
+      if (_freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+        _freeSignalDailyDate.count++;
+        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
+      } else {
+        console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
+      }
     }
   }
 
@@ -3788,7 +3797,7 @@ setInterval(() => {
 // ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
 const _signalResultSentCache = new Set();
 async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
-  const cacheKey = `${analysis.home}_${analysis.away}_${analysis.id}`;
+  const cacheKey = `${analysis.home}_${analysis.away}`;
   if (_signalResultSentCache.has(cacheKey)) return;
   _signalResultSentCache.add(cacheKey);
 
@@ -3842,8 +3851,15 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   ].filter(Boolean).join("\n");
 
   if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (cote moy ${coteMoy}, ${stats.winrate}% winrate)`);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (_freeResultDailyDate.date !== todayStr) { _freeResultDailyDate.date = todayStr; _freeResultDailyDate.count = 0; }
+  if (_freeResultDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+    _freeResultDailyDate.count++;
+    sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+    console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (envoyé free + premium)`);
+  } else {
+    console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (premium only, free déjà envoyé aujourd'hui)`);
+  }
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
