@@ -23,6 +23,13 @@ PHILOSOPHIE :
 - Prends en compte les performances passées des agents pour pondérer leurs votes.
 - Pondère davantage les agents avec une accuracy historique élevée.
 
+PONDÉRATION PAR MARCHÉ (IMPORTANT) :
+- Chaque agent a des forces et faiblesses par type de marché (Under, Over, BTTS, 1X2, Handicap).
+- La section "MATRICE AGENT × MARCHÉ" te montre la précision de chaque agent par marché.
+- Si un agent a 70% de précision en Under mais 30% en BTTS, son vote Under vaut beaucoup plus que son vote BTTS.
+- Quand tu choisis le marché final, privilégie celui où les agents qui le recommandent ont la meilleure précision historique sur CE type de marché.
+- Un agent avec peu de données sur un marché (< 5 résolutions) est neutre — ni bonus ni malus.
+
 FORMAT DE RÉPONSE (JSON strict) :
 {
   "decision": "PICK" ou "NOPICK",
@@ -62,6 +69,9 @@ HISTORIQUE RÉCENT :
 
 PERFORMANCE DES AGENTS (précision historique) :
 {agent_accuracy}
+
+MATRICE AGENT × MARCHÉ (précision par type de pari) :
+{market_matrix}
 
 STATISTIQUES GLOBALES DU SITE :
 - Winrate: {winrate}% | ROI: {roi}% | Wins: {wins} | Pertes: {losses}
