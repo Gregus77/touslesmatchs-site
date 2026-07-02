@@ -158,6 +158,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <button class="auth-login-btn" id="auth-btn" onclick="openLoginModal()">Connexion</button>
 </div>
 
+<!-- CLASSEMENT AGENTS IA — Elite only (en haut) -->
+<div id="agent-ranking" style="display:none;max-width:720px;margin:32px auto;padding:0 16px">
+  <div style="background:rgba(13,16,32,.8);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px;backdrop-filter:blur(20px)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">📊 Classement des agents IA</div>
+    <div id="agent-meta" style="font-size:12px;color:#7b82a0;margin-bottom:18px"></div>
+    <div id="agent-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+  </div>
+</div>
+
 <!-- FILTERS -->
 <div class="filters" id="filters">
   <button class="filter-btn active" data-filter="all">Tous</button>
@@ -179,15 +188,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="loading" id="loading">
     <div class="spinner"></div>
     <div style="font-size:14px;color:var(--muted2)">Chargement des matchs en direct...</div>
-  </div>
-</div>
-
-<!-- CLASSEMENT AGENTS IA — Elite only -->
-<div id="agent-ranking" style="display:none;max-width:720px;margin:32px auto;padding:0 16px">
-  <div style="background:rgba(13,16,32,.8);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px;backdrop-filter:blur(20px)">
-    <div style="font-size:16px;font-weight:800;margin-bottom:4px">📊 Classement des agents IA</div>
-    <div id="agent-meta" style="font-size:12px;color:#7b82a0;margin-bottom:18px"></div>
-    <div id="agent-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
   </div>
 </div>
 

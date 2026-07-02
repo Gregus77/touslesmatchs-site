@@ -1236,19 +1236,19 @@ footer{
         <stop offset="40%" stop-color="#17a34a" stop-opacity=".5"/>
         <stop offset="100%" stop-color="#0d7a36" stop-opacity=".3"/>
       </linearGradient>
-      <!-- Toit cuivré/doré comme le vrai SdF -->
+      <!-- Toit bleu-teal métallique -->
       <linearGradient id="roof-g" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#8b6914" stop-opacity=".65"/>
-        <stop offset="30%" stop-color="#a67c20" stop-opacity=".55"/>
-        <stop offset="60%" stop-color="#7a5d15" stop-opacity=".5"/>
-        <stop offset="100%" stop-color="#5c4510" stop-opacity=".6"/>
+        <stop offset="0%" stop-color="#1a5c7a" stop-opacity=".7"/>
+        <stop offset="30%" stop-color="#2d8aaa" stop-opacity=".6"/>
+        <stop offset="60%" stop-color="#1e6e85" stop-opacity=".55"/>
+        <stop offset="100%" stop-color="#164555" stop-opacity=".65"/>
       </linearGradient>
-      <!-- Halo projecteur (étoile blanche) -->
+      <!-- Halo projecteur (étoile blanche pure) -->
       <radialGradient id="fl" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stop-color="#fff" stop-opacity="1"/>
-        <stop offset="15%" stop-color="#fffbe6" stop-opacity=".85"/>
-        <stop offset="40%" stop-color="#fde68a" stop-opacity=".3"/>
-        <stop offset="100%" stop-color="#fde68a" stop-opacity="0"/>
+        <stop offset="15%" stop-color="#e8f4ff" stop-opacity=".9"/>
+        <stop offset="40%" stop-color="#c8e0ff" stop-opacity=".35"/>
+        <stop offset="100%" stop-color="#c8e0ff" stop-opacity="0"/>
       </radialGradient>
       <!-- Rayons en étoile pour les projecteurs -->
       <filter id="star-glow">
@@ -1273,30 +1273,30 @@ footer{
     <circle cx="900" cy="150" r="1.2" fill="#fff" opacity=".45"/><circle cx="750" cy="65" r="1.4" fill="#fff" opacity=".5"/>
     <circle cx="450" cy="180" r=".8" fill="#fff" opacity=".35"/><circle cx="950" cy="190" r="1" fill="#fff" opacity=".38"/>
 
-    <!-- ═══ TOIT CUIVRÉ / DORÉ ═══ -->
+    <!-- ═══ TOIT BLEU-TEAL MÉTALLIQUE ═══ -->
     <!-- Grand ovale extérieur du toit -->
     <ellipse cx="720" cy="280" rx="700" ry="290" fill="url(#roof-g)"/>
     <!-- Découpe le ciel (ovale intérieur) -->
     <ellipse cx="720" cy="220" rx="482" ry="202" fill="#060e28"/>
     <ellipse cx="720" cy="220" rx="480" ry="200" fill="url(#sky-g)"/>
     <!-- Bord intérieur lumineux du toit -->
-    <ellipse cx="720" cy="220" rx="483" ry="203" fill="none" stroke="rgba(253,230,138,.4)" stroke-width="2.5"/>
-    <ellipse cx="720" cy="220" rx="486" ry="206" fill="none" stroke="rgba(253,230,138,.15)" stroke-width="1"/>
+    <ellipse cx="720" cy="220" rx="483" ry="203" fill="none" stroke="rgba(200,230,255,.4)" stroke-width="2.5"/>
+    <ellipse cx="720" cy="220" rx="486" ry="206" fill="none" stroke="rgba(200,230,255,.15)" stroke-width="1"/>
     <!-- Nervures radiales du toit (structure métallique) -->
-    <line x1="720" y1="0" x2="720" y2="22" stroke="rgba(200,170,80,.25)" stroke-width="1.2"/>
-    <line x1="360" y1="40" x2="400" y2="28" stroke="rgba(200,170,80,.18)" stroke-width="1"/>
-    <line x1="1080" y1="40" x2="1040" y2="28" stroke="rgba(200,170,80,.18)" stroke-width="1"/>
-    <line x1="180" y1="160" x2="255" y2="90" stroke="rgba(200,170,80,.14)" stroke-width=".9"/>
-    <line x1="1260" y1="160" x2="1185" y2="90" stroke="rgba(200,170,80,.14)" stroke-width=".9"/>
-    <line x1="80" y1="340" x2="200" y2="240" stroke="rgba(200,170,80,.1)" stroke-width=".8"/>
-    <line x1="1360" y1="340" x2="1240" y2="240" stroke="rgba(200,170,80,.1)" stroke-width=".8"/>
-    <line x1="50" y1="440" x2="170" y2="350" stroke="rgba(200,170,80,.08)" stroke-width=".7"/>
-    <line x1="1390" y1="440" x2="1270" y2="350" stroke="rgba(200,170,80,.08)" stroke-width=".7"/>
+    <line x1="720" y1="0" x2="720" y2="22" stroke="rgba(150,200,240,.25)" stroke-width="1.2"/>
+    <line x1="360" y1="40" x2="400" y2="28" stroke="rgba(150,200,240,.18)" stroke-width="1"/>
+    <line x1="1080" y1="40" x2="1040" y2="28" stroke="rgba(150,200,240,.18)" stroke-width="1"/>
+    <line x1="180" y1="160" x2="255" y2="90" stroke="rgba(150,200,240,.14)" stroke-width=".9"/>
+    <line x1="1260" y1="160" x2="1185" y2="90" stroke="rgba(150,200,240,.14)" stroke-width=".9"/>
+    <line x1="80" y1="340" x2="200" y2="240" stroke="rgba(150,200,240,.1)" stroke-width=".8"/>
+    <line x1="1360" y1="340" x2="1240" y2="240" stroke="rgba(150,200,240,.1)" stroke-width=".8"/>
+    <line x1="50" y1="440" x2="170" y2="350" stroke="rgba(150,200,240,.08)" stroke-width=".7"/>
+    <line x1="1390" y1="440" x2="1270" y2="350" stroke="rgba(150,200,240,.08)" stroke-width=".7"/>
     <!-- Arcs concentriques du toit (cercles structurels) -->
-    <ellipse cx="720" cy="250" rx="560" ry="240" fill="none" stroke="rgba(200,170,80,.08)" stroke-width=".6"/>
-    <ellipse cx="720" cy="260" rx="620" ry="260" fill="none" stroke="rgba(200,170,80,.06)" stroke-width=".5"/>
+    <ellipse cx="720" cy="250" rx="560" ry="240" fill="none" stroke="rgba(150,200,240,.08)" stroke-width=".6"/>
+    <ellipse cx="720" cy="260" rx="620" ry="260" fill="none" stroke="rgba(150,200,240,.06)" stroke-width=".5"/>
     <!-- Bord extérieur du toit -->
-    <ellipse cx="720" cy="280" rx="702" ry="292" fill="none" stroke="rgba(253,230,138,.12)" stroke-width="2"/>
+    <ellipse cx="720" cy="280" rx="702" ry="292" fill="none" stroke="rgba(200,230,255,.12)" stroke-width="2"/>
 
     <!-- ═══ PROJECTEURS EN ÉTOILE ═══ -->
     <!-- Le long du bord intérieur du toit — ~40 projecteurs -->
@@ -1310,12 +1310,12 @@ footer{
       <circle cx="1000" cy="18" r="4.5" fill="url(#fl)"/><circle cx="1060" cy="28" r="4" fill="url(#fl)"/>
     </g>
     <!-- Halos chauds autour des projecteurs -->
-    <circle cx="400" cy="28" r="14" fill="rgba(253,230,138,.12)"/><circle cx="460" cy="18" r="15" fill="rgba(253,230,138,.13)"/>
-    <circle cx="520" cy="11" r="16" fill="rgba(253,230,138,.14)"/><circle cx="580" cy="6" r="16" fill="rgba(253,230,138,.14)"/>
-    <circle cx="640" cy="3" r="17" fill="rgba(253,230,138,.15)"/><circle cx="700" cy="1" r="17" fill="rgba(253,230,138,.15)"/>
-    <circle cx="760" cy="1" r="17" fill="rgba(253,230,138,.15)"/><circle cx="820" cy="3" r="17" fill="rgba(253,230,138,.15)"/>
-    <circle cx="880" cy="6" r="16" fill="rgba(253,230,138,.14)"/><circle cx="940" cy="11" r="16" fill="rgba(253,230,138,.14)"/>
-    <circle cx="1000" cy="18" r="15" fill="rgba(253,230,138,.13)"/><circle cx="1060" cy="28" r="14" fill="rgba(253,230,138,.12)"/>
+    <circle cx="400" cy="28" r="14" fill="rgba(200,230,255,.12)"/><circle cx="460" cy="18" r="15" fill="rgba(200,230,255,.13)"/>
+    <circle cx="520" cy="11" r="16" fill="rgba(200,230,255,.14)"/><circle cx="580" cy="6" r="16" fill="rgba(200,230,255,.14)"/>
+    <circle cx="640" cy="3" r="17" fill="rgba(200,230,255,.15)"/><circle cx="700" cy="1" r="17" fill="rgba(200,230,255,.15)"/>
+    <circle cx="760" cy="1" r="17" fill="rgba(200,230,255,.15)"/><circle cx="820" cy="3" r="17" fill="rgba(200,230,255,.15)"/>
+    <circle cx="880" cy="6" r="16" fill="rgba(200,230,255,.14)"/><circle cx="940" cy="11" r="16" fill="rgba(200,230,255,.14)"/>
+    <circle cx="1000" cy="18" r="15" fill="rgba(200,230,255,.13)"/><circle cx="1060" cy="28" r="14" fill="rgba(200,230,255,.12)"/>
     <!-- Gauche -->
     <g filter="url(#star-glow)">
       <circle cx="340" cy="45" r="3.5" fill="url(#fl)"/><circle cx="280" cy="72" r="3.5" fill="url(#fl)"/>
@@ -1323,10 +1323,10 @@ footer{
       <circle cx="160" cy="200" r="2.8" fill="url(#fl)"/><circle cx="140" cy="252" r="2.5" fill="url(#fl)"/>
       <circle cx="130" cy="310" r="2.5" fill="url(#fl)"/><circle cx="130" cy="370" r="2.2" fill="url(#fl)"/>
     </g>
-    <circle cx="340" cy="45" r="11" fill="rgba(253,230,138,.1)"/><circle cx="280" cy="72" r="11" fill="rgba(253,230,138,.1)"/>
-    <circle cx="230" cy="108" r="10" fill="rgba(253,230,138,.09)"/><circle cx="190" cy="152" r="10" fill="rgba(253,230,138,.08)"/>
-    <circle cx="160" cy="200" r="9" fill="rgba(253,230,138,.07)"/><circle cx="140" cy="252" r="8" fill="rgba(253,230,138,.06)"/>
-    <circle cx="130" cy="310" r="8" fill="rgba(253,230,138,.05)"/><circle cx="130" cy="370" r="7" fill="rgba(253,230,138,.04)"/>
+    <circle cx="340" cy="45" r="11" fill="rgba(200,230,255,.1)"/><circle cx="280" cy="72" r="11" fill="rgba(200,230,255,.1)"/>
+    <circle cx="230" cy="108" r="10" fill="rgba(200,230,255,.09)"/><circle cx="190" cy="152" r="10" fill="rgba(200,230,255,.08)"/>
+    <circle cx="160" cy="200" r="9" fill="rgba(200,230,255,.07)"/><circle cx="140" cy="252" r="8" fill="rgba(200,230,255,.06)"/>
+    <circle cx="130" cy="310" r="8" fill="rgba(200,230,255,.05)"/><circle cx="130" cy="370" r="7" fill="rgba(200,230,255,.04)"/>
     <!-- Droite -->
     <g filter="url(#star-glow)">
       <circle cx="1100" cy="45" r="3.5" fill="url(#fl)"/><circle cx="1160" cy="72" r="3.5" fill="url(#fl)"/>
@@ -1334,10 +1334,10 @@ footer{
       <circle cx="1280" cy="200" r="2.8" fill="url(#fl)"/><circle cx="1300" cy="252" r="2.5" fill="url(#fl)"/>
       <circle cx="1310" cy="310" r="2.5" fill="url(#fl)"/><circle cx="1310" cy="370" r="2.2" fill="url(#fl)"/>
     </g>
-    <circle cx="1100" cy="45" r="11" fill="rgba(253,230,138,.1)"/><circle cx="1160" cy="72" r="11" fill="rgba(253,230,138,.1)"/>
-    <circle cx="1210" cy="108" r="10" fill="rgba(253,230,138,.09)"/><circle cx="1250" cy="152" r="10" fill="rgba(253,230,138,.08)"/>
-    <circle cx="1280" cy="200" r="9" fill="rgba(253,230,138,.07)"/><circle cx="1300" cy="252" r="8" fill="rgba(253,230,138,.06)"/>
-    <circle cx="1310" cy="310" r="8" fill="rgba(253,230,138,.05)"/><circle cx="1310" cy="370" r="7" fill="rgba(253,230,138,.04)"/>
+    <circle cx="1100" cy="45" r="11" fill="rgba(200,230,255,.1)"/><circle cx="1160" cy="72" r="11" fill="rgba(200,230,255,.1)"/>
+    <circle cx="1210" cy="108" r="10" fill="rgba(200,230,255,.09)"/><circle cx="1250" cy="152" r="10" fill="rgba(200,230,255,.08)"/>
+    <circle cx="1280" cy="200" r="9" fill="rgba(200,230,255,.07)"/><circle cx="1300" cy="252" r="8" fill="rgba(200,230,255,.06)"/>
+    <circle cx="1310" cy="310" r="8" fill="rgba(200,230,255,.05)"/><circle cx="1310" cy="370" r="7" fill="rgba(200,230,255,.04)"/>
     <!-- Bas -->
     <g filter="url(#star-glow)">
       <circle cx="160" cy="430" r="2" fill="url(#fl)"/><circle cx="250" cy="490" r="2" fill="url(#fl)"/>
