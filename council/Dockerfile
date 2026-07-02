@@ -12,8 +12,10 @@ COPY council/ /app/council/
 # Create data directory
 RUN mkdir -p /app/data /app/site
 
-# Set Python path
+# Set Python path + timezone Paris
 ENV PYTHONPATH=/app/council
 ENV PYTHONUNBUFFERED=1
+ENV TZ=Europe/Paris
+RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo "Europe/Paris" > /etc/timezone
 
 CMD ["python", "/app/council/scheduler.py"]
