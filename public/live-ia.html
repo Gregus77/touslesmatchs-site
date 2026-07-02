@@ -460,6 +460,7 @@ function doLogin() {
       localStorage.setItem("tlm_plan", d.plan);
       closeLoginModal();
       updateAuthBar();
+      loadAgentRanking();
       renderMatches();
     } else {
       errEl.textContent = d.error || "Code invalide ou expiré.";
@@ -481,6 +482,7 @@ function doLogout() {
   localStorage.removeItem("tlm_code");
   localStorage.removeItem("tlm_plan");
   updateAuthBar();
+  document.getElementById("agent-ranking").style.display = "none";
   renderMatches();
 }
 
@@ -558,12 +560,8 @@ function loadAgentRanking() {
     }).catch(function(){});
 }
 
-// Load ranking after auth
-var origUpdateAuthBar = updateAuthBar;
-updateAuthBar = function() {
-  origUpdateAuthBar();
-  loadAgentRanking();
-};
+// Load ranking on page load if already logged in
+if (userAuth) loadAgentRanking();
 </script>
 </body>
 </html>
