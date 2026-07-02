@@ -6,7 +6,6 @@ Exécuté automatiquement à 11h59 chaque jour via le scheduler.
 import os
 import sys
 import json
-import asyncio
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -14,7 +13,6 @@ from dotenv import load_dotenv
 
 load_dotenv("/app/.env")
 
-# Add council dir to path
 sys.path.insert(0, "/app/council")
 
 from tools.history_db import (
@@ -26,7 +24,7 @@ from tools.sports_api import get_todays_matches, format_matches_for_prompt
 from tools.html_generator import inject_pick_into_html
 from tools.telegram_bot import (
     send_free_pick, send_nopick, send_premium_pick,
-    send_premium_stats, is_configured as telegram_ok
+    send_premium_stats, send_daily_report, is_configured as telegram_ok
 )
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
 
@@ -41,6 +39,7 @@ logging.basicConfig(
 log = logging.getLogger("hermes")
 
 IMPROVEMENT_NOTES_PATH = "/app/data/improvement_notes.txt"
+MIN_AGENT_ACCURACY = 80.0
 
 
 def load_improvement_notes():
@@ -79,6 +78,36 @@ def run_agent(agent_module, date, matches_text, history_text, stats):
         return agent_module.NAME, {"recommendation": "NOPICK", "confidence": 0, "reasoning": str(e)}
 
 
+def filter_agents_by_accuracy(agents, agent_accuracy):
+    """Keep only agents with >= 80% accuracy (or all if not enough data)."""
+    agent_name_map = {
+        "gpt": "DeepSeek", "gemini": "Gemini Flash",
+        "mistral": "Mistral", "groq": "Groq/Llama3",
+    }
+    qualified = []
+    excluded = []
+    for key, module in agents:
+        name = agent_name_map.get(key, key)
+        acc_data = agent_accuracy.get(name, {})
+        total = acc_data.get("total", 0)
+        accuracy = acc_data.get("accuracy", 0)
+        if total < 10:
+            qualified.append((key, module))
+            log.info(f"  [{name}] Pas assez de données ({total} picks) — inclus par défaut")
+        elif accuracy >= MIN_AGENT_ACCURACY:
+            qualified.append((key, module))
+            log.info(f"  [{name}] Accuracy {accuracy}% >= {MIN_AGENT_ACCURACY}% — qualifié")
+        else:
+            excluded.append((key, name, accuracy))
+            log.warning(f"  [{name}] Accuracy {accuracy}% < {MIN_AGENT_ACCURACY}% — EXCLU du Concile")
+
+    if len(qualified) < 2:
+        log.warning("Moins de 2 agents qualifiés — on garde tous les agents par sécurité")
+        return agents, excluded
+
+    return qualified, excluded
+
+
 def run_council():
     """Main orchestration function."""
     log.info("=" * 60)
@@ -89,11 +118,14 @@ def run_council():
     date_str = datetime.now().strftime("%d/%m/%Y")
     today_display = datetime.now().strftime("%d/%m")
 
-    # 1. Fetch today's matches
-    log.info("Récupération des matchs du jour...")
+    # 1. Fetch today's matches (multi-sport)
+    log.info("Récupération des matchs du jour (multi-sport)...")
     matches = get_todays_matches()
     matches_text = format_matches_for_prompt(matches)
-    log.info(f"  {len(matches)} matchs trouvés")
+    sport_counts = {}
+    for m in matches:
+        sport_counts[m.get("sport", "?")] = sport_counts.get(m.get("sport", "?"), 0) + 1
+    log.info(f"  {len(matches)} matchs: {sport_counts}")
 
     # 2. Load context
     picks_history = get_recent_picks(days=60)
@@ -104,26 +136,29 @@ def run_council():
 
     log.info(f"Contexte: {stats['wins']}W/{stats['losses']}L ({stats['winrate']}% winrate)")
 
-    # 3. Run 4 sub-agents in parallel
-    log.info("Lancement du conseil des agents...")
-    agents = [
+    # 3. Filter agents by accuracy (>= 80%)
+    all_agents = [
         ("gpt", gpt_agent),
         ("gemini", gemini_agent),
         ("mistral", mistral_agent),
         ("groq", groq_agent),
     ]
+    qualified_agents, excluded_agents = filter_agents_by_accuracy(all_agents, agent_accuracy)
+
+    # 4. Run qualified agents in parallel
+    log.info(f"Lancement de {len(qualified_agents)} agents qualifiés...")
     agent_reports = {}
     with ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(run_agent, module, date_str, matches_text, history_text, stats): key
-            for key, module in agents
+            for key, module in qualified_agents
         }
         for future in as_completed(futures):
             key = futures[future]
             name, report = future.result()
             agent_reports[key] = report
 
-    # 4. Collecter les picks premium (confiance 7-7.9) des agents
+    # 5. Collect premium candidates (confidence 7-7.9)
     premium_candidates = []
     for key, report in agent_reports.items():
         conf = report.get("confidence", 0)
@@ -131,7 +166,7 @@ def run_council():
             premium_candidates.append(report)
             log.info(f"  [{key}] Pick premium candidat: {report.get('match')} ({conf}/10)")
 
-    # 4. Claude (Chef) makes final decision
+    # 6. Claude (Chef) makes final decision
     log.info("Claude (Chef) prend sa décision finale...")
     decision = claude_chief.decide(
         date=date_str,
@@ -150,12 +185,12 @@ def run_council():
         log.info(f"  Pari: {decision.get('bet')} @ {decision.get('odds')}")
         log.info(f"  Confiance: {decision.get('confidence')}/10")
 
-    # 5. Save notes d'amélioration
+    # 7. Save improvement notes
     if decision.get("improvement_notes"):
         save_improvement_notes(decision["improvement_notes"])
         log.info("Notes d'amélioration sauvegardées.")
 
-    # 6. Save pick to DB
+    # 8. Save pick to DB
     is_nopick = (final != "PICK")
     agents_votes_summary = {
         k: {"rec": v.get("recommendation"), "conf": v.get("confidence"), "match": v.get("match")}
@@ -172,7 +207,7 @@ def run_council():
         claude_reasoning=decision.get("reasoning", ""),
     )
 
-    # 7. Save picks premium (confiance 7-7.9)
+    # 9. Save premium picks (confidence 7-7.9)
     seen_premium_matches = set()
     for pc in premium_candidates:
         match_key = pc.get("match", "")
@@ -188,7 +223,6 @@ def run_council():
                 agents_votes=agents_votes_summary,
                 claude_reasoning=pc.get("reasoning", ""),
             )
-            # Envoyer sur Telegram premium
             if telegram_ok():
                 ok = send_premium_pick(
                     match=pc.get("match"),
@@ -202,7 +236,7 @@ def run_council():
                     mark_premium_sent(pid)
                     log.info(f"  Pick premium envoyé Telegram: {match_key}")
 
-    # 8. Save agent votes for performance tracking
+    # 10. Save agent votes for performance tracking
     for key, report in agent_reports.items():
         agent_name = {"gpt": "DeepSeek", "gemini": "Gemini Flash",
                       "mistral": "Mistral", "groq": "Groq/Llama3"}.get(key, key)
@@ -211,11 +245,11 @@ def run_council():
             sport=report.get("sport"), confidence=report.get("confidence")
         )
 
-    # 9. Refresh picks history (now includes today)
+    # 11. Refresh picks history
     picks_history = get_recent_picks(days=60)
     stats = get_stats()
 
-    # 10. Generate new index.html
+    # 12. Generate new index.html
     log.info("Génération du HTML...")
     pick_data = {
         "nopick": is_nopick,
@@ -231,7 +265,7 @@ def run_council():
     else:
         log.error("Erreur lors de la génération du HTML.")
 
-    # 11. Telegram — canal gratuit
+    # 13. Telegram — free channel
     if telegram_ok():
         if is_nopick:
             send_nopick()
@@ -249,10 +283,63 @@ def run_council():
     else:
         log.warning("Telegram non configuré — messages non envoyés")
 
+    # 14. Daily report to admin Telegram
+    _send_daily_report(
+        decision=decision,
+        agent_reports=agent_reports,
+        excluded_agents=excluded_agents,
+        stats=stats,
+        sport_counts=sport_counts,
+        is_nopick=is_nopick,
+    )
+
     log.info("=" * 60)
     log.info("HERMES COUNCIL - Session terminée")
     log.info("=" * 60)
     return decision
+
+
+def _send_daily_report(decision, agent_reports, excluded_agents, stats, sport_counts, is_nopick):
+    """Send a daily operational report to the admin Telegram chat."""
+    date_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    sports_line = " | ".join(f"{s}: {c}" for s, c in sorted(sport_counts.items()))
+
+    agents_lines = []
+    for key, report in agent_reports.items():
+        name = {"gpt": "DeepSeek", "gemini": "Gemini Flash",
+                "mistral": "Mistral", "groq": "Groq/Llama3"}.get(key, key)
+        rec = report.get("recommendation", "?")
+        conf = report.get("confidence", 0)
+        match = report.get("match", "-")
+        agents_lines.append(f"  {name}: {rec} ({conf}/10) — {match}")
+
+    excluded_lines = []
+    for key, name, accuracy in excluded_agents:
+        excluded_lines.append(f"  {name}: {accuracy}% (< 80%)")
+
+    report_data = {
+        "date": date_str,
+        "sports": sports_line,
+        "total_matches": sum(sport_counts.values()),
+        "decision": "PICK" if not is_nopick else "NOPICK",
+        "match": decision.get("match", "-"),
+        "bet": decision.get("bet", "-"),
+        "odds": decision.get("odds", "-"),
+        "confidence": decision.get("confidence", 0),
+        "agents": "\n".join(agents_lines),
+        "excluded": "\n".join(excluded_lines) if excluded_lines else "Aucun",
+        "winrate": stats.get("winrate", 0),
+        "roi": stats.get("roi", 0),
+        "total_picks": stats.get("wins", 0) + stats.get("losses", 0),
+        "improvement": decision.get("improvement_notes", "")[:200],
+    }
+
+    try:
+        send_daily_report(report_data)
+        log.info("Rapport quotidien envoyé sur Telegram admin")
+    except Exception as e:
+        log.error(f"Erreur envoi rapport quotidien: {e}")
 
 
 if __name__ == "__main__":

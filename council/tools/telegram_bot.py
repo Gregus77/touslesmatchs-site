@@ -12,8 +12,9 @@ from datetime import datetime
 log = logging.getLogger("telegram")
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-FREE_CHANNEL_ID = os.environ.get("TELEGRAM_FREE_CHANNEL_ID", "")
+FREE_CHANNEL_ID = os.environ.get("TELEGRAM_FREE_CHANNEL_ID", "") or os.environ.get("TELEGRAM_CHANNEL_ID", "")
 PREMIUM_CHANNEL_ID = os.environ.get("TELEGRAM_PREMIUM_CHANNEL_ID", "")
+ADMIN_CHAT_ID = os.environ.get("TELEGRAM_ADMIN_CHAT_ID", "")
 
 WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr")
 BETCLIC_LINK = os.environ.get("BETCLIC_LINK", "https://www.betclic.fr")
@@ -171,6 +172,41 @@ def send_result_update(match, bet, result, score, tier="free"):
 {'🎉 Bravo à ceux qui ont joué !' if result == 'GAGNE' else '💪 On rebondit demain — la discipline paie sur le long terme.'}"""
 
     return _send_message(channel, text)
+
+
+def send_daily_report(report_data: dict):
+    """Envoie le rapport quotidien Hermes sur le chat admin Telegram."""
+    if not ADMIN_CHAT_ID:
+        log.warning("[Telegram] ADMIN_CHAT_ID non configuré — rapport non envoyé")
+        return False
+
+    d = report_data
+    text = f"""📋 <b>RAPPORT HERMES — {d['date']}</b>
+
+🏟️ <b>{d['total_matches']} matchs analysés</b>
+{d['sports']}
+
+{'✅' if d['decision'] == 'PICK' else '❌'} <b>Décision : {d['decision']}</b>
+{f"🏆 {d['match']}" if d['decision'] == 'PICK' else ''}
+{f"💡 {d['bet']} @ {d['odds']}" if d['decision'] == 'PICK' else ''}
+{f"🔥 Confiance : {d['confidence']}/10" if d['decision'] == 'PICK' else ''}
+
+🤖 <b>Votes des agents :</b>
+{d['agents']}
+
+🚫 <b>Agents exclus (< 80%) :</b>
+{d['excluded']}
+
+📈 <b>Stats globales :</b>
+Winrate : {d['winrate']}% | ROI : {d['roi']}%
+Total picks résolus : {d['total_picks']}
+
+{f"📝 Notes : {d['improvement']}" if d.get('improvement') else ''}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermes Council — Rapport automatique"""
+
+    return _send_message(ADMIN_CHAT_ID, text)
 
 
 def is_configured():

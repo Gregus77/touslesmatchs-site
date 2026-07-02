@@ -3185,8 +3185,18 @@ async function brevoAddContact(email, tag) {
   }
 }
 
+const _emailDailyCap = new Map();
+setInterval(() => _emailDailyCap.clear(), 24 * 60 * 60 * 1000);
+
 async function brevoSendEmail(to, subject, htmlContent) {
   if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
+  const key = to.toLowerCase();
+  const sent = _emailDailyCap.get(key) || 0;
+  if (sent >= 1) {
+    console.log(`[brevo] Cap 1 email/jour atteint pour ${key} — "${subject}" non envoyé`);
+    return;
+  }
+  _emailDailyCap.set(key, sent + 1);
   return httpPostStrict(
     "https://api.brevo.com/v3/smtp/email",
     {
