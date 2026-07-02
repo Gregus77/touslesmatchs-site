@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TousLesMatchs — Pronostics sportifs IA & Live IA</title>
-<meta name="description" content="Analyse sportive assistée par IA, picks vérifiés, historique transparent et Live IA. TousLesMatchs publie uniquement quand les données disponibles le justifient.">
+<title>TousLesMatchs — Hermes analyse. Tu decides.</title>
+<meta name="description" content="4 IA analysent chaque match. Le Chief tranche. Teste Hermes pour 1 euro et vois ce que le Concile pense vraiment.">
 <link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
@@ -781,7 +781,7 @@ footer{
 /* ══ STICKY EMAIL BAR ══ */
 #sticky-email-bar{position:fixed;bottom:80px;left:0;right:0;z-index:290;padding:0 12px;pointer-events:none;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s}
 #sticky-email-bar.hidden{transform:translateY(20px);opacity:0}
-.seb-inner{max-width:560px;margin:0 auto;background:linear-gradient(135deg,rgba(79,70,229,.97),rgba(124,58,237,.97));border:1px solid rgba(99,102,241,.5);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 40px rgba(79,70,229,.5);backdrop-filter:blur(16px);pointer-events:all}
+.seb-inner{max-width:560px;margin:0 auto;background:rgba(6,8,15,.95);border:1px solid rgba(16,185,129,.35);border-radius:16px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 40px rgba(0,0,0,.5);backdrop-filter:blur(16px);pointer-events:all}
 .seb-text{font-size:13px;font-weight:700;color:#fff;margin-bottom:6px;white-space:nowrap}
 .seb-form{display:flex;gap:6px;flex:1}
 .seb-input{flex:1;min-width:0;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:8px 12px;font-size:12px;color:#fff;outline:none;transition:border-color .15s}
@@ -1143,7 +1143,7 @@ footer{
   <div class="nav-right">
     <div id="nav-auth"><button class="nav-login" onclick="openModal()">Se connecter</button></div>
     <div id="lang-picker-slot"></div>
-    <a href="#plans" class="nav-cta" data-i18n="nav_cta">Commencer →</a>
+    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="nav-cta">Tester — 1€</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
 </nav>
@@ -1154,7 +1154,7 @@ footer{
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
-  <a href="#plan-carte" class="mm-cta" onclick="toggleMenu()">Rejoindre → dès 1€</a>
+  <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="mm-cta" onclick="toggleMenu()">Tester Hermes — 1€</a>
 </div>
 
 <!-- MODAL LOGIN -->
@@ -1362,82 +1362,65 @@ footer{
   <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%">
 
   <!-- Badge -->
-  <div class="hero-badge" style="margin-bottom:18px">
+  <div class="hero-badge" style="margin-bottom:20px">
     <span class="badge-dot"></span>
-    <span>Concile IA · 4 agents + Chief</span>
+    <span>Concile Hermes · 4 IA + 1 Chief</span>
   </div>
 
-  <!-- Headline — court, impactant -->
-  <h1 style="font-size:clamp(28px,4.4vw,54px);font-weight:900;line-height:1.1;letter-spacing:-.035em;margin-bottom:16px;max-width:800px;text-align:center">
-    4 IA analysent chaque match.<br>
-    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1 sélection. 0 match inventé.</span>
+  <!-- Headline — storytelling -->
+  <h1 style="font-size:clamp(32px,5vw,62px);font-weight:900;line-height:1.05;letter-spacing:-.04em;margin-bottom:18px;max-width:700px;text-align:center">
+    Hermes analyse.<br>
+    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Tu decides.</span>
   </h1>
 
-  <!-- Subtitle — 1 phrase -->
-  <p class="hero-sub" style="font-size:16px;color:var(--muted2);max-width:480px;line-height:1.6;margin-bottom:8px;text-align:center">
-    Stats, forme, H2H, blessures — nos IA croisent tout et ne retiennent que les <strong style="color:var(--text)">meilleures opportunités</strong>.
-  </p>
-  <p class="hero-disclaimer" style="font-size:11px;color:var(--muted);margin-bottom:24px;text-align:center">
-    Aucune garantie de gain · 18+ · Jeu responsable
+  <!-- Subtitle — 1 phrase claire -->
+  <p class="hero-sub" style="font-size:17px;color:var(--muted2);max-width:440px;line-height:1.6;margin-bottom:28px;text-align:center">
+    4 intelligences artificielles croisent les donnees de chaque match. Le Chief tranche. Tu recois le verdict.
   </p>
 
-  <!-- CTA -->
-  <div class="hero-cta-row" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:24px">
-    <a href="#pick" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#059669,#22d3ee);color:#04121a;font-size:16px;font-weight:900;padding:16px 34px;border-radius:13px;text-decoration:none;box-shadow:0 8px 32px rgba(34,211,238,.35);transition:all .2s"
-       onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 40px rgba(34,211,238,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(34,211,238,.35)'">
-      Voir la sélection du jour
+  <!-- CTA UNIQUE — Tester pour 1 euro -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px">
+    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15);transition:all .25s;letter-spacing:-.01em"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55),0 0 80px rgba(16,185,129,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15)'">
+      Tester Hermes — 1€
     </a>
-    <a href="#plans" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--b2);font-size:15px;font-weight:700;padding:15px 26px;border-radius:13px;text-decoration:none;transition:all .2s"
-       onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
-      Abonnements
-    </a>
-  </div>
-
-  <!-- EMAIL CAPTURE -->
-  <div id="hero-email-box" class="hero-email-wrap" style="background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.05));border:1px solid rgba(99,102,241,.22);border-radius:16px;padding:22px 28px;max-width:480px;width:100%;margin-bottom:20px;text-align:left">
-    <div style="font-size:14px;font-weight:800;margin-bottom:12px">📩 Analyse IA gratuite par email</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <input type="email" id="hero-email-input" placeholder="votre@email.com" autocomplete="email"
-        style="flex:1;min-width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s"
-        onfocus="this.style.borderColor='rgba(99,102,241,.55)'" onblur="this.style.borderColor='rgba(255,255,255,.16)'"
-        onkeydown="if(event.key==='Enter')heroEmailCapture()">
-      <button onclick="heroEmailCapture()"
-        style="background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 20px rgba(79,70,229,.35);transition:all .2s"
-        onmouseover="this.style.boxShadow='0 6px 28px rgba(79,70,229,.55)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(79,70,229,.35)'"
-        id="hero-email-btn">
-        S'inscrire →
-      </button>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
+      <span style="font-size:12px;color:var(--muted2)">🔒 Stripe</span>
+      <span style="font-size:12px;color:var(--muted2)">⚡ Resultat en 30s</span>
+      <span style="font-size:12px;color:var(--muted2)">0 engagement</span>
     </div>
-    <div id="hero-email-ok" style="display:none;color:var(--green);font-size:13px;margin-top:10px;font-weight:600"></div>
-    <div id="hero-email-err" style="display:none;color:var(--red);font-size:12px;margin-top:8px"></div>
-    <div style="font-size:10px;color:var(--muted);margin-top:8px">Gratuit · Zéro spam · Désabonnement en 1 clic</div>
   </div>
 
-  <!-- Telegram -->
-  <div class="hero-tg-row" style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:24px">
-    <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer"
-       style="display:inline-flex;align-items:center;gap:6px;color:var(--cyan);font-size:13px;font-weight:600;text-decoration:none;opacity:.8">
-      📱 Telegram gratuit
-    </a>
-  </div>
-
-  <!-- Badge dernier pick gagnant -->
-  <div id="hero-last-win" style="display:none;margin-bottom:14px">
-    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:8px 16px">
-      <span style="font-size:16px">✅</span>
-      <div>
-        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#10b981;margin-bottom:2px">Dernier pick</div>
-        <div id="hero-last-win-text" style="font-size:12px;font-weight:700;color:#eceaf4"></div>
+  <!-- Social proof compact -->
+  <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-bottom:20px">
+    <div id="hero-last-win" style="display:none">
+      <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:10px;padding:6px 14px">
+        <span style="font-size:14px">✅</span>
+        <div>
+          <div style="font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#10b981">Dernier pick</div>
+          <div id="hero-last-win-text" style="font-size:11px;font-weight:700;color:#eceaf4"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Stats bar -->
+  <!-- Stats bar — compact -->
   <div class="hero-stats">
     <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simulé</div></div>
-    <div class="hs"><div class="hs-val c-indigo">4+1</div><div class="hs-label">Agents + Chief</div></div>
-    <div class="hs"><div class="hs-val c-violet">3+</div><div class="hs-label">Sources</div></div>
+    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simule</div></div>
+    <div class="hs"><div class="hs-val c-indigo">4+1</div><div class="hs-label">IA</div></div>
+  </div>
+
+  <p style="font-size:10px;color:var(--muted);margin-top:12px;text-align:center">
+    Aucune garantie de gain · 18+ · joueurs-info-service.fr
+  </p>
+
+  <!-- Email capture masque mais fonctionnel (pour Brevo) -->
+  <div id="hero-email-box" class="hero-email-wrap" style="display:none">
+    <input type="email" id="hero-email-input" placeholder="votre@email.com" autocomplete="email" style="display:none">
+    <div id="hero-email-ok" style="display:none"></div>
+    <div id="hero-email-err" style="display:none"></div>
   </div>
 
   </div><!-- /z-index wrapper -->
@@ -1453,15 +1436,15 @@ footer{
 
 <!-- PROCHAIN PICK + RÉSULTATS RÉCENTS -->
 <section class="section-wrap" id="next-pick" style="padding-bottom:20px">
-  <div class="s-eyebrow" data-i18n="sec_next_eye">Concile · Picks en direct</div>
-  <div class="s-title" data-i18n="sec_next_title">Résultats &amp; Prochain Pick</div>
+  <div class="s-eyebrow">Hermes · Resultats en direct</div>
+  <div class="s-title">Derniers verdicts du Concile</div>
   <div id="pf-root"></div>
 </section>
 
 <!-- PICK DU JOUR -->
 <section class="section-wrap" id="pick">
-  <div class="s-eyebrow" data-i18n="sec_pick_eye">Concile · analyse du jour</div>
-  <div class="s-title" data-i18n="pick_today">Analyse du jour</div>
+  <div class="s-eyebrow">Hermes · Analyse du jour</div>
+  <div class="s-title">Le verdict d'aujourd'hui</div>
   <div id="pick-root"></div>
 </section>
 
@@ -1481,9 +1464,9 @@ footer{
 
 <!-- LIVE IA DÉMO -->
 <section class="section-wrap" style="padding-top:0;padding-bottom:80px">
-  <div class="s-eyebrow">Live IA · Démonstration</div>
-  <div class="s-title">4 agents IA. 1 arbitre Chief. 1 verdict.</div>
-  <div class="s-sub" style="margin-bottom:28px">Le Concile affiche le consensus, les signaux clés et les objections utiles. Les rapports complets et les prompts restent internes.</div>
+  <div class="s-eyebrow">Hermes en action</div>
+  <div class="s-title">Voila ce que Hermes voit. En 30 secondes.</div>
+  <div class="s-sub" style="margin-bottom:28px">4 IA analysent. Le Chief tranche. Tu recois le verdict avec la confiance et les objections.</div>
 
   <div class="liad-wrap">
     <!-- HEADER MATCH -->
@@ -1560,8 +1543,8 @@ footer{
 
     <!-- CTA -->
     <div class="liad-cta">
-      <a href="/live-ia" class="liad-try-btn">Analyser un vrai match maintenant →</a>
-      <div class="liad-note">⚡ Résultat en ~30 secondes<br>Disponible plans Pro &amp; Elite</div>
+      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="liad-try-btn" style="background:linear-gradient(135deg,#059669,#10b981)!important">Tester Hermes sur un vrai match — 1€</a>
+      <div class="liad-note">⚡ Resultat en ~30 secondes · 0 engagement · Paiement Stripe securise</div>
     </div>
   </div>
 </section>
@@ -1641,46 +1624,29 @@ footer{
 
 <!-- PLANS -->
 <section class="plans-section" id="plans">
-  <div class="s-eyebrow" data-i18n="sec_plans_eye">Abonnements</div>
-  <div class="s-title" data-i18n="sec_plans_title">Un plan pour chaque niveau d'ambition</div>
-  <div class="s-sub" data-i18n="sec_plans_sub">Du pick gratuit au Live IA complet — accès immédiat après paiement.</div>
+  <div class="s-eyebrow">Offres</div>
+  <div class="s-title">Teste. Puis decide.</div>
+  <div class="s-sub">1 euro pour tester Hermes sur le match de ton choix. Si ca te plait, passe Pro ou Elite.</div>
   <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">
-    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#10b981">✅ Code envoyé instantanément par email</div>
-    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--indigo2)">🔒 Paiement sécurisé par Stripe</div>
-    <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#22d3ee">⚡ Alertes signal fort dès 80% de confiance</div>
+    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#10b981">Code envoye instantanement par email</div>
+    <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--indigo2)">Paiement securise Stripe</div>
   </div>
   <div class="plans-grid">
+    <div class="pc feat" id="plan-carte" style="border-color:rgba(16,185,129,.4)">
+      <span class="pc-badge" style="background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3)">Recommande</span>
+      <div><div class="pc-price" style="background:linear-gradient(135deg,#34d399,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1€</div><div class="pc-name" style="margin-top:6px">Tester Hermes</div></div>
+      <div class="pc-desc">Choisis un match en direct. Hermes l'analyse en 30 secondes. Tu vois le verdict du Concile.</div>
+      <div class="pc-div"></div>
+      <div class="pc-features">
+        <div class="pcf"><span class="ok">✓</span>1 analyse complete Live IA</div>
+        <div class="pcf"><span class="ok">✓</span>Consensus 4 IA + verdict Chief</div>
+        <div class="pcf"><span class="ok">✓</span>Objections et confiance detaillee</div>
+        <div class="pcf"><span class="ok">✓</span>0 engagement, 0 abonnement</div>
+      </div>
+      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">Tester Hermes — 1€</a>
+    </div>
     <div class="pc">
-      <span class="pc-badge b-fr" data-i18n="plan_free_badge">Gratuit</span>
-      <div><div class="pc-price">0€<span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px" data-i18n="plan_free_name">Découverte</div></div>
-      <div class="pc-desc" data-i18n="plan_free_desc">La meilleure analyse IA du jour, visible sur le site. Aucune inscription.</div>
-      <div class="pc-div"></div>
-      <div class="pc-features">
-        <div class="pcf"><span class="ok">✓</span>1 pick/jour (site public)</div>
-        <div class="pcf"><span class="ok">✓</span>Stats et résultats</div>
-        <div class="pcf"><span class="no">✗</span>Groupe Telegram</div>
-        <div class="pcf"><span class="no">✗</span>Live IA</div>
-        <div class="pcf"><span class="no">✗</span>Consensus IA détaillé</div>
-      </div>
-      <a href="#pick" class="pc-btn prim" data-i18n="plan_free_btn">Voir le pick</a>
-    </div>
-    <div class="pc" id="plan-carte">
-      <span class="pc-badge b-ct" data-i18n="plan_carte_badge">À la carte</span>
-      <div><div class="pc-price">1€<span class="mo">/analyse</span></div><div class="pc-name" style="margin-top:6px" data-i18n="plan_carte_name">Test</div></div>
-      <div class="pc-desc" data-i18n="plan_carte_desc">1 crédit = 1 analyse complète sur le match de ton choix en Live IA.</div>
-      <div class="pc-div"></div>
-      <div class="pc-features">
-        <div class="pcf"><span class="ok">✓</span>1 analyse Live IA</div>
-        <div class="pcf"><span class="ok">✓</span>Consensus IA + objections</div>
-        <div class="pcf"><span class="ok">✓</span>Verdict + cote</div>
-        <div class="pcf"><span class="no">✗</span>Groupe Telegram</div>
-        <div class="pcf"><span class="no">✗</span>Accès illimité</div>
-      </div>
-      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" id="btn-carte" class="pc-btn prim">1 analyse — 1&euro;</a>
-    </div>
-    <div class="pc feat">
       <span class="pc-badge b-pr">Pro</span>
-      <span class="b-pop" data-i18n="plan_pop">Populaire</span>
       <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Pro</div></div>
       <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses Live IA par jour + groupe Telegram Pro. Idéal pour suivre les matchs sans attendre.</div>
       <div class="pc-div"></div>
@@ -1712,8 +1678,8 @@ footer{
   </div>
 </section>
 
-<!-- PARRAINAGE / REFERRAL SECTION -->
-<div id="referral-section" style="max-width:960px;margin:0 auto;padding:0 32px 40px;position:relative;z-index:1">
+<!-- PARRAINAGE / REFERRAL SECTION (hidden — focus conversion) -->
+<div id="referral-section" style="display:none;max-width:960px;margin:0 auto;padding:0 32px 40px;position:relative;z-index:1">
   <div style="background:linear-gradient(135deg,rgba(16,185,129,.08),rgba(79,70,229,.07));border:1px solid rgba(16,185,129,.22);border-radius:20px;padding:32px">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap">
       <div style="flex:1;min-width:260px">
@@ -1795,15 +1761,15 @@ function copyRefLink(){
   </div>
 </div>
 
-<!-- FAQ -->
-<section class="section-wrap" id="faq" style="border-top:1px solid var(--b1)">
+<!-- FAQ (hidden — focus conversion) -->
+<section class="section-wrap" id="faq" style="display:none;border-top:1px solid var(--b1)">
   <div class="s-eyebrow">Questions fréquentes</div>
   <div class="s-title">Tout ce que tu dois savoir</div>
   <div id="faq-list" style="margin-top:32px;display:flex;flex-direction:column;gap:8px"></div>
 </section>
 
-<!-- HOW IT WORKS -->
-<section class="how-section">
+<!-- HOW IT WORKS (hidden — focus conversion) -->
+<section class="how-section" style="display:none">
   <div class="s-eyebrow" data-i18n="sec_how_eye">Méthode</div>
   <div class="s-title" data-i18n="sec_how_title">Le Concile ne devine pas.</div>
   <div class="steps">
@@ -1840,6 +1806,24 @@ function copyRefLink(){
   </div>
 </section>
 
+<!-- CTA FINAL — derniere chance de convertir -->
+<section style="position:relative;z-index:1;padding:60px 32px;text-align:center;border-top:1px solid var(--b1)">
+  <div style="max-width:500px;margin:0 auto">
+    <div style="font-size:clamp(22px,3.5vw,34px);font-weight:900;letter-spacing:-.03em;margin-bottom:12px">
+      Pret a tester Hermes ?
+    </div>
+    <p style="font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:24px">
+      1 euro. 1 match. 30 secondes. Tu vois ce que 4 IA pensent vraiment — et tu decides.
+    </p>
+    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4);transition:all .25s"
+       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4)'">
+      Tester Hermes — 1€
+    </a>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paiement securise Stripe · 0 abonnement · Resultat immediat</div>
+  </div>
+</section>
+
 <footer>
   <div class="foot-logo">TousLesMatchs</div>
   <div class="foot-text">
@@ -1854,50 +1838,25 @@ function copyRefLink(){
   </div>
 </footer>
 
-<!-- STICKY EMAIL BAR -->
+<!-- STICKY CTA BAR — Tester Hermes -->
 <div id="sticky-email-bar" style="display:none">
-  <div class="seb-inner">
-    <div style="flex:1">
-      <div class="seb-text">🎁 Recevez gratuitement le prochain pick IA</div>
-      <div class="seb-form">
-        <input id="seb-email" class="seb-input" type="email" placeholder="votre@email.com" onkeydown="if(event.key==='Enter')subscribeStickyBar()">
-        <button class="seb-btn" onclick="subscribeStickyBar()">Recevoir →</button>
-      </div>
-    </div>
+  <div class="seb-inner" style="justify-content:center;gap:16px">
+    <div style="font-size:14px;font-weight:800;color:var(--text)">Teste Hermes sur un vrai match</div>
+    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+       style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(16,185,129,.3)">
+      1€ — Tester maintenant
+    </a>
     <button class="seb-close" onclick="closeStickyBar()">×</button>
   </div>
 </div>
 
-<!-- FLOATING TELEGRAM -->
+<!-- FLOATING TikTok (kept — acquisition) -->
 <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=floating_button&utm_campaign=prospection" target="_blank" rel="noopener noreferrer" class="tiktok-float">
   TikTok
 </a>
-<a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" class="tg-float">
-  📱 Telegram gratuit
-</a>
 
-<!-- EMAIL POPUP -->
-<div class="ep-bg" id="ep-bg">
-  <div class="ep-box">
-    <button class="ep-close" onclick="closeEmailPopup()">×</button>
-    <div style="font-size:32px;text-align:center;margin-bottom:14px">📩</div>
-    <div style="font-size:20px;font-weight:800;letter-spacing:-.02em;text-align:center;margin-bottom:8px">Recevez le prochain pick<br><span style="color:var(--cyan)">gratuitement par email</span></div>
-    <div style="font-size:13px;color:var(--muted2);text-align:center;margin-bottom:22px;line-height:1.6">Chaque jour à 11h59, le Concile Hermès analyse les matchs.<br>Recevez le pick + les liens bookmakers directement.</div>
-    <input class="ep-input" id="ep-email" type="email" placeholder="votre@email.com" autocomplete="email">
-    <select class="ep-input" id="ep-age" style="margin-top:10px">
-      <option value="">Votre âge</option>
-      <option value="18-24">18-24 ans</option>
-      <option value="25-34">25-34 ans</option>
-      <option value="35-44">35-44 ans</option>
-      <option value="45-54">45-54 ans</option>
-      <option value="55+">55 ans et plus</option>
-    </select>
-    <div id="ep-err" style="color:var(--red);font-size:12px;margin:6px 0 6px;display:none"></div>
-    <div id="ep-ok" style="color:var(--green);font-size:12px;margin:6px 0 6px;display:none"></div>
-    <button class="ep-btn" id="ep-btn" onclick="subscribeEmail()" style="margin:10px 0">Recevoir mon pick gratuit →</button>
-    <div style="font-size:11px;color:var(--muted);text-align:center">Gratuit · Zéro spam · Désabonnement en 1 clic</div>
-  </div>
-</div>
+<!-- Email popup & Telegram float hidden — focus conversion -->
+<div class="ep-bg" id="ep-bg" style="display:none!important"></div>
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="/js/i18n.js?v=concile-chief-20260623"></script>
