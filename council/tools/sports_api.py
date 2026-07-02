@@ -17,7 +17,7 @@ ALLOWED_LEAGUES = {
     94,           # Liga Portugal
     203,          # Super Lig (Turquie)
     2, 3, 848,    # Champions League, Europa League, Conference League
-    4, 1,         # Euro, Coupe du Monde
+    4,            # Euro (Coupe du Monde exclue)
     253, 262,     # MLS, Liga MX
     13,           # Copa Libertadores
     169,          # Chinese Super League

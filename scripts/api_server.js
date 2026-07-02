@@ -353,7 +353,7 @@ function callCohere(prompt) {
 
 function parseShadowResponse(text) {
   const t = text.trim();
-  const betMatch = t.match(/(?:PARI|BET|PRONOSTIC)\s*:\s*([^\n|]+)/i);
+  const betMatch = t.match(/(?:PARI|BET|PRONOSTIC|ANALYSE)\s*:\s*([^\n|]+)/i);
   const confMatch = t.match(/(?:CONFIANCE|CONFIDENCE)\s*:\s*(\d+)/i);
   const raisonMatch = t.match(/(?:RAISON|REASON|POURQUOI)\s*:\s*([^\n]+)/i);
   const marchesMatch = t.match(/MARCHES\s*:\s*([^\n]+)/i);
@@ -386,14 +386,16 @@ function buildShadowPrompt(match) {
   const scoreStr = (match.score_home != null && match.score_away != null)
     ? `\nScore actuel : ${match.score_home}-${match.score_away}${match.minute ? ` (${match.minute}')` : ""}`
     : "";
-  return `Tu es un analyste sportif expert. Analyse ce match et donne ta recommandation de pari.
+  return `Tu es un analyste sportif expert. Analyse ce match et donne ta recommandation.
 
 Match : ${match.home} vs ${match.away}
 Compétition : ${match.competition || match.league || "inconnue"}
 Sport : ${match.sport || "Football"}${scoreStr}
 
+DIRECTIVE : privilégie "Under 2.5" (Moins de 2.5 buts) sauf si le score rend ce marché impossible.
+
 Réponds UNIQUEMENT dans ce format :
-PARI : [ex: Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
+ANALYSE : [ex: Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
 CONFIANCE : [0-100]
 RAISON : [1 phrase maximum]
 MARCHES : buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55
@@ -809,6 +811,7 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
   "copa rio", "copa chile", "svenska cupen", "regional cup", "state cup",
+  "world cup", "coupe du monde", "fifa world", "copa del mundo",
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {
@@ -1493,8 +1496,10 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
 
 ${matchContext}
 
-En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande le meilleur pari.
+En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande la meilleure analyse.
 Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
+
+DIRECTIVE PRIORITAIRE : recommande "Under 2.5 buts" (Moins de 2.5 buts) par défaut SAUF si le score actuel rend ce marché mathématiquement impossible (déjà 3+ buts). C'est le marché principal à analyser.
 
 ⚠️ CONFIANCE ARGUMENTÉE — INTERDICTION du 70% générique :
 - Ta "confidence" DOIT refléter la force réelle des données, pas une valeur ronde par défaut.
@@ -1611,6 +1616,7 @@ Synthétise ces votes en tenant compte de :
 6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
 7. Les règles propres au sport: ${sport}
 8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
+9. DIRECTIVE PRIORITAIRE : privilégie "Under 2.5 buts" sauf si le score rend ce marché impossible
 
 Réponds en JSON pur (pas de markdown):
 {
@@ -1695,8 +1701,8 @@ Réponds en JSON pur (pas de markdown):
       _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
       const ico = si[match.sport] || "🎯";
-      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>Le pari exact et l'analyse complète sont réservés aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux picks</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse complète est réservée aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
       if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
     }
@@ -3057,8 +3063,8 @@ function leadLang(email, leadMap) {
 
 function pickEmailText(lang) {
   const t = {
-    fr: ["Pick du jour", "Pronostic du Concile", "Voir l'analyse complete", "Paris sportifs reserves aux +18 ans. Jeu responsable."],
-    en: ["Today's pick", "Council prediction", "See the full analysis", "Sports betting is 18+ only. Gamble responsibly."],
+    fr: ["Analyse du jour", "Pronostic du Concile IA", "Voir l'analyse complete", "Analyses sportives reservees aux +18 ans. Jeu responsable."],
+    en: ["Today's analysis", "AI Council prediction", "See the full analysis", "Sports analysis is 18+ only. Gamble responsibly."],
     es: ["Pick del dia", "Pronostico del Consejo", "Ver el analisis completo", "Apuestas deportivas solo para mayores de 18. Juega con responsabilidad."],
     pt: ["Pick do dia", "Prognostico do Conselho", "Ver a analise completa", "Apostas desportivas apenas para maiores de 18. Jogue com responsabilidade."],
     de: ["Tipp des Tages", "Prognose des Councils", "Vollstandige Analyse ansehen", "Sportwetten nur ab 18. Spiele verantwortungsvoll."],
@@ -3208,7 +3214,7 @@ function renewalEmailHtml(row, daysLeft, stats) {
   ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6;margin-top:16px">
     TousLesMatchs · <a href="https://www.touslesmatchs.com" style="color:#6366f1;text-decoration:none">touslesmatchs.com</a><br>
-    ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable. Le ROI passé ne garantit pas les résultats futurs.
+    ⚠️ Analyses sportives réservées aux +18 ans. Jeu responsable. Le ROI passé ne garantit pas les résultats futurs.
   </div>
 </div>`;
 }
@@ -3346,7 +3352,7 @@ app.post("/subscribe-email", async (req, res) => {
     <div style="text-align:center;margin-bottom:24px">
       <a href="https://www.touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Voir l'analyse Live IA →</a>
     </div>
-    <p style="font-size:12px;color:#7b82a0;text-align:center">⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable.<br>TousLesMatchs · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Mentions légales</a></p>
+    <p style="font-size:12px;color:#7b82a0;text-align:center">⚠️ Analyses sportives réservées aux +18 ans. Jeu responsable.<br>TousLesMatchs · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Mentions légales</a></p>
   </div>
 </div>`;
       brevoSendEmail(emailClean, "Bienvenue sur TousLesMatchs — ton premier pick arrive bientôt 🎯", welcomeHtml)
@@ -3393,7 +3399,7 @@ function buildNurtureJ1Html(email) {
     <div style="padding:32px">
       <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Depuis ton inscription hier, le Concile a publié son pick du jour.</p>
       ${pickLine}
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Tu veux recevoir l'analyse <strong style="color:#eceaf4">complète</strong> — le pari exact, la cote, la mise suggérée et la raison du Concile — directement dans ta boite mail et sur Telegram ?</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Tu veux recevoir l'analyse <strong style="color:#eceaf4">complète</strong> — le pick exact, la cote, la mise suggérée et le raisonnement du Concile IA — directement dans ta boite mail et sur Telegram ?</p>
       <div style="text-align:center;margin-bottom:20px">
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
       </div>
@@ -3418,7 +3424,7 @@ function buildNurtureJ3Html() {
         <div style="font-size:14px;color:#a8aec8;line-height:2">
           ✅ Match + compétition<br>
           ✅ Niveau de confiance du Concile<br>
-          🔒 Le pari exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
+          🔒 Le pick exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
           🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
           🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
         </div>
@@ -3444,7 +3450,7 @@ async function processScheduledEmails() {
         if (row.email_type === "nurture_j1") {
           await brevoSendEmail(row.email, "✅ Le Concile vient de publier — voici ce que tu as manqué", buildNurtureJ1Html(row.email));
         } else if (row.email_type === "nurture_j3") {
-          await brevoSendEmail(row.email, "🔒 Tu vois le signal, pas le pari — voici comment changer ça", buildNurtureJ3Html());
+          await brevoSendEmail(row.email, "🔒 Tu vois le signal, pas l'analyse complète — voici comment changer ça", buildNurtureJ3Html());
         }
         db.prepare("UPDATE scheduled_emails SET sent = 1 WHERE id = ?").run(row.id);
         console.log(`[nurturing] ${row.email_type} envoyé: ${row.email}`);
@@ -3523,7 +3529,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
-  const coteMoy = ((1 / (analysis.confidence / 100)) * 1.15).toFixed(2);
+  const coteMoy = Math.min(1.95, ((1 / (analysis.confidence / 100)) * 1.45)).toFixed(2);
   const gain = (10 * parseFloat(coteMoy)).toFixed(2);
 
   const premiumMsg = [
@@ -3532,7 +3538,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `💡 Pari : <b>${analysis.best_bet}</b>`,
+    `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
     `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
     ``,
     outcome === "win"
@@ -3560,7 +3566,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
     ``,
     outcome === "win"
-      ? `🔒 <b>Le pari exact était réservé aux abonnés.</b>\n💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner — dès 9.90€/mois</a>`
+      ? `🔒 <b>L'analyse complète était réservée aux abonnés.</b>\n💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner — dès 9.90€/mois</a>`
       : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">Rejoindre les abonnés</a>`,
     ``,
     `━━━━━━━━━━━━━━━━━━`,
@@ -3610,8 +3616,8 @@ async function sendWeeklyConversionEmail() {
       ${winsRows}
     </table>
     <div style="text-align:center;margin-top:20px;padding:14px;background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px">
-      <div style="font-size:14px;color:#a8aec8;margin-bottom:6px">🔒 Les paris exacts sont réservés aux abonnés</div>
-      <div style="font-size:13px;color:#6366f1">Tu vois les matchs gagnants, mais pas le pari — rejoins le Premium pour tout débloquer.</div>
+      <div style="font-size:14px;color:#a8aec8;margin-bottom:6px">🔒 Les analyses complètes sont réservées aux abonnés</div>
+      <div style="font-size:13px;color:#6366f1">Tu vois les matchs gagnants, mais pas l'analyse détaillée — rejoins le Premium pour tout débloquer.</div>
     </div>
   </div>
   <div style="text-align:center;margin-bottom:16px">
@@ -4719,7 +4725,7 @@ app.post("/internal/pick-notify", async (req, res) => {
   ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
     TousLesMatchs — Analyse IA · <a href="https://www.touslesmatchs.com" style="color:#6366f1;text-decoration:none">touslesmatchs.com</a><br>
-    ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable.
+    ⚠️ Analyses sportives réservées aux +18 ans. Jeu responsable.
   </div>
 </div>`;
 
@@ -4779,7 +4785,7 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
 
 app.get("/api/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
-  const coteMoy = (c) => ((1 / (c / 100)) * 1.15).toFixed(2);
+  const coteMoy = (c) => Math.min(1.95, ((1 / (c / 100)) * 1.45)).toFixed(2);
   res.json({
     ok: true,
     total: stats.total,
@@ -4863,7 +4869,7 @@ app.post("/internal/signal-notify", async (req, res) => {
   ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
     TousLesMatchs — Signal automatique Concile IA<br>
-    ⚠️ Paris sportifs réservés aux +18 ans. Jeu responsable. Cotes à vérifier sur les plateformes.
+    ⚠️ Analyses sportives réservées aux +18 ans. Jeu responsable. Cotes à vérifier sur les plateformes.
   </div>
 </div>`;
 
@@ -4903,12 +4909,12 @@ app.post("/internal/signal-notify", async (req, res) => {
     <div style="font-size:20px;font-weight:900;color:#eceaf4;margin-bottom:6px">${logoHtml}${signal.home} vs ${signal.away}</div>
     ${signal.minute ? `<div style="font-size:12px;color:#22d3ee;margin-bottom:12px">⏱ ${signal.minute}' en cours</div>` : ""}
     <div style="background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:16px;text-align:center">
-      <div style="font-size:14px;color:#a8aec8;margin-bottom:8px">Le Concile IA a identifié un pari à <strong style="color:#eceaf4">${conf}% de confiance</strong></div>
-      <div style="font-size:16px;font-weight:800;color:#6366f1">🔒 Pari réservé aux abonnés</div>
+      <div style="font-size:14px;color:#a8aec8;margin-bottom:8px">Le Concile IA a identifié une analyse à <strong style="color:#eceaf4">${conf}% de confiance</strong></div>
+      <div style="font-size:16px;font-weight:800;color:#6366f1">🔒 Analyse réservée aux abonnés</div>
     </div>
   </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer le pari — 9.90€/mois →</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer l'analyse — 9.90€/mois →</a>
   </div>
   <div style="text-align:center;margin-bottom:20px">
     <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Tester 1 analyse pour 1€</a>
