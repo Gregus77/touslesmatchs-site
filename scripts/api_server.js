@@ -3523,7 +3523,8 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
-  const coteMin = (1 / (analysis.confidence / 100)).toFixed(2);
+  const coteMoy = ((1 / (analysis.confidence / 100)) * 1.15).toFixed(2);
+  const gain = (10 * parseFloat(coteMoy)).toFixed(2);
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -3532,10 +3533,10 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Pari : <b>${analysis.best_bet}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote min : <b>${coteMin}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
     ``,
     outcome === "win"
-      ? `💰 Mise 10€ → <b>Gain ${(10 * parseFloat(coteMin)).toFixed(2)}€</b>`
+      ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
       : ``,
     ``,
     `📈 Bilan Signal Fort : <b>${stats.wins}W / ${stats.losses}L — ${stats.winrate}% winrate</b>`,
@@ -3550,10 +3551,10 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote min : <b>${coteMin}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
     ``,
     outcome === "win"
-      ? `💰 Mise 10€ → <b>Gain ${(10 * parseFloat(coteMin)).toFixed(2)}€</b>`
+      ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
       : ``,
     ``,
     `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
@@ -3568,7 +3569,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
 
   if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
   if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (cote ${coteMin}, ${stats.winrate}% winrate)`);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (cote moy ${coteMoy}, ${stats.winrate}% winrate)`);
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
