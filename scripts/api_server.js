@@ -1682,10 +1682,10 @@ Réponds en JSON pur (pas de markdown):
       _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
       const ico = si[match.sport] || "🎯";
-      const tg = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      [TELEGRAM_PREMIUM_CHANNEL_ID, TELEGRAM_CHANNEL_ID].filter(Boolean).forEach(ch => {
-        sendTelegramMessage(ch, tg).then(ok => console.log(`[signal-fort] Telegram → ${ch}: ${ok ? "OK" : "FAIL"}`));
-      });
+      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>Le pari exact et l'analyse complète sont réservés aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux picks</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
+      if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
     }
   }
 
@@ -4493,11 +4493,15 @@ app.post("/internal/signal-notify", async (req, res) => {
 
     const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
-    const tgText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-    const tgChannels = [TELEGRAM_PREMIUM_CHANNEL_ID, TELEGRAM_CHANNEL_ID].filter(Boolean);
-    for (const ch of tgChannels) {
-      const tgOk = await sendTelegramMessage(ch, tgText);
-      console.log(`[signal-notify] Telegram → ${ch}: ${tgOk ? "OK" : "FAIL"}`);
+    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>Le pari exact et l'analyse complète sont réservés aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux picks</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    if (TELEGRAM_PREMIUM_CHANNEL_ID) {
+      const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremiumText);
+      console.log(`[signal-notify] Telegram premium: ${ok ? "OK" : "FAIL"}`);
+    }
+    if (TELEGRAM_CHANNEL_ID) {
+      const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFreeText);
+      console.log(`[signal-notify] Telegram free: ${ok ? "OK" : "FAIL"}`);
     }
 
     // Épingler le signal 90 min sur Live IA pour que le lien Telegram mène au bon match
