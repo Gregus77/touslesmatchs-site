@@ -813,93 +813,36 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
   "regional cup", "state cup", "state league",
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
-  // Afrique — ligues à risque de matchs truqués
-  "ethiopian", "ethiopia", "premier league · ethiopia",
-  "nigerian", "nigeria", "npfl",
-  "tanzania", "tanzanian",
-  "kenya", "kenyan premier",
-  "uganda", "ugandan",
-  "ghana premier", "ghana · premier",
-  "zambia", "zambian",
-  "zimbabwe", "zimbabwean",
-  "mozambique",
-  "cameroon elite", "cameroun",
-  "rwanda",
-  "burundi",
-  "malawi",
-  "botswana",
-  "lesotho",
-  "eswatini", "swaziland",
-  // Asie — ligues à faible transparence
-  "kazakhstan", "kazakh",
-  "uzbekistan", "uzbek",
-  "tajikistan",
-  "kyrgyzstan",
-  "turkmenistan",
-  "myanmar",
-  "cambodia", "cambodian",
-  "laos",
-  "vietnam", "v.league",
-  "bangladesh",
-  "nepal",
-  "mongolia",
-  "bhutan",
-  "maldives",
-  "brunei",
-  "timor",
-  "palestine",
-  "jordan league",
-  "iraq league", "iraqi",
-  "syria", "syrian",
-  "yemen",
-  "oman league",
-  "bahrain",
-  "lebanon · premier", "lebanese",
-  "india · i-league", "india · super league",
-  "indian super",
-  "sri lanka",
-  "pakistan",
-  // Amérique — ligues secondaires/non fiables
-  "copa chile", "segunda · chile", "chile · segunda",
-  "bolivia", "bolivian",
-  "peru · liga", "peruvian",
-  "venezuela · liga", "venezuelan",
-  "paraguay · division", "paraguayan",
-  "uruguay · segunda",
-  "honduras", "honduran",
-  "guatemala", "guatemalan",
-  "el salvador", "salvadoran",
-  "nicaragua", "nicaraguan",
-  "costa rica · segunda",
-  "panama · liga",
-  "haiti",
-  "jamaica · premier",
-  "trinidad",
-  "dominican",
-  "cuba",
+  // Afrique
+  "ethiopia", "nigeria", "npfl", "tanzania", "kenya", "uganda",
+  "ghana", "zambia", "zimbabwe", "mozambique", "cameroon", "cameroun",
+  "rwanda", "burundi", "malawi", "botswana", "lesotho", "eswatini", "swaziland",
+  "senegal", "ivory coast", "côte d'ivoire", "burkina",
+  "congo", "angola", "namibia", "gabon", "togo", "benin", "niger · ",
+  "madagascar", "mauritius", "cape verde", "guinea",
+  "sierra leone", "liberia", "gambia", "eritrea", "djibouti", "comoros",
+  "south africa", "algeria · ligue", "tunisia · ligue", "egypt · premier",
+  // Asie
+  "kazakhstan", "uzbekistan", "tajikistan", "kyrgyzstan", "turkmenistan",
+  "myanmar", "cambodia", "laos", "vietnam", "v.league",
+  "bangladesh", "nepal", "mongolia", "bhutan", "maldives", "brunei", "timor",
+  "palestine", "jordan · ", "iraq", "syria", "yemen", "oman", "bahrain",
+  "lebanon", "india", "sri lanka", "pakistan",
+  "indonesia", "malaysia · ", "philippines", "thailand · ",
+  // Amérique du Sud — ligues secondaires
+  "chile", "bolivia", "peru", "venezuela", "ecuador",
+  "paraguay", "uruguay · segunda", "colombia · b",
+  // Amérique centrale et Caraïbes
+  "honduras", "guatemala", "el salvador", "nicaragua",
+  "costa rica", "panama · liga", "haiti", "jamaica", "trinidad",
+  "dominican", "cuba", "belize", "suriname", "guyana",
   // Europe — divisions inférieures/ligues exotiques
-  "estonia", "estonian",
-  "latvia", "latvian",
-  "lithuania", "lithuanian",
-  "faroe", "faroese",
-  "gibraltar",
-  "andorra · primera",
-  "malta · premier", "maltese",
-  "san marino",
-  "kosovo · superliga",
-  "north macedonia · first",
-  "albania · superliga", "albanian",
-  "moldova", "moldovan",
-  "belarus", "belarusian",
-  "armenia", "armenian",
-  "georgia · erovnuli", "georgian",
-  "azerbaijan · premier", "azerbaijani",
-  "iceland · úrvalsdeild",
-  "northern ireland · premiership",
-  "luxembourg",
-  "liechtenstein",
-  "montenegro · first",
-  "bosnia · premier",
+  "estonia", "latvia", "lithuania", "faroe", "gibraltar",
+  "andorra", "malta", "san marino", "kosovo", "north macedonia",
+  "albania", "moldova", "belarus", "armenia",
+  "georgia · erovnuli", "georgian erovnuli",
+  "azerbaijan", "iceland", "northern ireland",
+  "luxembourg", "liechtenstein", "montenegro", "bosnia",
   // Océanie
   "fiji", "samoa", "tonga", "vanuatu", "solomon", "papua",
   "new caledonia", "tahiti",
@@ -963,8 +906,8 @@ function isLowTrustCompetition(matchOrCompetition = "") {
     ? matchOrCompetition
     : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
-  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
+  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   return true;
 }
 
@@ -4140,7 +4083,8 @@ app.get("/live-matches", async (req, res) => {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
-    const matches = await fetchLiveMatches();
+    const allMatches = await fetchLiveMatches();
+    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
