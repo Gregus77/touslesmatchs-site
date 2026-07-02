@@ -162,6 +162,10 @@ const STRIPE_PRICE_ID_VIP      = process.env.STRIPE_PRICE_ID_VIP      || process
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
+const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const _signalSentCache = new Set();
 
 // ── Shadow agents (banc d'essai — free tiers) ─────────────────────────────────
 const MISTRAL_API_KEY    = process.env.MISTRAL_API_KEY    || "";
@@ -230,6 +234,31 @@ const SHADOW_AGENTS = [
     call: (prompt) => callCohere(prompt),
   },
 ];
+
+// ── Telegram helper ──────────────────────────────────────────────────────────
+function sendTelegramMessage(chatId, text) {
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(false);
+  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true });
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      timeout: 15000,
+    }, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try { resolve(JSON.parse(data).ok === true); } catch { resolve(false); }
+      });
+    });
+    req.on("error", () => resolve(false));
+    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.write(body);
+    req.end();
+  });
+}
 
 // ── Shadow API helpers ────────────────────────────────────────────────────────
 function callOpenAICompat(prompt, { url, key, model }) {
@@ -832,7 +861,7 @@ async function fetchFromApiSports() {
   try {
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!data.errors || Object.keys(data.errors).length === 0) {
-      const items = (data.response || []).slice(0, 20).map(normalizeApiSportsFootballFixture);
+      const items = (data.response || []).slice(0, 60).map(normalizeApiSportsFootballFixture);
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
     }
@@ -860,7 +889,7 @@ async function fetchFromApiSports() {
   // Hockey live
   try {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    const items = (data.response || []).slice(0, 10).map((g) => ({
+    const items = (data.response || []).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
       sourceId: String(g.id),
@@ -1438,50 +1467,16 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquem
   // Charger les performances historiques pour pondérer le verdict du Chief
   const agentPerf = getAgentPerformance();
 
-  const agentResults = [];
   const agentMarketList = []; // avis multi-marchés de chaque agent (hors Chief)
 
-  for (let i = 0; i < agentNames.length; i++) {
+  // Helper: run a single agent and return its result
+  async function runSingleAgent(i) {
     const isChief = i === 4;
-    // Pondération des agents : le poids reflète leur winrate réel (recalculé
-    // à chaque analyse à partir de agent_predictions, donc toujours à jour —
-    // pas besoin d'attendre un cron hebdomadaire). Neutre (50%) tant que
-    // l'échantillon est trop faible pour être significatif.
-    const previousVotes = isChief ? agentResults.map((a) => {
-      const p = agentPerf[a.name];
-      const resolved = p ? p.resolved : 0;
-      const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
-      const perfNote = resolved >= 5
-        ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
-        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
-      return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
-    }).join("\n") : "";
+    const agCfg = agentNames[i];
+    const temp = 0.3 + i * 0.05;
+    const maxTok = isChief ? 400 : 300;
 
-    const prompt = isChief
-      ? `${personas[i]}
-
-${matchContext}
-
-Votes des agents avec leur fiabilité historique:
-${previousVotes}
-
-Synthétise ces votes en tenant compte de :
-1. Le POIDS de chaque agent (indiqué ci-dessus, basé sur son winrate réel) : privilégie fortement les votes des agents à POIDS ≥60%, et ignore largement ceux à POIDS <35% sauf si aucun agent mieux noté ne couvre ce marché
-2. Les contraintes mathématiques du score live
-3. Tes connaissances sur ${match.home} et ${match.away}
-4. Les objections des agents minoritaires: explique pourquoi tu les acceptes ou les rejettes
-5. Le contrôle GPT-Codex Challenger: teste au moins 3 marchés alternatifs (BTTS, double chance, over/under, vainqueur ou nul selon disponibilité), puis rejette ceux dont le signal est moins robuste
-6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
-7. Les règles propres au sport: ${sport}
-8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
-
-Réponds en JSON pur (pas de markdown):
-{
-  "bet": "un parmi: ${availableBets.join(", ")}",
-  "confidence": <nombre 55-92>,
-  "raison": "<2 phrases max: verdict + raison principale; objection minoritaire acceptée/rejetée si elle existe>"
-}`
-      : `${personas[i]}
+    const prompt = `${personas[i]}
 
 ${matchContext}
 
@@ -1509,19 +1504,11 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
     try {
-      const agCfg = agentNames[i];
-      const temp = 0.3 + i * 0.05;
-      const maxTok = isChief ? 400 : 300;
-      // Cascade de fournisseurs : on essaie le fournisseur préféré de l'agent,
-      // puis on bascule sur les autres clés dispo (Groq, OpenRouter, Cerebras)
-      // jusqu'à obtenir une VRAIE réponse — au lieu de tomber sur 70% par défaut
-      // dès qu'un quota est épuisé. Toutes les clés du .env sont exploitées.
       const providers = [];
       if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: agCfg.model });
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
-      // Fallback: spread agents across different providers to avoid Groq rate-limiting
       if (!providers.length && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
       if (!providers.length && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: "mistral-small-latest" });
       if (GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
@@ -1539,66 +1526,123 @@ Réponds en JSON pur (pas de markdown):
             raw = rp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          if (probe && probe !== "{}" && probe.length > 8) break; // vraie réponse obtenue
+          if (probe && probe !== "{}" && probe.length > 8) break;
         } catch (e) {
-          console.error(`[concile] ${agentNames[i].name} fournisseur échec: ${e.message}`);
+          console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
       }
       const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const parsed = JSON.parse(cleaned);
 
-      // Détecter une réponse VIDE (l'IA n'a rien renvoyé → quota épuisé, clé
-      // manquante, ou erreur API). Avant, le code fabriquait un faux
-      // "Victoire domicile 70%" (BET_TYPES[0] + défauts) → toutes les IA
-      // semblaient dire la même chose sans analyser. On le signale désormais.
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
-      if (!isChief && !modelGaveBet) {
-        console.error(`[concile] agent ${agentNames[i].name} : réponse vide (IA non joignable — quota/clé)`);
-        agentResults.push({
-          name: agentNames[i].name,
-          icon: agentNames[i].icon,
-          bet: "—",
-          confidence: null,
+      if (!modelGaveBet) {
+        console.error(`[concile] agent ${agCfg.name} : réponse vide (IA non joignable — quota/clé)`);
+        return {
+          name: agCfg.name, icon: agCfg.icon,
+          bet: "—", confidence: null,
           raison: "⚠️ IA non joignable (quota épuisé ou clé manquante) — non comptée dans le verdict.",
-          isChief: false,
-          failed: true,
-        });
-        if (i < agentNames.length - 1) await new Promise((r) => setTimeout(r, 300));
-        continue;
+          isChief: false, failed: true,
+        };
       }
 
       const rawBet = parsed.bet || availableBets[0];
-      // Avis multi-marchés (mode économe) : on garde ce que pense l'agent sur
-      // chaque marché, séparément du pari envoyé au Concile.
-      if (!isChief && parsed.marches && typeof parsed.marches === "object") {
-        agentMarketList.push({ name: agentNames[i].name, marches: parsed.marches });
+      if (parsed.marches && typeof parsed.marches === "object") {
+        agentMarketList.push({ name: agCfg.name, marches: parsed.marches });
       }
       const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
-      // Fallback raison : synthèse des votes si Chief n'a pas produit d'analyse
-      const fallbackRaison = isChief && agentResults.length > 0
-        ? `Consensus des agents : ${agentResults.map(a => a.bet).join(", ")}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`
-        : `Score actuel ${match.score_home}-${match.score_away}, analyse basée sur le rythme du match.`;
+      const fallbackRaison = `Score actuel ${match.score_home}-${match.score_away}, analyse basée sur le rythme du match.`;
       const raisonFinal = corrected
         ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
         : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
 
-      agentResults.push({
-        name: agentNames[i].name,
-        icon: agentNames[i].icon,
+      return {
+        name: agCfg.name, icon: agCfg.icon,
         bet: validBet,
         confidence: Math.min(95, Math.max(50, isNaN(parseInt(parsed.confidence)) ? 55 : parseInt(parsed.confidence))),
         raison: raisonFinal,
-        isChief,
-        corrected: corrected || false,
-      });
+        isChief: false, corrected: corrected || false,
+      };
     } catch (e) {
-      console.error(`[concile] agent ${agentNames[i].name} erreur:`, e.message);
-      agentResults.push(getMockAgentAnalysis(agentNames[i], match, i));
+      console.error(`[concile] agent ${agCfg.name} erreur:`, e.message);
+      return getMockAgentAnalysis(agCfg, match, i);
     }
+  }
 
-    if (i < agentNames.length - 1) {
-      await new Promise((r) => setTimeout(r, 300));
+  // Phase 1: Run 4 agents IN PARALLEL (not sequentially)
+  const agentResults = await Promise.all([0, 1, 2, 3].map(i => runSingleAgent(i)));
+
+  // Phase 2: Run Chief AFTER, with all agent votes available
+  const previousVotes = agentResults.map((a) => {
+    const p = agentPerf[a.name];
+    const resolved = p ? p.resolved : 0;
+    const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
+    const perfNote = resolved >= 5
+      ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
+      : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
+    return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
+  }).join("\n");
+
+  const chiefPrompt = `${personas[4]}
+
+${matchContext}
+
+Votes des agents avec leur fiabilité historique:
+${previousVotes}
+
+Synthétise ces votes en tenant compte de :
+1. Le POIDS de chaque agent (indiqué ci-dessus, basé sur son winrate réel) : privilégie fortement les votes des agents à POIDS ≥60%, et ignore largement ceux à POIDS <35% sauf si aucun agent mieux noté ne couvre ce marché
+2. Les contraintes mathématiques du score live
+3. Tes connaissances sur ${match.home} et ${match.away}
+4. Les objections des agents minoritaires: explique pourquoi tu les acceptes ou les rejettes
+5. Le contrôle GPT-Codex Challenger: teste au moins 3 marchés alternatifs (BTTS, double chance, over/under, vainqueur ou nul selon disponibilité), puis rejette ceux dont le signal est moins robuste
+6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
+7. Les règles propres au sport: ${sport}
+8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
+
+Réponds en JSON pur (pas de markdown):
+{
+  "bet": "un parmi: ${availableBets.join(", ")}",
+  "confidence": <nombre 55-92>,
+  "raison": "<2 phrases max: verdict + raison principale; objection minoritaire acceptée/rejetée si elle existe>"
+}`;
+
+  try {
+    const chiefProviders = [];
+    if (GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
+    if (DEEPSEEK_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
+    if (OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
+    if (CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+
+    let raw = "{}";
+    for (const pv of chiefProviders) {
+      try {
+        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` });
+        raw = rp.choices?.[0]?.message?.content || "{}";
+        const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+        if (probe && probe !== "{}" && probe.length > 8) break;
+      } catch (e) {
+        console.error(`[concile] Chief fournisseur échec: ${e.message}`);
+      }
     }
+    const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    const rawBet = parsed.bet || availableBets[0];
+    const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
+    const fallbackRaison = `Consensus des agents : ${agentResults.map(a => a.bet).join(", ")}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`;
+    const raisonFinal = corrected
+      ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
+      : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
+
+    agentResults.push({
+      name: agentNames[4].name, icon: agentNames[4].icon,
+      bet: validBet,
+      confidence: Math.min(95, Math.max(50, isNaN(parseInt(parsed.confidence)) ? 55 : parseInt(parsed.confidence))),
+      raison: raisonFinal,
+      isChief: true, corrected: corrected || false,
+    });
+  } catch (e) {
+    console.error(`[concile] agent Chief erreur:`, e.message);
+    agentResults.push(getMockAgentAnalysis(agentNames[4], match, 4));
   }
 
   // Find consensus bet
@@ -1630,6 +1674,20 @@ Réponds en JSON pur (pas de markdown):
   const pick = loadPick();
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
+
+  // Signal fort Telegram automatique si confidence >= 80%
+  if (analysisResult.confidence >= 80 && TELEGRAM_BOT_TOKEN) {
+    const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
+    if (!_signalSentCache.has(signalKey)) {
+      _signalSentCache.add(signalKey);
+      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+      const ico = si[match.sport] || "🎯";
+      const tg = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      [TELEGRAM_PREMIUM_CHANNEL_ID, TELEGRAM_CHANNEL_ID].filter(Boolean).forEach(ch => {
+        sendTelegramMessage(ch, tg).then(ok => console.log(`[signal-fort] Telegram → ${ch}: ${ok ? "OK" : "FAIL"}`));
+      });
+    }
+  }
 
   // Évaluation shadow en parallèle (sans bloquer la réponse Concile)
   runShadowEvaluation(match).catch(e => console.error("[shadow] bg:", e.message));
@@ -2692,7 +2750,7 @@ async function resolveStalePredictions() {
         UNION ALL
         SELECT home, away, created_at FROM agent_market_predictions WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, created_at FROM concile_analyses WHERE outcome IS NULL
+        SELECT home, away, analysed_at AS created_at FROM concile_analyses WHERE outcome IS NULL
         UNION ALL
         SELECT home, away, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-3 hours')
@@ -4432,6 +4490,15 @@ app.post("/internal/signal-notify", async (req, res) => {
       }
     }
     console.log(`[signal-notify] Emails signal fort envoyés : ${sent}/${emails.length}`);
+
+    const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾", Rugby:"🏉" };
+    const tgIcon = sportIcons2[signal.sport] || "🎯";
+    const tgText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    const tgChannels = [TELEGRAM_PREMIUM_CHANNEL_ID, TELEGRAM_CHANNEL_ID].filter(Boolean);
+    for (const ch of tgChannels) {
+      const tgOk = await sendTelegramMessage(ch, tgText);
+      console.log(`[signal-notify] Telegram → ${ch}: ${tgOk ? "OK" : "FAIL"}`);
+    }
 
     // Épingler le signal 90 min sur Live IA pour que le lien Telegram mène au bon match
     addPinnedSignal({
