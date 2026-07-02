@@ -4779,6 +4779,7 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
 
 app.get("/api/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
+  const coteMoy = (c) => ((1 / (c / 100)) * 1.15).toFixed(2);
   res.json({
     ok: true,
     total: stats.total,
@@ -4790,11 +4791,24 @@ app.get("/api/signal-fort-stats", (req, res) => {
       away: r.away,
       competition: r.competition,
       sport: r.sport,
-      bet: r.best_bet,
       confidence: r.confidence,
       outcome: r.outcome,
+      cote: parseFloat(coteMoy(r.confidence)),
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
       date: r.analysed_at,
+    })),
+    picks_feed: stats.recent.map(r => ({
+      id: `sf-${r.home}-${r.away}-${r.analysed_at}`.replace(/\s+/g, '-').toLowerCase(),
+      date: r.analysed_at ? r.analysed_at.slice(0, 10) : "",
+      time: r.analysed_at ? r.analysed_at.slice(11, 16) : "",
+      competition: r.competition || r.sport || "",
+      home: r.home,
+      away: r.away,
+      pick: `Signal Fort ${r.confidence}%`,
+      cote: parseFloat(coteMoy(r.confidence)),
+      status: "finished",
+      result: r.outcome === "win" ? "win" : "loss",
+      score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?",
     })),
   });
 });

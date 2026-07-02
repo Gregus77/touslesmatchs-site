@@ -3065,6 +3065,18 @@ document.addEventListener('click',function(e){
   }
 });</script>
 <script>
+// ── Auto-update Signal Fort stats from API ──
+(function loadSignalFortStats(){
+  fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
+    if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
+    const existing = new Set(PICKS_FEED.map(p=>p.id));
+    d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); }});
+    buildChart();
+    if(typeof renderPicksFeed==='function') renderPicksFeed();
+  }).catch(()=>{});
+})();
+</script>
+<script>
 (function ensureCurrentPickVisible(){
   function text(v){ return (v === null || v === undefined || v === '') ? '-' : String(v); }
   function esc(v){
