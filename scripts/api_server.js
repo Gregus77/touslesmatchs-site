@@ -3454,14 +3454,52 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
+  const coteMin = (1 / (analysis.confidence / 100)).toFixed(2);
 
-  const premiumMsg = `${icon} <b>SIGNAL FORT ${resultText}</b>\n\n${si} <b>${analysis.home} vs ${analysis.away}</b>\n🏆 ${analysis.competition || ""}\n⚽ Score final : <b>${scoreH}-${scoreA}</b>\n💡 Pari : <b>${analysis.best_bet}</b> @ ${analysis.confidence}%\n\n📈 Bilan Signal Fort : <b>${stats.wins}W/${stats.losses}L — ${stats.winrate}% winrate</b>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+  const premiumMsg = [
+    `${icon} <b>SIGNAL FORT ${resultText}</b>`,
+    ``,
+    `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
+    analysis.competition ? `🏆 ${analysis.competition}` : "",
+    `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
+    `💡 Pari : <b>${analysis.best_bet}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote min : <b>${coteMin}</b>`,
+    ``,
+    outcome === "win"
+      ? `💰 Mise 10€ → <b>Gain ${(10 * parseFloat(coteMin)).toFixed(2)}€</b>`
+      : ``,
+    ``,
+    `📈 Bilan Signal Fort : <b>${stats.wins}W / ${stats.losses}L — ${stats.winrate}% winrate</b>`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━`,
+    `🤖 Concile IA — TousLesMatchs`,
+  ].filter(Boolean).join("\n");
 
-  const freeMsg = `${icon} <b>SIGNAL FORT ${resultText}</b>\n\n${si} <b>${analysis.home} vs ${analysis.away}</b>\n⚽ Score final : <b>${scoreH}-${scoreA}</b>\n📊 Confiance du signal : <b>${analysis.confidence}%</b>\n\n📈 Bilan global : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>\n\n${outcome === "win" ? "🔒 <b>Le pari exact était réservé aux abonnés.</b>\n👉 <a href=\"https://www.touslesmatchs.com/#plans\">S'abonner — dès 9.90€/mois</a>" : "💪 La discipline sur le long terme fait la différence."}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+  const freeMsg = [
+    `${icon} <b>SIGNAL FORT ${resultText}</b>`,
+    ``,
+    `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
+    analysis.competition ? `🏆 ${analysis.competition}` : "",
+    `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote min : <b>${coteMin}</b>`,
+    ``,
+    outcome === "win"
+      ? `💰 Mise 10€ → <b>Gain ${(10 * parseFloat(coteMin)).toFixed(2)}€</b>`
+      : ``,
+    ``,
+    `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
+    ``,
+    outcome === "win"
+      ? `🔒 <b>Le pari exact était réservé aux abonnés.</b>\n💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner — dès 9.90€/mois</a>`
+      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">Rejoindre les abonnés</a>`,
+    ``,
+    `━━━━━━━━━━━━━━━━━━`,
+    `🤖 Concile IA — TousLesMatchs`,
+  ].filter(Boolean).join("\n");
 
   if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
   if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (${stats.winrate}% winrate)`);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (cote ${coteMin}, ${stats.winrate}% winrate)`);
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
