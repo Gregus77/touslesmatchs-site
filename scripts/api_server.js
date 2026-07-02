@@ -3349,8 +3349,12 @@ app.post("/subscribe-email", async (req, res) => {
         ✅ Accès aux picks live sur le site
       </div>
     </div>
-    <div style="text-align:center;margin-bottom:24px">
+    <div style="text-align:center;margin-bottom:20px">
       <a href="https://www.touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Voir l'analyse Live IA →</a>
+    </div>
+    <div style="background:#0d1020;border:1px solid rgba(99,102,241,.12);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
+      <div style="font-size:12px;color:#a8aec8;margin-bottom:6px">📱 Rejoins aussi le canal Telegram gratuit</div>
+      <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#22d3ee;font-size:13px;font-weight:700;text-decoration:none">Rejoindre le canal →</a>
     </div>
     <p style="font-size:12px;color:#7b82a0;text-align:center">⚠️ Analyses sportives réservées aux +18 ans. Jeu responsable.<br>TousLesMatchs · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Mentions légales</a></p>
   </div>
@@ -3373,10 +3377,35 @@ function scheduleNurturingEmails(email) {
   const now = new Date();
   const j1 = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
   const j3 = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  const j5 = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString();
+  const j7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
   try {
     db.prepare("INSERT OR IGNORE INTO scheduled_emails (email, email_type, send_after) VALUES (?,?,?)").run(email, "nurture_j1", j1);
     db.prepare("INSERT OR IGNORE INTO scheduled_emails (email, email_type, send_after) VALUES (?,?,?)").run(email, "nurture_j3", j3);
+    db.prepare("INSERT OR IGNORE INTO scheduled_emails (email, email_type, send_after) VALUES (?,?,?)").run(email, "nurture_j5", j5);
+    db.prepare("INSERT OR IGNORE INTO scheduled_emails (email, email_type, send_after) VALUES (?,?,?)").run(email, "nurture_j7", j7);
   } catch (e) { console.error("[nurturing] schedule:", e.message); }
+}
+
+function buildPlanComparisonHtml() {
+  const plans = [
+    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Canal Telegram gratuit"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Pro/Elite"] },
+    { name: "1€ Test", price: "1€", color: "#22d3ee", features: ["1 analyse Live IA", "Consensus IA complet", "Verdict + cote + raison"], locked: ["Accès illimité", "Alertes Signal Fort"] },
+    { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Pro", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
+    { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
+  ];
+  const rows = plans.map(p => {
+    const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
+    const locks = (p.locked || []).map(f => `<div style="font-size:12px;color:#4a4e6a;line-height:1.8">🔒 ${f}</div>`).join("");
+    const badge = p.badge ? `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;background:${p.color};color:#fff;padding:2px 8px;border-radius:6px;display:inline-block;margin-bottom:6px">${p.badge}</div>` : "";
+    return `<td style="width:25%;vertical-align:top;padding:12px 8px;border-right:1px solid rgba(255,255,255,.04)">
+      ${badge}
+      <div style="font-size:14px;font-weight:900;color:${p.color};margin-bottom:2px">${p.name}</div>
+      <div style="font-size:18px;font-weight:900;color:#eceaf4;margin-bottom:10px">${p.price}</div>
+      ${feats}${locks}
+    </td>`;
+  }).join("");
+  return `<table style="width:100%;border-collapse:collapse;background:#0a0d1a;border:1px solid rgba(99,102,241,.15);border-radius:12px;overflow:hidden"><tr style="border-bottom:1px solid rgba(255,255,255,.06)">${rows}</tr></table>`;
 }
 
 function buildNurtureJ1Html(email) {
@@ -3441,6 +3470,89 @@ function buildNurtureJ3Html() {
   </div>`;
 }
 
+function buildNurtureJ5Html() {
+  const stats = getSignalFortStats();
+  const recentWins = stats.recent.filter(r => r.outcome === "win").slice(0, 3);
+  const winsBlock = recentWins.length > 0
+    ? recentWins.map(r => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+        <span style="font-size:16px">✅</span>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#eceaf4">${r.home} vs ${r.away}</div><div style="font-size:11px;color:#7b82a0">${r.final_score_home}-${r.final_score_away} · ${r.confidence}% confiance</div></div>
+        <div style="font-size:13px;font-weight:800;color:#10b981">GAGNÉ</div>
+      </div>`).join("")
+    : `<div style="font-size:13px;color:#a8aec8;text-align:center;padding:12px">Le Concile IA analyse des dizaines de matchs chaque semaine.</div>`;
+
+  return `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#10b981,#059669);padding:30px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.8);margin-top:4px">${stats.winrate}% de winrate sur les signaux forts</div>
+    </div>
+    <div style="padding:32px">
+      <p style="font-size:15px;color:#a8aec8;margin:0 0 16px">Voici ce que le Concile IA a détecté récemment :</p>
+      <div style="background:#0d1020;border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="text-align:center;margin-bottom:12px">
+          <span style="font-size:36px;font-weight:900;color:#10b981">${stats.winrate}%</span>
+          <div style="font-size:12px;color:#7b82a0;margin-top:2px">${stats.wins} gagnés sur ${stats.total} signaux forts</div>
+        </div>
+        ${winsBlock}
+      </div>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:20px">Ces résultats sont <strong style="color:#eceaf4">réels et vérifiables</strong>. Mais tu n'as vu que les signaux — les abonnés ont eu l'analyse complète <em>avant</em> le match.</p>
+      <div style="font-size:13px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;text-align:center">Quel plan te correspond ?</div>
+      ${buildPlanComparisonHtml()}
+      <div style="text-align:center;margin:24px 0 12px">
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
+      </div>
+      <div style="text-align:center;margin-bottom:20px">
+        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Juste tester 1 analyse pour 1€</a>
+      </div>
+      <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
+    </div>
+  </div>`;
+}
+
+function buildNurtureJ7Html() {
+  const stats = getSignalFortStats();
+  return `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:30px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.85);margin-top:4px">Ta première semaine est passée</div>
+    </div>
+    <div style="padding:32px">
+      <p style="font-size:15px;color:#a8aec8;margin:0 0 16px">En 7 jours, le Concile IA a analysé des dizaines de matchs. Voici ton bilan :</p>
+      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px;background:#0d1020;border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#10b981">${stats.wins}</div>
+          <div style="font-size:11px;color:#7b82a0;margin-top:2px">Signaux gagnés</div>
+        </div>
+        <div style="flex:1;min-width:120px;background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#6366f1">${stats.winrate}%</div>
+          <div style="font-size:11px;color:#7b82a0;margin-top:2px">Winrate global</div>
+        </div>
+        <div style="flex:1;min-width:120px;background:#0d1020;border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:28px;font-weight:900;color:#f59e0b">${stats.total}</div>
+          <div style="font-size:11px;color:#7b82a0;margin-top:2px">Signaux analysés</div>
+        </div>
+      </div>
+      <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;margin-bottom:20px;text-align:center">
+        <div style="font-size:14px;color:#f59e0b;font-weight:700;margin-bottom:6px">Tu as reçu les signaux — mais pas les analyses complètes</div>
+        <div style="font-size:13px;color:#a8aec8">Les abonnés Pro et Elite ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;text-align:center">Compare les plans en un coup d'oeil</div>
+      ${buildPlanComparisonHtml()}
+      <div style="text-align:center;margin:24px 0 12px">
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(245,158,11,.3)">Passer à l'action →</a>
+      </div>
+      <div style="text-align:center;margin-bottom:20px">
+        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester pour 1€ seulement</a>
+      </div>
+      <div style="background:#0d1020;border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
+        <div style="font-size:12px;color:#a8aec8">📱 Pas encore sur Telegram ?</div>
+        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#22d3ee;font-size:13px;font-weight:700;text-decoration:none">Rejoindre le canal gratuit →</a>
+      </div>
+      <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
+    </div>
+  </div>`;
+}
+
 async function processScheduledEmails() {
   if (!BREVO_API_KEY) return;
   try {
@@ -3451,6 +3563,10 @@ async function processScheduledEmails() {
           await brevoSendEmail(row.email, "✅ Le Concile vient de publier — voici ce que tu as manqué", buildNurtureJ1Html(row.email));
         } else if (row.email_type === "nurture_j3") {
           await brevoSendEmail(row.email, "🔒 Tu vois le signal, pas l'analyse complète — voici comment changer ça", buildNurtureJ3Html());
+        } else if (row.email_type === "nurture_j5") {
+          await brevoSendEmail(row.email, `📊 ${getSignalFortStats().winrate}% de réussite — les résultats parlent`, buildNurtureJ5Html());
+        } else if (row.email_type === "nurture_j7") {
+          await brevoSendEmail(row.email, "⚡ Ta première semaine est passée — voici le bilan", buildNurtureJ7Html());
         }
         db.prepare("UPDATE scheduled_emails SET sent = 1 WHERE id = ?").run(row.id);
         console.log(`[nurturing] ${row.email_type} envoyé: ${row.email}`);
@@ -3620,8 +3736,12 @@ async function sendWeeklyConversionEmail() {
       <div style="font-size:13px;color:#6366f1">Tu vois les matchs gagnants, mais pas l'analyse détaillée — rejoins le Premium pour tout débloquer.</div>
     </div>
   </div>
+  <div style="margin:20px 0;padding:0 4px">
+    <div style="font-size:12px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;text-align:center">Quel plan pour toi ?</div>
+    ${buildPlanComparisonHtml()}
+  </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer les picks — 9.90€/mois →</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
   </div>
   <div style="text-align:center;margin-bottom:16px">
     <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€</a>

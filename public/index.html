@@ -54,8 +54,8 @@
       "@id": "https://www.touslesmatchs.com/#faq",
       "mainEntity": [
         { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 4 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants ; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable." } },
-        { "@type": "Question", "name": "Comment est choisi le pari du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le système compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
-        { "@type": "Question", "name": "Est-ce que je peux recevoir les picks sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le canal Telegram gratuit reçoit le pari du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort." } },
+        { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
+        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort." } },
         { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
         { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort." } }
       ]
@@ -1134,7 +1134,7 @@ footer{
 <nav>
   <div class="nav-brand">TousLesMatchs</div>
   <div class="nav-center">
-    <a href="#pick" data-i18n="pick_today">Pari du jour</a>
+    <a href="#pick" data-i18n="pick_today">Analyse du jour</a>
     <a href="/live-ia"><span class="nav-live-dot" style="display:inline-block;margin-right:5px;vertical-align:middle"></span>Live IA</a>
     <a href="#plans" data-i18n="nav_join">Abonnements</a>
     <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)!important">📱 Telegram</a>
@@ -1252,7 +1252,7 @@ footer{
 
   <!-- EMAIL CAPTURE — CTA principal -->
   <div id="hero-email-box" style="background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.05));border:1px solid rgba(99,102,241,.22);border-radius:20px;padding:28px 32px;max-width:520px;width:100%;margin-bottom:32px;text-align:left">
-    <div style="font-size:15px;font-weight:800;margin-bottom:4px">📩 Recevez le pari du jour — gratuitement</div>
+    <div style="font-size:15px;font-weight:800;margin-bottom:4px">📩 Recevez l'analyse IA du jour — gratuitement</div>
     <div style="font-size:13px;color:var(--muted2);margin-bottom:18px;line-height:1.5">Le Concile IA analyse chaque matin. Votre pick arrive directement dans votre boite mail.</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <input type="email" id="hero-email-input" placeholder="votre@email.com" autocomplete="email"
@@ -1447,7 +1447,7 @@ footer{
 <!-- PICK DU JOUR -->
 <section class="section-wrap" id="pick">
   <div class="s-eyebrow" data-i18n="sec_pick_eye">Concile · analyse du jour</div>
-  <div class="s-title" data-i18n="pick_today">Pari du jour</div>
+  <div class="s-title" data-i18n="pick_today">Analyse du jour</div>
   <div id="pick-root"></div>
 </section>
 
@@ -1639,7 +1639,7 @@ footer{
     <div class="pc">
       <span class="pc-badge b-fr" data-i18n="plan_free_badge">Gratuit</span>
       <div><div class="pc-price">0€<span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px" data-i18n="plan_free_name">Découverte</div></div>
-      <div class="pc-desc" data-i18n="plan_free_desc">Le meilleur pari du jour, visible sur le site. Aucune inscription.</div>
+      <div class="pc-desc" data-i18n="plan_free_desc">La meilleure analyse IA du jour, visible sur le site. Aucune inscription.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>1 pick/jour (site public)</div>
@@ -1773,7 +1773,7 @@ function copyRefLink(){
 <div style="max-width:960px;margin:0 auto;padding:0 32px 60px;position:relative;z-index:1">
   <div class="tg-plans-cta">
     <div class="tpc-title">📱 Pas encore prêt à vous abonner ?</div>
-    <div class="tpc-sub">Rejoignez le canal Telegram gratuit et recevez le pari du jour — sans inscription, sans carte bancaire.</div>
+    <div class="tpc-sub">Rejoignez le canal Telegram gratuit et recevez l'analyse du jour — sans inscription, sans carte bancaire.</div>
     <div class="social-cta-row">
       <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" class="tg-plans-btn">📢 Canal Telegram gratuit →</a>
       <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=plans_cta&utm_campaign=prospection" target="_blank" rel="noopener noreferrer" class="tiktok-pick-btn">TikTok TousLesMatchs →</a>
@@ -1805,7 +1805,7 @@ function copyRefLink(){
   <div style="background:linear-gradient(135deg,rgba(0,136,204,.08),rgba(0,85,170,.06));border:1px solid rgba(0,136,204,.2);border-radius:20px;padding:32px;text-align:center">
     <div style="font-size:32px;margin-bottom:12px">📱</div>
     <div style="font-size:20px;font-weight:800;margin-bottom:8px">Rejoins le canal Telegram gratuit</div>
-    <div style="font-size:14px;color:var(--muted2);margin-bottom:24px;line-height:1.6">Reçois chaque pick en temps réel, avant que les cotes bougent.</div>
+    <div style="font-size:14px;color:var(--muted2);margin-bottom:24px;line-height:1.6">Reçois chaque analyse en temps réel, avant que les cotes bougent.</div>
     <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,136,204,.15);color:#22d3ee;border:1px solid rgba(0,136,204,.3);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s"
@@ -2163,7 +2163,7 @@ function renderPick(){
 
   const t=isResult
     ? `Résultat du pick : ${PICK.teamA.name} vs ${PICK.teamB.name} — ${isWin?'gagné':'perdu'} ${hasScoreA?PICK.scoreA:'?'}-${hasScoreB?PICK.scoreB:'?'}`
-    : `⚡ Pari du jour : ${PICK.teamA.name} vs ${PICK.teamB.name} — ${PICK.marketType} @${PICK.cote} · Consensus ${avg}%`;
+    : `⚡ Analyse du jour : ${PICK.teamA.name} vs ${PICK.teamB.name} — ${PICK.marketType} @${PICK.cote} · Consensus ${avg}%`;
   document.getElementById('t1').textContent=t;
   document.getElementById('t2').textContent=t;
 }
@@ -2468,7 +2468,7 @@ function renderNavAuth(){
     if(email && plan){
       const isElite = plan==='elite';
       heroBox.innerHTML = `<div style="font-size:15px;font-weight:800;margin-bottom:4px">👋 Content de te revoir${isElite?', membre Elite':''} !</div>
-        <div style="font-size:13px;color:var(--muted2);line-height:1.5">Ton pari du jour est prêt juste en dessous. Bonne analyse !</div>`;
+        <div style="font-size:13px;color:var(--muted2);line-height:1.5">Ton analyse du jour est prête juste en dessous. Bonne lecture !</div>`;
     } else {
       heroBox.innerHTML = heroBox.dataset.original;
     }
@@ -2761,9 +2761,9 @@ initPick();
 // ══ FAQ
 const FAQ_DATA = [
   {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 4 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
-  {q:"Comment est choisi le pari du jour ?", a:"Le système compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
-  {q:"Est-ce que je peux recevoir les picks sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit le pari du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
-  {q:"Comment puis-je parier avec vos liens ?", a:"Cliquez directement sur les boutons Winamax, Betclic, Unibet ou PMU sous le pari du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
+  {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
+  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
+  {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Betclic, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
@@ -3101,7 +3101,7 @@ document.addEventListener('click',function(e){
     root.innerHTML =
       '<div class="pick-outer"><div class="pick-inner tlm-live-pick-card">' +
         '<div class="pick-head">' +
-          '<div class="ph-left"><span class="ptag ptag-live">Pari du jour</span><span class="ptag-comp">'+esc(p.competition||p.league||p.sport||'Football')+'</span></div>' +
+          '<div class="ph-left"><span class="ptag ptag-live">Analyse du jour</span><span class="ptag-comp">'+esc(p.competition||p.league||p.sport||'Football')+'</span></div>' +
           '<div class="ph-right">'+esc(p.time||'')+'</div>' +
         '</div>' +
         '<div class="tlm-live-pick">' +
