@@ -2786,19 +2786,61 @@ async function resolveStalePredictions() {
       } catch (e) { console.error("[catch-up] football-data:", e.message); }
     }
 
-    // Source 2 : api-sports — complète les compétitions absentes de football-data
-    // (ligues mineures, certaines compétitions). Couvre hier + aujourd'hui.
+    // Source 2 : api-sports football — couvre aujourd'hui, hier, J-2
     if (API_SPORTS_KEY) {
-      for (const date of [new Date().toISOString().slice(0, 10), new Date(Date.now() - 86400000).toISOString().slice(0, 10)]) {
+      for (let d = 0; d < 3; d++) {
+        const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
         try {
-          const d = await httpGet(
+          const data = await httpGet(
             `https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`,
             { "x-apisports-key": API_SPORTS_KEY }
           );
-          const items = (d.response || []).map(normalizeApiSportsFootballFixture)
+          const items = (data.response || []).map(normalizeApiSportsFootballFixture)
             .filter(m => m.score_home !== null && m.score_away !== null);
           finished.push(...items);
-        } catch (e) { console.error("[catch-up] api-sports:", e.message); }
+        } catch (e) { console.error("[catch-up] api-sports football:", e.message); }
+      }
+    }
+
+    // Source 3 : api-sports basketball — résoudre les matchs basket aussi
+    if (API_SPORTS_KEY) {
+      for (let d = 0; d < 2; d++) {
+        const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+        try {
+          const data = await httpGet(
+            `https://v1.basketball.api-sports.io/games?date=${date}&status=FT`,
+            { "x-apisports-key": API_SPORTS_KEY }
+          );
+          (data.response || []).forEach(g => {
+            if (g.teams?.home?.name && g.teams?.away?.name && g.scores?.home?.total != null) {
+              finished.push({
+                home: g.teams.home.name, away: g.teams.away.name,
+                score_home: g.scores.home.total, score_away: g.scores.away.total,
+              });
+            }
+          });
+        } catch (e) { console.error("[catch-up] api-sports basketball:", e.message); }
+      }
+    }
+
+    // Source 4 : api-sports hockey
+    if (API_SPORTS_KEY) {
+      for (let d = 0; d < 2; d++) {
+        const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+        try {
+          const data = await httpGet(
+            `https://v1.hockey.api-sports.io/games?date=${date}&status=FT`,
+            { "x-apisports-key": API_SPORTS_KEY }
+          );
+          (data.response || []).forEach(g => {
+            if (g.teams?.home?.name && g.teams?.away?.name && g.scores?.home != null) {
+              finished.push({
+                home: g.teams.home.name, away: g.teams.away.name,
+                score_home: g.scores.home, score_away: g.scores.away,
+              });
+            }
+          });
+        } catch (e) { console.error("[catch-up] api-sports hockey:", e.message); }
       }
     }
 
@@ -2834,8 +2876,8 @@ async function resolveStalePredictions() {
     staleResolveRunning = false;
   }
 }
-// Toutes les heures + un premier passage 30s après le démarrage
-setInterval(resolveStalePredictions, 60 * 60 * 1000);
+// Toutes les 30 min + un premier passage 30s après le démarrage
+setInterval(resolveStalePredictions, 30 * 60 * 1000);
 setTimeout(resolveStalePredictions, 30 * 1000);
 
 let autoConcileObserverRunning = false;
