@@ -1205,9 +1205,9 @@ footer{
 .hero-stadium{position:relative;overflow:hidden;
   background:radial-gradient(ellipse 120% 80% at 50% 85%,rgba(16,185,129,.08) 0%,transparent 60%),
   linear-gradient(180deg,#060a14 0%,#0a0c1a 100%)}
-.stadium-bg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.85}
+.stadium-bg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:1}
 .stadium-fade{position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(180deg,rgba(6,10,20,.3) 0%,rgba(10,12,26,.6) 50%,var(--bg) 100%)}
+  background:linear-gradient(180deg,rgba(6,10,20,.15) 0%,rgba(10,12,26,.35) 60%,var(--bg) 100%)}
 @media(max-width:640px){
   .hero-stadium{padding:90px 20px 40px!important}
   .hero-stadium h1{font-size:26px!important;margin-bottom:14px!important}
@@ -1224,44 +1224,67 @@ footer{
 
   <!-- Stade SVG (silhouette avec projecteurs) -->
   <svg class="stadium-bg" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-    <!-- Ciel nocturne -->
     <rect width="1440" height="600" fill="#060a14"/>
-    <!-- Pelouse (lueur verte lointaine) -->
-    <ellipse cx="720" cy="580" rx="560" ry="80" fill="rgba(16,185,129,.06)"/>
-    <ellipse cx="720" cy="560" rx="400" ry="40" fill="rgba(16,185,129,.04)"/>
+    <!-- Pelouse — lueur verte prononcée -->
+    <ellipse cx="720" cy="570" rx="620" ry="100" fill="rgba(16,185,129,.18)"/>
+    <ellipse cx="720" cy="555" rx="440" ry="55" fill="rgba(16,185,129,.12)"/>
+    <ellipse cx="720" cy="545" rx="300" ry="30" fill="rgba(52,211,153,.08)"/>
     <!-- Tribunes gauche -->
-    <path d="M80,520 L80,340 Q80,320 100,310 L340,280 Q360,278 360,298 L360,510 Z" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <path d="M40,530 L40,310 Q40,285 65,275 L340,240 Q365,237 365,262 L365,520 Z" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/>
+    <path d="M60,520 L60,320 Q60,300 80,292 L320,260 Q340,258 340,278 L340,510 Z" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
     <!-- Tribunes droite -->
-    <path d="M1360,520 L1360,340 Q1360,320 1340,310 L1100,280 Q1080,278 1080,298 L1080,510 Z" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <path d="M1400,530 L1400,310 Q1400,285 1375,275 L1100,240 Q1075,237 1075,262 L1075,520 Z" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/>
+    <path d="M1380,520 L1380,320 Q1380,300 1360,292 L1120,260 Q1100,258 1100,278 L1100,510 Z" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
     <!-- Tribune fond -->
-    <path d="M340,285 L1100,285 L1100,500 L340,500 Z" fill="rgba(255,255,255,.015)" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
-    <!-- Toit arrondi -->
-    <path d="M60,340 Q720,180 1380,340" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="2"/>
-    <path d="M100,330 Q720,200 1340,330" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
-    <!-- Pylone gauche -->
-    <rect x="100" y="180" width="6" height="160" rx="2" fill="rgba(255,255,255,.08)"/>
-    <!-- Projecteurs gauche -->
-    <circle cx="103" cy="180" r="4" fill="rgba(255,255,255,.15)"/>
-    <circle cx="103" cy="190" r="3" fill="rgba(255,255,255,.1)"/>
-    <ellipse cx="200" cy="450" rx="120" ry="180" fill="url(#light-l)" opacity=".12"/>
-    <!-- Pylone droit -->
-    <rect x="1334" y="180" width="6" height="160" rx="2" fill="rgba(255,255,255,.08)"/>
+    <path d="M340,245 L1100,245 L1100,515 L340,515 Z" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+    <path d="M370,260 L1070,260 L1070,500 L370,500 Z" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
+    <!-- Rangées de sièges (lignes horizontales) -->
+    <line x1="370" y1="300" x2="1070" y2="300" stroke="rgba(255,255,255,.04)" stroke-width=".5"/>
+    <line x1="370" y1="340" x2="1070" y2="340" stroke="rgba(255,255,255,.04)" stroke-width=".5"/>
+    <line x1="370" y1="380" x2="1070" y2="380" stroke="rgba(255,255,255,.04)" stroke-width=".5"/>
+    <line x1="370" y1="420" x2="1070" y2="420" stroke="rgba(255,255,255,.04)" stroke-width=".5"/>
+    <line x1="370" y1="460" x2="1070" y2="460" stroke="rgba(255,255,255,.04)" stroke-width=".5"/>
+    <!-- Toit — structure arrondie prononcée -->
+    <path d="M30,310 Q720,120 1410,310" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="3"/>
+    <path d="M60,300 Q720,140 1380,300" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="2"/>
+    <path d="M100,295 Q720,160 1340,295" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+    <!-- Pylône gauche -->
+    <rect x="55" y="130" width="8" height="180" rx="3" fill="rgba(255,255,255,.2)"/>
+    <rect x="57" y="130" width="4" height="180" rx="2" fill="rgba(255,255,255,.08)"/>
+    <!-- Projecteurs gauche — gros et lumineux -->
+    <circle cx="59" cy="128" r="8" fill="rgba(255,255,255,.35)"/>
+    <circle cx="59" cy="128" r="14" fill="rgba(255,255,255,.08)"/>
+    <circle cx="59" cy="142" r="6" fill="rgba(255,255,255,.25)"/>
+    <circle cx="59" cy="155" r="5" fill="rgba(255,255,255,.18)"/>
+    <!-- Faisceau gauche -->
+    <polygon points="59,128 300,450 500,520 200,520 -50,450" fill="url(#beam-l)" opacity=".18"/>
+    <!-- Pylône droit -->
+    <rect x="1377" y="130" width="8" height="180" rx="3" fill="rgba(255,255,255,.2)"/>
+    <rect x="1379" y="130" width="4" height="180" rx="2" fill="rgba(255,255,255,.08)"/>
     <!-- Projecteurs droit -->
-    <circle cx="1337" cy="180" r="4" fill="rgba(255,255,255,.15)"/>
-    <circle cx="1337" cy="190" r="3" fill="rgba(255,255,255,.1)"/>
-    <ellipse cx="1240" cy="450" rx="120" ry="180" fill="url(#light-r)" opacity=".12"/>
-    <!-- Lumiere terrain -->
-    <ellipse cx="720" cy="540" rx="380" ry="60" fill="rgba(52,211,153,.04)"/>
+    <circle cx="1381" cy="128" r="8" fill="rgba(255,255,255,.35)"/>
+    <circle cx="1381" cy="128" r="14" fill="rgba(255,255,255,.08)"/>
+    <circle cx="1381" cy="142" r="6" fill="rgba(255,255,255,.25)"/>
+    <circle cx="1381" cy="155" r="5" fill="rgba(255,255,255,.18)"/>
+    <!-- Faisceau droit -->
+    <polygon points="1381,128 1140,450 940,520 1240,520 1490,450" fill="url(#beam-r)" opacity=".18"/>
+    <!-- Lumière terrain (projecteurs vers pelouse) -->
+    <ellipse cx="720" cy="540" rx="420" ry="70" fill="rgba(255,255,255,.06)"/>
+    <ellipse cx="720" cy="550" rx="350" ry="50" fill="rgba(52,211,153,.06)"/>
+    <!-- Ligne médiane terrain -->
+    <line x1="720" y1="510" x2="720" y2="580" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+    <circle cx="720" cy="545" r="25" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="1"/>
     <defs>
-      <radialGradient id="light-l" cx="30%" cy="20%"><stop offset="0%" stop-color="#fff" stop-opacity=".5"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>
-      <radialGradient id="light-r" cx="70%" cy="20%"><stop offset="0%" stop-color="#fff" stop-opacity=".5"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <linearGradient id="beam-l" x1="0%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#fff" stop-opacity=".7"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="beam-r" x1="100%" y1="0%" x2="50%" y2="100%"><stop offset="0%" stop-color="#fff" stop-opacity=".7"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient>
     </defs>
-    <!-- Etoiles -->
-    <circle cx="180" cy="60" r="1" fill="#fff" opacity=".3"/><circle cx="420" cy="40" r=".8" fill="#fff" opacity=".2"/>
-    <circle cx="650" cy="80" r="1.2" fill="#fff" opacity=".25"/><circle cx="900" cy="30" r=".7" fill="#fff" opacity=".3"/>
-    <circle cx="1100" cy="70" r="1" fill="#fff" opacity=".2"/><circle cx="1280" cy="50" r=".9" fill="#fff" opacity=".25"/>
-    <circle cx="300" cy="100" r=".6" fill="#fff" opacity=".15"/><circle cx="800" cy="120" r=".8" fill="#fff" opacity=".2"/>
-    <circle cx="1050" cy="110" r=".7" fill="#fff" opacity=".18"/><circle cx="520" cy="130" r=".5" fill="#fff" opacity=".15"/>
+    <!-- Étoiles -->
+    <circle cx="180" cy="50" r="1.2" fill="#fff" opacity=".4"/><circle cx="420" cy="35" r="1" fill="#fff" opacity=".3"/>
+    <circle cx="650" cy="70" r="1.5" fill="#fff" opacity=".35"/><circle cx="900" cy="25" r="1" fill="#fff" opacity=".4"/>
+    <circle cx="1100" cy="60" r="1.2" fill="#fff" opacity=".3"/><circle cx="1280" cy="42" r="1.1" fill="#fff" opacity=".35"/>
+    <circle cx="300" cy="85" r=".8" fill="#fff" opacity=".25"/><circle cx="800" cy="95" r="1" fill="#fff" opacity=".3"/>
+    <circle cx="1050" cy="90" r=".9" fill="#fff" opacity=".25"/><circle cx="520" cy="55" r=".7" fill="#fff" opacity=".2"/>
+    <circle cx="150" cy="95" r=".6" fill="#fff" opacity=".2"/><circle cx="1200" cy="80" r=".8" fill="#fff" opacity=".22"/>
   </svg>
   <div class="stadium-fade" aria-hidden="true"></div>
 
