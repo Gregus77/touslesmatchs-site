@@ -3382,6 +3382,60 @@ async function processScheduledEmails() {
 setInterval(processScheduledEmails, 15 * 60 * 1000);
 setTimeout(processScheduledEmails, 60 * 1000);
 
+// ── Signal Fort Bilan — track record des signaux >= 80% ─────────────────────
+function getSignalFortStats() {
+  try {
+    const all = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+             score_home_at_analysis, score_away_at_analysis,
+             final_score_home, final_score_away, analysed_at
+      FROM concile_analyses
+      WHERE confidence >= 80 AND outcome IN ('win','loss')
+      ORDER BY analysed_at DESC
+    `).all();
+    const wins = all.filter(r => r.outcome === "win");
+    const losses = all.filter(r => r.outcome === "loss");
+    const total = all.length;
+    const winrate = total > 0 ? Math.round(wins.length / total * 100) : 0;
+    return { total, wins: wins.length, losses: losses.length, winrate, recent: all.slice(0, 20) };
+  } catch (e) {
+    console.error("[signal-fort-bilan] stats:", e.message);
+    return { total: 0, wins: 0, losses: 0, winrate: 0, recent: [] };
+  }
+}
+
+async function sendSignalFortBilanTelegram() {
+  const stats = getSignalFortStats();
+  if (stats.total < 3) return;
+
+  const recentLines = stats.recent.slice(0, 10).map(r => {
+    const icon = r.outcome === "win" ? "✅" : "❌";
+    const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
+    return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}%`;
+  }).join("\n");
+
+  const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ 80% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
+
+  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ 80% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n🔒 <b>Accédez aux picks exacts et à l'analyse complète</b>\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner — dès 9.90€/mois</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+
+  if (TELEGRAM_PREMIUM_CHANNEL_ID) {
+    const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
+    console.log(`[signal-fort-bilan] Telegram premium: ${ok ? "OK" : "FAIL"}`);
+  }
+  if (TELEGRAM_CHANNEL_ID) {
+    const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+    console.log(`[signal-fort-bilan] Telegram free: ${ok ? "OK" : "FAIL"}`);
+  }
+}
+
+// Bilan hebdomadaire chaque dimanche à 20h (vérifie toutes les heures)
+setInterval(() => {
+  const now = new Date();
+  if (now.getDay() === 0 && now.getHours() === 20 && now.getMinutes() < 60) {
+    sendSignalFortBilanTelegram().catch(e => console.error("[signal-fort-bilan]", e.message));
+  }
+}, 60 * 60 * 1000);
+
 // Forgot code - lookup codes.db by email and send via Brevo
 app.post("/forgot-code", async (req, res) => {
   const { email } = req.body || {};
@@ -4499,6 +4553,37 @@ app.post("/referral/confirm", (req, res) => {
   if (!refCode || !newEmail) return res.json({ ok: false, error: "refCode et newEmail requis" });
   const credited = creditReferrer(refCode.toUpperCase(), newEmail.toLowerCase().trim());
   res.json({ ok: credited, message: credited ? "Parrain crédité de 30 jours" : "Déjà crédité ou code invalide" });
+});
+
+// ── Signal Fort Bilan — endpoint admin + public stats ────────────────────────
+app.post("/internal/signal-fort-bilan", async (req, res) => {
+  const { secret } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
+  await sendSignalFortBilanTelegram();
+  res.json({ ok: true, stats: getSignalFortStats() });
+});
+
+app.get("/api/signal-fort-stats", (req, res) => {
+  const stats = getSignalFortStats();
+  res.json({
+    ok: true,
+    total: stats.total,
+    wins: stats.wins,
+    losses: stats.losses,
+    winrate: stats.winrate,
+    recent: stats.recent.map(r => ({
+      home: r.home,
+      away: r.away,
+      competition: r.competition,
+      sport: r.sport,
+      bet: r.best_bet,
+      confidence: r.confidence,
+      outcome: r.outcome,
+      score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+      date: r.analysed_at,
+    })),
+  });
 });
 
 // ── Internal signal notify — strong signal email to premium subscribers ───────

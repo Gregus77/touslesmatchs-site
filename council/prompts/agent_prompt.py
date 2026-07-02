@@ -28,7 +28,8 @@ LIGUES AUTORISÉES (Winamax/Betclic) :
 Football : Ligue 1, Ligue 2, Premier League, Championship, La Liga, Bundesliga,
            Serie A, Eredivisie, Pro League, Liga Portugal, Super Lig,
            Champions League, Europa League, Conference League, Euro, Coupe du Monde,
-           MLS, Liga MX, Copa Libertadores
+           MLS, Liga MX, Copa Libertadores,
+           Chinese Super League, J1 League (Japon), K League 1 (Corée), Canadian Premier League
 Hockey : NHL, KHL
 Basketball : NBA, Euroligue
 Tennis : ATP, WTA (Grand Chelem, Masters 1000, 500)

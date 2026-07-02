@@ -1,6 +1,6 @@
 import os
 import json
-from mistralai import Mistral
+from openai import OpenAI
 from prompts.agent_prompt import AGENT_SYSTEM_PROMPT, AGENT_USER_PROMPT_TEMPLATE
 
 NAME = "Mistral"
@@ -10,7 +10,10 @@ client = None
 def _get_client():
     global client
     if client is None:
-        client = Mistral(api_key=os.environ.get("MISTRAL_API_KEY"))
+        client = OpenAI(
+            api_key=os.environ.get("MISTRAL_API_KEY"),
+            base_url="https://api.mistral.ai/v1",
+        )
     return client
 
 
@@ -25,7 +28,7 @@ def analyze(date, matches_text, history_text, stats):
         losses=stats.get("losses", 0),
     )
     try:
-        response = _get_client().chat.complete(
+        response = _get_client().chat.completions.create(
             model="mistral-small-latest",
             messages=[
                 {"role": "system", "content": AGENT_SYSTEM_PROMPT},

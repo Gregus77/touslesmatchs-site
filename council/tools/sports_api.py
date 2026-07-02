@@ -20,6 +20,10 @@ ALLOWED_LEAGUES = {
     4, 1,         # Euro, Coupe du Monde
     253, 262,     # MLS, Liga MX
     13,           # Copa Libertadores
+    169,          # Chinese Super League
+    98,           # J1 League (Japon)
+    292,          # K League 1 (Corée du Sud)
+    636,          # Canadian Premier League
 }
 
 _last_call = 0

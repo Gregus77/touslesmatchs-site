@@ -1,25 +1,18 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from prompts.agent_prompt import AGENT_SYSTEM_PROMPT, AGENT_USER_PROMPT_TEMPLATE
 
 NAME = "Gemini Flash"
-_model = None
+_client = None
 
 
-def _get_model():
-    global _model
-    if _model is None:
-        genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
-        _model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
-            system_instruction=AGENT_SYSTEM_PROMPT,
-            generation_config=genai.GenerationConfig(
-                response_mime_type="application/json",
-                temperature=0.3,
-            ),
-        )
-    return _model
+def _get_client():
+    global _client
+    if _client is None:
+        _client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
+    return _client
 
 
 def analyze(date, matches_text, history_text, stats):
@@ -33,7 +26,15 @@ def analyze(date, matches_text, history_text, stats):
         losses=stats.get("losses", 0),
     )
     try:
-        response = _get_model().generate_content(prompt)
+        response = _get_client().models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=AGENT_SYSTEM_PROMPT,
+                response_mime_type="application/json",
+                temperature=0.3,
+            ),
+        )
         return json.loads(response.text)
     except Exception as e:
         print(f"[{NAME}] Error: {e}")
