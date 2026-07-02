@@ -125,6 +125,19 @@ ensureColumn("concile_analyses", "away_shots",      "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "home_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "away_possession", "INTEGER DEFAULT NULL");
 
+// ── Nurturing emails table (persistent across restarts) ──────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS scheduled_emails (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    email_type TEXT NOT NULL,
+    send_after TEXT NOT NULL,
+    sent INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(email, email_type)
+  );
+`);
+
 // ── Shadow eval table ─────────────────────────────────────────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS shadow_evals (
@@ -3235,76 +3248,97 @@ app.post("/subscribe-email", async (req, res) => {
 });
 
 function scheduleNurturingEmails(email) {
-  // J+1 — Email preuve : résultats récents pour déclencher l'envie
-  setTimeout(async () => {
-    try {
-      let pickLine = "";
-      try {
-        const picks = JSON.parse(fs.readFileSync("/var/touslesmatchs/picks.json", "utf8"));
-        const p = picks.currentPick;
-        if (p?.status && ["GAGNE","WIN"].includes(String(p.status).toUpperCase())) {
-          pickLine = `<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:16px;margin-bottom:20px">
-            <div style="color:#10b981;font-weight:800;font-size:14px;margin-bottom:4px">✅ Dernier pick : GAGNÉ</div>
-            <div style="color:#a8aec8;font-size:13px">${p.home} vs ${p.away} · ${p.prono || p.bet} @${p.cote}</div>
-          </div>`;
-        }
-      } catch (_) {}
-      const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
-        <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:30px;text-align:center">
-          <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
-          <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">Le Concile IA a encore frappé</div>
-        </div>
-        <div style="padding:32px">
-          <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Depuis ton inscription hier, le Concile a publié son pick du jour.</p>
-          ${pickLine}
-          <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Tu veux recevoir l'analyse <strong style="color:#eceaf4">complète</strong> — le pari exact, la cote, la mise suggérée et la raison du Concile — directement dans ta boite mail et sur Telegram ?</p>
-          <div style="text-align:center;margin-bottom:20px">
-            <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
-          </div>
-          <div style="text-align:center;margin-bottom:20px">
-            <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€ →</a>
-          </div>
-          <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
-        </div>
-      </div>`;
-      await brevoSendEmail(email, "✅ Le Concile vient de publier — voici ce que tu as manqué", html);
-    } catch (e) { console.error("[nurturing J+1]", e.message); }
-  }, 24 * 60 * 60 * 1000); // 24h
-
-  // J+3 — Email urgence : bilan des derniers picks
-  setTimeout(async () => {
-    try {
-      const html = `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
-        <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:30px;text-align:center">
-          <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
-          <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">3 picks publiés depuis ton inscription</div>
-        </div>
-        <div style="padding:32px">
-          <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Tu t'es inscrit il y a 3 jours. Le Concile a travaillé chaque matin.</p>
-          <div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:20px;margin-bottom:24px">
-            <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22d3ee;margin-bottom:12px">Ce que tu as vu</div>
-            <div style="font-size:14px;color:#a8aec8;line-height:2">
-              ✅ Match + compétition<br>
-              ✅ Niveau de confiance du Concile<br>
-              🔒 Le pari exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
-              🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
-              🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
-            </div>
-          </div>
-          <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Pro.</p>
-          <div style="text-align:center;margin-bottom:12px">
-            <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
-          </div>
-          <div style="text-align:center;margin-bottom:24px">
-            <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Tester 1 analyse pour 1€</a>
-          </div>
-          <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
-        </div>
-      </div>`;
-      await brevoSendEmail(email, "🔒 Tu vois le signal, pas le pari — voici comment changer ça", html);
-    } catch (e) { console.error("[nurturing J+3]", e.message); }
-  }, 3 * 24 * 60 * 60 * 1000); // 72h
+  const now = new Date();
+  const j1 = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  const j3 = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    db.prepare("INSERT OR IGNORE INTO scheduled_emails (email, email_type, send_after) VALUES (?,?,?)").run(email, "nurture_j1", j1);
+    db.prepare("INSERT OR IGNORE INTO scheduled_emails (email, email_type, send_after) VALUES (?,?,?)").run(email, "nurture_j3", j3);
+  } catch (e) { console.error("[nurturing] schedule:", e.message); }
 }
+
+function buildNurtureJ1Html(email) {
+  let pickLine = "";
+  try {
+    const picks = JSON.parse(fs.readFileSync("/var/touslesmatchs/picks.json", "utf8"));
+    const p = picks.currentPick;
+    if (p?.status && ["GAGNE","WIN"].includes(String(p.status).toUpperCase())) {
+      pickLine = `<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:16px;margin-bottom:20px">
+        <div style="color:#10b981;font-weight:800;font-size:14px;margin-bottom:4px">✅ Dernier pick : GAGNÉ</div>
+        <div style="color:#a8aec8;font-size:13px">${p.home} vs ${p.away} · ${p.prono || p.bet} @${p.cote}</div>
+      </div>`;
+    }
+  } catch (_) {}
+  return `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:30px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">Le Concile IA a encore frappé</div>
+    </div>
+    <div style="padding:32px">
+      <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Depuis ton inscription hier, le Concile a publié son pick du jour.</p>
+      ${pickLine}
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Tu veux recevoir l'analyse <strong style="color:#eceaf4">complète</strong> — le pari exact, la cote, la mise suggérée et la raison du Concile — directement dans ta boite mail et sur Telegram ?</p>
+      <div style="text-align:center;margin-bottom:20px">
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
+      </div>
+      <div style="text-align:center;margin-bottom:20px">
+        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€ →</a>
+      </div>
+      <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
+    </div>
+  </div>`;
+}
+
+function buildNurtureJ3Html() {
+  return `<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:30px;text-align:center">
+      <div style="font-size:22px;font-weight:900;color:#fff">TousLesMatchs</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.75);margin-top:4px">3 picks publiés depuis ton inscription</div>
+    </div>
+    <div style="padding:32px">
+      <p style="font-size:15px;color:#a8aec8;margin:0 0 20px">Tu t'es inscrit il y a 3 jours. Le Concile a travaillé chaque matin.</p>
+      <div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:20px;margin-bottom:24px">
+        <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#22d3ee;margin-bottom:12px">Ce que tu as vu</div>
+        <div style="font-size:14px;color:#a8aec8;line-height:2">
+          ✅ Match + compétition<br>
+          ✅ Niveau de confiance du Concile<br>
+          🔒 Le pari exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
+          🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
+          🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
+        </div>
+      </div>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Pro.</p>
+      <div style="text-align:center;margin-bottom:12px">
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
+      </div>
+      <div style="text-align:center;margin-bottom:24px">
+        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Tester 1 analyse pour 1€</a>
+      </div>
+      <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
+    </div>
+  </div>`;
+}
+
+async function processScheduledEmails() {
+  if (!BREVO_API_KEY) return;
+  try {
+    const due = db.prepare("SELECT * FROM scheduled_emails WHERE sent = 0 AND send_after <= datetime('now') LIMIT 10").all();
+    for (const row of due) {
+      try {
+        if (row.email_type === "nurture_j1") {
+          await brevoSendEmail(row.email, "✅ Le Concile vient de publier — voici ce que tu as manqué", buildNurtureJ1Html(row.email));
+        } else if (row.email_type === "nurture_j3") {
+          await brevoSendEmail(row.email, "🔒 Tu vois le signal, pas le pari — voici comment changer ça", buildNurtureJ3Html());
+        }
+        db.prepare("UPDATE scheduled_emails SET sent = 1 WHERE id = ?").run(row.id);
+        console.log(`[nurturing] ${row.email_type} envoyé: ${row.email}`);
+      } catch (e) { console.error(`[nurturing] ${row.email_type}:`, e.message); }
+    }
+  } catch (e) { console.error("[nurturing] process:", e.message); }
+}
+
+setInterval(processScheduledEmails, 15 * 60 * 1000);
+setTimeout(processScheduledEmails, 60 * 1000);
 
 // Forgot code - lookup codes.db by email and send via Brevo
 app.post("/forgot-code", async (req, res) => {
@@ -4490,6 +4524,56 @@ app.post("/internal/signal-notify", async (req, res) => {
       }
     }
     console.log(`[signal-notify] Emails signal fort envoyés : ${sent}/${emails.length}`);
+
+    // Email teaser aux inscrits GRATUITS (sans le pari, avec CTA abonnement)
+    try {
+      const leadRows = loadLeads().leads || [];
+      const premiumEmails = new Set(emails.map(e => e.toLowerCase()));
+      const freeEmails = [...new Set(leadRows.map(l => l.email).filter(e => e && !premiumEmails.has(e.toLowerCase())))];
+      if (freeEmails.length > 0) {
+        const teaserHtml = `
+<div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">ALERTE SIGNAL FORT</div>
+  </div>
+  <div style="background:#0d1020;border:1px solid rgba(99,102,241,.3);border-radius:16px;padding:24px;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+      <span style="font-size:28px">${sportIcon}</span>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#f59e0b">🚨 Signal fort détecté</div>
+        <div style="font-size:11px;color:#7b82a0">${signal.competition || signal.sport || ""}</div>
+      </div>
+      <div style="margin-left:auto;background:${confColor}18;border:1px solid ${confColor};border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:${confColor}">${conf}%</div>
+    </div>
+    <div style="font-size:20px;font-weight:900;color:#eceaf4;margin-bottom:6px">${logoHtml}${signal.home} vs ${signal.away}</div>
+    ${signal.minute ? `<div style="font-size:12px;color:#22d3ee;margin-bottom:12px">⏱ ${signal.minute}' en cours</div>` : ""}
+    <div style="background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:16px;text-align:center">
+      <div style="font-size:14px;color:#a8aec8;margin-bottom:8px">Le Concile IA a identifié un pari à <strong style="color:#eceaf4">${conf}% de confiance</strong></div>
+      <div style="font-size:16px;font-weight:800;color:#6366f1">🔒 Pari réservé aux abonnés</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-bottom:16px">
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer le pari — 9.90€/mois →</a>
+  </div>
+  <div style="text-align:center;margin-bottom:20px">
+    <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Tester 1 analyse pour 1€</a>
+  </div>
+  <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
+    TousLesMatchs — Signal automatique Concile IA<br>
+    ⚠️ 18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a>
+  </div>
+</div>`;
+        let freeSent = 0;
+        for (const fe of freeEmails.slice(0, 200)) {
+          try {
+            await brevoSendEmail(fe, `🚨 Signal fort ${conf}% détecté — ${signal.home} vs ${signal.away}`, teaserHtml);
+            freeSent++;
+          } catch (_) {}
+        }
+        console.log(`[signal-notify] Teaser free envoyés : ${freeSent}/${freeEmails.length}`);
+      }
+    } catch (e) { console.error("[signal-notify] free teaser:", e.message); }
 
     const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
