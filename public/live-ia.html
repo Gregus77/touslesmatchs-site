@@ -501,7 +501,8 @@ var AGENT_ICONS = {
 };
 
 function loadAgentRanking() {
-  if (!userAuth || userAuth.plan !== "elite") {
+  var isEliteOrAdmin = userAuth && (userAuth.plan === "elite" || (userAuth.code && userAuth.code.toUpperCase().startsWith("ELITE-ADMIN")));
+  if (!isEliteOrAdmin) {
     document.getElementById("agent-ranking").style.display = "none";
     return;
   }

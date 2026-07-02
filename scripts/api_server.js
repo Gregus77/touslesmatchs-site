@@ -4839,6 +4839,69 @@ app.post("/admin/resolve-stale", async (req, res) => {
   res.json({ ok: true, resolved: before - after, pending_before: before, pending_after: after });
 });
 
+// ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
+const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
+
+app.post("/admin/send-report", (req, res) => {
+  const { email, code } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!TELEGRAM_ADMIN_CHAT_ID) return res.json({ ok: false, error: "TELEGRAM_ADMIN_CHAT_ID non configuré" });
+
+  const perf = getAgentPerformance();
+  const dateStr = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  const agents = Object.entries(perf).map(([name, p]) => {
+    const total = (p.wins || 0) + (p.losses || 0);
+    const wr = total > 0 ? Math.round(p.wins / total * 100) : 0;
+    const pending = p.pending || 0;
+    const status = total >= 10 ? (wr >= 80 ? "✅" : "⚠️") : "🔄";
+    return { name, wins: p.wins || 0, losses: p.losses || 0, total, wr, pending, status };
+  }).sort((a, b) => b.wr - a.wr);
+
+  const agentLines = agents.map(a =>
+    `  ${a.status} ${a.name}: ${a.total > 0 ? `${a.wr}% (${a.wins}/${a.total})` : `${a.pending} en attente`}`
+  ).join("\n");
+
+  let meta = {};
+  try {
+    meta = db.prepare(`
+      SELECT
+        COUNT(DISTINCT home || '|' || away || '|' || date(created_at)) as matches,
+        COUNT(*) as predictions,
+        SUM(CASE WHEN outcome IS NOT NULL THEN 1 ELSE 0 END) as resolved,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending
+      FROM agent_predictions
+    `).get() || {};
+  } catch(e) {}
+
+  let pickInfo = "";
+  try {
+    const lastPick = db.prepare("SELECT * FROM picks ORDER BY rowid DESC LIMIT 1").get();
+    if (lastPick) {
+      pickInfo = `\n🎯 <b>Dernier pick :</b>\n  ${lastPick.home || ''} vs ${lastPick.away || ''}\n  ${lastPick.bet || ''} @ ${lastPick.odds || ''}\n  Confiance: ${lastPick.confidence || '?'}/10\n  Résultat: ${lastPick.result || 'en attente'}`;
+    }
+  } catch(e) {}
+
+  const text = `📋 <b>RAPPORT HERMES — ${dateStr}</b>
+
+🤖 <b>Performance des agents :</b>
+${agentLines}
+
+📊 <b>Données :</b>
+  Matchs suivis : ${meta.matches || 0}
+  Prédictions : ${meta.predictions || 0}
+  Résolues : ${meta.resolved || 0}
+  En attente : ${meta.pending || 0}
+${pickInfo}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermes Council — Rapport à la demande`;
+
+  sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text).then(ok => {
+    res.json({ ok, message: ok ? "Rapport envoyé sur Telegram admin" : "Échec envoi Telegram" });
+  });
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 // ── Admin stats ───────────────────────────────────────────────────────────────
 app.get("/admin/stats", (req, res) => {
