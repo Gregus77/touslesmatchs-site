@@ -952,6 +952,11 @@ const TRUSTED_COMPETITIONS = [
   "saudi pro league", "roshn",
   "uae pro league",
   "qsl", "qatar stars",
+  "usl championship", "usl league",
+  "nwsl",
+  "ahl",
+  "nbl", "nbl · australia",
+  "australia cup",
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {

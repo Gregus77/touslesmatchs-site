@@ -26,6 +26,10 @@ ALLOWED_LEAGUES = {
     98,           # J1 League (Japon)
     292,          # K League 1 (Corée du Sud)
     636,          # Canadian Premier League
+    188,          # USL Championship (USA D2)
+    254,          # NWSL (USA femmes)
+    480,          # A-League (Australie)
+    399,          # Australia Cup
 }
 
 # ── Basketball ───────────────────────────────────────────────────────────────
@@ -33,6 +37,7 @@ BASKETBALL_HOST = "v1.basketball.api-sports.io"
 ALLOWED_BASKETBALL_LEAGUES = {
     12,   # NBA
     120,  # Euroligue
+    116,  # NBL (Australie)
 }
 
 # ── Hockey ───────────────────────────────────────────────────────────────────
@@ -40,6 +45,7 @@ HOCKEY_HOST = "v1.hockey.api-sports.io"
 ALLOWED_HOCKEY_LEAGUES = {
     57,   # NHL
     50,   # KHL
+    64,   # AHL (USA/Canada D2)
 }
 
 # ── Baseball ─────────────────────────────────────────────────────────────────
