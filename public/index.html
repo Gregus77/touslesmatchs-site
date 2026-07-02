@@ -1887,6 +1887,7 @@ function copyRefLink(){
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="/js/i18n.js?v=concile-chief-20260623"></script>
+<script>if(typeof i18n==='undefined'){window.i18n={t:function(k){return k},init:function(){},setLang:function(){}}}</script>
 <script>
 // ══ ÉTOILES
 const cv=document.getElementById('cosmos'),cx=cv.getContext('2d');
@@ -3020,8 +3021,8 @@ document.addEventListener('click',function(e){
 });
 </script>
 <script>document.addEventListener('DOMContentLoaded', () => {
-  i18n.init();
-  buildChart();
+  try{ if(typeof i18n!=='undefined') i18n.init(); }catch(e){ console.warn('[i18n] init error:', e); }
+  try{ buildChart(); }catch(e){ console.warn('[buildChart] error:', e); }
 
   // ── Membres Telegram (tg-member-count existant + FOMO strip)
   fetch('/api/community-stats').then(r=>r.json()).then(d=>{
