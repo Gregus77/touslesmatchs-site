@@ -1202,232 +1202,152 @@ footer{
 </div>
 
 <style>
-.hero-globe-wrap{background:radial-gradient(125% 95% at 50% 0%,#07160f 0%,#05080f 52%,var(--bg) 100%)}
-#hero-globe{position:absolute;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none;opacity:0;transition:opacity 1.4s ease}
-#hero-globe.ready{opacity:1}
-.hero-globe-fade{position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:radial-gradient(60% 55% at 50% 44%,transparent 0%,rgba(5,8,15,.25) 68%,var(--bg) 100%)}
-@media(max-width:640px){#hero-globe{opacity:0}#hero-globe.ready{opacity:.9}}
+.hero-stadium{position:relative;overflow:hidden;
+  background:radial-gradient(ellipse 120% 80% at 50% 85%,rgba(16,185,129,.08) 0%,transparent 60%),
+  linear-gradient(180deg,#060a14 0%,#0a0c1a 100%)}
+.stadium-bg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.85}
+.stadium-fade{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,10,20,.3) 0%,rgba(10,12,26,.6) 50%,var(--bg) 100%)}
+@media(max-width:640px){
+  .hero-stadium{padding:90px 20px 40px!important}
+  .hero-stadium h1{font-size:26px!important;margin-bottom:14px!important}
+  .hero-stadium .hero-sub{font-size:14px!important;margin-bottom:10px!important}
+  .hero-stadium .hero-disclaimer{display:none}
+  .hero-stadium .hero-cta-row{flex-direction:column;gap:10px!important}
+  .hero-stadium .hero-cta-row a{width:100%;justify-content:center;font-size:14px!important;padding:14px 20px!important}
+  .hero-email-wrap{padding:20px!important}
+  .hero-tg-row{display:none!important}
+}
 </style>
-<!-- HERO v3 — globe 3D + message clair -->
-<section class="hero hero-globe-wrap" style="padding:120px 32px 70px;min-height:auto;position:relative;overflow:hidden">
+<!-- HERO — fond stade + message court -->
+<section class="hero hero-stadium" style="padding:120px 32px 60px;min-height:auto">
 
-  <!-- Globe 3D (fond) — se dégrade proprement si WebGL/CDN indisponible -->
-  <canvas id="hero-globe" aria-hidden="true"></canvas>
-  <div class="hero-globe-fade" aria-hidden="true"></div>
+  <!-- Stade SVG (silhouette avec projecteurs) -->
+  <svg class="stadium-bg" viewBox="0 0 1440 600" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+    <!-- Ciel nocturne -->
+    <rect width="1440" height="600" fill="#060a14"/>
+    <!-- Pelouse (lueur verte lointaine) -->
+    <ellipse cx="720" cy="580" rx="560" ry="80" fill="rgba(16,185,129,.06)"/>
+    <ellipse cx="720" cy="560" rx="400" ry="40" fill="rgba(16,185,129,.04)"/>
+    <!-- Tribunes gauche -->
+    <path d="M80,520 L80,340 Q80,320 100,310 L340,280 Q360,278 360,298 L360,510 Z" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <!-- Tribunes droite -->
+    <path d="M1360,520 L1360,340 Q1360,320 1340,310 L1100,280 Q1080,278 1080,298 L1080,510 Z" fill="rgba(255,255,255,.025)" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <!-- Tribune fond -->
+    <path d="M340,285 L1100,285 L1100,500 L340,500 Z" fill="rgba(255,255,255,.015)" stroke="rgba(255,255,255,.03)" stroke-width="1"/>
+    <!-- Toit arrondi -->
+    <path d="M60,340 Q720,180 1380,340" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="2"/>
+    <path d="M100,330 Q720,200 1340,330" fill="none" stroke="rgba(255,255,255,.04)" stroke-width="1"/>
+    <!-- Pylone gauche -->
+    <rect x="100" y="180" width="6" height="160" rx="2" fill="rgba(255,255,255,.08)"/>
+    <!-- Projecteurs gauche -->
+    <circle cx="103" cy="180" r="4" fill="rgba(255,255,255,.15)"/>
+    <circle cx="103" cy="190" r="3" fill="rgba(255,255,255,.1)"/>
+    <ellipse cx="200" cy="450" rx="120" ry="180" fill="url(#light-l)" opacity=".12"/>
+    <!-- Pylone droit -->
+    <rect x="1334" y="180" width="6" height="160" rx="2" fill="rgba(255,255,255,.08)"/>
+    <!-- Projecteurs droit -->
+    <circle cx="1337" cy="180" r="4" fill="rgba(255,255,255,.15)"/>
+    <circle cx="1337" cy="190" r="3" fill="rgba(255,255,255,.1)"/>
+    <ellipse cx="1240" cy="450" rx="120" ry="180" fill="url(#light-r)" opacity=".12"/>
+    <!-- Lumiere terrain -->
+    <ellipse cx="720" cy="540" rx="380" ry="60" fill="rgba(52,211,153,.04)"/>
+    <defs>
+      <radialGradient id="light-l" cx="30%" cy="20%"><stop offset="0%" stop-color="#fff" stop-opacity=".5"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>
+      <radialGradient id="light-r" cx="70%" cy="20%"><stop offset="0%" stop-color="#fff" stop-opacity=".5"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    </defs>
+    <!-- Etoiles -->
+    <circle cx="180" cy="60" r="1" fill="#fff" opacity=".3"/><circle cx="420" cy="40" r=".8" fill="#fff" opacity=".2"/>
+    <circle cx="650" cy="80" r="1.2" fill="#fff" opacity=".25"/><circle cx="900" cy="30" r=".7" fill="#fff" opacity=".3"/>
+    <circle cx="1100" cy="70" r="1" fill="#fff" opacity=".2"/><circle cx="1280" cy="50" r=".9" fill="#fff" opacity=".25"/>
+    <circle cx="300" cy="100" r=".6" fill="#fff" opacity=".15"/><circle cx="800" cy="120" r=".8" fill="#fff" opacity=".2"/>
+    <circle cx="1050" cy="110" r=".7" fill="#fff" opacity=".18"/><circle cx="520" cy="130" r=".5" fill="#fff" opacity=".15"/>
+  </svg>
+  <div class="stadium-fade" aria-hidden="true"></div>
 
   <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:100%">
 
   <!-- Badge -->
-  <div class="hero-badge" style="margin-bottom:22px">
+  <div class="hero-badge" style="margin-bottom:18px">
     <span class="badge-dot"></span>
-    <span>Concile IA · 4 agents + 1 Chief · Analyse quotidienne</span>
+    <span>Concile IA · 4 agents + Chief</span>
   </div>
 
-  <!-- Headline — message évident en 3 secondes -->
-  <h1 style="font-size:clamp(30px,4.4vw,58px);font-weight:900;line-height:1.08;letter-spacing:-.035em;margin-bottom:20px;max-width:860px;text-align:center">
-    Nos intelligences artificielles analysent les matchs<br>
-    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">et sélectionnent les meilleures opportunités</span>
+  <!-- Headline — court, impactant -->
+  <h1 style="font-size:clamp(28px,4.4vw,54px);font-weight:900;line-height:1.1;letter-spacing:-.035em;margin-bottom:16px;max-width:800px;text-align:center">
+    4 IA analysent chaque match.<br>
+    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1 sélection. 0 match inventé.</span>
   </h1>
 
-  <!-- Subtitle — vocabulaire accessible, aucune promesse de gain -->
-  <p style="font-size:17px;color:var(--muted2);max-width:560px;line-height:1.7;margin-bottom:14px;text-align:center">
-    Plusieurs IA croisent des milliers de données — stats, forme des équipes, blessures, confrontations — puis retiennent uniquement les matchs aux <strong style="color:var(--text)">meilleures probabilités</strong> selon leurs modèles. Vous n'avez plus à chercher : la sélection arrive à vous.
+  <!-- Subtitle — 1 phrase -->
+  <p class="hero-sub" style="font-size:16px;color:var(--muted2);max-width:480px;line-height:1.6;margin-bottom:8px;text-align:center">
+    Stats, forme, H2H, blessures — nos IA croisent tout et ne retiennent que les <strong style="color:var(--text)">meilleures opportunités</strong>.
   </p>
-  <p style="font-size:12px;color:var(--muted);max-width:520px;line-height:1.6;margin-bottom:30px;text-align:center">
-    Analyses et sélections par IA — aucune garantie de gain. Vous restez libre de suivre ou non. 18+ · Jeu responsable.
+  <p class="hero-disclaimer" style="font-size:11px;color:var(--muted);margin-bottom:24px;text-align:center">
+    Aucune garantie de gain · 18+ · Jeu responsable
   </p>
 
-  <!-- CTA principal + secondaire -->
-  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:26px">
+  <!-- CTA -->
+  <div class="hero-cta-row" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center;margin-bottom:24px">
     <a href="#pick" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#059669,#22d3ee);color:#04121a;font-size:16px;font-weight:900;padding:16px 34px;border-radius:13px;text-decoration:none;box-shadow:0 8px 32px rgba(34,211,238,.35);transition:all .2s"
        onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 12px 40px rgba(34,211,238,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(34,211,238,.35)'">
-      🎯 Découvrir la sélection du jour →
+      Voir la sélection du jour
     </a>
     <a href="#plans" style="display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--b2);font-size:15px;font-weight:700;padding:15px 26px;border-radius:13px;text-decoration:none;transition:all .2s"
        onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.06)'">
-      Voir les abonnements
+      Abonnements
     </a>
   </div>
 
-  <!-- EMAIL CAPTURE — CTA principal -->
-  <div id="hero-email-box" style="background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.05));border:1px solid rgba(99,102,241,.22);border-radius:20px;padding:28px 32px;max-width:520px;width:100%;margin-bottom:32px;text-align:left">
-    <div style="font-size:15px;font-weight:800;margin-bottom:4px">📩 Recevez l'analyse IA du jour — gratuitement</div>
-    <div style="font-size:13px;color:var(--muted2);margin-bottom:18px;line-height:1.5">Le Concile IA analyse chaque matin. Votre pick arrive directement dans votre boite mail.</div>
+  <!-- EMAIL CAPTURE -->
+  <div id="hero-email-box" class="hero-email-wrap" style="background:linear-gradient(135deg,rgba(79,70,229,.08),rgba(124,58,237,.05));border:1px solid rgba(99,102,241,.22);border-radius:16px;padding:22px 28px;max-width:480px;width:100%;margin-bottom:20px;text-align:left">
+    <div style="font-size:14px;font-weight:800;margin-bottom:12px">📩 Analyse IA gratuite par email</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <input type="email" id="hero-email-input" placeholder="votre@email.com" autocomplete="email"
-        style="flex:1;min-width:190px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:13px 16px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s"
+        style="flex:1;min-width:180px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s"
         onfocus="this.style.borderColor='rgba(99,102,241,.55)'" onblur="this.style.borderColor='rgba(255,255,255,.16)'"
         onkeydown="if(event.key==='Enter')heroEmailCapture()">
       <button onclick="heroEmailCapture()"
-        style="background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:13px 22px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 20px rgba(79,70,229,.35);transition:all .2s"
+        style="background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 4px 20px rgba(79,70,229,.35);transition:all .2s"
         onmouseover="this.style.boxShadow='0 6px 28px rgba(79,70,229,.55)'" onmouseout="this.style.boxShadow='0 4px 20px rgba(79,70,229,.35)'"
         id="hero-email-btn">
-        Recevoir gratuitement →
+        S'inscrire →
       </button>
     </div>
-    <div id="hero-email-ok" style="display:none;color:var(--green);font-size:13px;margin-top:12px;font-weight:600">✓ Parfait ! Vérifiez votre boite mail.</div>
+    <div id="hero-email-ok" style="display:none;color:var(--green);font-size:13px;margin-top:10px;font-weight:600"></div>
     <div id="hero-email-err" style="display:none;color:var(--red);font-size:12px;margin-top:8px"></div>
-    <div style="font-size:11px;color:var(--muted);margin-top:12px">✓ Gratuit &nbsp;·&nbsp; ✓ Zéro spam &nbsp;·&nbsp; ✓ Désabonnement en 1 clic</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:8px">Gratuit · Zéro spam · Désabonnement en 1 clic</div>
   </div>
 
-  <!-- Telegram gratuit -->
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:48px">
+  <!-- Telegram -->
+  <div class="hero-tg-row" style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:24px">
     <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer"
-       style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,136,204,.1);color:var(--cyan);border:1px solid rgba(0,136,204,.22);font-size:14px;font-weight:600;padding:12px 22px;border-radius:11px;text-decoration:none;transition:all .2s"
-       onmouseover="this.style.background='rgba(0,136,204,.18)'" onmouseout="this.style.background='rgba(0,136,204,.1)'">
-      📱 Canal Telegram gratuit
+       style="display:inline-flex;align-items:center;gap:6px;color:var(--cyan);font-size:13px;font-weight:600;text-decoration:none;opacity:.8">
+      📱 Telegram gratuit
     </a>
   </div>
 
-  <!-- Badge dernier pick gagnant — affiché dynamiquement -->
-  <div id="hero-last-win" style="display:none;margin-bottom:18px">
-    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:10px 20px">
-      <span style="font-size:18px">✅</span>
+  <!-- Badge dernier pick gagnant -->
+  <div id="hero-last-win" style="display:none;margin-bottom:14px">
+    <div style="display:inline-flex;align-items:center;gap:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);border-radius:12px;padding:8px 16px">
+      <span style="font-size:16px">✅</span>
       <div>
-        <div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#10b981;margin-bottom:2px">Dernier pick</div>
-        <div id="hero-last-win-text" style="font-size:13px;font-weight:700;color:#eceaf4"></div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#10b981;margin-bottom:2px">Dernier pick</div>
+        <div id="hero-last-win-text" style="font-size:12px;font-weight:700;color:#eceaf4"></div>
       </div>
     </div>
   </div>
 
   <!-- Stats bar -->
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Taux de réussite</div></div>
+    <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Winrate</div></div>
     <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simulé</div></div>
     <div class="hs"><div class="hs-val c-indigo">4+1</div><div class="hs-label">Agents + Chief</div></div>
-    <div class="hs"><div class="hs-val c-violet">3+</div><div class="hs-label">Sources vérifiées</div></div>
+    <div class="hs"><div class="hs-val c-violet">3+</div><div class="hs-label">Sources</div></div>
   </div>
 
   </div><!-- /z-index wrapper -->
 </section>
-
-<!-- GLOBE 3D — réseau mondial de stades analysés par IA. Chargement différé,
-     dégradation propre si WebGL/CDN indisponible (le fond dégradé reste). -->
-<script>
-(function(){
-  var canvas = document.getElementById('hero-globe');
-  if(!canvas) return;
-  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(reduce) return; // accessibilité : pas d'animation lourde
-  // Test WebGL rapide
-  try { var t=document.createElement('canvas'); if(!(t.getContext('webgl')||t.getContext('experimental-webgl'))) return; } catch(e){ return; }
-
-  var s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
-  s.async = true;
-  s.onerror = function(){ /* CDN bloqué → le fond dégradé reste, aucune erreur visible */ };
-  s.onload = initGlobe;
-  document.head.appendChild(s);
-
-  function initGlobe(){
-    if(typeof THREE === 'undefined') return;
-    var wrap = canvas.parentElement;
-    var isMobile = window.innerWidth < 700;
-    var W = wrap.clientWidth, H = wrap.clientHeight;
-    var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: !isMobile });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.4 : 2));
-    renderer.setSize(W, H, false);
-
-    var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(42, W/H, 0.1, 100);
-    camera.position.set(0, 0.6, 15);
-
-    var globe = new THREE.Group();
-    scene.add(globe);
-    var R = 4.6;
-
-    function llToVec(lat, lng, r){
-      var phi=(90-lat)*Math.PI/180, theta=(lng+180)*Math.PI/180;
-      return new THREE.Vector3(-r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(theta));
-    }
-
-    // ── Planète : nuage de points (fibonacci) — look "digital planet"
-    var N = isMobile ? 900 : 1900;
-    var pos = new Float32Array(N*3);
-    for(var i=0;i<N;i++){
-      var y = 1 - (i/(N-1))*2, rr = Math.sqrt(1-y*y), th = i*2.399963;
-      pos[i*3]=Math.cos(th)*rr*R; pos[i*3+1]=y*R; pos[i*3+2]=Math.sin(th)*rr*R;
-    }
-    var pg = new THREE.BufferGeometry();
-    pg.setAttribute('position', new THREE.BufferAttribute(pos,3));
-    var pts = new THREE.Points(pg, new THREE.PointsMaterial({ color:0x1e7a5f, size:0.055, transparent:true, opacity:0.55 }));
-    globe.add(pts);
-
-    // Sphère intérieure sombre (masque le fond, donne du volume)
-    globe.add(new THREE.Mesh(new THREE.SphereGeometry(R*0.985, 40, 40),
-      new THREE.MeshBasicMaterial({ color:0x030a08 })));
-
-    // Atmosphère (halo vert/cyan)
-    var atm = new THREE.Mesh(new THREE.SphereGeometry(R*1.14, 40, 40),
-      new THREE.MeshBasicMaterial({ color:0x0fb488, transparent:true, opacity:0.06, side:THREE.BackSide }));
-    globe.add(atm);
-
-    // ── Stades (grandes villes football)
-    var cities = [[51.5,-0.1],[48.8,2.3],[40.4,-3.7],[52.5,13.4],[41.9,12.5],[55.8,37.6],
-      [40.7,-74],[19.4,-99.1],[-22.9,-43.2],[-34.6,-58.4],[-23.5,-46.6],[35.7,139.7],[30,31.2],[-26.2,28]];
-    var nodes = cities.map(function(c){ return llToVec(c[0],c[1],R*1.01); });
-    var ng = new THREE.BufferGeometry();
-    var np = new Float32Array(nodes.length*3);
-    nodes.forEach(function(v,k){ np[k*3]=v.x; np[k*3+1]=v.y; np[k*3+2]=v.z; });
-    ng.setAttribute('position', new THREE.BufferAttribute(np,3));
-    globe.add(new THREE.Points(ng, new THREE.PointsMaterial({ color:0x34f5c0, size:0.22, transparent:true, opacity:0.95 })));
-
-    // ── Faisceaux entre stades + flux de données
-    var flows = [];
-    function addArc(a,b){
-      var mats=[], p=[];
-      for(var t=0;t<=48;t++){
-        var f=t/48, v=a.clone().lerp(b,f).normalize().multiplyScalar(R + Math.sin(f*Math.PI)*R*0.30);
-        p.push(v);
-      }
-      var curve=new THREE.CatmullRomCurve3(p);
-      var geo=new THREE.BufferGeometry().setFromPoints(curve.getPoints(60));
-      globe.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color:0x22d3ee, transparent:true, opacity:0.32 })));
-      // particule de données qui circule
-      var dg=new THREE.BufferGeometry(); dg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3),3));
-      var dot=new THREE.Points(dg, new THREE.PointsMaterial({ color:0x8affea, size:0.16, transparent:true, opacity:0.95 }));
-      globe.add(dot);
-      flows.push({ curve:curve, dot:dot, t:Math.random(), sp:0.0018+Math.random()*0.0022 });
-    }
-    for(var a=0;a<10;a++){
-      var i1=Math.floor(Math.random()*nodes.length), i2=Math.floor(Math.random()*nodes.length);
-      if(i1!==i2) addArc(nodes[i1], nodes[i2]);
-    }
-
-    // ── Particules discrètes (fond étoilé)
-    var SN = isMobile ? 220 : 480, sp = new Float32Array(SN*3);
-    for(var j=0;j<SN;j++){ var rad=9+Math.random()*10, u=Math.random()*Math.PI*2, w=Math.acos(2*Math.random()-1);
-      sp[j*3]=rad*Math.sin(w)*Math.cos(u); sp[j*3+1]=rad*Math.cos(w); sp[j*3+2]=rad*Math.sin(w)*Math.sin(u); }
-    var sg=new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(sp,3));
-    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color:0x6bd7c4, size:0.045, transparent:true, opacity:0.5 })));
-
-    globe.rotation.x = 0.28;
-    canvas.classList.add('ready');
-
-    var running = true;
-    document.addEventListener('visibilitychange', function(){ running = !document.hidden; if(running) loop(); });
-    window.addEventListener('resize', function(){
-      W=wrap.clientWidth; H=wrap.clientHeight; camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H,false);
-    });
-
-    var tmp=new THREE.Vector3();
-    function loop(){
-      if(!running) return;
-      globe.rotation.y += 0.0009;
-      for(var f=0;f<flows.length;f++){
-        var fl=flows[f]; fl.t+=fl.sp; if(fl.t>1) fl.t=0;
-        fl.curve.getPoint(fl.t, tmp);
-        var arr=fl.dot.geometry.attributes.position.array; arr[0]=tmp.x; arr[1]=tmp.y; arr[2]=tmp.z;
-        fl.dot.geometry.attributes.position.needsUpdate=true;
-      }
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
-    }
-    loop();
-  }
-})();
-</script>
 
 <!-- FOMO STRIP (hidden - too cluttered) -->
 <div class="fomo-strip" id="fomo-strip" style="display:none">
