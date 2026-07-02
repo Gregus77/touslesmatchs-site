@@ -182,6 +182,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
+<!-- CLASSEMENT AGENTS IA — Elite only -->
+<div id="agent-ranking" style="display:none;max-width:720px;margin:32px auto;padding:0 16px">
+  <div style="background:rgba(13,16,32,.8);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px;backdrop-filter:blur(20px)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">📊 Classement des agents IA</div>
+    <div id="agent-meta" style="font-size:12px;color:#7b82a0;margin-bottom:18px"></div>
+    <div id="agent-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+  </div>
+</div>
+
 <!-- LOGIN MODAL -->
 <div class="modal-overlay" id="login-modal">
   <div class="modal-box" style="position:relative">
@@ -483,6 +492,77 @@ function escAttr(s) { return String(s || "").replace(/'/g, "\\'").replace(/"/g, 
 document.getElementById("login-modal").addEventListener("click", function(e) {
   if (e.target === this) closeLoginModal();
 });
+
+// ── Agent Ranking (Elite only) ──
+var AGENT_ICONS = {
+  "Mistral-7B": "🇫🇷", "Claude Chief": "👑", "GPT Analysis": "🤖",
+  "GROQ-Llama": "🦙", "GeminiFlash": "💎", "Mistral-Large": "🌊",
+  "DeepSeek-V3": "🧬", "Cohere-Command": "🧬", "Perplexity-Web": "🌐"
+};
+
+function loadAgentRanking() {
+  if (!userAuth || userAuth.plan !== "elite") {
+    document.getElementById("agent-ranking").style.display = "none";
+    return;
+  }
+  fetch("/api/agent-performance?email=" + encodeURIComponent(userAuth.email) + "&code=" + encodeURIComponent(userAuth.code))
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.performance) return;
+      var el = document.getElementById("agent-ranking");
+      el.style.display = "block";
+
+      var meta = d.meta || {};
+      document.getElementById("agent-meta").textContent =
+        (meta.matches_tracked || 0) + " matchs · " +
+        (meta.snapshots_tracked || 0) + " snapshots · " +
+        (meta.predictions_tracked || 0) + " predictions · " +
+        (meta.predictions_resolved || 0) + " résolues";
+
+      var agents = Object.keys(d.performance).map(function(name) {
+        var p = d.performance[name];
+        return { name: name, wins: p.wins || 0, total: (p.wins||0)+(p.losses||0), pending: p.pending || 0, winrate: p.winrate || 0 };
+      });
+      agents.sort(function(a,b){ return b.winrate - a.winrate; });
+
+      var grid = document.getElementById("agent-grid");
+      var html = "";
+      agents.forEach(function(ag, i) {
+        var rank = i + 1;
+        var icon = AGENT_ICONS[ag.name] || "🤖";
+        var medalIcon = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
+        var barColor = ag.winrate >= 60 ? "#10b981" : ag.winrate >= 40 ? "#f59e0b" : "#f43f5e";
+        var statText = ag.total > 0
+          ? ag.winrate + "% — " + ag.wins + "/" + ag.total + " corrects"
+          : ag.pending + " en attente";
+        html += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px">';
+        html += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+        html += '    <span style="font-size:18px">' + icon + '</span>';
+        html += '    <span style="font-size:12px;color:#7b82a0">' + medalIcon + " " + rank + '</span>';
+        html += '  </div>';
+        html += '  <div style="font-size:14px;font-weight:800;margin-bottom:2px">' + escHtml(ag.name) + '</div>';
+        html += '  <div style="font-size:12px;color:#a8aec8;margin-bottom:8px">' + statText + '</div>';
+        if (ag.total > 0) {
+          html += '  <div style="height:4px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden">';
+          html += '    <div style="height:100%;width:' + Math.min(100, ag.winrate) + '%;background:' + barColor + ';border-radius:3px"></div>';
+          html += '  </div>';
+        } else {
+          html += '  <div style="height:4px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden">';
+          html += '    <div style="height:100%;width:100%;background:#f59e0b;border-radius:3px"></div>';
+          html += '  </div>';
+        }
+        html += '</div>';
+      });
+      grid.innerHTML = html;
+    }).catch(function(){});
+}
+
+// Load ranking after auth
+var origUpdateAuthBar = updateAuthBar;
+updateAuthBar = function() {
+  origUpdateAuthBar();
+  loadAgentRanking();
+};
 </script>
 </body>
 </html>

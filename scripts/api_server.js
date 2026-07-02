@@ -4756,7 +4756,8 @@ app.post("/internal/strong-signals", (req, res) => {
 
 app.get("/agent-performance", (req, res) => {
   const { email, code } = req.query;
-  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
+  const auth = verifyCode(email, code);
+  if (!auth.valid || (auth.plan !== "elite" && !isAdminAccess(email, code))) return res.status(403).json({ ok: false, error: "Acces Elite requis" });
   const perf = getAgentPerformance();
   try {
     const meta = db.prepare(`
