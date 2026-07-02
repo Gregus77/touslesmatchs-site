@@ -59,6 +59,7 @@ def init_db():
             was_correct INTEGER,
             sport TEXT,
             confidence REAL,
+            bet_type TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -227,6 +228,32 @@ def get_agent_accuracy():
     return result
 
 
+def get_agent_market_accuracy():
+    """Performance de chaque agent par type de marché (under, over, btts, 1x2, handicap)."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    try:
+        c.execute("""
+            SELECT agent_name, bet_type, COUNT(*) as total, SUM(was_correct) as correct
+            FROM agent_performance
+            WHERE was_correct IS NOT NULL AND bet_type IS NOT NULL
+            GROUP BY agent_name, bet_type
+        """)
+        rows = c.fetchall()
+    except sqlite3.OperationalError:
+        rows = []
+    conn.close()
+
+    result = {}
+    for name, bet_type, total, correct in rows:
+        if name not in result:
+            result[name] = {}
+        correct = correct or 0
+        accuracy = round(correct / total * 100, 1) if total > 0 else 0
+        result[name][bet_type] = {"total": total, "correct": correct, "accuracy": accuracy}
+    return result
+
+
 def get_full_analytics():
     """Rapport complet pour Claude : performance par sport, IA, type de pari."""
     conn = sqlite3.connect(DB_PATH)
@@ -285,11 +312,36 @@ def get_full_analytics():
 
 
 def save_agent_vote(agent_name, date, recommendation, was_correct=None, sport=None, confidence=None):
+    bet_type = None
+    try:
+        data = json.loads(recommendation) if isinstance(recommendation, str) else recommendation
+        bet_raw = data.get("bet") or data.get("recommendation") or ""
+        bet_lower = bet_raw.lower()
+        if "under" in bet_lower or "moins" in bet_lower:
+            bet_type = "under"
+        elif "over" in bet_lower or "plus" in bet_lower:
+            bet_type = "over"
+        elif "btts" in bet_lower or "les deux" in bet_lower or "marquent" in bet_lower:
+            bet_type = "btts"
+        elif "1x2" in bet_lower or "victoire" in bet_lower or "ml" in bet_lower or "moneyline" in bet_lower:
+            bet_type = "1x2"
+        elif "handicap" in bet_lower:
+            bet_type = "handicap"
+        else:
+            bet_type = "other"
+    except Exception:
+        pass
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("""
-        INSERT INTO agent_performance (agent_name, date, recommendation, was_correct, sport, confidence)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (agent_name, date, recommendation, was_correct, sport, confidence))
+    try:
+        c.execute("""
+            INSERT INTO agent_performance (agent_name, date, recommendation, was_correct, sport, confidence, bet_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (agent_name, date, recommendation, was_correct, sport, confidence, bet_type))
+    except sqlite3.OperationalError:
+        c.execute("""
+            INSERT INTO agent_performance (agent_name, date, recommendation, was_correct, sport, confidence)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (agent_name, date, recommendation, was_correct, sport, confidence))
     conn.commit()
     conn.close()

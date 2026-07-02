@@ -10,6 +10,7 @@ const path = require("path");
 const fs = require("fs");
 const https = require("https");
 const http  = require("http");
+const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 const app = express();
@@ -135,6 +136,21 @@ db.exec(`
     sent INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(email, email_type)
+  );
+`);
+
+// ── Analytics — page views tracking ──────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS page_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page TEXT NOT NULL,
+    referrer TEXT DEFAULT '',
+    utm_source TEXT DEFAULT '',
+    utm_medium TEXT DEFAULT '',
+    utm_campaign TEXT DEFAULT '',
+    ip_hash TEXT DEFAULT '',
+    user_agent TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
   );
 `);
 
@@ -815,94 +831,36 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
   "regional cup", "state cup", "state league",
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
-  // Afrique — ligues à risque de matchs truqués
-  "ethiopian", "ethiopia", "premier league · ethiopia",
-  "nigerian", "nigeria", "npfl",
-  "tanzania", "tanzanian",
-  "kenya", "kenyan premier",
-  "uganda", "ugandan",
-  "ghana premier", "ghana · premier",
-  "zambia", "zambian",
-  "zimbabwe", "zimbabwean",
-  "mozambique",
-  "cameroon elite", "cameroun",
-  "rwanda",
-  "burundi",
-  "malawi",
-  "botswana",
-  "lesotho",
-  "eswatini", "swaziland",
-  // Asie — ligues à faible transparence
-  "kazakhstan", "kazakh",
-  "uzbekistan", "uzbek",
-  "tajikistan",
-  "kyrgyzstan",
-  "turkmenistan",
-  "myanmar",
-  "cambodia", "cambodian",
-  "laos",
-  "vietnam", "v.league",
-  "bangladesh",
-  "nepal",
-  "mongolia",
-  "bhutan",
-  "maldives",
-  "brunei",
-  "timor",
-  "palestine",
-  "jordan league",
-  "iraq league", "iraqi",
-  "syria", "syrian",
-  "yemen",
-  "oman league",
-  "bahrain",
-  "lebanon · premier", "lebanese",
-  "india · i-league", "india · super league",
-  "indian super",
-  "sri lanka",
-  "pakistan",
-  // Amérique — ligues secondaires/non fiables
-  "copa chile", "segunda · chile", "chile · segunda",
-  "bolivia", "bolivian",
-  "peru · liga", "peruvian",
-  "venezuela · liga", "venezuelan",
-  "ecuador · liga", "ecuadorian",
-  "paraguay · division", "paraguayan",
-  "uruguay · segunda",
-  "honduras", "honduran",
-  "guatemala", "guatemalan",
-  "el salvador", "salvadoran",
-  "nicaragua", "nicaraguan",
-  "costa rica · segunda",
-  "panama · liga",
-  "haiti",
-  "jamaica · premier",
-  "trinidad",
-  "dominican",
-  "cuba",
+  // Afrique
+  "ethiopia", "nigeria", "npfl", "tanzania", "kenya", "uganda",
+  "ghana", "zambia", "zimbabwe", "mozambique", "cameroon", "cameroun",
+  "rwanda", "burundi", "malawi", "botswana", "lesotho", "eswatini", "swaziland",
+  "senegal", "ivory coast", "côte d'ivoire", "burkina",
+  "congo", "angola", "namibia", "gabon", "togo", "benin", "niger · ",
+  "madagascar", "mauritius", "cape verde", "guinea",
+  "sierra leone", "liberia", "gambia", "eritrea", "djibouti", "comoros",
+  "south africa", "algeria · ligue", "tunisia · ligue", "egypt · premier",
+  // Asie
+  "kazakhstan", "uzbekistan", "tajikistan", "kyrgyzstan", "turkmenistan",
+  "myanmar", "cambodia", "laos", "vietnam", "v.league",
+  "bangladesh", "nepal", "mongolia", "bhutan", "maldives", "brunei", "timor",
+  "palestine", "jordan · ", "iraq", "syria", "yemen", "oman", "bahrain",
+  "lebanon", "india", "sri lanka", "pakistan",
+  "indonesia", "malaysia · ", "philippines", "thailand · ",
+  // Amérique du Sud — ligues secondaires
+  "chile", "bolivia", "peru", "venezuela", "ecuador",
+  "paraguay", "uruguay · segunda", "colombia · b",
+  // Amérique centrale et Caraïbes
+  "honduras", "guatemala", "el salvador", "nicaragua",
+  "costa rica", "panama · liga", "haiti", "jamaica", "trinidad",
+  "dominican", "cuba", "belize", "suriname", "guyana",
   // Europe — divisions inférieures/ligues exotiques
-  "estonia", "estonian",
-  "latvia", "latvian",
-  "lithuania", "lithuanian",
-  "faroe", "faroese",
-  "gibraltar",
-  "andorra · primera",
-  "malta · premier", "maltese",
-  "san marino",
-  "kosovo · superliga",
-  "north macedonia · first",
-  "albania · superliga", "albanian",
-  "moldova", "moldovan",
-  "belarus", "belarusian",
-  "armenia", "armenian",
-  "georgia · erovnuli", "georgian",
-  "azerbaijan · premier", "azerbaijani",
-  "iceland · úrvalsdeild",
-  "northern ireland · premiership",
-  "luxembourg",
-  "liechtenstein",
-  "montenegro · first",
-  "bosnia · premier",
+  "estonia", "latvia", "lithuania", "faroe", "gibraltar",
+  "andorra", "malta", "san marino", "kosovo", "north macedonia",
+  "albania", "moldova", "belarus", "armenia",
+  "georgia · erovnuli", "georgian erovnuli",
+  "azerbaijan", "iceland", "northern ireland",
+  "luxembourg", "liechtenstein", "montenegro", "bosnia",
   // Océanie
   "fiji", "samoa", "tonga", "vanuatu", "solomon", "papua",
   "new caledonia", "tahiti",
@@ -954,6 +912,11 @@ const TRUSTED_COMPETITIONS = [
   "saudi pro league", "roshn",
   "uae pro league",
   "qsl", "qatar stars",
+  "usl championship", "usl league",
+  "nwsl",
+  "ahl",
+  "nbl", "nbl · australia",
+  "australia cup",
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {
@@ -961,8 +924,8 @@ function isLowTrustCompetition(matchOrCompetition = "") {
     ? matchOrCompetition
     : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
-  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
+  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   return true;
 }
 
@@ -3118,8 +3081,8 @@ function shouldAutoObserveMatch(match) {
   const status = String(match.status || "").toUpperCase();
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
-  if (isLowTrustCompetition(match)) return false;
   if (String(match.sport || "Football") !== "Football") return true;
+  if (isLowTrustCompetition(match)) return false;
   const minute = parseLiveMinuteValue(match.minute);
   return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
 }
@@ -4152,7 +4115,8 @@ app.get("/live-matches", async (req, res) => {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
-    const matches = await fetchLiveMatches();
+    const allMatches = await fetchLiveMatches();
+    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
@@ -4918,7 +4882,80 @@ ${pickInfo}
   });
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// ── Analysis history (public, past concile analyses) ────────────────────────
+app.get("/analysis-history", (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const offset = parseInt(req.query.offset) || 0;
+  try {
+    const rows = db.prepare(`
+      SELECT id, home, away, competition, sport, best_bet, confidence, raison,
+             consensus_votes, outcome, analysed_at,
+             score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
+             final_score_home, final_score_away, resolved_at,
+             home_logo, away_logo, bet_category,
+             agents_json
+      FROM concile_analyses
+      WHERE date(analysed_at) >= '2026-07-03'
+      ORDER BY analysed_at DESC
+      LIMIT ? OFFSET ?
+    `).all(limit, offset);
+
+    const total = db.prepare(`SELECT COUNT(*) as cnt FROM concile_analyses WHERE date(analysed_at) >= '2026-07-03'`).get()?.cnt || 0;
+
+    const analyses = rows.map(r => {
+      let agents = [];
+      try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+      return {
+        id: r.id,
+        home: r.home, away: r.away,
+        competition: r.competition, sport: r.sport || "Football",
+        bet: r.best_bet, confidence: r.confidence,
+        reasoning: r.raison, consensus: r.consensus_votes,
+        outcome: r.outcome,
+        analysed_at: r.analysed_at,
+        score: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        minute: r.minute_at_analysis,
+        final_score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+        resolved_at: r.resolved_at,
+        home_logo: r.home_logo, away_logo: r.away_logo,
+        bet_category: r.bet_category,
+        agents_count: agents.length,
+      };
+    });
+
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome = 'loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE date(analysed_at) >= '2026-07-03' AND outcome IS NOT NULL
+    `).get() || {};
+
+    res.json({
+      ok: true, analyses, total,
+      stats: { total: stats.total || 0, wins: stats.wins || 0, losses: stats.losses || 0, winrate: stats.total > 0 ? Math.round(stats.wins / stats.total * 100) : 0 },
+    });
+  } catch (e) {
+    console.error("[analysis-history]", e.message);
+    res.json({ ok: true, analyses: [], total: 0, stats: { total: 0, wins: 0, losses: 0, winrate: 0 } });
+  }
+});
+
+// ── Admin — analytics reports on demand ──────────────────────────────────────
+app.post("/admin/analytics-report", async (req, res) => {
+  const { email, code, type } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (type === "weekly") {
+    const text = await buildWeeklyMarketingReport();
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
+    return res.json({ ok, message: ok ? "Rapport hebdo envoyé" : "Échec envoi" });
+  }
+  const text = buildDailyVisitorReport();
+  const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
+  res.json({ ok, message: ok ? "Rapport visiteurs envoyé" : "Échec envoi" });
+});
+
 // ── Admin stats ───────────────────────────────────────────────────────────────
 app.get("/admin/stats", (req, res) => {
   const { email, code } = req.query;
@@ -5497,6 +5534,219 @@ app.delete("/admin/preuves/:id", (req, res) => {
   res.json({ ok: true, deleted: proofs.length - updated.length });
 });
 
+// ── Analytics — tracking beacon ──────────────────────────────────────────────
+const TRACKING_GIF = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+
+app.get("/t", (req, res) => {
+  try {
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+    const ipHash = crypto.createHash("sha256").update(ip + "tlm-salt").digest("hex").slice(0, 16);
+    db.prepare(`
+      INSERT INTO page_views (page, referrer, utm_source, utm_medium, utm_campaign, ip_hash, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      String(req.query.p || "/").slice(0, 200),
+      String(req.query.r || "").slice(0, 500),
+      String(req.query.s || "").slice(0, 100),
+      String(req.query.m || "").slice(0, 100),
+      String(req.query.c || "").slice(0, 100),
+      ipHash,
+      String(req.headers["user-agent"] || "").slice(0, 300),
+    );
+  } catch (e) {
+    console.error("[tracking] error:", e.message);
+  }
+  res.set({ "Content-Type": "image/gif", "Cache-Control": "no-store" });
+  res.send(TRACKING_GIF);
+});
+
+// ── Analytics — daily visitor report (23:00 Paris) ──────────────────────────
+function getParisHour() {
+  return new Date().toLocaleString("en-US", { timeZone: "Europe/Paris", hour: "numeric", hour12: false });
+}
+
+function buildDailyVisitorReport() {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = db.prepare(`
+    SELECT page, referrer, utm_source, utm_medium, utm_campaign, ip_hash
+    FROM page_views
+    WHERE date(created_at) = ?
+  `).all(today);
+
+  const uniqueVisitors = new Set(rows.map(r => r.ip_hash)).size;
+  const totalViews = rows.length;
+
+  const byPage = {};
+  rows.forEach(r => { byPage[r.page] = (byPage[r.page] || 0) + 1; });
+
+  const bySource = {};
+  rows.forEach(r => {
+    let src = r.utm_source || "direct";
+    if (!r.utm_source && r.referrer) {
+      try {
+        const host = new URL(r.referrer).hostname.replace("www.", "");
+        src = host || "direct";
+      } catch { src = r.referrer.slice(0, 40) || "direct"; }
+    }
+    bySource[src] = (bySource[src] || new Set()).add(r.ip_hash);
+  });
+
+  const sourcesLines = Object.entries(bySource)
+    .map(([src, ips]) => ({ src, count: ips.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+    .map(s => `  ${s.src}: ${s.count} visiteur${s.count > 1 ? "s" : ""}`)
+    .join("\n");
+
+  const pagesLines = Object.entries(byPage)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([p, c]) => `  ${p}: ${c} vues`)
+    .join("\n");
+
+  return `📊 <b>RAPPORT VISITEURS — ${today}</b>
+
+👥 <b>Visiteurs uniques :</b> ${uniqueVisitors}
+👁 <b>Pages vues :</b> ${totalViews}
+
+🔗 <b>Sources :</b>
+${sourcesLines || "  Aucune visite"}
+
+📄 <b>Pages :</b>
+${pagesLines || "  Aucune visite"}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermès Analytics — Rapport quotidien`;
+}
+
+function sendDailyVisitorReport() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  const text = buildDailyVisitorReport();
+  sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text).then(ok => {
+    console.log(`[analytics] Rapport visiteurs quotidien: ${ok ? "envoyé" : "échec"}`);
+  });
+}
+
+// ── Analytics — weekly marketing report (Monday 8:00 Paris) ─────────────────
+async function buildWeeklyMarketingReport() {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+  const today = now.toISOString().slice(0, 10);
+
+  // Visiteurs de la semaine
+  const visitorsRow = db.prepare(`
+    SELECT COUNT(DISTINCT ip_hash) as visitors, COUNT(*) as views
+    FROM page_views WHERE date(created_at) >= ?
+  `).get(weekAgo);
+
+  // Visiteurs TikTok
+  const tiktokRow = db.prepare(`
+    SELECT COUNT(DISTINCT ip_hash) as visitors
+    FROM page_views WHERE date(created_at) >= ? AND (utm_source LIKE '%tiktok%' OR referrer LIKE '%tiktok%')
+  `).get(weekAgo);
+
+  // Emails récupérés (leads.json)
+  let newEmails = 0;
+  try {
+    const leadsData = loadLeads();
+    newEmails = leadsData.leads.filter(l => l.created_at && l.created_at >= weekAgo).length;
+  } catch {}
+
+  // Abonnements et CA via la DB codes
+  let newSubs = 0;
+  let revenue = 0;
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const subs = codesDb.prepare(`
+      SELECT plan, COUNT(*) as cnt FROM codes
+      WHERE active = 1 AND plan != 'free' AND created_at >= ?
+      GROUP BY plan
+    `).all(weekAgo);
+    codesDb.close();
+    const prices = { carte: 1, premium: 9.90, vip: 19.90, elite: 19.90 };
+    subs.forEach(s => {
+      newSubs += s.cnt;
+      revenue += (prices[s.plan] || 0) * s.cnt;
+    });
+  } catch (e) {
+    console.error("[analytics] codes query:", e.message);
+  }
+
+  // Taux de conversion
+  const totalVisitors = visitorsRow?.visitors || 0;
+  const conversionEmail = totalVisitors > 0 ? ((newEmails / totalVisitors) * 100).toFixed(1) : "0.0";
+  const conversionPaid = totalVisitors > 0 ? ((newSubs / totalVisitors) * 100).toFixed(1) : "0.0";
+
+  // Sources de la semaine
+  const sourceRows = db.prepare(`
+    SELECT
+      CASE
+        WHEN utm_source LIKE '%tiktok%' OR referrer LIKE '%tiktok%' THEN 'TikTok'
+        WHEN utm_source LIKE '%telegram%' OR referrer LIKE '%t.me%' THEN 'Telegram'
+        WHEN utm_source LIKE '%google%' OR referrer LIKE '%google%' THEN 'Google'
+        WHEN utm_source LIKE '%instagram%' OR referrer LIKE '%instagram%' THEN 'Instagram'
+        WHEN utm_source != '' THEN utm_source
+        WHEN referrer != '' THEN referrer
+        ELSE 'Direct'
+      END as source,
+      COUNT(DISTINCT ip_hash) as visitors
+    FROM page_views WHERE date(created_at) >= ?
+    GROUP BY source ORDER BY visitors DESC LIMIT 8
+  `).all(weekAgo);
+  const sourcesLines = sourceRows.map(s => `  ${s.source}: ${s.visitors}`).join("\n");
+
+  return `📈 <b>RAPPORT MARKETING HEBDO</b>
+📅 ${weekAgo} → ${today}
+
+📱 <b>Visiteurs TikTok :</b> ${tiktokRow?.visitors || 0}
+👥 <b>Visiteurs totaux :</b> ${totalVisitors}
+📧 <b>Emails récupérés :</b> ${newEmails}
+💳 <b>Abonnements :</b> ${newSubs}
+💶 <b>CA généré :</b> ${revenue.toFixed(2)} €
+🎯 <b>Conversion email :</b> ${conversionEmail}%
+💰 <b>Conversion payant :</b> ${conversionPaid}%
+
+🔗 <b>Top sources :</b>
+${sourcesLines || "  Aucune donnée"}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermès Analytics — Rapport hebdomadaire`;
+}
+
+function sendWeeklyMarketingReport() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  buildWeeklyMarketingReport().then(text => {
+    sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text).then(ok => {
+      console.log(`[analytics] Rapport marketing hebdo: ${ok ? "envoyé" : "échec"}`);
+    });
+  });
+}
+
+// ── Analytics scheduler ─────────────────────────────────────────────────────
+let _lastDailyReportDate = "";
+let _lastWeeklyReportDate = "";
+
+function checkAnalyticsSchedule() {
+  const now = new Date();
+  const parisStr = now.toLocaleString("en-GB", { timeZone: "Europe/Paris" });
+  const [datePart, timePart] = parisStr.split(", ");
+  const hour = parseInt(timePart.split(":")[0]);
+  const day = now.toLocaleDateString("en-US", { timeZone: "Europe/Paris", weekday: "long" });
+  const todayKey = now.toISOString().slice(0, 10);
+
+  if (hour === 23 && _lastDailyReportDate !== todayKey) {
+    _lastDailyReportDate = todayKey;
+    console.log("[analytics] Envoi rapport visiteurs quotidien (23h)...");
+    sendDailyVisitorReport();
+  }
+
+  if (day === "Monday" && hour === 8 && _lastWeeklyReportDate !== todayKey) {
+    _lastWeeklyReportDate = todayKey;
+    console.log("[analytics] Envoi rapport marketing hebdo (lundi 8h)...");
+    sendWeeklyMarketingReport();
+  }
+}
+
 const PORT = process.env.PORT || 3001;
 // ── Internal — liste abonnés expirant dans N jours (pour Hermès) ─────────────
 app.get("/internal/expiring-codes", (req, res) => {
@@ -5530,6 +5780,8 @@ if (require.main === module) {
       setTimeout(runAutoConcileObserver, 30000);
       setInterval(runAutoConcileObserver, AUTO_CONCILE_INTERVAL_MS);
     }
+    setInterval(checkAnalyticsSchedule, 60000);
+    console.log("[analytics] Scheduler actif: rapport quotidien 23h + hebdo lundi 8h");
   });
 }
 

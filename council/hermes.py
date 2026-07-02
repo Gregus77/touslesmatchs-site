@@ -18,7 +18,7 @@ sys.path.insert(0, "/app/council")
 from tools.history_db import (
     init_db, save_pick, save_premium_pick, mark_premium_sent,
     get_recent_picks, get_stats, get_premium_stats,
-    get_agent_accuracy, save_agent_vote, get_full_analytics
+    get_agent_accuracy, get_agent_market_accuracy, save_agent_vote, get_full_analytics
 )
 from tools.sports_api import get_todays_matches, format_matches_for_prompt
 from tools.html_generator import inject_pick_into_html
@@ -132,6 +132,7 @@ def run_council():
     history_text = format_history_text(picks_history)
     stats = get_stats()
     agent_accuracy = get_agent_accuracy()
+    market_accuracy = get_agent_market_accuracy()
     improvement_notes = load_improvement_notes()
 
     log.info(f"Contexte: {stats['wins']}W/{stats['losses']}L ({stats['winrate']}% winrate)")
@@ -161,7 +162,7 @@ def run_council():
     # 5. Collect premium candidates (confidence 7-7.9)
     premium_candidates = []
     for key, report in agent_reports.items():
-        conf = report.get("confidence", 0)
+        conf = report.get("confidence") or 0
         if 7.0 <= conf < 8.0 and report.get("recommendation") == "PICK":
             premium_candidates.append(report)
             log.info(f"  [{key}] Pick premium candidat: {report.get('match')} ({conf}/10)")
@@ -176,6 +177,7 @@ def run_council():
         stats=stats,
         agent_accuracy=agent_accuracy,
         improvement_notes=improvement_notes,
+        market_accuracy=market_accuracy,
     )
 
     final = decision.get("decision", "NOPICK")

@@ -14,9 +14,10 @@ def _get_client():
     return client
 
 
-def decide(date, matches_text, agent_reports: dict, history_text, stats, agent_accuracy, improvement_notes):
+def decide(date, matches_text, agent_reports: dict, history_text, stats, agent_accuracy, improvement_notes, market_accuracy=None):
     """
     agent_reports: dict with keys gpt, gemini, mistral, groq
+    market_accuracy: dict {agent_name: {market: {accuracy, total, correct}}}
     Returns final decision dict.
     """
     def fmt(report):
@@ -30,6 +31,16 @@ def decide(date, matches_text, agent_reports: dict, history_text, stats, agent_a
     if not accuracy_str:
         accuracy_str = "Pas encore assez de données historiques."
 
+    market_str = ""
+    if market_accuracy:
+        for agent, markets in market_accuracy.items():
+            lines = []
+            for mkt, data in sorted(markets.items()):
+                lines.append(f"{mkt}: {data['accuracy']}% ({data['correct']}/{data['total']})")
+            market_str += f"- {agent}: {' | '.join(lines)}\n"
+    if not market_str:
+        market_str = "Pas encore assez de données par marché."
+
     prompt = CHIEF_USER_PROMPT_TEMPLATE.format(
         date=date,
         matches=matches_text,
@@ -39,6 +50,7 @@ def decide(date, matches_text, agent_reports: dict, history_text, stats, agent_a
         groq_report=fmt(agent_reports.get("groq", {})),
         history=history_text,
         agent_accuracy=accuracy_str,
+        market_matrix=market_str,
         winrate=stats.get("winrate", 0),
         roi=stats.get("roi", 0),
         wins=stats.get("wins", 0),
