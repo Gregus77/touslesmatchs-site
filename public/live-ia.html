@@ -116,6 +116,40 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .refresh-bar{text-align:center;padding:8px;font-size:11px;color:var(--muted)}
 .refresh-bar button{background:none;border:none;color:var(--cyan);cursor:pointer;font-size:11px;font-weight:700;margin-left:6px}
 
+/* History section */
+.history-section{max-width:900px;margin:0 auto;padding:0 16px 40px}
+.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-top:48px;border-top:1px solid var(--b1)}
+.history-title{font-size:clamp(20px,3vw,28px);font-weight:800;letter-spacing:-.02em}
+.history-stats{display:flex;gap:16px;flex-wrap:wrap}
+.h-stat{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;padding:10px 16px;text-align:center;min-width:80px}
+.h-stat-val{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+.h-stat-val.green{color:var(--green)}.h-stat-val.red{color:var(--red)}.h-stat-val.cyan{color:var(--cyan)}
+.h-stat-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.h-card{background:var(--bg3);border:1px solid var(--b1);border-radius:14px;padding:16px 20px;margin-bottom:10px;transition:border-color .2s}
+.h-card:hover{border-color:rgba(99,102,241,.2)}
+.h-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.h-comp{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.h-time{font-size:11px;color:var(--muted)}
+.h-teams{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.h-logo{width:28px;height:28px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.h-logo img{width:100%;height:100%;object-fit:contain}
+.h-vs{font-size:12px;color:var(--muted);font-weight:700}
+.h-team-name{font-size:14px;font-weight:700}
+.h-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.h-bet{font-size:12px;font-weight:700;padding:4px 12px;border-radius:8px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:var(--indigo2)}
+.h-conf{font-size:12px;font-weight:700;color:var(--amber)}
+.h-outcome{font-size:12px;font-weight:800;padding:3px 10px;border-radius:6px}
+.h-outcome.win{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.h-outcome.loss{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+.h-outcome.pending{background:rgba(245,158,11,.08);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.h-score{font-size:13px;font-weight:800;color:var(--text)}
+.h-reasoning{font-size:12px;color:var(--muted2);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)}
+.h-load-more{display:block;width:100%;background:var(--bg3);border:1px solid var(--b2);color:var(--indigo2);padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;margin-top:16px;transition:all .2s}
+.h-load-more:hover{background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.3)}
+.h-empty{text-align:center;padding:48px 24px;color:var(--muted2)}
+.h-empty-icon{font-size:40px;margin-bottom:12px}
+.h-empty-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px}
+
 /* Footer */
 .footer{text-align:center;padding:32px 16px;border-top:1px solid var(--b1);font-size:11px;color:var(--muted);line-height:1.8}
 .footer a{color:var(--muted);text-decoration:none}
@@ -140,7 +174,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="nav-links">
     <a href="/">Accueil</a>
     <a href="/live-ia" class="active"><span class="live-dot"></span>Live IA</a>
-    <a href="/historique">Historique</a>
+    <a href="#historique">Historique</a>
     <a href="/#plans">Abonnements</a>
   </div>
   <a href="/" class="nav-back" id="mobile-back" style="display:none">← Retour</a>
@@ -204,6 +238,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
     <div class="modal-error" id="login-error"></div>
   </div>
+</div>
+
+<!-- HISTORIQUE DES ANALYSES -->
+<div class="history-section" id="historique">
+  <div class="history-header">
+    <div class="history-title">📋 Historique des analyses</div>
+    <div class="history-stats" id="history-stats"></div>
+  </div>
+  <div id="history-list"></div>
+  <button class="h-load-more" id="history-load-more" style="display:none" onclick="loadMoreHistory()">Charger plus d'analyses</button>
 </div>
 
 <!-- FOOTER -->
@@ -560,8 +604,101 @@ function loadAgentRanking() {
     }).catch(function(){});
 }
 
+// ── History ──
+var historyOffset = 0;
+var historyTotal = 0;
+
+function loadHistory(append) {
+  if (!append) historyOffset = 0;
+  fetch("/api/analysis-history?limit=20&offset=" + historyOffset)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) return;
+      historyTotal = d.total || 0;
+      renderHistoryStats(d.stats);
+      renderHistoryList(d.analyses, append);
+      historyOffset += d.analyses.length;
+      var btn = document.getElementById("history-load-more");
+      btn.style.display = historyOffset < historyTotal ? "block" : "none";
+    }).catch(function(){});
+}
+
+function loadMoreHistory() { loadHistory(true); }
+
+function renderHistoryStats(s) {
+  if (!s) return;
+  var el = document.getElementById("history-stats");
+  el.innerHTML =
+    '<div class="h-stat"><div class="h-stat-val cyan">' + (s.total || 0) + '</div><div class="h-stat-label">Analyses</div></div>' +
+    '<div class="h-stat"><div class="h-stat-val green">' + (s.wins || 0) + '</div><div class="h-stat-label">Gagnées</div></div>' +
+    '<div class="h-stat"><div class="h-stat-val red">' + (s.losses || 0) + '</div><div class="h-stat-label">Perdues</div></div>' +
+    '<div class="h-stat"><div class="h-stat-val">' + (s.winrate || 0) + '%</div><div class="h-stat-label">Winrate</div></div>';
+}
+
+function renderHistoryList(analyses, append) {
+  var el = document.getElementById("history-list");
+  if (!analyses || !analyses.length) {
+    if (!append) {
+      el.innerHTML = '<div class="h-empty"><div class="h-empty-icon">📊</div><div class="h-empty-title">Les analyses arrivent bientôt</div><div>Le Concile IA analyse les matchs en direct automatiquement. L\'historique se remplira dès les prochaines analyses.</div></div>';
+    }
+    return;
+  }
+
+  var html = append ? el.innerHTML : "";
+  analyses.forEach(function(a) {
+    var sportIcon = SPORT_ICONS[a.sport] || "⚽";
+    var homeLogo = a.home_logo ? '<img src="' + a.home_logo + '" alt="" loading="lazy">' : sportIcon;
+    var awayLogo = a.away_logo ? '<img src="' + a.away_logo + '" alt="" loading="lazy">' : sportIcon;
+
+    var outcomeHtml = '';
+    if (a.outcome === 'win') outcomeHtml = '<span class="h-outcome win">✅ Gagné</span>';
+    else if (a.outcome === 'loss') outcomeHtml = '<span class="h-outcome loss">❌ Perdu</span>';
+    else outcomeHtml = '<span class="h-outcome pending">⏳ En attente</span>';
+
+    var scoreHtml = '';
+    if (a.final_score) scoreHtml = '<span class="h-score">Score final : ' + escHtml(a.final_score) + '</span>';
+    else if (a.score) scoreHtml = '<span class="h-score">Score live : ' + escHtml(a.score) + ' (' + (a.minute || '?') + '\')</span>';
+
+    var timeStr = '';
+    if (a.analysed_at) {
+      try {
+        var d = new Date(a.analysed_at + 'Z');
+        timeStr = d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit'}) + ' à ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+      } catch(e) { timeStr = a.analysed_at; }
+    }
+
+    html += '<div class="h-card">';
+    html += '  <div class="h-top">';
+    html += '    <span class="h-comp">' + sportIcon + ' ' + escHtml(a.competition || a.sport) + '</span>';
+    html += '    <span class="h-time">' + escHtml(timeStr) + '</span>';
+    html += '  </div>';
+    html += '  <div class="h-teams">';
+    html += '    <div class="h-logo">' + homeLogo + '</div>';
+    html += '    <span class="h-team-name">' + escHtml(a.home) + '</span>';
+    html += '    <span class="h-vs">vs</span>';
+    html += '    <span class="h-team-name">' + escHtml(a.away) + '</span>';
+    html += '    <div class="h-logo">' + awayLogo + '</div>';
+    html += '  </div>';
+    html += '  <div class="h-bottom">';
+    html += '    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+    html += '      <span class="h-bet">🎯 ' + escHtml(a.bet || 'Analyse') + '</span>';
+    html += '      <span class="h-conf">⚡ ' + (a.confidence || '?') + '%</span>';
+    if (scoreHtml) html += '      ' + scoreHtml;
+    html += '    </div>';
+    html += '    ' + outcomeHtml;
+    html += '  </div>';
+    if (a.reasoning) {
+      html += '  <div class="h-reasoning">' + escHtml(a.reasoning).slice(0, 200) + (a.reasoning.length > 200 ? '...' : '') + '</div>';
+    }
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
 // Load ranking on page load if already logged in
 if (userAuth) loadAgentRanking();
+loadHistory();
 </script>
 <script>
 (function(){

@@ -4866,6 +4866,66 @@ ${pickInfo}
   });
 });
 
+// ── Analysis history (public, past concile analyses) ────────────────────────
+app.get("/analysis-history", (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const offset = parseInt(req.query.offset) || 0;
+  try {
+    const rows = db.prepare(`
+      SELECT id, home, away, competition, sport, best_bet, confidence, raison,
+             consensus_votes, outcome, analysed_at,
+             score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
+             final_score_home, final_score_away, resolved_at,
+             home_logo, away_logo, bet_category,
+             agents_json
+      FROM concile_analyses
+      WHERE date(analysed_at) >= '2026-07-03'
+      ORDER BY analysed_at DESC
+      LIMIT ? OFFSET ?
+    `).all(limit, offset);
+
+    const total = db.prepare(`SELECT COUNT(*) as cnt FROM concile_analyses WHERE date(analysed_at) >= '2026-07-03'`).get()?.cnt || 0;
+
+    const analyses = rows.map(r => {
+      let agents = [];
+      try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+      return {
+        id: r.id,
+        home: r.home, away: r.away,
+        competition: r.competition, sport: r.sport || "Football",
+        bet: r.best_bet, confidence: r.confidence,
+        reasoning: r.raison, consensus: r.consensus_votes,
+        outcome: r.outcome,
+        analysed_at: r.analysed_at,
+        score: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        minute: r.minute_at_analysis,
+        final_score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+        resolved_at: r.resolved_at,
+        home_logo: r.home_logo, away_logo: r.away_logo,
+        bet_category: r.bet_category,
+        agents_count: agents.length,
+      };
+    });
+
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome = 'loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE date(analysed_at) >= '2026-07-03' AND outcome IS NOT NULL
+    `).get() || {};
+
+    res.json({
+      ok: true, analyses, total,
+      stats: { total: stats.total || 0, wins: stats.wins || 0, losses: stats.losses || 0, winrate: stats.total > 0 ? Math.round(stats.wins / stats.total * 100) : 0 },
+    });
+  } catch (e) {
+    console.error("[analysis-history]", e.message);
+    res.json({ ok: true, analyses: [], total: 0, stats: { total: 0, wins: 0, losses: 0, winrate: 0 } });
+  }
+});
+
 // ── Admin — analytics reports on demand ──────────────────────────────────────
 app.post("/admin/analytics-report", async (req, res) => {
   const { email, code, type } = req.body || {};

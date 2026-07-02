@@ -1149,7 +1149,7 @@ footer{
 </nav>
 <div class="mobile-menu" id="mmenu">
   <a href="/" data-i18n="mm_home">🏠 Accueil</a>
-  <a href="/historique" data-i18n="mm_hist">📊 Historique des picks</a>
+  <a href="/live-ia#historique" data-i18n="mm_hist">📊 Historique des picks</a>
   <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
@@ -2035,7 +2035,7 @@ function renderPick(){
         <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise recommandée</div><div class="pi-val">${PICK.mise||'3% de ta bankroll'}</div></div></div>
       </div>`;
   const bookmakerHtml=isResult
-    ? `<div class="bm-head">Résultat archivé</div><div class="bm-grid"><a href="/historique" class="bm-btn" style="grid-column:1/-1">Voir l'historique des picks →</a></div>`
+    ? `<div class="bm-head">Résultat archivé</div><div class="bm-grid"><a href="/live-ia#historique" class="bm-btn" style="grid-column:1/-1">Voir l'historique des picks →</a></div>`
     : `<div class="bm-head">${i18n.t('bet_at')}</div><div class="bm-grid">${bmBtns}</div>`;
 
   root.innerHTML=`
@@ -2281,7 +2281,7 @@ function renderPicksFeed() {
         <span class="pf-comp">${p.competition.split('·')[0].trim()}</span>
       </div>`;
     });
-    html += `<a href="/historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir les ${past.length} derniers résultats →</a>`;
+    html += `<a href="/live-ia#historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir les ${past.length} derniers résultats →</a>`;
     html += '</div>';
   }
 
