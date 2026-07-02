@@ -1957,7 +1957,12 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
       `);
       pending.forEach(r => {
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
-        if (out) upd.run(out, h, a, "api_finished_match", r.id);
+        if (out) {
+          upd.run(out, h, a, "api_finished_match", r.id);
+          if (r.confidence >= 80 && TELEGRAM_BOT_TOKEN) {
+            notifySignalFortResult(r, out, h, a).catch(() => {});
+          }
+        }
       });
       console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
     }
@@ -3433,8 +3438,108 @@ setInterval(() => {
   const now = new Date();
   if (now.getDay() === 0 && now.getHours() === 20 && now.getMinutes() < 60) {
     sendSignalFortBilanTelegram().catch(e => console.error("[signal-fort-bilan]", e.message));
+    sendWeeklyConversionEmail().catch(e => console.error("[weekly-conversion]", e.message));
   }
 }, 60 * 60 * 1000);
+
+// ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
+const _signalResultSentCache = new Set();
+async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
+  const cacheKey = `${analysis.home}_${analysis.away}_${analysis.id}`;
+  if (_signalResultSentCache.has(cacheKey)) return;
+  _signalResultSentCache.add(cacheKey);
+
+  const icon = outcome === "win" ? "✅" : "❌";
+  const resultText = outcome === "win" ? "GAGNÉ" : "PERDU";
+  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+  const si = sportIcons[analysis.sport] || "🎯";
+  const stats = getSignalFortStats();
+
+  const premiumMsg = `${icon} <b>SIGNAL FORT ${resultText}</b>\n\n${si} <b>${analysis.home} vs ${analysis.away}</b>\n🏆 ${analysis.competition || ""}\n⚽ Score final : <b>${scoreH}-${scoreA}</b>\n💡 Pari : <b>${analysis.best_bet}</b> @ ${analysis.confidence}%\n\n📈 Bilan Signal Fort : <b>${stats.wins}W/${stats.losses}L — ${stats.winrate}% winrate</b>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+
+  const freeMsg = `${icon} <b>SIGNAL FORT ${resultText}</b>\n\n${si} <b>${analysis.home} vs ${analysis.away}</b>\n⚽ Score final : <b>${scoreH}-${scoreA}</b>\n📊 Confiance du signal : <b>${analysis.confidence}%</b>\n\n📈 Bilan global : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>\n\n${outcome === "win" ? "🔒 <b>Le pari exact était réservé aux abonnés.</b>\n👉 <a href=\"https://www.touslesmatchs.com/#plans\">S'abonner — dès 9.90€/mois</a>" : "💪 La discipline sur le long terme fait la différence."}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+
+  if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (${stats.winrate}% winrate)`);
+}
+
+// ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
+async function sendWeeklyConversionEmail() {
+  if (!BREVO_API_KEY) return;
+  const stats = getSignalFortStats();
+  if (stats.total < 3) return;
+
+  const recentWins = stats.recent.filter(r => r.outcome === "win").slice(0, 5);
+  const winsRows = recentWins.map(r =>
+    `<tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+      <td style="padding:8px 6px;font-size:13px;color:#10b981">✅</td>
+      <td style="padding:8px 6px;font-size:13px;color:#eceaf4">${r.home} vs ${r.away}</td>
+      <td style="padding:8px 6px;font-size:13px;color:#22d3ee">${r.final_score_home}-${r.final_score_away}</td>
+      <td style="padding:8px 6px;font-size:13px;color:#f8d37a">${r.confidence}%</td>
+    </tr>`
+  ).join("");
+
+  const htmlContent = `
+<div style="background:#06080f;padding:32px 24px;font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto">
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;display:inline-block">TousLesMatchs</div>
+    <div style="font-size:11px;color:#7b82a0;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">RÉSULTATS SIGNAL FORT — CETTE SEMAINE</div>
+  </div>
+  <div style="background:#0d1020;border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:24px;margin-bottom:20px">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:48px;font-weight:900;color:#10b981">${stats.winrate}%</div>
+      <div style="font-size:14px;color:#a8aec8">Winrate Signal Fort (≥80% confiance)</div>
+      <div style="font-size:13px;color:#7b82a0;margin-top:4px">${stats.wins} gagnés · ${stats.losses} perdus · ${stats.total} signaux</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <tr style="border-bottom:1px solid rgba(255,255,255,.12)">
+        <th style="padding:6px;font-size:11px;color:#7b82a0;text-align:left"></th>
+        <th style="padding:6px;font-size:11px;color:#7b82a0;text-align:left">Match</th>
+        <th style="padding:6px;font-size:11px;color:#7b82a0;text-align:left">Score</th>
+        <th style="padding:6px;font-size:11px;color:#7b82a0;text-align:left">Confiance</th>
+      </tr>
+      ${winsRows}
+    </table>
+    <div style="text-align:center;margin-top:20px;padding:14px;background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px">
+      <div style="font-size:14px;color:#a8aec8;margin-bottom:6px">🔒 Les paris exacts sont réservés aux abonnés</div>
+      <div style="font-size:13px;color:#6366f1">Tu vois les matchs gagnants, mais pas le pari — rejoins le Premium pour tout débloquer.</div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-bottom:16px">
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer les picks — 9.90€/mois →</a>
+  </div>
+  <div style="text-align:center;margin-bottom:16px">
+    <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€</a>
+  </div>
+  ${bookmakerEmailHtml()}
+  <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
+    TousLesMatchs — Bilan automatique hebdomadaire<br>
+    ⚠️ 18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a>
+  </div>
+</div>`;
+
+  try {
+    const premiumEmails = new Set();
+    try {
+      const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+      codesDb.prepare("SELECT email FROM codes WHERE active = 1 AND email IS NOT NULL AND email != ''").all()
+        .forEach(r => premiumEmails.add(r.email.toLowerCase()));
+      codesDb.close();
+    } catch {}
+
+    const leadRows = loadLeads().leads || [];
+    const freeEmails = [...new Set(leadRows.map(l => l.email).filter(e => e && !premiumEmails.has(e.toLowerCase())))];
+    let sent = 0;
+    for (const email of freeEmails.slice(0, 300)) {
+      try {
+        await brevoSendEmail(email, `📈 ${stats.winrate}% winrate cette semaine — Signal Fort IA`, htmlContent);
+        sent++;
+      } catch {}
+    }
+    console.log(`[weekly-conversion] Envoyé à ${sent}/${freeEmails.length} leads gratuits`);
+  } catch (e) { console.error("[weekly-conversion]", e.message); }
+}
 
 // Forgot code - lookup codes.db by email and send via Brevo
 app.post("/forgot-code", async (req, res) => {
