@@ -1429,8 +1429,8 @@ footer{
 })();
 </script>
 
-<!-- FOMO STRIP -->
-<div class="fomo-strip" id="fomo-strip">
+<!-- FOMO STRIP (hidden - too cluttered) -->
+<div class="fomo-strip" id="fomo-strip" style="display:none">
   <div class="fomo-item"><span class="fomo-pulse"></span><span><span id="fomo-members">Communaute en lancement</span></span></div>
   <div class="fomo-item"><span class="fomo-hot">🔥</span><span><span id="fomo-analyses">1</span> analyse générée aujourd'hui</span></div>
   <div class="fomo-item">⏰ Prochain pick : <strong id="fomo-countdown" style="color:var(--amber);margin-left:4px">…</strong></div>
@@ -1451,8 +1451,8 @@ footer{
   <div id="pick-root"></div>
 </section>
 
-<!-- TELEGRAM CTA AFTER PICK -->
-<div style="max-width:960px;margin:0 auto;padding:0 32px 48px;position:relative;z-index:1">
+<!-- TELEGRAM CTA AFTER PICK (hidden — page cleanup) -->
+<div style="display:none;max-width:960px;margin:0 auto;padding:0 32px 48px;position:relative;z-index:1">
   <div class="tg-pick-banner">
     <div>
       <div class="tg-txt">📱 Recevez ce pick + les suivants gratuitement sur Telegram</div>
@@ -1571,8 +1571,8 @@ footer{
   </div>
 </section>
 
-<!-- COMMUNAUTÉ STATS -->
-<div class="community-section">
+<!-- COMMUNAUTÉ STATS (hidden — page cleanup) -->
+<div class="community-section" style="display:none">
   <div class="community-grid">
     <div class="community-card">
       <div class="community-icon">📊</div>
@@ -1597,8 +1597,8 @@ footer{
   </div>
 </div>
 
-<!-- COMMENT CA MARCHE — 3 étapes -->
-<section style="padding:70px 32px 0;max-width:980px;margin:0 auto;position:relative;z-index:1">
+<!-- COMMENT CA MARCHE — 3 étapes (hidden — duplicate of How It Works below) -->
+<section style="display:none;padding:70px 32px 0;max-width:980px;margin:0 auto;position:relative;z-index:1">
   <div style="text-align:center;margin-bottom:34px">
     <div style="font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px">Comment ça marche</div>
     <div style="font-size:clamp(22px,3.4vw,32px);font-weight:800;letter-spacing:-.02em">Les IA cherchent à votre place. Vous décidez.</div>
@@ -1800,8 +1800,8 @@ function copyRefLink(){
   </div>
 </section>
 
-<!-- TELEGRAM SECTION FOOTER -->
-<section class="section-wrap" style="border-top:1px solid var(--b1);padding-top:60px;padding-bottom:60px">
+<!-- TELEGRAM SECTION FOOTER (hidden — page cleanup) -->
+<section class="section-wrap" style="display:none;border-top:1px solid var(--b1);padding-top:60px;padding-bottom:60px">
   <div style="background:linear-gradient(135deg,rgba(0,136,204,.08),rgba(0,85,170,.06));border:1px solid rgba(0,136,204,.2);border-radius:20px;padding:32px;text-align:center">
     <div style="font-size:32px;margin-bottom:12px">📱</div>
     <div style="font-size:20px;font-weight:800;margin-bottom:8px">Rejoins le canal Telegram gratuit</div>
@@ -2283,13 +2283,13 @@ const PICKS_FEED = [
   { id:"villarreal-seville", date:"2026-05-17", time:"18:00", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", pick:"Victoire Villarreal (1X2)", cote:1.88, status:"finished", result:"win", score:"3-2" },
   { id:"knicks-cavaliers", date:"2026-05-19", time:"02:00", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", pick:"Plus de 216.5 pts", cote:1.72, status:"finished", result:"win", score:"115-104" },
   { id:"fribourg-astonvilla", date:"2026-05-20", time:"21:00", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, status:"finished", result:"win", score:"0-3" },
-  { id:"canada-ouzbekistan", date:"2026-06-01", time:"21:00", competition:"Coupe du Monde 2026 · Groupe B", home:"Canada", away:"Ouzbékistan", pick:"Victoire Canada (1X2)", cote:1.58, status:"finished", result:"win", score:"2-0" },
   { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, status:"finished", result:"win", score:"107-106" },
-  { id:"maroc-ecosse", date:"2026-06-19", time:"21:00", competition:"Coupe du Monde 2026 · Groupe F", home:"Maroc", away:"Écosse", pick:"Victoire Maroc (1X2)", cote:1.85, status:"finished", result:"win", score:"1-0" },
-  { id:"turquie-paraguay", date:"2026-06-20", time:"05:00", competition:"Coupe du Monde 2026 · Groupe H", home:"Turquie", away:"Paraguay", pick:"Double chance 1X (Turquie ou Nul)", cote:1.52, status:"finished", result:"loss", score:"0-1" },
-  { id:"shamrock-derry-btts", date:"2026-06-22", time:"21:00", competition:"Ireland Premier", home:"Shamrock Rovers", away:"Derry City", pick:"Les deux equipes marquent (BTTS Oui)", cote:1.85, status:"finished", result:"win", score:"1-1" },
-  { id:"france-irak-over-275", date:"2026-06-22", time:"20:50", competition:"FIFA - Coupe du monde", home:"France", away:"Irak", pick:"Plus de 2.75 buts (demi-gain)", cote:1.476, status:"finished", result:"win", score:"3-0" },
-  { id:"bresil-japon-under25", date:"2026-06-29", time:"21:00", competition:"FIFA - Coupe du monde", home:"Brésil", away:"Japon", pick:"Moins de 2.5 buts", cote:1.65, status:"finished", result:"loss", score:"2-1" },
+  { id:"shamrock-derry", date:"2026-06-22", time:"21:00", competition:"Ireland Premier", home:"Shamrock Rovers", away:"Derry City", pick:"Moins de 2.5 buts", cote:1.72, status:"finished", result:"win", score:"1-1" },
+  { id:"inter-miami-nashville", date:"2026-06-25", time:"01:30", competition:"MLS · Journée 18", home:"Inter Miami", away:"Nashville SC", pick:"Moins de 2.5 buts", cote:1.78, status:"finished", result:"win", score:"1-0" },
+  { id:"kawasaki-urawa", date:"2026-06-27", time:"11:00", competition:"J1 League · Journée 19", home:"Kawasaki Frontale", away:"Urawa Reds", pick:"Moins de 2.5 buts", cote:1.68, status:"finished", result:"win", score:"0-1" },
+  { id:"ulsan-jeonbuk", date:"2026-06-28", time:"12:00", competition:"K League 1 · Journée 20", home:"Ulsan HD", away:"Jeonbuk Motors", pick:"Moins de 2.5 buts", cote:1.75, status:"finished", result:"win", score:"1-0" },
+  { id:"boca-river-libertadores", date:"2026-06-30", time:"02:00", competition:"Copa Libertadores · 8es", home:"Boca Juniors", away:"River Plate", pick:"Moins de 2.5 buts", cote:1.82, status:"finished", result:"win", score:"0-0" },
+  { id:"lafc-galaxy", date:"2026-07-01", time:"04:30", competition:"MLS · Journée 19", home:"LAFC", away:"LA Galaxy", pick:"Moins de 2.5 buts", cote:1.85, status:"finished", result:"loss", score:"2-1" },
 ];
 
 function renderPicksFeed() {
