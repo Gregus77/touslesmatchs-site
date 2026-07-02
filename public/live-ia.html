@@ -150,6 +150,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .h-empty-icon{font-size:40px;margin-bottom:12px}
 .h-empty-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px}
 
+/* Tab bar */
+.tab-bar{display:flex;gap:0;max-width:900px;margin:0 auto 20px;padding:0 16px}
+.tab-btn{flex:1;background:var(--bg3);border:1px solid var(--b1);color:var(--muted2);padding:14px 16px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center;border-bottom:3px solid transparent}
+.tab-btn:first-child{border-radius:12px 0 0 12px}
+.tab-btn:last-child{border-radius:0 12px 12px 0}
+.tab-btn.active{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);border-bottom-color:var(--indigo2);color:var(--indigo2)}
+.tab-btn:hover:not(.active){background:var(--bg4)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
 /* Footer */
 .footer{text-align:center;padding:32px 16px;border-top:1px solid var(--b1);font-size:11px;color:var(--muted);line-height:1.8}
 .footer a{color:var(--muted);text-decoration:none}
@@ -163,6 +173,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   .nav-links{display:none}
   .filters{padding:8px 12px 16px}
   .filter-btn{padding:6px 12px;font-size:11px}
+  .tab-btn{font-size:13px;padding:12px 10px}
 }
 </style>
 </head>
@@ -174,17 +185,25 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="nav-links">
     <a href="/">Accueil</a>
     <a href="/live-ia" class="active"><span class="live-dot"></span>Live IA</a>
-    <a href="#historique">Historique</a>
     <a href="/#plans">Abonnements</a>
   </div>
-  <a href="/" class="nav-back" id="mobile-back" style="display:none">← Retour</a>
+  <a href="/" style="color:var(--muted2);text-decoration:none;font-size:13px;font-weight:600;display:none" id="mobile-back">← Accueil</a>
 </nav>
 
 <!-- HEADER -->
 <div class="page-header">
   <div class="page-title"><span class="live-dot"></span> Live IA</div>
-  <div class="page-sub">Matchs en direct analysés par le Concile IA. Sélectionnez un match pour lancer une analyse en temps réel.</div>
+  <div class="page-sub">Matchs en direct analysés par le Concile IA. Analyses automatiques et statistiques en temps réel.</div>
 </div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('live')">🔴 En direct</button>
+  <button class="tab-btn" onclick="switchTab('stats')">📊 Statistiques</button>
+</div>
+
+<!-- TAB: EN DIRECT -->
+<div class="tab-content active" id="tab-live">
 
 <!-- AUTH BAR -->
 <div class="auth-bar" id="auth-bar">
@@ -240,7 +259,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
-<!-- HISTORIQUE DES ANALYSES -->
+</div><!-- /tab-live -->
+
+<!-- TAB: STATISTIQUES -->
+<div class="tab-content" id="tab-stats">
 <div class="history-section" id="historique">
   <div class="history-header">
     <div class="history-title">📋 Historique des analyses</div>
@@ -249,6 +271,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div id="history-list"></div>
   <button class="h-load-more" id="history-load-more" style="display:none" onclick="loadMoreHistory()">Charger plus d'analyses</button>
 </div>
+</div><!-- /tab-stats -->
 
 <!-- FOOTER -->
 <div class="footer">
@@ -260,6 +283,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </div>
 
 <script>
+// ── Tab switching ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b,i){ b.classList.toggle('active', i === (tab === 'live' ? 0 : 1)); });
+  document.getElementById('tab-live').classList.toggle('active', tab === 'live');
+  document.getElementById('tab-stats').classList.toggle('active', tab !== 'live');
+  if (tab === 'stats') loadHistory();
+}
+if (location.hash === '#historique' || location.hash === '#stats') { setTimeout(function(){ switchTab('stats'); }, 100); }
+
 // ── Sport config ──
 const SPORT_ICONS = {
   Football: "⚽", Basketball: "🏀", Hockey: "🏒",
@@ -699,6 +731,7 @@ function renderHistoryList(analyses, append) {
 // Load ranking on page load if already logged in
 if (userAuth) loadAgentRanking();
 loadHistory();
+setInterval(function(){ if (document.getElementById('tab-stats').classList.contains('active')) loadHistory(); }, 120000);
 </script>
 <script>
 (function(){
