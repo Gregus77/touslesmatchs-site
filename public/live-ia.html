@@ -563,5 +563,17 @@ function loadAgentRanking() {
 // Load ranking on page load if already logged in
 if (userAuth) loadAgentRanking();
 </script>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search);
+  var r=document.referrer||'';
+  new Image().src='/api/t?p='+encodeURIComponent(location.pathname)
+    +'&r='+encodeURIComponent(r)
+    +'&s='+encodeURIComponent(q.get('utm_source')||'')
+    +'&m='+encodeURIComponent(q.get('utm_medium')||'')
+    +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
+    +'&_='+Date.now();
+})();
+</script>
 </body>
 </html>

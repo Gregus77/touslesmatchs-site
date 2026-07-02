@@ -10,6 +10,7 @@ const path = require("path");
 const fs = require("fs");
 const https = require("https");
 const http  = require("http");
+const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 const app = express();
@@ -135,6 +136,21 @@ db.exec(`
     sent INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(email, email_type)
+  );
+`);
+
+// ── Analytics — page views tracking ──────────────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS page_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page TEXT NOT NULL,
+    referrer TEXT DEFAULT '',
+    utm_source TEXT DEFAULT '',
+    utm_medium TEXT DEFAULT '',
+    utm_campaign TEXT DEFAULT '',
+    ip_hash TEXT DEFAULT '',
+    user_agent TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
   );
 `);
 
@@ -4850,7 +4866,20 @@ ${pickInfo}
   });
 });
 
-// ── Start ─────────────────────────────────────────────────────────────────────
+// ── Admin — analytics reports on demand ──────────────────────────────────────
+app.post("/admin/analytics-report", async (req, res) => {
+  const { email, code, type } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (type === "weekly") {
+    const text = await buildWeeklyMarketingReport();
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
+    return res.json({ ok, message: ok ? "Rapport hebdo envoyé" : "Échec envoi" });
+  }
+  const text = buildDailyVisitorReport();
+  const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
+  res.json({ ok, message: ok ? "Rapport visiteurs envoyé" : "Échec envoi" });
+});
+
 // ── Admin stats ───────────────────────────────────────────────────────────────
 app.get("/admin/stats", (req, res) => {
   const { email, code } = req.query;
@@ -5429,6 +5458,219 @@ app.delete("/admin/preuves/:id", (req, res) => {
   res.json({ ok: true, deleted: proofs.length - updated.length });
 });
 
+// ── Analytics — tracking beacon ──────────────────────────────────────────────
+const TRACKING_GIF = Buffer.from("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7", "base64");
+
+app.get("/t", (req, res) => {
+  try {
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+    const ipHash = crypto.createHash("sha256").update(ip + "tlm-salt").digest("hex").slice(0, 16);
+    db.prepare(`
+      INSERT INTO page_views (page, referrer, utm_source, utm_medium, utm_campaign, ip_hash, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      String(req.query.p || "/").slice(0, 200),
+      String(req.query.r || "").slice(0, 500),
+      String(req.query.s || "").slice(0, 100),
+      String(req.query.m || "").slice(0, 100),
+      String(req.query.c || "").slice(0, 100),
+      ipHash,
+      String(req.headers["user-agent"] || "").slice(0, 300),
+    );
+  } catch (e) {
+    console.error("[tracking] error:", e.message);
+  }
+  res.set({ "Content-Type": "image/gif", "Cache-Control": "no-store" });
+  res.send(TRACKING_GIF);
+});
+
+// ── Analytics — daily visitor report (23:00 Paris) ──────────────────────────
+function getParisHour() {
+  return new Date().toLocaleString("en-US", { timeZone: "Europe/Paris", hour: "numeric", hour12: false });
+}
+
+function buildDailyVisitorReport() {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = db.prepare(`
+    SELECT page, referrer, utm_source, utm_medium, utm_campaign, ip_hash
+    FROM page_views
+    WHERE date(created_at) = ?
+  `).all(today);
+
+  const uniqueVisitors = new Set(rows.map(r => r.ip_hash)).size;
+  const totalViews = rows.length;
+
+  const byPage = {};
+  rows.forEach(r => { byPage[r.page] = (byPage[r.page] || 0) + 1; });
+
+  const bySource = {};
+  rows.forEach(r => {
+    let src = r.utm_source || "direct";
+    if (!r.utm_source && r.referrer) {
+      try {
+        const host = new URL(r.referrer).hostname.replace("www.", "");
+        src = host || "direct";
+      } catch { src = r.referrer.slice(0, 40) || "direct"; }
+    }
+    bySource[src] = (bySource[src] || new Set()).add(r.ip_hash);
+  });
+
+  const sourcesLines = Object.entries(bySource)
+    .map(([src, ips]) => ({ src, count: ips.size }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+    .map(s => `  ${s.src}: ${s.count} visiteur${s.count > 1 ? "s" : ""}`)
+    .join("\n");
+
+  const pagesLines = Object.entries(byPage)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([p, c]) => `  ${p}: ${c} vues`)
+    .join("\n");
+
+  return `📊 <b>RAPPORT VISITEURS — ${today}</b>
+
+👥 <b>Visiteurs uniques :</b> ${uniqueVisitors}
+👁 <b>Pages vues :</b> ${totalViews}
+
+🔗 <b>Sources :</b>
+${sourcesLines || "  Aucune visite"}
+
+📄 <b>Pages :</b>
+${pagesLines || "  Aucune visite"}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermès Analytics — Rapport quotidien`;
+}
+
+function sendDailyVisitorReport() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  const text = buildDailyVisitorReport();
+  sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text).then(ok => {
+    console.log(`[analytics] Rapport visiteurs quotidien: ${ok ? "envoyé" : "échec"}`);
+  });
+}
+
+// ── Analytics — weekly marketing report (Monday 8:00 Paris) ─────────────────
+async function buildWeeklyMarketingReport() {
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().slice(0, 10);
+  const today = now.toISOString().slice(0, 10);
+
+  // Visiteurs de la semaine
+  const visitorsRow = db.prepare(`
+    SELECT COUNT(DISTINCT ip_hash) as visitors, COUNT(*) as views
+    FROM page_views WHERE date(created_at) >= ?
+  `).get(weekAgo);
+
+  // Visiteurs TikTok
+  const tiktokRow = db.prepare(`
+    SELECT COUNT(DISTINCT ip_hash) as visitors
+    FROM page_views WHERE date(created_at) >= ? AND (utm_source LIKE '%tiktok%' OR referrer LIKE '%tiktok%')
+  `).get(weekAgo);
+
+  // Emails récupérés (leads.json)
+  let newEmails = 0;
+  try {
+    const leadsData = loadLeads();
+    newEmails = leadsData.leads.filter(l => l.created_at && l.created_at >= weekAgo).length;
+  } catch {}
+
+  // Abonnements et CA via la DB codes
+  let newSubs = 0;
+  let revenue = 0;
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const subs = codesDb.prepare(`
+      SELECT plan, COUNT(*) as cnt FROM codes
+      WHERE active = 1 AND plan != 'free' AND created_at >= ?
+      GROUP BY plan
+    `).all(weekAgo);
+    codesDb.close();
+    const prices = { carte: 1, premium: 9.90, vip: 19.90, elite: 19.90 };
+    subs.forEach(s => {
+      newSubs += s.cnt;
+      revenue += (prices[s.plan] || 0) * s.cnt;
+    });
+  } catch (e) {
+    console.error("[analytics] codes query:", e.message);
+  }
+
+  // Taux de conversion
+  const totalVisitors = visitorsRow?.visitors || 0;
+  const conversionEmail = totalVisitors > 0 ? ((newEmails / totalVisitors) * 100).toFixed(1) : "0.0";
+  const conversionPaid = totalVisitors > 0 ? ((newSubs / totalVisitors) * 100).toFixed(1) : "0.0";
+
+  // Sources de la semaine
+  const sourceRows = db.prepare(`
+    SELECT
+      CASE
+        WHEN utm_source LIKE '%tiktok%' OR referrer LIKE '%tiktok%' THEN 'TikTok'
+        WHEN utm_source LIKE '%telegram%' OR referrer LIKE '%t.me%' THEN 'Telegram'
+        WHEN utm_source LIKE '%google%' OR referrer LIKE '%google%' THEN 'Google'
+        WHEN utm_source LIKE '%instagram%' OR referrer LIKE '%instagram%' THEN 'Instagram'
+        WHEN utm_source != '' THEN utm_source
+        WHEN referrer != '' THEN referrer
+        ELSE 'Direct'
+      END as source,
+      COUNT(DISTINCT ip_hash) as visitors
+    FROM page_views WHERE date(created_at) >= ?
+    GROUP BY source ORDER BY visitors DESC LIMIT 8
+  `).all(weekAgo);
+  const sourcesLines = sourceRows.map(s => `  ${s.source}: ${s.visitors}`).join("\n");
+
+  return `📈 <b>RAPPORT MARKETING HEBDO</b>
+📅 ${weekAgo} → ${today}
+
+📱 <b>Visiteurs TikTok :</b> ${tiktokRow?.visitors || 0}
+👥 <b>Visiteurs totaux :</b> ${totalVisitors}
+📧 <b>Emails récupérés :</b> ${newEmails}
+💳 <b>Abonnements :</b> ${newSubs}
+💶 <b>CA généré :</b> ${revenue.toFixed(2)} €
+🎯 <b>Conversion email :</b> ${conversionEmail}%
+💰 <b>Conversion payant :</b> ${conversionPaid}%
+
+🔗 <b>Top sources :</b>
+${sourcesLines || "  Aucune donnée"}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermès Analytics — Rapport hebdomadaire`;
+}
+
+function sendWeeklyMarketingReport() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  buildWeeklyMarketingReport().then(text => {
+    sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text).then(ok => {
+      console.log(`[analytics] Rapport marketing hebdo: ${ok ? "envoyé" : "échec"}`);
+    });
+  });
+}
+
+// ── Analytics scheduler ─────────────────────────────────────────────────────
+let _lastDailyReportDate = "";
+let _lastWeeklyReportDate = "";
+
+function checkAnalyticsSchedule() {
+  const now = new Date();
+  const parisStr = now.toLocaleString("en-GB", { timeZone: "Europe/Paris" });
+  const [datePart, timePart] = parisStr.split(", ");
+  const hour = parseInt(timePart.split(":")[0]);
+  const day = now.toLocaleDateString("en-US", { timeZone: "Europe/Paris", weekday: "long" });
+  const todayKey = now.toISOString().slice(0, 10);
+
+  if (hour === 23 && _lastDailyReportDate !== todayKey) {
+    _lastDailyReportDate = todayKey;
+    console.log("[analytics] Envoi rapport visiteurs quotidien (23h)...");
+    sendDailyVisitorReport();
+  }
+
+  if (day === "Monday" && hour === 8 && _lastWeeklyReportDate !== todayKey) {
+    _lastWeeklyReportDate = todayKey;
+    console.log("[analytics] Envoi rapport marketing hebdo (lundi 8h)...");
+    sendWeeklyMarketingReport();
+  }
+}
+
 const PORT = process.env.PORT || 3001;
 // ── Internal — liste abonnés expirant dans N jours (pour Hermès) ─────────────
 app.get("/internal/expiring-codes", (req, res) => {
@@ -5462,6 +5704,8 @@ if (require.main === module) {
       setTimeout(runAutoConcileObserver, 30000);
       setInterval(runAutoConcileObserver, AUTO_CONCILE_INTERVAL_MS);
     }
+    setInterval(checkAnalyticsSchedule, 60000);
+    console.log("[analytics] Scheduler actif: rapport quotidien 23h + hebdo lundi 8h");
   });
 }
 
