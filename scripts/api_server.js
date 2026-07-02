@@ -2885,6 +2885,75 @@ async function resolveStalePredictions() {
 setInterval(resolveStalePredictions, 30 * 60 * 1000);
 setTimeout(resolveStalePredictions, 30 * 1000);
 
+// ── Résolution rapide Signal Fort (toutes les 10 min, délai 90 min) ──────────
+let signalFortResolveRunning = false;
+async function resolveSignalFortFast() {
+  if (signalFortResolveRunning || !API_SPORTS_KEY) return;
+  signalFortResolveRunning = true;
+  try {
+    const pending = db.prepare(`
+      SELECT DISTINCT home, away FROM concile_analyses
+      WHERE outcome IS NULL AND confidence >= 80
+        AND analysed_at <= datetime('now','-90 minutes')
+        AND analysed_at >= datetime('now','-48 hours')
+      LIMIT 30
+    `).all();
+    if (!pending.length) return;
+
+    const finished = [];
+    for (let d = 0; d < 2; d++) {
+      const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
+      try {
+        const data = await httpGet(
+          `https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`,
+          { "x-apisports-key": API_SPORTS_KEY }
+        );
+        (data.response || []).forEach(f => {
+          if (f.teams?.home?.name && f.goals?.home != null) {
+            finished.push({
+              home: f.teams.home.name, away: f.teams.away.name,
+              score_home: f.goals.home, score_away: f.goals.away,
+              ht_home: f.score?.halftime?.home ?? null,
+              ht_away: f.score?.halftime?.away ?? null,
+            });
+          }
+        });
+      } catch {}
+    }
+    if (!finished.length) return;
+
+    let resolved = 0;
+    for (const s of pending) {
+      const hw = String(s.home).split(" ")[0].toLowerCase();
+      const aw = String(s.away).split(" ")[0].toLowerCase();
+      if (!hw || !aw) continue;
+      const m = finished.find(f => {
+        const fh = String(f.home).toLowerCase();
+        const fa = String(f.away).toLowerCase();
+        return (fh.includes(hw) && fa.includes(aw)) || (fh.includes(aw) && fa.includes(hw));
+      });
+      if (m) {
+        const reversed = String(m.home).toLowerCase().includes(aw);
+        autoResolvePredictions({
+          home: s.home, away: s.away,
+          score_home: reversed ? m.score_away : m.score_home,
+          score_away: reversed ? m.score_home : m.score_away,
+          ht_home: reversed ? m.ht_away : m.ht_home,
+          ht_away: reversed ? m.ht_home : m.ht_away,
+        });
+        resolved++;
+      }
+    }
+    if (resolved) console.log(`[signal-fort-fast] ${resolved}/${pending.length} signaux forts résolus`);
+  } catch (e) {
+    console.error("[signal-fort-fast]", e.message);
+  } finally {
+    signalFortResolveRunning = false;
+  }
+}
+setInterval(resolveSignalFortFast, 10 * 60 * 1000);
+setTimeout(resolveSignalFortFast, 2 * 60 * 1000);
+
 let autoConcileObserverRunning = false;
 
 function shouldAutoObserveMatch(match) {
