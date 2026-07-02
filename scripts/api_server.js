@@ -864,7 +864,6 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "bolivia", "bolivian",
   "peru · liga", "peruvian",
   "venezuela · liga", "venezuelan",
-  "ecuador · liga", "ecuadorian",
   "paraguay · division", "paraguayan",
   "uruguay · segunda",
   "honduras", "honduran",
@@ -3114,8 +3113,8 @@ function shouldAutoObserveMatch(match) {
   const status = String(match.status || "").toUpperCase();
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
-  if (isLowTrustCompetition(match)) return false;
   if (String(match.sport || "Football") !== "Football") return true;
+  if (isLowTrustCompetition(match)) return false;
   const minute = parseLiveMinuteValue(match.minute);
   return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
 }

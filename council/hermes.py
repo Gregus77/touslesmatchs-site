@@ -162,7 +162,7 @@ def run_council():
     # 5. Collect premium candidates (confidence 7-7.9)
     premium_candidates = []
     for key, report in agent_reports.items():
-        conf = report.get("confidence", 0)
+        conf = report.get("confidence") or 0
         if 7.0 <= conf < 8.0 and report.get("recommendation") == "PICK":
             premium_candidates.append(report)
             log.info(f"  [{key}] Pick premium candidat: {report.get('match')} ({conf}/10)")
