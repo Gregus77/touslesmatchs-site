@@ -197,6 +197,62 @@ const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _freeResultDailyDate = { date: "", count: 0 };
+let _adaptiveThresholdCache = { value: 80, computedAt: 0 };
+
+function getAdaptiveSignalThreshold() {
+  const now = Date.now();
+  if (now - _adaptiveThresholdCache.computedAt < 30 * 60 * 1000) return _adaptiveThresholdCache.value;
+  try {
+    const rows = db.prepare(`
+      SELECT confidence, outcome FROM concile_analyses
+      WHERE confidence >= 80 AND outcome IN ('win','loss')
+      ORDER BY analysed_at DESC LIMIT 100
+    `).all();
+    if (rows.length < 15) {
+      _adaptiveThresholdCache = { value: 80, computedAt: now };
+      return 80;
+    }
+    const brackets = [
+      { min: 80, max: 82, wins: 0, total: 0 },
+      { min: 82, max: 85, wins: 0, total: 0 },
+      { min: 85, max: 88, wins: 0, total: 0 },
+      { min: 88, max: 101, wins: 0, total: 0 },
+    ];
+    for (const r of rows) {
+      for (const b of brackets) {
+        if (r.confidence >= b.min && r.confidence < b.max) {
+          b.total++;
+          if (r.outcome === "win") b.wins++;
+          break;
+        }
+      }
+    }
+    let threshold = 80;
+    let cumTotal = 0, cumWins = 0;
+    for (const b of brackets) {
+      cumTotal += b.total;
+      cumWins += b.wins;
+    }
+    let runTotal = 0, runWins = 0;
+    for (const b of brackets) {
+      const aboveTotal = cumTotal - runTotal;
+      const aboveWins = cumWins - runWins;
+      const aboveWinrate = aboveTotal > 0 ? Math.round(aboveWins / aboveTotal * 100) : 0;
+      if (aboveWinrate >= 65 && aboveTotal >= 5) {
+        threshold = b.min;
+        break;
+      }
+      runTotal += b.total;
+      runWins += b.wins;
+    }
+    console.log(`[adaptive-threshold] Seuil Signal Fort ajusté: ${threshold}% (basé sur ${rows.length} analyses récentes)`);
+    _adaptiveThresholdCache = { value: threshold, computedAt: now };
+    return threshold;
+  } catch (e) {
+    console.error("[adaptive-threshold]", e.message);
+    return _adaptiveThresholdCache.value || 80;
+  }
+}
 
 // ── Shadow agents (banc d'essai — free tiers) ─────────────────────────────────
 const MISTRAL_API_KEY    = process.env.MISTRAL_API_KEY    || "";
@@ -1801,8 +1857,9 @@ Réponds en JSON pur (pas de markdown):
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
-  // Signal fort Telegram automatique si confidence >= 80%
-  if (analysisResult.confidence >= 80 && TELEGRAM_BOT_TOKEN) {
+  // Signal fort Telegram automatique si confidence >= seuil adaptatif
+  const signalThreshold = getAdaptiveSignalThreshold();
+  if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
@@ -2079,7 +2136,8 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
         if (out) {
           upd.run(out, h, a, "api_finished_match", r.id);
-          if (r.confidence >= 80 && TELEGRAM_BOT_TOKEN) {
+          const resThreshold = getAdaptiveSignalThreshold();
+          if (r.confidence >= resThreshold && TELEGRAM_BOT_TOKEN) {
             notifySignalFortResult(r, out, h, a).catch(() => {});
           }
         }
@@ -3011,13 +3069,14 @@ async function resolveSignalFortFast() {
   if (signalFortResolveRunning || !API_SPORTS_KEY) return;
   signalFortResolveRunning = true;
   try {
+    const sfThreshold = getAdaptiveSignalThreshold();
     const pending = db.prepare(`
       SELECT DISTINCT home, away FROM concile_analyses
-      WHERE outcome IS NULL AND confidence >= 80
+      WHERE outcome IS NULL AND confidence >= ?
         AND analysed_at <= datetime('now','-90 minutes')
         AND analysed_at >= datetime('now','-48 hours')
       LIMIT 30
-    `).all();
+    `).all(sfThreshold);
     if (!pending.length) return;
 
     const finished = [];
@@ -3705,14 +3764,15 @@ setTimeout(processScheduledEmails, 60 * 1000);
 // ── Signal Fort Bilan — track record des signaux >= 80% ─────────────────────
 function getSignalFortStats() {
   try {
+    const threshold = getAdaptiveSignalThreshold();
     const all = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              score_home_at_analysis, score_away_at_analysis,
              final_score_home, final_score_away, analysed_at
       FROM concile_analyses
-      WHERE confidence >= 80 AND outcome IN ('win','loss')
+      WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
-    `).all();
+    `).all(threshold);
     const wins = all.filter(r => r.outcome === "win");
     const losses = all.filter(r => r.outcome === "loss");
     const total = all.length;
@@ -3734,7 +3794,8 @@ async function sendSignalFortBilanTelegram() {
     return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}%`;
   }).join("\n");
 
-  const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ 80% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
+  const threshold = getAdaptiveSignalThreshold();
+  const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
 
   const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ 80% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n🔒 <b>Accédez aux picks exacts et à l'analyse complète</b>\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner — dès 9.90€/mois</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
 
@@ -5205,6 +5266,7 @@ app.get("/api/signal-fort-stats", (req, res) => {
       result: r.outcome === "win" ? "win" : "loss",
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?",
     })),
+    threshold: getAdaptiveSignalThreshold(),
   });
 });
 
