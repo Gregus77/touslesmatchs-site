@@ -4981,6 +4981,73 @@ ${pickInfo}
   });
 });
 
+// ── Admin — bilan complet analyses gagnées/perdues sur Telegram admin ────────
+app.get("/admin/send-stats-bilan", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  if (!TELEGRAM_ADMIN_CHAT_ID) return res.json({ ok: false, error: "TELEGRAM_ADMIN_CHAT_ID non configure" });
+
+  try {
+    const threshold = getAdaptiveSignalThreshold();
+    const all = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+             final_score_home, final_score_away, analysed_at
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+      ORDER BY analysed_at DESC
+    `).all();
+
+    const wins = all.filter(r => r.outcome === "win");
+    const losses = all.filter(r => r.outcome === "loss");
+    const total = all.length;
+    const winrate = total > 0 ? Math.round(wins.length / total * 100) : 0;
+
+    const byComp = {};
+    all.forEach(r => {
+      const c = r.competition || "Inconnu";
+      if (!byComp[c]) byComp[c] = { w: 0, l: 0 };
+      if (r.outcome === "win") byComp[c].w++; else byComp[c].l++;
+    });
+    const compLines = Object.entries(byComp)
+      .sort((a, b) => (b[1].w + b[1].l) - (a[1].w + a[1].l))
+      .slice(0, 15)
+      .map(([c, s]) => {
+        const t = s.w + s.l;
+        const wr = Math.round(s.w / t * 100);
+        const icon = wr >= 60 ? "✅" : wr >= 40 ? "⚠️" : "❌";
+        return `${icon} ${c}: ${wr}% (${s.w}W/${s.l}L)`;
+      }).join("\n");
+
+    const recentLines = all.slice(0, 20).map(r => {
+      const icon = r.outcome === "win" ? "✅" : "❌";
+      const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
+      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}%`;
+    }).join("\n");
+
+    const text = `📊 <b>BILAN COMPLET DES ANALYSES</b>
+
+🎯 <b>Global :</b>
+✅ Gagnés : <b>${wins.length}</b>
+❌ Perdus : <b>${losses.length}</b>
+📈 Winrate : <b>${winrate}%</b> (${total} analyses)
+🎚 Seuil adaptatif : ${threshold}%
+
+🏆 <b>Par compétition :</b>
+${compLines}
+
+📋 <b>20 dernières analyses :</b>
+${recentLines}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermes Council — Bilan à la demande`;
+
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
+    res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Analysis history (public, past concile analyses) ────────────────────────
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
