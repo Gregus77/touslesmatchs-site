@@ -112,6 +112,7 @@ def _get_football_matches(today):
         away_form = _get_team_form(away_id, league_id)
         home_stats = _get_team_stats(home_id, league_id)
         away_stats = _get_team_stats(away_id, league_id)
+        standings = _get_league_standings(league_id)
 
         matches.append({
             "id": fixture_id,
@@ -130,6 +131,9 @@ def _get_football_matches(today):
             "away_form": away_form,
             "home_stats": home_stats,
             "away_stats": away_stats,
+            "home_standing": _format_standing(home_id, standings),
+            "away_standing": _format_standing(away_id, standings),
+            "h2h_goals": _format_h2h_goals(h2h),
             "status": fixture.get("status", {}).get("short"),
         })
 
@@ -432,6 +436,92 @@ def _get_team_stats(team_id, league_id):
         return ""
 
 
+_standings_cache = {}
+
+def _get_league_standings(league_id):
+    if not league_id:
+        return {}
+    cache_key = f"{league_id}_{datetime.now().strftime('%Y-%m-%d')}"
+    if cache_key in _standings_cache:
+        return _standings_cache[cache_key]
+    season = datetime.now().year
+    data = _football_api_get("standings", {"league": league_id, "season": season})
+    if not data:
+        data = _football_api_get("standings", {"league": league_id, "season": season - 1})
+    if not data:
+        _standings_cache[cache_key] = {}
+        return {}
+    try:
+        standings = data[0].get("league", {}).get("standings", [[]])[0]
+        result = {}
+        total_teams = len(standings)
+        for s in standings:
+            team = s.get("team", {})
+            tid = team.get("id")
+            if not tid:
+                continue
+            all_data = s.get("all", {})
+            home_data = s.get("home", {})
+            away_data = s.get("away", {})
+            played = all_data.get("played", 0) or 0
+            gf = all_data.get("goals", {}).get("for", 0) or 0
+            ga = all_data.get("goals", {}).get("against", 0) or 0
+            avg_goals = round((gf + ga) / played, 2) if played > 0 else 0
+            result[tid] = {
+                "rank": s.get("rank", 0),
+                "points": s.get("points", 0),
+                "played": played,
+                "won": all_data.get("win", 0) or 0,
+                "drawn": all_data.get("draw", 0) or 0,
+                "lost": all_data.get("lose", 0) or 0,
+                "gf": gf,
+                "ga": ga,
+                "gd": s.get("goalsDiff", 0),
+                "avg_goals_per_match": avg_goals,
+                "home_won": home_data.get("win", 0) or 0,
+                "home_played": home_data.get("played", 0) or 0,
+                "away_won": away_data.get("win", 0) or 0,
+                "away_played": away_data.get("played", 0) or 0,
+                "total_teams": total_teams,
+                "zone": "top" if s.get("rank", 99) <= max(4, total_teams // 4) else
+                        "bottom" if s.get("rank", 0) >= total_teams - max(4, total_teams // 4) + 1 else
+                        "mid",
+            }
+        _standings_cache[cache_key] = result
+        return result
+    except Exception as e:
+        print(f"[Standings] Error: {e}")
+        _standings_cache[cache_key] = {}
+        return {}
+
+
+def _format_standing(team_id, standings):
+    s = standings.get(team_id)
+    if not s:
+        return ""
+    zone_label = {"top": "HAUT de tableau", "mid": "milieu", "bottom": "BAS de tableau"}
+    return (
+        f"Classement: {s['rank']}e/{s['total_teams']} ({zone_label.get(s['zone'], '?')}) "
+        f"| {s['points']}pts | {s['won']}V {s['drawn']}N {s['lost']}D "
+        f"| {s['gf']}BP {s['ga']}BC (diff {s['gd']:+d}) "
+        f"| Moy {s['avg_goals_per_match']} buts/match"
+    )
+
+
+def _format_h2h_goals(h2h_text):
+    """Extract avg goals from H2H text for Under/Over prediction."""
+    if not h2h_text or "Aucun" in h2h_text:
+        return ""
+    import re
+    scores = re.findall(r'(\d+)-(\d+)', h2h_text)
+    if not scores:
+        return ""
+    total = sum(int(a) + int(b) for a, b in scores)
+    avg = round(total / len(scores), 1)
+    under = sum(1 for a, b in scores if int(a) + int(b) < 3)
+    return f"H2H moyenne: {avg} buts/match | {under}/{len(scores)} matchs Under 2.5"
+
+
 def format_matches_for_prompt(matches):
     if not matches:
         return "Aucun match disponible aujourd'hui."
@@ -460,10 +550,18 @@ def format_matches_for_prompt(matches):
         if m.get("away_form"):
             parts.append(f"   {m['away']} — {m['away_form']}")
 
+        if m.get("home_standing"):
+            parts.append(f"   {m['home']} — {m['home_standing']}")
+        if m.get("away_standing"):
+            parts.append(f"   {m['away']} — {m['away_standing']}")
+
         if m.get("home_stats"):
             parts.append(f"   Stats {m['home']}: {m['home_stats']}")
         if m.get("away_stats"):
             parts.append(f"   Stats {m['away']}: {m['away_stats']}")
+
+        if m.get("h2h_goals"):
+            parts.append(f"   {m['h2h_goals']}")
 
         lines.append("\n".join(parts))
 
