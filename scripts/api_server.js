@@ -6206,6 +6206,131 @@ app.get("/internal/expiring-codes", (req, res) => {
   }
 });
 
+// ── Admin Dashboard — aggregated data endpoint ──────────────────────────────
+app.get("/admin/dashboard-data", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+
+  try {
+    // ── Health ──
+    const health = {
+      api: { status: "ok", uptime: Math.round(process.uptime()) },
+      memory: {
+        rss: Math.round(process.memoryUsage().rss / 1048576),
+        heapUsed: Math.round(process.memoryUsage().heapUsed / 1048576),
+        heapTotal: Math.round(process.memoryUsage().heapTotal / 1048576),
+      },
+      node: process.version,
+      dbSize: (() => {
+        try { return Math.round(fs.statSync(DB_PATH).size / 1048576); } catch { return null; }
+      })(),
+    };
+
+    // ── Business — subscriptions ──
+    let business = { users: {}, expiring_soon: 0, expired_total: 0 };
+    try {
+      const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+      const all = codesDb.prepare("SELECT plan, active, expires_at, email, created_at FROM codes").all();
+      codesDb.close();
+      const now = new Date();
+      const active = all.filter(r => r.active === 1);
+      const counts = { free: 0, premium: 0, vip: 0, elite: 0, total: active.length };
+      active.forEach(r => { if (counts[r.plan] !== undefined) counts[r.plan]++; });
+      const expiring3d = active.filter(r => {
+        if (!r.expires_at) return false;
+        const d = Math.round((new Date(r.expires_at) - now) / 86400000);
+        return d >= 0 && d <= 3;
+      }).length;
+      const expired = all.filter(r => r.expires_at && new Date(r.expires_at) < now).length;
+      const newToday = all.filter(r => r.created_at && r.created_at.slice(0, 10) === now.toISOString().slice(0, 10)).length;
+      business = { users: counts, expiring_soon: expiring3d, expired_total: expired, new_today: newToday };
+    } catch (e) { business.error = e.message; }
+
+    // ── Analytics — visitors ──
+    let analytics = {};
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const todayRows = db.prepare("SELECT ip_hash, page, utm_source, referrer FROM page_views WHERE date(created_at) = ?").all(today);
+      const uniqueToday = new Set(todayRows.map(r => r.ip_hash)).size;
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      const yesterdayCount = db.prepare("SELECT COUNT(DISTINCT ip_hash) as c FROM page_views WHERE date(created_at) = ?").get(yesterday);
+      const last7 = db.prepare("SELECT date(created_at) as d, COUNT(DISTINCT ip_hash) as visitors, COUNT(*) as views FROM page_views WHERE created_at >= datetime('now', '-7 days') GROUP BY d ORDER BY d").all();
+      const topPages = {};
+      todayRows.forEach(r => { topPages[r.page] = (topPages[r.page] || 0) + 1; });
+      const topSources = {};
+      todayRows.forEach(r => {
+        let src = r.utm_source || "direct";
+        if (!r.utm_source && r.referrer) {
+          try { src = new URL(r.referrer).hostname.replace("www.", "") || "direct"; } catch { src = "direct"; }
+        }
+        topSources[src] = (topSources[src] || 0) + 1;
+      });
+      analytics = {
+        today: { visitors: uniqueToday, views: todayRows.length },
+        yesterday: { visitors: yesterdayCount?.c || 0 },
+        last7days: last7,
+        topPages: Object.entries(topPages).sort((a, b) => b[1] - a[1]).slice(0, 10),
+        topSources: Object.entries(topSources).sort((a, b) => b[1] - a[1]).slice(0, 10),
+      };
+    } catch (e) { analytics.error = e.message; }
+
+    // ── Pronostics — performance ──
+    const perf = getConcilePerformance();
+    const signalFort = getSignalFortStats();
+    const threshold = getAdaptiveSignalThreshold();
+    let currentPick = null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
+      currentPick = raw.currentPick || null;
+    } catch { try { currentPick = loadPick(); } catch {} }
+
+    const pronostics = {
+      currentPick,
+      signalFort: { total: signalFort.total, wins: signalFort.wins, losses: signalFort.losses, winrate: signalFort.winrate, threshold },
+      recent: perf.recent || [],
+      byAgent: perf.byAgent || [],
+      bySport: perf.bySport || [],
+    };
+
+    // ── Alerts ──
+    const alerts = [];
+    if (business.expiring_soon > 0) alerts.push({ level: "warning", msg: `${business.expiring_soon} abonnement(s) expirent dans 3 jours` });
+    if (health.memory.heapUsed > 400) alerts.push({ level: "danger", msg: `Mémoire heap élevée: ${health.memory.heapUsed} MB` });
+    if (!API_SPORTS_KEY && !FOOTBALL_DATA_KEY) alerts.push({ level: "danger", msg: "Aucune clé API sportive configurée" });
+    if (!STRIPE_SECRET_KEY) alerts.push({ level: "danger", msg: "Clé Stripe non configurée" });
+    if (!TELEGRAM_BOT_TOKEN) alerts.push({ level: "warning", msg: "Bot Telegram non configuré" });
+    if (!BREVO_API_KEY) alerts.push({ level: "warning", msg: "API Brevo non configurée" });
+    if (signalFort.winrate > 0 && signalFort.winrate < 50 && signalFort.total >= 10) alerts.push({ level: "danger", msg: `Winrate Signal Fort bas: ${signalFort.winrate}%` });
+
+    // ── Recent activity log ──
+    let activityLog = [];
+    try {
+      const recentAnalyses = db.prepare("SELECT home, away, competition, best_bet, confidence, outcome, analysed_at FROM concile_analyses ORDER BY analysed_at DESC LIMIT 15").all();
+      activityLog = recentAnalyses.map(r => ({
+        type: "analysis",
+        text: `${r.home} vs ${r.away} — ${r.best_bet} (${r.confidence}%)${r.outcome ? " → " + r.outcome : ""}`,
+        date: r.analysed_at,
+      }));
+    } catch {}
+
+    // ── Services status ──
+    const services = {
+      api_sports: !!API_SPORTS_KEY,
+      football_data: !!FOOTBALL_DATA_KEY,
+      stripe: !!STRIPE_SECRET_KEY,
+      telegram: !!TELEGRAM_BOT_TOKEN,
+      brevo: !!BREVO_API_KEY,
+      groq: !!GROQ_API_KEY,
+      deepseek: !!DEEPSEEK_API_KEY,
+    };
+
+    res.json({ ok: true, health, business, analytics, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
+  } catch (e) {
+    console.error("[admin-dashboard]", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
