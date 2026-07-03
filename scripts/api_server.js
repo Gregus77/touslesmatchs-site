@@ -126,6 +126,25 @@ ensureColumn("concile_analyses", "away_shots",      "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "home_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "away_possession", "INTEGER DEFAULT NULL");
 
+// ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
+try {
+  const dupeCount = db.prepare(`
+    SELECT COUNT(*) as cnt FROM concile_analyses
+    WHERE id NOT IN (
+      SELECT MAX(id) FROM concile_analyses GROUP BY home, away, date(analysed_at)
+    )
+  `).get()?.cnt || 0;
+  if (dupeCount > 0) {
+    db.exec(`
+      DELETE FROM concile_analyses
+      WHERE id NOT IN (
+        SELECT MAX(id) FROM concile_analyses GROUP BY home, away, date(analysed_at)
+      )
+    `);
+    console.log(`[migration] Supprimé ${dupeCount} doublons concile_analyses`);
+  }
+} catch (e) { console.error("[migration] dedup:", e.message); }
+
 // ── Nurturing emails table (persistent across restarts) ──────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS scheduled_emails (
@@ -3812,7 +3831,7 @@ setTimeout(processScheduledEmails, 60 * 1000);
 function getSignalFortStats() {
   try {
     const threshold = getAdaptiveSignalThreshold();
-    const all = db.prepare(`
+    const raw = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              score_home_at_analysis, score_away_at_analysis,
              final_score_home, final_score_away, analysed_at
@@ -3820,11 +3839,20 @@ function getSignalFortStats() {
       WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
     `).all(threshold);
-    const wins = all.filter(r => r.outcome === "win");
-    const losses = all.filter(r => r.outcome === "loss");
+    const seen = new Set();
+    const all = [];
+    for (const r of raw) {
+      const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (isLowTrustCompetition(r.competition)) continue;
+      all.push(r);
+    }
+    const wins = all.filter(r => r.outcome === "win").length;
+    const losses = all.filter(r => r.outcome === "loss").length;
     const total = all.length;
-    const winrate = total > 0 ? Math.round(wins.length / total * 100) : 0;
-    return { total, wins: wins.length, losses: losses.length, winrate, recent: all.slice(0, 20) };
+    const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
+    return { total, wins, losses, winrate, recent: all.slice(0, 20) };
   } catch (e) {
     console.error("[signal-fort-bilan] stats:", e.message);
     return { total: 0, wins: 0, losses: 0, winrate: 0, recent: [] };
@@ -5013,7 +5041,7 @@ async function sendStatsBilanTelegram() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   try {
     const threshold = getAdaptiveSignalThreshold();
-    const all = db.prepare(`
+    const raw = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              final_score_home, final_score_away, analysed_at
       FROM concile_analyses
@@ -5021,13 +5049,23 @@ async function sendStatsBilanTelegram() {
       ORDER BY analysed_at DESC
     `).all();
 
-    const wins = all.filter(r => r.outcome === "win");
-    const losses = all.filter(r => r.outcome === "loss");
-    const total = all.length;
+    const seen = new Set();
+    const all = [];
+    for (const r of raw) {
+      const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      all.push(r);
+    }
+
+    const trusted = all.filter(r => !isLowTrustCompetition(r.competition));
+    const wins = trusted.filter(r => r.outcome === "win");
+    const losses = trusted.filter(r => r.outcome === "loss");
+    const total = trusted.length;
     const winrate = total > 0 ? Math.round(wins.length / total * 100) : 0;
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const todayAll = all.filter(r => r.analysed_at && r.analysed_at.startsWith(todayStr));
+    const todayAll = trusted.filter(r => r.analysed_at && r.analysed_at.startsWith(todayStr));
     const todayWins = todayAll.filter(r => r.outcome === "win").length;
     const todayLosses = todayAll.filter(r => r.outcome === "loss").length;
 
@@ -5047,7 +5085,7 @@ async function sendStatsBilanTelegram() {
         return `${icon} ${c}: ${wr}% (${s.w}W/${s.l}L)`;
       }).join("\n");
 
-    const recentLines = all.slice(0, 20).map(r => {
+    const recentLines = trusted.slice(0, 20).map(r => {
       const icon = r.outcome === "win" ? "✅" : "❌";
       const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
       return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}%`;
@@ -5055,7 +5093,7 @@ async function sendStatsBilanTelegram() {
 
     const text = `📊 <b>BILAN COMPLET DES ANALYSES</b>
 
-🎯 <b>Global :</b>
+🎯 <b>Global (ligues fiables) :</b>
 ✅ Gagnés : <b>${wins.length}</b>
 ❌ Perdus : <b>${losses.length}</b>
 📈 Winrate : <b>${winrate}%</b> (${total} analyses)
@@ -5064,7 +5102,7 @@ async function sendStatsBilanTelegram() {
 📅 <b>Aujourd'hui :</b>
 ✅ ${todayWins} gagné${todayWins > 1 ? "s" : ""} / ❌ ${todayLosses} perdu${todayLosses > 1 ? "s" : ""} (${todayAll.length} résolus)
 
-🏆 <b>Par compétition :</b>
+🏆 <b>Par compétition (toutes) :</b>
 ${compLines}
 
 📋 <b>20 dernières analyses :</b>
@@ -5514,78 +5552,64 @@ app.get("/premium-teaser", (req, res) => {
   try {
     const threshold = getAdaptiveSignalThreshold();
     const today = new Date().toISOString().slice(0, 10);
-    const todaySignals = db.prepare(`
-      SELECT COUNT(DISTINCT home || '-' || away) as count FROM concile_analyses
-      WHERE date(analysed_at) = ? AND confidence >= ?
-    `).get(today, threshold);
-    const last7 = db.prepare(`
-      SELECT COUNT(*) as total,
-        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
-      FROM (
-        SELECT home, away, date(analysed_at) as d, outcome, MAX(confidence) as confidence
-        FROM concile_analyses
-        WHERE confidence >= ? AND outcome IN ('win','loss')
-          AND analysed_at >= datetime('now', '-7 days')
-        GROUP BY home, away, d
-      )
-    `).get(threshold);
-    const allTime = db.prepare(`
-      SELECT COUNT(*) as total,
-        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
-      FROM (
-        SELECT home, away, date(analysed_at) as d, outcome, MAX(confidence) as confidence
-        FROM concile_analyses
-        WHERE confidence >= ? AND outcome IN ('win','loss')
-        GROUP BY home, away, d
-      )
-    `).get(threshold);
-    const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
-    const avgCote = 1.55;
-    const simGain = allTime.total > 0 ? Math.round((allTime.wins * 10 * avgCote) - (allTime.total * 10)) : 0;
-    const recentRaw = db.prepare(`
-      SELECT home, away, competition, outcome, MAX(confidence) as confidence, best_bet,
-        final_score_home, final_score_away, sport, MAX(analysed_at) as analysed_at
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+
+    const allRows = db.prepare(`
+      SELECT home, away, competition, outcome, confidence, best_bet,
+        final_score_home, final_score_away, sport, analysed_at
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
-      GROUP BY home, away, date(analysed_at)
-      ORDER BY analysed_at DESC LIMIT 40
+      ORDER BY analysed_at DESC
     `).all(threshold);
-    const recentResults = recentRaw.filter(r => !isLowTrustCompetition(r.competition)).slice(0, 15);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const yesterdayStats = db.prepare(`
-      SELECT COUNT(*) as total,
-        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
-      FROM (
-        SELECT home, away, outcome, MAX(confidence) as confidence
-        FROM concile_analyses
-        WHERE confidence >= ? AND outcome IN ('win','loss')
-          AND date(analysed_at) = ?
-        GROUP BY home, away
-      )
-    `).get(threshold, yesterday);
-    const todayStats = db.prepare(`
-      SELECT COUNT(*) as total,
-        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
-      FROM (
-        SELECT home, away, outcome, MAX(confidence) as confidence
-        FROM concile_analyses
-        WHERE confidence >= ? AND outcome IN ('win','loss')
-          AND date(analysed_at) = ?
-        GROUP BY home, away
-      )
-    `).get(threshold, today);
+
+    const deduped = [];
+    const seen = new Set();
+    for (const r of allRows) {
+      const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (isLowTrustCompetition(r.competition)) continue;
+      deduped.push(r);
+    }
+
+    const todayRows = deduped.filter(r => (r.analysed_at || "").startsWith(today));
+    const yesterdayRows = deduped.filter(r => (r.analysed_at || "").startsWith(yesterday));
+    const week7 = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+    const weekRows = deduped.filter(r => (r.analysed_at || "").slice(0, 10) >= week7);
+
+    const agg = (rows) => ({
+      total: rows.length,
+      wins: rows.filter(r => r.outcome === "win").length,
+      losses: rows.filter(r => r.outcome === "loss").length,
+    });
+
+    const allTime = agg(deduped);
+    const todayStats = agg(todayRows);
+    const yesterdayStats = agg(yesterdayRows);
+    const weekStats = agg(weekRows);
+    const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
+
+    const simGain = deduped.reduce((sum, r) => {
+      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+      return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
+    }, 0);
+
+    const todaySignals = new Set(
+      db.prepare(`SELECT home || '-' || away as k FROM concile_analyses WHERE date(analysed_at) = ? AND confidence >= ?`).all(today, threshold)
+        .filter(r => !isLowTrustCompetition(r.k)).map(r => r.k)
+    ).size;
+
+    const recentResults = deduped.slice(0, 15);
+
     res.json({
       ok: true,
-      today_signals: todaySignals?.count || 0,
-      week: { total: last7?.total || 0, wins: last7?.wins || 0, losses: last7?.losses || 0 },
-      allTime: { total: allTime?.total || 0, wins: allTime?.wins || 0, winrate },
-      simulated_gain_10: simGain > 0 ? `+${simGain}€` : `${simGain}€`,
-      simulated_gain_raw: simGain,
-      today_results: { total: todayStats?.total || 0, wins: todayStats?.wins || 0, losses: todayStats?.losses || 0 },
-      yesterday: { total: yesterdayStats?.total || 0, wins: yesterdayStats?.wins || 0, losses: yesterdayStats?.losses || 0 },
+      today_signals: todaySignals,
+      week: weekStats,
+      allTime: { total: allTime.total, wins: allTime.wins, winrate },
+      simulated_gain_10: simGain > 0 ? `+${Math.round(simGain)}€` : `${Math.round(simGain)}€`,
+      simulated_gain_raw: Math.round(simGain),
+      today_results: todayStats,
+      yesterday: yesterdayStats,
       recent: recentResults.map(r => {
         const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
         const gain10 = r.outcome === 'win' ? Math.round((cote * 10 - 10) * 100) / 100 : -10;
