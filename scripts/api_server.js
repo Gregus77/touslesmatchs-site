@@ -4982,11 +4982,8 @@ ${pickInfo}
 });
 
 // ── Admin — bilan complet analyses gagnées/perdues sur Telegram admin ────────
-app.get("/admin/send-stats-bilan", async (req, res) => {
-  const { email, code } = req.query;
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
-  if (!TELEGRAM_ADMIN_CHAT_ID) return res.json({ ok: false, error: "TELEGRAM_ADMIN_CHAT_ID non configure" });
-
+async function sendStatsBilanTelegram() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   try {
     const threshold = getAdaptiveSignalThreshold();
     const all = db.prepare(`
@@ -5001,6 +4998,11 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
     const losses = all.filter(r => r.outcome === "loss");
     const total = all.length;
     const winrate = total > 0 ? Math.round(wins.length / total * 100) : 0;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayAll = all.filter(r => r.analysed_at && r.analysed_at.startsWith(todayStr));
+    const todayWins = todayAll.filter(r => r.outcome === "win").length;
+    const todayLosses = todayAll.filter(r => r.outcome === "loss").length;
 
     const byComp = {};
     all.forEach(r => {
@@ -5032,6 +5034,9 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
 📈 Winrate : <b>${winrate}%</b> (${total} analyses)
 🎚 Seuil adaptatif : ${threshold}%
 
+📅 <b>Aujourd'hui :</b>
+✅ ${todayWins} gagné${todayWins > 1 ? "s" : ""} / ❌ ${todayLosses} perdu${todayLosses > 1 ? "s" : ""} (${todayAll.length} résolus)
+
 🏆 <b>Par compétition :</b>
 ${compLines}
 
@@ -5039,13 +5044,20 @@ ${compLines}
 ${recentLines}
 
 ━━━━━━━━━━━━━━━━━━
-🤖 Hermes Council — Bilan à la demande`;
+🤖 Hermes Council — Bilan quotidien 22h`;
 
-    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
-    res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
+    return await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
   } catch (e) {
-    res.json({ ok: false, error: e.message });
+    console.error("[bilan-stats]", e.message);
+    return false;
   }
+}
+
+app.get("/admin/send-stats-bilan", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  const ok = await sendStatsBilanTelegram();
+  res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
 });
 
 // ── Analysis history (public, past concile analyses) ────────────────────────
@@ -5964,6 +5976,7 @@ function sendWeeklyMarketingReport() {
 // ── Analytics scheduler ─────────────────────────────────────────────────────
 let _lastDailyReportDate = "";
 let _lastWeeklyReportDate = "";
+let _lastBilanDate = "";
 
 function checkAnalyticsSchedule() {
   const now = new Date();
@@ -5972,6 +5985,12 @@ function checkAnalyticsSchedule() {
   const hour = parseInt(timePart.split(":")[0]);
   const day = now.toLocaleDateString("en-US", { timeZone: "Europe/Paris", weekday: "long" });
   const todayKey = now.toISOString().slice(0, 10);
+
+  if (hour === 22 && _lastBilanDate !== todayKey) {
+    _lastBilanDate = todayKey;
+    console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin...");
+    sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
+  }
 
   if (hour === 23 && _lastDailyReportDate !== todayKey) {
     _lastDailyReportDate = todayKey;
