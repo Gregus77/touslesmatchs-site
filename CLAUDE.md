@@ -54,7 +54,7 @@ Avant de declarer un travail termine, verifier :
 
 | Fonction | Role |
 |----------|------|
-| `isLowTrustCompetition()` | Filtre les ligues douteuses. Ordre : TRUSTED d'abord (return false), puis LOW_TRUST (return true), default return true |
+| `isLowTrustCompetition()` | Filtre les ligues douteuses. Ordre : LOW_TRUST d'abord (return true = bloque), puis TRUSTED (return false = passe), default return true |
 | `shouldAutoObserveMatch()` | Decide si un match merite une analyse auto-concile. Verifie : pas fini, sport != Football passe directement, puis filtre low-trust |
 | `TRUSTED_COMPETITIONS` | Whitelist des ligues fiables (Ligue 1, Premier League, NBA, NFL, etc.) |
 | `LOW_TRUST_COMPETITION_KEYWORDS` | Blacklist par pays/mots-cles (chile, bolivia, ecuador, etc.) |
@@ -93,7 +93,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse a 1 euro -> Pro (9.90
 - **Default** : Moins de 2.5 buts (Under 2.5) comme type d'analyse par defaut
 - **Coupe du Monde exclue** de toutes les analyses
 - **Ligues fiables uniquement** : whitelist TRUSTED_COMPETITIONS + blacklist LOW_TRUST_COMPETITION_KEYWORDS
-- **Ordre de filtrage** : TRUSTED verifie en premier (passe), puis LOW_TRUST (bloque), puis default = bloque
+- **Ordre de filtrage** : LOW_TRUST verifie en premier (bloque), puis TRUSTED (passe), puis default = bloque
 - **Cotes** : formule `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais au-dessus de 1.95
 - **Signal Fort** : alerte quand confiance >= 80%
 - **Multi-sport** : Football, Basketball, Hockey, Baseball, Tennis. Les sports non-Football passent directement le filtre low-trust dans shouldAutoObserveMatch

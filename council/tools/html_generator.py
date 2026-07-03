@@ -35,8 +35,8 @@ def inject_pick_into_html(pick_data: dict, picks_history: list, stats: dict) -> 
     # Build today pick block
     if pick_data.get("nopick"):
         pick_badge = "NOPICK"
-        pick_label = "PAS DE PARI"
-        pick_desc = f"PAS DE PARI - Aucun match n'atteint notre seuil 8/10"
+        pick_label = "PAS DE PICK"
+        pick_desc = f"PAS DE PICK - Aucun match n'atteint notre seuil 8/10"
         pick_match = "---"
         pick_bet = "---"
         pick_odds = "---"

@@ -66,7 +66,7 @@ def send_free_pick(match, bet, odds, sport, confidence, reasoning=""):
     text = f"""🏆 <b>PICK DU JOUR — {date_str}</b>
 
 {emoji} <b>{match}</b>
-💡 Pari : <b>{bet}</b>
+💡 Pick : <b>{bet}</b>
 📊 Cote : <b>{odds}</b>
 🔥 Confiance : <b>{confidence}/10</b>
 
@@ -93,7 +93,7 @@ def send_nopick():
 
 Le Conseil Hermes (5 IAs) n'a trouvé aucun match atteignant le seuil de confiance 8/10.
 
-✅ On préfère ne pas publier plutôt que de te donner un pari incertain.
+✅ On préfère ne pas publier plutôt que de forcer une sélection incertaine.
 📈 Winrate maintenu grâce à cette discipline.
 
 ━━━━━━━━━━━━━━━━━━
@@ -114,7 +114,7 @@ def send_premium_pick(match, bet, odds, sport, confidence, reasoning=""):
     text = f"""💎 <b>PICK PREMIUM — {date_str}</b>
 
 {emoji} <b>{match}</b>
-💡 Pari : <b>{bet}</b>
+💡 Pick : <b>{bet}</b>
 📊 Cote : <b>{odds}</b>
 🔥 Confiance : <b>{confidence}/10</b>
 

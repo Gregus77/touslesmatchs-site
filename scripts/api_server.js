@@ -480,7 +480,7 @@ Pour MARCHES (avis rapide sur chaque marché, codes courts + confiance 40-90) :
 - resultat : dom, ext ou nul
 - mt1 : oui ou non (but en 1ère mi-temps)
 
-Ne mets rien d'autre. Si tu n'es pas sûr du pari principal, réponds NO BET (mais donne quand même MARCHES).`;
+Ne mets rien d'autre. Si tu n'es pas sûr du pick principal, réponds NO BET (mais donne quand même MARCHES).`;
 }
 
 async function runShadowEvaluation(match) {
@@ -884,7 +884,7 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
   "u17", "u18", "u19", "u20", "u21", "u23",
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
-  "reserve", "reserves", "b team", "ii ", " ii", "youth", "academy",
+  "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
   "regional cup", "state cup", "state league",
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
   // Afrique
@@ -984,8 +984,8 @@ function isLowTrustCompetition(matchOrCompetition = "") {
     ? matchOrCompetition
     : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
-  if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
+  if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
   return true;
 }
 
@@ -1557,7 +1557,7 @@ function computeLiveConstraints(match) {
     else lines.push(`  → 0-0 ou égalité à la ${minute}' : Match nul probable (~45%) ou but décisif dans ~${remaining} min.`);
   }
 
-  lines.push("  → PRIORISE ces contraintes LIVE sur toute stat pré-match. Ne recommande PAS un pari mathématiquement contraire.");
+  lines.push("  → PRIORISE ces contraintes LIVE sur toute stat pré-match. Ne recommande PAS un marché mathématiquement contraire.");
   return lines.join("\n");
 }
 
@@ -1608,7 +1608,7 @@ Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${liveConstraints
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
-Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre pari est mathématiquement invalide.`;
+Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiquement invalide.`;
 
   // Concile v3 — 4 familles d'IA radicalement différentes + Chief
   // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
@@ -1919,9 +1919,9 @@ function getMockAgentAnalysis(agent, match, index) {
   const raisons = [
     `L'équipe à domicile montre une solidité défensive depuis la ${minute}'. Le contexte du score favorise ce marché.`,
     `Les statistiques de ce type de match à cette phase du jeu indiquent une forte probabilité pour ce scénario.`,
-    `Le score actuel de ${match.score_home}-${match.score_away} et la dynamique du match orientent clairement vers ce pari.`,
+    `Le score actuel de ${match.score_home}-${match.score_away} et la dynamique du match orientent clairement vers ce marché.`,
     `Analyse des patterns : ce type de configuration à la ${minute}' converge régulièrement vers ce résultat.`,
-    `En synthèse des votes du Concile et du contexte temps réel, ce pari offre le meilleur ratio risque/récompense.`,
+    `En synthèse des votes du Concile et du contexte temps réel, ce marché offre le meilleur ratio risque/récompense.`,
   ];
 
   return {
