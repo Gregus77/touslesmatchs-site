@@ -1119,11 +1119,11 @@ footer{
 <!-- TICKER -->
 <div class="ticker">
   <div class="ticker-inner">
-    <span id="t1">⚡ Prochain pick bientôt disponible — restez connectés</span>
+    <span id="t1">🕐 Prochain pick conseillé bientôt — <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#00d4ff;text-decoration:none">Rejoindre le groupe Telegram</a></span>
     <span>📊 Concile V4.3 · 4 agents + Chief · 3 sources minimum · Aucun match inventé</span>
     <span id="tw1">Statistiques en cours de synchronisation</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
-    <span id="t2">⚡ Prochain pick bientôt disponible — restez connectés</span>
+    <span id="t2">🕐 Prochain pick conseillé bientôt — <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#00d4ff;text-decoration:none">Rejoindre le groupe Telegram</a></span>
     <span>📊 Concile V4.3 · 4 agents + Chief · 3 sources minimum · Aucun match inventé</span>
     <span id="tw2">Statistiques en cours de synchronisation</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
@@ -1482,7 +1482,7 @@ footer{
 <!-- PICK DU JOUR -->
 <section class="section-wrap" id="pick">
   <div class="s-eyebrow">Hermes · Analyse du jour</div>
-  <div class="s-title">Le verdict d'aujourd'hui</div>
+  <div class="s-title">💎 Le pick du jour</div>
   <div id="pick-root"></div>
 </section>
 
@@ -1962,7 +1962,7 @@ function renderPick(){
   const root=document.getElementById('pick-root');
   if(!root) return;
   if(PICK.status==='no_bet'){
-    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">🕐</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">Prochain pick bientôt disponible</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Le Concile analyse les matchs du jour. Retour ce soir à 20h00.</div></div>`;
+    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">🕐</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">Prochain pick conseillé bientôt</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Rejoins le groupe Telegram pour recevoir les analyses en premier</div><div style="margin-top:16px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">📲 Rejoindre Telegram</a></div><div style="margin-top:12px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:13px">⚡ Voir l'analyse complète – 1 €</a></div></div>`;
     return;
   }
   if(!PICK.ia||!PICK.ia.length||!PICK.teamA||!PICK.teamB) return;
@@ -2328,8 +2328,9 @@ function renderPicksFeed() {
     }, 1000);
   } else {
     html += `<div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px">
-      Prochain pick bientôt — rejoins le groupe Telegram pour être notifié en premier 🔔
-      <div style="margin-top:14px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Canal gratuit Telegram →</a></div>
+      🕐 Prochain pick conseillé bientôt — rejoins le groupe Telegram
+      <div style="margin-top:14px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Rejoindre Telegram</a></div>
+      <div style="margin-top:8px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Analyse complète – 1 €</a></div>
     </div>`;
   }
 
@@ -2714,7 +2715,7 @@ async function initPick(){
             </div>
           </div></div></div>`;
       } else {
-        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">🕐</div><div style="font-size:16px;font-weight:700">Prochain pick bientôt disponible</div></div>`;
+        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">🕐</div><div style="font-size:16px;font-weight:700">Prochain pick conseillé bientôt</div><div style="margin-top:12px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Rejoindre Telegram</a></div><div style="margin-top:8px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Analyse complète – 1 €</a></div></div>`;
       }
     }
   }
