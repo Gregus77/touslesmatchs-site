@@ -921,6 +921,9 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "fiji", "samoa", "tonga", "vanuatu", "solomon", "papua",
   "new caledonia", "tahiti",
   "australia · npl", "australian npl",
+  "queensland premier league", "queensland · ", "victoria premier league",
+  // Moyen-Orient (manquant)
+  "iran",
   // USA — ligues amateurs/semi-pro
   "usl league two", "usl2", "usl league one",
   "npsl", "nisa", "mls next", "mls next pro",
@@ -954,7 +957,6 @@ const TRUSTED_COMPETITIONS = [
   "scottish premiership", "scottish · premiership",
   "danish superliga", "superliga · denmark",
   "norwegian eliteserien", "eliteserien",
-  "swedish allsvenskan", "allsvenskan",
   "finnish veikkausliiga",
   "czech first league", "czech liga",
   "polish ekstraklasa", "ekstraklasa",
