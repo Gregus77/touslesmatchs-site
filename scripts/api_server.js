@@ -2053,7 +2053,8 @@ function saveConcileAnalysis(match, result, pickBet) {
   try {
     const minute = parseInt(match.minute) || null;
     const statsStatus = result.statsStatus?.status || "unavailable";
-    const matchKey = getPredictionSnapshotKey(match);
+    const id = match?.id || match?.fixtureId || match?.sourceMatchId || `${match?.home}_${match?.away}`;
+    const matchKey = `${id}_${getTodayStr()}`;
     const sport = match.sport || "Football";
     const competition = match.competition || match.league || "";
     const learningProfile = getLearningProfile({ sport, competition, bet: result.best_bet });
@@ -2062,35 +2063,59 @@ function saveConcileAnalysis(match, result, pickBet) {
     const country = extractCountry(competition);
     const neutral = isNeutralComp(competition) ? 1 : 0;
 
-    // Extraire les stats live si disponibles
     const liveStats = result.statsStatus?.stats || null;
     const homePoss = liveStats?.possession?.home ?? null;
     const awayPoss = liveStats?.possession?.away ?? null;
     const homeShots = liveStats?.shots?.home ?? liveStats?.shots_on_goal?.home ?? null;
     const awayShots = liveStats?.shots?.away ?? liveStats?.shots_on_goal?.away ?? null;
 
-    db.prepare(`
-      INSERT INTO concile_analyses
-        (match_key, home, away, competition, minute_at_analysis,
-         score_home_at_analysis, score_away_at_analysis, stats_status,
-         best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
-         sport, learning_tier, learning_note, home_logo, away_logo,
-         bet_category, country, is_neutral,
-         home_possession, away_possession, home_shots, away_shots)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(
-      matchKey,
-      match.home, match.away, competition, minute,
-      match.score_home ?? null, match.score_away ?? null, statsStatus,
-      result.best_bet, result.confidence, result.raison || "",
-      result.consensus_votes || 0,
-      JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
-      pickBet || null, sport,
-      learningAssessment.tier, learningAssessment.reasons.join("; "),
-      match.home_logo || null, match.away_logo || null,
-      betCat, country, neutral,
-      homePoss, awayPoss, homeShots, awayShots
-    );
+    const existing = db.prepare("SELECT id, best_bet FROM concile_analyses WHERE match_key = ?").get(matchKey);
+    if (existing) {
+      const betChanged = existing.best_bet !== result.best_bet;
+      db.prepare(`
+        UPDATE concile_analyses SET
+          minute_at_analysis = ?, score_home_at_analysis = ?, score_away_at_analysis = ?,
+          stats_status = ?, best_bet = ?, confidence = ?, raison = ?,
+          consensus_votes = ?, agents_json = ?, pick_bet = ?,
+          learning_tier = ?, learning_note = ?,
+          bet_category = ?, home_possession = ?, away_possession = ?,
+          home_shots = ?, away_shots = ?, analysed_at = datetime('now')
+          ${betChanged ? ", outcome = NULL, final_score_home = NULL, final_score_away = NULL, resolved_at = NULL" : ""}
+        WHERE match_key = ?
+      `).run(
+        minute, match.score_home ?? null, match.score_away ?? null, statsStatus,
+        result.best_bet, result.confidence, result.raison || "",
+        result.consensus_votes || 0,
+        JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
+        pickBet || null,
+        learningAssessment.tier, learningAssessment.reasons.join("; "),
+        betCat, homePoss, awayPoss, homeShots, awayShots,
+        matchKey
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO concile_analyses
+          (match_key, home, away, competition, minute_at_analysis,
+           score_home_at_analysis, score_away_at_analysis, stats_status,
+           best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
+           sport, learning_tier, learning_note, home_logo, away_logo,
+           bet_category, country, is_neutral,
+           home_possession, away_possession, home_shots, away_shots)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(
+        matchKey,
+        match.home, match.away, competition, minute,
+        match.score_home ?? null, match.score_away ?? null, statsStatus,
+        result.best_bet, result.confidence, result.raison || "",
+        result.consensus_votes || 0,
+        JSON.stringify((result.agents || []).map(a => ({ name: a.name, bet: a.bet, confidence: a.confidence }))),
+        pickBet || null, sport,
+        learningAssessment.tier, learningAssessment.reasons.join("; "),
+        match.home_logo || null, match.away_logo || null,
+        betCat, country, neutral,
+        homePoss, awayPoss, homeShots, awayShots
+      );
+    }
     console.log(
       `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
       `${match.home} vs ${match.away} | minute=${minute ?? "?"} | ` +
@@ -5062,6 +5087,68 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
   res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
 });
 
+// ── Daily results summary → FREE Telegram channel (22h Paris) ────────────────
+let _lastFreeResultsBilanDate = "";
+async function sendDailyResultsFreeChannel() {
+  if (!TELEGRAM_CHANNEL_ID || !TELEGRAM_BOT_TOKEN) return false;
+  try {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const rows = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+             final_score_home, final_score_away
+      FROM concile_analyses
+      WHERE date(analysed_at) = ? AND outcome IN ('win','loss')
+      ORDER BY analysed_at DESC
+    `).all(todayStr);
+
+    const trusted = rows.filter(r => !isLowTrustCompetition(r.competition));
+    if (trusted.length < 3) return false;
+
+    const wins = trusted.filter(r => r.outcome === "win");
+    const losses = trusted.filter(r => r.outcome === "loss");
+    const winrate = Math.round(wins.length / trusted.length * 100);
+
+    const matchLines = trusted.slice(0, 15).map(r => {
+      const icon = r.outcome === "win" ? "✅" : "❌";
+      const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
+      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45)).toFixed(2);
+      const gainStr = r.outcome === "win" ? `+${(10 * parseFloat(cote) - 10).toFixed(0)}€` : "-10€";
+      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote} → ${gainStr}`;
+    }).join("\n");
+
+    const totalGain = trusted.reduce((sum, r) => {
+      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+      return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
+    }, 0);
+
+    const emoji = winrate >= 70 ? "🔥" : winrate >= 50 ? "📊" : "💪";
+    const msg = [
+      `${emoji} <b>RÉSULTATS DU JOUR — ${todayStr}</b>`,
+      ``,
+      `✅ <b>${wins.length} gagnés</b> / ❌ ${losses.length} perdus — <b>${winrate}% winrate</b>`,
+      ``,
+      matchLines,
+      ``,
+      `💰 <b>Bilan du jour à 10€/analyse : ${totalGain >= 0 ? "+" : ""}${totalGain.toFixed(0)}€</b>`,
+      ``,
+      winrate >= 60
+        ? `🚀 Ces résultats sont réservés aux membres Premium.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`
+        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`,
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      `🤖 Concile IA — TousLesMatchs`,
+      `⚠️ 18+ — Jeu responsable`,
+    ].join("\n");
+
+    const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, msg);
+    console.log(`[daily-results-free] ${wins.length}W/${losses.length}L ${winrate}% — Telegram free: ${ok ? "OK" : "FAIL"}`);
+    return ok;
+  } catch (e) {
+    console.error("[daily-results-free]", e.message);
+    return false;
+  }
+}
+
 // ── Analysis history (public, past concile analyses) ────────────────────────
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
@@ -6051,6 +6138,11 @@ function checkAnalyticsSchedule() {
     _lastBilanDate = todayKey;
     console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin...");
     sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
+    if (_lastFreeResultsBilanDate !== todayKey) {
+      _lastFreeResultsBilanDate = todayKey;
+      console.log("[daily-results-free] Envoi résultats du jour sur canal gratuit...");
+      sendDailyResultsFreeChannel().then(ok => console.log(`[daily-results-free] ${ok ? "OK" : "SKIP/ECHEC"}`));
+    }
   }
 
   if (hour === 23 && _lastDailyReportDate !== todayKey) {
