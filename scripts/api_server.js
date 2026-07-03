@@ -4689,7 +4689,7 @@ async function handleCreateCheckout(req, res) {
 
 // Legacy create-checkout accessible via /create-checkout et /api/create-checkout
 app.post("/create-checkout", handleCreateCheckout);
-app.post("/api/create-checkout", handleCreateCheckout);
+app.post("/create-checkout", handleCreateCheckout);
 
 // ── Community stats (Telegram member count) ───────────────────────────────────
 let tgMemberCache = { count: null, ts: 0 };
@@ -5385,7 +5385,7 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
   res.json({ ok: true, stats: getSignalFortStats() });
 });
 
-app.get("/api/signal-fort-stats", (req, res) => {
+app.get("/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
   const coteMoy = (c) => Math.min(1.95, ((1 / (c / 100)) * 1.45)).toFixed(2);
   res.json({
@@ -5423,7 +5423,7 @@ app.get("/api/signal-fort-stats", (req, res) => {
 });
 
 // ── Premium teaser stats — public endpoint for NOPICK sales pitch ─────────────
-app.get("/api/premium-teaser", (req, res) => {
+app.get("/premium-teaser", (req, res) => {
   try {
     const threshold = getAdaptiveSignalThreshold();
     const today = new Date().toISOString().slice(0, 10);
