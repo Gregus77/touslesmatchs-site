@@ -3845,7 +3845,6 @@ function getSignalFortStats() {
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (isLowTrustCompetition(r.competition)) continue;
       all.push(r);
     }
     const wins = all.filter(r => r.outcome === "win").length;
@@ -5058,14 +5057,13 @@ async function sendStatsBilanTelegram() {
       all.push(r);
     }
 
-    const trusted = all.filter(r => !isLowTrustCompetition(r.competition));
-    const wins = trusted.filter(r => r.outcome === "win");
-    const losses = trusted.filter(r => r.outcome === "loss");
-    const total = trusted.length;
+    const wins = all.filter(r => r.outcome === "win");
+    const losses = all.filter(r => r.outcome === "loss");
+    const total = all.length;
     const winrate = total > 0 ? Math.round(wins.length / total * 100) : 0;
 
     const todayStr = new Date().toISOString().slice(0, 10);
-    const todayAll = trusted.filter(r => r.analysed_at && r.analysed_at.startsWith(todayStr));
+    const todayAll = all.filter(r => r.analysed_at && r.analysed_at.startsWith(todayStr));
     const todayWins = todayAll.filter(r => r.outcome === "win").length;
     const todayLosses = todayAll.filter(r => r.outcome === "loss").length;
 
@@ -5085,7 +5083,7 @@ async function sendStatsBilanTelegram() {
         return `${icon} ${c}: ${wr}% (${s.w}W/${s.l}L)`;
       }).join("\n");
 
-    const recentLines = trusted.slice(0, 20).map(r => {
+    const recentLines = all.slice(0, 20).map(r => {
       const icon = r.outcome === "win" ? "✅" : "❌";
       const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
       return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}%`;
@@ -5093,7 +5091,7 @@ async function sendStatsBilanTelegram() {
 
     const text = `📊 <b>BILAN COMPLET DES ANALYSES</b>
 
-🎯 <b>Global (ligues fiables) :</b>
+🎯 <b>Global :</b>
 ✅ Gagnés : <b>${wins.length}</b>
 ❌ Perdus : <b>${losses.length}</b>
 📈 Winrate : <b>${winrate}%</b> (${total} analyses)
@@ -5139,14 +5137,21 @@ async function sendDailyResultsFreeChannel() {
       ORDER BY analysed_at DESC
     `).all(todayStr);
 
-    const trusted = rows.filter(r => !isLowTrustCompetition(r.competition));
-    if (trusted.length < 3) return false;
+    const seen = new Set();
+    const unique = [];
+    for (const r of rows) {
+      const k = `${r.home}_${r.away}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      unique.push(r);
+    }
+    if (unique.length < 3) return false;
 
-    const wins = trusted.filter(r => r.outcome === "win");
-    const losses = trusted.filter(r => r.outcome === "loss");
-    const winrate = Math.round(wins.length / trusted.length * 100);
+    const wins = unique.filter(r => r.outcome === "win");
+    const losses = unique.filter(r => r.outcome === "loss");
+    const winrate = Math.round(wins.length / unique.length * 100);
 
-    const matchLines = trusted.slice(0, 15).map(r => {
+    const matchLines = unique.map(r => {
       const icon = r.outcome === "win" ? "✅" : "❌";
       const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
       const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45)).toFixed(2);
@@ -5154,7 +5159,7 @@ async function sendDailyResultsFreeChannel() {
       return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote} → ${gainStr}`;
     }).join("\n");
 
-    const totalGain = trusted.reduce((sum, r) => {
+    const totalGain = unique.reduce((sum, r) => {
       const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
       return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
     }, 0);
@@ -5567,7 +5572,6 @@ app.get("/premium-teaser", (req, res) => {
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (isLowTrustCompetition(r.competition)) continue;
       deduped.push(r);
     }
 
