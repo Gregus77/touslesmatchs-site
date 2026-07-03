@@ -1964,28 +1964,75 @@ function renderPick(){
   const root=document.getElementById('pick-root');
   if(!root) return;
   if(PICK.status==='no_bet'){
-    root.innerHTML=`<div class="no-bet" id="nopick-premium-pitch">
-      <div style="font-size:40px;margin-bottom:18px">💎</div>
-      <div style="font-size:20px;font-weight:800;margin-bottom:10px">Les membres Premium reçoivent les alertes en temps réel</div>
-      <div id="nopick-stats" style="font-size:14px;color:var(--muted2);line-height:1.7">Chargement des statistiques...</div>
-      <div style="margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px">
-        <a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">⚡ Débloquer 1 analyse – 1 €</a>
-        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:13px">📲 Ou rejoindre Telegram gratuitement</a>
-      </div>
+    root.innerHTML=`<div class="no-bet" id="nopick-premium-pitch" style="text-align:left">
+      <div id="nopick-loading" style="text-align:center;padding:20px;color:var(--muted2)">Chargement des résultats...</div>
+      <div id="nopick-content" style="display:none"></div>
     </div>`;
     fetch('/api/premium-teaser?t='+Date.now()).then(r=>r.json()).then(d=>{
       if(!d.ok) return;
-      const el=document.getElementById('nopick-stats');
-      if(!el) return;
-      const lines=[];
-      if(d.today_signals>0) lines.push(`<div style="margin-bottom:8px">📡 <b style="color:var(--gold)">${d.today_signals} alerte${d.today_signals>1?'s':''}</b> envoyée${d.today_signals>1?'s':''} aujourd'hui aux membres Premium</div>`);
-      else lines.push(`<div style="margin-bottom:8px">📡 Les alertes Premium arrivent dès qu'Hermès détecte une opportunité</div>`);
-      if(d.week.total>0) lines.push(`<div style="margin-bottom:8px">📊 Cette semaine : <b style="color:#10b981">${d.week.wins} gagnés</b> sur ${d.week.total} signaux</div>`);
-      if(d.allTime.total>0){
-        lines.push(`<div style="margin-bottom:8px">🎯 Winrate global : <b style="color:#10b981">${d.allTime.winrate}%</b> sur ${d.allTime.total} analyses</div>`);
-        if(d.simulated_gain_100.startsWith('+')) lines.push(`<div style="margin-bottom:8px">💰 Simulation 10€/mise : <b style="color:#10b981">${d.simulated_gain_100}</b> de bénéfice</div>`);
+      const wrap=document.getElementById('nopick-content');
+      const load=document.getElementById('nopick-loading');
+      if(!wrap) return;
+      let html='';
+      const wr=d.allTime?.winrate||0;
+      const wrColor=wr>=70?'#10b981':wr>=60?'#f59e0b':'#6366f1';
+      html+=`<div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:15px;font-weight:700;color:var(--text1);margin-bottom:6px">📊 Nos résultats Premium — en toute transparence</div>
+        <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:12px">
+          <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:10px 16px;min-width:80px">
+            <div style="font-size:22px;font-weight:800;color:${wrColor}">${wr}%</div>
+            <div style="font-size:11px;color:var(--muted2)">winrate</div>
+          </div>
+          <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:10px 16px;min-width:80px">
+            <div style="font-size:22px;font-weight:800;color:#818cf8">${d.allTime?.total||0}</div>
+            <div style="font-size:11px;color:var(--muted2)">analyses</div>
+          </div>`;
+      if(d.simulated_gain_raw>0){
+        html+=`<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:10px 16px;min-width:80px">
+            <div style="font-size:22px;font-weight:800;color:#10b981">${d.simulated_gain_10}</div>
+            <div style="font-size:11px;color:var(--muted2)">à 10€/mise</div>
+          </div>`;
       }
-      el.innerHTML=lines.join('');
+      html+=`</div></div>`;
+      if(d.yesterday&&d.yesterday.total>0){
+        html+=`<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:center">
+          <span style="font-size:14px;font-weight:700;color:var(--gold)">Hier : ${d.yesterday.wins} gagné${d.yesterday.wins>1?'s':''} sur ${d.yesterday.total}</span>
+          ${d.yesterday.wins>=d.yesterday.total*0.7?'<span style="margin-left:6px">🔥</span>':''}
+        </div>`;
+      }
+      if(d.today_signals>0){
+        html+=`<div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:10px 16px;margin-bottom:14px;text-align:center">
+          <span style="font-size:13px;color:#818cf8;font-weight:600">📡 ${d.today_signals} alerte${d.today_signals>1?'s':''} envoyée${d.today_signals>1?'s':''} aujourd'hui aux membres</span>
+        </div>`;
+      }
+      if(d.recent&&d.recent.length>0){
+        html+=`<div style="font-size:12px;font-weight:700;color:var(--muted2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Derniers résultats vérifiés</div>`;
+        html+=`<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px">`;
+        d.recent.slice(0,7).forEach(r=>{
+          const isW=r.outcome==='win';
+          const icon=isW?'✅':'❌';
+          const bg=isW?'rgba(16,185,129,.06)':'rgba(244,63,94,.06)';
+          const border=isW?'rgba(16,185,129,.15)':'rgba(244,63,94,.12)';
+          const g=r.gain10||0;
+          const gainTxt=isW?`<span style="color:#10b981;font-weight:700;font-size:12px">+${g.toFixed(1)}€</span>`:`<span style="color:#f43f5e;font-weight:700;font-size:12px">${g}€</span>`;
+          html+=`<div style="display:flex;align-items:center;gap:8px;background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 12px">
+            <span style="font-size:16px;flex-shrink:0">${icon}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.match}</div>
+              <div style="font-size:11px;color:var(--muted2)">${r.competition}${r.score?' · '+r.score:''}${r.cote?' · @'+r.cote:''}</div>
+            </div>
+            <div style="flex-shrink:0;text-align:right">${gainTxt}</div>
+          </div>`;
+        });
+        html+=`</div>`;
+      }
+      html+=`<div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(212,175,55,.25)">⚡ Débloquer 1 analyse – 1 €</a>
+        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:13px">📲 Ou rejoindre Telegram gratuitement</a>
+      </div>`;
+      wrap.innerHTML=html;
+      if(load)load.style.display='none';
+      wrap.style.display='block';
     }).catch(()=>{});
     return;
   }

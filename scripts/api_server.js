@@ -5448,16 +5448,48 @@ app.get("/api/premium-teaser", (req, res) => {
     const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
     const avgCote = 1.55;
     const simGain = allTime.total > 0 ? Math.round((allTime.wins * 10 * avgCote) - (allTime.total * 10)) : 0;
+    const recentResults = db.prepare(`
+      SELECT home, away, competition, outcome, confidence, best_bet,
+        final_score_home, final_score_away, sport, analysed_at
+      FROM concile_analyses
+      WHERE confidence >= ? AND outcome IN ('win','loss')
+      ORDER BY analysed_at DESC LIMIT 10
+    `).all(threshold);
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const yesterdayStats = db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE confidence >= ? AND outcome IN ('win','loss')
+        AND date(analysed_at) = ?
+    `).get(threshold, yesterday);
     res.json({
       ok: true,
       today_signals: todaySignals?.count || 0,
       week: { total: last7?.total || 0, wins: last7?.wins || 0, losses: last7?.losses || 0 },
       allTime: { total: allTime?.total || 0, wins: allTime?.wins || 0, winrate },
-      simulated_gain_100: simGain > 0 ? `+${simGain}€` : `${simGain}€`,
+      simulated_gain_10: simGain > 0 ? `+${simGain}€` : `${simGain}€`,
+      simulated_gain_raw: simGain,
+      yesterday: { total: yesterdayStats?.total || 0, wins: yesterdayStats?.wins || 0, losses: yesterdayStats?.losses || 0 },
+      recent: recentResults.map(r => {
+        const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+        const gain10 = r.outcome === 'win' ? Math.round((cote * 10 - 10) * 100) / 100 : -10;
+        return {
+          match: `${r.home} vs ${r.away}`,
+          competition: r.competition || '',
+          outcome: r.outcome,
+          sport: r.sport || 'Football',
+          score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+          date: r.analysed_at ? r.analysed_at.slice(0, 10) : null,
+          cote: Math.round(cote * 100) / 100,
+          gain10,
+        };
+      }),
       threshold,
     });
   } catch (e) {
-    res.json({ ok: true, today_signals: 0, week: { total: 0, wins: 0, losses: 0 }, allTime: { total: 0, wins: 0, winrate: 0 }, simulated_gain_100: "0€", threshold: 80 });
+    res.json({ ok: true, today_signals: 0, week: { total: 0, wins: 0, losses: 0 }, allTime: { total: 0, wins: 0, winrate: 0 }, simulated_gain_10: "0€", simulated_gain_raw: 0, yesterday: { total: 0, wins: 0, losses: 0 }, recent: [], threshold: 80 });
   }
 });
 
