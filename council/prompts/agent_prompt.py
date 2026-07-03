@@ -63,7 +63,7 @@ REGLES STRICTES :
 - NOPICK est une bonne reponse — mieux vaut 0 pick qu'un mauvais pick
 
 DIRECTIVE PAR SPORT :
-- Football : "Moins de 2.5 buts (Under 2.5)" par defaut. Autre marche seulement si >2.5 buts/match en moyenne sur les H2H ET la saison.
+- Football : "Moins de 2.5 buts (Under 2.5)" UNIQUEMENT si les deux equipes sont proches au classement (ecart < 8 places) ET ont une moyenne < 2.5 buts/match. Si ecart > 10 places au classement (top vs bottom), INTERDIT de recommander Under 2.5 — preferer Victoire du favori ou Over 2.5. Un top 4 contre un bottom 5 marque souvent 3+ buts.
 - Basketball : "Handicap" ou "Over/Under points" — analyse les tendances offensives/defensives.
 - Hockey : "Under 5.5 buts" ou "ML (Money Line)" — analyse la solidite defensive.
 - Baseball : "ML (Money Line)" — analyse le pitcher titulaire et la forme recente.

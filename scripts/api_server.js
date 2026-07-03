@@ -466,7 +466,7 @@ Match : ${match.home} vs ${match.away}
 Compétition : ${match.competition || match.league || "inconnue"}
 Sport : ${match.sport || "Football"}${scoreStr}
 
-DIRECTIVE : privilégie "Under 2.5" (Moins de 2.5 buts) sauf si le score rend ce marché impossible.
+DIRECTIVE : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.
 
 Réponds UNIQUEMENT dans ce format :
 ANALYSE : [ex: Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
@@ -921,6 +921,10 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "fiji", "samoa", "tonga", "vanuatu", "solomon", "papua",
   "new caledonia", "tahiti",
   "australia · npl", "australian npl",
+  // USA — ligues amateurs/semi-pro
+  "usl league two", "usl2", "usl league one",
+  "npsl", "nisa", "mls next", "mls next pro",
+  "us open cup", "usl w league",
 ];
 
 const TRUSTED_COMPETITIONS = [
@@ -968,7 +972,7 @@ const TRUSTED_COMPETITIONS = [
   "saudi pro league", "roshn",
   "uae pro league",
   "qsl", "qatar stars",
-  "usl championship", "usl league",
+  "usl championship",
   "nwsl",
   "ahl",
   "nbl", "nbl · australia",
@@ -1516,11 +1520,23 @@ function computeLiveConstraints(match) {
     }
   }
 
+  // ── Détection de massacre / domination totale
+  const scoreDiff = Math.abs(h - a);
+  if (scoreDiff >= 3 && total < 3) {
+    lines.push(`  → ⚠️ DOMINATION TOTALE (${h}-${a}) : NE PAS recommander Under 2.5 — l'équipe dominante continue de marquer.`);
+  } else if (scoreDiff >= 2 && minute <= 60) {
+    lines.push(`  → ⚠️ ÉCART IMPORTANT (${h}-${a}) en ${minute}' : Under 2.5 est RISQUÉ — l'équipe en tête peut continuer à marquer. Préfère Over 2.5 ou Victoire.`);
+  } else if (total >= 2 && minute <= 45) {
+    lines.push(`  → ⚠️ MATCH OUVERT (${total} buts en ${minute}') : Under 2.5 RISQUÉ au rythme actuel. Préfère Over 2.5.`);
+  }
+
   // ── Rythme de buts (extrapolation + recommandation)
   if (minute >= 30) {
     lines.push(`  → Rythme actuel : ${total} but(s) en ${minute}' → extrapolation : ~${projectedTotal} buts à 90'.`);
-    if (projectedTotal < 2.0 && total < 3) {
-      lines.push(`  → ⚠️ PROJECTION FAIBLE (${projectedTotal} buts) : Over 2.5 peu probable au rythme actuel → préfère Under 2.5.`);
+    if (projectedTotal >= 3.0 && total < 3) {
+      lines.push(`  → ⚠️ PROJECTION HAUTE (${projectedTotal} buts) : Under 2.5 DANGEREUX → préfère Over 2.5 ou Victoire.`);
+    } else if (projectedTotal < 2.0 && total < 3 && scoreDiff < 2) {
+      lines.push(`  → PROJECTION FAIBLE (${projectedTotal} buts) : Over 2.5 peu probable → Under 2.5 favori.`);
     } else if (projectedTotal >= 2.5 && total < 3) {
       lines.push(`  → Projection compatible avec Over 2.5 (${projectedTotal} buts estimés).`);
     }
@@ -1662,7 +1678,11 @@ ${matchContext}
 En te basant sur tes connaissances des équipes ET les données live ci-dessus, recommande la meilleure analyse.
 Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
 
-DIRECTIVE PRIORITAIRE : recommande "Under 2.5 buts" (Moins de 2.5 buts) par défaut SAUF si le score actuel rend ce marché mathématiquement impossible (déjà 3+ buts). C'est le marché principal à analyser.
+DIRECTIVE MARCHÉ :
+- Under 2.5 buts UNIQUEMENT si le match est équilibré (écart de score 0-1) ET le rythme de buts est faible (projection < 2.5).
+- INTERDIT de recommander Under 2.5 si : écart >= 2 buts OU 2+ buts marqués avant la 45' OU une équipe domine clairement.
+- Si l'écart est large (2+), préfère Over 2.5 ou Victoire de l'équipe dominante.
+- Respecte impérativement les CONTRAINTES MATHÉMATIQUES LIVE ci-dessous.
 
 ⚠️ CONFIANCE ARGUMENTÉE — INTERDICTION du 70% générique :
 - Ta "confidence" DOIT refléter la force réelle des données, pas une valeur ronde par défaut.
@@ -1779,7 +1799,7 @@ Synthétise ces votes en tenant compte de :
 6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
 7. Les règles propres au sport: ${sport}
 8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
-9. DIRECTIVE PRIORITAIRE : privilégie "Under 2.5 buts" sauf si le score rend ce marché impossible
+9. DIRECTIVE MARCHÉ : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts marqués avant 45' → Over 2.5 ou Victoire. JAMAIS Under 2.5 quand une équipe domine
 
 Réponds en JSON pur (pas de markdown):
 {
