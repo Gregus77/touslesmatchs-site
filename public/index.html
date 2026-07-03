@@ -1974,7 +1974,6 @@ function renderPick(){
     root.innerHTML=`<div style="text-align:left">
       <div id="nopick-cards" style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:20px"></div>
       <div id="nopick-yesterday"></div>
-      <div id="nopick-today"></div>
       <div id="nopick-feed"></div>
       <div style="text-align:center;margin-top:22px;padding:20px;background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(99,102,241,.06));border:1px solid rgba(212,175,55,.15);border-radius:14px">
         <div style="font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px">Recevez ces analyses en temps réel</div>
@@ -1986,7 +1985,7 @@ function renderPick(){
       </div>
     </div>`;
     fetch('/api/premium-teaser?t='+Date.now()).then(r=>r.json()).then(d=>{
-      if(!d.ok) return;
+      if(!d.ok){console.error('[premium-teaser] not ok',d);return;}
       const wr=d.allTime?.winrate||0;
       const wrColor=wr>=70?'#10b981':wr>=60?'#f59e0b':'#6366f1';
       const cardsEl=document.getElementById('nopick-cards');
@@ -2008,28 +2007,41 @@ function renderPick(){
         cardsEl.innerHTML=c;
       }
       const yEl=document.getElementById('nopick-yesterday');
-      if(yEl&&d.yesterday&&d.yesterday.total>0){
-        yEl.innerHTML=`<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);border-radius:10px;padding:12px 16px;margin-bottom:14px;text-align:center">
-          <span style="font-size:15px;font-weight:700;color:var(--gold)">Hier : ${d.yesterday.wins} gagné${d.yesterday.wins>1?'s':''} sur ${d.yesterday.total}</span>
-          ${d.yesterday.wins>=d.yesterday.total*0.7?'<span style="margin-left:6px">🔥</span>':''}
-        </div>`;
-      }
-      const tEl=document.getElementById('nopick-today');
-      if(tEl&&d.today_signals>0){
-        tEl.innerHTML=`<div style="background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:10px 16px;margin-bottom:14px;text-align:center">
-          <span style="font-size:13px;color:#818cf8;font-weight:600">📡 ${d.today_signals} alerte${d.today_signals>1?'s':''} envoyée${d.today_signals>1?'s':''} aujourd'hui aux membres</span>
-        </div>`;
+      if(yEl){
+        let banners='';
+        if(d.today_results&&d.today_results.total>0){
+          const tw=d.today_results.wins, tt=d.today_results.total;
+          banners+=`<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-align:center">
+            <span style="font-size:15px;font-weight:700;color:#818cf8">Aujourd'hui : ${tw} gagné${tw>1?'s':''} sur ${tt}</span>
+            ${tw>=tt*0.7?'<span style="margin-left:6px">🔥</span>':''}
+          </div>`;
+        }
+        if(d.yesterday&&d.yesterday.total>0){
+          const yw=d.yesterday.wins, yt=d.yesterday.total;
+          banners+=`<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-align:center">
+            <span style="font-size:15px;font-weight:700;color:var(--gold)">Hier : ${yw} gagné${yw>1?'s':''} sur ${yt}</span>
+            ${yw>=yt*0.7?'<span style="margin-left:6px">🔥</span>':''}
+          </div>`;
+        }
+        if(d.today_signals>0){
+          banners+=`<div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);border-radius:10px;padding:10px 16px;margin-bottom:10px;text-align:center">
+            <span style="font-size:13px;color:#818cf8;font-weight:600">📡 ${d.today_signals} alerte${d.today_signals>1?'s':''} envoyée${d.today_signals>1?'s':''} aujourd'hui aux membres</span>
+          </div>`;
+        }
+        yEl.innerHTML=banners;
       }
       const fEl=document.getElementById('nopick-feed');
       if(fEl&&d.recent&&d.recent.length>0){
-        let f=`<div style="font-size:12px;font-weight:700;color:var(--muted2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Derniers résultats vérifiés</div>`;
+        let f=`<div style="font-size:12px;font-weight:700;color:var(--muted2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Si vous étiez Premium, vous auriez eu :</div>`;
         f+=`<div style="display:flex;flex-direction:column;gap:6px">`;
-        d.recent.slice(0,7).forEach(r=>{
+        let totalGain=0;
+        d.recent.forEach(r=>{
           const isW=r.outcome==='win';
           const icon=isW?'✅':'❌';
           const bg=isW?'rgba(16,185,129,.06)':'rgba(244,63,94,.06)';
           const border=isW?'rgba(16,185,129,.15)':'rgba(244,63,94,.12)';
           const g=r.gain10||0;
+          totalGain+=g;
           const gainTxt=isW?`<span style="color:#10b981;font-weight:700;font-size:12px">+${g.toFixed(1)}€</span>`:`<span style="color:#f43f5e;font-weight:700;font-size:12px">${g}€</span>`;
           f+=`<div style="display:flex;align-items:center;gap:8px;background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 12px">
             <span style="font-size:16px;flex-shrink:0">${icon}</span>
@@ -2041,9 +2053,14 @@ function renderPick(){
           </div>`;
         });
         f+=`</div>`;
+        if(totalGain>0){
+          f+=`<div style="text-align:center;margin-top:12px;padding:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px">
+            <span style="font-size:14px;font-weight:700;color:#10b981">Bilan sur ces ${d.recent.length} analyses : +${totalGain.toFixed(1)}€ à 10€/mise</span>
+          </div>`;
+        }
         fEl.innerHTML=f;
       }
-    }).catch(()=>{});
+    }).catch(e=>{console.error('[premium-teaser] fetch error',e);});
     return;
   }
   if(!PICK.ia||!PICK.ia.length||!PICK.teamA||!PICK.teamB) return;

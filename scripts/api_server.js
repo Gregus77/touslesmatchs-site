@@ -5428,42 +5428,67 @@ app.get("/api/premium-teaser", (req, res) => {
     const threshold = getAdaptiveSignalThreshold();
     const today = new Date().toISOString().slice(0, 10);
     const todaySignals = db.prepare(`
-      SELECT COUNT(*) as count FROM concile_analyses
+      SELECT COUNT(DISTINCT home || '-' || away) as count FROM concile_analyses
       WHERE date(analysed_at) = ? AND confidence >= ?
     `).get(today, threshold);
     const last7 = db.prepare(`
       SELECT COUNT(*) as total,
         SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
         SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
-      FROM concile_analyses
-      WHERE confidence >= ? AND outcome IN ('win','loss')
-        AND analysed_at >= datetime('now', '-7 days')
+      FROM (
+        SELECT home, away, date(analysed_at) as d, outcome, MAX(confidence) as confidence
+        FROM concile_analyses
+        WHERE confidence >= ? AND outcome IN ('win','loss')
+          AND analysed_at >= datetime('now', '-7 days')
+        GROUP BY home, away, d
+      )
     `).get(threshold);
     const allTime = db.prepare(`
       SELECT COUNT(*) as total,
         SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
-      FROM concile_analyses
-      WHERE confidence >= ? AND outcome IN ('win','loss')
+      FROM (
+        SELECT home, away, date(analysed_at) as d, outcome, MAX(confidence) as confidence
+        FROM concile_analyses
+        WHERE confidence >= ? AND outcome IN ('win','loss')
+        GROUP BY home, away, d
+      )
     `).get(threshold);
     const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
     const avgCote = 1.55;
     const simGain = allTime.total > 0 ? Math.round((allTime.wins * 10 * avgCote) - (allTime.total * 10)) : 0;
     const recentResults = db.prepare(`
-      SELECT home, away, competition, outcome, confidence, best_bet,
-        final_score_home, final_score_away, sport, analysed_at
+      SELECT home, away, competition, outcome, MAX(confidence) as confidence, best_bet,
+        final_score_home, final_score_away, sport, MAX(analysed_at) as analysed_at
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
-      ORDER BY analysed_at DESC LIMIT 10
+      GROUP BY home, away, date(analysed_at)
+      ORDER BY analysed_at DESC LIMIT 15
     `).all(threshold);
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     const yesterdayStats = db.prepare(`
       SELECT COUNT(*) as total,
         SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
         SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
-      FROM concile_analyses
-      WHERE confidence >= ? AND outcome IN ('win','loss')
-        AND date(analysed_at) = ?
+      FROM (
+        SELECT home, away, outcome, MAX(confidence) as confidence
+        FROM concile_analyses
+        WHERE confidence >= ? AND outcome IN ('win','loss')
+          AND date(analysed_at) = ?
+        GROUP BY home, away
+      )
     `).get(threshold, yesterday);
+    const todayStats = db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM (
+        SELECT home, away, outcome, MAX(confidence) as confidence
+        FROM concile_analyses
+        WHERE confidence >= ? AND outcome IN ('win','loss')
+          AND date(analysed_at) = ?
+        GROUP BY home, away
+      )
+    `).get(threshold, today);
     res.json({
       ok: true,
       today_signals: todaySignals?.count || 0,
@@ -5471,6 +5496,7 @@ app.get("/api/premium-teaser", (req, res) => {
       allTime: { total: allTime?.total || 0, wins: allTime?.wins || 0, winrate },
       simulated_gain_10: simGain > 0 ? `+${simGain}€` : `${simGain}€`,
       simulated_gain_raw: simGain,
+      today_results: { total: todayStats?.total || 0, wins: todayStats?.wins || 0, losses: todayStats?.losses || 0 },
       yesterday: { total: yesterdayStats?.total || 0, wins: yesterdayStats?.wins || 0, losses: yesterdayStats?.losses || 0 },
       recent: recentResults.map(r => {
         const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
