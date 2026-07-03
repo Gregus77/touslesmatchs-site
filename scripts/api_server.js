@@ -5456,14 +5456,15 @@ app.get("/api/premium-teaser", (req, res) => {
     const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
     const avgCote = 1.55;
     const simGain = allTime.total > 0 ? Math.round((allTime.wins * 10 * avgCote) - (allTime.total * 10)) : 0;
-    const recentResults = db.prepare(`
+    const recentRaw = db.prepare(`
       SELECT home, away, competition, outcome, MAX(confidence) as confidence, best_bet,
         final_score_home, final_score_away, sport, MAX(analysed_at) as analysed_at
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
       GROUP BY home, away, date(analysed_at)
-      ORDER BY analysed_at DESC LIMIT 15
+      ORDER BY analysed_at DESC LIMIT 40
     `).all(threshold);
+    const recentResults = recentRaw.filter(r => !isLowTrustCompetition(r.competition)).slice(0, 15);
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     const yesterdayStats = db.prepare(`
       SELECT COUNT(*) as total,
