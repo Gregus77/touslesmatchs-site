@@ -1962,7 +1962,29 @@ function renderPick(){
   const root=document.getElementById('pick-root');
   if(!root) return;
   if(PICK.status==='no_bet'){
-    root.innerHTML=`<div class="no-bet"><div style="font-size:40px;margin-bottom:18px">🕐</div><div style="font-size:20px;font-weight:800;margin-bottom:10px">Prochain pick conseillé bientôt</div><div style="font-size:14px;color:var(--muted2);line-height:1.7">Rejoins le groupe Telegram pour recevoir les analyses en premier</div><div style="margin-top:16px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">📲 Rejoindre Telegram</a></div><div style="margin-top:12px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:13px">⚡ Voir l'analyse complète – 1 €</a></div></div>`;
+    root.innerHTML=`<div class="no-bet" id="nopick-premium-pitch">
+      <div style="font-size:40px;margin-bottom:18px">💎</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:10px">Les membres Premium reçoivent les alertes en temps réel</div>
+      <div id="nopick-stats" style="font-size:14px;color:var(--muted2);line-height:1.7">Chargement des statistiques...</div>
+      <div style="margin-top:20px;display:flex;flex-direction:column;align-items:center;gap:10px">
+        <a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">⚡ Débloquer 1 analyse – 1 €</a>
+        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:13px">📲 Ou rejoindre Telegram gratuitement</a>
+      </div>
+    </div>`;
+    fetch('/api/premium-teaser?t='+Date.now()).then(r=>r.json()).then(d=>{
+      if(!d.ok) return;
+      const el=document.getElementById('nopick-stats');
+      if(!el) return;
+      const lines=[];
+      if(d.today_signals>0) lines.push(`<div style="margin-bottom:8px">📡 <b style="color:var(--gold)">${d.today_signals} alerte${d.today_signals>1?'s':''}</b> envoyée${d.today_signals>1?'s':''} aujourd'hui aux membres Premium</div>`);
+      else lines.push(`<div style="margin-bottom:8px">📡 Les alertes Premium arrivent dès qu'Hermès détecte une opportunité</div>`);
+      if(d.week.total>0) lines.push(`<div style="margin-bottom:8px">📊 Cette semaine : <b style="color:#10b981">${d.week.wins} gagnés</b> sur ${d.week.total} signaux</div>`);
+      if(d.allTime.total>0){
+        lines.push(`<div style="margin-bottom:8px">🎯 Winrate global : <b style="color:#10b981">${d.allTime.winrate}%</b> sur ${d.allTime.total} analyses</div>`);
+        if(d.simulated_gain_100.startsWith('+')) lines.push(`<div style="margin-bottom:8px">💰 Simulation 10€/mise : <b style="color:#10b981">${d.simulated_gain_100}</b> de bénéfice</div>`);
+      }
+      el.innerHTML=lines.join('');
+    }).catch(()=>{});
     return;
   }
   if(!PICK.ia||!PICK.ia.length||!PICK.teamA||!PICK.teamB) return;
@@ -2715,7 +2737,7 @@ async function initPick(){
             </div>
           </div></div></div>`;
       } else {
-        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">🕐</div><div style="font-size:16px;font-weight:700">Prochain pick conseillé bientôt</div><div style="margin-top:12px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Rejoindre Telegram</a></div><div style="margin-top:8px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Analyse complète – 1 €</a></div></div>`;
+        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">💎</div><div style="font-size:16px;font-weight:700">Les membres Premium reçoivent les alertes en direct</div><div style="margin-top:12px"><a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⚡ Débloquer 1 analyse – 1 €</a></div><div style="margin-top:8px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:12px">📲 Ou rejoindre Telegram gratuitement</a></div></div>`;
       }
     }
   }

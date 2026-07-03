@@ -5074,6 +5074,39 @@ app.get("/admin/stats", (req, res) => {
   }
 });
 
+// ── Admin losing leagues analysis ─────────────────────────────────────────────
+app.get("/admin/losing-leagues", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.json({ ok: false, error: "Accès admin requis" });
+  try {
+    const rows = db.prepare(`
+      SELECT competition, country, sport,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss') AND competition != ''
+      GROUP BY competition
+      HAVING total >= 2
+      ORDER BY losses DESC, total DESC
+    `).all();
+    const leagues = rows.map(r => ({
+      competition: r.competition,
+      country: r.country,
+      sport: r.sport,
+      total: r.total,
+      wins: r.wins,
+      losses: r.losses,
+      winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : 0,
+      danger: r.total >= 3 && (r.wins / r.total) < 0.5,
+    }));
+    const dangerous = leagues.filter(l => l.danger);
+    res.json({ ok: true, leagues, dangerous, suggestion: dangerous.map(l => l.competition.toLowerCase()) });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Admin codes list ──────────────────────────────────────────────────────────
 app.get("/admin/codes", (req, res) => {
   const { email, code } = req.query;
@@ -5288,6 +5321,45 @@ app.get("/api/signal-fort-stats", (req, res) => {
     })),
     threshold: getAdaptiveSignalThreshold(),
   });
+});
+
+// ── Premium teaser stats — public endpoint for NOPICK sales pitch ─────────────
+app.get("/api/premium-teaser", (req, res) => {
+  try {
+    const threshold = getAdaptiveSignalThreshold();
+    const today = new Date().toISOString().slice(0, 10);
+    const todaySignals = db.prepare(`
+      SELECT COUNT(*) as count FROM concile_analyses
+      WHERE date(analysed_at) = ? AND confidence >= ?
+    `).get(today, threshold);
+    const last7 = db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE confidence >= ? AND outcome IN ('win','loss')
+        AND analysed_at >= datetime('now', '-7 days')
+    `).get(threshold);
+    const allTime = db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
+      FROM concile_analyses
+      WHERE confidence >= ? AND outcome IN ('win','loss')
+    `).get(threshold);
+    const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
+    const avgCote = 1.55;
+    const simGain = allTime.total > 0 ? Math.round((allTime.wins * 10 * avgCote) - (allTime.total * 10)) : 0;
+    res.json({
+      ok: true,
+      today_signals: todaySignals?.count || 0,
+      week: { total: last7?.total || 0, wins: last7?.wins || 0, losses: last7?.losses || 0 },
+      allTime: { total: allTime?.total || 0, wins: allTime?.wins || 0, winrate },
+      simulated_gain_100: simGain > 0 ? `+${simGain}€` : `${simGain}€`,
+      threshold,
+    });
+  } catch (e) {
+    res.json({ ok: true, today_signals: 0, week: { total: 0, wins: 0, losses: 0 }, allTime: { total: 0, wins: 0, winrate: 0 }, simulated_gain_100: "0€", threshold: 80 });
+  }
 });
 
 // ── Internal signal notify — strong signal email to premium subscribers ───────
