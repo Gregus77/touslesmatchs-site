@@ -3,7 +3,7 @@ const path = require("path");
 const https = require("https");
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "gregoryguyot.gg@gmail.com";
+const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 const ONLY_EMAIL = (process.env.ONLY_EMAIL || "").toLowerCase();
 

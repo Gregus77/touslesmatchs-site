@@ -1,19 +1,21 @@
 #!/bin/bash
-TOKEN=ODk4NjU0NDkwMjpBQUZkNkdrUktHUlBVSnBOZkdDNk9jSWNhM2lYN19EcGoyUQo=
-TOKEN=$(echo $TOKEN | base64 -d | tr -d '
-')
-CHAT_ID='-1003818884997'
+TOKEN="${HERMES_ADMIN_TLM_BOT}"
+if [ -z "$TOKEN" ]; then echo "HERMES_ADMIN_TLM_BOT not set"; exit 1; fi
+CHAT_ID="${TELEGRAM_ADMIN_CHAT_ID:--1003818884997}"
+ADMIN_ID="${TELEGRAM_ADMIN_USER_ID:-309921562}"
 OFFSET_FILE=/tmp/hpoff.txt
 [ -f $OFFSET_FILE ] && OFF="&offset=$(cat $OFFSET_FILE)" || OFF=''
 RESP=$(curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates?limit=5&timeout=5${OFF}")
 echo "$RESP" | python3 -c "
-import sys,json
+import sys,json,os
 d=json.load(sys.stdin)
+chat_id=os.environ.get('TELEGRAM_ADMIN_CHAT_ID','-1003818884997')
+admin_id=os.environ.get('TELEGRAM_ADMIN_USER_ID','309921562')
 for u in d.get('result',[]):
  m=u.get('message',{})
  c=m.get('chat',{})
  f=m.get('from',{})
- if str(c.get('id'))=='-1003818884997' and str(f.get('id'))=='309921562':
+ if str(c.get('id'))==chat_id and str(f.get('id'))==admin_id:
   open('/tmp/hermes_inbox.txt','w').write(m.get('text',''))
  open('/tmp/hpoff.txt','w').write(str(u.get('update_id',0)+1))
 "
