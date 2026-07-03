@@ -5550,7 +5550,6 @@ app.get("/signal-fort-stats", (req, res) => {
 // ── Premium teaser stats — public endpoint for NOPICK sales pitch ─────────────
 app.get("/premium-teaser", (req, res) => {
   try {
-    const threshold = getAdaptiveSignalThreshold();
     const today = new Date().toISOString().slice(0, 10);
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
@@ -5558,9 +5557,9 @@ app.get("/premium-teaser", (req, res) => {
       SELECT home, away, competition, outcome, confidence, best_bet,
         final_score_home, final_score_away, sport, analysed_at
       FROM concile_analyses
-      WHERE confidence >= ? AND outcome IN ('win','loss')
+      WHERE outcome IN ('win','loss')
       ORDER BY analysed_at DESC
-    `).all(threshold);
+    `).all();
 
     const deduped = [];
     const seen = new Set();
@@ -5594,12 +5593,9 @@ app.get("/premium-teaser", (req, res) => {
       return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
     }, 0);
 
-    const todaySignals = new Set(
-      db.prepare(`SELECT home || '-' || away as k FROM concile_analyses WHERE date(analysed_at) = ? AND confidence >= ?`).all(today, threshold)
-        .filter(r => !isLowTrustCompetition(r.k)).map(r => r.k)
-    ).size;
+    const todaySignals = todayRows.length;
 
-    const recentResults = deduped.slice(0, 15);
+    const recentResults = todayRows.length > 0 ? todayRows : deduped.slice(0, 20);
 
     res.json({
       ok: true,
@@ -5624,10 +5620,9 @@ app.get("/premium-teaser", (req, res) => {
           gain10,
         };
       }),
-      threshold,
     });
   } catch (e) {
-    res.json({ ok: true, today_signals: 0, week: { total: 0, wins: 0, losses: 0 }, allTime: { total: 0, wins: 0, winrate: 0 }, simulated_gain_10: "0€", simulated_gain_raw: 0, yesterday: { total: 0, wins: 0, losses: 0 }, recent: [], threshold: 80 });
+    res.json({ ok: true, today_signals: 0, week: { total: 0, wins: 0, losses: 0 }, allTime: { total: 0, wins: 0, winrate: 0 }, simulated_gain_10: "0€", simulated_gain_raw: 0, yesterday: { total: 0, wins: 0, losses: 0 }, recent: [], });
   }
 });
 

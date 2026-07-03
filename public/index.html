@@ -2053,11 +2053,13 @@ function renderPick(){
           </div>`;
         });
         f+=`</div>`;
-        if(totalGain>0){
-          f+=`<div style="text-align:center;margin-top:12px;padding:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px">
-            <span style="font-size:14px;font-weight:700;color:#10b981">Bilan sur ces ${d.recent.length} analyses : +${totalGain.toFixed(1)}€ à 10€/mise</span>
-          </div>`;
-        }
+        const bilanColor=totalGain>=0?'#10b981':'#f43f5e';
+        const bilanBg=totalGain>=0?'rgba(16,185,129,.08)':'rgba(244,63,94,.06)';
+        const bilanBorder=totalGain>=0?'rgba(16,185,129,.2)':'rgba(244,63,94,.15)';
+        const bilanSign=totalGain>=0?'+':'';
+        f+=`<div style="text-align:center;margin-top:12px;padding:10px;background:${bilanBg};border:1px solid ${bilanBorder};border-radius:10px">
+          <span style="font-size:14px;font-weight:700;color:${bilanColor}">Bilan sur ces ${d.recent.length} analyses : ${bilanSign}${totalGain.toFixed(1)}€ à 10€/mise</span>
+        </div>`;
         fEl.innerHTML=f;
       }
     }).catch(e=>{console.error('[premium-teaser] fetch error',e);});
