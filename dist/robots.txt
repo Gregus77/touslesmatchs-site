@@ -1,10 +1,3 @@
+# https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /api/*
-
-# Sitemap
-Sitemap: https://touslesmatchs.com/sitemap.xml
-
-# Crawl-delay pour être respectueux
-Crawl-delay: 2
+Disallow:

@@ -19,7 +19,7 @@ export default function Subscription() {
       name: "Premium",
       price: "9,90€",
       period: "/mois",
-      color: "#C9A227",
+      color: "#22C55E",
       features: [
         "10 analyses/jour",
         "Accès premium site",
@@ -28,7 +28,6 @@ export default function Subscription() {
       ],
       cta: "Choisir",
       priceId: process.env.REACT_APP_STRIPE_PRICE_PREMIUM,
-      recommended: true,
     },
     {
       name: "VIP",
@@ -46,19 +45,20 @@ export default function Subscription() {
       priceId: process.env.REACT_APP_STRIPE_PRICE_VIP,
     },
     {
-      name: "Elite",
+      name: "Club Elite",
       price: "29,90€",
       period: "/mois",
-      color: "#A78BFA",
+      color: "#C9A227",
       features: [
         "Analyses illimitées",
-        "Accès Elite complet",
-        "Canal Telegram Elite privé",
-        "API personnalisée",
-        "Support dédié",
+        "Toutes les sélections du Concile",
+        "Canal Telegram privé Club Elite",
+        "Accès prioritaire & support dédié",
+        "Cercle privé exclusif",
       ],
-      cta: "Choisir",
+      cta: "👑 Rejoindre",
       priceId: process.env.REACT_APP_STRIPE_PRICE_ELITE,
+      recommended: true,
     },
   ];
 
@@ -205,7 +205,7 @@ export default function Subscription() {
                   letterSpacing: "1px",
                 },
               },
-              "⭐ RECOMMANDÉ"
+              "⭐ Le plus populaire"
             ),
 
           // Plan name
