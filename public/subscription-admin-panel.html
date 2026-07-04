@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mission 002 — Subscription Engine Admin Panel</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+
+    h1 {
+      color: #1a73e8;
+      margin-bottom: 30px;
+      border-bottom: 2px solid #1a73e8;
+      padding-bottom: 10px;
+    }
+
+    h2 {
+      color: #1a73e8;
+      margin: 30px 0 15px 0;
+      font-size: 1.3em;
+    }
+
+    .section {
+      background: #f9f9f9;
+      border-left: 4px solid #1a73e8;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+
+    .form-group {
+      margin: 15px 0;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+      min-width: 120px;
+    }
+
+    input, select, textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: inherit;
+      flex: 1;
+      min-height: 40px;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #1557b0;
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 0.9em;
+    }
+
+    .visitor { background: #e8e8e8; color: #333; }
+    .pay-per-view { background: #fff3cd; color: #333; }
+    .essential { background: #d4edda; color: #155724; }
+    .elite { background: #d1ecf1; color: #0c5460; }
+
+    .active { background: #28a745; color: white; }
+    .expired { background: #dc3545; color: white; }
+    .cancelled { background: #6c757d; color: white; }
+    .suspended { background: #fd7e14; color: white; }
+    .pending { background: #ffc107; color: #333; }
+
+    .result {
+      background: #f0f0f0;
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 15px 0;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .error {
+      background: #fee;
+      color: #c33;
+      border: 1px solid #fcc;
+    }
+
+    .success {
+      background: #efe;
+      color: #3c3;
+      border: 1px solid #cfc;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #f0f0f0;
+      font-weight: 600;
+      color: #333;
+    }
+
+    tr:hover {
+      background: #f9f9f9;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+
+    .info-box {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 4px;
+      border-left: 4px solid #1a73e8;
+    }
+
+    .info-box strong {
+      display: block;
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 5px;
+    }
+
+    .info-box span {
+      display: block;
+      color: #333;
+      font-size: 1.2em;
+      font-weight: 600;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin: 20px 0;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .tab {
+      padding: 10px 20px;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: #1a73e8;
+    }
+
+    .tab.active {
+      color: #1a73e8;
+      border-bottom: 2px solid #1a73e8;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔧 Mission 002 — Subscription Engine Admin Panel</h1>
+
+    <!-- User Search -->
+    <div class="section">
+      <h2>🔍 Rechercher un utilisateur</h2>
+      <div class="form-group">
+        <label>Email:</label>
+        <input type="email" id="searchEmail" placeholder="user@example.com">
+        <button onclick="searchUser()">Rechercher</button>
+      </div>
+      <div id="searchResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- User Details -->
+    <div id="userPanel" style="display: none;">
+      <div class="section">
+        <h2>📊 Détails de l'abonnement</h2>
+        <div id="userDetails"></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('subscription')">Abonnement</button>
+        <button class="tab" onclick="switchTab('purchases')">Achats d'analyses</button>
+        <button class="tab" onclick="switchTab('history')">Historique</button>
+      </div>
+
+      <!-- Subscription Tab -->
+      <div id="subscription" class="tab-content active">
+        <div class="section">
+          <h2>📝 Modifier l'abonnement</h2>
+          <div class="form-group">
+            <label>Plan:</label>
+            <select id="newPlan">
+              <option value="VISITOR">VISITOR</option>
+              <option value="PAY_PER_VIEW">PAY_PER_VIEW</option>
+              <option value="ESSENTIAL">ESSENTIAL</option>
+              <option value="ELITE">ELITE</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Statut:</label>
+            <select id="newStatus">
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="EXPIRED">EXPIRED</option>
+              <option value="CANCELLED">CANCELLED</option>
+              <option value="SUSPENDED">SUSPENDED</option>
+              <option value="PENDING_PAYMENT">PENDING_PAYMENT</option>
+              <option value="REFUNDED">REFUNDED</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Raison:</label>
+            <input type="text" id="updateReason" placeholder="ex: admin upgrade, test">
+          </div>
+          <div class="form-group">
+            <label>Code admin:</label>
+            <input type="password" id="adminCode" placeholder="Entrez le code admin">
+          </div>
+          <button onclick="updateSubscription()">Mettre à jour</button>
+          <div id="updateResult" class="result" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- Purchases Tab -->
+      <div id="purchases" class="tab-content">
+        <div class="section">
+          <h2>💳 Enregistrer un achat d'analyse</h2>
+          <div class="form-group">
+            <label>ID Analyse:</label>
+            <input type="text" id="analysisId" placeholder="ex: match_20260704_001">
+          </div>
+          <div class="form-group">
+            <label>Match Key:</label>
+            <input type="text" id="matchKey" placeholder="ex: ligue1_20260704_psg_om">
+          </div>
+          <div class="form-group">
+            <label>Code admin:</label>
+            <input type="password" id="adminCodePurchase" placeholder="Entrez le code admin">
+          </div>
+          <button onclick="recordPurchase()">Enregistrer achat</button>
+          <div id="purchaseResult" class="result" style="display: none;"></div>
+
+          <h2>📜 Achats d'analyses</h2>
+          <div id="purchasesList"></div>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="history" class="tab-content">
+        <div class="section">
+          <h2>📈 Historique des changements d'abonnement</h2>
+          <div id="historyList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "";
+
+    async function searchUser() {
+      const email = document.getElementById("searchEmail").value.trim();
+      if (!email) {
+        alert("Veuillez entrer une email");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/api/user/${email}/access`);
+        const data = await response.json();
+
+        if (!data.ok) {
+          showResult("searchResult", `Erreur: ${data.error}`, "error");
+          document.getElementById("userPanel").style.display = "none";
+          return;
+        }
+
+        showUserDetails(data.access);
+        document.getElementById("userPanel").style.display = "block";
+      } catch (error) {
+        showResult("searchResult", `Erreur réseau: ${error.message}`, "error");
+      }
+    }
+
+    function showUserDetails(access) {
+      const html = `
+        <div class="info-grid">
+          <div class="info-box">
+            <strong>Email</strong>
+            <span>${access.email}</span>
+          </div>
+          <div class="info-box">
+            <strong>Plan</strong>
+            <span><span class="status-badge ${access.plan.toLowerCase()}">${access.plan}</span></span>
+          </div>
+          <div class="info-box">
+            <strong>Statut</strong>
+            <span><span class="status-badge ${access.subscription_status.toLowerCase()}">${access.subscription_status}</span></span>
+          </div>
+          <div class="info-box">
+            <strong>Analyses du jour</strong>
+            <span>${access.analyses_restantes_du_jour}/${access.droits.daily_limit || 0}</span>
+          </div>
+          <div class="info-box">
+            <strong>Analyses achetées</strong>
+            <span>${access.analyses_achetees}</span>
+          </div>
+          <div class="info-box">
+            <strong>Groupe Telegram</strong>
+            <span>${access.groupe_telegram || "N/A"}</span>
+          </div>
+          <div class="info-box">
+            <strong>Expiration</strong>
+            <span>${access.expiration ? `${access.jours_restants} jours` : "N/A"}</span>
+          </div>
+          <div class="info-box">
+            <strong>Statut</strong>
+            <span>${access.droits.is_active ? "✅ Actif" : "❌ Inactif"}</span>
+          </div>
+        </div>
+      `;
+      document.getElementById("userDetails").innerHTML = html;
+
+      // Load history
+      loadHistory(access.email);
+
+      // Update form defaults
+      document.getElementById("newPlan").value = access.plan;
+      document.getElementById("newStatus").value = access.subscription_status;
+    }
+
+    async function updateSubscription() {
+      const email = document.getElementById("searchEmail").value;
+      const plan = document.getElementById("newPlan").value;
+      const status = document.getElementById("newStatus").value;
+      const reason = document.getElementById("updateReason").value;
+      const code = document.getElementById("adminCode").value;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/subscription/update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            code,
+            target_email: email,
+            plan,
+            status,
+            reason: reason || "manual",
+          }),
+        });
+
+        const data = await response.json();
+        if (data.ok) {
+          showResult("updateResult", `✅ Abonnement mis à jour!\n${JSON.stringify(data.subscription, null, 2)}`, "success");
+          searchUser(); // Reload
+        } else {
+          showResult("updateResult", `❌ Erreur: ${data.error}`, "error");
+        }
+      } catch (error) {
+        showResult("updateResult", `❌ Erreur réseau: ${error.message}`, "error");
+      }
+    }
+
+    async function recordPurchase() {
+      const email = document.getElementById("searchEmail").value;
+      const analysisId = document.getElementById("analysisId").value;
+      const matchKey = document.getElementById("matchKey").value;
+      const code = document.getElementById("adminCodePurchase").value;
+
+      if (!analysisId || !matchKey) {
+        alert("Remplissez tous les champs");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/subscription/record-purchase`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            code,
+            target_email: email,
+            analysis_id: analysisId,
+            match_key: matchKey,
+          }),
+        });
+
+        const data = await response.json();
+        if (data.ok) {
+          showResult("purchaseResult", `✅ Achat enregistré!\n${JSON.stringify(data.purchase, null, 2)}`, "success");
+          loadHistory(email);
+        } else {
+          showResult("purchaseResult", `❌ Erreur: ${data.error}`, "error");
+        }
+      } catch (error) {
+        showResult("purchaseResult", `❌ Erreur réseau: ${error.message}`, "error");
+      }
+    }
+
+    async function loadHistory(email) {
+      const code = prompt("Code admin:");
+      if (!code) return;
+
+      try {
+        const response = await fetch(`${API_BASE}/admin/subscription/history/${email}?code=${code}`);
+        const data = await response.json();
+
+        if (!data.ok) {
+          document.getElementById("historyList").innerHTML = `<p style="color: red;">Erreur: ${data.error}</p>`;
+          return;
+        }
+
+        let html = "<h3>Changements d'abonnement</h3>";
+        if (data.subscription_history.history.length === 0) {
+          html += "<p>Aucun historique</p>";
+        } else {
+          html += "<table><thead><tr><th>Date</th><th>De</th><th>À</th><th>Raison</th></tr></thead><tbody>";
+          data.subscription_history.history.forEach(h => {
+            html += `<tr>
+              <td>${new Date(h.triggered_at).toLocaleString('fr-FR')}</td>
+              <td>${h.old_plan || h.old_status || "N/A"}</td>
+              <td>${h.new_plan || h.new_status || "N/A"}</td>
+              <td>${h.reason || "N/A"}</td>
+            </tr>`;
+          });
+          html += "</tbody></table>";
+        }
+
+        html += "<h3>Achats d'analyses</h3>";
+        if (data.purchase_history.purchases.length === 0) {
+          html += "<p>Aucun achat</p>";
+        } else {
+          html += "<table><thead><tr><th>Date</th><th>Analyse</th><th>Match</th><th>Montant</th><th>Statut</th></tr></thead><tbody>";
+          data.purchase_history.purchases.forEach(p => {
+            html += `<tr>
+              <td>${new Date(p.purchase_date).toLocaleString('fr-FR')}</td>
+              <td>${p.analysis_id}</td>
+              <td>${p.match_key}</td>
+              <td>${(p.amount / 100).toFixed(2)}€</td>
+              <td>${p.status}</td>
+            </tr>`;
+          });
+          html += "</tbody></table>";
+        }
+
+        document.getElementById("historyList").innerHTML = html;
+      } catch (error) {
+        document.getElementById("historyList").innerHTML = `<p style="color: red;">Erreur réseau: ${error.message}</p>`;
+      }
+    }
+
+    function showResult(elementId, message, type) {
+      const el = document.getElementById(elementId);
+      el.textContent = message;
+      el.className = `result ${type}`;
+      el.style.display = "block";
+    }
+
+    function switchTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll(".tab-content").forEach(tab => {
+        tab.classList.remove("active");
+      });
+      document.querySelectorAll(".tab").forEach(tab => {
+        tab.classList.remove("active");
+      });
+
+      // Show selected tab
+      document.getElementById(tabName).classList.add("active");
+      event.target.classList.add("active");
+    }
+  </script>
+</body>
+</html>

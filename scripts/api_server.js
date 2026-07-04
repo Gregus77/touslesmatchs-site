@@ -12,6 +12,7 @@ const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
+const SubscriptionEngine = require("./subscription-engine");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -27,6 +28,7 @@ app.use(cors());
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+const subscriptionEngine = new SubscriptionEngine(DB_PATH);
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -96,6 +98,63 @@ db.exec(`
     pick_bet TEXT DEFAULT NULL,
     outcome TEXT DEFAULT NULL
   );
+
+  -- Mission 002: Subscription Engine
+  CREATE TABLE IF NOT EXISTS subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE NOT NULL,
+    plan TEXT NOT NULL DEFAULT 'VISITOR',
+    subscription_status TEXT NOT NULL DEFAULT 'ACTIVE',
+    subscription_start_date TEXT,
+    subscription_end_date TEXT,
+    auto_renew BOOLEAN DEFAULT FALSE,
+    stripe_price_id TEXT,
+    stripe_subscription_id TEXT,
+    telegram_group_id TEXT,
+    telegram_group_name TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS analysis_purchases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    analysis_id TEXT NOT NULL,
+    match_key TEXT NOT NULL,
+    purchase_date TEXT DEFAULT (datetime('now')),
+    stripe_payment_id TEXT,
+    amount INTEGER NOT NULL,
+    currency TEXT DEFAULT 'EUR',
+    status TEXT DEFAULT 'completed',
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS subscription_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    old_plan TEXT,
+    new_plan TEXT,
+    old_status TEXT,
+    new_status TEXT,
+    reason TEXT,
+    details TEXT,
+    triggered_by TEXT,
+    triggered_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+`);
+
+// ── Mission 002: Subscription Engine — Create indexes ──
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_plan ON subscriptions(plan);
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(subscription_status);
+  CREATE INDEX IF NOT EXISTS idx_subscriptions_expiry ON subscriptions(subscription_end_date);
+  CREATE INDEX IF NOT EXISTS idx_analysis_purchases_user ON analysis_purchases(user_id);
+  CREATE INDEX IF NOT EXISTS idx_analysis_purchases_analysis ON analysis_purchases(analysis_id);
+  CREATE INDEX IF NOT EXISTS idx_subscription_history_user ON subscription_history(user_id);
+  CREATE INDEX IF NOT EXISTS idx_subscription_history_date ON subscription_history(triggered_at);
 `);
 
 function ensureColumn(table, column, definition) {
@@ -6951,6 +7010,175 @@ app.get("/admin/datahub-state", (req, res) => {
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
 // ===== End M009-M010 =====
+
+// ── Mission 002: Subscription Engine ──────────────────────────────────────────
+// GET /api/subscription/:email
+app.get("/api/subscription/:email", (req, res) => {
+  try {
+    const { email } = req.params;
+    if (!email) return res.status(400).json({ ok: false, error: "Email required" });
+
+    const sub = subscriptionEngine.getByEmail(email);
+    if (!sub) return res.status(404).json({ ok: false, error: "User or subscription not found" });
+
+    res.json({
+      ok: true,
+      subscription: sub,
+    });
+  } catch (e) {
+    console.error("[/api/subscription/:email] error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/user/:email/access - Full access details
+app.get("/api/user/:email/access", (req, res) => {
+  try {
+    const { email } = req.params;
+    if (!email) return res.status(400).json({ ok: false, error: "Email required" });
+
+    const sub = subscriptionEngine.getByEmail(email);
+    if (!sub) return res.status(404).json({ ok: false, error: "User or subscription not found" });
+
+    // Get purchase count
+    const purchases = db.prepare(
+      "SELECT COUNT(*) as count FROM analysis_purchases WHERE user_id = ? AND status = ?"
+    ).get(sub.user_id, "completed");
+
+    // Get subscription history
+    const history = subscriptionEngine.getSubscriptionHistory(sub.user_id, 5, 0);
+    const previousSubscription = history.history.length > 0 ? history.history[0] : null;
+
+    // Calculate days until expiration
+    let daysUntilExpiration = null;
+    if (sub.endDate) {
+      const now = new Date();
+      const endDate = new Date(sub.endDate);
+      const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+      daysUntilExpiration = diff > 0 ? diff : 0;
+    }
+
+    res.json({
+      ok: true,
+      access: {
+        email: email,
+        plan: sub.plan,
+        subscription_status: sub.status,
+        analyses_restantes_du_jour: Math.max(0, (sub.dailyLimit || 0) - sub.analysesToday),
+        analyses_achetees: sub.purchaseCount,
+        groupe_telegram: sub.telegramGroupName,
+        expiration: sub.endDate,
+        jours_restants: daysUntilExpiration,
+        droits: {
+          visitor: sub.plan === "VISITOR",
+          pay_per_view: sub.plan === "PAY_PER_VIEW",
+          essential: sub.plan === "ESSENTIAL",
+          elite: sub.plan === "ELITE",
+          is_active: sub.isActive,
+          daily_limit: sub.dailyLimit,
+        },
+        abonnement_precedent: previousSubscription ? {
+          plan: previousSubscription.old_plan,
+          status: previousSubscription.old_status,
+          date: previousSubscription.triggered_at,
+        } : null,
+      },
+    });
+  } catch (e) {
+    console.error("[/api/user/:email/access] error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Admin: Test subscription update (admin only)
+app.post("/admin/subscription/update", (req, res) => {
+  try {
+    const { email, code, plan, status, reason } = req.body;
+
+    // Check admin rights
+    if (!isAdmin(email, code)) {
+      return res.status(403).json({ ok: false, error: "Unauthorized" });
+    }
+
+    const targetEmail = req.body.target_email || email;
+    const userId = subscriptionEngine.getUserIdByEmail(targetEmail);
+    if (!userId) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const result = subscriptionEngine.updateSubscription(
+      userId,
+      plan,
+      status,
+      reason || "manual",
+      { admin: email }
+    );
+
+    res.json({ ok: true, subscription: result });
+  } catch (e) {
+    console.error("[/admin/subscription/update] error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Admin: Record analysis purchase (for testing)
+app.post("/admin/subscription/record-purchase", (req, res) => {
+  try {
+    const { email, code, target_email, analysis_id, match_key } = req.body;
+
+    if (!isAdmin(email, code)) {
+      return res.status(403).json({ ok: false, error: "Unauthorized" });
+    }
+
+    const userId = subscriptionEngine.getUserIdByEmail(target_email);
+    if (!userId) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const result = subscriptionEngine.recordAnalysisPurchase(
+      userId,
+      analysis_id || `test_${Date.now()}`,
+      match_key || "test_match",
+      `stripe_charge_test_${Date.now()}`,
+      100
+    );
+
+    res.json({ ok: true, purchase: result });
+  } catch (e) {
+    console.error("[/admin/subscription/record-purchase] error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Admin: Get user subscription history
+app.get("/admin/subscription/history/:email", (req, res) => {
+  try {
+    const { email } = req.params;
+    const { code } = req.query;
+
+    if (!isAdmin(email, code)) {
+      return res.status(403).json({ ok: false, error: "Unauthorized" });
+    }
+
+    const userId = subscriptionEngine.getUserIdByEmail(email);
+    if (!userId) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+
+    const history = subscriptionEngine.getSubscriptionHistory(userId, 50, 0);
+    const purchases = subscriptionEngine.getAnalysisPurchases(userId, 50, 0);
+
+    res.json({
+      ok: true,
+      email,
+      subscription_history: history,
+      purchase_history: purchases,
+    });
+  } catch (e) {
+    console.error("[/admin/subscription/history/:email] error:", e.message);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
 
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
