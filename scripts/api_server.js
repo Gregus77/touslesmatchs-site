@@ -6952,6 +6952,36 @@ app.get("/admin/datahub-state", (req, res) => {
 });
 // ===== End M009-M010 =====
 
+// ===== Brevo Dashboard endpoint =====
+app.get("/admin/brevo-status", async (req, res) => {
+  try {
+    const brevo = require("./brevo");
+    const health = await brevo.healthCheck();
+    const stats = brevo.getStats();
+    const lists = await brevo.getLists();
+    const contacts = await brevo.getContacts();
+    res.json({
+      ok: true,
+      brevo: {
+        api: health.ok ? "connected" : "error",
+        status: health.status,
+        response_ms: health.ms,
+        test_mode: stats.testMode,
+        calls_total: stats.calls,
+        errors_total: stats.errors,
+        last_call: stats.lastCall,
+        last_error: stats.lastError,
+        avg_ms: stats.avgMs,
+        lists: lists.ok ? (lists.data?.lists?.length || 0) : null,
+        contacts: contacts.ok ? (contacts.data?.contacts?.length || 0) : null,
+      }
+    });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+// ===== End Brevo =====
+
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     if (AUTO_CONCILE_OBSERVER) {
