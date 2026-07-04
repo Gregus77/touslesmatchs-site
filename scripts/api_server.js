@@ -195,6 +195,229 @@ db.exec(`
   );
 `);
 
+// ── Migration V2: League ratings + ANJ markets + Decision journal ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS league_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    league TEXT NOT NULL,
+    sport TEXT DEFAULT 'Football',
+    total_predictions INTEGER DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    winrate REAL DEFAULT 0,
+    roi REAL DEFAULT 0,
+    profit_loss REAL DEFAULT 0,
+    coefficient REAL DEFAULT 0.60,
+    class TEXT DEFAULT 'D',
+    avg_confidence REAL DEFAULT 0,
+    last_updated TEXT DEFAULT (datetime('now')),
+    UNIQUE(league, sport)
+  );
+  CREATE TABLE IF NOT EXISTS anj_markets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    competition TEXT NOT NULL UNIQUE,
+    sport TEXT DEFAULT 'Football',
+    available_in_france INTEGER DEFAULT 1,
+    markets_available TEXT DEFAULT '1X2,DoubleChance,OverUnder,BTTS',
+    bookmakers TEXT DEFAULT 'Winamax,Betclic,Unibet,PMU',
+    fr_verified INTEGER DEFAULT 0,
+    last_verified TEXT DEFAULT NULL
+  );
+  CREATE TABLE IF NOT EXISTS decision_journal (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    match_key TEXT DEFAULT '',
+    home TEXT DEFAULT '',
+    away TEXT DEFAULT '',
+    decision TEXT NOT NULL,
+    reason TEXT DEFAULT '',
+    score_final REAL DEFAULT 0,
+    seuil REAL DEFAULT 85,
+    score_ia REAL DEFAULT 0,
+    coefficient_ligue REAL DEFAULT 0,
+    coefficient_filtrage REAL DEFAULT 0,
+    plan TEXT DEFAULT 'free',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE TABLE IF NOT EXISTS agent_weights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_name TEXT NOT NULL UNIQUE,
+    weight REAL DEFAULT 1.0,
+    total_predictions INTEGER DEFAULT 0,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    winrate REAL DEFAULT 0,
+    roi REAL DEFAULT 0,
+    last_updated TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+// ── Initialise agent weights if empty ──
+try {
+  const agentCount = db.prepare("SELECT COUNT(*) as c FROM agent_weights").get().c;
+  if (agentCount === 0) {
+    const defaultAgents = ["GROQ-Llama", "GPT Analysis", "GeminiFlash", "Mistral-7B", "Claude Chief"];
+    const insert = db.prepare("INSERT OR IGNORE INTO agent_weights (agent_name, weight) VALUES (?, 1.0)");
+    for (const name of defaultAgents) insert.run(name);
+    console.log("[migration] Agent weights initialised with 5 agents");
+  }
+} catch(e) { console.error("[migration] agent_weights init:", e.message); }
+
+// ── Initialise ANJ markets if empty ──
+try {
+  const anjCount = db.prepare("SELECT COUNT(*) as c FROM anj_markets").get().c;
+  if (anjCount === 0) {
+    const anjComps = [
+      ["Premier League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Ligue 1", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["La Liga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Serie A", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Bundesliga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Champions League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Europa League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Serie B", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Betclic,Unibet"],
+      ["Championship", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Betclic"],
+      ["Liga Portugal", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Betclic,Unibet"],
+      ["Eredivisie", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Unibet,PMU"],
+      ["MLS", "Football", 0, "1X2,DoubleChance,OverUnder,BTTS", "Betclic"],
+      ["NHL", "Hockey", 0, "1X2,OverUnder", ""],
+      ["NBA", "Basketball", 0, "1X2,OverUnder", "Betclic"],
+    ];
+    const ins = db.prepare("INSERT OR IGNORE INTO anj_markets (competition, sport, available_in_france, markets_available, bookmakers) VALUES (?,?,?,?,?)");
+    for (const row of anjComps) ins.run(...row);
+    console.log("[migration] ANJ markets initialised");
+  }
+} catch(e) { console.error("[migration] ANJ init:", e.message); }
+
+// ── Update league ratings from concile_analyses ──
+// ── MISSION 005: Auto-refresh every 30 min ──
+function refreshAISpecialization() {
+  try {
+    const rows = db.prepare("SELECT agent_name, bet as market_line, COUNT(*) as total, SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins, SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses, ROUND(AVG(confidence),0) as avg_conf FROM agent_predictions WHERE outcome IS NOT NULL AND outcome != 'pending' GROUP BY agent_name, bet").all();
+    const upsert = db.prepare("INSERT INTO ai_market_specialization (agent_name, market_line, total, wins, losses, winrate, roi, avg_confidence, last_updated) VALUES (?,?,?,?,?,?,?,?,datetime('now')) ON CONFLICT(agent_name, market_line) DO UPDATE SET total=excluded.total, wins=excluded.wins, losses=excluded.losses, winrate=excluded.winrate, roi=excluded.roi, avg_confidence=excluded.avg_confidence, last_updated=excluded.last_updated");
+    for (const r of rows) {
+      const total = r.total||0; const wins = r.wins||0; const losses = r.losses||0;
+      upsert.run(r.agent_name, r.market_line, total, wins, losses, total>0?Math.round((wins/total)*10000)/100:0, total>0?Math.round(((wins-losses)/total)*10000)/100:0, r.avg_conf||0);
+    }
+  } catch(e) { console.error("[m005] ai_spec:", e.message); }
+}
+function refreshMonthlySnapshots() {
+  try {
+    const months = db.prepare("SELECT strftime('%Y',analysed_at) as y, strftime('%m',analysed_at) as m, COUNT(*) as t, SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as w, SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as l, ROUND(AVG(confidence),0) as ac FROM concile_analyses WHERE outcome IS NOT NULL AND outcome!='pending' AND analysed_at IS NOT NULL GROUP BY y,m").all();
+    const upsert = db.prepare("INSERT INTO monthly_snapshots (year,month,total_predictions,wins,losses,winrate,roi,avg_confidence,created_at) VALUES (?,?,?,?,?,?,?,?,datetime('now')) ON CONFLICT(year,month) DO UPDATE SET total_predictions=excluded.total_predictions,wins=excluded.wins,losses=excluded.losses,winrate=excluded.winrate,roi=excluded.roi,avg_confidence=excluded.avg_confidence,created_at=excluded.created_at");
+    for (const r of months) {
+      const t=r.t||0; const w=r.w||0; const l=r.l||0;
+      upsert.run(parseInt(r.y), parseInt(r.m), t, w, l, t>0?Math.round((w/t)*10000)/100:0, t>0?Math.round(((w-l)/t)*10000)/100:0, r.ac||0);
+    }
+  } catch(e) { console.error("[m005] snapshots:", e.message); }
+}
+function checkSystemAlerts() {
+  try {
+    const badA = db.prepare("SELECT agent_name,winrate FROM agent_weights WHERE total_predictions>=10 AND winrate<50").all();
+    for (const a of badA) {
+      if (!db.prepare("SELECT 1 FROM system_alerts WHERE type='agent_decline' AND affected_entity=? AND resolved=0").get(a.agent_name))
+        db.prepare("INSERT INTO system_alerts (type,severity,title,message,affected_entity) VALUES ('agent_decline','warning',?,?,?)").run("Agent en baisse: "+a.agent_name, a.agent_name+" winrate "+a.winrate+"%", a.agent_name);
+    }
+    const badL = db.prepare("SELECT league,winrate FROM league_ratings WHERE total_predictions>=10 AND winrate<45").all();
+    for (const l of badL) {
+      if (!db.prepare("SELECT 1 FROM system_alerts WHERE type='league_decline' AND affected_entity=? AND resolved=0").get(l.league))
+        db.prepare("INSERT INTO system_alerts (type,severity,title,message,affected_entity) VALUES ('league_decline','warning',?,?,?)").run("Ligue en baisse: "+l.league, l.league+" winrate "+l.winrate+"%", l.league);
+    }
+  } catch(e) { console.error("[m005] alerts:", e.message); }
+}
+refreshAISpecialization();
+refreshMonthlySnapshots();
+checkSystemAlerts();
+setInterval(refreshAISpecialization, 1800000);
+setInterval(refreshMonthlySnapshots, 1800000);
+setInterval(checkSystemAlerts, 1800000);
+
+function refreshLeagueRatings() {
+  try {
+    const leagues = db.prepare(`
+      SELECT competition as league, sport,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        ROUND(AVG(confidence), 0) as avg_conf
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY competition, sport
+    `).all();
+    const upsert = db.prepare(`
+      INSERT INTO league_ratings (league, sport, total_predictions, wins, losses, winrate, roi, avg_confidence, coefficient, class, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(league, sport) DO UPDATE SET
+        total_predictions=excluded.total_predictions, wins=excluded.wins, losses=excluded.losses,
+        winrate=excluded.winrate, roi=excluded.roi, avg_confidence=excluded.avg_confidence,
+        coefficient=excluded.coefficient, class=excluded.class, last_updated=excluded.last_updated
+    `);
+    for (const l of leagues) {
+      if (!l.league) continue;
+      const total = l.total || 0;
+      const wins = l.wins || 0;
+      const losses = l.losses || 0;
+      const winrate = total > 0 ? Math.round((wins / total) * 10000) / 100 : 0;
+      const roi = total > 0 ? Math.round(((wins - losses) / total) * 10000) / 100 : 0;
+      let cls = "E", coeff = 0.40;
+      if (total >= 100 && winrate >= 75 && roi >= 5) { cls = "A"; coeff = 1.00; }
+      else if (total >= 50 && winrate >= 65 && roi >= 0) { cls = "B"; coeff = 0.90; }
+      else if (total >= 20 && winrate >= 55) { cls = "C"; coeff = 0.75; }
+      else if (total >= 10 && winrate >= 40) { cls = "D"; coeff = 0.60; }
+      upsert.run(l.league, l.sport || "Football", total, wins, losses, winrate, roi, l.avg_conf || 0, coeff, cls);
+    }
+    console.log(`[migration] League ratings updated: ${leagues.length} leagues`);
+  } catch(e) { console.error("[migration] refreshLeagueRatings:", e.message); }
+}
+
+// ── Update agent weights from agent_predictions ──
+function refreshAgentWeights() {
+  try {
+    const agents = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM agent_predictions
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY agent_name
+    `).all();
+    const upsert = db.prepare(`
+      INSERT INTO agent_weights (agent_name, total_predictions, wins, losses, winrate, roi, weight, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(agent_name) DO UPDATE SET
+        total_predictions=excluded.total_predictions, wins=excluded.wins, losses=excluded.losses,
+        winrate=excluded.winrate, roi=excluded.roi,
+        weight=excluded.weight, last_updated=excluded.last_updated
+    `);
+    for (const a of agents) {
+      const total = a.total || 0;
+      const wins = a.wins || 0;
+      const losses = a.losses || 0;
+      const winrate = total > 0 ? Math.round((wins / total) * 10000) / 100 : 0;
+      const roi = total > 0 ? Math.round(((wins - losses) / total) * 10000) / 100 : 0;
+      // Calculate dynamic weight: base 1.0, adjusted by winrate
+      let weight = 1.0;
+      if (total >= 5) {
+        if (winrate >= 80) weight = 1.3;
+        else if (winrate >= 70) weight = 1.15;
+        else if (winrate >= 60) weight = 1.0;
+        else if (winrate >= 50) weight = 0.85;
+        else weight = 0.7;
+      }
+      upsert.run(a.agent_name, total, wins, losses, winrate, roi, weight);
+    }
+    console.log(`[migration] Agent weights updated: ${agents.length} agents`);
+  } catch(e) { console.error("[migration] refreshAgentWeights:", e.message); }
+}
+
+// ── Run initial refresh ──
+refreshLeagueRatings();
+refreshAgentWeights();
+// ── Auto-refresh every hour ──
+setInterval(refreshLeagueRatings, 3600000);
+setInterval(refreshAgentWeights, 3600000);
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.API_FOOTBALL_KEY || "";
@@ -720,7 +943,7 @@ function saveProofs(proofs) {
 let liveMatchesCache = { data: null, ts: 0 };
 const CACHE_TTL = 10 * 60 * 1000;
 
-const TOKEN_LIMITS = { free: 0, carte: 1, premium: 10, vip: 30, elite: 30 };
+const TOKEN_LIMITS = { free: 0, carte: 1, essentiel: 10, elite: 30 };
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 function authMiddleware(req, res, next) {
@@ -3538,6 +3761,106 @@ setInterval(() => _expirySentToday.clear(), 24 * 60 * 60 * 1000);
 // ══════════════════════════════════════════════════════════════════════════════
 // Routes
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ===== MOTEUR DE SCORING V2 =====
+
+// Configuration des seuils
+const SCORE_SEUIL_PUBLICATION = 85;
+const SCORE_SEUIL_FREE_ONLY = 65;
+const SCORE_NB_MATCHES_MIN = 10; // matchs minimum avant d'utiliser le coefficient ligue
+
+// Classes de ligues avec leurs coefficients
+const LEAGUE_CLASSES = {
+  A: { coefficient: 1.00, min_predictions: 100, min_winrate: 75, min_roi: 5, premium: true, label: "Tres fiable", emoji: "\uD83D\uDFE2" },
+  B: { coefficient: 0.90, min_predictions: 50, min_winrate: 65, min_roi: 0, premium: true, label: "Fiable", emoji: "\uD83D\uDFE2" },
+  C: { coefficient: 0.75, min_predictions: 20, min_winrate: 55, min_roi: -5, premium: true, label: "Moyenne", emoji: "\uD83D\uDFE1" },
+  D: { coefficient: 0.60, min_predictions: 10, min_winrate: 40, min_roi: -15, premium: false, label: "Risquee", emoji: "\uD83D\uDFE0" },
+  E: { coefficient: 0.40, min_predictions: 0, min_winrate: 0, min_roi: -99, premium: false, label: "A eviter", emoji: "\uD83D\uDD34" },
+};
+
+// Nom des ligues majeures fiables (coefficient forcé A)
+const MAJOR_LEAGUES = [
+  "premier league", "ligue 1", "laliga", "serie a", "bundesliga",
+  "champions league", "europa league", "conference league",
+  "nhl", "nba", "mlb",
+];
+
+// Calcule la classe d'une ligue à partir de ses stats
+function computeLeagueClass(total, wins, losses, roi) {
+  const winrate = total > 0 ? (wins / (wins + losses)) * 100 : 0;
+  if (total >= 100 && winrate >= 75 && roi >= 5) return "A";
+  if (total >= 50 && winrate >= 65 && roi >= 0) return "B";
+  if (total >= 20 && winrate >= 55) return "C";
+  if (total >= 10 && winrate >= 40) return "D";
+  return "E";
+}
+
+// Calcule le coefficient de fiabilité d'une ligue
+function getLeagueCoefficient(leagueName) {
+  const name = (leagueName || "").toLowerCase();
+  // Les ligues majeures sont toujours A
+  for (const ml of MAJOR_LEAGUES) {
+    if (name.includes(ml)) return LEAGUE_CLASSES.A;
+  }
+  // Charger les stats depuis agent_predictions
+  try {
+    const stats = db.prepare(
+      "SELECT COUNT(*) as total, SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins, " +
+      "SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses " +
+      "FROM agent_predictions WHERE home LIKE ? OR away LIKE ?"
+    ).all("%" + leagueName.split(" ")[0] + "%", "%" + leagueName.split(" ")[0] + "%");
+    if (stats.length > 0) {
+      const s = stats[0];
+      const cls = computeLeagueClass(s.total, s.wins, s.losses, 0);
+      return LEAGUE_CLASSES[cls] || LEAGUE_CLASSES.E;
+    }
+  } catch(e) { /* pas de stats */ }
+  // Si aucune donnée, classe D par défaut
+  return LEAGUE_CLASSES.D;
+}
+
+// Calcule le score final pondéré
+function computeWeightedScore(confidence, leagueName) {
+  // Score de base = confiance IA (0-100)
+  const baseScore = Math.min(100, Math.max(0, confidence || 70));
+  // Coefficient ligue
+  const league = getLeagueCoefficient(leagueName);
+  const coeff = league.coefficient;
+  // Score final = confiance * coefficient ligue
+  const finalScore = Math.round(baseScore * coeff);
+  const premium = league.premium && finalScore >= SCORE_SEUIL_PUBLICATION;
+  return {
+    baseScore,
+    coeff,
+    finalScore,
+    premium,
+    league,
+    publiable: finalScore >= SCORE_SEUIL_FREE_ONLY,
+    premiumOk: premium,
+    seuilAtteint: finalScore >= SCORE_SEUIL_PUBLICATION,
+  };
+}
+
+// Vérifie si un marché est disponible en France (ANJ)
+function isMarketAvailableInFrance(marketType, competition) {
+  // Marchés toujours disponibles en France
+  const frMarkets = ["1X2", "Double Chance", "Over/Under 2.5", "BTTS", "DNB"];
+  if (!frMarkets.includes(marketType)) return { available: false, reason: "Marche non disponible en France" };
+  // Compétitions autorisées en France
+  const frCompetitions = [
+    "ligue 1", "ligue 2", "premier league", "championship", "laliga", "serie a",
+    "serie b", "bundesliga", "2. bundesliga", "primeira liga", "eredivisie",
+    "champions league", "europa league", "conference league",
+    "mls", "nhl", "nba",
+  ];
+  const comp = (competition || "").toLowerCase();
+  for (const fc of frCompetitions) {
+    if (comp.includes(fc)) return { available: true, reason: "Disponible en France", badge: "\uD83C\uDDEB\uD83C\uDDF7" };
+  }
+  return { available: false, reason: "Non verifie", badge: "\u2753" };
+}
+
+// ===== FIN MOTEUR DE SCORING V2 =====
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
@@ -6372,7 +6695,264 @@ app.get("/admin/dashboard-data", (req, res) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  // ===== ENDPOINTS SCORING V2 =====
+app.get("/scoring/league-ratings", (req, res) => {
+  try {
+    const stats = db.prepare("SELECT * FROM league_ratings ORDER BY class ASC, winrate DESC").all();
+    res.json({ ok: true, leagues: stats || [] });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.get("/scoring/evaluate", (req, res) => {
+  try {
+    const { confidence, league } = req.query;
+    const score = computeWeightedScore(parseFloat(confidence || 0), league || "");
+    res.json({ ok: true, ...score });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.get("/scoring/market-check", (req, res) => {
+  try {
+    const { market, competition } = req.query;
+    const check = isMarketAvailableInFrance(market || "", competition || "");
+    res.json({ ok: true, ...check });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+// ===== FIN ENDPOINTS SCORING V2 =====
+
+// ===== ENDPOINTS ADMIN V2 =====
+
+// Dashboard stats - stats globales
+app.get("/admin/stats", (req, res) => {
+  try {
+    const total = db.prepare("SELECT COUNT(*) as c FROM concile_analyses").get().c;
+    const resolved = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE outcome IS NOT NULL AND outcome != 'pending'").get().c;
+    const wins = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE outcome='win'").get().c;
+    const losses = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE outcome='loss'").get().c;
+    const refused = db.prepare("SELECT COUNT(*) as c FROM decision_journal WHERE decision='refused'").get().c;
+    const premium = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE plan='premium' AND outcome IS NOT NULL").get().c;
+    const winrate = resolved > 0 ? Math.round((wins / resolved) * 10000) / 100 : 0;
+    const roi = resolved > 0 ? Math.round(((wins - losses) / resolved) * 10000) / 100 : 0;
+    res.json({
+      ok: true, total, resolved, wins, losses, refused, premium,
+      winrate, roi, profit_loss: wins - losses
+    });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// League ratings
+app.get("/admin/leagues", (req, res) => {
+  try {
+    const leagues = db.prepare("SELECT * FROM league_ratings ORDER BY class ASC, winrate DESC").all();
+    res.json({ ok: true, leagues });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Agent performance
+app.get("/admin/agents", (req, res) => {
+  try {
+    const agents = db.prepare("SELECT * FROM agent_weights ORDER BY weight DESC, winrate DESC").all();
+    res.json({ ok: true, agents });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Decision journal
+app.get("/admin/journal", (req, res) => {
+  try {
+    const limit = Math.min(100, parseInt(req.query.limit || 50));
+    const entries = db.prepare("SELECT * FROM decision_journal ORDER BY created_at DESC LIMIT ?").all(limit);
+    res.json({ ok: true, entries });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Market performance per bet type
+app.get("/admin/markets", (req, res) => {
+  try {
+    const markets = db.prepare(`
+      SELECT bet_category,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        ROUND(AVG(confidence), 0) as avg_confidence
+      FROM concile_analyses
+      WHERE bet_category IS NOT NULL AND outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY bet_category
+      ORDER BY total DESC
+    `).all();
+    res.json({ ok: true, markets });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Competition performance per league
+app.get("/admin/competitions", (req, res) => {
+  try {
+    const comps = db.prepare(`
+      SELECT competition,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        ROUND(AVG(confidence), 0) as avg_confidence
+      FROM concile_analyses
+      WHERE competition IS NOT NULL AND competition != '' AND outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY competition
+      ORDER BY total DESC
+      LIMIT 50
+    `).all();
+    res.json({ ok: true, competitions: comps });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// System health
+app.get("/admin/health", (req, res) => {
+  try {
+    const total = db.prepare("SELECT COUNT(*) as c FROM concile_analyses").get().c;
+    const resolved = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE outcome IS NOT NULL AND outcome != 'pending'").get().c;
+    const refused = db.prepare("SELECT COUNT(*) as c FROM decision_journal WHERE decision='refused'").get().c;
+    const wins = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE outcome='win'").get().c;
+    const losses = db.prepare("SELECT COUNT(*) as c FROM concile_analyses WHERE outcome='loss'").get().c;
+    const winrate = resolved > 0 ? Math.round((wins / resolved) * 10000) / 100 : 0;
+    const roi = resolved > 0 ? Math.round(((wins - losses) / resolved) * 10000) / 100 : 0;
+    const topAgent = db.prepare("SELECT agent_name, winrate FROM agent_weights WHERE total_predictions > 0 ORDER BY winrate DESC LIMIT 1").get();
+    const topLeague = db.prepare("SELECT league, winrate FROM league_ratings WHERE total_predictions > 0 ORDER BY winrate DESC LIMIT 1").get();
+    res.json({
+      ok: true, uptime: Math.round(process.uptime()),
+      total, resolved, refused, wins, losses,
+      winrate, roi, profit_loss: wins - losses,
+      top_agent: topAgent || null, top_league: topLeague || null
+    });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+// ===== MISSION 005 — Endpoints =====
+app.get("/admin/ai-specialization", (req, res) => {
+  try {
+    const data = db.prepare("SELECT * FROM ai_market_specialization ORDER BY total DESC LIMIT 100").all();
+    res.json({ ok: true, data });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+app.get("/admin/monthly-history", (req, res) => {
+  try {
+    const data = db.prepare("SELECT * FROM monthly_snapshots ORDER BY year DESC, month DESC").all();
+    res.json({ ok: true, data });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+app.get("/admin/alerts", (req, res) => {
+  try {
+    const data = db.prepare("SELECT * FROM system_alerts ORDER BY created_at DESC LIMIT 50").all();
+    res.json({ ok: true, data });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+// ===== End M005 =====
+
+// ===== FIN ENDPOINTS ADMIN V2 =====
+
+
+
+// ===== M007: Scheduler state endpoint =====
+app.get("/admin/scheduler-state", (req, res) => {
+  try {
+    const fs = require("fs");
+    let state = {};
+    try { state = JSON.parse(fs.readFileSync("/shared/scheduler_state.json", "utf8")); } catch(e) {}
+    // Get process info
+    let schedulerRunning = false;
+    try {
+      const r = require("child_process").execSync("systemctl is-active tlm-scheduler", {timeout: 3000}).toString().trim();
+      schedulerRunning = r === "active";
+    } catch(e) {}
+    const uptime = process.uptime();
+    res.json({
+      ok: true,
+      scheduler: {
+        active: schedulerRunning,
+        service: "tlm-scheduler",
+        auto_restart: true,
+        boot_enabled: true,
+        state: state
+      },
+      site_uptime: uptime
+    });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+// ===== End M007 =====
+
+// ===== M008: Data Guardian state =====
+app.get("/admin/guardian-state", (req, res) => {
+  try {
+    const fs = require("fs");
+    let state = {};
+    try { state = JSON.parse(fs.readFileSync("/shared/guardian_state.json", "utf8")); } catch(e) {}
+    let anomalies = [];
+    try { anomalies = JSON.parse(fs.readFileSync("/shared/anomalies.json", "utf8")); } catch(e) {}
+    let guardianRunning = false;
+    try {
+      const alive = fs.readFileSync("/shared/guardian_state.json", "utf8");
+      const parsed = JSON.parse(alive);
+      if (parsed.status === "running" || parsed.status === "healthy") guardianRunning = true;
+    } catch(e) {}
+    res.json({
+      ok: true, guardian: {
+        active: guardianRunning, state, anomalies: anomalies.slice(-10),
+        recent_anomalies: anomalies.filter(a => a.severity === "error" || a.severity === "critical").slice(-5)
+      }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+// ===== End M008 =====
+
+// ===== M009-M010: Data Hub state =====
+app.get("/admin/datahub-state", (req, res) => {
+  try {
+    const fs = require("fs");
+    let state = {};
+    try { state = JSON.parse(fs.readFileSync("/shared/datahub_state.json", "utf8")); } catch(e) {}
+    let hubRunning = false;
+    try {
+      const s = JSON.parse(fs.readFileSync("/shared/datahub_state.json", "utf8"));
+      hubRunning = (s.status === "running" || s.status === "healthy");
+    } catch(e) {}
+    res.json({
+      ok: true,
+      datahub: {
+        active: hubRunning,
+        failover_count: state.failover_count || 0,
+        current_source: state.source || "unknown",
+        api_sports_ok: state.api_sports_ok,
+        football_ok: state.football_ok,
+        api_sports_ms: state.api_sports_response_ms,
+        football_ms: state.football_response_ms,
+        last_sync: state.last_sync,
+        last_inconsistency: state.last_inconsistency || null,
+        both_down: state.both_down || false,
+        state: state
+      }
+    });
+  } catch(e) { res.json({ ok: false, error: e.message }); }
+});
+// ===== End M009-M010 =====
+
+app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     if (AUTO_CONCILE_OBSERVER) {
       console.log(`[auto-concile] enabled: every ${Math.round(AUTO_CONCILE_INTERVAL_MS / 60000)} min, max ${AUTO_CONCILE_MAX_MATCHES} match(es)`);
