@@ -3,14 +3,17 @@ import json
 from openai import OpenAI
 from prompts.agent_prompt import AGENT_SYSTEM_PROMPT, AGENT_USER_PROMPT_TEMPLATE
 
-NAME = "GPT-4o Mini"
+NAME = "DeepSeek"
 client = None
 
 
 def _get_client():
     global client
     if client is None:
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        client = OpenAI(
+            api_key=os.environ.get("DEEPSEEK_API_KEY"),
+            base_url="https://api.deepseek.com"
+        )
     return client
 
 
@@ -26,7 +29,7 @@ def analyze(date, matches_text, history_text, stats):
     )
     try:
         response = _get_client().chat.completions.create(
-            model="gpt-4o-mini",
+            model="deepseek-chat",
             messages=[
                 {"role": "system", "content": AGENT_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},

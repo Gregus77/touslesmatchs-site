@@ -5,11 +5,13 @@ www.touslesmatchs.com {
         reverse_proxy api:3001
     }
 
-    # Frontend React
-    root * /srv
-    file_server
-    try_files {path} /index.html
-    encode gzip
+    # Frontend statique
+    handle {
+        root * /srv
+        try_files {path} {path}.html /index.html
+        file_server
+        encode gzip
+    }
 }
 
 touslesmatchs.com {

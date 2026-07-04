@@ -1,11 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const https = require("https");
-
-const BREVO_API_KEY = process.env.BREVO_API_KEY;
-const SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "gregoryguyot.gg@gmail.com";
-const SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
-const ONLY_EMAIL = (process.env.ONLY_EMAIL || "").toLowerCase();
+const brevo = require("./brevo");
 
 const LEADS_FILE = path.join(__dirname, "..", "data", "leads.json");
 const SUBSCRIBERS_FILE = path.join(__dirname, "..", "data", "subscribers.json");
@@ -88,7 +83,7 @@ function pickNextEmail(lead) {
   return sequence.find(step => age >= step.minDays && !lead[step.sentField]);
 }
 
-function emailPayload(email, step) {
+function buildEmailContent(email, step) {
   const htmlContent = `
     <div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#111;line-height:1.6">
       <h1>${step.title}</h1>
@@ -112,50 +107,12 @@ function emailPayload(email, step) {
     </div>
   `;
 
-  return {
-    sender: { email: SENDER_EMAIL, name: SENDER_NAME },
-    to: [{ email }],
-    subject: step.subject,
-    htmlContent,
-    textContent: `${step.title}\n\n${step.subject}\n\nPremium : ${PREMIUM_URL}\nFree : ${FREE_TELEGRAM_URL}\n\n18+ uniquement. Aucun gain garanti.`
-  };
-}
+  const textContent = `${step.title}\n\n${step.subject}\n\nPremium : ${PREMIUM_URL}\nFree : ${FREE_TELEGRAM_URL}\n\n18+ uniquement. Aucun gain garanti.`;
 
-function brevoPost(payload) {
-  return new Promise((resolve, reject) => {
-    const body = JSON.stringify(payload);
-
-    const req = https.request({
-      hostname: "api.brevo.com",
-      path: "/v3/smtp/email",
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json",
-        "content-length": Buffer.byteLength(body)
-      }
-    }, res => {
-      let data = "";
-      res.on("data", c => data += c);
-      res.on("end", () => {
-        let parsed = {};
-        try { parsed = JSON.parse(data); } catch(e) { parsed = { raw: data }; }
-
-        if (res.statusCode >= 200 && res.statusCode < 300) resolve(parsed);
-        else reject(new Error(`Brevo ${res.statusCode}: ${JSON.stringify(parsed)}`));
-      });
-    });
-
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
+  return { htmlContent, textContent };
 }
 
 async function main() {
-  if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
-
   const data = readJson(LEADS_FILE, { leads: [] });
   const paid = activeSubscriberEmails();
 
@@ -166,7 +123,7 @@ async function main() {
     const email = String(lead.email || "").toLowerCase();
     if (!email) continue;
 
-    if (ONLY_EMAIL && email !== ONLY_EMAIL) {
+    if (brevo.TEST_MODE && email !== brevo.ONLY_EMAIL.toLowerCase()) {
       skipped++;
       continue;
     }
@@ -183,18 +140,24 @@ async function main() {
       continue;
     }
 
-    const result = await brevoPost(emailPayload(email, step));
+    try {
+      const content = buildEmailContent(email, step);
+      const result = await brevo.sendEmail(email, step.subject, content.htmlContent, content.textContent);
 
-    lead[step.sentField] = new Date().toISOString();
-    lead[`email_${step.key}_status`] = "sent";
-    lead[`email_${step.key}_brevo_message_id`] = result.messageId || null;
-    lead.last_sequence_email = step.key;
+      lead[step.sentField] = new Date().toISOString();
+      lead[`email_${step.key}_status`] = "sent";
+      lead[`email_${step.key}_brevo_message_id`] = result.messageId || null;
+      lead.last_sequence_email = step.key;
 
-    sent++;
+      sent++;
+    } catch (err) {
+      console.error(`Erreur envoi sequence email ${email}: ${err.message}`);
+      skipped++;
+    }
   }
 
   fs.writeFileSync(LEADS_FILE, JSON.stringify(data, null, 2));
-  console.log(`OK - sequence emails envoyés: ${sent}, ignorés: ${skipped}`);
+  console.log(`OK - sequence emails envoyés: ${sent}, ignorés: ${skipped}` + (brevo.TEST_MODE ? ` (mode test: ${brevo.ONLY_EMAIL})` : ""));
 }
 
 main().catch(err => {

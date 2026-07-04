@@ -1,188 +1,568 @@
 import os
 import requests
-import json
+import time
 from datetime import datetime
 
-SPORTS_API_KEY = os.environ.get("SPORTS_API_KEY", "")
-SPORTS_API_HOST = os.environ.get("SPORTS_API_HOST", "v3.football.api-sports.io")
-SPORTS_API_PROVIDER = os.environ.get("SPORTS_API_PROVIDER", "api-football")
+API_KEY = os.environ.get("API_FOOTBALL_KEY") or os.environ.get("SPORTS_API_KEY", "")
+
+# ── Football ─────────────────────────────────────────────────────────────────
+FOOTBALL_HOST = "v3.football.api-sports.io"
+
+ALLOWED_LEAGUES = {
+    61, 62,       # Ligue 1, Ligue 2
+    39, 40,       # Premier League, Championship
+    140,          # La Liga
+    78,           # Bundesliga
+    135,          # Serie A
+    88,           # Eredivisie
+    144,          # Pro League (Belgique)
+    94,           # Liga Portugal
+    203,          # Super Lig (Turquie)
+    2, 3, 848,    # Champions League, Europa League, Conference League
+    4,            # Euro (Coupe du Monde exclue)
+    253, 262,     # MLS, Liga MX
+    13,           # Copa Libertadores
+    169,          # Chinese Super League
+    98,           # J1 League (Japon)
+    292,          # K League 1 (Corée du Sud)
+    636,          # Canadian Premier League
+    188,          # USL Championship (USA D2)
+    254,          # NWSL (USA femmes)
+    480,          # A-League (Australie)
+    399,          # Australia Cup
+}
+
+# ── Basketball ───────────────────────────────────────────────────────────────
+BASKETBALL_HOST = "v1.basketball.api-sports.io"
+ALLOWED_BASKETBALL_LEAGUES = {
+    12,   # NBA
+    120,  # Euroligue
+    116,  # NBL (Australie)
+}
+
+# ── Hockey ───────────────────────────────────────────────────────────────────
+HOCKEY_HOST = "v1.hockey.api-sports.io"
+ALLOWED_HOCKEY_LEAGUES = {
+    57,   # NHL
+    50,   # KHL
+    64,   # AHL (USA/Canada D2)
+}
+
+# ── Baseball ─────────────────────────────────────────────────────────────────
+BASEBALL_HOST = "v1.baseball.api-sports.io"
+ALLOWED_BASEBALL_LEAGUES = {
+    1,    # MLB
+}
+
+# ── Tennis ───────────────────────────────────────────────────────────────────
+TENNIS_HOST = "v1.tennis.api-sports.io"
+
+_last_call = 0
 
 
-def get_todays_matches():
-    """Fetch today's matches from the configured sports API."""
-    today = datetime.now().strftime("%Y-%m-%d")
-    provider = SPORTS_API_PROVIDER.lower()
+def _api_get(host, endpoint, params=None):
+    global _last_call
+    elapsed = time.time() - _last_call
+    if elapsed < 0.25:
+        time.sleep(0.25 - elapsed)
+    _last_call = time.time()
 
-    if provider == "api-football":
-        return _fetch_api_football(today)
-    elif provider == "thesportsdb":
-        return _fetch_thesportsdb(today)
-    elif provider == "odds-api":
-        return _fetch_odds_api(today)
-    else:
-        return _fetch_api_football(today)
-
-
-def _fetch_api_football(date):
-    url = f"https://{SPORTS_API_HOST}/fixtures"
-    headers = {
-        "x-rapidapi-key": SPORTS_API_KEY,
-        "x-rapidapi-host": SPORTS_API_HOST,
-    }
-    params = {"date": date, "status": "NS", "timezone": "Europe/Paris"}
+    url = f"https://{host}/{endpoint}"
+    headers = {"x-apisports-key": API_KEY}
     try:
-        resp = requests.get(url, headers=headers, params=params, timeout=15)
+        resp = requests.get(url, headers=headers, params=params or {}, timeout=15)
         resp.raise_for_status()
-        data = resp.json()
-        matches = []
-        for f in data.get("response", []):
-            fixture = f.get("fixture", {})
-            teams = f.get("teams", {})
-            league = f.get("league", {})
-            odds = _get_odds_api_football(fixture.get("id"))
-            matches.append({
-                "id": fixture.get("id"),
-                "date": fixture.get("date"),
-                "home": teams.get("home", {}).get("name"),
-                "away": teams.get("away", {}).get("name"),
-                "league": league.get("name"),
-                "country": league.get("country"),
-                "sport": "Foot",
-                "odds": odds,
-                "status": fixture.get("status", {}).get("short"),
-            })
-        return matches
+        return resp.json().get("response", [])
     except Exception as e:
-        print(f"[SportsAPI] Error fetching API-Football: {e}")
-        return _get_fallback_matches()
+        print(f"[API-Sports] Error on {host}/{endpoint}: {e}")
+        return []
 
 
-def _get_odds_api_football(fixture_id):
+def _football_api_get(endpoint, params=None):
+    return _api_get(FOOTBALL_HOST, endpoint, params)
+
+
+# ── Football matches ─────────────────────────────────────────────────────────
+def _get_football_matches(today):
+    fixtures = _football_api_get("fixtures", {"date": today, "status": "NS", "timezone": "Europe/Paris"})
+    if not fixtures:
+        print(f"[Football] Aucun match NS pour {today}")
+        return []
+
+    total = len(fixtures)
+    fixtures = [f for f in fixtures if f.get("league", {}).get("id") in ALLOWED_LEAGUES]
+    print(f"[Football] {len(fixtures)} matchs dans les ligues autorisees (sur {total} total)")
+
+    matches = []
+    for f in fixtures:
+        fixture = f.get("fixture", {})
+        teams = f.get("teams", {})
+        league = f.get("league", {})
+
+        home_name = teams.get("home", {}).get("name", "?")
+        away_name = teams.get("away", {}).get("name", "?")
+        home_id = teams.get("home", {}).get("id")
+        away_id = teams.get("away", {}).get("id")
+        fixture_id = fixture.get("id")
+        league_id = league.get("id")
+
+        odds = _get_match_odds(fixture_id)
+        h2h = _get_h2h(home_id, away_id)
+        home_form = _get_team_form(home_id, league_id)
+        away_form = _get_team_form(away_id, league_id)
+        home_stats = _get_team_stats(home_id, league_id)
+        away_stats = _get_team_stats(away_id, league_id)
+        standings = _get_league_standings(league_id)
+
+        matches.append({
+            "id": fixture_id,
+            "date": fixture.get("date"),
+            "home": home_name,
+            "away": away_name,
+            "home_id": home_id,
+            "away_id": away_id,
+            "league": league.get("name"),
+            "league_id": league_id,
+            "country": league.get("country"),
+            "sport": "Foot",
+            "odds": odds,
+            "h2h": h2h,
+            "home_form": home_form,
+            "away_form": away_form,
+            "home_stats": home_stats,
+            "away_stats": away_stats,
+            "home_standing": _format_standing(home_id, standings),
+            "away_standing": _format_standing(away_id, standings),
+            "h2h_goals": _format_h2h_goals(h2h),
+            "status": fixture.get("status", {}).get("short"),
+        })
+
+    print(f"[Football] {len(matches)} matchs enrichis")
+    return matches
+
+
+# ── Basketball matches ───────────────────────────────────────────────────────
+def _get_basketball_matches(today):
+    data = _api_get(BASKETBALL_HOST, "games", {"date": today})
+    if not data:
+        return []
+
+    games = [g for g in data
+             if g.get("league", {}).get("id") in ALLOWED_BASKETBALL_LEAGUES
+             and g.get("status", {}).get("short") == "NS"]
+    print(f"[Basketball] {len(games)} matchs NBA/Euroligue")
+
+    matches = []
+    for g in games:
+        teams = g.get("teams", {})
+        league = g.get("league", {})
+        matches.append({
+            "id": f"bk-{g.get('id')}",
+            "date": g.get("date"),
+            "home": teams.get("home", {}).get("name", "?"),
+            "away": teams.get("away", {}).get("name", "?"),
+            "league": league.get("name", "Basketball"),
+            "country": league.get("country", {}).get("name", "") if isinstance(league.get("country"), dict) else str(league.get("country", "")),
+            "sport": "Basketball",
+            "odds": {},
+            "h2h": "",
+            "home_form": "",
+            "away_form": "",
+            "home_stats": "",
+            "away_stats": "",
+        })
+    return matches
+
+
+# ── Hockey matches ───────────────────────────────────────────────────────────
+def _get_hockey_matches(today):
+    data = _api_get(HOCKEY_HOST, "games", {"date": today})
+    if not data:
+        return []
+
+    games = [g for g in data
+             if g.get("league", {}).get("id") in ALLOWED_HOCKEY_LEAGUES
+             and g.get("status", {}).get("short") == "NS"]
+    print(f"[Hockey] {len(games)} matchs NHL/KHL")
+
+    matches = []
+    for g in games:
+        teams = g.get("teams", {})
+        league = g.get("league", {})
+        matches.append({
+            "id": f"hk-{g.get('id')}",
+            "date": g.get("date"),
+            "home": teams.get("home", {}).get("name", "?"),
+            "away": teams.get("away", {}).get("name", "?"),
+            "league": league.get("name", "Hockey"),
+            "country": league.get("country") or "",
+            "sport": "Hockey",
+            "odds": {},
+            "h2h": "",
+            "home_form": "",
+            "away_form": "",
+            "home_stats": "",
+            "away_stats": "",
+        })
+    return matches
+
+
+# ── Baseball matches ─────────────────────────────────────────────────────────
+def _get_baseball_matches(today):
+    data = _api_get(BASEBALL_HOST, "games", {"date": today})
+    if not data:
+        return []
+
+    games = [g for g in data
+             if g.get("league", {}).get("id") in ALLOWED_BASEBALL_LEAGUES
+             and g.get("status", {}).get("short") == "NS"]
+    print(f"[Baseball] {len(games)} matchs MLB")
+
+    matches = []
+    for g in games:
+        teams = g.get("teams", {})
+        league = g.get("league", {})
+        matches.append({
+            "id": f"bb-{g.get('id')}",
+            "date": g.get("date"),
+            "home": teams.get("home", {}).get("name", "?"),
+            "away": teams.get("away", {}).get("name", "?"),
+            "league": league.get("name", "MLB"),
+            "country": "USA",
+            "sport": "Baseball",
+            "odds": {},
+            "h2h": "",
+            "home_form": "",
+            "away_form": "",
+            "home_stats": "",
+            "away_stats": "",
+        })
+    return matches
+
+
+# ── Tennis matches (ATP only) ────────────────────────────────────────────────
+def _get_tennis_matches(today):
+    data = _api_get(TENNIS_HOST, "games", {"date": today})
+    if not data:
+        return []
+
+    games = [g for g in data
+             if "atp" in str(g.get("league", {}).get("name", "")).lower()
+             and "wta" not in str(g.get("league", {}).get("name", "")).lower()
+             and g.get("status", {}).get("short") == "NS"]
+    print(f"[Tennis] {len(games)} matchs ATP")
+
+    matches = []
+    for g in games:
+        players = g.get("players", g.get("teams", {}))
+        league = g.get("league", {})
+        matches.append({
+            "id": f"tn-{g.get('id')}",
+            "date": g.get("date"),
+            "home": players.get("home", {}).get("name", "?"),
+            "away": players.get("away", {}).get("name", "?"),
+            "league": league.get("name", "ATP"),
+            "country": league.get("country") or "",
+            "sport": "Tennis",
+            "odds": {},
+            "h2h": "",
+            "home_form": "",
+            "away_form": "",
+            "home_stats": "",
+            "away_stats": "",
+        })
+    return matches
+
+
+# ── Main entry point ─────────────────────────────────────────────────────────
+def get_todays_matches():
+    if not API_KEY:
+        print("[API-Sports] API_FOOTBALL_KEY manquant!")
+        return []
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    all_matches = []
+
+    all_matches.extend(_get_football_matches(today))
+
+    for fetcher, sport in [
+        (_get_basketball_matches, "Basketball"),
+        (_get_hockey_matches, "Hockey"),
+        (_get_baseball_matches, "Baseball"),
+        (_get_tennis_matches, "Tennis"),
+    ]:
+        try:
+            all_matches.extend(fetcher(today))
+        except Exception as e:
+            print(f"[{sport}] Erreur: {e}")
+
+    print(f"[API-Sports] Total: {len(all_matches)} matchs multi-sport")
+    return all_matches
+
+
+# ── Football enrichment helpers (unchanged) ──────────────────────────────────
+def _get_match_odds(fixture_id):
     if not fixture_id:
         return {}
-    url = f"https://{SPORTS_API_HOST}/odds"
-    headers = {
-        "x-rapidapi-key": SPORTS_API_KEY,
-        "x-rapidapi-host": SPORTS_API_HOST,
-    }
-    params = {"fixture": fixture_id}
+    data = _football_api_get("odds", {"fixture": fixture_id})
+    if not data:
+        return {}
     try:
-        resp = requests.get(url, headers=headers, params=params, timeout=10)
-        data = resp.json()
-        bookmakers = data.get("response", [{}])
-        if bookmakers and bookmakers[0].get("bookmakers"):
-            bets = bookmakers[0]["bookmakers"][0].get("bets", [])
-            for bet in bets:
+        bookmakers = data[0].get("bookmakers", [])
+        if not bookmakers:
+            return {}
+        for bk in bookmakers:
+            for bet in bk.get("bets", []):
                 if bet.get("name") == "Match Winner":
                     values = {v["value"]: v["odd"] for v in bet.get("values", [])}
                     return {
                         "home_win": values.get("Home"),
                         "draw": values.get("Draw"),
                         "away_win": values.get("Away"),
+                        "bookmaker": bk.get("name"),
                     }
-    except Exception:
+    except (IndexError, KeyError):
         pass
     return {}
 
 
-def _fetch_thesportsdb(date):
-    """TheSportsDB free tier."""
-    url = f"https://www.thesportsdb.com/api/v1/json/3/eventsday.php"
-    params = {"d": date, "s": "Soccer"}
+def _get_h2h(home_id, away_id):
+    if not home_id or not away_id:
+        return ""
+    data = _football_api_get("fixtures/headtohead", {"h2h": f"{home_id}-{away_id}", "last": 5})
+    if not data:
+        return "Aucun H2H disponible."
+    lines = []
+    home_wins = 0
+    away_wins = 0
+    draws = 0
+    for f in data:
+        teams = f.get("teams", {})
+        goals = f.get("goals", {})
+        h = goals.get("home", 0)
+        a = goals.get("away", 0)
+        home_t = teams.get("home", {}).get("name", "?")
+        away_t = teams.get("away", {}).get("name", "?")
+        date = f.get("fixture", {}).get("date", "")[:10]
+        lines.append(f"  {date}: {home_t} {h}-{a} {away_t}")
+        if h > a:
+            if teams.get("home", {}).get("id") == home_id:
+                home_wins += 1
+            else:
+                away_wins += 1
+        elif a > h:
+            if teams.get("away", {}).get("id") == away_id:
+                away_wins += 1
+            else:
+                home_wins += 1
+        else:
+            draws += 1
+    summary = f"H2H (5 derniers): {home_wins}V dom / {draws}N / {away_wins}V ext"
+    return summary + "\n" + "\n".join(lines)
+
+
+def _get_team_form(team_id, league_id):
+    if not team_id:
+        return ""
+    params = {"team": team_id, "last": 5}
+    if league_id:
+        params["league"] = league_id
+    data = _football_api_get("fixtures", params)
+    if not data:
+        return "Forme inconnue"
+    results = []
+    goals_for = 0
+    goals_against = 0
+    for f in data:
+        teams = f.get("teams", {})
+        goals = f.get("goals", {})
+        is_home = teams.get("home", {}).get("id") == team_id
+        gf = goals.get("home", 0) if is_home else goals.get("away", 0)
+        ga = goals.get("away", 0) if is_home else goals.get("home", 0)
+        goals_for += gf or 0
+        goals_against += ga or 0
+        if gf is not None and ga is not None:
+            if gf > ga:
+                results.append("V")
+            elif gf < ga:
+                results.append("D")
+            else:
+                results.append("N")
+    form_str = "".join(results)
+    return f"Forme: {form_str} | Buts: {goals_for} marques, {goals_against} encaisses (5 matchs)"
+
+
+def _get_team_stats(team_id, league_id):
+    if not team_id or not league_id:
+        return ""
+    season = datetime.now().year
+    data = _football_api_get("teams/statistics", {"team": team_id, "league": league_id, "season": season})
+    if not data:
+        data = _football_api_get("teams/statistics", {"team": team_id, "league": league_id, "season": season - 1})
+    if not data:
+        return ""
     try:
-        resp = requests.get(url, params=params, timeout=15)
-        data = resp.json()
-        matches = []
-        for event in (data.get("events") or []):
-            matches.append({
-                "id": event.get("idEvent"),
-                "date": event.get("dateEvent"),
-                "home": event.get("strHomeTeam"),
-                "away": event.get("strAwayTeam"),
-                "league": event.get("strLeague"),
-                "country": event.get("strCountry"),
-                "sport": event.get("strSport", "Foot"),
-                "odds": {},
-                "status": "NS",
-            })
-        return matches
-    except Exception as e:
-        print(f"[SportsAPI] TheSportsDB error: {e}")
-        return _get_fallback_matches()
+        if isinstance(data, list):
+            data = data[0] if data else {}
+        fixtures = data.get("fixtures", {})
+        goals = data.get("goals", {})
+        played = fixtures.get("played", {})
+        wins_data = fixtures.get("wins", {})
+        draws_data = fixtures.get("draws", {})
+        losses_data = fixtures.get("losses", {})
+
+        total_played = (played.get("home", 0) or 0) + (played.get("away", 0) or 0)
+        total_wins = (wins_data.get("home", 0) or 0) + (wins_data.get("away", 0) or 0)
+        total_draws = (draws_data.get("home", 0) or 0) + (draws_data.get("away", 0) or 0)
+        total_losses = (losses_data.get("home", 0) or 0) + (losses_data.get("away", 0) or 0)
+
+        gf_home = goals.get("for", {}).get("total", {}).get("home", 0) or 0
+        gf_away = goals.get("for", {}).get("total", {}).get("away", 0) or 0
+        ga_home = goals.get("against", {}).get("total", {}).get("home", 0) or 0
+        ga_away = goals.get("against", {}).get("total", {}).get("away", 0) or 0
+
+        home_wins = wins_data.get("home", 0) or 0
+        home_played = played.get("home", 0) or 0
+        away_wins = wins_data.get("away", 0) or 0
+        away_played = played.get("away", 0) or 0
+
+        lines = [
+            f"Saison: {total_played}J {total_wins}V {total_draws}N {total_losses}D",
+            f"Buts: {gf_home + gf_away} marques, {ga_home + ga_away} encaisses",
+            f"Domicile: {home_wins}V/{home_played}J | Exterieur: {away_wins}V/{away_played}J",
+        ]
+        return " | ".join(lines)
+    except Exception:
+        return ""
 
 
-def _fetch_odds_api(date):
-    url = "https://api.the-odds-api.com/v4/sports/upcoming/odds/"
-    params = {
-        "apiKey": SPORTS_API_KEY,
-        "regions": "eu",
-        "markets": "h2h",
-        "dateFormat": "iso",
-        "commenceTimeFrom": f"{date}T00:00:00Z",
-        "commenceTimeTo": f"{date}T23:59:59Z",
-    }
+_standings_cache = {}
+
+def _get_league_standings(league_id):
+    if not league_id:
+        return {}
+    cache_key = f"{league_id}_{datetime.now().strftime('%Y-%m-%d')}"
+    if cache_key in _standings_cache:
+        return _standings_cache[cache_key]
+    season = datetime.now().year
+    data = _football_api_get("standings", {"league": league_id, "season": season})
+    if not data:
+        data = _football_api_get("standings", {"league": league_id, "season": season - 1})
+    if not data:
+        _standings_cache[cache_key] = {}
+        return {}
     try:
-        resp = requests.get(url, params=params, timeout=15)
-        data = resp.json()
-        matches = []
-        for game in data:
-            home = game.get("home_team")
-            away = game.get("away_team")
-            odds = {}
-            for bk in game.get("bookmakers", [])[:1]:
-                for mkt in bk.get("markets", []):
-                    if mkt["key"] == "h2h":
-                        for o in mkt.get("outcomes", []):
-                            if o["name"] == home:
-                                odds["home_win"] = o["price"]
-                            elif o["name"] == away:
-                                odds["away_win"] = o["price"]
-                            else:
-                                odds["draw"] = o["price"]
-            matches.append({
-                "id": game.get("id"),
-                "date": game.get("commence_time"),
-                "home": home,
-                "away": away,
-                "league": game.get("sport_title"),
-                "country": "",
-                "sport": "Foot",
-                "odds": odds,
-                "status": "NS",
-            })
-        return matches
+        standings = data[0].get("league", {}).get("standings", [[]])[0]
+        result = {}
+        total_teams = len(standings)
+        for s in standings:
+            team = s.get("team", {})
+            tid = team.get("id")
+            if not tid:
+                continue
+            all_data = s.get("all", {})
+            home_data = s.get("home", {})
+            away_data = s.get("away", {})
+            played = all_data.get("played", 0) or 0
+            gf = all_data.get("goals", {}).get("for", 0) or 0
+            ga = all_data.get("goals", {}).get("against", 0) or 0
+            avg_goals = round((gf + ga) / played, 2) if played > 0 else 0
+            result[tid] = {
+                "rank": s.get("rank", 0),
+                "points": s.get("points", 0),
+                "played": played,
+                "won": all_data.get("win", 0) or 0,
+                "drawn": all_data.get("draw", 0) or 0,
+                "lost": all_data.get("lose", 0) or 0,
+                "gf": gf,
+                "ga": ga,
+                "gd": s.get("goalsDiff", 0),
+                "avg_goals_per_match": avg_goals,
+                "home_won": home_data.get("win", 0) or 0,
+                "home_played": home_data.get("played", 0) or 0,
+                "away_won": away_data.get("win", 0) or 0,
+                "away_played": away_data.get("played", 0) or 0,
+                "total_teams": total_teams,
+                "zone": "top" if s.get("rank", 99) <= max(4, total_teams // 4) else
+                        "bottom" if s.get("rank", 0) >= total_teams - max(4, total_teams // 4) + 1 else
+                        "mid",
+            }
+        _standings_cache[cache_key] = result
+        return result
     except Exception as e:
-        print(f"[SportsAPI] Odds-API error: {e}")
-        return _get_fallback_matches()
+        print(f"[Standings] Error: {e}")
+        _standings_cache[cache_key] = {}
+        return {}
 
 
-def _get_fallback_matches():
-    """Returns empty list - council will output NOPICK."""
-    print("[SportsAPI] Using fallback - no matches available")
-    return []
+def _format_standing(team_id, standings):
+    s = standings.get(team_id)
+    if not s:
+        return ""
+    zone_label = {"top": "HAUT de tableau", "mid": "milieu", "bottom": "BAS de tableau"}
+    return (
+        f"Classement: {s['rank']}e/{s['total_teams']} ({zone_label.get(s['zone'], '?')}) "
+        f"| {s['points']}pts | {s['won']}V {s['drawn']}N {s['lost']}D "
+        f"| {s['gf']}BP {s['ga']}BC (diff {s['gd']:+d}) "
+        f"| Moy {s['avg_goals_per_match']} buts/match"
+    )
+
+
+def _format_h2h_goals(h2h_text):
+    """Extract avg goals from H2H text for Under/Over prediction."""
+    if not h2h_text or "Aucun" in h2h_text:
+        return ""
+    import re
+    scores = re.findall(r'(\d+)-(\d+)', h2h_text)
+    if not scores:
+        return ""
+    total = sum(int(a) + int(b) for a, b in scores)
+    avg = round(total / len(scores), 1)
+    under = sum(1 for a, b in scores if int(a) + int(b) < 3)
+    return f"H2H moyenne: {avg} buts/match | {under}/{len(scores)} matchs Under 2.5"
 
 
 def format_matches_for_prompt(matches):
-    """Format match list as readable text for AI prompts."""
     if not matches:
         return "Aucun match disponible aujourd'hui."
     lines = []
     for i, m in enumerate(matches, 1):
-        odds_str = ""
-        if m.get("odds"):
-            o = m["odds"]
-            parts = []
+        parts = [f"{i}. [{m['sport']}] {m['home']} vs {m['away']} - {m.get('league','')} ({m.get('country','')})"]
+
+        o = m.get("odds", {})
+        if o:
+            odds_parts = []
             if o.get("home_win"):
-                parts.append(f"1={o['home_win']}")
+                odds_parts.append(f"1={o['home_win']}")
             if o.get("draw"):
-                parts.append(f"X={o['draw']}")
+                odds_parts.append(f"X={o['draw']}")
             if o.get("away_win"):
-                parts.append(f"2={o['away_win']}")
-            if parts:
-                odds_str = f" | Cotes: {', '.join(parts)}"
-        lines.append(
-            f"{i}. [{m['sport']}] {m['home']} vs {m['away']} "
-            f"- {m.get('league','')} ({m.get('country','')})"
-            f"{odds_str}"
-        )
-    return "\n".join(lines)
+                odds_parts.append(f"2={o['away_win']}")
+            if odds_parts:
+                bk = o.get("bookmaker", "")
+                parts.append(f"   Cotes ({bk}): {', '.join(odds_parts)}")
+
+        if m.get("h2h"):
+            parts.append(f"   {m['h2h']}")
+
+        if m.get("home_form"):
+            parts.append(f"   {m['home']} — {m['home_form']}")
+        if m.get("away_form"):
+            parts.append(f"   {m['away']} — {m['away_form']}")
+
+        if m.get("home_standing"):
+            parts.append(f"   {m['home']} — {m['home_standing']}")
+        if m.get("away_standing"):
+            parts.append(f"   {m['away']} — {m['away_standing']}")
+
+        if m.get("home_stats"):
+            parts.append(f"   Stats {m['home']}: {m['home_stats']}")
+        if m.get("away_stats"):
+            parts.append(f"   Stats {m['away']}: {m['away_stats']}")
+
+        if m.get("h2h_goals"):
+            parts.append(f"   {m['h2h_goals']}")
+
+        lines.append("\n".join(parts))
+
+    return "\n\n".join(lines)
