@@ -5303,6 +5303,20 @@ app.get("/admin/stats", (req, res) => {
   }
 });
 
+// ── Admin Brevo stats (Mission 001) ─────────────────────────────────────────────
+app.get("/admin/brevo-stats", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.json({ ok: false, error: "Accès admin requis" });
+
+  try {
+    const brevo = require("./brevo");
+    const stats = await brevo.getStats();
+    res.json({ ok: true, brevo: stats });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Admin losing leagues analysis ─────────────────────────────────────────────
 app.get("/admin/losing-leagues", (req, res) => {
   const { email, code } = req.query;
