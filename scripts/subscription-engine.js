@@ -342,6 +342,100 @@ class SubscriptionEngine {
   }
 
   /**
+   * === SPECIFICATION-COMPLIANT METHODS ===
+   * These methods match the exact API defined in Mission 002 requirements
+   */
+
+  /**
+   * Get user subscription (spec: getUserSubscription)
+   */
+  getUserSubscription(userId) {
+    return this.getSubscriptionStatus(userId);
+  }
+
+  /**
+   * Check if user has access to content (spec: hasAccess)
+   */
+  hasAccess(userId, plan) {
+    try {
+      const status = this.getSubscriptionStatus(userId);
+      if (!status) return false;
+
+      // VISITOR has no special access
+      if (plan === "VISITOR") return false;
+
+      // ESSENTIAL and ELITE have full access
+      if (plan === "ESSENTIAL" || plan === "ELITE") {
+        return status.isActive && !status.isExpired;
+      }
+
+      return false;
+    } catch (e) {
+      console.error("[SubscriptionEngine] hasAccess error:", e.message);
+      return false;
+    }
+  }
+
+  /**
+   * Check if user can access specific analysis (spec: canAccessAnalysis)
+   */
+  canAccessAnalysis(userId, analysisId, plan) {
+    return this.hasAccessToAnalysis(userId, analysisId, plan);
+  }
+
+  /**
+   * Get daily analysis limit (spec: getDailyLimit)
+   */
+  getDailyLimit(userId) {
+    try {
+      const status = this.getSubscriptionStatus(userId);
+      if (!status) return 0;
+      return status.dailyLimit || 0;
+    } catch (e) {
+      console.error("[SubscriptionEngine] getDailyLimit error:", e.message);
+      return 0;
+    }
+  }
+
+  /**
+   * Get Telegram group (spec: getTelegramGroup)
+   */
+  getTelegramGroup(userId) {
+    try {
+      const status = this.getSubscriptionStatus(userId);
+      if (!status) return null;
+      return {
+        id: status.telegramGroupId,
+        name: status.telegramGroupName,
+      };
+    } catch (e) {
+      console.error("[SubscriptionEngine] getTelegramGroup error:", e.message);
+      return null;
+    }
+  }
+
+  /**
+   * Get purchased analyses (spec: getPurchasedAnalyses)
+   */
+  getPurchasedAnalyses(userId, limit = 50, offset = 0) {
+    return this.getAnalysisPurchases(userId, limit, offset);
+  }
+
+  /**
+   * Check if subscription is active (spec: isSubscriptionActive)
+   */
+  isSubscriptionActive(userId) {
+    try {
+      const status = this.getSubscriptionStatus(userId);
+      if (!status) return false;
+      return status.isActive;
+    } catch (e) {
+      console.error("[SubscriptionEngine] isSubscriptionActive error:", e.message);
+      return false;
+    }
+  }
+
+  /**
    * Close database connection
    */
   close() {
