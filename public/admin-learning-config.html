@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Configuration Learning Engine — TousLesMatchs Admin</title>
+<style>
+:root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --orange: #d29922; --red: #f85149; --blue: #58a6ff; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; min-height: 100vh; }
+h1 { font-size: 1.3rem; margin-bottom: 8px; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+.login-box { max-width: 360px; margin: 80px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+.login-box h2 { margin-bottom: 16px; font-size: 1.1rem; }
+.login-box input { width: 100%; padding: 10px; margin-bottom: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: .9rem; }
+.login-box button { width: 100%; padding: 10px; background: var(--blue); border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; }
+.config-page { display: none; max-width: 900px; margin: 0 auto; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.card h3 { font-size: 1rem; margin-bottom: 12px; color: var(--blue); }
+.field { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.field:last-child { border-bottom: none; }
+.field label { flex: 1; font-size: .85rem; }
+.field label small { display: block; color: var(--muted); font-size: .75rem; margin-top: 2px; }
+.field input { width: 100px; padding: 6px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: .85rem; text-align: right; }
+.actions { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }
+.btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: .85rem; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: .85rem; z-index: 999; display: none; }
+.toast-success { background: var(--green); color: #000; }
+.toast-error { background: var(--red); color: #fff; }
+.history-table { width: 100%; font-size: .78rem; border-collapse: collapse; }
+.history-table th, .history-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.history-table th { color: var(--muted); font-weight: 600; }
+.back-link { display: inline-block; margin-bottom: 16px; color: var(--blue); text-decoration: none; font-size: .85rem; }
+.ab-notice { background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; padding: 12px; margin-top: 12px; font-size: .8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="login-box" id="loginBox">
+  <h2>Admin Learning Engine</h2>
+  <input type="email" id="email" placeholder="Email admin">
+  <input type="password" id="code" placeholder="Code admin">
+  <button onclick="login()">Connexion</button>
+</div>
+
+<div class="config-page" id="configPage">
+  <a href="/admin-dashboard" class="back-link">&larr; Retour au dashboard</a>
+  <h1>Configuration Learning Engine</h1>
+  <p class="subtitle">Tous les parametres du moteur d'apprentissage. Chaque modification est historisee.</p>
+
+  <div class="card">
+    <h3>Ponderation du poids</h3>
+    <div class="field">
+      <label>Wilson weight<small>Part du Wilson Score dans le calcul (0-1)</small></label>
+      <input type="number" step="0.05" min="0" max="1" id="cfg_weight_wilson_share">
+    </div>
+    <div class="field">
+      <label>EMA weight<small>Part de l'EMA dans le calcul (0-1). Wilson + EMA = 1</small></label>
+      <input type="number" step="0.05" min="0" max="1" id="cfg_weight_ema_share">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Parametres EMA</h3>
+    <div class="field">
+      <label>Alpha EMA<small>Facteur de lissage (0.01 = tres lent, 0.2 = reactif)</small></label>
+      <input type="number" step="0.01" min="0.01" max="0.5" id="cfg_ema_alpha">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Wilson Score</h3>
+    <div class="field">
+      <label>Z-score (confiance)<small>1.28=80%, 1.645=90%, 1.96=95%, 2.576=99%</small></label>
+      <input type="number" step="0.001" min="1" max="3" id="cfg_wilson_z">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Seuils</h3>
+    <div class="field">
+      <label>Minimum de matchs<small>En dessous, poids bloque a 50%</small></label>
+      <input type="number" step="1" min="3" max="50" id="cfg_min_resolutions">
+    </div>
+    <div class="field">
+      <label>Minimum contextuel<small>Matchs requis pour un poids contextuel</small></label>
+      <input type="number" step="1" min="3" max="30" id="cfg_min_context_resolutions">
+    </div>
+    <div class="field">
+      <label>Poids par defaut<small>Poids quand en apprentissage</small></label>
+      <input type="number" step="1" min="10" max="70" id="cfg_default_weight">
+    </div>
+    <div class="field">
+      <label>Poids minimum<small>Plancher du poids calcule</small></label>
+      <input type="number" step="1" min="1" max="30" id="cfg_weight_min">
+    </div>
+    <div class="field">
+      <label>Poids maximum<small>Plafond du poids calcule</small></label>
+      <input type="number" step="1" min="70" max="99" id="cfg_weight_max">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>ROI</h3>
+    <div class="field">
+      <label>ROI cap<small>Bonus/malus maximum du multiplicateur ROI (ex: 0.3 = ±30%)</small></label>
+      <input type="number" step="0.05" min="0.05" max="0.8" id="cfg_roi_cap">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Seuils de confiance</h3>
+    <div class="field">
+      <label>Tres fiable — min matchs<small></small></label>
+      <input type="number" step="1" min="10" max="200" id="cfg_ct_very_reliable_matches">
+    </div>
+    <div class="field">
+      <label>Tres fiable — min Wilson<small></small></label>
+      <input type="number" step="0.05" min="0" max="1" id="cfg_ct_very_reliable_wilson">
+    </div>
+    <div class="field">
+      <label>Fiable — min matchs<small></small></label>
+      <input type="number" step="1" min="5" max="100" id="cfg_ct_reliable_matches">
+    </div>
+    <div class="field">
+      <label>Fiable — min Wilson<small></small></label>
+      <input type="number" step="0.05" min="0" max="1" id="cfg_ct_reliable_wilson">
+    </div>
+    <div class="field">
+      <label>En progression — min matchs<small></small></label>
+      <input type="number" step="1" min="5" max="50" id="cfg_ct_progressing_matches">
+    </div>
+    <div class="field">
+      <label>En progression — min Wilson<small></small></label>
+      <input type="number" step="0.05" min="0" max="1" id="cfg_ct_progressing_wilson">
+    </div>
+    <div class="field">
+      <label>Peu de donnees — min matchs<small></small></label>
+      <input type="number" step="1" min="3" max="30" id="cfg_ct_low_data_matches">
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>A/B Testing (preparation)</h3>
+    <div class="ab-notice">
+      Le systeme est prepare pour tester plusieurs configurations en parallele via le champ <code>variant</code>. Actuellement, seule la variante <strong>production</strong> est active. Une future version permettra de lancer des variantes concurrentes et comparer automatiquement les resultats.
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btnSave" onclick="saveConfig()">Sauvegarder</button>
+    <button class="btn btn-danger" onclick="resetConfig()">Restaurer la configuration par defaut</button>
+    <button class="btn btn-secondary" onclick="location.href='/admin-dashboard'">Retour dashboard</button>
+  </div>
+
+  <div class="card" style="margin-top:24px">
+    <h3>Historique des modifications</h3>
+    <div id="historyContent"><em style="color:var(--muted)">Chargement...</em></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let adminEmail = "", adminCode = "";
+
+function login() {
+  adminEmail = document.getElementById("email").value;
+  adminCode = document.getElementById("code").value;
+  if (!adminEmail || !adminCode) return;
+  fetchConfig();
+}
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast toast-" + type;
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+async function fetchConfig() {
+  try {
+    const r = await fetch(`/api/admin/learning-config?email=${encodeURIComponent(adminEmail)}&code=${encodeURIComponent(adminCode)}`);
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || "Erreur", "error"); return; }
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("configPage").style.display = "block";
+    populateFields(d.config);
+    renderHistory(d.history || []);
+  } catch (e) { showToast("Erreur connexion", "error"); }
+}
+
+function populateFields(c) {
+  document.getElementById("cfg_weight_wilson_share").value = c.weight_wilson_share;
+  document.getElementById("cfg_weight_ema_share").value = c.weight_ema_share;
+  document.getElementById("cfg_ema_alpha").value = c.ema_alpha;
+  document.getElementById("cfg_wilson_z").value = c.wilson_z;
+  document.getElementById("cfg_min_resolutions").value = c.min_resolutions;
+  document.getElementById("cfg_min_context_resolutions").value = c.min_context_resolutions;
+  document.getElementById("cfg_default_weight").value = c.default_weight;
+  document.getElementById("cfg_weight_min").value = c.weight_min;
+  document.getElementById("cfg_weight_max").value = c.weight_max;
+  document.getElementById("cfg_roi_cap").value = c.roi_cap;
+  const ct = c.confidence_thresholds || {};
+  document.getElementById("cfg_ct_very_reliable_matches").value = (ct.very_reliable || {}).minMatches || 50;
+  document.getElementById("cfg_ct_very_reliable_wilson").value = (ct.very_reliable || {}).minWilson || 0.55;
+  document.getElementById("cfg_ct_reliable_matches").value = (ct.reliable || {}).minMatches || 30;
+  document.getElementById("cfg_ct_reliable_wilson").value = (ct.reliable || {}).minWilson || 0.45;
+  document.getElementById("cfg_ct_progressing_matches").value = (ct.progressing || {}).minMatches || 15;
+  document.getElementById("cfg_ct_progressing_wilson").value = (ct.progressing || {}).minWilson || 0.35;
+  document.getElementById("cfg_ct_low_data_matches").value = (ct.low_data || {}).minMatches || 10;
+}
+
+function buildConfigFromFields() {
+  return {
+    weight_wilson_share: parseFloat(document.getElementById("cfg_weight_wilson_share").value),
+    weight_ema_share: parseFloat(document.getElementById("cfg_weight_ema_share").value),
+    ema_alpha: parseFloat(document.getElementById("cfg_ema_alpha").value),
+    wilson_z: parseFloat(document.getElementById("cfg_wilson_z").value),
+    min_resolutions: parseInt(document.getElementById("cfg_min_resolutions").value),
+    min_context_resolutions: parseInt(document.getElementById("cfg_min_context_resolutions").value),
+    default_weight: parseInt(document.getElementById("cfg_default_weight").value),
+    weight_min: parseInt(document.getElementById("cfg_weight_min").value),
+    weight_max: parseInt(document.getElementById("cfg_weight_max").value),
+    roi_cap: parseFloat(document.getElementById("cfg_roi_cap").value),
+    confidence_thresholds: {
+      very_reliable: { minMatches: parseInt(document.getElementById("cfg_ct_very_reliable_matches").value), minWilson: parseFloat(document.getElementById("cfg_ct_very_reliable_wilson").value), label: "Tres fiable" },
+      reliable: { minMatches: parseInt(document.getElementById("cfg_ct_reliable_matches").value), minWilson: parseFloat(document.getElementById("cfg_ct_reliable_wilson").value), label: "Fiable" },
+      progressing: { minMatches: parseInt(document.getElementById("cfg_ct_progressing_matches").value), minWilson: parseFloat(document.getElementById("cfg_ct_progressing_wilson").value), label: "En progression" },
+      low_data: { minMatches: parseInt(document.getElementById("cfg_ct_low_data_matches").value), minWilson: 0, label: "Peu de donnees" },
+      learning: { minMatches: 0, minWilson: 0, label: "En apprentissage" },
+    },
+  };
+}
+
+async function saveConfig() {
+  const config = buildConfigFromFields();
+  if (Math.abs(config.weight_wilson_share + config.weight_ema_share - 1) > 0.01) {
+    showToast("Wilson weight + EMA weight doit etre egal a 1", "error"); return;
+  }
+  document.getElementById("btnSave").disabled = true;
+  try {
+    const r = await fetch("/api/admin/learning-config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, config })
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || "Erreur", "error"); return; }
+    showToast(`Configuration sauvegardee (${d.changes.length} modification(s))`, "success");
+    fetchConfig();
+  } catch (e) { showToast("Erreur serveur", "error"); }
+  finally { document.getElementById("btnSave").disabled = false; }
+}
+
+async function resetConfig() {
+  if (!confirm("Restaurer TOUS les parametres aux valeurs par defaut ?")) return;
+  try {
+    const r = await fetch("/api/admin/learning-config/reset", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode })
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || "Erreur", "error"); return; }
+    showToast("Configuration restauree aux valeurs par defaut", "success");
+    fetchConfig();
+  } catch (e) { showToast("Erreur serveur", "error"); }
+}
+
+function renderHistory(history) {
+  if (!history.length) {
+    document.getElementById("historyContent").innerHTML = '<em style="color:var(--muted)">Aucune modification</em>';
+    return;
+  }
+  document.getElementById("historyContent").innerHTML = `<table class="history-table">
+    <tr><th>Date</th><th>Parametre</th><th>Ancienne valeur</th><th>Nouvelle valeur</th><th>Par</th></tr>
+    ${history.map(h => `<tr>
+      <td>${h.changed_at ? new Date(h.changed_at).toLocaleString('fr-FR') : '—'}</td>
+      <td><strong>${esc(h.param_name)}</strong></td>
+      <td style="color:var(--red)">${esc(h.old_value || '—')}</td>
+      <td style="color:var(--green)">${esc(h.new_value || '—')}</td>
+      <td style="color:var(--muted)">${esc(h.changed_by || '—')}</td>
+    </tr>`).join("")}
+  </table>`;
+}
+</script>
+</body>
+</html>

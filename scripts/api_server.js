@@ -171,6 +171,29 @@ ensureColumn("agent_weights", "roi_multiplier", "REAL DEFAULT 1.0");
 ensureColumn("agent_weights", "bet_category", "TEXT DEFAULT 'all'");
 ensureColumn("agent_weights", "context_key", "TEXT DEFAULT 'global'");
 ensureColumn("agent_weights", "old_weight", "REAL");
+
+// ── Learning Engine — persistent configuration ─────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS learning_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    config_json TEXT NOT NULL,
+    variant TEXT DEFAULT 'production',
+    updated_by TEXT DEFAULT 'system',
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS learning_config_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    param_name TEXT NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    variant TEXT DEFAULT 'production',
+    changed_by TEXT DEFAULT 'admin',
+    changed_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 ensureColumn("concile_analyses", "cote", "REAL DEFAULT NULL");
 ensureColumn("concile_analyses", "gain", "REAL DEFAULT NULL");
 
@@ -2084,7 +2107,7 @@ function assessLearningProfile(profile, minResolved = 5) {
 
 // ── Learning Engine ──────────────────────────────────────────────────────────
 // Learning Engine Configuration — all parameters configurable, nothing hardcoded
-const LEARNING_CONFIG = {
+const LEARNING_CONFIG_DEFAULTS = {
   version: "2.0.0",
   wilson_z: 1.645,
   ema_alpha: 0.05,
@@ -2104,6 +2127,39 @@ const LEARNING_CONFIG = {
     learning: { minMatches: 0, minWilson: 0, label: "En apprentissage" },
   },
 };
+
+function loadLearningConfig(variant = "production") {
+  try {
+    const row = db.prepare(`SELECT config_json FROM learning_config WHERE variant = ? ORDER BY updated_at DESC LIMIT 1`).get(variant);
+    if (row) return { ...LEARNING_CONFIG_DEFAULTS, ...JSON.parse(row.config_json) };
+  } catch (e) { console.error("[learning-config] load:", e.message); }
+  return { ...LEARNING_CONFIG_DEFAULTS };
+}
+
+function saveLearningConfig(newConfig, changedBy = "admin", variant = "production") {
+  const current = loadLearningConfig(variant);
+  const changes = [];
+  for (const [key, val] of Object.entries(newConfig)) {
+    const oldVal = JSON.stringify(current[key]);
+    const newVal = JSON.stringify(val);
+    if (oldVal !== newVal) {
+      changes.push({ param_name: key, old_value: oldVal, new_value: newVal });
+    }
+  }
+  const merged = { ...current, ...newConfig };
+  db.prepare(`INSERT INTO learning_config (config_json, variant, updated_by) VALUES (?, ?, ?)`).run(JSON.stringify(merged), variant, changedBy);
+  const insertHistory = db.prepare(`INSERT INTO learning_config_history (param_name, old_value, new_value, variant, changed_by) VALUES (?, ?, ?, ?, ?)`);
+  for (const c of changes) {
+    insertHistory.run(c.param_name, c.old_value, c.new_value, variant, changedBy);
+  }
+  return { config: merged, changes };
+}
+
+function getLearningConfigHistory(limit = 50) {
+  return db.prepare(`SELECT * FROM learning_config_history ORDER BY changed_at DESC LIMIT ?`).all(limit);
+}
+
+let LEARNING_CONFIG = loadLearningConfig();
 
 function wilsonScoreLowerBound(wins, total, z) {
   if (total === 0) return 0;
@@ -2173,6 +2229,7 @@ function computeContextWeight(wins, total, outcomes, roiMultiplier, contextLabel
 
 function computeAgentWeights() {
   try {
+    LEARNING_CONFIG = loadLearningConfig();
     const { wilson_z, ema_alpha, min_resolutions, min_context_resolutions, roi_cap, default_weight, weight_wilson_share, weight_ema_share, weight_min, weight_max, version } = LEARNING_CONFIG;
 
     const agents = db.prepare(`
@@ -6670,6 +6727,38 @@ app.post("/admin/learning-engine/recompute", (req, res) => {
   try {
     const results = computeAgentWeights();
     res.json({ ok: true, agents: results, message: `${results.length} agent(s) recalcule(s)` });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── Learning Engine — Configuration endpoints ──────────────────────────────
+app.get("/admin/learning-config", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  res.json({ ok: true, config: LEARNING_CONFIG, defaults: LEARNING_CONFIG_DEFAULTS, history: getLearningConfigHistory() });
+});
+
+app.post("/admin/learning-config", (req, res) => {
+  const { email, code, config } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  if (!config || typeof config !== "object") return res.status(400).json({ ok: false, error: "config object requis" });
+  try {
+    const result = saveLearningConfig(config, email || "admin");
+    LEARNING_CONFIG = result.config;
+    res.json({ ok: true, config: result.config, changes: result.changes });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/admin/learning-config/reset", (req, res) => {
+  const { email, code } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const result = saveLearningConfig(LEARNING_CONFIG_DEFAULTS, email || "admin (reset)");
+    LEARNING_CONFIG = result.config;
+    res.json({ ok: true, config: result.config, changes: result.changes, message: "Configuration restauree aux valeurs par defaut" });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
