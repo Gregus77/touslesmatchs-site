@@ -145,6 +145,23 @@ try {
   }
 } catch (e) { console.error("[migration] dedup:", e.message); }
 
+// ── Learning Engine — agent weights history ──────────────────────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS agent_weights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_name TEXT NOT NULL,
+    weight REAL NOT NULL,
+    winrate REAL,
+    total_resolved INTEGER DEFAULT 0,
+    roi REAL DEFAULT 0,
+    sport TEXT DEFAULT 'all',
+    reason TEXT DEFAULT '',
+    computed_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+ensureColumn("concile_analyses", "cote", "REAL DEFAULT NULL");
+ensureColumn("concile_analyses", "gain", "REAL DEFAULT NULL");
+
 // ── Nurturing emails table (persistent across restarts) ──────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS scheduled_emails (
@@ -1794,13 +1811,23 @@ Réponds en JSON pur (pas de markdown):
   const agentResults = await Promise.all([0, 1, 2, 3].map(i => runSingleAgent(i)));
 
   // Phase 2: Run Chief AFTER, with all agent votes available
+  // Use Learning Engine weights if available, fallback to winrate-based calculation
+  const learnedWeights = {};
+  try {
+    const latestW = getLatestAgentWeights();
+    latestW.forEach(w => { learnedWeights[w.agent] = w; });
+  } catch {}
+
   const previousVotes = agentResults.map((a) => {
     const p = agentPerf[a.name];
     const resolved = p ? p.resolved : 0;
-    const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
-    const perfNote = resolved >= 5
-      ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
-      : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
+    const lw = learnedWeights[a.name];
+    const weight = lw ? Math.round(lw.weight) : (resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50);
+    const perfNote = lw
+      ? ` — POIDS: ${weight}% (${lw.reason})`
+      : resolved >= 5
+        ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
+        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
     return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
   }).join("\n");
 
@@ -2043,6 +2070,218 @@ function assessLearningProfile(profile, minResolved = 5) {
   return { tier: clientSafe ? "elite_candidate" : "learning", score: clientSafe ? 100 : Math.max(0, 70 - reasons.length * 15), clientSafe, reasons };
 }
 
+// ── Learning Engine ──────────────────────────────────────────────────────────
+function computeAgentWeights() {
+  try {
+    const agents = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM agent_predictions
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name
+    `).all();
+
+    const recentWindow = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
+      FROM agent_predictions
+      WHERE outcome IN ('win','loss')
+        AND created_at >= datetime('now', '-30 days')
+      GROUP BY agent_name
+    `).all();
+    const recentMap = {};
+    recentWindow.forEach(r => { recentMap[r.agent_name] = r; });
+
+    const results = [];
+    const insert = db.prepare(`
+      INSERT INTO agent_weights (agent_name, weight, winrate, total_resolved, roi, sport, reason)
+      VALUES (?, ?, ?, ?, ?, 'all', ?)
+    `);
+
+    for (const ag of agents) {
+      const resolved = ag.wins + ag.losses;
+      if (resolved < 3) continue;
+
+      const globalWinrate = Math.round(ag.wins / resolved * 100);
+      const recent = recentMap[ag.agent_name];
+      const recentWinrate = recent && recent.total >= 3
+        ? Math.round(recent.wins / recent.total * 100)
+        : null;
+
+      const roiData = computeAgentROI(ag.agent_name);
+      const roi = roiData.roi;
+
+      // Weight formula: 60% recent winrate (or global if not enough data) + 25% global winrate + 15% ROI bonus
+      const baseWinrate = recentWinrate !== null ? recentWinrate : globalWinrate;
+      const roiBonus = Math.max(-15, Math.min(15, roi / 2));
+      let weight = Math.round(baseWinrate * 0.6 + globalWinrate * 0.25 + 50 * 0.15 + roiBonus);
+      weight = Math.max(5, Math.min(95, weight));
+
+      const reasons = [];
+      if (recentWinrate !== null && recentWinrate !== globalWinrate) {
+        reasons.push(`recent 30j: ${recentWinrate}% (${recent.total} matchs)`);
+      }
+      reasons.push(`global: ${globalWinrate}% (${resolved} matchs)`);
+      if (roi !== 0) reasons.push(`ROI: ${roi > 0 ? "+" : ""}${roi.toFixed(1)}%`);
+
+      insert.run(ag.agent_name, weight, globalWinrate, resolved, roi, reasons.join(", "));
+      results.push({ agent: ag.agent_name, weight, globalWinrate, recentWinrate, resolved, roi, reasons });
+    }
+
+    return results;
+  } catch (e) {
+    console.error("[learning-engine] computeWeights:", e.message);
+    return [];
+  }
+}
+
+function computeAgentROI(agentName) {
+  try {
+    const rows = db.prepare(`
+      SELECT ap.outcome, ca.confidence, ca.cote
+      FROM agent_predictions ap
+      LEFT JOIN concile_analyses ca ON ap.match_key = ca.match_key
+      WHERE ap.agent_name = ? AND ap.outcome IN ('win','loss')
+    `).all(agentName);
+
+    let totalStake = 0, totalReturn = 0;
+    for (const r of rows) {
+      const cote = r.cote || Math.min(1.95, ((1 / (Math.max(55, r.confidence || 55) / 100)) * 1.45));
+      totalStake += 1;
+      if (r.outcome === "win") totalReturn += cote;
+    }
+    const roi = totalStake > 0 ? Math.round(((totalReturn - totalStake) / totalStake) * 1000) / 10 : 0;
+    return { roi, totalStake, totalReturn: Math.round(totalReturn * 100) / 100 };
+  } catch (e) {
+    return { roi: 0, totalStake: 0, totalReturn: 0 };
+  }
+}
+
+function getLatestAgentWeights() {
+  try {
+    const agents = db.prepare(`
+      SELECT DISTINCT agent_name FROM agent_weights ORDER BY agent_name
+    `).all().map(r => r.agent_name);
+
+    return agents.map(name => {
+      const latest = db.prepare(`
+        SELECT * FROM agent_weights WHERE agent_name = ? ORDER BY computed_at DESC LIMIT 1
+      `).get(name);
+      const previous = db.prepare(`
+        SELECT weight FROM agent_weights WHERE agent_name = ? ORDER BY computed_at DESC LIMIT 1 OFFSET 1
+      `).get(name);
+      const history = db.prepare(`
+        SELECT weight, winrate, roi, computed_at FROM agent_weights
+        WHERE agent_name = ? ORDER BY computed_at DESC LIMIT 30
+      `).all(name);
+      return {
+        agent: name,
+        weight: latest.weight,
+        winrate: latest.winrate,
+        resolved: latest.total_resolved,
+        roi: latest.roi,
+        reason: latest.reason,
+        updatedAt: latest.computed_at,
+        previousWeight: previous ? previous.weight : null,
+        trend: previous ? (latest.weight > previous.weight ? "up" : latest.weight < previous.weight ? "down" : "stable") : "new",
+        history,
+      };
+    });
+  } catch (e) {
+    console.error("[learning-engine] getWeights:", e.message);
+    return [];
+  }
+}
+
+function getLearningEngineStats() {
+  try {
+    const overall = db.prepare(`
+      SELECT COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses WHERE outcome IN ('win','loss')
+    `).get();
+
+    const overallROI = (() => {
+      const rows = db.prepare(`
+        SELECT outcome, confidence, cote FROM concile_analyses WHERE outcome IN ('win','loss')
+      `).all();
+      let stake = 0, ret = 0;
+      for (const r of rows) {
+        const cote = r.cote || Math.min(1.95, ((1 / (Math.max(55, r.confidence || 55) / 100)) * 1.45));
+        stake += 1;
+        if (r.outcome === "win") ret += cote;
+      }
+      return stake > 0 ? Math.round(((ret - stake) / stake) * 1000) / 10 : 0;
+    })();
+
+    const byCompetition = db.prepare(`
+      SELECT competition, sport, country,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses WHERE outcome IN ('win','loss') AND competition != ''
+      GROUP BY competition ORDER BY total DESC
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : 0
+    }));
+
+    const bySport = db.prepare(`
+      SELECT sport,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses WHERE outcome IN ('win','loss')
+      GROUP BY sport ORDER BY total DESC
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : 0
+    }));
+
+    const byBetCategory = db.prepare(`
+      SELECT bet_category,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses WHERE outcome IN ('win','loss') AND bet_category IS NOT NULL
+      GROUP BY bet_category ORDER BY total DESC
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : 0
+    }));
+
+    const byConfidenceBracket = db.prepare(`
+      SELECT
+        CASE
+          WHEN confidence < 60 THEN '55-59'
+          WHEN confidence < 70 THEN '60-69'
+          WHEN confidence < 80 THEN '70-79'
+          WHEN confidence < 90 THEN '80-89'
+          ELSE '90+'
+        END as bracket,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
+      FROM concile_analyses WHERE outcome IN ('win','loss')
+      GROUP BY bracket ORDER BY bracket
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : 0
+    }));
+
+    return {
+      overall: {
+        total: overall.total, wins: overall.wins, losses: overall.losses,
+        winrate: overall.total > 0 ? Math.round(overall.wins / overall.total * 100) : 0,
+        roi: overallROI,
+      },
+      byCompetition, bySport, byBetCategory, byConfidenceBracket,
+    };
+  } catch (e) {
+    console.error("[learning-engine] stats:", e.message);
+    return { overall: {}, byCompetition: [], bySport: [], byBetCategory: [], byConfidenceBracket: [] };
+  }
+}
+
 function extractCountry(competition) {
   if (!competition) return null;
   const map = {
@@ -2088,6 +2327,8 @@ function saveConcileAnalysis(match, result, pickBet) {
     const homeShots = liveStats?.shots?.home ?? liveStats?.shots_on_goal?.home ?? null;
     const awayShots = liveStats?.shots?.away ?? liveStats?.shots_on_goal?.away ?? null;
 
+    const cote = Math.min(1.95, ((1 / (Math.max(55, result.confidence) / 100)) * 1.45));
+
     const existing = db.prepare("SELECT id, best_bet FROM concile_analyses WHERE match_key = ?").get(matchKey);
     if (existing) {
       const betChanged = existing.best_bet !== result.best_bet;
@@ -2098,8 +2339,8 @@ function saveConcileAnalysis(match, result, pickBet) {
           consensus_votes = ?, agents_json = ?, pick_bet = ?,
           learning_tier = ?, learning_note = ?,
           bet_category = ?, home_possession = ?, away_possession = ?,
-          home_shots = ?, away_shots = ?, analysed_at = datetime('now')
-          ${betChanged ? ", outcome = NULL, final_score_home = NULL, final_score_away = NULL, resolved_at = NULL" : ""}
+          home_shots = ?, away_shots = ?, cote = ?, analysed_at = datetime('now')
+          ${betChanged ? ", outcome = NULL, final_score_home = NULL, final_score_away = NULL, resolved_at = NULL, gain = NULL" : ""}
         WHERE match_key = ?
       `).run(
         minute, match.score_home ?? null, match.score_away ?? null, statsStatus,
@@ -2109,6 +2350,7 @@ function saveConcileAnalysis(match, result, pickBet) {
         pickBet || null,
         learningAssessment.tier, learningAssessment.reasons.join("; "),
         betCat, homePoss, awayPoss, homeShots, awayShots,
+        Math.round(cote * 100) / 100,
         matchKey
       );
     } else {
@@ -2119,8 +2361,8 @@ function saveConcileAnalysis(match, result, pickBet) {
            best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
            sport, learning_tier, learning_note, home_logo, away_logo,
            bet_category, country, is_neutral,
-           home_possession, away_possession, home_shots, away_shots)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           home_possession, away_possession, home_shots, away_shots, cote)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).run(
         matchKey,
         match.home, match.away, competition, minute,
@@ -2132,7 +2374,8 @@ function saveConcileAnalysis(match, result, pickBet) {
         learningAssessment.tier, learningAssessment.reasons.join("; "),
         match.home_logo || null, match.away_logo || null,
         betCat, country, neutral,
-        homePoss, awayPoss, homeShots, awayShots
+        homePoss, awayPoss, homeShots, awayShots,
+        Math.round(cote * 100) / 100
       );
     }
     console.log(
@@ -2195,26 +2438,31 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
             final_score_home = ?,
             final_score_away = ?,
             resolved_at = datetime('now'),
-            result_source = ?
+            result_source = ?,
+            gain = ?
         WHERE id = ?
       `);
+      let resolved = 0;
       pending.forEach(r => {
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
         if (out) {
-          upd.run(out, h, a, "api_finished_match", r.id);
+          const cote = r.cote || Math.min(1.95, ((1 / (Math.max(55, r.confidence) / 100)) * 1.45));
+          const gain = out === "win" ? Math.round((cote - 1) * 100) / 100 : -1;
+          upd.run(out, h, a, "api_finished_match", gain, r.id);
+          resolved++;
           const resThreshold = getAdaptiveSignalThreshold();
           if (r.confidence >= resThreshold && TELEGRAM_BOT_TOKEN) {
             notifySignalFortResult(r, out, h, a).catch(() => {});
           }
         }
       });
-      console.log(`[concile-trace] résolu ${pending.length} analyses: ${home} vs ${away} (${h}-${a})`);
+      console.log(`[concile-trace] résolu ${resolved} analyses: ${home} vs ${away} (${h}-${a})`);
+
+      if (resolved > 0) {
+        try { computeAgentWeights(); } catch (e) { console.error("[learning-engine] auto-recompute:", e.message); }
+      }
     }
 
-    // Résoudre aussi les IA du banc d'essai (shadow_evals) — indépendamment de
-    // concile_analyses : avant, ça ne se déclenchait QUE si ce match avait des
-    // lignes concile_analyses en attente, donc quasiment jamais pour les agents
-    // du banc d'essai (Groq-Llama70B/8B, Cerebras, OpenRouter, Mistral-Small...).
     resolveShadowOutcomes(home, away, h, a);
   } catch(e) { console.error("[concile-trace] resolve:", e.message); }
 }
@@ -6203,6 +6451,38 @@ app.get("/internal/expiring-codes", (req, res) => {
     res.json({ ok: true, count: withDiff.length, expiring: withDiff });
   } catch(e) {
     res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Learning Engine API ──────────────────────────────────────────────────────
+app.get("/admin/learning-engine", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const weights = getLatestAgentWeights();
+    const stats = getLearningEngineStats();
+    const topAgents = [...weights].sort((a, b) => b.weight - a.weight);
+    const worstAgents = [...weights].sort((a, b) => a.weight - b.weight);
+    res.json({
+      ok: true,
+      agents: weights,
+      topAgents: topAgents.slice(0, 5),
+      worstAgents: worstAgents.slice(0, 5),
+      stats,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/admin/learning-engine/recompute", (req, res) => {
+  const { email, code } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const results = computeAgentWeights();
+    res.json({ ok: true, agents: results, message: `${results.length} agent(s) recalcule(s)` });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
   }
 });
 
