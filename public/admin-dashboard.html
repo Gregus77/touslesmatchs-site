@@ -210,7 +210,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <!-- ROW 5: Recent analyses + Activity log -->
+  <!-- ROW 5: Learning Engine -->
+  <div class="grid">
+    <div class="card" style="grid-column:1/-1">
+      <h2>Learning Engine — Poids des IA
+        <button onclick="recomputeWeights()" style="margin-left:auto;background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:.75rem">Recalculer</button>
+      </h2>
+      <div id="learningContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>ROI & Performance Globale</h2>
+      <div id="roiContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Performance par Confiance</h2>
+      <div id="confidenceContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 7: Recent analyses + Activity log -->
   <div class="grid">
     <div class="card">
       <h2>Dernieres Analyses</h2>
@@ -265,14 +286,92 @@ async function fetchDashboard() {
   if (!credentials) return false;
   try {
     const params = new URLSearchParams({ email: credentials.email, code: credentials.code });
-    const r = await fetch(`${API_BASE}/admin/dashboard-data?${params}`);
+    const [r, lr] = await Promise.all([
+      fetch(`${API_BASE}/admin/dashboard-data?${params}`),
+      fetch(`${API_BASE}/admin/learning-engine?${params}`).catch(() => null),
+    ]);
     const data = await r.json();
     if (!data.ok) return false;
+    let learning = null;
+    if (lr && lr.ok) { try { learning = await lr.json(); } catch {} }
     renderDashboard(data);
+    if (learning && learning.ok) renderLearningEngine(learning);
+    else {
+      document.getElementById("learningContent").innerHTML = '<div style="color:var(--muted)">Pas encore de donnees (recalculer apres quelques matchs resolus)</div>';
+      document.getElementById("roiContent").innerHTML = '<div style="color:var(--muted)">—</div>';
+      document.getElementById("confidenceContent").innerHTML = '<div style="color:var(--muted)">—</div>';
+    }
     return true;
   } catch (e) {
     console.error("Dashboard fetch error:", e);
     return false;
+  }
+}
+
+async function recomputeWeights() {
+  if (!credentials) return;
+  try {
+    const r = await fetch(`${API_BASE}/admin/learning-engine/recompute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: credentials.email, code: credentials.code }),
+    });
+    const data = await r.json();
+    if (data.ok) fetchDashboard();
+  } catch {}
+}
+
+function renderLearningEngine(le) {
+  const agents = le.agents || [];
+  if (agents.length === 0) {
+    document.getElementById("learningContent").innerHTML = '<div style="color:var(--muted)">Aucun agent avec assez de donnees</div>';
+  } else {
+    const sorted = [...agents].sort((a, b) => b.weight - a.weight);
+    document.getElementById("learningContent").innerHTML = `<table class="agent-table">
+      <tr><th>Agent</th><th>Poids</th><th>Tendance</th><th>Winrate</th><th>ROI</th><th>Matchs</th><th>Raison</th></tr>
+      ${sorted.map(ag => {
+        const trendIcon = ag.trend === 'up' ? '<span style="color:var(--green)">&#9650;</span>' : ag.trend === 'down' ? '<span style="color:var(--red)">&#9660;</span>' : '<span style="color:var(--muted)">&#9644;</span>';
+        const weightColor = ag.weight >= 60 ? 'green' : ag.weight >= 40 ? 'orange' : 'red';
+        const roiColor = ag.roi > 0 ? 'green' : ag.roi < 0 ? 'red' : '';
+        return `<tr>
+          <td><strong>${esc(ag.agent)}</strong></td>
+          <td><span class="stat-value ${weightColor}">${Math.round(ag.weight)}%</span></td>
+          <td style="text-align:center">${trendIcon} ${ag.previousWeight !== null ? '(avant: ' + Math.round(ag.previousWeight) + '%)' : ''}</td>
+          <td>${ag.winrate !== null ? ag.winrate + '%' : '—'}</td>
+          <td class="${roiColor}">${ag.roi !== undefined ? (ag.roi > 0 ? '+' : '') + ag.roi.toFixed(1) + '%' : '—'}</td>
+          <td>${ag.resolved || 0}</td>
+          <td style="font-size:.75rem;color:var(--muted)">${esc(ag.reason || '')}</td>
+        </tr>`;
+      }).join("")}
+    </table>`;
+  }
+
+  const stats = le.stats || {};
+  const ov = stats.overall || {};
+  document.getElementById("roiContent").innerHTML = `
+    <div class="big-row">
+      <div class="big-item"><div class="big-number ${ov.roi > 0 ? 'green' : ov.roi < 0 ? 'red' : ''}">${ov.roi !== undefined ? (ov.roi > 0 ? '+' : '') + ov.roi.toFixed(1) + '%' : '—'}</div><div class="big-label">ROI Global</div></div>
+      <div class="big-item"><div class="big-number ${ov.winrate >= 55 ? 'green' : ov.winrate >= 45 ? 'orange' : 'red'}">${ov.winrate || 0}%</div><div class="big-label">Winrate</div></div>
+      <div class="big-item"><div class="big-number">${ov.total || 0}</div><div class="big-label">Total resolus</div></div>
+    </div>
+    ${(stats.bySport || []).length ? '<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Par sport :</div>' +
+      (stats.bySport || []).map(s => `<div class="stat-row"><span class="stat-label">${esc(s.sport || 'Football')}</span><span class="stat-value">${s.winrate}% (${s.total})</span></div>`).join("") : ''}
+    ${(stats.byBetCategory || []).length ? '<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Par type :</div>' +
+      (stats.byBetCategory || []).slice(0, 6).map(b => `<div class="stat-row"><span class="stat-label">${esc(b.bet_category || '?')}</span><span class="stat-value">${b.winrate}% (${b.total})</span></div>`).join("") : ''}
+  `;
+
+  const brackets = stats.byConfidenceBracket || [];
+  if (brackets.length > 0) {
+    document.getElementById("confidenceContent").innerHTML = `
+      ${brackets.map(b => `
+        <div class="stat-row">
+          <span class="stat-label">Confiance ${esc(b.bracket)}%</span>
+          <span class="stat-value ${b.winrate >= 60 ? 'green' : b.winrate >= 50 ? 'orange' : 'red'}">${b.winrate}% (${b.total} matchs)</span>
+        </div>
+      `).join("")}
+    `;
+  } else {
+    document.getElementById("confidenceContent").innerHTML = '<div style="color:var(--muted)">Pas assez de donnees</div>';
   }
 }
 
