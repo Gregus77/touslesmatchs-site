@@ -65,6 +65,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .svc-on{background:rgba(0,184,148,.1);border:1px solid rgba(0,184,148,.2);color:var(--green)}
 .svc-off{background:rgba(225,112,85,.1);border:1px solid rgba(225,112,85,.2);color:var(--red)}
 
+.progress-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.pf-green{background:var(--green)}
+.pf-orange{background:var(--orange)}
+.pf-red{background:var(--red)}
+
+.docker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.docker-item{padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg)}
+.docker-name{font-weight:600;font-size:.85rem;margin-bottom:4px}
+.docker-status{font-size:.75rem}
+.docker-running{border-color:rgba(0,184,148,.3)}
+.docker-stopped{border-color:rgba(225,112,85,.3)}
+
+.backup-item{padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem;display:flex;justify-content:space-between;align-items:center}
+.backup-item:last-child{border-bottom:none}
+.backup-name{font-weight:500}
+.backup-meta{color:var(--muted);font-size:.75rem}
+
 .chart-bars{display:flex;align-items:flex-end;gap:4px;height:100px;margin-top:10px}
 .chart-bar{flex:1;background:var(--accent);border-radius:4px 4px 0 0;min-width:20px;position:relative;cursor:default}
 .chart-bar:hover{opacity:.85}
@@ -124,19 +142,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <!-- ROW 1: Health + Services -->
+  <!-- ROW 1: VPS + Docker + Alerts -->
+  <div class="grid">
+    <div class="card">
+      <h2><span class="dot dot-green" id="vpsDot"></span> Sante VPS</h2>
+      <div id="vpsContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2><span class="dot dot-green" id="dockerDot"></span> Docker</h2>
+      <div id="dockerContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card" id="alertsCard">
+      <h2>Alertes</h2>
+      <div class="alerts-list" id="alertsContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: API Health + Services + Backups -->
   <div class="grid">
     <div class="card" id="healthCard">
-      <h2><span class="dot dot-green" id="healthDot"></span> Sante Systeme</h2>
+      <h2><span class="dot dot-green" id="healthDot"></span> Sante API</h2>
       <div id="healthContent"><div class="spinner"></div></div>
     </div>
     <div class="card" id="servicesCard">
       <h2>Services Connectes</h2>
       <div id="servicesContent"><div class="spinner"></div></div>
     </div>
-    <div class="card" id="alertsCard">
-      <h2>Alertes</h2>
-      <div class="alerts-list" id="alertsContent"><div class="spinner"></div></div>
+    <div class="card">
+      <h2>Sauvegardes</h2>
+      <div id="backupsContent"><div class="spinner"></div></div>
     </div>
   </div>
 
@@ -244,6 +278,71 @@ async function fetchDashboard() {
 
 function renderDashboard(d) {
   document.getElementById("lastUpdate").textContent = "Derniere mise a jour : " + new Date(d.timestamp).toLocaleString("fr-FR");
+
+  // VPS
+  const vps = d.vps || {};
+  if (vps.error && !vps.ram) {
+    document.getElementById("vpsContent").innerHTML = '<div style="color:var(--muted);font-size:.85rem">Donnees VPS indisponibles (volumes non montes)</div>';
+    document.getElementById("vpsDot").className = "dot dot-orange";
+  } else if (vps.ram) {
+    const ramColor = vps.ram.pct > 90 ? 'red' : vps.ram.pct > 75 ? 'orange' : 'green';
+    const diskColor = vps.disk ? (vps.disk.pct > 90 ? 'red' : vps.disk.pct > 75 ? 'orange' : 'green') : 'green';
+    const cpuColor = vps.cpu !== null ? (vps.cpu > 90 ? 'red' : vps.cpu > 70 ? 'orange' : 'green') : 'green';
+    const uptimeD = Math.floor(vps.uptime / 86400);
+    const uptimeH = Math.floor((vps.uptime % 86400) / 3600);
+    document.getElementById("vpsDot").className = "dot dot-" + (ramColor === 'red' || diskColor === 'red' || cpuColor === 'red' ? 'red' : ramColor === 'orange' || diskColor === 'orange' ? 'orange' : 'green');
+    document.getElementById("vpsContent").innerHTML = `
+      ${vps.cpu !== null ? `<div class="stat-row"><span class="stat-label">CPU</span><span class="stat-value ${cpuColor}">${vps.cpu}%</span></div><div class="progress-bar"><div class="progress-fill pf-${cpuColor}" style="width:${vps.cpu}%"></div></div>` : ''}
+      <div class="stat-row" style="margin-top:6px"><span class="stat-label">RAM</span><span class="stat-value ${ramColor}">${vps.ram.usedMB} / ${vps.ram.totalMB} MB (${vps.ram.pct}%)</span></div>
+      <div class="progress-bar"><div class="progress-fill pf-${ramColor}" style="width:${vps.ram.pct}%"></div></div>
+      ${vps.disk ? `<div class="stat-row" style="margin-top:6px"><span class="stat-label">Disque</span><span class="stat-value ${diskColor}">${vps.disk.usedGB} / ${vps.disk.totalGB} GB (${vps.disk.pct}%)</span></div><div class="progress-bar"><div class="progress-fill pf-${diskColor}" style="width:${vps.disk.pct}%"></div></div>` : ''}
+      <div class="stat-row" style="margin-top:6px"><span class="stat-label">Load Average</span><span class="stat-value">${vps.load.m1} / ${vps.load.m5} / ${vps.load.m15}</span></div>
+      <div class="stat-row"><span class="stat-label">Uptime VPS</span><span class="stat-value">${uptimeD}j ${uptimeH}h</span></div>
+    `;
+  }
+
+  // Docker
+  const dk = d.docker || {};
+  if (dk.error) {
+    document.getElementById("dockerContent").innerHTML = '<div style="color:var(--muted);font-size:.85rem">Docker indisponible (socket non monte)</div>';
+    document.getElementById("dockerDot").className = "dot dot-orange";
+  } else if (dk.containers && dk.containers.length > 0) {
+    document.getElementById("dockerDot").className = "dot dot-" + (dk.stopped > 0 ? "orange" : "green");
+    document.getElementById("dockerContent").innerHTML = `
+      <div class="big-row" style="margin-bottom:12px">
+        <div class="big-item"><div class="big-number green">${dk.running}</div><div class="big-label">Running</div></div>
+        <div class="big-item"><div class="big-number ${dk.stopped > 0 ? 'red' : ''}">${dk.stopped}</div><div class="big-label">Stopped</div></div>
+        <div class="big-item"><div class="big-number">${dk.total}</div><div class="big-label">Total</div></div>
+      </div>
+      <div class="docker-grid">
+        ${dk.containers.map(c => `<div class="docker-item docker-${c.state === 'running' ? 'running' : 'stopped'}">
+          <div class="docker-name">${esc(c.name)}</div>
+          <div class="docker-status" style="color:var(--${c.state === 'running' ? 'green' : 'red'})">${esc(c.status)}</div>
+        </div>`).join("")}
+      </div>
+    `;
+  } else {
+    document.getElementById("dockerContent").innerHTML = '<div style="color:var(--muted)">Aucun conteneur trouve</div>';
+  }
+
+  // Backups
+  const bk = d.backups || {};
+  if (bk.error) {
+    document.getElementById("backupsContent").innerHTML = `<div style="color:var(--muted);font-size:.85rem">${esc(bk.error)}</div>`;
+  } else if (bk.latest) {
+    const latestDate = new Date(bk.latest.date);
+    const hoursSince = Math.round((Date.now() - latestDate.getTime()) / 3600000);
+    const freshColor = hoursSince <= 24 ? 'green' : hoursSince <= 48 ? 'orange' : 'red';
+    document.getElementById("backupsContent").innerHTML = `
+      <div class="stat-row"><span class="stat-label">Derniere sauvegarde</span><span class="stat-value ${freshColor}">${hoursSince < 1 ? 'Il y a moins d\\'1h' : 'Il y a ' + hoursSince + 'h'}</span></div>
+      <div class="stat-row"><span class="stat-label">Fichier</span><span class="stat-value" style="font-size:.8rem">${esc(bk.latest.name)}</span></div>
+      <div class="stat-row"><span class="stat-label">Taille</span><span class="stat-value">${bk.latest.sizeMB} MB</span></div>
+      <div class="stat-row"><span class="stat-label">Total sauvegardes</span><span class="stat-value">${bk.total || 0}</span></div>
+      ${bk.files && bk.files.length > 1 ? '<div style="margin-top:10px;font-size:.78rem;color:var(--muted)">Historique :</div>' + bk.files.slice(0, 5).map(f => `<div class="backup-item"><span class="backup-name">${esc(f.name)}</span><span class="backup-meta">${f.sizeMB} MB — ${f.date.slice(0,16).replace("T"," ")}</span></div>`).join("") : ''}
+    `;
+  } else {
+    document.getElementById("backupsContent").innerHTML = '<div class="alert-item alert-danger">Aucune sauvegarde trouvee</div>';
+  }
 
   // Health
   const h = d.health;
