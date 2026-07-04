@@ -1,24 +1,16 @@
-# dependencies
-/node_modules
-
-# production
-/build
-
-# env
+node_modules/
+dist/
+data/
 .env
-.env.*
-.env.local
-
-# backups
-backups/
-dist.backup*/
+.envx
 *.bak
-*.backup-*
-
-# logs
-logs/
-*.log
-
-# secrets
-**/__pycache__/
+*.bak.*
+*.sh~
+__pycache__/
 *.pyc
+*.pyo
+.vscode/
+.idea/
+*.log
+/var/
+tmp/
