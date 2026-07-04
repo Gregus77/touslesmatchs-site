@@ -13,6 +13,7 @@ const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
 const SubscriptionEngine = require("./subscription-engine");
+const StripeHandler = require("./stripe-handler");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -486,16 +487,28 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
-const STRIPE_PRICE_ID_CARTE    = process.env.STRIPE_PRICE_ID_CARTE    || process.env.STRIPE_PRICE_CARTE   || "";
-const STRIPE_PRICE_ID_PREMIUM  = process.env.STRIPE_PRICE_ID_PREMIUM  || process.env.STRIPE_PRICE_PRO     || "";
-const STRIPE_PRICE_ID_ELITE    = process.env.STRIPE_PRICE_ID_ELITE    || process.env.STRIPE_PRICE_ELITE   || "";
-const STRIPE_PRICE_ID_VIP      = process.env.STRIPE_PRICE_ID_VIP      || process.env.STRIPE_PRICE_VIP     || "";
+const STRIPE_PRICE_ID_CARTE     = process.env.STRIPE_PRICE_ID_CARTE     || process.env.STRIPE_PRICE_CARTE   || "";
+const STRIPE_PRICE_ID_ESSENTIAL = process.env.STRIPE_PRICE_ID_ESSENTIAL || process.env.STRIPE_PRICE_ID_PREMIUM || process.env.STRIPE_PRICE_PRO || "";
+const STRIPE_PRICE_ID_ELITE     = process.env.STRIPE_PRICE_ID_ELITE     || process.env.STRIPE_PRICE_ELITE   || "";
+const STRIPE_PRICE_ID_PREMIUM   = process.env.STRIPE_PRICE_ID_PREMIUM   || STRIPE_PRICE_ID_ESSENTIAL;
+const STRIPE_PRICE_ID_VIP       = process.env.STRIPE_PRICE_ID_VIP       || process.env.STRIPE_PRICE_VIP     || "";
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
 const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const CODES_DB_PATH = process.env.CODES_DB_PATH || "/data/codes.db";
+const stripeHandler = new StripeHandler({
+  db,
+  subscriptionEngine,
+  priceConfig: {
+    carte: STRIPE_PRICE_ID_CARTE,
+    essential: STRIPE_PRICE_ID_ESSENTIAL,
+    elite: STRIPE_PRICE_ID_ELITE,
+  },
+  codesDbPath: CODES_DB_PATH,
+});
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _freeResultDailyDate = { date: "", count: 0 };
@@ -4466,7 +4479,7 @@ app.post("/forgot-code", async (req, res) => {
 });
 
 // ── Verify code (reads codes.db directly) ────────────────────────────────────
-const CODES_DB_PATH = process.env.CODES_DB_PATH || "/data/codes.db";
+// CODES_DB_PATH declared near top of file (used by stripeHandler init)
 
 // Auto-create codes table if it doesn't exist
 try {
@@ -4942,152 +4955,83 @@ app.post("/prematch-analysis", async (req, res) => {
 });
 
 // ── Stripe ────────────────────────────────────────────────────────────────────
-app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
-  const { price_id } = req.body || {};
-  if (!price_id || !STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
-  const planLookup = { [STRIPE_PRICE_ID_CARTE]: "carte", [STRIPE_PRICE_ID_PREMIUM]: "premium", [STRIPE_PRICE_ID_VIP]: "vip", [STRIPE_PRICE_ID_ELITE]: "elite" };
-  const planName = planLookup[price_id] || "premium";
+// Checkout endpoint — creates a Stripe Checkout session
+app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
+  const { price_id, plan: planName } = req.body || {};
+  if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
+
+  // Accept either a raw price_id or a plan name
+  const priceMap = {
+    carte: STRIPE_PRICE_ID_CARTE,
+    essential: STRIPE_PRICE_ID_ESSENTIAL,
+    elite: STRIPE_PRICE_ID_ELITE,
+    // Legacy aliases
+    standard: STRIPE_PRICE_ID_ESSENTIAL,
+    premium: STRIPE_PRICE_ID_ESSENTIAL,
+    vip: STRIPE_PRICE_ID_ELITE,
+  };
+  const resolvedPriceId = price_id || priceMap[(planName || "").toLowerCase()];
+  if (!resolvedPriceId) return res.json({ ok: false, error: "Plan inconnu ou price_id manquant" });
+
+  const isSinglePayment = resolvedPriceId === STRIPE_PRICE_ID_CARTE;
 
   try {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode: isSinglePayment ? "payment" : "subscription",
       payment_method_types: ["card"],
-      line_items: [{ price: price_id, quantity: 1 }],
-      success_url: `https://www.touslesmatchs.com/live-ia?success=1&plan=${planName}`,
+      line_items: [{ price: resolvedPriceId, quantity: 1 }],
+      success_url: `https://www.touslesmatchs.com/live-ia?success=1`,
       cancel_url: "https://www.touslesmatchs.com/subscription",
       client_reference_id: String(req.user.id),
       customer_email: req.user.email,
     });
     res.json({ ok: true, url: session.url });
   } catch (e) {
-    res.json({ ok: false, error: e.message });
+    console.error("[stripe] create-checkout error:", e.message);
+    res.json({ ok: false, error: "Erreur lors de la creation de la session" });
   }
 });
 
-// Stripe webhook — activate subscription
+// Stripe webhook — all events routed through StripeHandler
 app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
-  if (!STRIPE_SECRET_KEY) return res.json({ ok: false });
+  if (!STRIPE_SECRET_KEY) return res.status(503).json({ ok: false, error: "Stripe not configured" });
 
   let event;
+  let stripe;
   try {
     const Stripe = require("stripe");
-    const stripe = Stripe(STRIPE_SECRET_KEY);
-    event = STRIPE_WEBHOOK_SECRET
-      ? stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET)
-      : JSON.parse(req.body);
+    stripe = Stripe(STRIPE_SECRET_KEY);
+    if (STRIPE_WEBHOOK_SECRET) {
+      event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET);
+    } else {
+      event = JSON.parse(req.body);
+    }
   } catch (e) {
-    return res.status(400).json({ error: e.message });
+    console.error("[stripe] webhook signature verification failed:", e.message);
+    return res.status(400).json({ error: "Webhook signature verification failed" });
   }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-
-    // ── Récupérer email client et prix ──────────────────────────────────────
-    const customerEmail = (session.customer_details?.email || session.customer_email || "").toLowerCase().trim();
-    let priceId = "";
-    try {
-      const Stripe2 = require("stripe");
-      const stripe2 = Stripe2(STRIPE_SECRET_KEY);
-      const full = await stripe2.checkout.sessions.retrieve(session.id, { expand: ["line_items"] });
-      priceId = full.line_items?.data?.[0]?.price?.id || "";
-    } catch(e) { console.error("[stripe] retrieve error:", e.message); }
-
-    const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro", durationDays: 1 },
-      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro",            durationDays: 32 },
-      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP",            durationDays: 32 },
-      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite",          durationDays: 32 },
-    };
-    const { status = "premium", label: planLabel = "Pro", durationDays = 32 } = planMap[priceId] || {};
-
-    // ── Mettre à jour users table si userId connu ────────────────────────────
-    const userId = parseInt(session.client_reference_id);
-    if (userId) {
-      db.prepare("UPDATE users SET status = ?, stripe_customer_id = ?, stripe_subscription_id = ? WHERE id = ?").run(
-        status, session.customer, session.subscription, userId
-      );
-      const limit = TOKEN_LIMITS[status] || 0;
-      db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
-    }
-
-    // ── Créer code d'accès dans codes.db si pas encore existant ─────────────
-    if (customerEmail) {
-      try {
-        const codeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        const newCode = Array.from({ length: 8 }, () => codeChars[Math.floor(Math.random() * codeChars.length)]).join("");
-        const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
-        const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
-        const cdbw = new Database(CODES_DB_PATH);
-        const existing = cdbw.prepare("SELECT code FROM codes WHERE email = ? AND plan = ? AND active = 1").get(customerEmail, status);
-        if (!existing) {
-          cdbw.prepare(
-            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
-          ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr());
-          console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}`);
-        }
-        cdbw.close();
-      } catch(e) { console.error("[stripe] code creation error:", e.message); }
-    }
-
-    // ── Email de confirmation via Brevo ──────────────────────────────────────
-    if (customerEmail && BREVO_API_KEY) {
-      (async () => {
-        try {
-          const cdb = new Database(CODES_DB_PATH, { readonly: true });
-          const codeRows = cdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").all(customerEmail);
-          cdb.close();
-
-          const codeList = codeRows.map(r =>
-            `<tr><td style="padding:8px 16px;font-family:monospace;font-size:18px;font-weight:800;letter-spacing:.08em;color:#eceaf4">${r.code}</td>
-             <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
-          ).join("");
-
-          const upsellBlock = status === "carte"
-            ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Pro, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
-                <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
-              </div>`
-            : status === "premium"
-            ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
-              </div>`
-            : "";
-
-          const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
-              <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
-            </div>
-            <div style="padding:32px">
-              <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
-              <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:10px;overflow:hidden;margin-bottom:24px">${codeList}</table>
-              <p style="font-size:13px;color:#7b82a0;margin:0 0 20px">Utilise ce code sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a> → bouton "Se connecter" → entre ton email + ce code.</p>
-              <div style="text-align:center">
-                <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Acceder au Live IA →</a>
-              </div>
-              ${upsellBlock}
-            </div>
-          </div>`;
-
-          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html);
-          console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
-        } catch(e) { console.error("[stripe] email error:", e.message); }
-      })();
-    }
+  try {
+    const result = await stripeHandler.handleEvent(event, stripe);
+    console.log(`[stripe] Event ${event.type} (${event.id}): ${result.ok ? "OK" : "ERROR"}${result.skipped ? " (duplicate)" : ""}`);
+    res.json({ received: true, ...result });
+  } catch (e) {
+    console.error("[stripe] webhook handler error:", e.message);
+    res.status(500).json({ received: true, error: "Internal processing error" });
   }
+});
 
-  if (event.type === "customer.subscription.deleted") {
-    const sub = event.data.object;
-    db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
-  }
-
-  res.json({ received: true });
+// Stripe event history endpoint (admin only)
+app.get("/admin/stripe/events", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Forbidden" });
+  const limit = Math.min(parseInt(req.query.limit) || 50, 100);
+  const offset = parseInt(req.query.offset) || 0;
+  const history = stripeHandler.getEventHistory(limit, offset);
+  res.json({ ok: true, ...history });
 });
 
 async function handleCreateCheckout(req, res) {
@@ -5095,21 +5039,24 @@ async function handleCreateCheckout(req, res) {
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
   const priceMap = {
-    carte:    STRIPE_PRICE_ID_CARTE,
-    standard: STRIPE_PRICE_ID_PREMIUM,
-    premium:  STRIPE_PRICE_ID_PREMIUM,
-    vip:      STRIPE_PRICE_ID_VIP,
-    elite:    STRIPE_PRICE_ID_ELITE,
+    carte:     STRIPE_PRICE_ID_CARTE,
+    essential: STRIPE_PRICE_ID_ESSENTIAL,
+    elite:     STRIPE_PRICE_ID_ELITE,
+    // Legacy aliases
+    standard:  STRIPE_PRICE_ID_ESSENTIAL,
+    premium:   STRIPE_PRICE_ID_ESSENTIAL,
+    vip:       STRIPE_PRICE_ID_ELITE,
   };
-  const priceId = priceMap[plan];
+  const priceId = priceMap[(plan || "").toLowerCase()];
   if (!priceId) return res.json({ ok: false, error: "Plan inconnu" });
+
+  const isSinglePayment = priceId === STRIPE_PRICE_ID_CARTE;
 
   try {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
-    const mode = plan === "carte" ? "payment" : "subscription";
     const session = await stripe.checkout.sessions.create({
-      mode,
+      mode: isSinglePayment ? "payment" : "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `https://www.touslesmatchs.com/live-ia?success=1&plan=${plan}`,
@@ -5118,12 +5065,12 @@ async function handleCreateCheckout(req, res) {
     });
     res.json({ ok: true, url: session.url });
   } catch (e) {
-    res.json({ ok: false, error: e.message });
+    console.error("[stripe] legacy create-checkout error:", e.message);
+    res.json({ ok: false, error: "Erreur lors de la creation de la session" });
   }
 }
 
-// Legacy create-checkout accessible via /create-checkout et /api/create-checkout
-app.post("/create-checkout", handleCreateCheckout);
+// Legacy create-checkout
 app.post("/create-checkout", handleCreateCheckout);
 
 // ── Community stats (Telegram member count) ───────────────────────────────────
@@ -5756,12 +5703,11 @@ app.post("/internal/stripe-verify", async (req, res) => {
 
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
-      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
-      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
-      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
+      [STRIPE_PRICE_ID_CARTE]:     { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_ESSENTIAL]: { status: "essential", durationDays: 32, creditsMax: 10 },
+      [STRIPE_PRICE_ID_ELITE]:     { status: "elite",   durationDays: 32, creditsMax: 30 },
     };
-    const { status = "premium", durationDays = 32, creditsMax = 10 } = planMap[priceId] || {};
+    const { status = "essential", durationDays = 32, creditsMax = 10 } = planMap[priceId] || {};
 
     // Chercher code existant
     const cdbr = new Database(CODES_DB_PATH, { readonly: true });
