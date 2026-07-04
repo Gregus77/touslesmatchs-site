@@ -151,14 +151,26 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     agent_name TEXT NOT NULL,
     weight REAL NOT NULL,
+    wilson_score REAL DEFAULT 0,
+    ema_score REAL DEFAULT 0,
+    roi_multiplier REAL DEFAULT 1.0,
     winrate REAL,
     total_resolved INTEGER DEFAULT 0,
     roi REAL DEFAULT 0,
     sport TEXT DEFAULT 'all',
+    bet_category TEXT DEFAULT 'all',
+    context_key TEXT DEFAULT 'global',
+    old_weight REAL,
     reason TEXT DEFAULT '',
     computed_at TEXT DEFAULT (datetime('now'))
   );
 `);
+ensureColumn("agent_weights", "wilson_score", "REAL DEFAULT 0");
+ensureColumn("agent_weights", "ema_score", "REAL DEFAULT 0");
+ensureColumn("agent_weights", "roi_multiplier", "REAL DEFAULT 1.0");
+ensureColumn("agent_weights", "bet_category", "TEXT DEFAULT 'all'");
+ensureColumn("agent_weights", "context_key", "TEXT DEFAULT 'global'");
+ensureColumn("agent_weights", "old_weight", "REAL");
 ensureColumn("concile_analyses", "cote", "REAL DEFAULT NULL");
 ensureColumn("concile_analyses", "gain", "REAL DEFAULT NULL");
 
@@ -2071,8 +2083,38 @@ function assessLearningProfile(profile, minResolved = 5) {
 }
 
 // ── Learning Engine ──────────────────────────────────────────────────────────
+// Learning Engine Configuration
+const LEARNING_CONFIG = {
+  wilson_z: 1.645,         // 90% confidence interval (z-score)
+  ema_alpha: 0.05,         // EMA smoothing factor (configurable)
+  min_resolutions: 10,     // Minimum resolved predictions before weight > 50%
+  roi_cap: 0.3,            // Max ROI multiplier bonus (+/- 30%)
+  default_weight: 50,      // Default weight for agents below minimum threshold
+};
+
+function wilsonScoreLowerBound(wins, total, z) {
+  if (total === 0) return 0;
+  const p = wins / total;
+  const denominator = 1 + (z * z) / total;
+  const centre = p + (z * z) / (2 * total);
+  const spread = z * Math.sqrt((p * (1 - p) + (z * z) / (4 * total)) / total);
+  return (centre - spread) / denominator;
+}
+
+function computeEMA(outcomes, alpha) {
+  if (!outcomes || outcomes.length === 0) return 0.5;
+  let ema = 0.5;
+  for (const o of outcomes) {
+    const val = o === "win" ? 1 : 0;
+    ema = alpha * val + (1 - alpha) * ema;
+  }
+  return ema;
+}
+
 function computeAgentWeights() {
   try {
+    const { wilson_z, ema_alpha, min_resolutions, roi_cap, default_weight } = LEARNING_CONFIG;
+
     const agents = db.prepare(`
       SELECT agent_name,
         COUNT(*) as total,
@@ -2083,22 +2125,10 @@ function computeAgentWeights() {
       GROUP BY agent_name
     `).all();
 
-    const recentWindow = db.prepare(`
-      SELECT agent_name,
-        COUNT(*) as total,
-        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins
-      FROM agent_predictions
-      WHERE outcome IN ('win','loss')
-        AND created_at >= datetime('now', '-30 days')
-      GROUP BY agent_name
-    `).all();
-    const recentMap = {};
-    recentWindow.forEach(r => { recentMap[r.agent_name] = r; });
-
     const results = [];
     const insert = db.prepare(`
-      INSERT INTO agent_weights (agent_name, weight, winrate, total_resolved, roi, sport, reason)
-      VALUES (?, ?, ?, ?, ?, 'all', ?)
+      INSERT INTO agent_weights (agent_name, weight, wilson_score, ema_score, roi_multiplier, winrate, total_resolved, roi, sport, bet_category, context_key, old_weight, reason)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const ag of agents) {
@@ -2106,29 +2136,93 @@ function computeAgentWeights() {
       if (resolved < 3) continue;
 
       const globalWinrate = Math.round(ag.wins / resolved * 100);
-      const recent = recentMap[ag.agent_name];
-      const recentWinrate = recent && recent.total >= 3
-        ? Math.round(recent.wins / recent.total * 100)
-        : null;
+      const wilson = wilsonScoreLowerBound(ag.wins, resolved, wilson_z);
+
+      const outcomes = db.prepare(`
+        SELECT outcome FROM agent_predictions
+        WHERE agent_name = ? AND outcome IN ('win','loss')
+        ORDER BY created_at ASC
+      `).all(ag.agent_name).map(r => r.outcome);
+      const ema = computeEMA(outcomes, ema_alpha);
 
       const roiData = computeAgentROI(ag.agent_name);
       const roi = roiData.roi;
+      const roiMultiplier = 1 + Math.max(-roi_cap, Math.min(roi_cap, roi / 100));
 
-      // Weight formula: 60% recent winrate (or global if not enough data) + 25% global winrate + 15% ROI bonus
-      const baseWinrate = recentWinrate !== null ? recentWinrate : globalWinrate;
-      const roiBonus = Math.max(-15, Math.min(15, roi / 2));
-      let weight = Math.round(baseWinrate * 0.6 + globalWinrate * 0.25 + 50 * 0.15 + roiBonus);
-      weight = Math.max(5, Math.min(95, weight));
+      let weight;
+      if (resolved < min_resolutions) {
+        weight = default_weight;
+      } else {
+        const baseScore = (wilson * 0.6 + ema * 0.4) * 100;
+        weight = Math.round(baseScore * roiMultiplier);
+        weight = Math.max(5, Math.min(95, weight));
+      }
+
+      const oldWeightRow = db.prepare(`
+        SELECT weight FROM agent_weights WHERE agent_name = ? AND context_key = 'global' ORDER BY computed_at DESC LIMIT 1
+      `).get(ag.agent_name);
+      const oldWeight = oldWeightRow ? oldWeightRow.weight : null;
 
       const reasons = [];
-      if (recentWinrate !== null && recentWinrate !== globalWinrate) {
-        reasons.push(`recent 30j: ${recentWinrate}% (${recent.total} matchs)`);
-      }
-      reasons.push(`global: ${globalWinrate}% (${resolved} matchs)`);
-      if (roi !== 0) reasons.push(`ROI: ${roi > 0 ? "+" : ""}${roi.toFixed(1)}%`);
+      if (resolved < min_resolutions) reasons.push(`< ${min_resolutions} résolutions (${resolved}), poids bloqué`);
+      reasons.push(`Wilson(90%): ${(wilson * 100).toFixed(1)}%`);
+      reasons.push(`EMA(α=${ema_alpha}): ${(ema * 100).toFixed(1)}%`);
+      reasons.push(`ROI×: ${roiMultiplier.toFixed(2)}`);
+      reasons.push(`${resolved} matchs`);
 
-      insert.run(ag.agent_name, weight, globalWinrate, resolved, roi, reasons.join(", "));
-      results.push({ agent: ag.agent_name, weight, globalWinrate, recentWinrate, resolved, roi, reasons });
+      insert.run(ag.agent_name, weight, wilson, ema, roiMultiplier, globalWinrate, resolved, roi, "all", "all", "global", oldWeight, reasons.join(" | "));
+
+      // Contextual weights by sport
+      const sportRows = db.prepare(`
+        SELECT ap.outcome, ca.sport
+        FROM agent_predictions ap
+        LEFT JOIN concile_analyses ca ON ap.match_key = ca.match_key
+        WHERE ap.agent_name = ? AND ap.outcome IN ('win','loss') AND ca.sport IS NOT NULL
+      `).all(ag.agent_name);
+
+      const bySport = {};
+      for (const r of sportRows) {
+        if (!bySport[r.sport]) bySport[r.sport] = { wins: 0, total: 0, outcomes: [] };
+        bySport[r.sport].total++;
+        if (r.outcome === "win") bySport[r.sport].wins++;
+        bySport[r.sport].outcomes.push(r.outcome);
+      }
+
+      for (const [sport, data] of Object.entries(bySport)) {
+        if (data.total < 5) continue;
+        const sWilson = wilsonScoreLowerBound(data.wins, data.total, wilson_z);
+        const sEma = computeEMA(data.outcomes, ema_alpha);
+        let sWeight = data.total < min_resolutions ? default_weight : Math.round((sWilson * 0.6 + sEma * 0.4) * 100 * roiMultiplier);
+        sWeight = Math.max(5, Math.min(95, sWeight));
+        insert.run(ag.agent_name, sWeight, sWilson, sEma, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, sport, "all", `sport:${sport}`, null, `${sport}: Wilson ${(sWilson * 100).toFixed(1)}% | EMA ${(sEma * 100).toFixed(1)}% | ${data.total} matchs`);
+      }
+
+      // Contextual weights by bet_category
+      const catRows = db.prepare(`
+        SELECT ap.outcome, ca.bet_category
+        FROM agent_predictions ap
+        LEFT JOIN concile_analyses ca ON ap.match_key = ca.match_key
+        WHERE ap.agent_name = ? AND ap.outcome IN ('win','loss') AND ca.bet_category IS NOT NULL
+      `).all(ag.agent_name);
+
+      const byCat = {};
+      for (const r of catRows) {
+        if (!byCat[r.bet_category]) byCat[r.bet_category] = { wins: 0, total: 0, outcomes: [] };
+        byCat[r.bet_category].total++;
+        if (r.outcome === "win") byCat[r.bet_category].wins++;
+        byCat[r.bet_category].outcomes.push(r.outcome);
+      }
+
+      for (const [cat, data] of Object.entries(byCat)) {
+        if (data.total < 5) continue;
+        const cWilson = wilsonScoreLowerBound(data.wins, data.total, wilson_z);
+        const cEma = computeEMA(data.outcomes, ema_alpha);
+        let cWeight = data.total < min_resolutions ? default_weight : Math.round((cWilson * 0.6 + cEma * 0.4) * 100 * roiMultiplier);
+        cWeight = Math.max(5, Math.min(95, cWeight));
+        insert.run(ag.agent_name, cWeight, cWilson, cEma, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, "all", cat, `bet:${cat}`, null, `${cat}: Wilson ${(cWilson * 100).toFixed(1)}% | EMA ${(cEma * 100).toFixed(1)}% | ${data.total} matchs`);
+      }
+
+      results.push({ agent: ag.agent_name, weight, wilson: (wilson * 100).toFixed(1), ema: (ema * 100).toFixed(1), roiMultiplier: roiMultiplier.toFixed(2), globalWinrate, resolved, roi, belowThreshold: resolved < min_resolutions });
     }
 
     return results;
@@ -2163,33 +2257,51 @@ function computeAgentROI(agentName) {
 function getLatestAgentWeights() {
   try {
     const agents = db.prepare(`
-      SELECT DISTINCT agent_name FROM agent_weights ORDER BY agent_name
+      SELECT DISTINCT agent_name FROM agent_weights WHERE context_key = 'global' ORDER BY agent_name
     `).all().map(r => r.agent_name);
 
     return agents.map(name => {
       const latest = db.prepare(`
-        SELECT * FROM agent_weights WHERE agent_name = ? ORDER BY computed_at DESC LIMIT 1
+        SELECT * FROM agent_weights WHERE agent_name = ? AND context_key = 'global' ORDER BY computed_at DESC LIMIT 1
       `).get(name);
+      if (!latest) return null;
+
       const previous = db.prepare(`
-        SELECT weight FROM agent_weights WHERE agent_name = ? ORDER BY computed_at DESC LIMIT 1 OFFSET 1
+        SELECT weight FROM agent_weights WHERE agent_name = ? AND context_key = 'global' ORDER BY computed_at DESC LIMIT 1 OFFSET 1
       `).get(name);
+
       const history = db.prepare(`
-        SELECT weight, winrate, roi, computed_at FROM agent_weights
-        WHERE agent_name = ? ORDER BY computed_at DESC LIMIT 30
+        SELECT weight, wilson_score, ema_score, roi_multiplier, winrate, roi, total_resolved, reason, computed_at FROM agent_weights
+        WHERE agent_name = ? AND context_key = 'global' ORDER BY computed_at DESC LIMIT 30
       `).all(name);
+
+      const contextual = db.prepare(`
+        SELECT context_key, weight, wilson_score, ema_score, total_resolved, winrate, computed_at FROM agent_weights
+        WHERE agent_name = ? AND context_key != 'global' ORDER BY computed_at DESC LIMIT 20
+      `).all(name);
+
+      const belowThreshold = latest.total_resolved < LEARNING_CONFIG.min_resolutions;
+
       return {
         agent: name,
         weight: latest.weight,
+        wilsonScore: latest.wilson_score,
+        emaScore: latest.ema_score,
+        roiMultiplier: latest.roi_multiplier,
         winrate: latest.winrate,
         resolved: latest.total_resolved,
         roi: latest.roi,
         reason: latest.reason,
         updatedAt: latest.computed_at,
+        oldWeight: latest.old_weight,
         previousWeight: previous ? previous.weight : null,
         trend: previous ? (latest.weight > previous.weight ? "up" : latest.weight < previous.weight ? "down" : "stable") : "new",
+        belowThreshold,
+        minResolutions: LEARNING_CONFIG.min_resolutions,
+        contextual,
         history,
       };
-    });
+    }).filter(Boolean);
   } catch (e) {
     console.error("[learning-engine] getWeights:", e.message);
     return [];
@@ -2269,6 +2381,7 @@ function getLearningEngineStats() {
     }));
 
     return {
+      config: LEARNING_CONFIG,
       overall: {
         total: overall.total, wins: overall.wins, losses: overall.losses,
         winrate: overall.total > 0 ? Math.round(overall.wins / overall.total * 100) : 0,
@@ -2278,7 +2391,7 @@ function getLearningEngineStats() {
     };
   } catch (e) {
     console.error("[learning-engine] stats:", e.message);
-    return { overall: {}, byCompetition: [], bySport: [], byBetCategory: [], byConfidenceBracket: [] };
+    return { config: LEARNING_CONFIG, overall: {}, byCompetition: [], bySport: [], byBetCategory: [], byConfidenceBracket: [] };
   }
 }
 
