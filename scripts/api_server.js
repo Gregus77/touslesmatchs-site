@@ -2140,19 +2140,44 @@ function saveLearningConfig(newConfig, changedBy = "admin", variant = "productio
   const current = loadLearningConfig(variant);
   const changes = [];
   for (const [key, val] of Object.entries(newConfig)) {
+    if (key === "version") continue;
     const oldVal = JSON.stringify(current[key]);
     const newVal = JSON.stringify(val);
     if (oldVal !== newVal) {
       changes.push({ param_name: key, old_value: oldVal, new_value: newVal });
     }
   }
-  const merged = { ...current, ...newConfig };
+  const oldVersion = current.version || "2.0.0";
+  let newVersion = oldVersion;
+  if (changes.length > 0) {
+    const parts = oldVersion.split(".").map(Number);
+    parts[2] = (parts[2] || 0) + 1;
+    newVersion = parts.join(".");
+  }
+  const merged = { ...current, ...newConfig, version: newVersion };
   db.prepare(`INSERT INTO learning_config (config_json, variant, updated_by) VALUES (?, ?, ?)`).run(JSON.stringify(merged), variant, changedBy);
   const insertHistory = db.prepare(`INSERT INTO learning_config_history (param_name, old_value, new_value, variant, changed_by) VALUES (?, ?, ?, ?, ?)`);
   for (const c of changes) {
     insertHistory.run(c.param_name, c.old_value, c.new_value, variant, changedBy);
   }
-  return { config: merged, changes };
+  if (changes.length > 0) {
+    insertHistory.run("version", JSON.stringify(oldVersion), JSON.stringify(newVersion), variant, changedBy);
+  }
+  return { config: merged, changes, version: newVersion };
+}
+
+function listConfigVersions(variant = "production") {
+  return db.prepare(`SELECT id, config_json, variant, updated_by, updated_at FROM learning_config WHERE variant = ? ORDER BY updated_at DESC LIMIT 50`).all(variant).map(r => {
+    const cfg = JSON.parse(r.config_json);
+    return { id: r.id, version: cfg.version || "?", updatedBy: r.updated_by, updatedAt: r.updated_at };
+  });
+}
+
+function restoreConfigVersion(configId, changedBy = "admin") {
+  const row = db.prepare(`SELECT config_json, variant FROM learning_config WHERE id = ?`).get(configId);
+  if (!row) return null;
+  const restored = JSON.parse(row.config_json);
+  return saveLearningConfig(restored, `${changedBy} (restore v${restored.version})`, row.variant);
 }
 
 function getLearningConfigHistory(limit = 50) {
@@ -2160,6 +2185,106 @@ function getLearningConfigHistory(limit = 50) {
 }
 
 let LEARNING_CONFIG = loadLearningConfig();
+
+// ── Learning Engine — Simulation & Backtest ─────────────────────────────────
+
+function simulateWeights(customConfig) {
+  const cfg = { ...LEARNING_CONFIG, ...customConfig };
+  const { wilson_z, ema_alpha, min_resolutions, roi_cap, default_weight, weight_wilson_share, weight_ema_share, weight_min, weight_max } = cfg;
+
+  const agents = db.prepare(`
+    SELECT agent_name,
+      COUNT(*) as total,
+      SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+      SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+    FROM agent_predictions WHERE outcome IN ('win','loss') GROUP BY agent_name
+  `).all();
+
+  const results = [];
+  for (const ag of agents) {
+    const resolved = ag.wins + ag.losses;
+    if (resolved < 3) continue;
+    const wilson = wilsonScoreLowerBound(ag.wins, resolved, wilson_z);
+    const outcomes = db.prepare(`SELECT outcome FROM agent_predictions WHERE agent_name = ? AND outcome IN ('win','loss') ORDER BY created_at ASC`).all(ag.agent_name).map(r => r.outcome);
+    const ema = computeEMA(outcomes, ema_alpha);
+    const roiData = computeAgentROI(ag.agent_name);
+    const roiMultiplier = 1 + Math.max(-roi_cap, Math.min(roi_cap, roiData.roi / 100));
+    let weight = resolved < min_resolutions ? default_weight : Math.round((wilson * weight_wilson_share + ema * weight_ema_share) * 100 * roiMultiplier);
+    weight = Math.max(weight_min, Math.min(weight_max, weight));
+    const currentRow = db.prepare(`SELECT weight FROM agent_weights WHERE agent_name = ? AND context_key = 'global' ORDER BY computed_at DESC LIMIT 1`).get(ag.agent_name);
+    results.push({ agent: ag.agent_name, simulatedWeight: weight, currentWeight: currentRow ? currentRow.weight : null, wilson: (wilson * 100).toFixed(1), ema: (ema * 100).toFixed(1), roiMultiplier: roiMultiplier.toFixed(2), resolved, roi: roiData.roi, delta: currentRow ? weight - currentRow.weight : null });
+  }
+  return { config: cfg, agents: results.sort((a, b) => b.simulatedWeight - a.simulatedWeight) };
+}
+
+function runBacktest(customConfig) {
+  const cfg = { ...LEARNING_CONFIG, ...customConfig };
+  const { wilson_z, ema_alpha, min_resolutions, roi_cap, weight_wilson_share, weight_ema_share, default_weight, weight_min, weight_max } = cfg;
+
+  const analyses = db.prepare(`
+    SELECT match_key, outcome, confidence, cote, agents_json, created_at
+    FROM concile_analyses WHERE outcome IN ('win','loss') ORDER BY created_at ASC
+  `).all();
+
+  if (analyses.length === 0) return { config: cfg, results: { roi: 0, winrate: 0, total: 0, curve: [] }, comparison: null };
+
+  let stake = 0, returns = 0, wins = 0;
+  const curve = [];
+  const agentStats = {};
+
+  for (const a of analyses) {
+    let agents = [];
+    try { agents = JSON.parse(a.agents_json || "[]"); } catch (e) {}
+
+    for (const ag of agents) {
+      const name = ag.agent || ag.name;
+      if (!name) continue;
+      if (!agentStats[name]) agentStats[name] = { wins: 0, total: 0, outcomes: [] };
+    }
+
+    const weightedVotes = {};
+    for (const ag of agents) {
+      const name = ag.agent || ag.name;
+      if (!name) continue;
+      const s = agentStats[name];
+      const wilson = wilsonScoreLowerBound(s.wins, s.total, wilson_z);
+      const ema = computeEMA(s.outcomes, ema_alpha);
+      const roi = s.total > 0 ? (s.wins * 1.7 - s.total) / s.total * 100 : 0;
+      const roiMult = 1 + Math.max(-roi_cap, Math.min(roi_cap, roi / 100));
+      let w = s.total < min_resolutions ? default_weight : Math.round((wilson * weight_wilson_share + ema * weight_ema_share) * 100 * roiMult);
+      w = Math.max(weight_min, Math.min(weight_max, w));
+      weightedVotes[name] = w;
+    }
+
+    const cote = a.cote || Math.min(1.95, ((1 / (Math.max(55, a.confidence || 55) / 100)) * 1.45));
+    stake += 1;
+    if (a.outcome === "win") { returns += cote; wins++; }
+
+    for (const ag of agents) {
+      const name = ag.agent || ag.name;
+      if (!name) continue;
+      agentStats[name].total++;
+      agentStats[name].outcomes.push(a.outcome);
+      if (a.outcome === "win") agentStats[name].wins++;
+    }
+
+    if (stake % 5 === 0 || stake === analyses.length) {
+      curve.push({ matchIndex: stake, roi: Math.round(((returns - stake) / stake) * 1000) / 10, winrate: Math.round(wins / stake * 100) });
+    }
+  }
+
+  const backtestROI = stake > 0 ? Math.round(((returns - stake) / stake) * 1000) / 10 : 0;
+  const backtestWinrate = stake > 0 ? Math.round(wins / stake * 100) : 0;
+
+  const currentStats = getLearningEngineStats();
+  const comparison = {
+    current: { roi: currentStats.overall.roi, winrate: currentStats.overall.winrate, total: currentStats.overall.total },
+    backtest: { roi: backtestROI, winrate: backtestWinrate, total: stake },
+    delta: { roi: backtestROI - (currentStats.overall.roi || 0), winrate: backtestWinrate - (currentStats.overall.winrate || 0) }
+  };
+
+  return { config: cfg, results: { roi: backtestROI, winrate: backtestWinrate, total: stake, curve }, comparison };
+}
 
 function wilsonScoreLowerBound(wins, total, z) {
   if (total === 0) return 0;
@@ -6762,6 +6887,57 @@ app.post("/admin/learning-config/reset", (req, res) => {
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message });
   }
+});
+
+// ── Learning Engine — Simulation, Backtest, Versions, Sandbox ──────────────���─
+
+app.post("/admin/learning-engine/simulate", (req, res) => {
+  const { email, code, config } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const result = simulateWeights(config || {});
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/admin/learning-engine/backtest", (req, res) => {
+  const { email, code, config } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const result = runBacktest(config || {});
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.get("/admin/learning-config/versions", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    res.json({ ok: true, versions: listConfigVersions(), current: LEARNING_CONFIG.version });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/admin/learning-config/restore", (req, res) => {
+  const { email, code, configId } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  if (!configId) return res.status(400).json({ ok: false, error: "configId requis" });
+  try {
+    const result = restoreConfigVersion(configId, email || "admin");
+    if (!result) return res.status(404).json({ ok: false, error: "Version introuvable" });
+    LEARNING_CONFIG = result.config;
+    res.json({ ok: true, config: result.config, version: result.version });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/admin/learning-engine/sandbox", (req, res) => {
+  const { email, code, config } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const sandboxConfig = { ...LEARNING_CONFIG, ...config };
+    const simulation = simulateWeights(sandboxConfig);
+    const backtest = runBacktest(sandboxConfig);
+    res.json({ ok: true, sandbox: { config: sandboxConfig, simulation: simulation.agents, backtest: backtest.results, comparison: backtest.comparison } });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // ── Admin Dashboard — aggregated data endpoint ──────────────────────────────

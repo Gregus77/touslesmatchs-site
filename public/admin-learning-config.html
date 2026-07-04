@@ -145,9 +145,36 @@ h1 { font-size: 1.3rem; margin-bottom: 8px; }
   </div>
 
   <div class="card">
+    <h3>Simulation</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Testez une configuration sans modifier les poids reels. Les valeurs ci-dessus sont utilisees.</p>
+    <button class="btn btn-secondary" onclick="runSimulation()">Lancer la simulation</button>
+    <div id="simulationResult" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h3>Backtest</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Rejoue tout l'historique avec la configuration ci-dessus et compare au systeme actuel.</p>
+    <button class="btn btn-secondary" onclick="runBacktest()">Lancer le backtest</button>
+    <div id="backtestResult" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h3>Sandbox</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Combine simulation + backtest pour tester un algorithme complet sans toucher aux vrais poids.</p>
+    <button class="btn btn-secondary" onclick="runSandbox()">Lancer le sandbox</button>
+    <div id="sandboxResult" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card">
+    <h3>Versions de configuration</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Chaque sauvegarde cree une nouvelle version. Vous pouvez restaurer n'importe quelle version precedente.</p>
+    <div id="versionsContent"><em style="color:var(--muted)">Chargement...</em></div>
+  </div>
+
+  <div class="card">
     <h3>A/B Testing (preparation)</h3>
     <div class="ab-notice">
-      Le systeme est prepare pour tester plusieurs configurations en parallele via le champ <code>variant</code>. Actuellement, seule la variante <strong>production</strong> est active. Une future version permettra de lancer des variantes concurrentes et comparer automatiquement les resultats.
+      Le systeme est prepare pour tester plusieurs configurations en parallele via le champ <code>variant</code>. Le Sandbox permet deja de comparer une configuration alternative au systeme actuel. Une future version automatisera le split et la comparaison sur des matchs en temps reel.
     </div>
   </div>
 
@@ -194,6 +221,7 @@ async function fetchConfig() {
     document.getElementById("configPage").style.display = "block";
     populateFields(d.config);
     renderHistory(d.history || []);
+    fetchVersions();
   } catch (e) { showToast("Erreur connexion", "error"); }
 }
 
@@ -288,6 +316,132 @@ function renderHistory(history) {
       <td style="color:var(--muted)">${esc(h.changed_by || '—')}</td>
     </tr>`).join("")}
   </table>`;
+}
+
+async function runSimulation() {
+  const config = buildConfigFromFields();
+  document.getElementById("simulationResult").innerHTML = '<em style="color:var(--muted)">Simulation en cours...</em>';
+  try {
+    const r = await fetch("/api/admin/learning-engine/simulate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, config })
+    });
+    const d = await r.json();
+    if (!d.ok) { document.getElementById("simulationResult").innerHTML = `<span style="color:var(--red)">${esc(d.error)}</span>`; return; }
+    const agents = d.agents || [];
+    document.getElementById("simulationResult").innerHTML = `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:8px">Resultats (poids reels NON modifies) :</div>
+      <table class="history-table">
+        <tr><th>Agent</th><th>Poids simule</th><th>Poids actuel</th><th>Delta</th><th>Wilson</th><th>EMA</th><th>ROI×</th></tr>
+        ${agents.map(a => `<tr>
+          <td><strong>${esc(a.agent)}</strong></td>
+          <td>${a.simulatedWeight}%</td>
+          <td>${a.currentWeight !== null ? a.currentWeight + '%' : '—'}</td>
+          <td style="color:var(--${a.delta > 0 ? 'green' : a.delta < 0 ? 'red' : 'muted'})">${a.delta !== null ? (a.delta > 0 ? '+' : '') + a.delta : '—'}</td>
+          <td>${a.wilson}%</td>
+          <td>${a.ema}%</td>
+          <td>×${a.roiMultiplier}</td>
+        </tr>`).join("")}
+      </table>`;
+  } catch (e) { document.getElementById("simulationResult").innerHTML = `<span style="color:var(--red)">Erreur: ${esc(e.message)}</span>`; }
+}
+
+async function runBacktest() {
+  const config = buildConfigFromFields();
+  document.getElementById("backtestResult").innerHTML = '<em style="color:var(--muted)">Backtest en cours...</em>';
+  try {
+    const r = await fetch("/api/admin/learning-engine/backtest", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, config })
+    });
+    const d = await r.json();
+    if (!d.ok) { document.getElementById("backtestResult").innerHTML = `<span style="color:var(--red)">${esc(d.error)}</span>`; return; }
+    const res = d.results || {};
+    const comp = d.comparison || {};
+    const curve = res.curve || [];
+    let chartHtml = '';
+    if (curve.length > 1) {
+      const w = 400, h = 80;
+      const maxRoi = Math.max(...curve.map(c => c.roi), 1);
+      const minRoi = Math.min(...curve.map(c => c.roi), -1);
+      const range = maxRoi - minRoi || 1;
+      const points = curve.map((c, i) => `${(i / (curve.length - 1)) * w},${h - ((c.roi - minRoi) / range) * h}`).join(' ');
+      const zeroY = h - ((0 - minRoi) / range) * h;
+      chartHtml = `<div style="margin-top:12px"><svg width="${w}" height="${h}" style="border:1px solid var(--border);border-radius:4px"><line x1="0" y1="${zeroY}" x2="${w}" y2="${zeroY}" stroke="var(--muted)" stroke-dasharray="3"/><polyline points="${points}" fill="none" stroke="var(--blue)" stroke-width="1.5"/></svg><div style="font-size:.7rem;color:var(--muted)">Courbe ROI au fil des matchs</div></div>`;
+    }
+    document.getElementById("backtestResult").innerHTML = `
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px">
+        <div><div style="font-size:1.2rem;font-weight:700;color:var(--${res.roi > 0 ? 'green' : 'red'})">${res.roi > 0 ? '+' : ''}${res.roi}%</div><div style="font-size:.75rem;color:var(--muted)">ROI Backtest</div></div>
+        <div><div style="font-size:1.2rem;font-weight:700">${res.winrate}%</div><div style="font-size:.75rem;color:var(--muted)">Winrate</div></div>
+        <div><div style="font-size:1.2rem;font-weight:700">${res.total}</div><div style="font-size:.75rem;color:var(--muted)">Matchs</div></div>
+      </div>
+      ${comp.current ? `<div style="font-size:.8rem;border-top:1px solid var(--border);padding-top:8px">
+        <strong>Comparaison avec config actuelle :</strong><br>
+        ROI actuel: ${comp.current.roi}% → Backtest: ${res.roi}% (<span style="color:var(--${comp.delta.roi >= 0 ? 'green' : 'red'})">${comp.delta.roi >= 0 ? '+' : ''}${comp.delta.roi.toFixed(1)}%</span>)<br>
+        Winrate actuel: ${comp.current.winrate}% → Backtest: ${res.winrate}% (<span style="color:var(--${comp.delta.winrate >= 0 ? 'green' : 'red'})">${comp.delta.winrate >= 0 ? '+' : ''}${comp.delta.winrate}%</span>)
+      </div>` : ''}
+      ${chartHtml}`;
+  } catch (e) { document.getElementById("backtestResult").innerHTML = `<span style="color:var(--red)">Erreur: ${esc(e.message)}</span>`; }
+}
+
+async function runSandbox() {
+  const config = buildConfigFromFields();
+  document.getElementById("sandboxResult").innerHTML = '<em style="color:var(--muted)">Sandbox en cours...</em>';
+  try {
+    const r = await fetch("/api/admin/learning-engine/sandbox", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, config })
+    });
+    const d = await r.json();
+    if (!d.ok) { document.getElementById("sandboxResult").innerHTML = `<span style="color:var(--red)">${esc(d.error)}</span>`; return; }
+    const sb = d.sandbox || {};
+    const bt = sb.backtest || {};
+    const sim = sb.simulation || [];
+    document.getElementById("sandboxResult").innerHTML = `
+      <div style="font-size:.8rem;margin-bottom:8px"><strong>Mode Sandbox</strong> — aucun poids reel modifie</div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:12px">
+        <div><div style="font-size:1.1rem;font-weight:700;color:var(--${bt.roi > 0 ? 'green' : 'red'})">${bt.roi > 0 ? '+' : ''}${bt.roi}%</div><div style="font-size:.7rem;color:var(--muted)">ROI projete</div></div>
+        <div><div style="font-size:1.1rem;font-weight:700">${bt.winrate}%</div><div style="font-size:.7rem;color:var(--muted)">Winrate projete</div></div>
+        <div><div style="font-size:1.1rem;font-weight:700">${bt.total}</div><div style="font-size:.7rem;color:var(--muted)">Matchs</div></div>
+      </div>
+      ${sb.comparison ? `<div style="font-size:.8rem;color:var(--muted)">vs actuel: ROI ${sb.comparison.delta.roi >= 0 ? '+' : ''}${sb.comparison.delta.roi.toFixed(1)}% | Winrate ${sb.comparison.delta.winrate >= 0 ? '+' : ''}${sb.comparison.delta.winrate}%</div>` : ''}
+      ${sim.length ? `<div style="margin-top:8px;font-size:.75rem">Top agents: ${sim.slice(0, 4).map(a => `${esc(a.agent)} ${a.simulatedWeight}%`).join(' | ')}</div>` : ''}`;
+  } catch (e) { document.getElementById("sandboxResult").innerHTML = `<span style="color:var(--red)">Erreur: ${esc(e.message)}</span>`; }
+}
+
+async function fetchVersions() {
+  try {
+    const r = await fetch(`/api/admin/learning-config/versions?email=${encodeURIComponent(adminEmail)}&code=${encodeURIComponent(adminCode)}`);
+    const d = await r.json();
+    if (!d.ok) return;
+    const versions = d.versions || [];
+    if (!versions.length) { document.getElementById("versionsContent").innerHTML = '<em style="color:var(--muted)">Aucune version</em>'; return; }
+    document.getElementById("versionsContent").innerHTML = `
+      <div style="font-size:.8rem;margin-bottom:8px">Version active: <strong>v${esc(d.current)}</strong></div>
+      <table class="history-table">
+        <tr><th>Version</th><th>Date</th><th>Par</th><th>Action</th></tr>
+        ${versions.map(v => `<tr>
+          <td>v${esc(v.version)}</td>
+          <td>${v.updatedAt ? new Date(v.updatedAt).toLocaleString('fr-FR') : '—'}</td>
+          <td style="color:var(--muted)">${esc(v.updatedBy || '—')}</td>
+          <td><button class="btn btn-secondary" style="padding:3px 8px;font-size:.7rem" onclick="restoreVersion(${v.id})">Restaurer</button></td>
+        </tr>`).join("")}
+      </table>`;
+  } catch (e) {}
+}
+
+async function restoreVersion(configId) {
+  if (!confirm("Restaurer cette version ?")) return;
+  try {
+    const r = await fetch("/api/admin/learning-config/restore", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, configId })
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || "Erreur", "error"); return; }
+    showToast(`Version restauree (v${d.version})`, "success");
+    fetchConfig();
+  } catch (e) { showToast("Erreur", "error"); }
 }
 </script>
 </body>
