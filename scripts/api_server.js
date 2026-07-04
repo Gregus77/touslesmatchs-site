@@ -6324,102 +6324,45 @@ app.get("/admin/dashboard-data", (req, res) => {
       deepseek: !!DEEPSEEK_API_KEY,
     };
 
-    // ── VPS health (from mounted host /proc) ──
-    let vps = {};
+    // ── VPS + Docker + Backups (from host cron script via /shared/vps-status.json) ──
+    let vps = {}, docker = { containers: [] }, backups = { latest: null, files: [] };
     try {
-      const memRaw = fs.readFileSync("/host/proc/meminfo", "utf8");
-      const memParse = (k) => { const m = memRaw.match(new RegExp(k + ":\\s+(\\d+)")); return m ? parseInt(m[1]) : 0; };
-      const memTotalKB = memParse("MemTotal");
-      const memAvailKB = memParse("MemAvailable");
-      const memUsedKB = memTotalKB - memAvailKB;
+      const statusRaw = fs.readFileSync("/shared/vps-status.json", "utf8");
+      const status = JSON.parse(statusRaw);
+      vps = { ram: status.ram, cpu: status.cpu, disk: status.disk, load: status.load, uptime: status.uptime, collectedAt: status.timestamp };
 
-      const loadRaw = fs.readFileSync("/host/proc/loadavg", "utf8").trim().split(/\s+/);
-      const uptimeRaw = fs.readFileSync("/host/proc/uptime", "utf8").trim().split(/\s+/);
-      const uptimeSec = Math.round(parseFloat(uptimeRaw[0]) || 0);
-
-      let cpuPct = null;
-      try {
-        const statLines = fs.readFileSync("/host/proc/stat", "utf8").split("\n");
-        const cpuLine = statLines.find(l => l.startsWith("cpu "));
-        if (cpuLine) {
-          const vals = cpuLine.split(/\s+/).slice(1).map(Number);
-          const idle = vals[3] + (vals[4] || 0);
-          const total = vals.reduce((a, b) => a + b, 0);
-          cpuPct = total > 0 ? Math.round((1 - idle / total) * 100) : null;
-        }
-      } catch {}
-
-      let disk = null;
-      try {
-        const { execSync } = require("child_process");
-        const dfOut = execSync("df -B1 / 2>/dev/null", { timeout: 3000 }).toString().trim().split("\n");
-        if (dfOut.length >= 2) {
-          const parts = dfOut[1].split(/\s+/);
-          disk = { totalGB: Math.round(parseInt(parts[1]) / 1073741824), usedGB: Math.round(parseInt(parts[2]) / 1073741824), pct: parseInt(parts[4]) };
-        }
-      } catch {}
-
-      vps = {
-        ram: { totalMB: Math.round(memTotalKB / 1024), usedMB: Math.round(memUsedKB / 1024), pct: memTotalKB > 0 ? Math.round(memUsedKB / memTotalKB * 100) : 0 },
-        cpu: cpuPct,
-        load: { m1: loadRaw[0], m5: loadRaw[1], m15: loadRaw[2] },
-        uptime: uptimeSec,
-        disk,
-      };
-
-      if (vps.ram.pct > 90) alerts.push({ level: "danger", msg: `RAM VPS critique : ${vps.ram.pct}%` });
-      else if (vps.ram.pct > 75) alerts.push({ level: "warning", msg: `RAM VPS elevee : ${vps.ram.pct}%` });
+      if (vps.ram && vps.ram.pct > 90) alerts.push({ level: "danger", msg: `RAM VPS critique : ${vps.ram.pct}%` });
+      else if (vps.ram && vps.ram.pct > 75) alerts.push({ level: "warning", msg: `RAM VPS elevee : ${vps.ram.pct}%` });
       if (vps.disk && vps.disk.pct > 90) alerts.push({ level: "danger", msg: `Disque VPS critique : ${vps.disk.pct}%` });
       else if (vps.disk && vps.disk.pct > 75) alerts.push({ level: "warning", msg: `Disque VPS eleve : ${vps.disk.pct}%` });
-      if (cpuPct !== null && cpuPct > 90) alerts.push({ level: "danger", msg: `CPU VPS critique : ${cpuPct}%` });
-    } catch (e) { vps.error = e.message; }
+      if (vps.cpu != null && vps.cpu > 90) alerts.push({ level: "danger", msg: `CPU VPS critique : ${vps.cpu}%` });
 
-    // ── Docker containers (from mounted socket) ──
-    let docker = { containers: [], error: null };
-    try {
-      const { execSync } = require("child_process");
-      const raw = execSync('curl -s --unix-socket /var/run/docker.sock http://localhost/containers/json?all=true 2>/dev/null', { timeout: 5000 }).toString();
-      const containers = JSON.parse(raw);
-      docker.containers = containers.map(c => ({
-        name: (c.Names && c.Names[0] || "").replace(/^\//, ""),
-        image: (c.Image || "").split(":")[0].split("/").pop(),
-        state: c.State,
-        status: c.Status,
-        healthy: c.State === "running" ? (c.Status || "").toLowerCase().includes("unhealthy") ? "unhealthy" : "healthy" : "stopped",
-      }));
-      docker.running = docker.containers.filter(c => c.state === "running").length;
-      docker.stopped = docker.containers.filter(c => c.state !== "running").length;
-      docker.total = docker.containers.length;
-      if (docker.stopped > 0) alerts.push({ level: "warning", msg: `${docker.stopped} conteneur(s) Docker arrete(s)` });
-    } catch (e) { docker.error = e.message; }
+      const staleMin = status.timestamp ? (Date.now() - new Date(status.timestamp).getTime()) / 60000 : 999;
+      if (staleMin > 5) alerts.push({ level: "warning", msg: `Donnees VPS obsoletes (${Math.round(staleMin)} min)` });
 
-    // ── Backups ──
-    let backups = { latest: null, files: [] };
-    try {
-      const backupDir = "/backups";
-      if (fs.existsSync(backupDir)) {
-        const files = fs.readdirSync(backupDir)
-          .filter(f => !f.startsWith("."))
-          .map(f => {
-            const stat = fs.statSync(path.join(backupDir, f));
-            return { name: f, sizeMB: Math.round(stat.size / 1048576 * 100) / 100, date: stat.mtime.toISOString() };
-          })
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
-        backups.files = files.slice(0, 10);
-        backups.latest = files[0] || null;
-        backups.total = files.length;
-        if (files.length > 0) {
-          const hoursSince = (Date.now() - new Date(files[0].date).getTime()) / 3600000;
+      if (Array.isArray(status.docker)) {
+        docker.containers = status.docker;
+        docker.running = docker.containers.filter(c => c.state === "running").length;
+        docker.stopped = docker.containers.filter(c => c.state !== "running").length;
+        docker.total = docker.containers.length;
+        if (docker.stopped > 0) alerts.push({ level: "warning", msg: `${docker.stopped} conteneur(s) Docker arrete(s)` });
+      }
+
+      if (Array.isArray(status.backups)) {
+        backups.files = status.backups.slice(0, 10);
+        backups.latest = backups.files[0] || null;
+        backups.total = status.backups.length;
+        if (backups.latest) {
+          const hoursSince = (Date.now() - new Date(backups.latest.date).getTime()) / 3600000;
           if (hoursSince > 48) alerts.push({ level: "danger", msg: `Derniere sauvegarde il y a ${Math.round(hoursSince)}h` });
           else if (hoursSince > 24) alerts.push({ level: "warning", msg: `Derniere sauvegarde il y a ${Math.round(hoursSince)}h` });
         } else {
           alerts.push({ level: "danger", msg: "Aucune sauvegarde trouvee" });
         }
-      } else {
-        backups.error = "Dossier /backups non monte";
-        alerts.push({ level: "warning", msg: "Dossier sauvegardes non accessible" });
       }
-    } catch (e) { backups.error = e.message; }
+    } catch (e) {
+      vps.error = "vps-status.json indisponible — installer le cron sur le host";
+    }
 
     res.json({ ok: true, health, vps, docker, backups, business, analytics, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
   } catch (e) {

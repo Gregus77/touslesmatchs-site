@@ -38,12 +38,7 @@ services:
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
     volumes:
       - api_data:/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /proc/stat:/host/proc/stat:ro
-      - /proc/meminfo:/host/proc/meminfo:ro
-      - /proc/loadavg:/host/proc/loadavg:ro
-      - /proc/uptime:/host/proc/uptime:ro
-      - /data/backups:/backups:ro
+      - /opt/touslesmatchs/shared:/shared:ro
     networks:
       - web
     expose:
