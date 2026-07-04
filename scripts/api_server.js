@@ -178,6 +178,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     config_json TEXT NOT NULL,
     variant TEXT DEFAULT 'production',
+    status TEXT DEFAULT 'draft',
     updated_by TEXT DEFAULT 'system',
     updated_at TEXT DEFAULT (datetime('now'))
   );
@@ -193,7 +194,22 @@ db.exec(`
     changed_at TEXT DEFAULT (datetime('now'))
   );
 `);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS learning_lab_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    config_id INTEGER,
+    run_type TEXT NOT NULL,
+    roi REAL,
+    winrate REAL,
+    total_matches INTEGER,
+    curve_json TEXT,
+    comparison_json TEXT,
+    created_by TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
 
+ensureColumn("learning_config", "status", "TEXT DEFAULT 'draft'");
 ensureColumn("concile_analyses", "cote", "REAL DEFAULT NULL");
 ensureColumn("concile_analyses", "gain", "REAL DEFAULT NULL");
 
@@ -2180,6 +2196,99 @@ function restoreConfigVersion(configId, changedBy = "admin") {
   return saveLearningConfig(restored, `${changedBy} (restore v${restored.version})`, row.variant);
 }
 
+function saveLearningLabRun(configId, runType, roi, winrate, totalMatches, curve, comparison, createdBy) {
+  db.prepare(`
+    INSERT INTO learning_lab_runs (config_id, run_type, roi, winrate, total_matches, curve_json, comparison_json, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(configId, runType, roi, winrate, totalMatches, JSON.stringify(curve || []), JSON.stringify(comparison || {}), createdBy);
+}
+
+function getLatestRunsForConfig(configId, limit = 10) {
+  return db.prepare(`
+    SELECT * FROM learning_lab_runs WHERE config_id = ? ORDER BY created_at DESC LIMIT ?
+  `).all(configId, limit);
+}
+
+function validateConfigPromotion(configId) {
+  const row = db.prepare(`SELECT * FROM learning_config WHERE id = ?`).get(configId);
+  if (!row) return { valid: false, errors: ["Config introuvable"] };
+
+  const cfg = JSON.parse(row.config_json);
+  const runs = getLatestRunsForConfig(configId);
+  const backtests = runs.filter(r => r.run_type === "backtest");
+  const current = loadLearningConfig("production");
+  const currentStats = getLearningEngineStats();
+
+  const errors = [];
+  const warnings = [];
+
+  // Critère 1 : minimum 100 paris simulés/backtestés
+  const totalMatches = backtests.reduce((sum, r) => sum + (r.total_matches || 0), 0);
+  if (totalMatches < 100) errors.push(`Insuffisant d'historique: ${totalMatches} matchs (min 100)`);
+
+  // Critère 2 : ROI supérieur à la version actuelle
+  if (backtests.length > 0) {
+    const avgRoi = backtests.reduce((sum, r) => sum + (r.roi || 0), 0) / backtests.length;
+    if (avgRoi <= (currentStats.overall.roi || 0)) {
+      warnings.push(`ROI simulé (${avgRoi.toFixed(1)}%) pas meilleur que production (${(currentStats.overall.roi || 0)}%)`);
+    }
+  }
+
+  // Critère 3 : Winrate non dégradé
+  if (backtests.length > 0) {
+    const avgWinrate = backtests.reduce((sum, r) => sum + (r.winrate || 0), 0) / backtests.length;
+    if (avgWinrate < (currentStats.overall.winrate || 50)) {
+      errors.push(`Winrate degradé: ${avgWinrate}% vs ${currentStats.overall.winrate}%`);
+    }
+  }
+
+  // Critère 4 : aucun test en erreur
+  const errorRuns = runs.filter(r => r.roi === null || r.winrate === null);
+  if (errorRuns.length > 0) errors.push(`${errorRuns.length} test(s) en erreur`);
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    stats: { totalMatches, avgRoi: backtests.length > 0 ? (backtests.reduce((s, r) => s + r.roi, 0) / backtests.length).toFixed(1) : 0, avgWinrate: backtests.length > 0 ? (backtests.reduce((s, r) => s + r.winrate, 0) / backtests.length).toFixed(0) : 0 }
+  };
+}
+
+function promoteConfigToProduction(configId, promotedBy = "admin") {
+  const validation = validateConfigPromotion(configId);
+  if (!validation.valid) return { ok: false, errors: validation.errors };
+
+  const row = db.prepare(`SELECT config_json FROM learning_config WHERE id = ?`).get(configId);
+  const cfg = JSON.parse(row.config_json);
+
+  db.prepare(`UPDATE learning_config SET status = 'production' WHERE variant = 'production' AND status = 'production'`).run();
+  db.prepare(`UPDATE learning_config SET status = 'production' WHERE id = ?`).run(configId);
+
+  return { ok: true, version: cfg.version, stats: validation.stats, message: `v${cfg.version} promue en production` };
+}
+
+function getLearningLabDashboard() {
+  const current = loadLearningConfig("production");
+  const allConfigs = db.prepare(`
+    SELECT id, config_json, status, updated_by, updated_at FROM learning_config ORDER BY updated_at DESC LIMIT 20
+  `).all().map(r => {
+    const cfg = JSON.parse(r.config_json);
+    const runs = getLatestRunsForConfig(r.id, 5);
+    const backtests = runs.filter(r => r.run_type === "backtest");
+    return {
+      id: r.id, version: cfg.version, status: r.status, updatedBy: r.updated_by, updatedAt: r.updated_at,
+      recentRuns: runs.length, avgRoi: backtests.length > 0 ? (backtests.reduce((s, r) => s + r.roi, 0) / backtests.length).toFixed(1) : null,
+      avgWinrate: backtests.length > 0 ? (backtests.reduce((s, r) => s + r.winrate, 0) / backtests.length).toFixed(0) : null
+    };
+  });
+
+  return {
+    current: { version: current.version, roi: getLearningEngineStats().overall.roi, winrate: getLearningEngineStats().overall.winrate },
+    configs: allConfigs,
+    stats: getLearningEngineStats()
+  };
+}
+
 function getLearningConfigHistory(limit = 50) {
   return db.prepare(`SELECT * FROM learning_config_history ORDER BY changed_at DESC LIMIT ?`).all(limit);
 }
@@ -2284,6 +2393,18 @@ function runBacktest(customConfig) {
   };
 
   return { config: cfg, results: { roi: backtestROI, winrate: backtestWinrate, total: stake, curve }, comparison };
+}
+
+function runSimulationAndSave(customConfig, configId, createdBy) {
+  const result = simulateWeights(customConfig);
+  if (configId) saveLearningLabRun(configId, "simulation", null, null, null, [], { simulation: true }, createdBy);
+  return result;
+}
+
+function runBacktestAndSave(customConfig, configId, createdBy) {
+  const result = runBacktest(customConfig);
+  if (configId) saveLearningLabRun(configId, "backtest", result.results.roi, result.results.winrate, result.results.total, result.results.curve, result.comparison, createdBy);
+  return result;
 }
 
 function wilsonScoreLowerBound(wins, total, z) {
@@ -6937,6 +7058,51 @@ app.post("/admin/learning-engine/sandbox", (req, res) => {
     const simulation = simulateWeights(sandboxConfig);
     const backtest = runBacktest(sandboxConfig);
     res.json({ ok: true, sandbox: { config: sandboxConfig, simulation: simulation.agents, backtest: backtest.results, comparison: backtest.comparison } });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ── Learning Lab — Science & Validation ────────────────────────────────────
+
+app.get("/admin/learning-lab", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    res.json({ ok: true, dashboard: getLearningLabDashboard() });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/admin/learning-lab/backtest-config", (req, res) => {
+  const { email, code, configId } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  if (!configId) return res.status(400).json({ ok: false, error: "configId requis" });
+  try {
+    const row = db.prepare(`SELECT config_json FROM learning_config WHERE id = ?`).get(configId);
+    if (!row) return res.status(404).json({ ok: false, error: "Config introuvable" });
+    const cfg = JSON.parse(row.config_json);
+    const result = runBacktestAndSave(cfg, configId, email || "admin");
+    res.json({ ok: true, ...result });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/admin/learning-lab/validate", (req, res) => {
+  const { email, code, configId } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  if (!configId) return res.status(400).json({ ok: false, error: "configId requis" });
+  try {
+    const validation = validateConfigPromotion(configId);
+    res.json({ ok: true, validation });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+app.post("/admin/learning-lab/promote", (req, res) => {
+  const { email, code, configId } = req.body || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  if (!configId) return res.status(400).json({ ok: false, error: "configId requis" });
+  try {
+    const result = promoteConfigToProduction(configId, email || "admin");
+    if (!result.ok) return res.status(400).json({ ok: false, errors: result.errors });
+    LEARNING_CONFIG = loadLearningConfig();
+    res.json({ ok: true, ...result });
   } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 

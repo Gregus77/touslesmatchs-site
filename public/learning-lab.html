@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Learning Lab — TousLesMatchs</title>
+<style>
+:root { --bg: #0d1117; --surface: #161b22; --border: #30363d; --text: #e6edf3; --muted: #8b949e; --green: #3fb950; --orange: #d29922; --red: #f85149; --blue: #58a6ff; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; min-height: 100vh; }
+h1 { font-size: 1.5rem; margin-bottom: 8px; }
+.subtitle { color: var(--muted); font-size: .85rem; margin-bottom: 24px; }
+.login-box { max-width: 360px; margin: 80px auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+.login-box h2 { margin-bottom: 16px; font-size: 1.1rem; }
+.login-box input { width: 100%; padding: 10px; margin-bottom: 12px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); }
+.login-box button { width: 100%; padding: 10px; background: var(--blue); border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; }
+.page { display: none; max-width: 1200px; margin: 0 auto; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.card h3 { font-size: 1rem; margin-bottom: 12px; color: var(--blue); }
+.big-row { display: flex; gap: 20px; margin-bottom: 16px; flex-wrap: wrap; }
+.big-item { flex: 1; min-width: 120px; }
+.big-number { font-size: 1.8rem; font-weight: 700; }
+.big-label { font-size: .75rem; color: var(--muted); margin-top: 4px; }
+.configs-table { width: 100%; font-size: .8rem; border-collapse: collapse; }
+.configs-table th, .configs-table td { padding: 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.configs-table th { color: var(--muted); font-weight: 600; }
+.badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: .7rem; font-weight: 600; }
+.badge-draft { background: var(--border); color: var(--muted); }
+.badge-testing { background: var(--orange); color: #000; }
+.badge-production { background: var(--green); color: #000; }
+.btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: .8rem; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-success { background: var(--green); color: #000; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-secondary { background: var(--border); color: var(--text); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: .85rem; z-index: 999; display: none; }
+.toast-success { background: var(--green); color: #000; }
+.toast-error { background: var(--red); color: #fff; }
+.validation-list { list-style: none; font-size: .8rem; }
+.validation-list li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.validation-list li.error { color: var(--red); }
+.validation-list li.warning { color: var(--orange); }
+.validation-list li.success { color: var(--green); }
+.back-link { display: inline-block; margin-bottom: 16px; color: var(--blue); text-decoration: none; font-size: .85rem; }
+</style>
+</head>
+<body>
+
+<div class="login-box" id="loginBox">
+  <h2>Learning Lab</h2>
+  <input type="email" id="email" placeholder="Email admin">
+  <input type="password" id="code" placeholder="Code admin">
+  <button onclick="login()">Connexion</button>
+</div>
+
+<div class="page" id="labPage">
+  <a href="/admin-dashboard" class="back-link">&larr; Retour au dashboard</a>
+  <h1>🔬 Learning Lab</h1>
+  <p class="subtitle">Laboratoire scientifique du Learning Engine. Testez, validez, promouvez.</p>
+
+  <div class="card">
+    <h3>Configuration active</h3>
+    <div class="big-row">
+      <div class="big-item">
+        <div class="big-number" id="currentVersion">—</div>
+        <div class="big-label">Version production</div>
+      </div>
+      <div class="big-item">
+        <div class="big-number green" id="currentRoi">—</div>
+        <div class="big-label">ROI actuel</div>
+      </div>
+      <div class="big-item">
+        <div class="big-number" id="currentWinrate">—</div>
+        <div class="big-label">Winrate</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Historique des configurations</h3>
+    <p style="font-size:.8rem;color:var(--muted);margin-bottom:12px">Chaque ligne est une version. Testez, validez, promouvez en production.</p>
+    <div id="configsContent"><em style="color:var(--muted)">Chargement...</em></div>
+  </div>
+
+  <div class="card">
+    <h3>Critères de promotion</h3>
+    <ul style="font-size:.8rem;color:var(--muted);list-style:none">
+      <li>✓ Minimum 100 paris backtestés</li>
+      <li>✓ ROI ≥ version actuelle</li>
+      <li>✓ Winrate non dégradé</li>
+      <li>✓ Aucun test en erreur</li>
+    </ul>
+  </div>
+
+  <div class="card" id="detailsCard" style="display:none">
+    <h3>Détails de la version</h3>
+    <div id="versionDetails"></div>
+    <div style="margin-top:16px">
+      <button class="btn btn-primary" onclick="runBacktestNow()">Lancer un backtest</button>
+      <button class="btn btn-success" id="btnPromote" onclick="promoteNow()" style="display:none">Promouvoir en production</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let adminEmail = "", adminCode = "";
+let currentSelectionId = null;
+
+function login() {
+  adminEmail = document.getElementById("email").value;
+  adminCode = document.getElementById("code").value;
+  if (!adminEmail || !adminCode) return;
+  fetchLab();
+}
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast toast-" + type;
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 3000);
+}
+
+async function fetchLab() {
+  try {
+    const r = await fetch(`/api/admin/learning-lab?email=${encodeURIComponent(adminEmail)}&code=${encodeURIComponent(adminCode)}`);
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || "Erreur", "error"); return; }
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("labPage").style.display = "block";
+    renderDashboard(d.dashboard || {});
+  } catch (e) { showToast("Erreur connexion", "error"); }
+}
+
+function renderDashboard(db) {
+  const curr = db.current || {};
+  document.getElementById("currentVersion").textContent = "v" + (curr.version || "?");
+  document.getElementById("currentRoi").textContent = (curr.roi !== null ? (curr.roi > 0 ? '+' : '') + curr.roi.toFixed(1) + '%' : "—");
+  document.getElementById("currentWinrate").textContent = (curr.winrate || 0) + "%";
+
+  const configs = db.configs || [];
+  if (!configs.length) {
+    document.getElementById("configsContent").innerHTML = '<em style="color:var(--muted)">Aucune configuration</em>';
+  } else {
+    document.getElementById("configsContent").innerHTML = `<table class="configs-table">
+      <tr><th>Version</th><th>Statut</th><th>Tests</th><th>ROI moyen</th><th>Winrate moyen</th><th>Par</th><th>Date</th><th>Actions</th></tr>
+      ${configs.map(c => `<tr onclick="selectVersion(${c.id})" style="cursor:pointer;${c.status === 'production' ? 'background:rgba(63,185,80,0.1)' : ''}">
+        <td><strong>v${esc(c.version)}</strong></td>
+        <td><span class="badge badge-${c.status}">${c.status}</span></td>
+        <td>${c.recentRuns || 0}</td>
+        <td>${c.avgRoi !== null ? (c.avgRoi > 0 ? '+' : '') + c.avgRoi + '%' : '—'}</td>
+        <td>${c.avgWinrate !== null ? c.avgWinrate + '%' : '—'}</td>
+        <td style="color:var(--muted);font-size:.7rem">${esc(c.updatedBy || '—')}</td>
+        <td style="color:var(--muted);font-size:.7rem">${c.updatedAt ? new Date(c.updatedAt).toLocaleDateString('fr-FR') : '—'}</td>
+        <td onclick="event.stopPropagation();"><button class="btn btn-secondary" style="padding:3px 8px" onclick="selectVersion(${c.id})">Détails</button></td>
+      </tr>`).join("")}
+    </table>`;
+  }
+}
+
+async function selectVersion(configId) {
+  currentSelectionId = configId;
+  try {
+    const r = await fetch(`/api/admin/learning-config?email=${encodeURIComponent(adminEmail)}&code=${encodeURIComponent(adminCode)}`);
+    const d = await r.json();
+    if (!d.ok) return;
+
+    const config = d.config;
+    const validation = await validateConfig(configId);
+    const validationResult = validation?.validation || {};
+
+    let validHtml = '<ul class="validation-list">';
+    (validationResult.errors || []).forEach(e => { validHtml += `<li class="error">✗ ${esc(e)}</li>`; });
+    (validationResult.warnings || []).forEach(e => { validHtml += `<li class="warning">⚠ ${esc(e)}</li>`; });
+    if (!validationResult.errors || validationResult.errors.length === 0) validHtml += '<li class="success">✓ Tous les critères satisfaits</li>';
+    validHtml += '</ul>';
+
+    const btnPromote = document.getElementById("btnPromote");
+    btnPromote.style.display = validationResult.valid ? "inline-block" : "none";
+
+    document.getElementById("versionDetails").innerHTML = `
+      <div style="margin-bottom:16px">
+        <div style="font-weight:600;margin-bottom:8px">Résultats des backtests :</div>
+        <ul class="validation-list">
+          <li>Matchs testés : ${validationResult.stats?.totalMatches || 0}</li>
+          <li>ROI moyen : ${validationResult.stats?.avgRoi || "—"}%</li>
+          <li>Winrate moyen : ${validationResult.stats?.avgWinrate || "—"}%</li>
+        </ul>
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-weight:600;margin-bottom:8px">Validation pour promotion :</div>
+        ${validHtml}
+      </div>
+    `;
+
+    document.getElementById("detailsCard").style.display = "block";
+  } catch (e) { showToast("Erreur", "error"); }
+}
+
+async function validateConfig(configId) {
+  try {
+    const r = await fetch("/api/admin/learning-lab/validate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, configId })
+    });
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+async function runBacktestNow() {
+  if (!currentSelectionId) return;
+  document.querySelector(".btn-primary").disabled = true;
+  try {
+    const r = await fetch("/api/admin/learning-lab/backtest-config", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, configId: currentSelectionId })
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast(d.error || "Erreur", "error"); return; }
+    showToast("Backtest lancé, données sauvegardées", "success");
+    setTimeout(() => { fetchLab(); }, 1000);
+  } catch (e) { showToast("Erreur", "error"); }
+  finally { document.querySelector(".btn-primary").disabled = false; }
+}
+
+async function promoteNow() {
+  if (!currentSelectionId || !confirm("Promouvoir cette version en production ?")) return;
+  document.getElementById("btnPromote").disabled = true;
+  try {
+    const r = await fetch("/api/admin/learning-lab/promote", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: adminEmail, code: adminCode, configId: currentSelectionId })
+    });
+    const d = await r.json();
+    if (!d.ok) { showToast((d.errors || []).join(", ") || "Erreur", "error"); return; }
+    showToast(`✓ ${d.message}`, "success");
+    setTimeout(() => { fetchLab(); }, 1000);
+  } catch (e) { showToast("Erreur", "error"); }
+  finally { document.getElementById("btnPromote").disabled = false; }
+}
+</script>
+</body>
+</html>
