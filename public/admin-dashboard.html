@@ -328,38 +328,67 @@ function renderLearningEngine(le) {
     document.getElementById("learningContent").innerHTML = '<div style="color:var(--muted)">Aucun agent avec assez de donnees</div>';
   } else {
     const sorted = [...agents].sort((a, b) => b.weight - a.weight);
-    const configHtml = config.ema_alpha ? `<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">Config: Wilson z=${config.wilson_z} | EMA α=${config.ema_alpha} | Min ${config.min_resolutions} matchs | ROI cap ±${(config.roi_cap*100)}%</div>` : '';
+    const configHtml = config.version ? `<div style="font-size:.75rem;color:var(--muted);margin-bottom:8px">v${config.version} | Wilson z=${config.wilson_z} | EMA α=${config.ema_alpha} | Min ${config.min_resolutions} matchs | ROI cap ±${Math.round(config.roi_cap*100)}% | Poids: Wilson ${Math.round(config.weight_wilson_share*100)}% + EMA ${Math.round(config.weight_ema_share*100)}%</div>` : '';
+    const confIcon = (c) => {
+      if (!c) return '';
+      const icons = { very_reliable: '🟢🟢', reliable: '🟢', progressing: '🟡', low_data: '🟠', learning: '🔴' };
+      return `<span title="${c.label}">${icons[c.level] || '⚪'}</span>`;
+    };
     document.getElementById("learningContent").innerHTML = configHtml + `<table class="agent-table">
-      <tr><th>Agent</th><th>Poids</th><th>Wilson</th><th>EMA</th><th>ROI×</th><th>Tendance</th><th>Matchs</th><th>Statut</th></tr>
+      <tr><th>Agent</th><th>Poids</th><th>Wilson</th><th>EMA</th><th>ROI×</th><th>Confiance</th><th>Tendance</th><th>Matchs</th></tr>
       ${sorted.map(ag => {
         const trendIcon = ag.trend === 'up' ? '<span style="color:var(--green)">&#9650;</span>' : ag.trend === 'down' ? '<span style="color:var(--red)">&#9660;</span>' : '<span style="color:var(--muted)">&#9644;</span>';
         const weightColor = ag.belowThreshold ? 'orange' : ag.weight >= 60 ? 'green' : ag.weight >= 40 ? 'orange' : 'red';
-        const statusLabel = ag.belowThreshold ? '<span style="color:var(--orange)">⏳ Calibration</span>' : '<span style="color:var(--green)">✓ Actif</span>';
         return `<tr>
           <td><strong>${esc(ag.agent)}</strong></td>
-          <td><span class="stat-value ${weightColor}">${Math.round(ag.weight)}%</span>${ag.oldWeight !== null && ag.oldWeight !== undefined ? ' <span style="font-size:.7rem;color:var(--muted)">(avant: '+Math.round(ag.oldWeight)+'%)</span>' : ''}</td>
+          <td><span class="stat-value ${weightColor}">${Math.round(ag.weight)}%</span>${ag.oldWeight !== null && ag.oldWeight !== undefined ? ' <span style="font-size:.7rem;color:var(--muted)">(${Math.round(ag.oldWeight)}%)</span>' : ''}</td>
           <td>${ag.wilsonScore !== undefined ? (ag.wilsonScore * 100).toFixed(1) + '%' : '—'}</td>
           <td>${ag.emaScore !== undefined ? (ag.emaScore * 100).toFixed(1) + '%' : '—'}</td>
           <td>${ag.roiMultiplier !== undefined ? '×' + ag.roiMultiplier.toFixed(2) : '—'}</td>
+          <td>${confIcon(ag.confidence)} <span style="font-size:.7rem">${ag.confidence ? ag.confidence.label : ''}</span></td>
           <td style="text-align:center">${trendIcon}</td>
           <td>${ag.resolved || 0}</td>
-          <td>${statusLabel}</td>
         </tr>`;
       }).join("")}
     </table>` +
+    // Evolution chart (SVG sparklines per agent)
+    (sorted.some(ag => ag.history && ag.history.length > 1) ? `
+      <div style="margin-top:16px;font-size:.8rem;color:var(--muted)">Evolution des poids (30 derniers recalculs) :</div>
+      <div style="margin-top:8px">
+        ${sorted.filter(ag => ag.history && ag.history.length > 1).map(ag => {
+          const h = [...ag.history].reverse();
+          const max = Math.max(...h.map(p => p.weight));
+          const min = Math.min(...h.map(p => p.weight));
+          const range = max - min || 1;
+          const w = 200, ht = 30;
+          const points = h.map((p, i) => `${(i / (h.length - 1)) * w},${ht - ((p.weight - min) / range) * ht}`).join(' ');
+          return `<div style="display:inline-flex;align-items:center;gap:8px;margin-right:16px;margin-bottom:6px">
+            <span style="font-size:.75rem;min-width:60px">${esc(ag.agent)}</span>
+            <svg width="${w}" height="${ht}" style="border-bottom:1px solid var(--border)"><polyline points="${points}" fill="none" stroke="var(--green)" stroke-width="1.5"/></svg>
+            <span style="font-size:.7rem;color:var(--muted)">${Math.round(h[h.length-1].weight)}%</span>
+          </div>`;
+        }).join("")}
+      </div>` : '') +
+    // Contextual weights
     (sorted.some(ag => ag.contextual && ag.contextual.length > 0) ? `
-      <div style="margin-top:12px;font-size:.8rem;color:var(--muted)">Poids contextuels :</div>
+      <div style="margin-top:16px;font-size:.8rem;color:var(--muted)">Poids contextuels (sport / championnat / type) :</div>
       <table class="agent-table" style="font-size:.75rem;margin-top:4px">
         <tr><th>Agent</th><th>Contexte</th><th>Poids</th><th>Wilson</th><th>EMA</th><th>Matchs</th></tr>
         ${sorted.flatMap(ag => (ag.contextual || []).map(c => `<tr>
           <td>${esc(ag.agent)}</td>
-          <td>${esc(c.context_key)}</td>
+          <td>${esc(c.context_key.replace('sport:','').replace('comp:','').replace('bet:',''))}</td>
           <td>${Math.round(c.weight)}%</td>
-          <td>${(c.wilson_score * 100).toFixed(1)}%</td>
-          <td>${(c.ema_score * 100).toFixed(1)}%</td>
+          <td>${c.wilson_score !== null ? (c.wilson_score * 100).toFixed(1) + '%' : '—'}</td>
+          <td>${c.ema_score !== null ? (c.ema_score * 100).toFixed(1) + '%' : '—'}</td>
           <td>${c.total_resolved}</td>
         </tr>`)).join("")}
-      </table>` : '');
+      </table>` : '') +
+    // Audit trail (last modifications)
+    (sorted.some(ag => ag.history && ag.history.length > 0) ? `
+      <div style="margin-top:16px;font-size:.8rem;color:var(--muted)">Historique des modifications (audit trail) :</div>
+      <div style="max-height:200px;overflow-y:auto;margin-top:4px;font-size:.72rem;font-family:monospace">
+        ${sorted.flatMap(ag => (ag.history || []).slice(0, 5).map(h => `<div style="padding:2px 0;border-bottom:1px solid var(--border)">${h.computed_at ? new Date(h.computed_at).toLocaleDateString('fr-FR') : '—'} | ${esc(ag.agent)} | ${Math.round(h.weight)}% | W:${h.wilson_score !== null ? (h.wilson_score*100).toFixed(0)+'%':'—'} E:${h.ema_score !== null ? (h.ema_score*100).toFixed(0)+'%':'—'} R:×${h.roi_multiplier ? h.roi_multiplier.toFixed(2) : '—'} | ${h.total_resolved||0} matchs</div>`)).join("")}
+      </div>` : '');
   }
 
   const stats = le.stats || {};

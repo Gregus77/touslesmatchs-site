@@ -2083,13 +2083,26 @@ function assessLearningProfile(profile, minResolved = 5) {
 }
 
 // ── Learning Engine ──────────────────────────────────────────────────────────
-// Learning Engine Configuration
+// Learning Engine Configuration — all parameters configurable, nothing hardcoded
 const LEARNING_CONFIG = {
-  wilson_z: 1.645,         // 90% confidence interval (z-score)
-  ema_alpha: 0.05,         // EMA smoothing factor (configurable)
-  min_resolutions: 10,     // Minimum resolved predictions before weight > 50%
-  roi_cap: 0.3,            // Max ROI multiplier bonus (+/- 30%)
-  default_weight: 50,      // Default weight for agents below minimum threshold
+  version: "2.0.0",
+  wilson_z: 1.645,
+  ema_alpha: 0.05,
+  min_resolutions: 10,
+  min_context_resolutions: 5,
+  roi_cap: 0.3,
+  default_weight: 50,
+  weight_wilson_share: 0.6,
+  weight_ema_share: 0.4,
+  weight_min: 5,
+  weight_max: 95,
+  confidence_thresholds: {
+    very_reliable: { minMatches: 50, minWilson: 0.55, label: "Tres fiable" },
+    reliable: { minMatches: 30, minWilson: 0.45, label: "Fiable" },
+    progressing: { minMatches: 15, minWilson: 0.35, label: "En progression" },
+    low_data: { minMatches: 10, minWilson: 0, label: "Peu de donnees" },
+    learning: { minMatches: 0, minWilson: 0, label: "En apprentissage" },
+  },
 };
 
 function wilsonScoreLowerBound(wins, total, z) {
@@ -2111,9 +2124,56 @@ function computeEMA(outcomes, alpha) {
   return ema;
 }
 
+function computeConfidenceIndex(totalResolved, wilsonScore, emaScore) {
+  const { confidence_thresholds, min_resolutions } = LEARNING_CONFIG;
+  if (totalResolved < min_resolutions) return { level: "learning", label: confidence_thresholds.learning.label, color: "red" };
+  const emaStability = Math.abs(emaScore - 0.5) < 0.15 ? 0 : 1;
+  if (totalResolved >= confidence_thresholds.very_reliable.minMatches && wilsonScore >= confidence_thresholds.very_reliable.minWilson && emaStability)
+    return { level: "very_reliable", label: confidence_thresholds.very_reliable.label, color: "green" };
+  if (totalResolved >= confidence_thresholds.reliable.minMatches && wilsonScore >= confidence_thresholds.reliable.minWilson)
+    return { level: "reliable", label: confidence_thresholds.reliable.label, color: "green" };
+  if (totalResolved >= confidence_thresholds.progressing.minMatches && wilsonScore >= confidence_thresholds.progressing.minWilson)
+    return { level: "progressing", label: confidence_thresholds.progressing.label, color: "orange" };
+  if (totalResolved >= confidence_thresholds.low_data.minMatches)
+    return { level: "low_data", label: confidence_thresholds.low_data.label, color: "orange" };
+  return { level: "learning", label: confidence_thresholds.learning.label, color: "red" };
+}
+
+function buildExplicability(agentName, oldWeight, newWeight, wilson, ema, roiMultiplier, resolved, contextLabel) {
+  const delta = newWeight - (oldWeight || 50);
+  const parts = [];
+  if (delta !== 0) parts.push(`${agentName} passe de ${oldWeight !== null ? Math.round(oldWeight) : '50 (defaut)'} a ${Math.round(newWeight)}`);
+  else parts.push(`${agentName} reste a ${Math.round(newWeight)}`);
+  parts.push(`Wilson: ${(wilson * 100).toFixed(1)}%`);
+  parts.push(`EMA: ${(ema * 100).toFixed(1)}%`);
+  parts.push(`ROI multiplicateur: x${roiMultiplier.toFixed(2)}`);
+  if (contextLabel !== "global") parts.push(`Contexte: ${contextLabel}`);
+  parts.push(`${resolved} matchs resolus`);
+  const conf = computeConfidenceIndex(resolved, wilson, ema);
+  parts.push(`Confiance: ${conf.label}`);
+  return parts.join(" | ");
+}
+
+function computeContextWeight(wins, total, outcomes, roiMultiplier, contextLabel) {
+  const { wilson_z, ema_alpha, min_resolutions, min_context_resolutions, default_weight, weight_wilson_share, weight_ema_share, weight_min, weight_max } = LEARNING_CONFIG;
+  const wilson = wilsonScoreLowerBound(wins, total, wilson_z);
+  const ema = computeEMA(outcomes, ema_alpha);
+  let weight;
+  if (total < min_context_resolutions) {
+    weight = default_weight;
+  } else if (total < min_resolutions) {
+    weight = default_weight;
+  } else {
+    const baseScore = (wilson * weight_wilson_share + ema * weight_ema_share) * 100;
+    weight = Math.round(baseScore * roiMultiplier);
+    weight = Math.max(weight_min, Math.min(weight_max, weight));
+  }
+  return { weight, wilson, ema };
+}
+
 function computeAgentWeights() {
   try {
-    const { wilson_z, ema_alpha, min_resolutions, roi_cap, default_weight } = LEARNING_CONFIG;
+    const { wilson_z, ema_alpha, min_resolutions, min_context_resolutions, roi_cap, default_weight, weight_wilson_share, weight_ema_share, weight_min, weight_max, version } = LEARNING_CONFIG;
 
     const agents = db.prepare(`
       SELECT agent_name,
@@ -2153,9 +2213,9 @@ function computeAgentWeights() {
       if (resolved < min_resolutions) {
         weight = default_weight;
       } else {
-        const baseScore = (wilson * 0.6 + ema * 0.4) * 100;
+        const baseScore = (wilson * weight_wilson_share + ema * weight_ema_share) * 100;
         weight = Math.round(baseScore * roiMultiplier);
-        weight = Math.max(5, Math.min(95, weight));
+        weight = Math.max(weight_min, Math.min(weight_max, weight));
       }
 
       const oldWeightRow = db.prepare(`
@@ -2163,14 +2223,11 @@ function computeAgentWeights() {
       `).get(ag.agent_name);
       const oldWeight = oldWeightRow ? oldWeightRow.weight : null;
 
-      const reasons = [];
-      if (resolved < min_resolutions) reasons.push(`< ${min_resolutions} résolutions (${resolved}), poids bloqué`);
-      reasons.push(`Wilson(90%): ${(wilson * 100).toFixed(1)}%`);
-      reasons.push(`EMA(α=${ema_alpha}): ${(ema * 100).toFixed(1)}%`);
-      reasons.push(`ROI×: ${roiMultiplier.toFixed(2)}`);
-      reasons.push(`${resolved} matchs`);
+      const confidence = computeConfidenceIndex(resolved, wilson, ema);
+      const explicability = buildExplicability(ag.agent_name, oldWeight, weight, wilson, ema, roiMultiplier, resolved, "global");
 
-      insert.run(ag.agent_name, weight, wilson, ema, roiMultiplier, globalWinrate, resolved, roi, "all", "all", "global", oldWeight, reasons.join(" | "));
+      const reason = `[v${version}] ${explicability}`;
+      insert.run(ag.agent_name, weight, wilson, ema, roiMultiplier, globalWinrate, resolved, roi, "all", "all", "global", oldWeight, reason);
 
       // Contextual weights by sport
       const sportRows = db.prepare(`
@@ -2189,12 +2246,32 @@ function computeAgentWeights() {
       }
 
       for (const [sport, data] of Object.entries(bySport)) {
-        if (data.total < 5) continue;
-        const sWilson = wilsonScoreLowerBound(data.wins, data.total, wilson_z);
-        const sEma = computeEMA(data.outcomes, ema_alpha);
-        let sWeight = data.total < min_resolutions ? default_weight : Math.round((sWilson * 0.6 + sEma * 0.4) * 100 * roiMultiplier);
-        sWeight = Math.max(5, Math.min(95, sWeight));
-        insert.run(ag.agent_name, sWeight, sWilson, sEma, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, sport, "all", `sport:${sport}`, null, `${sport}: Wilson ${(sWilson * 100).toFixed(1)}% | EMA ${(sEma * 100).toFixed(1)}% | ${data.total} matchs`);
+        if (data.total < min_context_resolutions) continue;
+        const ctx = computeContextWeight(data.wins, data.total, data.outcomes, roiMultiplier, sport);
+        insert.run(ag.agent_name, ctx.weight, ctx.wilson, ctx.ema, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, sport, "all", `sport:${sport}`, null, `[v${version}] ${sport}: Wilson ${(ctx.wilson * 100).toFixed(1)}% | EMA ${(ctx.ema * 100).toFixed(1)}% | ${data.total} matchs`);
+      }
+
+      // Contextual weights by competition (championship)
+      const compRows = db.prepare(`
+        SELECT ap.outcome, ca.competition, ca.sport
+        FROM agent_predictions ap
+        LEFT JOIN concile_analyses ca ON ap.match_key = ca.match_key
+        WHERE ap.agent_name = ? AND ap.outcome IN ('win','loss') AND ca.competition IS NOT NULL AND ca.competition != ''
+      `).all(ag.agent_name);
+
+      const byComp = {};
+      for (const r of compRows) {
+        const key = r.competition;
+        if (!byComp[key]) byComp[key] = { wins: 0, total: 0, outcomes: [], sport: r.sport };
+        byComp[key].total++;
+        if (r.outcome === "win") byComp[key].wins++;
+        byComp[key].outcomes.push(r.outcome);
+      }
+
+      for (const [comp, data] of Object.entries(byComp)) {
+        if (data.total < min_context_resolutions) continue;
+        const ctx = computeContextWeight(data.wins, data.total, data.outcomes, roiMultiplier, comp);
+        insert.run(ag.agent_name, ctx.weight, ctx.wilson, ctx.ema, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, data.sport || "all", "all", `comp:${comp}`, null, `[v${version}] ${comp}: Wilson ${(ctx.wilson * 100).toFixed(1)}% | EMA ${(ctx.ema * 100).toFixed(1)}% | ${data.total} matchs`);
       }
 
       // Contextual weights by bet_category
@@ -2214,15 +2291,12 @@ function computeAgentWeights() {
       }
 
       for (const [cat, data] of Object.entries(byCat)) {
-        if (data.total < 5) continue;
-        const cWilson = wilsonScoreLowerBound(data.wins, data.total, wilson_z);
-        const cEma = computeEMA(data.outcomes, ema_alpha);
-        let cWeight = data.total < min_resolutions ? default_weight : Math.round((cWilson * 0.6 + cEma * 0.4) * 100 * roiMultiplier);
-        cWeight = Math.max(5, Math.min(95, cWeight));
-        insert.run(ag.agent_name, cWeight, cWilson, cEma, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, "all", cat, `bet:${cat}`, null, `${cat}: Wilson ${(cWilson * 100).toFixed(1)}% | EMA ${(cEma * 100).toFixed(1)}% | ${data.total} matchs`);
+        if (data.total < min_context_resolutions) continue;
+        const ctx = computeContextWeight(data.wins, data.total, data.outcomes, roiMultiplier, cat);
+        insert.run(ag.agent_name, ctx.weight, ctx.wilson, ctx.ema, roiMultiplier, Math.round(data.wins / data.total * 100), data.total, roi, "all", cat, `bet:${cat}`, null, `[v${version}] ${cat}: Wilson ${(ctx.wilson * 100).toFixed(1)}% | EMA ${(ctx.ema * 100).toFixed(1)}% | ${data.total} matchs`);
       }
 
-      results.push({ agent: ag.agent_name, weight, wilson: (wilson * 100).toFixed(1), ema: (ema * 100).toFixed(1), roiMultiplier: roiMultiplier.toFixed(2), globalWinrate, resolved, roi, belowThreshold: resolved < min_resolutions });
+      results.push({ agent: ag.agent_name, weight, wilson: (wilson * 100).toFixed(1), ema: (ema * 100).toFixed(1), roiMultiplier: roiMultiplier.toFixed(2), globalWinrate, resolved, roi, belowThreshold: resolved < min_resolutions, confidence, explicability });
     }
 
     return results;
@@ -2281,6 +2355,7 @@ function getLatestAgentWeights() {
       `).all(name);
 
       const belowThreshold = latest.total_resolved < LEARNING_CONFIG.min_resolutions;
+      const confidence = computeConfidenceIndex(latest.total_resolved, latest.wilson_score, latest.ema_score);
 
       return {
         agent: name,
@@ -2297,6 +2372,7 @@ function getLatestAgentWeights() {
         previousWeight: previous ? previous.weight : null,
         trend: previous ? (latest.weight > previous.weight ? "up" : latest.weight < previous.weight ? "down" : "stable") : "new",
         belowThreshold,
+        confidence,
         minResolutions: LEARNING_CONFIG.min_resolutions,
         contextual,
         history,
