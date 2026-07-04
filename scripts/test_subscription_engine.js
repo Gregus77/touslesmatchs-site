@@ -60,7 +60,8 @@ testDb.exec(`
     amount INTEGER NOT NULL,
     currency TEXT DEFAULT 'EUR',
     status TEXT DEFAULT 'completed',
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, analysis_id)
   );
 
   CREATE TABLE subscription_history (

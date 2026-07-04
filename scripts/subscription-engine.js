@@ -4,6 +4,10 @@
 
 const Database = require("better-sqlite3");
 
+// Allowed enumeration values (used to reject invalid plan/status writes)
+const VALID_PLANS = ["VISITOR", "PAY_PER_VIEW", "ESSENTIAL", "ELITE"];
+const VALID_STATUSES = ["ACTIVE", "EXPIRED", "CANCELLED", "SUSPENDED", "PENDING_PAYMENT", "REFUNDED"];
+
 class SubscriptionEngine {
   constructor(dbPath = process.env.DB_PATH || "/data/tlm.db") {
     this.db = new Database(dbPath);
@@ -74,8 +78,11 @@ class SubscriptionEngine {
         analysesToday = daily?.count || 0;
       }
 
-      // Check expiration
+      // Check expiration. If the subscription just expired, persist the new
+      // status AND reflect it in the value we return, so `status` and
+      // `isActive` never contradict each other.
       let isExpired = false;
+      let effectiveStatus = sub.subscription_status;
       if (sub.subscription_end_date) {
         const now = new Date();
         const endDate = new Date(sub.subscription_end_date);
@@ -83,6 +90,7 @@ class SubscriptionEngine {
         if (isExpired && sub.subscription_status === "ACTIVE") {
           // Auto-expire subscription
           this.updateSubscriptionStatus(userId, sub.plan, "EXPIRED", "expiry", "Auto-expired subscription");
+          effectiveStatus = "EXPIRED";
         }
       }
 
@@ -95,7 +103,7 @@ class SubscriptionEngine {
         id: sub.id,
         user_id: sub.user_id,
         plan: sub.plan,
-        status: sub.subscription_status,
+        status: effectiveStatus,
         startDate: sub.subscription_start_date,
         endDate: sub.subscription_end_date,
         autoRenew: sub.auto_renew,
@@ -105,7 +113,7 @@ class SubscriptionEngine {
         analysesToday: analysesToday,
         dailyLimit: dailyLimit,
         isExpired: isExpired,
-        isActive: sub.subscription_status === "ACTIVE" && !isExpired,
+        isActive: effectiveStatus === "ACTIVE" && !isExpired,
       };
     } catch (e) {
       console.error("[SubscriptionEngine] getSubscriptionStatus error:", e.message);
@@ -126,19 +134,32 @@ class SubscriptionEngine {
         throw new Error(`User ${userId} has no subscription`);
       }
 
-      const updateFields = [];
+      // Build a fully parameterized UPDATE. Column names are static literals;
+      // only values are bound via placeholders (no string interpolation of input).
+      const setClauses = [];
+      const params = [];
+
       if (newPlan && newPlan !== current.plan) {
-        updateFields.push(`plan = '${newPlan}'`);
+        if (!VALID_PLANS.includes(newPlan)) {
+          throw new Error(`Invalid plan: ${newPlan}`);
+        }
+        setClauses.push("plan = ?");
+        params.push(newPlan);
       }
       if (newStatus && newStatus !== current.subscription_status) {
-        updateFields.push(`subscription_status = '${newStatus}'`);
+        if (!VALID_STATUSES.includes(newStatus)) {
+          throw new Error(`Invalid status: ${newStatus}`);
+        }
+        setClauses.push("subscription_status = ?");
+        params.push(newStatus);
       }
-      updateFields.push(`updated_at = datetime('now')`);
+      setClauses.push("updated_at = datetime('now')");
 
-      if (updateFields.length > 1) { // Only if something changed
-        this.db.prepare(`
-          UPDATE subscriptions SET ${updateFields.join(", ")} WHERE user_id = ?
-        `).run(userId);
+      if (setClauses.length > 1) { // Only if something actually changed
+        params.push(userId);
+        this.db.prepare(
+          `UPDATE subscriptions SET ${setClauses.join(", ")} WHERE user_id = ?`
+        ).run(...params);
 
         // Log the change
         this.logSubscriptionChange(
@@ -210,6 +231,14 @@ class SubscriptionEngine {
         status: "completed",
       };
     } catch (e) {
+      // A duplicate purchase of the same analysis by the same user is blocked by
+      // the UNIQUE(user_id, analysis_id) constraint. Surface a clear, typed error.
+      if (e && /UNIQUE constraint failed/i.test(e.message)) {
+        const dupErr = new Error("Analysis already purchased by this user");
+        dupErr.code = "DUPLICATE_PURCHASE";
+        console.error("[SubscriptionEngine] recordAnalysisPurchase duplicate:", analysisId);
+        throw dupErr;
+      }
       console.error("[SubscriptionEngine] recordAnalysisPurchase error:", e.message);
       throw e;
     }

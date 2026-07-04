@@ -128,7 +128,8 @@ db.exec(`
     amount INTEGER NOT NULL,
     currency TEXT DEFAULT 'EUR',
     status TEXT DEFAULT 'completed',
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE(user_id, analysis_id)
   );
 
   CREATE TABLE IF NOT EXISTS subscription_history (
@@ -7012,11 +7013,40 @@ app.get("/admin/datahub-state", (req, res) => {
 // ===== End M009-M010 =====
 
 // ── Mission 002: Subscription Engine ──────────────────────────────────────────
+// Auth guard for subscription endpoints: the caller must present a valid JWT and
+// may only read its OWN subscription (an admin token may read any email).
+// Returns the authorized email on success, or null after sending an error response.
+function authorizeSubscriptionAccess(req, res, email) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token) {
+    res.status(401).json({ ok: false, error: "Authentification requise" });
+    return null;
+  }
+  let payload;
+  try {
+    payload = jwt.verify(token, JWT_SECRET);
+  } catch {
+    res.status(401).json({ ok: false, error: "Token invalide" });
+    return null;
+  }
+  const requested = String(email || "").toLowerCase().trim();
+  const owner = String(payload.email || "").toLowerCase().trim();
+  const isAdminToken = payload.status === "admin" || payload.admin === true;
+  if (!isAdminToken && owner !== requested) {
+    res.status(403).json({ ok: false, error: "Accès interdit" });
+    return null;
+  }
+  return requested;
+}
+
 // GET /api/subscription/:email
 app.get("/api/subscription/:email", (req, res) => {
   try {
     const { email } = req.params;
     if (!email) return res.status(400).json({ ok: false, error: "Email required" });
+
+    if (!authorizeSubscriptionAccess(req, res, email)) return;
 
     const sub = subscriptionEngine.getByEmail(email);
     if (!sub) return res.status(404).json({ ok: false, error: "User or subscription not found" });
@@ -7036,6 +7066,8 @@ app.get("/api/user/:email/access", (req, res) => {
   try {
     const { email } = req.params;
     if (!email) return res.status(400).json({ ok: false, error: "Email required" });
+
+    if (!authorizeSubscriptionAccess(req, res, email)) return;
 
     const sub = subscriptionEngine.getByEmail(email);
     if (!sub) return res.status(404).json({ ok: false, error: "User or subscription not found" });
