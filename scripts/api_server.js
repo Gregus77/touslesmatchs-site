@@ -3251,6 +3251,42 @@ function autoResolvePredictions(match) {
 
   // Résoudre aussi les traces Concile
   resolveConcileAnalyses(home, away, score_home, score_away);
+
+  // Learning Engine — apprentissage automatique après chaque match terminé
+  autoLearnFromMatch(home, away, h, a);
+}
+
+function autoLearnFromMatch(home, away, scoreHome, scoreAway) {
+  try {
+    const engine = learningBridge.getEngine();
+    const hw = String(home || "").split(" ")[0];
+    const aw = String(away || "").split(" ")[0];
+    if (!hw || !aw) return;
+
+    const snapshots = db.prepare(
+      "SELECT * FROM official_prediction_snapshots WHERE home LIKE ? AND away LIKE ? AND status = 'published'"
+    ).all(`%${hw}%`, `%${aw}%`);
+
+    let learned = 0;
+    for (const snap of snapshots) {
+      const result = engine.evaluateMatch(snap, scoreHome, scoreAway);
+      if (result) {
+        learned++;
+        console.log(`[learning] ${snap.home} vs ${snap.away}: concile=${result.outcome} | agents=${Object.entries(result.agentOutcomes).map(([n, o]) => `${n}:${o}`).join(", ")}`);
+      }
+    }
+
+    if (learned > 0) {
+      engine.recalculateROI();
+      const weightChanges = engine.recalculateWeights();
+      if (weightChanges.length) {
+        console.log(`[learning] Poids mis à jour: ${weightChanges.map(c => `${c.agent} ${c.oldWeight}→${c.newWeight}`).join(", ")}`);
+      }
+      console.log(`[learning] ${learned} snapshot(s) évalué(s) pour ${home} vs ${away} (${scoreHome}-${scoreAway})`);
+    }
+  } catch (e) {
+    console.error("[learning] auto-learn:", e.message);
+  }
 }
 
 // ── Rattrapage : résout les prédictions en attente dont le match est fini mais
