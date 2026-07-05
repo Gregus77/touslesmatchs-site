@@ -12,6 +12,9 @@ const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
+const { PublicationEngine, evaluatePublication, loadConfig: loadPubConfig, DEFAULT_CONFIG: PUB_DEFAULT_CONFIG } = require("./publication_engine");
+const { SnapshotStore } = require("./snapshot_store");
+const { bus, EVENT_NAMES } = require("./event_bus");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -440,6 +443,40 @@ const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 80, computedAt: 0 };
+
+// ── Publication Engine — source de verite unique ────────────────────────────
+const snapshotStore = new SnapshotStore(db);
+const publicationEngine = new PublicationEngine({
+  snapshotStore,
+  config: loadPubConfig(process.env),
+  onPublish: (snapshot) => {
+    console.log(`[pub-engine] PUBLISHED: ${snapshot.home} vs ${snapshot.away} | ${snapshot.selection} @ ${snapshot.confidence}% | minute=${snapshot.minute_at_publication}`);
+  },
+});
+
+// ── Event Bus consumers — Telegram, Brevo, Site read from OFFICIAL_PREDICTION_PUBLISHED ──
+bus.on(EVENT_NAMES.OFFICIAL_PREDICTION_PUBLISHED, (snapshot) => {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+  const ico = si[snapshot.sport] || "🎯";
+  const tgPremium = `🚨 <b>SIGNAL FORT — ${snapshot.confidence}%</b>\n\n${ico} <b>${snapshot.home} vs ${snapshot.away}</b>\n🏆 ${snapshot.competition || ""}\n${snapshot.minute_at_publication ? `⏱ ${snapshot.minute_at_publication}' · Score : ${snapshot.score_home ?? "?"}-${snapshot.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${snapshot.selection}</b>\n📊 Confiance : <b>${snapshot.confidence}%</b>\n${snapshot.raison ? `\n<i>${String(snapshot.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+  const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${snapshot.confidence}%</b>\n\n${ico} <b>${snapshot.home} vs ${snapshot.away}</b>\n🏆 ${snapshot.competition || ""}\n${snapshot.minute_at_publication ? `⏱ ${snapshot.minute_at_publication}' · Score : ${snapshot.score_home ?? "?"}-${snapshot.score_away ?? "?"}` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+  if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[pub-engine] Telegram premium: ${ok ? "OK" : "FAIL"}`));
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
+  if (_freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+    _freeSignalDailyDate.count++;
+    sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[pub-engine] Telegram free: ${ok ? "OK" : "FAIL"}`));
+  }
+});
+
+bus.on(EVENT_NAMES.POST_PUBLICATION_ANALYSIS, (payload) => {
+  console.log(`[pub-engine] Post-publication analysis: ${payload.match_key} at ${payload.minute}'`);
+});
+
+bus.on(EVENT_NAMES.PREDICTION_REJECTED, (payload) => {
+  console.log(`[pub-engine] Rejected: ${payload.match_key} — ${payload.reason}`);
+});
 
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
@@ -2116,31 +2153,20 @@ Réponds en JSON pur (pas de markdown):
     agent_performance: agentPerf,
   };
 
-  // Tracer l'analyse pour la boucle d'apprentissage
+  // Tracer l'analyse pour la boucle d'apprentissage (ancien systeme conserve pour historique)
   const pick = loadPick();
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
-  // Signal fort Telegram automatique si confidence >= seuil adaptatif
-  const signalThreshold = getAdaptiveSignalThreshold();
-  if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN) {
-    const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
-    if (!_signalSentCache.has(signalKey)) {
-      _signalSentCache.add(signalKey);
-      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
-      const ico = si[match.sport] || "🎯";
-      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
-      const todayStr = new Date().toISOString().slice(0, 10);
-      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      if (_freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
-        _freeSignalDailyDate.count++;
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
-      } else {
-        console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
-      }
-    }
+  // Publication Engine — source de verite unique pour tous les consommateurs
+  // Le moteur decide PUBLISH / WAIT / BLOCKED selon les regles configurees
+  const pubResult = publicationEngine.process(analysisResult, match);
+  if (pubResult.decision === "PUBLISH") {
+    console.log(`[pub-engine] Official snapshot created: ${match.home} vs ${match.away} | ${pubResult.snapshot.selection}`);
+  } else if (pubResult.decision === "BLOCKED") {
+    console.log(`[pub-engine] ${pubResult.reason}`);
+  } else {
+    console.log(`[pub-engine] WAIT: ${pubResult.reason}`);
   }
 
   // Évaluation shadow en parallèle (sans bloquer la réponse Concile)
@@ -3436,6 +3462,8 @@ function shouldAutoObserveMatch(match) {
 }
 
 function hasPredictionSnapshot(match) {
+  const matchKey = `${match.id || match.fixtureId || match.sourceMatchId || `${match.home}_${match.away}`}_${getTodayStr()}`;
+  if (snapshotStore.hasSnapshot(matchKey)) return true;
   const key = getPredictionSnapshotKey(match);
   try {
     const row = db.prepare("SELECT 1 FROM agent_predictions WHERE match_key = ? LIMIT 1").get(key);
@@ -4154,6 +4182,22 @@ setTimeout(processScheduledEmails, 60 * 1000);
 function getSignalFortStats() {
   try {
     const threshold = getAdaptiveSignalThreshold();
+
+    // Source primaire : official_prediction_snapshots (Publication Engine)
+    let snapshotRows = [];
+    try {
+      snapshotRows = db.prepare(`
+        SELECT home, away, competition, sport, selection as best_bet, confidence, outcome,
+               score_home, score_away,
+               score_home as score_home_at_analysis, score_away as score_away_at_analysis,
+               NULL as final_score_home, NULL as final_score_away, created_at as analysed_at
+        FROM official_prediction_snapshots
+        WHERE confidence >= ?
+        ORDER BY created_at DESC
+      `).all(threshold);
+    } catch (_) {}
+
+    // Fallback : concile_analyses (ancien systeme, pendant la transition)
     const raw = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              score_home_at_analysis, score_away_at_analysis,
@@ -4162,8 +4206,16 @@ function getSignalFortStats() {
       WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
     `).all(threshold);
+
+    // Merge : snapshots en priorite, fallback concile_analyses
     const seen = new Set();
     const all = [];
+    for (const r of snapshotRows) {
+      const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      all.push(r);
+    }
     for (const r of raw) {
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
@@ -5519,21 +5571,39 @@ async function sendDailyResultsFreeChannel() {
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const offset = parseInt(req.query.offset) || 0;
+  const source = req.query.source || "auto";
   try {
-    const rows = db.prepare(`
-      SELECT id, home, away, competition, sport, best_bet, confidence, raison,
-             consensus_votes, outcome, analysed_at,
-             score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
-             final_score_home, final_score_away, resolved_at,
-             home_logo, away_logo, bet_category,
-             agents_json
-      FROM concile_analyses
-      WHERE date(analysed_at) >= '2026-07-03'
-      ORDER BY analysed_at DESC
-      LIMIT ? OFFSET ?
-    `).all(limit, offset);
-
-    const total = db.prepare(`SELECT COUNT(*) as cnt FROM concile_analyses WHERE date(analysed_at) >= '2026-07-03'`).get()?.cnt || 0;
+    // Source "snapshots" = official snapshots only, "legacy" = concile_analyses only, "auto" = merge
+    let rows;
+    let total;
+    if (source === "snapshots") {
+      rows = snapshotStore.getAllSnapshots({ limit, offset }).map(s => ({
+        id: s.id, home: s.home, away: s.away, competition: s.competition, sport: s.sport,
+        best_bet: s.selection, confidence: s.confidence, raison: s.raison,
+        consensus_votes: s.consensus_votes, outcome: null,
+        analysed_at: s.created_at,
+        score_home_at_analysis: s.score_home, score_away_at_analysis: s.score_away,
+        minute_at_analysis: s.minute_at_publication,
+        final_score_home: null, final_score_away: null, resolved_at: null,
+        home_logo: null, away_logo: null, bet_category: s.market,
+        agents_json: s.agents_json, source: "snapshot",
+      }));
+      total = snapshotStore.countSnapshots();
+    } else {
+      rows = db.prepare(`
+        SELECT id, home, away, competition, sport, best_bet, confidence, raison,
+               consensus_votes, outcome, analysed_at,
+               score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
+               final_score_home, final_score_away, resolved_at,
+               home_logo, away_logo, bet_category,
+               agents_json
+        FROM concile_analyses
+        WHERE date(analysed_at) >= '2026-07-03'
+        ORDER BY analysed_at DESC
+        LIMIT ? OFFSET ?
+      `).all(limit, offset);
+      total = db.prepare(`SELECT COUNT(*) as cnt FROM concile_analyses WHERE date(analysed_at) >= '2026-07-03'`).get()?.cnt || 0;
+    }
 
     const analyses = rows.map(r => {
       let agents = [];
@@ -5875,6 +5945,32 @@ app.get("/signal-fort-stats", (req, res) => {
   });
 });
 
+// ── Official Snapshots — source de verite unique pour Dashboard et Site ──────
+app.get("/api/official-snapshots", (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
+    const offset = Math.max(0, parseInt(req.query.offset) || 0);
+    const snapshots = snapshotStore.getAllSnapshots({ limit, offset });
+    const total = snapshotStore.countSnapshots();
+    res.json({ ok: true, snapshots, total, limit, offset });
+  } catch (e) {
+    console.error("[official-snapshots]", e.message);
+    res.json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+app.get("/api/official-snapshot/:matchKey", (req, res) => {
+  try {
+    const snapshot = snapshotStore.getSnapshot(req.params.matchKey);
+    if (!snapshot) return res.json({ ok: false, error: "Snapshot introuvable" });
+    const postAnalyses = snapshotStore.getPostPublicationAnalyses(req.params.matchKey);
+    res.json({ ok: true, snapshot, post_analyses: postAnalyses });
+  } catch (e) {
+    console.error("[official-snapshot]", e.message);
+    res.json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
 // ── Premium teaser stats — public endpoint for NOPICK sales pitch ─────────────
 app.get("/premium-teaser", (req, res) => {
   try {
@@ -5960,6 +6056,26 @@ app.post("/internal/signal-notify", async (req, res) => {
   if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
   if (!signal || !signal.home) return res.json({ ok: false, error: "signal manquant" });
   if (!BREVO_API_KEY) return res.json({ ok: false, error: "BREVO_API_KEY non configuré", sent: 0 });
+
+  // Route through Publication Engine for official snapshot
+  try {
+    const signalAnalysis = {
+      match_key: `${signal.id || `${signal.home}_${signal.away}`}_${getTodayStr()}`,
+      best_bet: signal.bet || "",
+      confidence: signal.confidence || 0,
+      raison: signal.reason || "",
+      consensus_votes: signal.consensus_votes || 3,
+      total_agents: 5,
+      agents: [],
+    };
+    const signalMatch = {
+      id: signal.id, home: signal.home, away: signal.away,
+      competition: signal.competition || "", sport: signal.sport || "Football",
+      score_home: signal.score_home, score_away: signal.score_away,
+      minute: signal.minute, status: "IN_PLAY",
+    };
+    publicationEngine.process(signalAnalysis, signalMatch);
+  } catch (e) { console.error("[signal-notify] pub-engine:", e.message); }
 
   try {
     const codesDb = new Database(CODES_DB_PATH, { readonly: true });
