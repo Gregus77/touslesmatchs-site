@@ -245,14 +245,11 @@ async function main() {
     });
 
     await check("Webhook with valid signature → 200", async () => {
-      const event = makeEvent("checkout.session.completed", {
-        id: "cs_sig_test",
+      const event = makeEvent("customer.subscription.created", {
+        id: "sub_sig_test",
         customer: "cus_alice_http",
-        customer_email: "alice@test.com",
-        subscription: "sub_sig_1",
-        payment_intent: "pi_sig_1",
-        client_reference_id: String(aliceId),
-        mode: "subscription",
+        status: "active",
+        items: { data: [{ price: { id: "price_essential_http" } }] },
       });
       const r = await sendWebhook(event);
       assertEqual(r.status, 200, "status");
@@ -264,7 +261,7 @@ async function main() {
     // ===== GROUP 2: Subscription lifecycle via webhooks =====
     console.log("📋 GROUP 2: Subscription lifecycle\n");
 
-    await check("checkout.session.completed → subscription activated", async () => {
+    await check("checkout.session.completed with unresolvable price → error (no subscription modified)", async () => {
       const event = makeEvent("checkout.session.completed", {
         id: "cs_lifecycle_1",
         customer: "cus_bob_http",
@@ -274,11 +271,9 @@ async function main() {
         client_reference_id: String(bobId),
         mode: "subscription",
       });
-      // Mock retrieval won't work (no real Stripe SDK), but the handler catches
-      // the error and continues — plan will be null (unknown price)
       const r = await sendWebhook(event);
       assertEqual(r.status, 200, "status");
-      assertEqual(r.json.ok, true, "ok");
+      assertEqual(r.json.ok, false, "ok (should fail — unknown price_id)");
     });
 
     await check("customer.subscription.created → plan set", async () => {

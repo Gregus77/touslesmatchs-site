@@ -182,7 +182,7 @@ class StripeHandler {
 
     const plan = this._resolvePlan(priceId);
     if (!plan) {
-      console.warn(`[stripe-handler] Unknown price_id: ${priceId}`);
+      throw new Error(`Unknown price_id: ${priceId} — cannot resolve plan, aborting checkout`);
     }
 
     // Find or identify the user

@@ -5004,11 +5004,11 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
   try {
     const Stripe = require("stripe");
     stripe = Stripe(STRIPE_SECRET_KEY);
-    if (STRIPE_WEBHOOK_SECRET) {
-      event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET);
-    } else {
-      event = JSON.parse(req.body);
+    if (!STRIPE_WEBHOOK_SECRET) {
+      console.error("[stripe] STRIPE_WEBHOOK_SECRET not configured — rejecting webhook");
+      return res.status(500).json({ ok: false, error: "Webhook secret not configured" });
     }
+    event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET);
   } catch (e) {
     console.error("[stripe] webhook signature verification failed:", e.message);
     return res.status(400).json({ error: "Webhook signature verification failed" });
