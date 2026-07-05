@@ -222,6 +222,97 @@ const bus = new EventBus({ store });
   });
 
   // ══════════════════════════════════════════════════════════════════════════════
+  // GROUP 6b: Subscriber timeout
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  await test("Slow subscriber times out without blocking others", async () => {
+    const timeoutBus = new EventBus({ strictTypes: false });
+    const calls = [];
+    const fast1 = (evt) => { calls.push("fast1"); };
+    const slow = async () => { await new Promise((r) => setTimeout(r, 500)); calls.push("slow"); };
+    const fast2 = (evt) => { calls.push("fast2"); };
+
+    timeoutBus.subscribe("TEST_TIMEOUT", fast1, { timeout: 100 });
+    timeoutBus.subscribe("TEST_TIMEOUT", slow, { timeout: 50 });
+    timeoutBus.subscribe("TEST_TIMEOUT", fast2, { timeout: 100 });
+
+    const result = await timeoutBus.publish("TEST_TIMEOUT", {});
+    assert(result.delivered === 3, "All 3 handlers attempted");
+    assert(result.results[0].ok === true, "fast1 succeeded");
+    assert(result.results[1].ok === false, "slow handler failed");
+    assert(result.results[1].timeout === true, "Marked as timeout");
+    assert(result.results[1].error.includes("timeout after 50ms"), "Timeout error message");
+    assert(result.results[2].ok === true, "fast2 succeeded after slow timeout");
+    assert(calls.includes("fast1"), "fast1 ran");
+    assert(!calls.includes("slow"), "slow did not complete");
+    assert(calls.includes("fast2"), "fast2 ran");
+    timeoutBus.close();
+  });
+
+  await test("Subscriber within timeout succeeds normally", async () => {
+    const timeoutBus = new EventBus({ strictTypes: false });
+    let received = false;
+    const handler = async () => { await new Promise((r) => setTimeout(r, 5)); received = true; };
+    timeoutBus.subscribe("TEST_TIMEOUT_OK", handler, { timeout: 200 });
+
+    const result = await timeoutBus.publish("TEST_TIMEOUT_OK", {});
+    assert(result.delivered === 1, "Handler attempted");
+    assert(result.results[0].ok === true, "Handler succeeded within timeout");
+    assert(received === true, "Handler completed");
+    timeoutBus.close();
+  });
+
+  await test("Default provider timeout applies to all subscribers", async () => {
+    const provider = new InProcessProvider({ timeout: 30 });
+    const timeoutBus = new EventBus({ provider, strictTypes: false });
+    const slow = async () => { await new Promise((r) => setTimeout(r, 500)); };
+
+    timeoutBus.subscribe("TEST_DEFAULT_TO", slow);
+    const result = await timeoutBus.publish("TEST_DEFAULT_TO", {});
+    assert(result.results[0].ok === false, "Timed out with default timeout");
+    assert(result.results[0].timeout === true, "Marked as timeout");
+    timeoutBus.close();
+  });
+
+  await test("Per-subscriber timeout overrides provider default", async () => {
+    const provider = new InProcessProvider({ timeout: 10 });
+    const timeoutBus = new EventBus({ provider, strictTypes: false });
+    let completed = false;
+    const handler = async () => { await new Promise((r) => setTimeout(r, 30)); completed = true; };
+
+    timeoutBus.subscribe("TEST_OVERRIDE_TO", handler, { timeout: 200 });
+    const result = await timeoutBus.publish("TEST_OVERRIDE_TO", {});
+    assert(result.results[0].ok === true, "Handler succeeded with overridden timeout");
+    assert(completed === true, "Handler completed");
+    timeoutBus.close();
+  });
+
+  await test("Timeout event is historised in store", async () => {
+    const slow = async () => { await new Promise((r) => setTimeout(r, 500)); };
+    bus.subscribe("PAYMENT_REFUNDED", slow, { timeout: 20 });
+
+    await bus.publish("PAYMENT_REFUNDED", { test: "timeout_store" }, { source: "test" });
+    const { events } = store.queryByType("PAYMENT_REFUNDED", 10, 0);
+    const timeoutEvt = events.find((e) => e.error && e.error.includes("timeout after"));
+    assert(timeoutEvt !== undefined, "Timeout event found in store");
+    assert(timeoutEvt.result === "partial_failure", "Recorded as partial_failure");
+
+    bus.unsubscribe("PAYMENT_REFUNDED", slow);
+  });
+
+  await test("No timeout (0) means unlimited wait", async () => {
+    const timeoutBus = new EventBus({ strictTypes: false });
+    let completed = false;
+    const handler = async () => { await new Promise((r) => setTimeout(r, 30)); completed = true; };
+    timeoutBus.subscribe("TEST_NO_TO", handler); // no timeout option = 0 = unlimited
+
+    const result = await timeoutBus.publish("TEST_NO_TO", {});
+    assert(result.results[0].ok === true, "Handler succeeded without timeout");
+    assert(completed === true, "Handler completed");
+    timeoutBus.close();
+  });
+
+  // ══════════════════════════════════════════════════════════════════════════════
   // GROUP 7: Event Store (persistence)
   // ══════════════════════════════════════════════════════════════════════════════
 

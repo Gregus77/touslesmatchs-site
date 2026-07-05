@@ -22,32 +22,47 @@ const EVENT_TYPES = {
 // Replace it with a RabbitMQ/Redis/Kafka provider by calling EventBus.setProvider().
 
 class InProcessProvider {
-  constructor() {
+  constructor(opts = {}) {
     this._channels = {};
+    this._defaultTimeout = opts.timeout || 0; // 0 = no timeout
   }
 
-  subscribe(channel, handler) {
+  subscribe(channel, handler, opts = {}) {
     if (!this._channels[channel]) this._channels[channel] = [];
-    this._channels[channel].push(handler);
+    this._channels[channel].push({
+      fn: handler,
+      timeout: opts.timeout !== undefined ? opts.timeout : this._defaultTimeout,
+    });
   }
 
   unsubscribe(channel, handler) {
     if (!this._channels[channel]) return false;
-    const idx = this._channels[channel].indexOf(handler);
+    const idx = this._channels[channel].findIndex((entry) => entry.fn === handler);
     if (idx === -1) return false;
     this._channels[channel].splice(idx, 1);
     return true;
   }
 
   async publish(channel, envelope) {
-    const handlers = this._channels[channel] || [];
+    const entries = this._channels[channel] || [];
     const results = [];
-    for (const handler of handlers) {
+    for (const entry of entries) {
+      const name = entry.fn.name || "(anonymous)";
       try {
-        await handler(envelope);
-        results.push({ handler: handler.name || "(anonymous)", ok: true });
+        if (entry.timeout > 0) {
+          await Promise.race([
+            entry.fn(envelope),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error(`timeout after ${entry.timeout}ms`)), entry.timeout)
+            ),
+          ]);
+        } else {
+          await entry.fn(envelope);
+        }
+        results.push({ handler: name, ok: true });
       } catch (e) {
-        results.push({ handler: handler.name || "(anonymous)", ok: false, error: e.message });
+        const isTimeout = e.message.startsWith("timeout after ");
+        results.push({ handler: name, ok: false, error: e.message, timeout: isTimeout });
       }
     }
     return results;
@@ -100,11 +115,11 @@ class EventBus {
     return { id: envelope.id, type, delivered: results.length, results };
   }
 
-  subscribe(type, handler) {
+  subscribe(type, handler, opts = {}) {
     if (this._strictTypes && !EVENT_TYPES[type]) {
       throw new Error(`Unknown event type: ${type}`);
     }
-    this._provider.subscribe(type, handler);
+    this._provider.subscribe(type, handler, opts);
   }
 
   unsubscribe(type, handler) {
