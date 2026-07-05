@@ -15,6 +15,7 @@ const { bookmakerButtons } = require("./bookmakers.config");
 const { PublicationEngine, evaluatePublication, loadConfig: loadPubConfig, DEFAULT_CONFIG: PUB_DEFAULT_CONFIG } = require("./publication_engine");
 const { SnapshotStore } = require("./snapshot_store");
 const { bus, EVENT_NAMES } = require("./event_bus");
+const { LearningBridge } = require("./learning_bridge");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -453,6 +454,14 @@ const publicationEngine = new PublicationEngine({
     console.log(`[pub-engine] PUBLISHED: ${snapshot.home} vs ${snapshot.away} | ${snapshot.selection} @ ${snapshot.confidence}% | minute=${snapshot.minute_at_publication}`);
   },
 });
+
+// ── Learning Bridge — poids et contexte Learning Engine pour le Concile ──
+const learningBridge = new LearningBridge(db);
+if (learningBridge.isAvailable()) {
+  console.log("[learning-bridge] Learning Engine connecté au Concile");
+} else {
+  console.log("[learning-bridge] Learning Engine tables non trouvées — mode fallback");
+}
 
 // ── Event Bus consumers — Telegram, Brevo, Site read from OFFICIAL_PREDICTION_PUBLISHED ──
 bus.on(EVENT_NAMES.OFFICIAL_PREDICTION_PUBLISHED, (snapshot) => {
@@ -2055,21 +2064,18 @@ Réponds en JSON pur (pas de markdown):
 
   // Phase 2: Run Chief AFTER, with all agent votes available
   const previousVotes = agentResults.map((a) => {
-    const p = agentPerf[a.name];
-    const resolved = p ? p.resolved : 0;
-    const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
-    const perfNote = resolved >= 5
-      ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
-      : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
-    return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
+    return learningBridge.formatAgentVoteLine(a, agentPerf);
   }).join("\n");
+
+  const competitionNote = learningBridge.formatCompetitionNote(match.competition);
+  const betTypeNote = learningBridge.formatBetTypeNote(availableBets);
 
   const chiefPrompt = `${personas[4]}
 
 ${matchContext}
 
-Votes des agents avec leur fiabilité historique:
-${previousVotes}
+Votes des agents avec leur fiabilité historique (poids calculés par le Learning Engine):
+${previousVotes}${competitionNote}${betTypeNote}
 
 Synthétise ces votes en tenant compte de :
 1. Le POIDS de chaque agent (indiqué ci-dessus, basé sur son winrate réel) : privilégie fortement les votes des agents à POIDS ≥60%, et ignore largement ceux à POIDS <35% sauf si aucun agent mieux noté ne couvre ce marché
