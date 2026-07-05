@@ -2,6 +2,12 @@
 
 ## Regles automatiques (s'appliquent a CHAQUE session)
 
+### Selection dynamique du modele (OBLIGATOIRE)
+- A chaque demande, appliquer le skill `smart-model` AVANT de commencer le travail
+- Classifier la demande (Niveau 1 = Haiku, Niveau 2 = Sonnet, Niveau 3 = Opus)
+- Deleguer au sous-agent avec le modele optimal via l'outil Agent
+- Annoncer le modele choisi au user avant de lancer
+
 ### Economie de tokens
 - NE PAS relire des fichiers deja connus -- utiliser la reference ci-dessous
 - NE PAS explorer le projet pour "comprendre l'architecture" -- tout est documente ici

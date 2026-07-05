@@ -4,6 +4,7 @@ description: >
   Selectionne dynamiquement le modele IA optimal (haiku/sonnet/opus) en
   fonction de la complexite de la demande. Economise les tokens sur les
   taches simples, reserve la puissance pour le complexe.
+trigger: auto
 ---
 
 # Skill : Selection dynamique du modele
