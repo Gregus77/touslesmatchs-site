@@ -16,6 +16,7 @@ RUN mkdir -p /data
 COPY scripts/api_server.js ./server.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/event-bus.js ./event-bus.js
+COPY scripts/brevo-subscriber.js ./brevo-subscriber.js
 
 EXPOSE 3001
 CMD ["node", "server.js"]
