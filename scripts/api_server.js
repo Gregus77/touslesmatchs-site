@@ -3668,15 +3668,17 @@ async function brevoAddContact(email, tag) {
 const _emailDailyCap = new Map();
 setInterval(() => _emailDailyCap.clear(), 24 * 60 * 60 * 1000);
 
-async function brevoSendEmail(to, subject, htmlContent) {
+async function brevoSendEmail(to, subject, htmlContent, { transactional = false } = {}) {
   if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
   const key = to.toLowerCase();
-  const sent = _emailDailyCap.get(key) || 0;
-  if (sent >= 1) {
-    console.log(`[brevo] Cap 1 email/jour atteint pour ${key} — "${subject}" non envoyé`);
-    return;
+  if (!transactional) {
+    const sent = _emailDailyCap.get(key) || 0;
+    if (sent >= 1) {
+      console.log(`[brevo] Cap 1 email/jour atteint pour ${key} — "${subject}" non envoyé`);
+      return;
+    }
+    _emailDailyCap.set(key, sent + 1);
   }
-  _emailDailyCap.set(key, sent + 1);
   return httpPostStrict(
     "https://api.brevo.com/v3/smtp/email",
     {
@@ -5205,13 +5207,13 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
                 <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Pro, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
-                <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
+                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
               </div>`
             : status === "premium"
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
                 <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
+                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
               </div>`
             : "";
 
@@ -5236,7 +5238,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             </div>
           </div>`;
 
-          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html);
+          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html, { transactional: true });
           console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
         } catch(e) { console.error("[stripe] email error:", e.message); }
       })();
@@ -5310,26 +5312,29 @@ async function handleCreateCheckout(req, res) {
   const priceId = priceMap[plan];
   if (!priceId) return res.json({ ok: false, error: "Plan inconnu" });
 
+  const customerEmail = String(user_id || "").trim().toLowerCase();
+  const isEmail = customerEmail.includes("@");
+
   try {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
     const mode = plan === "carte" ? "payment" : "subscription";
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       mode,
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `https://www.touslesmatchs.com/live-ia?success=1&plan=${plan}`,
-      cancel_url: "https://www.touslesmatchs.com/subscription",
+      cancel_url: "https://www.touslesmatchs.com/#plans",
       client_reference_id: String(user_id || ""),
-    });
+    };
+    if (isEmail) sessionParams.customer_email = customerEmail;
+    const session = await stripe.checkout.sessions.create(sessionParams);
     res.json({ ok: true, url: session.url });
   } catch (e) {
     res.json({ ok: false, error: e.message });
   }
 }
 
-// Legacy create-checkout accessible via /create-checkout et /api/create-checkout
-app.post("/create-checkout", handleCreateCheckout);
 app.post("/create-checkout", handleCreateCheckout);
 
 // ── Community stats (Telegram member count) ───────────────────────────────────

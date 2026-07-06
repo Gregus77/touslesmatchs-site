@@ -627,7 +627,7 @@ footer{
         <div class="pcf"><span class="no">✗</span>Groupe Telegram</div>
         <div class="pcf"><span class="no">✗</span>Accès illimité</div>
       </div>
-      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" rel="noopener noreferrer" id="btn-carte" class="pc-btn">1 analyse — 1&euro;</a>
+      <a href="#" onclick="startCheckout('carte',event)" id="btn-carte" class="pc-btn">1 analyse — 1&euro;</a>
     </div>
     <div class="pc feat">
       <span class="pc-badge b-pr">Essentiel</span>
@@ -643,7 +643,7 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Alertes instantanées</div>
         <div class="pcf"><span class="no">✗</span>Groupe Elite</div>
       </div>
-      <a href="https://buy.stripe.com/7sYbJ1dfK6NugIAfpA3VC02" target="_blank" rel="noopener noreferrer" id="btn-pro" class="pc-btn prim">S'abonner — 9.90€/mois</a>
+      <a href="#" onclick="startCheckout('premium',event)" id="btn-pro" class="pc-btn prim">S'abonner — 9.90€/mois</a>
     </div>
     <div class="pc">
       <span class="pc-badge b-el">Elite</span>
@@ -658,7 +658,7 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Accès prioritaire aux picks</div>
         <div class="pcf"><span class="ok">✓</span>Support direct</div>
       </div>
-      <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" rel="noopener noreferrer" id="btn-elite" class="pc-btn">S'abonner — 19.90€/mois</a>
+      <a href="#" onclick="startCheckout('elite',event)" id="btn-elite" class="pc-btn">S'abonner — 19.90€/mois</a>
     </div>
   </div>
 </section>
@@ -939,6 +939,28 @@ function buildChart(){
       }
     }
   });
+}
+
+// ══ STRIPE CHECKOUT
+async function startCheckout(plan, event) {
+  if (event) event.preventDefault();
+  var btn = event && event.currentTarget;
+  var oldText = btn ? btn.textContent : "";
+  if (btn) { btn.textContent = "Redirection Stripe..."; btn.style.pointerEvents = "none"; }
+  try {
+    var r = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: plan, user_id: localStorage.getItem('tlm_email') || '' })
+    });
+    var data = await r.json();
+    if (!data.ok || !data.url) throw new Error(data.error || "Checkout indisponible");
+    location.href = data.url;
+  } catch (e) {
+    alert("Paiement indisponible pour le moment. Reessayez dans quelques secondes.");
+    console.error("[checkout]", e);
+    if (btn) { btn.textContent = oldText; btn.style.pointerEvents = ""; }
+  }
 }
 
 // ══ INIT

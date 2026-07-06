@@ -1143,7 +1143,7 @@ footer{
   <div class="nav-right">
     <div id="nav-auth"><button class="nav-login" onclick="openModal()">Se connecter</button></div>
     <div id="lang-picker-slot"></div>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="nav-cta">Tester — 1€</a>
+    <a href="#" onclick="startCheckout('carte',event)" class="nav-cta">Tester — 1€</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
 </nav>
@@ -1154,7 +1154,7 @@ footer{
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
-  <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="mm-cta" onclick="toggleMenu()">Tester Hermes — 1€</a>
+  <a href="#" class="mm-cta" onclick="toggleMenu();startCheckout('carte',event)">Tester Hermes — 1€</a>
 </div>
 
 <!-- MODAL LOGIN -->
@@ -1418,8 +1418,8 @@ footer{
 
   <!-- CTA UNIQUE — Tester pour 1 euro -->
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px">
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
-       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15);transition:all .25s;letter-spacing:-.01em"
+    <a href="#" onclick="startCheckout('carte',event)"
+       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15);transition:all .25s;letter-spacing:-.01em;cursor:pointer"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55),0 0 80px rgba(16,185,129,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15)'">
       Tester Hermes — 1€
     </a>
@@ -1537,7 +1537,7 @@ footer{
 
     <!-- CTA -->
     <div class="liad-cta">
-      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="liad-try-btn" style="background:linear-gradient(135deg,#059669,#10b981)!important">Tester Hermes sur un vrai match — 1€</a>
+      <a href="#" onclick="startCheckout('carte',event)" class="liad-try-btn" style="background:linear-gradient(135deg,#059669,#10b981)!important">Tester Hermes sur un vrai match — 1€</a>
       <div class="liad-note">⚡ Resultat en ~30 secondes · 0 engagement · Paiement Stripe securise</div>
     </div>
   </div>
@@ -1637,7 +1637,7 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Objections et confiance detaillee</div>
         <div class="pcf"><span class="ok">✓</span>0 engagement, 0 abonnement</div>
       </div>
-      <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">Tester Hermes — 1€</a>
+      <a href="#" onclick="startCheckout('carte',event)" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">Tester Hermes — 1€</a>
     </div>
     <div class="pc">
       <span class="pc-badge b-pr">Pro</span>
@@ -1652,7 +1652,7 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Historique et suivi des performances</div>
         <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable a tout moment</b></div>
       </div>
-      <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" target="_blank" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
+      <a href="#" onclick="startCheckout('premium',event)" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
       <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">Soit 0.33€ par analyse — rentabilise en 1 seul pick gagnant</div>
     </div>
     <div class="pc">
@@ -1668,7 +1668,7 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Support direct + canal dedie</div>
         <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable a tout moment</b></div>
       </div>
-      <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner — 19.90€/mois</a>
+      <a href="#" onclick="startCheckout('elite',event)" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner — 19.90€/mois</a>
       <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">Soit 0.66€ par analyse — les alertes Signal Fort seules valent le prix</div>
     </div>
   </div>
@@ -1811,8 +1811,8 @@ function copyRefLink(){
     <p style="font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:24px">
       1 euro. 1 match. 30 secondes. Tu vois ce que 4 IA pensent vraiment — et tu decides.
     </p>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
-       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4);transition:all .25s"
+    <a href="#" onclick="startCheckout('carte',event)"
+       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4);transition:all .25s;cursor:pointer"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4)'">
       Tester Hermes — 1€
     </a>
@@ -1838,8 +1838,8 @@ function copyRefLink(){
 <div id="sticky-email-bar" style="display:none">
   <div class="seb-inner" style="justify-content:center;gap:16px">
     <div style="font-size:14px;font-weight:800;color:var(--text)">Teste Hermes sur un vrai match</div>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
-       style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(16,185,129,.3)">
+    <a href="#" onclick="startCheckout('carte',event)"
+       style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(16,185,129,.3);cursor:pointer">
       1€ — Tester maintenant
     </a>
     <button class="seb-close" onclick="closeStickyBar()">×</button>

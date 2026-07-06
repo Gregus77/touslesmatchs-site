@@ -747,12 +747,12 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Paiement recu — ton analyse est deverrouillee !</div>' +
       '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Tu as aime ? Avec <b style="color:#fff">Pro</b>, tu as <b style="color:#d4af37">10 analyses par jour</b> au lieu d\'une seule.<br>Soit <b>0.33€ par analyse</b> — sans engagement, annulable a tout moment.</div>' +
-      '<a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Pro — 9.90€/mois sans engagement</a>';
+      '<a href="#" onclick="startCheckout(\'premium\',event)" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;cursor:pointer">Passer Pro — 9.90€/mois sans engagement</a>';
   } else if (plan === 'premium' || plan === 'standard') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue dans Pro — ton acces est actif !</div>' +
       '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite</b>, tu passes a <b style="color:#d4af37">30 analyses/jour</b> + <b>alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — sans engagement, annulable a tout moment.</div>' +
-      '<a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Elite — 19.90€/mois sans engagement</a>';
+      '<a href="#" onclick="startCheckout(\'elite\',event)" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;cursor:pointer">Passer Elite — 19.90€/mois sans engagement</a>';
   } else if (plan === 'elite' || plan === 'vip') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#d4af37;font-weight:800;font-size:16px;margin-bottom:8px">👑 Bienvenue dans Elite — tu as acces a tout !</div>' +
@@ -762,6 +762,27 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
   document.body.appendChild(upsellDiv);
   history.replaceState(null, '', location.pathname);
 })();
+
+async function startCheckout(plan, event) {
+  if (event) event.preventDefault();
+  var btn = event && event.currentTarget;
+  var oldText = btn ? btn.textContent : "";
+  if (btn) { btn.textContent = "Redirection Stripe..."; btn.style.pointerEvents = "none"; }
+  try {
+    var r = await fetch('/api/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: plan, user_id: localStorage.getItem('tlm_email') || '' })
+    });
+    var data = await r.json();
+    if (!data.ok || !data.url) throw new Error(data.error || "Checkout indisponible");
+    location.href = data.url;
+  } catch (e) {
+    alert("Paiement indisponible pour le moment. Reessayez dans quelques secondes.");
+    console.error("[checkout]", e);
+    if (btn) { btn.textContent = oldText; btn.style.pointerEvents = ""; }
+  }
+}
 </script>
 <script>
 (function(){
