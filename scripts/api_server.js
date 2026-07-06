@@ -16,6 +16,8 @@ const { PublicationEngine, evaluatePublication, loadConfig: loadPubConfig, DEFAU
 const { SnapshotStore } = require("./snapshot_store");
 const { bus, EVENT_NAMES } = require("./event_bus");
 const { LearningBridge } = require("./learning_bridge");
+const { CRM, CRM_EVENTS } = require("./crm");
+const { HermesDashboard } = require("./hermes_dashboard");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -462,6 +464,14 @@ if (learningBridge.isAvailable()) {
 } else {
   console.log("[learning-bridge] Learning Engine tables non trouvées — mode fallback");
 }
+
+// ── CRM — gestion centralisée des contacts et abonnements ──
+const crm = new CRM(db);
+console.log("[crm] CRM initialisé");
+
+// ── Dashboard Hermès — lecture seule, centre de contrôle ──
+const hermesDashboard = new HermesDashboard(db);
+console.log("[dashboard] Hermès Dashboard initialisé");
 
 // ── Event Bus consumers — Telegram, Brevo, Site read from OFFICIAL_PREDICTION_PUBLISHED ──
 bus.on(EVENT_NAMES.OFFICIAL_PREDICTION_PUBLISHED, (snapshot) => {
@@ -3962,6 +3972,9 @@ app.post("/subscribe-email", async (req, res) => {
     else leadsData.leads.push(lead);
     saveLeads(leadsData);
 
+    // CRM — enregistrer le lead
+    try { crm.registerLead(emailClean, { source: lead.source, lang: lead.lang, country: lead.country, utm: lead.utm }); } catch(e) { console.error("[subscribe-email] CRM error:", e.message); }
+
     if (!BREVO_API_KEY) {
       console.log(`[subscribe-email] Brevo non configure - lead sauvegarde: ${emailClean}`);
       return res.json({ ok: true });
@@ -5047,6 +5060,23 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
     }
 
+    // ── CRM — enregistrer l'achat ──────────────────────────────────────────
+    if (customerEmail) {
+      try {
+        const expiresAtCrm = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
+        const creditsMaxCrm = status === "carte" ? 1 : status === "elite" ? 30 : 10;
+        crm.activateSubscription(customerEmail, {
+          plan: status,
+          stripeCustomerId: session.customer || "",
+          stripeSubscriptionId: session.subscription || "",
+          creditsMax: creditsMaxCrm,
+          expiresAt: expiresAtCrm,
+          stripeEventId: event.id || "",
+        });
+        console.log(`[stripe] CRM activé: ${customerEmail} plan=${status}`);
+      } catch(e) { console.error("[stripe] CRM error:", e.message); }
+    }
+
     // ── Créer code d'accès dans codes.db si pas encore existant ─────────────
     if (customerEmail) {
       try {
@@ -5119,6 +5149,41 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
   if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object;
     db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
+
+    // CRM — annuler l'abonnement
+    try {
+      const cancelledUser = db.prepare("SELECT email FROM users WHERE stripe_subscription_id = ?").get(sub.id);
+      if (cancelledUser) {
+        crm.cancelSubscription(cancelledUser.email, "stripe_subscription_deleted");
+        console.log(`[stripe] CRM annulation: ${cancelledUser.email}`);
+      }
+    } catch(e) { console.error("[stripe] CRM cancel error:", e.message); }
+  }
+
+  if (event.type === "invoice.payment_succeeded") {
+    const invoice = event.data.object;
+    const subId = invoice.subscription;
+    if (subId && invoice.billing_reason === "subscription_cycle") {
+      try {
+        const renewUser = db.prepare("SELECT email, status FROM users WHERE stripe_subscription_id = ?").get(subId);
+        if (renewUser) {
+          const expiresAt = new Date(Date.now() + 32 * 86400000).toISOString().slice(0, 10);
+          crm.updateContact(renewUser.email, { expires_at: expiresAt, credits_used: 0, credits_date: new Date().toISOString().slice(0, 10) });
+          console.log(`[stripe] CRM renouvellement: ${renewUser.email}`);
+        }
+      } catch(e) { console.error("[stripe] CRM renewal error:", e.message); }
+    }
+  }
+
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object;
+    const customerEmail = (charge.billing_details?.email || "").toLowerCase().trim();
+    if (customerEmail) {
+      try {
+        crm.cancelSubscription(customerEmail, "stripe_refund");
+        console.log(`[stripe] CRM remboursement: ${customerEmail}`);
+      } catch(e) { console.error("[stripe] CRM refund error:", e.message); }
+    }
   }
 
   res.json({ received: true });
@@ -6683,6 +6748,18 @@ app.get("/internal/expiring-codes", (req, res) => {
     }));
     res.json({ ok: true, count: withDiff.length, expiring: withDiff });
   } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Hermès Dashboard — centre de contrôle read-only ─────────────────────────
+app.get("/admin/hermes-dashboard", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    res.json({ ok: true, ...hermesDashboard.getFullDashboard() });
+  } catch(e) {
+    console.error("[hermes-dashboard]", e.message);
     res.json({ ok: false, error: e.message });
   }
 });
