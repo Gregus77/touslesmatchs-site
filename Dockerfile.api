@@ -15,6 +15,14 @@ RUN mkdir -p /data
 
 COPY scripts/api_server.js ./server.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
+COPY scripts/publication_engine.js ./publication_engine.js
+COPY scripts/snapshot_store.js ./snapshot_store.js
+COPY scripts/event_bus.js ./event_bus.js
+COPY scripts/learning_bridge.js ./learning_bridge.js
+COPY scripts/learning_engine.js ./learning_engine.js
+COPY scripts/crm.js ./crm.js
+COPY scripts/hermes_dashboard.js ./hermes_dashboard.js
+COPY scripts/invite_link_manager.js ./invite_link_manager.js
 
 EXPOSE 3001
 CMD ["node", "server.js"]
