@@ -18,6 +18,7 @@ const { bus, EVENT_NAMES } = require("./event_bus");
 const { LearningBridge } = require("./learning_bridge");
 const { CRM, CRM_EVENTS } = require("./crm");
 const { HermesDashboard } = require("./hermes_dashboard");
+const InviteLinkManager = require("./invite_link_manager");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -472,6 +473,85 @@ console.log("[crm] CRM initialisé");
 // ── Dashboard Hermès — lecture seule, centre de contrôle ──
 const hermesDashboard = new HermesDashboard(db);
 console.log("[dashboard] Hermès Dashboard initialisé");
+
+// ── Telegram Gateway — InviteLinkManager + plan → groupe ──
+const inviteLinkManager = new InviteLinkManager({
+  botToken: TELEGRAM_BOT_TOKEN,
+  defaultExpireSeconds: 86400,
+});
+
+const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
+const PLAN_TELEGRAM_GROUP = {
+  premium: TELEGRAM_PREMIUM_CHANNEL_ID,
+  pro: TELEGRAM_PREMIUM_CHANNEL_ID,
+  elite: TELEGRAM_ELITE_CHANNEL_ID,
+  vip: TELEGRAM_ELITE_CHANNEL_ID,
+};
+
+async function createTelegramInviteForPlan(plan, email) {
+  const chatId = PLAN_TELEGRAM_GROUP[plan];
+  if (!chatId || !TELEGRAM_BOT_TOKEN) {
+    return { ok: false, error: "Telegram non configuré pour ce plan" };
+  }
+  const result = await inviteLinkManager.createInviteLink(chatId, {
+    memberLimit: 1,
+    name: `${plan}:${email.slice(0, 20)}`,
+  });
+  if (result.ok) {
+    bus.publish("TELEGRAM_INVITE_CREATED", { email, plan, inviteLink: result.inviteLink, chatId });
+    console.log(`[telegram-gateway] Invitation créée: ${email} plan=${plan}`);
+  } else {
+    bus.publish("TELEGRAM_INVITE_FAILED", { email, plan, error: result.error });
+    console.error(`[telegram-gateway] Échec invitation: ${email} — ${result.error}`);
+  }
+  return result;
+}
+
+async function removeMemberFromGroup(chatId, telegramUserId) {
+  if (!TELEGRAM_BOT_TOKEN || !chatId || !telegramUserId) {
+    return { ok: false, error: "params manquants" };
+  }
+  const body = JSON.stringify({ chat_id: chatId, user_id: telegramUserId });
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TELEGRAM_BOT_TOKEN}/banChatMember`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      timeout: 15000,
+    }, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.ok) {
+            bus.publish("TELEGRAM_MEMBER_REMOVED", { chatId, telegramUserId });
+            console.log(`[telegram-gateway] Membre retiré: userId=${telegramUserId} de ${chatId}`);
+            const unbanBody = JSON.stringify({ chat_id: chatId, user_id: telegramUserId, only_if_banned: true });
+            const unbanReq = https.request({
+              hostname: "api.telegram.org",
+              path: `/bot${TELEGRAM_BOT_TOKEN}/unbanChatMember`,
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(unbanBody) },
+              timeout: 10000,
+            }, () => {});
+            unbanReq.on("error", () => {});
+            unbanReq.write(unbanBody);
+            unbanReq.end();
+          }
+          resolve({ ok: parsed.ok, error: parsed.description });
+        } catch { resolve({ ok: false, error: "parse error" }); }
+      });
+    });
+    req.on("error", (e) => resolve({ ok: false, error: e.message }));
+    req.on("timeout", () => { req.destroy(); resolve({ ok: false, error: "timeout" }); });
+    req.write(body);
+    req.end();
+  });
+}
+
+console.log("[telegram-gateway] Gateway initialisée");
 
 // ── Event Bus consumers — Telegram, Brevo, Site read from OFFICIAL_PREDICTION_PUBLISHED ──
 bus.on(EVENT_NAMES.OFFICIAL_PREDICTION_PUBLISHED, (snapshot) => {
@@ -5077,6 +5157,18 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       } catch(e) { console.error("[stripe] CRM error:", e.message); }
     }
 
+    // ── Telegram — créer invitation pour les plans avec groupe ───────────────
+    let telegramInviteLink = "";
+    if (customerEmail && PLAN_TELEGRAM_GROUP[status]) {
+      try {
+        const invResult = await createTelegramInviteForPlan(status, customerEmail);
+        if (invResult.ok) {
+          telegramInviteLink = invResult.inviteLink;
+          crm.updateContact(customerEmail, { telegram_joined: 0, notes: `invite:${telegramInviteLink}` });
+        }
+      } catch(e) { console.error("[stripe] Telegram invite error:", e.message); }
+    }
+
     // ── Créer code d'accès dans codes.db si pas encore existant ─────────────
     if (customerEmail) {
       try {
@@ -5136,6 +5228,11 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
                 <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Acceder au Live IA →</a>
               </div>
               ${upsellBlock}
+              ${telegramInviteLink ? `<div style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(124,58,237,.06));border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
+                <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">📱 Rejoins ton groupe Telegram ${planLabel}</div>
+                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Lien personnel, valable 24h, usage unique.</div>
+                <a href="${telegramInviteLink}" style="display:inline-block;background:linear-gradient(135deg,#0088cc,#229ED9);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe Telegram →</a>
+              </div>` : ""}
             </div>
           </div>`;
 
@@ -5150,12 +5247,22 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     const sub = event.data.object;
     db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
 
-    // CRM — annuler l'abonnement
+    // CRM — annuler l'abonnement + retirer du groupe Telegram
     try {
-      const cancelledUser = db.prepare("SELECT email FROM users WHERE stripe_subscription_id = ?").get(sub.id);
+      const cancelledUser = db.prepare("SELECT email, status FROM users WHERE stripe_subscription_id = ?").get(sub.id);
       if (cancelledUser) {
+        const oldPlan = cancelledUser.status;
         crm.cancelSubscription(cancelledUser.email, "stripe_subscription_deleted");
         console.log(`[stripe] CRM annulation: ${cancelledUser.email}`);
+
+        const crmContact = crm.getContact(cancelledUser.email);
+        const groupId = PLAN_TELEGRAM_GROUP[oldPlan];
+        if (crmContact && crmContact.telegram_joined && groupId) {
+          removeMemberFromGroup(groupId, crmContact.telegram_joined).then(r => {
+            if (r.ok) console.log(`[stripe] Membre retiré du groupe Telegram: ${cancelledUser.email}`);
+            else console.log(`[stripe] Échec retrait Telegram: ${r.error}`);
+          });
+        }
       }
     } catch(e) { console.error("[stripe] CRM cancel error:", e.message); }
   }
@@ -5353,6 +5460,24 @@ app.post("/internal/strategy-report", (req, res) => {
     return res.status(403).json({ ok: false, error: "Forbidden" });
   }
   res.json({ ok: true, ...getStrategyDashboard() });
+});
+
+// ── Internal — enregistrer le telegram_user_id quand un utilisateur rejoint ──
+app.post("/internal/telegram-joined", (req, res) => {
+  const { secret, email, telegram_user_id } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) {
+    return res.status(403).json({ ok: false, error: "Forbidden" });
+  }
+  if (!email || !telegram_user_id) return res.json({ ok: false, error: "email et telegram_user_id requis" });
+  try {
+    const updated = crm.updateContact(email, { telegram_joined: Number(telegram_user_id) });
+    if (!updated) return res.json({ ok: false, error: "contact non trouvé" });
+    console.log(`[telegram-gateway] User joined: ${email} tg_id=${telegram_user_id}`);
+    res.json({ ok: true });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 app.post("/internal/strong-signals", (req, res) => {
