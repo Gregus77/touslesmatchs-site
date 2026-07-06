@@ -5182,7 +5182,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
         const existing = cdbw.prepare("SELECT code FROM codes WHERE email = ? AND plan = ? AND active = 1").get(customerEmail, status);
         if (!existing) {
           cdbw.prepare(
-            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))"
           ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr());
           console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}`);
         }
@@ -6022,7 +6022,7 @@ app.post("/internal/stripe-verify", async (req, res) => {
       const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
       const cdbw = new Database(CODES_DB_PATH);
       cdbw.prepare(
-        "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+        "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))"
       ).run(newCode, email, status, expiresAt, creditsMax, getTodayStr());
       cdbw.close();
       codeRow = { code: newCode, plan: status };
