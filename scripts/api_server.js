@@ -5192,56 +5192,57 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
 
     // ── Email de confirmation via Brevo ──────────────────────────────────────
     if (customerEmail && BREVO_API_KEY) {
-      (async () => {
-        try {
-          const cdb = new Database(CODES_DB_PATH, { readonly: true });
-          const codeRows = cdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").all(customerEmail);
-          cdb.close();
+      try {
+        const cdb = new Database(CODES_DB_PATH, { readonly: true });
+        const codeRows = cdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").all(customerEmail);
+        cdb.close();
+        console.log(`[stripe] codes trouvés pour ${customerEmail}: ${codeRows.length}`);
 
-          const codeList = codeRows.map(r =>
-            `<tr><td style="padding:8px 16px;font-family:monospace;font-size:18px;font-weight:800;letter-spacing:.08em;color:#eceaf4">${r.code}</td>
-             <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
-          ).join("");
+        const codeList = codeRows.map(r =>
+          `<tr><td style="padding:8px 16px;font-family:monospace;font-size:18px;font-weight:800;letter-spacing:.08em;color:#eceaf4">${r.code}</td>
+           <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
+        ).join("");
 
-          const upsellBlock = status === "carte"
-            ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Pro, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
-                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
-              </div>`
-            : status === "premium"
-            ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
-              </div>`
-            : "";
+        const upsellBlock = status === "carte"
+          ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
+              <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
+              <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Pro, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
+              <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
+            </div>`
+          : status === "premium"
+          ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
+              <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
+              <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
+              <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
+            </div>`
+          : "";
 
-          const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
-              <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+        const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
+          <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
+            <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+          </div>
+          <div style="padding:32px">
+            <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
+            <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:10px;overflow:hidden;margin-bottom:24px">${codeList}</table>
+            <p style="font-size:13px;color:#7b82a0;margin:0 0 20px">Utilise ce code sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a> → bouton "Se connecter" → entre ton email + ce code.</p>
+            <div style="text-align:center">
+              <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Acceder au Live IA →</a>
             </div>
-            <div style="padding:32px">
-              <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
-              <table style="width:100%;border-collapse:collapse;background:#0d1020;border-radius:10px;overflow:hidden;margin-bottom:24px">${codeList}</table>
-              <p style="font-size:13px;color:#7b82a0;margin:0 0 20px">Utilise ce code sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a> → bouton "Se connecter" → entre ton email + ce code.</p>
-              <div style="text-align:center">
-                <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Acceder au Live IA →</a>
-              </div>
-              ${upsellBlock}
-              ${telegramInviteLink ? `<div style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(124,58,237,.06));border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">📱 Rejoins ton groupe Telegram ${planLabel}</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Lien personnel, valable 24h, usage unique.</div>
-                <a href="${telegramInviteLink}" style="display:inline-block;background:linear-gradient(135deg,#0088cc,#229ED9);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe Telegram →</a>
-              </div>` : ""}
-            </div>
-          </div>`;
+            ${upsellBlock}
+            ${telegramInviteLink ? `<div style="background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(124,58,237,.06));border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
+              <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">📱 Rejoins ton groupe Telegram ${planLabel}</div>
+              <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Lien personnel, valable 24h, usage unique.</div>
+              <a href="${telegramInviteLink}" style="display:inline-block;background:linear-gradient(135deg,#0088cc,#229ED9);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe Telegram →</a>
+            </div>` : ""}
+          </div>
+        </div>`;
 
-          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html, { transactional: true });
-          console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
-        } catch(e) { console.error("[stripe] email error:", e.message); }
-      })();
+        await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html, { transactional: true });
+        console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
+      } catch(e) { console.error("[stripe] email error:", e.message); }
+    } else {
+      console.log(`[stripe] Email non envoyé: email=${customerEmail || "VIDE"} brevo=${BREVO_API_KEY ? "OK" : "MANQUANTE"}`);
     }
   }
 
