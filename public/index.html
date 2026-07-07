@@ -1452,7 +1452,7 @@ footer{
   <!-- Stats bar — compact -->
   <div class="hero-stats">
     <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simule</div></div>
+    <div class="hs"><div class="hs-val c-cyan" id="hs-roi">—</div><div class="hs-label">ROI</div></div>
     <div class="hs"><div class="hs-val c-indigo">4+1</div><div class="hs-label">IA</div></div>
   </div>
 
@@ -1556,23 +1556,37 @@ footer{
   <div class="roi-card">
     <div class="roi-header">
       <div class="roi-kpis">
-        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl">Profit net</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl">ROI</div></div>
         <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">—</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl" id="kpi-bankroll-lbl">Bankroll</div></div>
         <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">—</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
       </div>
+    </div>
+    <div style="position:relative;height:180px;width:100%">
+      <canvas id="roi-chart"></canvas>
+    </div>
+    <div id="member-simulator" style="display:none;margin-top:16px;padding:16px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--indigo2);margin-bottom:10px">Simulateur de mise</div>
       <div class="stake-selector" id="stake-selector">
         <span class="stake-label">Mise unitaire</span>
         <button class="stake-btn" data-stake="10" onclick="setStake(10)">10€</button>
         <button class="stake-btn" data-stake="20" onclick="setStake(20)">20€</button>
         <button class="stake-btn" data-stake="50" onclick="setStake(50)">50€</button>
         <button class="stake-btn" data-stake="100" onclick="setStake(100)">100€</button>
+        <input type="number" id="custom-stake" min="1" max="1000" placeholder="Autre" style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid rgba(99,102,241,.25);background:rgba(6,8,15,.5);color:var(--text1);font-size:13px;font-weight:600;text-align:center" onchange="setStake(parseInt(this.value)||10)">
       </div>
+      <div id="sim-results" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:12px">
+        <div style="flex:1;min-width:80px;text-align:center">
+          <div style="font-size:11px;color:var(--muted2)">Profit net</div>
+          <div style="font-size:18px;font-weight:800;color:var(--green)" id="sim-profit">—</div>
+        </div>
+        <div style="flex:1;min-width:80px;text-align:center">
+          <div style="font-size:11px;color:var(--muted2)">Bankroll</div>
+          <div style="font-size:18px;font-weight:800;color:var(--cyan)" id="sim-bankroll">—</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:10px;text-align:center">Simulation historique. Aucune garantie de gain. 18+ · joueurs-info-service.fr</div>
     </div>
-    <div style="position:relative;height:180px;width:100%">
-      <canvas id="roi-chart"></canvas>
-    </div>
-    <div class="stake-disclaimer">Simulation basée sur une mise unitaire. Les performances restent identiques quel que soit le montant joué.</div>
+    <div id="stake-disclaimer-public" class="stake-disclaimer">Performances publiques en % (ROI, winrate). Simulateur de mise dans l'espace membre.</div>
   </div>
 </section>
 
@@ -2012,10 +2026,10 @@ function renderPick(){
             <div style="font-size:26px;font-weight:800;color:#818cf8">${d.allTime?.total||0}</div>
             <div style="font-size:11px;color:var(--muted2);margin-top:2px">analyses</div>
           </div>`;
-        if(d.simulated_gain_raw>0){
+        if(d.allTime?.roi){
           c+=`<div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:12px 18px;min-width:90px;text-align:center">
-            <div style="font-size:26px;font-weight:800;color:#10b981">${d.simulated_gain_10}</div>
-            <div style="font-size:11px;color:var(--muted2);margin-top:2px">à 10€/mise</div>
+            <div style="font-size:26px;font-weight:800;color:#10b981">${d.allTime.roi}</div>
+            <div style="font-size:11px;color:var(--muted2);margin-top:2px">ROI</div>
           </div>`;
         }
         cardsEl.innerHTML=c;
@@ -2054,25 +2068,22 @@ function renderPick(){
           const icon=isW?'✅':'❌';
           const bg=isW?'rgba(16,185,129,.06)':'rgba(244,63,94,.06)';
           const border=isW?'rgba(16,185,129,.15)':'rgba(244,63,94,.12)';
-          const g=r.gain10||0;
-          totalGain+=g;
-          const gainTxt=isW?`<span style="color:#10b981;font-weight:700;font-size:12px">+${g.toFixed(1)}€</span>`:`<span style="color:#f43f5e;font-weight:700;font-size:12px">${g}€</span>`;
+          const isWin=r.outcome==='win';
           f+=`<div style="display:flex;align-items:center;gap:8px;background:${bg};border:1px solid ${border};border-radius:8px;padding:8px 12px">
             <span style="font-size:16px;flex-shrink:0">${icon}</span>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:600;color:var(--text1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.match}</div>
               <div style="font-size:11px;color:var(--muted2)">${r.competition}${r.score?' · '+r.score:''}${r.cote?' · @'+r.cote:''}</div>
             </div>
-            <div style="flex-shrink:0;text-align:right">${gainTxt}</div>
+            <div style="flex-shrink:0;text-align:right"><span style="color:${isWin?'#10b981':'#f43f5e'};font-weight:700;font-size:12px">${isWin?'Gagné':'Perdu'}</span></div>
           </div>`;
         });
         f+=`</div>`;
-        const bilanColor=totalGain>=0?'#10b981':'#f43f5e';
-        const bilanBg=totalGain>=0?'rgba(16,185,129,.08)':'rgba(244,63,94,.06)';
-        const bilanBorder=totalGain>=0?'rgba(16,185,129,.2)':'rgba(244,63,94,.15)';
-        const bilanSign=totalGain>=0?'+':'';
-        f+=`<div style="text-align:center;margin-top:12px;padding:10px;background:${bilanBg};border:1px solid ${bilanBorder};border-radius:10px">
-          <span style="font-size:14px;font-weight:700;color:${bilanColor}">Bilan sur ces ${d.recent.length} analyses : ${bilanSign}${totalGain.toFixed(1)}€ à 10€/mise</span>
+        const wins=d.recent.filter(r=>r.outcome==='win').length;
+        const wr=d.recent.length>0?Math.round(wins/d.recent.length*100):0;
+        const bilanColor=wr>=50?'#10b981':'#f43f5e';
+        f+=`<div style="text-align:center;margin-top:12px;padding:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px">
+          <span style="font-size:14px;font-weight:700;color:${bilanColor}">Bilan : ${wins}/${d.recent.length} gagnés · Winrate ${wr}%</span>
         </div>`;
         fEl.innerHTML=f;
       }
@@ -2145,8 +2156,7 @@ function renderPick(){
       </div>`
     : `<div class="pick-insight">
         <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${(avg/10).toFixed(1)}/10</div></div></div>
-        <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">${STAKE}€ → ${Math.round(STAKE*PICK.cote)}€</div></div></div>
-        <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise recommandée</div><div class="pi-val">${PICK.mise||'3% de ta bankroll'}</div></div></div>
+        <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Cote</div><div class="pi-val c-green">@${PICK.cote}</div></div></div>
       </div>`;
   const bookmakerHtml=isResult
     ? `<div class="bm-head">Résultat archivé</div><div class="bm-grid"><a href="/live-ia#historique" class="bm-btn" style="grid-column:1/-1">Voir l'historique des picks →</a></div>`
@@ -2291,25 +2301,25 @@ function buildChart(){
   var winrate = total > 0 ? Math.round(wins / total * 100) : 0;
   var roiEl = document.getElementById('kpi-roi');
   var wrEl  = document.getElementById('kpi-winrate');
-  var bkEl  = document.getElementById('kpi-bankroll');
   var pkEl  = document.getElementById('kpi-picks');
-  var bkLbl = document.getElementById('kpi-bankroll-lbl');
-  var gainNet = (bankroll - bankrollDepart).toFixed(1);
-  if(roiEl) roiEl.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
+  if(roiEl) roiEl.textContent = (roi >= 0 ? '+' : '') + roi + '%';
   if(wrEl)  wrEl.textContent  = winrate + '%';
-  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll.toFixed(0) + '€';
-  if(bkLbl) bkLbl.textContent = bankrollDepart + '€ → X€';
   if(pkEl)  pkEl.textContent  = total;
   var hsW = document.getElementById('hs-winrate');
-  var hsG = document.getElementById('hs-gain');
+  var hsR = document.getElementById('hs-roi');
   if(hsW) hsW.textContent = winrate + '%';
-  if(hsG) hsG.textContent = (gainNet >= 0 ? '+' : '') + Math.round(gainNet) + '€';
-  var tickerStr = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur ${mise}€/pick`;
+  if(hsR) hsR.textContent = (roi >= 0 ? '+' : '') + roi + '%';
+  var tickerStr = `🏆 Winrate ${winrate}% · ROI ${roi>=0?'+':''}${roi}% · ${total} pick${total>1?'s':''}`;
   ['tw1','tw2'].forEach(id=>{var e=document.getElementById(id);if(e)e.textContent=tickerStr;});
   var communityPlayed = document.getElementById('community-picks-played');
   if(communityPlayed) communityPlayed.textContent = String(total);
   var fomoRecord = document.getElementById('fomo-record');
   if(fomoRecord) fomoRecord.textContent = `Stats: ${wins} gagnés / ${total - wins} perdus · ${total} picks terminés`;
+  var simProfit = document.getElementById('sim-profit');
+  var simBankroll = document.getElementById('sim-bankroll');
+  var gainNet = (bankroll - bankrollDepart).toFixed(1);
+  if(simProfit) simProfit.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
+  if(simBankroll) simBankroll.textContent = bankroll.toFixed(0) + '€';
 
   const canvas = document.getElementById('roi-chart');
   if(!canvas) return;
@@ -2396,18 +2406,16 @@ function renderPicksFeed() {
   const next = PICKS_FEED.find(p => p.status === 'upcoming');
   let html = '';
 
-  // Résultats passés — tous, avec gain en euros
   if (past.length) {
     html += '<div class="pf-past">';
     [...past].reverse().slice(0,6).forEach(p => {
       const w = p.result === 'win';
-      const gain = w ? '+' + ((p.cote - 1) * STAKE).toFixed(0) + '€' : '-' + STAKE + '€';
       html += `<div class="pf-past-item${w?'':' loss'}">
         <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
         <span class="pf-sc">${p.score||'—'}</span>
         <span class="pf-ct">@${p.cote}</span>
-        <span style="font-size:12px;font-weight:700;color:${w?'var(--green)':'var(--red)'};margin-left:auto">${gain}</span>
+        <span style="font-size:12px;font-weight:700;color:${w?'var(--green)':'var(--red)'};margin-left:auto">${w?'Gagné':'Perdu'}</span>
         <span class="pf-comp">${p.competition.split('·')[0].trim()}</span>
       </div>`;
     });
@@ -2551,14 +2559,21 @@ function renderNavAuth(){
   const el=document.getElementById('nav-auth');
   const email=localStorage.getItem('tlm_email');
   const plan=localStorage.getItem('tlm_plan');
+  const simEl=document.getElementById('member-simulator');
+  const disclaimerEl=document.getElementById('stake-disclaimer-public');
   if(email&&plan){
     const isElite=plan==='elite';
     el.innerHTML=`<div class="nav-user">
       <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
       <button class="nav-logout" onclick="doLogout()" title="${i18n.t('logout')}">✕</button>
     </div>`;
+    if(simEl) simEl.style.display='block';
+    if(disclaimerEl) disclaimerEl.style.display='none';
+    buildChart();
   } else {
     el.innerHTML=`<button class="nav-login" onclick="openModal()">${i18n.t('nav_connect')}</button>`;
+    if(simEl) simEl.style.display='none';
+    if(disclaimerEl) disclaimerEl.style.display='block';
   }
   // Ne pas redemander l'email en hero si la personne est déjà inscrite/connectée
   const heroBox = document.getElementById('hero-email-box');
@@ -3081,33 +3096,7 @@ async function subscribeEmail(){
   badge.style.display = 'block';
 })();
 
-function computeRealGains(){
-  var mise = STAKE;
-  var totalGain = 0;
-  PICKS_FEED.filter(p => p.status === 'finished').forEach(p => {
-    if(p.result === 'win') totalGain += Math.round((p.cote - 1) * mise);
-    else if(p.result === 'loss') totalGain -= mise;
-  });
-  return totalGain;
-}
-function updateGainsLine(){
-  var el = document.getElementById('gains-line');
-  if(!el) return;
-  var gain = computeRealGains();
-  if(gain <= 0){ el.style.display='none'; return; }
-  el.style.display='block';
-  el.textContent = `Simulation historique : +${gain}€ sur une base de ${STAKE}€ par pick terminé`;
-}
-(function injectGainsLine(){
-  var heroStats = document.querySelector('.hero-stats');
-  if(!heroStats) return;
-  var wrap = heroStats.parentNode;
-  var el = document.createElement('div');
-  el.id = 'gains-line';
-  el.style.cssText = 'margin-top:16px;font-size:13px;color:var(--green);font-weight:600;text-align:center;opacity:.9';
-  wrap.insertBefore(el, heroStats.nextSibling);
-  updateGainsLine();
-})();
+function updateGainsLine(){}
 
 // ══ MENU HAMBURGER
 function toggleMenu(){
