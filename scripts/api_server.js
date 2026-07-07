@@ -2238,6 +2238,72 @@ Réponds en JSON pur (pas de markdown):
   return analysisResult;
 }
 
+function calculateRealConfidence(bet, match) {
+  const score_home = parseInt(match.score_home) || 0;
+  const score_away = parseInt(match.score_away) || 0;
+  const minute = parseInt(match.minute) || 50;
+  const remaining = Math.max(0, 93 - minute);
+  const total_goals = score_home + score_away;
+
+  // Base confidence by bet type + current match state
+  let confidence = 55;
+
+  if (bet === "Victoire domicile") {
+    if (score_home > score_away) {
+      const diff = score_home - score_away;
+      if (diff >= 3) confidence = 88;
+      else if (diff === 2) confidence = diff > 0 ? Math.min(85, 70 + minute / 2) : 65;
+      else confidence = Math.min(80, 65 + minute / 1.5);
+    } else confidence = 50;
+  } else if (bet === "Victoire extérieur") {
+    if (score_away > score_home) {
+      const diff = score_away - score_home;
+      if (diff >= 3) confidence = 88;
+      else if (diff === 2) confidence = Math.min(85, 70 + minute / 2);
+      else confidence = Math.min(80, 65 + minute / 1.5);
+    } else confidence = 50;
+  } else if (bet === "Match nul") {
+    if (score_home === score_away) {
+      if (minute < 30) confidence = Math.min(75, 50 + (30 - minute) / 2);
+      else if (minute < 70) confidence = Math.min(78, 55 + (70 - minute) / 3);
+      else confidence = Math.min(85, 60 + minute / 2);
+    } else confidence = 45;
+  } else if (bet === "Over 2.5 buts") {
+    if (total_goals >= 3) confidence = 92;
+    else if (total_goals === 2) {
+      if (remaining <= 15) confidence = 82;
+      else confidence = 72;
+    } else if (total_goals === 1) {
+      const rate = minute > 0 ? total_goals / minute : 0;
+      const projected = rate * 90;
+      if (projected >= 2.5) confidence = 68;
+      else confidence = 55;
+    } else confidence = Math.min(65, 50 + minute / 3);
+  } else if (bet === "Under 2.5 buts") {
+    if (total_goals === 0) confidence = Math.min(88, 60 + (93 - minute) / 2);
+    else if (total_goals === 1) {
+      if (remaining <= 20) confidence = 80;
+      else confidence = 65;
+    } else if (total_goals === 2) confidence = 55;
+    else confidence = 35;
+  } else if (bet === "BTTS Oui") {
+    if (score_home > 0 && score_away > 0) confidence = 92;
+    else if ((score_home > 0 || score_away > 0) && remaining >= 30) confidence = 72;
+    else if ((score_home > 0 || score_away > 0) && remaining >= 15) confidence = 60;
+    else confidence = 45;
+  } else if (bet === "BTTS Non") {
+    if (score_home === 0 || score_away === 0) {
+      if (remaining <= 15) confidence = 85;
+      else if (remaining <= 30) confidence = 75;
+      else confidence = 65;
+    } else confidence = 40;
+  } else {
+    confidence = 60;
+  }
+
+  return Math.max(50, Math.min(95, Math.round(confidence)));
+}
+
 function getMockAgentAnalysis(agent, match, index) {
   const bets = BET_TYPES;
   const score_diff = match.score_home - match.score_away;
@@ -2248,7 +2314,7 @@ function getMockAgentAnalysis(agent, match, index) {
   else if (score_diff === 0) bet = "Over 2.5 buts";
   else bet = score_diff > 0 ? "Victoire domicile" : "Victoire extérieur";
 
-  const confidence = 60 + Math.floor(Math.random() * 25);
+  const confidence = calculateRealConfidence(bet, match);
   const raisons = [
     `L'équipe à domicile montre une solidité défensive depuis la ${minute}'. Le contexte du score favorise ce marché.`,
     `Les statistiques de ce type de match à cette phase du jeu indiquent une forte probabilité pour ce scénario.`,
@@ -3689,9 +3755,17 @@ function saveReferrals(data) {
   fs.mkdirSync("/var/touslesmatchs", { recursive: true });
   fs.writeFileSync(REFERRALS_PATH, JSON.stringify(data, null, 2));
 }
+function generateSecureCode(chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", length = 8) {
+  const alphabet = chars;
+  const randomBytes = crypto.randomBytes(length);
+  return Array.from(randomBytes)
+    .map(byte => alphabet[byte % alphabet.length])
+    .join("");
+}
+
 function makeRefCode(email) {
   const slug = email.replace(/@.*/, "").replace(/[^a-z0-9]/gi, "").slice(0, 8).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const rand = generateSecureCode("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 4);
   return `REF-${slug}-${rand}`;
 }
 function getOrCreateRefCode(email) {
@@ -5148,8 +5222,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     // ── Créer code d'accès dans codes.db si pas encore existant ─────────────
     if (customerEmail) {
       try {
-        const codeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-        const newCode = Array.from({ length: 8 }, () => codeChars[Math.floor(Math.random() * codeChars.length)]).join("");
+        const newCode = generateSecureCode("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);
         const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
         const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
         const cdbw = new Database(CODES_DB_PATH);
@@ -6014,8 +6087,7 @@ app.post("/internal/stripe-verify", async (req, res) => {
 
     if (!codeRow) {
       // Créer le code
-      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      const newCode = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const newCode = generateSecureCode("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 8);
       const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
       const cdbw = new Database(CODES_DB_PATH);
       cdbw.prepare(
