@@ -8,7 +8,7 @@
     "index.html": "f63839070d621ea75c804dd25523ba04380597f5343d9461e164c4dac1d45b2a",
     "live-ia.html": "16b66201aa17d0619597bbb7545671211b83e1414f90486cb5e9075cd209fbda",
     "template.html": "3a141896149878919932b880f66828cde97e378cb7b8b807c76edfa21fbf673a",
-    "admin-dashboard.html": "32e4437ff112ae5a2c9e1f6f237fe2c06c1afc8494f1775716b701aa6395db36"
+    "admin-dashboard.html": "427fe2ac928f0771c66b06a3907583019ed92a88b373fffdd3f7d7b8903dd1ee"
   },
   "docker_volume": "/opt/touslesmatchs/public:/srv",
   "generated_at": "2026-07-07T19:30:00Z"

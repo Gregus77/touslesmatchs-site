@@ -210,7 +210,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 
-  <!-- ROW 5: Recent analyses + Activity log -->
+  <!-- ROW 5: CRM + Telegram -->
+  <div class="grid">
+    <div class="card">
+      <h2>CRM — Contacts</h2>
+      <div id="crmContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Telegram — Canaux</h2>
+      <div id="telegramContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 6: Recent analyses + Activity log -->
   <div class="grid">
     <div class="card">
       <h2>Dernieres Analyses</h2>
@@ -482,6 +494,32 @@ function renderDashboard(d) {
   } else {
     document.getElementById("recentContent").innerHTML = '<div style="color:var(--muted)">Aucune analyse recente</div>';
   }
+
+  // CRM
+  const crm = d.crmStats || {};
+  if (crm.error) {
+    document.getElementById("crmContent").innerHTML = `<div style="color:var(--muted);font-size:.85rem">${esc(crm.error)}</div>`;
+  } else {
+    const planRows = (crm.byPlan || []).map(p => `<div class="stat-row"><span class="stat-label">${esc(p.plan || 'inconnu')}</span><span class="stat-value">${p.c}</span></div>`).join("");
+    document.getElementById("crmContent").innerHTML = `
+      <div class="big-row">
+        <div class="big-item"><div class="big-number blue">${crm.total || 0}</div><div class="big-label">Contacts total</div></div>
+        <div class="big-item"><div class="big-number green">${crm.recent_7d || 0}</div><div class="big-label">Nouveaux (7j)</div></div>
+        <div class="big-item"><div class="big-number">${crm.telegram_joined || 0}</div><div class="big-label">Telegram</div></div>
+      </div>
+      ${planRows}
+    `;
+  }
+
+  // Telegram
+  const tg = d.telegramStats || {};
+  document.getElementById("telegramContent").innerHTML = `
+    <div class="stat-row"><span class="stat-label">Bot configure</span><span class="stat-value ${tg.botConfigured ? 'green' : 'red'}">${tg.botConfigured ? 'Oui' : 'Non'}</span></div>
+    <div class="stat-row"><span class="stat-label">Canal gratuit</span><span class="stat-value ${tg.freeChannel ? 'green' : 'red'}">${tg.freeChannel ? 'Configure' : 'Absent'}</span></div>
+    <div class="stat-row"><span class="stat-label">Canal premium</span><span class="stat-value ${tg.premiumChannel ? 'green' : 'red'}">${tg.premiumChannel ? 'Configure' : 'Absent'}</span></div>
+    <div class="stat-row"><span class="stat-label">Canal elite</span><span class="stat-value ${tg.eliteChannel ? 'green' : 'red'}">${tg.eliteChannel ? 'Configure' : 'Absent'}</span></div>
+    ${tg.freeMembers ? `<div class="stat-row"><span class="stat-label">Membres gratuit</span><span class="stat-value blue">${tg.freeMembers}</span></div>` : ''}
+  `;
 
   // Activity log
   const log = d.activityLog || [];

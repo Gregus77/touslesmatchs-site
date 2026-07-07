@@ -7128,7 +7128,29 @@ app.get("/admin/dashboard-data", (req, res) => {
       vps.error = "vps-status.json indisponible — installer le cron sur le host";
     }
 
-    res.json({ ok: true, health, vps, docker, backups, business, analytics, pronostics, alerts, activityLog, services, timestamp: new Date().toISOString() });
+    // ── CRM stats ──
+    let crmStats = {};
+    try {
+      const totalContacts = db.prepare("SELECT COUNT(*) as c FROM crm_contacts").get()?.c || 0;
+      const planCounts = db.prepare("SELECT plan, COUNT(*) as c FROM crm_contacts GROUP BY plan").all();
+      const recentLeads = db.prepare("SELECT COUNT(*) as c FROM crm_contacts WHERE created_at >= datetime('now', '-7 days')").get()?.c || 0;
+      const telegramJoined = db.prepare("SELECT COUNT(*) as c FROM crm_contacts WHERE telegram_joined = 1").get()?.c || 0;
+      crmStats = { total: totalContacts, byPlan: planCounts, recent_7d: recentLeads, telegram_joined: telegramJoined };
+    } catch (e) { crmStats.error = e.message; }
+
+    // ── Telegram stats ──
+    let telegramStats = {};
+    try {
+      if (tgMemberCache.count !== null && Date.now() - tgMemberCache.ts < 10 * 60 * 1000) {
+        telegramStats.freeMembers = tgMemberCache.count;
+      }
+      telegramStats.botConfigured = !!TELEGRAM_BOT_TOKEN;
+      telegramStats.freeChannel = !!process.env.TELEGRAM_FREE_CHANNEL_ID;
+      telegramStats.premiumChannel = !!process.env.TELEGRAM_PREMIUM_CHANNEL_ID;
+      telegramStats.eliteChannel = !!process.env.TELEGRAM_ELITE_CHANNEL_ID;
+    } catch (e) { telegramStats.error = e.message; }
+
+    res.json({ ok: true, health, vps, docker, backups, business, analytics, pronostics, alerts, activityLog, services, crmStats, telegramStats, timestamp: new Date().toISOString() });
   } catch (e) {
     console.error("[admin-dashboard]", e.message);
     res.status(500).json({ ok: false, error: e.message });
