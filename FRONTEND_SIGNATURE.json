@@ -1,7 +1,7 @@
 {
   "frontend_dir": "public",
   "branch": "claude/skill-dynamic-model-selection-3cqqyb",
-  "commit": "be1e26d",
+  "commit": "6381f94",
   "version": "1.2.0-rc1",
   "entry_title": "TousLesMatchs — Hermes analyse. Tu decides.",
   "files": {

@@ -10,7 +10,7 @@
     "docker_volume_container_council": "/app/site"
   },
   "branch": "claude/skill-dynamic-model-selection-3cqqyb",
-  "commit": "f768270",
+  "commit": "6381f94",
   "docker": {
     "services": ["site", "api", "council", "hermes-admin"],
     "compose_file": "docker-compose.yml"
