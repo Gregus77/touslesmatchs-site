@@ -5222,13 +5222,13 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
 
   if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object;
-    db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
 
     // CRM — annuler l'abonnement + retirer du groupe Telegram
     try {
       const cancelledUser = db.prepare("SELECT email, status FROM users WHERE stripe_subscription_id = ?").get(sub.id);
       if (cancelledUser) {
         const oldPlan = cancelledUser.status;
+        db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
         crm.cancelSubscription(cancelledUser.email, "stripe_subscription_deleted");
         console.log(`[stripe] CRM annulation: ${cancelledUser.email}`);
 
@@ -5240,6 +5240,20 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             else console.log(`[stripe] Échec retrait Telegram: ${r.error}`);
           });
         }
+      } else {
+        const crmContact = crm.getContactByStripeSubscription(sub.id);
+        if (crmContact) {
+          const oldPlan = crmContact.plan;
+          crm.cancelSubscription(crmContact.email, "stripe_subscription_deleted");
+          console.log(`[stripe] CRM annulation (via CRM): ${crmContact.email}`);
+          const groupId = PLAN_TELEGRAM_GROUP[oldPlan];
+          if (crmContact.telegram_joined && groupId) {
+            removeMemberFromGroup(groupId, crmContact.telegram_joined).then(r => {
+              if (r.ok) console.log(`[stripe] Membre retiré du groupe Telegram: ${crmContact.email}`);
+              else console.log(`[stripe] Échec retrait Telegram: ${r.error}`);
+            });
+          }
+        }
       }
     } catch(e) { console.error("[stripe] CRM cancel error:", e.message); }
   }
@@ -5250,10 +5264,18 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     if (subId && invoice.billing_reason === "subscription_cycle") {
       try {
         const renewUser = db.prepare("SELECT email, status FROM users WHERE stripe_subscription_id = ?").get(subId);
-        if (renewUser) {
+        const renewEmail = renewUser?.email || crm.getContactByStripeSubscription(subId)?.email;
+        if (renewEmail) {
           const expiresAt = new Date(Date.now() + 32 * 86400000).toISOString().slice(0, 10);
-          crm.updateContact(renewUser.email, { expires_at: expiresAt, credits_used: 0, credits_date: new Date().toISOString().slice(0, 10) });
-          console.log(`[stripe] CRM renouvellement: ${renewUser.email}`);
+          crm.updateContact(renewEmail, { expires_at: expiresAt, credits_used: 0, credits_date: new Date().toISOString().slice(0, 10) });
+          console.log(`[stripe] CRM renouvellement: ${renewEmail}`);
+
+          try {
+            const cdbw = new Database(CODES_DB_PATH);
+            cdbw.prepare("UPDATE codes SET expires_at = ?, credits_used = 0, credits_date = ? WHERE email = ? AND active = 1")
+              .run(expiresAt, new Date().toISOString().slice(0, 10), renewEmail.toLowerCase().trim());
+            cdbw.close();
+          } catch(ce) { console.error("[stripe] codes renewal error:", ce.message); }
         }
       } catch(e) { console.error("[stripe] CRM renewal error:", e.message); }
     }
@@ -6897,7 +6919,7 @@ app.get("/admin/dashboard-data", (req, res) => {
       codesDb.close();
       const now = new Date();
       const active = all.filter(r => r.active === 1);
-      const counts = { free: 0, premium: 0, vip: 0, elite: 0, total: active.length };
+      const counts = { free: 0, carte: 0, premium: 0, vip: 0, elite: 0, total: active.length };
       active.forEach(r => { if (counts[r.plan] !== undefined) counts[r.plan]++; });
       const expiring3d = active.filter(r => {
         if (!r.expires_at) return false;
@@ -6906,7 +6928,12 @@ app.get("/admin/dashboard-data", (req, res) => {
       }).length;
       const expired = all.filter(r => r.expires_at && new Date(r.expires_at) < now).length;
       const newToday = all.filter(r => r.created_at && r.created_at.slice(0, 10) === now.toISOString().slice(0, 10)).length;
-      business = { users: counts, expiring_soon: expiring3d, expired_total: expired, new_today: newToday };
+      const totalCarte = all.filter(r => r.plan === "carte").length;
+      const priceMap = { carte: 1, premium: 9.90, vip: 14.90, elite: 19.90 };
+      const revenue = all.reduce((sum, r) => sum + (priceMap[r.plan] || 0), 0);
+      const uniqueVisitors7d = (() => { try { return db.prepare("SELECT COUNT(DISTINCT ip_hash) as c FROM page_views WHERE created_at >= datetime('now', '-7 days')").get()?.c || 0; } catch { return 0; } })();
+      const conversionRate = uniqueVisitors7d > 0 ? Math.round((all.filter(r => r.created_at && new Date(r.created_at) >= new Date(Date.now() - 7 * 86400000)).length / uniqueVisitors7d) * 10000) / 100 : 0;
+      business = { users: counts, expiring_soon: expiring3d, expired_total: expired, new_today: newToday, total_carte: totalCarte, revenue_estimate: Math.round(revenue * 100) / 100, conversion_7d: conversionRate };
     } catch (e) { business.error = e.message; }
 
     // ── Analytics — visitors ──

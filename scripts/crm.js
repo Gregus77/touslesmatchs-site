@@ -94,6 +94,11 @@ class CRM {
     return this._db.prepare("SELECT * FROM crm_contacts WHERE id = ?").get(id) || null;
   }
 
+  getContactByStripeSubscription(subId) {
+    if (!subId) return null;
+    return this._db.prepare("SELECT * FROM crm_contacts WHERE stripe_subscription_id = ?").get(subId) || null;
+  }
+
   findOrCreateContact(email, defaults = {}) {
     const clean = email.toLowerCase().trim();
     let contact = this.getContact(clean);

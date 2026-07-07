@@ -384,6 +384,9 @@ function renderDashboard(d) {
       <div class="big-item"><div class="big-number">${b.users.elite || 0}</div><div class="big-label">Elite</div></div>
       <div class="big-item"><div class="big-number">${b.users.vip || 0}</div><div class="big-label">VIP</div></div>
     </div>
+    <div class="stat-row"><span class="stat-label">Achats 1€ (carte)</span><span class="stat-value blue">${b.total_carte || 0}</span></div>
+    <div class="stat-row"><span class="stat-label">CA estime</span><span class="stat-value green">${(b.revenue_estimate || 0).toFixed(2)} €</span></div>
+    <div class="stat-row"><span class="stat-label">Taux de conversion (7j)</span><span class="stat-value ${(b.conversion_7d || 0) > 1 ? 'green' : 'orange'}">${b.conversion_7d || 0}%</span></div>
     <div class="stat-row"><span class="stat-label">Free</span><span class="stat-value">${b.users.free || 0}</span></div>
     <div class="stat-row"><span class="stat-label">Nouveaux aujourd'hui</span><span class="stat-value green">${b.new_today || 0}</span></div>
     <div class="stat-row"><span class="stat-label">Expirent sous 3 jours</span><span class="stat-value ${b.expiring_soon > 0 ? 'orange' : ''}">${b.expiring_soon}</span></div>
