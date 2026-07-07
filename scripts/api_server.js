@@ -1257,6 +1257,8 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
   "regional cup", "state cup", "state league",
+  // Divisions inférieures des ligues autorisées (sinon "bundesliga" dans le nom passe le filtre)
+  "2. bundesliga", "bundesliga 2", "ligue 2", "serie b", "segunda division", "segunda liga",
   // Exclusions définitives — compétitions interdites
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
   "champions league", "ligue des champions", "uefa champions",
