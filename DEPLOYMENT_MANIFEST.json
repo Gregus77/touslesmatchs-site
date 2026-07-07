@@ -1,0 +1,27 @@
+{
+  "version": "1.0.0",
+  "frontend": {
+    "directory": "public",
+    "entry_file": "index.html",
+    "pages": ["index.html", "live-ia.html", "admin-dashboard.html"],
+    "template": "template.html",
+    "docker_volume_host": "/opt/touslesmatchs/public",
+    "docker_volume_container_site": "/srv",
+    "docker_volume_container_council": "/app/site"
+  },
+  "branch": "claude/skill-dynamic-model-selection-3cqqyb",
+  "commit": "f768270",
+  "docker": {
+    "services": ["site", "api", "council", "hermes-admin"],
+    "compose_file": "docker-compose.yml"
+  },
+  "checks": {
+    "forbidden_volume": "/opt/touslesmatchs/site:/srv",
+    "required_volume": "/opt/touslesmatchs/public:/srv",
+    "forbidden_links": ["buy.stripe.com"],
+    "required_env_vars": ["STRIPE_SECRET_KEY", "BREVO_API_KEY", "TELEGRAM_BOT_TOKEN"],
+    "frontend_title_must_contain": "Hermes",
+    "frontend_title_must_not_contain": "Le Concile analyse"
+  },
+  "generated_at": "2026-07-07T19:30:00Z"
+}
