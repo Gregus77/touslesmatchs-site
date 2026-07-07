@@ -9,8 +9,9 @@ RUN pip install --no-cache-dir -r /app/council/requirements.txt
 # Copy council code
 COPY council/ /app/council/
 
-# Create data directory
+# Create data directory and copy template for html_generator
 RUN mkdir -p /app/data /app/site
+COPY public/template.html /app/site/template.html
 
 # Set Python path + timezone Paris
 ENV PYTHONPATH=/app/council

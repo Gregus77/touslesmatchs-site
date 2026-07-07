@@ -13,7 +13,7 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      - /opt/touslesmatchs/site:/srv
+      - /opt/touslesmatchs/public:/srv
       - /opt/touslesmatchs/Caddyfile:/etc/caddy/Caddyfile
     networks:
       - web
@@ -70,6 +70,7 @@ services:
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
     volumes:
       - council_data:/app/data
+      - /opt/touslesmatchs/public:/app/site
     networks:
       - web
 

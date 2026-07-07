@@ -1,48 +1,49 @@
 #!/bin/bash
 # ============================================================
-# HERMES COUNCIL — Script de déploiement sur VPS Hostinger
+# TOUSLESMATCHS — Script de deploiement complet
 # ============================================================
-set -e
+set -euo pipefail
+
+cd /opt/touslesmatchs
 
 echo "================================================"
-echo " HERMES COUNCIL - Déploiement"
+echo " TOUSLESMATCHS - Deploiement"
+echo " Date: $(date)"
+echo " Branche: $(git branch --show-current)"
 echo "================================================"
 
-# Vérifier que .env existe
-if [ ! -f ".env" ]; then
-  echo "❌ ERREUR: Fichier .env manquant!"
-  echo "   Copie .env.example en .env et remplis tes clés API"
-  echo "   cp .env.example .env && nano .env"
+# Pre-deploy check
+echo ""
+echo "=== Phase 1: Verifications pre-deploiement ==="
+bash scripts/pre-deploy-check.sh || { echo "DEPLOIEMENT ANNULE"; exit 1; }
+
+# Pull latest code
+echo ""
+echo "=== Phase 2: Mise a jour du code ==="
+git pull origin "$(git branch --show-current)"
+
+# Build + restart all services
+echo ""
+echo "=== Phase 3: Build et redemarrage ==="
+docker compose up -d --build
+
+# Wait for services
+echo ""
+echo "Attente du demarrage des services (15s)..."
+sleep 15
+
+# Post-deploy check
+echo ""
+echo "=== Phase 4: Verifications post-deploiement ==="
+bash scripts/post-deploy-check.sh || {
+  echo ""
+  echo "DEPLOIEMENT SUSPECT — verifier manuellement"
+  echo "Rollback: git checkout backup-pre-mission-001 && docker compose up -d --build"
   exit 1
-fi
-
-# Vérifier les clés essentielles
-if grep -q "ANTHROPIC_API_KEY=sk-ant-XXXXXX" .env; then
-  echo "⚠️  ATTENTION: La clé Anthropic n'est pas configurée dans .env"
-fi
-
-echo ""
-echo "1. Arrêt des conteneurs existants..."
-docker compose down --remove-orphans 2>/dev/null || true
-
-echo "2. Build de l'image council..."
-docker compose build --no-cache council
-
-echo "3. Démarrage des services..."
-docker compose up -d
-
-echo ""
-echo "4. Vérification du démarrage..."
-sleep 5
-docker compose ps
+}
 
 echo ""
 echo "================================================"
-echo " Déploiement terminé !"
-echo " Site disponible sur http://$(hostname -I | awk '{print $1}')"
-echo ""
-echo " Commandes utiles :"
-echo "  Voir les logs du conseil : docker compose logs -f council"
-echo "  Tester le conseil manuellement : docker compose exec council python /app/council/hermes.py"
-echo "  Forcer une mise à jour : docker compose exec council python /app/council/hermes.py"
+echo " Deploiement termine avec succes !"
+echo " Site: https://touslesmatchs.com"
 echo "================================================"
