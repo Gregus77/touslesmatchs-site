@@ -635,11 +635,17 @@ nav{
   padding:28px 28px 20px;
   backdrop-filter:blur(20px);
 }
-.roi-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px}
+.roi-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
 .roi-kpis{display:flex;gap:24px;flex-wrap:wrap}
 .roi-kpi .val{font-size:28px;font-weight:900;letter-spacing:-.03em;line-height:1}
 .roi-kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
 canvas#roi-chart{width:100%;display:block}
+.stake-selector{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.stake-selector .stake-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-right:4px}
+.stake-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--b2);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+.stake-btn:hover{border-color:var(--indigo2);color:var(--t1)}
+.stake-btn.active{background:linear-gradient(135deg,var(--indigo),var(--indigo2));color:#fff;border-color:var(--indigo2)}
+.stake-disclaimer{font-size:11px;color:var(--muted);text-align:center;margin-top:12px;opacity:.7}
 
 /* ══ PLANS ══ */
 .plans-section{padding:100px 32px;max-width:1100px;margin:0 auto;position:relative;z-index:1;scroll-margin-top:100px}
@@ -1552,13 +1558,21 @@ footer{
       <div class="roi-kpis">
         <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl">Profit net</div></div>
         <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">—</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl">100€ → X€</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl" id="kpi-bankroll-lbl">Bankroll</div></div>
         <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">—</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
+      </div>
+      <div class="stake-selector" id="stake-selector">
+        <span class="stake-label">Mise unitaire</span>
+        <button class="stake-btn" data-stake="10" onclick="setStake(10)">10€</button>
+        <button class="stake-btn" data-stake="20" onclick="setStake(20)">20€</button>
+        <button class="stake-btn" data-stake="50" onclick="setStake(50)">50€</button>
+        <button class="stake-btn" data-stake="100" onclick="setStake(100)">100€</button>
       </div>
     </div>
     <div style="position:relative;height:180px;width:100%">
       <canvas id="roi-chart"></canvas>
     </div>
+    <div class="stake-disclaimer">Simulation basée sur une mise unitaire. Les performances restent identiques quel que soit le montant joué.</div>
   </div>
 </section>
 
@@ -2131,7 +2145,7 @@ function renderPick(){
       </div>`
     : `<div class="pick-insight">
         <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${(avg/10).toFixed(1)}/10</div></div></div>
-        <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">100€ → ${Math.round(100*PICK.cote)}€</div></div></div>
+        <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">${STAKE}€ → ${Math.round(STAKE*PICK.cote)}€</div></div></div>
         <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise recommandée</div><div class="pi-val">${PICK.mise||'3% de ta bankroll'}</div></div></div>
       </div>`;
   const bookmakerHtml=isResult
@@ -2236,48 +2250,65 @@ function renderPick(){
   document.getElementById('t2').textContent=t;
 }
 
+// ══ STAKE SELECTOR ══
+var STAKE = parseInt(localStorage.getItem('tlm_stake')) || 10;
+function setStake(val) {
+  STAKE = val;
+  localStorage.setItem('tlm_stake', val);
+  document.querySelectorAll('.stake-btn').forEach(function(b){
+    b.classList.toggle('active', parseInt(b.dataset.stake) === val);
+  });
+  buildChart();
+  renderPicksFeed();
+  updateGainsLine();
+}
+(function initStakeButtons(){
+  document.querySelectorAll('.stake-btn').forEach(function(b){
+    b.classList.toggle('active', parseInt(b.dataset.stake) === STAKE);
+  });
+})();
+
 // ══ ROI CHART
 function buildChart(){
-  // Calcul dynamique depuis PICKS_FEED (vrais picks terminés)
-  const finished = PICKS_FEED.filter(p => p.status === 'finished');
-  const mise = 10, bankrollDepart = 100;
-  let bankroll = bankrollDepart;
-  const labels = ['Départ'];
-  const data = [bankroll];
+  var mise = STAKE;
+  var bankrollDepart = mise * 10;
+  var finished = PICKS_FEED.filter(p => p.status === 'finished');
+  var bankroll = bankrollDepart;
+  var labels = ['Départ'];
+  var data = [bankroll];
 
   finished.forEach(p => {
     if(p.result === 'win') bankroll = parseFloat((bankroll + (p.cote - 1) * mise).toFixed(1));
     else bankroll = parseFloat((bankroll - mise).toFixed(1));
-    const dateStr = p.date ? p.date.split('-').slice(1).reverse().join('/') : '';
+    var dateStr = p.date ? p.date.split('-').slice(1).reverse().join('/') : '';
     labels.push(dateStr + ' ' + p.home.split(' ')[0]);
     data.push(bankroll);
   });
 
-  // Mise à jour des KPIs
-  const wins = finished.filter(p => p.result === 'win').length;
-  const total = finished.length;
-  const roi = total > 0 ? ((bankroll - bankrollDepart) / bankrollDepart * 100).toFixed(1) : '0';
-  const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
-  const roiEl = document.getElementById('kpi-roi');
-  const wrEl  = document.getElementById('kpi-winrate');
-  const bkEl  = document.getElementById('kpi-bankroll');
-  const pkEl  = document.getElementById('kpi-picks');
-  const gainNet = (bankroll - bankrollDepart).toFixed(1);
+  var wins = finished.filter(p => p.result === 'win').length;
+  var total = finished.length;
+  var roi = total > 0 ? ((bankroll - bankrollDepart) / bankrollDepart * 100).toFixed(1) : '0';
+  var winrate = total > 0 ? Math.round(wins / total * 100) : 0;
+  var roiEl = document.getElementById('kpi-roi');
+  var wrEl  = document.getElementById('kpi-winrate');
+  var bkEl  = document.getElementById('kpi-bankroll');
+  var pkEl  = document.getElementById('kpi-picks');
+  var bkLbl = document.getElementById('kpi-bankroll-lbl');
+  var gainNet = (bankroll - bankrollDepart).toFixed(1);
   if(roiEl) roiEl.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
   if(wrEl)  wrEl.textContent  = winrate + '%';
-  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll + '€';
+  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll.toFixed(0) + '€';
+  if(bkLbl) bkLbl.textContent = bankrollDepart + '€ → X€';
   if(pkEl)  pkEl.textContent  = total;
-  // Sync hero stats
-  const hsW = document.getElementById('hs-winrate');
-  const hsG = document.getElementById('hs-gain');
+  var hsW = document.getElementById('hs-winrate');
+  var hsG = document.getElementById('hs-gain');
   if(hsW) hsW.textContent = winrate + '%';
   if(hsG) hsG.textContent = (gainNet >= 0 ? '+' : '') + Math.round(gainNet) + '€';
-  // Sync ticker avec les vraies stats calculées
-  const tickerStr = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur 10€/pick`;
-  ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=tickerStr;});
-  const communityPlayed = document.getElementById('community-picks-played');
+  var tickerStr = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur ${mise}€/pick`;
+  ['tw1','tw2'].forEach(id=>{var e=document.getElementById(id);if(e)e.textContent=tickerStr;});
+  var communityPlayed = document.getElementById('community-picks-played');
   if(communityPlayed) communityPlayed.textContent = String(total);
-  const fomoRecord = document.getElementById('fomo-record');
+  var fomoRecord = document.getElementById('fomo-record');
   if(fomoRecord) fomoRecord.textContent = `Stats: ${wins} gagnés / ${total - wins} perdus · ${total} picks terminés`;
 
   const canvas = document.getElementById('roi-chart');
@@ -2371,7 +2402,7 @@ function renderPicksFeed() {
     html += '<div class="pf-past">';
     [...past].reverse().slice(0,6).forEach(p => {
       const w = p.result === 'win';
-      const gain = w ? '+' + ((p.cote - 1) * 100).toFixed(0) + '€' : '-100€';
+      const gain = w ? '+' + ((p.cote - 1) * STAKE).toFixed(0) + '€' : '-' + STAKE + '€';
       html += `<div class="pf-past-item${w?'':' loss'}">
         <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
@@ -3052,25 +3083,31 @@ async function subscribeEmail(){
 })();
 
 function computeRealGains(){
-  const mise = 100;
-  let totalGain = 0;
+  var mise = STAKE;
+  var totalGain = 0;
   PICKS_FEED.filter(p => p.status === 'finished').forEach(p => {
     if(p.result === 'win') totalGain += Math.round((p.cote - 1) * mise);
     else if(p.result === 'loss') totalGain -= mise;
   });
   return totalGain;
 }
-// Injecte la ligne de gains dans la section hero si positif
+function updateGainsLine(){
+  var el = document.getElementById('gains-line');
+  if(!el) return;
+  var gain = computeRealGains();
+  if(gain <= 0){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.textContent = `Simulation historique : +${gain}€ sur une base de ${STAKE}€ par pick terminé`;
+}
 (function injectGainsLine(){
-  const gain = computeRealGains();
-  if(gain <= 0) return;
-  const heroStats = document.querySelector('.hero-stats');
+  var heroStats = document.querySelector('.hero-stats');
   if(!heroStats) return;
-  const wrap = heroStats.parentNode;
-  const el = document.createElement('div');
+  var wrap = heroStats.parentNode;
+  var el = document.createElement('div');
+  el.id = 'gains-line';
   el.style.cssText = 'margin-top:16px;font-size:13px;color:var(--green);font-weight:600;text-align:center;opacity:.9';
-  el.textContent = `Simulation historique : +${gain}€ sur une base de 100€ par pick terminé`;
   wrap.insertBefore(el, heroStats.nextSibling);
+  updateGainsLine();
 })();
 
 // ══ MENU HAMBURGER
