@@ -2280,7 +2280,8 @@ function setStake(val) {
 
 // ══ ROI CHART
 function buildChart(){
-  var mise = STAKE;
+  var isMember = !!(localStorage.getItem('tlm_email') && localStorage.getItem('tlm_plan'));
+  var mise = isMember ? STAKE : 10;
   var bankrollDepart = mise * 10;
   var finished = PICKS_FEED.filter(p => p.status === 'finished');
   var bankroll = bankrollDepart;
