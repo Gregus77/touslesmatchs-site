@@ -6126,7 +6126,7 @@ app.post("/internal/pick-notify", async (req, res) => {
     const leadMap = new Map(leadRows.map(l => [String(l.email || "").toLowerCase(), l]));
 
     const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const gainPotentiel = pick.cote ? Math.round(100 * parseFloat(pick.cote)) : "?";
+    const gainPotentiel = pick.cote ? Math.round((parseFloat(pick.cote) - 1) * 10) : "?";
     const liveUnavailableHtml = pick.liveUnavailable
       ? `<div style="font-size:13px;color:#fbbf24;line-height:1.6;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.28);border-radius:10px;padding:12px;margin-top:12px">Analyse Live IA indisponible pour ce match : il n'est pas couvert par l'API live. Le pick officiel reste valide, mais aucune analyse live ne sera promise.</div>`
       : "";
@@ -6152,7 +6152,7 @@ app.post("/internal/pick-notify", async (req, res) => {
     ${liveUnavailableHtml}
   </div>
   <div style="text-align:center;margin-bottom:20px">
-    <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">💰 Gain potentiel sur 100€ misés : <strong style="color:#10b981">+${gainPotentiel}€</strong></div>
+    <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">📊 Cote @${pick.cote} · Gain potentiel sur 10€ : <strong style="color:#10b981">+${gainPotentiel}€</strong></div>
     <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir l'analyse complète →</a>
   </div>
   ${bookmakerEmailHtml()}

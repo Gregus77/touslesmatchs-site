@@ -159,7 +159,7 @@ export default function App() {
   var total = picks.filter(function(p){return p[5]!=="NOPICK" && p[5]!=="EN COURS" && p[5]!=="EN ATTENTE";}).length;
   var winrate = total > 0 ? Math.round((wins/total)*100) : 0;
 
-  var miseFixe = 10, bankrollDepart = 100, gainsCumules = 0;
+  var miseFixe = 10, bankrollDepart = miseFixe * 10, gainsCumules = 0;
   picks.forEach(function(p) {
     if (p[5] === "GAGNE") gainsCumules += (parseFloat(p[3]) - 1) * miseFixe;
     else if (p[5] === "PERDU") gainsCumules -= miseFixe;
