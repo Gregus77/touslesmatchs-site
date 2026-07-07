@@ -1,13 +1,13 @@
 {
   "frontend_dir": "public",
   "branch": "claude/skill-dynamic-model-selection-3cqqyb",
-  "commit": "268fa53",
-  "version": "1.1.0",
+  "commit": "be1e26d",
+  "version": "1.2.0-rc1",
   "entry_title": "TousLesMatchs — Hermes analyse. Tu decides.",
   "files": {
-    "index.html": "f63839070d621ea75c804dd25523ba04380597f5343d9461e164c4dac1d45b2a",
+    "index.html": "e7305ffeabd05a5a883855606537ead512463de995d3cfa269134729bd385259",
     "live-ia.html": "16b66201aa17d0619597bbb7545671211b83e1414f90486cb5e9075cd209fbda",
-    "template.html": "3a141896149878919932b880f66828cde97e378cb7b8b807c76edfa21fbf673a",
+    "template.html": "27e9942a151d69228e61d1b4bf9ab0dcd3ec218f31293cc9babb554d88fb38de",
     "admin-dashboard.html": "427fe2ac928f0771c66b06a3907583019ed92a88b373fffdd3f7d7b8903dd1ee"
   },
   "docker_volume": "/opt/touslesmatchs/public:/srv",
