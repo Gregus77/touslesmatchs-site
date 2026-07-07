@@ -9,27 +9,13 @@ API_KEY = os.environ.get("API_FOOTBALL_KEY") or os.environ.get("SPORTS_API_KEY",
 FOOTBALL_HOST = "v3.football.api-sports.io"
 
 ALLOWED_LEAGUES = {
-    61, 62,       # Ligue 1, Ligue 2
-    39, 40,       # Premier League, Championship
+    61,           # Ligue 1
+    39,           # Premier League
     140,          # La Liga
     78,           # Bundesliga
     135,          # Serie A
-    88,           # Eredivisie
-    144,          # Pro League (Belgique)
-    94,           # Liga Portugal
-    203,          # Super Lig (Turquie)
-    2, 3, 848,    # Champions League, Europa League, Conference League
-    4,            # Euro (Coupe du Monde exclue)
-    253, 262,     # MLS, Liga MX
-    13,           # Copa Libertadores
-    169,          # Chinese Super League
-    98,           # J1 League (Japon)
-    292,          # K League 1 (Corée du Sud)
-    636,          # Canadian Premier League
-    188,          # USL Championship (USA D2)
-    254,          # NWSL (USA femmes)
-    480,          # A-League (Australie)
-    399,          # Australia Cup
+    128,          # Liga Profesional (Argentine)
+    71,           # Brasileirao Serie A
 }
 
 # ── Basketball ───────────────────────────────────────────────────────────────

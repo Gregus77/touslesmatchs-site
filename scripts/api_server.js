@@ -275,20 +275,13 @@ try {
   const anjCount = db.prepare("SELECT COUNT(*) as c FROM anj_markets").get().c;
   if (anjCount === 0) {
     const anjComps = [
-      ["Premier League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
       ["Ligue 1", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
+      ["Premier League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
       ["La Liga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
       ["Serie A", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
       ["Bundesliga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Champions League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Europa League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Serie B", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Betclic,Unibet"],
-      ["Championship", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Betclic"],
-      ["Liga Portugal", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Betclic,Unibet"],
-      ["Eredivisie", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Unibet,PMU"],
-      ["MLS", "Football", 0, "1X2,DoubleChance,OverUnder,BTTS", "Betclic"],
-      ["NHL", "Hockey", 0, "1X2,OverUnder", ""],
-      ["NBA", "Basketball", 0, "1X2,OverUnder", "Betclic"],
+      ["Liga Profesional", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Betclic,Unibet"],
+      ["Brasileirao", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Betclic,Unibet"],
     ];
     const ins = db.prepare("INSERT OR IGNORE INTO anj_markets (competition, sport, available_in_france, markets_available, bookmakers) VALUES (?,?,?,?,?)");
     for (const row of anjComps) ins.run(...row);
@@ -1264,7 +1257,21 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
   "regional cup", "state cup", "state league",
+  // Exclusions définitives — compétitions interdites
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
+  "champions league", "ligue des champions", "uefa champions",
+  "europa league", "ligue europa",
+  "conference league",
+  "nations league", "ligue des nations",
+  "euro 20", "uefa euro",
+  "coupe de france", "fa cup", "efl cup", "carabao", "league cup",
+  "copa del rey", "dfb-pokal", "dfb pokal", "coppa italia",
+  "coupe de la ligue",
+  "super cup", "supercoupe", "supercopa", "community shield",
+  "playoff", "play-off", "barrage", "barrages", "qualification", "qualif",
+  "preliminary", "preliminaire",
+  "women", "féminin", "feminin", "w ", " w ",
+  "esport", "e-sport", "e sport", "virtual", "virtuel", "cyber",
   // Afrique
   "ethiopia", "nigeria", "npfl", "tanzania", "kenya", "uganda",
   "ghana", "zambia", "zimbabwe", "mozambique", "cameroon", "cameroun",
@@ -1309,54 +1316,14 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
 ];
 
 const TRUSTED_COMPETITIONS = [
-  "ligue 1", "ligue 2", "coupe de france",
-  "premier league", "championship", "fa cup", "efl cup", "carabao",
-  "la liga", "laliga", "segunda division", "copa del rey",
-  "bundesliga", "2. bundesliga", "dfb-pokal",
-  "serie a", "serie b", "coppa italia",
-  "eredivisie",
-  "pro league", "first division a",
-  "liga portugal", "primeira liga",
-  "super lig", "süper lig",
-  "champions league", "europa league", "conference league",
-  "euro 20", "uefa euro", "nations league",
-  "mls ", "liga mx", "copa libertadores", "copa sudamericana",
+  // 7 ligues autorisées uniquement
+  "ligue 1",
+  "premier league",
+  "la liga", "laliga",
+  "serie a",
+  "bundesliga",
+  "liga profesional", "copa argentina", "primera division · argentina",
   "brasileirao", "serie a · brazil",
-  "liga profesional", "copa argentina",
-  "j1 league", "j-league", "meiji yasuda",
-  "k league", "k-league",
-  "chinese super league",
-  "canadian premier",
-  "nhl", "nba", "atp", "wta", "grand slam",
-  "top 14", "pro d2", "premiership rugby", "urc",
-  "euroleague", "euroligue",
-  "a-league", "a league · australia",
-  "swiss super league", "super league · switzerland",
-  "scottish premiership", "scottish · premiership",
-  "danish superliga", "superliga · denmark",
-  "norwegian eliteserien", "eliteserien",
-  "finnish veikkausliiga",
-  "czech first league", "czech liga",
-  "polish ekstraklasa", "ekstraklasa",
-  "croatian hnl", "hnl · croatia",
-  "serbian superliga", "super liga · serbia",
-  "greek super league", "super league · greece",
-  "romanian superliga", "liga i · romania",
-  "ukrainian premier",
-  "russian premier",
-  "austrian bundesliga",
-  "hungarian nb i", "nb i · hungary",
-  "bulgarian first", "first league · bulgaria",
-  "slovak super liga",
-  "cypriot first", "first division · cyprus",
-  "saudi pro league", "roshn",
-  "uae pro league",
-  "qsl", "qatar stars",
-  "usl championship",
-  "nwsl",
-  "ahl",
-  "nbl", "nbl · australia",
-  "australia cup",
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {
@@ -3211,11 +3178,18 @@ function resolveMarketBet(bet, h, a, htTotal) {
   switch (bet) {
     case "Over 2.5 buts":  return total > 2.5 ? "win" : "loss";
     case "Under 2.5 buts": return total < 2.5 ? "win" : "loss";
+    case "Over 1.5 buts":  return total > 1.5 ? "win" : "loss";
+    case "Under 1.5 buts": return total < 1.5 ? "win" : "loss";
+    case "Over 3.5 buts":  return total > 3.5 ? "win" : "loss";
+    case "Under 3.5 buts": return total < 3.5 ? "win" : "loss";
     case "BTTS Oui":       return (h > 0 && a > 0) ? "win" : "loss";
     case "BTTS Non":       return (h > 0 && a > 0) ? "loss" : "win";
     case "Victoire domicile":  return h > a ? "win" : "loss";
     case "Victoire extérieur": return a > h ? "win" : "loss";
     case "Match nul":      return h === a ? "win" : "loss";
+    case "Double chance 1X": return h >= a ? "win" : "loss";
+    case "Double chance X2": return a >= h ? "win" : "loss";
+    case "Double chance 12": return h !== a ? "win" : "loss";
     case "But en 1ère mi-temps":       return htTotal == null ? null : (htTotal > 0 ? "win" : "loss");
     case "Aucun but en 1ère mi-temps": return htTotal == null ? null : (htTotal === 0 ? "win" : "loss");
     default: return getBetOutcomeForScore(bet, h, a);
