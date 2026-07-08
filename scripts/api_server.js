@@ -566,7 +566,8 @@ const SHADOW_AGENTS = [
 
 // ── Telegram helper ──────────────────────────────────────────────────────────
 function sendTelegramMessage(chatId, text) {
-  if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(false);
+  if (!TELEGRAM_BOT_TOKEN) { console.error("[telegram] BOT_TOKEN manquant"); return Promise.resolve(false); }
+  if (!chatId) { console.error("[telegram] chatId manquant"); return Promise.resolve(false); }
   const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true });
   return new Promise((resolve) => {
     const req = https.request({
@@ -579,11 +580,15 @@ function sendTelegramMessage(chatId, text) {
       let data = "";
       res.on("data", d => data += d);
       res.on("end", () => {
-        try { resolve(JSON.parse(data).ok === true); } catch { resolve(false); }
+        try {
+          const parsed = JSON.parse(data);
+          if (!parsed.ok) console.error(`[telegram] API error → ${chatId}: ${parsed.description || JSON.stringify(parsed)}`);
+          resolve(parsed.ok === true);
+        } catch { resolve(false); }
       });
     });
-    req.on("error", () => resolve(false));
-    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.on("error", (e) => { console.error(`[telegram] network error: ${e.message}`); resolve(false); });
+    req.on("timeout", () => { console.error("[telegram] timeout 15s"); req.destroy(); resolve(false); });
     req.write(body);
     req.end();
   });
@@ -1174,64 +1179,85 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
 
 const TRUSTED_COMPETITIONS = [
   "ligue 1", "ligue 2", "coupe de france",
-  "premier league", "championship", "fa cup", "efl cup", "carabao",
+  "premier league", "championship · england", "efl championship", "fa cup", "efl cup", "carabao",
   "la liga", "laliga", "segunda division", "copa del rey",
   "bundesliga", "2. bundesliga", "dfb-pokal",
   "serie a", "serie b", "coppa italia",
   "eredivisie",
   "pro league", "first division a",
   "liga portugal", "primeira liga",
-  "super lig", "süper lig",
+  "super lig",
   "champions league", "europa league", "conference league",
   "euro 20", "uefa euro", "nations league",
-  "mls ", "liga mx", "copa libertadores", "copa sudamericana",
+  "mls", "major league soccer", "liga mx",
+  "copa libertadores", "copa sudamericana",
   "brasileirao", "serie a · brazil",
   "liga profesional", "copa argentina",
+  "primera division · argentina",
   "j1 league", "j-league", "meiji yasuda",
   "k league", "k-league",
-  "chinese super league",
+  "chinese super league", "csl",
   "canadian premier",
   "nhl", "nba", "atp", "wta", "grand slam",
   "top 14", "pro d2", "premiership rugby", "urc",
-  "euroleague", "euroligue",
-  "a-league", "a league · australia",
-  "swiss super league", "super league · switzerland",
-  "scottish premiership", "scottish · premiership",
-  "danish superliga", "superliga · denmark",
+  "euroleague",
+  "a-league", "a league",
+  "allsvenskan", "swedish",
+  "swiss super league",
+  "scottish premiership",
+  "danish superliga", "superliga",
   "norwegian eliteserien", "eliteserien",
-  "finnish veikkausliiga",
+  "finnish veikkausliiga", "veikkausliiga",
   "czech first league", "czech liga",
   "polish ekstraklasa", "ekstraklasa",
-  "croatian hnl", "hnl · croatia",
-  "serbian superliga", "super liga · serbia",
-  "greek super league", "super league · greece",
-  "romanian superliga", "liga i · romania",
+  "croatian hnl",
+  "serbian superliga",
+  "greek super league",
+  "romanian superliga", "liga i",
   "ukrainian premier",
   "russian premier",
   "austrian bundesliga",
-  "hungarian nb i", "nb i · hungary",
-  "bulgarian first", "first league · bulgaria",
+  "hungarian nb i",
+  "bulgarian first",
   "slovak super liga",
-  "cypriot first", "first division · cyprus",
+  "cypriot first",
   "saudi pro league", "roshn",
   "uae pro league",
   "qsl", "qatar stars",
   "usl championship",
   "nwsl",
   "ahl",
-  "nbl", "nbl · australia",
+  "nbl",
   "australia cup",
+  "copa america",
+  "gold cup", "concacaf",
+  "african cup", "can ",
+  "olympic", "jeux olympiques",
+  "club world cup",
+  "recopa",
+  "supercopa",
+  "community shield", "trophee des champions",
+  "super cup",
+  "liga betplay", "colombia",
+  "liga 1 · peru",
+  "primera division · uruguay", "uruguay",
+  "campeonato nacional · chile",
+  "lpf · paraguay",
 ];
+
+function stripAccents(s) {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
 
 function isLowTrustCompetition(matchOrCompetition = "") {
   const raw = typeof matchOrCompetition === "string"
     ? matchOrCompetition
     : String(matchOrCompetition?.competition || "");
-  const value = String(raw || "").toLowerCase();
+  const value = stripAccents(String(raw || "").toLowerCase()).trim();
   if (!value) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
-  return true;
+  return false;
 }
 
 function getVerifiedFixtureId(match) {
@@ -2896,7 +2922,7 @@ function getStrongSignalAlerts(options = {}) {
         const assessment = assessLearningProfile(profile, minResolved);
         const sampleOk = total >= minResolved && assessment.clientSafe;
         const sport = r.sport || "Football";
-        const highConfidence = r.confidence >= 85;
+        const highConfidence = r.confidence >= threshold;
         const eligible = sampleOk || highConfidence;
         return {
           id: r.match_key,
@@ -5371,6 +5397,46 @@ ${pickInfo}
   sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text).then(ok => {
     res.json({ ok, message: ok ? "Rapport envoyé sur Telegram admin" : "Échec envoi Telegram" });
   });
+});
+
+// ── Admin — diagnostic Telegram complet ──────────────────────────────────────
+app.get("/admin/telegram-diagnostic", async (req, res) => {
+  const results = {
+    bot_token_set: !!TELEGRAM_BOT_TOKEN,
+    channel_id_set: !!TELEGRAM_CHANNEL_ID,
+    premium_channel_id_set: !!TELEGRAM_PREMIUM_CHANNEL_ID,
+    admin_chat_id_set: !!TELEGRAM_ADMIN_CHAT_ID,
+    tests: {},
+  };
+  if (TELEGRAM_BOT_TOKEN) {
+    try {
+      const getMeData = await new Promise((resolve) => {
+        const r = https.request({ hostname: "api.telegram.org", path: `/bot${TELEGRAM_BOT_TOKEN}/getMe`, method: "GET", timeout: 10000 }, (resp) => {
+          let d = ""; resp.on("data", c => d += c); resp.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({ ok: false }); } });
+        });
+        r.on("error", () => resolve({ ok: false, error: "network" }));
+        r.on("timeout", () => { r.destroy(); resolve({ ok: false, error: "timeout" }); });
+        r.end();
+      });
+      results.tests.getMe = getMeData;
+    } catch (e) { results.tests.getMe = { ok: false, error: e.message }; }
+    try {
+      const whData = await new Promise((resolve) => {
+        const r = https.request({ hostname: "api.telegram.org", path: `/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo`, method: "GET", timeout: 10000 }, (resp) => {
+          let d = ""; resp.on("data", c => d += c); resp.on("end", () => { try { resolve(JSON.parse(d)); } catch { resolve({ ok: false }); } });
+        });
+        r.on("error", () => resolve({ ok: false, error: "network" }));
+        r.on("timeout", () => { r.destroy(); resolve({ ok: false, error: "timeout" }); });
+        r.end();
+      });
+      results.tests.webhookInfo = whData;
+    } catch (e) { results.tests.webhookInfo = { ok: false, error: e.message }; }
+    if (TELEGRAM_ADMIN_CHAT_ID) {
+      const testOk = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, "🔧 <b>Test diagnostic Telegram</b>\n\nCe message confirme que le bot fonctionne correctement.\n\n🤖 TousLesMatchs API");
+      results.tests.sendMessage = { ok: testOk, target: "admin_chat" };
+    }
+  }
+  res.json(results);
 });
 
 // ── Admin — bilan complet analyses gagnées/perdues sur Telegram admin ────────
