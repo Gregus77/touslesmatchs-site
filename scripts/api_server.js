@@ -20,8 +20,13 @@ const { CRM, CRM_EVENTS } = require("./crm");
 const { HermesDashboard } = require("./hermes_dashboard");
 const InviteLinkManager = require("./invite_link_manager");
 const { IARankingEngine, isMarketStillValid, anonymizeAgentName } = require("./ia_ranking_engine");
+const { HermesBrain } = require("./hermes_brain");
 
 const iaRanking = new IARankingEngine();
+const hermesBrain = new HermesBrain();
+["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief"].forEach((name, i) => {
+  hermesBrain.addAgent(name, { displayOrder: i + 1 });
+});
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -2215,7 +2220,10 @@ Réponds en JSON pur (pas de markdown):
     const sport = (match.sport || "Football").toLowerCase();
     const competition = match.competition || match.league || "";
     agentResults.forEach(a => {
-      iaRanking.recordPrediction(a.name, matchKey, a.bet, a.confidence, sport, competition, a.bet);
+      iaRanking.recordPrediction({
+        agentName: a.name, matchKey, sport, competition,
+        marketType: a.bet, prediction: a.bet, confidence: a.confidence,
+      });
     });
   } catch (e) { console.warn("[ia-ranking] record error:", e.message); }
 
@@ -2243,6 +2251,41 @@ Réponds en JSON pur (pas de markdown):
   const pick = loadPick();
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
+
+  // Hermès V3 — cerveau du concile, décisionnaire unique
+  try {
+    const hermesVotes = agentResults.filter(a => !a.failed).map(a => ({
+      agentName: a.name,
+      vote: a.bet,
+      confidence: a.confidence || 0,
+      arguments: a.raison || "",
+      prediction: a.bet,
+    }));
+    const hermesResult = hermesBrain.evaluate({
+      matchKey: `${match.home}_${match.away}`,
+      home: match.home,
+      away: match.away,
+      competition: match.competition || "",
+      sport: sport,
+      market: chief.bet,
+      minute: matchMinute,
+      score: matchScore,
+      votes: hermesVotes,
+      dataQuality: statsStatus.available ? 1.0 : 0.5,
+      statsAvailable: statsStatus.available,
+    });
+    analysisResult.hermes = {
+      decision: hermesResult.decision,
+      reason: hermesResult.reason,
+      qualityScore: hermesResult.qualityScore,
+      consensus: hermesResult.consensus,
+      dominantBet: hermesResult.dominantBet,
+      published: hermesResult.published,
+    };
+    console.log(`[hermes-v3] ${match.home} vs ${match.away}: ${hermesResult.decision} (score=${hermesResult.qualityScore}/100, consensus=${hermesResult.consensus.level})`);
+  } catch (e) {
+    console.error("[hermes-v3] evaluate error:", e.message);
+  }
 
   // Publication Engine — source de verite unique pour tous les consommateurs
   // Le moteur decide PUBLISH / WAIT / BLOCKED selon les regles configurees
@@ -3411,8 +3454,27 @@ function autoResolvePredictions(match) {
   // IA Ranking Engine — Obj 9: feed results for dynamic ranking
   try {
     const matchKey = `${home}_${away}`;
-    iaRanking.processMatchResult(matchKey, h, a);
+    const totalGoals = h + a;
+    const mainOutcome = totalGoals < 2.5 ? "win" : "loss";
+    iaRanking.processMatchResult({ matchKey, outcome: mainOutcome });
   } catch (e) { console.warn("[ia-ranking] processMatchResult error:", e.message); }
+
+  // Hermès V3 — apprentissage automatique après résultat
+  try {
+    const matchKey = `${home}_${away}`;
+    const totalGoals = h + a;
+    const outcome = totalGoals < 2.5 ? "win" : "loss";
+    const hermesLearn = hermesBrain.processResult(matchKey, outcome);
+    if (hermesLearn.predictionsResolved > 0) {
+      console.log(`[hermes-v3] Apprentissage: ${hermesLearn.predictionsResolved} prédictions résolues pour ${home} vs ${away} (${h}-${a})`);
+      if (hermesLearn.weightChanges.length) {
+        console.log(`[hermes-v3] Poids mis à jour: ${hermesLearn.weightChanges.map(c => `${c.agent} ${c.oldWeight}→${c.newWeight}`).join(", ")}`);
+      }
+      if (hermesLearn.actions.length) {
+        console.log(`[hermes-v3] Actions auto: ${hermesLearn.actions.map(a => `${a.action}:${a.agent}`).join(", ")}`);
+      }
+    }
+  } catch (e) { console.warn("[hermes-v3] processResult error:", e.message); }
 }
 
 function autoLearnFromMatch(home, away, scoreHome, scoreAway) {
@@ -6977,6 +7039,80 @@ app.get("/admin/hermes-dashboard", (req, res) => {
     res.json({ ok: true, ...hermesDashboard.getFullDashboard() });
   } catch(e) {
     console.error("[hermes-dashboard]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// ── Hermès V3 Brain — admin endpoints ────────────────────────────────────────
+app.get("/admin/hermes-v3-dashboard", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    res.json({ ok: true, ...hermesBrain.getDashboard() });
+  } catch (e) {
+    console.error("[hermes-v3]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.get("/admin/hermes-v3-journal", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const limit = Math.min(100, parseInt(req.query.limit) || 50);
+    const decision = req.query.decision || null;
+    const entries = hermesBrain.getJournal({ limit, decision });
+    res.json({ ok: true, entries });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/admin/hermes-v3-config", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const updates = req.body || {};
+    if (updates.publicationThreshold != null) {
+      hermesBrain.setThreshold(Number(updates.publicationThreshold));
+    }
+    if (updates.config) {
+      hermesBrain.updateConfig(updates.config);
+    }
+    res.json({ ok: true, config: hermesBrain.getConfig() });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/admin/hermes-v3-agent", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    const { action, name, options } = req.body || {};
+    if (action === "add") {
+      const result = hermesBrain.addAgent(name, options || {});
+      res.json({ ok: true, agent: result });
+    } else if (action === "disable") {
+      hermesBrain.disableAgent(name);
+      res.json({ ok: true, message: `Agent ${name} désactivé` });
+    } else if (action === "enable") {
+      hermesBrain.enableAgent(name);
+      res.json({ ok: true, message: `Agent ${name} réactivé` });
+    } else {
+      res.json({ ok: false, error: "Action inconnue. Utiliser: add, disable, enable" });
+    }
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.get("/admin/hermes-v3-recommendations", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  try {
+    res.json({ ok: true, recommendations: hermesBrain.getRecommendations() });
+  } catch (e) {
     res.json({ ok: false, error: e.message });
   }
 });
