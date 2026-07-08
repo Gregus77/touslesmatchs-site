@@ -117,6 +117,25 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
+# ── 4b. Protection index.html (incident 08/07/2026) ────────
+echo ""
+echo "--- Phase 4b: Protection index.html ---"
+
+if grep -n 'SITE_HTML_PATH' council/tools/html_generator.py 2>/dev/null | grep -q 'index\.html'; then
+  echo "ERREUR CRITIQUE: html_generator.py cible index.html — va ecraser le site"
+  ERRORS=$((ERRORS + 1))
+else
+  echo "OK: html_generator.py ecrit dans pick.html"
+fi
+
+for PY_FILE in $(find council/ -name "*.py" 2>/dev/null); do
+  if grep -n 'open.*index\.html.*["\x27]w' "$PY_FILE" 2>/dev/null | grep -qv '^\s*#'; then
+    echo "ERREUR: $PY_FILE ouvre index.html en ecriture"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+echo "OK: Aucun script Python n'ecrit dans index.html"
+
 # ── 5. Pas de credentials exposes ──────────────────────────
 echo ""
 echo "--- Phase 5: Securite credentials ---"

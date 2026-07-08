@@ -2,6 +2,8 @@ import os
 import json
 from datetime import datetime
 
+# JAMAIS écrire dans index.html — le Concile a écrasé le vrai site le 08/07/2026.
+# index.html (176KB) ne doit être modifié que via Git. Le council écrit dans pick.html.
 SITE_HTML_PATH = os.environ.get("SITE_HTML_PATH", "/app/site/pick.html")
 SITE_TEMPLATE_PATH = os.environ.get("SITE_TEMPLATE_PATH", "/app/site/template.html")
 

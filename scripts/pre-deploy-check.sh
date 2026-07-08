@@ -51,6 +51,24 @@ for LEGACY_DIR in src dist nginx; do
   fi
 done
 
+# ── 1b. PROTECTION index.html ────────────────────────────────
+echo ""
+echo "--- Protection index.html ---"
+
+if grep -rn 'index\.html' council/tools/html_generator.py 2>/dev/null | grep -v '^.*:#' | grep -q 'SITE_HTML_PATH.*index\.html'; then
+  echo "ERREUR: html_generator.py ecrit dans index.html — INTERDIT (incident 08/07/2026)"
+  ERRORS=$((ERRORS + 1))
+else
+  echo "OK: html_generator.py n'ecrit pas dans index.html"
+fi
+
+if grep -rn 'SITE_HTML_PATH.*index\.html' council/ 2>/dev/null | grep -v ':#' | grep -qv 'pick\.html'; then
+  echo "ERREUR: Un script council ecrit dans index.html"
+  ERRORS=$((ERRORS + 1))
+else
+  echo "OK: Aucun script council n'ecrit dans index.html"
+fi
+
 # ── 2. DOCKER-COMPOSE ────────────────────────────────────────
 echo ""
 echo "--- Docker Compose ---"
