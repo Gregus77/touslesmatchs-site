@@ -3930,7 +3930,7 @@ function renewalEmailHtml(row, daysLeft, stats) {
   const urgency = daysLeft <= 1 ? "🔴 DERNIER JOUR" : daysLeft <= 3 ? "🟡 Plus que " + daysLeft + " jours" : "📅 Dans " + daysLeft + " jours";
   const pickRows = stats.recent.map(p => {
     const icon = p.outcome === "win" ? "✅" : "❌";
-    const gain = p.outcome === "win" ? `+8u` : `-10u`;
+    const gain = p.outcome === "win" ? `✓ Gagné` : `✗ Perdu`;
     const gainColor = p.outcome === "win" ? "#10b981" : "#f43f5e";
     return `<tr style="border-bottom:1px solid rgba(255,255,255,.06)">
       <td style="padding:8px 6px;font-size:13px;color:#eceaf4">${p.home} vs ${p.away}</td>
@@ -3953,7 +3953,7 @@ function renewalEmailHtml(row, daysLeft, stats) {
 
   ${stats.total > 0 ? `
   <div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:16px;padding:24px;margin-bottom:20px">
-    <div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6366f1;margin-bottom:16px">📊 CE QUE TU AURAIS GAGNÉ CE MOIS</div>
+    <div style="font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6366f1;margin-bottom:16px">📊 BILAN DU MOIS</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
       <div style="text-align:center;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px">
         <div style="font-size:26px;font-weight:900;color:#10b981">${stats.wins}</div>
@@ -3971,13 +3971,13 @@ function renewalEmailHtml(row, daysLeft, stats) {
     ${pickRows ? `<table style="width:100%;border-collapse:collapse">
       <tr style="border-bottom:1px solid rgba(255,255,255,.08)">
         <th style="text-align:left;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Match</th>
-        <th style="text-align:left;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Paris</th>
+        <th style="text-align:left;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Analyse</th>
         <th style="text-align:right;padding:6px;font-size:11px;color:#7b82a0;font-weight:600">Résultat</th>
       </tr>
       ${pickRows}
     </table>` : ""}
   </div>
-  <div style="text-align:center;font-size:13px;color:#a8aec8;margin-bottom:20px">Sur 10€ misés par pick, tu aurais <strong style="color:${stats.roi >= 0 ? "#10b981" : "#f43f5e"}">${stats.roi >= 0 ? "gagné" : "perdu"} ${Math.abs(stats.roi * stats.total / 10).toFixed(0)}€</strong> sur ${stats.total} picks ce mois.</div>
+  <div style="text-align:center;font-size:13px;color:#a8aec8;margin-bottom:20px">Simulation sur ${stats.total} picks ce mois — ROI : <strong style="color:${stats.roi >= 0 ? "#10b981" : "#f43f5e"}">${stats.roi >= 0 ? "+" : ""}${stats.roi}%</strong>. Aucune garantie de gain.</div>
   ` : `<div style="background:#0d1020;border:1px solid rgba(99,102,241,.2);border-radius:16px;padding:20px;text-align:center;margin-bottom:20px;color:#a8aec8">Le Concile continue d'affiner ses analyses — les résultats s'accumulent pick après pick.</div>`}
 
   <div style="text-align:center;margin-bottom:24px">
