@@ -25,6 +25,9 @@
       "react-app/jest"
     ]
   },
+  "jest": {
+    "testPathIgnorePatterns": ["<rootDir>/_deprecated/", "<rootDir>/node_modules/"]
+  },
   "browserslist": {
     "production": [
       ">0.2%",

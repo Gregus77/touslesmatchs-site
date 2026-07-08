@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -uo pipefail
 ERRORS=0
 WARNINGS=0
 
@@ -40,9 +40,16 @@ elif echo "$TITLE" | grep -qi "Le Concile analyse"; then
 fi
 
 if [ -d site ] && [ -f site/index.html ]; then
-  echo "ATTENTION: site/index.html existe encore — ancien frontend present"
-  WARNINGS=$((WARNINGS + 1))
+  echo "ERREUR: site/index.html existe — ancien frontend doit etre dans _deprecated/"
+  ERRORS=$((ERRORS + 1))
 fi
+
+for LEGACY_DIR in src dist nginx; do
+  if [ -d "$LEGACY_DIR" ] && [ "$(ls -A "$LEGACY_DIR" 2>/dev/null)" ]; then
+    echo "ERREUR: $LEGACY_DIR/ non vide — doit etre dans _deprecated/"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
 
 # ── 2. DOCKER-COMPOSE ────────────────────────────────────────
 echo ""

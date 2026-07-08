@@ -7,7 +7,6 @@ describe("Payment Link migration — no buy.stripe.com remaining", () => {
   const frontendFiles = [
     path.resolve(__dirname, "../../public/index.html"),
     path.resolve(__dirname, "../../public/live-ia.html"),
-    path.resolve(__dirname, "../../site/index.html"),
   ];
 
   for (const filePath of frontendFiles) {
@@ -49,11 +48,6 @@ describe("Frontend uses startCheckout() API flow", () => {
 
   test("public/live-ia.html defines startCheckout function", () => {
     const content = fs.readFileSync(path.resolve(__dirname, "../../public/live-ia.html"), "utf8");
-    expect(content).toContain("function startCheckout(plan");
-  });
-
-  test("site/index.html defines startCheckout function", () => {
-    const content = fs.readFileSync(path.resolve(__dirname, "../../site/index.html"), "utf8");
     expect(content).toContain("function startCheckout(plan");
   });
 

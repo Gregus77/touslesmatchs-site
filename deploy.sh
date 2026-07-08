@@ -11,10 +11,17 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 BACKUP_DIR="/opt/touslesmatchs/.deploy-backups/$TIMESTAMP"
 
 echo "================================================"
-echo " TOUSLESMATCHS - Deploiement"
+echo " TOUSLESMATCHS - Deploiement securise (LOCKDOWN V1.1)"
 echo " Date: $(date)"
 echo " Branche: $BRANCH"
 echo "================================================"
+
+# ── Phase -1: Installation garde-fous Git ───────────────────
+if [ -f scripts/git-pre-commit-hook.sh ]; then
+  cp scripts/git-pre-commit-hook.sh .git/hooks/pre-commit 2>/dev/null || true
+  chmod +x .git/hooks/pre-commit 2>/dev/null || true
+  echo "OK: Pre-commit hook installe"
+fi
 
 # ── Phase 0: Sauvegardes automatiques ────────────────────────
 echo ""
@@ -81,15 +88,27 @@ echo ""
 echo "=== Phase 4: Post-deploy checks ==="
 bash scripts/post-deploy-check.sh || {
   echo ""
-  echo "=== DEPLOIEMENT SUSPECT ==="
-  echo "Rollback automatique disponible:"
-  echo "  bash scripts/rollback.sh $TIMESTAMP"
+  echo "=== DEPLOIEMENT SUSPECT — ROLLBACK AUTOMATIQUE ==="
+  echo "Rollback vers backup: $TIMESTAMP"
+  bash scripts/rollback.sh "$TIMESTAMP"
   exit 1
 }
 
+# ── Phase 5: Hermes Guardian ────────────────────────────────
+echo ""
+echo "=== Phase 5: Hermes Guardian ==="
+if [ -f scripts/hermes-guardian.sh ]; then
+  bash scripts/hermes-guardian.sh || {
+    echo "=== GUARDIAN: ANOMALIES DETECTEES ==="
+    echo "Rollback disponible: bash scripts/rollback.sh $TIMESTAMP"
+    exit 1
+  }
+fi
+
 echo ""
 echo "================================================"
-echo " Deploiement termine avec succes !"
+echo " Deploiement securise termine avec succes !"
 echo " Site: https://touslesmatchs.com"
 echo " Backup: $BACKUP_DIR"
+echo " Lockdown: V1.1"
 echo "================================================"

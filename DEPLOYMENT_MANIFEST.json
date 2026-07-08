@@ -1,5 +1,6 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "lockdown": "V1.1",
   "frontend": {
     "directory": "public",
     "entry_file": "index.html",
@@ -9,8 +10,11 @@
     "docker_volume_container_site": "/srv",
     "docker_volume_container_council": "/app/site"
   },
+  "deprecated": {
+    "directories": ["site", "src", "dist", "nginx"],
+    "archived_to": "_deprecated"
+  },
   "branch": "claude/skill-dynamic-model-selection-3cqqyb",
-  "commit": "6381f94",
   "docker": {
     "services": ["site", "api", "council", "hermes-admin"],
     "compose_file": "docker-compose.yml"
@@ -19,9 +23,19 @@
     "forbidden_volume": "/opt/touslesmatchs/site:/srv",
     "required_volume": "/opt/touslesmatchs/public:/srv",
     "forbidden_links": ["buy.stripe.com"],
+    "forbidden_directories": ["site", "src", "dist", "nginx"],
     "required_env_vars": ["STRIPE_SECRET_KEY", "BREVO_API_KEY", "TELEGRAM_BOT_TOKEN"],
     "frontend_title_must_contain": "Hermes",
     "frontend_title_must_not_contain": "Le Concile analyse"
   },
-  "generated_at": "2026-07-07T19:30:00Z"
+  "scripts": {
+    "deploy": "deploy.sh",
+    "pre_deploy": "scripts/pre-deploy-check.sh",
+    "post_deploy": "scripts/post-deploy-check.sh",
+    "verify_signature": "scripts/verify-frontend-signature.sh",
+    "rollback": "scripts/rollback.sh",
+    "guardian": "scripts/hermes-guardian.sh",
+    "pre_commit_hook": "scripts/git-pre-commit-hook.sh"
+  },
+  "generated_at": "2026-07-08T14:58:00Z"
 }
