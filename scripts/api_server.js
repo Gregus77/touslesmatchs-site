@@ -1226,10 +1226,11 @@ const TRUSTED_COMPETITIONS = [
 function isLowTrustCompetition(matchOrCompetition = "") {
   const raw = typeof matchOrCompetition === "string"
     ? matchOrCompetition
-    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+    : String(matchOrCompetition?.competition || "");
   const value = String(raw || "").toLowerCase();
-  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
+  if (!value) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
+  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   return true;
 }
 
@@ -2253,17 +2254,18 @@ function getLearningProfile({ sport = "Football", competition = "", bet = "" } =
 
 function assessLearningProfile(profile, minResolved = 5) {
   const reasons = [];
-  if (!profile) return { tier: "learning", score: 0, clientSafe: false, reasons: ["profil absent"] };
+  if (!profile) return { tier: "learning", score: 50, clientSafe: true, reasons: ["profil absent — mode apprentissage"] };
   const sportResolved = profile.sportStats?.resolved || 0;
   const marketResolved = profile.marketStats?.resolved || 0;
   const sportWinrate = profile.sportStats?.winrate;
   const marketWinrate = profile.marketStats?.winrate;
-  if (sportResolved < Math.max(3, minResolved)) reasons.push(`historique sport insuffisant (${sportResolved}/${Math.max(3, minResolved)})`);
-  if (marketResolved < minResolved) reasons.push(`historique marche insuffisant (${marketResolved}/${minResolved})`);
+  if (sportResolved < Math.max(3, minResolved)) reasons.push(`historique sport en construction (${sportResolved}/${Math.max(3, minResolved)})`);
+  if (marketResolved < minResolved) reasons.push(`historique marche en construction (${marketResolved}/${minResolved})`);
   if (sportWinrate !== null && sportWinrate < 50) reasons.push(`sport sous 50% (${sportWinrate}%)`);
   if (marketWinrate !== null && marketWinrate < 55) reasons.push(`marche sous 55% (${marketWinrate}%)`);
-  const clientSafe = reasons.length === 0;
-  return { tier: clientSafe ? "elite_candidate" : "learning", score: clientSafe ? 100 : Math.max(0, 70 - reasons.length * 15), clientSafe, reasons };
+  const hasNegativePerf = (sportWinrate !== null && sportWinrate < 50) || (marketWinrate !== null && marketWinrate < 55);
+  const clientSafe = !hasNegativePerf;
+  return { tier: clientSafe ? (sportResolved >= minResolved ? "elite_candidate" : "learning") : "underperforming", score: clientSafe ? Math.max(50, 100 - reasons.length * 10) : Math.max(0, 70 - reasons.length * 15), clientSafe, reasons };
 }
 
 function extractCountry(competition) {
@@ -2894,9 +2896,7 @@ function getStrongSignalAlerts(options = {}) {
         const assessment = assessLearningProfile(profile, minResolved);
         const sampleOk = total >= minResolved && assessment.clientSafe;
         const sport = r.sport || "Football";
-        // Pour les sports non-Football (basket, hockey, baseball) : signal éligible dès 85% de confiance
-        // même sans historique suffisant (sport récent sur la plateforme)
-        const highConfidence = r.confidence >= 85 && sport !== "Football";
+        const highConfidence = r.confidence >= 85;
         const eligible = sampleOk || highConfidence;
         return {
           id: r.match_key,
@@ -3432,7 +3432,8 @@ function shouldAutoObserveMatch(match) {
   if (String(match.sport || "Football") !== "Football") return true;
   if (isLowTrustCompetition(match)) return false;
   const minute = parseLiveMinuteValue(match.minute);
-  return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
+  if (minute === null) return true;
+  return minute >= AUTO_CONCILE_MIN_MINUTE;
 }
 
 function hasPredictionSnapshot(match) {
@@ -3451,14 +3452,28 @@ async function runAutoConcileObserver() {
   autoConcileObserverRunning = true;
   try {
     const matches = await fetchLiveMatches();
+    const skippedReasons = { notLive: 0, finished: 0, lowTrust: 0, minuteTooLow: 0, alreadyAnalysed: 0 };
+    for (const m of matches) {
+      const status = String(m.status || "").toUpperCase();
+      if (!["IN_PLAY", "LIVE"].includes(status)) { skippedReasons.notLive++; continue; }
+      if (isFinishedOrTooLateForLiveIa(m)) { skippedReasons.finished++; continue; }
+      if (String(m.sport || "Football") === "Football" && isLowTrustCompetition(m)) { skippedReasons.lowTrust++; continue; }
+    }
     const observed = matches
       .filter(shouldAutoObserveMatch)
-      .filter(m => !hasPredictionSnapshot(m));
+      .filter(m => {
+        if (hasPredictionSnapshot(m)) { skippedReasons.alreadyAnalysed++; return false; }
+        return true;
+      });
     const candidates = observed.slice(0, AUTO_CONCILE_MAX_MATCHES);
     console.log(
       `[auto-concile] live=${matches.length} eligible=${observed.length} analysed_this_cycle=${candidates.length} ` +
-      `skipped_low_trust=${matches.filter(isLowTrustCompetition).length}`
+      `skip_detail: lowTrust=${skippedReasons.lowTrust} notLive=${skippedReasons.notLive} finished=${skippedReasons.finished} alreadyAnalysed=${skippedReasons.alreadyAnalysed}`
     );
+    if (matches.length > 0 && observed.length === 0) {
+      const sample = matches.slice(0, 3).map(m => `${m.competition || "?"} (${m.sport || "?"}) ${m.status}`).join("; ");
+      console.log(`[auto-concile] sample matchs rejetés: ${sample}`);
+    }
 
     for (const match of candidates) {
       try {
@@ -6876,8 +6891,9 @@ app.get("/admin/scheduler-state", (req, res) => {
     // Get process info
     let schedulerRunning = false;
     try {
-      const r = require("child_process").execSync("systemctl is-active tlm-scheduler", {timeout: 3000}).toString().trim();
-      schedulerRunning = r === "active";
+      const stateFile = fs.readFileSync("/shared/scheduler_state.json", "utf8");
+      const parsed = JSON.parse(stateFile);
+      schedulerRunning = parsed.status === "running" || parsed.status === "healthy" || !!parsed.last_run;
     } catch(e) {}
     const uptime = process.uptime();
     res.json({
