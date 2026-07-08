@@ -19,6 +19,9 @@ const { LearningBridge } = require("./learning_bridge");
 const { CRM, CRM_EVENTS } = require("./crm");
 const { HermesDashboard } = require("./hermes_dashboard");
 const InviteLinkManager = require("./invite_link_manager");
+const { IARankingEngine, isMarketStillValid, anonymizeAgentName } = require("./ia_ranking_engine");
+
+const iaRanking = new IARankingEngine();
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -2206,14 +2209,32 @@ Réponds en JSON pur (pas de markdown):
   saveAgentPredictions(match, agentResults);
   saveAgentMarketPredictions(match, agentMarketList);
 
+  // Record dans le ranking engine pour Obj 5/6/9
+  try {
+    const matchKey = `${match.home}_${match.away}`;
+    const sport = (match.sport || "Football").toLowerCase();
+    const competition = match.competition || match.league || "";
+    agentResults.forEach(a => {
+      iaRanking.recordPrediction(a.name, matchKey, a.bet, a.confidence, sport, competition, a.bet);
+    });
+  } catch (e) { console.warn("[ia-ranking] record error:", e.message); }
+
+  // Obj 7: temporal market validity check
+  const matchMinute = parseInt(match.minute) || 0;
+  const matchScore = match.score_home != null && match.score_away != null
+    ? { home: parseInt(match.score_home), away: parseInt(match.score_away) }
+    : null;
+  const marketValid = isMarketStillValid(chief.bet, matchMinute, matchScore);
+
   const analysisResult = {
     match_key: `${match.home}_${match.away}`,
     best_bet: chief.bet,
-    confidence: chief.confidence,
-    raison: chief.raison,
+    confidence: marketValid ? chief.confidence : Math.min(chief.confidence, 40),
+    raison: marketValid ? chief.raison : `⏱ Marché "${chief.bet}" invalide à la ${matchMinute}e minute. ${chief.raison}`,
     consensus_votes: consensusVotes + 1,
     total_agents: 5,
     agents: agentResults,
+    market_valid: marketValid,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
   };
@@ -3386,6 +3407,12 @@ function autoResolvePredictions(match) {
 
   // Learning Engine — apprentissage automatique après chaque match terminé
   autoLearnFromMatch(home, away, h, a);
+
+  // IA Ranking Engine — Obj 9: feed results for dynamic ranking
+  try {
+    const matchKey = `${home}_${away}`;
+    iaRanking.processMatchResult(matchKey, h, a);
+  } catch (e) { console.warn("[ia-ranking] processMatchResult error:", e.message); }
 }
 
 function autoLearnFromMatch(home, away, scoreHome, scoreAway) {
@@ -4202,8 +4229,8 @@ function buildNurtureJ1Html(email) {
     const p = picks.currentPick;
     if (p?.status && ["GAGNE","WIN"].includes(String(p.status).toUpperCase())) {
       pickLine = `<div style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:16px;margin-bottom:20px">
-        <div style="color:#10b981;font-weight:800;font-size:14px;margin-bottom:4px">✅ Dernier pick : GAGNÉ</div>
-        <div style="color:#a8aec8;font-size:13px">${p.home} vs ${p.away} · ${p.prono || p.bet} @${p.cote}</div>
+        <div style="color:#10b981;font-weight:800;font-size:14px;margin-bottom:4px">✅ Dernier signal : GAGNÉ</div>
+        <div style="color:#a8aec8;font-size:13px">${p.home} vs ${p.away} · ${p.prono || p.bet}</div>
       </div>`;
     }
   } catch (_) {}
@@ -4466,9 +4493,6 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
-  const coteMoy = Math.min(1.95, ((1 / (analysis.confidence / 100)) * 1.45)).toFixed(2);
-  const gain = (10 * parseFloat(coteMoy)).toFixed(2);
-
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
     ``,
@@ -4476,11 +4500,8 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b>`,
     ``,
-    outcome === "win"
-      ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
-      : ``,
     ``,
     `📈 Bilan Signal Fort : <b>${stats.wins}W / ${stats.losses}L — ${stats.winrate}% winrate</b>`,
     ``,
@@ -4494,16 +4515,12 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
-    ``,
-    outcome === "win"
-      ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
-      : ``,
+    `📊 Confiance : <b>${analysis.confidence}%</b>`,
     ``,
     `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
     ``,
     outcome === "win"
-      ? `💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`
+      ? `💎 Imagine si tu avais eu le signal...\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`
       : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`,
     ``,
     `━━━━━━━━━━━━━━━━━━`,
@@ -5838,15 +5855,8 @@ async function sendDailyResultsFreeChannel() {
     const matchLines = unique.map(r => {
       const icon = r.outcome === "win" ? "✅" : "❌";
       const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45)).toFixed(2);
-      const gainStr = r.outcome === "win" ? `+${(10 * parseFloat(cote) - 10).toFixed(0)}€` : "-10€";
-      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote} → ${gainStr}`;
+      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} · ${r.confidence}%`;
     }).join("\n");
-
-    const totalGain = unique.reduce((sum, r) => {
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
-      return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
-    }, 0);
 
     const emoji = winrate >= 70 ? "🔥" : winrate >= 50 ? "📊" : "💪";
     const msg = [
@@ -5855,8 +5865,6 @@ async function sendDailyResultsFreeChannel() {
       `✅ <b>${wins.length} gagnés</b> / ❌ ${losses.length} perdus — <b>${winrate}% winrate</b>`,
       ``,
       matchLines,
-      ``,
-      `💰 <b>Bilan du jour à 10€/analyse : ${totalGain >= 0 ? "+" : ""}${totalGain.toFixed(0)}€</b>`,
       ``,
       winrate >= 60
         ? `🚀 Ces résultats sont réservés aux membres Premium.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`
@@ -6126,7 +6134,6 @@ app.post("/internal/pick-notify", async (req, res) => {
     const leadMap = new Map(leadRows.map(l => [String(l.email || "").toLowerCase(), l]));
 
     const today = new Date().toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const gainPotentiel = pick.cote ? Math.round((parseFloat(pick.cote) - 1) * 10) : "?";
     const liveUnavailableHtml = pick.liveUnavailable
       ? `<div style="font-size:13px;color:#fbbf24;line-height:1.6;background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.28);border-radius:10px;padding:12px;margin-top:12px">Analyse Live IA indisponible pour ce match : il n'est pas couvert par l'API live. Le pick officiel reste valide, mais aucune analyse live ne sera promise.</div>`
       : "";
@@ -6144,7 +6151,6 @@ app.post("/internal/pick-notify", async (req, res) => {
       <div style="font-size:13px;color:#a8aec8;margin-bottom:4px">Pronostic du Concile</div>
       <div style="font-size:20px;font-weight:800;color:#eceaf4">${pick.prono || pick.bet || ""}</div>
       <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap">
-        <span style="font-size:13px;color:#22d3ee">📊 Cote : <strong>${pick.cote}</strong></span>
         <span style="font-size:13px;color:#10b981">✅ Confiance : <strong>${pick.confidenceTg || pick.confidence+"/10" || ""}</strong></span>
       </div>
     </div>
@@ -6152,7 +6158,7 @@ app.post("/internal/pick-notify", async (req, res) => {
     ${liveUnavailableHtml}
   </div>
   <div style="text-align:center;margin-bottom:20px">
-    <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">📊 Cote @${pick.cote} · Gain potentiel sur 10€ : <strong style="color:#10b981">+${gainPotentiel}€</strong></div>
+    <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">📊 Confiance : <strong style="color:#10b981">${pick.confidenceTg || pick.confidence+"/10" || ""}</strong></div>
     <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Voir l'analyse complète →</a>
   </div>
   ${bookmakerEmailHtml()}
@@ -6167,7 +6173,7 @@ app.post("/internal/pick-notify", async (req, res) => {
     for (const email of emails) {
       try {
         const [subjectPrefix] = pickEmailText(leadLang(email, leadMap));
-        await brevoSendEmail(email, `🎯 ${subjectPrefix} — ${pick.home} vs ${pick.away} @${pick.cote}`, htmlContent);
+        await brevoSendEmail(email, `🎯 ${subjectPrefix} — ${pick.home} vs ${pick.away}`, htmlContent);
         sent++;
       } catch (e) {
         console.error(`[pick-notify] email to ${email}:`, e.message);
@@ -6218,7 +6224,6 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
 
 app.get("/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
-  const coteMoy = (c) => Math.min(1.95, ((1 / (c / 100)) * 1.45)).toFixed(2);
   res.json({
     ok: true,
     total: stats.total,
@@ -6232,7 +6237,6 @@ app.get("/signal-fort-stats", (req, res) => {
       sport: r.sport,
       confidence: r.confidence,
       outcome: r.outcome,
-      cote: parseFloat(coteMoy(r.confidence)),
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
       date: r.analysed_at,
     })),
@@ -6243,8 +6247,7 @@ app.get("/signal-fort-stats", (req, res) => {
       competition: r.competition || r.sport || "",
       home: r.home,
       away: r.away,
-      pick: `Signal Fort ${r.confidence}%`,
-      cote: parseFloat(coteMoy(r.confidence)),
+      signal: `Signal Fort ${r.confidence}%`,
       status: "finished",
       result: r.outcome === "win" ? "win" : "loss",
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?",
@@ -6254,6 +6257,31 @@ app.get("/signal-fort-stats", (req, res) => {
 });
 
 // ── Official Snapshots — source de verite unique pour Dashboard et Site ──────
+// ── IA Ranking — Obj 5: dynamic AI ranking per sport/league/market ──────────
+app.get("/api/ia-rankings", (req, res) => {
+  try {
+    const sport = req.query.sport || null;
+    const competition = req.query.competition || null;
+    const market = req.query.market || null;
+    const rankings = iaRanking.getRankings({ sport, competition, marketType: market });
+    const anonymized = rankings.map((r, i) => ({
+      rank: i + 1,
+      displayName: anonymizeAgentName(r.agent_name),
+      sport: r.sport,
+      competition: r.competition,
+      marketType: r.market_type,
+      winrate: r.winrate,
+      totalPredictions: r.total_predictions,
+      weight: r.weight,
+      enabled: r.enabled,
+    }));
+    res.json({ ok: true, rankings: anonymized });
+  } catch (e) {
+    console.error("[ia-rankings]", e.message);
+    res.json({ ok: true, rankings: [] });
+  }
+});
+
 app.get("/api/official-snapshots", (req, res) => {
   try {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
@@ -6319,11 +6347,6 @@ app.get("/premium-teaser", (req, res) => {
     const weekStats = agg(weekRows);
     const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
 
-    const simGain = deduped.reduce((sum, r) => {
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
-      return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
-    }, 0);
-
     const todaySignals = todayRows.length;
 
     const recentResults = todayRows.length > 0 ? todayRows : deduped.slice(0, 20);
@@ -6333,24 +6356,17 @@ app.get("/premium-teaser", (req, res) => {
       today_signals: todaySignals,
       week: weekStats,
       allTime: { total: allTime.total, wins: allTime.wins, winrate },
-      simulated_gain_10: simGain > 0 ? `+${Math.round(simGain)}€` : `${Math.round(simGain)}€`,
-      simulated_gain_raw: Math.round(simGain),
       today_results: todayStats,
       yesterday: yesterdayStats,
-      recent: recentResults.map(r => {
-        const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
-        const gain10 = r.outcome === 'win' ? Math.round((cote * 10 - 10) * 100) / 100 : -10;
-        return {
-          match: `${r.home} vs ${r.away}`,
-          competition: r.competition || '',
-          outcome: r.outcome,
-          sport: r.sport || 'Football',
-          score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
-          date: r.analysed_at ? r.analysed_at.slice(0, 10) : null,
-          cote: Math.round(cote * 100) / 100,
-          gain10,
-        };
-      }),
+      recent: recentResults.map(r => ({
+        match: `${r.home} vs ${r.away}`,
+        competition: r.competition || '',
+        outcome: r.outcome,
+        sport: r.sport || 'Football',
+        confidence: r.confidence,
+        score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+        date: r.analysed_at ? r.analysed_at.slice(0, 10) : null,
+      })),
     });
   } catch (e) {
     res.json({ ok: true, today_signals: 0, week: { total: 0, wins: 0, losses: 0 }, allTime: { total: 0, wins: 0, winrate: 0 }, simulated_gain_10: "0€", simulated_gain_raw: 0, yesterday: { total: 0, wins: 0, losses: 0 }, recent: [], });
