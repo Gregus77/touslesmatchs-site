@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime
 
-SITE_HTML_PATH = os.environ.get("SITE_HTML_PATH", "/app/site/index.html")
+SITE_HTML_PATH = os.environ.get("SITE_HTML_PATH", "/app/site/pick.html")
 SITE_TEMPLATE_PATH = os.environ.get("SITE_TEMPLATE_PATH", "/app/site/template.html")
 
 WINAMAX_LINK = os.environ.get("WINAMAX_LINK", "https://www.winamax.fr/parrain?code=WMX8M5")
