@@ -2277,12 +2277,13 @@ Réponds en JSON pur (pas de markdown):
     analysisResult.hermes = {
       decision: hermesResult.decision,
       reason: hermesResult.reason,
-      qualityScore: hermesResult.qualityScore,
+      indiceHermes: hermesResult.indiceHermes,
+      indiceBreakdown: hermesResult.indiceBreakdown,
       consensus: hermesResult.consensus,
       dominantBet: hermesResult.dominantBet,
       published: hermesResult.published,
     };
-    console.log(`[hermes-v3] ${match.home} vs ${match.away}: ${hermesResult.decision} (score=${hermesResult.qualityScore}/100, consensus=${hermesResult.consensus.level})`);
+    console.log(`[hermes-v3] ${match.home} vs ${match.away}: ${hermesResult.decision} (indice=${hermesResult.indiceHermes}/100, consensus=${hermesResult.consensus.level})`);
   } catch (e) {
     console.error("[hermes-v3] evaluate error:", e.message);
   }

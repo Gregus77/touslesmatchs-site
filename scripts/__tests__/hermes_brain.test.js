@@ -108,10 +108,27 @@ describe("HermesBrain — Agent Management", () => {
     const brain = createBrain();
     expect(brain._snapToWeightStep(2.3)).toBe(2.5);
   });
+
+  test("total_analyses starts at 0", () => {
+    const brain = createBrain();
+    brain.addAgent("A1");
+    expect(brain.getAgent("A1").total_analyses).toBe(0);
+  });
+
+  test("total_analyses increments after evaluate", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+    brain.evaluate({
+      matchKey: "M1",
+      votes: [{ agentName: "A1", vote: "X", confidence: 70 }],
+      market: "X",
+    });
+    expect(brain.getAgent("A1").total_analyses).toBe(1);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MARKET VALIDITY (Obj 12)
+// MARKET VALIDITY
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Market Validity", () => {
@@ -171,58 +188,57 @@ describe("HermesBrain — Market Validity", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// QUALITY SCORE (Obj 2)
+// INDICE HERMÈS™ — 16 sub-scores
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("HermesBrain — Quality Score", () => {
+describe("HermesBrain — Indice Hermès™", () => {
   test("returns score between 0 and 100", () => {
     const brain = createBrain();
     brain.addAgent("Agent-1");
     brain.addAgent("Agent-2");
     const votes = makeVotes(["Under 2.5", "Under 2.5"], [80, 75]);
-    const result = brain.calculateQualityScore({ votes, market: "Under 2.5" });
+    const result = brain.calculateIndiceHermes({ votes, market: "Under 2.5" });
     expect(result.score).toBeGreaterThanOrEqual(0);
     expect(result.score).toBeLessThanOrEqual(100);
   });
 
-  test("includes all breakdown components", () => {
+  test("includes all 16 breakdown components", () => {
     const brain = createBrain();
     const votes = makeVotes(["Under 2.5"], [70]);
-    const result = brain.calculateQualityScore({ votes, market: "Under 2.5" });
-    expect(result.breakdown).toHaveProperty("consensus");
-    expect(result.breakdown).toHaveProperty("agentHistoryMarket");
-    expect(result.breakdown).toHaveProperty("roiHistorique");
-    expect(result.breakdown).toHaveProperty("winrateHistorique");
-    expect(result.breakdown).toHaveProperty("qualiteDonnees");
-    expect(result.breakdown).toHaveProperty("fiabiliteChampionnat");
-    expect(result.breakdown).toHaveProperty("minuteDeJeu");
-    expect(result.breakdown).toHaveProperty("disponibiliteStats");
-    expect(result.breakdown).toHaveProperty("validiteMarche");
-    expect(result.breakdown).toHaveProperty("coherenceVotes");
-    expect(result.breakdown).toHaveProperty("confianceMoyenne");
+    const result = brain.calculateIndiceHermes({ votes, market: "Under 2.5" });
+    const expectedKeys = [
+      "statistique", "ia", "historique", "championnat", "forme",
+      "domicile_exterieur", "motivation", "calendrier", "blessures",
+      "fatigue", "meteo", "bookmakers", "marche", "donnees",
+      "stabilite", "risque",
+    ];
+    for (const key of expectedKeys) {
+      expect(result.breakdown).toHaveProperty(key);
+      expect(typeof result.breakdown[key]).toBe("number");
+    }
   });
 
   test("higher consensus = higher score", () => {
     const brain = createBrain();
-    const low = brain.calculateQualityScore({
+    const low = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5", "Over 2.5", "BTTS", "1X2"], [60, 60, 60, 60]),
       market: "Under 2.5",
     });
-    const high = brain.calculateQualityScore({
+    const high = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5", "Under 2.5", "Under 2.5", "Under 2.5"], [80, 80, 80, 80]),
       market: "Under 2.5",
     });
     expect(high.score).toBeGreaterThan(low.score);
   });
 
-  test("invalid market sets validiteMarche to 0", () => {
+  test("invalid market sets marche to 0", () => {
     const brain = createBrain();
-    const result = brain.calculateQualityScore({
+    const result = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5"], [90]),
       market: "Under 2.5",
       minute: 80,
     });
-    expect(result.breakdown.validiteMarche).toBe(0);
+    expect(result.breakdown.marche).toBe(0);
   });
 
   test("championship reliability: Premier League > unknown", () => {
@@ -231,23 +247,23 @@ describe("HermesBrain — Quality Score", () => {
     expect(brain._getChampionshipReliability("Unknown League")).toBe(50);
   });
 
-  test("minute score decreases with time", () => {
+  test("fatigue score decreases with minute", () => {
     const brain = createBrain();
-    expect(brain._getMinuteScore(0)).toBe(100);
-    expect(brain._getMinuteScore(10)).toBe(95);
-    expect(brain._getMinuteScore(45)).toBe(85);
-    expect(brain._getMinuteScore(75)).toBe(50);
-    expect(brain._getMinuteScore(90)).toBe(10);
+    expect(brain._getFatigueScore(0)).toBe(100);
+    expect(brain._getFatigueScore(15)).toBe(95);
+    expect(brain._getFatigueScore(45)).toBe(85);
+    expect(brain._getFatigueScore(75)).toBe(50);
+    expect(brain._getFatigueScore(90)).toBe(10);
   });
 
   test("stats unavailable reduces score", () => {
     const brain = createBrain();
-    const withStats = brain.calculateQualityScore({
+    const withStats = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5"], [80]),
       market: "Under 2.5",
       statsAvailable: true,
     });
-    const withoutStats = brain.calculateQualityScore({
+    const withoutStats = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5"], [80]),
       market: "Under 2.5",
       statsAvailable: false,
@@ -257,28 +273,126 @@ describe("HermesBrain — Quality Score", () => {
 
   test("empty votes returns low score", () => {
     const brain = createBrain();
-    const result = brain.calculateQualityScore({ votes: [] });
-    expect(result.score).toBeLessThan(55);
+    const result = brain.calculateIndiceHermes({ votes: [] });
+    expect(result.score).toBeLessThan(60);
   });
 
   test("data quality impacts score", () => {
     const brain = createBrain();
-    const high = brain.calculateQualityScore({
+    const high = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5"], [80]),
       market: "Under 2.5",
       dataQuality: 1.0,
     });
-    const low = brain.calculateQualityScore({
+    const low = brain.calculateIndiceHermes({
       votes: makeVotes(["Under 2.5"], [80]),
       market: "Under 2.5",
       dataQuality: 0.3,
     });
     expect(high.score).toBeGreaterThan(low.score);
   });
+
+  test("home advantage boosts domicile_exterieur", () => {
+    const brain = createBrain();
+    expect(brain._getHomeAwayScore("home")).toBe(65);
+    expect(brain._getHomeAwayScore("away")).toBe(40);
+    expect(brain._getHomeAwayScore("neutral")).toBe(50);
+    expect(brain._getHomeAwayScore(null)).toBe(50);
+  });
+
+  test("motivation score from matchImportance", () => {
+    const brain = createBrain();
+    expect(brain._getMotivationScore(90)).toBe(90);
+    expect(brain._getMotivationScore(null)).toBe(50);
+    expect(brain._getMotivationScore(150)).toBe(100);
+  });
+
+  test("schedule score from scheduleDensity", () => {
+    const brain = createBrain();
+    expect(brain._getScheduleScore(80)).toBe(80);
+    expect(brain._getScheduleScore(null)).toBe(50);
+  });
+
+  test("injury score handles different formats", () => {
+    const brain = createBrain();
+    expect(brain._getInjuryScore(null)).toBe(50);
+    expect(brain._getInjuryScore(75)).toBe(75);
+    expect(brain._getInjuryScore({ available: false })).toBe(30);
+    expect(brain._getInjuryScore({ score: 90 })).toBe(90);
+  });
+
+  test("weather score handles different formats", () => {
+    const brain = createBrain();
+    expect(brain._getWeatherScore(null)).toBe(50);
+    expect(brain._getWeatherScore(80)).toBe(80);
+    expect(brain._getWeatherScore({ score: 60 })).toBe(60);
+  });
+
+  test("bookmaker score handles different formats", () => {
+    const brain = createBrain();
+    expect(brain._getBookmakerScore(null, [])).toBe(50);
+    expect(brain._getBookmakerScore(85, [])).toBe(85);
+    expect(brain._getBookmakerScore({ alignment: 70 }, [])).toBe(70);
+  });
+
+  test("data completeness score accumulates", () => {
+    const brain = createBrain();
+    const minimal = brain._getDataCompletenessScore({ votes: [] });
+    const full = brain._getDataCompletenessScore({
+      votes: [],
+      statsAvailable: true,
+      dataQuality: 0.9,
+      competition: "Ligue 1",
+      homeAway: "home",
+      injuryData: {},
+      oddsData: {},
+      weatherData: {},
+      matchImportance: 80,
+    });
+    expect(full).toBeGreaterThan(minimal);
+    expect(full).toBe(100);
+  });
+
+  test("risk score varies with conditions", () => {
+    const brain = createBrain();
+    const lowRisk = brain._getRiskScore(
+      makeVotes(["Under 2.5", "Under 2.5", "Under 2.5"], [85, 90, 88]),
+      10, null, "Under 2.5"
+    );
+    const highRisk = brain._getRiskScore(
+      makeVotes(["Under 2.5", "Over 2.5", "BTTS", "1X2"], [40, 35, 45, 30]),
+      88, { home: 0, away: 0 }, "Under 2.5"
+    );
+    expect(lowRisk).toBeGreaterThan(highRisk);
+  });
+
+  test("totalWeight reflects sum of indiceWeights", () => {
+    const brain = createBrain();
+    const result = brain.calculateIndiceHermes({ votes: makeVotes(["X"], [70]), market: "X" });
+    const expectedTotal = Object.values(DEFAULT_CONFIG.indiceWeights).reduce((s, v) => s + v, 0);
+    expect(result.totalWeight).toBe(expectedTotal);
+  });
+
+  test("custom indiceWeights are applied", () => {
+    const brain = createBrain({
+      indiceWeights: {
+        statistique: 0, ia: 0, historique: 0, championnat: 0, forme: 50,
+        domicile_exterieur: 0, motivation: 0, calendrier: 0, blessures: 0,
+        fatigue: 0, meteo: 0, bookmakers: 0, marche: 50, donnees: 0,
+        stabilite: 0, risque: 0,
+      },
+    });
+    const result = brain.calculateIndiceHermes({
+      votes: makeVotes(["Under 2.5", "Under 2.5"], [80, 80]),
+      market: "Under 2.5",
+    });
+    expect(result.breakdown.marche).toBe(100);
+    expect(result.score).toBeGreaterThanOrEqual(50);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONSENSUS LEVELS (Obj 4)
+// CONSENSUS LEVELS
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Consensus Levels", () => {
@@ -311,11 +425,11 @@ describe("HermesBrain — Consensus Levels", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HERMÈS DECISION (Obj 1 + 3)
+// HERMÈS DECISION (evaluate)
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Decision (evaluate)", () => {
-  test("refuses when quality score is below threshold", () => {
+  test("refuses when indice is below threshold", () => {
     const brain = createBrain({ publicationThreshold: 90 });
     ["Agent-1", "Agent-2", "Agent-3", "Agent-4"].forEach(n => brain.addAgent(n));
     const result = brain.evaluate({
@@ -344,7 +458,7 @@ describe("HermesBrain — Decision (evaluate)", () => {
     expect(result.reason).toContain("invalide");
   });
 
-  test("publishes when quality score meets threshold", () => {
+  test("publishes when indice meets threshold", () => {
     const brain = createBrain({ publicationThreshold: 30 });
     ["Agent-1", "Agent-2", "Agent-3", "Agent-4"].forEach(n => brain.addAgent(n));
     const result = brain.evaluate({
@@ -359,7 +473,25 @@ describe("HermesBrain — Decision (evaluate)", () => {
     });
     expect(result.decision).toBe("PUBLICATION");
     expect(result.published).toBe(true);
-    expect(result.qualityScore).toBeGreaterThanOrEqual(30);
+    expect(result.indiceHermes).toBeGreaterThanOrEqual(30);
+  });
+
+  test("returns indiceHermes and indiceBreakdown", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    ["Agent-1"].forEach(n => brain.addAgent(n));
+    const result = brain.evaluate({
+      matchKey: "A_B",
+      home: "A",
+      away: "B",
+      votes: makeVotes(["Under 2.5"], [80]),
+      market: "Under 2.5",
+    });
+    expect(typeof result.indiceHermes).toBe("number");
+    expect(result.indiceHermes).toBeGreaterThanOrEqual(0);
+    expect(result.indiceHermes).toBeLessThanOrEqual(100);
+    expect(result.indiceBreakdown).toBeDefined();
+    expect(result.indiceBreakdown).toHaveProperty("statistique");
+    expect(result.indiceBreakdown).toHaveProperty("risque");
   });
 
   test("returns consensus level", () => {
@@ -444,10 +576,45 @@ describe("HermesBrain — Decision (evaluate)", () => {
     });
     expect(result.reason).toContain("aucun signal suffisamment fiable");
   });
+
+  test("marketValid flag is in result", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+    const valid = brain.evaluate({
+      matchKey: "M1",
+      votes: [{ agentName: "A1", vote: "X", confidence: 80 }],
+      market: "Under 2.5",
+      minute: 10,
+    });
+    expect(valid.marketValid).toBe(true);
+
+    const invalid = brain.evaluate({
+      matchKey: "M2",
+      votes: [{ agentName: "A1", vote: "X", confidence: 80 }],
+      market: "Under 2.5",
+      minute: 80,
+    });
+    expect(invalid.marketValid).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TRIAL PHASE (Obj 7)
+// CONFIDENCE RANGE
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("HermesBrain — Confidence Range", () => {
+  test("confidence ranges bucketed correctly", () => {
+    const brain = createBrain();
+    expect(brain._confidenceRange(30)).toBe("very_low");
+    expect(brain._confidenceRange(55)).toBe("low");
+    expect(brain._confidenceRange(65)).toBe("medium");
+    expect(brain._confidenceRange(75)).toBe("high");
+    expect(brain._confidenceRange(85)).toBe("very_high");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TRIAL PHASE
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Trial Phase", () => {
@@ -466,22 +633,19 @@ describe("HermesBrain — Trial Phase", () => {
     const brain = createBrain({ autoPromote: { minPredictions: 3, winrateThreshold: 55 } });
     brain.addAgent("TrialBot", { trial: true, trialPredictions: 2 });
 
-    // 2 evaluations
     brain.evaluate({ matchKey: "M1", votes: [{ agentName: "TrialBot", vote: "X", confidence: 80 }], market: "X" });
-    // Manually resolve as win to build good record
     brain.db.prepare("UPDATE hermes_predictions SET outcome = 'win' WHERE match_key = 'M1'").run();
 
     brain.evaluate({ matchKey: "M2", votes: [{ agentName: "TrialBot", vote: "X", confidence: 80 }], market: "X" });
     brain.db.prepare("UPDATE hermes_predictions SET outcome = 'win' WHERE match_key = 'M2'").run();
 
-    // After the second eval, trial_remaining hits 0 → auto-evaluation
     const agent = brain.getAgent("TrialBot");
     expect(agent.status).not.toBe("trial");
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// LEARNING LOOP (Obj 9)
+// LEARNING LOOP
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Learning Loop", () => {
@@ -548,10 +712,93 @@ describe("HermesBrain — Learning Loop", () => {
     expect(specs[0].losses).toBe(1);
     expect(specs[0].winrate).toBe(80);
   });
+
+  test("processResult builds rankings", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+    brain.addAgent("A2");
+
+    for (let i = 0; i < 3; i++) {
+      brain.evaluate({
+        matchKey: `r_${i}`,
+        sport: "football",
+        competition: "Ligue 1",
+        votes: [
+          { agentName: "A1", vote: "Under 2.5", confidence: 80 },
+          { agentName: "A2", vote: "Under 2.5", confidence: 70 },
+        ],
+        market: "Under 2.5",
+      });
+      brain.processResult(`r_${i}`, "win");
+    }
+
+    const rankings = brain.getRankings("football", "Ligue 1", "Under 2.5");
+    expect(rankings.length).toBe(2);
+    expect(rankings[0].rank).toBe(1);
+    expect(rankings[1].rank).toBe(2);
+  });
+
+  test("processResult calculates precision", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+
+    for (let i = 0; i < 5; i++) {
+      brain.evaluate({
+        matchKey: `p_${i}`,
+        sport: "football",
+        competition: "Ligue 1",
+        votes: [{ agentName: "A1", vote: "X", confidence: 80 }],
+        market: "X",
+      });
+      brain.processResult(`p_${i}`, i < 4 ? "win" : "loss");
+    }
+
+    const specs = brain.getSpecializations("A1", { sport: "football", marketType: "X" });
+    expect(specs[0].precision_score).toBeGreaterThanOrEqual(0);
+    expect(specs[0].precision_score).toBeLessThanOrEqual(100);
+  });
+
+  test("processResult calculates stability", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+
+    for (let i = 0; i < 8; i++) {
+      brain.evaluate({
+        matchKey: `s_${i}`,
+        sport: "football",
+        votes: [{ agentName: "A1", vote: "X", confidence: 75 }],
+        market: "X",
+      });
+      brain.processResult(`s_${i}`, i % 2 === 0 ? "win" : "loss");
+    }
+
+    const specs = brain.getSpecializations("A1", { marketType: "X" });
+    expect(specs[0].stability).toBeGreaterThanOrEqual(0);
+    expect(specs[0].stability).toBeLessThanOrEqual(100);
+  });
+
+  test("processResult calculates yield", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+
+    for (let i = 0; i < 5; i++) {
+      brain.evaluate({
+        matchKey: `y_${i}`,
+        sport: "football",
+        votes: [{ agentName: "A1", vote: "X", confidence: 80 }],
+        market: "X",
+      });
+      brain.processResult(`y_${i}`, i < 3 ? "win" : "loss");
+    }
+
+    const specs = brain.getSpecializations("A1", { marketType: "X" });
+    expect(specs[0].yield).toBeDefined();
+    expect(typeof specs[0].yield).toBe("number");
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SPECIALIZATIONS (Obj 5)
+// SPECIALIZATIONS
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Specializations", () => {
@@ -610,7 +857,61 @@ describe("HermesBrain — Specializations", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DYNAMIC WEIGHTS (Obj 6)
+// RANKINGS
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("HermesBrain — Rankings", () => {
+  test("getRankings returns empty with no data", () => {
+    const brain = createBrain();
+    expect(brain.getRankings("football")).toHaveLength(0);
+  });
+
+  test("getAllRankings groups by sport/competition/market", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+    brain.addAgent("A2");
+
+    brain.evaluate({
+      matchKey: "rank1",
+      sport: "football",
+      competition: "Ligue 1",
+      votes: [
+        { agentName: "A1", vote: "X", confidence: 80 },
+        { agentName: "A2", vote: "X", confidence: 70 },
+      ],
+      market: "X",
+    });
+    brain.processResult("rank1", "win");
+
+    const all = brain.getAllRankings();
+    expect(all.length).toBeGreaterThan(0);
+    expect(all[0]).toHaveProperty("sport");
+    expect(all[0]).toHaveProperty("competition");
+    expect(all[0]).toHaveProperty("market_type");
+    expect(all[0]).toHaveProperty("agents");
+    expect(all[0]).toHaveProperty("agent_count");
+  });
+
+  test("rankings update rank in specializations", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+
+    brain.evaluate({
+      matchKey: "sp_rank1",
+      sport: "football",
+      competition: "PL",
+      votes: [{ agentName: "A1", vote: "X", confidence: 80 }],
+      market: "X",
+    });
+    brain.processResult("sp_rank1", "win");
+
+    const specs = brain.getSpecializations("A1");
+    expect(specs[0].rank).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DYNAMIC WEIGHTS
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Dynamic Weights", () => {
@@ -662,7 +963,7 @@ describe("HermesBrain — Dynamic Weights", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// AUTO-MANAGEMENT (Obj 10)
+// AUTO-MANAGEMENT
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Auto-Management", () => {
@@ -689,7 +990,6 @@ describe("HermesBrain — Auto-Management", () => {
 
   test("getRecommendations identifies inactive agents", () => {
     const brain = createBrain();
-    // Add agent with old created_at
     brain.db.prepare(`
       INSERT INTO hermes_agents (agent_name, status, weight, created_at)
       VALUES ('OldAgent', 'active', 1.0, datetime('now', '-14 days'))
@@ -701,7 +1001,49 @@ describe("HermesBrain — Auto-Management", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// JOURNAL (Obj 8)
+// AGENT FULL STATS
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("HermesBrain — Agent Full Stats", () => {
+  test("getAgentFullStats returns null for unknown agent", () => {
+    const brain = createBrain();
+    expect(brain.getAgentFullStats("Unknown")).toBeNull();
+  });
+
+  test("getAgentFullStats returns complete profile", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+
+    for (let i = 0; i < 5; i++) {
+      brain.evaluate({
+        matchKey: `fs_${i}`,
+        sport: "football",
+        competition: "Ligue 1",
+        votes: [{ agentName: "A1", vote: "Under 2.5", confidence: 80 }],
+        market: "Under 2.5",
+      });
+      brain.processResult(`fs_${i}`, i < 4 ? "win" : "loss");
+    }
+
+    const stats = brain.getAgentFullStats("A1");
+    expect(stats).not.toBeNull();
+    expect(stats.agent_name).toBe("A1");
+    expect(stats.globalStats).toBeDefined();
+    expect(stats.globalStats.total).toBe(5);
+    expect(stats.globalStats.wins).toBe(4);
+    expect(stats.globalStats.losses).toBe(1);
+    expect(stats.globalStats.winrate).toBeGreaterThan(0);
+    expect(stats.globalStats.roi).toBeDefined();
+    expect(stats.globalStats.yield).toBeDefined();
+    expect(stats.specializations.length).toBeGreaterThan(0);
+    expect(stats.rankings).toBeDefined();
+    expect(stats.recentPredictions.length).toBeGreaterThan(0);
+    expect(stats.weightHistory).toBeDefined();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// JOURNAL
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Journal", () => {
@@ -726,7 +1068,7 @@ describe("HermesBrain — Journal", () => {
     expect(entry.competition).toBe("Ligue 1");
     expect(entry.sport).toBe("football");
     expect(entry.market_type).toBe("Under 2.5");
-    expect(entry.quality_score).toBeGreaterThan(0);
+    expect(entry.indice_hermes).toBeGreaterThan(0);
     expect(entry.consensus_level).toBeDefined();
     expect(entry.decision).toBeDefined();
     expect(entry.decision_reason).toBeDefined();
@@ -734,7 +1076,7 @@ describe("HermesBrain — Journal", () => {
 
   test("journal filters by decision", () => {
     const brain = createBrain({ publicationThreshold: 50 });
-    brain.addAgent("A1");
+    brain.addAgent("Agent-1");
 
     brain.evaluate({
       matchKey: "M1",
@@ -763,13 +1105,14 @@ describe("HermesBrain — Journal", () => {
     });
     const journal = brain.getJournal();
     const entry = brain.getJournalEntry(journal[0].id);
-    expect(typeof entry.quality_breakdown).toBe("object");
+    expect(typeof entry.indice_breakdown).toBe("object");
+    expect(entry.indice_breakdown).toHaveProperty("statistique");
     expect(Array.isArray(entry.votes_json)).toBe(true);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// DASHBOARD (Obj 11)
+// DASHBOARD
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Dashboard", () => {
@@ -793,12 +1136,13 @@ describe("HermesBrain — Dashboard", () => {
     expect(dashboard.agents).toHaveLength(2);
     expect(dashboard.globalStats).toBeDefined();
     expect(dashboard.journal).toBeDefined();
+    expect(dashboard.rankings).toBeDefined();
     expect(dashboard.recentDecisions).toBeDefined();
     expect(dashboard.recentWeightChanges).toBeDefined();
     expect(dashboard.recommendations).toBeDefined();
   });
 
-  test("dashboard agent entry includes specializations", () => {
+  test("dashboard agent entry includes specializations and metrics", () => {
     const brain = createBrain({ publicationThreshold: 10 });
     brain.addAgent("A1");
     brain.evaluate({
@@ -814,11 +1158,30 @@ describe("HermesBrain — Dashboard", () => {
     expect(a1.specializations.length).toBeGreaterThan(0);
     expect(a1.totalPredictions).toBe(1);
     expect(a1.winrate).toBe(100);
+    expect(a1.roi).toBeDefined();
+    expect(a1.yield).toBeDefined();
+    expect(a1.totalAnalyses).toBeDefined();
+  });
+
+  test("dashboard journal stats include avg_indice", () => {
+    const brain = createBrain({ publicationThreshold: 10 });
+    brain.addAgent("A1");
+    brain.evaluate({
+      matchKey: "D1",
+      votes: [{ agentName: "A1", vote: "X", confidence: 80 }],
+      market: "X",
+    });
+
+    const dashboard = brain.getDashboard();
+    expect(dashboard.journal).toHaveProperty("avg_indice");
+    expect(dashboard.journal).toHaveProperty("total_evaluations");
+    expect(dashboard.journal).toHaveProperty("published");
+    expect(dashboard.journal).toHaveProperty("refused");
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CONFIG (Obj 13)
+// CONFIGURATION
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Configuration", () => {
@@ -846,27 +1209,21 @@ describe("HermesBrain — Configuration", () => {
     const brain = createBrain();
     const config = brain.getConfig();
     expect(config.publicationThreshold).toBe(90);
-    expect(config.qualityWeights).toBeDefined();
+    expect(config.indiceWeights).toBeDefined();
     expect(config.consensusLevels).toBeDefined();
     expect(config.marketValidityRules).toBeDefined();
   });
 
-  test("custom quality weights are applied", () => {
-    const brain = createBrain({
-      qualityWeights: { consensus: 50, agentHistoryMarket: 0, roiHistorique: 0, winrateHistorique: 0, qualiteDonnees: 0, fiabiliteChampionnat: 0, minuteDeJeu: 0, disponibiliteStats: 0, validiteMarche: 50, coherenceVotes: 0, confianceMoyenne: 0 },
-    });
-    const result = brain.calculateQualityScore({
-      votes: makeVotes(["Under 2.5", "Under 2.5"], [80, 80]),
-      market: "Under 2.5",
-    });
-    expect(result.breakdown.consensus).toBe(100);
-    expect(result.breakdown.validiteMarche).toBe(100);
-    expect(result.score).toBeGreaterThanOrEqual(90);
+  test("updateConfig merges indiceWeights", () => {
+    const brain = createBrain();
+    brain.updateConfig({ indiceWeights: { statistique: 20 } });
+    expect(brain.config.indiceWeights.statistique).toBe(20);
+    expect(brain.config.indiceWeights.ia).toBe(10);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ARCHITECTURE FUTURE (Obj 13)
+// EXTENSIBILITY
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Extensibility", () => {
@@ -925,11 +1282,11 @@ describe("HermesBrain — Extensibility", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// INTEGRATION SCENARIO
+// FULL SCENARIO
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe("HermesBrain — Full Scenario", () => {
-  test("complete lifecycle: add agents → evaluate → result → learn", () => {
+  test("complete lifecycle: add agents → evaluate → result → learn → rankings", () => {
     const brain = createBrain({ publicationThreshold: 30 });
 
     brain.addAgent("DeepSeek", { displayOrder: 1 });
@@ -938,7 +1295,6 @@ describe("HermesBrain — Full Scenario", () => {
     brain.addAgent("Chief", { displayOrder: 4 });
     brain.addAgent("NewBot", { trial: true, trialPredictions: 5 });
 
-    // Day 1: All agree on Under 2.5
     const eval1 = brain.evaluate({
       matchKey: "PSG_OM_2026-07-08",
       home: "PSG",
@@ -958,25 +1314,31 @@ describe("HermesBrain — Full Scenario", () => {
       ],
     });
 
-    expect(eval1.qualityScore).toBeGreaterThan(0);
+    expect(eval1.indiceHermes).toBeGreaterThan(0);
+    expect(eval1.indiceBreakdown).toBeDefined();
+    expect(eval1.indiceBreakdown).toHaveProperty("statistique");
+    expect(eval1.indiceBreakdown).toHaveProperty("risque");
     expect(eval1.dominantBet).toBe("Under 2.5");
 
-    // Match ends 0-0 → win
     const result1 = brain.processResult("PSG_OM_2026-07-08", "win");
     expect(result1.predictionsResolved).toBe(5);
 
-    // Check specializations were created
     const specs = brain.getSpecializations("DeepSeek", { sport: "football", marketType: "Under 2.5" });
     expect(specs.length).toBe(1);
     expect(specs[0].wins).toBe(1);
 
-    // Dashboard works
     const dashboard = brain.getDashboard();
     expect(dashboard.agents).toHaveLength(5);
     expect(dashboard.globalStats.wins).toBe(5);
+    expect(dashboard.rankings.length).toBeGreaterThan(0);
 
-    // Trial agent counter decremented
     const newBot = brain.getAgent("NewBot");
     expect(newBot.trial_remaining).toBe(4);
+    expect(newBot.total_analyses).toBe(1);
+
+    const fullStats = brain.getAgentFullStats("DeepSeek");
+    expect(fullStats).not.toBeNull();
+    expect(fullStats.globalStats.wins).toBe(1);
+    expect(fullStats.specializations.length).toBeGreaterThan(0);
   });
 });
