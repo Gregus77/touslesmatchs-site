@@ -5211,12 +5211,13 @@ app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
   try {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
+    const mode = planName === "carte" ? "payment" : "subscription";
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode,
       payment_method_types: ["card"],
       line_items: [{ price: price_id, quantity: 1 }],
       success_url: `https://www.touslesmatchs.com/live-ia?success=1&plan=${planName}`,
-      cancel_url: "https://www.touslesmatchs.com/subscription",
+      cancel_url: "https://www.touslesmatchs.com/#plans",
       client_reference_id: String(req.user.id),
       customer_email: req.user.email,
     });
@@ -6522,7 +6523,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     }
     console.log(`[signal-notify] Emails signal fort envoyés : ${sent}/${emails.length}`);
 
-    // Email teaser aux inscrits GRATUITS (sans le pari, avec CTA abonnement)
+    // Email teaser aux inscrits GRATUITS (sans le pick, avec CTA abonnement)
     try {
       const leadRows = loadLeads().leads || [];
       const premiumEmails = new Set(emails.map(e => e.toLowerCase()));
@@ -6574,8 +6575,8 @@ app.post("/internal/signal-notify", async (req, res) => {
 
     const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
-    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Pari : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>Le pari exact et l'analyse complète sont réservés aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux picks</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Pick : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>Le pick exact et l'analyse complète sont réservés aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux picks</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
     if (TELEGRAM_PREMIUM_CHANNEL_ID) {
       const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremiumText);
       console.log(`[signal-notify] Telegram premium: ${ok ? "OK" : "FAIL"}`);

@@ -37,11 +37,11 @@ const sequence = [
     key: "j1",
     minDays: 1,
     sentField: "email_j1_sent_at",
-    subject: "Pourquoi TousLesMatchs ne force pas un pari chaque jour",
+    subject: "Pourquoi TousLesMatchs ne force pas un pick chaque jour",
     title: "La discipline protège la bankroll",
     body: `
-      <p>Un bon système de pronostics ne cherche pas à jouer tous les jours.</p>
-      <p>Quand Hermès ne trouve pas de valeur claire, il vaut mieux ne rien publier que pousser un pari faible.</p>
+      <p>Un bon système d’analyse ne cherche pas à jouer tous les jours.</p>
+      <p>Quand Hermès ne trouve pas de valeur claire, il vaut mieux ne rien publier que pousser un pick faible.</p>
       <p>C’est exactement l’esprit TousLesMatchs : moins de bruit, plus de sélection.</p>
     `
   },

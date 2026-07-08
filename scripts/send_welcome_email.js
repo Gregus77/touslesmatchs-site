@@ -66,8 +66,8 @@ function buildEmail(email) {
       <p>Merci pour votre inscription.</p>
 
       <p>
-        Ici, Hermès ne force pas un pari tous les jours. Quand aucune opportunité solide n’est détectée,
-        nous préférons dire la vérité plutôt que publier un pari faible.
+        Ici, Hermès ne force pas une analyse tous les jours. Quand aucune opportunité solide n’est détectée,
+        nous préférons dire la vérité plutôt que publier un pick faible.
       </p>
 
       <p><strong>Votre accès Free :</strong></p>
@@ -112,7 +112,7 @@ function buildEmail(email) {
 
 Merci pour votre inscription.
 
-Hermès ne force pas un pari tous les jours. Quand aucune opportunité solide n’est détectée, nous préférons dire la vérité.
+Hermès ne force pas une analyse tous les jours. Quand aucune opportunité solide n’est détectée, nous préférons dire la vérité.
 
 Telegram Free :
 ${FREE_TELEGRAM_URL}
