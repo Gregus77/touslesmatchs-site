@@ -1894,6 +1894,11 @@ function copyRefLink(){
 <script src="/js/i18n.js?v=concile-chief-20260623"></script>
 <script>if(typeof i18n==='undefined'){window.i18n={t:function(k){return k},init:function(){},setLang:function(){}}}</script>
 <script>
+function safeNum(v,fallback){if(fallback===undefined)fallback='—';if(v===null||v===undefined||typeof v==='number'&&(!isFinite(v)||isNaN(v)))return fallback;if(typeof v==='string'){var n=parseFloat(v);if(isNaN(n)||!isFinite(n))return fallback;}return v;}
+function safePct(v){var s=safeNum(v,null);if(s===null)return '—';return(s>=0?'+':'')+s+'%';}
+function safeEuro(v){var s=safeNum(v,null);if(s===null)return '—';return(s>=0?'+':'')+s+'€';}
+</script>
+<script>
 // ══ ÉTOILES
 const cv=document.getElementById('cosmos'),cx=cv.getContext('2d');
 let stars=[];
@@ -2101,7 +2106,8 @@ function renderPick(){
   const isResult=PICK.status==='result'||PICK.status==='win'||PICK.status==='loss'||PICK.result==='win'||PICK.result==='loss';
   const isWin=PICK.result==='win'||PICK.status==='win';
   const isPending=isResult&&PICK.result===null; // match joué, résultat non encore connu
-  const avg=Math.round(PICK.ia.reduce((a,b)=>a+b.pct,0)/PICK.ia.length);
+  const avgRaw=PICK.ia.length>0?Math.round(PICK.ia.reduce((a,b)=>a+b.pct,0)/PICK.ia.length):0;
+  const avg=isFinite(avgRaw)?avgRaw:0;
   const mc=MC[PICK.marketType]||MC["1"];
   const vClass={go:'v-go',half:'v-half',no_bet:'v-no'}[PICK.verdict]||'v-no';
   const hasScoreA=PICK.scoreA!==null&&PICK.scoreA!==undefined;
@@ -2162,7 +2168,7 @@ function renderPick(){
         <div class="pi-item"><span class="pi-ico">📚</span><div><div class="pi-lbl">Historique</div><div class="pi-val">Résultat enregistré</div></div></div>
       </div>`
     : `<div class="pick-insight">
-        <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${(avg/10).toFixed(1)}/10</div></div></div>
+        <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${safeNum((avg/10).toFixed(1),'—')}/10</div></div></div>
         <div class="pi-item"><span class="pi-ico">🤖</span><div><div class="pi-lbl">IA en accord</div><div class="pi-val c-green">${PICK.ia.filter(a=>a.ok).length}/${PICK.ia.length}</div></div></div>
       </div>`;
   const bookmakerHtml=isResult
@@ -2291,7 +2297,8 @@ function buildChart(){
   var data = [bankroll];
 
   finished.forEach(p => {
-    if(p.result === 'win') bankroll = parseFloat((bankroll + (p.cote - 1) * mise).toFixed(1));
+    var cote = parseFloat(p.cote);
+    if(p.result === 'win' && isFinite(cote)) bankroll = parseFloat((bankroll + (cote - 1) * mise).toFixed(1));
     else bankroll = parseFloat((bankroll - mise).toFixed(1));
     var dateStr = p.date ? p.date.split('-').slice(1).reverse().join('/') : '';
     labels.push(dateStr + ' ' + p.home.split(' ')[0]);
@@ -2305,14 +2312,18 @@ function buildChart(){
   var roiEl = document.getElementById('kpi-roi');
   var wrEl  = document.getElementById('kpi-winrate');
   var pkEl  = document.getElementById('kpi-picks');
-  if(roiEl) roiEl.textContent = (roi >= 0 ? '+' : '') + roi + '%';
-  if(wrEl)  wrEl.textContent  = winrate + '%';
+  var roiDisplay = safePct(roi);
+  if(roiEl) roiEl.textContent = roiDisplay;
+  if(wrEl)  wrEl.textContent  = total > 0 ? winrate + '%' : '—';
   if(pkEl)  pkEl.textContent  = total;
   var hsW = document.getElementById('hs-winrate');
   var hsR = document.getElementById('hs-roi');
-  if(hsW) hsW.textContent = winrate + '%';
-  if(hsR) hsR.textContent = (roi >= 0 ? '+' : '') + roi + '%';
-  var tickerStr = `🏆 Winrate ${winrate}% · ROI ${roi>=0?'+':''}${roi}% · ${total} signal${total>1?'s':''}`;
+  if(hsW) hsW.textContent = total > 0 ? winrate + '%' : '—';
+  if(hsR) hsR.textContent = roiDisplay;
+  var roiTicker = safeNum(roi, null);
+  var tickerStr = roiTicker !== null
+    ? `🏆 Winrate ${winrate}% · ROI ${roiTicker>=0?'+':''}${roiTicker}% · ${total} signal${total>1?'s':''}`
+    : `🏆 ${total} signal${total>1?'s':''} analysé${total>1?'s':''}`;
   ['tw1','tw2'].forEach(id=>{var e=document.getElementById(id);if(e)e.textContent=tickerStr;});
   var communityPlayed = document.getElementById('community-picks-played');
   if(communityPlayed) communityPlayed.textContent = String(total);
@@ -2321,8 +2332,8 @@ function buildChart(){
   var simProfit = document.getElementById('sim-profit');
   var simBankroll = document.getElementById('sim-bankroll');
   var gainNet = (bankroll - bankrollDepart).toFixed(1);
-  if(simProfit) simProfit.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
-  if(simBankroll) simBankroll.textContent = bankroll.toFixed(0) + '€';
+  if(simProfit) simProfit.textContent = safeEuro(gainNet);
+  if(simBankroll) simBankroll.textContent = safeNum(bankroll.toFixed(0), '—') + (safeNum(bankroll.toFixed(0), null) !== null ? '€' : '');
 
   const canvas = document.getElementById('roi-chart');
   if(!canvas) return;
@@ -2376,7 +2387,7 @@ function buildChart(){
           titleColor:'#eceaf4',
           bodyColor:'#a8aec8',
           padding:12,
-          callbacks:{label:ctx=>`  ${ctx.parsed.y.toFixed(1)}%`}
+          callbacks:{label:ctx=>{var v=ctx.parsed.y;return isFinite(v)?`  ${v.toFixed(1)}%`:'  —';}}
         }
       },
       scales:{
@@ -2390,16 +2401,16 @@ function buildChart(){
 // ══ SIGNALS FEED DATA — Admin: modifier ce tableau pour mettre à jour la homepage
 // status: "finished" | "upcoming"
 const PICKS_FEED = [
-  { id:"lazio-inter", date:"2026-05-13", time:"20:00", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", signal:"Victoire Inter (1X2)", status:"finished", result:"win", score:"0-2" },
-  { id:"villarreal-seville", date:"2026-05-17", time:"18:00", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", signal:"Victoire Villarreal (1X2)", status:"finished", result:"win", score:"3-2" },
-  { id:"knicks-cavaliers", date:"2026-05-19", time:"02:00", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", signal:"Plus de 216.5 pts", status:"finished", result:"win", score:"115-104" },
-  { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", signal:"Victoire San Antonio (1X2)", status:"finished", result:"win", score:"107-106" },
-  { id:"psg-lyon", date:"2026-06-22", time:"21:00", competition:"Ligue 1 · J34", home:"Paris Saint-Germain", away:"Olympique Lyonnais", signal:"Moins de 2.5 buts", status:"finished", result:"win", score:"1-0" },
-  { id:"bayern-dortmund", date:"2026-06-25", time:"18:30", competition:"Bundesliga · J33", home:"Bayern Munich", away:"Borussia Dortmund", signal:"Moins de 2.5 buts", status:"finished", result:"win", score:"1-0" },
-  { id:"atletico-real", date:"2026-06-27", time:"21:00", competition:"La Liga · J35", home:"Atlético Madrid", away:"Real Madrid", signal:"Moins de 2.5 buts", status:"finished", result:"win", score:"0-1" },
-  { id:"boca-river", date:"2026-06-28", time:"22:00", competition:"Liga Profesional · J18", home:"Boca Juniors", away:"River Plate", signal:"Moins de 2.5 buts", status:"finished", result:"win", score:"1-0" },
-  { id:"milan-napoli", date:"2026-06-30", time:"20:45", competition:"Serie A · J36", home:"AC Milan", away:"Napoli", signal:"Moins de 2.5 buts", status:"finished", result:"win", score:"0-0" },
-  { id:"arsenal-chelsea", date:"2026-07-01", time:"17:30", competition:"Premier League · J37", home:"Arsenal", away:"Chelsea", signal:"Moins de 2.5 buts", status:"finished", result:"loss", score:"2-1" },
+  { id:"lazio-inter", date:"2026-05-13", time:"20:00", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", signal:"Victoire Inter (1X2)", cote:1.72, status:"finished", result:"win", score:"0-2" },
+  { id:"villarreal-seville", date:"2026-05-17", time:"18:00", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", signal:"Victoire Villarreal (1X2)", cote:1.65, status:"finished", result:"win", score:"3-2" },
+  { id:"knicks-cavaliers", date:"2026-05-19", time:"02:00", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", signal:"Plus de 216.5 pts", cote:1.85, status:"finished", result:"win", score:"115-104" },
+  { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", signal:"Victoire San Antonio (1X2)", cote:1.78, status:"finished", result:"win", score:"107-106" },
+  { id:"psg-lyon", date:"2026-06-22", time:"21:00", competition:"Ligue 1 · J34", home:"Paris Saint-Germain", away:"Olympique Lyonnais", signal:"Moins de 2.5 buts", cote:1.55, status:"finished", result:"win", score:"1-0" },
+  { id:"bayern-dortmund", date:"2026-06-25", time:"18:30", competition:"Bundesliga · J33", home:"Bayern Munich", away:"Borussia Dortmund", signal:"Moins de 2.5 buts", cote:1.62, status:"finished", result:"win", score:"1-0" },
+  { id:"atletico-real", date:"2026-06-27", time:"21:00", competition:"La Liga · J35", home:"Atlético Madrid", away:"Real Madrid", signal:"Moins de 2.5 buts", cote:1.58, status:"finished", result:"win", score:"0-1" },
+  { id:"boca-river", date:"2026-06-28", time:"22:00", competition:"Liga Profesional · J18", home:"Boca Juniors", away:"River Plate", signal:"Moins de 2.5 buts", cote:1.70, status:"finished", result:"win", score:"1-0" },
+  { id:"milan-napoli", date:"2026-06-30", time:"20:45", competition:"Serie A · J36", home:"AC Milan", away:"Napoli", signal:"Moins de 2.5 buts", cote:1.60, status:"finished", result:"win", score:"0-0" },
+  { id:"arsenal-chelsea", date:"2026-07-01", time:"17:30", competition:"Premier League · J37", home:"Arsenal", away:"Chelsea", signal:"Moins de 2.5 buts", cote:1.52, status:"finished", result:"loss", score:"2-1" },
 ];
 
 function renderPicksFeed() {
@@ -2429,6 +2440,7 @@ function renderPicksFeed() {
     const kickMs = new Date(next.date+'T'+next.time+':00').getTime();
     const diff = kickMs - Date.now();
     const fmtTimer = (ms) => {
+      if (!isFinite(ms)) return '—';
       if (ms <= 0) return '🔴 '+i18n.t('pf_live_now');
       const h = Math.floor(ms/3600000);
       const m = Math.floor((ms%3600000)/60000);

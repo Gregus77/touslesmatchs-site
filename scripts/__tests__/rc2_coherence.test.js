@@ -102,3 +102,46 @@ describe("RC2.1 — ANJ extension checks (emails)", () => {
     expect(real).toEqual([]);
   });
 });
+
+describe("RC2.3 — No NaN/undefined/null/Infinity on frontend", () => {
+  test("safeNum utility is defined globally", () => {
+    expect(indexSource).toMatch(/function safeNum\(/);
+    expect(indexSource).toMatch(/function safePct\(/);
+    expect(indexSource).toMatch(/function safeEuro\(/);
+  });
+
+  test("ROI display uses safePct instead of raw concatenation", () => {
+    expect(indexSource).toMatch(/roiDisplay\s*=\s*safePct\(roi\)/);
+  });
+
+  test("sim-profit uses safeEuro", () => {
+    expect(indexSource).toMatch(/simProfit.*safeEuro\(gainNet\)/);
+  });
+
+  test("all PICKS_FEED entries have a numeric cote", () => {
+    const feedMatch = indexSource.match(/const PICKS_FEED\s*=\s*\[([\s\S]*?)\];/);
+    expect(feedMatch).not.toBeNull();
+    const entries = feedMatch[1].match(/\{[^}]+\}/g) || [];
+    expect(entries.length).toBeGreaterThan(0);
+    entries.forEach(entry => {
+      expect(entry).toMatch(/cote:\s*[\d.]+/);
+    });
+  });
+
+  test("buildChart sanitizes cote with parseFloat + isFinite", () => {
+    expect(indexSource).toMatch(/var cote\s*=\s*parseFloat\(p\.cote\)/);
+    expect(indexSource).toMatch(/isFinite\(cote\)/);
+  });
+
+  test("ticker fallback when ROI is invalid", () => {
+    expect(indexSource).toMatch(/roiTicker\s*!==\s*null/);
+  });
+
+  test("chart tooltip handles non-finite values", () => {
+    expect(indexSource).toMatch(/isFinite\(v\).*toFixed/);
+  });
+
+  test("fmtTimer handles NaN milliseconds", () => {
+    expect(indexSource).toMatch(/isFinite\(ms\)/);
+  });
+});
