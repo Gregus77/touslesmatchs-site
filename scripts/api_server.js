@@ -1150,9 +1150,13 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "palestine", "jordan · ", "iraq", "syria", "yemen", "oman", "bahrain",
   "lebanon", "india", "sri lanka", "pakistan",
   "indonesia", "malaysia · ", "philippines", "thailand · ",
-  // Amérique du Sud — ligues secondaires
-  "chile", "bolivia", "peru", "venezuela", "ecuador",
-  "paraguay", "uruguay · segunda", "colombia · b",
+  // Amérique du Sud — ligues secondaires uniquement (pas les premières divisions)
+  "segunda · chile", "segunda · peru", "segunda · colombia",
+  "segunda · ecuador", "segunda · venezuela", "segunda · bolivia",
+  "segunda · paraguay",
+  "bolivia · division", "copa bolivia",
+  "uruguay · segunda",
+  "tercera division", "cuarta division",
   // Amérique centrale et Caraïbes
   "honduras", "guatemala", "el salvador", "nicaragua",
   "costa rica", "panama · liga", "haiti", "jamaica", "trinidad",
@@ -1238,11 +1242,20 @@ const TRUSTED_COMPETITIONS = [
   "supercopa",
   "community shield", "trophee des champions",
   "super cup",
-  "liga betplay", "colombia",
-  "liga 1 · peru",
-  "primera division · uruguay", "uruguay",
-  "campeonato nacional · chile",
-  "lpf · paraguay",
+  "liga betplay", "categoría primera a",
+  "liga 1 · peru", "liga 1 · peru", "primera division · peru",
+  "primera division · uruguay",
+  "campeonato nacional · chile", "primera division · chile", "primera · chile",
+  "lpf · paraguay", "primera division · paraguay",
+  "primera division · colombia",
+  "primera division · ecuador", "ligapro · ecuador",
+  "primera division · venezuela", "liga futve",
+  "primera division · bolivia", "division profesional · bolivia",
+  "mlb", "nippon", "npb",
+  "nfl", "cfl",
+  "wimbledon", "roland garros", "us open", "australian open",
+  "copa america", "conmebol",
+  "concacaf champions", "leagues cup",
 ];
 
 function stripAccents(s) {
@@ -4616,6 +4629,10 @@ app.get("/live-matches", async (req, res) => {
     }
     const allMatches = await fetchLiveMatches();
     const matches = allMatches.filter(m => !isLowTrustCompetition(m));
+    if (allMatches.length > 0 && matches.length === 0) {
+      const sample = allMatches.slice(0, 5).map(m => `${m.competition} (${m.sport})`).join("; ");
+      console.log(`[live-matches] ATTENTION: ${allMatches.length} matchs live mais 0 après filtre low-trust. Exemples: ${sample}`);
+    }
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
