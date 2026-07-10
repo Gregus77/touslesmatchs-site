@@ -5860,7 +5860,7 @@ app.get("/signal-fort-stats", (req, res) => {
       competition: r.competition || r.sport || "",
       home: r.home,
       away: r.away,
-      pick: `Signal Fort ${r.confidence}%`,
+      pick: r.best_bet || `Signal Fort ${r.confidence}%`,
       cote: parseFloat(coteMoy(r.confidence)),
       status: "finished",
       result: r.outcome === "win" ? "win" : "loss",

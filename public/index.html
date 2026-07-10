@@ -988,6 +988,7 @@ footer{
 .pf-sc{font-weight:700;color:var(--muted2);font-size:13px}
 .pf-ct{font-size:11px;color:var(--cyan)}
 .pf-comp{font-size:11px;color:var(--muted);white-space:nowrap}
+.pf-pick{font-size:11px;color:var(--indigo2);font-weight:600;white-space:nowrap}
 
 /* ── Next Pick Card ── */
 .np-card{background:var(--bg2);border:1px solid rgba(99,102,241,.25);border-radius:20px;padding:28px;position:relative;overflow:hidden}
@@ -2375,10 +2376,11 @@ function renderPicksFeed() {
       html += `<div class="pf-past-item${w?'':' loss'}">
         <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
+        <span class="pf-pick">${p.pick}</span>
         <span class="pf-sc">${p.score||'—'}</span>
         <span class="pf-ct">@${p.cote}</span>
         <span style="font-size:12px;font-weight:700;color:${w?'var(--green)':'var(--red)'};margin-left:auto">${gain}</span>
-        <span class="pf-comp">${p.competition.split('·')[0].trim()}</span>
+        <span class="pf-comp">${p.competition}</span>
       </div>`;
     });
     html += `<a href="/live-ia#historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir les ${past.length} derniers résultats →</a>`;
