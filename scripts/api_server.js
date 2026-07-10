@@ -7427,8 +7427,195 @@ app.get("/admin/datahub-state", (req, res) => {
 });
 // ===== End M009-M010 =====
 
+// ── COUCHE 2 : Tests de non-regression au demarrage ──────────────────────────
+function runStartupChecks() {
+  const failures = [];
+
+  // 2a. Tables BDD critiques
+  const requiredTables = ["users", "concile_analyses", "agent_predictions", "agent_market_predictions"];
+  for (const t of requiredTables) {
+    try { db.prepare(`SELECT 1 FROM ${t} LIMIT 1`).get(); }
+    catch { failures.push(`table BDD manquante: ${t}`); }
+  }
+
+  // 2b. TRUSTED_COMPETITIONS >= 50 (jamais revenir a 7 ligues)
+  if (TRUSTED_COMPETITIONS.length < 50) {
+    failures.push(`TRUSTED_COMPETITIONS trop court: ${TRUSTED_COMPETITIONS.length} (min 50)`);
+  }
+
+  // 2c. signal_validation charge
+  try {
+    const gate = getGateStatus();
+    if (!gate.rules) failures.push("signal_validation non charge");
+  } catch { failures.push("signal_validation import echoue"); }
+
+  // 2d. Stripe price IDs configures
+  if (STRIPE_SECRET_KEY && !STRIPE_PRICE_ID_CARTE && !STRIPE_PRICE_ID_PREMIUM && !STRIPE_PRICE_ID_ELITE) {
+    failures.push("Stripe: aucun price ID configure");
+  }
+
+  // 2e. AUTO_CONCILE_MIN_MINUTE = 35 (jamais revenir a 10)
+  if (AUTO_CONCILE_MIN_MINUTE < 35) {
+    failures.push(`AUTO_CONCILE_MIN_MINUTE=${AUTO_CONCILE_MIN_MINUTE} (doit etre >= 35)`);
+  }
+
+  // 2f. Cles API IA (au moins 1 pour le concile)
+  if (!GROQ_API_KEY && !DEEPSEEK_API_KEY) {
+    failures.push("Aucune cle API IA configuree (GROQ ou DEEPSEEK minimum)");
+  }
+
+  if (failures.length > 0) {
+    console.error("╔══════════════════════════════════════════════════════════╗");
+    console.error("║  STARTUP CHECK FAILED — PROBLEMES CRITIQUES DETECTES   ║");
+    console.error("╚══════════════════════════════════════════════════════════╝");
+    failures.forEach(f => console.error(`  ✗ ${f}`));
+    console.error("Le serveur demarre mais ces problemes DOIVENT etre corriges.");
+  } else {
+    console.log("[startup-check] Tous les tests de non-regression passes ✓");
+  }
+  return failures;
+}
+
+// ── COUCHE 1 : Healthcheck continu (toutes les 5 minutes) ───────────────────
+let _lastHeartbeat = { timestamp: null, status: "unknown", checks: {} };
+
+async function runHeartbeat() {
+  const checks = {};
+  const alerts = [];
+
+  // 1a. Stripe
+  if (STRIPE_SECRET_KEY) {
+    try {
+      const Stripe = require("stripe");
+      const stripe = Stripe(STRIPE_SECRET_KEY);
+      await stripe.prices.list({ limit: 1 });
+      checks.stripe = { ok: true };
+    } catch (e) {
+      checks.stripe = { ok: false, error: e.message };
+      alerts.push("Stripe injoignable: " + e.message);
+    }
+  } else {
+    checks.stripe = { ok: false, error: "STRIPE_SECRET_KEY manquante" };
+  }
+
+  // 1b. Brevo
+  if (BREVO_API_KEY) {
+    try {
+      const data = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY });
+      checks.brevo = { ok: !!data.email, email: data.email || null };
+    } catch (e) {
+      checks.brevo = { ok: false, error: e.message };
+      alerts.push("Brevo injoignable: " + e.message);
+    }
+  } else {
+    checks.brevo = { ok: false, error: "BREVO_API_KEY manquante" };
+  }
+
+  // 1c. Telegram bot
+  if (TELEGRAM_BOT_TOKEN) {
+    try {
+      const data = await httpGet(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe`);
+      checks.telegram = { ok: data?.ok === true, bot: data?.result?.username || null };
+    } catch (e) {
+      checks.telegram = { ok: false, error: e.message };
+      alerts.push("Telegram bot injoignable: " + e.message);
+    }
+  } else {
+    checks.telegram = { ok: false, error: "TELEGRAM_BOT_TOKEN manquant" };
+  }
+
+  // 1d. API-Sports quota
+  if (API_SPORTS_KEY) {
+    try {
+      const data = await httpGet("https://v3.football.api-sports.io/status", { "x-apisports-key": API_SPORTS_KEY });
+      const account = data?.response?.account || {};
+      const requests = data?.response?.requests || {};
+      checks.api_sports = {
+        ok: true,
+        plan: account.plan || "?",
+        requests_today: requests.current || 0,
+        requests_limit: requests.limit_day || 0,
+      };
+      if (requests.current > requests.limit_day * 0.9) {
+        alerts.push(`API-Sports quota critique: ${requests.current}/${requests.limit_day}`);
+      }
+    } catch (e) {
+      checks.api_sports = { ok: false, error: e.message };
+      alerts.push("API-Sports injoignable: " + e.message);
+    }
+  } else {
+    checks.api_sports = { ok: false, error: "API_SPORTS_KEY manquante" };
+  }
+
+  // 1e. Dernier concile reussi
+  try {
+    const last = db.prepare(`
+      SELECT analysed_at, home, away, confidence, best_bet
+      FROM concile_analyses ORDER BY analysed_at DESC LIMIT 1
+    `).get();
+    if (last) {
+      const hoursAgo = (Date.now() - new Date(last.analysed_at + "Z").getTime()) / 3600000;
+      checks.last_concile = {
+        ok: hoursAgo < 24,
+        hours_ago: Math.round(hoursAgo * 10) / 10,
+        match: `${last.home} vs ${last.away}`,
+        confidence: last.confidence,
+        bet: last.best_bet,
+      };
+      if (hoursAgo >= 24) alerts.push(`Aucune analyse concile depuis ${Math.round(hoursAgo)}h`);
+    } else {
+      checks.last_concile = { ok: false, error: "aucune analyse en BDD" };
+    }
+  } catch (e) {
+    checks.last_concile = { ok: false, error: e.message };
+  }
+
+  // 1f. BDD integrite rapide
+  try {
+    const counts = db.prepare(`
+      SELECT
+        (SELECT COUNT(*) FROM concile_analyses) as analyses,
+        (SELECT COUNT(*) FROM concile_analyses WHERE outcome IS NULL AND analysed_at <= datetime('now','-48 hours')) as stale,
+        (SELECT COUNT(*) FROM agent_predictions WHERE outcome IS NULL AND created_at <= datetime('now','-48 hours')) as stale_pred
+    `).get();
+    checks.db_health = { ok: true, total_analyses: counts.analyses, stale_unresolved: counts.stale, stale_predictions: counts.stale_pred };
+    if (counts.stale > 20) alerts.push(`${counts.stale} analyses non resolues depuis 48h+`);
+  } catch (e) {
+    checks.db_health = { ok: false, error: e.message };
+  }
+
+  const status = alerts.length === 0 ? "HEALTHY" : "DEGRADED";
+  _lastHeartbeat = { timestamp: new Date().toISOString(), status, checks, alerts };
+
+  // Alerte admin Telegram si probleme
+  if (alerts.length > 0 && TELEGRAM_BOT_TOKEN && TELEGRAM_ADMIN_CHAT_ID) {
+    const msg = `⚠️ <b>HEARTBEAT ALERTE</b>\n\n${alerts.map(a => `❌ ${a}`).join("\n")}\n\n🕐 ${new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris" })}`;
+    sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg).catch(() => {});
+  }
+
+  if (alerts.length > 0) {
+    console.log(`[heartbeat] ${status}: ${alerts.join("; ")}`);
+  }
+}
+
+app.get("/admin/heartbeat", (req, res) => {
+  res.json(_lastHeartbeat);
+});
+
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
+
+    // Couche 2 : tests de non-regression au demarrage
+    const startupFailures = runStartupChecks();
+    if (startupFailures.length > 0 && TELEGRAM_BOT_TOKEN && TELEGRAM_ADMIN_CHAT_ID) {
+      const msg = `🚨 <b>STARTUP ALERTE</b>\n\n${startupFailures.map(f => `✗ ${f}`).join("\n")}\n\nBuild: ${BUILD_VERSION.hash}`;
+      sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg).catch(() => {});
+    }
+
+    // Couche 1 : heartbeat continu toutes les 5 minutes
+    setTimeout(runHeartbeat, 15000);
+    setInterval(runHeartbeat, 5 * 60 * 1000);
+
     if (AUTO_CONCILE_OBSERVER) {
       console.log(`[auto-concile] enabled: every ${Math.round(AUTO_CONCILE_INTERVAL_MS / 60000)} min, max ${AUTO_CONCILE_MAX_MATCHES} match(es)`);
       setTimeout(runAutoConcileObserver, 30000);

@@ -103,24 +103,57 @@ for k,v in d.get('best_worst_per_market',{}).items():
 "
 ```
 
-### Verification apres deploiement
+### Architecture de protection — 3 couches (POINT DE SAUVEGARDE 2026-07-10)
 
-Apres chaque `docker compose up -d --build`, verifier dans les 5 minutes :
+Le systeme a 3 couches de protection qui empechent de reculer ou creer des bugs :
+
+**COUCHE 1 : Heartbeat continu (toutes les 5 minutes)**
+- Verifie automatiquement : Stripe, Brevo, Telegram bot, API-Sports (quota), dernier concile, BDD
+- Si un service casse → alerte Telegram admin immediate
+- Endpoint : `/admin/heartbeat`
+- Log : `[heartbeat] DEGRADED: ...` si probleme
+
+**COUCHE 2 : Tests de non-regression au demarrage**
+Au boot du serveur, avant d'accepter du trafic, verifie :
+- Tables BDD critiques presentes (users, concile_analyses, agent_predictions, agent_market_predictions)
+- TRUSTED_COMPETITIONS >= 50 (jamais revenir a 7 ligues)
+- signal_validation charge
+- Stripe price IDs configures
+- AUTO_CONCILE_MIN_MINUTE >= 35 (jamais revenir a 10)
+- Au moins 1 cle API IA (GROQ ou DEEPSEEK)
+Si echec → log `STARTUP CHECK FAILED` + alerte Telegram admin
+
+**COUCHE 3 : Smoke tests post-deploy (`scripts/smoke_test.sh`)**
+A lancer apres chaque deploiement :
+- API accessible (3 endpoints)
+- Version et build hash correct
+- TRUSTED >= 50, MIN_MINUTE >= 35
+- Preflight systeme HEALTHY
+- Services Docker running
+- Filtres live (matchs apres filtre)
+- Heartbeat status
+
+### Deploiement complet (commande unique)
 ```bash
-# 1. Services up
-docker ps --format "table {{.Names}}\t{{.Status}}" | grep touslesmatchs
+cd /opt/touslesmatchs && \
+  git fetch origin claude/kind-brahmagupta-6df1sy && \
+  git reset --hard origin/claude/kind-brahmagupta-6df1sy && \
+  docker compose up -d --build && \
+  sleep 10 && \
+  bash scripts/smoke_test.sh
+```
+Si le smoke test FAIL → corriger avant de considerer le deploy reussi.
 
-# 2. API repond
-curl -s http://localhost:3001/live-matches | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'OK: {len(d.get(\"matches\",[]))} matchs')"
+### Verification manuelle rapide
+```bash
+# Version deployee
+curl -s http://localhost:3001/admin/version | python3 -c "import sys,json; v=json.load(sys.stdin); print(f'Build: {v[\"version\"][\"hash\"]} | TRUSTED: {v[\"rules\"][\"trusted_count\"]} | MIN: {v[\"rules\"][\"min_minute\"]}')"
 
-# 3. Filtres OK (eligible > 0 quand il y a des matchs)
-docker logs touslesmatchs-api --tail 20 | grep -E "auto-concile|eligible"
+# Heartbeat (services externes)
+curl -s http://localhost:3001/admin/heartbeat | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Status: {d[\"status\"]}'); [print(f'  ❌ {a}') for a in d.get('alerts',[])]"
 
-# 4. Telegram OK
-curl -s http://localhost:3001/admin/telegram-diagnostic | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Bot: {d[\"tests\"][\"getMe\"][\"ok\"]}, Send: {d[\"tests\"].get(\"sendMessage\",{}).get(\"ok\",\"?\")}' )"
-
-# 5. Preflight complet
-curl -s http://localhost:3001/admin/preflight | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Status: {d[\"status\"]}'); [print(f'  WARNING: {w}') for w in d.get('warnings',[])]"
+# Audit agents
+curl -s http://localhost:3001/admin/audit | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'{d[\"summary\"][\"total_predictions\"]} predictions'); [print(f'  {a[\"agent_name\"]}: {a[\"winrate\"]}%') for a in d['agents']]"
 ```
 
 ### Etat actuel des filtres (reference — MISE A JOUR 2026-07-10)
@@ -191,6 +224,7 @@ Avant de declarer un travail termine, verifier :
 | `docker-compose.yml` | Orchestration des 4 services |
 | `scripts/signal_validation.js` | Validation centralisee des signaux forts (14 criteres, tous doivent passer avant envoi Telegram) |
 | `scripts/preflight.sh` | Script de verification securite pre-deploiement |
+| `scripts/smoke_test.sh` | Tests post-deploy (couche 3) : API, version, Docker, filtres, services externes |
 
 ## Fonctions cles dans api_server.js
 
@@ -208,6 +242,9 @@ Avant de declarer un travail termine, verifier :
 | `validateSignal()` | (signal_validation.js) Gate centralise : 14 criteres doivent passer avant envoi Telegram |
 | `markSignalSent()` | (signal_validation.js) Enregistre un signal envoye (anti-doublon, compteur quotidien) |
 | `recordLoss()`/`recordWin()` | (signal_validation.js) Suivi des defaites consecutives pour pause automatique |
+| `preMatchValidation()` | Gate pre-analyse : 5 checks avant de lancer les agents IA (economise des tokens) |
+| `runStartupChecks()` | Couche 2 : tests de non-regression au boot du serveur |
+| `runHeartbeat()` | Couche 1 : healthcheck continu Stripe/Brevo/Telegram/API-Sports/BDD (toutes les 5 min) |
 
 ## Endpoints API importants
 
@@ -224,6 +261,7 @@ Avant de declarer un travail termine, verifier :
 | `/admin/preflight` | GET | Bilan complet du systeme (BDD, filtres, agents, Telegram, live, learning engine) |
 | `/admin/version` | GET | Version du build (hash git, date, regles actives) |
 | `/admin/audit` | GET | Audit complet : performance par agent, par marche, par ligue, analyses recentes avec stats |
+| `/admin/heartbeat` | GET | Healthcheck continu : Stripe, Brevo, Telegram, API-Sports, dernier concile, BDD |
 | `/admin/telegram-diagnostic` | GET | Test complet Telegram (getMe, webhook, envoi test) |
 | `/admin/send-report` | POST | Envoie rapport Hermes sur Telegram admin |
 
