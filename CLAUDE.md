@@ -163,6 +163,42 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse a 1 euro -> Pro (9.90
 - **Signal Fort** : alerte quand confiance >= 80%
 - **Multi-sport** : Football, Basketball, Hockey, Baseball, Tennis. Les sports non-Football passent directement le filtre low-trust dans shouldAutoObserveMatch
 
+### Fenetre d'analyse et publication (REGLES STRICTES)
+- **Pas d'analyse automatique avant la 35e minute** — `AUTO_CONCILE_MIN_MINUTE = 35`
+- **Pas d'analyse automatique apres la 75e minute** — `isFinishedOrTooLateForLiveIa` coupe a `minute >= 75`
+- **Pas d'envoi Telegram avant 35' ni apres 75'** — fenetre d'envoi signal fort : `matchMinute >= 35 && matchMinute < 75`
+- Ces limites s'appliquent a l'auto-concile et aux signaux forts Telegram
+- L'analyse manuelle (bouton site) reste disponible a tout moment pour l'utilisateur
+
+### Pays et competitions — Regles definitives (POINT DE SAUVEGARDE 2026-07-10)
+
+**PAYS BLOQUES (toutes divisions, toutes competitions)** :
+- Afrique : Ethiopia, Nigeria, Tanzania, Kenya, Uganda, Ghana, Zambia, Zimbabwe, Mozambique, Cameroon, Rwanda, Burundi, Malawi, Botswana, Senegal, Ivory Coast, Congo, Angola, Namibia, Gabon, Togo, Benin, Niger, Madagascar, Guinea, Sierra Leone, Liberia, Gambia, South Africa, Algeria, Tunisia, Egypt
+- Asie : Kazakhstan, Uzbekistan, Tajikistan, Kyrgyzstan, Turkmenistan, Myanmar, Cambodia, Laos, Vietnam, Bangladesh, Nepal, Mongolia, Palestine, Jordan, Iraq, Syria, Yemen, Oman, Bahrain, Lebanon, India, Sri Lanka, Pakistan, Indonesia, Malaysia, Philippines, Thailand, Iran
+- Amerique du Sud : **Chile, Bolivia, Peru, Venezuela, Ecuador, Paraguay, Colombia**
+- Amerique centrale : Honduras, Guatemala, El Salvador, Nicaragua, Costa Rica, Panama, Haiti, Jamaica, Trinidad, Dominican, Cuba, Belize, Suriname, Guyana
+- Europe (divisions inferieures) : Estonia, Latvia, Lithuania, Faroe, Gibraltar, Andorra, Malta, San Marino, Kosovo, North Macedonia, Albania, Moldova, Belarus, Armenia, Georgia, Azerbaijan, Iceland, Northern Ireland, Luxembourg, Liechtenstein, Montenegro, Bosnia
+- Oceanie : Fiji, Samoa, Tonga, Vanuatu, Solomon, Papua, New Caledonia, Tahiti, Australia NPL
+
+**PAYS/LIGUES AUTORISES** :
+- Europe top : France (Ligue 1/2), Angleterre (PL, Championship, FA Cup), Espagne (La Liga), Allemagne (Bundesliga), Italie (Serie A), Pays-Bas (Eredivisie), Belgique, Portugal, Turquie, Ecosse, Danemark, Norvege, Suede, Finlande, Suisse, Pologne, Republique Tcheque, Croatie, Serbie, Grece, Roumanie, Ukraine, Russie, Autriche, Hongrie, Bulgarie, Slovaquie, Chypre
+- Coupes europeennes : Champions League, Europa League, Conference League, Nations League
+- Amerique du Nord : MLS, Liga MX, USL Championship, NWSL, Canadian Premier, Leagues Cup, CONCACAF Champions
+- Amerique du Sud (3 pays seulement) : **Bresil** (Brasileirao), **Argentine** (Liga Profesional), **Uruguay** (Primera Division)
+- Coupes sud-americaines : Copa Libertadores, Copa Sudamericana, Copa America, Recopa, Supercopa
+- Asie premium : J-League (Japon), K-League (Coree), Chinese Super League, Saudi Pro League, UAE Pro League, Qatar Stars
+- Oceanie premium : A-League (Australie), Australia Cup
+- Sports US : NBA, NHL, MLB, NFL, CFL, AHL, NBL
+- Tennis : ATP, WTA, Grand Slam (Wimbledon, Roland Garros, US Open, Australian Open)
+- Rugby : Top 14, Pro D2, Premiership Rugby, URC
+- International : Euro, Olympic, Club World Cup (PAS la Coupe du Monde)
+
+**CATEGORIES TOUJOURS BLOQUEES** :
+- Friendly / Amical (toutes)
+- Jeunes : U17, U18, U19, U20, U21, U23
+- Reserves, B team, Youth, Academy
+- Coupe du Monde FIFA (world cup, coupe du monde, fifa world, copa del mundo)
+
 ### Anonymat du fondateur
 Ne jamais creer de fonctionnalite qui expose le nom, prenom, photo, voix, adresse ou telephone du fondateur. La marque communique, jamais le fondateur.
 

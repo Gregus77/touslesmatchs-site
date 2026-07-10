@@ -971,7 +971,7 @@ function getTodayStr() {
 const AUTO_CONCILE_OBSERVER = process.env.AUTO_CONCILE_OBSERVER !== "0";
 const AUTO_CONCILE_INTERVAL_MS = Math.max(5, Number(process.env.AUTO_CONCILE_INTERVAL_MIN || 10)) * 60 * 1000;
 const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX_MATCHES || 8));
-const AUTO_CONCILE_MIN_MINUTE = Math.max(1, Number(process.env.AUTO_CONCILE_MIN_MINUTE || 10));
+const AUTO_CONCILE_MIN_MINUTE = Math.max(1, Number(process.env.AUTO_CONCILE_MIN_MINUTE || 35));
 const AUTO_CONCILE_BUCKET_MINUTES = Math.max(5, Number(process.env.AUTO_CONCILE_BUCKET_MINUTES || 15));
 
 function getTokenRow(userId) {
@@ -1434,7 +1434,7 @@ function isFinishedOrTooLateForLiveIa(match) {
   const status = String(match?.status || "").toUpperCase();
   if (["FINISHED", "FT", "AET", "PEN", "ENDED", "CANCELLED", "POSTPONED"].includes(status)) return true;
   const minute = parseLiveMinuteValue(match?.minute);
-  return match?.sport === "Football" && minute !== null && minute >= 85;
+  return match?.sport === "Football" && minute !== null && minute >= 75;
 }
 
 function scoresDiffer(a, b) {
@@ -2151,8 +2151,11 @@ Réponds en JSON pur (pas de markdown):
   saveConcileAnalysis(match, analysisResult, pickBet);
 
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
+  // Fenetre d'envoi : entre 35' et 75' uniquement (pas de prono trop tot ni trop tard)
   const signalThreshold = getAdaptiveSignalThreshold();
-  if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN) {
+  const matchMinute = parseLiveMinuteValue(match.minute);
+  const inSendWindow = matchMinute === null || (matchMinute >= 35 && matchMinute < 75);
+  if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN && inSendWindow) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
