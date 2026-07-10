@@ -598,6 +598,41 @@ function sendTelegramMessage(chatId, text) {
   });
 }
 
+// Génère un lien d'invitation Telegram à usage unique vers le canal premium.
+// Le bot doit être administrateur du canal avec le droit d'inviter.
+function createPremiumInviteLink(labelEmail) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_PREMIUM_CHANNEL_ID) return Promise.resolve(null);
+  const body = JSON.stringify({
+    chat_id: TELEGRAM_PREMIUM_CHANNEL_ID,
+    name: `Premium ${labelEmail || ""}`.slice(0, 32),
+    member_limit: 1,
+    creates_join_request: false,
+  });
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TELEGRAM_BOT_TOKEN}/createChatInviteLink`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
+      timeout: 15000,
+    }, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const j = JSON.parse(data);
+          if (j.ok && j.result && j.result.invite_link) resolve(j.result.invite_link);
+          else { console.error("[telegram] createChatInviteLink KO:", data.slice(0, 200)); resolve(null); }
+        } catch { resolve(null); }
+      });
+    });
+    req.on("error", () => resolve(null));
+    req.on("timeout", () => { req.destroy(); resolve(null); });
+    req.write(body);
+    req.end();
+  });
+}
+
 // ── Shadow API helpers ────────────────────────────────────────────────────────
 function callOpenAICompat(prompt, { url, key, model }) {
   return new Promise((resolve) => {
@@ -5044,6 +5079,21 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
              <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
           ).join("");
 
+          // Lien d'invitation unique au groupe Telegram premium (Pro/VIP/Elite)
+          let premiumTelegramBlock = "";
+          if (["premium", "vip", "elite"].includes(status)) {
+            const inviteLink = await createPremiumInviteLink(customerEmail);
+            if (inviteLink) {
+              premiumTelegramBlock = `<div style="background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(79,70,229,.08));border:1px solid rgba(34,211,238,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
+                  <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:8px">📲 Ton acces au groupe Telegram premium</div>
+                  <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Lien personnel a usage unique — ne le partage pas.<br>Tu y recois les signaux forts (confiance 80%+) en direct.</div>
+                  <a href="${inviteLink}" style="display:inline-block;background:linear-gradient(135deg,#22d3ee,#4f46e5);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe premium →</a>
+                </div>`;
+            } else {
+              console.error(`[stripe] invite premium non généré pour ${customerEmail} — vérifier que le bot est admin du canal`);
+            }
+          }
+
           const upsellBlock = status === "carte"
             ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
@@ -5070,6 +5120,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
               <div style="text-align:center">
                 <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Acceder au Live IA →</a>
               </div>
+              ${premiumTelegramBlock}
               ${upsellBlock}
             </div>
           </div>`;
