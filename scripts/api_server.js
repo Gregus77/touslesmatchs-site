@@ -1,6 +1,13 @@
 // TousLesMatchs — API Server
 // Auth, live matches, Live IA, Stripe, Brevo, Admin
 
+process.on("uncaughtException", (err) => {
+  console.error("[CRASH-GUARD] uncaughtException:", err.message, err.stack);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[CRASH-GUARD] unhandledRejection:", reason);
+});
+
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");

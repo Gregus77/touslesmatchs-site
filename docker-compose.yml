@@ -76,6 +76,7 @@ services:
     container_name: touslesmatchs-hermes-admin
     restart: unless-stopped
     working_dir: /app
+    command: ["python", "-c", "import time; print('[hermes-admin] Idle — admin via api_server.js'); time.sleep(float('inf'))"]
     environment:
       - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
