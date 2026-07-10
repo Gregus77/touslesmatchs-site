@@ -12,6 +12,7 @@ const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
+const { validateSignal, recordSignalSent, recordFreeSignalSent, canSendFreeSignal, getSignalState } = require("./signal_validation");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -2121,24 +2122,26 @@ Réponds en JSON pur (pas de markdown):
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
-  // Signal fort Telegram automatique si confidence >= seuil adaptatif
+  // Signal fort Telegram — validation complète via signal_validation.js
   const signalThreshold = getAdaptiveSignalThreshold();
   if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
-      _signalSentCache.add(signalKey);
-      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
-      const ico = si[match.sport] || "🎯";
-      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
-      const todayStr = new Date().toISOString().slice(0, 10);
-      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      if (_freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
-        _freeSignalDailyDate.count++;
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
-      } else {
-        console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
+      const validation = validateSignal(match, analysisResult, { isLowTrustFn: isLowTrustCompetition, db });
+      if (validation.passed) {
+        _signalSentCache.add(signalKey);
+        recordSignalSent(match);
+        const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+        const ico = si[match.sport] || "🎯";
+        const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+        const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+        if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
+        if (canSendFreeSignal() && TELEGRAM_CHANNEL_ID) {
+          recordFreeSignalSent();
+          sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
+        } else {
+          console.log(`[signal-fort] Free channel: limite atteinte, skip`);
+        }
       }
     }
   }

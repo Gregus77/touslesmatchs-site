@@ -37,6 +37,7 @@ Avant de declarer un travail termine, verifier :
 | Fichier | Role |
 |---------|------|
 | `scripts/api_server.js` | API Node.js -- TOUT est la : Concile JS, Stripe, Telegram, Brevo, Signal Fort, Live IA, analytics, auto-concile |
+| `scripts/signal_validation.js` | Gate de validation des signaux — 13 criteres obligatoires avant envoi Telegram |
 | `public/index.html` | Page d'accueil unique (SPA-like) |
 | `public/live-ia.html` | Page Live IA avec onglets En direct / Statistiques |
 | `public/js/i18n.js` | Traductions FR de l'interface |
@@ -97,6 +98,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse a 1 euro -> Pro (9.90
 - **Cotes** : formule `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais au-dessus de 1.95
 - **Signal Fort** : alerte quand confiance >= 80%
 - **Multi-sport** : Football, Basketball, Hockey, Baseball, Tennis. Les sports non-Football passent directement le filtre low-trust dans shouldAutoObserveMatch
+- **Validation signaux** : 13 criteres dans `scripts/signal_validation.js` — competition, timing live (10'-75'), donnees, consensus (3/5), confiance (>=80%), marche autorise, cotes (1.25-1.95), coherence modeles, limite 3 signaux/jour, espacement 1h, anti-doublon, pause apres 3 defaites, statut match
 
 ### Anonymat du fondateur
 Ne jamais creer de fonctionnalite qui expose le nom, prenom, photo, voix, adresse ou telephone du fondateur. La marque communique, jamais le fondateur.
