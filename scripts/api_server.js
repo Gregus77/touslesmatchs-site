@@ -5456,6 +5456,171 @@ app.get("/admin/telegram-diagnostic", async (req, res) => {
   res.json(results);
 });
 
+// ── Admin — preflight : etat complet du systeme pour chaque session Claude ───
+app.get("/admin/preflight", async (req, res) => {
+  const report = { timestamp: new Date().toISOString(), checks: {}, warnings: [] };
+
+  // 1. Base de donnees — etat des tables
+  try {
+    const tables = {};
+    const tableNames = ["concile_analyses", "agent_predictions", "agent_market_predictions",
+      "users", "user_tokens", "revealed_analyses", "page_views", "scheduled_emails",
+      "shadow_evals", "league_ratings", "decision_journal", "agent_weights"];
+    for (const t of tableNames) {
+      try {
+        const row = db.prepare(`SELECT COUNT(*) as n FROM ${t}`).get();
+        tables[t] = row.n;
+      } catch { tables[t] = "TABLE_MISSING"; }
+    }
+    report.checks.database = { ok: true, tables };
+  } catch (e) { report.checks.database = { ok: false, error: e.message }; }
+
+  // 2. Historique picks — derniers picks et stats
+  try {
+    const lastPicks = db.prepare(`
+      SELECT home, away, best_bet, confidence, outcome, sport, competition,
+             analysed_at, final_score_home, final_score_away
+      FROM concile_analyses ORDER BY rowid DESC LIMIT 10
+    `).all();
+    const stats = db.prepare(`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) as pending
+      FROM concile_analyses
+    `).get();
+    const winrate = (stats.wins + stats.losses) > 0
+      ? Math.round(stats.wins / (stats.wins + stats.losses) * 100) : null;
+    report.checks.history = { ok: true, total: stats.total, wins: stats.wins,
+      losses: stats.losses, pending: stats.pending, winrate, last_picks: lastPicks };
+  } catch (e) { report.checks.history = { ok: false, error: e.message }; }
+
+  // 3. Competitions — distribution des analyses par competition
+  try {
+    const compStats = db.prepare(`
+      SELECT competition, sport, COUNT(*) as n,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE competition IS NOT NULL AND competition != ''
+      GROUP BY competition, sport ORDER BY n DESC LIMIT 30
+    `).all();
+    report.checks.competitions = { ok: true, count: compStats.length, data: compStats };
+  } catch (e) { report.checks.competitions = { ok: false, error: e.message }; }
+
+  // 4. Performance agents
+  try {
+    const perf = getAgentPerformance();
+    const agents = {};
+    for (const [name, p] of Object.entries(perf)) {
+      const resolved = (p.wins || 0) + (p.losses || 0);
+      agents[name] = {
+        wins: p.wins || 0, losses: p.losses || 0, resolved,
+        pending: p.pending || 0,
+        winrate: resolved > 0 ? Math.round(p.wins / resolved * 100) : null,
+      };
+    }
+    report.checks.agents = { ok: true, data: agents };
+  } catch (e) { report.checks.agents = { ok: false, error: e.message }; }
+
+  // 5. Filtres — TRUSTED et LOW_TRUST counts
+  report.checks.filters = {
+    ok: true,
+    trusted_count: TRUSTED_COMPETITIONS.length,
+    low_trust_count: LOW_TRUST_COMPETITION_KEYWORDS.length,
+    default_behavior: "return false (accepte les competitions inconnues)",
+    filter_order: "TRUSTED d'abord, puis LOW_TRUST, puis default",
+  };
+
+  // 6. Telegram
+  report.checks.telegram = {
+    bot_token_set: !!TELEGRAM_BOT_TOKEN,
+    free_channel_set: !!TELEGRAM_CHANNEL_ID,
+    premium_channel_set: !!TELEGRAM_PREMIUM_CHANNEL_ID,
+    admin_chat_set: !!TELEGRAM_ADMIN_CHAT_ID,
+  };
+
+  // 7. API keys
+  report.checks.api_keys = {
+    api_football: !!API_SPORTS_KEY,
+    football_data: !!FOOTBALL_DATA_KEY,
+    deepseek: !!DEEPSEEK_API_KEY,
+    groq: !!GROQ_API_KEY,
+    mistral: !!MISTRAL_API_KEY,
+    perplexity: !!PERPLEXITY_API_KEY,
+    cohere: !!COHERE_API_KEY,
+    stripe: !!STRIPE_SECRET_KEY,
+  };
+
+  // 8. Live matches — etat actuel
+  try {
+    const allMatches = await fetchLiveMatches();
+    const filtered = allMatches.filter(m => !isLowTrustCompetition(m));
+    const blockedSample = allMatches
+      .filter(m => isLowTrustCompetition(m))
+      .slice(0, 5)
+      .map(m => ({ competition: m.competition, sport: m.sport }));
+    report.checks.live = {
+      ok: true,
+      total_from_api: allMatches.length,
+      after_filter: filtered.length,
+      blocked: allMatches.length - filtered.length,
+      blocked_sample: blockedSample,
+      sports: [...new Set(filtered.map(m => m.sport))],
+    };
+    if (allMatches.length > 0 && filtered.length === 0) {
+      report.warnings.push("TOUS les matchs live sont bloques par le filtre low-trust");
+    }
+  } catch (e) { report.checks.live = { ok: false, error: e.message }; }
+
+  // 9. Adaptive threshold
+  try {
+    report.checks.signal_threshold = { value: getAdaptiveSignalThreshold() };
+  } catch (e) { report.checks.signal_threshold = { error: e.message }; }
+
+  // 10. Learning engine — verification circulaire
+  try {
+    const zeroHistory = assessLearningProfile(null, 5);
+    report.checks.learning_engine = {
+      ok: zeroHistory.clientSafe === true,
+      zero_history_result: zeroHistory,
+      circular_dependency: zeroHistory.clientSafe !== true
+        ? "ALERTE: le manque d'historique bloque les analyses (dependance circulaire)"
+        : "OK: le manque d'historique ne bloque pas",
+    };
+    if (zeroHistory.clientSafe !== true) {
+      report.warnings.push("Dependance circulaire detectee dans le learning engine");
+    }
+  } catch (e) { report.checks.learning_engine = { ok: false, error: e.message }; }
+
+  // 11. Auto-concile observer status
+  report.checks.auto_concile = {
+    enabled: !!AUTO_CONCILE_OBSERVER,
+    min_minute: typeof AUTO_CONCILE_MIN_MINUTE !== "undefined" ? AUTO_CONCILE_MIN_MINUTE : "?",
+    max_matches: typeof AUTO_CONCILE_MAX_MATCHES !== "undefined" ? AUTO_CONCILE_MAX_MATCHES : "?",
+  };
+
+  // 12. Stripe
+  report.checks.stripe = {
+    secret_key_set: !!STRIPE_SECRET_KEY,
+    price_ids: {
+      premium: !!process.env.STRIPE_PRICE_ID_PREMIUM,
+      vip: !!process.env.STRIPE_PRICE_ID_VIP,
+      elite: !!process.env.STRIPE_PRICE_ID_ELITE,
+    },
+  };
+
+  // Resume global
+  const criticalFails = Object.entries(report.checks)
+    .filter(([, v]) => v.ok === false)
+    .map(([k]) => k);
+  report.status = criticalFails.length === 0 ? "HEALTHY" : "DEGRADED";
+  report.critical_failures = criticalFails;
+
+  res.json(report);
+});
+
 // ── Admin — bilan complet analyses gagnées/perdues sur Telegram admin ────────
 async function sendStatsBilanTelegram() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
