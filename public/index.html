@@ -989,6 +989,9 @@ footer{
 .pf-ct{font-size:11px;color:var(--cyan)}
 .pf-comp{font-size:11px;color:var(--muted);white-space:nowrap}
 .pf-pick{font-size:11px;color:var(--indigo2);font-weight:600;white-space:nowrap}
+.pf-past-item.pending{background:rgba(99,102,241,.05);border-color:rgba(99,102,241,.2)}
+.pf-badge.pending{color:var(--indigo2);background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3)}
+.pf-section-title{font-size:13px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;margin:16px 0 8px;padding-left:4px}
 
 /* ── Next Pick Card ── */
 .np-card{background:var(--bg2);border:1px solid rgba(99,102,241,.25);border-radius:20px;padding:28px;position:relative;overflow:hidden}
@@ -2363,14 +2366,34 @@ const PICKS_FEED = [
 
 function renderPicksFeed() {
   const root = document.getElementById('pf-root');
+  const pending = PICKS_FEED.filter(p => p.status === 'pending');
   const past = PICKS_FEED.filter(p => p.status === 'finished');
   const next = PICKS_FEED.find(p => p.status === 'upcoming');
   let html = '';
 
-  // Résultats passés — tous, avec gain en euros
-  if (past.length) {
+  // Analyses en cours (envoyées sur Telegram, en attente de résultat)
+  if (pending.length) {
+    html += '<div class="pf-section-title">Analyses du jour — en attente de résultat</div>';
     html += '<div class="pf-past">';
-    [...past].reverse().slice(0,6).forEach(p => {
+    [...pending].reverse().forEach(p => {
+      html += `<div class="pf-past-item pending">
+        <span class="pf-badge pending">⏳</span>
+        <span class="pf-mn">${p.home} vs ${p.away}</span>
+        <span class="pf-pick">${p.pick}</span>
+        <span class="pf-sc">${p.score||'en cours'}</span>
+        <span class="pf-ct">@${p.cote}</span>
+        <span style="font-size:11px;font-weight:600;color:var(--indigo2);margin-left:auto">${p.confidence||''}%</span>
+        <span class="pf-comp">${p.competition}</span>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Résultats terminés
+  if (past.length) {
+    if(pending.length) html += '<div class="pf-section-title">Résultats passés</div>';
+    html += '<div class="pf-past">';
+    [...past].reverse().slice(0,10).forEach(p => {
       const w = p.result === 'win';
       const gain = w ? '+' + ((p.cote - 1) * 10).toFixed(0) + '€' : '-10€';
       html += `<div class="pf-past-item${w?'':' loss'}">
@@ -2383,8 +2406,12 @@ function renderPicksFeed() {
         <span class="pf-comp">${p.competition}</span>
       </div>`;
     });
-    html += `<a href="/live-ia#historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir les ${past.length} derniers résultats →</a>`;
+    html += `<a href="/live-ia#historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir tous les résultats →</a>`;
     html += '</div>';
+  }
+
+  // Boutons bookmakers avec affiliation
+  if(past.length || pending.length) {
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 20px">';
     BM.forEach(b=>{
       html += `<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}" style="flex:1 1 calc(25% - 8px);min-width:100px;max-width:160px;text-align:center;font-size:13px;padding:10px 14px">${b.name} →</a>`;
@@ -3153,13 +3180,13 @@ document.addEventListener('click',function(e){
     d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
     injectAndRefresh();
   }).catch(()=>{});
-  fetch('/api/analysis-history?limit=30').then(r=>r.json()).then(d=>{
+  fetch('/api/analysis-history?limit=50').then(r=>r.json()).then(d=>{
     if(!d.ok || !d.analyses) return;
     d.analyses.forEach(a=>{
       const id='ah-'+String(a.home+'-'+a.away+'-'+(a.analysed_at||'')).replace(/\s+/g,'-').toLowerCase();
       if(existing.has(id)) return;
-      if(!a.outcome) return;
       const coteMoy=(c)=>Math.min(1.95,((1/(c/100))*1.45));
+      const hasResult = a.outcome === 'win' || a.outcome === 'loss';
       PICKS_FEED.push({
         id, date:a.analysed_at?a.analysed_at.slice(0,10):'',
         time:a.analysed_at?a.analysed_at.slice(11,16):'',
@@ -3167,9 +3194,10 @@ document.addEventListener('click',function(e){
         home:a.home, away:a.away,
         pick:a.bet||'Analyse IA',
         cote:parseFloat(coteMoy(a.confidence).toFixed(2)),
-        status:'finished',
-        result:a.outcome==='win'?'win':'loss',
-        score:a.final_score||a.score||'?'
+        confidence:a.confidence,
+        status: hasResult ? 'finished' : 'pending',
+        result: hasResult ? a.outcome : null,
+        score:a.final_score||a.score||null
       });
       existing.add(id);
       updated=true;
