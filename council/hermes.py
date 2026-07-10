@@ -27,6 +27,7 @@ from tools.telegram_bot import (
     send_premium_stats, send_daily_report, is_configured as telegram_ok
 )
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
+from agents import opus_agent, gpt4o_agent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,6 +84,7 @@ def filter_agents_by_accuracy(agents, agent_accuracy):
     agent_name_map = {
         "gpt": "DeepSeek", "gemini": "Gemini Flash",
         "mistral": "Mistral", "groq": "Groq/Llama3",
+        "opus": "Opus", "gpt4o": "GPT-4o",
     }
     qualified = []
     excluded = []
@@ -158,6 +160,25 @@ def run_council():
             key = futures[future]
             name, report = future.result()
             agent_reports[key] = report
+
+    # 4b. Run shadow agents (vote enregistré mais n'influence PAS la décision)
+    shadow_agents = [
+        ("opus", opus_agent),
+        ("gpt4o", gpt4o_agent),
+    ]
+    shadow_reports = {}
+    log.info(f"Lancement de {len(shadow_agents)} agents shadow (à blanc)...")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {
+            executor.submit(run_agent, module, date_str, matches_text, history_text, stats): key
+            for key, module in shadow_agents
+        }
+        for future in as_completed(futures):
+            key = futures[future]
+            name, report = future.result()
+            shadow_reports[key] = report
+            log.info(f"  [SHADOW] {name}: {report.get('recommendation')} "
+                     f"conf={report.get('confidence',0)} — {report.get('match','—')}")
 
     # 5. Collect premium candidates (confidence 7-7.9)
     premium_candidates = []
@@ -239,9 +260,13 @@ def run_council():
                     log.info(f"  Pick premium envoyé Telegram: {match_key}")
 
     # 10. Save agent votes for performance tracking
-    for key, report in agent_reports.items():
-        agent_name = {"gpt": "DeepSeek", "gemini": "Gemini Flash",
-                      "mistral": "Mistral", "groq": "Groq/Llama3"}.get(key, key)
+    agent_name_map = {
+        "gpt": "DeepSeek", "gemini": "Gemini Flash",
+        "mistral": "Mistral", "groq": "Groq/Llama3",
+        "opus": "Opus", "gpt4o": "GPT-4o",
+    }
+    for key, report in {**agent_reports, **shadow_reports}.items():
+        agent_name = agent_name_map.get(key, key)
         save_agent_vote(
             agent_name, today_display, json.dumps(report),
             sport=report.get("sport"), confidence=report.get("confidence")
@@ -289,6 +314,7 @@ def run_council():
     _send_daily_report(
         decision=decision,
         agent_reports=agent_reports,
+        shadow_reports=shadow_reports,
         excluded_agents=excluded_agents,
         stats=stats,
         sport_counts=sport_counts,
@@ -301,20 +327,31 @@ def run_council():
     return decision
 
 
-def _send_daily_report(decision, agent_reports, excluded_agents, stats, sport_counts, is_nopick):
+def _send_daily_report(decision, agent_reports, shadow_reports, excluded_agents, stats, sport_counts, is_nopick):
     """Send a daily operational report to the admin Telegram chat."""
     date_str = datetime.now().strftime("%d/%m/%Y %H:%M")
 
+    name_map = {
+        "gpt": "DeepSeek", "gemini": "Gemini Flash",
+        "mistral": "Mistral", "groq": "Groq/Llama3",
+        "opus": "Opus", "gpt4o": "GPT-4o",
+    }
     sports_line = " | ".join(f"{s}: {c}" for s, c in sorted(sport_counts.items()))
 
     agents_lines = []
     for key, report in agent_reports.items():
-        name = {"gpt": "DeepSeek", "gemini": "Gemini Flash",
-                "mistral": "Mistral", "groq": "Groq/Llama3"}.get(key, key)
+        name = name_map.get(key, key)
         rec = report.get("recommendation", "?")
         conf = report.get("confidence", 0)
         match = report.get("match", "-")
         agents_lines.append(f"  {name}: {rec} ({conf}/10) — {match}")
+
+    for key, report in shadow_reports.items():
+        name = name_map.get(key, key)
+        rec = report.get("recommendation", "?")
+        conf = report.get("confidence", 0)
+        match = report.get("match", "-")
+        agents_lines.append(f"  👻 {name} (shadow): {rec} ({conf}/10) — {match}")
 
     excluded_lines = []
     for key, name, accuracy in excluded_agents:

@@ -1264,10 +1264,11 @@ async function fetchFromFootballData() {
   try {
     const today = new Date().toISOString().slice(0, 10);
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    // Matchs EN COURS + TERMINÉS hier et aujourd'hui (couvre les picks de J-1)
-    const [liveData, finishedData] = await Promise.all([
+    // Matchs EN COURS + TERMINÉS + PROGRAMMÉS aujourd'hui
+    const [liveData, finishedData, scheduledData] = await Promise.all([
       httpGet("https://api.football-data.org/v4/matches?status=LIVE", { "X-Auth-Token": FOOTBALL_DATA_KEY }),
       httpGet(`https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${yesterday}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
+      httpGet(`https://api.football-data.org/v4/matches?status=SCHEDULED,TIMED&dateFrom=${today}&dateTo=${today}`, { "X-Auth-Token": FOOTBALL_DATA_KEY }),
     ]);
     const live = (liveData.matches || []).map((m) => {
       const match = formatFDMatch(m);
@@ -1277,8 +1278,12 @@ async function fetchFromFootballData() {
       const match = formatFDMatch(m);
       return { ...match, lowTrustCompetition: isLowTrustCompetition(match) };
     });
-    const all = [...live, ...finished];
-    console.log(`[live-matches] football-data.org: ${live.length} live, ${finished.length} finished (hier+aujourd'hui)`);
+    const scheduled = (scheduledData.matches || []).map((m) => {
+      const match = formatFDMatch(m);
+      return { ...match, lowTrustCompetition: isLowTrustCompetition(match) };
+    });
+    const all = [...live, ...scheduled, ...finished];
+    console.log(`[live-matches] football-data.org: ${live.length} live, ${scheduled.length} scheduled, ${finished.length} finished`);
     return all;
   } catch (e) {
     console.error("[live-matches] football-data.org error:", e.message);
@@ -1410,7 +1415,9 @@ function parseLiveMinuteValue(minute) {
 
 function isFinishedOrTooLateForLiveIa(match) {
   const status = String(match?.status || "").toUpperCase();
-  if (["FINISHED", "FT", "AET", "PEN", "ENDED", "CANCELLED", "POSTPONED"].includes(status)) return true;
+  if (["CANCELLED", "POSTPONED"].includes(status)) return true;
+  if (["SCHEDULED", "TIMED"].includes(status)) return false;
+  if (["FINISHED", "FT", "AET", "PEN", "ENDED"].includes(status)) return true;
   const minute = parseLiveMinuteValue(match?.minute);
   return match?.sport === "Football" && minute !== null && minute >= 85;
 }
