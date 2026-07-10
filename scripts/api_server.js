@@ -1184,7 +1184,7 @@ const TRUSTED_COMPETITIONS = [
   "super lig", "süper lig",
   "champions league", "europa league", "conference league",
   "euro 20", "uefa euro", "nations league",
-  "mls ", "liga mx", "copa libertadores", "copa sudamericana",
+  "mls", "liga mx", "copa libertadores", "copa sudamericana",
   "brasileirao", "serie a · brazil",
   "liga profesional", "copa argentina",
   "j1 league", "j-league", "meiji yasuda",

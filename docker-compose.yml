@@ -26,6 +26,7 @@ services:
     restart: unless-stopped
     environment:
       - API_FOOTBALL_KEY=${API_FOOTBALL_KEY}
+      - FOOTBALL_DATA_KEY=${FOOTBALL_DATA_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
