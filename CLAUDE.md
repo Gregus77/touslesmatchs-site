@@ -110,6 +110,7 @@ Avant de declarer un travail termine, verifier :
 | `council/tools/telegram_bot.py` | Envoi Telegram (gratuit + premium + admin) |
 | `Caddyfile` | Config reverse proxy (routes API, fichiers statiques) |
 | `docker-compose.yml` | Orchestration des 4 services |
+| `scripts/signal_validation.js` | Validation centralisee des signaux forts (14 criteres, tous doivent passer avant envoi Telegram) |
 | `scripts/preflight.sh` | Script de verification securite pre-deploiement |
 
 ## Fonctions cles dans api_server.js
@@ -125,6 +126,9 @@ Avant de declarer un travail termine, verifier :
 | `buildDailyVisitorReport()` | Rapport visiteurs quotidien (23h Paris) |
 | `buildWeeklyMarketingReport()` | Rapport marketing hebdo (lundi 8h) |
 | `checkAnalyticsSchedule()` | Scheduler interne (interval 60s) pour rapports |
+| `validateSignal()` | (signal_validation.js) Gate centralise : 14 criteres doivent passer avant envoi Telegram |
+| `markSignalSent()` | (signal_validation.js) Enregistre un signal envoye (anti-doublon, compteur quotidien) |
+| `recordLoss()`/`recordWin()` | (signal_validation.js) Suivi des defaites consecutives pour pause automatique |
 
 ## Endpoints API importants
 

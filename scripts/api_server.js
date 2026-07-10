@@ -12,6 +12,7 @@ const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
+const { validateSignal, markSignalSent, recordLoss, recordWin, getGateStatus } = require("./signal_validation");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -2150,12 +2151,12 @@ Réponds en JSON pur (pas de markdown):
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
-  // Signal fort Telegram automatique si confidence >= seuil adaptatif
-  // Fenetre d'envoi : entre 35' et 75' uniquement (pas de prono trop tot ni trop tard)
-  const signalThreshold = getAdaptiveSignalThreshold();
-  const matchMinute = parseLiveMinuteValue(match.minute);
-  const inSendWindow = matchMinute === null || (matchMinute >= 35 && matchMinute < 75);
-  if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN && inSendWindow) {
+  // Signal fort Telegram — validation centralisee via signal_validation.js
+  const gate = validateSignal(match, analysisResult, {
+    isLowTrust: (m) => isLowTrustCompetition(m.competition, m.sport),
+    adaptiveThreshold: getAdaptiveSignalThreshold(),
+  });
+  if (gate.allowed && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
@@ -2172,7 +2173,10 @@ Réponds en JSON pur (pas de markdown):
       } else {
         console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
       }
+      markSignalSent(match);
     }
+  } else if (!gate.allowed) {
+    console.log(`[signal-gate] BLOQUE ${match.home} vs ${match.away}: ${gate.reasons.join(", ")}`);
   }
 
   // Évaluation shadow en parallèle (sans bloquer la réponse Concile)
@@ -2458,6 +2462,8 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
         if (out) {
           upd.run(out, h, a, "api_finished_match", r.id);
+          if (out === "win") recordWin(r.sport || "Football", r.competition);
+          else if (out === "loss") recordLoss(r.sport || "Football", r.competition);
           const resThreshold = getAdaptiveSignalThreshold();
           if (r.confidence >= resThreshold && TELEGRAM_BOT_TOKEN) {
             notifySignalFortResult(r, out, h, a).catch(() => {});
@@ -5593,7 +5599,12 @@ app.get("/admin/preflight", async (req, res) => {
     max_matches: typeof AUTO_CONCILE_MAX_MATCHES !== "undefined" ? AUTO_CONCILE_MAX_MATCHES : "?",
   };
 
-  // 12. Stripe
+  // 12. Signal validation gate status
+  try {
+    report.checks.signal_gate = getGateStatus();
+  } catch (e) { report.checks.signal_gate = { error: e.message }; }
+
+  // 13. Stripe
   report.checks.stripe = {
     secret_key_set: !!STRIPE_SECRET_KEY,
     price_ids: {
