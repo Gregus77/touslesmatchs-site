@@ -2223,106 +2223,110 @@ function buildChart(){
     data.push(bankroll);
   });
 
-  // Mise à jour des KPIs
+  // KPIs de secours calculés depuis PICKS_FEED (picks du jour)
   const wins = finished.filter(p => p.result === 'win').length;
   const total = finished.length;
-  const roi = total > 0 ? ((bankroll - bankrollDepart) / bankrollDepart * 100).toFixed(1) : '0';
   const winrate = total > 0 ? Math.round(wins / total * 100) : 0;
-  const roiEl = document.getElementById('kpi-roi');
-  const wrEl  = document.getElementById('kpi-winrate');
-  const bkEl  = document.getElementById('kpi-bankroll');
-  const pkEl  = document.getElementById('kpi-picks');
-  const gainNet = (bankroll - bankrollDepart).toFixed(1);
-  if(roiEl) roiEl.textContent = (gainNet >= 0 ? '+' : '') + gainNet + '€';
-  if(wrEl)  wrEl.textContent  = winrate + '%';
-  if(bkEl)  bkEl.textContent  = bankrollDepart + '€ → ' + bankroll + '€';
-  if(pkEl)  pkEl.textContent  = total;
-  // Sync hero stats
-  const hsW = document.getElementById('hs-winrate');
-  const hsG = document.getElementById('hs-gain');
-  if(hsW) hsW.textContent = winrate + '%';
-  if(hsG) hsG.textContent = (gainNet >= 0 ? '+' : '') + Math.round(gainNet) + '€';
-  // Sync ticker — prefer premium-teaser stats (includes auto-concile) for consistency
+  const gainNet = parseFloat((bankroll - bankrollDepart).toFixed(1));
+
+  // Applique les KPIs + ticker + hero à partir d'une source unique
+  function applyStats(wr, tot, gain, bankrollFinal){
+    const set = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+    set('kpi-roi', (gain >= 0 ? '+' : '') + gain + '€');
+    set('kpi-winrate', wr + '%');
+    set('kpi-bankroll', '100€ → ' + bankrollFinal + '€');
+    set('kpi-picks', tot);
+    set('hs-winrate', wr + '%');
+    set('hs-gain', (gain >= 0 ? '+' : '') + Math.round(gain) + '€');
+    const ts = `🏆 Winrate ${wr}% · ${tot} pick${tot>1?'s':''} · Profit ${gain>=0?'+':''}${Math.round(gain)}€ sur 10€/pick`;
+    ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ts;});
+    const cp = document.getElementById('community-picks-played');
+    if(cp) cp.textContent = String(tot);
+    const fr = document.getElementById('fomo-record');
+    const w = Math.round(tot * wr / 100);
+    if(fr) fr.textContent = `Stats: ${w} gagnés / ${tot - w} perdus · ${tot} picks terminés`;
+  }
+
+  // Dessine la courbe de bankroll
+  function drawRoiChart(chLabels, chData){
+    const canvas = document.getElementById('roi-chart');
+    if(!canvas) return;
+    if(typeof Chart === 'undefined'){ canvas.style.display = 'none'; return; }
+    if(!chData || chData.length < 3){
+      canvas.style.display = 'none';
+      if(!canvas.parentNode.querySelector('.roi-empty-msg')){
+        const msg = document.createElement('div');
+        msg.className = 'roi-empty-msg';
+        msg.style.cssText = 'text-align:center;padding:32px 16px;color:var(--muted);font-size:13px;line-height:1.8';
+        msg.innerHTML = '📈 Courbe de progression en construction<br><span style="font-size:11px;opacity:.6">Les résultats s\'afficheront ici au fil des picks</span>';
+        canvas.parentNode.insertBefore(msg, canvas);
+      }
+      return;
+    }
+    canvas.style.display = '';
+    const ctx2 = canvas.getContext('2d');
+    const grad = ctx2.createLinearGradient(0, 0, 0, 180);
+    grad.addColorStop(0, 'rgba(99,102,241,.25)');
+    grad.addColorStop(1, 'rgba(99,102,241,.02)');
+    const dense = chData.length > 40;
+    if(canvas._roiChart) canvas._roiChart.destroy();
+    canvas._roiChart = new Chart(ctx2,{
+      type:'line',
+      data:{
+        labels: chLabels,
+        datasets:[{
+          label:'Bankroll (€)',
+          data: chData,
+          borderColor:'#6366f1',
+          backgroundColor:grad,
+          borderWidth:2.5,
+          pointBackgroundColor:'#6366f1',
+          pointBorderColor:'#0d1020',
+          pointBorderWidth:2,
+          pointRadius: dense ? 0 : 5,
+          pointHoverRadius:7,
+          tension:.4, fill:true,
+        }]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(13,16,32,.95)',
+            borderColor:'rgba(99,102,241,.3)',
+            borderWidth:1,
+            titleColor:'#eceaf4',
+            bodyColor:'#a8aec8',
+            padding:12,
+            callbacks:{label:ctx=>`  ${ctx.parsed.y.toFixed(1)}€`}
+          }
+        },
+        scales:{
+          x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b82a0',font:{size:11},maxTicksLimit:8,autoSkip:true}},
+          y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b82a0',font:{size:11},callback:v=>v+'€'}}
+        }
+      }
+    });
+  }
+
+  // Source UNIQUE : premium-teaser (toutes les analyses). Fallback : picks du jour.
   fetch('/api/premium-teaser?t='+Date.now()).then(r=>r.json()).then(pt=>{
-    if(pt.ok && pt.allTime && pt.allTime.total > 0){
-      const ptWr = pt.allTime.winrate || 0;
-      const ptTotal = pt.allTime.total || 0;
-      const ptGain = pt.simulated_gain_raw || 0;
-      const ts = `🏆 Winrate ${ptWr}% · ${ptTotal} pick${ptTotal>1?'s':''} · Profit ${ptGain>=0?'+':''}${ptGain}€ sur 10€/pick`;
-      ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ts;});
+    if(pt.ok && pt.allTime && pt.allTime.total > 0 && Array.isArray(pt.progression) && pt.progression.length > 1){
+      const wr = pt.allTime.winrate || 0;
+      const tot = pt.allTime.total || 0;
+      const gain = pt.simulated_gain_raw || 0;
+      const bankrollFinal = (pt.bankroll_final != null ? pt.bankroll_final : 100);
+      applyStats(wr, tot, gain, bankrollFinal);
+      drawRoiChart(pt.progression.map(p=>p.label), pt.progression.map(p=>p.value));
     } else {
-      const ts = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur 10€/pick`;
-      ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ts;});
+      applyStats(winrate, total, gainNet, bankroll);
+      drawRoiChart(labels, data);
     }
   }).catch(()=>{
-    const ts = `🏆 Winrate ${winrate}% · ${total} pick${total>1?'s':''} · Profit ${gainNet>=0?'+':''}${Math.round(gainNet)}€ sur 10€/pick`;
-    ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ts;});
-  });
-  const communityPlayed = document.getElementById('community-picks-played');
-  if(communityPlayed) communityPlayed.textContent = String(total);
-  const fomoRecord = document.getElementById('fomo-record');
-  if(fomoRecord) fomoRecord.textContent = `Stats: ${wins} gagnés / ${total - wins} perdus · ${total} picks terminés`;
-
-  const canvas = document.getElementById('roi-chart');
-  if(!canvas) return;
-  if(typeof Chart === 'undefined'){
-    canvas.style.display = 'none';
-    return;
-  }
-
-  // Pas assez de données : message à la place du graphique
-  if(total < 2){
-    canvas.style.display = 'none';
-    const msg = document.createElement('div');
-    msg.style.cssText = 'text-align:center;padding:32px 16px;color:var(--muted);font-size:13px;line-height:1.8';
-    msg.innerHTML = '📈 Courbe de progression en construction<br><span style="font-size:11px;opacity:.6">Les résultats s\'afficheront ici au fil des picks</span>';
-    canvas.parentNode.insertBefore(msg, canvas);
-    return;
-  }
-
-  const ctx2 = canvas.getContext('2d');
-  const grad = ctx2.createLinearGradient(0, 0, 0, 180);
-  grad.addColorStop(0, 'rgba(99,102,241,.25)');
-  grad.addColorStop(1, 'rgba(99,102,241,.02)');
-
-  new Chart(ctx2,{
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:'Bankroll (€)',
-        data,
-        borderColor:'#6366f1',
-        backgroundColor:grad,
-        borderWidth:2.5,
-        pointBackgroundColor:'#6366f1',
-        pointBorderColor:'#0d1020',
-        pointBorderWidth:2,
-        pointRadius:5,
-        pointHoverRadius:7,
-        tension:.4, fill:true,
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'rgba(13,16,32,.95)',
-          borderColor:'rgba(99,102,241,.3)',
-          borderWidth:1,
-          titleColor:'#eceaf4',
-          bodyColor:'#a8aec8',
-          padding:12,
-          callbacks:{label:ctx=>`  ${ctx.parsed.y.toFixed(1)}€`}
-        }
-      },
-      scales:{
-        x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b82a0',font:{size:11}}},
-        y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#7b82a0',font:{size:11},callback:v=>v+'€'}}
-      }
-    }
+    applyStats(winrate, total, gainNet, bankroll);
+    drawRoiChart(labels, data);
   });
 }
 

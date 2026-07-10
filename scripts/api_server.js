@@ -5964,6 +5964,21 @@ app.get("/premium-teaser", (req, res) => {
 
     const recentResults = todayRows.length > 0 ? todayRows : deduped.slice(0, 20);
 
+    // Courbe de bankroll chronologique (mise 10€, capital départ 100€)
+    // sur toutes les analyses — source unique pour le graphique ROI du site.
+    const chronological = [...deduped].reverse();
+    let bankroll = 100;
+    const progression = [{ label: "Départ", value: 100 }];
+    for (const r of chronological) {
+      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+      bankroll += r.outcome === "win" ? (10 * cote - 10) : -10;
+      bankroll = Math.round(bankroll * 100) / 100;
+      const label = r.analysed_at
+        ? r.analysed_at.slice(5, 10).split("-").reverse().join("/") + " " + String(r.home || "").split(" ")[0]
+        : String(r.home || "").split(" ")[0];
+      progression.push({ label, value: bankroll });
+    }
+
     res.json({
       ok: true,
       today_signals: todaySignals,
@@ -5971,6 +5986,8 @@ app.get("/premium-teaser", (req, res) => {
       allTime: { total: allTime.total, wins: allTime.wins, winrate },
       simulated_gain_10: simGain > 0 ? `+${Math.round(simGain)}€` : `${Math.round(simGain)}€`,
       simulated_gain_raw: Math.round(simGain),
+      bankroll_final: Math.round(bankroll * 100) / 100,
+      progression,
       today_results: todayStats,
       yesterday: yesterdayStats,
       recent: recentResults.map(r => {
