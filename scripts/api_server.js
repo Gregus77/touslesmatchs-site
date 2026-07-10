@@ -1151,6 +1151,10 @@ function normalizeApiSportsFootballFixture(f) {
     sport: "Football",
     home: f.teams.home.name,
     away: f.teams.away.name,
+    homeId: f.teams.home.id ?? null,
+    awayId: f.teams.away.id ?? null,
+    leagueId: f.league?.id ?? null,
+    season: f.league?.season ?? null,
     home_logo: f.teams.home.logo || null,
     away_logo: f.teams.away.logo || null,
     score_home: f.goals.home ?? null,
@@ -1620,6 +1624,74 @@ async function fetchMatchStatsForMatch(match) {
   return buildStatsStatus({ ...match, fixtureId }, stats, null);
 }
 
+// ── H2H (confrontations directes) — donnée factuelle pour ancrer l'analyse ────
+const h2hCache = new Map();
+
+async function fetchH2H(match) {
+  if (!API_SPORTS_KEY || match.source !== "api-sports" || match.sport !== "Football") return null;
+  const homeId = match.homeId, awayId = match.awayId;
+  if (!homeId || !awayId) return null;
+
+  const ck = `h2h_${homeId}_${awayId}`;
+  const cached = h2hCache.get(ck);
+  if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
+
+  try {
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeId}-${awayId}&last=10`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const rows = (data?.response || []).filter(r =>
+      r?.goals?.home != null && r?.goals?.away != null &&
+      ["FT", "AET", "PEN"].includes(r?.fixture?.status?.short)
+    );
+    if (rows.length < 2) {
+      h2hCache.set(ck, { data: null, ts: Date.now() });
+      return null;
+    }
+    let totalGoals = 0, under25 = 0, btts = 0, homeWins = 0, awayWins = 0, draws = 0;
+    for (const r of rows) {
+      const gh = r.goals.home, ga = r.goals.away;
+      const tot = gh + ga;
+      totalGoals += tot;
+      if (tot <= 2) under25++;
+      if (gh > 0 && ga > 0) btts++;
+      // Ramener au point de vue de l'équipe "home" actuelle (via id)
+      const curHomeIsRowHome = r.teams?.home?.id === homeId;
+      const curHomeGoals = curHomeIsRowHome ? gh : ga;
+      const curAwayGoals = curHomeIsRowHome ? ga : gh;
+      if (curHomeGoals > curAwayGoals) homeWins++;
+      else if (curHomeGoals < curAwayGoals) awayWins++;
+      else draws++;
+    }
+    const n = rows.length;
+    const h2h = {
+      n,
+      avgGoals: Math.round((totalGoals / n) * 100) / 100,
+      under25Pct: Math.round((under25 / n) * 100),
+      bttsPct: Math.round((btts / n) * 100),
+      homeWins, awayWins, draws,
+    };
+    h2hCache.set(ck, { data: h2h, ts: Date.now() });
+    return h2h;
+  } catch (e) {
+    console.error("[h2h] Erreur:", e.message);
+    return null;
+  }
+}
+
+function buildH2HBlock(h2h, homeName, awayName) {
+  if (!h2h) return "";
+  return `
+
+H2H VÉRIFIÉ (${h2h.n} dernières confrontations directes, données API réelles) :
+- Bilan : ${homeName} ${h2h.homeWins}V · ${h2h.draws}N · ${awayName} ${h2h.awayWins}V
+- Moyenne de buts : ${h2h.avgGoals}/match
+- Under 2.5 buts : ${h2h.under25Pct}% des confrontations
+- Les deux équipes marquent (BTTS) : ${h2h.bttsPct}%
+→ Utilise ces chiffres RÉELS en priorité sur ta mémoire pour juger Under/Over 2.5, BTTS et le vainqueur probable.`;
+}
+
 function parseMatchStats(data) {
   if (!data?.response?.length) return null;
   const home = data.response[0]?.statistics || [];
@@ -1897,6 +1969,16 @@ async function runConcileAnalysis(match) {
   const liveStats = statsStatus.available ? statsStatus.stats : null;
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
 
+  // H2H factuel (confrontations directes réelles) — ancre l'analyse dans les données
+  let h2hBlock = "";
+  try {
+    const h2h = await fetchH2H(match);
+    h2hBlock = buildH2HBlock(h2h, match.home, match.away);
+    if (h2h) console.log(`[concile] H2H récupéré ${match.home} vs ${match.away}: ${h2h.n} matchs, moy ${h2h.avgGoals} buts, Under2.5 ${h2h.under25Pct}%`);
+  } catch (e) {
+    console.error("[concile] H2H:", e.message);
+  }
+
   if (statsStatus.available) {
     console.log(`[concile] Stats live récupérées pour ${match.home} vs ${match.away} fixture=${statsStatus.fixtureId}`);
   } else {
@@ -1912,7 +1994,7 @@ async function runConcileAnalysis(match) {
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${liveConstraints}
+Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${liveConstraints}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
