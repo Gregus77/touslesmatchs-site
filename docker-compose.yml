@@ -13,7 +13,7 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      - /opt/touslesmatchs/site:/srv
+      - /opt/touslesmatchs/public:/srv:ro
       - /opt/touslesmatchs/Caddyfile:/etc/caddy/Caddyfile
     networks:
       - web

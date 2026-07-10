@@ -13,6 +13,17 @@ const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
 const { validateSignal, markSignalSent, recordLoss, recordWin, getGateStatus } = require("./signal_validation");
+const { execSync } = require("child_process");
+
+// ── Version et build info (anti-rollback) ────────────────────────────────────
+const BUILD_VERSION = (() => {
+  try {
+    const hash = execSync("git rev-parse --short HEAD 2>/dev/null", { encoding: "utf-8" }).trim();
+    const date = execSync("git log -1 --format=%ci 2>/dev/null", { encoding: "utf-8" }).trim();
+    return { hash, date, built_at: new Date().toISOString() };
+  } catch { return { hash: "unknown", date: "unknown", built_at: new Date().toISOString() }; }
+})();
+console.log(`[version] Build ${BUILD_VERSION.hash} (${BUILD_VERSION.date})`);
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -1835,7 +1846,63 @@ function computeLiveConstraints(match) {
   return lines.join("\n");
 }
 
+function preMatchValidation(match) {
+  const reasons = [];
+  const sport = String(match?.sport || "Football");
+
+  // 1. Competition autorisee
+  if (sport === "Football" && isLowTrustCompetition(match)) {
+    reasons.push(`competition bloquee: ${match.competition || "?"}`);
+  }
+
+  // 2. Statut du match
+  const status = String(match?.status || "").toUpperCase();
+  const blockedStatuses = ["FINISHED", "FT", "AET", "PEN", "ENDED", "CANCELLED",
+    "POSTPONED", "SUSPENDED", "ABANDONED", "WALKOVER", "NOT_STARTED", "NS", "SCHEDULED"];
+  if (blockedStatuses.includes(status)) {
+    reasons.push(`statut interdit: ${status}`);
+  }
+
+  // 3. Fenetre de minutes (Football)
+  const minute = parseLiveMinuteValue(match?.minute);
+  if (sport === "Football" && minute !== null) {
+    if (minute < AUTO_CONCILE_MIN_MINUTE) reasons.push(`trop tot: ${minute}' < ${AUTO_CONCILE_MIN_MINUTE}'`);
+    if (minute >= 75) reasons.push(`trop tard: ${minute}' >= 75'`);
+  }
+
+  // 4. Sport autorise
+  const allowedSports = ["Football", "Basketball", "Hockey", "Baseball", "Tennis"];
+  if (!allowedSports.includes(sport)) {
+    reasons.push(`sport non autorise: ${sport}`);
+  }
+
+  // 5. Donnees minimales
+  if (!match?.home || !match?.away) {
+    reasons.push("donnees match incompletes (home/away manquant)");
+  }
+
+  const allowed = reasons.length === 0;
+  if (!allowed) {
+    console.log(`[pre-match] BLOQUE ${match?.home || "?"} vs ${match?.away || "?"}: ${reasons.join(", ")}`);
+  }
+  return { allowed, reasons };
+}
+
 async function runConcileAnalysis(match) {
+  // Validation pre-match obligatoire avant toute analyse
+  const prematch = preMatchValidation(match);
+  if (!prematch.allowed) {
+    return {
+      best_bet: "NOPICK",
+      confidence: 0,
+      raison: `Bloque par validation pre-match: ${prematch.reasons.join("; ")}`,
+      consensus_votes: 0,
+      total_agents: 0,
+      agents: [],
+      blocked_by_prematch: true,
+    };
+  }
+
   if (!GROQ_API_KEY) {
     return getMockAnalysis(match);
   }
@@ -5455,8 +5522,22 @@ app.get("/admin/telegram-diagnostic", async (req, res) => {
 });
 
 // ── Admin — preflight : etat complet du systeme pour chaque session Claude ───
+app.get("/admin/version", (req, res) => {
+  res.json({
+    version: BUILD_VERSION,
+    rules: {
+      min_minute: AUTO_CONCILE_MIN_MINUTE,
+      max_minute: 75,
+      trusted_count: TRUSTED_COMPETITIONS.length,
+      low_trust_count: LOW_TRUST_COMPETITION_KEYWORDS.length,
+      allowed_sports: ["Football", "Basketball", "Hockey", "Baseball", "Tennis"],
+      signal_gate: getGateStatus(),
+    },
+  });
+});
+
 app.get("/admin/preflight", async (req, res) => {
-  const report = { timestamp: new Date().toISOString(), checks: {}, warnings: [] };
+  const report = { timestamp: new Date().toISOString(), version: BUILD_VERSION, checks: {}, warnings: [] };
 
   // 1. Base de donnees — etat des tables
   try {

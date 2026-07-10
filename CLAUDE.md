@@ -23,6 +23,46 @@ Avant toute modification de code, Claude DOIT :
 - **Le learning engine ne doit JAMAIS bloquer par manque d'historique** — `assessLearningProfile(null)` doit retourner `clientSafe: true`
 - **Pas de systemctl** dans le code (incompatible Docker)
 - **Pas de modification du .env** dans les commits
+- **Ne JAMAIS servir le site depuis un dossier autre que `public/`** — le volume Docker monte `public/` directement en lecture seule
+- **Verifier la version apres deploiement** : `curl http://localhost:3001/admin/version` — le hash git doit correspondre au commit deploye
+
+### Anti-rollback : pourquoi le site revenait a l'ancienne version
+
+Le docker-compose.yml montait `/opt/touslesmatchs/site:/srv` — un dossier separe jamais mis a jour par git.
+Corrige le 2026-07-10 : maintenant monte `/opt/touslesmatchs/public:/srv:ro` (lecture seule, directement depuis git).
+NE JAMAIS remettre un mount vers `/opt/touslesmatchs/site` — c'est la cause du bug de version.
+
+### Validation pre-match (OBLIGATOIRE avant toute analyse)
+
+Avant de lancer le concile IA sur un match, `preMatchValidation()` verifie :
+1. Competition autorisee (pas low-trust pour Football)
+2. Statut du match valide (pas FINISHED, CANCELLED, NOT_STARTED, etc.)
+3. Fenetre de minutes : >= 35' et < 75' (Football uniquement)
+4. Sport autorise (Football, Basketball, Hockey, Baseball, Tennis)
+5. Donnees minimales presentes (home/away)
+
+Si un critere echoue → NOPICK automatique, pas d'appel API, pas de tokens gaspilles.
+Log : `[pre-match] BLOQUE ...` avec les raisons.
+
+### Validation pre-envoi Telegram (14 criteres dans signal_validation.js)
+
+Apres analyse, avant envoi Telegram, `validateSignal()` verifie en plus :
+1. Competition autorisee
+2. Statut match valide
+3. Fenetre 35'-75' (Football)
+4. Donnees reelles (pas mock)
+5. Consensus >= 3/5 agents d'accord
+6. Confiance >= seuil adaptatif (80% par defaut)
+7. Marche autorise (Victoire, Over/Under, BTTS, Double chance, Handicap)
+8. Cotes dans fourchette [1.25 - 1.95]
+9. Coherence modeles (ecart max 30% entre agents)
+10. Limite journaliere : max 3 signaux/jour
+11. Espacement : min 60 minutes entre signaux
+12. Anti-doublon : 1 signal par match par jour
+13. Pause defaites : 3 defaites consecutives = 24h pause sur le segment
+14. Sport autorise
+
+Tous doivent passer. Un seul echec = signal bloque + motif logge.
 
 ### Verification apres deploiement
 
