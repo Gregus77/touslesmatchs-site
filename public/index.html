@@ -2371,7 +2371,7 @@ function renderPicksFeed() {
     html += '<div class="pf-past">';
     [...past].reverse().slice(0,6).forEach(p => {
       const w = p.result === 'win';
-      const gain = w ? '+' + ((p.cote - 1) * 10).toFixed(0) + '€' : '-10€';
+      const gain = w ? '+' + ((p.cote - 1) * 100).toFixed(0) + '€' : '-100€';
       html += `<div class="pf-past-item${w?'':' loss'}">
         <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
@@ -3052,7 +3052,7 @@ async function subscribeEmail(){
 })();
 
 function computeRealGains(){
-  const mise = 10;
+  const mise = 100;
   let totalGain = 0;
   PICKS_FEED.filter(p => p.status === 'finished').forEach(p => {
     if(p.result === 'win') totalGain += Math.round((p.cote - 1) * mise);
@@ -3069,7 +3069,7 @@ function computeRealGains(){
   const wrap = heroStats.parentNode;
   const el = document.createElement('div');
   el.style.cssText = 'margin-top:16px;font-size:13px;color:var(--green);font-weight:600;text-align:center;opacity:.9';
-  el.textContent = `Simulation historique : +${gain}€ sur une base de 10€ par pick terminé`;
+  el.textContent = `Simulation historique : +${gain}€ sur une base de 100€ par pick terminé`;
   wrap.insertBefore(el, heroStats.nextSibling);
 })();
 
