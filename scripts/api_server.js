@@ -2121,6 +2121,23 @@ Réponds en JSON pur (pas de markdown):
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
+  // Masquer les noms d'IA dans le raisonnement public
+  function maskAiNames(text) {
+    if (!text) return "";
+    const map = [
+      [/Perplexity[- ]?Web/gi, "IA 1"], [/DeepSeek[- ]?V3/gi, "IA 2"],
+      [/Mistral[- ]?Large/gi, "IA 3"], [/Cohere[- ]?Command/gi, "IA 4"],
+      [/Groq[- ]?Llama\d*/gi, "IA 5"], [/Claude[- ]?Chief/gi, "Concile"],
+      [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
+      [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
+      [/Mistral[- ]?7B/gi, "IA"], [/Cerebras[- ]?Llama/gi, "IA"],
+      [/OR[- ]?Mistral7B/gi, "IA"], [/Llama[- ]?\d+[bB]?/gi, "IA"],
+    ];
+    let r = text;
+    for (const [re, rep] of map) r = r.replace(re, rep);
+    return r;
+  }
+
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
   const signalThreshold = getAdaptiveSignalThreshold();
   if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN) {
@@ -2129,8 +2146,9 @@ Réponds en JSON pur (pas de markdown):
       _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
       const ico = si[match.sport] || "🎯";
-      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${analysisResult.raison ? `\n<i>${String(analysisResult.raison).slice(0, 200)}</i>` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const safeRaison = maskAiNames(String(analysisResult.raison || "").slice(0, 200));
+      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
       const todayStr = new Date().toISOString().slice(0, 10);
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
