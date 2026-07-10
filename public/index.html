@@ -2385,6 +2385,11 @@ function renderPicksFeed() {
     });
     html += `<a href="/live-ia#historique" style="display:block;text-align:center;padding:10px;font-size:12px;color:var(--indigo2);text-decoration:none;font-weight:600;opacity:.8">Voir les ${past.length} derniers résultats →</a>`;
     html += '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 20px">';
+    BM.forEach(b=>{
+      html += `<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}" style="flex:1 1 calc(25% - 8px);min-width:100px;max-width:160px;text-align:center;font-size:13px;padding:10px 14px">${b.name} →</a>`;
+    });
+    html += '</div>';
   }
 
   // Prochain pick featured
@@ -3136,14 +3141,40 @@ document.addEventListener('click',function(e){
   }
 });</script>
 <script>
-// ── Auto-update Signal Fort stats from API ──
-(function loadSignalFortStats(){
+// ── Auto-update from Signal Fort + Analysis History ──
+(function loadRecentPicks(){
+  const existing = new Set(PICKS_FEED.map(p=>p.id));
+  let updated = false;
+  function injectAndRefresh(){
+    if(updated){ buildChart(); if(typeof renderPicksFeed==='function') renderPicksFeed(); }
+  }
   fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
     if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
-    const existing = new Set(PICKS_FEED.map(p=>p.id));
-    d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); }});
-    buildChart();
-    if(typeof renderPicksFeed==='function') renderPicksFeed();
+    d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
+    injectAndRefresh();
+  }).catch(()=>{});
+  fetch('/api/analysis-history?limit=30').then(r=>r.json()).then(d=>{
+    if(!d.ok || !d.analyses) return;
+    d.analyses.forEach(a=>{
+      const id='ah-'+String(a.home+'-'+a.away+'-'+(a.analysed_at||'')).replace(/\s+/g,'-').toLowerCase();
+      if(existing.has(id)) return;
+      if(!a.outcome) return;
+      const coteMoy=(c)=>Math.min(1.95,((1/(c/100))*1.45));
+      PICKS_FEED.push({
+        id, date:a.analysed_at?a.analysed_at.slice(0,10):'',
+        time:a.analysed_at?a.analysed_at.slice(11,16):'',
+        competition:a.competition||a.sport||'',
+        home:a.home, away:a.away,
+        pick:a.bet||'Analyse IA',
+        cote:parseFloat(coteMoy(a.confidence).toFixed(2)),
+        status:'finished',
+        result:a.outcome==='win'?'win':'loss',
+        score:a.final_score||a.score||'?'
+      });
+      existing.add(id);
+      updated=true;
+    });
+    injectAndRefresh();
   }).catch(()=>{});
 })();
 </script>
