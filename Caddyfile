@@ -5,6 +5,29 @@ www.touslesmatchs.com {
         reverse_proxy api:3001
     }
 
+    # Routes API directes (sans prefixe /api)
+    handle /live-matches {
+        reverse_proxy api:3001
+    }
+    handle /current-pick {
+        reverse_proxy api:3001
+    }
+    handle /signal-fort-stats {
+        reverse_proxy api:3001
+    }
+    handle /admin/* {
+        reverse_proxy api:3001
+    }
+    handle /t {
+        reverse_proxy api:3001
+    }
+    handle /create-checkout-session {
+        reverse_proxy api:3001
+    }
+    handle /stripe/webhook {
+        reverse_proxy api:3001
+    }
+
     # Frontend statique
     handle {
         root * /srv

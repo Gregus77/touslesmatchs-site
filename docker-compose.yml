@@ -43,8 +43,8 @@ services:
       - /opt/touslesmatchs/shared:/shared:ro
     networks:
       - web
-    expose:
-      - "3001"
+    ports:
+      - "127.0.0.1:3001:3001"
 
   council:
     build:

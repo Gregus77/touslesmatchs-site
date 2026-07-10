@@ -6952,6 +6952,36 @@ app.get("/admin/datahub-state", (req, res) => {
 });
 // ===== End M009-M010 =====
 
+// ── Smoke-test endpoints ─────────────────────────────────────────────────────
+const API_START_TIME = Date.now();
+
+app.get("/admin/version", (req, res) => {
+  res.json({
+    ok: true,
+    version: process.env.API_VERSION || "1.0.0",
+    node: process.version,
+    uptime: Math.round((Date.now() - API_START_TIME) / 1000)
+  });
+});
+
+app.get("/admin/preflight", (req, res) => {
+  const checks = {
+    database: false,
+    env: false
+  };
+  try {
+    db.prepare("SELECT 1").get();
+    checks.database = true;
+  } catch (_) {}
+  checks.env = !!(process.env.API_FOOTBALL_KEY && process.env.TELEGRAM_BOT_TOKEN);
+  const ok = checks.database && checks.env;
+  res.status(ok ? 200 : 503).json({ ok, checks });
+});
+
+app.get("/admin/heartbeat", (req, res) => {
+  res.json({ ok: true, ts: new Date().toISOString() });
+});
+
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     if (AUTO_CONCILE_OBSERVER) {
