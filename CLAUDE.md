@@ -56,9 +56,10 @@ Ligues cles : Ligue 1/2, Premier League, La Liga, Bundesliga, Serie A, Eredivisi
 MLS, Liga MX, J-League, K-League, NBA, NHL, MLB, NFL, ATP, Copa America, Champions League, etc.
 
 **LOW_TRUST_COMPETITION_KEYWORDS** : Friendly/amical, U17-U23, reserves, youth,
-divisions secondaires specifiques (segunda · pays), ligues africaines non-premium,
-ligues asiatiques mineures, ligues oceaniennes.
-NE PAS ajouter de noms de pays entiers (bloque toutes les competitions du pays).
+Coupe du Monde, ligues africaines, ligues asiatiques mineures, ligues oceaniennes.
+Pays sud-americains bloques : Chile, Bolivia, Peru, Venezuela, Ecuador, Paraguay, Colombia.
+Pays sud-americains autorises (TRUSTED) : Bresil, Argentine, Uruguay uniquement.
+NE PAS modifier cette liste sans validation explicite du fondateur.
 
 ## Regles automatiques (s'appliquent a CHAQUE session)
 
