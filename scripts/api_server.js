@@ -1240,6 +1240,19 @@ function isLowTrustCompetition(matchOrCompetition = "") {
   return true;
 }
 
+// Filtre allégé pour l'AFFICHAGE de la page Live IA (menu de matchs à analyser).
+// On bloque uniquement les ligues explicitement blacklistées (jeunes, amicaux,
+// ligues à matchs truqués) mais on ne bloque PAS un match juste parce qu'il n'est
+// pas dans la whitelist. Le filtre strict isLowTrustCompetition reste utilisé pour
+// ce qu'Hermes recommande (pick quotidien, auto-concile).
+function isBlacklistedForLiveDisplay(matchOrCompetition = "") {
+  const raw = typeof matchOrCompetition === "string"
+    ? matchOrCompetition
+    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+  const value = String(raw || "").toLowerCase();
+  return LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword));
+}
+
 function getVerifiedFixtureId(match) {
   if (!match || match.source !== "api-sports" || match.sport !== "Football") return null;
   const fixtureId = match.fixtureId || match.sourceId || match.id;
@@ -4601,7 +4614,7 @@ app.get("/live-matches", async (req, res) => {
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
     const allMatches = await fetchLiveMatches();
-    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
+    const matches = allMatches.filter(m => !isBlacklistedForLiveDisplay(m));
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
