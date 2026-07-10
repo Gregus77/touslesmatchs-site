@@ -151,7 +151,7 @@ def send_premium_stats(stats: dict):
 {sport_lines}
 
 ━━━━━━━━━━━━━━━━━━
-🤖 Données Conseil Hermes — Claude + 4 IAs
+🤖 Données Conseil Hermes — 5 IAs
 💎 Abonnement Premium — Merci de votre confiance"""
 
     return _send_message(PREMIUM_CHANNEL_ID, text)
