@@ -445,6 +445,8 @@ const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
 const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
+const _premiumSignalDaily = { date: "", count: 0 };
+const PREMIUM_SIGNAL_DAILY_CAP = 10;
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 80, computedAt: 0 };
 
@@ -2176,10 +2178,17 @@ Réponds en JSON pur (pas de markdown):
       const safeRaison = maskAiNames(String(analysisResult.raison || "").slice(0, 200));
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium: ${ok ? "OK" : "FAIL"}`));
+      const todayStr = new Date().toISOString().slice(0, 10);
+      // Canal premium : plafonné à 10 signaux/jour pour ne pas spammer les clients
+      if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+        _premiumSignalDaily.count++;
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}): ${ok ? "OK" : "FAIL"}`));
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID) {
+        console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
+      }
       // Copie ADMIN : l'admin reçoit TOUS les signaux forts, sans limite, sur son chat perso
       if (TELEGRAM_ADMIN_CHAT_ID) sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `👑 <b>[ADMIN · copie signal]</b>\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
-      const todayStr = new Date().toISOString().slice(0, 10);
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
       if (_freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
