@@ -64,6 +64,45 @@ Apres analyse, avant envoi Telegram, `validateSignal()` verifie en plus :
 
 Tous doivent passer. Un seul echec = signal bloque + motif logge.
 
+### Audit des agents IA (OBLIGATOIRE a chaque session)
+
+Claude DOIT consulter `/admin/audit` au debut de chaque session pour savoir :
+
+1. **Quel agent est bon sur quel marche** — chaque agent (Perplexity, DeepSeek, Mistral, Cohere, Chief/Groq) a un winrate par type de marche :
+   - Over 2.5 buts / Under 2.5 buts
+   - BTTS Oui / BTTS Non
+   - Victoire domicile / Victoire exterieur / Match nul
+   - Double chance 1X / X2
+   - Handicap
+2. **Quelles ligues performent** — winrate par competition, pour savoir si on doit retirer/ajouter des ligues
+3. **Les analyses recentes** — avec minute d'analyse, score au moment de l'analyse, stats (tirs, possession), score final, et votes de chaque agent
+4. **Les meilleurs et pires agents par marche** — pour identifier les faiblesses
+
+**Tables BDD utilisees** :
+- `agent_predictions` : 1 ligne par agent par match, bet + outcome (win/loss)
+- `agent_market_predictions` : predictions multi-marches par agent
+- `ai_market_specialization` : resume automatique agent+marche (refresh toutes les 30 min)
+- `concile_analyses` : analyse complete avec stats au moment de l'analyse (minute, score, tirs, possession)
+- `league_ratings` : performance par ligue (class A/B/C/D/E, coefficient)
+- `agent_weights` : poids dynamique par agent (ajuste selon winrate)
+
+**Commande d'audit** :
+```bash
+curl -s http://localhost:3001/admin/audit | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+print(f'Total: {d[\"summary\"][\"total_predictions\"]} predictions, {d[\"summary\"][\"total_wins\"]}W/{d[\"summary\"][\"total_losses\"]}L')
+print('\n== AGENTS ==')
+for a in d['agents']: print(f'  {a[\"agent_name\"]}: {a[\"wins\"]}/{a[\"total\"]} ({a[\"winrate\"]}%)')
+print('\n== MARCHES ==')
+for m in d['markets']: print(f'  {m[\"market\"]}: {m[\"wins\"]}/{m[\"total\"]} ({m[\"winrate\"]}%)')
+print('\n== MEILLEUR/PIRE PAR MARCHE ==')
+for k,v in d.get('best_worst_per_market',{}).items():
+  b = v.get('best',{}); w = v.get('worst',{})
+  print(f'  {k}: best={b.get(\"agent\",\"?\")} ({b.get(\"winrate\",0)}%), worst={w.get(\"agent\",\"?\")} ({w.get(\"winrate\",0)}%)')
+"
+```
+
 ### Verification apres deploiement
 
 Apres chaque `docker compose up -d --build`, verifier dans les 5 minutes :
@@ -183,6 +222,8 @@ Avant de declarer un travail termine, verifier :
 | `/create-checkout-session` | POST | Stripe checkout |
 | `/webhook` | POST | Webhook Stripe |
 | `/admin/preflight` | GET | Bilan complet du systeme (BDD, filtres, agents, Telegram, live, learning engine) |
+| `/admin/version` | GET | Version du build (hash git, date, regles actives) |
+| `/admin/audit` | GET | Audit complet : performance par agent, par marche, par ligue, analyses recentes avec stats |
 | `/admin/telegram-diagnostic` | GET | Test complet Telegram (getMe, webhook, envoi test) |
 | `/admin/send-report` | POST | Envoie rapport Hermes sur Telegram admin |
 

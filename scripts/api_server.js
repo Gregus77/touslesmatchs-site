@@ -5536,6 +5536,133 @@ app.get("/admin/version", (req, res) => {
   });
 });
 
+// ── Audit complet des agents IA par type de marche ───────────────────────────
+app.get("/admin/audit", (req, res) => {
+  try {
+    // 1. Performance globale par agent
+    const agentGlobal = db.prepare(`
+      SELECT agent_name, COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        ROUND(AVG(confidence), 1) as avg_confidence
+      FROM agent_predictions
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY agent_name ORDER BY wins DESC
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 1000) / 10 : 0,
+    }));
+
+    // 2. Performance par agent + par type de marche (Over, Under, BTTS, 1X2, etc.)
+    const agentByMarket = db.prepare(`
+      SELECT agent_name, bet as market,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM agent_predictions
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY agent_name, bet ORDER BY agent_name, total DESC
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 1000) / 10 : 0,
+    }));
+
+    // 3. Performance globale par type de marche (quel marche est le plus rentable)
+    const marketGlobal = db.prepare(`
+      SELECT bet as market,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        ROUND(AVG(confidence), 1) as avg_confidence
+      FROM agent_predictions
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY bet ORDER BY total DESC
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 1000) / 10 : 0,
+    }));
+
+    // 4. Analyses concile avec stats au moment de l'analyse (35'-75')
+    const recentAnalyses = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+        minute_at_analysis, score_home_at_analysis, score_away_at_analysis,
+        final_score_home, final_score_away, stats_status,
+        home_shots, away_shots, home_possession, away_possession,
+        agents_json, analysed_at, resolved_at
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      ORDER BY analysed_at DESC LIMIT 50
+    `).all().map(r => {
+      let agents = [];
+      try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+      return {
+        match: `${r.home} vs ${r.away}`,
+        competition: r.competition,
+        sport: r.sport,
+        bet: r.best_bet,
+        confidence: r.confidence,
+        outcome: r.outcome,
+        minute_analysed: r.minute_at_analysis,
+        score_at_analysis: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        final_score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+        stats_at_analysis: {
+          shots: r.home_shots != null ? `${r.home_shots}-${r.away_shots}` : null,
+          possession: r.home_possession != null ? `${r.home_possession}%-${r.away_possession}%` : null,
+        },
+        agents_votes: agents.map(a => ({ name: a.name || a.agent, bet: a.bet, confidence: a.confidence })),
+        analysed_at: r.analysed_at,
+        resolved_at: r.resolved_at,
+      };
+    });
+
+    // 5. Meilleur et pire agent par marche
+    const bestWorst = {};
+    for (const r of agentByMarket) {
+      if (r.total < 3) continue;
+      if (!bestWorst[r.market]) bestWorst[r.market] = { best: null, worst: null };
+      if (!bestWorst[r.market].best || r.winrate > bestWorst[r.market].best.winrate) {
+        bestWorst[r.market].best = { agent: r.agent_name, winrate: r.winrate, total: r.total };
+      }
+      if (!bestWorst[r.market].worst || r.winrate < bestWorst[r.market].worst.winrate) {
+        bestWorst[r.market].worst = { agent: r.agent_name, winrate: r.winrate, total: r.total };
+      }
+    }
+
+    // 6. Performance par ligue
+    const leaguePerf = db.prepare(`
+      SELECT competition as league, sport,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IS NOT NULL AND outcome != 'pending' AND competition != ''
+      GROUP BY competition, sport ORDER BY total DESC LIMIT 30
+    `).all().map(r => ({
+      ...r, winrate: r.total > 0 ? Math.round(r.wins / r.total * 1000) / 10 : 0,
+    }));
+
+    res.json({
+      timestamp: new Date().toISOString(),
+      version: BUILD_VERSION.hash,
+      summary: {
+        total_predictions: agentGlobal.reduce((s, a) => s + a.total, 0),
+        total_wins: agentGlobal.reduce((s, a) => s + a.wins, 0),
+        total_losses: agentGlobal.reduce((s, a) => s + a.losses, 0),
+      },
+      agents: agentGlobal,
+      agents_by_market: agentByMarket,
+      markets: marketGlobal,
+      best_worst_per_market: bestWorst,
+      leagues: leaguePerf,
+      recent_analyses: recentAnalyses,
+      rules: {
+        analysis_window: "35'-75' (Football)",
+        signal_gate: "14 criteres (signal_validation.js)",
+        pre_match: "5 checks (preMatchValidation)",
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get("/admin/preflight", async (req, res) => {
   const report = { timestamp: new Date().toISOString(), version: BUILD_VERSION, checks: {}, warnings: [] };
 
