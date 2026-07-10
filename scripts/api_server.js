@@ -1692,6 +1692,134 @@ H2H VÉRIFIÉ (${h2h.n} dernières confrontations directes, données API réelle
 → Utilise ces chiffres RÉELS en priorité sur ta mémoire pour juger Under/Over 2.5, BTTS et le vainqueur probable.`;
 }
 
+// ── Contexte profond : forme, force/classement, enjeu, blessés (données API) ───
+const teamStatsCache = new Map();
+const standingsCache = new Map();
+const injuriesCache = new Map();
+
+const DEEP_CONTEXT_ENABLED = process.env.DEEP_CONTEXT !== "0";
+
+async function fetchTeamStatistics(leagueId, season, teamId) {
+  if (!API_SPORTS_KEY || !leagueId || !season || !teamId) return null;
+  const ck = `tstat_${leagueId}_${season}_${teamId}`;
+  const c = teamStatsCache.get(ck);
+  if (c && Date.now() - c.ts < 6 * 3600 * 1000) return c.data;
+  try {
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/teams/statistics?league=${leagueId}&season=${season}&team=${teamId}`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const r = data?.response;
+    if (!r || !r.fixtures) { teamStatsCache.set(ck, { data: null, ts: Date.now() }); return null; }
+    const out = {
+      form: String(r.form || "").slice(-5),
+      wins: r.fixtures?.wins?.total ?? 0,
+      draws: r.fixtures?.draws?.total ?? 0,
+      loses: r.fixtures?.loses?.total ?? 0,
+      gfAvg: parseFloat(r.goals?.for?.average?.total ?? 0) || 0,
+      gaAvg: parseFloat(r.goals?.against?.average?.total ?? 0) || 0,
+      cleanSheet: r.clean_sheet?.total ?? 0,
+      failedToScore: r.failed_to_score?.total ?? 0,
+    };
+    teamStatsCache.set(ck, { data: out, ts: Date.now() });
+    return out;
+  } catch (e) { console.error("[team-stats]", e.message); return null; }
+}
+
+async function fetchStandings(leagueId, season) {
+  if (!API_SPORTS_KEY || !leagueId || !season) return null;
+  const ck = `stand_${leagueId}_${season}`;
+  const c = standingsCache.get(ck);
+  if (c && Date.now() - c.ts < 6 * 3600 * 1000) return c.data;
+  try {
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/standings?league=${leagueId}&season=${season}`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const table = data?.response?.[0]?.league?.standings?.[0] || [];
+    const rows = table.map(t => ({
+      teamId: t.team?.id, rank: t.rank, points: t.points, goalsDiff: t.goalsDiff,
+    })).filter(r => r.teamId);
+    const out = rows.length ? { rows, total: rows.length } : null;
+    standingsCache.set(ck, { data: out, ts: Date.now() });
+    return out;
+  } catch (e) { console.error("[standings]", e.message); return null; }
+}
+
+async function fetchInjuries(match) {
+  if (!API_SPORTS_KEY || !match.fixtureId) return null;
+  const ck = `inj_${match.fixtureId}`;
+  const c = injuriesCache.get(ck);
+  if (c && Date.now() - c.ts < 3600 * 1000) return c.data;
+  try {
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/injuries?fixture=${match.fixtureId}`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const list = data?.response || [];
+    const home = [], away = [];
+    for (const it of list) {
+      const name = it.player?.name;
+      if (!name) continue;
+      if (it.team?.id === match.homeId) home.push(name);
+      else if (it.team?.id === match.awayId) away.push(name);
+    }
+    const out = { home, away };
+    injuriesCache.set(ck, { data: out, ts: Date.now() });
+    return out;
+  } catch (e) { console.error("[injuries]", e.message); return null; }
+}
+
+function stakeLabel(rank, total) {
+  if (rank == null || !total) return "?";
+  if (rank <= 3) return "haut de tableau (course Europe/titre)";
+  if (rank >= total - 2) return "bas de tableau (lutte pour le maintien)";
+  return "milieu de tableau";
+}
+
+async function fetchDeepContext(match) {
+  if (!DEEP_CONTEXT_ENABLED) return "";
+  if (match.source !== "api-sports" || match.sport !== "Football" || !match.homeId || !match.awayId) return "";
+  try {
+    const [homeStats, awayStats, standings, injuries] = await Promise.all([
+      fetchTeamStatistics(match.leagueId, match.season, match.homeId),
+      fetchTeamStatistics(match.leagueId, match.season, match.awayId),
+      fetchStandings(match.leagueId, match.season),
+      fetchInjuries(match),
+    ]);
+
+    let out = "";
+    if (homeStats || awayStats) {
+      out += `\n\nFORME & FORCE (5 derniers résultats + moyennes saison, données API réelles) :`;
+      if (homeStats) out += `\n- ${match.home} : forme ${homeStats.form || "?"} | ${homeStats.gfAvg} but/m marqués, ${homeStats.gaAvg} encaissés | ${homeStats.wins}V-${homeStats.draws}N-${homeStats.loses}D`;
+      if (awayStats) out += `\n- ${match.away} : forme ${awayStats.form || "?"} | ${awayStats.gfAvg} but/m marqués, ${awayStats.gaAvg} encaissés | ${awayStats.wins}V-${awayStats.draws}N-${awayStats.loses}D`;
+    }
+    if (standings?.rows?.length) {
+      const h = standings.rows.find(r => r.teamId === match.homeId);
+      const a = standings.rows.find(r => r.teamId === match.awayId);
+      if (h || a) {
+        out += `\n\nCLASSEMENT & ENJEU :`;
+        if (h) out += `\n- ${match.home} : ${h.rank}e (${h.points} pts) — ${stakeLabel(h.rank, standings.total)}`;
+        if (a) out += `\n- ${match.away} : ${a.rank}e (${a.points} pts) — ${stakeLabel(a.rank, standings.total)}`;
+        if (h && a) out += `\n- Écart : ${Math.abs(h.rank - a.rank)} places, ${Math.abs(h.points - a.points)} pts`;
+      }
+    }
+    if (injuries && (injuries.home.length || injuries.away.length)) {
+      out += `\n\nBLESSÉS / ABSENTS (données API réelles) :`;
+      out += `\n- ${match.home} : ${injuries.home.length ? injuries.home.slice(0, 5).join(", ") : "aucun signalé"}`;
+      out += `\n- ${match.away} : ${injuries.away.length ? injuries.away.slice(0, 5).join(", ") : "aucun signalé"}`;
+    }
+    if (out) {
+      out += `\n→ Croise ces données avec le H2H pour justifier ta confiance. Mauvaise forme, écart de niveau au classement, absences clés ou faible enjeu = prudence. Signaux convergents (bonne forme + classement + H2H alignés) = confiance haute justifiée.`;
+      console.log(`[concile] Contexte profond OK ${match.home} vs ${match.away}`);
+    }
+    return out;
+  } catch (e) {
+    console.error("[concile] deep-context:", e.message);
+    return "";
+  }
+}
+
 function parseMatchStats(data) {
   if (!data?.response?.length) return null;
   const home = data.response[0]?.statistics || [];
@@ -1969,14 +2097,18 @@ async function runConcileAnalysis(match) {
   const liveStats = statsStatus.available ? statsStatus.stats : null;
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
 
-  // H2H factuel (confrontations directes réelles) — ancre l'analyse dans les données
-  let h2hBlock = "";
+  // H2H factuel + contexte profond (forme, classement, enjeu, blessés) en parallèle
+  let h2hBlock = "", deepBlock = "";
   try {
-    const h2h = await fetchH2H(match);
+    const [h2h, deep] = await Promise.all([
+      fetchH2H(match),
+      fetchDeepContext(match),
+    ]);
     h2hBlock = buildH2HBlock(h2h, match.home, match.away);
+    deepBlock = deep || "";
     if (h2h) console.log(`[concile] H2H récupéré ${match.home} vs ${match.away}: ${h2h.n} matchs, moy ${h2h.avgGoals} buts, Under2.5 ${h2h.under25Pct}%`);
   } catch (e) {
-    console.error("[concile] H2H:", e.message);
+    console.error("[concile] H2H/deep:", e.message);
   }
 
   if (statsStatus.available) {
@@ -1994,7 +2126,7 @@ async function runConcileAnalysis(match) {
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${liveConstraints}
+Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${deepBlock}${liveConstraints}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
