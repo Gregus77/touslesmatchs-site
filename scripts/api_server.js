@@ -3480,13 +3480,21 @@ setTimeout(resolveSignalFortFast, 2 * 60 * 1000);
 
 let autoConcileObserverRunning = false;
 
+// Compétitions UEFA (y compris tours de qualification Europa/Conference/Champions)
+// — fiables même quand elles opposent de petits clubs, donc autorisées en auto-concile.
+function isUefaCompetition(match) {
+  const comp = String(match?.competition || match?.league || "").toLowerCase();
+  return /uefa|champions league|europa league|conference league|europa conference/.test(comp);
+}
+
 function shouldAutoObserveMatch(match) {
   if (!match || match.scoreConflict) return false;
   const status = String(match.status || "").toUpperCase();
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (String(match.sport || "Football") !== "Football") return true;
-  if (isLowTrustCompetition(match)) return false;
+  // Option 3 : grandes ligues (whitelist) + compétitions UEFA (dont qualifs européennes)
+  if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
   const minute = parseLiveMinuteValue(match.minute);
   return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
 }
