@@ -653,6 +653,7 @@ section[id]{scroll-margin-top:100px}
   position:relative;overflow:hidden;
   backdrop-filter:blur(20px);
   transition:all .25s;
+  height:100%;
 }
 .pc:hover{border-color:var(--b3);transform:translateY(-3px);box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .pc.feat{
@@ -1552,7 +1553,7 @@ footer{
       <div class="roi-kpis">
         <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl">Profit net</div></div>
         <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">—</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl">100€ → X€</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl">10€ → X€</div></div>
         <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">—</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
       </div>
     </div>
@@ -2131,7 +2132,7 @@ function renderPick(){
       </div>`
     : `<div class="pick-insight">
         <div class="pi-item"><span class="pi-ico">🎯</span><div><div class="pi-lbl">Confiance du Concile</div><div class="pi-val c-cyan">${(avg/10).toFixed(1)}/10</div></div></div>
-        <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">100€ → ${Math.round(100*PICK.cote)}€</div></div></div>
+        <div class="pi-item"><span class="pi-ico">💰</span><div><div class="pi-lbl">Gain potentiel</div><div class="pi-val c-green">10€ → ${Math.round(10*PICK.cote)}€</div></div></div>
         <div class="pi-item"><span class="pi-ico">📊</span><div><div class="pi-lbl">Mise recommandée</div><div class="pi-val">${PICK.mise||'3% de ta bankroll'}</div></div></div>
       </div>`;
   const bookmakerHtml=isResult
@@ -2240,7 +2241,7 @@ function renderPick(){
 function buildChart(){
   // Calcul dynamique depuis PICKS_FEED (vrais picks terminés)
   const finished = PICKS_FEED.filter(p => p.status === 'finished');
-  const mise = 10, bankrollDepart = 100;
+  const mise = 10, bankrollDepart = 10;
   let bankroll = bankrollDepart;
   const labels = ['Départ'];
   const data = [bankroll];
@@ -2371,7 +2372,7 @@ function renderPicksFeed() {
     html += '<div class="pf-past">';
     [...past].reverse().slice(0,6).forEach(p => {
       const w = p.result === 'win';
-      const gain = w ? '+' + ((p.cote - 1) * 100).toFixed(0) + '€' : '-100€';
+      const gain = w ? '+' + ((p.cote - 1) * 10).toFixed(0) + '€' : '-10€';
       html += `<div class="pf-past-item${w?'':' loss'}">
         <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
         <span class="pf-mn">${p.home} vs ${p.away}</span>
@@ -3052,7 +3053,7 @@ async function subscribeEmail(){
 })();
 
 function computeRealGains(){
-  const mise = 100;
+  const mise = 10;
   let totalGain = 0;
   PICKS_FEED.filter(p => p.status === 'finished').forEach(p => {
     if(p.result === 'win') totalGain += Math.round((p.cote - 1) * mise);
@@ -3069,7 +3070,7 @@ function computeRealGains(){
   const wrap = heroStats.parentNode;
   const el = document.createElement('div');
   el.style.cssText = 'margin-top:16px;font-size:13px;color:var(--green);font-weight:600;text-align:center;opacity:.9';
-  el.textContent = `Simulation historique : +${gain}€ sur une base de 100€ par pick terminé`;
+  el.textContent = `Simulation historique : +${gain}€ sur une base de 10€ par pick terminé`;
   wrap.insertBefore(el, heroStats.nextSibling);
 })();
 
