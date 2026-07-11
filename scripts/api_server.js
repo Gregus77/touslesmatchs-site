@@ -1403,6 +1403,44 @@ function passesHistoricalQualityGate(match, bet) {
   return { ok: true, reason: "segment fiable ou historique insuffisant (seuil 85% appliqué)" };
 }
 
+// ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
+const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.40));
+
+function betIsPlayable(match, bet, cote) {
+  // Cote trop faible = aucune valeur (ex: victoire à 1.10 sur un 3-0)
+  if (cote && cote < MIN_PLAYABLE_ODD) {
+    return { ok: false, reason: `cote ${cote} < ${MIN_PLAYABLE_ODD} (trop faible, pas de valeur)` };
+  }
+  const sh = Number(match?.score_home), sa = Number(match?.score_away);
+  if (Number.isFinite(sh) && Number.isFinite(sa)) {
+    const diff = sh - sa;
+    const total = sh + sa;
+    const b = String(bet || "").toLowerCase();
+
+    // Victoire déjà quasi acquise (écart >= 2 buts) → cote ridicule, pari déjà joué
+    if ((/victoire.*(dom|home)|domicile|^1$/.test(b)) && diff >= 2) {
+      return { ok: false, reason: `domicile mène déjà ${sh}-${sa} — victoire déjà jouée` };
+    }
+    if ((/victoire.*(ext|away)|ext[eé]rieur|^2$/.test(b)) && diff <= -2) {
+      return { ok: false, reason: `extérieur mène déjà ${sh}-${sa} — victoire déjà jouée` };
+    }
+    // Over / Under déjà tranchés par le score actuel
+    const overM = b.match(/(?:over|plus de)\s*(\d+(?:\.5)?)/);
+    if (overM && total > parseFloat(overM[1])) {
+      return { ok: false, reason: `Over ${overM[1]} déjà atteint (${total} buts) — plus rien à gagner` };
+    }
+    const underM = b.match(/(?:under|moins de|inf[eé]rieur)\s*(?:à\s*)?(\d+(?:\.5)?)/);
+    if (underM && total > parseFloat(underM[1])) {
+      return { ok: false, reason: `Under ${underM[1]} déjà perdu (${total} buts)` };
+    }
+    // Double chance sans valeur si un gros écart est déjà là
+    if (/double chance|1x|x2/.test(b) && Math.abs(diff) >= 2) {
+      return { ok: false, reason: `écart ${sh}-${sa} — double chance sans valeur` };
+    }
+  }
+  return { ok: true, reason: "valeur ok" };
+}
+
 function getVerifiedFixtureId(match) {
   if (!match || match.source !== "api-sports" || match.sport !== "Football") return null;
   const fixtureId = match.fixtureId || match.sourceId || match.id;
@@ -2638,7 +2676,11 @@ Réponds en JSON pur (pas de markdown):
   if (!qualityGate.ok) {
     console.log(`[signal-fort] Bloqué par barrière qualité — ${qualityGate.reason}`);
   }
-  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && TELEGRAM_BOT_TOKEN) {
+  const playable = betIsPlayable(match, analysisResult.best_bet, analysisResult.cote);
+  if (!playable.ok) {
+    console.log(`[signal-fort] Bloqué (sans valeur) — ${playable.reason}`);
+  }
+  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && playable.ok && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
