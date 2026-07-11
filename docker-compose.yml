@@ -40,7 +40,10 @@ services:
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
     volumes:
-      - api_data:/data
+      # Bind-mount sur le disque hôte : la base survit à `docker compose down -v`,
+      # `docker volume rm` et `docker system prune --volumes`. NE JAMAIS remettre
+      # un volume nommé ici — c'est ce qui a effacé les stats en juillet 2026.
+      - /opt/touslesmatchs/data:/data
       - /opt/touslesmatchs/shared:/shared:ro
     networks:
       - web
@@ -95,7 +98,8 @@ volumes:
   caddy_data:
   caddy_config:
   council_data:
-  api_data:
+  # api_data supprimé : la base API est désormais bind-montée sur /opt/touslesmatchs/data
+  # (voir service api) pour survivre à toute opération Docker destructive.
 
 networks:
   web:

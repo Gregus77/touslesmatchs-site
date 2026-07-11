@@ -35,6 +35,46 @@ app.use(cors());
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
 
+// ── Anti-perte de données : snapshot automatique au démarrage ─────────────────
+// À CHAQUE boot, avant toute migration/DELETE, on copie la base dans /data/snapshots.
+// Rotation : on garde les 30 derniers snapshots. Ces fichiers vivent dans le même
+// volume que la base, donc ils survivent aux rebuilds ; combinés au bind-mount host
+// (docker-compose) ils survivent aussi à `down -v` / prune.
+function bootSnapshot() {
+  try {
+    const snapDir = path.join(path.dirname(DB_PATH), "snapshots");
+    fs.mkdirSync(snapDir, { recursive: true });
+    // Snapshot cohérent via l'API SQLite (pas une simple copie de fichier)
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const dest = path.join(snapDir, `tlm-boot-${ts}.db`);
+    db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
+    db.backup(dest)
+      .then(() => {
+        console.log(`[safeguard] Snapshot de démarrage créé: ${dest}`);
+        // Rotation : garder les 30 plus récents
+        try {
+          const files = fs.readdirSync(snapDir)
+            .filter(f => f.startsWith("tlm-boot-") && f.endsWith(".db"))
+            .map(f => ({ f, t: fs.statSync(path.join(snapDir, f)).mtimeMs }))
+            .sort((a, b) => b.t - a.t);
+          files.slice(30).forEach(x => { try { fs.unlinkSync(path.join(snapDir, x.f)); } catch (_) {} });
+        } catch (e) { console.error("[safeguard] rotation:", e.message); }
+      })
+      .catch(e => console.error("[safeguard] snapshot échec:", e.message));
+  } catch (e) {
+    console.error("[safeguard] bootSnapshot:", e.message);
+  }
+}
+
+// Garde-fou : ne JAMAIS laisser une migration destructive s'exécuter sur une base
+// qui vient d'être remplie de données précieuses sans snapshot préalable.
+const _rowCountAtBoot = (() => {
+  try { return db.prepare("SELECT COUNT(*) c FROM concile_analyses").get()?.c ?? 0; }
+  catch (_) { return 0; }
+})();
+if (_rowCountAtBoot > 0) bootSnapshot();
+else console.log("[safeguard] Base vide au démarrage — pas de snapshot (rien à protéger)");
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -7360,6 +7400,33 @@ function checkAnalyticsSchedule() {
     console.log("[analytics] Envoi rapport performance hebdo (lundi 9h)...");
     sendPerformanceReportTelegram(7).then(ok => console.log(`[perf-report] ${ok ? "OK" : "ECHEC"}`));
   }
+
+  // Watchdog anti-perte : détecte une chute brutale du nombre d'analyses
+  dataIntegrityWatchdog();
+}
+
+// ── Watchdog d'intégrité : alerte si la base perd des données ──────────────────
+// Mémorise le pic historique de lignes. Si le compte chute de plus de 20% par
+// rapport au pic (signature d'un wipe / down -v), alerte l'admin sur Telegram et
+// déclenche un snapshot de secours. Ne bloque jamais l'app — surveillance seule.
+let _peakAnalysesCount = 0;
+let _lastWipeAlert = 0;
+function dataIntegrityWatchdog() {
+  try {
+    const c = db.prepare("SELECT COUNT(*) c FROM concile_analyses").get()?.c ?? 0;
+    if (c > _peakAnalysesCount) _peakAnalysesCount = c;
+    // Chute > 20% du pic, pic significatif, pas d'alerte dans la dernière heure
+    if (_peakAnalysesCount >= 50 && c < _peakAnalysesCount * 0.8 && Date.now() - _lastWipeAlert > 3600000) {
+      _lastWipeAlert = Date.now();
+      const msg = `🚨 <b>ALERTE PERTE DE DONNÉES</b>\n\nLes analyses sont passées de <b>${_peakAnalysesCount}</b> à <b>${c}</b> lignes.\n\nCause probable : rebuild/volume Docker effacé. Restaure le dernier snapshot :\n<code>ls -1t /opt/touslesmatchs/data/snapshots/ | head</code>\n\nHermès n'a PAS le droit de supprimer des données — vérifie ce qui s'est passé.`;
+      console.error(`[watchdog] CHUTE DE DONNÉES: ${_peakAnalysesCount} → ${c}`);
+      if (typeof TELEGRAM_ADMIN_CHAT_ID !== "undefined" && TELEGRAM_ADMIN_CHAT_ID) {
+        sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg).catch(() => {});
+      }
+      // Snapshot de secours immédiat de l'état actuel (même réduit) pour forensics
+      try { bootSnapshot(); } catch (_) {}
+    }
+  } catch (e) { /* table absente au tout premier boot — ignorer */ }
 }
 
 const PORT = process.env.PORT || 3001;
