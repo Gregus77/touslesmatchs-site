@@ -3704,6 +3704,7 @@ async function resolveStalePredictions() {
         UNION ALL
         SELECT home, away, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-3 hours')
+        AND created_at >= datetime('now','-7 days')
       LIMIT 120
     `).all();
     if (!stale.length) return;
@@ -3723,9 +3724,9 @@ async function resolveStalePredictions() {
       } catch (e) { console.error("[catch-up] football-data:", e.message); }
     }
 
-    // Source 2 : api-sports football — couvre aujourd'hui, hier, J-2
+    // Source 2 : api-sports football — couvre les 6 derniers jours (matchs finis)
     if (API_SPORTS_KEY) {
-      for (let d = 0; d < 3; d++) {
+      for (let d = 0; d < 6; d++) {
         const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
         try {
           const data = await httpGet(
