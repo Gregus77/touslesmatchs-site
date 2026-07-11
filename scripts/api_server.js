@@ -2743,7 +2743,17 @@ Réponds en JSON pur (pas de markdown):
   if (!playable.ok) {
     console.log(`[signal-fort] Bloqué (sans valeur) — ${playable.reason}`);
   }
-  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && playable.ok && TELEGRAM_BOT_TOKEN) {
+  // Garde-fou final à l'émission : jamais de signal sur un match féminin ni une
+  // ligue douteuse, quel que soit le chemin d'analyse (défense en profondeur).
+  const isWomen = isWomenMatch(match);
+  if (isWomen) {
+    console.log(`[signal-fort] Bloqué — match féminin (liste noire): ${match.home} vs ${match.away}`);
+  }
+  const lowTrust = !isUefaCompetition(match) && isLowTrustCompetition(match);
+  if (lowTrust) {
+    console.log(`[signal-fort] Bloqué — ligue douteuse (liste noire): ${match.competition || match.league || ""}`);
+  }
+  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
