@@ -2541,7 +2541,25 @@ Réponds en JSON pur (pas de markdown):
   const agentResults = await Promise.all([0, 1, 2, 3].map(i => runSingleAgent(i)));
 
   // Phase 2: Run Chief AFTER, with all agent votes available
-  const previousVotes = agentResults.map((a) => {
+  // Filter weak agents (winrate < 52% AND resolved >= 30 predictions)
+  const benchedAgents = [];
+  const activedAgentResults = agentResults.filter((a) => {
+    const p = agentPerf[a.name];
+    const resolved = p ? p.resolved : 0;
+    const winrate = p ? p.winrate : null;
+    if (resolved >= 30 && winrate !== null && winrate < 52) {
+      benchedAgents.push(`${a.name} (${winrate}% sur ${resolved})`);
+      return false; // Filter out
+    }
+    return true; // Keep
+  });
+
+  // Log benched agents for debugging
+  if (benchedAgents.length > 0) {
+    console.log(`[concile] Benched agents (winrate < 52%, resolved >= 30): ${benchedAgents.join(", ")}`);
+  }
+
+  const previousVotes = activedAgentResults.map((a) => {
     const p = agentPerf[a.name];
     const resolved = p ? p.resolved : 0;
     const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
@@ -2551,12 +2569,17 @@ Réponds en JSON pur (pas de markdown):
     return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
   }).join("\n");
 
+  // Build benched agents note for Chief awareness
+  const benchedNote = benchedAgents.length > 0
+    ? `\n\nNOTE: Agents exclus du vote (faible historique): ${benchedAgents.join(", ")} [ces agents ont <52% winrate sur 30+ prédictions résolues]`
+    : "";
+
   const chiefPrompt = `${personas[4]}
 
 ${matchContext}
 
 Votes des agents avec leur fiabilité historique:
-${previousVotes}
+${previousVotes || "(aucun agent actif)"}${benchedNote}
 
 Synthétise ces votes en tenant compte de :
 1. Le POIDS de chaque agent (indiqué ci-dessus, basé sur son winrate réel) : privilégie fortement les votes des agents à POIDS ≥60%, et ignore largement ceux à POIDS <35% sauf si aucun agent mieux noté ne couvre ce marché
