@@ -132,6 +132,8 @@ ensureColumn("concile_analyses", "home_shots",      "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "away_shots",      "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "home_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "away_possession", "INTEGER DEFAULT NULL");
+ensureColumn("concile_analyses", "real_odd",        "REAL DEFAULT NULL");
+ensureColumn("concile_analyses", "real_odd_source", "TEXT DEFAULT NULL");
 
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
@@ -1868,6 +1870,105 @@ async function fetchDeepContext(match) {
   }
 }
 
+// ── Vraies cotes bookmakers ARJEL (API-Sports) ────────────────────────────────
+const oddsCache = new Map();
+const ARJEL_BOOKMAKERS = [
+  "betclic", "winamax", "unibet", "parionssport", "parions sport",
+  "pmu", "zebet", "vbet", "genybet", "bwin", "betsson", "netbet", "france pari",
+];
+
+async function fetchRealOdds(match) {
+  if (!API_SPORTS_KEY || match.source !== "api-sports" || match.sport !== "Football" || !match.fixtureId) return null;
+  const ck = `odds_${match.fixtureId}`;
+  const c = oddsCache.get(ck);
+  if (c && Date.now() - c.ts < 10 * 60 * 1000) return c.data;
+  let data = null;
+  try {
+    const resp = await httpGet(
+      `https://v3.football.api-sports.io/odds?fixture=${match.fixtureId}`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const bookmakers = resp?.response?.[0]?.bookmakers || [];
+    if (bookmakers.length) {
+      const chosen = bookmakers.find(bm =>
+        ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a))
+      ) || bookmakers[0];
+      data = { bookmaker: chosen.name, bets: chosen.bets || [] };
+    }
+  } catch (e) { console.error("[odds]", e.message); data = null; }
+  oddsCache.set(ck, { data, ts: Date.now() });
+  return data;
+}
+
+// Mappe le pari recommandé (texte libre FR) vers la vraie cote du bookmaker.
+function pickRealOdd(oddsData, betLabel, match) {
+  if (!oddsData?.bets?.length) return null;
+  const b = String(betLabel || "").toLowerCase();
+  const findBet = (names) => oddsData.bets.find(x => names.some(n => String(x.name || "").toLowerCase().includes(n)));
+  const valOf = (bet, matcher) => {
+    if (!bet) return null;
+    const v = (bet.values || []).find(v => matcher(String(v.value || "").toLowerCase()));
+    const o = v ? parseFloat(v.odd) : null;
+    return (o && o > 1) ? Math.round(o * 100) / 100 : null;
+  };
+  if (/under|moins de|-2\.5/.test(b))  return valOf(findBet(["goals over/under", "over/under"]), s => s.includes("under 2.5"));
+  if (/over|plus de|\+2\.5/.test(b))   return valOf(findBet(["goals over/under", "over/under"]), s => s.includes("over 2.5"));
+  if (/btts|both teams|deux équipes|marquent/.test(b)) {
+    const bt = findBet(["both teams to score", "both teams score"]);
+    const wantNo = /\bnon\b|\bno\b/.test(b);
+    return valOf(bt, s => wantNo ? s === "no" : s === "yes");
+  }
+  if (/double chance/.test(b)) {
+    const bt = findBet(["double chance"]);
+    if (/1x|domicile.*nul|home.*draw/.test(b)) return valOf(bt, s => s.includes("home/draw") || s === "1x");
+    if (/x2|nul.*ext|draw.*away/.test(b))     return valOf(bt, s => s.includes("draw/away") || s === "x2");
+    return valOf(bt, s => s.includes("home/away") || s === "12");
+  }
+  if (/victoire|vainqueur|winner/.test(b)) {
+    const bt = findBet(["match winner", "1x2", "winner"]);
+    const home = String(match?.home || "").toLowerCase();
+    const away = String(match?.away || "").toLowerCase();
+    if (home && b.includes(home.split(" ")[0])) return valOf(bt, s => s === "home");
+    if (away && b.includes(away.split(" ")[0])) return valOf(bt, s => s === "away");
+    if (/nul|draw|match nul/.test(b))           return valOf(bt, s => s === "draw");
+  }
+  return null;
+}
+
+// Cote marché réaliste par défaut si aucune vraie cote — variée SELON le marché
+// (fini la cote unique 1.71 pour tout). Utilisée en fallback uniquement.
+function estimateMarketOdd(confidence, betLabel) {
+  const base = Math.min(1.95, (1 / (Math.max(1, confidence) / 100)) * 1.45);
+  const b = String(betLabel || "").toLowerCase();
+  let mult = 1.0, lo = 1.2, hi = 2.6;
+  if (/double chance|1x|x2|12\b/.test(b))                { mult = 0.72; lo = 1.12; hi = 1.75; }
+  else if (/draw no bet|dnb|remboursé/.test(b))          { mult = 0.9;  lo = 1.25; hi = 2.2; }
+  else if (/victoire|vainqueur|winner/.test(b))          { mult = 0.88; lo = 1.2;  hi = 2.9; }
+  else if (/under|moins de|-2\.5|-1\.5|-3\.5/.test(b))   { mult = 1.0;  lo = 1.4;  hi = 2.1; }
+  else if (/over|plus de|\+2\.5|\+1\.5|\+3\.5/.test(b))  { mult = 1.12; lo = 1.5;  hi = 2.5; }
+  else if (/btts|both teams|deux équipes|marquent/.test(b)) { mult = 1.08; lo = 1.5; hi = 2.3; }
+  const odd = Math.max(lo, Math.min(hi, base * mult));
+  return Math.round(odd * 100) / 100;
+}
+
+// Retourne la meilleure cote disponible : vraie cote ARJEL sinon estimation marché.
+async function computeBestOdd(match, betLabel, confidence) {
+  try {
+    const oddsData = await fetchRealOdds(match);
+    const real = pickRealOdd(oddsData, betLabel, match);
+    if (real) {
+      return { cote: real, source: oddsData.bookmaker || "bookmaker" };
+    }
+  } catch (e) { console.error("[odds] compute:", e.message); }
+  return { cote: estimateMarketOdd(confidence, betLabel), source: "estimation" };
+}
+
+// Cote d'une ligne concile_analyses : vraie cote stockée sinon estimation par marché.
+function rowOdd(r) {
+  if (r && r.real_odd && r.real_odd > 1) return Math.round(r.real_odd * 100) / 100;
+  return estimateMarketOdd(r?.confidence || 0, r?.best_bet || "");
+}
+
 function parseMatchStats(data) {
   if (!data?.response?.length) return null;
   const home = data.response[0]?.statistics || [];
@@ -2430,10 +2531,16 @@ Réponds en JSON pur (pas de markdown):
   saveAgentPredictions(match, agentResults);
   saveAgentMarketPredictions(match, agentMarketList);
 
+  // Vraie cote ARJEL (sinon estimation marché variée par type de pari)
+  const oddInfo = await computeBestOdd(match, chief.bet, chief.confidence);
+  console.log(`[concile] Cote ${match.home} vs ${match.away}: ${oddInfo.cote} (${oddInfo.source}) — ${chief.bet}`);
+
   const analysisResult = {
     match_key: `${match.home}_${match.away}`,
     best_bet: chief.bet,
     confidence: chief.confidence,
+    cote: oddInfo.cote,
+    cote_source: oddInfo.source,
     raison: chief.raison,
     consensus_votes: consensusVotes + 1,
     total_agents: 5,
@@ -2676,7 +2783,7 @@ function saveConcileAnalysis(match, result, pickBet) {
           consensus_votes = ?, agents_json = ?, pick_bet = ?,
           learning_tier = ?, learning_note = ?,
           bet_category = ?, home_possession = ?, away_possession = ?,
-          home_shots = ?, away_shots = ?, analysed_at = datetime('now')
+          home_shots = ?, away_shots = ?, real_odd = ?, real_odd_source = ?, analysed_at = datetime('now')
           ${betChanged ? ", outcome = NULL, final_score_home = NULL, final_score_away = NULL, resolved_at = NULL" : ""}
         WHERE match_key = ?
       `).run(
@@ -2687,6 +2794,7 @@ function saveConcileAnalysis(match, result, pickBet) {
         pickBet || null,
         learningAssessment.tier, learningAssessment.reasons.join("; "),
         betCat, homePoss, awayPoss, homeShots, awayShots,
+        result.cote ?? null, result.cote_source ?? null,
         matchKey
       );
     } else {
@@ -2697,8 +2805,9 @@ function saveConcileAnalysis(match, result, pickBet) {
            best_bet, confidence, raison, consensus_votes, agents_json, pick_bet,
            sport, learning_tier, learning_note, home_logo, away_logo,
            bet_category, country, is_neutral,
-           home_possession, away_possession, home_shots, away_shots)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           home_possession, away_possession, home_shots, away_shots,
+           real_odd, real_odd_source)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).run(
         matchKey,
         match.home, match.away, competition, minute,
@@ -2710,7 +2819,8 @@ function saveConcileAnalysis(match, result, pickBet) {
         learningAssessment.tier, learningAssessment.reasons.join("; "),
         match.home_logo || null, match.away_logo || null,
         betCat, country, neutral,
-        homePoss, awayPoss, homeShots, awayShots
+        homePoss, awayPoss, homeShots, awayShots,
+        result.cote ?? null, result.cote_source ?? null
       );
     }
     console.log(
@@ -5833,7 +5943,7 @@ async function sendDailyResultsFreeChannel() {
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
     const rows = db.prepare(`
-      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+      SELECT home, away, competition, sport, best_bet, confidence, outcome, real_odd,
              final_score_home, final_score_away
       FROM concile_analyses
       WHERE date(analysed_at) = ? AND outcome IN ('win','loss')
@@ -5857,13 +5967,13 @@ async function sendDailyResultsFreeChannel() {
     const matchLines = unique.map(r => {
       const icon = r.outcome === "win" ? "✅" : "❌";
       const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45)).toFixed(2);
-      const gainStr = r.outcome === "win" ? `+${(10 * parseFloat(cote) - 10).toFixed(0)}€` : "-10€";
-      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote} → ${gainStr}`;
+      const cote = rowOdd(r);
+      const gainStr = r.outcome === "win" ? `+${(10 * cote - 10).toFixed(0)}€` : "-10€";
+      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote.toFixed(2)} → ${gainStr}`;
     }).join("\n");
 
     const totalGain = unique.reduce((sum, r) => {
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+      const cote = rowOdd(r);
       return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
     }, 0);
 
@@ -6262,7 +6372,7 @@ app.get("/premium-teaser", (req, res) => {
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
     const allRows = db.prepare(`
-      SELECT home, away, competition, outcome, confidence, best_bet,
+      SELECT home, away, competition, outcome, confidence, best_bet, real_odd,
         final_score_home, final_score_away, sport, analysed_at
       FROM concile_analyses
       WHERE outcome IN ('win','loss')
@@ -6296,7 +6406,7 @@ app.get("/premium-teaser", (req, res) => {
     const winrate = allTime.total > 0 ? Math.round(allTime.wins / allTime.total * 100) : 0;
 
     const simGain = deduped.reduce((sum, r) => {
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+      const cote = rowOdd(r);
       return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
     }, 0);
 
@@ -6310,7 +6420,7 @@ app.get("/premium-teaser", (req, res) => {
     let bankroll = 100;
     const progression = [{ label: "Départ", value: 100 }];
     for (const r of chronological) {
-      const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+      const cote = rowOdd(r);
       bankroll += r.outcome === "win" ? (10 * cote - 10) : -10;
       bankroll = Math.round(bankroll * 100) / 100;
       const label = r.analysed_at
@@ -6331,7 +6441,7 @@ app.get("/premium-teaser", (req, res) => {
       today_results: todayStats,
       yesterday: yesterdayStats,
       recent: recentResults.map(r => {
-        const cote = Math.min(1.95, ((1 / (r.confidence / 100)) * 1.45));
+        const cote = rowOdd(r);
         const gain10 = r.outcome === 'win' ? Math.round((cote * 10 - 10) * 100) / 100 : -10;
         return {
           match: `${r.home} vs ${r.away}`,
