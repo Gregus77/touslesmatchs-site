@@ -1350,6 +1350,59 @@ function isUnderperformingCompetition(match) {
   return getUnderperformingCompetitions().has(comp);
 }
 
+// ── Barrière qualité : ne PROPOSER (signaler) que les segments prouvés gagnants ─
+// Le système continue d'analyser tout (pour apprendre), mais un signal ne part au
+// client que si la ligue et/ou le marché ont un track record réel suffisant.
+const QUALITY_GATE_ENABLED = process.env.QUALITY_GATE !== "0";
+let _segmentStatsCache = { data: null, ts: 0 };
+
+function getSegmentStats() {
+  if (_segmentStatsCache.data && Date.now() - _segmentStatsCache.ts < 60 * 60 * 1000) return _segmentStatsCache.data;
+  const data = { comp: {}, market: {}, compMarket: {} };
+  try {
+    const rows = db.prepare(`
+      SELECT competition, best_bet, outcome FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+    `).all();
+    const bump = (obj, key, win) => { const o = (obj[key] = obj[key] || { w: 0, t: 0 }); o.t++; if (win) o.w++; };
+    for (const r of rows) {
+      const comp = String(r.competition || "").toLowerCase();
+      const mk = categorizeBet(r.best_bet);
+      const win = r.outcome === "win";
+      if (comp) bump(data.comp, comp, win);
+      if (mk !== "NO BET") bump(data.market, mk, win);
+      if (comp && mk !== "NO BET") bump(data.compMarket, comp + "||" + mk, win);
+    }
+  } catch (e) { console.error("[segment-stats]", e.message); }
+  _segmentStatsCache = { data, ts: Date.now() };
+  return data;
+}
+
+function passesHistoricalQualityGate(match, bet) {
+  if (!QUALITY_GATE_ENABLED) return { ok: true, reason: "gate off" };
+  const stats = getSegmentStats();
+  const comp = String(match?.competition || "").toLowerCase();
+  const mk = categorizeBet(bet);
+  const wr = (o) => (o && o.t > 0 ? o.w / o.t : null);
+
+  // 1) Ligue × marché — le plus précis. >=6 analyses et <50% de réussite => on bloque.
+  const cm = stats.compMarket[comp + "||" + mk];
+  if (cm && cm.t >= 6 && wr(cm) < 0.50) {
+    return { ok: false, reason: `${mk} en ${match.competition} : ${Math.round(wr(cm) * 100)}% (${cm.t} analyses)` };
+  }
+  // 2) Ligue seule — >=12 analyses et <52% => on bloque.
+  const c = stats.comp[comp];
+  if (c && c.t >= 12 && wr(c) < 0.52) {
+    return { ok: false, reason: `ligue ${match.competition} : ${Math.round(wr(c) * 100)}% (${c.t} analyses)` };
+  }
+  // 3) Marché seul — >=25 analyses et <50% => on bloque.
+  const m = stats.market[mk];
+  if (m && m.t >= 25 && wr(m) < 0.50) {
+    return { ok: false, reason: `marché ${mk} : ${Math.round(wr(m) * 100)}% (${m.t} analyses)` };
+  }
+  return { ok: true, reason: "segment fiable ou historique insuffisant (seuil 85% appliqué)" };
+}
+
 function getVerifiedFixtureId(match) {
   if (!match || match.source !== "api-sports" || match.sport !== "Football") return null;
   const fixtureId = match.fixtureId || match.sourceId || match.id;
@@ -2578,10 +2631,14 @@ Réponds en JSON pur (pas de markdown):
   }
 
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
-  // ET si on dispose de vraies données (stats live, H2H ou contexte) — pas de signal à l'aveugle.
+  // ET vraies données présentes ET segment (ligue/marché) prouvé gagnant historiquement.
   const signalThreshold = getAdaptiveSignalThreshold();
   const hasRealData = statsStatus.available || !!h2hBlock || !!deepBlock;
-  if (analysisResult.confidence >= signalThreshold && hasRealData && TELEGRAM_BOT_TOKEN) {
+  const qualityGate = passesHistoricalQualityGate(match, analysisResult.best_bet);
+  if (!qualityGate.ok) {
+    console.log(`[signal-fort] Bloqué par barrière qualité — ${qualityGate.reason}`);
+  }
+  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
