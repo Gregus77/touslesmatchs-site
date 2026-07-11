@@ -2333,8 +2333,40 @@ function buildChart(){
 // ══ PICKS FEED DATA — Admin: modifier ce tableau pour mettre à jour la homepage
 // status: "finished" | "upcoming"
 // Pour ajouter un prochain pick, ajouter un objet avec status:"upcoming" à la fin
-// Feed 100% dynamique : rempli en direct depuis /api/analysis-history (vraies analyses).
-const PICKS_FEED = [];
+const PICKS_FEED = [
+  { id:"lazio-inter", date:"2026-05-13", time:"20:00", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", pick:"Victoire Inter (1X2)", cote:1.60, status:"finished", result:"win", score:"0-2" },
+  { id:"villarreal-seville", date:"2026-05-17", time:"18:00", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", pick:"Victoire Villarreal (1X2)", cote:1.88, status:"finished", result:"win", score:"3-2" },
+  { id:"knicks-cavaliers", date:"2026-05-19", time:"02:00", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", pick:"Plus de 216.5 pts", cote:1.72, status:"finished", result:"win", score:"115-104" },
+  { id:"fribourg-astonvilla", date:"2026-05-20", time:"21:00", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, status:"finished", result:"win", score:"0-3" },
+  { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, status:"finished", result:"win", score:"107-106" },
+  { id:"shamrock-derry", date:"2026-06-22", time:"21:00", competition:"Ireland Premier", home:"Shamrock Rovers", away:"Derry City", pick:"Moins de 2.5 buts", cote:1.72, status:"finished", result:"win", score:"1-1" },
+  { id:"inter-miami-nashville", date:"2026-06-25", time:"01:30", competition:"MLS · Journée 18", home:"Inter Miami", away:"Nashville SC", pick:"Moins de 2.5 buts", cote:1.78, status:"finished", result:"win", score:"1-0" },
+  { id:"kawasaki-urawa", date:"2026-06-27", time:"11:00", competition:"J1 League · Journée 19", home:"Kawasaki Frontale", away:"Urawa Reds", pick:"Moins de 2.5 buts", cote:1.68, status:"finished", result:"win", score:"0-1" },
+  { id:"ulsan-jeonbuk", date:"2026-06-28", time:"12:00", competition:"K League 1 · Journée 20", home:"Ulsan HD", away:"Jeonbuk Motors", pick:"Moins de 2.5 buts", cote:1.75, status:"finished", result:"win", score:"1-0" },
+  { id:"boca-river-libertadores", date:"2026-06-30", time:"02:00", competition:"Copa Libertadores · 8es", home:"Boca Juniors", away:"River Plate", pick:"Moins de 2.5 buts", cote:1.82, status:"finished", result:"win", score:"0-0" },
+  { id:"lafc-galaxy", date:"2026-07-01", time:"04:30", competition:"MLS · Journée 19", home:"LAFC", away:"LA Galaxy", pick:"Moins de 2.5 buts", cote:1.85, status:"finished", result:"loss", score:"2-1" },
+  { id:"ponte-preta-criciuma", date:"2026-07-09", time:"00:40", competition:"Serie B · Brésil", home:"Ponte Preta", away:"Criciuma", pick:"Over 2.5 buts", cote:1.70, status:"finished", result:"win", score:"1-2" },
+  { id:"real-potosi-abb", date:"2026-07-09", time:"00:31", competition:"Primera División · Bolivie", home:"Real Potosí", away:"ABB", pick:"Victoire domicile", cote:1.70, status:"finished", result:"win", score:"3-1" },
+  { id:"hartford-orangecounty", date:"2026-07-09", time:"00:31", competition:"USL Championship · USA", home:"Hartford Athletic", away:"Orange County SC", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-2" },
+  { id:"greenville-sarasota", date:"2026-07-09", time:"00:31", competition:"USL League One · USA", home:"Greenville Triumph", away:"Sarasota Paradise", pick:"Under 2.5 buts", cote:1.70, status:"finished", result:"win", score:"0-0" },
+  { id:"blackrock-bostonbolts", date:"2026-07-09", time:"00:40", competition:"USL League Two · USA", home:"Black Rock", away:"Boston Bolts", pick:"Under 2.5 buts", cote:1.65, status:"finished", result:"win", score:"0-0" },
+  { id:"boca-paranaense", date:"2026-07-09", time:"00:31", competition:"Friendlies Clubs", home:"Boca Juniors", away:"Atletico Paranaense", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"loss", score:"1-0" },
+  { id:"ingolstadt-lask", date:"2026-07-09", time:"13:30", competition:"Friendlies Clubs", home:"FC Ingolstadt 04", away:"Lask Linz", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"win", score:"2-0" },
+  { id:"cracovia-pardubice", date:"2026-07-09", time:"13:30", competition:"Friendlies Clubs", home:"Cracovia Krakow", away:"Pardubice", pick:"Victoire domicile", cote:1.75, status:"finished", result:"win", score:"2-0" },
+  { id:"rennes-caen", date:"2026-07-09", time:"13:30", competition:"Friendlies Clubs", home:"Rennes", away:"Caen", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"loss", score:"1-2" },
+  { id:"dynamo-kyiv-ucluj", date:"2026-07-09", time:"18:40", competition:"UEFA Europa League", home:"Dynamo Kyiv", away:"Universitatea Cluj", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-0" },
+  { id:"sheriff-aluminij", date:"2026-07-09", time:"18:40", competition:"UEFA Europa League", home:"Sheriff Tiraspol", away:"Aluminij", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-0" },
+  { id:"vojvodina-ferencvaros", date:"2026-07-09", time:"18:31", competition:"UEFA Europa League", home:"Vojvodina", away:"Ferencvarosi TC", pick:"Over 2.5 buts", cote:1.80, status:"finished", result:"win", score:"1-2" },
+  { id:"hajduk-zilina", date:"2026-07-09", time:"18:31", competition:"UEFA Europa League", home:"HNK Hajduk Split", away:"Žilina", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"loss", score:"2-0" },
+  { id:"vllaznia-malisheva", date:"2026-07-09", time:"18:30", competition:"UEFA Europa Conference League", home:"Vllaznia Shkodër", away:"Malisheva", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-1" },
+  { id:"velez-milsami", date:"2026-07-09", time:"18:40", competition:"UEFA Europa Conference League", home:"Velež", away:"Milsami Orhei", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"1-1" },
+  { id:"dinamo-minsk-sileks", date:"2026-07-09", time:"18:31", competition:"UEFA Europa Conference League", home:"Dinamo Minsk", away:"Sileks", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-1" },
+  { id:"bohemians-stjoseph", date:"2026-07-09", time:"18:31", competition:"UEFA Europa Conference League", home:"Bohemians", away:"St Joseph S Fc", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-0" },
+  { id:"korona-omonia", date:"2026-07-09", time:"18:40", competition:"Friendlies Clubs", home:"Korona Kielce", away:"Omonia Nicosia", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-0" },
+  { id:"europa-shkendija", date:"2026-07-09", time:"18:40", competition:"UEFA Europa Conference League", home:"Europa", away:"Shkendija", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"loss", score:"0-5" },
+  { id:"nublense-ohiggins", date:"2026-07-10", time:"00:30", competition:"Copa De La Liga · Chili", home:"Nublense", away:"O'Higgins", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-1" },
+  { id:"nacional-potosi-aurora", date:"2026-07-10", time:"00:30", competition:"Primera División · Bolivie", home:"Nacional Potosí", away:"Aurora", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"win", score:"2-0" },
+];
 
 function renderPicksFeed() {
   const root = document.getElementById('pf-root');
