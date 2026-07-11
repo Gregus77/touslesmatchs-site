@@ -6987,6 +6987,114 @@ let _lastDailyReportDate = "";
 let _lastWeeklyReportDate = "";
 let _lastBilanDate = "";
 
+// ── Rapport de performance hebdo : où l'on gagne / où l'on perd ───────────────
+function buildPerformanceReport(days = 7) {
+  const sinceDays = Math.max(1, days);
+  const rows = db.prepare(`
+    SELECT competition, sport, best_bet, confidence, outcome, real_odd, analysed_at
+    FROM concile_analyses
+    WHERE outcome IN ('win','loss')
+      AND analysed_at >= datetime('now', ?)
+  `).all(`-${sinceDays} days`);
+
+  if (!rows.length) return null;
+
+  const profitOf = (r) => {
+    const cote = rowOdd(r);
+    return r.outcome === "win" ? (10 * cote - 10) : -10;
+  };
+
+  const byComp = {};
+  const byMarket = {};
+  let gWins = 0, gProfit = 0;
+  for (const r of rows) {
+    const p = profitOf(r);
+    gProfit += p;
+    if (r.outcome === "win") gWins++;
+
+    const comp = r.competition || r.sport || "Inconnu";
+    (byComp[comp] = byComp[comp] || { total: 0, wins: 0, profit: 0 });
+    byComp[comp].total++; byComp[comp].profit += p;
+    if (r.outcome === "win") byComp[comp].wins++;
+
+    const mk = categorizeBet(r.best_bet);
+    if (mk !== "NO BET") {
+      (byMarket[mk] = byMarket[mk] || { total: 0, wins: 0, profit: 0 });
+      byMarket[mk].total++; byMarket[mk].profit += p;
+      if (r.outcome === "win") byMarket[mk].wins++;
+    }
+  }
+
+  const total = rows.length;
+  const gWinrate = Math.round(gWins / total * 100);
+
+  const compArr = Object.entries(byComp).map(([name, s]) => ({
+    name, ...s, winrate: Math.round(s.wins / s.total * 100),
+  }));
+  const marketArr = Object.entries(byMarket).map(([name, s]) => ({
+    name, ...s, winrate: Math.round(s.wins / s.total * 100),
+  }));
+
+  // Rentables / perdantes : min 3 analyses pour éviter le bruit
+  const eligible = compArr.filter(c => c.total >= 3);
+  const winners = [...eligible].sort((a, b) => b.profit - a.profit).slice(0, 5);
+  const losers = [...eligible].sort((a, b) => a.profit - b.profit).filter(c => c.profit < 0).slice(0, 5);
+
+  const fmt = (v) => (v >= 0 ? `+${Math.round(v)}` : `${Math.round(v)}`);
+  const line = (c) => `  • ${c.name} : ${c.winrate}% (${c.wins}/${c.total}) · ${fmt(c.profit)}€`;
+
+  let text = `📊 <b>RAPPORT PERFORMANCE — ${sinceDays} derniers jours</b>\n\n`;
+  text += `🌍 <b>Global :</b> ${total} analyses · ${gWinrate}% réussite · <b>${fmt(gProfit)}€</b> (10€/pick)\n\n`;
+
+  if (winners.length) {
+    text += `✅ <b>TES LIGUES RENTABLES :</b>\n${winners.filter(c => c.profit >= 0).map(line).join("\n") || "  (aucune positive)"}\n\n`;
+  }
+  if (losers.length) {
+    text += `❌ <b>TES LIGUES PERDANTES (à éviter) :</b>\n${losers.map(line).join("\n")}\n\n`;
+  }
+
+  const marketsSorted = marketArr.filter(m => m.total >= 3).sort((a, b) => b.profit - a.profit);
+  if (marketsSorted.length) {
+    text += `🎯 <b>PAR TYPE DE PARI :</b>\n${marketsSorted.map(line).join("\n")}\n\n`;
+  }
+
+  const bestMk = marketsSorted[0];
+  const worstMk = marketsSorted[marketsSorted.length - 1];
+  const recoParts = [];
+  if (winners[0] && winners[0].profit > 0) recoParts.push(`privilégie ${winners[0].name}`);
+  if (bestMk && bestMk.profit > 0) recoParts.push(`marché ${bestMk.name}`);
+  if (losers[0]) recoParts.push(`évite ${losers[0].name}`);
+  if (worstMk && worstMk.profit < 0 && worstMk !== bestMk) recoParts.push(`prudence sur ${worstMk.name}`);
+  if (recoParts.length) text += `💡 <b>Reco :</b> ${recoParts.join(" · ")}.\n\n`;
+
+  text += `━━━━━━━━━━━━━━━━━━\n🤖 Hermes — Auto-analyse de tes résultats réels`;
+  return text;
+}
+
+async function sendPerformanceReportTelegram(days = 7) {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  try {
+    const text = buildPerformanceReport(days);
+    if (!text) {
+      return await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, "📊 Rapport performance : pas assez d'analyses résolues sur la période.");
+    }
+    return await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, text);
+  } catch (e) {
+    console.error("[perf-report]", e.message);
+    return false;
+  }
+}
+
+app.get("/admin/performance-report", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  const days = Math.max(1, Math.min(90, parseInt(req.query.days) || 7));
+  const ok = await sendPerformanceReportTelegram(days);
+  res.json({ ok, message: ok ? "Rapport performance envoyé sur Telegram admin" : "Echec envoi" });
+});
+
+let _lastPerfReportDate = "";
+
 function checkAnalyticsSchedule() {
   const now = new Date();
   const parisStr = now.toLocaleString("en-GB", { timeZone: "Europe/Paris" });
@@ -7016,6 +7124,12 @@ function checkAnalyticsSchedule() {
     _lastWeeklyReportDate = todayKey;
     console.log("[analytics] Envoi rapport marketing hebdo (lundi 8h)...");
     sendWeeklyMarketingReport();
+  }
+
+  if (day === "Monday" && hour === 9 && _lastPerfReportDate !== todayKey) {
+    _lastPerfReportDate = todayKey;
+    console.log("[analytics] Envoi rapport performance hebdo (lundi 9h)...");
+    sendPerformanceReportTelegram(7).then(ok => console.log(`[perf-report] ${ok ? "OK" : "ECHEC"}`));
   }
 }
 
