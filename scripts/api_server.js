@@ -1314,7 +1314,6 @@ const TRUSTED_COMPETITIONS = [
   "uae pro league",
   "qsl", "qatar stars",
   "usl championship",
-  "nwsl",
   "ahl",
   "nbl", "nbl · australia",
   "australia cup",
