@@ -2942,8 +2942,11 @@ function getBetOutcomeForScore(bet, h, a) {
   const normalized = value.toLowerCase();
   const total = Number(h) + Number(a);
   if (!value) return null;
-  if (normalized.includes("over 2.5") || normalized.includes("plus de 2.5")) return total > 2.5 ? "win" : "loss";
-  if (normalized.includes("under 2.5") || normalized.includes("moins de 2.5")) return total < 2.5 ? "win" : "loss";
+  // Over / Under sur N'IMPORTE QUELLE ligne (0.5, 1.5, 2.5, 3.5...)
+  const overM = normalized.match(/(?:over|plus de)\s*(\d+(?:\.5)?)/);
+  if (overM) return total > parseFloat(overM[1]) ? "win" : "loss";
+  const underM = normalized.match(/(?:under|moins de|inf[eé]rieur(?:\s*à)?)\s*(\d+(?:\.5)?)/);
+  if (underM) return total < parseFloat(underM[1]) ? "win" : "loss";
   if (normalized.includes("btts oui") || normalized.includes("les deux equipes marquent") || normalized.includes("les deux équipes marquent")) return (h > 0 && a > 0) ? "win" : "loss";
   if (normalized.includes("btts non")) return (h > 0 && a > 0) ? "loss" : "win";
   if (value === "Match nul" || value === "X" || normalized.includes("nul")) return h === a ? "win" : "loss";
@@ -2952,6 +2955,17 @@ function getBetOutcomeForScore(bet, h, a) {
   if (value === "12" || normalized.includes("12")) return h !== a ? "win" : "loss";
   if (normalized.includes("domicile") || value === "1") return h > a ? "win" : "loss";
   if (normalized.includes("extérieur") || normalized.includes("exterieur") || value === "2") return a > h ? "win" : "loss";
+  return null;
+}
+
+// Résout un pari "Victoire [nom d'équipe]" en identifiant le côté (dom/ext) via les noms.
+function resolveTeamWinBet(bet, home, away, h, a) {
+  const b = String(bet || "").toLowerCase();
+  if (!/victoire|win|gagne|vainqueur/.test(b)) return null;
+  const homeW = String(home || "").toLowerCase().split(" ")[0];
+  const awayW = String(away || "").toLowerCase().split(" ")[0];
+  if (homeW && homeW.length > 2 && b.includes(homeW)) return h > a ? "win" : "loss";
+  if (awayW && awayW.length > 2 && b.includes(awayW)) return a > h ? "win" : "loss";
   return null;
 }
 
@@ -2992,7 +3006,7 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
         WHERE id = ?
       `);
       pending.forEach(r => {
-        const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet);
+        const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet) || resolveTeamWinBet(r.best_bet, home, away, h, a);
         if (out) {
           upd.run(out, h, a, "api_finished_match", r.id);
           const resThreshold = getAdaptiveSignalThreshold();
@@ -3774,7 +3788,7 @@ function autoResolvePredictions(match) {
         // getBetOutcomeForScore gère bien plus de variantes de libellés
         // ("Plus de 2.5", "moins de 2.5", domicile/extérieur, 1X/X2/12...).
         // betResults reste un filet de secours pour les libellés exacts.
-        const outcome = getBetOutcomeForScore(p.bet, h, a) || betResults[p.bet] || null;
+        const outcome = getBetOutcomeForScore(p.bet, h, a) || betResults[p.bet] || resolveTeamWinBet(p.bet, home, away, h, a) || null;
         if (outcome) { updateStmt.run(outcome, p.id); resolved++; }
       });
       console.log(`[agent-perf] Auto-résolu ${resolved}/${pending.length} prédictions: ${home} vs ${away} (${h}-${a})`);
@@ -6153,18 +6167,28 @@ app.get("/analysis-history", (req, res) => {
       };
     });
 
-    const stats = db.prepare(`
-      SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN outcome = 'win' THEN 1 ELSE 0 END) as wins,
-        SUM(CASE WHEN outcome = 'loss' THEN 1 ELSE 0 END) as losses
-      FROM concile_analyses
-      WHERE date(analysed_at) >= '2026-07-03' AND outcome IS NOT NULL
-    `).get() || {};
+    // Stats globales dédoublonnées (même logique que /premium-teaser) —
+    // source unique pour que la page Live IA et la page d'accueil affichent
+    // exactement le même winrate / nombre de picks.
+    const allResolved = db.prepare(`
+      SELECT home, away, outcome, analysed_at FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+      ORDER BY analysed_at DESC
+    `).all();
+    const seenStat = new Set();
+    let sTotal = 0, sWins = 0;
+    for (const r of allResolved) {
+      const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seenStat.has(k)) continue;
+      seenStat.add(k);
+      sTotal++;
+      if (r.outcome === "win") sWins++;
+    }
+    const stats = { total: sTotal, wins: sWins, losses: sTotal - sWins };
 
     res.json({
       ok: true, analyses, total,
-      stats: { total: stats.total || 0, wins: stats.wins || 0, losses: stats.losses || 0, winrate: stats.total > 0 ? Math.round(stats.wins / stats.total * 100) : 0 },
+      stats: { total: stats.total, wins: stats.wins, losses: stats.losses, winrate: stats.total > 0 ? Math.round(stats.wins / stats.total * 100) : 0 },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
@@ -7192,7 +7216,84 @@ app.get("/admin/performance-report", async (req, res) => {
   res.json({ ok, message: ok ? "Rapport performance envoyé sur Telegram admin" : "Echec envoi" });
 });
 
+// ── Rapport d'apprentissage quotidien : montre qu'Hermes progresse ───────────
+function buildLearningReport() {
+  const threshold = getAdaptiveSignalThreshold();
+
+  // Classement des agents par winrate réel (poids appliqué par le Chief)
+  const perf = getAgentPerformance();
+  const agents = Object.entries(perf)
+    .map(([name, p]) => ({ name, wr: p.winrate, resolved: p.resolved }))
+    .filter(a => a.resolved > 0)
+    .sort((a, b) => (b.wr || 0) - (a.wr || 0));
+  const agentLines = agents.length
+    ? agents.map(a => `  ${a.wr >= 60 ? "✅" : a.wr >= 50 ? "➖" : "⚠️"} ${a.name} : ${a.wr}% (${a.resolved})`).join("\n")
+    : "  (pas encore de prédictions résolues)";
+
+  // Compétitions auto-exclues (boucle d'auto-amélioration)
+  const weak = [...getUnderperformingCompetitions()];
+  const weakLine = weak.length ? weak.slice(0, 8).join(", ") : "aucune";
+
+  // Calibration : le seuil tient-il ses promesses ?
+  let calibLine = "données insuffisantes";
+  try {
+    const c = db.prepare(`
+      SELECT COUNT(*) t, SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) w
+      FROM concile_analyses WHERE confidence >= ? AND outcome IN ('win','loss')
+    `).get(threshold);
+    if (c && c.t >= 10) {
+      const realWr = Math.round(c.w / c.t * 100);
+      const gap = realWr - threshold;
+      const verdict = Math.abs(gap) <= 5 ? "✅ bien calibré" : gap < -5 ? "⚠️ trop optimiste" : "💪 marge de sécurité";
+      calibLine = `signaux ≥${threshold}% → winrate réel ${realWr}% (${c.t} analyses) — ${verdict}`;
+    }
+  } catch (e) {}
+
+  // Top segments rentables (7 jours) via les stats de segment
+  const seg = getSegmentStats();
+  const compArr = Object.entries(seg.comp)
+    .map(([name, s]) => ({ name, wr: Math.round(s.w / s.t * 100), t: s.t }))
+    .filter(c => c.t >= 5)
+    .sort((a, b) => b.wr - a.wr);
+  const topComps = compArr.slice(0, 4).map(c => `  ✅ ${c.name} : ${c.wr}% (${c.t})`).join("\n") || "  (historique en construction)";
+
+  const date = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris", day: "2-digit", month: "2-digit" });
+  return `🧠 <b>RAPPORT D'APPRENTISSAGE — ${date}</b>
+
+🎚 <b>Seuil signal actuel :</b> ${threshold}% (auto-ajusté)
+🎯 <b>Calibration :</b> ${calibLine}
+
+🤖 <b>Fiabilité des IA (poids appliqué) :</b>
+${agentLines}
+
+🏆 <b>Meilleurs segments (prouvés) :</b>
+${topComps}
+
+🚫 <b>Compétitions auto-exclues :</b> ${weakLine}
+
+━━━━━━━━━━━━━━━━━━
+🤖 Hermes apprend de chaque résultat — mise à jour quotidienne`;
+}
+
+async function sendLearningReportTelegram() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  try {
+    return await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, buildLearningReport());
+  } catch (e) {
+    console.error("[learning-report]", e.message);
+    return false;
+  }
+}
+
+app.get("/admin/learning-report", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  const ok = await sendLearningReportTelegram();
+  res.json({ ok, message: ok ? "Rapport d'apprentissage envoyé sur Telegram admin" : "Echec envoi" });
+});
+
 let _lastPerfReportDate = "";
+let _lastLearningReportDate = "";
 
 function checkAnalyticsSchedule() {
   const now = new Date();
@@ -7217,6 +7318,12 @@ function checkAnalyticsSchedule() {
     _lastDailyReportDate = todayKey;
     console.log("[analytics] Envoi rapport visiteurs quotidien (23h)...");
     sendDailyVisitorReport();
+  }
+
+  if (hour === 23 && _lastLearningReportDate !== todayKey) {
+    _lastLearningReportDate = todayKey;
+    console.log("[analytics] Envoi rapport d'apprentissage quotidien (23h)...");
+    sendLearningReportTelegram().then(ok => console.log(`[learning-report] ${ok ? "OK" : "ECHEC"}`));
   }
 
   if (day === "Monday" && hour === 8 && _lastWeeklyReportDate !== todayKey) {
