@@ -1196,9 +1196,15 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "palestine", "jordan · ", "iraq", "syria", "yemen", "oman", "bahrain",
   "lebanon", "india", "sri lanka", "pakistan",
   "indonesia", "malaysia · ", "philippines", "thailand · ",
+  // Divisions inférieures asiatiques (2e/3e divisions — volatiles, cause de pertes)
+  "k league 2", "k-league 2", "j2 league", "j3 league", "j2-league", "j3-league",
+  "china league one", "chinese league two",
   // Amérique du Sud — ligues secondaires
   "chile", "bolivia", "peru", "venezuela", "ecuador",
   "paraguay", "uruguay · segunda", "colombia · b",
+  // Argentine — divisions inférieures (2e/3e/4e — très volatiles)
+  "primera b metropolitana", "primera b nacional", "primera c", "primera d",
+  "torneo federal", "argentina · primera b",
   // Amérique centrale et Caraïbes
   "honduras", "guatemala", "el salvador", "nicaragua",
   "costa rica", "panama · liga", "haiti", "jamaica", "trinidad",
