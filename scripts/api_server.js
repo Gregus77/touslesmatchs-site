@@ -448,7 +448,8 @@ const _freeSignalDailyDate = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
 const PREMIUM_SIGNAL_DAILY_CAP = 10;
 const _freeResultDailyDate = { date: "", count: 0 };
-let _adaptiveThresholdCache = { value: 80, computedAt: 0 };
+let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
+const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
 
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
@@ -456,18 +457,18 @@ function getAdaptiveSignalThreshold() {
   try {
     const rows = db.prepare(`
       SELECT confidence, outcome FROM concile_analyses
-      WHERE confidence >= 80 AND outcome IN ('win','loss')
+      WHERE confidence >= ${SIGNAL_FLOOR} AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC LIMIT 100
     `).all();
     if (rows.length < 15) {
-      _adaptiveThresholdCache = { value: 80, computedAt: now };
-      return 80;
+      _adaptiveThresholdCache = { value: SIGNAL_FLOOR, computedAt: now };
+      return SIGNAL_FLOOR;
     }
     const brackets = [
-      { min: 80, max: 82, wins: 0, total: 0 },
-      { min: 82, max: 85, wins: 0, total: 0 },
       { min: 85, max: 88, wins: 0, total: 0 },
-      { min: 88, max: 101, wins: 0, total: 0 },
+      { min: 88, max: 91, wins: 0, total: 0 },
+      { min: 91, max: 94, wins: 0, total: 0 },
+      { min: 94, max: 101, wins: 0, total: 0 },
     ];
     for (const r of rows) {
       for (const b of brackets) {
@@ -478,7 +479,7 @@ function getAdaptiveSignalThreshold() {
         }
       }
     }
-    let threshold = 80;
+    let threshold = SIGNAL_FLOOR;
     let cumTotal = 0, cumWins = 0;
     for (const b of brackets) {
       cumTotal += b.total;
@@ -501,7 +502,7 @@ function getAdaptiveSignalThreshold() {
     return threshold;
   } catch (e) {
     console.error("[adaptive-threshold]", e.message);
-    return _adaptiveThresholdCache.value || 80;
+    return _adaptiveThresholdCache.value || SIGNAL_FLOOR;
   }
 }
 
@@ -1291,7 +1292,54 @@ function isBlacklistedForLiveDisplay(matchOrCompetition = "") {
     ? matchOrCompetition
     : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
-  return LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword));
+  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
+  if (typeof matchOrCompetition === "object" && isWomenMatch(matchOrCompetition)) return true;
+  return false;
+}
+
+// Détecte les matchs féminins (compétitions "W"/Women/Féminin, équipes suffixées " W").
+function isWomenMatch(match) {
+  if (!match) return false;
+  const comp = String(match.competition || match.league || "").toLowerCase();
+  const home = String(match.home || "").trim();
+  const away = String(match.away || "").trim();
+  const compHit = /\bwomen\b|f[ée]minin|femenin|femminile|frauen|\bnwsl\b|\bwsl\b|wk-league|w-league|w league|kobiet|damallsvenskan|\bfeminine\b|\bwomens?\b/.test(comp);
+  const teamHit = /(\s|\()w\)?$/i.test(home) || /(\s|\()w\)?$/i.test(away) || /\bwomen\b/i.test(home) || /\bwomen\b/i.test(away);
+  return compHit || teamHit;
+}
+
+// Auto-blacklist dynamique : compétitions où le taux de réussite est trop faible.
+// Boucle d'auto-amélioration — on cesse d'analyser ce qui fait perdre.
+let _weakCompCache = { set: new Set(), ts: 0 };
+function getUnderperformingCompetitions() {
+  if (Date.now() - _weakCompCache.ts < 60 * 60 * 1000) return _weakCompCache.set;
+  const weak = new Set();
+  try {
+    const rows = db.prepare(`
+      SELECT competition,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) AS wins,
+        SUM(CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) AS total
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss') AND competition IS NOT NULL AND competition != ''
+      GROUP BY competition
+      HAVING total >= 8
+    `).all();
+    for (const r of rows) {
+      const wr = r.total > 0 ? r.wins / r.total : 1;
+      if (wr < 0.45) {
+        weak.add(String(r.competition).toLowerCase());
+        console.log(`[weak-comp] Compétition exclue (auto): ${r.competition} — ${Math.round(wr*100)}% sur ${r.total} analyses`);
+      }
+    }
+  } catch (e) { console.error("[weak-comp]", e.message); }
+  _weakCompCache = { set: weak, ts: Date.now() };
+  return weak;
+}
+
+function isUnderperformingCompetition(match) {
+  const comp = String(match?.competition || "").toLowerCase();
+  if (!comp) return false;
+  return getUnderperformingCompetitions().has(comp);
 }
 
 function getVerifiedFixtureId(match) {
@@ -2417,8 +2465,10 @@ Réponds en JSON pur (pas de markdown):
   }
 
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
+  // ET si on dispose de vraies données (stats live, H2H ou contexte) — pas de signal à l'aveugle.
   const signalThreshold = getAdaptiveSignalThreshold();
-  if (analysisResult.confidence >= signalThreshold && TELEGRAM_BOT_TOKEN) {
+  const hasRealData = statsStatus.available || !!h2hBlock || !!deepBlock;
+  if (analysisResult.confidence >= signalThreshold && hasRealData && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
@@ -3736,16 +3786,22 @@ function isUefaCompetition(match) {
   return /uefa|champions league|europa league|conference league|europa conference/.test(comp);
 }
 
+const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
+const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
+
 function shouldAutoObserveMatch(match) {
   if (!match || match.scoreConflict) return false;
   const status = String(match.status || "").toUpperCase();
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
+  if (isWomenMatch(match)) return false;              // pas de matchs féminins
   if (String(match.sport || "Football") !== "Football") return true;
   // Option 3 : grandes ligues (whitelist) + compétitions UEFA (dont qualifs européennes)
   if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
+  if (isUnderperformingCompetition(match)) return false; // exclut les compétitions perdantes
+  // Fenêtre 35-75' : assez de données jouées + cote encore intéressante
   const minute = parseLiveMinuteValue(match.minute);
-  return minute !== null && minute >= AUTO_CONCILE_MIN_MINUTE;
+  return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
 }
 
 function hasPredictionSnapshot(match) {
