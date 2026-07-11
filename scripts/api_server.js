@@ -6012,7 +6012,7 @@ app.get("/analysis-history", (req, res) => {
   try {
     const rows = db.prepare(`
       SELECT id, home, away, competition, sport, best_bet, confidence, raison,
-             consensus_votes, outcome, analysed_at,
+             consensus_votes, outcome, analysed_at, real_odd,
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
@@ -6033,6 +6033,7 @@ app.get("/analysis-history", (req, res) => {
         home: r.home, away: r.away,
         competition: r.competition, sport: r.sport || "Football",
         bet: r.best_bet, confidence: r.confidence,
+        cote: rowOdd(r),
         reasoning: r.raison, consensus: r.consensus_votes,
         outcome: r.outcome,
         analysed_at: r.analysed_at,

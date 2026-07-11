@@ -3186,18 +3186,22 @@ document.addEventListener('click',function(e){
   }).catch(()=>{});
   fetch('/api/analysis-history?limit=50').then(r=>r.json()).then(d=>{
     if(!d.ok || !d.analyses) return;
+    const todayStr = new Date().toISOString().slice(0,10);
     d.analyses.forEach(a=>{
       const id='ah-'+String(a.home+'-'+a.away+'-'+(a.analysed_at||'')).replace(/\s+/g,'-').toLowerCase();
       if(existing.has(id)) return;
       const coteMoy=(c)=>Math.min(1.95,((1/(c/100))*1.45));
       const hasResult = a.outcome === 'win' || a.outcome === 'loss';
+      const dateStr = a.analysed_at ? a.analysed_at.slice(0,10) : '';
+      // Ne pas afficher en "en attente" les analyses non résolues d'un jour passé
+      if(!hasResult && dateStr !== todayStr) return;
       PICKS_FEED.push({
-        id, date:a.analysed_at?a.analysed_at.slice(0,10):'',
+        id, date:dateStr,
         time:a.analysed_at?a.analysed_at.slice(11,16):'',
         competition:a.competition||a.sport||'',
         home:a.home, away:a.away,
         pick:a.bet||'Analyse IA',
-        cote:parseFloat(coteMoy(a.confidence).toFixed(2)),
+        cote: (a.cote!=null ? parseFloat(a.cote) : parseFloat(coteMoy(a.confidence).toFixed(2))),
         confidence:a.confidence,
         status: hasResult ? 'finished' : 'pending',
         result: hasResult ? a.outcome : null,
