@@ -6669,6 +6669,17 @@ app.post("/internal/signal-notify", async (req, res) => {
   const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
   if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
   if (!signal || !signal.home) return res.json({ ok: false, error: "signal manquant" });
+  // Garde-fou : Hermès ne peut PAS diffuser un signal sur un match féminin ni une
+  // ligue douteuse (Football), même via cet endpoint interne (défense en profondeur).
+  const sigMatch = { competition: signal.competition, league: signal.competition, home: signal.home, away: signal.away, sport: signal.sport };
+  if (isWomenMatch(sigMatch)) {
+    console.log(`[signal-notify] Bloqué — match féminin (liste noire): ${signal.home} vs ${signal.away}`);
+    return res.json({ ok: false, error: "match féminin exclu", blocked: "women" });
+  }
+  if (signal.sport === "Football" && !isUefaCompetition(sigMatch) && isLowTrustCompetition(sigMatch)) {
+    console.log(`[signal-notify] Bloqué — ligue douteuse (liste noire): ${signal.competition || ""}`);
+    return res.json({ ok: false, error: "ligue douteuse exclue", blocked: "low_trust" });
+  }
   if (!BREVO_API_KEY) return res.json({ ok: false, error: "BREVO_API_KEY non configuré", sent: 0 });
 
   try {
