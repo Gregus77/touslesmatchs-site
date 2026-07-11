@@ -152,6 +152,14 @@ function ensureColumn(table, column, definition) {
   }
 }
 
+// Bankroll de l'utilisateur (simulateur de gestion de capital), keyée par email
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_bankroll (
+    email TEXT PRIMARY KEY,
+    amount REAL NOT NULL,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+`);
 ensureColumn("concile_analyses", "final_score_home", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "final_score_away", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "resolved_at", "TEXT DEFAULT NULL");
@@ -5176,6 +5184,51 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
     status: user.status,
     reset_at: "minuit",
   });
+});
+
+// ── Gestion de capital — bankroll de l'utilisateur (login par email + code) ───
+// Vérifie que le couple email/code est un abonné actif de codes.db.
+function bankrollAuth(email, code) {
+  if (!email || !code) return null;
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = codesDb.prepare(
+      "SELECT email, plan, expires_at FROM codes WHERE code = ? AND email = ? AND active = 1"
+    ).get(String(code).toUpperCase().trim(), String(email).toLowerCase().trim());
+    codesDb.close();
+    if (!row) return null;
+    if (row.expires_at && new Date(row.expires_at) < new Date()) return null;
+    return row;
+  } catch (e) {
+    console.error("[bankroll] auth:", e.message);
+    return null;
+  }
+}
+
+// Récupère la bankroll enregistrée de l'utilisateur.
+app.post("/bankroll/get", (req, res) => {
+  const { email, code } = req.body || {};
+  const auth = bankrollAuth(email, code);
+  if (!auth) return res.json({ ok: false, error: "Non authentifié" });
+  const row = db.prepare("SELECT amount FROM user_bankroll WHERE email = ?").get(auth.email);
+  res.json({ ok: true, bankroll: row ? row.amount : null });
+});
+
+// Enregistre/modifie la bankroll (montant en euros, 0–1 000 000).
+app.post("/bankroll/set", (req, res) => {
+  const { email, code, bankroll } = req.body || {};
+  const auth = bankrollAuth(email, code);
+  if (!auth) return res.json({ ok: false, error: "Non authentifié" });
+  const raw = Number(bankroll);
+  if (!Number.isFinite(raw) || raw < 0 || raw > 1000000) {
+    return res.json({ ok: false, error: "Montant invalide" });
+  }
+  const amount = Math.round(raw * 100) / 100;
+  db.prepare(`
+    INSERT INTO user_bankroll (email, amount, updated_at) VALUES (?, ?, datetime('now'))
+    ON CONFLICT(email) DO UPDATE SET amount = excluded.amount, updated_at = datetime('now')
+  `).run(auth.email, amount);
+  res.json({ ok: true, bankroll: amount });
 });
 
 // ── Pick du jour — lit picks.json d'Hermès en priorité ───────────────────────
