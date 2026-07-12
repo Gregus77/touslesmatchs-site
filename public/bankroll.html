@@ -72,6 +72,18 @@
   .stake-gain { font-size: 11px; color: #7b82a0; }
   .c-prudent { color: #10b981; } .c-normal { color: #f59e0b; } .c-risque { color: #ef4444; }
 
+  /* Suivi gains/pertes */
+  .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+  .ttile { background: #06080f; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 11px 4px; text-align: center; }
+  .tval { font-size: 16px; font-weight: 900; }
+  .tlbl { font-size: 10px; color: #7b82a0; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+  .bet-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .bet-item:last-child { border-bottom: none; }
+  .bet-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bet-profit { font-weight: 800; white-space: nowrap; }
+  .bet-del { color: #6b7186; cursor: pointer; font-size: 15px; }
+  .empty { color: #7b82a0; font-size: 13px; text-align: center; padding: 16px 0; }
+
   .disclaimer {
     font-size: 11px; color: #6b7186; line-height: 1.7; margin-top: 24px;
     padding: 16px; background: rgba(255,255,255,.02); border-radius: 12px; border: 1px solid rgba(255,255,255,.05);
@@ -164,6 +176,28 @@
         </div>
       </div>
     </div>
+
+    <!-- Mon suivi gains / pertes -->
+    <div class="card">
+      <div class="label">Mon suivi — gains &amp; pertes</div>
+      <div class="totals">
+        <div class="ttile"><div class="tval" id="t-solde">0 €</div><div class="tlbl">Solde net</div></div>
+        <div class="ttile"><div class="tval c-prudent" id="t-gagne">0 €</div><div class="tlbl">Gagné</div></div>
+        <div class="ttile"><div class="tval c-risque" id="t-perdu">0 €</div><div class="tlbl">Perdu</div></div>
+        <div class="ttile"><div class="tval c-normal" id="t-winrate">0%</div><div class="tlbl">Réussite</div></div>
+      </div>
+      <div style="margin-bottom:8px"><input type="text" id="bet-label" placeholder="Match (ex : PSG - OM)" maxlength="80"></div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="number" id="bet-stake" placeholder="Mise €" min="0" step="1" inputmode="decimal">
+        <input type="number" id="bet-odds" placeholder="Cote" min="1" step="0.05" inputmode="decimal">
+      </div>
+      <div class="row">
+        <button class="btn" style="background:linear-gradient(135deg,#059669,#10b981)" onclick="addBet('win')">✅ Gagné</button>
+        <button class="btn" style="background:linear-gradient(135deg,#b91c1c,#ef4444)" onclick="addBet('loss')">❌ Perdu</button>
+      </div>
+      <div class="err" id="bet-error"></div>
+      <div id="bets-list" style="margin-top:16px"></div>
+    </div>
   </div>
 
   <div class="disclaimer">
@@ -220,7 +254,84 @@
     });
   }
 
-  function showApp() { document.getElementById('app').classList.remove('hidden'); }
+  function showApp() {
+    document.getElementById('app').classList.remove('hidden');
+    loadBets();
+  }
+
+  // ── Suivi gains / pertes ─────────────────────────────────────────────────────
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function loadBets() {
+    fetch('/api/bankroll/bets/list', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) renderBets(d);
+    }).catch(function(){});
+  }
+
+  function renderBets(d) {
+    var t = d.totals;
+    var solde = document.getElementById('t-solde');
+    solde.textContent = (t.solde >= 0 ? '+' : '') + euro(t.solde);
+    solde.className = 'tval ' + (t.solde >= 0 ? 'c-prudent' : 'c-risque');
+    document.getElementById('t-gagne').textContent = euro(t.gagne);
+    document.getElementById('t-perdu').textContent = euro(t.perdu);
+    document.getElementById('t-winrate').textContent = t.winrate + '%';
+    var list = document.getElementById('bets-list');
+    if (!d.bets.length) {
+      list.innerHTML = '<div class="empty">Aucune mise enregistrée. Ajoute ta première ci-dessus.</div>';
+      return;
+    }
+    list.innerHTML = d.bets.map(function(b) {
+      var pos = b.profit >= 0;
+      return '<div class="bet-item">' +
+        '<div class="bet-label">' + escapeHtml(b.label) +
+        ' <span style="color:#7b82a0">· ' + b.stake + '€ @ ' + b.odds + '</span></div>' +
+        '<div class="bet-profit ' + (pos ? 'c-prudent' : 'c-risque') + '">' + (pos ? '+' : '') + euro(b.profit) + '</div>' +
+        '<span class="bet-del" onclick="delBet(' + b.id + ')">🗑</span></div>';
+    }).join('');
+  }
+
+  function addBet(result) {
+    var label = document.getElementById('bet-label').value.trim();
+    var stake = Number(document.getElementById('bet-stake').value);
+    var odds = Number(document.getElementById('bet-odds').value);
+    var err = document.getElementById('bet-error');
+    if (!label) { err.textContent = 'Indique le match.'; err.style.display = 'block'; return; }
+    if (!(stake > 0)) { err.textContent = 'Mise invalide.'; err.style.display = 'block'; return; }
+    if (!(odds >= 1)) { err.textContent = 'Cote invalide.'; err.style.display = 'block'; return; }
+    err.style.display = 'none';
+    fetch('/api/bankroll/bets/add', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code, label: label, stake: stake, odds: odds, result: result })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) {
+        document.getElementById('bet-label').value = '';
+        document.getElementById('bet-stake').value = '';
+        document.getElementById('bet-odds').value = '';
+        renderBets(d);
+      } else {
+        err.textContent = d.error || 'Erreur.'; err.style.display = 'block';
+      }
+    }).catch(function() {
+      err.textContent = 'Erreur de connexion.'; err.style.display = 'block';
+    });
+  }
+
+  function delBet(id) {
+    fetch('/api/bankroll/bets/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code, id: id })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) renderBets(d);
+    }).catch(function(){});
+  }
 
   // ── Bankroll ───────────────────────────────────────────────────────────────
   var currentBankroll = null;

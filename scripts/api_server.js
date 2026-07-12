@@ -160,6 +160,20 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now'))
   );
 `);
+// Suivi personnel des mises (gains/pertes) par utilisateur, keyé par email
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_bets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    label TEXT NOT NULL,
+    stake REAL NOT NULL,
+    odds REAL NOT NULL,
+    result TEXT NOT NULL,
+    profit REAL NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_bets_email ON user_bets(email);
+`);
 ensureColumn("concile_analyses", "final_score_home", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "final_score_away", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "resolved_at", "TEXT DEFAULT NULL");
@@ -5229,6 +5243,70 @@ app.post("/bankroll/set", (req, res) => {
     ON CONFLICT(email) DO UPDATE SET amount = excluded.amount, updated_at = datetime('now')
   `).run(auth.email, amount);
   res.json({ ok: true, bankroll: amount });
+});
+
+// Calcule l'historique + les totaux (gains/pertes) d'un utilisateur.
+function bankrollHistory(email) {
+  const bets = db.prepare(
+    "SELECT id, label, stake, odds, result, profit, created_at FROM user_bets WHERE email = ? ORDER BY id DESC LIMIT 200"
+  ).all(email);
+  let gagne = 0, perdu = 0, wins = 0;
+  for (const b of bets) {
+    if (b.profit >= 0) { gagne += b.profit; if (b.result === "win") wins++; }
+    else perdu += -b.profit;
+  }
+  const total = bets.length;
+  return {
+    bets,
+    totals: {
+      count: total,
+      wins,
+      winrate: total ? Math.round(wins / total * 100) : 0,
+      gagne: Math.round(gagne * 100) / 100,
+      perdu: Math.round(perdu * 100) / 100,
+      solde: Math.round((gagne - perdu) * 100) / 100,
+    },
+  };
+}
+
+// Liste l'historique de mises + totaux de l'utilisateur.
+app.post("/bankroll/bets/list", (req, res) => {
+  const { email, code } = req.body || {};
+  const auth = bankrollAuth(email, code);
+  if (!auth) return res.json({ ok: false, error: "Non authentifié" });
+  res.json({ ok: true, ...bankrollHistory(auth.email) });
+});
+
+// Ajoute une mise au suivi personnel (et pousse l'email vers Brevo).
+app.post("/bankroll/bets/add", (req, res) => {
+  const { email, code, label, stake, odds, result } = req.body || {};
+  const auth = bankrollAuth(email, code);
+  if (!auth) return res.json({ ok: false, error: "Non authentifié" });
+  const s = Number(stake), o = Number(odds);
+  const lbl = String(label || "").trim().slice(0, 80);
+  if (!lbl) return res.json({ ok: false, error: "Libellé requis" });
+  if (!Number.isFinite(s) || s <= 0 || s > 1000000) return res.json({ ok: false, error: "Mise invalide" });
+  if (!Number.isFinite(o) || o < 1 || o > 1000) return res.json({ ok: false, error: "Cote invalide" });
+  if (result !== "win" && result !== "loss") return res.json({ ok: false, error: "Résultat invalide" });
+  const profit = result === "win"
+    ? Math.round(s * (o - 1) * 100) / 100
+    : Math.round(-s * 100) / 100;
+  db.prepare(
+    "INSERT INTO user_bets (email, label, stake, odds, result, profit) VALUES (?, ?, ?, ?, ?, ?)"
+  ).run(auth.email, lbl, Math.round(s * 100) / 100, Math.round(o * 100) / 100, result, profit);
+  // Nurturing : s'assurer que l'email est bien dans Brevo
+  const tag = auth.plan === "free" ? "FREE" : auth.plan === "premium" ? "PREMIUM" : auth.plan === "elite" ? "ELITE" : "VIP";
+  brevoAddContact(auth.email, tag).catch(() => {});
+  res.json({ ok: true, ...bankrollHistory(auth.email) });
+});
+
+// Supprime une mise du suivi.
+app.post("/bankroll/bets/delete", (req, res) => {
+  const { email, code, id } = req.body || {};
+  const auth = bankrollAuth(email, code);
+  if (!auth) return res.json({ ok: false, error: "Non authentifié" });
+  db.prepare("DELETE FROM user_bets WHERE id = ? AND email = ?").run(Number(id), auth.email);
+  res.json({ ok: true, ...bankrollHistory(auth.email) });
 });
 
 // ── Pick du jour — lit picks.json d'Hermès en priorité ───────────────────────
