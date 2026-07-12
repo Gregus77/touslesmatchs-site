@@ -510,7 +510,7 @@ const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
-const PREMIUM_SIGNAL_DAILY_CAP = 10;
+const PREMIUM_SIGNAL_DAILY_CAP = 4; // qualité > volume : seuls les meilleurs paris du jour
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
@@ -1462,6 +1462,23 @@ function passesHistoricalQualityGate(match, bet) {
     return { ok: false, reason: `marché ${mk} : ${Math.round(wr(m) * 100)}% (${m.t} analyses)` };
   }
   return { ok: true, reason: "segment fiable ou historique insuffisant (seuil 85% appliqué)" };
+}
+
+// ── Score "meilleur pari" : valeur (EV) + confiance + segment prouvé gagnant ──
+// Ne pousser en Premium que l'élite (3-4/jour) au lieu du premier venu.
+// EV = espérance sur mise unitaire = p·(cote−1) − (1−p). Positif = pari à valeur.
+function bestBetGrade(match, bet, confidence, cote) {
+  const p = (Number(confidence) || 0) / 100;
+  const c = Number(cote) || 0;
+  const ev = c > 0 ? (p * (c - 1) - (1 - p)) : -1;
+  const stats = getSegmentStats();
+  const comp = String(match?.competition || "").toLowerCase();
+  const mk = categorizeBet(bet);
+  const seg = stats.compMarket[comp + "||" + mk] || stats.comp[comp];
+  const segWr = seg && seg.t >= 8 ? seg.w / seg.t : null;
+  // Élite = valeur positive ET (confiance très haute OU segment historiquement gagnant)
+  const elite = ev > 0 && ((Number(confidence) || 0) >= 88 || (segWr !== null && segWr >= 0.62));
+  return { ev, segWr, elite };
 }
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
@@ -2784,11 +2801,15 @@ Réponds en JSON pur (pas de markdown):
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
-      // Canal premium : plafonné à 10 signaux/jour pour ne pas spammer les clients
+      // Canal premium : uniquement l'ÉLITE (meilleure valeur/segment), plafonné à 4/jour.
+      // L'admin, lui, reçoit TOUT (voir plus bas) — rien n'est perdu pour le suivi.
+      const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && grade.elite && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}): ${ok ? "OK" : "FAIL"}`));
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) EV=${grade.ev.toFixed(2)}: ${ok ? "OK" : "FAIL"}`));
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && !grade.elite) {
+        console.log(`[signal-fort] Premium: pari non-élite (EV=${grade.ev.toFixed(2)}, segWr=${grade.segWr === null ? "n/a" : Math.round(grade.segWr * 100) + "%"}) — réservé admin`);
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
