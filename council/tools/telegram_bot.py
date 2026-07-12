@@ -21,6 +21,14 @@ BETCLIC_LINK = os.environ.get("BETCLIC_LINK", "https://www.betclic.fr")
 
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
+# ── Unification des moteurs de signaux ────────────────────────────────────────
+# Le moteur JS (api_server.js) est le SEUL émetteur Telegram public : c'est lui qui
+# porte tous les garde-fous (exclusion féminin, ligues low-trust, conformité ANJ,
+# tri par valeur). Le council Python ne poste donc PLUS en direct sur Free/Premium.
+# Il continue de générer picks.json (page "Analyse du jour") et son rapport admin.
+# Réactivable au besoin via COUNCIL_PUBLIC_TELEGRAM=on.
+COUNCIL_PUBLIC_TELEGRAM = os.environ.get("COUNCIL_PUBLIC_TELEGRAM", "off").lower() == "on"
+
 
 def _sport_emoji(sport):
     emojis = {"Foot": "⚽", "Hockey": "🏒", "Basketball": "🏀",
@@ -31,6 +39,11 @@ def _sport_emoji(sport):
 def _send_message(chat_id, text, parse_mode="HTML", disable_preview=True):
     if not BOT_TOKEN or not chat_id:
         log.warning(f"[Telegram] Token ou channel_id manquant — message non envoyé")
+        return False
+    # Verrou d'unification : plus aucun post public direct depuis le council.
+    # Seul l'admin (rapport de monitoring) reste autorisé.
+    if not COUNCIL_PUBLIC_TELEGRAM and chat_id in (FREE_CHANNEL_ID, PREMIUM_CHANNEL_ID):
+        log.info(f"[Telegram] Post public council désactivé (unifié côté JS) — non envoyé à {chat_id}")
         return False
     try:
         resp = requests.post(
