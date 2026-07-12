@@ -2052,6 +2052,19 @@ const ARJEL_BOOKMAKERS = [
   "pmu", "zebet", "vbet", "genybet", "bwin", "betsson", "netbet", "france pari",
 ];
 
+// Compétitions non-foot MAJEURES disponibles sur les bookmakers ARJEL français.
+// Elles n'ont pas de cote récupérée automatiquement (l'API odds ne couvre que le
+// foot), mais on sait qu'elles sont jouables en France → autorisées pour les clients.
+const ARJEL_MAJOR_COMPETITIONS = [
+  "nba", "wnba", "euroleague", "euroligue", "eurocup", "betclic elite", "pro a",
+  "nhl", "atp", "wta", "grand slam", "roland garros", "wimbledon", "us open",
+  "australian open", "masters 1000", "mlb", "top 14", "champions cup", "pro d2",
+];
+function isArjelMajorCompetition(match) {
+  const hay = `${match?.competition || ""} ${match?.league || ""} ${match?.sport || ""}`.toLowerCase();
+  return ARJEL_MAJOR_COMPETITIONS.some(k => hay.includes(k));
+}
+
 async function fetchRealOdds(match) {
   if (!API_SPORTS_KEY || match.source !== "api-sports" || match.sport !== "Football" || !match.fixtureId) return null;
   const ck = `odds_${match.fixtureId}`;
@@ -2807,9 +2820,10 @@ Réponds en JSON pur (pas de markdown):
       // Barrière ARJEL : les clients ne reçoivent QUE des paris jouables sur un
       // bookmaker français agréé (cote réelle Betclic/Winamax/Unibet/PMU…). Sinon
       // (cote estimée ou bookmaker non-ARJEL) → admin uniquement.
-      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a));
+      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a))
+        || isArjelMajorCompetition(match);
       if (!arjelPlayable) {
-        console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}) — réservé admin, non diffusé Premium/Free`);
+        console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
       if (TELEGRAM_PREMIUM_CHANNEL_ID && grade.elite && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
