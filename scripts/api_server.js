@@ -2804,22 +2804,34 @@ Réponds en JSON pur (pas de markdown):
       // Canal premium : uniquement l'ÉLITE (meilleure valeur/segment), plafonné à 4/jour.
       // L'admin, lui, reçoit TOUT (voir plus bas) — rien n'est perdu pour le suivi.
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
+      // Barrière ARJEL : les clients ne reçoivent QUE des paris jouables sur un
+      // bookmaker français agréé (cote réelle Betclic/Winamax/Unibet/PMU…). Sinon
+      // (cote estimée ou bookmaker non-ARJEL) → admin uniquement.
+      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a));
+      if (!arjelPlayable) {
+        console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}) — réservé admin, non diffusé Premium/Free`);
+      }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && grade.elite && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && grade.elite && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) EV=${grade.ev.toFixed(2)}: ${ok ? "OK" : "FAIL"}`));
-      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && !grade.elite) {
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) EV=${grade.ev.toFixed(2)} ${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && !grade.elite) {
         console.log(`[signal-fort] Premium: pari non-élite (EV=${grade.ev.toFixed(2)}, segWr=${grade.segWr === null ? "n/a" : Math.round(grade.segWr * 100) + "%"}) — réservé admin`);
-      } else if (TELEGRAM_PREMIUM_CHANNEL_ID) {
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
-      // Copie ADMIN : l'admin reçoit TOUS les signaux forts, sans limite, sur son chat perso
-      if (TELEGRAM_ADMIN_CHAT_ID) sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `👑 <b>[ADMIN · copie signal]</b>\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
+      // Copie ADMIN : l'admin reçoit TOUS les signaux forts (même hors ARJEL), sans limite.
+      if (TELEGRAM_ADMIN_CHAT_ID) {
+        const adminHeader = arjelPlayable
+          ? `👑 <b>[ADMIN · copie signal]</b>\n🏦 Bookmaker : ${analysisResult.cote_source}`
+          : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ Cote : ${analysisResult.cote_source || "estimation"} (pas de bookmaker français agréé)`;
+        sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `${adminHeader}\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
+      }
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      if (_freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+      if (arjelPlayable && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
         sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
-      } else {
+      } else if (arjelPlayable) {
         console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
       }
     }
