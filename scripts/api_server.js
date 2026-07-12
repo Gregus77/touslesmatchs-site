@@ -175,6 +175,15 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_user_bets_email ON user_bets(email);
 `);
 // Historique du chatbot, keyé par email : chaque utilisateur a SA mémoire isolée.
+// Migration : si une ancienne table chat_messages existe avec un schéma incompatible
+// (sans colonne email — ex. version user_id), on la remplace proprement.
+try {
+  const chatCols = db.prepare("PRAGMA table_info(chat_messages)").all().map(c => c.name);
+  if (chatCols.length && !chatCols.includes("email")) {
+    db.exec("DROP TABLE chat_messages");
+    console.log("[migration] ancienne table chat_messages (schéma incompatible) supprimée");
+  }
+} catch (_) {}
 db.exec(`
   CREATE TABLE IF NOT EXISTS chat_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
