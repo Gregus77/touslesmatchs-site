@@ -751,22 +751,9 @@ footer{
   animation:tg-float-in .5s ease;
 }
 .tg-float:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,136,204,.65)}
-.tiktok-float{
-  position:fixed;bottom:78px;right:24px;z-index:300;
-  display:flex;align-items:center;gap:8px;
-  background:linear-gradient(135deg,#ff0050,#8b5cf6);
-  color:#fff;font-size:13px;font-weight:800;
-  padding:12px 20px;border-radius:50px;
-  text-decoration:none;
-  box-shadow:0 4px 20px rgba(255,0,80,.32);
-  transition:all .2s;
-  animation:tg-float-in .55s ease;
-}
-.tiktok-float:hover{transform:translateY(-3px);box-shadow:0 8px 28px rgba(255,0,80,.48)}
 @keyframes tg-float-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:640px){
   .tg-float{bottom:16px;right:12px;padding:10px 14px;font-size:12px;gap:6px}
-  .tiktok-float{bottom:64px;right:12px;padding:10px 14px;font-size:12px;gap:6px}
 }
 
 /* ══ FAQ ══ */
@@ -1819,12 +1806,10 @@ function copyRefLink(){
   </div>
 </div>
 
-<!-- FLOATING TikTok (kept — acquisition) -->
-<a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=floating_button&utm_campaign=prospection" target="_blank" rel="noopener noreferrer" class="tiktok-float">
-  TikTok
-</a>
+<!-- Widgets flottants (chatbot + TikTok + Telegram) : composant global unique -->
+<script src="/js/widgets.js" defer></script>
 
-<!-- Email popup & Telegram float hidden — focus conversion -->
+<!-- Email popup hidden — focus conversion -->
 <div class="ep-bg" id="ep-bg" style="display:none!important"></div>
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>

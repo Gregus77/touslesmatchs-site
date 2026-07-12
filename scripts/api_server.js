@@ -174,6 +174,17 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_user_bets_email ON user_bets(email);
 `);
+// Historique du chatbot, keyé par email : chaque utilisateur a SA mémoire isolée.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_chat_email ON chat_messages(email);
+`);
 ensureColumn("concile_analyses", "final_score_home", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "final_score_away", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "resolved_at", "TEXT DEFAULT NULL");
@@ -5354,6 +5365,80 @@ app.post("/bankroll/bets/delete", (req, res) => {
   if (!auth) return res.json({ ok: false, error: "Non authentifié" });
   db.prepare("DELETE FROM user_bets WHERE id = ? AND email = ?").run(Number(id), auth.email);
   res.json({ ok: true, ...bankrollHistory(auth.email) });
+});
+
+// ── Chatbot Mistral — mémoire isolée par utilisateur ─────────────────────────
+const CHAT_UNAVAILABLE = "Notre assistant est momentanément indisponible. Réessaie dans un instant, ou écris-nous sur Telegram.";
+const CHAT_SYSTEM_PROMPT = `Tu es l'assistant virtuel de TousLesMatchs.com, un service d'analyses sportives par IA appelé le "Concile". Réponds en français, brièvement, clairement et avec le sourire.
+Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (1 € l'analyse à l'unité, Pro 9,90 €/mois, Elite 19,90 €/mois), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
+RÈGLES STRICTES :
+- N'emploie JAMAIS le mot "pari" ni "parier" : dis "analyse", "sélection" ou "pick".
+- Ne garantis JAMAIS de gains ; rappelle que rien n'est certain et que le service est réservé aux 18 ans et plus.
+- Ne donne pas d'analyse précise gratuitement : invite poliment à s'abonner pour y accéder.
+- Si tu ne sais pas, dis-le simplement et oriente vers le support Telegram.`;
+
+app.post("/chat", async (req, res) => {
+  const { email, code, message } = req.body || {};
+  const msg = String(message || "").trim().slice(0, 1000);
+  if (!msg) return res.json({ ok: false, error: "Message vide" });
+
+  // Utilisateur connecté (email+code valides) → mémoire persistante ISOLÉE.
+  const auth = (email && code) ? bankrollAuth(email, code) : null;
+  const memKey = auth ? auth.email : null;
+
+  if (!MISTRAL_API_KEY) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+
+  // Historique de CET utilisateur uniquement (jamais celui d'un autre).
+  let history = [];
+  if (memKey) {
+    try {
+      history = db.prepare("SELECT role, content FROM chat_messages WHERE email = ? ORDER BY id DESC LIMIT 10").all(memKey).reverse();
+    } catch (_) {}
+  }
+
+  const messages = [
+    { role: "system", content: CHAT_SYSTEM_PROMPT },
+    ...history.map(h => ({ role: h.role === "assistant" ? "assistant" : "user", content: h.content })),
+    { role: "user", content: msg },
+  ];
+
+  let reply = "";
+  try {
+    const rp = await httpPost(
+      "https://api.mistral.ai/v1/chat/completions",
+      { model: "mistral-small-latest", messages, temperature: 0.4, max_tokens: 500 },
+      { Authorization: `Bearer ${MISTRAL_API_KEY}` }
+    );
+    reply = rp?.choices?.[0]?.message?.content?.trim() || "";
+  } catch (e) {
+    console.error("[chat] Mistral:", e.message);
+  }
+
+  if (!reply) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+
+  // Sauvegarde pour CET utilisateur seulement.
+  if (memKey) {
+    try {
+      const ins = db.prepare("INSERT INTO chat_messages (email, role, content) VALUES (?,?,?)");
+      ins.run(memKey, "user", msg);
+      ins.run(memKey, "assistant", reply);
+      db.prepare(`DELETE FROM chat_messages WHERE email = ? AND id NOT IN (
+        SELECT id FROM chat_messages WHERE email = ? ORDER BY id DESC LIMIT 40)`).run(memKey, memKey);
+    } catch (e) { console.error("[chat] save:", e.message); }
+  }
+
+  res.json({ ok: true, reply, memory: !!memKey });
+});
+
+// Réaffiche la conversation de l'utilisateur à l'ouverture du chat.
+app.post("/chat/history", (req, res) => {
+  const { email, code } = req.body || {};
+  const auth = (email && code) ? bankrollAuth(email, code) : null;
+  if (!auth) return res.json({ ok: true, messages: [] });
+  try {
+    const rows = db.prepare("SELECT role, content FROM chat_messages WHERE email = ? ORDER BY id DESC LIMIT 20").all(auth.email).reverse();
+    res.json({ ok: true, messages: rows });
+  } catch (_) { res.json({ ok: true, messages: [] }); }
 });
 
 // ── Pick du jour — lit picks.json d'Hermès en priorité ───────────────────────
