@@ -1806,6 +1806,17 @@ function copyRefLink(){
   </div>
 </div>
 
+<!-- Correction du saut d'ancre (#plans / #plan-carte) sur page longue + splash -->
+<style>#plans,#plan-carte{scroll-margin-top:80px}</style>
+<script>
+window.addEventListener('load', function(){
+  if (location.hash && location.hash.length > 1) {
+    var el = document.querySelector(location.hash);
+    if (el) setTimeout(function(){ el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
+  }
+});
+</script>
+
 <!-- Widgets flottants (chatbot + TikTok + Telegram) : composant global unique -->
 <script src="/js/widgets.js" defer></script>
 
