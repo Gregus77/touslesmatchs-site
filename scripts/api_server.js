@@ -1070,7 +1070,7 @@ function saveProofs(proofs) {
 
 // Cache live matches 10 minutes to stay under 100 req/day
 let liveMatchesCache = { data: null, ts: 0 };
-const CACHE_TTL = 10 * 60 * 1000;
+const CACHE_TTL = 30 * 1000; // 30 s : scores live quasi temps réel (cache global partagé, ~2 appels API/min max)
 
 const TOKEN_LIMITS = { free: 0, carte: 1, essentiel: 10, elite: 30 };
 
