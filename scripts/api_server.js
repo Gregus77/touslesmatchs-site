@@ -1259,6 +1259,9 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
   "u17", "u18", "u19", "u20", "u21", "u23",
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
+  // Divisions inférieures / groupes régionaux — données live lentes et peu fiables
+  "kakkonen", "ykkonen", "lohko", "kolmonen", "regionalliga", "oberliga",
+  "national league north", "national league south", "isthmian", "northern premier",
   "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
   "regional cup", "state cup", "state league",
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
