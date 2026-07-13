@@ -256,6 +256,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <input class="modal-input" type="text" id="login-code" placeholder="PRO-XXXXXX">
     <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
     <div class="modal-error" id="login-error"></div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);text-align:center">
+      <div class="modal-sub" style="margin-bottom:10px">Pas encore de code d'accès ?</div>
+      <a href="/#plans" style="display:block;text-decoration:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-weight:800;padding:13px;border-radius:10px">⚡ Voir les offres — teste dès 1&nbsp;€</a>
+    </div>
   </div>
 </div>
 
@@ -432,8 +436,8 @@ function renderMatches() {
 
     if (isLive && !isDone) {
       html += '<div class="mc-cta">';
-      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " disabled title=\"Connecte-toi pour analyser\"" : "") + '>';
-      html += '    🧠 Analyser ce match';
+      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';
+      html += (userAuth ? '    🧠 Analyser ce match' : '    🔓 Débloquer l\'analyse');
       html += '  </button>';
       html += '</div>';
       html += '<div class="mc-analysis" id="analysis-' + escAttr(matchId) + '"></div>';
