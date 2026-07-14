@@ -8247,6 +8247,31 @@ app.get("/admin/heartbeat", (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
 });
 
+
+// ---- Chatbot Mistral --------------------------------------------------------
+const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
+const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
+const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram @TousLesMatchs_Free. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
+app.post("/chatbot/ask", express.json(), async (req, res) => {
+  try {
+    const { question, email, session } = req.body || {};
+    if (!question) return res.json({ ok: false, error: "Question vide" });
+    const userKey = email || session || "anon_" + Date.now();
+    const hist = db.prepare("SELECT role, content FROM chat_messages WHERE user_key = ? ORDER BY id DESC LIMIT 10").all(userKey).reverse();
+    hist.push({ role: "user", content: question });
+    try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "user", question); } catch(e){}
+    const resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    const answer = data?.choices?.[0]?.message?.content || "Notre assistant est momentanement indisponible.";
+    try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "assistant", answer); } catch(e){}
+    res.json({ ok: true, answer });
+  } catch(e) {
+    console.error("[CHATBOT]", e.message);
+    res.json({ ok: true, answer: "Notre assistant est momentanement indisponible." });
+  }
+});
+
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     if (AUTO_CONCILE_OBSERVER) {
