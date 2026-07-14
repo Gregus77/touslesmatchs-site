@@ -90,10 +90,15 @@ Toujours travailler sur cette branche. Ne jamais pusher sur `main` directement.
 - Headers securite Caddy
 
 ### Etape 4 (ex-9) : Moteur de consensus
-- `scripts/concile_engine.js` — module unique, meme runtime Node
-- Consensus pondere avec poids [0.5-1.5] par IA x marche x ligue x recence
-- Tracabilite complete
-- Architecture ACTEE : Claude = architecte, Hermes = decideur
+- [x] **Phase 1 TERMINEE** : `scripts/concile_engine.js` cree (98 lignes)
+  - [x] `computeWeights()`, `computeConsensus()`, `buildAnalysisResult()`
+  - [x] `api_server.js` refactorisee (28 lignes inline → 3 appels)
+  - [x] `Dockerfile.api` actualise pour copier le module
+  - [x] Comportement identique (extraction pure), pret a deployer
+  - Branche : `claude/consensus-engine-architecture-sy3gqg` (commit ba2b50d)
+- [ ] **Phase 2 TODO** : Poids dynamiques (market, league, recency factors)
+- [ ] **Phase 3 TODO** : Decision par calcul (Chief perd arbitrage)
+- [x] Design document complet : `docs/DESIGN_concile_engine.md`
 
 ### Etape 5 : Brevo
 - Nurturing email sequences
@@ -150,9 +155,31 @@ TikTok → TousLesMatchs.com → Telegram Gratuit → Analyse 1 euro → Pro 9.9
 - `codes.db` : clients, codes d'acces, bankroll, bets, chat_messages
 - Chemin : `/opt/touslesmatchs/data/` (bind-mount dans Docker)
 
+## Problemes ouverts (14 juillet 19h00)
+
+### Site web affiche version ANCIENNE
+- **Symptome** : Manquent TikTok button, Telegram button, Chatbot en bas de page
+- **Cause** : Fichiers modifies localement (`public/index.html`, `site/index.html`) nettoyes lors d'un `git clean`
+- **Action requise** :
+  1. Chercher quand TikTok/Telegram/Chatbot ont ete ajoutes (pas trouve dans main recent)
+  2. Restaurer depuis backup `/opt/touslesmatchs/backups/mission-*/` si existe
+  3. Ou regener les fichiers avec les features
+
+### Telegram : Alexis + Romuald
+- **Alexis** (fils) : Rétrogradé en lecture seule sur Hermes Admin ✅, RESTE admin sur Premium ⚠️
+  - Fix manuelle requise : App Telegram → Premium → Admins → Alexis → Retirer
+- **Romuald** (frère) : User ID inconnu, trouvable seulement si envoie `/start` au bot en privé
+  - Fix : Get ID via getUpdates, puis promoteChatMember restriction
+
+### Git : Conflits de branche
+- VPS a eu reset force a `c3201fa` sur `main` pour stabiliser
+- Branche du consensus engine (`claude/consensus-engine-architecture-sy3gqg`) prete a merger quand Phase 2/3 faites
+- Attention : Ne pas mélanger consensus-engine work avec smoke-test branch
+
 ## Preferences utilisateur
 
 - "quand tu me donnes deux choix, analyse les pour et contre et fais directement le recommande, je te fais confiance"
 - "dis moi si je la pousse dans hermes ou sur le VPS hostinger" (toujours preciser ou executer les commandes)
 - Mobile first, design premium sobre
 - Pas de features inutiles — chaque dev doit augmenter le CA, la conversion, la confiance, l'automatisation, la vitesse ou l'UX
+- **Architecture consensus** : UN seul moteur (pas fragmentation), Claude architecte + code, Hermes decideur
