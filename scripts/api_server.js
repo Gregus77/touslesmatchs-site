@@ -4961,7 +4961,7 @@ function getSignalFortStats() {
     const raw = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              score_home_at_analysis, score_away_at_analysis,
-             final_score_home, final_score_away, analysed_at
+             final_score_home, final_score_away, analysed_at, minute_at_analysis
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
@@ -5033,6 +5033,9 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const stats = getSignalFortStats();
   const coteMoy = Math.min(1.95, ((1 / (analysis.confidence / 100)) * 1.45)).toFixed(2);
   const gain = (10 * parseFloat(coteMoy)).toFixed(2);
+  const minuteStr = analysis.minute_at_analysis !== null && analysis.minute_at_analysis !== undefined
+    ? ` (donné à la ${analysis.minute_at_analysis}e min)`
+    : "";
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -5040,7 +5043,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
+    `💡 Analyse IA : <b>${analysis.best_bet}${minuteStr}</b>`,
     `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
     ``,
     outcome === "win"
@@ -6901,6 +6904,10 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
 app.get("/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
   const coteMoy = (c) => Math.min(1.95, ((1 / (c / 100)) * 1.45)).toFixed(2);
+  const formatPronoTimestamp = (bet, minute) => {
+    if (!bet || minute === null || minute === undefined) return bet;
+    return `${bet} (à la ${minute}e min)`;
+  };
   res.json({
     ok: true,
     total: stats.total,
@@ -6916,6 +6923,7 @@ app.get("/signal-fort-stats", (req, res) => {
       outcome: r.outcome,
       cote: parseFloat(coteMoy(r.confidence)),
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+      bet_with_timestamp: formatPronoTimestamp(r.best_bet, r.minute_at_analysis),
       date: r.analysed_at,
     })),
     picks_feed: stats.recent.map(r => ({
@@ -6925,7 +6933,7 @@ app.get("/signal-fort-stats", (req, res) => {
       competition: r.competition || r.sport || "",
       home: r.home,
       away: r.away,
-      pick: r.best_bet || `Signal Fort ${r.confidence}%`,
+      pick: formatPronoTimestamp(r.best_bet || `Signal Fort ${r.confidence}%`, r.minute_at_analysis),
       cote: parseFloat(coteMoy(r.confidence)),
       status: "finished",
       result: r.outcome === "win" ? "win" : "loss",
@@ -6943,7 +6951,7 @@ app.get("/premium-teaser", (req, res) => {
 
     const allRows = db.prepare(`
       SELECT home, away, competition, outcome, confidence, best_bet, real_odd,
-        final_score_home, final_score_away, sport, analysed_at
+        final_score_home, final_score_away, sport, analysed_at, minute_at_analysis
       FROM concile_analyses
       WHERE outcome IN ('win','loss')
       ORDER BY analysed_at DESC
@@ -7013,12 +7021,17 @@ app.get("/premium-teaser", (req, res) => {
       recent: recentResults.map(r => {
         const cote = rowOdd(r);
         const gain10 = r.outcome === 'win' ? Math.round((cote * 10 - 10) * 100) / 100 : -10;
+        const betWithTime = r.minute_at_analysis !== null && r.minute_at_analysis !== undefined
+          ? `${r.best_bet} (à la ${r.minute_at_analysis}e min)`
+          : r.best_bet;
         return {
           match: `${r.home} vs ${r.away}`,
           competition: r.competition || '',
           outcome: r.outcome,
           sport: r.sport || 'Football',
           score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+          bet: r.best_bet,
+          bet_with_timestamp: betWithTime,
           date: r.analysed_at ? r.analysed_at.slice(0, 10) : null,
           cote: Math.round(cote * 100) / 100,
           gain10,
