@@ -2306,6 +2306,23 @@ function computeAvailableBets(match) {
 
 // Correction post-IA : si l'IA recommande quand même un pari impossible, on corrige
 function validateAndCorrectBet(bet, match, availableBets) {
+  // R2 (finalité connue) : jamais de "Victoire" d'une équipe qui mène déjà de >= 3 buts.
+  // Le résultat est décidé, le book ne cote plus — aucune valeur. Ex: 0-3 → pas de "Victoire extérieur".
+  {
+    const sc = readKnownScore(match);
+    if (sc) {
+      const gap = sc.home - sc.away;
+      const decidedWin =
+        (bet === "Victoire domicile" && gap >= DECIDED_MATCH_GAP) ||
+        (bet === "Victoire extérieur" && -gap >= DECIDED_MATCH_GAP);
+      if (decidedWin) {
+        const alt = availableBets.find(b => b !== bet && !/Victoire/i.test(b)) || availableBets[0];
+        console.log(`[concile] Finalité connue (${sc.home}-${sc.away}) : "${bet}" rejeté → "${alt}"`);
+        return { bet: alt, corrected: true, original: bet };
+      }
+    }
+  }
+
   if (availableBets.includes(bet)) return { bet, corrected: false };
 
   // Corrections logiques
@@ -4183,6 +4200,29 @@ function isUefaCompetition(match) {
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
 
+// ── Règles métier gravées dans la pierre (ne pas assouplir) ───────────────────
+// R1 : aucun prono live avant la 35e minute ni après la 75e (données suffisantes
+//      jouées + cote encore offerte par les books).
+// R2 : aucun prono sur un match à finalité connue (écart >= 3 buts). Le book ne
+//      cote plus un résultat décidé — ex : 0-3 → "Victoire extérieur" interdit.
+const DECIDED_MATCH_GAP = 3;
+
+function isMatchDecided(match) {
+  const score = readKnownScore(match);
+  if (!score) return false;
+  return Math.abs(score.home - score.away) >= DECIDED_MATCH_GAP;
+}
+
+// Retourne null si le match peut être pronostiqué en live, sinon la raison du blocage.
+// Utilisé par l'auto-observer ET les endpoints d'analyse manuelle (pas le prématch).
+function livePickBlockReason(match) {
+  const minute = parseLiveMinuteValue(match && match.minute);
+  if (minute !== null && minute < AUTO_CONCILE_WINDOW_MIN) return `Analyse indisponible avant la ${AUTO_CONCILE_WINDOW_MIN}e minute.`;
+  if (minute !== null && minute > AUTO_CONCILE_WINDOW_MAX) return `Analyse indisponible après la ${AUTO_CONCILE_WINDOW_MAX}e minute.`;
+  if (isMatchDecided(match)) return "Analyse indisponible : match à finalité connue (écart de 3 buts ou plus).";
+  return null;
+}
+
 function shouldAutoObserveMatch(match) {
   if (!match || match.scoreConflict) return false;
   const status = String(match.status || "").toUpperCase();
@@ -4193,7 +4233,8 @@ function shouldAutoObserveMatch(match) {
   // Option 3 : grandes ligues (whitelist) + compétitions UEFA (dont qualifs européennes)
   if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
   if (isUnderperformingCompetition(match)) return false; // exclut les compétitions perdantes
-  // Fenêtre 35-75' : assez de données jouées + cote encore intéressante
+  if (isMatchDecided(match)) return false;               // R2 : match à finalité connue (écart >= 3 buts)
+  // R1 : fenêtre 35-75' — assez de données jouées + cote encore offerte
   const minute = parseLiveMinuteValue(match.minute);
   return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
 }
@@ -5578,6 +5619,8 @@ app.post("/analyse", async (req, res) => {
     const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
     if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
     if (rejectScoreConflict(verifiedMatch, res)) return;
+    const blockReason = livePickBlockReason(verifiedMatch);
+    if (blockReason) return res.json({ ok: false, error: blockReason });
     const analysis = await runConcileAnalysis(verifiedMatch);
     const chief = analysis.agents[analysis.agents.length - 1];
 
@@ -5603,6 +5646,8 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
   const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
   if (rejectScoreConflict(verifiedMatch, res)) return;
+  const blockReason = livePickBlockReason(verifiedMatch);
+  if (blockReason) return res.json({ ok: false, error: blockReason });
 
   const matchKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${getTodayStr()}`;
 
@@ -5724,6 +5769,8 @@ app.post("/concile-analysis", async (req, res) => {
   const verifiedMatch = await requireVerifiedLiveMatch(match);
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
   if (rejectScoreConflict(verifiedMatch, res)) return;
+  const blockReason = livePickBlockReason(verifiedMatch);
+  if (blockReason) return res.json({ ok: false, error: blockReason });
 
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   // Cache partagé par match+état (pas par user) pour économiser les tokens Groq
