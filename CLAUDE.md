@@ -1,5 +1,22 @@
 # CLAUDE.md — TousLesMatchs
 
+## 🔒 VERSION VERROUILLÉE — LIRE `VERSION_LOCK.md` EN PREMIER
+
+**Avant TOUTE action** (lecture, écriture, git op), consulter `VERSION_LOCK.md`
+à la racine du projet. Ce fichier définit le commit de référence stable
+(`1918412`, 14 juillet 2026) et interdit tout retour à une version antérieure
+sans validation utilisateur explicite.
+
+**Interdits sans validation utilisateur :**
+- `git reset --hard <commit-antérieur-à-1918412>`
+- `git revert` d'un commit récent
+- Restauration d'un backup antérieur au 14 juillet 2026, 22h00
+- Modification du `docker-compose.yml` remettant `site/` comme web root
+
+**Règles métier gravées dans la pierre :**
+- R1 : Aucun prono avant la 35e min ni après la 75e
+- R2 : Aucun prono sur un match à finalité connue (écart ≥ 3 buts)
+
 ## Regles automatiques (s'appliquent a CHAQUE session)
 
 ### Economie de tokens
