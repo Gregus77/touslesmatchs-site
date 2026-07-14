@@ -535,6 +535,22 @@ const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
 
+// ── Seuils spécifiques par marché ────────────────────────────────────────────
+// Certains marchés ont un winrate historique nettement supérieur → seuil abaissé.
+// "But 1ère MT" est notre point fort : 82% de winrate sur 931 pronos historiques
+// (Cohere-Command, juillet 2026). On peut donc émettre à 75% de confiance sans
+// dégrader la qualité perçue.
+const MARKET_SIGNAL_FLOORS = {
+  "But en 1ère mi-temps":       75,
+  "Aucun but en 1ère mi-temps": 75,
+};
+
+function getSignalThresholdForBet(bet) {
+  const overrideForBet = MARKET_SIGNAL_FLOORS[bet];
+  if (overrideForBet !== undefined) return overrideForBet;
+  return getAdaptiveSignalThreshold();
+}
+
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
   if (now - _adaptiveThresholdCache.computedAt < 30 * 60 * 1000) return _adaptiveThresholdCache.value;
@@ -2824,7 +2840,8 @@ Réponds en JSON pur (pas de markdown):
 
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
   // ET vraies données présentes ET segment (ligue/marché) prouvé gagnant historiquement.
-  const signalThreshold = getAdaptiveSignalThreshold();
+  // Seuil abaissé sur "But 1ère MT" (marché à 82% de winrate historique).
+  const signalThreshold = getSignalThresholdForBet(analysisResult.best_bet);
   const hasRealData = statsStatus.available || !!h2hBlock || !!deepBlock;
   const qualityGate = passesHistoricalQualityGate(match, analysisResult.best_bet);
   if (!qualityGate.ok) {
