@@ -6304,6 +6304,105 @@ app.post("/admin/resolve-stale", async (req, res) => {
   res.json({ ok: true, resolved: before - after, pending_before: before, pending_after: after });
 });
 
+// Audit complet : perf de CHAQUE IA (officielles + shadow "IA blanches"), matrice
+// IA×marché, meilleur agent par type de pari — le tout envoyé sur Telegram Hermes Admin.
+app.get("/admin/full-agents-audit", async (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  try {
+    // 1) IA officielles (vote + décision) — depuis agent_predictions
+    const officialAgents = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) pending,
+        ROUND(AVG(confidence),0) avg_conf
+      FROM agent_predictions
+      GROUP BY agent_name
+    `).all().map(r => {
+      const resolved = r.wins + r.losses;
+      return { ...r, resolved, winrate: resolved > 0 ? Math.round(r.wins / resolved * 100) : null };
+    }).sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    // 2) IA blanches (banc d'essai) — depuis shadow_evals, jamais publiées
+    const shadowAgents = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) pending,
+        ROUND(AVG(confidence),0) avg_conf
+      FROM shadow_evals
+      GROUP BY agent_name
+    `).all().map(r => {
+      const resolved = r.wins + r.losses;
+      return { ...r, resolved, winrate: resolved > 0 ? Math.round(r.wins / resolved * 100) : null };
+    }).sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    // 3) Matrice IA × type de pari — quelle IA est meilleure sur quoi
+    const matrixRows = db.prepare(`
+      SELECT agent_name, market_line,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions
+      GROUP BY agent_name, market_line
+    `).all();
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+    const bestByMarket = {};
+    matrixRows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      if (resolved < 5) return;                       // seuil : min 5 résolus pour avis fiable
+      const wr = Math.round(r.wins / resolved * 100);
+      if (!bestByMarket[r.market_line] || wr > bestByMarket[r.market_line].winrate) {
+        bestByMarket[r.market_line] = { agent: r.agent_name, winrate: wr, resolved, label: lineLabels[r.market_line] || r.market_line };
+      }
+    });
+
+    // 4) Formater le message Telegram
+    const fmtAgent = (a) => `  ${a.winrate !== null ? `${a.winrate}%` : "n/a"} — ${a.agent_name} (${a.wins}W/${a.losses}L, ${a.pending} en attente, conf. moy ${a.avg_conf || 0}%)`;
+    const officialBlock = officialAgents.length ? officialAgents.map(fmtAgent).join("\n") : "  (aucune donnée)";
+    const shadowBlock   = shadowAgents.length   ? shadowAgents.map(fmtAgent).join("\n")   : "  (aucune donnée)";
+    const bestBlock = Object.keys(bestByMarket).length
+      ? Object.values(bestByMarket).map(b => `  🏆 ${b.label} → <b>${b.agent}</b> (${b.winrate}% sur ${b.resolved})`).join("\n")
+      : "  (pas assez de données ≥5 résolus par marché)";
+
+    const msg = [
+      `🧠 <b>AUDIT COMPLET DES IA</b>`,
+      `📅 ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+      ``,
+      `<b>🎯 IA officielles (Concile)</b>`,
+      officialBlock,
+      ``,
+      `<b>⚪ IA blanches (banc d'essai)</b>`,
+      shadowBlock,
+      ``,
+      `<b>🏆 Meilleure IA par type de pari</b>`,
+      bestBlock,
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      `Verrou v1918412 · règles R1/R2 actives`,
+    ].join("\n");
+
+    let telegramSent = false;
+    if (TELEGRAM_ADMIN_CHAT_ID) {
+      telegramSent = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+    }
+
+    res.json({
+      ok: true,
+      telegram_sent: telegramSent,
+      official_agents: officialAgents,
+      shadow_agents: shadowAgents,
+      best_by_market: bestByMarket,
+      message_preview: msg,
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // Audit quotidien : tous les pronos du jour (résolus + en attente) avec score final
 // Utilisé pour valider "il manque X résultats" — vue exhaustive et transparente.
 app.get("/admin/daily-audit", (req, res) => {
