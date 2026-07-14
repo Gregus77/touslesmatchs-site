@@ -6304,6 +6304,50 @@ app.post("/admin/resolve-stale", async (req, res) => {
   res.json({ ok: true, resolved: before - after, pending_before: before, pending_after: after });
 });
 
+// Audit quotidien : tous les pronos du jour (résolus + en attente) avec score final
+// Utilisé pour valider "il manque X résultats" — vue exhaustive et transparente.
+app.get("/admin/daily-audit", (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  const day = (req.query.day || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    const rows = db.prepare(`
+      SELECT id, home, away, competition, sport, best_bet, confidence,
+             minute_at_analysis, score_home_at_analysis, score_away_at_analysis,
+             final_score_home, final_score_away, outcome, analysed_at, resolved_at
+      FROM concile_analyses
+      WHERE substr(analysed_at,1,10) = ?
+      ORDER BY analysed_at ASC
+    `).all(day);
+    const wins    = rows.filter(r => r.outcome === "win").length;
+    const losses  = rows.filter(r => r.outcome === "loss").length;
+    const pending = rows.filter(r => !r.outcome).length;
+    res.json({
+      ok: true, day, total: rows.length, wins, losses, pending,
+      items: rows.map(r => ({
+        id: r.id,
+        match: `${r.home} vs ${r.away}`,
+        competition: r.competition || r.sport || "",
+        bet: r.best_bet,
+        confidence: r.confidence,
+        minute_at_analysis: r.minute_at_analysis,
+        score_at_analysis: r.score_home_at_analysis != null
+          ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        final_score: r.final_score_home != null
+          ? `${r.final_score_home}-${r.final_score_away}` : null,
+        outcome: r.outcome || "pending",
+        analysed_at: r.analysed_at,
+        resolved_at: r.resolved_at,
+        display: r.final_score_home != null && r.minute_at_analysis != null
+          ? `Score final ${r.final_score_home}-${r.final_score_away}, ${r.best_bet} donné à la ${r.minute_at_analysis}e min`
+          : null,
+      })),
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 
