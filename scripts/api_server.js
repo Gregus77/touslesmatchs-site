@@ -6308,7 +6308,7 @@ app.post("/admin/resolve-stale", async (req, res) => {
 // IA×marché, meilleur agent par type de pari — le tout envoyé sur Telegram Hermes Admin.
 app.get("/admin/full-agents-audit", async (req, res) => {
   const { email, code } = req.query || {};
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   try {
     // 1) IA officielles (vote + décision) — depuis agent_predictions
     const officialAgents = db.prepare(`
@@ -6407,7 +6407,7 @@ app.get("/admin/full-agents-audit", async (req, res) => {
 // Utilisé pour valider "il manque X résultats" — vue exhaustive et transparente.
 app.get("/admin/daily-audit", (req, res) => {
   const { email, code } = req.query || {};
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   const day = (req.query.day || new Date().toISOString().slice(0, 10)).slice(0, 10);
   try {
     const rows = db.prepare(`
