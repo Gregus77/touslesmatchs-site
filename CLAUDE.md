@@ -1,5 +1,18 @@
 # CLAUDE.md — TousLesMatchs
 
+## 📖 ORDRE DE LECTURE OBLIGATOIRE À CHAQUE SESSION
+
+1. `PROJECT_STATE.md` — mémoire vivante, état courant, chantiers ouverts
+2. `VERSION_LOCK.md` — commit de référence interdit de rollback
+3. `CLAUDE.md` — ce fichier (règles + économie de tokens)
+4. `docs/CONSTITUTION.md` — vision, organisation, départements
+5. `docs/INFRASTRUCTURE.md` — VPS, Docker, sécurité, backups
+6. `docs/HERMES_COUNCIL.md` — moteur IA, agents, consensus
+7. `docs/BUSINESS_GROWTH.md` — roadmap commercial, priorisation ROI
+
+Ces 7 fichiers constituent la **fondation** du projet. Toute IA reprenant
+le projet DOIT les lire avant d'agir, dans cet ordre.
+
 ## 🔒 VERSION VERROUILLÉE — LIRE `VERSION_LOCK.md` EN PREMIER
 
 **Avant TOUTE action** (lecture, écriture, git op), consulter `VERSION_LOCK.md`
