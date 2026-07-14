@@ -16,8 +16,8 @@ git pull origin "$BRANCH"
 echo "▶ 2/5 — Reconstruction des images…"
 docker compose up -d --build
 
-echo "▶ 3/5 — Synchronisation du frontend (public/ → site/)…"
-cp -a "$REPO/public/." "$REPO/site/"
+echo "▶ 3/5 — Vérification du web root…"
+echo "   Web root : $(grep -A2 'volumes:' docker-compose.yml | grep '/srv' | sed 's/.*- //')"
 
 echo "▶ 4/5 — Redémarrage du serveur web…"
 docker restart touslesmatchs-site >/dev/null
