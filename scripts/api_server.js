@@ -5515,7 +5515,9 @@ app.get("/live-matches", async (req, res) => {
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
     const allMatches = await fetchLiveMatches();
-    const matches = allMatches.filter(m => !isBlacklistedForLiveDisplay(m));
+    // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
+    // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
+    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
