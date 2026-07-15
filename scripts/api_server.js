@@ -6474,7 +6474,7 @@ app.get("/public-history", (req, res) => {
 
 app.post("/admin/resolve-match", (req, res) => {
   const { email, code, home, away, score_home, score_away } = req.body || {};
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   if (!home || !away || score_home === undefined || score_away === undefined) {
     return res.json({ ok: false, error: "home, away, score_home, score_away requis" });
   }
@@ -6485,7 +6485,7 @@ app.post("/admin/resolve-match", (req, res) => {
 // Forcer le rattrapage de TOUTES les prédictions en attente (matchs finis)
 app.post("/admin/resolve-stale", async (req, res) => {
   const { email, code } = req.body || {};
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   const countPending = () => db.prepare(`
     SELECT (SELECT COUNT(*) FROM agent_predictions WHERE outcome IS NULL)
          + (SELECT COUNT(*) FROM agent_market_predictions WHERE outcome IS NULL) AS n
