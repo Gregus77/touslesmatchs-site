@@ -2107,20 +2107,28 @@ function renderPick(){
       }
       const yEl=document.getElementById('nopick-yesterday');
       if(yEl){
+        // Bannières cliquables qui affichent la liste détaillée des picks du jour concerné.
+        // Le détail est dépoyé/replié en dessous. Data-day = 'today' | 'yesterday'.
         let banners='';
+        const todayList = Array.isArray(d.recent) ? d.recent.filter(r => (r.date||'') === new Date().toISOString().slice(0,10)) : [];
+        const ydayISO = new Date(Date.now()-86400000).toISOString().slice(0,10);
+        const yesterdayList = Array.isArray(d.recent) ? d.recent.filter(r => (r.date||'') === ydayISO) : [];
+        window._nopickDetails = { today: todayList, yesterday: yesterdayList };
         if(d.today_results&&d.today_results.total>0){
           const tw=d.today_results.wins, tt=d.today_results.total;
-          banners+=`<div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-align:center">
+          banners+=`<div class="nopick-banner" data-day="today" role="button" tabindex="0" style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-align:center;cursor:pointer;transition:background .15s">
             <span style="font-size:15px;font-weight:700;color:#818cf8">Aujourd'hui : ${tw} gagné${tw>1?'s':''} sur ${tt}</span>
             ${tw>=tt*0.7?'<span style="margin-left:6px">🔥</span>':''}
-          </div>`;
+            <span class="nopick-caret" style="margin-left:8px;font-size:11px;color:#818cf8;opacity:.7">▼ voir</span>
+          </div><div id="nopick-details-today" style="display:none;margin-bottom:12px"></div>`;
         }
         if(d.yesterday&&d.yesterday.total>0){
           const yw=d.yesterday.wins, yt=d.yesterday.total;
-          banners+=`<div style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-align:center">
+          banners+=`<div class="nopick-banner" data-day="yesterday" role="button" tabindex="0" style="background:rgba(212,175,55,.06);border:1px solid rgba(212,175,55,.15);border-radius:10px;padding:12px 16px;margin-bottom:10px;text-align:center;cursor:pointer;transition:background .15s">
             <span style="font-size:15px;font-weight:700;color:var(--gold)">Hier : ${yw} gagné${yw>1?'s':''} sur ${yt}</span>
             ${yw>=yt*0.7?'<span style="margin-left:6px">🔥</span>':''}
-          </div>`;
+            <span class="nopick-caret" style="margin-left:8px;font-size:11px;color:var(--gold);opacity:.7">▼ voir</span>
+          </div><div id="nopick-details-yesterday" style="display:none;margin-bottom:12px"></div>`;
         }
         if(d.today_signals>0){
           banners+=`<div style="background:rgba(99,102,241,.04);border:1px solid rgba(99,102,241,.12);border-radius:10px;padding:10px 16px;margin-bottom:10px;text-align:center">
@@ -2128,6 +2136,40 @@ function renderPick(){
           </div>`;
         }
         yEl.innerHTML=banners;
+        // Handlers : au clic, on déplie la liste détaillée du jour concerné.
+        yEl.querySelectorAll('.nopick-banner').forEach(el => {
+          const toggle = () => {
+            const day = el.dataset.day;
+            const box = document.getElementById('nopick-details-' + day);
+            const caret = el.querySelector('.nopick-caret');
+            if (!box) return;
+            const isOpen = box.style.display !== 'none';
+            if (isOpen) { box.style.display = 'none'; if (caret) caret.innerHTML = '▼ voir'; return; }
+            const list = (window._nopickDetails[day] || []);
+            if (!list.length) {
+              box.innerHTML = `<div style="text-align:center;padding:14px;color:var(--muted);font-size:13px">Aucun détail disponible pour ce jour.</div>`;
+            } else {
+              box.innerHTML = list.map(r => {
+                const isW = r.outcome === 'win';
+                const icon = isW ? '✅' : '❌';
+                const gainTxt = isW ? `<span style="color:#10b981;font-weight:700">+${(r.gain10||0).toFixed(1)}€</span>` : `<span style="color:#f43f5e;font-weight:700">${r.gain10||0}€</span>`;
+                const betLine = r.bet_with_timestamp || r.bet || '';
+                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.05);border-radius:8px;margin-bottom:6px;font-size:13px">
+                  <span>${icon}</span>
+                  <span style="flex:1;color:#eceaf4">${r.match}</span>
+                  <span style="color:var(--muted);font-size:11px">${betLine}${r.score ? ' · '+r.score : ''}</span>
+                  ${gainTxt}
+                </div>`;
+              }).join('');
+            }
+            box.style.display = 'block';
+            if (caret) caret.innerHTML = '▲ masquer';
+          };
+          el.addEventListener('click', toggle);
+          el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+          el.addEventListener('mouseenter', () => el.style.background = el.style.background.replace('.08', '.14').replace('.06', '.12'));
+          el.addEventListener('mouseleave', () => el.style.background = el.style.background.replace('.14', '.08').replace('.12', '.06'));
+        });
       }
       const fEl=document.getElementById('nopick-feed');
       if(fEl&&d.recent&&d.recent.length>0){
