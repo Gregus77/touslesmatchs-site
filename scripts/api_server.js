@@ -2606,7 +2606,9 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
 
-    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 4 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.`,
+    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 4 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.
+
+RÈGLE CHAMPION : le marché "But en 1ère mi-temps" a un winrate historique prouvé de 82% (931 pronos vérifiés). À qualité égale (écart de confiance ≤ 5 points), tu DOIS privilégier ce marché sur les autres. Si un agent le vote avec confiance ≥ 75% et que ton propre pick est un autre marché avec confiance équivalente, aligne-toi sur "But en 1ère mi-temps" — c'est notre marché champion prouvé.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -2826,6 +2828,39 @@ Réponds en JSON pur (pas de markdown):
   agentResults.slice(0, 4).forEach((a) => {
     betCounts[a.bet] = (betCounts[a.bet] || 0) + 1;
   });
+
+  // ─── OVERRIDE MARCHÉ CHAMPION — Option A ──────────────────────────────
+  // Winrate historique "But 1ère MT" = 82% sur 931 pronos (Cohere-Command).
+  // Si un agent vote ce marché avec confiance ≥ 75% ET que le Chief a choisi
+  // autre chose avec un écart de confiance ≤ 5 pts, on aligne sur le champion.
+  // Sécurité : on ne le fait QUE si l'agent qui vote "mt1" est parmi les
+  // 5 IA ayant un winrate ≥ 60% (sinon on ne renforce pas un mauvais signal).
+  const CHAMPION_BETS = new Set(["But en 1ère mi-temps", "Aucun but en 1ère mi-temps"]);
+  const CHAMPION_MIN_CONF = 75;
+  const CHAMPION_MAX_GAP  = 5;
+  let overrideApplied = null;
+  if (!CHAMPION_BETS.has(chief.bet)) {
+    const eligibleChampion = agentResults.slice(0, 4).find(a => {
+      if (!CHAMPION_BETS.has(a.bet)) return false;
+      if ((a.confidence ?? 0) < CHAMPION_MIN_CONF) return false;
+      // L'agent qui suggère doit être fiable (≥60% winrate historique)
+      const perf = agentPerf[a.name];
+      const agentWinrate = perf && perf.resolved >= 20 ? perf.winrate : 100; // pas assez de data → on fait confiance
+      if (agentWinrate < 60) return false;
+      // Écart de confiance ≤ 5 pts avec le pick du Chief
+      return Math.abs((a.confidence ?? 0) - (chief.confidence ?? 0)) <= CHAMPION_MAX_GAP;
+    });
+    if (eligibleChampion) {
+      overrideApplied = { from: chief.bet, to: eligibleChampion.bet, by: eligibleChampion.name };
+      console.log(`[concile] Override marché champion : "${chief.bet}" → "${eligibleChampion.bet}" (${eligibleChampion.name} @ ${eligibleChampion.confidence}%)`);
+      chief.bet = eligibleChampion.bet;
+      chief.confidence = Math.min(chief.confidence, eligibleChampion.confidence); // conf = la plus prudente
+      chief.raison = `${chief.raison} · Marché champion privilégié (winrate historique 82%).`;
+      chief.corrected = true;
+      chief._championOverride = overrideApplied;
+    }
+  }
+
   const consensusBet = chief.bet;
   const consensusVotes = betCounts[consensusBet] || 0;
 
