@@ -1137,7 +1137,7 @@ footer{
   <div class="nav-right">
     <div id="nav-auth"><button class="nav-login" onclick="openModal()">Se connecter</button></div>
     <div id="lang-picker-slot"></div>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="nav-cta">Tester — 1€</a>
+    <a href="/#plan-carte" class="nav-cta">Abonnement</a>
     <button class="nav-hamburger" onclick="toggleMenu()" id="hbtn">☰</button>
   </div>
 </nav>
@@ -1149,7 +1149,7 @@ footer{
   <a href="/bankroll">💼 Ma bankroll</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
-  <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="mm-cta" onclick="toggleMenu()">Tester Hermes — 1€</a>
+  <a href="/#plan-carte" class="mm-cta" onclick="toggleMenu()">Abonnement</a>
 </div>
 
 <!-- MODAL LOGIN -->
@@ -1554,6 +1554,11 @@ footer{
   var DELAY_MS = 45000; // 45 s avant apparition auto
   function getCookie(name){ var m = document.cookie.match('(?:^|; )'+name+'=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; }
   function setCookie(name, val, days){ var d = new Date(); d.setTime(d.getTime() + days*86400000); document.cookie = name+'='+encodeURIComponent(val)+'; expires='+d.toUTCString()+'; path=/; SameSite=Lax'; }
+  // Ne PAS afficher le popup si l'utilisateur est déjà abonné (a un code d'accès actif).
+  // Convention du site : la présence de 'tlm_email' dans localStorage = utilisateur connecté.
+  try {
+    if (localStorage.getItem('tlm_email')) return;
+  } catch(_){}
   if (getCookie(COOKIE) === '1') return; // Déjà vu
   var modal = document.getElementById('lead-modal-backdrop');
   var shown = false;
