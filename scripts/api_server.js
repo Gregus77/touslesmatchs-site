@@ -1335,6 +1335,12 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   // Divisions inférieures asiatiques (2e/3e divisions — volatiles, cause de pertes)
   "k league 2", "k-league 2", "j2 league", "j3 league", "j2-league", "j3-league",
   "china league one", "chinese league two",
+  // Coupe de Corée + divisions amateurs coréennes (K3/K4) : équipes semi-pro,
+  // scores fous (4-0, 4-3, 5-0), 6 pertes le 15/07/2026. On garde la K-League 1.
+  // ⚠️ Ces entrées DOIVENT rester avant TRUSTED "fa cup" (ordre : LOW_TRUST gagne).
+  "fa cup · south-korea", "fa cup · korea", "korea · fa cup", "korean fa cup",
+  "korea fa cup", "coupe de corée", "coupe de coree", "korea cup",
+  "k3 league", "k3-league", "k4 league", "k4-league", "k3 · korea", "k4 · korea",
   // Amérique du Sud — ligues secondaires
   "chile", "bolivia", "peru", "venezuela", "ecuador",
   "paraguay", "uruguay · segunda", "colombia · b",
