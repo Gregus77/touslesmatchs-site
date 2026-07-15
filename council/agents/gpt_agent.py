@@ -3,7 +3,7 @@ import json
 from openai import OpenAI
 from prompts.agent_prompt import AGENT_SYSTEM_PROMPT, AGENT_USER_PROMPT_TEMPLATE
 
-NAME = "DeepSeek"
+NAME = "DeepSeek-V3"  # aligné sur le nom utilisé par le JS Concile — même provider (deepseek-chat), stats partagées
 client = None
 
 

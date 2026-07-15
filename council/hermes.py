@@ -89,11 +89,18 @@ def filter_agents_by_accuracy(agents, agent_accuracy):
     stockés dans concile_analyses / agent_predictions (colonne agent_name),
     sinon le filtre ne détecte jamais la sous-performance et tous les
     agents sont conservés (bug historique juillet 2026)."""
+    # Le mapping doit correspondre au NAME défini dans chaque module d'agent
+    # AINSI qu'à ce qui est stocké en base (agent_predictions.agent_name).
+    # Les agents gpt/mistral ont été renommés (DeepSeek-V3 / Mistral-Large)
+    # pour hériter des stats de leurs providers déjà utilisés par le JS Concile
+    # (mêmes APIs, mêmes modèles, donc perf attendue équivalente).
+    # gemini/groq gardent leurs anciens noms historiques (perf sous-performante
+    # confirmée sur 96-113 pronos → seront exclus par le filtre).
     agent_name_map = {
-        "gpt":     "GPT Analysis",
-        "gemini":  "GeminiFlash",
-        "mistral": "Mistral-7B",
-        "groq":    "GROQ-Llama",
+        "gpt":     "DeepSeek-V3",   # ~67% hérité du champion JS
+        "mistral": "Mistral-Large", # ~70% hérité du champion JS
+        "gemini":  "GeminiFlash",   # 49% historique → EXCLU
+        "groq":    "GROQ-Llama",    # 47% historique → EXCLU
         "opus":    "Opus",
         "gpt4o":   "GPT-4o",
     }
