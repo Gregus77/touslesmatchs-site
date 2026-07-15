@@ -74,10 +74,28 @@
 - [ ] Telegram premium réservé Pro/Elite
 
 ### Étape 3 — Sécurité
-- [ ] **URGENT** : Rotation clés API (Stripe, Mistral, Telegram)
-- [ ] **URGENT** : Rotation code admin `ELITE-ADMIN1` (compromis dans chat)
-- [ ] Rate limiting API
-- [ ] Headers sécurité Caddy
+- [ ] **URGENT** : Rotation clés API (Stripe, Mistral, Telegram) — cf. procédure ci-dessous
+- [ ] **URGENT** : Rotation code admin `ELITE-ADMIN1` (compromis dans chat) — bloc SQL fourni
+- [x] **Rate limiting API** (fait ce 14 juil) :
+  - `/login` 10/min · `/register` 5/min
+  - `/create-checkout-session` 10/min
+  - `/analyse` `/live-ia/analyse` `/concile-analysis` 30/min
+  - `/chat` 20/min
+  - 429 + Retry-After header si dépassement
+- [x] **Headers sécurité Caddy** (fait ce 14 juil) :
+  - HSTS 1 an + preload
+  - X-Content-Type-Options nosniff
+  - X-Frame-Options SAMEORIGIN
+  - Referrer-Policy strict-origin-when-cross-origin
+  - Permissions-Policy restrictive
+  - CSP whitelist (Stripe, TikTok, Telegram, GA autorisés)
+  - Server header masqué
+
+**Procédure rotation clés API (à faire trimestriellement) :**
+1. Stripe : dashboard.stripe.com → API keys → Roll → mettre à jour `.env` sur VPS
+2. Telegram bot : parler à @BotFather → `/revoke` → nouveau token
+3. Mistral : console.mistral.ai → API keys → régénérer
+4. Toujours : `docker restart touslesmatchs-api touslesmatchs-council` après update `.env`
 
 ### Étape 4 — Moteur consensus (Phase 2 & 3)
 - [x] Phase 1 : `scripts/concile_engine.js` extrait

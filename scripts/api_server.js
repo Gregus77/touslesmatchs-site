@@ -31,6 +31,48 @@ app.use((req, res, next) => {
 });
 app.use(cors());
 
+// ── Rate limiting maison (sans dépendance) ────────────────────────────────────
+// Empêche brute force login / spam checkout / scraping IA.
+// Sliding window par IP + par route, en mémoire (suffisant pour un seul
+// container ; à migrer sur Redis si scale-out un jour).
+const RATE_LIMITS = {
+  // Endpoints sensibles → limites strictes
+  "/login":                   { max: 10,  windowMs: 60_000 },   // 10/min : brute force
+  "/register":                { max:  5,  windowMs: 60_000 },   // 5/min
+  "/create-checkout-session": { max: 10,  windowMs: 60_000 },   // 10/min : anti-spam Stripe
+  "/analyse":                 { max: 30,  windowMs: 60_000 },   // 30/min : anti-scraping IA
+  "/live-ia/analyse":         { max: 30,  windowMs: 60_000 },
+  "/concile-analysis":        { max: 30,  windowMs: 60_000 },
+  "/chat":                    { max: 20,  windowMs: 60_000 },   // 20/min : anti-abuse chatbot
+};
+const _rateBuckets = new Map(); // clé = ip|route → [timestamps]
+function rateLimit(req, res, next) {
+  const route = Object.keys(RATE_LIMITS).find(r => req.path === r || req.path.startsWith(r + "/"));
+  if (!route) return next();
+  const cfg = RATE_LIMITS[route];
+  const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown").split(",")[0].trim();
+  const key = `${ip}|${route}`;
+  const now = Date.now();
+  const bucket = (_rateBuckets.get(key) || []).filter(t => now - t < cfg.windowMs);
+  if (bucket.length >= cfg.max) {
+    res.setHeader("Retry-After", Math.ceil(cfg.windowMs / 1000));
+    return res.status(429).json({ ok: false, error: "Trop de requêtes. Réessaie dans une minute." });
+  }
+  bucket.push(now);
+  _rateBuckets.set(key, bucket);
+  next();
+}
+app.use(rateLimit);
+// Nettoyage périodique des buckets vieux (mémoire libre toutes les 10 min)
+setInterval(() => {
+  const cutoff = Date.now() - 5 * 60_000;
+  for (const [key, bucket] of _rateBuckets) {
+    const fresh = bucket.filter(t => t > cutoff);
+    if (!fresh.length) _rateBuckets.delete(key);
+    else _rateBuckets.set(key, fresh);
+  }
+}, 10 * 60_000);
+
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
