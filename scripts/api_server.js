@@ -4118,7 +4118,7 @@ async function resolveStalePredictions() {
         SELECT home, away, analysed_at AS created_at FROM concile_analyses WHERE outcome IS NULL
         UNION ALL
         SELECT home, away, created_at FROM shadow_evals WHERE outcome IS NULL
-      ) WHERE created_at <= datetime('now','-3 hours')
+      ) WHERE created_at <= datetime('now','-90 minutes')
         AND created_at >= datetime('now','-7 days')
       LIMIT 120
     `).all();
@@ -4229,8 +4229,10 @@ async function resolveStalePredictions() {
     staleResolveRunning = false;
   }
 }
-// Toutes les 30 min + un premier passage 30s après le démarrage
-setInterval(resolveStalePredictions, 30 * 60 * 1000);
+// Toutes les 5 min + un premier passage 30s après le démarrage.
+// Combiné au seuil abaissé à 90 min, un match fini est résolu et affiché
+// à jour sur le site dans les ~5 min qui suivent sa fin.
+setInterval(resolveStalePredictions, 5 * 60 * 1000);
 setTimeout(resolveStalePredictions, 30 * 1000);
 
 // ── Résolution rapide Signal Fort (toutes les 10 min, délai 90 min) ──────────
