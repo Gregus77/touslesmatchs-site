@@ -4752,12 +4752,26 @@ app.post("/subscribe-email", async (req, res) => {
       console.log(`[subscribe-email] Brevo non configure - lead sauvegarde: ${emailClean}`);
       return res.json({ ok: true });
     }
+    // Envoi Brevo avec attributs UTM pour segmentation par canal d'acquisition.
+    // Ces attributs permettent dans Brevo de créer des LISTES automatiques
+    // (ex: "Leads TikTok Romuald") et des séquences email spécifiques par source.
+    const brevoAttributes = {
+      PLAN: "FREE_SUBSCRIBER",
+      SOURCE: lead.source || "direct",
+      UTM_SOURCE: (lead.utm && lead.utm.source) || "",
+      UTM_MEDIUM: (lead.utm && lead.utm.medium) || "",
+      UTM_CAMPAIGN: (lead.utm && lead.utm.campaign) || "",
+      LANDING: lead.landing_page || "",
+      LANG: (lead.lang || "fr").slice(0, 2),
+      COUNTRY: lead.country || "",
+      SIGNUP_DATE: lead.created_at.slice(0, 10),
+    };
     await httpPost(
       "https://api.brevo.com/v3/contacts",
-      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER" }, updateEnabled: true },
+      { email: emailClean, attributes: brevoAttributes, updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} lang=${lead.lang} country=${lead.country}`);
+    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} utm=${JSON.stringify(lead.utm)} lang=${lead.lang} country=${lead.country}`);
 
     // Email de bienvenue uniquement pour les nouveaux inscrits
     if (!existing) {

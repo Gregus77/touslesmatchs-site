@@ -1505,6 +1505,84 @@ footer{
   <a href="/#plan-carte" class="champion-cta">Voir les offres →</a>
 </div>
 
+<!-- ── POPUP CAPTURE EMAIL ─────────────────────────────────────────────────
+     Apparaît une seule fois par visiteur :
+       - Après 45 s de présence sur le site
+       - Ou immédiatement sur exit-intent (souris qui remonte vers le X)
+     Cookie 30 jours : ne réapparaît pas si déjà vu ou email déjà donné.
+     Passe le UTM à /api/subscribe-email → tag Brevo pour segmentation.
+-->
+<style>
+  .lead-modal-backdrop{position:fixed;inset:0;background:rgba(4,3,10,.72);backdrop-filter:blur(6px);z-index:9998;display:none;align-items:center;justify-content:center;padding:20px;animation:lmFade .3s ease}
+  .lead-modal-backdrop.open{display:flex}
+  @keyframes lmFade{from{opacity:0}to{opacity:1}}
+  .lead-modal{background:linear-gradient(160deg,#12111f,#0a0912);border:1px solid rgba(16,185,129,.35);border-radius:20px;max-width:460px;width:100%;padding:36px 32px 28px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.6);animation:lmSlide .35s ease}
+  @keyframes lmSlide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .lead-modal-close{position:absolute;top:12px;right:14px;background:none;border:none;color:#a4a1b8;font-size:26px;cursor:pointer;line-height:1;padding:4px 8px}
+  .lead-modal-close:hover{color:#eceaf4}
+  .lead-modal-badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:rgba(16,185,129,.15);color:#10b981;padding:5px 10px;border-radius:999px;margin-bottom:14px}
+  .lead-modal h3{margin:0 0 8px;font-size:22px;font-weight:800;color:#eceaf4;line-height:1.3}
+  .lead-modal h3 strong{color:#10b981}
+  .lead-modal p{margin:0 0 20px;color:#a4a1b8;font-size:14px;line-height:1.5}
+  .lead-modal-form{display:flex;flex-direction:column;gap:10px}
+  .lead-modal-form input[type=email]{padding:14px 16px;background:#0a0912;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#eceaf4;font-size:15px;outline:none;transition:border .15s}
+  .lead-modal-form input[type=email]:focus{border-color:#10b981}
+  .lead-modal-form button{padding:14px 18px;background:#10b981;color:#0a0912;border:none;border-radius:10px;font-weight:800;font-size:15px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+  .lead-modal-form button:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(16,185,129,.35)}
+  .lead-modal-form button:disabled{opacity:.6;cursor:wait}
+  .lead-modal-legal{margin-top:14px;font-size:11px;color:#7b82a0;text-align:center;line-height:1.5}
+  .lead-modal-legal a{color:#7b82a0;text-decoration:underline}
+  .lead-modal-ok{color:#10b981;font-size:14px;text-align:center;padding:12px;background:rgba(16,185,129,.08);border-radius:10px;margin-top:10px;display:none}
+</style>
+<div id="lead-modal-backdrop" class="lead-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="lead-modal-title">
+  <div class="lead-modal">
+    <button class="lead-modal-close" aria-label="Fermer" onclick="closeLeadModal(true)">&times;</button>
+    <span class="lead-modal-badge">🏆 Marché champion</span>
+    <h3 id="lead-modal-title">Reçois nos analyses <strong>“But 1ʳᵉ mi-temps”</strong> gratuitement</h3>
+    <p>82&nbsp;% de réussite sur 931 analyses vérifiées. Signal envoyé par email dès qu'Hermès le détecte.</p>
+    <form class="lead-modal-form" onsubmit="submitLeadModal(event)">
+      <input type="email" id="lead-modal-input" placeholder="votre@email.com" autocomplete="email" required>
+      <button type="submit" id="lead-modal-btn">Recevoir gratuitement →</button>
+    </form>
+    <div id="lead-modal-ok" class="lead-modal-ok">✓ Merci ! Un email de bienvenue arrive dans quelques secondes.</div>
+    <p class="lead-modal-legal">Gratuit, sans engagement. Désinscription en un clic. <br>18+ · <a href="/confidentialite.html">Confidentialité</a></p>
+  </div>
+</div>
+<script>
+(function(){
+  var COOKIE = 'tlm_lead_modal_seen';
+  var DELAY_MS = 45000; // 45 s avant apparition auto
+  function getCookie(name){ var m = document.cookie.match('(?:^|; )'+name+'=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; }
+  function setCookie(name, val, days){ var d = new Date(); d.setTime(d.getTime() + days*86400000); document.cookie = name+'='+encodeURIComponent(val)+'; expires='+d.toUTCString()+'; path=/; SameSite=Lax'; }
+  if (getCookie(COOKIE) === '1') return; // Déjà vu
+  var modal = document.getElementById('lead-modal-backdrop');
+  var shown = false;
+  function open(){ if (shown) return; shown = true; modal.classList.add('open'); setTimeout(function(){ var i = document.getElementById('lead-modal-input'); i && i.focus(); }, 400); }
+  window.closeLeadModal = function(userClosed){ modal.classList.remove('open'); if (userClosed) setCookie(COOKIE, '1', 30); };
+  window.submitLeadModal = async function(ev){
+    ev.preventDefault();
+    var input = document.getElementById('lead-modal-input');
+    var btn = document.getElementById('lead-modal-btn');
+    var okEl = document.getElementById('lead-modal-ok');
+    var email = (input.value || '').trim().toLowerCase();
+    if (!email || !email.includes('@')) return;
+    btn.disabled = true; btn.textContent = '…';
+    try {
+      await fetch('/api/subscribe-email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(typeof leadPayload === 'function' ? leadPayload(email, '') : { email: email }) });
+    } catch(_){}
+    okEl.style.display = 'block';
+    btn.style.display = 'none';
+    input.style.display = 'none';
+    setCookie(COOKIE, '1', 365);
+    setTimeout(function(){ closeLeadModal(false); }, 3000);
+  };
+  // Déclencheur 1 : temps
+  setTimeout(open, DELAY_MS);
+  // Déclencheur 2 : exit-intent (souris qui sort par le haut)
+  document.addEventListener('mouseleave', function(e){ if (e.clientY < 10) open(); });
+})();
+</script>
+
 <!-- FOMO STRIP (hidden - too cluttered) -->
 <div class="fomo-strip" id="fomo-strip" style="display:none">
   <div class="fomo-item"><span class="fomo-pulse"></span><span><span id="fomo-members">Communaute en lancement</span></span></div>
