@@ -7325,7 +7325,11 @@ app.get("/premium-teaser", (req, res) => {
 
     const todaySignals = todayRows.length;
 
-    const recentResults = todayRows.length > 0 ? todayRows : deduped.slice(0, 20);
+    // `recent` doit contenir aujourd'hui ET hier pour que le front puisse
+    // déplier les deux onglets ("Aujourd'hui" et "Hier"). Avant, seul today
+    // était inclus quand il y avait des matchs du jour → clic "Hier" vide.
+    const merged = [...todayRows, ...yesterdayRows];
+    const recentResults = merged.length > 0 ? merged : deduped.slice(0, 20);
 
     // Courbe de bankroll chronologique (mise 10€, capital départ 100€)
     // sur toutes les analyses — source unique pour le graphique ROI du site.
