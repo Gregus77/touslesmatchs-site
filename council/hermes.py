@@ -40,7 +40,10 @@ logging.basicConfig(
 log = logging.getLogger("hermes")
 
 IMPROVEMENT_NOTES_PATH = "/app/data/improvement_notes.txt"
-MIN_AGENT_ACCURACY = 80.0
+# Seuil de qualification : un agent en dessous est exclu du vote (mais garde
+# ses stats — il peut revenir s'il remonte). 55% est un compromis : au-dessus
+# du random (50%) avec marge, en-dessous du seuil d'excellence du JS Concile (65%).
+MIN_AGENT_ACCURACY = 55.0
 
 
 def load_improvement_notes():
@@ -80,11 +83,19 @@ def run_agent(agent_module, date, matches_text, history_text, stats):
 
 
 def filter_agents_by_accuracy(agents, agent_accuracy):
-    """Keep only agents with >= 80% accuracy (or all if not enough data)."""
+    """Keep only agents with >= 80% accuracy (or all if not enough data).
+
+    Le mapping ci-dessous DOIT correspondre EXACTEMENT aux noms
+    stockés dans concile_analyses / agent_predictions (colonne agent_name),
+    sinon le filtre ne détecte jamais la sous-performance et tous les
+    agents sont conservés (bug historique juillet 2026)."""
     agent_name_map = {
-        "gpt": "DeepSeek", "gemini": "Gemini Flash",
-        "mistral": "Mistral", "groq": "Groq/Llama3",
-        "opus": "Opus", "gpt4o": "GPT-4o",
+        "gpt":     "GPT Analysis",
+        "gemini":  "GeminiFlash",
+        "mistral": "Mistral-7B",
+        "groq":    "GROQ-Llama",
+        "opus":    "Opus",
+        "gpt4o":   "GPT-4o",
     }
     qualified = []
     excluded = []

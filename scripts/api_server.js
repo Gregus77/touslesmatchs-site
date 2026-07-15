@@ -626,16 +626,9 @@ const SHADOW_AGENTS = [
       model: "llama-3.3-70b-versatile",
     }),
   },
-  {
-    name: "Groq-Llama8B",
-    icon: "🐎",
-    enabled: () => !!GROQ_API_KEY,
-    call: (prompt) => callOpenAICompat(prompt, {
-      url: "https://api.groq.com/openai/v1/chat/completions",
-      key: GROQ_API_KEY,
-      model: "llama-3.1-8b-instant",
-    }),
-  },
+  // Groq-Llama8B retiré le 15 juillet 2026 : 43% de winrate sur 255 résolus
+  // (audit /admin/full-agents-audit). Sous-performance chronique. À réactiver
+  // seulement si Groq publie une v2 sensiblement meilleure.
   {
     name: "Mistral-Small",
     icon: "🌊",

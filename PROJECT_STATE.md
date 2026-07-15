@@ -36,8 +36,38 @@
 ### Étape 1 — Audit complet (EN COURS)
 - [x] Endpoint `/admin/daily-audit` (pronos + résultats du jour)
 - [x] Endpoint `/admin/full-agents-audit` (perf IA + IA blanches + Telegram push)
-- [ ] Interpréter les résultats → décider quelles IA promouvoir/supprimer
+- [x] **Audit réalisé le 14 juil 2026** — résultats consolidés ci-dessous
+- [x] **Actions correctives appliquées** (commit 368fd64+) :
+  - Filtre Python Concile réparé (mapping noms incorrect → aucun agent n'était filtré)
+  - Seuil `MIN_AGENT_ACCURACY` : 80% → 55% (réaliste)
+  - Groq-Llama8B (43% sur 255) retiré du banc d'essai
 - [ ] Rapport structuré par criticité (rouge/orange/jaune/vert)
+
+**Résultats audit 14 juil 2026 :**
+
+| Rang | IA | Winrate | Statut | Action |
+|---|---|---|---|---|
+| 🥇 | Cohere-Command | 70% (935) | Champion tous marchés | Garder + doubler poids en Phase 2 |
+| 🥇 | Mistral-Large | 70% (870) | Excellent | Garder |
+| 🥈 | Perplexity-Web | 69% (934) | Excellent (web temps réel) | Garder |
+| 🥈 | Claude Chief | 68% (1057) | Arbitre stable | Garder |
+| 🥉 | DeepSeek-V3 | 67% (928) | Champion Over/Under 2.5 (71%) | Garder + spécialiser Phase 2 |
+| ⚪ | Mistral-Small (shadow) | 63% (90) | Prometteur | **Candidat à promouvoir** ≥ 50 résolus supplémentaires |
+| ⚪ | Groq-Llama70B (shadow) | 57% (247) | Stable, échantillon large | **Candidat à promouvoir** en Phase 2 |
+| ⚠️ | Mistral-7B | 54% (96) | Bordure | Surveillé (filtre auto Python appliqué) |
+| ❌ | GeminiFlash | 49% (96) | Sous-performant | Filtré du Python Concile |
+| ❌ | GROQ-Llama | 47% (113) | Sous-performant | Filtré du Python Concile |
+| ❌ | GPT Analysis | 46% (111) | Sous-performant | Filtré du Python Concile |
+| 🗑️ | Groq-Llama8B (shadow) | 43% (255) | Supprimé | Retiré du code |
+
+**Champions par marché :**
+- BTTS → Cohere-Command **70%**
+- Over/Under 2.5 → DeepSeek-V3 **71%**
+- But 1ère MT → Cohere-Command **82%** 🔥
+- Résultat 1X2 → Cohere-Command **60%**
+
+**Optimisation appliquée :** seuil Signal Fort abaissé à 75% sur le marché
+"But 1ère MT" (`MARKET_SIGNAL_FLOORS` dans `api_server.js`).
 
 ### Étape 2 — Cloisonnement abonnements
 - [ ] Vérifier chaque plan (1€, Pro 9,90, Elite 19,90)
