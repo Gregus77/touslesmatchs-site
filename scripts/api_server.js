@@ -5026,8 +5026,84 @@ setInterval(() => {
   if (now.getDay() === 0 && now.getHours() === 20 && now.getMinutes() < 60) {
     sendSignalFortBilanTelegram().catch(e => console.error("[signal-fort-bilan]", e.message));
     sendWeeklyConversionEmail().catch(e => console.error("[weekly-conversion]", e.message));
+    sendWeeklyAgentsAudit().catch(e => console.error("[weekly-agents-audit]", e.message));
   }
 }, 60 * 60 * 1000);
+
+// ── Rapport hebdomadaire de perf des IA (dimanche 20h, Telegram admin) ────────
+// Garantit que TU vois chaque semaine où en sont les agents (officiels + shadow)
+// sans avoir à lancer une commande. Si une IA se met à sous-performer, elle
+// apparaîtra dans le rapport avec son winrate en baisse — signal d'alerte visuel.
+async function sendWeeklyAgentsAudit() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  try {
+    const officialAgents = db.prepare(`
+      SELECT agent_name, COUNT(*) total,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_predictions
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name
+    `).all().map(r => ({ ...r, resolved: r.wins + r.losses, winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null }))
+      .sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    const shadowAgents = db.prepare(`
+      SELECT agent_name, COUNT(*) total,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM shadow_evals
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name
+    `).all().map(r => ({ ...r, resolved: r.wins + r.losses, winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null }))
+      .sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    // Meilleur agent par marché — piloter la boucle vertueuse
+    const matrixRows = db.prepare(`
+      SELECT agent_name, market_line,
+             COUNT(*) total,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name, market_line
+    `).all();
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+    const bestByMarket = {};
+    matrixRows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      if (resolved < 5) return;
+      const wr = Math.round(r.wins / resolved * 100);
+      if (!bestByMarket[r.market_line] || wr > bestByMarket[r.market_line].winrate) {
+        bestByMarket[r.market_line] = { agent: r.agent_name, winrate: wr, resolved, label: lineLabels[r.market_line] || r.market_line };
+      }
+    });
+
+    const fmt = (a) => `  ${a.winrate !== null ? `${a.winrate}%` : "n/a"} — ${a.agent_name} (${a.wins}W/${a.losses}L)`;
+    const msg = [
+      `📊 <b>AUDIT HEBDOMADAIRE DES IA</b>`,
+      `📅 Semaine du ${new Date(Date.now() - 7*86400000).toISOString().slice(0,10)} au ${new Date().toISOString().slice(0,10)}`,
+      ``,
+      `<b>🎯 IA officielles</b>`,
+      officialAgents.length ? officialAgents.map(fmt).join("\n") : "  (aucune donnée)",
+      ``,
+      `<b>⚪ IA blanches (banc d'essai)</b>`,
+      shadowAgents.length ? shadowAgents.map(fmt).join("\n") : "  (aucune donnée)",
+      ``,
+      `<b>🏆 Meilleur agent par marché</b>`,
+      Object.keys(bestByMarket).length
+        ? Object.values(bestByMarket).map(b => `  🏆 ${b.label} → ${b.agent} (${b.winrate}% sur ${b.resolved})`).join("\n")
+        : "  (pas assez de données)",
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      `🤖 Rapport auto · TousLesMatchs`,
+    ].join("\n");
+
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+    console.log(`[weekly-agents-audit] Telegram admin: ${ok ? "OK" : "FAIL"}`);
+  } catch (e) {
+    console.error("[weekly-agents-audit] error:", e.message);
+  }
+}
 
 // ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
 const _signalResultSentCache = new Set();
