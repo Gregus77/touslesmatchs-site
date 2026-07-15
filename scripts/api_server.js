@@ -3264,6 +3264,10 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
     ).all(`%${first}%`, `%${away.split(' ')[0]}%`);
 
     if (pending.length) {
+      // PROTECTION IMMUTABILITÉ : le AND outcome IS NULL en clause WHERE garantit
+      // que la DB rejette l'update si un outcome a déjà été enregistré entre le
+      // SELECT et l'UPDATE (course, appel concurrent, retry auto). Immuable
+      // par contrainte, pas seulement par convention applicative.
       const upd = db.prepare(`
         UPDATE concile_analyses
         SET outcome = ?,
@@ -3271,7 +3275,7 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
             final_score_away = ?,
             resolved_at = datetime('now'),
             result_source = ?
-        WHERE id = ?
+        WHERE id = ? AND outcome IS NULL AND final_score_home IS NULL
       `);
       pending.forEach(r => {
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet) || resolveTeamWinBet(r.best_bet, home, away, h, a);
@@ -4013,6 +4017,17 @@ function getFinalScoreFromPick(pick) {
   const match = String(pick.score || "").trim().match(/(\d+)\s*[-:]\s*(\d+)/);
   if (!match) return null;
   return { score_home: Number(match[1]), score_away: Number(match[2]) };
+}
+
+// ── PROTECTION IMMUTABILITÉ ──────────────────────────────────────────────
+// Toute résolution stockée en base est IMMUABLE. On refuse toute mise à jour
+// qui écraserait un outcome, un score final ou une valeur déjà renseignée.
+// Seul un admin peut passer par /admin/resolve-match (traçabilité complète).
+function isProtectedFromOverwrite(existing) {
+  if (!existing) return false;
+  return existing.outcome != null
+      || existing.final_score_home != null
+      || existing.resolved_at != null;
 }
 
 function autoResolvePredictions(match) {
