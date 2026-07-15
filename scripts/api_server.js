@@ -1563,11 +1563,18 @@ function bestBetGrade(match, bet, confidence, cote) {
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
 const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.40));
+// Plafond de cote : au-delà, le book estime l'événement peu probable = longshot
+// perdant (ex: "Under 2.5 @ 3.65" du 15/07/2026 = -10€). Règle métier : cote max 1.95.
+const MAX_PLAYABLE_ODD = Math.min(3.0, Number(process.env.MAX_PLAYABLE_ODD || 1.95));
 
 function betIsPlayable(match, bet, cote) {
   // Cote trop faible = aucune valeur (ex: victoire à 1.10 sur un 3-0)
   if (cote && cote < MIN_PLAYABLE_ODD) {
     return { ok: false, reason: `cote ${cote} < ${MIN_PLAYABLE_ODD} (trop faible, pas de valeur)` };
+  }
+  // Cote trop haute = longshot que le book juge improbable (règle métier : max 1.95)
+  if (cote && cote > MAX_PLAYABLE_ODD) {
+    return { ok: false, reason: `cote ${cote} > ${MAX_PLAYABLE_ODD} (longshot, trop risqué)` };
   }
   const sh = Number(match?.score_home), sa = Number(match?.score_away);
   if (Number.isFinite(sh) && Number.isFinite(sa)) {
