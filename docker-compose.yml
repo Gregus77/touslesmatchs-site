@@ -72,8 +72,14 @@ services:
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      # Accès en lecture aux vraies stats agents (populées par l'API JS).
+      # Sans ce mount, get_agent_accuracy() renvoie 0 → filtre inopérant.
+      - API_STATS_DB=/shared_api/tlm.db
     volumes:
       - council_data:/app/data
+      # Read-only : Concile lit les perfs des agents pour son filtre,
+      # ne doit JAMAIS écrire dans la DB de l'API.
+      - /opt/touslesmatchs/data:/shared_api:ro
     networks:
       - web
 
