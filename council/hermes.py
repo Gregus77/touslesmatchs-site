@@ -27,7 +27,7 @@ from tools.telegram_bot import (
     send_premium_stats, send_daily_report, is_configured as telegram_ok
 )
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
-from agents import opus_agent, gpt4o_agent
+from agents import opus_agent, gpt4o_agent, gpt5_agent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -103,6 +103,7 @@ def filter_agents_by_accuracy(agents, agent_accuracy):
         "groq":    "GROQ-Llama",    # 47% historique → EXCLU
         "opus":    "Opus",
         "gpt4o":   "GPT-4o",
+        "gpt5":    "GPT-5",
     }
     qualified = []
     excluded = []
@@ -163,13 +164,14 @@ def run_council():
         ("gemini", gemini_agent),
         ("mistral", mistral_agent),
         ("groq", groq_agent),
+        ("gpt5", gpt5_agent),
     ]
     qualified_agents, excluded_agents = filter_agents_by_accuracy(all_agents, agent_accuracy)
 
     # 4. Run qualified agents in parallel
     log.info(f"Lancement de {len(qualified_agents)} agents qualifiés...")
     agent_reports = {}
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {
             executor.submit(run_agent, module, date_str, matches_text, history_text, stats): key
             for key, module in qualified_agents
