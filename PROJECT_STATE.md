@@ -9,12 +9,38 @@
 
 | Champ | Valeur |
 |---|---|
-| **Dernière mise à jour** | 14 juillet 2026, 22h45 |
-| **Commit stable** | `df8e294` (branche `claude/touslesmatchs-smoke-test-7hlgum`) |
+| **Dernière mise à jour** | 16 juillet 2026, 15h10 |
+| **Commit stable** | `e71071f` (branche `claude/consensus-engine-architecture-sy3gqg`) |
 | **Verrou** | `VERSION_LOCK.md` — commit `1918412` interdit tout retour antérieur |
-| **VPS déployé sur** | `df8e294` (dernier `bash scripts/deploy.sh`) |
-| **Étape courante** | Étape 1 — Audit complet (mission 10 étapes) |
-| **Prochaine action** | Interpréter le résultat de `/admin/full-agents-audit` pour classer les IA |
+| **VPS déployé sur** | `e71071f` — vérifié en ligne (197 Ko, widgets OK, garde-fous verts) |
+| **Branche de dev active** | `claude/consensus-engine-architecture-sy3gqg` (la SEULE — `smoke-test` abandonnée) |
+| **Étape courante** | Incident web-root résolu + déploiement durci |
+| **Prochaine action** | Collaboration multi-IA (Claude + GPT) sur dossier partagé + Hermès agent |
+
+## 🔥 Incident 16 juillet 2026 — vieille version servie + pull bloqués (RÉSOLU)
+
+**Symptômes** : site figé sur vieille page 42 Ko sans widgets depuis des semaines,
+aucun signal Telegram, déploiements sans effet.
+
+**Cause racine (double)** :
+1. `docker-compose.yml` modifié **à la main sur le VPS** (non commité) pour servir
+   `site/` au lieu de `public/` → vieille page servie (interdit par VERSION_LOCK).
+2. `site/index.html` (généré en écriture par Hermès `html_generator.py`) était
+   **suivi par git** → toujours « modifié » → **bloquait tous les `git pull`**
+   silencieusement pendant des jours → aucun déploiement ne passait.
+
+**Correctifs appliqués (commits ee0d028 → e71071f)** :
+- Montage web root remis sur `public/` (`docker-compose.yml` restauré).
+- `site/index.html` **dé-suivi** (`git rm --cached` + `.gitignore`). `template.html`
+  reste suivi (source lue par Hermès).
+- `deploy.sh` durci avec 3 garde-fous :
+  - **G1** : refuse si modifs code/config non commitées (ignore `site/` généré).
+  - **G2** : refuse si `docker-compose.yml` sert `site/` au lieu de `public/`.
+  - **G3** : refuse si page en ligne < 100 Ko ou sans `widgets.js` + alerte Telegram.
+- `deploy.sh` pointe désormais sur `claude/consensus-engine-architecture-sy3gqg`.
+
+**Leçon** : ne JAMAIS éditer un fichier suivi directement sur le VPS. Ne jamais
+suivre dans git un fichier généré en runtime. Toujours passer par la branche.
 
 ## 📋 Checklist de démarrage de session
 
