@@ -31,6 +31,9 @@ def analyze(date, matches_text, history_text, stats):
         losses=stats.get("losses", 0),
     )
     try:
+        # GPT-5 (modèle de raisonnement) : utilise max_completion_tokens (pas
+        # max_tokens) et n'accepte que la température par défaut. Budget élevé
+        # car le raisonnement consomme des tokens avant de produire le JSON.
         response = _get_client().chat.completions.create(
             model=MODEL,
             messages=[
@@ -38,8 +41,7 @@ def analyze(date, matches_text, history_text, stats):
                 {"role": "user", "content": prompt},
             ],
             response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=500,
+            max_completion_tokens=2000,
         )
         raw = response.choices[0].message.content
         return json.loads(raw)
