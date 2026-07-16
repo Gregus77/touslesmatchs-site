@@ -7,7 +7,7 @@
 set -e
 
 REPO="/opt/touslesmatchs"
-BRANCH="claude/touslesmatchs-smoke-test-7hlgum"
+BRANCH="claude/consensus-engine-architecture-sy3gqg"
 cd "$REPO"
 
 echo "▶ 1/5 — Récupération du code (branche $BRANCH)…"
