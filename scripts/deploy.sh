@@ -29,14 +29,17 @@ alert() {
 
 fail() { echo "❌ $1"; alert "$1"; exit 1; }
 
-# ── G1 — Pré-vol : aucune modif locale non commitée ──────────────────────────
+# ── G1 — Pré-vol : aucune modif locale non commitée (hors site/ généré) ──────
+# On ignore site/ : contenu régénéré en continu par le Concile Hermès, il ne
+# doit jamais bloquer un déploiement. On ne surveille que le code et la config.
 echo "▶ 1/6 — Garde-fou : modifs locales non commitées ?"
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "   ⚠️  Fichiers modifiés localement sur le VPS :"
-  git status --short
-  fail "Modifs locales non commitées — elles bloquent le pull. Fais 'git stash' d'abord (voir ci-dessus)."
+DIRTY="$( { git diff --name-only; git diff --cached --name-only; } | sort -u | grep -v '^site/' || true )"
+if [ -n "$DIRTY" ]; then
+  echo "   ⚠️  Fichiers code/config modifiés localement sur le VPS :"
+  echo "$DIRTY" | sed 's/^/     /'
+  fail "Modifs locales non commitées (hors site/) — elles bloquent le pull. Fais 'git stash' d'abord."
 fi
-echo "   OK — arbre de travail propre"
+echo "   OK — code/config propre (site/ généré ignoré)"
 
 echo "▶ 2/6 — Récupération du code (branche $BRANCH)…"
 git fetch origin "$BRANCH"
