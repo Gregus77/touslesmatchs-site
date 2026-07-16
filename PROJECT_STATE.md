@@ -9,12 +9,12 @@
 
 | Champ | Valeur |
 |---|---|
-| **Dernière mise à jour** | 14 juillet 2026, 22h45 |
-| **Commit stable** | `df8e294` (branche `claude/touslesmatchs-smoke-test-7hlgum`) |
+| **Dernière mise à jour** | 16 juillet 2026, 14h30 |
+| **Commit stable** | `e9f92a0` (branche `claude/touslesmatchs-smoke-test-7hlgum`) |
 | **Verrou** | `VERSION_LOCK.md` — commit `1918412` interdit tout retour antérieur |
-| **VPS déployé sur** | `df8e294` (dernier `bash scripts/deploy.sh`) |
-| **Étape courante** | Étape 1 — Audit complet (mission 10 étapes) |
-| **Prochaine action** | Interpréter le résultat de `/admin/full-agents-audit` pour classer les IA |
+| **VPS déployé sur** | `a714573` (attente déploiement) |
+| **Étape courante** | Étape 1b — Affichage taux de réussite par marché et IA |
+| **Prochaine action** | Déployer, tester `/api/market-agent-stats` et vérifier affichage sur pick card |
 
 ## 📋 Checklist de démarrage de session
 
@@ -68,6 +68,15 @@
 
 **Optimisation appliquée :** seuil Signal Fort abaissé à 75% sur le marché
 "But 1ère MT" (`MARKET_SIGNAL_FLOORS` dans `api_server.js`).
+
+### Étape 1b — Market success rates par IA (FAIT)
+- [x] Endpoint `/api/market-agent-stats` retourne winrates par marché et agent
+- [x] Frontend affiche taux de réussite global et par agent dans pick card
+- [x] Affichage top 4 agents par marché (classés par winrate)
+- [ ] **À tester** : Vérifier que marketType et market_line s'alignent correctement
+  - marketType est tiré du pick (p.bet ou p.marketType)
+  - market_line est tiré des prédictions d'agents (mt1, btts, buts, resultat)
+  - Si pas de correspondance : pas d'affichage stats (fallback gracieux OK)
 
 ### Étape 2 — Cloisonnement abonnements
 - [ ] Vérifier chaque plan (1€, Pro 9,90, Elite 19,90)
