@@ -30,20 +30,30 @@ def analyze(date, matches_text, history_text, stats):
         wins=stats.get("wins", 0),
         losses=stats.get("losses", 0),
     )
+    # GPT-5 est un modèle de raisonnement : les tokens de réflexion sont comptés
+    # dans max_completion_tokens. Sans limiter la réflexion, il peut tout
+    # consommer en raisonnement et renvoyer un contenu VIDE. On demande donc un
+    # effort de raisonnement faible (analyse rapide) + un budget large pour le
+    # JSON. reasoning_effort n'existe que sur les modèles de raisonnement : si le
+    # modèle configuré ne le supporte pas, on réessaie sans ce paramètre.
+    base_kwargs = dict(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": AGENT_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ],
+        response_format={"type": "json_object"},
+        max_completion_tokens=4000,
+    )
     try:
-        # GPT-5 (modèle de raisonnement) : utilise max_completion_tokens (pas
-        # max_tokens) et n'accepte que la température par défaut. Budget élevé
-        # car le raisonnement consomme des tokens avant de produire le JSON.
-        response = _get_client().chat.completions.create(
-            model=MODEL,
-            messages=[
-                {"role": "system", "content": AGENT_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            response_format={"type": "json_object"},
-            max_completion_tokens=2000,
-        )
+        try:
+            response = _get_client().chat.completions.create(reasoning_effort="low", **base_kwargs)
+        except Exception:
+            # Modèle sans reasoning_effort (ex. non-raisonnement) → fallback
+            response = _get_client().chat.completions.create(**base_kwargs)
         raw = response.choices[0].message.content
+        if not raw or not raw.strip():
+            return {"recommendation": "NOPICK", "confidence": 0, "reasoning": "Réponse vide du modèle"}
         return json.loads(raw)
     except Exception as e:
         print(f"[{NAME}] Error: {e}")
