@@ -16,6 +16,23 @@
 **Ne ré-explore pas le projet pour « comprendre l'architecture » : tout est
 documenté ci-dessus.** C'est ce qui économise les tokens.
 
+## 🔐 RÈGLE ABSOLUE — pas d'écrasement sans accord du fondateur
+
+**Aucune IA ne peut supprimer, écraser ou revenir en arrière sur la dernière
+version d'un fichier produite par une autre IA (ou par le fondateur) sans
+l'accord EXPLICITE du fondateur (Grégory).**
+
+Concrètement :
+- Si tu arrives après une autre IA et que tu veux modifier son travail récent :
+  tu le signales au fondateur et tu **attends son feu vert** avant de toucher.
+- Tu peux **ajouter** par-dessus (nouveau code, nouvelle fonctionnalité) librement.
+- Mais **remplacer / supprimer / réécrire** ce qu'une autre IA vient de livrer =
+  interdit sans validation. En cas de doute : demander, ne pas décider seul.
+- Git n'efface jamais rien (tout est dans l'historique) — cette règle garantit
+  qu'on ne se marche pas dessus **avant même** d'en arriver au conflit technique.
+- La protection technique de cette règle = branche `main` protégée + fusion par
+  Pull Request que **seul le fondateur approuve** (voir SETUP_COLLABORATION.md).
+
 ## 🤝 Les 4 règles d'or (ne jamais s'écraser)
 
 1. **Une branche par IA/chantier, fusion par Pull Request.**
