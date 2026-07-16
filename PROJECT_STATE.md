@@ -5,6 +5,24 @@
 
 ---
 
+## 🔄 PASSATION EXPRESS — lire EN PREMIER si tu reprends le projet
+
+> Ce bloc est réécrit par l'IA qui passe la main. Il dit où on en est **là,
+> maintenant**, pour reprendre sans rien casser ni effacer.
+
+- **Branche active** : `claude/consensus-engine-architecture-sy3gqg` (la SEULE).
+- **Dernier commit poussé** : voir `git log --oneline -1` (tout est commité + poussé).
+- **Site en prod** : version `public/` OK (197 Ko, widgets, 5 IA). Web root = `public/`.
+- **En cours / à surveiller** :
+  - GPT-5 ajouté au Concile (5ᵉ agent). Clé OpenAI + crédit OK côté Grégory.
+    À confirmer : le test `docker exec ... python3 -c "...max_completion_tokens..."`
+    renvoie bien une réponse, et `[GPT-5]` apparaît dans les logs du Concile à 11h59.
+  - Site « 4 IA → 5 IA » mis à jour : nécessite un `bash scripts/deploy.sh` pour être en ligne.
+- **Prochaine action** : redéployer (`bash scripts/deploy.sh`), valider GPT-5,
+  tester les 2 liens Telegram, protéger `main` sur GitHub.
+- **À NE PAS toucher sans l'accord de Grégory** : `docker-compose.yml` (web root
+  `public/`), `VERSION_LOCK.md`, le montage Docker, les clés `.env`.
+
 ## 🔖 État courant (à mettre à jour à chaque session)
 
 | Champ | Valeur |

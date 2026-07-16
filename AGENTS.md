@@ -46,6 +46,26 @@ Concrètement :
    (Incident du 16/07/2026 : une édition manuelle de `docker-compose.yml` sur le
    VPS a servi une vieille version pendant des semaines. Voir `PROJECT_STATE.md`.)
 
+## 🔄 Passation Claude ⇄ GPT (quand Grégory est limité en tokens)
+
+Quand Grégory dit « je suis limité, passe la main à GPT » (ou l'inverse), l'IA
+qui part **NE FAIT PAS** disparaître son travail. Elle passe le relais proprement :
+
+**IA qui PART (3 gestes obligatoires) :**
+1. `git add -A && git commit` de tout travail en cours (rien ne reste non commité).
+2. `git push` sur sa branche.
+3. Mettre à jour le bloc **« 🔄 PASSATION EXPRESS »** en haut de `PROJECT_STATE.md` :
+   où on en est, ce qui est en cours, la prochaine action, et ce qu'il ne faut
+   surtout PAS toucher sans l'accord de Grégory.
+
+**IA qui ARRIVE (2 gestes obligatoires) :**
+1. Lire `PROJECT_STATE.md` → bloc « 🔄 PASSATION EXPRESS » = reprise immédiate.
+2. `git pull` de la branche indiquée avant de coder quoi que ce soit.
+
+Résultat : GPT reprend EXACTEMENT là où Claude s'est arrêté (et inversement),
+sans rien effacer. La règle absolue (pas d'écrasement sans accord de Grégory)
+s'applique pendant toute la passation.
+
 ## 🚦 Se répartir le travail sans collision
 
 - **Avant de commencer**, écrire dans `PROJECT_STATE.md` (section « Chantiers
