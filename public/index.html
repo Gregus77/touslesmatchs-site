@@ -2415,6 +2415,9 @@ function buildChart(){
     set('kpi-picks', tot);
     set('hs-winrate', wr + '%');
     set('hs-gain', (gain >= 0 ? '+' : '') + Math.round(gain) + '€');
+    // Bannière + popup champion : MÊME source unique que le KPI (zéro contradiction)
+    document.querySelectorAll('#champ-winrate,#champ-winrate-2').forEach(e=>{ e.textContent = wr; });
+    document.querySelectorAll('#champ-total,#champ-total-2').forEach(e=>{ e.textContent = tot; });
     const ts = `🏆 Winrate ${wr}% · ${tot} pick${tot>1?'s':''} · Profit ${gain>=0?'+':''}${Math.round(gain)}€ sur 10€/pick`;
     ['tw1','tw2'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=ts;});
     const cp = document.getElementById('community-picks-played');
@@ -3357,11 +3360,6 @@ document.addEventListener('click',function(e){
     if(updated){ buildChart(); if(typeof renderPicksFeed==='function') renderPicksFeed(); }
   }
   fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
-    // Bannière + popup champion : chiffres réels et à jour (jamais en dur)
-    if(d && d.ok && typeof d.winrate==='number' && d.total>0){
-      document.querySelectorAll('#champ-winrate,#champ-winrate-2').forEach(e=>{e.textContent=d.winrate;});
-      document.querySelectorAll('#champ-total,#champ-total-2').forEach(e=>{e.textContent=d.total;});
-    }
     if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
     d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
     injectAndRefresh();
