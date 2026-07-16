@@ -7293,6 +7293,74 @@ app.get("/signal-fort-stats", (req, res) => {
   });
 });
 
+// ── Market success rates by IA agent ────────────────────────────────────────
+app.get("/api/market-agent-stats", (req, res) => {
+  try {
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+
+    // Query agent_market_predictions grouped by market_line and agent_name
+    const rows = db.prepare(`
+      SELECT
+        market_line,
+        agent_name,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses,
+        ROUND(AVG(confidence), 0) as avg_confidence
+      FROM agent_market_predictions
+      WHERE outcome IS NOT NULL AND outcome != 'pending'
+      GROUP BY market_line, agent_name
+      ORDER BY market_line, wins / (wins + losses) DESC
+    `).all();
+
+    const markets = {};
+
+    // Initialize markets
+    Object.keys(lineLabels).forEach(line => {
+      markets[line] = {
+        label: lineLabels[line],
+        overall_winrate: 0,
+        overall_count: 0,
+        by_agent: {}
+      };
+    });
+
+    // Populate by_agent data and calculate totals
+    rows.forEach(r => {
+      const total = r.total || 0;
+      const wins = r.wins || 0;
+      const losses = r.losses || 0;
+      const winrate = total > 0 ? Math.round((wins / total) * 100) : 0;
+
+      if (markets[r.market_line]) {
+        markets[r.market_line].by_agent[r.agent_name] = {
+          winrate,
+          count: total,
+          wins,
+          losses,
+          avg_confidence: r.avg_confidence || 0
+        };
+        markets[r.market_line].overall_count += total;
+        markets[r.market_line].overall_wins = (markets[r.market_line].overall_wins || 0) + wins;
+      }
+    });
+
+    // Calculate overall winrates
+    Object.keys(markets).forEach(line => {
+      const m = markets[line];
+      if (m.overall_count > 0) {
+        m.overall_winrate = Math.round((m.overall_wins / m.overall_count) * 100);
+      }
+      delete m.overall_wins;
+    });
+
+    res.json({ ok: true, markets });
+  } catch (e) {
+    console.error("[market-agent-stats]", e);
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // ── Premium teaser stats — public endpoint for NOPICK sales pitch ─────────────
 app.get("/premium-teaser", (req, res) => {
   try {

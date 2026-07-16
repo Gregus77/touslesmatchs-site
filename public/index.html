@@ -1988,6 +1988,7 @@ if(window.matchMedia('(max-width: 700px)').matches || window.matchMedia('(prefer
 // ══ PICK DATA — chargé dynamiquement depuis /api/current-pick
 // Pas de fallback hardcodé : si Hermès n'a pas fourni de pick, on affiche "Pas de pick aujourd'hui"
 const PICK={ status:"no_bet" };
+const MARKET_STATS={}; // Taux de réussite par marché et par IA
 
 const MC={
   "1":      {color:"#10b981",bg:"rgba(16,185,129,.08)",border:"rgba(16,185,129,.2)",bar:"rgba(16,185,129,.6)"},
@@ -2268,6 +2269,30 @@ function renderPick(){
         </div>
       </div>`;
 
+  // Build market stats HTML if data is available
+  let marketStatsHtml = '';
+  if(PICK.marketType && MARKET_STATS[PICK.marketType]){
+    const mstat = MARKET_STATS[PICK.marketType];
+    const mLabel = mstat.label || PICK.marketType;
+    let agentsList = '';
+    const agents = Object.entries(mstat.by_agent || {})
+      .sort((a,b) => (b[1].winrate || 0) - (a[1].winrate || 0))
+      .slice(0, 4); // Top 4 agents
+    if(agents.length > 0){
+      agentsList = agents.map(([name, data]) => {
+        const wr = data.winrate || 0;
+        const cnt = data.count || 0;
+        return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)"><div><span style="color:var(--muted2)">${name}</span></div><div><span style="color:#10b981;font-weight:600">${wr}%</span><span style="color:var(--muted2);font-size:11px;margin-left:6px">(${cnt})</span></div></div>`;
+      }).join('');
+    }
+    marketStatsHtml = `<div style="margin-top:16px;padding:14px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);border-radius:10px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:#10b981;margin-bottom:8px;letter-spacing:.05em">📊 Réussite ${mLabel}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text1);margin-bottom:10px">Global : <span style="color:#10b981;font-size:15px">${mstat.overall_winrate}%</span> <span style="color:var(--muted2);font-size:11px">${mstat.overall_count} analyses</span></div>
+      <div style="font-size:11px;color:var(--muted2);margin-bottom:6px">Par agent IA :</div>
+      ${agentsList || '<div style="color:var(--muted2);font-size:12px">Données insuffisantes</div>'}
+    </div>`;
+  }
+
   const bmBtns=BM.map(b=>`<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}">${b.name} →</a>`).join('');
   const insightHtml=isResult
     ? `<div class="pick-insight">
@@ -2346,6 +2371,7 @@ function renderPick(){
               </div>`
           }
           ${insightHtml}
+          ${marketStatsHtml}
           <div class="ia-head">
             <div class="ia-title">${i18n.t('pick_analysis_lbl')}</div>
             <div class="ia-consensus">${avg}% ${i18n.t('consensus')}</div>
@@ -2952,6 +2978,13 @@ async function initPick(){
     const d = await r.json();
     rawPick = d.pick || d.currentPick || (d.home ? d : null);
   }catch(e){ console.error('[initPick] fetch error:', e); }
+
+  // Charge les stats de réussite par marché et IA
+  try{
+    const sr = await fetch('/api/market-agent-stats?t='+Date.now());
+    const sd = await sr.json();
+    if(sd.ok && sd.markets) Object.assign(MARKET_STATS, sd.markets);
+  }catch(e){ console.error('[initPick] market stats fetch error:', e); }
 
   const p = rawPick;
   const home = p?.teamA?.name || p?.home || '';
