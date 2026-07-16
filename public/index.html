@@ -1460,7 +1460,8 @@ footer{
 </section>
 
 <!-- ── BANDEAU MARCHÉ CHAMPION — "But 1ère MT" 82% ──────────────────────── -->
-<!-- Source : audit /admin/full-agents-audit (14 juil 2026) — Cohere-Command 82% sur 931 pronos -->
+<!-- Bannière champion : winrate + total remplis en direct depuis /api/signal-fort-stats
+     (voir #champ-winrate / #champ-total). Chiffres réels, jamais en dur. -->
 <style>
   .champion-band{
     max-width:1200px;margin:32px auto;padding:24px 28px;
@@ -1498,8 +1499,8 @@ footer{
   <div class="champion-left">
     <span class="champion-badge">🏆 Marché champion</span>
     <div class="champion-txt">
-      <p class="champion-title"><strong>82&nbsp;% de réussite</strong> sur les analyses “But en 1ʳᵉ mi-temps”</p>
-      <p class="champion-sub">931 analyses vérifiées · Winrate calculé sur toute l'historique du Concile IA</p>
+      <p class="champion-title"><strong><span id="champ-winrate">84</span>&nbsp;% de réussite</strong> sur les analyses IA vérifiées</p>
+      <p class="champion-sub"><span id="champ-total">183</span> analyses vérifiées · Winrate calculé sur tout l'historique du Concile IA</p>
     </div>
   </div>
   <a href="/#plan-carte" class="champion-cta">Voir les offres →</a>
@@ -1538,8 +1539,8 @@ footer{
   <div class="lead-modal">
     <button class="lead-modal-close" aria-label="Fermer" onclick="closeLeadModal(true)">&times;</button>
     <span class="lead-modal-badge">🏆 Marché champion</span>
-    <h3 id="lead-modal-title">Reçois nos analyses <strong>“But 1ʳᵉ mi-temps”</strong> gratuitement</h3>
-    <p>82&nbsp;% de réussite sur 931 analyses vérifiées. Signal envoyé par email dès qu'Hermès le détecte.</p>
+    <h3 id="lead-modal-title">Reçois nos <strong>analyses IA</strong> gratuitement</h3>
+    <p><strong><span id="champ-winrate-2">84</span>&nbsp;% de réussite</strong> sur <span id="champ-total-2">183</span> analyses vérifiées. Signal envoyé par email dès qu'Hermès le détecte.</p>
     <form class="lead-modal-form" onsubmit="submitLeadModal(event)">
       <input type="email" id="lead-modal-input" placeholder="votre@email.com" autocomplete="email" required>
       <button type="submit" id="lead-modal-btn">Recevoir gratuitement →</button>
@@ -3356,6 +3357,11 @@ document.addEventListener('click',function(e){
     if(updated){ buildChart(); if(typeof renderPicksFeed==='function') renderPicksFeed(); }
   }
   fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
+    // Bannière + popup champion : chiffres réels et à jour (jamais en dur)
+    if(d && d.ok && typeof d.winrate==='number' && d.total>0){
+      document.querySelectorAll('#champ-winrate,#champ-winrate-2').forEach(e=>{e.textContent=d.winrate;});
+      document.querySelectorAll('#champ-total,#champ-total-2').forEach(e=>{e.textContent=d.total;});
+    }
     if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
     d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
     injectAndRefresh();
