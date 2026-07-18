@@ -34,6 +34,14 @@ est desormais la memoire officielle du projet.
 
 Tous les agents doivent le consulter avant de commencer un travail.
 
+## Communication centralisee
+
+L'admin (Greg) ne parle qu'a Hermes.
+Hermes repartit les taches a Claude Code, GPT et Kimi.
+Les IA ne contactent jamais l'admin directement — elles passent par Hermes.
+
+Schema : Admin (Greg) <-> Hermes (CTO) <-> Claude / GPT / Kimi
+
 ## Regle absolue n°1
 
 **Aucun agent ne doit ecraser le travail d'un autre.**
