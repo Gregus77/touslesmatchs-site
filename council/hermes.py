@@ -1,6 +1,6 @@
 """
 Hermes Council Orchestrator
-Coordonne le conseil de 5 IAs pour générer le pick sportif quotidien.
+Coordonne le conseil de 6+1 IAs pour générer le pick sportif quotidien.
 Exécuté automatiquement à 11h59 chaque jour via le scheduler.
 """
 import os

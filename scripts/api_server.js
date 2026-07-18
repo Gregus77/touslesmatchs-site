@@ -4683,7 +4683,7 @@ app.post("/subscribe-email", async (req, res) => {
       const welcomeHtml = `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
   <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
     <div style="font-size:26px;font-weight:900;color:#fff">Bienvenue sur TousLesMatchs</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">6 agents IA + 1 Chief. Tu décides avec plus de données.</div>
   </div>
   <div style="padding:32px">
     <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
@@ -5972,7 +5972,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
             <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
               <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 6 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
             </div>
             <div style="padding:32px">
               <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
@@ -8263,7 +8263,7 @@ app.get("/admin/heartbeat", (req, res) => {
 // ---- Chatbot Mistral --------------------------------------------------------
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
-const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram @TousLesMatchs_Free. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
+const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 6+1 IA en direct. Winrate: 78%. Paiement Stripe. Telegram @TousLesMatchs_Free. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
 app.post("/chatbot/ask", express.json(), async (req, res) => {
   try {
     const { question, email, session } = req.body || {};

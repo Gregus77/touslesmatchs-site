@@ -89,7 +89,7 @@ def send_free_pick(match, bet, odds, sport, confidence, reasoning=""):
 🎯 Jouer sur <a href="{WINAMAX_LINK}">Winamax</a> ou <a href="{BETCLIC_LINK}">Betclic</a>
 
 ⚠️ Jeu responsable — 18+ — Max 2-5% bankroll
-🤖 Sélectionné par le Conseil Hermes (5 IAs)"""
+🤖 Sélectionné par le Conseil Hermes (6+1 IAs)"""
 
     return _send_message(FREE_CHANNEL_ID, text)
 
@@ -104,7 +104,7 @@ def send_nopick():
 
 ❌ <b>PAS DE PICK AUJOURD'HUI</b>
 
-Le Conseil Hermes (5 IAs) n'a trouvé aucun match atteignant le seuil de confiance 8/10.
+Le Conseil Hermes (6+1 IAs) n'a trouvé aucun match atteignant le seuil de confiance 8/10.
 
 ✅ On préfère ne pas publier plutôt que de forcer une sélection incertaine.
 📈 Winrate maintenu grâce à cette discipline.
@@ -164,7 +164,7 @@ def send_premium_stats(stats: dict):
 {sport_lines}
 
 ━━━━━━━━━━━━━━━━━━
-🤖 Données Conseil Hermes — 5 IAs
+🤖 Données Conseil Hermes — 6+1 IAs
 💎 Abonnement Premium — Merci de votre confiance"""
 
     return _send_message(PREMIUM_CHANNEL_ID, text)
