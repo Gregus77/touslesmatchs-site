@@ -10,10 +10,31 @@ EXCLUDED = [
     re.compile(r'[0-9]+\s*$', re.I)
 ]
 
+# Championnats/pays à exclure (trop imprévisibles, mauvais winrate)
+BAD_LEAGUES = [
+    re.compile(r'Bulgaria', re.I),
+    re.compile(r'Serbia', re.I),
+    re.compile(r'Canadian Premier', re.I),
+    re.compile(r'Copa Argentina', re.I),
+    re.compile(r'Brazil.*Serie B|Serie B.*Brazil', re.I),
+    re.compile(r'First League.*Bulgar', re.I),
+    re.compile(r'Super Liga.*Serb', re.I),
+]
+
 def is_excluded(match_name):
     for pat in EXCLUDED:
         if pat.search(match_name):
             return True
+    return False
+
+def is_bad_league(entry):
+    """Exclure les championnats problématiques via le champ sport (index 6)."""
+    if isinstance(entry, list) and len(entry) > 6:
+        sport = str(entry[6])
+        return any(p.search(sport) for p in BAD_LEAGUES)
+    if isinstance(entry, dict):
+        sport = str(entry.get('sport', '') or entry.get('league', ''))
+        return any(p.search(sport) for p in BAD_LEAGUES)
     return False
 
 with open('/opt/touslesmatchs/data/picks.json', 'r', encoding='utf-8') as f:
@@ -22,8 +43,8 @@ with open('/opt/touslesmatchs/data/picks.json', 'r', encoding='utf-8') as f:
 original_count = len(data['history'])
 new_history = []
 for entry in data['history']:
-    match_name = entry[1]
-    if not is_excluded(match_name):
+    match_name = entry[1] if isinstance(entry, list) else entry.get('match', '')
+    if not is_excluded(match_name) and not is_bad_league(entry):
         new_history.append(entry)
 
 def parse_date(date_str):

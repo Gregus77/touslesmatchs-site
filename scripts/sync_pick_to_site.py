@@ -43,6 +43,20 @@ history = data.get("history", [])
 current_status = pick.get("status", "EN ATTENTE")
 current_match = f'{pick.get("home", "")} vs {pick.get("away", "")}'
 
+def _is_duplicate(match, date, history):
+    """Vérifie si le match existe déjà pour cette date (évite les doublons)."""
+    match_norm = match.lower().strip()
+    date_norm = str(date).strip()
+    for h in history:
+        if isinstance(h, list) and len(h) >= 2:
+            if str(h[0]).strip() == date_norm and str(h[1]).lower().strip() == match_norm:
+                return True
+        elif isinstance(h, dict):
+            if str(h.get("date", "")).strip() == date_norm and \
+               str(h.get("match", "")).lower().strip() == match_norm:
+                return True
+    return False
+
 if current_status in ["GAGNE", "PERDU", "ANNULE"] and current_match.strip() != "vs":
     row = [
         pick.get("date", ""),
@@ -53,7 +67,7 @@ if current_status in ["GAGNE", "PERDU", "ANNULE"] and current_match.strip() != "
         current_status,
         pick.get("sport", "")
     ]
-    if not any(current_match in str(h) for h in history):
+    if not _is_duplicate(current_match, pick.get("date", ""), history):
         history.insert(0, row)
 
 

@@ -7,6 +7,22 @@ SPORTS_API_KEY = os.environ.get("SPORTS_API_KEY", "")
 SPORTS_API_HOST = os.environ.get("SPORTS_API_HOST", "v3.football.api-sports.io")
 SPORTS_API_PROVIDER = os.environ.get("SPORTS_API_PROVIDER", "api-football")
 
+# Pays/championnats exclus (mauvais winrate constaté)
+_BAD_COUNTRIES = {"bulgaria", "serbia", "canada"}
+_BAD_LEAGUE_KEYWORDS = ["copa argentina", "canadian premier"]
+
+def _is_bad_league(league_name: str, country: str) -> bool:
+    cn = (country or "").lower().strip()
+    lg = (league_name or "").lower().strip()
+    if cn in _BAD_COUNTRIES:
+        return True
+    if cn == "brazil" and "serie b" in lg:
+        return True
+    for kw in _BAD_LEAGUE_KEYWORDS:
+        if kw in lg:
+            return True
+    return False
+
 
 def get_todays_matches():
     """Fetch today's matches from the configured sports API."""
@@ -39,6 +55,9 @@ def _fetch_api_football(date):
             fixture = f.get("fixture", {})
             teams = f.get("teams", {})
             league = f.get("league", {})
+            # Exclure les championnats problématiques
+            if _is_bad_league(league.get("name", ""), league.get("country", "")):
+                continue
             odds = _get_odds_api_football(fixture.get("id"))
             matches.append({
                 "id": fixture.get("id"),

@@ -30,15 +30,21 @@ function isoDate(offsetDays) {
 
 function isBadLeague(fx) {
   const name = `${fx.league?.name || ""} ${fx.league?.round || ""}`.toLowerCase();
-  return (
-    name.includes("u20") ||
-    name.includes("u21") ||
-    name.includes("u23") ||
-    name.includes("youth") ||
-    name.includes("women") ||
-    name.includes("friendly") ||
-    name.includes("reserve")
-  );
+  const country = (fx.league?.country || "").toLowerCase();
+
+  // Types de matchs non pertinents
+  if (name.includes("u20") || name.includes("u21") || name.includes("u23") ||
+      name.includes("youth") || name.includes("women") ||
+      name.includes("friendly") || name.includes("reserve")) return true;
+
+  // Pays/championnats à mauvais winrate
+  if (country === "bulgaria") return true;
+  if (country === "serbia") return true;
+  if (country === "canada") return true;
+  if (name.includes("copa argentina")) return true;
+  if (country === "brazil" && name.includes("serie b")) return true;
+
+  return false;
 }
 
 function scoreFixture(fx) {

@@ -62,6 +62,27 @@ function toRow(x) {
   ];
 }
 
+// Championnats/pays à exclure (trop imprévisibles)
+const BAD_LEAGUES = [
+  /bulgaria/i,
+  /serbi[ae]/i,
+  /canadian premier/i,
+  /copa argentina/i,
+  /brazil.*serie b|serie b.*brazil/i,
+  /première ligue.*serb/i,
+  /first league.*bulgar/i,
+];
+
+function isBadLeague(sport) {
+  return BAD_LEAGUES.some(p => p.test(sport || ""));
+}
+
+function normKey(s) {
+  return String(s || "").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ").trim();
+}
+
 function cleanRows(rows) {
   const fixed = [];
 
@@ -70,6 +91,9 @@ function cleanRows(rows) {
     const [date, match, bet, cote, score, status, sport] = r;
     if (!date || !match || !bet) continue;
     if (status === "ANNULÉ") continue;
+
+    // Exclure les championnats problématiques
+    if (isBadLeague(sport)) continue;
 
     const lower = `${match} ${bet}`.toLowerCase();
 
@@ -100,11 +124,18 @@ function cleanRows(rows) {
     fixed.push([date, match, bet, cote, score, status, sport]);
   }
 
+  // Déduplication robuste : date + match + pari (normalisés)
   const byKey = new Map();
   for (const r of fixed) {
-    const key = `${r[1]}|${r[2]}`.toLowerCase();
+    const key = `${normKey(r[0])}|${normKey(r[1])}|${normKey(r[2])}`;
     const old = byKey.get(key);
-    if (!old || parseDate(r[0]) >= parseDate(old[0])) byKey.set(key, r);
+    // Garder l'entrée avec le statut le plus récent (GAGNE/PERDU > EN ATTENTE)
+    const statusPriority = (s) => s === "GAGNÉ" || s === "PERDU" ? 1 : 0;
+    if (!old ||
+        statusPriority(r[5]) > statusPriority(old[5]) ||
+        (statusPriority(r[5]) === statusPriority(old[5]) && parseDate(r[0]) >= parseDate(old[0]))) {
+      byKey.set(key, r);
+    }
   }
 
   return [...byKey.values()].sort((a, b) => parseDate(b[0]) - parseDate(a[0]));
