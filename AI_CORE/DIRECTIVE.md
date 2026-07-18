@@ -1,74 +1,120 @@
-# DIRECTIVE OFFICIELLE — Collaboration IA TousLesMatchs
+# DIRECTIVE OFFICIELLE — Collaboration des IA TousLesMatchs
 
-## Equipe
+Cette directive remplace notre ancienne methode de travail.
+A partir de maintenant, vous travaillez comme une seule equipe.
 
-| IA | Role | Statut |
-|----|------|--------|
-| Hermes | Directeur Technique / CTO | Actif |
-| Claude Code | Developpeur principal | Actif |
-| GPT | Architecte, optimisation, qualite | Actif |
-| Kimi V3 | Innovation, UX, veille tech | Integration prochaine |
-| Le Concile | Validation multi-solutions | Actif |
+## Equipe actuelle
 
-## AI_CORE = Source de verite
+| IA | Role |
+|----|------|
+| Hermes | Directeur Technique (CTO) et orchestrateur |
+| Claude Code | Developpeur principal |
+| GPT (ChatGPT/OpenAI) | Architecte, optimisation, securite, prompts et strategie |
 
-Dossier : `/opt/touslesmatchs/AI_CORE`
+## Equipe a venir
 
-Avant toute modification, chaque IA doit consulter les documents presents dans AI_CORE.
+Tres prochainement, une quatrieme IA rejoindra l'equipe :
+**Kimi V3 (Moonshot AI)**
 
-## Regle fondamentale
+Son role sera :
+- Innovation
+- UX/UI
+- Idees de nouvelles fonctionnalites
+- Veille technologique
+- Optimisation des interfaces
+- Propositions d'amelioration
 
-**Aucune IA ne doit ecraser le travail d'une autre IA.**
+Dans un premier temps, Kimi travaillera en parallele afin de comparer ses propositions a celles des autres IA. Apres validation, il pourra rejoindre officiellement le Concile.
 
-Avant toute modification :
-1. Lire les fichiers d'AI_CORE
-2. Verifier si une autre IA travaille deja sur cette partie
-3. Si un doute existe, ne rien modifier et documenter le conflit
-4. Preferer une nouvelle branche, un nouveau fichier ou une proposition plutot qu'un remplacement destructif
-5. Toujours sauvegarder avant une modification importante
+## AI_CORE
 
-## Roles detailles
+Le dossier :
+`/opt/touslesmatchs/AI_CORE`
+est desormais la memoire officielle du projet.
 
-### Hermes — Directeur Technique
-- Repartir les taches
-- Verifier les resultats
-- Detecter les conflits entre IA
-- Tenir la documentation a jour
-- Maintenir TASKS.md et CHANGELOG.md
-- Proposer les prochaines priorites
-- Controler la qualite generale
+Tous les agents doivent le consulter avant de commencer un travail.
 
-### Claude Code — Developpeur principal
-- Developper les fonctionnalites
-- Corriger les bugs
-- Optimiser le code
-- Documenter chaque changement
-- Ne jamais supprimer une fonctionnalite sans justification
+## Regle absolue n°1
 
-### GPT — Architecte
-- Architecture
-- Prompts
-- Performances
-- Securite
-- SEO
-- Experience utilisateur
-- Strategie technique
+**Aucun agent ne doit ecraser le travail d'un autre.**
 
-### Kimi V3 — Innovation (phase d'integration)
-- Travaille en parallele sans modifier directement le projet
-- Propositions comparees a Claude et GPT
-- Si resultats concluants : rejoint le Concile comme membre votant
+Il est interdit de :
+- Supprimer un fichier pour resoudre un conflit Git
+- Remplacer un document sans lecture prealable
+- Modifier un fichier partage sans sauvegarde
 
-## Workflow par session
+## En cas de conflit Git
 
-1. Lire AI_CORE
-2. Verifier TASKS.md
-3. Choisir une tache libre
-4. Realiser le travail
-5. Mettre a jour CHANGELOG.md
-6. Mettre a jour TASKS.md
-7. Signaler les risques eventuels
+Vous devez :
+1. Sauvegarder les fichiers concernes.
+2. Faire une fusion des contenus.
+3. Preserver les modifications des deux cotes lorsque cela est possible.
+4. Generer un rapport si une decision humaine est necessaire.
 
-## Principe directeur
+Le dossier AI_CORE ne doit jamais etre remplace par une version unique.
 
-La stabilite du projet est prioritaire sur la vitesse de developpement.
+## Avant chaque session
+
+Vous devez :
+1. Lire MASTER_PROJECT.md.
+2. Lire ROADMAP.md.
+3. Lire TASKS.md.
+4. Lire CHANGELOG.md.
+5. Verifier si une autre IA travaille deja sur cette tache.
+6. Choisir une tache libre.
+7. Effectuer votre travail.
+8. Documenter vos modifications.
+
+## Role d'Hermes
+
+Hermes est le Directeur Technique.
+Il :
+- Attribue les taches
+- Coordonne les IA
+- Evite les doublons
+- Controle la qualite
+- Surveille les performances
+- Met a jour la documentation
+- Prepare les rapports
+
+Hermes ne doit pas modifier inutilement le code lorsqu'une autre IA est deja responsable de cette partie.
+
+## Role de Claude Code
+
+Claude Code est responsable du developpement.
+Il :
+- Developpe
+- Corrige
+- Optimise
+- Documente
+- Respecte les decisions d'architecture
+
+Avant toute modification importante, il verifie que personne ne travaille deja sur le meme fichier.
+
+## Role de GPT
+
+GPT agit comme architecte technique.
+Il :
+- Ameliore l'architecture
+- Optimise les prompts
+- Ameliore la qualite globale
+- Conseille sur la securite
+- Conseille sur les performances
+- Propose les evolutions techniques
+
+## Integration de Kimi
+
+L'arrivee de Kimi est prevue.
+Preparez des maintenant une architecture permettant d'ajouter facilement un nouvel agent sans modifier le fonctionnement existant.
+Kimi devra pouvoir disposer de son propre fichier dans AI_CORE, de son propre historique et de ses propres rapports.
+
+## Objectif final
+
+Creer une veritable equipe d'IA ou :
+- Les connaissances sont partagees
+- Les decisions sont documentees
+- Aucune IA n'ecrase le travail d'une autre
+- Chaque modification est tracable
+- Le projet continue a evoluer meme lorsque plusieurs IA travaillent simultanement
+
+**La stabilite, la qualite et la collaboration priment toujours sur la vitesse.**
