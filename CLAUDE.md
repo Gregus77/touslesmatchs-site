@@ -120,11 +120,11 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse a 1 euro -> Pro (9.90
 - Ne jamais falsifier de statistiques
 
 ### Analyses sportives
-- **Default** : Moins de 2.5 buts (Under 2.5) comme type d'analyse par defaut
+- **Default** : "But en 1ere mi-temps" comme type d'analyse PRIORITAIRE, puis Under 2.5 en second choix
 - **Coupe du Monde exclue** de toutes les analyses
 - **Ligues fiables uniquement** : whitelist TRUSTED_COMPETITIONS + blacklist LOW_TRUST_COMPETITION_KEYWORDS
 - **Ordre de filtrage** : LOW_TRUST verifie en premier (bloque), puis TRUSTED (passe), puis default = bloque
-- **Cotes** : formule `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais au-dessus de 1.95
+- **Cotes** : fourchette 1.40–2.30 uniquement. Formule estimation : `Math.min(2.30, ((1 / (confidence / 100)) * 1.45))`. MIN_PLAYABLE_ODD=1.40, MAX_PLAYABLE_ODD=2.30
 - **Signal Fort** : alerte quand confiance >= 80%
 - **Multi-sport** : Football, Basketball, Hockey, Baseball, Tennis. Les sports non-Football passent directement le filtre low-trust dans shouldAutoObserveMatch
 

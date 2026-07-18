@@ -855,7 +855,7 @@ function parseShadowResponse(text) {
   const marchesMatch = t.match(/MARCHES\s*:\s*([^\n]+)/i);
   let bet = betMatch ? betMatch[1].trim() : null;
   if (!bet) {
-    const known = ["Over 2.5", "Under 2.5", "BTTS Oui", "BTTS Non", "Match nul", "Victoire domicile", "Victoire extérieur", "1X", "X2", "12", "NO BET"];
+    const known = ["But en 1ère mi-temps", "Over 2.5", "Under 2.5", "BTTS Oui", "BTTS Non", "Match nul", "Victoire domicile", "Victoire extérieur", "1X", "X2", "12", "NO BET"];
     for (const k of known) {
       if (t.toLowerCase().includes(k.toLowerCase())) { bet = k; break; }
     }
@@ -888,10 +888,10 @@ Match : ${match.home} vs ${match.away}
 Compétition : ${match.competition || match.league || "inconnue"}
 Sport : ${match.sport || "Football"}${scoreStr}
 
-DIRECTIVE : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.
+DIRECTIVE PRIORITAIRE : "But en 1ère mi-temps" est le marché PRIORITAIRE — recommande-le en premier choix dès que les conditions le permettent (attaques actives, historique de buts précoces, rythme offensif). Under 2.5 en second choix UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts avant 45' → préfère Over 2.5 ou Victoire.
 
 Réponds UNIQUEMENT dans ce format :
-ANALYSE : [ex: Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
+ANALYSE : [ex: But en 1ère mi-temps / Under 2.5 / Over 2.5 / Victoire domicile / 1X / Match nul / NO BET]
 CONFIANCE : [0-100]
 RAISON : [1 phrase maximum]
 MARCHES : buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55
@@ -1563,18 +1563,26 @@ function bestBetGrade(match, bet, confidence, cote) {
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
 const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.40));
+<<<<<<< HEAD
 // Plafond de cote : au-delà, le book estime l'événement peu probable = longshot
 // perdant (ex: "Under 2.5 @ 3.65" du 15/07/2026 = -10€). Règle métier : cote max 1.95.
 const MAX_PLAYABLE_ODD = Math.min(3.0, Number(process.env.MAX_PLAYABLE_ODD || 1.95));
+=======
+const MAX_PLAYABLE_ODD = Math.min(5.0, Number(process.env.MAX_PLAYABLE_ODD || 2.30));
+>>>>>>> 638ca3f05af526ddfbf59f1cd4265fb62b04aaaf
 
 function betIsPlayable(match, bet, cote) {
-  // Cote trop faible = aucune valeur (ex: victoire à 1.10 sur un 3-0)
   if (cote && cote < MIN_PLAYABLE_ODD) {
     return { ok: false, reason: `cote ${cote} < ${MIN_PLAYABLE_ODD} (trop faible, pas de valeur)` };
   }
+<<<<<<< HEAD
   // Cote trop haute = longshot que le book juge improbable (règle métier : max 1.95)
   if (cote && cote > MAX_PLAYABLE_ODD) {
     return { ok: false, reason: `cote ${cote} > ${MAX_PLAYABLE_ODD} (longshot, trop risqué)` };
+=======
+  if (cote && cote > MAX_PLAYABLE_ODD) {
+    return { ok: false, reason: `cote ${cote} > ${MAX_PLAYABLE_ODD} (trop haute, risque excessif)` };
+>>>>>>> 638ca3f05af526ddfbf59f1cd4265fb62b04aaaf
   }
   const sh = Number(match?.score_home), sa = Number(match?.score_away);
   if (Number.isFinite(sh) && Number.isFinite(sa)) {
@@ -2186,6 +2194,10 @@ function pickRealOdd(oddsData, betLabel, match) {
     const o = v ? parseFloat(v.odd) : null;
     return (o && o > 1) ? Math.round(o * 100) / 100 : null;
   };
+  if (/1[eè]re mi-temps|first half|mi.temps/.test(b)) {
+    const bt = findBet(["first half goals", "1st half", "goals in first half", "first half over/under"]);
+    return valOf(bt, s => s.includes("over 0.5") || s === "yes" || s.includes("1+"));
+  }
   if (/under|moins de|-2\.5/.test(b))  return valOf(findBet(["goals over/under", "over/under"]), s => s.includes("under 2.5"));
   if (/over|plus de|\+2\.5/.test(b))   return valOf(findBet(["goals over/under", "over/under"]), s => s.includes("over 2.5"));
   if (/btts|both teams|deux équipes|marquent/.test(b)) {
@@ -2213,15 +2225,16 @@ function pickRealOdd(oddsData, betLabel, match) {
 // Cote marché réaliste par défaut si aucune vraie cote — variée SELON le marché
 // (fini la cote unique 1.71 pour tout). Utilisée en fallback uniquement.
 function estimateMarketOdd(confidence, betLabel) {
-  const base = Math.min(1.95, (1 / (Math.max(1, confidence) / 100)) * 1.45);
+  const base = Math.min(2.30, (1 / (Math.max(1, confidence) / 100)) * 1.45);
   const b = String(betLabel || "").toLowerCase();
-  let mult = 1.0, lo = 1.2, hi = 2.6;
+  let mult = 1.0, lo = 1.40, hi = 2.30;
   if (/double chance|1x|x2|12\b/.test(b))                { mult = 0.72; lo = 1.12; hi = 1.75; }
   else if (/draw no bet|dnb|remboursé/.test(b))          { mult = 0.9;  lo = 1.25; hi = 2.2; }
-  else if (/victoire|vainqueur|winner/.test(b))          { mult = 0.88; lo = 1.2;  hi = 2.9; }
-  else if (/under|moins de|-2\.5|-1\.5|-3\.5/.test(b))   { mult = 1.0;  lo = 1.4;  hi = 2.1; }
-  else if (/over|plus de|\+2\.5|\+1\.5|\+3\.5/.test(b))  { mult = 1.12; lo = 1.5;  hi = 2.5; }
-  else if (/btts|both teams|deux équipes|marquent/.test(b)) { mult = 1.08; lo = 1.5; hi = 2.3; }
+  else if (/victoire|vainqueur|winner/.test(b))          { mult = 0.88; lo = 1.40;  hi = 2.30; }
+  else if (/under|moins de|-2\.5|-1\.5|-3\.5/.test(b))   { mult = 1.0;  lo = 1.40;  hi = 2.10; }
+  else if (/over|plus de|\+2\.5|\+1\.5|\+3\.5/.test(b))  { mult = 1.12; lo = 1.40;  hi = 2.30; }
+  else if (/btts|both teams|deux équipes|marquent/.test(b)) { mult = 1.08; lo = 1.40; hi = 2.30; }
+  else if (/1[eè]re mi-temps|first half|mt1|mi.temps/.test(b)) { mult = 1.05; lo = 1.40; hi = 2.30; }
   const odd = Math.max(lo, Math.min(hi, base * mult));
   return Math.round(odd * 100) / 100;
 }
@@ -2284,7 +2297,7 @@ function buildStatsBlock(stats, home, away) {
 }
 
 // ── Groq Concile analysis ─────────────────────────────────────────────────────
-const BET_TYPES = ["Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "Under 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
+const BET_TYPES = ["But en 1ère mi-temps", "Under 2.5 buts", "Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
 
 // Estime la minute depuis l'heure de début quand l'API ne la fournit pas
 function estimateMinute(match) {
@@ -2343,6 +2356,8 @@ function computeAvailableBets(match) {
   // Marchés déjà gagnés : ne jamais proposer un pari dont l'issue est déjà acquise.
   if (total > 2.5) bets = bets.filter(b => b !== "Over 2.5 buts");
   if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Oui");
+  // But en 1ère mi-temps : retirer si mi-temps passée ou si un but déjà marqué (marché déjà tranché)
+  if (minute >= 46 || total > 0) bets = bets.filter(b => b !== "But en 1ère mi-temps");
 
   // Over 2.5 : projection mathématique basée sur le rythme actuel
   const need25 = Math.max(0, 3 - total);
@@ -2644,7 +2659,8 @@ En te basant sur tes connaissances des équipes ET les données live ci-dessus, 
 Tu DOIS choisir parmi cette liste uniquement : ${availableBets.join(", ")}
 
 DIRECTIVE MARCHÉ :
-- Under 2.5 buts UNIQUEMENT si le match est équilibré (écart de score 0-1) ET le rythme de buts est faible (projection < 2.5).
+- "But en 1ère mi-temps" est le marché PRIORITAIRE — recommande-le en premier choix dès que les conditions le permettent (attaques actives, historique de buts précoces, rythme offensif en début de match).
+- Under 2.5 buts en SECOND CHOIX, UNIQUEMENT si le match est équilibré (écart de score 0-1) ET le rythme de buts est faible (projection < 2.5).
 - INTERDIT de recommander Under 2.5 si : écart >= 2 buts OU 2+ buts marqués avant la 45' OU une équipe domine clairement.
 - Si l'écart est large (2+), préfère Over 2.5 ou Victoire de l'équipe dominante.
 - Respecte impérativement les CONTRAINTES MATHÉMATIQUES LIVE ci-dessous.
@@ -2787,7 +2803,7 @@ Synthétise ces votes en tenant compte de :
 6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
 7. Les règles propres au sport: ${sport}
 8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
-9. DIRECTIVE MARCHÉ : Under 2.5 UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts marqués avant 45' → Over 2.5 ou Victoire. JAMAIS Under 2.5 quand une équipe domine
+9. DIRECTIVE MARCHÉ : "But en 1ère mi-temps" est le marché PRIORITAIRE — recommande-le en premier choix dès que les conditions le permettent. Under 2.5 en second choix UNIQUEMENT si match équilibré (écart 0-1 but) ET rythme faible. Si écart >= 2 buts OU 2+ buts marqués avant 45' → Over 2.5 ou Victoire. JAMAIS Under 2.5 quand une équipe domine
 
 Réponds en JSON pur (pas de markdown):
 {
@@ -3002,7 +3018,8 @@ function getMockAgentAnalysis(agent, match, index) {
   const score_diff = match.score_home - match.score_away;
   const minute = parseInt(match.minute) || 50;
   let bet;
-  if (score_diff > 0 && minute > 60) bet = "Under 2.5 buts";
+  if (minute < 45) bet = "But en 1ère mi-temps";
+  else if (score_diff > 0 && minute > 60) bet = "Under 2.5 buts";
   else if (score_diff === 0 && minute < 70) bet = "BTTS Oui";
   else if (score_diff === 0) bet = "Over 2.5 buts";
   else bet = score_diff > 0 ? "Victoire domicile" : "Victoire extérieur";
@@ -4843,7 +4860,7 @@ app.post("/subscribe-email", async (req, res) => {
       const welcomeHtml = `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
   <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
     <div style="font-size:26px;font-weight:900;color:#fff">Bienvenue sur TousLesMatchs</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">6 agents IA + 1 Chief. Tu décides avec plus de données.</div>
   </div>
   <div style="padding:32px">
     <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
@@ -6217,7 +6234,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
             <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
               <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 6 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
             </div>
             <div style="padding:32px">
               <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
@@ -8659,6 +8676,31 @@ app.get("/admin/preflight", (req, res) => {
 
 app.get("/admin/heartbeat", (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
+});
+
+
+// ---- Chatbot Mistral --------------------------------------------------------
+const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
+const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
+const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 6+1 IA en direct. Winrate: 78%. Paiement Stripe. Telegram @TousLesMatchs_Free. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
+app.post("/chatbot/ask", express.json(), async (req, res) => {
+  try {
+    const { question, email, session } = req.body || {};
+    if (!question) return res.json({ ok: false, error: "Question vide" });
+    const userKey = email || session || "anon_" + Date.now();
+    const hist = db.prepare("SELECT role, content FROM chat_messages WHERE user_key = ? ORDER BY id DESC LIMIT 10").all(userKey).reverse();
+    hist.push({ role: "user", content: question });
+    try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "user", question); } catch(e){}
+    const resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    const answer = data?.choices?.[0]?.message?.content || "Notre assistant est momentanement indisponible.";
+    try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "assistant", answer); } catch(e){}
+    res.json({ ok: true, answer });
+  } catch(e) {
+    console.error("[CHATBOT]", e.message);
+    res.json({ ok: true, answer: "Notre assistant est momentanement indisponible." });
+  }
 });
 
 app.listen(PORT, () => {

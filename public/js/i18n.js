@@ -42,7 +42,11 @@ const i18n = (function(){
       sec_how_eye: "Méthode",
       sec_how_title: "Le Concile ne devine pas.",
       step1_title: "Collecte vérifiée à 6h00",
+<<<<<<< HEAD
       step2_title: "5 agents spécialisés + 1 Chief",
+=======
+      step2_title: "6 agents spécialisés + 1 Chief",
+>>>>>>> 638ca3f05af526ddfbf59f1cd4265fb62b04aaaf
       step3_title: "Diffusion à 7h00",
       step4_title: "Résultats tracés, modèle amélioré",
       foot_text: "Analyse sportive assistée par IA · Données vérifiées · 0 match inventé",

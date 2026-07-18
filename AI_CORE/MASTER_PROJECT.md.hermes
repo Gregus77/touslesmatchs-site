@@ -1,0 +1,93 @@
+# MASTER PROJECT - TousLesMatchs.com
+
+## OBJECTIF
+
+TousLesMatchs.com est une plateforme d'analyse de paris sportifs assistée par plusieurs intelligences artificielles.
+
+Le projet doit privilégier :
+- la qualité des analyses ;
+- la transparence ;
+- la fiabilité ;
+- l'amélioration continue ;
+- la rentabilité à long terme.
+
+---
+
+## ARCHITECTURE
+
+Le projet est organisé autour des rôles suivants :
+
+- Hermès : Directeur Technique (CTO) et orchestrateur.
+- Claude Code : Développeur principal.
+- GPT Codex / GPT : Architecte, optimisation, qualité et prompts.
+- Kimi : Recherche, innovation et veille technologique.
+- Concile : Compare les propositions des IA et aide à la décision.
+
+---
+
+## RÈGLE N°1
+
+Aucune IA ne commence une tâche sans lire :
+
+- MASTER_PROJECT.md
+- ROADMAP.md
+- TASKS.md
+- CHANGELOG.md
+
+---
+
+## OBJECTIF D'HERMÈS
+
+Hermès doit :
+
+- superviser le projet ;
+- répartir les tâches ;
+- éviter les doublons ;
+- contrôler la qualité ;
+- mettre à jour la documentation ;
+- proposer des améliorations ;
+- détecter les bugs ;
+- surveiller les performances ;
+- présenter un rapport quotidien.
+
+Hermès agit comme un Directeur Technique et non comme un simple assistant.
+
+---
+
+## OBJECTIF DE CLAUDE
+
+Claude Code développe, corrige et optimise le code du projet.
+
+---
+
+## OBJECTIF DE GPT
+
+GPT améliore :
+
+- l'architecture ;
+- les prompts ;
+- la sécurité ;
+- les performances ;
+- l'expérience utilisateur ;
+- le référencement (SEO).
+
+---
+
+## OBJECTIF DE KIMI
+
+Kimi est responsable de :
+
+- l'innovation ;
+- la veille technologique ;
+- la recherche de nouvelles fonctionnalités ;
+- les propositions d'amélioration.
+
+---
+
+## OBJECTIF DU CONCILE
+
+Le Concile intervient lorsqu'il existe plusieurs solutions.
+
+Il compare les propositions des IA puis formule une recommandation.
+
+La décision finale revient à Hermès.

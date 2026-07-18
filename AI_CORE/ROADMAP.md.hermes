@@ -1,0 +1,51 @@
+# ROADMAP - TousLesMatchs.com
+
+## PRIORITÉ 1 - STABILITÉ
+
+- [ ] Vérifier que tous les conteneurs Docker redémarrent automatiquement.
+- [ ] Corriger tous les bugs critiques.
+- [ ] Vérifier les sauvegardes automatiques.
+- [ ] Vérifier Stripe.
+- [ ] Vérifier Telegram.
+- [ ] Vérifier les APIs.
+
+---
+
+## PRIORITÉ 2 - IA
+
+- [ ] Intégrer Kimi au Concile.
+- [ ] Mesurer les performances de chaque IA.
+- [ ] Éliminer les IA peu performantes.
+- [ ] Améliorer les prompts.
+- [ ] Réduire les coûts des modèles.
+
+---
+
+## PRIORITÉ 3 - SITE
+
+- [ ] Refaire la page d'accueil.
+- [ ] Améliorer le SEO.
+- [ ] Optimiser les performances.
+- [ ] Optimiser la version mobile.
+- [ ] Ajouter de nouvelles statistiques.
+
+---
+
+## PRIORITÉ 4 - BUSINESS
+
+- [ ] Finaliser Stripe.
+- [ ] Finaliser les abonnements.
+- [ ] Développer Telegram Premium.
+- [ ] Développer les partenariats.
+- [ ] Développer l'affiliation.
+
+---
+
+## PRIORITÉ 5 - FUTUR
+
+- [ ] Application mobile.
+- [ ] API publique.
+- [ ] IA Basket.
+- [ ] IA Hockey.
+- [ ] IA Tennis.
+- [ ] Internationalisation.

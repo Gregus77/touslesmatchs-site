@@ -1,0 +1,41 @@
+# TASKS - TousLesMatchs.com
+
+## EN COURS
+
+- [ ] Rédiger les rapports quotidiens Telegram (automatique via cron)
+
+## À FAIRE — Priorité 1 (Stabilité)
+
+- [ ] Stripe : configurer les Price IDs dans .env (actuellement vides)
+- [ ] Vérifier que docker-compose a `restart: always` sur tous les services
+- [ ] Vérifier les sauvegardes automatiques DB
+
+## À FAIRE — Priorité 2 (IA)
+
+- [ ] Ajouter Kimi V3 au Concile
+- [ ] Analyser les premiers résultats "But 1ère MT" (après 50+ analyses)
+- [ ] Audit des agents : Mistral-7B (54%), GeminiFlash (49%), GROQ-Llama (47%), GPT Analysis (46%) — remplacer si <50%
+
+## À FAIRE — Priorité 3 (Business)
+
+- [ ] Stripe : finaliser les paiements
+- [ ] Brevo : finaliser les emails automatiques
+- [ ] Telegram Premium : vérifier les envois
+
+## À FAIRE — Priorité 4 (Site)
+
+- [ ] SEO
+- [ ] Optimisation mobile
+- [ ] Statistiques utilisateurs
+
+## TERMINÉES (18/07/2026)
+
+- Création du dossier AI_CORE avec MASTER_PROJECT.md, ROADMAP.md, TASKS.md, CHANGELOG.md
+- Provider DeepSeek → OpenRouter (Claude Sonnet 4 + fallback chain)
+- SSH VPS rétabli
+- hermes-admin réparé (bug time.sleep(float("inf")))
+- Telegram token renouvelé
+- "But 1ère MT" ajouté aux analyses
+- "Match nul" retiré des BET_TYPES
+- USL League Two blacklisté
+- Accès Premium gratuit : Alexis, Romuald, Jerome, Aurelien enregistrés

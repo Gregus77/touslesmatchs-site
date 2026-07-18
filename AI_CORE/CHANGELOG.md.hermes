@@ -1,0 +1,28 @@
+# CHANGELOG - TousLesMatchs.com
+
+## 18/07/2026 — Session Hermès (Grégory)
+
+### Corrigé
+- Provider DeepSeek (clé invalide) → OpenRouter (Claude Sonnet 4)
+- Fallback chain configurée : Claude Sonnet 4 → DeepSeek v4 Flash → GPT-4o-mini
+- SSH VPS rétabli (nouvelle clé générée et installée)
+- hermes-admin réparé : `time.sleep(float("inf"))` → `time.sleep(999999)`
+- Telegram token renouvelé (ancien token invalide)
+- TELEGRAM_BOT_TOKEN unifié vers bot Admin (pour tous les groupes)
+
+### Modifié
+- BET_TYPES : "But 1ère MT" ajouté, "Match nul" retiré
+- USL League Two blacklisté (59% WR)
+- docker-compose.yml : sleep fix pour hermes-admin
+
+### Vérifié
+- Site : HTTP 200
+- SSL : valide jusqu"au 13/09/2026
+- Disque : 58 Go libres / 96 Go
+- Stats : 562 analyses, 305W/89L = 77.4% WR
+- Tous les conteneurs Docker : UP
+
+### Nouveau
+- AI_CORE : dossier mémoire officiel créé
+- CHANGELOG.md créé
+- MASTER_PROJECT.md, ROADMAP.md, TASKS.md existants
