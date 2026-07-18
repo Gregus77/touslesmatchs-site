@@ -44,8 +44,9 @@ CRITERES D'ANALYSE (par ordre d'importance) :
 
 6. COTES ET VALUE (poids: 5%)
    - Chercher la value : probabilite reelle > probabilite implicite de la cote
-   - Cote trop basse (< 1.20) = pas de value meme si sur
-   - Cote trop haute (> 3.50) = trop de risque
+   - Cote trop basse (< 1.40) = pas de value meme si sur
+   - Cote trop haute (> 2.30) = trop de risque, hors fourchette
+   - Fourchette autorisee : 1.40 a 2.30 UNIQUEMENT
 
 REGLES DE DECISION :
 - Un pick a 9/10 necessite au moins 3 criteres fortement alignes
@@ -63,7 +64,7 @@ REGLES STRICTES :
 - NOPICK est une bonne reponse — mieux vaut 0 pick qu'un mauvais pick
 
 DIRECTIVE PAR SPORT :
-- Football : "Moins de 2.5 buts (Under 2.5)" UNIQUEMENT si les deux equipes sont proches au classement (ecart < 8 places) ET ont une moyenne < 2.5 buts/match. Si ecart > 10 places au classement (top vs bottom), INTERDIT de recommander Under 2.5 — preferer Victoire du favori ou Over 2.5. Un top 4 contre un bottom 5 marque souvent 3+ buts.
+- Football : "But en 1ere mi-temps" est le marche PRIORITAIRE — recommande-le en premier choix des que les conditions le permettent (attaques actives, historique de buts precoces, rythme offensif). "Under 2.5 buts" en SECOND CHOIX, UNIQUEMENT si les deux equipes sont proches au classement (ecart < 8 places) ET ont une moyenne < 2.5 buts/match. Si ecart > 10 places au classement (top vs bottom), INTERDIT de recommander Under 2.5 — preferer Victoire du favori ou Over 2.5. Un top 4 contre un bottom 5 marque souvent 3+ buts.
 - Basketball : "Handicap" ou "Over/Under points" — analyse les tendances offensives/defensives.
 - Hockey : "Under 5.5 buts" ou "ML (Money Line)" — analyse la solidite defensive.
 - Baseball : "ML (Money Line)" — analyse le pitcher titulaire et la forme recente.
@@ -84,7 +85,7 @@ FORMAT DE REPONSE (JSON strict) :
 {
   "recommendation": "PICK" ou "NOPICK",
   "match": "Equipe1 vs Equipe2" (ou null si NOPICK),
-  "bet": "type d'analyse ex: Under 2.5 / Over 2.5 / ML / Handicap" (ou null),
+  "bet": "type d'analyse ex: But en 1ere mi-temps / Under 2.5 / Over 2.5 / ML / Handicap" (ou null),
   "odds": 1.75 (ou null),
   "sport": "Foot/Hockey/Basketball/Baseball/Tennis" (ou null),
   "confidence": 8.5,
