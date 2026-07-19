@@ -6646,6 +6646,38 @@ app.get("/admin/codes", (req, res) => {
   }
 });
 
+// ── Admin create code ─────────────────────────────────────────────────────────
+app.post("/admin/create-code", (req, res) => {
+  const { email: adminEmail, code: adminCode } = req.query;
+  if (!isAdmin(adminEmail, adminCode)) return res.json({ ok: false, error: "Accès admin requis" });
+
+  const { target_email, plan = "elite", duration_days = 32 } = req.body || {};
+  if (!target_email) return res.json({ ok: false, error: "target_email requis" });
+
+  const creditsMap = { carte: 1, premium: 10, vip: 20, elite: 30 };
+  const creditsMax = creditsMap[plan] || 10;
+
+  try {
+    const cdbw = new Database(CODES_DB_PATH);
+    const existing = cdbw.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get(target_email);
+    if (existing) {
+      cdbw.close();
+      return res.json({ ok: true, code: existing.code, plan: existing.plan, note: "Code existant réactivé" });
+    }
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const newCode = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const expiresAt = new Date(Date.now() + duration_days * 86400000).toISOString().slice(0, 10);
+    cdbw.prepare(
+      "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+    ).run(newCode, target_email, plan, expiresAt, creditsMax, getTodayStr());
+    cdbw.close();
+    console.log(`[admin] Code créé: ${newCode} pour ${target_email} plan ${plan} expire ${expiresAt}`);
+    res.json({ ok: true, code: newCode, plan, email: target_email, expires_at: expiresAt });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
 // ── Internal pick notify — called by Hermès after /analyse ───────────────────
 // Secured by HERMES_ADMIN_TLM_BOT token as shared secret
 // Route appelée par Hermès bot après vérification Stripe paiement client
