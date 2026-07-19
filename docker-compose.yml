@@ -44,6 +44,8 @@ services:
       # `docker volume rm` et `docker system prune --volumes`. NE JAMAIS remettre
       # un volume nommé ici — c'est ce qui a effacé les stats en juillet 2026.
       - /opt/touslesmatchs/data:/data
+      - /opt/touslesmatchs/data/picks:/picks
+      - /opt/touslesmatchs/data/var:/var/touslesmatchs
       - /opt/touslesmatchs/shared:/shared:ro
     networks:
       - web
