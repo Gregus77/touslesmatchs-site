@@ -8307,19 +8307,23 @@ app.post("/chatbot/ask", express.json(), async (req, res) => {
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
 
-    // One-shot: grant Elite access to lamatrice2012@gmail.com
+    // One-shot: ensure Elite access for lamatrice2012@gmail.com
     try {
       const _gdb = new Database(CODES_DB_PATH);
-      const _existing = _gdb.prepare("SELECT code FROM codes WHERE email = ? AND active = 1").get("lamatrice2012@gmail.com");
-      if (!_existing) {
+      const _existing = _gdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get("lamatrice2012@gmail.com");
+      if (_existing && _existing.plan === "elite") {
+        console.log(`[admin-grant] lamatrice2012@gmail.com déjà Elite: ${_existing.code}`);
+      } else if (_existing) {
+        const _exp = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+        _gdb.prepare("UPDATE codes SET plan = 'elite', credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
+        console.log(`[admin-grant] lamatrice2012@gmail.com upgradé en Elite — Code: ${_existing.code} — Expire: ${_exp}`);
+      } else {
         const _chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         const _code = Array.from({ length: 8 }, () => _chars[Math.floor(Math.random() * _chars.length)]).join("");
         const _exp = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
         const _today = new Date().toISOString().slice(0, 10);
         _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,?)").run(_code, "lamatrice2012@gmail.com", "elite", _exp, 30, _today, new Date().toISOString());
         console.log(`[admin-grant] Elite créé pour lamatrice2012@gmail.com — Code: ${_code} — Expire: ${_exp}`);
-      } else {
-        console.log(`[admin-grant] lamatrice2012@gmail.com a déjà un code actif: ${_existing.code}`);
       }
       _gdb.close();
     } catch(e) { console.error("[admin-grant] erreur:", e.message); }
