@@ -8316,7 +8316,7 @@ app.listen(PORT, () => {
         const _code = Array.from({ length: 8 }, () => _chars[Math.floor(Math.random() * _chars.length)]).join("");
         const _exp = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
         const _today = new Date().toISOString().slice(0, 10);
-        _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)").run(_code, "lamatrice2012@gmail.com", "elite", _exp, 30, _today);
+        _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,?)").run(_code, "lamatrice2012@gmail.com", "elite", _exp, 30, _today, new Date().toISOString());
         console.log(`[admin-grant] Elite créé pour lamatrice2012@gmail.com — Code: ${_code} — Expire: ${_exp}`);
       } else {
         console.log(`[admin-grant] lamatrice2012@gmail.com a déjà un code actif: ${_existing.code}`);
