@@ -7,7 +7,7 @@ const Database = require("better-sqlite3");
 const path = require("path");
 
 const CODES_DB_PATH = process.env.CODES_DB_PATH || path.join(__dirname, "..", "data", "codes.db");
-const TARGET_EMAIL = "lamtrice2012@gmail.com";
+const TARGET_EMAIL = "lamatrice2012@gmail.com";
 const PLAN = "elite";
 const CREDITS_MAX = 30;
 const DURATION_DAYS = 365; // 1 an d'accès
