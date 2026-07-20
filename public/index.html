@@ -3228,7 +3228,7 @@ document.addEventListener('click',function(e){
     var away=(p.teamB&&p.teamB.name)||p.away;
     if(!home || home === 'Analyse en cours' || p.status === 'no_pick' || p.status === 'NOPICK') return;
     var market=p.marketLabel||p.prono||p.marketType||p.bet||'Pronostic du Concile';
-    var confidence=p.confidenceTg || (p.confidence ? (p.confidence + '/10') : '7/10');
+    var confidence=p.confidenceTg || (p.confidence ? ((p.confidence > 10 ? (p.confidence/10).toFixed(1) : p.confidence) + '/10') : '7/10');
     var homeAbbr=((p.teamA&&p.teamA.abbr)||home).slice(0,3).toUpperCase();
     var awayAbbr=((p.teamB&&p.teamB.abbr)||away).slice(0,3).toUpperCase();
     var homeLogo=p.home_logo||(p.teamA&&p.teamA.logo)||null;
