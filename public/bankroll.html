@@ -177,8 +177,14 @@
       </div>
     </div>
 
+    <!-- Note visiteur gratuit -->
+    <div id="guest-note" class="card hidden" style="text-align:center">
+      <div style="font-size:14px;color:#a8aec8;line-height:1.6">💡 Les stratégies de mise ci-dessus sont <b>gratuites pour tous</b>.<br>Pour <b>enregistrer et suivre tes paris</b> (gains/pertes sauvegardés), connecte-toi.</div>
+      <div style="margin-top:14px"><a href="/#plans" class="btn" style="display:inline-block;text-decoration:none">Voir les offres →</a></div>
+    </div>
+
     <!-- Mon suivi gains / pertes -->
-    <div class="card">
+    <div class="card" id="suivi-card">
       <div class="label">Mon suivi — gains &amp; pertes</div>
       <div class="totals">
         <div class="ttile"><div class="tval" id="t-solde">0 €</div><div class="tlbl">Solde net</div></div>
@@ -221,7 +227,16 @@
       showApp();
       loadBankroll();
     } else {
-      document.getElementById('login-card').classList.remove('hidden');
+      // Visiteur gratuit : stratégies de mise accessibles à tous.
+      // Le suivi personnel (paris sauvegardés) reste réservé aux connectés.
+      document.getElementById('app').classList.remove('hidden');
+      var suivi = document.getElementById('suivi-card');
+      if (suivi) suivi.classList.add('hidden');
+      var note = document.getElementById('guest-note');
+      if (note) note.classList.remove('hidden');
+      currentBankroll = Number(localStorage.getItem('tlm_guest_bankroll')) || 100;
+      document.getElementById('bankroll-amount').textContent = euro(currentBankroll);
+      recompute();
     }
   }
 
@@ -256,7 +271,7 @@
 
   function showApp() {
     document.getElementById('app').classList.remove('hidden');
-    loadBets();
+    if (userAuth) loadBets();
   }
 
   // ── Suivi gains / pertes ─────────────────────────────────────────────────────
@@ -371,7 +386,18 @@
     if (!isFinite(raw) || raw < 0 || raw > 1000000) {
       errEl.textContent = 'Montant invalide.'; errEl.style.display = 'block'; return;
     }
-    errEl.style.display = 'none'; btn.disabled = true; btn.textContent = '...';
+    errEl.style.display = 'none';
+    // Visiteur gratuit : capital sauvegardé localement (pas de compte requis)
+    if (!userAuth) {
+      currentBankroll = raw;
+      try { localStorage.setItem('tlm_guest_bankroll', String(raw)); } catch(e) {}
+      document.getElementById('bankroll-amount').textContent = euro(raw);
+      document.getElementById('bankroll-edit').classList.add('hidden');
+      document.getElementById('bankroll-display').classList.remove('hidden');
+      recompute();
+      return;
+    }
+    btn.disabled = true; btn.textContent = '...';
     fetch('/api/bankroll/set', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: userAuth.email, code: userAuth.code, bankroll: raw })
