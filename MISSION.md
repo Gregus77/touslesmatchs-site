@@ -20,28 +20,28 @@ Construire le meilleur site de pronostics IA d'Europe.
 - Optimiser les CTA, reduire les clics inutiles
 
 ## Fonctionnalites a developper
-- [ ] Compte Gratuit (inscription sans paiement)
-- [ ] Dashboard utilisateur
-- [ ] Historique personnel
+- [x] Compte Gratuit (inscription sans paiement) — dashboard.html
+- [x] Dashboard utilisateur — dashboard.html
+- [x] Historique personnel — /user/history
 - [ ] Favoris
 - [ ] Notifications
-- [ ] Tableau de bord
-- [ ] FAQ
-- [ ] Comment fonctionne Hermes
-- [ ] Performances (page publique)
-- [ ] Historique public
+- [x] Tableau de bord — dashboard.html (KPIs)
+- [x] FAQ — faq.html + section index.html
+- [x] Comment fonctionne Hermes — faq.html + section index.html
+- [x] Performances (page publique) — performances.html
+- [x] Historique public — performances.html
 - [ ] Parrainage
 - [ ] Pages SEO (equipes, competitions, matchs, pronostics)
 
 ## Analytics a preparer
-- [ ] Google Analytics 4
-- [ ] Microsoft Clarity
-- [ ] Google Search Console
-- [ ] Schema.org (structured data)
-- [ ] Open Graph
-- [ ] Twitter Cards
-- [ ] Robots.txt
-- [ ] Sitemap.xml
+- [x] Google Analytics 4 — placeholder pret (window.__GA4_ID)
+- [x] Microsoft Clarity — placeholder pret (window.__CLARITY_ID)
+- [ ] Google Search Console — a configurer par Hermes
+- [x] Schema.org (structured data) — FAQPage + Organization + WebSite
+- [x] Open Graph — toutes les pages
+- [x] Twitter Cards — toutes les pages
+- [x] Robots.txt — /admin et /api bloques
+- [x] Sitemap.xml — toutes les pages publiques
 
 ## Zones interdites (gerees par Hermes)
 - Telegram
