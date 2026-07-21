@@ -4272,9 +4272,20 @@ function isYouthOrWomen(match) {
   return false;
 }
 
+// Compétitions PROUVÉES perdantes sur l'historique réel du Concile (bilan) — on
+// les retire de la vitrine car elles tirent le winrate vers le bas :
+//  World Cup / FIFA World Cup 53-59% (aussi exclue ANJ), Queensland 33%,
+//  USL League Two 58%. Tout le reste (petites ligues disciplinées où l'Under 2.5
+//  gagne : Liban, Syrie, Kirghizistan, Éthiopie, Brésil Serie B, USL One…) est
+//  CONSERVÉ : c'est là qu'est le volume ET le winrate.
+const LOSING_COMPETITIONS_RE = /world cup|coupe du monde|fifa world|queensland|usl league two|usl2\b/i;
 function isNoiseForDisplay(match) {
-  if (isYouthOrWomen(match)) return true;              // jeunes/féminines : jamais
-  return !isUefaCompetition(match) && isLowTrustCompetition(match);
+  if (isYouthOrWomen(match)) return true;              // jeunes/féminines : jamais vendables
+  const raw = typeof match === "string"
+    ? match
+    : [match?.competition, match?.league].filter(Boolean).join(" ");
+  if (LOSING_COMPETITIONS_RE.test(String(raw || ""))) return true; // perdants prouvés
+  return false;                                        // on garde les gagnants (volume)
 }
 
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
