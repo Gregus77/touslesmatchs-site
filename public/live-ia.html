@@ -466,7 +466,7 @@ function renderMatches() {
 
     if (isLive && !isDone) {
       var min = parseInt(m.minute, 10);
-      var tooEarly = !isNaN(min) && min < 25;
+      var tooEarly = isNaN(min) || min < 25;
       var tooLate = !isNaN(min) && min > 65;
       var blocked = tooEarly || tooLate;
       html += '<div class="mc-cta">';

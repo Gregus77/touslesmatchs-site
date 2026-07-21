@@ -5922,8 +5922,8 @@ app.post("/concile-analysis", async (req, res) => {
   if (rejectScoreConflict(verifiedMatch, res)) return;
 
   const liveMinute = parseInt(verifiedMatch.minute || match.minute, 10);
-  if (!isNaN(liveMinute) && (liveMinute < 25 || liveMinute > 65)) {
-    const reason = liveMinute < 25
+  if (isNaN(liveMinute) || liveMinute < 25 || liveMinute > 65) {
+    const reason = isNaN(liveMinute) || liveMinute < 25
       ? "Pas assez de statistiques avant la 25e minute"
       : "Cotes trop basses apres la 65e minute";
     return res.json({ ok: false, error: reason });
