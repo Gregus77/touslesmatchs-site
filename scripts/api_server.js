@@ -535,6 +535,11 @@ const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
 
+// Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
+// historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
+// IA) qui ne part pas sur Telegram → on ne la montre pas comme un "pick". Réglable.
+const PUBLISHED_MIN_CONFIDENCE = 80;
+
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
   if (now - _adaptiveThresholdCache.computedAt < 30 * 60 * 1000) return _adaptiveThresholdCache.value;
@@ -6677,6 +6682,7 @@ app.get("/analysis-history", (req, res) => {
         ) AS _rn
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
+          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
       )
       WHERE _rn = 1
       ORDER BY analysed_at DESC
@@ -6687,6 +6693,7 @@ app.get("/analysis-history", (req, res) => {
       SELECT COUNT(*) AS cnt FROM (
         SELECT 1 FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
+          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
       )
     `).get()?.cnt || 0;
@@ -6741,7 +6748,7 @@ app.get("/analysis-history", (req, res) => {
     // exactement le même winrate / nombre de picks.
     const allResolved = db.prepare(`
       SELECT home, away, competition, outcome, analysed_at FROM concile_analyses
-      WHERE outcome IN ('win','loss')
+      WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
       ORDER BY analysed_at DESC
     `).all();
     const seenStat = new Set();
@@ -7152,7 +7159,7 @@ app.get("/premium-teaser", (req, res) => {
       SELECT home, away, competition, outcome, confidence, best_bet, real_odd,
         final_score_home, final_score_away, sport, analysed_at
       FROM concile_analyses
-      WHERE outcome IN ('win','loss')
+      WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
       ORDER BY analysed_at DESC
     `).all();
 
