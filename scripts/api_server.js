@@ -4254,7 +4254,21 @@ function isExcludedFromPicks(match) {
 // grandes ligues, K League, MLS, Brésil… Contrairement à isExcludedFromPicks
 // (plus strict, réservé au PICK), les qualifs UEFA restent visibles ici car le
 // nom « UEFA Champions League » inspire confiance.
+// Jeunes (U15-U23), réserves, académies, féminines — TOUJOURS exclus, même si le
+// nom de compétition contient "Champions League" (ex : "Nasjonal U19 Champions
+// League · Norway"), sinon l'exemption UEFA les laisserait passer.
+const YOUTH_KEYWORDS_RE = /\bu1[5-9]\b|\bu2[0-3]\b|under[ -]?(1[5-9]|2[0-3])\b|\byouth\b|primavera|\breserves?\b|academy/i;
+function isYouthOrWomen(match) {
+  const raw = typeof match === "string"
+    ? match
+    : [match?.competition, match?.league, match?.home, match?.away].filter(Boolean).join(" ");
+  if (YOUTH_KEYWORDS_RE.test(String(raw || ""))) return true;
+  if (typeof match === "object" && isWomenMatch(match)) return true;
+  return false;
+}
+
 function isNoiseForDisplay(match) {
+  if (isYouthOrWomen(match)) return true;              // jeunes/féminines : jamais
   return !isUefaCompetition(match) && isLowTrustCompetition(match);
 }
 
@@ -6673,9 +6687,11 @@ app.get("/analysis-history", (req, res) => {
       }
     } catch (_) {}
 
-    // Aucun filtre d'affichage : on montre TOUS les résultats et TOUS les jours
-    // (état d'avant 17h). Seul le PICK du jour reste filtré aux ligues premium.
-    const visibleRows = rows;
+    // On montre tous les jours et tous les résultats, SAUF la couche indésirable :
+    // jeunes (U17-U23), amateur/réserves, féminines et ligues douteuses/exotiques.
+    // On GARDE UEFA (même qualif) + grandes ligues. Pas de masquage "+6h" ici,
+    // donc aucun jour ne disparaît — on retire juste les matchs douteux.
+    const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
 
     const analyses = visibleRows.map(r => {
       let agents = [];
@@ -6713,7 +6729,8 @@ app.get("/analysis-history", (req, res) => {
     const seenStat = new Set();
     let sTotal = 0, sWins = 0;
     for (const r of allResolved) {
-      // Stats cohérentes avec la liste : on compte tous les résultats affichés.
+      // Mêmes exclusions que la liste (jeunes / douteuses) pour un winrate cohérent.
+      if (isNoiseForDisplay(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
@@ -7124,6 +7141,8 @@ app.get("/premium-teaser", (req, res) => {
     const deduped = [];
     const seen = new Set();
     for (const r of allRows) {
+      // Mêmes exclusions que la vitrine (jeunes / douteuses).
+      if (isNoiseForDisplay(r)) continue;
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
