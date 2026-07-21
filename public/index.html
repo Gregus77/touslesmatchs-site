@@ -327,24 +327,28 @@ nav{
 .section-wrap.wide{max-width:1120px}
 .s-eyebrow{
   display:inline-flex;align-items:center;gap:8px;
-  font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
-  color:var(--indigo2);margin-bottom:14px;
+  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:#c084fc;margin-bottom:14px;
 }
 .s-eyebrow::before{
-  content:'';width:20px;height:1px;
-  background:linear-gradient(90deg,var(--indigo2),transparent);
+  content:'';width:22px;height:2px;border-radius:2px;
+  background:linear-gradient(90deg,#ec4899,#a855f7,transparent);
 }
 .s-title{
   font-size:clamp(26px,3.5vw,42px);font-weight:800;
   letter-spacing:-.025em;margin-bottom:10px;
 }
+.s-title::after{
+  content:'';display:block;width:52px;height:3px;border-radius:3px;margin-top:14px;
+  background:linear-gradient(90deg,#ec4899,#a855f7);
+}
 .s-sub{font-size:15px;color:var(--muted2);line-height:1.65;max-width:560px;margin-bottom:40px}
 
 /* ══ PICK CARD — PREMIUM ══ */
 .pick-outer{
-  background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(34,211,238,.06));
+  background:linear-gradient(135deg,rgba(168,85,247,.16),rgba(236,72,153,.08),rgba(34,211,238,.06));
   border-radius:20px;padding:1px;
-  box-shadow:0 0 80px rgba(79,70,229,.1),0 0 40px rgba(34,211,238,.05);
+  box-shadow:0 0 80px rgba(168,85,247,.14),0 0 40px rgba(236,72,153,.08);
 }
 .pick-inner{
   background:rgba(13,16,32,.95);
@@ -1442,7 +1446,7 @@ footer{
   <div class="hero-stats">
     <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Winrate</div></div>
     <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simule</div></div>
-    <div class="hs"><div class="hs-val c-indigo">4+1</div><div class="hs-label">IA</div></div>
+    <div class="hs"><div class="hs-val c-violet">5+1</div><div class="hs-label">IA</div></div>
   </div>
 
   <p style="font-size:10px;color:var(--muted);margin-top:12px;text-align:center">
@@ -1655,7 +1659,7 @@ footer{
     </div>
     <div class="community-card">
       <div class="community-icon">🤖</div>
-      <div class="community-val" style="color:var(--indigo2)">4+1</div>
+      <div class="community-val" style="color:#a855f7">5+1</div>
       <div class="community-lbl">Agents + Chief</div>
     </div>
     <div class="community-card">
