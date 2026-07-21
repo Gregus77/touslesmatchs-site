@@ -3459,6 +3459,27 @@ document.addEventListener('click',function(e){
       return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
     });
   }
+  // Date + heure du match affichées dans le fuseau horaire du visiteur
+  function fmtPickWhen(p){
+    var loc = (navigator.language || 'fr-FR');
+    var hasTime = p.time && /^\d{1,2}:\d{2}/.test(p.time);
+    try {
+      // Heure de coup d'envoi fournie (UTC) → conversion vers l'heure locale du visiteur
+      if (p.kickoffUtc) {
+        var k = new Date(p.kickoffUtc);
+        if (!isNaN(k)) return k.toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'}) + ' · ' + k.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
+      }
+      if (p.date) {
+        var dt = new Date(p.date + 'T' + (hasTime ? p.time.slice(0,5) : '12:00') + ':00');
+        if (!isNaN(dt)) {
+          var s = dt.toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'});
+          if (hasTime) s += ' · ' + dt.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
+          return s;
+        }
+      }
+    } catch(e){}
+    return hasTime ? p.time : (p.date || '');
+  }
   function drawPick(p){
     var root=document.getElementById('pick-root');
     if(!root || !p) return;
@@ -3477,7 +3498,7 @@ document.addEventListener('click',function(e){
       '<div class="pick-outer"><div class="pick-inner tlm-live-pick-card">' +
         '<div class="pick-head">' +
           '<div class="ph-left"><span class="ptag ptag-live">Analyse du jour</span><span class="ptag-comp">'+esc(p.competition||p.league||p.sport||'Football')+'</span></div>' +
-          '<div class="ph-right">'+esc(p.time||'')+'</div>' +
+          '<div class="ph-right">'+esc(fmtPickWhen(p))+'</div>' +
         '</div>' +
         '<div class="tlm-live-pick">' +
           '<div class="tlm-live-match">' +
