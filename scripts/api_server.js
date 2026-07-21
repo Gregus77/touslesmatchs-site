@@ -5456,14 +5456,65 @@ app.post("/chat/history", (req, res) => {
   } catch (_) { res.json({ ok: true, messages: [] }); }
 });
 
-// ── Pick du jour — lit picks.json d'Hermès en priorité ───────────────────────
-app.get("/current-pick", (req, res) => {
-  // 1. Essaie picks.json d'Hermès (source de vérité)
+// ── Pick du jour auto — l'API choisit le meilleur pick frais (hors ligues exclues) ──
+// Le Concile Python ne peut pas écrire /picks/picks.json (pas de volume partagé),
+// donc l'API régénère elle-même le pick du jour depuis ses analyses. Ainsi le match
+// du jour se met à jour tout seul chaque jour, sans jamais afficher une ligue exclue.
+function refreshDailyPickFromDB() {
+  try {
+    const _db = new Database(DB_PATH, { readonly: true });
+    const rows = _db.prepare(
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo " +
+      "FROM concile_analyses WHERE analysed_at >= datetime('now','-36 hours') AND confidence IS NOT NULL AND home IS NOT NULL " +
+      "ORDER BY confidence DESC, id DESC LIMIT 80"
+    ).all();
+    _db.close();
+    const pick = rows.find(r => r.home && r.away && !isLowTrustCompetition(r.competition));
+    if (!pick) { console.log("[daily-pick] aucun pick frais eligible (hors blacklist)"); return false; }
+    const coteVal = Number(pick.real_odd) || Number(pick.cote_suggested) || Math.min(1.95, ((1 / (pick.confidence / 100)) * 1.45));
+    const data = {
+      currentPick: {
+        home: pick.home, away: pick.away,
+        competition: pick.competition || pick.sport || "Football",
+        sport: pick.sport || "Football",
+        date: new Date().toISOString().slice(0, 10), time: "",
+        best_bet: pick.best_bet || "Analyse IA", confidence: pick.confidence,
+        cote: Number(coteVal.toFixed(2)), raison: pick.raison || "",
+        home_logo: pick.home_logo || null, away_logo: pick.away_logo || null,
+        source: "auto-api", publishedAt: new Date().toISOString(), status: "upcoming"
+      }
+    };
+    try { fs.writeFileSync(HERMES_PICKS_PATH, JSON.stringify(data, null, 2)); }
+    catch (e) { console.error("[daily-pick] ecriture:", e.message); return false; }
+    console.log(`[daily-pick] auto: ${pick.home} vs ${pick.away} (${pick.competition}) conf ${pick.confidence}`);
+    return true;
+  } catch (e) { console.error("[daily-pick]", e.message); return false; }
+}
+
+// Le pick stocké est-il frais (aujourd'hui) et d'une ligue autorisée ?
+function storedPickIsFresh() {
   try {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
-    if (p && p.home && p.home !== "Analyse en cours") {
-      return res.json({ ok: true, pick: normalizeCurrentPick(p, "hermes") });
+    if (!p || !p.home || p.home === "Analyse en cours") return false;
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const pDate = (p.date || (p.publishedAt || "").slice(0, 10) || "").slice(0, 10);
+    if (pDate !== todayISO) return false;
+    if (isLowTrustCompetition(p.competition || p.league || "")) return false;
+    return true;
+  } catch { return false; }
+}
+
+// ── Pick du jour — lit picks.json (Hermès/manuel/auto-API) ───────────────────
+app.get("/current-pick", (req, res) => {
+  // Si le pick stocké n'est pas d'aujourd'hui ou vient d'une ligue exclue, on régénère
+  if (!storedPickIsFresh()) refreshDailyPickFromDB();
+  // 1. Essaie picks.json (source de vérité), en excluant les ligues blacklistées
+  try {
+    const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
+    const p = raw.currentPick;
+    if (p && p.home && p.home !== "Analyse en cours" && !isLowTrustCompetition(p.competition || p.league || "")) {
+      return res.json({ ok: true, pick: normalizeCurrentPick(p, p.source || "hermes") });
     }
   } catch (e) { /* picks.json absent ou invalide */ }
   // 2. Fallback sur le pick manuel admin
@@ -8338,6 +8389,11 @@ app.listen(PORT, () => {
     }
     setInterval(checkAnalyticsSchedule, 60000);
     console.log("[analytics] Scheduler actif: rapport quotidien 23h + hebdo lundi 8h");
+
+    // Pick du jour auto : régénère au démarrage puis vérifie chaque heure
+    setTimeout(() => { if (!storedPickIsFresh()) refreshDailyPickFromDB(); }, 15000);
+    setInterval(() => { if (!storedPickIsFresh()) refreshDailyPickFromDB(); }, 3600000);
+    console.log("[daily-pick] Auto-refresh actif (démarrage + horaire, hors ligues exclues)");
   });
 }
 
