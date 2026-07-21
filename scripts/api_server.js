@@ -1255,6 +1255,9 @@ function normalizeApiSportsFootballFixture(f) {
 }
 
 const LOW_TRUST_COMPETITION_KEYWORDS = [
+  // Ligues exclues manuellement (performances négatives — rapports Hermes)
+  "bulgaria", "serbia", "usl league two",
+  "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
   // Catégories génériques non fiables
   "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
   "u17", "u18", "u19", "u20", "u21", "u23",

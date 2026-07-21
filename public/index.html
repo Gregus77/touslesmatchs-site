@@ -3406,18 +3406,22 @@ document.addEventListener('click',function(e){
 (function loadRecentPicks(){
   const existing = new Set(PICKS_FEED.map(p=>p.id));
   let updated = false;
+  // Ligues exclues (perf négative — ne plus afficher dans l'historique)
+  const EXCLUDED_LEAGUES = ['bulgaria','serbia','usl league two','fa cup · south-korea','fa cup · south korea','korean fa cup'];
+  const isExcluded = (comp) => { const c=(comp||'').toLowerCase(); return EXCLUDED_LEAGUES.some(k=>c.includes(k)); };
   function injectAndRefresh(){
     if(updated){ buildChart(); if(typeof renderPicksFeed==='function') renderPicksFeed(); }
   }
   fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
     if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
-    d.picks_feed.forEach(p=>{ if(!existing.has(p.id)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
+    d.picks_feed.forEach(p=>{ if(!existing.has(p.id) && !isExcluded(p.competition)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
     injectAndRefresh();
   }).catch(()=>{});
   fetch('/api/analysis-history?limit=50').then(r=>r.json()).then(d=>{
     if(!d.ok || !d.analyses) return;
     const todayStr = new Date().toISOString().slice(0,10);
     d.analyses.forEach(a=>{
+      if(isExcluded(a.competition)) return;
       const id='ah-'+String(a.home+'-'+a.away+'-'+(a.analysed_at||'')).replace(/\s+/g,'-').toLowerCase();
       if(existing.has(id)) return;
       const coteMoy=(c)=>Math.min(1.95,((1/(c/100))*1.45));
