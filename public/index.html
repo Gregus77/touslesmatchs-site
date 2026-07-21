@@ -1552,7 +1552,7 @@ footer{
 <script>
 (function(){
   var COOKIE = 'tlm_lead_modal_seen';
-  var DELAY_MS = 45000; // 45 s avant apparition auto
+  var DELAY_MS = 20000; // 20 s avant apparition auto (tunnel conversion)
   function getCookie(name){ var m = document.cookie.match('(?:^|; )'+name+'=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; }
   function setCookie(name, val, days){ var d = new Date(); d.setTime(d.getTime() + days*86400000); document.cookie = name+'='+encodeURIComponent(val)+'; expires='+d.toUTCString()+'; path=/; SameSite=Lax'; }
   // Ne PAS afficher le popup si l'utilisateur est déjà abonné (a un code d'accès actif).
@@ -1589,8 +1589,8 @@ footer{
 })();
 </script>
 
-<!-- FOMO STRIP (hidden - too cluttered) -->
-<div class="fomo-strip" id="fomo-strip" style="display:none">
+<!-- FOMO STRIP (preuve sociale — tunnel conversion) -->
+<div class="fomo-strip" id="fomo-strip">
   <div class="fomo-item"><span class="fomo-pulse"></span><span><span id="fomo-members">Communaute en lancement</span></span></div>
   <div class="fomo-item"><span class="fomo-hot">🔥</span><span><span id="fomo-analyses">1</span> analyse générée aujourd'hui</span></div>
   <div class="fomo-item">⏰ Prochain pick : <strong id="fomo-countdown" style="color:var(--amber);margin-left:4px">…</strong></div>
