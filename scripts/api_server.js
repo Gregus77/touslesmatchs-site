@@ -6683,11 +6683,9 @@ app.get("/analysis-history", (req, res) => {
     const STALE_PENDING_MS = 6 * 3600 * 1000;
     const nowMs = Date.now();
     const visibleRows = rows.filter(r => {
-      // Crédibilité : on masque la couche bruit (jeunes/amateur/exotique) mais on
-      // garde UEFA + grandes ligues. Seul le pick du jour est filtré plus strict.
-      if (isNoiseForDisplay(r)) return false;
-      // On masque aussi les analyses restées en attente > 6 h (matchs non
-      // résolvables → impression de bug).
+      // On affiche TOUS les résultats de la journée (volume + preuve d'activité).
+      // Seul le PICK du jour reste filtré aux ligues premium. On masque uniquement
+      // les analyses restées en attente > 6 h (matchs non résolvables).
       const resolved = r.outcome === "win" || r.outcome === "loss";
       if (!resolved) {
         const ts = Date.parse(String(r.analysed_at || "").replace(" ", "T") + "Z");
@@ -6732,8 +6730,7 @@ app.get("/analysis-history", (req, res) => {
     const seenStat = new Set();
     let sTotal = 0, sWins = 0;
     for (const r of allResolved) {
-      // Stats cohérentes avec la liste affichée (mêmes ligues visibles).
-      if (isNoiseForDisplay(r)) continue;
+      // Stats cohérentes avec la liste : on compte tous les résultats affichés.
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
@@ -7144,8 +7141,6 @@ app.get("/premium-teaser", (req, res) => {
     const deduped = [];
     const seen = new Set();
     for (const r of allRows) {
-      // Même filtre crédibilité que la vitrine (winrate/gains sur ligues visibles).
-      if (isNoiseForDisplay(r)) continue;
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
