@@ -4257,9 +4257,10 @@ function shouldAutoObserveMatch(match) {
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (isWomenMatch(match)) return false;              // pas de matchs féminins
   if (String(match.sport || "Football") !== "Football") return true;
-  // Grandes ligues (whitelist) + coupes d'Europe, mais SANS les tours de qualif
-  // (juillet-août : petits clubs, imprévisibles).
-  if (isExcludedFromPicks(match)) return false;
+  // Analyse large pour remplir la journée : grandes ligues + coupes d'Europe
+  // (dont qualifs). Le tri "premium" ne s'applique qu'au PICK du jour, pas à
+  // l'activité affichée. On bloque juste les ligues non fiables hors UEFA.
+  if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
   if (isUnderperformingCompetition(match)) return false; // exclut les compétitions perdantes
   // Fenêtre 35-75' : assez de données jouées + cote encore intéressante
   const minute = parseLiveMinuteValue(match.minute);
@@ -6670,7 +6671,9 @@ app.get("/analysis-history", (req, res) => {
     const STALE_PENDING_MS = 6 * 3600 * 1000;
     const nowMs = Date.now();
     const visibleRows = rows.filter(r => {
-      if (isExcludedFromPicks(r)) return false;
+      // On affiche TOUS les résultats de la journée (preuve d'activité) ; seul le
+      // pick du jour reste filtré aux ligues premium. On masque uniquement les
+      // analyses restées en attente > 6 h (matchs non résolvables → impression de bug).
       const resolved = r.outcome === "win" || r.outcome === "loss";
       if (!resolved) {
         const ts = Date.parse(String(r.analysed_at || "").replace(" ", "T") + "Z");
@@ -6715,10 +6718,7 @@ app.get("/analysis-history", (req, res) => {
     const seenStat = new Set();
     let sTotal = 0, sWins = 0;
     for (const r of allResolved) {
-      // Même filtre que la liste visible : on ne compte QUE les ligues fiables
-      // (pas les qualifs UEFA, U19, Australia Cup…), pour que les compteurs
-      // Analyses/Gagnées/Perdues/Winrate collent exactement à ce qui est affiché.
-      if (isExcludedFromPicks(r)) continue;
+      // Stats cohérentes avec la liste : on compte tous les résultats affichés.
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
@@ -7129,9 +7129,6 @@ app.get("/premium-teaser", (req, res) => {
     const deduped = [];
     const seen = new Set();
     for (const r of allRows) {
-      // Cohérence avec la vitrine : on écarte les ligues non fiables et les
-      // qualifs UEFA des statistiques publiques (winrate, gains simulés…).
-      if (isExcludedFromPicks(r)) continue;
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
