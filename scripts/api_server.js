@@ -1258,6 +1258,7 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   // Ligues exclues manuellement (performances négatives — rapports Hermes)
   "bulgaria", "serbia", "usl league two",
   "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
+  "· china", "china", "chinese",
   // Catégories génériques non fiables
   "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
   "u17", "u18", "u19", "u20", "u21", "u23",
@@ -2852,11 +2853,12 @@ Réponds en JSON pur (pas de markdown):
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && grade.elite && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      // Premium/Elite : reçoit l'analyse complète de CHAQUE signal jouable ARJEL
+      // (plafonné à PREMIUM_SIGNAL_DAILY_CAP/jour). Les abonnés paient — ils reçoivent
+      // au moins autant que le gratuit, avec la sélection + la raison en clair.
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) EV=${grade.ev.toFixed(2)} ${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
-      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && !grade.elite) {
-        console.log(`[signal-fort] Premium: pari non-élite (EV=${grade.ev.toFixed(2)}, segWr=${grade.segWr === null ? "n/a" : Math.round(grade.segWr * 100) + "%"}) — réservé admin`);
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${grade.elite ? "ELITE " : ""}${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
@@ -6567,16 +6569,31 @@ app.get("/analysis-history", (req, res) => {
 
     const total = db.prepare(`SELECT COUNT(*) as cnt FROM concile_analyses WHERE date(analysed_at) >= '2026-07-03'`).get()?.cnt || 0;
 
+    // Auth optionnelle : seuls les abonnés (ou l'admin) voient le pick des analyses
+    // EN COURS. Les visiteurs voient les résultats passés (preuve) mais pas les
+    // picks non encore résolus — sinon la réponse serait donnée gratuitement.
+    let isPaidViewer = false;
+    try {
+      const qEmail = req.query.email, qCode = req.query.code;
+      if (qEmail && qCode) {
+        const a = verifyCode(qEmail, qCode);
+        isPaidViewer = (a.valid && a.plan && a.plan !== "free") || isAdminAccess(qEmail, qCode);
+      }
+    } catch (_) {}
+
     const analyses = rows.map(r => {
       let agents = [];
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+      const resolved = r.outcome === "win" || r.outcome === "loss";
+      const reveal = resolved || isPaidViewer; // pick visible si terminé OU abonné
       return {
         id: r.id,
         home: r.home, away: r.away,
         competition: r.competition, sport: r.sport || "Football",
-        bet: r.best_bet, confidence: r.confidence,
-        cote: rowOdd(r),
-        reasoning: r.raison, consensus: r.consensus_votes,
+        bet: reveal ? r.best_bet : null, confidence: r.confidence,
+        cote: reveal ? rowOdd(r) : null,
+        reasoning: reveal ? r.raison : null, consensus: r.consensus_votes,
+        locked: !reveal,
         outcome: r.outcome,
         analysed_at: r.analysed_at,
         score: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
