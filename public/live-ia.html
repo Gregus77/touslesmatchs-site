@@ -318,7 +318,7 @@ let userAuth = null;
     refreshCredits();   // récupère le compteur de jetons à jour au chargement
   }
   loadMatches();
-  setInterval(function(){ loadMatches(); }, 60000);
+  setInterval(function(){ loadMatches(); refreshCredits(); }, 60000);
 
   if (window.innerWidth <= 600) {
     document.getElementById("mobile-back").style.display = "block";
@@ -361,9 +361,12 @@ function updateAuthBar() {
         && userAuth.credits_max != null && userAuth.credits_left != null) {
       var left = userAuth.credits_left, max = userAuth.credits_max;
       var col = left === 0 ? "#f43f5e" : (left <= 2 ? "#f59e0b" : "#34d399");
-      tokens = ' <span id="token-counter" style="display:inline-block;margin-left:8px;padding:2px 10px;border-radius:999px;'
-        + 'background:rgba(124,58,237,.12);border:1px solid rgba(124,58,237,.3);font-size:12px;font-weight:800;color:' + col + '">'
-        + '🎟️ ' + left + '/' + max + ' analyses aujourd\'hui</span>';
+      tokens = '<div id="token-counter" style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:8px 18px;border-radius:14px;'
+        + 'background:rgba(124,58,237,.14);border:1.5px solid rgba(124,58,237,.4);">'
+        + '<span style="font-size:22px">🎟️</span>'
+        + '<span style="font-size:26px;font-weight:900;line-height:1;color:' + col + '">' + left + '<span style="font-size:16px;color:var(--muted2);font-weight:700">/' + max + '</span></span>'
+        + '<span style="font-size:13px;color:var(--muted2);font-weight:600">analyses<br>aujourd\'hui</span>'
+        + '</div>';
     }
     info.innerHTML = (isElite ? "👑" : "⚡") + " <strong>" + planName + "</strong> — " + userAuth.email + tokens;
     btn.textContent = "Déconnexion";
