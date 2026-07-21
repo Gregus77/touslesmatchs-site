@@ -5484,23 +5484,29 @@ function maskAiNamesGlobal(text) {
 function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
-    // Fenêtre large (7 jours) : on privilégie les analyses récentes et confiantes.
-    // Les gagnantes remontent en premier (meilleure vitrine), puis par confiance.
     const rows = _db.prepare(
       "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
-      "ORDER BY (CASE WHEN outcome='win' THEN 0 WHEN outcome IS NULL THEN 1 ELSE 2 END), confidence DESC, id DESC LIMIT 200"
+      "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
     _db.close();
-    const pick = rows.find(r => r.home && r.away && !isLowTrustCompetition(r.competition));
-    if (!pick) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const eligible = rows.filter(r => r.home && r.away && !isLowTrustCompetition(r.competition));
+    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
+    // Priorité 1 : un match d'AUJOURD'HUI (en cours d'abord = actionnable, sinon le plus confiant du jour).
+    // Priorité 2 : sinon, la meilleure gagnante récente (vitrine).
+    const todays = eligible.filter(r => (r.analysed_at || "").slice(0, 10) === todayISO);
+    let pick = todays.find(r => r.outcome === null) || todays[0]
+            || eligible.find(r => r.outcome === "win") || eligible[0];
+    if (!pick) { console.log("[daily-pick] aucun pick eligible"); return false; }
+    const matchDate = (pick.analysed_at || "").slice(0, 10) || todayISO;
     const coteVal = Number(pick.real_odd) || Number(pick.cote_suggested) || Math.min(1.95, ((1 / (pick.confidence / 100)) * 1.45));
     const data = {
       currentPick: {
         home: pick.home, away: pick.away,
         competition: pick.competition || pick.sport || "Football",
         sport: pick.sport || "Football",
-        date: new Date().toISOString().slice(0, 10), time: "",
+        date: matchDate, time: "",
         best_bet: pick.best_bet || "Analyse IA", confidence: pick.confidence,
         cote: Number(coteVal.toFixed(2)), raison: maskAiNamesGlobal(pick.raison || ""),
         home_logo: pick.home_logo || null, away_logo: pick.away_logo || null,
