@@ -2,7 +2,7 @@ import os
 from agents.or_common import analyze_via_openrouter
 
 NAME = "Opus"
-MODEL = (os.environ.get("OR_OPUS_MODEL") or "").strip() or "anthropic/claude-3.5-haiku"
+MODEL = (os.environ.get("OR_OPUS_MODEL") or "").strip() or "anthropic/claude-haiku-4.5"
 
 
 def analyze(date, matches_text, history_text, stats):
