@@ -4247,6 +4247,17 @@ function isExcludedFromPicks(match) {
   return !isUefaCompetition(match) && isLowTrustCompetition(match);
 }
 
+// Filtre d'AFFICHAGE (résultats du jour + stats) — plus léger que le filtre du
+// pick. On masque uniquement la couche "bruit" qui abîme la crédibilité auprès
+// d'un visiteur (jeunes U17-U23, réserves, féminines, ligues exotiques hors
+// UEFA), MAIS on GARDE les compétitions reconnaissables : UEFA (même en qualif),
+// grandes ligues, K League, MLS, Brésil… Contrairement à isExcludedFromPicks
+// (plus strict, réservé au PICK), les qualifs UEFA restent visibles ici car le
+// nom « UEFA Champions League » inspire confiance.
+function isNoiseForDisplay(match) {
+  return !isUefaCompetition(match) && isLowTrustCompetition(match);
+}
+
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
 
@@ -6194,6 +6205,7 @@ app.get("/community-stats", async (req, res) => {
     || "";
   const CHANNEL_ID = process.env.TELEGRAM_FREE_CHANNEL_ID
     || process.env.TELEGRAM_CHAT_ID
+    || process.env.TELEGRAM_CHANNEL_ID
     || "@touslesmatchs_fr";
 
   // Cache 10 minutes
@@ -6671,9 +6683,11 @@ app.get("/analysis-history", (req, res) => {
     const STALE_PENDING_MS = 6 * 3600 * 1000;
     const nowMs = Date.now();
     const visibleRows = rows.filter(r => {
-      // On affiche TOUS les résultats de la journée (preuve d'activité) ; seul le
-      // pick du jour reste filtré aux ligues premium. On masque uniquement les
-      // analyses restées en attente > 6 h (matchs non résolvables → impression de bug).
+      // Crédibilité : on masque la couche bruit (jeunes/amateur/exotique) mais on
+      // garde UEFA + grandes ligues. Seul le pick du jour est filtré plus strict.
+      if (isNoiseForDisplay(r)) return false;
+      // On masque aussi les analyses restées en attente > 6 h (matchs non
+      // résolvables → impression de bug).
       const resolved = r.outcome === "win" || r.outcome === "loss";
       if (!resolved) {
         const ts = Date.parse(String(r.analysed_at || "").replace(" ", "T") + "Z");
@@ -6718,7 +6732,8 @@ app.get("/analysis-history", (req, res) => {
     const seenStat = new Set();
     let sTotal = 0, sWins = 0;
     for (const r of allResolved) {
-      // Stats cohérentes avec la liste : on compte tous les résultats affichés.
+      // Stats cohérentes avec la liste affichée (mêmes ligues visibles).
+      if (isNoiseForDisplay(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
@@ -7129,6 +7144,8 @@ app.get("/premium-teaser", (req, res) => {
     const deduped = [];
     const seen = new Set();
     for (const r of allRows) {
+      // Même filtre crédibilité que la vitrine (winrate/gains sur ligues visibles).
+      if (isNoiseForDisplay(r)) continue;
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
