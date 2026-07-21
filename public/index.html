@@ -2555,39 +2555,23 @@ function renderPicksFeed() {
   const next = PICKS_FEED.find(p => p.status === 'upcoming');
   let html = '';
 
-  // Analyses en cours (envoyées sur Telegram, en attente de résultat)
-  if (pending.length) {
-    html += '<div class="pf-section-title">Analyses du jour — en attente de résultat</div>';
-    html += '<div class="pf-past">';
-    [...pending].reverse().forEach(p => {
-      html += `<div class="pf-past-item pending">
-        <span class="pf-badge pending">⏳</span>
-        <span class="pf-mn">${p.home} vs ${p.away}</span>
-        <span class="pf-pick">${p.pick}</span>
-        <span class="pf-sc">${p.score||'en cours'}</span>
-        <span class="pf-ct">@${p.cote}</span>
-        <span style="font-size:11px;font-weight:600;color:var(--indigo2);margin-left:auto">${p.confidence||''}%</span>
-        <span class="pf-comp">${p.competition}</span>
-      </div>`;
-    });
-    html += '</div>';
-  }
-
-  // Résultats terminés — groupés par jour avec total de la journée
-  if (past.length) {
-    if(pending.length) html += '<div class="pf-section-title">Résultats passés</div>';
-
-    // Regroupe les matchs par date (Signal Fort Telegram + analyses)
+  // Historique groupé par jour — accordéon (clic sur la journée pour dérouler)
+  // Aujourd'hui (matchs en cours + terminés) et hier ouverts, jours plus anciens repliés
+  const feedItems = PICKS_FEED.filter(p => p.status === 'pending' || p.status === 'finished');
+  if (feedItems.length) {
     const byDay = {};
-    past.forEach(p => {
+    feedItems.forEach(p => {
       const d = p.date || '—';
       (byDay[d] = byDay[d] || []).push(p);
     });
-    // Dates triées de la plus récente à la plus ancienne, 4 jours max affichés
-    const days = Object.keys(byDay).sort((a,b)=> b.localeCompare(a)).slice(0,4);
+    const days = Object.keys(byDay).filter(d => d !== '—').sort((a,b)=> b.localeCompare(a)).slice(0,7);
+
+    const todayISO = new Date().toISOString().slice(0,10);
+    const ydayISO = new Date(Date.now()-86400000).toISOString().slice(0,10);
 
     const fmtDay = (iso) => {
-      if(!iso || iso === '—') return '';
+      if(iso === todayISO) return "Aujourd'hui";
+      if(iso === ydayISO) return "Hier";
       const parts = iso.split('-');
       if(parts.length !== 3) return iso;
       const dt = new Date(iso+'T12:00:00');
@@ -2598,39 +2582,61 @@ function renderPicksFeed() {
 
     days.forEach(day => {
       const items = byDay[day];
-      // Total du jour : gain simulé si on avait joué tous les matchs à 10€/mise
+      const finishedItems = items.filter(p => p.result === 'win' || p.result === 'loss');
+      const pendingCount = items.filter(p => p.status === 'pending').length;
+      // Total du jour : gain simulé si on avait joué tous les matchs terminés à 10€/mise
       let dayTotal = 0, dayWins = 0;
-      items.forEach(p => {
+      finishedItems.forEach(p => {
         if(p.result === 'win'){ dayTotal += (p.cote - 1) * 10; dayWins++; }
         else { dayTotal -= 10; }
       });
       dayTotal = Math.round(dayTotal);
       const totColor = dayTotal >= 0 ? 'var(--green)' : 'var(--red)';
       const totSign = dayTotal >= 0 ? '+' : '';
+      const open = (day === todayISO || day === ydayISO);
+      const bodyId = 'pfday-' + day.replace(/[^0-9]/g,'');
 
-      // En-tête de journée : date à gauche, total à droite
-      html += `<div style="display:flex;align-items:center;justify-content:space-between;margin:18px 0 8px;padding:0 2px">
-        <div style="font-size:13px;font-weight:800;color:var(--text);text-transform:capitalize">${fmtDay(day)}
-          <span style="font-size:11px;font-weight:500;color:var(--muted);margin-left:6px">${dayWins}/${items.length} gagnés</span>
+      // En-tête cliquable : chevron + date à gauche, total à droite
+      html += `<div onclick="var b=document.getElementById('${bodyId}');var c=this.querySelector('.pf-chev');if(b){var o=b.style.display==='none';b.style.display=o?'block':'none';if(c)c.style.transform=o?'rotate(90deg)':'rotate(0deg)';}" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px;padding:11px 13px;background:var(--bg2);border:1px solid var(--b2);border-radius:12px;user-select:none">
+        <div style="display:flex;align-items:center;gap:9px;min-width:0">
+          <span class="pf-chev" style="display:inline-block;transition:transform .2s;transform:rotate(${open?'90deg':'0deg'});color:var(--muted);font-size:11px;flex-shrink:0">▶</span>
+          <span style="font-size:13px;font-weight:800;color:var(--text);text-transform:capitalize">${fmtDay(day)}</span>
+          <span style="font-size:11px;font-weight:500;color:var(--muted)">${dayWins}/${finishedItems.length} gagnés${pendingCount?` · ${pendingCount} en cours`:''}</span>
         </div>
-        <div style="font-size:14px;font-weight:800;color:${totColor}">${totSign}${dayTotal}€
-          <span style="font-size:10px;font-weight:500;color:var(--muted);margin-left:4px">sur la journée</span>
-        </div>
+        <div style="font-size:14px;font-weight:800;color:${totColor};flex-shrink:0">${totSign}${dayTotal}€</div>
       </div>`;
 
-      html += '<div class="pf-past">';
-      [...items].sort((a,b)=> (b.time||'').localeCompare(a.time||'')).forEach(p => {
-        const w = p.result === 'win';
-        const gain = w ? '+' + ((p.cote - 1) * 10).toFixed(0) + '€' : '-10€';
-        html += `<div class="pf-past-item${w?'':' loss'}">
-          <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
-          <span class="pf-mn">${p.home} vs ${p.away}</span>
-          <span class="pf-pick">${p.pick}</span>
-          <span class="pf-sc">${p.score||'—'}</span>
-          <span class="pf-ct">@${p.cote}</span>
-          <span style="font-size:12px;font-weight:700;color:${w?'var(--green)':'var(--red)'};margin-left:auto">${gain}</span>
-          <span class="pf-comp">${p.competition}</span>
-        </div>`;
+      // Corps (matchs) : en cours d'abord, puis terminés du plus récent au plus ancien
+      html += `<div id="${bodyId}" class="pf-past" style="display:${open?'block':'none'}">`;
+      const ordered = [...items].sort((a,b)=>{
+        const ap = a.status==='pending'?0:1, bp = b.status==='pending'?0:1;
+        if(ap !== bp) return ap - bp;
+        return (b.time||'').localeCompare(a.time||'');
+      });
+      ordered.forEach(p => {
+        if(p.status === 'pending'){
+          html += `<div class="pf-past-item pending">
+            <span class="pf-badge pending">⏳</span>
+            <span class="pf-mn">${p.home} vs ${p.away}</span>
+            <span class="pf-pick">${p.pick}</span>
+            <span class="pf-sc">${p.score||'en cours'}</span>
+            <span class="pf-ct">@${p.cote}</span>
+            <span style="font-size:11px;font-weight:600;color:var(--indigo2);margin-left:auto">${p.confidence||''}%</span>
+            <span class="pf-comp">${p.competition}</span>
+          </div>`;
+        } else {
+          const w = p.result === 'win';
+          const gain = w ? '+' + ((p.cote - 1) * 10).toFixed(0) + '€' : '-10€';
+          html += `<div class="pf-past-item${w?'':' loss'}">
+            <span class="pf-badge ${w?'win':'loss'}">${w?'✅':'❌'}</span>
+            <span class="pf-mn">${p.home} vs ${p.away}</span>
+            <span class="pf-pick">${p.pick}</span>
+            <span class="pf-sc">${p.score||'—'}</span>
+            <span class="pf-ct">@${p.cote}</span>
+            <span style="font-size:12px;font-weight:700;color:${w?'var(--green)':'var(--red)'};margin-left:auto">${gain}</span>
+            <span class="pf-comp">${p.competition}</span>
+          </div>`;
+        }
       });
       html += '</div>';
     });
