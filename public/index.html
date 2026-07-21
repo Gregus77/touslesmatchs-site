@@ -1469,34 +1469,47 @@ footer{
 <style>
   .champion-band{
     max-width:1200px;margin:32px auto;padding:24px 28px;
-    background:linear-gradient(135deg,rgba(16,185,129,.10),rgba(6,182,212,.06));
-    border:1px solid rgba(16,185,129,.35);border-radius:20px;
+    background:linear-gradient(135deg,rgba(168,85,247,.14),rgba(236,72,153,.08));
+    border:1px solid rgba(168,85,247,.35);border-radius:20px;
     display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;
+    box-shadow:0 0 50px rgba(168,85,247,.08);
   }
-  .champion-left{display:flex;align-items:center;gap:20px;flex:1;min-width:280px}
+  .champion-left{display:flex;align-items:center;gap:20px;flex:1 1 280px;min-width:0}
   .champion-badge{
     font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
     padding:6px 12px;border-radius:999px;
-    background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.35);
-    white-space:nowrap;
+    background:rgba(168,85,247,.18);color:#c084fc;border:1px solid rgba(168,85,247,.4);
+    white-space:nowrap;flex-shrink:0;
   }
-  .champion-txt{flex:1;min-width:200px}
+  .champion-txt{flex:1;min-width:0}
   .champion-title{margin:0 0 4px;font-size:18px;font-weight:800;color:#eceaf4;line-height:1.3}
-  .champion-title strong{color:#10b981;font-size:22px}
+  .champion-title strong{color:#e879f9;font-size:22px}
   .champion-sub{margin:0;font-size:13px;color:#a4a1b8;line-height:1.4}
   .champion-cta{
     display:inline-flex;align-items:center;gap:6px;
     padding:12px 20px;font-size:14px;font-weight:700;
-    background:#10b981;color:#0a0912;border-radius:10px;text-decoration:none;
-    white-space:nowrap;transition:transform .15s ease,box-shadow .15s ease;
+    background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border-radius:10px;text-decoration:none;
+    white-space:nowrap;flex-shrink:0;transition:transform .15s ease,box-shadow .15s ease;
   }
-  .champion-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(16,185,129,.4)}
+  .champion-cta:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(168,85,247,.45)}
   @media(max-width:640px){
-    .champion-band{padding:18px 20px;gap:16px}
+    .champion-band{flex-direction:column;text-align:center;align-items:stretch;padding:18px 20px;gap:14px}
+    .champion-left{flex-direction:column;align-items:center;gap:12px}
     .champion-title{font-size:16px}
     .champion-title strong{font-size:20px}
     .champion-sub{font-size:12px}
     .champion-cta{width:100%;justify-content:center;padding:14px 18px}
+  }
+  /* ── Accents rose/violet + sécurité anti-débordement mobile ── */
+  .nav-cta{background:linear-gradient(135deg,#a855f7,#ec4899)!important}
+  .hero-badge{color:#e879f9;background:rgba(168,85,247,.08);border-color:rgba(168,85,247,.22)}
+  .badge-dot{background:#e879f9}
+  .hero-flame{filter:drop-shadow(0 0 14px rgba(232,121,249,.4))}
+  @media(max-width:640px){
+    .hero{padding:118px 18px 70px}
+    .hero-stats{flex-wrap:wrap;gap:10px}
+    section,.section-wrap,.plans-section,.champion-band{max-width:100%}
+    .plans-grid{grid-template-columns:1fr}
   }
 </style>
 <div class="champion-band" role="region" aria-label="Marché champion">
