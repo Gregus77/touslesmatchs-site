@@ -1048,6 +1048,10 @@ function normalizeCurrentPick(p, defaultSource) {
     sport: p.sport || "Football",
     home_logo: p.home_logo || p.teamA?.logo || null,
     away_logo: p.away_logo || p.teamB?.logo || null,
+    home_form: p.home_form || null,
+    away_form: p.away_form || null,
+    home_goals_avg: p.home_goals_avg != null ? p.home_goals_avg : null,
+    away_goals_avg: p.away_goals_avg != null ? p.away_goals_avg : null,
   };
 }
 
@@ -5486,7 +5490,7 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis " +
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
@@ -5516,6 +5520,9 @@ function refreshDailyPickFromDB() {
         best_bet: pick.best_bet || "Analyse IA", confidence: pick.confidence,
         cote: Number(coteVal.toFixed(2)), raison: maskAiNamesGlobal(pick.raison || ""),
         home_logo: pick.home_logo || null, away_logo: pick.away_logo || null,
+        home_form: pick.home_form || null, away_form: pick.away_form || null,
+        home_goals_avg: pick.home_goals_avg != null ? pick.home_goals_avg : null,
+        away_goals_avg: pick.away_goals_avg != null ? pick.away_goals_avg : null,
         source: "auto-api", publishedAt: new Date().toISOString(), status: "upcoming"
       }
     };

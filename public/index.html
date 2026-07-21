@@ -3497,6 +3497,28 @@ document.addEventListener('click',function(e){
     } catch(e){}
     return hasTime ? p.time : (p.date || '');
   }
+  // Stats clés + avis du Concile sous le pick (vitrine gratuite)
+  function buildPickInsight(p){
+    var hn=(p.teamA&&p.teamA.name)||p.home, an=(p.teamB&&p.teamB.name)||p.away;
+    var bullets=[];
+    if(p.home_form) bullets.push('<b>'+esc(hn)+'</b> — forme : '+esc(String(p.home_form)));
+    if(p.away_form) bullets.push('<b>'+esc(an)+'</b> — forme : '+esc(String(p.away_form)));
+    if(p.home_goals_avg!=null && p.home_goals_avg!=='') bullets.push('<b>'+esc(hn)+'</b> : '+esc(String(p.home_goals_avg))+' buts/match en moyenne');
+    if(p.away_goals_avg!=null && p.away_goals_avg!=='') bullets.push('<b>'+esc(an)+'</b> : '+esc(String(p.away_goals_avg))+' buts/match en moyenne');
+    var html='';
+    if(bullets.length){
+      html+='<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding:16px;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.18);border-radius:14px">'+
+        bullets.map(function(b){return '<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--muted2);line-height:1.5"><span style="color:#10b981;flex-shrink:0">✅</span><span>'+b+'</span></div>';}).join('')+
+      '</div>';
+    }
+    if(p.raison){
+      html+='<div style="margin-top:14px;padding:16px 18px;background:linear-gradient(135deg,rgba(168,85,247,.08),rgba(236,72,153,.05));border:1px solid rgba(168,85,247,.22);border-radius:14px">'+
+        '<div style="font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#c084fc;margin-bottom:8px">🧠 L\'avis du Concile</div>'+
+        '<div style="font-size:14px;color:#d8d5e8;line-height:1.6">'+esc(p.raison)+'</div>'+
+      '</div>';
+    }
+    return html;
+  }
   function drawPick(p){
     var root=document.getElementById('pick-root');
     if(!root || !p) return;
@@ -3528,6 +3550,7 @@ document.addEventListener('click',function(e){
             '<div class="tlm-live-pill"><span>Cote</span><strong>@'+esc(p.cote||'-')+'</strong></div>' +
             '<div class="tlm-live-pill"><span>Confiance</span><strong>'+esc(confidence)+'</strong></div>' +
           '</div>' +
+          buildPickInsight(p) +
         '</div>' +
       '</div></div>';
   }
