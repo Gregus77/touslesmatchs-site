@@ -1,17 +1,53 @@
 import os
 import json
-import anthropic
+import requests
 from prompts.chief_prompt import CHIEF_SYSTEM_PROMPT, CHIEF_USER_PROMPT_TEMPLATE
 
 NAME = "Claude (Chef)"
-client = None
+
+# Le Chef appelle Claude via OpenRouter (crédits OpenRouter) si OPENROUTER_API_KEY
+# est défini — sinon repli sur l'API Anthropic directe. Ça permet d'utiliser le
+# solde OpenRouter au lieu des crédits API Anthropic.
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_CHIEF_MODEL", "anthropic/claude-3.7-sonnet")
+ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_CHIEF_MODEL", "claude-opus-4-7")
 
 
-def _get_client():
-    global client
-    if client is None:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    return client
+def _call_openrouter(system, prompt):
+    resp = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={
+            "Authorization": f"Bearer {OPENROUTER_KEY}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://www.touslesmatchs.com",
+            "X-Title": "TousLesMatchs Concile",
+        },
+        json={
+            "model": OPENROUTER_MODEL,
+            "max_tokens": 1024,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": prompt},
+            ],
+        },
+        timeout=90,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["choices"][0]["message"]["content"]
+
+
+def _call_anthropic(system, prompt):
+    import anthropic
+    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+    message = client.messages.create(
+        model=ANTHROPIC_MODEL,
+        max_tokens=1024,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    return message.content[0].text
 
 
 def decide(date, matches_text, agent_reports: dict, history_text, stats, agent_accuracy, improvement_notes, market_accuracy=None):
@@ -59,13 +95,15 @@ def decide(date, matches_text, agent_reports: dict, history_text, stats, agent_a
     )
 
     try:
-        message = _get_client().messages.create(
-            model="claude-opus-4-7",
-            max_tokens=1024,
-            system=CHIEF_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = message.content[0].text
+        if OPENROUTER_KEY:
+            raw = _call_openrouter(CHIEF_SYSTEM_PROMPT, prompt)
+            print(f"[{NAME}] via OpenRouter ({OPENROUTER_MODEL})")
+        elif ANTHROPIC_KEY:
+            raw = _call_anthropic(CHIEF_SYSTEM_PROMPT, prompt)
+            print(f"[{NAME}] via Anthropic ({ANTHROPIC_MODEL})")
+        else:
+            raise RuntimeError("Aucune clé API configurée (OPENROUTER_API_KEY ou ANTHROPIC_API_KEY)")
+
         # Extract JSON from response
         raw = raw.strip()
         if raw.startswith("```"):
