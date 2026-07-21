@@ -6708,13 +6708,17 @@ app.get("/analysis-history", (req, res) => {
     // source unique pour que la page Live IA et la page d'accueil affichent
     // exactement le même winrate / nombre de picks.
     const allResolved = db.prepare(`
-      SELECT home, away, outcome, analysed_at FROM concile_analyses
+      SELECT home, away, competition, outcome, analysed_at FROM concile_analyses
       WHERE outcome IN ('win','loss')
       ORDER BY analysed_at DESC
     `).all();
     const seenStat = new Set();
     let sTotal = 0, sWins = 0;
     for (const r of allResolved) {
+      // Même filtre que la liste visible : on ne compte QUE les ligues fiables
+      // (pas les qualifs UEFA, U19, Australia Cup…), pour que les compteurs
+      // Analyses/Gagnées/Perdues/Winrate collent exactement à ce qui est affiché.
+      if (isExcludedFromPicks(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
@@ -7125,6 +7129,9 @@ app.get("/premium-teaser", (req, res) => {
     const deduped = [];
     const seen = new Set();
     for (const r of allRows) {
+      // Cohérence avec la vitrine : on écarte les ligues non fiables et les
+      // qualifs UEFA des statistiques publiques (winrate, gains simulés…).
+      if (isExcludedFromPicks(r)) continue;
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
