@@ -5311,7 +5311,7 @@ app.post("/verify-code", (req, res) => {
     const tag = row.plan === "free" ? "FREE" : row.plan === "premium" ? "PREMIUM" : row.plan === "elite" ? "ELITE" : "VIP";
     brevoAddContact(row.email, tag).catch(() => {});
 
-    return res.json({ valid: true, plan: row.plan, credits_left, email: row.email });
+    return res.json({ valid: true, plan: row.plan, credits_left, credits_max: row.credits_max, email: row.email });
   } catch (e) {
     console.error("[verify-code] error:", e.message);
     return res.json({ valid: false, error: "Erreur de vérification" });
@@ -5943,7 +5943,23 @@ app.post("/concile-analysis", async (req, res) => {
       wdb.close();
     } catch(ce) { console.error("[concile-analysis] credits error:", ce.message); }
 
-    res.json({ ok: true, ...sanitizeAnalysisForClient(analysis, allowAdminFields) });
+    // Compteur de jetons pour l'affichage (jetons restants aujourd'hui). Les
+    // comptes admin (illimités) n'ont pas de compteur.
+    let creditFields = {};
+    if (!allowAdminFields) {
+      try {
+        const rdb = new Database(CODES_DB_PATH, { readonly: true });
+        const cr = rdb.prepare("SELECT credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
+          .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+        rdb.close();
+        if (cr && cr.credits_max > 0) {
+          const used = cr.credits_date === today ? cr.credits_used : 0;
+          creditFields = { credits_left: Math.max(0, cr.credits_max - used), credits_max: cr.credits_max };
+        }
+      } catch(_) {}
+    }
+
+    res.json({ ok: true, ...sanitizeAnalysisForClient(analysis, allowAdminFields), ...creditFields });
   } catch (e) {
     res.json({ ok: false, error: "Erreur d'analyse — réessaie" });
   }
