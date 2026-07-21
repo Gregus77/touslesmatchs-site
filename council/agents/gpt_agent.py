@@ -1,45 +1,9 @@
 import os
-import json
-from openai import OpenAI
-from prompts.agent_prompt import AGENT_SYSTEM_PROMPT, AGENT_USER_PROMPT_TEMPLATE
+from agents.or_common import analyze_via_openrouter
 
 NAME = "DeepSeek"
-client = None
-
-
-def _get_client():
-    global client
-    if client is None:
-        client = OpenAI(
-            api_key=os.environ.get("DEEPSEEK_API_KEY"),
-            base_url="https://api.deepseek.com"
-        )
-    return client
+MODEL = (os.environ.get("OR_DEEPSEEK_MODEL") or "").strip() or "deepseek/deepseek-chat"
 
 
 def analyze(date, matches_text, history_text, stats):
-    prompt = AGENT_USER_PROMPT_TEMPLATE.format(
-        date=date,
-        matches=matches_text,
-        history=history_text,
-        winrate=stats.get("winrate", 0),
-        roi=stats.get("roi", 0),
-        wins=stats.get("wins", 0),
-        losses=stats.get("losses", 0),
-    )
-    try:
-        response = _get_client().chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": AGENT_SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.3,
-            max_tokens=500,
-        )
-        raw = response.choices[0].message.content
-        return json.loads(raw)
-    except Exception as e:
-        print(f"[{NAME}] Error: {e}")
-        return {"recommendation": "NOPICK", "confidence": 0, "reasoning": f"Erreur: {e}"}
+    return analyze_via_openrouter(NAME, MODEL, date, matches_text, history_text, stats)
