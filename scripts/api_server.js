@@ -6660,6 +6660,9 @@ app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const offset = parseInt(req.query.offset) || 0;
   try {
+    // Dédoublonnage en SQL : un match est analysé plusieurs fois par jour
+    // (snapshots à différentes minutes). ROW_NUMBER garde UNE ligne par
+    // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
     const rows = db.prepare(`
       SELECT id, home, away, competition, sport, best_bet, confidence, raison,
              consensus_votes, outcome, analysed_at, real_odd,
@@ -6667,13 +6670,26 @@ app.get("/analysis-history", (req, res) => {
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
              agents_json
-      FROM concile_analyses
-      WHERE date(analysed_at) >= '2026-07-03'
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
+        ) AS _rn
+        FROM concile_analyses
+        WHERE date(analysed_at) >= '2026-07-03'
+      )
+      WHERE _rn = 1
       ORDER BY analysed_at DESC
       LIMIT ? OFFSET ?
     `).all(limit, offset);
 
-    const total = db.prepare(`SELECT COUNT(*) as cnt FROM concile_analyses WHERE date(analysed_at) >= '2026-07-03'`).get()?.cnt || 0;
+    const total = db.prepare(`
+      SELECT COUNT(*) AS cnt FROM (
+        SELECT 1 FROM concile_analyses
+        WHERE date(analysed_at) >= '2026-07-03'
+        GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+      )
+    `).get()?.cnt || 0;
 
     // Auth optionnelle : seuls les abonnés (ou l'admin) voient le pick des analyses
     // EN COURS. Les visiteurs voient les résultats passés (preuve) mais pas les
@@ -6691,6 +6707,8 @@ app.get("/analysis-history", (req, res) => {
     // jeunes (U17-U23), amateur/réserves, féminines et ligues douteuses/exotiques.
     // On GARDE UEFA (même qualif) + grandes ligues. Pas de masquage "+6h" ici,
     // donc aucun jour ne disparaît — on retire juste les matchs douteux.
+    // Retrait de la couche indésirable (jeunes/féminines/douteuses) ; les
+    // doublons sont déjà éliminés en SQL ci-dessus.
     const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
 
     const analyses = visibleRows.map(r => {
