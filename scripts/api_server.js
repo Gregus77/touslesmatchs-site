@@ -5460,6 +5460,25 @@ app.post("/chat/history", (req, res) => {
 // Le Concile Python ne peut pas écrire /picks/picks.json (pas de volume partagé),
 // donc l'API régénère elle-même le pick du jour depuis ses analyses. Ainsi le match
 // du jour se met à jour tout seul chaque jour, sans jamais afficher une ligue exclue.
+// Masque les noms d'IA dans un texte public (version réutilisable)
+function maskAiNamesGlobal(text) {
+  if (!text) return "";
+  const map = [
+    [/Perplexity[- ]?Web/gi, "IA 1"], [/DeepSeek[- ]?V3/gi, "IA 2"],
+    [/Mistral[- ]?Large/gi, "IA 3"], [/Cohere[- ]?Command/gi, "IA 4"],
+    [/Groq[- ]?Llama\d*/gi, "IA 5"], [/Claude[- ]?Chief/gi, "Concile"],
+    [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
+    [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
+    [/Mistral[- ]?7B/gi, "IA"], [/Cerebras[- ]?Llama/gi, "IA"],
+    [/OR[- ]?Mistral7B/gi, "IA"], [/Llama[- ]?\d+[bB]?/gi, "IA"],
+    [/DeepSeek/gi, "IA"], [/Mistral/gi, "IA"], [/Cohere/gi, "IA"],
+    [/Perplexity/gi, "IA"], [/Gemini/gi, "IA"], [/Groq/gi, "IA"],
+  ];
+  let r = text;
+  for (const [re, rep] of map) r = r.replace(re, rep);
+  return r;
+}
+
 function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
@@ -5479,7 +5498,7 @@ function refreshDailyPickFromDB() {
         sport: pick.sport || "Football",
         date: new Date().toISOString().slice(0, 10), time: "",
         best_bet: pick.best_bet || "Analyse IA", confidence: pick.confidence,
-        cote: Number(coteVal.toFixed(2)), raison: pick.raison || "",
+        cote: Number(coteVal.toFixed(2)), raison: maskAiNamesGlobal(pick.raison || ""),
         home_logo: pick.home_logo || null, away_logo: pick.away_logo || null,
         source: "auto-api", publishedAt: new Date().toISOString(), status: "upcoming"
       }
