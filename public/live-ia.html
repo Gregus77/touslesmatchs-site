@@ -465,10 +465,27 @@ function renderMatches() {
     }
 
     if (isLive && !isDone) {
+      var min = parseInt(m.minute, 10);
+      var tooEarly = !isNaN(min) && min < 25;
+      var tooLate = !isNaN(min) && min > 65;
+      var blocked = tooEarly || tooLate;
       html += '<div class="mc-cta">';
-      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';
-      html += (userAuth ? '    🧠 Analyser ce match' : '    🔓 Débloquer l\'analyse');
-      html += '  </button>';
+      if (blocked) {
+        html += '  <button class="mc-analyse-btn" disabled style="opacity:.5;cursor:not-allowed">';
+        html += '    🧠 Analyser ce match';
+        html += '  </button>';
+        html += '  <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">';
+        if (tooEarly) {
+          html += '⏳ Pas assez de statistiques avant la 25<sup>e</sup> minute';
+        } else {
+          html += '⏰ Cotes trop basses après la 65<sup>e</sup> minute';
+        }
+        html += '</div>';
+      } else {
+        html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';
+        html += (userAuth ? '    🧠 Analyser ce match' : '    🔓 Débloquer l\'analyse');
+        html += '  </button>';
+      }
       html += '</div>';
       html += '<div class="mc-analysis" id="analysis-' + escAttr(matchId) + '"></div>';
     }
