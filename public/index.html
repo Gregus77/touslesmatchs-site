@@ -8,6 +8,34 @@
 <link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
+<!-- ══ Analytics (IDs injectés par Hermes via env) ══ -->
+<!-- Google Analytics 4 — remplacer GA_MEASUREMENT_ID par l'ID réel -->
+<script id="ga4-loader"></script>
+<script>
+(function(){
+  var id = window.__GA4_ID || '';
+  if (!id) return;
+  var s = document.getElementById('ga4-loader');
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+  s.async = true;
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', id, { anonymize_ip: true });
+  window.gtag = gtag;
+})();
+</script>
+<!-- Microsoft Clarity — remplacer CLARITY_ID par l'ID réel -->
+<script>
+(function(){
+  var id = window.__CLARITY_ID || '';
+  if (!id) return;
+  (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+  t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+  y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window,document,"clarity","script",id);
+})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com">
@@ -1134,6 +1162,9 @@ footer{
     <a href="/live-ia"><span class="nav-live-dot" style="display:inline-block;margin-right:5px;vertical-align:middle"></span>Live IA</a>
     <a href="/preuves">🏆 Résultats</a>
     <a href="/bankroll">💼 Ma bankroll</a>
+    <a href="/performances">Performances</a>
+    <a href="#methode">Méthode</a>
+    <a href="#faq">FAQ</a>
     <a href="#plans" data-i18n="nav_join">Abonnements</a>
     <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)!important">📱 Telegram</a>
     <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=nav&utm_campaign=prospection" target="_blank" rel="noopener noreferrer" style="color:#fb7185!important">TikTok</a>
@@ -1881,15 +1912,15 @@ function copyRefLink(){
   </div>
 </div>
 
-<!-- FAQ (hidden — focus conversion) -->
-<section class="section-wrap" id="faq" style="display:none;border-top:1px solid var(--b1)">
+<!-- FAQ -->
+<section class="section-wrap" id="faq" style="border-top:1px solid var(--b1)">
   <div class="s-eyebrow">Questions fréquentes</div>
   <div class="s-title">Tout ce que tu dois savoir</div>
   <div id="faq-list" style="margin-top:32px;display:flex;flex-direction:column;gap:8px"></div>
 </section>
 
-<!-- HOW IT WORKS (hidden — focus conversion) -->
-<section class="how-section" style="display:none">
+<!-- HOW IT WORKS -->
+<section class="how-section" id="methode">
   <div class="s-eyebrow" data-i18n="sec_how_eye">Méthode</div>
   <div class="s-title" data-i18n="sec_how_title">Le Concile ne devine pas.</div>
   <div class="steps">
@@ -1951,6 +1982,10 @@ function copyRefLink(){
     <span style="opacity:.75;font-size:11px;margin-top:8px;display:block">LES JEUX D'ARGENT ET DE HASARD PEUVENT ETRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr - 09 74 75 13 13, appel non surtaxe.</span>
     <span style="opacity:.55;font-size:11px;margin-top:6px;display:block">18+ - TousLesMatchs ne garantit aucun gain - Analyses informatives - Jouez uniquement ce que vous pouvez perdre.</span>
     <span style="display:block;margin-top:10px;font-size:11px;line-height:1.8">
+      <a href="/performances" style="color:var(--muted);text-decoration:none;opacity:.6">Performances</a>
+      <span style="margin:0 6px;opacity:.3">·</span>
+      <a href="/faq" style="color:var(--muted);text-decoration:none;opacity:.6">FAQ</a>
+      <span style="margin:0 6px;opacity:.3">·</span>
       <a href="/mentions-legales.html" style="color:var(--muted);text-decoration:none;opacity:.6">Mentions légales</a>
       <span style="margin:0 6px;opacity:.3">·</span>
       <a href="/cgu.html" style="color:var(--muted);text-decoration:none;opacity:.6">CGU</a>
