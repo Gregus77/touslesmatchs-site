@@ -6673,26 +6673,9 @@ app.get("/analysis-history", (req, res) => {
       }
     } catch (_) {}
 
-    // Filtre d'affichage du track record public :
-    //  1. On masque les ligues non fiables (Australia Cup, U19, etc.) — elles ne
-    //     doivent jamais apparaître dans la vitrine, résolues ou non.
-    //  2. On masque les analyses restées "en attente" depuis plus de 6 h : ce sont
-    //     des matchs obscurs (qualifs exotiques) que nos sources de résultats ne
-    //     couvrent pas — elles resteraient ⏳ pour toujours et donnent une
-    //     impression de bug. Les analyses récentes en cours restent visibles.
-    const STALE_PENDING_MS = 6 * 3600 * 1000;
-    const nowMs = Date.now();
-    const visibleRows = rows.filter(r => {
-      // On affiche TOUS les résultats de la journée (volume + preuve d'activité).
-      // Seul le PICK du jour reste filtré aux ligues premium. On masque uniquement
-      // les analyses restées en attente > 6 h (matchs non résolvables).
-      const resolved = r.outcome === "win" || r.outcome === "loss";
-      if (!resolved) {
-        const ts = Date.parse(String(r.analysed_at || "").replace(" ", "T") + "Z");
-        if (!isNaN(ts) && (nowMs - ts) > STALE_PENDING_MS) return false;
-      }
-      return true;
-    });
+    // Aucun filtre d'affichage : on montre TOUS les résultats et TOUS les jours
+    // (état d'avant 17h). Seul le PICK du jour reste filtré aux ligues premium.
+    const visibleRows = rows;
 
     const analyses = visibleRows.map(r => {
       let agents = [];
