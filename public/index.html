@@ -3577,5 +3577,62 @@ document.addEventListener('click',function(e){
     +'&_='+Date.now();
 })();
 </script>
+
+<!-- ── BARRE CTA FIXE MOBILE — levier de conversion n°1 sur trafic TikTok ──────
+     Toujours visible en bas de l'écran sur mobile. Renvoie vers le test à 1€.
+     Fermable (croix) ; l'état de fermeture dure la session. Masquée sur desktop. -->
+<style>
+  #sticky-cta{
+    position:fixed;left:0;right:0;bottom:0;z-index:9998;
+    display:none;align-items:center;gap:10px;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));
+    background:rgba(9,12,24,.92);backdrop-filter:blur(14px);
+    border-top:1px solid rgba(124,58,237,.28);
+    box-shadow:0 -8px 28px rgba(0,0,0,.4);
+  }
+  #sticky-cta .sc-txt{flex:1;min-width:0;line-height:1.25}
+  #sticky-cta .sc-t1{font-size:13px;font-weight:800;color:#eceaf4}
+  #sticky-cta .sc-t2{font-size:11px;color:#9a97ad}
+  #sticky-cta a.sc-btn{
+    flex-shrink:0;display:inline-flex;align-items:center;gap:6px;
+    background:linear-gradient(135deg,#059669,#10b981);color:#fff;
+    font-size:15px;font-weight:900;letter-spacing:-.01em;
+    padding:12px 22px;border-radius:12px;text-decoration:none;
+    box-shadow:0 6px 20px rgba(16,185,129,.4);
+  }
+  #sticky-cta .sc-close{
+    flex-shrink:0;background:none;border:none;color:#6b6880;
+    font-size:20px;line-height:1;padding:4px 6px;cursor:pointer;
+  }
+  @media(max-width:640px){
+    #sticky-cta.show{display:flex}
+    body.has-sticky-cta{padding-bottom:74px}
+  }
+</style>
+<div id="sticky-cta" role="region" aria-label="Tester Hermes">
+  <div class="sc-txt">
+    <div class="sc-t1">Teste le Concile IA</div>
+    <div class="sc-t2">1 analyse complète · sans engagement</div>
+  </div>
+  <a class="sc-btn" href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" rel="noopener noreferrer">Tester — 1€</a>
+  <button class="sc-close" aria-label="Fermer" onclick="(function(){document.getElementById('sticky-cta').classList.remove('show');document.body.classList.remove('has-sticky-cta');try{sessionStorage.setItem('scHidden','1')}catch(e){}})()">×</button>
+</div>
+<script>
+(function(){
+  try{ if(sessionStorage.getItem('scHidden')==='1') return; }catch(e){}
+  // N'apparaît qu'après un léger scroll (le visiteur est engagé), sur mobile.
+  function reveal(){
+    if(window.innerWidth>640) return;
+    if(window.scrollY < 300) return;
+    var el=document.getElementById('sticky-cta');
+    if(el && !el.classList.contains('show')){
+      el.classList.add('show');
+      document.body.classList.add('has-sticky-cta');
+    }
+    window.removeEventListener('scroll', reveal);
+  }
+  window.addEventListener('scroll', reveal, {passive:true});
+})();
+</script>
 </body>
 </html>
