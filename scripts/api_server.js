@@ -538,7 +538,7 @@ const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de conf
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
 // IA) qui ne part pas sur Telegram → on ne la montre pas comme un "pick". Réglable.
-const PUBLISHED_MIN_CONFIDENCE = 80;
+const PUBLISHED_MIN_CONFIDENCE = 85;
 
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
