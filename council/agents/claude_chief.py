@@ -8,10 +8,11 @@ NAME = "Claude (Chef)"
 # Le Chef appelle Claude via OpenRouter (crédits OpenRouter) si OPENROUTER_API_KEY
 # est défini — sinon repli sur l'API Anthropic directe. Ça permet d'utiliser le
 # solde OpenRouter au lieu des crédits API Anthropic.
-OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.environ.get("OPENROUTER_CHIEF_MODEL", "anthropic/claude-3.7-sonnet")
-ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_CHIEF_MODEL", "claude-opus-4-7")
+OPENROUTER_KEY = (os.environ.get("OPENROUTER_API_KEY") or "").strip()
+# `or` gère le cas où la variable existe mais est vide (docker-compose la met à "")
+OPENROUTER_MODEL = (os.environ.get("OPENROUTER_CHIEF_MODEL") or "").strip() or "anthropic/claude-3.7-sonnet"
+ANTHROPIC_KEY = (os.environ.get("ANTHROPIC_API_KEY") or "").strip()
+ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_CHIEF_MODEL") or "").strip() or "claude-opus-4-7"
 
 
 def _call_openrouter(system, prompt):
