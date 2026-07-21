@@ -8507,7 +8507,10 @@ app.listen(PORT, () => {
       const _gdb = new Database(CODES_DB_PATH);
       const _existing = _gdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get("lamatrice2012@gmail.com");
       if (_existing && _existing.plan === "elite") {
-        console.log(`[admin-grant] lamatrice2012@gmail.com déjà Elite: ${_existing.code}`);
+        // Déjà Elite : on garantit quand même 30 analyses/jour et l'expiration.
+        const _exp = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
+        _gdb.prepare("UPDATE codes SET credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
+        console.log(`[admin-grant] lamatrice2012@gmail.com Elite confirmé (30/j): ${_existing.code}`);
       } else if (_existing) {
         const _exp = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
         _gdb.prepare("UPDATE codes SET plan = 'elite', credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
