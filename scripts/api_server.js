@@ -5380,6 +5380,40 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
   });
 });
 
+// ── Auth: profil utilisateur ──────────────────────────────────────────────────
+app.get("/auth/me", authMiddleware, (req, res) => {
+  const user = db.prepare("SELECT id, email, status, created_at FROM users WHERE id = ?").get(req.user.id);
+  if (!user) return res.json({ ok: false, error: "Utilisateur introuvable" });
+  const row = ensureTokenRow(user.id);
+  const limit = TOKEN_LIMITS[user.status] || 0;
+  res.json({ ok: true, user: { id: user.id, email: user.email, status: user.status, created_at: user.created_at, tokens_today: row.tokens_today, tokens_limit: limit } });
+});
+
+// ── User: historique personnel des analyses revealees ─────────────────────────
+app.get("/user/history", authMiddleware, (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+  const offset = parseInt(req.query.offset) || 0;
+  try {
+    const rows = db.prepare(`
+      SELECT ra.match_key, ra.analysis_json, ra.revealed_at
+      FROM revealed_analyses ra
+      WHERE ra.user_id = ?
+      ORDER BY ra.revealed_at DESC
+      LIMIT ? OFFSET ?
+    `).all(req.user.id, limit, offset);
+    const total = db.prepare("SELECT COUNT(*) AS cnt FROM revealed_analyses WHERE user_id = ?").get(req.user.id)?.cnt || 0;
+    const analyses = rows.map(r => {
+      let data = {};
+      try { data = JSON.parse(r.analysis_json || "{}"); } catch {}
+      return { match_key: r.match_key, revealed_at: r.revealed_at, ...data };
+    });
+    res.json({ ok: true, analyses, total });
+  } catch (e) {
+    console.error("[user/history]", e.message);
+    res.json({ ok: true, analyses: [], total: 0 });
+  }
+});
+
 // ── Gestion de capital — bankroll de l'utilisateur (login par email + code) ───
 // Vérifie que le couple email/code est un abonné actif de codes.db.
 function bankrollAuth(email, code) {
