@@ -1259,6 +1259,7 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "bulgaria", "serbia", "usl league two",
   "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
   "· china", "china", "chinese",
+  "australia cup",
   // Catégories génériques non fiables
   "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
   "u17", "u18", "u19", "u20", "u21", "u23",
@@ -5485,13 +5486,18 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at " +
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
     _db.close();
     const todayISO = new Date().toISOString().slice(0, 10);
-    const eligible = rows.filter(r => r.home && r.away && !isLowTrustCompetition(r.competition));
+    // Fenêtre minute : un prono live n'a de valeur qu'entre la 25e et la 65e minute
+    // (avant = trop incertain, après = cotes bookmaker trop basses). On tolère les
+    // analyses sans minute (pré-match / sports sans minute).
+    const PICK_MIN_MINUTE = 25, PICK_MAX_MINUTE = 65;
+    const minuteOk = (m) => m == null || (m >= PICK_MIN_MINUTE && m <= PICK_MAX_MINUTE);
+    const eligible = rows.filter(r => r.home && r.away && !isLowTrustCompetition(r.competition) && minuteOk(r.minute_at_analysis));
     if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI (en cours d'abord = actionnable, sinon le plus confiant du jour).
     // Priorité 2 : sinon, la meilleure gagnante récente (vitrine).
