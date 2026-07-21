@@ -5484,14 +5484,16 @@ function maskAiNamesGlobal(text) {
 function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
+    // Fenêtre large (7 jours) : on privilégie les analyses récentes et confiantes.
+    // Les gagnantes remontent en premier (meilleure vitrine), puis par confiance.
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo " +
-      "FROM concile_analyses WHERE analysed_at >= datetime('now','-36 hours') AND confidence IS NOT NULL AND home IS NOT NULL " +
-      "ORDER BY confidence DESC, id DESC LIMIT 80"
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at " +
+      "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
+      "ORDER BY (CASE WHEN outcome='win' THEN 0 WHEN outcome IS NULL THEN 1 ELSE 2 END), confidence DESC, id DESC LIMIT 200"
     ).all();
     _db.close();
     const pick = rows.find(r => r.home && r.away && !isLowTrustCompetition(r.competition));
-    if (!pick) { console.log("[daily-pick] aucun pick frais eligible (hors blacklist)"); return false; }
+    if (!pick) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
     const coteVal = Number(pick.real_odd) || Number(pick.cote_suggested) || Math.min(1.95, ((1 / (pick.confidence / 100)) * 1.45));
     const data = {
       currentPick: {
