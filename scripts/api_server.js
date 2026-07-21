@@ -3982,114 +3982,147 @@ function autoResolvePredictions(match) {
 // ── Rattrapage : résout les prédictions en attente dont le match est fini mais
 // qui sont sorties de la fenêtre live (matchs de plus de quelques heures/jours).
 // Sans ça, une prédiction reste "en attente" pour toujours → leaderboard faussé.
+
+// Normalise un nom d'équipe : minuscules + suppression des accents (« Göteborg »
+// → « goteborg »), pour que le rapprochement API↔DB ne casse pas sur les accents.
+const NORM = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+// Préfixes de clubs trop génériques pour identifier un match (« FC », « AC »…).
+const GENERIC_CLUB_TOKENS = new Set([
+  "fc", "ac", "sc", "afc", "cf", "sk", "fk", "us", "as", "ss", "ssc", "cd",
+  "ca", "sv", "sd", "rc", "cs", "if", "bk", "ff", "ik", "nk", "hnk", "kf",
+  "club", "real", "sporting", "athletic", "deportivo", "atletico", "united", "city",
+]);
+// Renvoie le mot le plus distinctif d'un nom d'équipe (ignore les préfixes
+// génériques). « FC Levadia Tallinn » → « levadia », pas « fc ».
+function matchToken(name) {
+  const words = NORM(name).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter(Boolean);
+  const meaningful = words.filter((w) => w.length >= 3 && !GENERIC_CLUB_TOKENS.has(w));
+  const pool = meaningful.length ? meaningful : words;
+  return pool.sort((a, b) => b.length - a.length)[0] || "";
+}
+
 let staleResolveRunning = false;
 async function resolveStalePredictions() {
   if (staleResolveRunning || (!FOOTBALL_DATA_KEY && !API_SPORTS_KEY)) return;
   staleResolveRunning = true;
   try {
-    const stale = db.prepare(`
-      SELECT DISTINCT home, away FROM (
-        SELECT home, away, created_at FROM agent_predictions WHERE outcome IS NULL
+    const staleRows = db.prepare(`
+      SELECT DISTINCT home, away, sport, substr(created_at, 1, 10) AS day FROM (
+        SELECT home, away, 'Football' AS sport, created_at FROM agent_predictions WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, created_at FROM agent_market_predictions WHERE outcome IS NULL
+        SELECT home, away, 'Football' AS sport, created_at FROM agent_market_predictions WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, analysed_at AS created_at FROM concile_analyses WHERE outcome IS NULL
+        SELECT home, away, COALESCE(sport, 'Football') AS sport, analysed_at AS created_at FROM concile_analyses WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, created_at FROM shadow_evals WHERE outcome IS NULL
+        SELECT home, away, 'Football' AS sport, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-90 minutes')
         AND created_at >= datetime('now','-7 days')
-      LIMIT 120
+      LIMIT 200
     `).all();
-    if (!stale.length) return;
+    if (!staleRows.length) return;
+
+    // Dédupe des paires à résoudre
+    const stale = [];
+    const seenPair = new Set();
+    for (const r of staleRows) {
+      const k = `${r.home}|${r.away}`;
+      if (seenPair.has(k)) continue;
+      seenPair.add(k); stale.push(r);
+    }
+
+    // On ne requête l'API QUE pour les dates et sports réellement en attente.
+    // Avant : 6 jours × 3 sports à CHAQUE passage (~10 appels/20 min → quota
+    // api-sports gratuit cramé en 1-2 h, d'où les matchs du soir jamais résolus).
+    const today = new Date().toISOString().slice(0, 10);
+    const neededDates = new Set([today]);
+    const neededSports = new Set();
+    for (const r of staleRows) {
+      if (r.day) neededDates.add(r.day);
+      neededSports.add(String(r.sport || "Football"));
+    }
+    const dates = [...neededDates].sort().slice(-7);
 
     const finished = [];
 
-    // Source 1 : football-data — une requête couvre 7 jours de matchs finis
+    // Source 1 : football-data — une seule requête couvre 7 jours de matchs finis
     if (FOOTBALL_DATA_KEY) {
       try {
-        const to = new Date().toISOString().slice(0, 10);
         const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
         const d = await httpGet(
-          `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${from}&dateTo=${to}`,
+          `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${from}&dateTo=${today}`,
           { "X-Auth-Token": FOOTBALL_DATA_KEY }
         );
         finished.push(...(d.matches || []).map(formatFDMatch).filter(m => m.score_home !== null && m.score_away !== null));
       } catch (e) { console.error("[catch-up] football-data:", e.message); }
     }
 
-    // Source 2 : api-sports football — couvre les 6 derniers jours (matchs finis)
+    // Source 2 : api-sports — uniquement les dates/sports en attente (quota maîtrisé).
+    // status=FT-AET-PEN : capture aussi les matchs allés en prolongation / tab
+    // (fréquent sur les qualifs européennes à double confrontation).
     if (API_SPORTS_KEY) {
-      for (let d = 0; d < 6; d++) {
-        const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
-        try {
-          const data = await httpGet(
-            `https://v3.football.api-sports.io/fixtures?date=${date}&status=FT`,
-            { "x-apisports-key": API_SPORTS_KEY }
-          );
-          const items = (data.response || []).map(normalizeApiSportsFootballFixture)
-            .filter(m => m.score_home !== null && m.score_away !== null);
-          finished.push(...items);
-        } catch (e) { console.error("[catch-up] api-sports football:", e.message); }
-      }
-    }
-
-    // Source 3 : api-sports basketball — résoudre les matchs basket aussi
-    if (API_SPORTS_KEY) {
-      for (let d = 0; d < 2; d++) {
-        const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
-        try {
-          const data = await httpGet(
-            `https://v1.basketball.api-sports.io/games?date=${date}&status=FT`,
-            { "x-apisports-key": API_SPORTS_KEY }
-          );
-          (data.response || []).forEach(g => {
-            if (g.teams?.home?.name && g.teams?.away?.name && g.scores?.home?.total != null) {
-              finished.push({
-                home: g.teams.home.name, away: g.teams.away.name,
-                score_home: g.scores.home.total, score_away: g.scores.away.total,
-              });
-            }
-          });
-        } catch (e) { console.error("[catch-up] api-sports basketball:", e.message); }
-      }
-    }
-
-    // Source 4 : api-sports hockey
-    if (API_SPORTS_KEY) {
-      for (let d = 0; d < 2; d++) {
-        const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);
-        try {
-          const data = await httpGet(
-            `https://v1.hockey.api-sports.io/games?date=${date}&status=FT`,
-            { "x-apisports-key": API_SPORTS_KEY }
-          );
-          (data.response || []).forEach(g => {
-            if (g.teams?.home?.name && g.teams?.away?.name && g.scores?.home != null) {
-              finished.push({
-                home: g.teams.home.name, away: g.teams.away.name,
-                score_home: g.scores.home, score_away: g.scores.away,
-              });
-            }
-          });
-        } catch (e) { console.error("[catch-up] api-sports hockey:", e.message); }
+      for (const date of dates) {
+        if (neededSports.has("Football")) {
+          try {
+            const data = await httpGet(
+              `https://v3.football.api-sports.io/fixtures?date=${date}&status=FT-AET-PEN`,
+              { "x-apisports-key": API_SPORTS_KEY }
+            );
+            const items = (data.response || []).map(normalizeApiSportsFootballFixture)
+              .filter(m => m.score_home !== null && m.score_away !== null);
+            finished.push(...items);
+          } catch (e) { console.error("[catch-up] api-sports football:", e.message); }
+        }
+        if (neededSports.has("Basketball")) {
+          try {
+            const data = await httpGet(
+              `https://v1.basketball.api-sports.io/games?date=${date}&status=FT`,
+              { "x-apisports-key": API_SPORTS_KEY }
+            );
+            (data.response || []).forEach(g => {
+              if (g.teams?.home?.name && g.teams?.away?.name && g.scores?.home?.total != null) {
+                finished.push({
+                  home: g.teams.home.name, away: g.teams.away.name,
+                  score_home: g.scores.home.total, score_away: g.scores.away.total,
+                });
+              }
+            });
+          } catch (e) { console.error("[catch-up] api-sports basketball:", e.message); }
+        }
+        if (neededSports.has("Hockey")) {
+          try {
+            const data = await httpGet(
+              `https://v1.hockey.api-sports.io/games?date=${date}&status=FT`,
+              { "x-apisports-key": API_SPORTS_KEY }
+            );
+            (data.response || []).forEach(g => {
+              if (g.teams?.home?.name && g.teams?.away?.name && g.scores?.home != null) {
+                finished.push({
+                  home: g.teams.home.name, away: g.teams.away.name,
+                  score_home: g.scores.home, score_away: g.scores.away,
+                });
+              }
+            });
+          } catch (e) { console.error("[catch-up] api-sports hockey:", e.message); }
+        }
       }
     }
 
     if (!finished.length) return;
 
+    // Rapprochement robuste : mot distinctif + normalisation accents.
     let resolvedMatches = 0;
     for (const s of stale) {
-      const hw = String(s.home || "").split(" ")[0].toLowerCase();
-      const aw = String(s.away || "").split(" ")[0].toLowerCase();
+      const hw = matchToken(s.home);
+      const aw = matchToken(s.away);
       if (!hw || !aw) continue;
       const m = finished.find(f => {
-        const fh = String(f.home || "").toLowerCase();
-        const fa = String(f.away || "").toLowerCase();
+        const fh = NORM(f.home);
+        const fa = NORM(f.away);
         return (fh.includes(hw) && fa.includes(aw)) || (fh.includes(aw) && fa.includes(hw));
       });
       if (m) {
         // Réordonne le score si le match a été trouvé dans le sens inverse
-        const reversed = String(m.home || "").toLowerCase().includes(aw);
+        const reversed = NORM(m.home).includes(aw) && !NORM(m.home).includes(hw);
         autoResolvePredictions({
           home: s.home, away: s.away,
           score_home: reversed ? m.score_away : m.score_home,
@@ -4190,6 +4223,30 @@ function isUefaCompetition(match) {
   return /uefa|champions league|europa league|conference league|europa conference/.test(comp);
 }
 
+// Les TOURS DE QUALIFICATION des coupes d'Europe (juillet–août) opposent souvent
+// de petits clubs de nations mineures (Estonie, Gibraltar, Géorgie, Arménie…) :
+// matchs imprévisibles, sans source de résultat fiable → à écarter des picks et
+// de la vitrine. Les phases de ligue / finales (sept.–mai) restent premium.
+function isUefaQualifier(match) {
+  if (!isUefaCompetition(match)) return false;
+  const comp = String(match?.competition || match?.league || "").toLowerCase();
+  // Mention explicite d'un tour de qualif si l'API la fournit
+  if (/qualif|preliminar|play-?off|1st round|2nd round|3rd round/.test(comp)) return true;
+  // Heuristique calendaire : en juillet/août, toute rencontre de coupe d'Europe
+  // de clubs est un tour de qualif (les phases principales démarrent mi-septembre).
+  const dstr = match?.date || match?.analysed_at || match?.kickoffUtc || match?.time || "";
+  const d = dstr ? new Date(String(dstr).replace(" ", "T")) : new Date();
+  const month = (isNaN(d.getTime()) ? new Date() : d).getUTCMonth() + 1; // 1-12
+  return month === 7 || month === 8;
+}
+
+// Un match doit-il être écarté des picks/vitrine ? Ligue non fiable (hors UEFA)
+// OU tour de qualification européen.
+function isExcludedFromPicks(match) {
+  if (isUefaQualifier(match)) return true;
+  return !isUefaCompetition(match) && isLowTrustCompetition(match);
+}
+
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
 
@@ -4200,8 +4257,9 @@ function shouldAutoObserveMatch(match) {
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (isWomenMatch(match)) return false;              // pas de matchs féminins
   if (String(match.sport || "Football") !== "Football") return true;
-  // Option 3 : grandes ligues (whitelist) + compétitions UEFA (dont qualifs européennes)
-  if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
+  // Grandes ligues (whitelist) + coupes d'Europe, mais SANS les tours de qualif
+  // (juillet-août : petits clubs, imprévisibles).
+  if (isExcludedFromPicks(match)) return false;
   if (isUnderperformingCompetition(match)) return false; // exclut les compétitions perdantes
   // Fenêtre 35-75' : assez de données jouées + cote encore intéressante
   const minute = parseLiveMinuteValue(match.minute);
@@ -5501,7 +5559,7 @@ function refreshDailyPickFromDB() {
     // analyses sans minute (pré-match / sports sans minute).
     const PICK_MIN_MINUTE = 25, PICK_MAX_MINUTE = 65;
     const minuteOk = (m) => m == null || (m >= PICK_MIN_MINUTE && m <= PICK_MAX_MINUTE);
-    const eligible = rows.filter(r => r.home && r.away && !isLowTrustCompetition(r.competition) && minuteOk(r.minute_at_analysis));
+    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r) && minuteOk(r.minute_at_analysis));
     if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI (en cours d'abord = actionnable, sinon le plus confiant du jour).
     // Priorité 2 : sinon, la meilleure gagnante récente (vitrine).
@@ -5542,7 +5600,7 @@ function storedPickIsFresh() {
     const todayISO = new Date().toISOString().slice(0, 10);
     const pDate = (p.date || (p.publishedAt || "").slice(0, 10) || "").slice(0, 10);
     if (pDate !== todayISO) return false;
-    if (isLowTrustCompetition(p.competition || p.league || "")) return false;
+    if (isExcludedFromPicks(p)) return false;
     return true;
   } catch { return false; }
 }
@@ -5555,7 +5613,7 @@ app.get("/current-pick", (req, res) => {
   try {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
-    if (p && p.home && p.home !== "Analyse en cours" && !isLowTrustCompetition(p.competition || p.league || "")) {
+    if (p && p.home && p.home !== "Analyse en cours" && !isExcludedFromPicks(p)) {
       return res.json({ ok: true, pick: normalizeCurrentPick(p, p.source || "hermes") });
     }
   } catch (e) { /* picks.json absent ou invalide */ }
@@ -6612,7 +6670,7 @@ app.get("/analysis-history", (req, res) => {
     const STALE_PENDING_MS = 6 * 3600 * 1000;
     const nowMs = Date.now();
     const visibleRows = rows.filter(r => {
-      if (isLowTrustCompetition(r.competition || "")) return false;
+      if (isExcludedFromPicks(r)) return false;
       const resolved = r.outcome === "win" || r.outcome === "loss";
       if (!resolved) {
         const ts = Date.parse(String(r.analysed_at || "").replace(" ", "T") + "Z");
@@ -7158,8 +7216,8 @@ app.post("/internal/signal-notify", async (req, res) => {
     console.log(`[signal-notify] Bloqué — match féminin (liste noire): ${signal.home} vs ${signal.away}`);
     return res.json({ ok: false, error: "match féminin exclu", blocked: "women" });
   }
-  if (signal.sport === "Football" && !isUefaCompetition(sigMatch) && isLowTrustCompetition(sigMatch)) {
-    console.log(`[signal-notify] Bloqué — ligue douteuse (liste noire): ${signal.competition || ""}`);
+  if (signal.sport === "Football" && isExcludedFromPicks(sigMatch)) {
+    console.log(`[signal-notify] Bloqué — ligue douteuse ou qualif UEFA (liste noire): ${signal.competition || ""}`);
     return res.json({ ok: false, error: "ligue douteuse exclue", blocked: "low_trust" });
   }
   if (!BREVO_API_KEY) return res.json({ ok: false, error: "BREVO_API_KEY non configuré", sent: 0 });
