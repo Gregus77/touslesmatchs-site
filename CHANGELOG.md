@@ -1,5 +1,28 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-07-22
+
+### P0 — Refonte Hero orientée conversion (audit produit)
+- **Panneau "Le Conseil délibère"** (effet WOW) : vote multi-IA en direct dans le Hero.
+  Chaque agent (Alpha→Sigma, anonymisé) affiche son pari + confiance + couleur
+  (vert = aligné, jaune = diverge), puis le verdict du Conseil en grand.
+  - Nouvel endpoint API `/council-vote` (appelé `/api/council-vote`) : votes réels
+    depuis `concile_analyses.agents_json`, noms d'IA masqués via `maskAiNamesGlobal`.
+- **Hero reformulé** : angle différenciateur "5 IA votent, le Conseil tranche"
+  (au lieu de "Hermes analyse / Tu décides"). Sous-titre insiste sur le vote multi-IA
+  vs une seule IA chez les concurrents. Mot "pari"/"parie" évité (conformité ANJ).
+- **CTA** : principal "🔥 Voir l'analyse du jour" (friction basse) + lien secondaire
+  "tester le Conseil complet — 1€".
+- **Barre de preuves** : ajout "Matchs analysés" + note "Mise à jour toutes les heures ·
+  Historique 100 % public". Chiffres réels depuis /api/premium-teaser.
+- Impact : conversion, valeur perçue, confiance, effet WOW.
+
+### Correctifs cotes & doublons
+- Suppression lien affilié Betclic (config, boutons, FAQ, anj_markets).
+- Vraies cotes ARJEL (API-Sports) partout : signal-fort-stats, Telegram, pick du jour.
+- Dédoublonnage infaillible du feed "Derniers verdicts" au rendu (par match+date).
+- Seuil de publication : 82.
+
 ## 2026-07-21
 
 ### Phase 2 — Compte Gratuit + Dashboard

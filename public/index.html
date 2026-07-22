@@ -1432,26 +1432,108 @@ footer{
   <!-- Badge -->
   <div class="hero-badge" style="margin-bottom:20px">
     <span class="badge-dot"></span>
-    <span>Concile Hermes · 5 IA + 1 Chief</span>
+    <span>Le Conseil IA · 5 agents + 1 Chief</span>
   </div>
 
-  <!-- Headline — storytelling -->
-  <h1 style="font-size:clamp(32px,5vw,62px);font-weight:900;line-height:1.05;letter-spacing:-.04em;margin-bottom:18px;max-width:700px;text-align:center">
-    Hermes analyse.<br>
-    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Tu décides.</span>
+  <!-- Headline — bénéfice + différenciateur (vote multi-IA) -->
+  <h1 style="font-size:clamp(32px,5vw,62px);font-weight:900;line-height:1.05;letter-spacing:-.04em;margin-bottom:18px;max-width:760px;text-align:center">
+    Ne décide plus seul.<br>
+    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">5 IA votent. Le Conseil tranche.</span>
   </h1>
 
-  <!-- Subtitle — 1 phrase claire -->
-  <p class="hero-sub" style="font-size:17px;color:var(--muted2);max-width:440px;line-height:1.6;margin-bottom:28px;text-align:center">
-    5 intelligences artificielles croisent les données de chaque match. Le Chief tranche. Tu reçois le verdict.
+  <!-- Subtitle — différenciateur clair -->
+  <p class="hero-sub" style="font-size:17px;color:var(--muted2);max-width:480px;line-height:1.6;margin-bottom:26px;text-align:center">
+    Là où les autres te donnent l'avis d'<strong style="color:#eceaf4">une seule</strong> IA, nous croisons le vote de <strong style="color:#eceaf4">5 intelligences artificielles</strong>. Tu vois le consensus, les désaccords et le verdict final — en toute transparence.
   </p>
 
-  <!-- CTA UNIQUE — Tester pour 1 euro -->
+  <!-- ══ LE CONSEIL DÉLIBÈRE — panneau vote multi-IA (effet WOW) ══ -->
+  <style>
+    .council-panel{width:100%;max-width:460px;margin:0 auto 26px;
+      background:linear-gradient(160deg,rgba(30,27,58,.75),rgba(15,14,30,.85));
+      border:1px solid rgba(129,140,248,.28);border-radius:20px;padding:18px 18px 20px;
+      box-shadow:0 20px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.02) inset;
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);position:relative;overflow:hidden}
+    .council-panel::before{content:"";position:absolute;top:-40%;left:-30%;width:80%;height:80%;
+      background:radial-gradient(circle,rgba(129,140,248,.16),transparent 70%);pointer-events:none}
+    .cp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;position:relative}
+    .cp-live{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;
+      letter-spacing:.08em;text-transform:uppercase;color:#a78bfa}
+    .cp-live-dot{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:cpPulse 1.8s infinite}
+    @keyframes cpPulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+    .cp-match{font-size:11px;color:var(--muted2);font-weight:600;text-align:right;max-width:180px;line-height:1.2}
+    .cp-agent{display:flex;align-items:center;gap:11px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.05);opacity:0;transform:translateY(6px);animation:cpIn .5s forwards}
+    .cp-agent:last-of-type{border-bottom:none}
+    @keyframes cpIn{to{opacity:1;transform:none}}
+    .cp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    .cp-dot.g{background:#34d399;box-shadow:0 0 10px rgba(52,211,153,.5)}
+    .cp-dot.y{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.5)}
+    .cp-name{font-size:13px;font-weight:800;color:#c7d2fe;width:58px;flex-shrink:0}
+    .cp-bet{font-size:12.5px;color:#eceaf4;flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cp-conf{font-size:13px;font-weight:900;flex-shrink:0}
+    .cp-conf.g{color:#34d399}.cp-conf.y{color:#fbbf24}
+    .cp-verdict{margin-top:14px;padding:15px 16px;border-radius:14px;
+      background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(52,211,153,.12));
+      border:1px solid rgba(124,58,237,.4);position:relative}
+    .cp-verdict-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#a78bfa;margin-bottom:5px}
+    .cp-verdict-bet{font-size:19px;font-weight:900;color:#fff;line-height:1.15;letter-spacing:-.02em}
+    .cp-verdict-meta{display:flex;align-items:center;gap:14px;margin-top:8px}
+    .cp-verdict-conf{display:inline-flex;align-items:baseline;gap:4px}
+    .cp-verdict-conf b{font-size:22px;font-weight:900;color:#34d399}
+    .cp-verdict-conf span{font-size:11px;color:var(--muted2)}
+    .cp-skel{height:38px;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.08),rgba(255,255,255,.04));background-size:200% 100%;animation:cpShimmer 1.4s infinite;margin-bottom:6px}
+    @keyframes cpShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @media(max-width:640px){.council-panel{max-width:100%}.cp-name{width:52px;font-size:12px}}
+  </style>
+  <div class="council-panel" id="council-panel">
+    <div class="cp-head">
+      <span class="cp-live"><span class="cp-live-dot"></span>Le Conseil délibère</span>
+      <span class="cp-match" id="cp-match">Analyse du jour</span>
+    </div>
+    <div id="cp-body">
+      <div class="cp-skel"></div><div class="cp-skel"></div><div class="cp-skel"></div>
+    </div>
+  </div>
+  <script>
+  (function loadCouncilVote(){
+    var body=document.getElementById('cp-body');
+    var matchEl=document.getElementById('cp-match');
+    if(!body) return;
+    fetch('/api/council-vote').then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.ok||!d.agents||!d.agents.length){ document.getElementById('council-panel').style.display='none'; return; }
+      if(d.match&&d.match.home){ matchEl.textContent=d.match.home+' — '+d.match.away; }
+      var html='';
+      d.agents.forEach(function(a,i){
+        var cls=a.aligned?'g':'y';
+        html+='<div class="cp-agent" style="animation-delay:'+(i*0.09)+'s">'
+          +'<span class="cp-dot '+cls+'"></span>'
+          +'<span class="cp-name">'+a.label+'</span>'
+          +'<span class="cp-bet">'+(a.bet||'')+'</span>'
+          +'<span class="cp-conf '+cls+'">'+a.confidence+'%</span>'
+          +'</div>';
+      });
+      var v=d.verdict||{};
+      html+='<div class="cp-verdict">'
+        +'<div class="cp-verdict-lbl">🔥 Verdict du Conseil</div>'
+        +'<div class="cp-verdict-bet">'+(v.bet||'—')+'</div>'
+        +'<div class="cp-verdict-meta">'
+        +'<span class="cp-verdict-conf"><b>'+(v.confidence||'')+'%</b><span>de confiance</span></span>'
+        +(v.cote?'<span class="cp-verdict-conf"><b style="color:#22d3ee">'+v.cote+'</b><span>cote</span></span>':'')
+        +'</div></div>';
+      body.innerHTML=html;
+    }).catch(function(){ document.getElementById('council-panel').style.display='none'; });
+  })();
+  </script>
+
+  <!-- CTA — voir l'analyse (friction basse) + test 1€ -->
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px">
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <a href="#pick"
        style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15);transition:all .25s;letter-spacing:-.01em"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55),0 0 80px rgba(16,185,129,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15)'">
-      Tester Hermes — 1€
+      🔥 Voir l'analyse du jour
+    </a>
+    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+       style="font-size:14px;color:#a78bfa;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(167,139,250,.4);padding-bottom:1px">
+      ou tester le Conseil complet — 1€ →
     </a>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
       <span style="font-size:12px;color:var(--muted2)">🔒 Stripe</span>
@@ -1489,14 +1571,18 @@ footer{
     </div>
   </div>
 
-  <!-- Stats bar — compact -->
+  <!-- Barre de preuves — chiffres réels -->
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simule</div></div>
-    <div class="hs"><div class="hs-val c-violet">5+1</div><div class="hs-label">IA</div></div>
+    <div class="hs"><div class="hs-val" style="color:#eceaf4" id="hs-total">—</div><div class="hs-label">Matchs analysés</div></div>
+    <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Réussite</div></div>
+    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simulé</div></div>
+    <div class="hs"><div class="hs-val c-violet">5+1</div><div class="hs-label">IA au vote</div></div>
   </div>
 
-  <p style="font-size:10px;color:var(--muted);margin-top:12px;text-align:center">
+  <p style="font-size:11px;color:var(--muted2);margin-top:12px;text-align:center;font-weight:600">
+    🔄 Mise à jour toutes les heures · Historique 100&nbsp;% public
+  </p>
+  <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">
     Aucune garantie de gain · 18+ · joueurs-info-service.fr
   </p>
 
@@ -2481,6 +2567,7 @@ function buildChart(){
     set('kpi-winrate', wr + '%');
     set('kpi-bankroll', '100€ → ' + bankrollFinal + '€');
     set('kpi-picks', tot);
+    set('hs-total', tot);
     set('hs-winrate', wr + '%');
     set('hs-gain', (gain >= 0 ? '+' : '') + Math.round(gain) + '€');
     // Bannière + popup champion : MÊME source unique que le KPI (zéro contradiction)

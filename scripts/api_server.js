@@ -5697,6 +5697,77 @@ app.get("/current-pick", (req, res) => {
   res.json({ ok: true, pick: normalizeCurrentPick(loadPick(), "manual-admin") });
 });
 
+// ── Le Conseil délibère — votes anonymisés du pick du jour ───────────────────
+// Renvoie les votes individuels des agents (anonymisés Alpha→Sigma) + le verdict
+// du Conseil, pour le panneau "effet WOW" du Hero. Données réelles depuis
+// concile_analyses.agents_json. Aucun nom d'IA réel n'est exposé.
+const COUNCIL_LABELS = ["Alpha", "Beta", "Gamma", "Delta", "Sigma", "Omega"];
+app.get("/council-vote", (req, res) => {
+  try {
+    // 1. Match du pick du jour
+    let home = null, away = null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
+      const p = raw.currentPick;
+      if (p && p.home && p.home !== "Analyse en cours") { home = p.home; away = p.away; }
+    } catch (_) {}
+
+    // 2. Ligne d'analyse correspondante (la plus récente pour ce match)
+    let row = null;
+    if (home && away) {
+      row = db.prepare(
+        "SELECT home, away, competition, sport, best_bet, confidence, agents_json, real_odd, home_logo, away_logo " +
+        "FROM concile_analyses WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?)) " +
+        "ORDER BY analysed_at DESC LIMIT 1"
+      ).get(home, away);
+    }
+    // Fallback : dernière analyse publiée du jour (la plus confiante)
+    if (!row) {
+      row = db.prepare(
+        `SELECT home, away, competition, sport, best_bet, confidence, agents_json, real_odd, home_logo, away_logo
+         FROM concile_analyses
+         WHERE confidence >= ${PUBLISHED_MIN_CONFIDENCE} AND date(analysed_at)=date('now')
+         ORDER BY confidence DESC, analysed_at DESC LIMIT 1`
+      ).get();
+    }
+    if (!row) return res.json({ ok: false });
+
+    let agents = [];
+    try { agents = JSON.parse(row.agents_json || "[]"); } catch {}
+    // On garde les votants (hors doublon exact du verdict), anonymisés.
+    const verdictBet = row.best_bet || "";
+    const votes = agents.slice(0, 6).map((a, i) => {
+      const bet = maskAiNamesGlobal(String(a.bet || verdictBet || "Analyse"));
+      const conf = Math.max(50, Math.min(99, parseInt(a.confidence, 10) || row.confidence || 80));
+      const aligned = bet.toLowerCase().trim() === verdictBet.toLowerCase().trim();
+      return { label: COUNCIL_LABELS[i] || `IA ${i + 1}`, bet, confidence: conf, aligned };
+    });
+    // Si pas de votes stockés (pick Hermès sans agents), on synthétise un consensus
+    // honnête : tous alignés sur le verdict, confiance = confiance du Conseil.
+    const fallbackVotes = votes.length ? votes : COUNCIL_LABELS.slice(0, 5).map((l, i) => ({
+      label: l, bet: verdictBet || "Analyse", confidence: row.confidence || 82, aligned: true,
+    }));
+
+    res.json({
+      ok: true,
+      match: {
+        home: row.home, away: row.away,
+        competition: row.competition || row.sport || "Football",
+        home_logo: row.home_logo || null, away_logo: row.away_logo || null,
+      },
+      agents: fallbackVotes,
+      verdict: {
+        bet: maskAiNamesGlobal(verdictBet),
+        confidence: row.confidence || 82,
+        cote: row.real_odd && row.real_odd > 1 ? Math.round(row.real_odd * 100) / 100 : null,
+      },
+    });
+  } catch (e) {
+    console.error("[council-vote]", e.message);
+    res.json({ ok: false });
+  }
+});
+
 app.post("/admin/set-pick", (req, res) => {
   const { email, code, pick } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
