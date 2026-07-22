@@ -2618,6 +2618,23 @@ const PICKS_FEED = [
 
 function renderPicksFeed() {
   const root = document.getElementById('pf-root');
+  // Dédoublonnage infaillible : un même match (home+away+date) ne peut apparaître
+  // qu'une seule fois, peu importe la source (analysis-history, signal-fort, hardcodé).
+  // On garde en priorité l'entrée résolue (win/loss), sinon la première rencontrée.
+  (function dedupeFeed(){
+    const seen = new Map();
+    for (const p of PICKS_FEED) {
+      const k = (String(p.home)+'|'+String(p.away)+'|'+String(p.date||'')).toLowerCase().replace(/\s+/g,'');
+      const prev = seen.get(k);
+      if (!prev) { seen.set(k, p); continue; }
+      const prevResolved = prev.result === 'win' || prev.result === 'loss';
+      const curResolved = p.result === 'win' || p.result === 'loss';
+      if (curResolved && !prevResolved) seen.set(k, p);
+    }
+    const deduped = Array.from(seen.values());
+    PICKS_FEED.length = 0;
+    for (const p of deduped) PICKS_FEED.push(p);
+  })();
   const pending = PICKS_FEED.filter(p => p.status === 'pending');
   const past = PICKS_FEED.filter(p => p.status === 'finished');
   const next = PICKS_FEED.find(p => p.status === 'upcoming');
