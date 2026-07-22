@@ -310,7 +310,7 @@ db.exec(`
     sport TEXT DEFAULT 'Football',
     available_in_france INTEGER DEFAULT 1,
     markets_available TEXT DEFAULT '1X2,DoubleChance,OverUnder,BTTS',
-    bookmakers TEXT DEFAULT 'Winamax,Betclic,Unibet,PMU',
+    bookmakers TEXT DEFAULT 'Winamax,Unibet,PMU',
     fr_verified INTEGER DEFAULT 0,
     last_verified TEXT DEFAULT NULL
   );
@@ -359,20 +359,20 @@ try {
   const anjCount = db.prepare("SELECT COUNT(*) as c FROM anj_markets").get().c;
   if (anjCount === 0) {
     const anjComps = [
-      ["Premier League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Ligue 1", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["La Liga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Serie A", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Bundesliga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Champions League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Europa League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Betclic,Unibet,PMU"],
-      ["Serie B", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Betclic,Unibet"],
-      ["Championship", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Betclic"],
-      ["Liga Portugal", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Betclic,Unibet"],
+      ["Premier League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["Ligue 1", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["La Liga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["Serie A", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["Bundesliga", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["Champions League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["Europa League", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS,DNB", "Winamax,Unibet,PMU"],
+      ["Serie B", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Unibet"],
+      ["Championship", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Unibet"],
+      ["Liga Portugal", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Unibet,PMU"],
       ["Eredivisie", "Football", 1, "1X2,DoubleChance,OverUnder,BTTS", "Unibet,PMU"],
-      ["MLS", "Football", 0, "1X2,DoubleChance,OverUnder,BTTS", "Betclic"],
-      ["NHL", "Hockey", 0, "1X2,OverUnder", ""],
-      ["NBA", "Basketball", 0, "1X2,OverUnder", "Betclic"],
+      ["MLS", "Football", 0, "1X2,DoubleChance,OverUnder,BTTS", "Winamax,Unibet"],
+      ["NHL", "Hockey", 0, "1X2,OverUnder", "Winamax,Unibet"],
+      ["NBA", "Basketball", 0, "1X2,OverUnder", "Winamax,Unibet"],
     ];
     const ins = db.prepare("INSERT OR IGNORE INTO anj_markets (competition, sport, available_in_france, markets_available, bookmakers) VALUES (?,?,?,?,?)");
     for (const row of anjComps) ins.run(...row);
@@ -5100,8 +5100,8 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
-  const coteMoy = Math.min(1.95, ((1 / (analysis.confidence / 100)) * 1.45)).toFixed(2);
-  const gain = (10 * parseFloat(coteMoy)).toFixed(2);
+  const coteAffichee = rowOdd(analysis).toFixed(2);
+  const gain = (10 * parseFloat(coteAffichee)).toFixed(2);
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -5110,7 +5110,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>`,
     ``,
     outcome === "win"
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
@@ -5128,7 +5128,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote moy. : <b>${coteMoy}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>`,
     ``,
     outcome === "win"
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
@@ -5644,7 +5644,7 @@ function refreshDailyPickFromDB() {
             || eligible.find(r => r.outcome === "win") || eligible[0];
     if (!pick) { console.log("[daily-pick] aucun pick eligible"); return false; }
     const matchDate = (pick.analysed_at || "").slice(0, 10) || todayISO;
-    const coteVal = Number(pick.real_odd) || Number(pick.cote_suggested) || Math.min(1.95, ((1 / (pick.confidence / 100)) * 1.45));
+    const coteVal = rowOdd(pick);
     const data = {
       currentPick: {
         home: pick.home, away: pick.away,
@@ -7183,7 +7183,6 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
 
 app.get("/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
-  const coteMoy = (c) => Math.min(1.95, ((1 / (c / 100)) * 1.45)).toFixed(2);
   res.json({
     ok: true,
     total: stats.total,
@@ -7197,7 +7196,7 @@ app.get("/signal-fort-stats", (req, res) => {
       sport: r.sport,
       confidence: r.confidence,
       outcome: r.outcome,
-      cote: parseFloat(coteMoy(r.confidence)),
+      cote: rowOdd(r),
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
       date: r.analysed_at,
     })),
@@ -7209,7 +7208,7 @@ app.get("/signal-fort-stats", (req, res) => {
       home: r.home,
       away: r.away,
       pick: r.best_bet || `Signal Fort ${r.confidence}%`,
-      cote: parseFloat(coteMoy(r.confidence)),
+      cote: rowOdd(r),
       status: "finished",
       result: r.outcome === "win" ? "win" : "loss",
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?",

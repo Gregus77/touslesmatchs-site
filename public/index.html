@@ -631,7 +631,7 @@ nav{
 /* BOOKMAKERS */
 .bm-head{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:600;padding:0 24px;margin-bottom:12px}
 .bm-grid{display:flex;flex-wrap:wrap;gap:10px;padding:0 24px 24px;justify-content:center}
-.bm-btn{flex:1 1 calc(25% - 10px);min-width:120px;max-width:180px}
+.bm-btn{flex:1 1 calc(33% - 10px);min-width:120px;max-width:200px}
 .bm-btn{
   padding:14px 8px;border-radius:11px;text-align:center;
   text-decoration:none;font-size:13px;font-weight:800;
@@ -2073,7 +2073,6 @@ const MC={
 
 const BM=[
   {name:"Winamax",cls:"bm-w",url:"https://www.winamax.fr/parrain?code=77953728"},
-  {name:"Betclic", cls:"bm-b",url:"https://www.betclic.fr/fr-fr/sports/?promocode=GREGA3GZ"},
   {name:"Unibet",  cls:"bm-u",url:"https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254"},
   {name:"PMU",     cls:"bm-p",url:"https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728"},
 ];
@@ -2717,7 +2716,7 @@ function renderPicksFeed() {
   if(past.length || pending.length) {
     html += '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0 20px">';
     BM.forEach(b=>{
-      html += `<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}" style="flex:1 1 calc(25% - 8px);min-width:100px;max-width:160px;text-align:center;font-size:13px;padding:10px 14px">${b.name} →</a>`;
+      html += `<a href="${b.url}" target="_blank" rel="noopener noreferrer" class="bm-btn ${b.cls}" style="flex:1 1 calc(33% - 8px);min-width:100px;max-width:180px;text-align:center;font-size:13px;padding:10px 14px">${b.name} →</a>`;
     });
     html += '</div>';
   }
@@ -3169,7 +3168,7 @@ const FAQ_DATA = [
   {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
   {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
   {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
-  {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Betclic, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
+  {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
@@ -3495,29 +3494,24 @@ document.addEventListener('click',function(e){
 // ── Auto-update from Signal Fort + Analysis History ──
 (function loadRecentPicks(){
   const existing = new Set(PICKS_FEED.map(p=>p.id));
+  const matchSeen = new Set(PICKS_FEED.map(p=>(p.home+'-'+p.away+'-'+(p.date||'')).replace(/\s+/g,'-').toLowerCase()));
   let updated = false;
-  // Ligues exclues (perf négative — ne plus afficher dans l'historique)
   const EXCLUDED_LEAGUES = ['bulgaria','serbia','usl league two','fa cup · south-korea','fa cup · south korea','korean fa cup'];
   const isExcluded = (comp) => { const c=(comp||'').toLowerCase(); return EXCLUDED_LEAGUES.some(k=>c.includes(k)); };
+  function matchKey(home,away,date){ return (home+'-'+away+'-'+(date||'')).replace(/\s+/g,'-').toLowerCase(); }
   function injectAndRefresh(){
     if(updated){ buildChart(); if(typeof renderPicksFeed==='function') renderPicksFeed(); }
   }
-  fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
-    if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
-    d.picks_feed.forEach(p=>{ if(!existing.has(p.id) && !isExcluded(p.competition)){ PICKS_FEED.push(p); existing.add(p.id); updated=true; }});
-    injectAndRefresh();
-  }).catch(()=>{});
   fetch('/api/analysis-history?limit=50').then(r=>r.json()).then(d=>{
     if(!d.ok || !d.analyses) return;
     const todayStr = new Date().toISOString().slice(0,10);
     d.analyses.forEach(a=>{
       if(isExcluded(a.competition)) return;
-      const id='ah-'+String(a.home+'-'+a.away+'-'+(a.analysed_at||'')).replace(/\s+/g,'-').toLowerCase();
-      if(existing.has(id)) return;
-      const coteMoy=(c)=>Math.min(1.95,((1/(c/100))*1.45));
-      const hasResult = a.outcome === 'win' || a.outcome === 'loss';
       const dateStr = a.analysed_at ? a.analysed_at.slice(0,10) : '';
-      // Ne pas afficher en "en attente" les analyses non résolues d'un jour passé
+      const mk = matchKey(a.home,a.away,dateStr);
+      if(matchSeen.has(mk)) return;
+      const id='ah-'+mk;
+      const hasResult = a.outcome === 'win' || a.outcome === 'loss';
       if(!hasResult && dateStr !== todayStr) return;
       PICKS_FEED.push({
         id, date:dateStr,
@@ -3525,14 +3519,24 @@ document.addEventListener('click',function(e){
         competition:a.competition||a.sport||'',
         home:a.home, away:a.away,
         pick:a.bet||'Analyse IA',
-        cote: (a.cote!=null ? parseFloat(a.cote) : parseFloat(coteMoy(a.confidence).toFixed(2))),
+        cote: (a.cote!=null ? parseFloat(a.cote) : null),
         confidence:a.confidence,
         status: hasResult ? 'finished' : 'pending',
         result: hasResult ? a.outcome : null,
         score:a.final_score||a.score||null
       });
-      existing.add(id);
+      existing.add(id); matchSeen.add(mk);
       updated=true;
+    });
+    injectAndRefresh();
+  }).catch(()=>{});
+  fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
+    if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
+    d.picks_feed.forEach(p=>{
+      if(isExcluded(p.competition)) return;
+      const mk = matchKey(p.home,p.away,p.date);
+      if(matchSeen.has(mk)) return;
+      PICKS_FEED.push(p); existing.add(p.id); matchSeen.add(mk); updated=true;
     });
     injectAndRefresh();
   }).catch(()=>{});
