@@ -2,6 +2,16 @@
 
 ## 2026-07-22
 
+### P1 — Perception premium & confiance (lot 1)
+- **Section "Pourquoi nous ?"** : 6 cartes glassmorphism sur le différenciateur
+  multi-IA (5 IA pas une opinion, analyses croisées, score de confiance, historique
+  public, ROI transparent, critères explicites).
+- **Méthode passée à 5 étapes** : ajout de l'étape "Seuls les verdicts solides sont
+  publiés" (transparence sur le seuil de confiance).
+- **Comparatif des offres** : tableau clair 1€ Test / Pro / Elite sous les cartes
+  (analyses, consensus, Telegram, Signal Fort, avant-première, historique, engagement).
+- Impact : confiance, valeur perçue, conversion upsell.
+
 ### P0 — Refonte Hero orientée conversion (audit produit)
 - **Panneau "Le Conseil délibère"** (effet WOW) : vote multi-IA en direct dans le Hero.
   Chaque agent (Alpha→Sigma, anonymisé) affiche son pari + confiance + couleur
