@@ -3529,9 +3529,9 @@ document.addEventListener('click',function(e){
       updated=true;
     });
     injectAndRefresh();
-  }).catch(()=>{});
-  fetch('/api/signal-fort-stats').then(r=>r.json()).then(d=>{
-    if(!d.ok || !d.picks_feed || !d.picks_feed.length) return;
+    return fetch('/api/signal-fort-stats');
+  }).then(r=>r?r.json():null).then(d=>{
+    if(!d||!d.ok||!d.picks_feed||!d.picks_feed.length) return;
     d.picks_feed.forEach(p=>{
       if(isExcluded(p.competition)) return;
       const mk = matchKey(p.home,p.away,p.date);
