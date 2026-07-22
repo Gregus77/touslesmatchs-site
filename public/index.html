@@ -1596,6 +1596,42 @@ footer{
   </div><!-- /z-index wrapper -->
 </section>
 
+<!-- ══ BANDEAU ACTIVITÉ EN DIRECT — compteurs réels (réassurance) ══ -->
+<style>
+  .live-strip{max-width:900px;margin:0 auto;padding:0 24px}
+  .live-strip-inner{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;
+    background:rgba(13,16,32,.55);border:1px solid rgba(129,140,248,.16);border-radius:14px;
+    backdrop-filter:blur(12px);overflow:hidden}
+  .ls-item{flex:1;min-width:140px;padding:14px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.05)}
+  .ls-item:last-child{border-right:none}
+  .ls-val{font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1;margin-bottom:4px;color:#eceaf4}
+  .ls-val .ls-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#34d399;margin-right:5px;vertical-align:middle;animation:cpPulse 1.8s infinite}
+  .ls-lbl{font-size:11px;color:var(--muted2);font-weight:600;letter-spacing:.02em}
+  @media(max-width:560px){.ls-item{min-width:45%;flex:1 1 45%}.ls-item:nth-child(2){border-right:none}}
+</style>
+<div class="live-strip" id="live-strip" style="display:none">
+  <div class="live-strip-inner">
+    <div class="ls-item"><div class="ls-val"><span class="ls-live-dot"></span><span id="ls-analyses">—</span></div><div class="ls-lbl">Analyses aujourd'hui</div></div>
+    <div class="ls-item"><div class="ls-val" id="ls-ia">5</div><div class="ls-lbl">IA au vote</div></div>
+    <div class="ls-item"><div class="ls-val" id="ls-total">—</div><div class="ls-lbl">Matchs analysés</div></div>
+    <div class="ls-item"><div class="ls-val c-violet" style="color:#a78bfa" id="ls-signals">—</div><div class="ls-lbl">Signaux forts du jour</div></div>
+  </div>
+</div>
+<script>
+(function loadLiveActivity(){
+  fetch('/api/live-activity').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok) return;
+    var strip=document.getElementById('live-strip');
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('ls-analyses', d.analyses_today>0? d.analyses_today : (d.published_today||0));
+    set('ls-ia', d.ia_active||5);
+    set('ls-total', d.total_published||0);
+    set('ls-signals', d.signals_today||0);
+    if((d.total_published||0)>0 || (d.analyses_today||0)>0) strip.style.display='block';
+  }).catch(function(){});
+})();
+</script>
+
 <!-- ── BANDEAU MARCHÉ CHAMPION — "But 1ère MT" 82% ──────────────────────── -->
 <!-- Bannière champion : winrate + total remplis en direct depuis /api/signal-fort-stats
      (voir #champ-winrate / #champ-total). Chiffres réels, jamais en dur. -->

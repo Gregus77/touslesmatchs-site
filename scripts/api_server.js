@@ -5768,6 +5768,44 @@ app.get("/council-vote", (req, res) => {
   }
 });
 
+// ── Activité en direct — compteurs réels du jour (réassurance "site vivant") ──
+app.get("/live-activity", (req, res) => {
+  try {
+    const analysesToday = db.prepare(
+      "SELECT COUNT(*) AS c FROM concile_analyses WHERE date(analysed_at)=date('now')"
+    ).get()?.c || 0;
+    const publishedToday = db.prepare(
+      `SELECT COUNT(*) AS c FROM (
+         SELECT 1 FROM concile_analyses
+         WHERE date(analysed_at)=date('now') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+         GROUP BY lower(trim(home)), lower(trim(away))
+       )`
+    ).get()?.c || 0;
+    const totalPublished = db.prepare(
+      `SELECT COUNT(*) AS c FROM (
+         SELECT 1 FROM concile_analyses
+         WHERE confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+       )`
+    ).get()?.c || 0;
+    const signalsToday = db.prepare(
+      `SELECT COUNT(*) AS c FROM concile_analyses
+       WHERE date(analysed_at)=date('now') AND confidence >= ?`
+    ).get(getAdaptiveSignalThreshold())?.c || 0;
+    res.json({
+      ok: true,
+      analyses_today: analysesToday,
+      published_today: publishedToday,
+      total_published: totalPublished,
+      signals_today: signalsToday,
+      ia_active: 5,
+    });
+  } catch (e) {
+    console.error("[live-activity]", e.message);
+    res.json({ ok: false });
+  }
+});
+
 app.post("/admin/set-pick", (req, res) => {
   const { email, code, pick } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });

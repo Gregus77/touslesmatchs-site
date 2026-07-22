@@ -2,6 +2,11 @@
 
 ## 2026-07-22
 
+### P2 — Croissance (lot 1)
+- **Bandeau d'activité en direct** sous le Hero : analyses du jour, IA au vote,
+  matchs analysés (total), signaux forts du jour. Compteurs 100 % réels via
+  nouvel endpoint `/live-activity` (aucun chiffre inventé).
+
 ### P1 — Perception premium & confiance (lot 1)
 - **Section "Pourquoi nous ?"** : 6 cartes glassmorphism sur le différenciateur
   multi-IA (5 IA pas une opinion, analyses croisées, score de confiance, historique
