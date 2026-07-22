@@ -5030,7 +5030,7 @@ function getSignalFortStats() {
     const raw = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              score_home_at_analysis, score_away_at_analysis,
-             final_score_home, final_score_away, analysed_at
+             final_score_home, final_score_away, analysed_at, real_odd
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
