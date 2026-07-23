@@ -33,6 +33,11 @@
 
 ## 2026-07-23
 
+### Bilan du jour en direct (feed accueil)
+- Encart en tête de "Derniers verdicts" : analyses du jour, gagnées / perdues / en attente,
+  et total gain/perte du jour (10€/pick sur les résolues). Frontend uniquement (calculé
+  depuis PICKS_FEED, données déjà chargées). Se met à jour à la résolution des matchs.
+
 ### Sécurité — durcissement P1 + P2 (suite audit)
 - **Rate limiting maison** (aucune dépendance, en mémoire) : `/auth/login` et `/auth/register`
   limités à 20 tentatives / 15 min / IP (anti-brute-force) ; limite globale 600 req / min / IP

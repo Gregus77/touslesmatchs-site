@@ -2977,6 +2977,35 @@ function renderPicksFeed() {
     const todayISO = new Date().toISOString().slice(0,10);
     const ydayISO = new Date(Date.now()-86400000).toISOString().slice(0,10);
 
+    // ── Bilan du jour EN DIRECT : analyses du jour, gagnées/perdues/en attente + total ──
+    const todayItems = feedItems.filter(p => p.date === todayISO);
+    if (todayItems.length) {
+      const tResolved = todayItems.filter(p => p.result === 'win' || p.result === 'loss');
+      const tWins = tResolved.filter(p => p.result === 'win').length;
+      const tLoss = tResolved.length - tWins;
+      const tPending = todayItems.filter(p => p.status === 'pending').length;
+      let tTotal = 0;
+      tResolved.forEach(p => { tTotal += p.result === 'win' ? (p.cote - 1) * 10 : -10; });
+      tTotal = Math.round(tTotal);
+      const col = tTotal >= 0 ? 'var(--green)' : 'var(--red)';
+      const sign = tTotal >= 0 ? '+' : '';
+      html += `<div style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(34,211,238,.06));border:1px solid rgba(124,58,237,.28);border-radius:16px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+          <div style="display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#a78bfa">
+            <span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:cpPulse 1.8s infinite"></span>Bilan du jour en direct
+          </div>
+          <div style="font-size:20px;font-weight:900;color:${col}">${sign}${tTotal}€</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:#eceaf4">${todayItems.length}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">Analyses</div></div>
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:var(--green)">${tWins}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">Gagnées</div></div>
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:var(--red)">${tLoss}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">Perdues</div></div>
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:var(--indigo2)">${tPending}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">En attente</div></div>
+        </div>
+        ${tPending>0?`<div style="font-size:11px;color:var(--muted2);margin-top:10px;text-align:center">⏳ ${tPending} match${tPending>1?'s':''} en cours — bilan mis à jour à la résolution</div>`:''}
+      </div>`;
+    }
+
     const fmtDay = (iso) => {
       if(iso === todayISO) return "Aujourd'hui";
       if(iso === ydayISO) return "Hier";
