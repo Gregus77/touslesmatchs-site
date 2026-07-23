@@ -16,6 +16,7 @@
 - Refonte visuelle de l'accueil `public/index.html` en cockpit dashboard premium inspire de la maquette fournie.
 - Derniere passe UX : premiere vue allegee type capture, ticker masque, navigation desktop simplifiee, calendrier retire du hero.
 - Nouveau tableau dashboard branche sur `/api/live-matches` avec fallback preview locale vers le site public.
+- Passe "moins usine a gaz" : rail et KPIs caches sur le premier ecran, et faux dessin Live IA remplace par une photo sportive locale `public/assets/tlm-player-night.jpg`.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
@@ -44,6 +45,7 @@
 - Passe design supplementaire : logos bookmakers visibles dans le hero + carte joueur stylisee dans la colonne droite, pour se rapprocher de la maquette dashboard premium.
 - Passe conversion : hero simplifie en parcours "matchs en cours -> 1 euro/Telegram -> bookmakers", avec fallback local vers l'API publique pour la preview.
 - Passe sobriete apres retour fondateur : ticker masque, nav visible reduite, calendrier retire du premier ecran, tableau "Matchs en cours" branche a `/api/live-matches` et rendu mobile compacte.
+- Passe effet pro : photo sportive locale dans la carte Live IA, badges bookmakers inspires des couleurs de marque sans fichiers de logos officiels, et etat vide "Radar en cours" au lieu d'un grand tableau creux.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).
