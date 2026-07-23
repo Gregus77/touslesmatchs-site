@@ -40,6 +40,7 @@
 - Fallback ajoute pour garder le panneau central visible si `/api/council-vote` ne repond pas encore.
 - Verification locale Chrome : pas de debordement horizontal desktop/mobile, 7 liens Stripe, 10 liens Telegram, 28 references `/api/` detectees.
 - Passe design supplementaire : logos bookmakers visibles dans le hero + carte joueur stylisee dans la colonne droite, pour se rapprocher de la maquette dashboard premium.
+- Passe conversion : hero simplifie en parcours "matchs en cours -> 1 euro/Telegram -> bookmakers", avec fallback local vers l'API publique pour la preview.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).

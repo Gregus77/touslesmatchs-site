@@ -1318,12 +1318,13 @@ footer{
 .tlm-bm-mini-w{background:linear-gradient(135deg,#e30613,#871018)}
 .tlm-bm-mini-u{background:linear-gradient(135deg,#0ea35b,#064e32)}
 .tlm-bm-mini-p{background:linear-gradient(135deg,#f5b80b,#8a5b00)}
-.tlm-live-now-card{border-radius:20px;background:linear-gradient(160deg,rgba(9,16,40,.98),rgba(13,18,48,.96));border:1px solid rgba(34,211,238,.22);padding:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 18px 50px rgba(0,0,0,.28)}
+.tlm-live-now-card{border-radius:20px;background:radial-gradient(circle at 18% 0,rgba(98,255,0,.1),transparent 24%),linear-gradient(160deg,rgba(9,16,40,.98),rgba(13,18,48,.96));border:1px solid rgba(34,211,238,.28);padding:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 18px 50px rgba(0,0,0,.28)}
 .tlm-live-now-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
 .tlm-live-now-head h3{font-size:18px;font-weight:950;color:#fff;letter-spacing:-.03em}
 .tlm-live-now-head a{font-size:12px;color:#22d3ee;text-decoration:none;font-weight:900}
 .tlm-live-now-list{display:grid;gap:9px;margin-bottom:14px}
-.tlm-live-now-match{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);padding:12px}
+.tlm-live-now-match{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border-radius:14px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);padding:12px;transition:border-color .18s,background .18s,transform .18s}
+.tlm-live-now-match:hover{border-color:rgba(98,255,0,.38);background:rgba(98,255,0,.07);transform:translateY(-1px)}
 .tlm-live-now-teams{font-size:13px;font-weight:900;color:#fff;line-height:1.25}
 .tlm-live-now-meta{font-size:11px;color:var(--muted2);margin-top:3px;font-weight:700}
 .tlm-live-now-score{min-width:54px;text-align:center;border-radius:10px;background:rgba(98,255,0,.12);color:#7cff1f;padding:8px 7px;font-weight:950}
@@ -1332,6 +1333,7 @@ footer{
 .tlm-live-actions .paid{background:linear-gradient(135deg,#62ff00,#22c55e);color:#07120b}
 .tlm-live-actions .tg{background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.28);color:#67e8f9}
 .tlm-empty-live{border-radius:14px;border:1px dashed rgba(255,255,255,.16);padding:14px;color:var(--muted2);font-size:13px;line-height:1.45;text-align:center}
+.tlm-live-note{font-size:11px;color:var(--muted);margin-top:10px;text-align:center}
 .tlm-cockpit-proof{grid-area:trust;font-size:11px;color:var(--muted2);font-weight:700;text-align:left;margin:0!important;align-self:end}
 .tlm-cockpit-legal{grid-area:trust;font-size:10px;color:var(--muted);text-align:left;margin:26px 0 0!important;align-self:end}
 @media(max-width:1080px){.tlm-cockpit-shell{grid-template-columns:1fr;grid-template-areas:"intro" "teaser" "stats" "actions" "side" "trust"}.tlm-cockpit-side{grid-template-columns:1fr;grid-template-rows:auto auto}}
@@ -1748,6 +1750,7 @@ footer{
         <a class="paid" href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" rel="noopener noreferrer">Débloquer 1 analyse</a>
         <a class="tg" href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer">Recevoir sur Telegram</a>
       </div>
+      <div class="tlm-live-note">Les cotes exactes et le meilleur bookmaker apparaissent dans l'analyse du match.</div>
     </div>
     <div class="tlm-bookmaker-choice">
       <h3>Bookmakers partenaires</h3>
@@ -1787,10 +1790,13 @@ footer{
     var root=document.getElementById('tlm-live-now-list');
     if(!root) return;
     function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
-    function fallback(){
-      root.innerHTML='<div class="tlm-empty-live">Aucun match live affiché pour le moment. Rejoins Telegram ou ouvre Live IA pour recevoir les prochaines alertes.</div>';
+    function apiUrl(path){
+      return (location.hostname==='127.0.0.1'||location.hostname==='localhost') ? 'https://www.touslesmatchs.com'+path : path;
     }
-    fetch('/api/live-matches',{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    function fallback(){
+      root.innerHTML='<div class="tlm-empty-live"><strong style="color:#fff">Aucun match qualifié en live maintenant.</strong><br>Rejoins Telegram ou ouvre Live IA pour recevoir les prochaines alertes.</div>';
+    }
+    fetch(apiUrl('/api/live-matches'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
       var arr = Array.isArray(d) ? d : (d.matches || d.live || d.data || []);
       arr = arr.filter(Boolean).slice(0,3);
       if(!arr.length){ fallback(); return; }
@@ -3929,11 +3935,22 @@ async function subscribeEmail(){
 
 // ══ APERÇU DU PICK DU JOUR dans le hero (hameçon above-the-fold)
 (function heroPickTeaser(){
-  fetch('/api/current-pick?t='+Date.now(),{cache:'no-store'})
+  function pickFallback(){
+    var m = document.getElementById('hpt-match');
+    var c = document.getElementById('hpt-comp');
+    var cf = document.getElementById('hpt-conf');
+    if(m) m.textContent = 'Analyse du jour en préparation';
+    if(c) c.textContent = 'Les matchs qualifiés apparaissent ici dès publication';
+    if(cf) cf.textContent = 'Live IA';
+  }
+  var pickUrl = (location.hostname==='127.0.0.1'||location.hostname==='localhost')
+    ? 'https://www.touslesmatchs.com/api/current-pick?t='+Date.now()
+    : '/api/current-pick?t='+Date.now();
+  fetch(pickUrl,{cache:'no-store'})
     .then(function(r){return r.json();})
     .then(function(d){
       var p = d && (d.pick || d.currentPick || (d.home ? d : null));
-      if(!p || !p.home || p.home === 'Analyse en cours') return;
+      if(!p || !p.home || p.home === 'Analyse en cours'){ pickFallback(); return; }
       var el = document.getElementById('hero-pick-teaser');
       if(!el) return;
       var m = document.getElementById('hpt-match');
@@ -3945,7 +3962,7 @@ async function subscribeEmail(){
       var conf = p.confidence ? (p.confidence > 10 ? Math.round(p.confidence) : Math.round(p.confidence*10)) : null;
       if(cf && conf) cf.textContent = 'Confiance ' + conf + '%';
       el.style.display = 'block';
-    }).catch(function(){});
+    }).catch(pickFallback);
 })();
 
 // ══ GAINS RÉELS — calcul depuis PICKS_FEED
