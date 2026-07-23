@@ -19,6 +19,7 @@ const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
 const { bookmakerButtons } = require("./bookmakers.config");
+const seoPages = require("./seo_pages");
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -5720,6 +5721,57 @@ app.get("/current-pick", (req, res) => {
   } catch (e) { /* picks.json absent ou invalide */ }
   // 2. Fallback sur le pick manuel admin
   res.json({ ok: true, pick: normalizeCurrentPick(loadPick(), "manual-admin") });
+});
+
+// ── Pages SEO (pronostics) — contenu public indexable ────────────────────────
+// On ne génère des pages QUE pour les analyses résolues (win/loss) : ce sont des
+// preuves historiques (comme /performances), aucun pick payant n'est dévoilé.
+function seoPublishedRows(limit) {
+  try {
+    const rows = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, raison, real_odd, outcome, analysed_at
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
+        ) AS _rn
+        FROM concile_analyses
+        WHERE date(analysed_at) >= '2026-07-03'
+          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND outcome IN ('win','loss')
+      ) WHERE _rn = 1
+      ORDER BY analysed_at DESC
+      LIMIT ?
+    `).all(limit);
+    return rows.filter(r => !isNoiseForDisplay(r)).map(r => ({
+      home: r.home, away: r.away, competition: r.competition, sport: r.sport || "Football",
+      date: r.analysed_at, bet: maskAiNamesGlobal(r.best_bet || "Analyse IA"),
+      confidence: r.confidence, cote: rowOdd(r), outcome: r.outcome,
+      reasoning: maskAiNamesGlobal(r.raison || ""),
+    }));
+  } catch (e) { console.error("[seo] rows:", e.message); return []; }
+}
+
+app.get("/pronostics", (req, res) => {
+  const items = seoPublishedRows(500);
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(seoPages.renderIndex(items));
+});
+
+app.get("/pronostic/:slug", (req, res) => {
+  const items = seoPublishedRows(500);
+  const slug = String(req.params.slug || "").toLowerCase();
+  const item = items.find(it => seoPages.matchSlug(it) === slug);
+  if (!item) { res.redirect(302, "/pronostics"); return; }
+  const related = items.filter(it => seoPages.matchSlug(it) !== slug).slice(0, 6);
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(seoPages.renderDetail(item, related));
+});
+
+app.get("/sitemap-pronostics.xml", (req, res) => {
+  const items = seoPublishedRows(1000);
+  res.set("Content-Type", "application/xml; charset=utf-8");
+  res.send(seoPages.renderSitemap(items));
 });
 
 // ── Le Conseil délibère — votes anonymisés du pick du jour ───────────────────

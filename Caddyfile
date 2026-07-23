@@ -12,6 +12,16 @@ www.touslesmatchs.com {
     handle /current-pick {
         reverse_proxy api:3001
     }
+    # Pages SEO dynamiques (pronostics) servies par l'API
+    handle /pronostics {
+        reverse_proxy api:3001
+    }
+    handle /pronostic/* {
+        reverse_proxy api:3001
+    }
+    handle /sitemap-pronostics.xml {
+        reverse_proxy api:3001
+    }
     handle /signal-fort-stats {
         reverse_proxy api:3001
     }

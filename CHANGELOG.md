@@ -10,6 +10,19 @@
   Le résultat n'est posté que sur les canaux ayant réellement reçu le pick.
   Garde-fous ARJEL + qualité + cote mini **inchangés** (aucun assouplissement).
 
+### P2 — Croissance (lot 3) — pages SEO dynamiques
+- **Nouveau module `scripts/seo_pages.js`** (isolé, ne touche pas la base).
+- **Pages `/pronostic/:slug`** : une page riche par analyse résolue (verdict du
+  Conseil, confiance, cote, raisonnement, Schema.org SportsEvent, liens internes).
+  Cible le long-tail Google ("pronostic <équipe> <équipe>").
+- **Page `/pronostics`** : index de toutes les analyses (Schema.org CollectionPage).
+- **`sitemap-pronostics.xml`** dynamique + référencé dans robots.txt.
+- **Sécurité** : uniquement les analyses RÉSOLUES (win/loss) → preuves historiques,
+  aucun pick payant dévoilé. Filtre bruit/ligues douteuses. Conforme ANJ (pas de
+  "pari", disclaimer, 18+, aucune garantie de gain).
+- Routes Caddy ajoutées + liens footer/sitemap pour l'indexation.
+- Impact : trafic organique Google, autorité SEO.
+
 ### P2 — Croissance (lot 2) — tunnel de conversion
 - **Section tunnel "Commence gratuitement en 3 étapes"** avant les offres :
   1) voir l'analyse du jour (gratuit) → 2) créer un compte gratuit → 3) passer Pro/Elite.

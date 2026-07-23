@@ -5,3 +5,4 @@ Disallow: /admin-dashboard
 Disallow: /api/
 
 Sitemap: https://www.touslesmatchs.com/sitemap.xml
+Sitemap: https://www.touslesmatchs.com/sitemap-pronostics.xml
