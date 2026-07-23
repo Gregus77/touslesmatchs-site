@@ -10,6 +10,13 @@
   Le résultat n'est posté que sur les canaux ayant réellement reçu le pick.
   Garde-fous ARJEL + qualité + cote mini **inchangés** (aucun assouplissement).
 
+### P2 — Croissance (lot 2) — tunnel de conversion
+- **Section tunnel "Commence gratuitement en 3 étapes"** avant les offres :
+  1) voir l'analyse du jour (gratuit) → 2) créer un compte gratuit → 3) passer Pro/Elite.
+- **Compte gratuit reconnecté au funnel** : liens `/dashboard` ajoutés dans la nav
+  (desktop + menu mobile). Le dashboard existait mais n'était lié nulle part.
+- Impact : conversion (parcours progressif visiteur → inscrit → abonné).
+
 ### P2 — Croissance (lot 1)
 - **Bandeau d'activité en direct** sous le Hero : analyses du jour, IA au vote,
   matchs analysés (total), signaux forts du jour. Compteurs 100 % réels via

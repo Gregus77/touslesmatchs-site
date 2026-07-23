@@ -1165,6 +1165,7 @@ footer{
     <a href="/performances">Performances</a>
     <a href="#methode">Méthode</a>
     <a href="#faq">FAQ</a>
+    <a href="/dashboard" style="color:#34d399!important">✨ Compte gratuit</a>
     <a href="#plans" data-i18n="nav_join">Abonnements</a>
     <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)!important">📱 Telegram</a>
     <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=nav&utm_campaign=prospection" target="_blank" rel="noopener noreferrer" style="color:#fb7185!important">TikTok</a>
@@ -1182,6 +1183,7 @@ footer{
   <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="/bankroll">💼 Ma bankroll</a>
+  <a href="/dashboard" style="color:#34d399" onclick="toggleMenu()">✨ Créer un compte gratuit</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
   <a href="/#plan-carte" class="mm-cta" onclick="toggleMenu()">Abonnement</a>
@@ -1884,6 +1886,52 @@ footer{
 </section>
 
 <!-- PLANS -->
+<!-- ══ TUNNEL — commence gratuitement en 3 étapes ══ -->
+<style>
+  .funnel-section{max-width:1000px;margin:60px auto 0;padding:0 24px;text-align:center}
+  .funnel-eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#34d399;margin-bottom:10px}
+  .funnel-title{font-size:clamp(24px,4vw,38px);font-weight:900;letter-spacing:-.03em;margin-bottom:34px;line-height:1.12}
+  .funnel-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:30px}
+  .funnel-step{position:relative;background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid rgba(129,140,248,.18);border-radius:16px;padding:26px 20px;text-align:left;backdrop-filter:blur(10px)}
+  .funnel-num{position:absolute;top:-14px;left:20px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 4px 14px rgba(16,185,129,.4)}
+  .funnel-step.s2 .funnel-num{background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 4px 14px rgba(124,58,237,.4)}
+  .funnel-step.s3 .funnel-num{background:linear-gradient(135deg,#d97706,#f59e0b);box-shadow:0 4px 14px rgba(245,158,11,.4)}
+  .funnel-h{font-size:16px;font-weight:800;color:#eceaf4;margin:12px 0 6px;letter-spacing:-.01em}
+  .funnel-p{font-size:13px;color:var(--muted2);line-height:1.55}
+  .funnel-badge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-bottom:2px}
+  .funnel-badge.free{color:#34d399;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.28)}
+  .funnel-badge.pay{color:#f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28)}
+  .funnel-cta{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:16px;font-weight:900;padding:16px 38px;border-radius:13px;text-decoration:none;box-shadow:0 8px 28px rgba(16,185,129,.35);transition:all .25s}
+  .funnel-cta:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(16,185,129,.5)}
+  @media(max-width:720px){.funnel-steps{grid-template-columns:1fr;gap:22px}}
+</style>
+<section class="funnel-section">
+  <div class="funnel-eyebrow">Commence gratuitement</div>
+  <h2 class="funnel-title">3 étapes. Zéro carte bancaire<br>pour démarrer.</h2>
+  <div class="funnel-steps">
+    <div class="funnel-step s1">
+      <div class="funnel-num">1</div>
+      <span class="funnel-badge free">Gratuit</span>
+      <div class="funnel-h">Regarde l'analyse du jour</div>
+      <div class="funnel-p">Le verdict du Conseil, le consensus des 5 IA et le score de confiance — visibles directement sur le site, sans inscription.</div>
+    </div>
+    <div class="funnel-step s2">
+      <div class="funnel-num">2</div>
+      <span class="funnel-badge free">Gratuit</span>
+      <div class="funnel-h">Crée ton compte</div>
+      <div class="funnel-p">Suis tes analyses, garde ton historique personnel et reçois les picks. Toujours sans engagement, sans carte.</div>
+    </div>
+    <div class="funnel-step s3">
+      <div class="funnel-num">3</div>
+      <span class="funnel-badge pay">Quand tu es convaincu</span>
+      <div class="funnel-h">Passe Pro ou Elite</div>
+      <div class="funnel-p">Débloque les analyses Live IA illimitées et les alertes Signal Fort. Annulable à tout moment.</div>
+    </div>
+  </div>
+  <a href="/dashboard" class="funnel-cta">✨ Créer mon compte gratuit</a>
+  <div style="margin-top:12px;font-size:12px;color:var(--muted2)">0€ · Sans carte bancaire · Désinscription en 1 clic</div>
+</section>
+
 <section class="plans-section" id="plans">
   <div class="s-eyebrow">Offres</div>
   <div class="s-title">Teste. Puis decide.</div>
