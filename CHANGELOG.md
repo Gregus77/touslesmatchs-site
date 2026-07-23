@@ -33,6 +33,13 @@
 
 ## 2026-07-23
 
+### Signaux Telegram : PLUS JAMAIS de cote calculée — seulement la vraie cote bookmaker
+- Signal fort ET message de résultat : la cote (et le gain) ne s'affichent QUE si c'est
+  une **vraie cote bookmaker** (real_odd_source = Winamax/Unibet/PMU/…). Si seule une
+  estimation existe → aucune cote affichée (fini les chiffres calculés dans les groupes).
+- Note : la vraie cote provient de l'endpoint /odds (pré-match). Pour la cote EXACTE au
+  moment de l'envoi pendant le match (in-play), il faut l'endpoint /odds/live = plan Pro API.
+
 ### Cote envoyée AVEC le signal (Telegram premium/élite) — zéro requête API en plus
 - Le message de signal fort premium affiche désormais la cote + bookmaker directement :
   `💰 Cote : 1.87 (Unibet)`. La cote est **déjà calculée** au moment de l'analyse

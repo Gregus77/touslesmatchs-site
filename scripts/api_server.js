@@ -3062,7 +3062,9 @@ Réponds en JSON pur (pas de markdown):
       // supplémentaire. On l'envoie AVEC le signal, avec le bookmaker source si réel.
       const _bmSig = (analysisResult.cote_source && !/estimation/i.test(String(analysisResult.cote_source)))
         ? ` <i>(${analysisResult.cote_source})</i>` : "";
-      const coteSig = analysisResult.cote ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
+      // On n'affiche la cote QUE si c'est une VRAIE cote bookmaker (jamais l'estimation).
+      const coteSig = (analysisResult.cote && _bmSig)
+        ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse exacte du Concile (sélection + raison) est réservée aux abonnés.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'analyse – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -5323,6 +5325,8 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const _bm = analysis.real_odd_source && !/estimation/i.test(String(analysis.real_odd_source))
     ? String(analysis.real_odd_source) : null;
   const bmSuffix = _bm ? ` <i>(${_bm})</i>` : "";
+  // Cote/gain affichés UNIQUEMENT si vraie cote bookmaker (jamais l'estimation).
+  const hasReal = !!_bm;
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -5331,9 +5335,9 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>${bmSuffix}`,
+    `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
-    outcome === "win"
+    outcome === "win" && hasReal
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
       : ``,
     ``,
@@ -5349,9 +5353,9 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>${bmSuffix}`,
+    `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
-    outcome === "win"
+    outcome === "win" && hasReal
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
       : ``,
     ``,
