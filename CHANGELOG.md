@@ -33,6 +33,16 @@
 
 ## 2026-07-23
 
+### Cohérence cotes : nom du bookmaker sur Telegram + site
+- **fetchRealOdds** privilégie désormais NOS bookmakers partenaires (Winamax, Unibet, PMU)
+  puis tout ARJEL, puis le premier — pour que le bookmaker affiché soit cliquable.
+- **Telegram** (résultat Signal Fort) : la cote affiche le bookmaker source, ex : `Cote : 1.87 (Unibet)`
+  (masqué si cote estimée).
+- **Site** (carte du pick) : ajout de "chez <Bookmaker>" sous la cote.
+- **/current-pick** renvoie désormais `bookmaker` (source réelle, null si estimation).
+- Note : les cotes proviennent de l'endpoint /odds (pré-match). Avec le garde-fou
+  "victoire déjà jouée", elles restent cohérentes. Cotes 100% in-play = étape séparée (plan API).
+
 ### Fix crédibilité : garde-fou "victoire déjà jouée" (Signal Fort)
 - **Bug** : un signal "Victoire Apollon Limassol" est parti à la 64' alors que le score
   était 0-3 (pari déjà joué), avec une cote pré-match Unibet (1.87) irréaliste pour du live.

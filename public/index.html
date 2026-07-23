@@ -2746,6 +2746,7 @@ function renderPick(){
             <div class="cote-group">
               <div class="cl">${i18n.t('avg_odds')}</div>
               <div class="cn">${PICK.cote}</div>
+              ${PICK.bookmaker?`<div style="font-size:10px;color:var(--muted2);font-weight:600;margin-top:2px">chez ${PICK.bookmaker}</div>`:''}
             </div>
             ${_isPaid
               ? `<div class="vblock">
@@ -3458,6 +3459,7 @@ async function initPick(){
     PICK.marketType = p.marketType||p.bet||PICK.marketType;
     PICK.marketLabel = p.marketLabel||p.prono||PICK.marketLabel;
     PICK.cote = parseFloat(p.cote)||PICK.cote;
+    PICK.bookmaker = p.bookmaker || PICK.bookmaker || null;
     PICK.status = (p.status==='win'||p.status==='loss'||p.status==='GAGNE'||p.status==='PERDU') ? 'result' : 'upcoming';
     PICK.result = p.result||(p.status==='win'||p.status==='GAGNE'?'win':p.status==='loss'||p.status==='PERDU'?'loss':null);
     if(p.scoreA!=null) PICK.scoreA=p.scoreA;

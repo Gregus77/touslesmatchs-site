@@ -2322,9 +2322,12 @@ async function fetchRealOdds(match) {
     );
     const bookmakers = resp?.response?.[0]?.bookmakers || [];
     if (bookmakers.length) {
-      const chosen = bookmakers.find(bm =>
-        ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a))
-      ) || bookmakers[0];
+      // On privilégie NOS bookmakers partenaires (cliquables sur le site : Winamax,
+      // Unibet, PMU), puis n'importe quel ARJEL, puis le premier disponible.
+      const PARTNER = ["winamax", "unibet", "pmu"];
+      const chosen = bookmakers.find(bm => PARTNER.some(a => String(bm.name || "").toLowerCase().includes(a)))
+        || bookmakers.find(bm => ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a)))
+        || bookmakers[0];
       data = { bookmaker: chosen.name, bets: chosen.bets || [] };
     }
   } catch (e) { console.error("[odds]", e.message); data = null; }
@@ -5311,6 +5314,10 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const stats = getSignalFortStats();
   const coteAffichee = rowOdd(analysis).toFixed(2);
   const gain = (10 * parseFloat(coteAffichee)).toFixed(2);
+  // Nom du bookmaker source (transparence) — sauf si cote estimée
+  const _bm = analysis.real_odd_source && !/estimation/i.test(String(analysis.real_odd_source))
+    ? String(analysis.real_odd_source) : null;
+  const bmSuffix = _bm ? ` <i>(${_bm})</i>` : "";
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -5319,7 +5326,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>${bmSuffix}`,
     ``,
     outcome === "win"
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
@@ -5337,7 +5344,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>${bmSuffix}`,
     ``,
     outcome === "win"
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
@@ -5852,7 +5859,7 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg " +
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
@@ -5880,7 +5887,9 @@ function refreshDailyPickFromDB() {
         sport: pick.sport || "Football",
         date: matchDate, time: "",
         best_bet: pick.best_bet || "Analyse IA", confidence: pick.confidence,
-        cote: Number(coteVal.toFixed(2)), raison: maskAiNamesGlobal(pick.raison || ""),
+        cote: Number(coteVal.toFixed(2)),
+        bookmaker: (pick.real_odd_source && !/estimation/i.test(String(pick.real_odd_source))) ? String(pick.real_odd_source) : null,
+        raison: maskAiNamesGlobal(pick.raison || ""),
         home_logo: pick.home_logo || null, away_logo: pick.away_logo || null,
         home_form: pick.home_form || null, away_form: pick.away_form || null,
         home_goals_avg: pick.home_goals_avg != null ? pick.home_goals_avg : null,
