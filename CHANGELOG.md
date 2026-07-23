@@ -17,6 +17,9 @@
 - Derniere passe UX : premiere vue allegee type capture, ticker masque, navigation desktop simplifiee, calendrier retire du hero.
 - Nouveau tableau dashboard branche sur `/api/live-matches` avec fallback preview locale vers le site public.
 - Passe "moins usine a gaz" : rail et KPIs caches sur le premier ecran, et faux dessin Live IA remplace par une photo sportive locale `public/assets/tlm-player-night.jpg`.
+- Moteur signaux par palier ajoute dans `scripts/api_server.js` : Standard 3/jour >=88, Premium 10/jour >=90, Elite 30/jour >=90, cote reelle ARJEL >=1.50, sports cibles foot/basket/hockey/baseball.
+- Nouvelles routes : `GET /api/tier-signals`, `POST /internal/tier-signals/preview`, `POST /internal/tier-signals/send` (`dryRun` par defaut).
+- Auto-envoi prepare mais desactive par defaut : `TIER_SIGNALS_AUTO_SEND=1` requis pour declencher l'envoi periodique.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
@@ -46,6 +49,7 @@
 - Passe conversion : hero simplifie en parcours "matchs en cours -> 1 euro/Telegram -> bookmakers", avec fallback local vers l'API publique pour la preview.
 - Passe sobriete apres retour fondateur : ticker masque, nav visible reduite, calendrier retire du premier ecran, tableau "Matchs en cours" branche a `/api/live-matches` et rendu mobile compacte.
 - Passe effet pro : photo sportive locale dans la carte Live IA, badges bookmakers inspires des couleurs de marque sans fichiers de logos officiels, et etat vide "Radar en cours" au lieu d'un grand tableau creux.
+- Moteur Telegram/site par palier : colonnes `sig_sent_standard` / `sig_sent_elite`, endpoint public de volumes du jour, routes internes Hermes preview/send, et section "#paliers" alignee sur les nouvelles regles.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).

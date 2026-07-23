@@ -2292,6 +2292,7 @@ footer{
   .tier-kpi .v{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1}
   .tier-kpi .l{font-size:11px;color:var(--muted2);font-weight:600;margin-top:5px}
   .tier-desc{font-size:12.5px;color:var(--muted2);text-align:center;margin-bottom:18px;line-height:1.5}
+  .tier-live-line{font-size:12px;color:#7cff1f;text-align:center;margin:-8px 0 18px;font-weight:800}
   .tier-recent a,.tier-recent div.row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--b1);border-radius:10px;margin-bottom:7px;font-size:13px}
   .tier-recent .b{flex-shrink:0}
   .tier-recent .m{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600}
@@ -2310,6 +2311,7 @@ footer{
   </div>
   <div class="tier-panel">
     <div class="tier-desc" id="tier-desc"></div>
+    <div class="tier-live-line" id="tier-live-line" style="display:none"></div>
     <div class="tier-kpis">
       <div class="tier-kpi"><div class="v c-green" id="tier-wr">—</div><div class="l">Réussite</div></div>
       <div class="tier-kpi"><div class="v" style="color:#eceaf4" id="tier-total">—</div><div class="l">Analyses</div></div>
@@ -2321,16 +2323,21 @@ footer{
 <script>
 (function(){
   var DESCS={
-    standard:"🟢 Standard — les analyses les plus sûres du Conseil (confiance ≥ 88%, jouables sur bookmaker français). Faible volume, haute exigence.",
-    premium:"🟣 Premium — plus de volume (confiance ≥ 85%, ARJEL). Inclut tout le Standard.",
-    elite:"🟠 Elite — l'intégralité des analyses publiées, y compris les matchs « IA seulement » non couverts par les bookmakers français. Le plus gros volume : fait pour ceux qui ont le temps de suivre."
+    standard:"🟢 Standard — 3 signaux maximum par jour, confiance ≥ 88%, cote réelle ARJEL ≥ 1.50. Faible volume, haute exigence.",
+    premium:"🟣 Premium — 10 signaux maximum par jour, confiance ≥ 90%, avant-match ou live, cote réelle ARJEL ≥ 1.50.",
+    elite:"🟠 Elite — 30 signaux maximum par jour, confiance ≥ 90%, football, hockey, baseball et basket, cote réelle ARJEL ≥ 1.50."
   };
-  var DATA=null, current='standard';
+  var DATA=null, LIVE=null, current='standard';
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
   window.showTier=function(t){
     current=t;
     document.querySelectorAll('.tier-tab').forEach(function(el){el.classList.toggle('active',el.dataset.t===t);});
     var d=document.getElementById('tier-desc'); if(d)d.textContent=DESCS[t]||'';
+    var live=document.getElementById('tier-live-line');
+    if(live&&LIVE&&LIVE[t]){
+      live.style.display='block';
+      live.textContent=(LIVE[t].available||0)+' signaux disponibles aujourd hui · '+(LIVE[t].sent||0)+' envoyés / '+(LIVE[t].dailyCap||0);
+    } else if(live){ live.style.display='none'; }
     if(!DATA||!DATA[t]){return;}
     var s=DATA[t];
     var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
@@ -2356,6 +2363,10 @@ footer{
     if(!d||!d.ok||!d.tiers){document.getElementById('paliers').style.display='none';return;}
     DATA=d.tiers; window.showTier('standard');
   }).catch(function(){var p=document.getElementById('paliers');if(p)p.style.display='none';});
+  fetch('/api/tier-signals').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok||!d.tiers)return;
+    LIVE=d.tiers; window.showTier(current);
+  }).catch(function(){});
 })();
 </script>
 

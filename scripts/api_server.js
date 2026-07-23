@@ -353,6 +353,8 @@ ensureColumn("concile_analyses", "real_odd_source", "TEXT DEFAULT NULL");
 // poster le résultat (gagné/perdu) que sur les canaux qui ont vu le pick.
 ensureColumn("concile_analyses", "sig_sent_free",    "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_premium", "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_standard","INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_elite",   "INTEGER DEFAULT 0");
 
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
@@ -663,11 +665,20 @@ const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmat
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
+const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_CHANNEL_ID || "";
 const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || process.env.TELEGRAM_VIP_CHANNEL_ID || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
-const PREMIUM_SIGNAL_DAILY_CAP = 4; // qualité > volume : seuls les meilleurs paris du jour
+const _eliteSignalDaily = { date: "", count: 0 };
+const TIER_SIGNAL_RULES = {
+  standard: { label: "Standard", minConfidence: 88, minOdd: 1.50, dailyCap: 3, arjelOnly: true },
+  premium:  { label: "Premium",  minConfidence: 90, minOdd: 1.50, dailyCap: 10, arjelOnly: true },
+  elite:    { label: "Elite",    minConfidence: 90, minOdd: 1.50, dailyCap: 30, arjelOnly: true },
+};
+const TIER_SIGNALS_AUTO_SEND = process.env.TIER_SIGNALS_AUTO_SEND === "1";
+const PREMIUM_SIGNAL_DAILY_CAP = TIER_SIGNAL_RULES.premium.dailyCap;
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
@@ -2331,6 +2342,151 @@ function rowOdd(r) {
   return estimateMarketOdd(r?.confidence || 0, r?.best_bet || "");
 }
 
+function normTierSport(sport = "") {
+  const s = String(sport || "Football").toLowerCase();
+  if (/basket/.test(s)) return "Basketball";
+  if (/hockey|nhl/.test(s)) return "Hockey";
+  if (/base.?ball|mlb/.test(s)) return "Baseball";
+  if (/foot|soccer/.test(s)) return "Football";
+  return String(sport || "Football");
+}
+
+function isSupportedTierSport(sport = "") {
+  return ["Football", "Basketball", "Hockey", "Baseball"].includes(normTierSport(sport));
+}
+
+function tierSignalHasRealArjelOdd(row) {
+  const odd = row && (row.real_odd || row.cote);
+  const source = String(row?.real_odd_source || row?.cote_source || "").toLowerCase();
+  return !!(odd && odd >= 1.5 && ARJEL_BOOKMAKERS.some(a => source.includes(a)));
+}
+
+function isTierMarketAllowed(row) {
+  const sport = normTierSport(row?.sport);
+  const bet = String(row?.best_bet || row?.bet || "").toLowerCase();
+  if (!isSupportedTierSport(sport)) return { ok: false, reason: "sport_non_cible" };
+  if (sport === "Football") return { ok: true };
+  if (/vainqueur|winner|victoire/.test(bet) && !/nul|draw/.test(bet)) return { ok: true };
+  return { ok: false, reason: "marche_non_moneyline" };
+}
+
+function tierSignalScore(row) {
+  const odd = rowOdd(row);
+  const confidence = Number(row?.confidence || 0);
+  const sportBoost = normTierSport(row?.sport) === "Football" ? 0 : 1.5;
+  const arjelBoost = tierSignalHasRealArjelOdd(row) ? 4 : 0;
+  return Math.round((confidence * 10 + Math.min(odd, 2.6) * 30 + arjelBoost + sportBoost) * 10) / 10;
+}
+
+function getTierSignalEligibility(row) {
+  const confidence = Number(row?.confidence || 0);
+  const odd = rowOdd(row);
+  const market = isTierMarketAllowed(row);
+  if (!market.ok) return { tiers: [], reason: market.reason };
+  if (isWomenMatch(row) || (!isUefaCompetition(row) && isLowTrustCompetition(row))) {
+    return { tiers: [], reason: "competition_bloquee" };
+  }
+  if (!tierSignalHasRealArjelOdd(row)) {
+    return { tiers: [], reason: "cote_arjel_reelle_absente" };
+  }
+  const tiers = Object.entries(TIER_SIGNAL_RULES)
+    .filter(([, rule]) => confidence >= rule.minConfidence && odd >= rule.minOdd)
+    .map(([tier]) => tier);
+  return { tiers, reason: tiers.length ? "ok" : "seuil_insuffisant" };
+}
+
+function buildTierSignalMessage(row, tier) {
+  const rule = TIER_SIGNAL_RULES[tier] || TIER_SIGNAL_RULES.standard;
+  const sport = normTierSport(row.sport);
+  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
+  const moment = row.minute_at_analysis || row.minute
+    ? `⏱ ${row.minute_at_analysis || row.minute}'`
+    : "Avant-match";
+  const score = row.score_home_at_analysis != null
+    ? ` · Score : ${row.score_home_at_analysis}-${row.score_away_at_analysis}`
+    : "";
+  const reason = maskAiNamesGlobal(String(row.raison || row.reason || "").slice(0, 220));
+  return [
+    `🚨 <b>SIGNAL ${rule.label.toUpperCase()} — ${row.confidence}%</b>`,
+    ``,
+    `${sportIcons[sport] || "🎯"} <b>${row.home} vs ${row.away}</b>`,
+    row.competition ? `🏆 ${row.competition}` : "",
+    `${moment}${score}`,
+    ``,
+    `💡 Analyse IA : <b>${maskAiNamesGlobal(row.best_bet || row.bet || "")}</b>`,
+    `📊 Confiance : <b>${row.confidence}%</b> · Cote ARJEL : <b>${rowOdd(row).toFixed(2)}</b>`,
+    row.real_odd_source ? `🏦 Source cote : <b>${row.real_odd_source}</b>` : "",
+    reason ? `\n<i>${reason}</i>` : "",
+    ``,
+    `━━━━━━━━━━━━━━━━━━`,
+    `🤖 Concile IA — TousLesMatchs`,
+    `⚠️ 18+ — Jeu responsable`,
+  ].filter(Boolean).join("\n");
+}
+
+function countTierSignalsSentToday(tier, dateStr = new Date().toISOString().slice(0, 10)) {
+  const col = tier === "standard" ? "sig_sent_standard" : tier === "elite" ? "sig_sent_elite" : "sig_sent_premium";
+  try {
+    return db.prepare(`SELECT COUNT(*) AS c FROM concile_analyses WHERE date(analysed_at)=? AND ${col}=1`).get(dateStr)?.c || 0;
+  } catch (_) { return 0; }
+}
+
+function selectTierSignalCandidates({ day = new Date().toISOString().slice(0, 10), limit = 120 } = {}) {
+  const rows = db.prepare(`
+    SELECT id, home, away, competition, sport, best_bet, confidence, raison,
+           consensus_votes, analysed_at, minute_at_analysis, score_home_at_analysis,
+           score_away_at_analysis, real_odd, real_odd_source, outcome,
+           sig_sent_standard, sig_sent_premium, sig_sent_elite
+    FROM (
+      SELECT *, ROW_NUMBER() OVER (
+        PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at), lower(trim(best_bet))
+        ORDER BY confidence DESC, analysed_at DESC
+      ) AS _rn
+      FROM concile_analyses
+      WHERE date(analysed_at)=?
+        AND (outcome IS NULL OR outcome='pending')
+        AND confidence >= ?
+        AND real_odd IS NOT NULL
+        AND real_odd >= ?
+    )
+    WHERE _rn = 1
+    ORDER BY confidence DESC, real_odd DESC, analysed_at DESC
+    LIMIT ?
+  `).all(day, TIER_SIGNAL_RULES.standard.minConfidence, TIER_SIGNAL_RULES.standard.minOdd, limit);
+
+  return rows.map(r => {
+    const eligibility = getTierSignalEligibility(r);
+    return {
+      ...r,
+      sport: normTierSport(r.sport),
+      cote: rowOdd(r),
+      score: tierSignalScore(r),
+      eligible_tiers: eligibility.tiers,
+      reject_reason: eligibility.reason,
+    };
+  }).sort((a, b) => b.score - a.score);
+}
+
+async function sendTierSignal(row, tier) {
+  const rule = TIER_SIGNAL_RULES[tier];
+  const channel = tier === "standard" ? TELEGRAM_STANDARD_CHANNEL_ID
+    : tier === "elite" ? TELEGRAM_ELITE_CHANNEL_ID
+    : TELEGRAM_PREMIUM_CHANNEL_ID;
+  if (!rule || !channel || !TELEGRAM_BOT_TOKEN) return { ok: false, reason: "channel_missing" };
+  if (!row.eligible_tiers?.includes(tier)) return { ok: false, reason: row.reject_reason || "not_eligible" };
+  const alreadySent = tier === "standard" ? row.sig_sent_standard : tier === "elite" ? row.sig_sent_elite : row.sig_sent_premium;
+  if (alreadySent) return { ok: false, reason: "already_sent" };
+  const today = new Date().toISOString().slice(0, 10);
+  if (countTierSignalsSentToday(tier, today) >= rule.dailyCap) return { ok: false, reason: "daily_cap" };
+  const ok = await sendTelegramMessage(channel, buildTierSignalMessage(row, tier));
+  if (ok) {
+    if (tier === "standard") markSignalSent(row.home, row.away, "sig_sent_standard");
+    else if (tier === "elite") markSignalSent(row.home, row.away, "sig_sent_elite");
+    else markSignalSent(row.home, row.away, "sig_sent_premium");
+  }
+  return { ok, reason: ok ? "sent" : "telegram_failed" };
+}
+
 function parseMatchStats(data) {
   if (!data?.response?.length) return null;
   const home = data.response[0]?.statistics || [];
@@ -2994,23 +3150,33 @@ Réponds en JSON pur (pas de markdown):
       // Barrière ARJEL : les clients ne reçoivent QUE des paris jouables sur un
       // bookmaker français agréé (cote réelle Betclic/Winamax/Unibet/PMU…). Sinon
       // (cote estimée ou bookmaker non-ARJEL) → admin uniquement.
-      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a))
-        || isArjelMajorCompetition(match);
+      const arjelPlayable = tierSignalHasRealArjelOdd({ real_odd: analysisResult.cote, real_odd_source: analysisResult.cote_source });
       if (!arjelPlayable) {
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
+      const marketTierOk = isTierMarketAllowed({ ...match, best_bet: analysisResult.best_bet }).ok;
+      const standardTierOk = analysisResult.confidence >= TIER_SIGNAL_RULES.standard.minConfidence && analysisResult.cote >= TIER_SIGNAL_RULES.standard.minOdd && marketTierOk;
+      const premiumTierOk = analysisResult.confidence >= TIER_SIGNAL_RULES.premium.minConfidence && analysisResult.cote >= TIER_SIGNAL_RULES.premium.minOdd && marketTierOk;
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
       // Premium/Elite : reçoit l'analyse complète de CHAQUE signal jouable ARJEL
       // (plafonné à PREMIUM_SIGNAL_DAILY_CAP/jour). Les abonnés paient — ils reçoivent
       // au moins autant que le gratuit, avec la sélection + la raison en clair.
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && premiumTierOk && countTierSignalsSentToday("premium", todayStr) < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
         markSignalSent(match.home, match.away, "sig_sent_premium");
         sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${grade.elite ? "ELITE " : ""}${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
-      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable) {
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && premiumTierOk) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
       // Copie ADMIN : l'admin reçoit TOUS les signaux forts (même hors ARJEL), sans limite.
+      if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = 0; }
+      if (TELEGRAM_ELITE_CHANNEL_ID && arjelPlayable && premiumTierOk && countTierSignalsSentToday("elite", todayStr) < TIER_SIGNAL_RULES.elite.dailyCap) {
+        _eliteSignalDaily.count++;
+        markSignalSent(match.home, match.away, "sig_sent_elite");
+        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${TIER_SIGNAL_RULES.elite.dailyCap}) ${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
+      } else if (TELEGRAM_ELITE_CHANNEL_ID && arjelPlayable && premiumTierOk) {
+        console.log(`[signal-fort] Elite: plafond ${TIER_SIGNAL_RULES.elite.dailyCap}/jour atteint, skip`);
+      }
       if (TELEGRAM_ADMIN_CHAT_ID) {
         const adminHeader = arjelPlayable
           ? `👑 <b>[ADMIN · copie signal]</b>\n🏦 Bookmaker : ${analysisResult.cote_source}`
@@ -3018,11 +3184,11 @@ Réponds en JSON pur (pas de markdown):
         sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `${adminHeader}\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
       }
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      if (arjelPlayable && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+      if (arjelPlayable && standardTierOk && countTierSignalsSentToday("standard", todayStr) < TIER_SIGNAL_RULES.standard.dailyCap && TELEGRAM_STANDARD_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
-        markSignalSent(match.home, match.away, "sig_sent_free");
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
-      } else if (arjelPlayable) {
+        markSignalSent(match.home, match.away, "sig_sent_standard");
+        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram standard (${_freeSignalDailyDate.count}/${TIER_SIGNAL_RULES.standard.dailyCap}): ${ok ? "OK" : "FAIL"}`));
+      } else if (arjelPlayable && standardTierOk) {
         console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
       }
     }
@@ -5287,22 +5453,25 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   // le pick. Un signal jamais diffusé (bloqué/hors ARJEL/plafond) ne génère aucun
   // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
   const sentPremium = analysis.sig_sent_premium === 1 || analysis.sig_sent_premium === true;
-  const sentFree = analysis.sig_sent_free === 1 || analysis.sig_sent_free === true;
-  if (!sentPremium && !sentFree) {
+  const sentElite = analysis.sig_sent_elite === 1 || analysis.sig_sent_elite === true;
+  const sentFree = analysis.sig_sent_free === 1 || analysis.sig_sent_free === true || analysis.sig_sent_standard === 1 || analysis.sig_sent_standard === true;
+  if (!sentPremium && !sentFree && !sentElite) {
     console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
     return;
   }
   if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_ELITE_CHANNEL_ID && sentElite) sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, premiumMsg);
   if (TELEGRAM_CHANNEL_ID && sentFree) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentPremium ? " premium" : ""})`);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " standard" : ""}${sentPremium ? " premium" : ""}${sentElite ? " elite" : ""})`);
 }
 
 // Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
 function markSignalSent(home, away, col) {
-  if (col !== "sig_sent_free" && col !== "sig_sent_premium") return;
+  if (!["sig_sent_free", "sig_sent_premium", "sig_sent_standard", "sig_sent_elite"].includes(col)) return;
   try {
+    const extra = col === "sig_sent_standard" ? ", sig_sent_free=1" : "";
     db.prepare(
-      `UPDATE concile_analyses SET ${col}=1
+      `UPDATE concile_analyses SET ${col}=1${extra}
        WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
          AND date(analysed_at)=date('now')`
     ).run(home, away);
@@ -5913,8 +6082,7 @@ app.get("/sitemap-pronostics.xml", (req, res) => {
 //   Elite    = tout le publié >= PUBLISHED_MIN_CONFIDENCE (ARJEL + "IA seulement")
 // Lecture seule. Chaque palier a son propre track record (total, winrate, ROI simulé).
 function rowIsArjel(r) {
-  return ARJEL_BOOKMAKERS.some(a => String(r.real_odd_source || "").toLowerCase().includes(a))
-    || isArjelMajorCompetition(r);
+  return tierSignalHasRealArjelOdd(r);
 }
 function tierStatsFor(set) {
   let wins = 0, roi = 0;
@@ -5953,9 +6121,9 @@ app.get("/tier-stats", (req, res) => {
       ORDER BY analysed_at DESC
     `).all();
     const clean = rows.filter(r => !isNoiseForDisplay(r));
-    const standard = clean.filter(r => r.confidence >= 88 && rowIsArjel(r));
-    const premium  = clean.filter(r => r.confidence >= 85 && rowIsArjel(r));
-    const elite    = clean; // tout le publié
+    const standard = clean.filter(r => r.confidence >= TIER_SIGNAL_RULES.standard.minConfidence && rowIsArjel(r));
+    const premium  = clean.filter(r => r.confidence >= TIER_SIGNAL_RULES.premium.minConfidence && rowIsArjel(r));
+    const elite    = clean.filter(r => r.confidence >= TIER_SIGNAL_RULES.elite.minConfidence && rowIsArjel(r) && isSupportedTierSport(r.sport));
     res.json({
       ok: true,
       tiers: {
@@ -5971,6 +6139,125 @@ app.get("/tier-stats", (req, res) => {
 // Renvoie les votes individuels des agents (anonymisés Alpha→Sigma) + le verdict
 // du Conseil, pour le panneau "effet WOW" du Hero. Données réelles depuis
 // concile_analyses.agents_json. Aucun nom d'IA réel n'est exposé.
+app.get("/tier-signals", (req, res) => {
+  try {
+    const targetDay = String(req.query.day || new Date().toISOString().slice(0, 10)).slice(0, 10);
+    const candidates = selectTierSignalCandidates({ day: targetDay });
+    const tiers = {};
+    for (const [tier, rule] of Object.entries(TIER_SIGNAL_RULES)) {
+      const sent = countTierSignalsSentToday(tier, targetDay);
+      const col = tier === "standard" ? "sig_sent_standard" : tier === "elite" ? "sig_sent_elite" : "sig_sent_premium";
+      const list = candidates.filter(r => r.eligible_tiers.includes(tier) && !r[col]).slice(0, rule.dailyCap);
+      tiers[tier] = {
+        label: rule.label,
+        minConfidence: rule.minConfidence,
+        minOdd: rule.minOdd,
+        dailyCap: rule.dailyCap,
+        sent,
+        available: list.length,
+        preview: list.slice(0, 5).map(r => ({
+          home: r.home, away: r.away, sport: r.sport, competition: r.competition,
+          confidence: r.confidence, cote: r.cote, moment: r.minute_at_analysis ? `${r.minute_at_analysis}'` : "avant-match",
+          locked: true,
+        })),
+      };
+    }
+    res.json({ ok: true, day: targetDay, tiers });
+  } catch (e) {
+    console.error("[tier-signals]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/internal/tier-signals/preview", (req, res) => {
+  const { secret, day } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
+  try {
+    const targetDay = day || new Date().toISOString().slice(0, 10);
+    const candidates = selectTierSignalCandidates({ day: targetDay });
+    const tiers = {};
+    for (const [tier, rule] of Object.entries(TIER_SIGNAL_RULES)) {
+      const sent = countTierSignalsSentToday(tier, targetDay);
+      const remaining = Math.max(0, rule.dailyCap - sent);
+      const col = tier === "standard" ? "sig_sent_standard" : tier === "elite" ? "sig_sent_elite" : "sig_sent_premium";
+      tiers[tier] = {
+        rule,
+        sent,
+        remaining,
+        candidates: candidates
+          .filter(r => r.eligible_tiers.includes(tier) && !r[col])
+          .slice(0, remaining || rule.dailyCap)
+          .map(r => ({
+            id: r.id, home: r.home, away: r.away, sport: r.sport, competition: r.competition,
+            bet: maskAiNamesGlobal(r.best_bet || ""), confidence: r.confidence,
+            cote: r.cote, source: r.real_odd_source, score: r.score,
+            moment: r.minute_at_analysis ? `${r.minute_at_analysis}'` : "avant-match",
+          })),
+      };
+    }
+    res.json({ ok: true, day: targetDay, tiers });
+  } catch (e) {
+    console.error("[tier-signals-preview]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+app.post("/internal/tier-signals/send", async (req, res) => {
+  const { secret, day, tier = "all", dryRun = true } = req.body || {};
+  const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
+  if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
+  try {
+    const targetDay = day || new Date().toISOString().slice(0, 10);
+    const wanted = tier === "all" ? ["standard", "premium", "elite"] : [String(tier).toLowerCase()];
+    const candidates = selectTierSignalCandidates({ day: targetDay });
+    const results = [];
+    for (const t of wanted) {
+      const rule = TIER_SIGNAL_RULES[t];
+      if (!rule) { results.push({ tier: t, ok: false, reason: "unknown_tier" }); continue; }
+      const sent = countTierSignalsSentToday(t, targetDay);
+      const remaining = Math.max(0, rule.dailyCap - sent);
+      const col = t === "standard" ? "sig_sent_standard" : t === "elite" ? "sig_sent_elite" : "sig_sent_premium";
+      const picks = candidates.filter(r => r.eligible_tiers.includes(t) && !r[col]).slice(0, remaining);
+      for (const row of picks) {
+        if (dryRun) {
+          results.push({ tier: t, ok: true, dryRun: true, id: row.id, home: row.home, away: row.away, confidence: row.confidence, cote: row.cote });
+        } else {
+          const out = await sendTierSignal(row, t);
+          results.push({ tier: t, ...out, id: row.id, home: row.home, away: row.away, confidence: row.confidence, cote: row.cote });
+        }
+      }
+      if (!picks.length) results.push({ tier: t, ok: true, dryRun, reason: remaining <= 0 ? "daily_cap" : "no_candidate" });
+    }
+    res.json({ ok: true, day: targetDay, dryRun, results });
+  } catch (e) {
+    console.error("[tier-signals-send]", e.message);
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+async function runTierSignalAutoSender() {
+  if (!TIER_SIGNALS_AUTO_SEND) return;
+  try {
+    const candidates = selectTierSignalCandidates();
+    for (const tier of ["standard", "premium", "elite"]) {
+      const rule = TIER_SIGNAL_RULES[tier];
+      const col = tier === "standard" ? "sig_sent_standard" : tier === "elite" ? "sig_sent_elite" : "sig_sent_premium";
+      const remaining = Math.max(0, rule.dailyCap - countTierSignalsSentToday(tier));
+      if (remaining <= 0) continue;
+      const picks = candidates.filter(r => r.eligible_tiers.includes(tier) && !r[col]).slice(0, remaining);
+      for (const row of picks) {
+        const out = await sendTierSignal(row, tier);
+        console.log(`[tier-auto] ${tier} ${row.home} vs ${row.away}: ${out.ok ? "OK" : out.reason}`);
+      }
+    }
+  } catch (e) {
+    console.error("[tier-auto]", e.message);
+  }
+}
+setInterval(runTierSignalAutoSender, 10 * 60 * 1000);
+setTimeout(runTierSignalAutoSender, 90 * 1000);
+
 const COUNCIL_LABELS = ["Alpha", "Beta", "Gamma", "Delta", "Sigma", "Omega"];
 app.get("/council-vote", (req, res) => {
   try {

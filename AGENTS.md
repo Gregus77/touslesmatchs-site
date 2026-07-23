@@ -72,6 +72,9 @@ Chaque IA qui travaille sur ce projet DOIT :
 | `/api/council-vote` | GET | Votes anonymises (panneau Hero "Le Conseil delibere") |
 | `/api/live-activity` | GET | Compteurs live reels (bandeau Hero) |
 | `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite |
+| `/api/tier-signals` | GET | Volumes du jour par palier (public, sans devoiler les analyses payantes) |
+| `/internal/tier-signals/preview` | POST | Preview interne Hermes des candidats Standard/Premium/Elite |
+| `/internal/tier-signals/send` | POST | Envoi interne Hermes des signaux par palier (dryRun par defaut) |
 | `/pronostics` | GET | Page SEO index (HTML) |
 | `/pronostic/:slug` | GET | Page SEO detail par match (HTML) |
 | `/sitemap-pronostics.xml` | GET | Sitemap dynamique des pronostics |
@@ -217,12 +220,19 @@ Si aucun objectif n'est rempli : NE PAS developper.
 
 Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confiance, contenu par ARJEL) :
 - **Standard** = ARJEL & confiance >= 88 (fleurons, faible volume)
-- **Premium** = ARJEL & confiance >= 85 (inclut Standard)
-- **Elite** = tout le publie >= 82 (ARJEL + "IA seulement", gros volume)
+- **Premium** = ARJEL & confiance >= 90 (inclut Standard, jusqu'a 10/jour)
+- **Elite** = ARJEL & confiance >= 90 (football/basketball/hockey/baseball, jusqu'a 30/jour)
 
-Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets). 
-Etape 2 (a faire) : visibilite selon le plan dans l'espace perso.
-Etape 3 (a faire, ZONE HERMES) : diffusion Telegram par palier + recap quotidien — A COORDONNER.
+Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
+Etape 2 EN COURS : moteur `/tier-signals` + routes internes Hermes pour Standard/Premium/Elite.
+Etape 3 (a faire, ZONE HERMES) : scheduler Telegram par palier + recap quotidien — A COORDONNER.
+
+Regles moteur signaux (2026-07-24) :
+- Standard = 3 signaux max/jour, confiance >= 88, cote reelle ARJEL >= 1.50.
+- Premium = 10 signaux max/jour, confiance >= 90, avant-match ou live, cote reelle ARJEL >= 1.50.
+- Elite = 30 signaux max/jour, confiance >= 90, football/basketball/hockey/baseball, cote reelle ARJEL >= 1.50.
+- Ne jamais forcer le volume : si la journee ne produit que 7 bons signaux Premium, envoyer 7.
+- Envoi automatique des paliers desactive par defaut ; activer seulement avec `TIER_SIGNALS_AUTO_SEND=1` apres verification des canaux `TELEGRAM_STANDARD_CHANNEL_ID`, `TELEGRAM_PREMIUM_CHANNEL_ID`, `TELEGRAM_ELITE_CHANNEL_ID`.
 
 ## Deploiement (procedure + pieges connus)
 
