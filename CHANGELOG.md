@@ -2,7 +2,7 @@
 
 ## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
 
-**Dernière IA active :** Claude · **Branche :** `claude/tiktok-arjel-automation-hgp1tv`
+**Dernière IA active :** Codex · **Branche :** `codex/dashboard-premium-redesign`
 **Date :** 2026-07-23
 
 **✅ Fait et déployé :**
@@ -11,6 +11,10 @@
 - Fixes : doublons vitrine, vraies cotes ARJEL, cohérence résultats Telegram, Betclic retiré, seuil 82.
 - Système de paliers **étape 1** : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
 - Docs de passation : `AGENTS.md`, `POUR-LES-IA.md`, `CODEX.md`, `backup-db.sh`.
+
+**Fait sur branche Codex, pas encore deploye :**
+- Refonte visuelle de l'accueil `public/index.html` en cockpit dashboard premium inspire de la maquette fournie.
+- Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
 - Dans `public/dashboard.html` (espace perso), afficher les stats **selon le plan de l'utilisateur** :
@@ -29,6 +33,12 @@
 ---
 
 ## 2026-07-23
+
+### Codex - Refonte accueil dashboard premium (branche `codex/dashboard-premium-redesign`)
+- `public/index.html` : hero transforme en cockpit dashboard sombre, avec intro, cartes KPI, panneau Concile central, calendrier/activite laterale et bloc Live IA.
+- Les liens/API existants sont conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historique, paliers et endpoints front.
+- Fallback ajoute pour garder le panneau central visible si `/api/council-vote` ne repond pas encore.
+- Verification locale Chrome : pas de debordement horizontal desktop/mobile, 7 liens Stripe, 10 liens Telegram, 28 references `/api/` detectees.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).
