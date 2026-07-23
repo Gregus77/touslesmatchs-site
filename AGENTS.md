@@ -1,5 +1,20 @@
-# AGENTS.md — Fichier partage entre TOUTES les IA (Claude, Codex, Hermes, etc.)
-# Derniere mise a jour : 2026-07-21 par Claude
+# AGENTS.md — Fichier partage entre TOUTES les IA (Claude, Codex, Hermes, GPT, etc.)
+# Derniere mise a jour : 2026-07-23 par Claude
+
+## ⚡ HANDOFF RAPIDE — POUR TOUTE IA QUI REPREND (lis d'abord ceci)
+
+- **Repo GitHub** : `Gregus77/touslesmatchs-site`
+- **Branche de dev active** : `claude/tiktok-arjel-automation-hgp1tv` (le code le PLUS a jour est ici, PAS sur main)
+- **Serveur (VPS Hostinger)** : `/opt/touslesmatchs` (Ubuntu 24.04)
+- **Ce fichier + `CHANGELOG.md`** = la source de verite. Lis les 2 avant de coder.
+
+**A PRESERVER ABSOLUMENT (ne jamais casser) :**
+- **Liens bookmakers / affiliation** → `scripts/bookmakers.config.js` (+ variables `.env` : WINAMAX_LINK, UNIBET_LINK, PMU_LINK). **Betclic a ete retire volontairement.** Bookmakers actifs : Winamax, Unibet, PMU.
+- **Endpoints API** → voir la table ci-dessous (routes exactes, ne pas renommer).
+- **Cles API / tokens** → uniquement dans `.env` sur le serveur, JAMAIS dans le code ni les commits.
+- **Stripe, Telegram, Brevo, Concile** → voir "Ce qui ne doit JAMAIS casser".
+
+**Procedure de deploiement (IMPORTANT — pieges connus)** : voir section "Deploiement" en bas.
 
 ## REGLE ABSOLUE : NE RIEN CASSER
 
@@ -52,6 +67,16 @@ Chaque IA qui travaille sur ce projet DOIT :
 | `/webhook` | POST | Webhook Stripe |
 | `/t` | GET | Pixel tracking visiteurs |
 | `/admin/analytics-report` | GET | Rapport analytics |
+| `/auth/register` `/auth/login` `/auth/me` | POST/GET | Comptes gratuits (dashboard.html) |
+| `/user/history` | GET | Historique perso d'un compte |
+| `/api/council-vote` | GET | Votes anonymises (panneau Hero "Le Conseil delibere") |
+| `/api/live-activity` | GET | Compteurs live reels (bandeau Hero) |
+| `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite |
+| `/pronostics` | GET | Page SEO index (HTML) |
+| `/pronostic/:slug` | GET | Page SEO detail par match (HTML) |
+| `/sitemap-pronostics.xml` | GET | Sitemap dynamique des pronostics |
+
+> Note routage Caddy : le front appelle `/api/xxx` ; Caddy strippe `/api` → le serveur definit la route `/xxx`. Les pages SEO (`/pronostics`, `/pronostic/*`, `/sitemap-pronostics.xml`) ont des `handle` dedies dans le `Caddyfile`.
 
 ## Regles metier OBLIGATOIRES
 
@@ -81,7 +106,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 - Cotes : `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais > 1.95
 - Signal Fort : confiance >= 80%
 - Multi-sport : Football, Basketball, Hockey, Baseball, Tennis
-- Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 83 (ne pas baisser)
+- Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 82 (regle par le fondateur)
 
 ### Comptes speciaux actifs
 - LaMatrice (lamatrice2012@gmail.com) : Elite, 30 analyses/jour, expire ~19 sept 2026
@@ -112,7 +137,12 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 | `NORM()` | Normalise accents (NFD) | Critique pour la resolution |
 | `matchToken()` | Extrait le mot distinctif d'un nom d'equipe | Evite les faux positifs FC/AC |
 | `refreshDailyPickFromDB()` | Charge le pick du jour depuis SQLite | Utilise isExcludedFromPicks |
-| `PUBLISHED_MIN_CONFIDENCE` | Seuil 83/100 pour la vitrine | NE PAS MODIFIER |
+| `PUBLISHED_MIN_CONFIDENCE` | Seuil 82/100 pour la vitrine | Regle par le fondateur |
+| `rowOdd()` | Vraie cote ARJEL stockee sinon estimation marche | Utiliser partout, PAS l'ancienne formule fake |
+| `computeBestOdd()` / `fetchRealOdds()` | Vraies cotes API-Sports /odds | Cotes reelles bookmakers |
+| `markSignalSent()` | Trace sig_sent_free / sig_sent_premium | Resultat Telegram poste QUE sur canaux ayant recu le pick |
+| `seoPages` (IIFE inline) | Rendu des pages SEO pronostics | Inline dans api_server.js (pas de module externe) |
+| `rowIsArjel()` / `tierStatsFor()` | Stats par palier | Standard>=88 ARJEL, Premium>=85 ARJEL, Elite>=82 tout |
 
 ## Bases de donnees SQLite
 
@@ -175,21 +205,61 @@ Si aucun objectif n'est rempli : NE PAS developper.
 [Hermes] Description courte du changement
 ```
 
-## Etat actuel du projet (juillet 2026)
+## Liens bookmakers / affiliation (SENSIBLE — revenus)
 
-### Version deployee (stable)
-- Commit de reference : `d23daf6` — seuil 83, filtres valides
-- Sauvegarde REFERENCE : `/opt/backups/REFERENCE-STABLE-20260721_2134.tar.gz`
+- **Fichier** : `scripts/bookmakers.config.js` — utilise par emails, Telegram, et importe cote front.
+- **Front** : tableau `BM` dans `public/index.html` (boutons sous l'analyse).
+- **Bookmakers actifs** : **Winamax, Unibet, PMU**. **Betclic RETIRE volontairement** (le fondateur n'etait pas sur que le lien etait le sien). NE PAS le remettre sans accord.
+- **Surcharge possible via .env** : `WINAMAX_LINK`, `UNIBET_LINK`, `PMU_LINK`.
+- `ARJEL_BOOKMAKERS` (dans api_server.js) sert au MATCHING des cotes reelles — garder "betclic" dedans est OK (c'est pour lire la cote, pas pour afficher un lien).
 
-### En attente de deploiement
-- Commit `77f4fb5` : filtre vitrine base sur performances reelles (LOSING_COMPETITIONS_RE)
-- Decision repoussee a mi-aout (reprise des championnats)
+## Systeme de paliers (Standard / Premium / Elite)
+
+Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confiance, contenu par ARJEL) :
+- **Standard** = ARJEL & confiance >= 88 (fleurons, faible volume)
+- **Premium** = ARJEL & confiance >= 85 (inclut Standard)
+- **Elite** = tout le publie >= 82 (ARJEL + "IA seulement", gros volume)
+
+Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets). 
+Etape 2 (a faire) : visibilite selon le plan dans l'espace perso.
+Etape 3 (a faire, ZONE HERMES) : diffusion Telegram par palier + recap quotidien — A COORDONNER.
+
+## Deploiement (procedure + pieges connus)
+
+```bash
+cd /opt/touslesmatchs
+git fetch origin claude/tiktok-arjel-automation-hgp1tv
+git checkout origin/claude/tiktok-arjel-automation-hgp1tv -- public/ scripts/api_server.js scripts/bookmakers.config.js
+docker compose up -d --build
+```
+
+**Pieges rencontres (IMPORTANT) :**
+1. **`git pull` echoue** ("local changes would be overwritten") car Docker modifie des fichiers montes. → Utiliser `git checkout origin/<branche> -- <fichiers>` (ecrase cible sans merge), PAS `git pull`.
+2. **Caddyfile immuable** (`chattr +i`, `lsattr` montre le flag `i`). Avant de le mettre a jour : `chattr -i Caddyfile` puis `git show origin/<branche>:Caddyfile > Caddyfile`.
+3. **Dossier `site/`** = fichiers Docker parfois immuables → ne pas essayer de `rm`/reset dessus, ce n'est pas source.
+4. **Dockerfile.api ne copie QUE `api_server.js` + `bookmakers.config.js`.** Tout nouveau module `require('./xxx')` fait CRASHER l'API (Cannot find module). → Inliner le code dans api_server.js (ex: `seoPages`).
+5. Toujours verifier apres deploiement : `docker compose ps` (api = Up, pas Restarting) + `docker logs touslesmatchs-api --tail 30`.
+
+## Sauvegardes (avant/apres tout correctif touchant la base)
+
+- **Script** : `./backup-db.sh <label>` → copie `tlm.db` dans `/opt/backups` ET `/root/backups`.
+- Faire `./backup-db.sh avant-x` AVANT, `./backup-db.sh apres-x` APRES.
+- Archive complete nocturne : `backup.sh` (cron).
+
+## Etat actuel du projet (2026-07-23)
+
+### Refonte produit FAITE (audit conversion) — deployee
+- Hero refait + panneau vote multi-IA + barre de preuves
+- Sections "Pourquoi nous", methode 5 etapes, comparatif offres
+- Bandeau activite live, tunnel de conversion, compte gratuit reconnecte
+- Pages SEO dynamiques (`/pronostics`, `/pronostic/:slug`, sitemap)
+- Stats par palier (etape 1)
+- Fixes : doublons vitrine, vraies cotes ARJEL, coherence resultats Telegram, Betclic retire
 
 ### Decisions strategiques en attente (mi-aout)
 - Ajuster les filtres de ligues avec les donnees de la vraie saison
-- Evaluer si le filtre performances (77f4fb5) doit remplacer le filtre actuel
 
-## Performances connues (412 analyses resolues, 77% WR)
-- Meilleurs : UEFA Europa 91%, UEFA CL 87%, Serie B Bresil 86%
-- Pires : Match nul 50%, USL League Two 58%, World Cup 55%
+## Performances connues (~360 analyses resolues, ~81% WR)
+- Meilleurs : UEFA Europa/CL ~87-91%, Serie A/B Bresil bons
+- Pires : Match nul ~50%, USL League Two ~58%, World Cup ~55% (exclus vitrine)
 - Meilleurs types : Victoire domicile 82%, Under X.5 78%
