@@ -1,5 +1,33 @@
 # CHANGELOG — TousLesMatchs
 
+## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
+
+**Dernière IA active :** Claude · **Branche :** `claude/tiktok-arjel-automation-hgp1tv`
+**Date :** 2026-07-23
+
+**✅ Fait et déployé :**
+- Refonte conversion complète (Hero + vote multi-IA, preuves, Pourquoi nous, méthode 5 étapes,
+  comparatif offres, bandeau activité live, tunnel + compte gratuit, pages SEO).
+- Fixes : doublons vitrine, vraies cotes ARJEL, cohérence résultats Telegram, Betclic retiré, seuil 82.
+- Système de paliers **étape 1** : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
+- Docs de passation : `AGENTS.md`, `POUR-LES-IA.md`, `CODEX.md`, `backup-db.sh`.
+
+**🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
+- Dans `public/dashboard.html` (espace perso), afficher les stats **selon le plan de l'utilisateur** :
+  - Standard → voit uniquement les stats du palier Standard
+  - Premium (pro) → voit Standard + Premium
+  - Elite → voit tout (Standard + Premium + Elite, dont matchs "IA seulement")
+- Données déjà dispo : `GET /api/tier-stats` (renvoie les 3 paliers) + `GET /api/auth/me` (renvoie `user.status`).
+- Mapping plans : `free`/`standard` → standard · `pro` → premium · `elite` → elite.
+- Ne PAS toucher au Telegram (étape 3, zone Hermès).
+
+**📋 Plus tard :**
+- Paliers étape 3 (diffusion Telegram par palier + récap quotidien) — coordonner avec Hermès.
+- SEO : pages par équipe / championnat (en plus des pages par match).
+- Google Search Console : soumettre `sitemap-pronostics.xml`.
+
+---
+
 ## 2026-07-23
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
