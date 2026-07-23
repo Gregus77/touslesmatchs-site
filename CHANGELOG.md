@@ -39,6 +39,7 @@
 - Les liens/API existants sont conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historique, paliers et endpoints front.
 - Fallback ajoute pour garder le panneau central visible si `/api/council-vote` ne repond pas encore.
 - Verification locale Chrome : pas de debordement horizontal desktop/mobile, 7 liens Stripe, 10 liens Telegram, 28 references `/api/` detectees.
+- Passe design supplementaire : logos bookmakers visibles dans le hero + carte joueur stylisee dans la colonne droite, pour se rapprocher de la maquette dashboard premium.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).

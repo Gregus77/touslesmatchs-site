@@ -1242,7 +1242,7 @@ footer{
 .tlm-cockpit-hero{min-height:calc(100vh - 34px)!important;padding:116px 28px 44px!important;align-items:center}
 .tlm-cockpit-hero .stadium-bg{opacity:.28;filter:saturate(1.15) contrast(1.08)}
 .tlm-cockpit-hero .stadium-fade{background:radial-gradient(circle at 78% 22%,rgba(101,255,0,.18),transparent 28%),radial-gradient(circle at 18% 18%,rgba(40,98,255,.22),transparent 34%),linear-gradient(180deg,rgba(4,7,18,.55),rgba(5,8,19,.88) 48%,#06080f 100%)}
-.tlm-cockpit-shell{width:min(1380px,100%);display:grid!important;grid-template-columns:minmax(260px,.9fr) minmax(360px,1.35fr) minmax(280px,.82fr);grid-template-areas:"intro council side" "stats council side" "actions council side" "teaser teaser side" "trust trust side";align-items:stretch!important;gap:16px;padding:14px;border:1px solid rgba(126,160,255,.22);border-radius:28px;background:linear-gradient(145deg,rgba(11,13,34,.88),rgba(10,13,31,.72));box-shadow:0 34px 110px rgba(0,0,0,.62),0 0 0 10px rgba(87,116,184,.18);backdrop-filter:blur(18px)}
+.tlm-cockpit-shell{width:min(1380px,100%);display:grid!important;grid-template-columns:minmax(260px,.9fr) minmax(360px,1.35fr) minmax(280px,.82fr);grid-template-areas:"intro council side" "stats council side" "actions council side" "bookmakers council side" "teaser teaser side" "trust trust side";align-items:stretch!important;gap:16px;padding:14px;border:1px solid rgba(126,160,255,.22);border-radius:28px;background:linear-gradient(145deg,rgba(11,13,34,.88),rgba(10,13,31,.72));box-shadow:0 34px 110px rgba(0,0,0,.62),0 0 0 10px rgba(87,116,184,.18);backdrop-filter:blur(18px)}
 .tlm-cockpit-intro{grid-area:intro;text-align:left!important;align-items:flex-start!important;padding:12px 2px 0 2px}
 .tlm-cockpit-title{font-size:clamp(34px,4.2vw,64px)!important;max-width:520px!important;text-align:left!important;margin-bottom:18px!important}
 .tlm-cockpit-sub{text-align:left!important;max-width:460px!important;margin-bottom:0!important}
@@ -1263,10 +1263,21 @@ footer{
 .tlm-cockpit-actions a:nth-child(2){color:#7cff1f!important;border-bottom-color:rgba(124,255,31,.45)!important}
 .tlm-cockpit-hero #hero-pick-teaser{grid-area:teaser;max-width:none!important;margin:0!important}
 .tlm-cockpit-hero #hero-pick-teaser>div{border-radius:14px!important;background:linear-gradient(135deg,rgba(11,29,66,.88),rgba(14,18,47,.86))!important;border-color:rgba(91,141,255,.25)!important}
+.tlm-hero-bookmakers{grid-area:bookmakers;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.tlm-bm-logo{height:54px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-decoration:none;font-weight:950;letter-spacing:-.02em;color:#fff;border:1px solid rgba(255,255,255,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 12px 28px rgba(0,0,0,.22);position:relative;overflow:hidden}
+.tlm-bm-logo::before{content:"";position:absolute;inset:-40% -20%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.16),transparent);transform:translateX(-70%);transition:transform .35s}
+.tlm-bm-logo:hover::before{transform:translateX(70%)}
+.tlm-bm-logo small{font-size:9px;letter-spacing:.08em;text-transform:uppercase;opacity:.82;margin-top:2px}
+.tlm-bm-w{background:linear-gradient(135deg,#e30613,#871018)}
+.tlm-bm-u{background:linear-gradient(135deg,#0ea35b,#064e32)}
+.tlm-bm-p{background:linear-gradient(135deg,#f5b80b,#8a5b00)}
+.tlm-side-bookmakers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tlm-side-bookmakers .tlm-bm-logo{height:48px;font-size:13px}
+.tlm-side-bookmakers .tlm-bm-logo small{font-size:8px}
 .tlm-cockpit-last{grid-area:trust;justify-content:flex-start!important;margin:0!important}
 .tlm-cockpit-hero .hero-stats{grid-area:stats;width:100%;display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;margin:0!important}
 .tlm-cockpit-hero .hs{min-width:0!important;border-radius:14px!important;background:linear-gradient(150deg,rgba(25,42,87,.74),rgba(15,18,44,.9))!important;border:1px solid rgba(91,141,255,.18)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.tlm-cockpit-side{grid-area:side;display:grid;grid-template-rows:auto 1fr auto;gap:14px}
+.tlm-cockpit-side{grid-area:side;display:grid;grid-template-rows:auto auto auto auto;gap:14px}
 .tlm-side-card{border-radius:18px;background:linear-gradient(155deg,rgba(22,28,68,.86),rgba(14,17,43,.92));border:1px solid rgba(126,160,255,.18);padding:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
 .tlm-side-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .tlm-side-title{font-size:13px;font-weight:900;color:#fff;letter-spacing:-.01em}
@@ -1278,13 +1289,16 @@ footer{
 .tlm-match-list{display:flex;flex-direction:column;gap:9px}
 .tlm-match-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,.035);font-size:12px;color:#dbeafe}
 .tlm-score{display:flex;gap:5px}.tlm-score span{min-width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);font-weight:900}.tlm-score span.hot{background:#62ff00;color:#07120b}
-.tlm-premier-card{min-height:180px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;position:relative;background:linear-gradient(135deg,rgba(98,255,0,.78),rgba(10,88,31,.78))!important}
-.tlm-premier-card::after{content:"";position:absolute;right:-40px;bottom:-50px;width:190px;height:190px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 68%)}
-.tlm-premier-card strong{position:relative;font-size:32px;line-height:1.02;color:#fff;letter-spacing:-.04em;text-shadow:0 8px 26px rgba(0,0,0,.28)}
+.tlm-premier-card{min-height:176px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;position:relative;background:radial-gradient(circle at 78% 22%,rgba(255,255,255,.22),transparent 22%),linear-gradient(135deg,#58ff00 0%,#1a8d21 48%,#0b341d 100%)!important}
+.tlm-premier-card::before{content:"";position:absolute;right:8px;bottom:-10px;width:150px;height:190px;border-radius:72px 72px 22px 22px;background:linear-gradient(180deg,#f8d2aa 0 22%,#c81622 23% 58%,#fff 59% 63%,#c81622 64%);box-shadow:-18px 0 40px rgba(0,0,0,.28);transform:skewX(-6deg)}
+.tlm-premier-card::after{content:"";position:absolute;right:52px;bottom:142px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#ffe5c8,#c98455 68%);box-shadow:0 -20px 0 -9px #111827,20px 36px 0 -24px #f8d2aa}
+.tlm-player-arm{position:absolute;right:112px;bottom:64px;width:72px;height:28px;border-radius:20px;background:#c81622;transform:rotate(-35deg);box-shadow:45px -18px 0 -4px #c81622,72px -28px 0 -10px #f8d2aa}
+.tlm-player-name{position:absolute;right:22px;bottom:22px;color:rgba(255,255,255,.75);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+.tlm-premier-card strong{position:relative;font-size:29px;line-height:1.02;color:#fff;letter-spacing:-.04em;text-shadow:0 8px 26px rgba(0,0,0,.28)}
 .tlm-premier-card a{position:relative;align-self:flex-start;color:#07120b;background:#fff;padding:9px 13px;border-radius:999px;text-decoration:none;font-weight:900;font-size:12px}
 .tlm-cockpit-proof{grid-area:trust;font-size:11px;color:var(--muted2);font-weight:700;text-align:left;margin:0!important;align-self:end}
 .tlm-cockpit-legal{grid-area:trust;font-size:10px;color:var(--muted);text-align:left;margin:26px 0 0!important;align-self:end}
-@media(max-width:1080px){.tlm-cockpit-shell{grid-template-columns:1fr 1fr;grid-template-areas:"intro council" "stats council" "actions actions" "teaser teaser" "side side" "trust trust"}.tlm-cockpit-side{grid-template-columns:1fr 1fr;grid-template-rows:auto}}
+@media(max-width:1080px){.tlm-cockpit-shell{grid-template-columns:1fr 1fr;grid-template-areas:"intro council" "stats council" "actions actions" "bookmakers bookmakers" "teaser teaser" "side side" "trust trust"}.tlm-cockpit-side{grid-template-columns:1fr 1fr;grid-template-rows:auto}}
 @media(max-width:640px){
   .hero-stadium{padding:90px 20px 40px!important}
   .hero-stadium h1{font-size:26px!important;margin-bottom:14px!important}
@@ -1295,11 +1309,12 @@ footer{
   .hero-email-wrap{padding:20px!important}
   .hero-tg-row{display:none!important}
   .tlm-cockpit-hero{padding:94px 12px 28px!important}
-  .tlm-cockpit-shell{grid-template-columns:1fr;grid-template-areas:"intro" "council" "stats" "actions" "teaser" "side" "trust";border-radius:18px;padding:10px;box-shadow:0 18px 60px rgba(0,0,0,.55),0 0 0 5px rgba(87,116,184,.15)}
+  .tlm-cockpit-shell{grid-template-columns:1fr;grid-template-areas:"intro" "council" "stats" "actions" "bookmakers" "teaser" "side" "trust";border-radius:18px;padding:10px;box-shadow:0 18px 60px rgba(0,0,0,.55),0 0 0 5px rgba(87,116,184,.15)}
   .tlm-cockpit-title{font-size:32px!important}
   .tlm-cockpit-side{grid-template-columns:1fr}
   .tlm-calendar{gap:5px}
   .tlm-live-board{display:none}
+  .tlm-hero-bookmakers{grid-template-columns:1fr}
 }
 </style>
 <!-- HERO — fond stade + message court -->
@@ -1623,6 +1638,12 @@ footer{
   </div>
 
   <!-- Aperçu du pick du jour — hameçon above-the-fold, renvoie vers l'analyse -->
+  <div class="tlm-hero-bookmakers" aria-label="Bookmakers partenaires">
+    <a class="tlm-bm-logo tlm-bm-w" href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener noreferrer">Winamax<small>Offre partenaire</small></a>
+    <a class="tlm-bm-logo tlm-bm-u" href="https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254" target="_blank" rel="noopener noreferrer">Unibet<small>Offre partenaire</small></a>
+    <a class="tlm-bm-logo tlm-bm-p" href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener noreferrer">PMU<small>Offre partenaire</small></a>
+  </div>
+
   <a id="hero-pick-teaser" href="#pick" style="display:none;text-decoration:none;width:100%;max-width:440px;margin:0 auto 22px">
     <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.28);border-radius:16px;padding:16px 18px;transition:background .2s"
          onmouseover="this.style.background='rgba(124,58,237,.15)'" onmouseout="this.style.background='rgba(124,58,237,.08)'">
@@ -1669,16 +1690,26 @@ footer{
       </div>
     </div>
     <div class="tlm-side-card">
+      <div class="tlm-side-head"><div class="tlm-side-title">Bookmakers partenaires</div><span class="tlm-live-chip">FR</span></div>
+      <div class="tlm-side-bookmakers">
+        <a class="tlm-bm-logo tlm-bm-w" href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener noreferrer">Wina<small>max</small></a>
+        <a class="tlm-bm-logo tlm-bm-u" href="https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254" target="_blank" rel="noopener noreferrer">Uni<small>bet</small></a>
+        <a class="tlm-bm-logo tlm-bm-p" href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener noreferrer">PMU<small>sport</small></a>
+      </div>
+    </div>
+    <div class="tlm-side-card tlm-premier-card">
+      <strong>Tableau<br>de bord<br>premium</strong>
+      <span class="tlm-player-arm" aria-hidden="true"></span>
+      <span class="tlm-player-name">Live sport</span>
+      <a href="/live-ia">Ouvrir Live IA</a>
+    </div>
+    <div class="tlm-side-card">
       <div class="tlm-side-head"><div class="tlm-side-title">Aujourd'hui</div><span class="tlm-live-chip">IA active</span></div>
       <div class="tlm-match-list">
         <div class="tlm-match-row"><span>Analyse du jour</span><span class="tlm-score"><span>5</span><span class="hot">1</span></span><span>Chief</span></div>
         <div class="tlm-match-row"><span>Live IA</span><span class="tlm-score"><span class="hot">30s</span></span><span>Verdict</span></div>
         <div class="tlm-match-row"><span>Historique</span><span class="tlm-score"><span>100%</span></span><span>public</span></div>
       </div>
-    </div>
-    <div class="tlm-side-card tlm-premier-card">
-      <strong>Tableau<br>de bord<br>premium</strong>
-      <a href="/live-ia">Ouvrir Live IA</a>
     </div>
   </div>
 
