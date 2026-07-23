@@ -99,7 +99,7 @@ Ne JAMAIS creer de fonctionnalite qui expose le nom, prenom, photo, voix, adress
 
 ### Tunnel de vente (ne JAMAIS complexifier)
 ```
-TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mois) -> Elite (19.90/mois)
+TikTok -> TousLesMatchs.com -> Telegram Standard -> Analyse 1euro -> Pro (9.90/mois) -> Elite (19.90/mois)
 ```
 
 ### Analyses sportives
@@ -117,7 +117,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 ## Ce qui ne doit JAMAIS casser
 
 - Stripe (paiements, webhooks)
-- Telegram (bots, canaux gratuit/premium)
+- Telegram (bots, groupes Standard/Premium/Elite)
 - Hermes / Concile IA
 - Live IA (analyse en direct + onglet Statistiques)
 - Brevo (emails, nurturing)
@@ -143,7 +143,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 | `PUBLISHED_MIN_CONFIDENCE` | Seuil 82/100 pour la vitrine | Regle par le fondateur |
 | `rowOdd()` | Vraie cote ARJEL stockee sinon estimation marche | Utiliser partout, PAS l'ancienne formule fake |
 | `computeBestOdd()` / `fetchRealOdds()` | Vraies cotes API-Sports /odds | Cotes reelles bookmakers |
-| `markSignalSent()` | Trace sig_sent_free / sig_sent_premium | Resultat Telegram poste QUE sur canaux ayant recu le pick |
+| `markSignalSent()` | Trace sig_sent_standard / sig_sent_premium / sig_sent_elite (sig_sent_free legacy) | Resultat Telegram poste QUE sur groupes ayant recu le pick |
 | `seoPages` (IIFE inline) | Rendu des pages SEO pronostics | Inline dans api_server.js (pas de module externe) |
 | `rowIsArjel()` / `tierStatsFor()` | Stats par palier | Standard>=88 ARJEL, Premium>=85 ARJEL, Elite>=82 tout |
 

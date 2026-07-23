@@ -3189,7 +3189,7 @@ Réponds en JSON pur (pas de markdown):
         markSignalSent(match.home, match.away, "sig_sent_standard");
         sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram standard (${_freeSignalDailyDate.count}/${TIER_SIGNAL_RULES.standard.dailyCap}): ${ok ? "OK" : "FAIL"}`));
       } else if (arjelPlayable && standardTierOk) {
-        console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
+        console.log(`[signal-fort] Standard channel: déjà 1 signal envoyé aujourd'hui, skip`);
       }
     }
   }
@@ -5103,7 +5103,7 @@ app.post("/subscribe-email", async (req, res) => {
       <a href="https://www.touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Voir l'analyse Live IA →</a>
     </div>
     <div style="background:#0d1020;border:1px solid rgba(99,102,241,.12);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
-      <div style="font-size:12px;color:#a8aec8;margin-bottom:6px">📱 Rejoins aussi le canal Telegram gratuit</div>
+      <div style="font-size:12px;color:#a8aec8;margin-bottom:6px">📱 Rejoins aussi le groupe Telegram Standard</div>
       <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#22d3ee;font-size:13px;font-weight:700;text-decoration:none">Rejoindre le canal →</a>
     </div>
     <p style="font-size:12px;color:#7b82a0;text-align:center">⚠️ Analyses sportives réservées aux +18 ans. Jeu responsable.<br>TousLesMatchs · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Mentions légales</a></p>
@@ -5139,7 +5139,7 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Canal Telegram gratuit"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Pro/Elite"] },
+    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Groupe Telegram Standard"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Pro/Elite"] },
     { name: "1€ Test", price: "1€", color: "#22d3ee", features: ["1 analyse Live IA", "Consensus IA complet", "Verdict + cote + raison"], locked: ["Accès illimité", "Alertes Signal Fort"] },
     { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Pro", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
     { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
@@ -5296,7 +5296,7 @@ function buildNurtureJ7Html() {
       </div>
       <div style="background:#0d1020;border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
         <div style="font-size:12px;color:#a8aec8">📱 Pas encore sur Telegram ?</div>
-        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#22d3ee;font-size:13px;font-weight:700;text-decoration:none">Rejoindre le canal gratuit →</a>
+        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#22d3ee;font-size:13px;font-weight:700;text-decoration:none">Rejoindre le groupe Standard →</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5378,9 +5378,9 @@ async function sendSignalFortBilanTelegram() {
     const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
     console.log(`[signal-fort-bilan] Telegram premium: ${ok ? "OK" : "FAIL"}`);
   }
-  if (TELEGRAM_CHANNEL_ID) {
-    const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-    console.log(`[signal-fort-bilan] Telegram free: ${ok ? "OK" : "FAIL"}`);
+  if (TELEGRAM_STANDARD_CHANNEL_ID) {
+    const ok = await sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, freeMsg);
+    console.log(`[signal-fort-bilan] Telegram standard: ${ok ? "OK" : "FAIL"}`);
   }
 }
 
@@ -5461,7 +5461,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   }
   if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
   if (TELEGRAM_ELITE_CHANNEL_ID && sentElite) sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_CHANNEL_ID && sentFree) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+  if (TELEGRAM_STANDARD_CHANNEL_ID && sentFree) sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, freeMsg);
   console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " standard" : ""}${sentPremium ? " premium" : ""}${sentElite ? " elite" : ""})`);
 }
 
@@ -7326,10 +7326,10 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
   res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
 });
 
-// ── Daily results summary → FREE Telegram channel (22h Paris) ────────────────
+// ── Daily results summary → Standard Telegram group (22h Paris) ─────────────
 let _lastFreeResultsBilanDate = "";
-async function sendDailyResultsFreeChannel() {
-  if (!TELEGRAM_CHANNEL_ID || !TELEGRAM_BOT_TOKEN) return false;
+async function sendDailyResultsStandardChannel() {
+  if (!TELEGRAM_STANDARD_CHANNEL_ID || !TELEGRAM_BOT_TOKEN) return false;
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
     const rows = db.prepare(`
@@ -7386,11 +7386,11 @@ async function sendDailyResultsFreeChannel() {
       `⚠️ 18+ — Jeu responsable`,
     ].join("\n");
 
-    const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, msg);
-    console.log(`[daily-results-free] ${wins.length}W/${losses.length}L ${winrate}% — Telegram free: ${ok ? "OK" : "FAIL"}`);
+    const ok = await sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, msg);
+    console.log(`[daily-results-standard] ${wins.length}W/${losses.length}L ${winrate}% — Telegram standard: ${ok ? "OK" : "FAIL"}`);
     return ok;
   } catch (e) {
-    console.error("[daily-results-free]", e.message);
+    console.error("[daily-results-standard]", e.message);
     return false;
   }
 }
@@ -8115,9 +8115,9 @@ app.post("/internal/signal-notify", async (req, res) => {
       const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremiumText);
       console.log(`[signal-notify] Telegram premium: ${ok ? "OK" : "FAIL"}`);
     }
-    if (TELEGRAM_CHANNEL_ID) {
-      const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFreeText);
-      console.log(`[signal-notify] Telegram free: ${ok ? "OK" : "FAIL"}`);
+    if (TELEGRAM_STANDARD_CHANNEL_ID) {
+      const ok = await sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgFreeText);
+      console.log(`[signal-notify] Telegram standard: ${ok ? "OK" : "FAIL"}`);
     }
 
     // Épingler le signal 90 min sur Live IA pour que le lien Telegram mène au bon match
@@ -8709,8 +8709,8 @@ function checkAnalyticsSchedule() {
     sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
     if (_lastFreeResultsBilanDate !== todayKey) {
       _lastFreeResultsBilanDate = todayKey;
-      console.log("[daily-results-free] Envoi résultats du jour sur canal gratuit...");
-      sendDailyResultsFreeChannel().then(ok => console.log(`[daily-results-free] ${ok ? "OK" : "SKIP/ECHEC"}`));
+      console.log("[daily-results-standard] Envoi résultats du jour sur groupe Standard...");
+      sendDailyResultsStandardChannel().then(ok => console.log(`[daily-results-standard] ${ok ? "OK" : "SKIP/ECHEC"}`));
     }
   }
 

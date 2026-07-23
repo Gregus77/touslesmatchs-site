@@ -20,6 +20,7 @@
 - Moteur signaux par palier ajoute dans `scripts/api_server.js` : Standard 3/jour >=88, Premium 10/jour >=90, Elite 30/jour >=90, cote reelle ARJEL >=1.50, sports cibles foot/basket/hockey/baseball.
 - Nouvelles routes : `GET /api/tier-signals`, `POST /internal/tier-signals/preview`, `POST /internal/tier-signals/send` (`dryRun` par defaut).
 - Auto-envoi prepare mais desactive par defaut : `TIER_SIGNALS_AUTO_SEND=1` requis pour declencher l'envoi periodique.
+- Le groupe Telegram historique gratuit devient le groupe **Standard** : `TELEGRAM_STANDARD_CHANNEL_ID` prend le relais, avec fallback legacy sur `TELEGRAM_CHANNEL_ID`.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
