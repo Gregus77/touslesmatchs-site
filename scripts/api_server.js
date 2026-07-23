@@ -5906,6 +5906,67 @@ app.get("/sitemap-pronostics.xml", (req, res) => {
   res.send(seoPages.renderSitemap(items));
 });
 
+// ── Stats par palier (Standard / Premium / Elite) — idée "signaux par palier" ─
+// Hybride : rang par confiance, contenu par dispo ARJEL.
+//   Standard = ARJEL & confiance >= 88 (les fleurons, faible volume)
+//   Premium  = ARJEL & confiance >= 85 (inclut Standard)
+//   Elite    = tout le publié >= PUBLISHED_MIN_CONFIDENCE (ARJEL + "IA seulement")
+// Lecture seule. Chaque palier a son propre track record (total, winrate, ROI simulé).
+function rowIsArjel(r) {
+  return ARJEL_BOOKMAKERS.some(a => String(r.real_odd_source || "").toLowerCase().includes(a))
+    || isArjelMajorCompetition(r);
+}
+function tierStatsFor(set) {
+  let wins = 0, roi = 0;
+  for (const r of set) {
+    const cote = rowOdd(r);
+    if (r.outcome === "win") { wins++; roi += (cote - 1) * 10; } else { roi -= 10; }
+  }
+  const total = set.length;
+  return {
+    total, wins, losses: total - wins,
+    winrate: total ? Math.round(wins / total * 100) : 0,
+    roi: Math.round(roi),
+    recent: set.slice(0, 8).map(r => ({
+      home: r.home, away: r.away, competition: r.competition || r.sport || "",
+      bet: maskAiNamesGlobal(r.best_bet || ""), confidence: r.confidence,
+      cote: rowOdd(r), outcome: r.outcome,
+      score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+    })),
+  };
+}
+app.get("/tier-stats", (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT home, away, competition, sport, confidence, best_bet, outcome, real_odd,
+             real_odd_source, final_score_home, final_score_away, analysed_at
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
+        ) AS _rn
+        FROM concile_analyses
+        WHERE outcome IN ('win','loss')
+          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND date(analysed_at) >= '2026-07-03'
+      ) WHERE _rn = 1
+      ORDER BY analysed_at DESC
+    `).all();
+    const clean = rows.filter(r => !isNoiseForDisplay(r));
+    const standard = clean.filter(r => r.confidence >= 88 && rowIsArjel(r));
+    const premium  = clean.filter(r => r.confidence >= 85 && rowIsArjel(r));
+    const elite    = clean; // tout le publié
+    res.json({
+      ok: true,
+      tiers: {
+        standard: tierStatsFor(standard),
+        premium: tierStatsFor(premium),
+        elite: tierStatsFor(elite),
+      },
+    });
+  } catch (e) { console.error("[tier-stats]", e.message); res.json({ ok: false }); }
+});
+
 // ── Le Conseil délibère — votes anonymisés du pick du jour ───────────────────
 // Renvoie les votes individuels des agents (anonymisés Alpha→Sigma) + le verdict
 // du Conseil, pour le panneau "effet WOW" du Hero. Données réelles depuis

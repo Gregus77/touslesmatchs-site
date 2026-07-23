@@ -1886,6 +1886,91 @@ footer{
 </section>
 
 <!-- PLANS -->
+<!-- ══ RÉSULTATS PAR PALIER (Standard / Premium / Elite) ══ -->
+<style>
+  .tier-section{max-width:1000px;margin:64px auto 0;padding:0 24px}
+  .tier-eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#a78bfa;text-align:center;margin-bottom:10px}
+  .tier-title{font-size:clamp(24px,4vw,38px);font-weight:900;letter-spacing:-.03em;text-align:center;line-height:1.12;margin-bottom:12px}
+  .tier-sub{font-size:15px;color:var(--muted2);text-align:center;max-width:600px;margin:0 auto 28px;line-height:1.6}
+  .tier-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:22px;flex-wrap:wrap}
+  .tier-tab{padding:11px 22px;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;border:1px solid var(--b2);background:rgba(13,16,32,.5);color:var(--muted2);transition:all .2s}
+  .tier-tab.active{color:#fff;border-color:transparent}
+  .tier-tab.active[data-t="standard"]{background:linear-gradient(135deg,#059669,#10b981)}
+  .tier-tab.active[data-t="premium"]{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+  .tier-tab.active[data-t="elite"]{background:linear-gradient(135deg,#d97706,#f59e0b)}
+  .tier-panel{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid var(--b2);border-radius:20px;padding:26px 24px;backdrop-filter:blur(10px)}
+  .tier-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+  .tier-kpi{text-align:center;padding:14px 10px;background:rgba(255,255,255,.03);border-radius:14px}
+  .tier-kpi .v{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1}
+  .tier-kpi .l{font-size:11px;color:var(--muted2);font-weight:600;margin-top:5px}
+  .tier-desc{font-size:12.5px;color:var(--muted2);text-align:center;margin-bottom:18px;line-height:1.5}
+  .tier-recent a,.tier-recent div.row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--b1);border-radius:10px;margin-bottom:7px;font-size:13px}
+  .tier-recent .b{flex-shrink:0}
+  .tier-recent .m{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600}
+  .tier-recent .c{flex-shrink:0;color:var(--cyan);font-size:12px}
+  .tier-recent .g{flex-shrink:0;font-weight:800;font-size:12px}
+  @media(max-width:520px){.tier-kpi .v{font-size:24px}}
+</style>
+<section class="tier-section" id="paliers">
+  <div class="tier-eyebrow">Performance par abonnement</div>
+  <h2 class="tier-title">Chaque palier, sa performance.</h2>
+  <p class="tier-sub">Comme au trading : le Standard reçoit les gros fleurons, le Premium plus de volume, l'Elite reçoit tout — y compris les analyses « IA seulement ». Trois track records, tous publics.</p>
+  <div class="tier-tabs">
+    <div class="tier-tab active" data-t="standard" onclick="showTier('standard')">🟢 Standard</div>
+    <div class="tier-tab" data-t="premium" onclick="showTier('premium')">🟣 Premium</div>
+    <div class="tier-tab" data-t="elite" onclick="showTier('elite')">🟠 Elite</div>
+  </div>
+  <div class="tier-panel">
+    <div class="tier-desc" id="tier-desc"></div>
+    <div class="tier-kpis">
+      <div class="tier-kpi"><div class="v c-green" id="tier-wr">—</div><div class="l">Réussite</div></div>
+      <div class="tier-kpi"><div class="v" style="color:#eceaf4" id="tier-total">—</div><div class="l">Analyses</div></div>
+      <div class="tier-kpi"><div class="v c-cyan" id="tier-roi">—</div><div class="l">Profit simulé (10€/pick)</div></div>
+    </div>
+    <div class="tier-recent" id="tier-recent"></div>
+  </div>
+</section>
+<script>
+(function(){
+  var DESCS={
+    standard:"🟢 Standard — les analyses les plus sûres du Conseil (confiance ≥ 88%, jouables sur bookmaker français). Faible volume, haute exigence.",
+    premium:"🟣 Premium — plus de volume (confiance ≥ 85%, ARJEL). Inclut tout le Standard.",
+    elite:"🟠 Elite — l'intégralité des analyses publiées, y compris les matchs « IA seulement » non couverts par les bookmakers français. Le plus gros volume : fait pour ceux qui ont le temps de suivre."
+  };
+  var DATA=null, current='standard';
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
+  window.showTier=function(t){
+    current=t;
+    document.querySelectorAll('.tier-tab').forEach(function(el){el.classList.toggle('active',el.dataset.t===t);});
+    var d=document.getElementById('tier-desc'); if(d)d.textContent=DESCS[t]||'';
+    if(!DATA||!DATA[t]){return;}
+    var s=DATA[t];
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('tier-wr',(s.winrate||0)+'%');
+    set('tier-total',s.total||0);
+    set('tier-roi',((s.roi>=0?'+':'')+(s.roi||0))+'€');
+    var rec=document.getElementById('tier-recent');
+    if(rec){
+      if(!s.recent||!s.recent.length){rec.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:14px">Track record en construction pour ce palier.</div>';}
+      else{
+        rec.innerHTML=s.recent.map(function(r){
+          var win=r.outcome==='win';
+          var gain=win?('+'+Math.round((r.cote-1)*10)+'€'):'-10€';
+          return '<div class="row"><span class="b">'+(win?'✅':'❌')+'</span>'
+            +'<span class="m">'+esc(r.home)+' - '+esc(r.away)+'</span>'
+            +'<span class="c">@'+(r.cote||'')+'</span>'
+            +'<span class="g" style="color:'+(win?'var(--green)':'var(--red)')+'">'+gain+'</span></div>';
+        }).join('');
+      }
+    }
+  };
+  fetch('/api/tier-stats').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok||!d.tiers){document.getElementById('paliers').style.display='none';return;}
+    DATA=d.tiers; window.showTier('standard');
+  }).catch(function(){var p=document.getElementById('paliers');if(p)p.style.display='none';});
+})();
+</script>
+
 <!-- ══ TUNNEL — commence gratuitement en 3 étapes ══ -->
 <style>
   .funnel-section{max-width:1000px;margin:60px auto 0;padding:0 24px;text-align:center}

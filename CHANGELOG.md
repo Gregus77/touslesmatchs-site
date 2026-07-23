@@ -1,5 +1,20 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-07-23
+
+### Signaux par palier — étape 1 (site + API, lecture seule)
+- **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).
+  Définition hybride : rang par confiance, contenu par dispo ARJEL.
+  - Standard = ARJEL & confiance ≥ 88% (les fleurons, faible volume)
+  - Premium = ARJEL & confiance ≥ 85% (inclut Standard)
+  - Elite = tout le publié ≥ 82% (ARJEL + "IA seulement", gros volume)
+  - Chaque palier : total, winrate, ROI simulé, 8 derniers résultats.
+- **Section site "Chaque palier, sa performance"** (#paliers) : 3 onglets
+  Standard/Premium/Elite, KPIs + track record par palier. Valorise les 3 abonnements.
+- **Zone Telegram NON touchée** (réservée à Hermès) — diffusion par palier = étape 2 à coordonner.
+- Lecture seule : aucune écriture en base.
+- **backup-db.sh** ajouté : sauvegarde rapide tlm.db avant/après correctif.
+
 ## 2026-07-22
 
 ### Correctif Telegram — cohérence des résultats
