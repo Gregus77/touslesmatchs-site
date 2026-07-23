@@ -14,6 +14,8 @@
 
 **Fait sur branche Codex, pas encore deploye :**
 - Refonte visuelle de l'accueil `public/index.html` en cockpit dashboard premium inspire de la maquette fournie.
+- Derniere passe UX : premiere vue allegee type capture, ticker masque, navigation desktop simplifiee, calendrier retire du hero.
+- Nouveau tableau dashboard branche sur `/api/live-matches` avec fallback preview locale vers le site public.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
@@ -41,6 +43,7 @@
 - Verification locale Chrome : pas de debordement horizontal desktop/mobile, 7 liens Stripe, 10 liens Telegram, 28 references `/api/` detectees.
 - Passe design supplementaire : logos bookmakers visibles dans le hero + carte joueur stylisee dans la colonne droite, pour se rapprocher de la maquette dashboard premium.
 - Passe conversion : hero simplifie en parcours "matchs en cours -> 1 euro/Telegram -> bookmakers", avec fallback local vers l'API publique pour la preview.
+- Passe sobriete apres retour fondateur : ticker masque, nav visible reduite, calendrier retire du premier ecran, tableau "Matchs en cours" branche a `/api/live-matches` et rendu mobile compacte.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).
