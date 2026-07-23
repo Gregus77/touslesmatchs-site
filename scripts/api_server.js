@@ -216,6 +216,10 @@ ensureColumn("concile_analyses", "home_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "away_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "real_odd",        "REAL DEFAULT NULL");
 ensureColumn("concile_analyses", "real_odd_source", "TEXT DEFAULT NULL");
+// Traçage: sur quels canaux clients le signal a réellement été DIFFUSÉ. Sert à ne
+// poster le résultat (gagné/perdu) que sur les canaux qui ont vu le pick.
+ensureColumn("concile_analyses", "sig_sent_free",    "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_premium", "INTEGER DEFAULT 0");
 
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
@@ -2868,6 +2872,7 @@ Réponds en JSON pur (pas de markdown):
       // au moins autant que le gratuit, avec la sélection + la raison en clair.
       if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
+        markSignalSent(match.home, match.away, "sig_sent_premium");
         sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${grade.elite ? "ELITE " : ""}${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
@@ -2882,6 +2887,7 @@ Réponds en JSON pur (pas de markdown):
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
       if (arjelPlayable && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
+        markSignalSent(match.home, match.away, "sig_sent_free");
         sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
       } else if (arjelPlayable) {
         console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
@@ -5144,11 +5150,30 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `🤖 Concile IA — TousLesMatchs`,
   ].filter(Boolean).join("\n");
 
-  if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_CHANNEL_ID) {
-    sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-    console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (envoyé free + premium)`);
+  // Cohérence : on ne poste le résultat QUE sur les canaux qui ont réellement reçu
+  // le pick. Un signal jamais diffusé (bloqué/hors ARJEL/plafond) ne génère aucun
+  // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
+  const sentPremium = analysis.sig_sent_premium === 1 || analysis.sig_sent_premium === true;
+  const sentFree = analysis.sig_sent_free === 1 || analysis.sig_sent_free === true;
+  if (!sentPremium && !sentFree) {
+    console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
+    return;
   }
+  if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_CHANNEL_ID && sentFree) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentPremium ? " premium" : ""})`);
+}
+
+// Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
+function markSignalSent(home, away, col) {
+  if (col !== "sig_sent_free" && col !== "sig_sent_premium") return;
+  try {
+    db.prepare(
+      `UPDATE concile_analyses SET ${col}=1
+       WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
+         AND date(analysed_at)=date('now')`
+    ).run(home, away);
+  } catch (e) { console.error("[signal-sent]", e.message); }
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────

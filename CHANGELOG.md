@@ -2,6 +2,14 @@
 
 ## 2026-07-22
 
+### Correctif Telegram — cohérence des résultats
+- **Problème** : le canal gratuit postait « ✅/❌ + inscris-toi » pour des picks
+  jamais diffusés (signaux bloqués : cote basse, hors ARJEL, plafond atteint).
+  L'envoi du résultat ne vérifiait que la confiance, pas la diffusion réelle.
+- **Fix** : traçage `sig_sent_free` / `sig_sent_premium` sur `concile_analyses`.
+  Le résultat n'est posté que sur les canaux ayant réellement reçu le pick.
+  Garde-fous ARJEL + qualité + cote mini **inchangés** (aucun assouplissement).
+
 ### P2 — Croissance (lot 1)
 - **Bandeau d'activité en direct** sous le Hero : analyses du jour, IA au vote,
   matchs analysés (total), signaux forts du jour. Compteurs 100 % réels via
