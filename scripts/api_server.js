@@ -675,7 +675,7 @@ const _eliteSignalDaily = { date: "", count: 0 };
 const TIER_SIGNAL_RULES = {
   standard: { label: "Standard", minConfidence: 88, minOdd: 1.50, dailyCap: 3, arjelOnly: true },
   premium:  { label: "Premium",  minConfidence: 90, minOdd: 1.50, dailyCap: 10, arjelOnly: true },
-  elite:    { label: "Elite",    minConfidence: 90, minOdd: 1.50, dailyCap: 30, arjelOnly: true },
+  elite:    { label: "Elite/VIP", minConfidence: 90, minOdd: 1.50, dailyCap: 30, arjelOnly: true },
 };
 const TIER_SIGNALS_AUTO_SEND = process.env.TIER_SIGNALS_AUTO_SEND === "1";
 const PREMIUM_SIGNAL_DAILY_CAP = TIER_SIGNAL_RULES.premium.dailyCap;
@@ -5139,10 +5139,10 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Groupe Telegram Standard"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Pro/Elite"] },
+    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Groupe Telegram Standard"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Premium/Elite/VIP"] },
     { name: "1€ Test", price: "1€", color: "#22d3ee", features: ["1 analyse Live IA", "Consensus IA complet", "Verdict + cote + raison"], locked: ["Accès illimité", "Alertes Signal Fort"] },
-    { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Pro", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
-    { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
+    { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Premium", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
+    { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite/VIP", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -5208,7 +5208,7 @@ function buildNurtureJ3Html() {
           🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
         </div>
       </div>
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Pro.</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, groupe Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
       </div>
@@ -5853,7 +5853,7 @@ app.post("/bankroll/bets/delete", (req, res) => {
 // ── Chatbot Mistral — mémoire isolée par utilisateur ─────────────────────────
 const CHAT_UNAVAILABLE = "Notre assistant est momentanément indisponible. Réessaie dans un instant, ou écris-nous sur Telegram.";
 const CHAT_SYSTEM_PROMPT = `Tu es l'assistant virtuel de TousLesMatchs.com, un service d'analyses sportives par IA appelé le "Concile". Réponds en français, brièvement, clairement et avec le sourire.
-Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (1 € l'analyse à l'unité, Pro 9,90 €/mois, Elite 19,90 €/mois), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
+Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (1 € l'analyse à l'unité, Pro 9,90 €/mois, Elite 19,90 €/mois), le groupe Telegram, la page Live IA, la page Résultats, la gestion de capital.
 RÈGLES STRICTES :
 - N'emploie JAMAIS le mot "pari" ni "parier" : dis "analyse", "sélection" ou "pick".
 - Ne garantis JAMAIS de gains ; rappelle que rien n'est certain et que le service est réservé aux 18 ans et plus.
@@ -6848,15 +6848,15 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
              <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
           ).join("");
 
-          // Lien d'invitation unique au groupe Telegram premium (Pro/VIP/Elite)
+          // Lien d'invitation unique au groupe Telegram Premium (Premium/Elite/VIP)
           let premiumTelegramBlock = "";
           if (["premium", "vip", "elite"].includes(status)) {
             const inviteLink = await createPremiumInviteLink(customerEmail);
             if (inviteLink) {
               premiumTelegramBlock = `<div style="background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(79,70,229,.08));border:1px solid rgba(34,211,238,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                  <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:8px">📲 Ton acces au groupe Telegram premium</div>
+                  <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:8px">📲 Ton acces au groupe Telegram Premium</div>
                   <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Lien personnel a usage unique — ne le partage pas.<br>Tu y recois les signaux forts (confiance 80%+) en direct.</div>
-                  <a href="${inviteLink}" style="display:inline-block;background:linear-gradient(135deg,#22d3ee,#4f46e5);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe premium →</a>
+                  <a href="${inviteLink}" style="display:inline-block;background:linear-gradient(135deg,#22d3ee,#4f46e5);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe Premium →</a>
                 </div>`;
             } else {
               console.error(`[stripe] invite premium non généré pour ${customerEmail} — vérifier que le bot est admin du canal`);
@@ -6952,7 +6952,7 @@ app.get("/community-stats", async (req, res) => {
     return res.json({ ok: false, members: null, hidden: true });
   }
 
-  // Try multiple bot tokens — whichever is admin of the free channel
+  // Try multiple bot tokens — whichever is admin of the Standard group
   const BOT_TOKEN = process.env.HERMES_ADMIN_TLM_BOT
     || process.env.TELEGRAM_BOT_TOKEN
     || process.env.BOT_TOKEN
@@ -9248,7 +9248,7 @@ app.get("/admin/heartbeat", (req, res) => {
 // ---- Chatbot Mistral --------------------------------------------------------
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
-const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram @TousLesMatchs_Free. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
+const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram Standard. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
 app.post("/chatbot/ask", express.json(), async (req, res) => {
   try {
     const { question, email, session } = req.body || {};

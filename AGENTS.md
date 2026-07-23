@@ -71,9 +71,9 @@ Chaque IA qui travaille sur ce projet DOIT :
 | `/user/history` | GET | Historique perso d'un compte |
 | `/api/council-vote` | GET | Votes anonymises (panneau Hero "Le Conseil delibere") |
 | `/api/live-activity` | GET | Compteurs live reels (bandeau Hero) |
-| `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite |
+| `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite/VIP |
 | `/api/tier-signals` | GET | Volumes du jour par palier (public, sans devoiler les analyses payantes) |
-| `/internal/tier-signals/preview` | POST | Preview interne Hermes des candidats Standard/Premium/Elite |
+| `/internal/tier-signals/preview` | POST | Preview interne Hermes des candidats Standard/Premium/Elite/VIP |
 | `/internal/tier-signals/send` | POST | Envoi interne Hermes des signaux par palier (dryRun par defaut) |
 | `/pronostics` | GET | Page SEO index (HTML) |
 | `/pronostic/:slug` | GET | Page SEO detail par match (HTML) |
@@ -117,7 +117,7 @@ TikTok -> TousLesMatchs.com -> Telegram Standard -> Analyse 1euro -> Pro (9.90/m
 ## Ce qui ne doit JAMAIS casser
 
 - Stripe (paiements, webhooks)
-- Telegram (bots, groupes Standard/Premium/Elite)
+- Telegram (bots, groupes Standard/Premium/Elite/VIP)
 - Hermes / Concile IA
 - Live IA (analyse en direct + onglet Statistiques)
 - Brevo (emails, nurturing)
@@ -224,7 +224,7 @@ Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confi
 - **Elite** = ARJEL & confiance >= 90 (football/basketball/hockey/baseball, jusqu'a 30/jour)
 
 Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
-Etape 2 EN COURS : moteur `/tier-signals` + routes internes Hermes pour Standard/Premium/Elite.
+Etape 2 EN COURS : moteur `/tier-signals` + routes internes Hermes pour Standard/Premium/Elite/VIP.
 Etape 3 (a faire, ZONE HERMES) : scheduler Telegram par palier + recap quotidien — A COORDONNER.
 
 Regles moteur signaux (2026-07-24) :

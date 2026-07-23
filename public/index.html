@@ -83,9 +83,9 @@
       "mainEntity": [
         { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants ; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable." } },
         { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
-        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le groupe Telegram Standard reçoit les analyses sélectionnées. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort." } },
+        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le groupe Telegram Standard reçoit les analyses sélectionnées. Pro débloque les analyses Live IA et le groupe Premium. Elite/VIP ajoute les alertes de signal fort." } },
         { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort." } }
+        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Premium. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite/VIP + alertes signal fort." } }
       ]
     }
   ]
@@ -2303,11 +2303,11 @@ footer{
 <section class="tier-section" id="paliers">
   <div class="tier-eyebrow">Performance par abonnement</div>
   <h2 class="tier-title">Chaque palier, sa performance.</h2>
-  <p class="tier-sub">Comme au trading : le Standard reçoit les gros fleurons, le Premium plus de volume, l'Elite reçoit tout — y compris les analyses « IA seulement ». Trois track records, tous publics.</p>
+  <p class="tier-sub">Comme au trading : le Standard reçoit les gros fleurons, le Premium plus de volume, l'Elite/VIP reçoit tout — y compris les analyses « IA seulement ». Trois track records, tous publics.</p>
   <div class="tier-tabs">
     <div class="tier-tab active" data-t="standard" onclick="showTier('standard')">🟢 Standard</div>
     <div class="tier-tab" data-t="premium" onclick="showTier('premium')">🟣 Premium</div>
-    <div class="tier-tab" data-t="elite" onclick="showTier('elite')">🟠 Elite</div>
+    <div class="tier-tab" data-t="elite" onclick="showTier('elite')">🟠 Elite/VIP</div>
   </div>
   <div class="tier-panel">
     <div class="tier-desc" id="tier-desc"></div>
@@ -2325,7 +2325,7 @@ footer{
   var DESCS={
     standard:"🟢 Standard — 3 signaux maximum par jour, confiance ≥ 88%, cote réelle ARJEL ≥ 1.50. Faible volume, haute exigence.",
     premium:"🟣 Premium — 10 signaux maximum par jour, confiance ≥ 90%, avant-match ou live, cote réelle ARJEL ≥ 1.50.",
-    elite:"🟠 Elite — 30 signaux maximum par jour, confiance ≥ 90%, football, hockey, baseball et basket, cote réelle ARJEL ≥ 1.50."
+    elite:"🟠 Elite/VIP — 30 signaux maximum par jour, confiance ≥ 90%, football, hockey, baseball et basket, cote réelle ARJEL ≥ 1.50."
   };
   var DATA=null, LIVE=null, current='standard';
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
@@ -2444,11 +2444,11 @@ footer{
     <div class="pc">
       <span class="pc-badge b-pr">Pro</span>
       <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Pro</div></div>
-      <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses Live IA par jour + groupe Telegram Pro. Tu ne rates plus aucun match rentable.</div>
+      <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses Live IA par jour + groupe Telegram Premium. Tu ne rates plus aucun match rentable.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>10 analyses Live IA par jour</div>
-        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Pro avec alertes</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Premium avec alertes</div>
         <div class="pcf"><span class="ok">✓</span>Consensus 5 IA + verdict Chief</div>
         <div class="pcf"><span class="ok">✓</span>Analyse des matchs en direct</div>
         <div class="pcf"><span class="ok">✓</span>Historique et suivi des performances</div>
@@ -2467,7 +2467,7 @@ footer{
       <div class="pc-div"></div>
       <div class="pc-features">
         <div class="pcf"><span class="ok">✓</span>30 analyses Live IA par jour</div>
-        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Elite (picks prioritaires)</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Elite/VIP (picks prioritaires)</div>
         <div class="pcf"><span class="ok">✓</span>Alertes Signal Fort automatiques (confiance 85%+)</div>
         <div class="pcf"><span class="ok">✓</span>Picks en avant-premiere avant le site</div>
         <div class="pcf"><span class="ok">✓</span>Support direct + canal dedie</div>
@@ -2645,7 +2645,7 @@ function copyRefLink(){
     <div class="step"><div class="step-n">1</div><div><div class="step-title" data-i18n="step1_title">Collecte vérifiée à 6h00</div><div class="step-desc">Hermès collecte les matchs via API-SPORTS, puis vérifie chaque donnée sur 3 sources indépendantes : SofaScore, FBref, Transfermarkt. Aucun match non confirmé n'est affiché. Aucun score inventé.</div></div></div>
     <div class="step"><div class="step-n">2</div><div><div class="step-title" data-i18n="step2_title">5 agents spécialisés + 1 Chief</div><div class="step-desc">Les agents analysent stats, tactique, value et marchés selon le sport. Le Chief arbitre les désaccords : si les objections sont trop fortes ou les données faibles, la décision devient NO BET.</div></div></div>
     <div class="step"><div class="step-n">3</div><div><div class="step-title">Seuls les verdicts solides sont publiés</div><div class="step-desc">Une analyse n'est diffusée que si la confiance du Conseil dépasse le seuil de qualité. En dessous, elle reste interne : tu ne vois que les décisions dans lesquelles le Conseil croit vraiment.</div></div></div>
-    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro débloque les analyses Live IA ; Elite reçoit aussi les alertes de signal fort.</div></div></div>
+    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro débloque les analyses Live IA ; Elite/VIP reçoit aussi les alertes de signal fort.</div></div></div>
     <div class="step"><div class="step-n">5</div><div><div class="step-title" data-i18n="step4_title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 </section>
@@ -2665,7 +2665,7 @@ function copyRefLink(){
       <a href="https://t.me/+I4mDxIa-1YBhM2U8" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.25);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s"
          onmouseover="this.style.background='rgba(99,102,241,.2)'" onmouseout="this.style.background='rgba(99,102,241,.1)'">
-        ⚡ Pro &amp; Elite
+        ⚡ Premium &amp; Elite/VIP
       </a>
       <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=community_footer&utm_campaign=prospection" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(255,0,80,.16),rgba(139,92,246,.14));color:#fb7185;border:1px solid rgba(251,113,133,.32);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:800;text-decoration:none;transition:all .2s"
@@ -3906,12 +3906,12 @@ initPick();
 const FAQ_DATA = [
   {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
   {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
-  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le groupe Telegram Standard reçoit les signaux sélectionnés. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
+  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le groupe Telegram Standard reçoit les signaux sélectionnés. Pro débloque les analyses Live IA et le groupe Premium. Elite/VIP ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
   {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit."},
+  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Premium. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite/VIP + alertes signal fort. Reset automatique à minuit."},
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);

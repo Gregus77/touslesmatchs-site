@@ -60,7 +60,7 @@
   - Elite = tout le publié ≥ 82% (ARJEL + "IA seulement", gros volume)
   - Chaque palier : total, winrate, ROI simulé, 8 derniers résultats.
 - **Section site "Chaque palier, sa performance"** (#paliers) : 3 onglets
-  Standard/Premium/Elite, KPIs + track record par palier. Valorise les 3 abonnements.
+  Standard/Premium/Elite/VIP, KPIs + track record par palier. Valorise les 3 abonnements.
 - **Zone Telegram NON touchée** (réservée à Hermès) — diffusion par palier = étape 2 à coordonner.
 - Lecture seule : aucune écriture en base.
 - **backup-db.sh** ajouté : sauvegarde rapide tlm.db avant/après correctif.
