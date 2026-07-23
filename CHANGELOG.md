@@ -33,6 +33,16 @@
 
 ## 2026-07-23
 
+### Fix crédibilité : garde-fou "victoire déjà jouée" (Signal Fort)
+- **Bug** : un signal "Victoire Apollon Limassol" est parti à la 64' alors que le score
+  était 0-3 (pari déjà joué), avec une cote pré-match Unibet (1.87) irréaliste pour du live.
+- **Cause** : `betIsPlayable` ne bloquait "victoire déjà acquise (écart ≥ 2 buts)" que si le
+  pari contenait les mots "domicile"/"extérieur" — pas quand il contenait le NOM de l'équipe.
+- **Fix** : reconnaissance de "Victoire <nom d'équipe>" (comparé à match.home/away) →
+  bloque dès qu'une équipe mène de 2 buts. Les vrais signaux (0-0, 0-1) restent autorisés.
+- Testé : 0-3 → bloqué ; 0-1/0-0 → autorisé ; 3-0 côté domicile → bloqué.
+- Impact : crédibilité, conformité ANJ (plus de gain surévalué sur pari déjà joué).
+
 ### Bilan du jour en direct (feed accueil)
 - Encart en tête de "Derniers verdicts" : analyses du jour, gagnées / perdues / en attente,
   et total gain/perte du jour (10€/pick sur les résolues). Frontend uniquement (calculé

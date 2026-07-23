@@ -1727,12 +1727,24 @@ function betIsPlayable(match, bet, cote) {
     const total = sh + sa;
     const b = String(bet || "").toLowerCase();
 
-    // Victoire déjà quasi acquise (écart >= 2 buts) → cote ridicule, pari déjà joué
-    if ((/victoire.*(dom|home)|domicile|^1$/.test(b)) && diff >= 2) {
-      return { ok: false, reason: `domicile mène déjà ${sh}-${sa} — victoire déjà jouée` };
-    }
-    if ((/victoire.*(ext|away)|ext[eé]rieur|^2$/.test(b)) && diff <= -2) {
-      return { ok: false, reason: `extérieur mène déjà ${sh}-${sa} — victoire déjà jouée` };
+    // Victoire déjà quasi acquise (écart >= 2 buts) → pari déjà joué, cote irréaliste.
+    // On reconnaît "Victoire domicile/extérieur" MAIS AUSSI "Victoire <nom d'équipe>"
+    // (ex: "Victoire Apollon Limassol" à 0-3 doit être bloqué — bug corrigé 23/07).
+    const isWinBet = /victoire|vainqueur|winner|\bwin\b/.test(b) || /^[12]$/.test(b);
+    if (isWinBet) {
+      const norm = (s) => String(s || "").toLowerCase().trim();
+      const homeN = norm(match?.home), awayN = norm(match?.away);
+      const firstWord = (s) => (s.split(/[\s.]+/).filter(Boolean)[0] || "");
+      const hMentioned = homeN && (b.includes(homeN) || (firstWord(homeN).length >= 3 && b.includes(firstWord(homeN))));
+      const aMentioned = awayN && (b.includes(awayN) || (firstWord(awayN).length >= 3 && b.includes(firstWord(awayN))));
+      const isHomeWin = /victoire.*(dom|home)|domicile|^1$/.test(b) || (hMentioned && !aMentioned);
+      const isAwayWin = /victoire.*(ext|away)|ext[eé]rieur|^2$/.test(b) || (aMentioned && !hMentioned);
+      if (isHomeWin && diff >= 2) {
+        return { ok: false, reason: `domicile mène déjà ${sh}-${sa} — victoire déjà jouée` };
+      }
+      if (isAwayWin && diff <= -2) {
+        return { ok: false, reason: `extérieur mène déjà ${sh}-${sa} — victoire déjà jouée` };
+      }
     }
     // Over / Under déjà tranchés par le score actuel
     const overM = b.match(/(?:over|plus de)\s*(\d+(?:\.5)?)/);
