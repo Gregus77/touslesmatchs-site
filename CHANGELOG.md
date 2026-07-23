@@ -21,6 +21,7 @@
 - Nouvelles routes : `GET /api/tier-signals`, `POST /internal/tier-signals/preview`, `POST /internal/tier-signals/send` (`dryRun` par defaut).
 - Auto-envoi prepare mais desactive par defaut : `TIER_SIGNALS_AUTO_SEND=1` requis pour declencher l'envoi periodique.
 - Le groupe Telegram historique gratuit devient le groupe **Standard** : `TELEGRAM_STANDARD_CHANNEL_ID` prend le relais, avec fallback legacy sur `TELEGRAM_CHANNEL_ID`.
+- Accueil aligne sur la gamme **Standard / Premium / Elite-VIP** : suppression de la mise en avant publique du test 1 euro, ajout de `STRIPE_PRICE_ID_STANDARD` et page SEO `/signaux-sportifs-ia`.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**

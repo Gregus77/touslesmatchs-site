@@ -16,6 +16,9 @@ www.touslesmatchs.com {
     handle /pronostics {
         reverse_proxy api:3001
     }
+    handle /signaux-sportifs-ia {
+        reverse_proxy api:3001
+    }
     handle /pronostic/* {
         reverse_proxy api:3001
     }

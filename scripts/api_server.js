@@ -85,7 +85,7 @@ p{margin-bottom:14px;color:var(--muted2)}
 .disclaimer{margin-top:32px;padding-top:20px;border-top:1px solid var(--b1);font-size:11px;color:var(--muted);line-height:1.7}
 .footlinks{margin-top:18px;font-size:12px}.footlinks a{margin-right:14px;color:var(--muted2)}
 </style></head><body>
-<nav class="topnav"><a href="/" class="brand">TousLesMatchs</a><a href="/#plan-carte" class="cta">Tester le Conseil — 1€</a></nav>
+<nav class="topnav"><a href="/" class="brand">TousLesMatchs</a><a href="/#plans" class="cta">Voir les groupes</a></nav>
 <div class="wrap">
 ${bodyHtml}
 <div class="disclaimer">Analyses sportives assistées par IA à but informatif. TousLesMatchs ne garantit aucun gain. Les jeux d'argent et de hasard peuvent être dangereux : pertes d'argent, conflits familiaux, addiction. 18+ · Interdit aux mineurs. Conseils et aide sur <a href="https://www.joueurs-info-service.fr" rel="nofollow">joueurs-info-service.fr</a> — 09 74 75 13 13 (appel non surtaxé).</div>
@@ -122,13 +122,35 @@ ${bodyHtml}
   <p>Chaque analyse repose sur le vote de 5 agents IA spécialisés : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
   <h2>Comment fonctionne le Conseil IA ?</h2>
   <p>Hermès collecte les données vérifiées du match, 5 agents analysent stats, forme et valeur, puis le Chief arbitre les désaccords. Si les signaux sont contradictoires, c'est NO BET. <a href="/#methode">Voir la méthode complète →</a></p>
-  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de l'analyse complète en direct ?</div><p style="margin-bottom:14px">Teste le Conseil sur le match de ton choix, en temps réel.</p><a href="/#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Tester le Conseil — 1€</a></div>
+  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de recevoir les signaux en direct ?</div><p style="margin-bottom:14px">Choisis ton niveau : Standard, Premium ou Elite/VIP.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les groupes</a></div>
   ${relatedHtml}`;
     return shell({ title, description, canonical, bodyHtml: body, schema });
   }
+  function renderSignalLanding() {
+    const title = "Signaux sportifs IA — Standard, Premium, Elite/VIP | TousLesMatchs";
+    const description = "Recevez des signaux sportifs IA filtres par le Concile : Standard, Premium et Elite/VIP. Football, basket, hockey et baseball, historique public et jeu responsable.";
+    const canonical = `${SITE}/signaux-sportifs-ia`;
+    const schema = { "@context": "https://schema.org", "@type": "FAQPage", name: title, url: canonical,
+      mainEntity: [
+        { "@type": "Question", name: "Quelle est la difference entre Standard, Premium et Elite/VIP ?", acceptedAnswer: { "@type": "Answer", text: "Standard recoit les signaux les plus selectifs, Premium ajoute plus de volume et le Live IA, Elite/VIP couvre le volume maximal multisport avec alertes prioritaires." } },
+        { "@type": "Question", name: "Les resultats sont-ils publics ?", acceptedAnswer: { "@type": "Answer", text: "Oui. Les performances sont suivies dans l'historique public, avec les signaux gagnes et perdus." } }
+      ] };
+    const body = `
+  <div class="bc"><a href="/">Accueil</a> › Signaux sportifs IA</div>
+  <h1>Signaux sportifs IA : Standard, Premium, Elite/VIP</h1>
+  <p class="sub">TousLesMatchs filtre les matchs avec le Concile : 5 agents IA analysent les donnees, le Chief tranche, puis seuls les signaux avec cote reelle et confiance suffisante sont publies.</p>
+  <div class="card"><h2>Standard</h2><p>Le groupe Standard recoit jusqu'a 3 signaux par jour, confiance minimale 88/100, cote reelle ARJEL minimum 1.50. C'est le niveau le plus selectif.</p></div>
+  <div class="card"><h2>Premium</h2><p>Le groupe Premium recoit jusqu'a 10 signaux par jour, avec davantage de volume, acces Live IA et historique de performance consultable.</p></div>
+  <div class="card"><h2>Elite/VIP</h2><p>Elite/VIP vise jusqu'a 30 signaux par jour sur football, basket, hockey et baseball, avec alertes prioritaires et suivi complet.</p></div>
+  <h2>Pourquoi une page dediee aux signaux IA ?</h2>
+  <p>Les utilisateurs qui arrivent depuis Google, TikTok ou Telegram doivent comprendre immediatement quel groupe choisir. Cette page explique la methode, les seuils, les sports couverts et la difference entre les niveaux sans promettre de resultat certain.</p>
+  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Choisir un groupe Telegram</div><p style="margin-bottom:14px">Compare Standard, Premium et Elite/VIP sur la page d'accueil.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les abonnements</a></div>`;
+    return shell({ title, description, canonical, bodyHtml: body, schema });
+  }
+
   function renderIndex(items) {
     const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
-    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, tennis et plus. Verdict de 5 intelligences artificielles, confiance et historique public.";
+    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, hockey et baseball. Verdict de 5 intelligences artificielles, confiance et historique public.";
     const canonical = `${SITE}/pronostics`;
     const schema = { "@context": "https://schema.org", "@type": "CollectionPage", name: title, description, url: canonical };
     const rows = (items || []).map(it => {
@@ -144,13 +166,13 @@ ${bodyHtml}
     return shell({ title, description, canonical, bodyHtml: body, schema });
   }
   function renderSitemap(items) {
-    const urls = [`${SITE}/pronostics`].concat((items || []).map(it => `${SITE}/pronostic/${matchSlug(it)}`));
+    const urls = [`${SITE}/pronostics`, `${SITE}/signaux-sportifs-ia`].concat((items || []).map(it => `${SITE}/pronostic/${matchSlug(it)}`));
     return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n")}
 </urlset>`;
   }
-  return { slugify, matchSlug, renderDetail, renderIndex, renderSitemap };
+  return { slugify, matchSlug, renderDetail, renderIndex, renderSignalLanding, renderSitemap };
 })();
 
 const app = express();
@@ -657,6 +679,7 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE    = process.env.STRIPE_PRICE_ID_CARTE    || process.env.STRIPE_PRICE_CARTE   || "";
+const STRIPE_PRICE_ID_STANDARD = process.env.STRIPE_PRICE_ID_STANDARD || process.env.STRIPE_PRICE_STANDARD || "";
 const STRIPE_PRICE_ID_PREMIUM  = process.env.STRIPE_PRICE_ID_PREMIUM  || process.env.STRIPE_PRICE_PRO     || "";
 const STRIPE_PRICE_ID_ELITE    = process.env.STRIPE_PRICE_ID_ELITE    || process.env.STRIPE_PRICE_ELITE   || "";
 const STRIPE_PRICE_ID_VIP      = process.env.STRIPE_PRICE_ID_VIP      || process.env.STRIPE_PRICE_VIP     || "";
@@ -3142,7 +3165,7 @@ Réponds en JSON pur (pas de markdown):
       const ico = si[match.sport] || "🎯";
       const safeRaison = maskAiNames(String(analysisResult.raison || "").slice(0, 200));
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse exacte du Concile (sélection + raison) est réservée aux abonnés.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'analyse – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse exacte du Concile (sélection + raison) est réservée aux abonnés.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Voir les offres Premium</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       // Canal premium : uniquement l'ÉLITE (meilleure valeur/segment), plafonné à 4/jour.
       // L'admin, lui, reçoit TOUT (voir plus bas) — rien n'est perdu pour le suivi.
@@ -5139,10 +5162,9 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Groupe Telegram Standard"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Premium/Elite/VIP"] },
-    { name: "1€ Test", price: "1€", color: "#22d3ee", features: ["1 analyse Live IA", "Consensus IA complet", "Verdict + cote + raison"], locked: ["Accès illimité", "Alertes Signal Fort"] },
-    { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Premium", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
-    { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite/VIP", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
+    { name: "Standard", price: "Entrée", color: "#22c55e", features: ["Jusqu'a 3 signaux/jour", "Confiance >= 88/100", "Groupe Telegram Standard", "Historique public"], locked: ["Live IA", "Volume Premium", "Elite/VIP"] },
+    { name: "Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Groupe Telegram Premium", "Consensus + verdict Chief", "Historique complet"], locked: ["Volume Elite/VIP"] },
+    { name: "Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Groupe Telegram Elite/VIP", "Alertes Signal Fort", "Multisport prioritaire", "Support direct"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -5183,7 +5205,7 @@ function buildNurtureJ1Html(email) {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€ →</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir les offres Premium →</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5208,12 +5230,12 @@ function buildNurtureJ3Html() {
           🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
         </div>
       </div>
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, groupe Telegram Premium.</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Avec Premium, tu accèdes au pick complet, au Live IA sur les matchs disponibles et au groupe Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
       </div>
       <div style="text-align:center;margin-bottom:24px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Tester 1 analyse pour 1€</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir les offres Premium</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5252,7 +5274,7 @@ function buildNurtureJ5Html() {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Juste tester 1 analyse pour 1€</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Juste voir les offres Premium</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5284,7 +5306,7 @@ function buildNurtureJ7Html() {
       </div>
       <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;margin-bottom:20px;text-align:center">
         <div style="font-size:14px;color:#f59e0b;font-weight:700;margin-bottom:6px">Tu as reçu les signaux — mais pas les analyses complètes</div>
-        <div style="font-size:13px;color:#a8aec8">Les abonnés Pro et Elite ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
+        <div style="font-size:13px;color:#a8aec8">Les membres Premium et Elite/VIP ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;text-align:center">Compare les plans en un coup d'oeil</div>
       ${buildPlanComparisonHtml()}
@@ -5292,7 +5314,7 @@ function buildNurtureJ7Html() {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(245,158,11,.3)">Passer à l'action →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester pour 1€ seulement</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres Premium</a>
       </div>
       <div style="background:#0d1020;border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
         <div style="font-size:12px;color:#a8aec8">📱 Pas encore sur Telegram ?</div>
@@ -5372,7 +5394,7 @@ async function sendSignalFortBilanTelegram() {
   const threshold = getAdaptiveSignalThreshold();
   const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
 
-  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Voir les offres Premium</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
 
   if (TELEGRAM_PREMIUM_CHANNEL_ID) {
     const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
@@ -5442,8 +5464,8 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
     ``,
     outcome === "win"
-      ? `💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`
-      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`,
+      ? `💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Voir les offres Premium</a>`
+      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Voir les offres Premium</a>`,
     ``,
     `━━━━━━━━━━━━━━━━━━`,
     `🤖 Concile IA — TousLesMatchs`,
@@ -5528,7 +5550,7 @@ async function sendWeeklyConversionEmail() {
     <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
   </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir les offres Premium</a>
   </div>
   ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
@@ -5853,7 +5875,7 @@ app.post("/bankroll/bets/delete", (req, res) => {
 // ── Chatbot Mistral — mémoire isolée par utilisateur ─────────────────────────
 const CHAT_UNAVAILABLE = "Notre assistant est momentanément indisponible. Réessaie dans un instant, ou écris-nous sur Telegram.";
 const CHAT_SYSTEM_PROMPT = `Tu es l'assistant virtuel de TousLesMatchs.com, un service d'analyses sportives par IA appelé le "Concile". Réponds en français, brièvement, clairement et avec le sourire.
-Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (1 € l'analyse à l'unité, Pro 9,90 €/mois, Elite 19,90 €/mois), le groupe Telegram, la page Live IA, la page Résultats, la gestion de capital.
+Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (Standard, Premium 9,90 €/mois, Elite/VIP 19,90 €/mois), le groupe Telegram, la page Live IA, la page Résultats, la gestion de capital.
 RÈGLES STRICTES :
 - N'emploie JAMAIS le mot "pari" ni "parier" : dis "analyse", "sélection" ou "pick".
 - Ne garantis JAMAIS de gains ; rappelle que rien n'est certain et que le service est réservé aux 18 ans et plus.
@@ -6057,6 +6079,11 @@ app.get("/pronostics", (req, res) => {
   const items = seoPublishedRows(500);
   res.set("Content-Type", "text/html; charset=utf-8");
   res.send(seoPages.renderIndex(items));
+});
+
+app.get("/signaux-sportifs-ia", (req, res) => {
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(seoPages.renderSignalLanding());
 });
 
 app.get("/pronostic/:slug", (req, res) => {
@@ -6749,7 +6776,7 @@ app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
   const { price_id } = req.body || {};
   if (!price_id || !STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
-  const planLookup = { [STRIPE_PRICE_ID_CARTE]: "carte", [STRIPE_PRICE_ID_PREMIUM]: "premium", [STRIPE_PRICE_ID_VIP]: "vip", [STRIPE_PRICE_ID_ELITE]: "elite" };
+  const planLookup = { [STRIPE_PRICE_ID_CARTE]: "carte", [STRIPE_PRICE_ID_STANDARD]: "standard", [STRIPE_PRICE_ID_PREMIUM]: "premium", [STRIPE_PRICE_ID_VIP]: "vip", [STRIPE_PRICE_ID_ELITE]: "elite" };
   const planName = planLookup[price_id] || "premium";
 
   try {
@@ -6800,7 +6827,8 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
 
     const planMap = {
       [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro", durationDays: 1 },
-      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro",            durationDays: 32 },
+      [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", label: "Standard",       durationDays: 32 },
+      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Premium",        durationDays: 32 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP",            durationDays: 32 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite",          durationDays: 32 },
     };
@@ -6866,14 +6894,14 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const upsellBlock = status === "carte"
             ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Pro, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
-                <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
+                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Premium, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
+                <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Premium — 9.90€/mois</a>
               </div>`
             : status === "premium"
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
                 <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
+                <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite/VIP — 19.90€/mois</a>
               </div>`
             : "";
 
@@ -6915,7 +6943,7 @@ async function handleCreateCheckout(req, res) {
 
   const priceMap = {
     carte:    STRIPE_PRICE_ID_CARTE,
-    standard: STRIPE_PRICE_ID_PREMIUM,
+    standard: STRIPE_PRICE_ID_STANDARD,
     premium:  STRIPE_PRICE_ID_PREMIUM,
     vip:      STRIPE_PRICE_ID_VIP,
     elite:    STRIPE_PRICE_ID_ELITE,
@@ -7378,8 +7406,8 @@ async function sendDailyResultsStandardChannel() {
       `💰 <b>Bilan du jour à 10€/analyse : ${totalGain >= 0 ? "+" : ""}${totalGain.toFixed(0)}€</b>`,
       ``,
       winrate >= 60
-        ? `🚀 Ces résultats sont réservés aux membres Premium.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`
-        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`,
+        ? `🚀 Ces résultats sont réservés aux membres Premium.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Voir les offres Premium</a>`
+        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Voir les offres Premium</a>`,
       ``,
       `━━━━━━━━━━━━━━━━━━`,
       `🤖 Concile IA — TousLesMatchs`,
@@ -7618,7 +7646,7 @@ app.post("/admin/create-code", (req, res) => {
   const { target_email, plan = "elite", duration_days = 32 } = req.body || {};
   if (!target_email) return res.json({ ok: false, error: "target_email requis" });
 
-  const creditsMap = { carte: 1, premium: 10, vip: 20, elite: 30 };
+  const creditsMap = { carte: 1, standard: 0, premium: 10, vip: 20, elite: 30 };
   const creditsMax = creditsMap[plan] || 10;
 
   try {
@@ -7663,6 +7691,7 @@ app.post("/internal/stripe-verify", async (req, res) => {
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
       [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", durationDays: 32, creditsMax: 0 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
@@ -7712,6 +7741,7 @@ app.post("/payment-success", async (req, res) => {
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
       [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", durationDays: 32, creditsMax: 0 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
@@ -8089,7 +8119,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer l'analyse — 9.90€/mois →</a>
   </div>
   <div style="text-align:center;margin-bottom:20px">
-    <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Tester 1 analyse pour 1€</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres Premium</a>
   </div>
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
     TousLesMatchs — Signal automatique Concile IA<br>
@@ -9248,7 +9278,7 @@ app.get("/admin/heartbeat", (req, res) => {
 // ---- Chatbot Mistral --------------------------------------------------------
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
-const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram Standard. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
+const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: Standard, 9.90e Premium, 19.90e Elite/VIP. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram Standard. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
 app.post("/chatbot/ask", express.json(), async (req, res) => {
   try {
     const { question, email, session } = req.body || {};

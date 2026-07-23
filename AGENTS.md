@@ -75,6 +75,7 @@ Chaque IA qui travaille sur ce projet DOIT :
 | `/api/tier-signals` | GET | Volumes du jour par palier (public, sans devoiler les analyses payantes) |
 | `/internal/tier-signals/preview` | POST | Preview interne Hermes des candidats Standard/Premium/Elite/VIP |
 | `/internal/tier-signals/send` | POST | Envoi interne Hermes des signaux par palier (dryRun par defaut) |
+| `/signaux-sportifs-ia` | GET | Page SEO organique Standard/Premium/Elite-VIP |
 | `/pronostics` | GET | Page SEO index (HTML) |
 | `/pronostic/:slug` | GET | Page SEO detail par match (HTML) |
 | `/sitemap-pronostics.xml` | GET | Sitemap dynamique des pronostics |
@@ -99,7 +100,7 @@ Ne JAMAIS creer de fonctionnalite qui expose le nom, prenom, photo, voix, adress
 
 ### Tunnel de vente (ne JAMAIS complexifier)
 ```
-TikTok -> TousLesMatchs.com -> Telegram Standard -> Analyse 1euro -> Pro (9.90/mois) -> Elite (19.90/mois)
+TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 ```
 
 ### Analyses sportives
@@ -215,6 +216,14 @@ Si aucun objectif n'est rempli : NE PAS developper.
 - **Bookmakers actifs** : **Winamax, Unibet, PMU**. **Betclic RETIRE volontairement** (le fondateur n'etait pas sur que le lien etait le sien). NE PAS le remettre sans accord.
 - **Surcharge possible via .env** : `WINAMAX_LINK`, `UNIBET_LINK`, `PMU_LINK`.
 - `ARJEL_BOOKMAKERS` (dans api_server.js) sert au MATCHING des cotes reelles — garder "betclic" dedans est OK (c'est pour lire la cote, pas pour afficher un lien).
+
+## Stripe — gamme publique 2026-07-24
+
+- Offre publique : **Standard / Premium / Elite-VIP**.
+- `STRIPE_PRICE_ID_STANDARD` est pret cote backend mais doit etre cree/configure dans Stripe avant paiement Standard.
+- `STRIPE_PRICE_ID_PREMIUM` conserve le lien actuel Premium.
+- `STRIPE_PRICE_ID_ELITE` / `STRIPE_PRICE_ID_VIP` conservent les niveaux hauts existants.
+- L'ancien 1 euro et les anciens libelles gratuits ne doivent plus etre mis en avant sur l'accueil.
 
 ## Systeme de paliers (Standard / Premium / Elite)
 
