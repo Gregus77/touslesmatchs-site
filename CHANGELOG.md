@@ -33,6 +33,12 @@
 
 ## 2026-07-23
 
+### Cote envoyée AVEC le signal (Telegram premium/élite) — zéro requête API en plus
+- Le message de signal fort premium affiche désormais la cote + bookmaker directement :
+  `💰 Cote : 1.87 (Unibet)`. La cote est **déjà calculée** au moment de l'analyse
+  (`computeBestOdd`) → aucun appel API supplémentaire, aucun gaspillage de quota.
+- Canal gratuit inchangé (pick + cote réservés aux abonnés = tunnel de vente).
+
 ### Cohérence cotes : nom du bookmaker sur Telegram + site
 - **fetchRealOdds** privilégie désormais NOS bookmakers partenaires (Winamax, Unibet, PMU)
   puis tout ARJEL, puis le premier — pour que le bookmaker affiché soit cliquable.
