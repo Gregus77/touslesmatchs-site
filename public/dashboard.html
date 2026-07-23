@@ -77,6 +77,26 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 
 .empty-state{text-align:center;color:var(--muted);padding:40px;font-size:14px}
 
+/* Stats par palier */
+.tier-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.tc{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:20px;position:relative;overflow:hidden}
+.tc.standard{border-color:rgba(16,185,129,.28)}
+.tc.premium{border-color:rgba(99,102,241,.28)}
+.tc.elite{border-color:rgba(124,58,237,.28)}
+.tc-name{font-size:13px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.tc-kpis{display:flex;gap:12px}
+.tc-k{flex:1}
+.tc-k .v{font-size:22px;font-weight:900;line-height:1;letter-spacing:-.02em}
+.tc-k .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+.tc-body{transition:filter .2s}
+.tc.locked .tc-body{filter:blur(7px);opacity:.45;pointer-events:none;user-select:none}
+.tc-lock{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:rgba(6,8,15,.6);backdrop-filter:blur(1px);text-align:center;padding:16px}
+.tc-lock .ico{font-size:20px}
+.tc-lock .txt{font-size:12px;font-weight:700;color:var(--text);line-height:1.35}
+.tc-lock a{margin-top:2px;font-size:11px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:7px 16px;border-radius:8px;text-decoration:none}
+.tier-note{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5}
+@media(max-width:768px){.tier-cards{grid-template-columns:1fr}}
+
 footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin-top:60px}
 .foot-text{font-size:12px;color:var(--muted);line-height:1.9;max-width:500px;margin:0 auto}
 
@@ -128,7 +148,13 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
       <div class="kpi"><div class="kpi-val" id="d-since" style="color:var(--green)">—</div><div class="kpi-lbl">Membre depuis</div></div>
     </div>
 
-    <div class="section-title">Mes dernières analyses</div>
+    <div class="section-title" style="margin-top:40px">Performance par palier</div>
+    <div id="tier-cards" class="tier-cards">
+      <div class="empty-state">Chargement...</div>
+    </div>
+    <div class="tier-note" id="tier-note"></div>
+
+    <div class="section-title" style="margin-top:40px">Mes dernières analyses</div>
     <div id="history-list" class="history-list">
       <div class="empty-state">Chargement...</div>
     </div>
@@ -248,6 +274,9 @@ function loadDashboard() {
       document.getElementById('upgrade-box').style.display = 'block';
       document.getElementById('upgrade-text').textContent = 'Passe à Elite pour 30 analyses/jour et les alertes Signal Fort.';
     }
+
+    // Stats par palier selon le plan (Standard / Premium / Elite)
+    renderTierStats(u.status);
   })
   .catch(function() { logout(); });
 
@@ -276,6 +305,50 @@ function loadDashboard() {
   .catch(function() {
     document.getElementById('history-list').innerHTML = '<div class="empty-state">Erreur de chargement</div>';
   });
+}
+
+// Quels paliers un plan débloque : free→Standard · premium(Pro)→+Premium · elite→tout
+function tiersForPlan(status) {
+  if (status === 'elite') return { standard: true, premium: true, elite: true };
+  if (status === 'premium') return { standard: true, premium: true, elite: false };
+  return { standard: true, premium: false, elite: false };
+}
+
+// Affiche les 3 paliers : débloqués selon le plan, verrouillés (floutés + CTA) sinon.
+function renderTierStats(status) {
+  var allowed = tiersForPlan(status);
+  var META = {
+    standard: { label: '🟢 Standard' },
+    premium:  { label: '🟣 Premium' },
+    elite:    { label: '🟠 Elite' }
+  };
+  var UPSELL = { premium: 'Réservé aux membres Pro et Elite', elite: 'Réservé aux membres Elite' };
+  var container = document.getElementById('tier-cards');
+  var note = document.getElementById('tier-note');
+  if (!container) return;
+  fetch('/api/tier-stats').then(function(r) { return r.json(); }).then(function(d) {
+    if (!d || !d.ok || !d.tiers) { container.innerHTML = '<div class="empty-state">Statistiques indisponibles pour le moment.</div>'; return; }
+    var order = ['standard', 'premium', 'elite'];
+    container.innerHTML = order.map(function(k) {
+      var s = d.tiers[k] || { total: 0, winrate: 0, roi: 0 };
+      var unlocked = allowed[k];
+      var body = '<div class="tc-body">' +
+        '<div class="tc-name">' + META[k].label + '</div>' +
+        '<div class="tc-kpis">' +
+          '<div class="tc-k"><div class="v" style="color:var(--green)">' + (s.winrate || 0) + '%</div><div class="l">Réussite</div></div>' +
+          '<div class="tc-k"><div class="v">' + (s.total || 0) + '</div><div class="l">Analyses</div></div>' +
+          '<div class="tc-k"><div class="v" style="color:var(--cyan)">' + ((s.roi >= 0 ? '+' : '') + (s.roi || 0)) + '€</div><div class="l">Profit 10€/pick</div></div>' +
+        '</div></div>';
+      var lock = unlocked ? '' :
+        '<div class="tc-lock"><div class="ico">🔒</div><div class="txt">' + (UPSELL[k] || '') + '</div><a href="/#plans">Débloquer</a></div>';
+      return '<div class="tc ' + k + (unlocked ? '' : ' locked') + '">' + body + lock + '</div>';
+    }).join('');
+    if (note) {
+      if (status === 'elite') note.textContent = 'Accès complet aux 3 paliers, matchs « IA seulement » inclus.';
+      else if (status === 'premium') note.textContent = 'Tu vois Standard + Premium. Elite débloque tout le volume, y compris les analyses « IA seulement ».';
+      else note.textContent = 'Tu vois le palier Standard. Premium et Elite débloquent plus de volume d\'analyses.';
+    }
+  }).catch(function() { container.innerHTML = '<div class="empty-state">Erreur de chargement des paliers</div>'; });
 }
 
 // Auto-login if token exists

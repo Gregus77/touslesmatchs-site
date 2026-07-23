@@ -10,25 +10,32 @@
   comparatif offres, bandeau activité live, tunnel + compte gratuit, pages SEO).
 - Fixes : doublons vitrine, vraies cotes ARJEL, cohérence résultats Telegram, Betclic retiré, seuil 82.
 - Système de paliers **étape 1** : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
+- Système de paliers **étape 2** : `public/dashboard.html` affiche les stats par palier
+  SELON le plan (free→Standard · premium→+Premium · elite→tout), paliers verrouillés floutés + CTA.
 - Docs de passation : `AGENTS.md`, `POUR-LES-IA.md`, `CODEX.md`, `backup-db.sh`.
 
-**🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
-- Dans `public/dashboard.html` (espace perso), afficher les stats **selon le plan de l'utilisateur** :
-  - Standard → voit uniquement les stats du palier Standard
-  - Premium (pro) → voit Standard + Premium
-  - Elite → voit tout (Standard + Premium + Elite, dont matchs "IA seulement")
-- Données déjà dispo : `GET /api/tier-stats` (renvoie les 3 paliers) + `GET /api/auth/me` (renvoie `user.status`).
-- Mapping plans : `free`/`standard` → standard · `pro` → premium · `elite` → elite.
-- Ne PAS toucher au Telegram (étape 3, zone Hermès).
+**🚧 À FAIRE (prochaine étape) — Paliers étape 3 (ZONE HERMÈS, à coordonner) :**
+- Diffusion Telegram par palier + récap quotidien ("voilà ce qui s'est passé aujourd'hui"
+  en Standard/Premium/Elite). Touche `council/` + Telegram → NE PAS faire sans accord d'Hermès.
+- Réutiliser la logique de paliers déjà en place côté API (`rowIsArjel`, seuils 82/85/88).
 
 **📋 Plus tard :**
-- Paliers étape 3 (diffusion Telegram par palier + récap quotidien) — coordonner avec Hermès.
 - SEO : pages par équipe / championnat (en plus des pages par match).
 - Google Search Console : soumettre `sitemap-pronostics.xml`.
 
 ---
 
 ## 2026-07-23
+
+### Signaux par palier — étape 2 (espace perso, visibilité selon le plan)
+- **`public/dashboard.html`** : nouvelle section "Performance par palier" qui affiche
+  les 3 track records SELON le plan de l'utilisateur (via `/api/auth/me` → `status`) :
+  - `free` → Standard débloqué, Premium + Elite verrouillés (floutés + CTA "Débloquer")
+  - `premium` (Pro) → Standard + Premium débloqués, Elite verrouillé
+  - `elite` → les 3 débloqués (matchs "IA seulement" inclus)
+- Données : `GET /api/tier-stats` (existant) + `GET /api/auth/me` (existant). Aucune route modifiée.
+- Frontend uniquement, aucune écriture en base. Zone Telegram non touchée.
+- Impact : conversion (upsell contextuel), valeur perçue des 3 abonnements.
 
 ### Signaux par palier — étape 1 (site + API, lecture seule)
 - **Endpoint `/tier-stats`** : 3 track records séparés (Standard / Premium / Elite).

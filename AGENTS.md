@@ -220,8 +220,12 @@ Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confi
 - **Premium** = ARJEL & confiance >= 85 (inclut Standard)
 - **Elite** = tout le publie >= 82 (ARJEL + "IA seulement", gros volume)
 
-Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets). 
-Etape 2 (a faire) : visibilite selon le plan dans l'espace perso.
+Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
+Etape 2 FAITE : `public/dashboard.html` affiche les stats par palier SELON le plan.
+  Mapping plan -> paliers visibles (fonction `tiersForPlan` dans dashboard.html) :
+  - `free`    -> Standard (Premium + Elite verrouilles, floutes + CTA)
+  - `premium` -> Standard + Premium (Elite verrouille)
+  - `elite`   -> Standard + Premium + Elite (matchs "IA seulement" inclus)
 Etape 3 (a faire, ZONE HERMES) : diffusion Telegram par palier + recap quotidien — A COORDONNER.
 
 ## Deploiement (procedure + pieges connus)
