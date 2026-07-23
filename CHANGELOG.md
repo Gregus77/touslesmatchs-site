@@ -14,10 +14,16 @@
   SELON le plan (free→Standard · premium→+Premium · elite→tout), paliers verrouillés floutés + CTA.
 - Docs de passation : `AGENTS.md`, `POUR-LES-IA.md`, `CODEX.md`, `backup-db.sh`.
 
-**🚧 À FAIRE (prochaine étape) — Paliers étape 3 (ZONE HERMÈS, à coordonner) :**
-- Diffusion Telegram par palier + récap quotidien ("voilà ce qui s'est passé aujourd'hui"
-  en Standard/Premium/Elite). Touche `council/` + Telegram → NE PAS faire sans accord d'Hermès.
-- Réutiliser la logique de paliers déjà en place côté API (`rowIsArjel`, seuils 82/85/88).
+- Sécurité **P1 + P2** FAITES : rate limiting maison (auth 20/15min, global 600/min) +
+  garde des endpoints `/admin/*` en lecture (admin OU token Hermès). Voir RAPPORT-AUDIT-2026-07-23.md.
+  ⚠️ **Coordination Hermès** : son monitoring qui lit `/admin/health`, `/admin/scheduler-state`, etc.
+  doit maintenant passer `?secret=<HERMES_ADMIN_TLM_BOT>` (sinon 403).
+
+**🚧 À FAIRE (prochaines étapes) :**
+- **Sécurité P3** : restreindre le CORS (`app.use(cors())` = `*`) au domaine touslesmatchs.com (au moins /admin).
+- **Sécurité P4** : vérifier que `STRIPE_WEBHOOK_SECRET` est bien défini en prod (config .env, pas code).
+- **Paliers étape 3 (ZONE HERMÈS, à coordonner)** : diffusion Telegram par palier + récap quotidien.
+  Touche `council/` + Telegram → NE PAS faire sans accord d'Hermès. Réutiliser `rowIsArjel`, seuils 82/85/88.
 
 **📋 Plus tard :**
 - SEO : pages par équipe / championnat (en plus des pages par match).
@@ -26,6 +32,18 @@
 ---
 
 ## 2026-07-23
+
+### Sécurité — durcissement P1 + P2 (suite audit)
+- **Rate limiting maison** (aucune dépendance, en mémoire) : `/auth/login` et `/auth/register`
+  limités à 20 tentatives / 15 min / IP (anti-brute-force) ; limite globale 600 req / min / IP
+  (anti-scraping, ne gêne aucun visiteur normal). Réponse `429` si dépassé.
+- **Endpoints `/admin/*` en lecture protégés** : `/admin/leagues`, `/admin/agents`, `/admin/journal`,
+  `/admin/markets`, `/admin/competitions`, `/admin/health`, `/admin/ai-specialization`,
+  `/admin/monthly-history`, `/admin/alerts`, `/admin/scheduler-state`, `/admin/guardian-state`,
+  `/admin/datahub-state`, `/admin/version`, `/admin/preflight`, `/admin/heartbeat`.
+  Accès désormais : admin (email+code) **OU** token Hermès (`?secret=<HERMES_ADMIN_TLM_BOT>`).
+- Middleware placé après `app.use(cors())`. `isAdmin` réutilisé (hoisté). Aucune route existante modifiée.
+- ⚠️ Le monitoring Hermès doit ajouter `?secret=<token>` sur ces lectures.
 
 ### Signaux par palier — étape 2 (espace perso, visibilité selon le plan)
 - **`public/dashboard.html`** : nouvelle section "Performance par palier" qui affiche

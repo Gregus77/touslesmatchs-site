@@ -164,6 +164,64 @@ app.use((req, res, next) => {
 });
 app.use(cors());
 
+// ── SÉCURITÉ P2 : rate limiting maison (aucune dépendance externe) ────────────
+// Strict sur l'authentification (anti-brute-force), très large ailleurs
+// (anti-scraping sans gêner les visiteurs). Stockage en mémoire, nettoyé.
+const _rlHits = new Map();
+function rlAllow(key, max, windowMs) {
+  const now = Date.now();
+  const arr = (_rlHits.get(key) || []).filter(t => now - t < windowMs);
+  arr.push(now);
+  _rlHits.set(key, arr);
+  return arr.length <= max;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, arr] of _rlHits) {
+    const keep = arr.filter(t => now - t < 15 * 60 * 1000);
+    if (keep.length) _rlHits.set(k, keep); else _rlHits.delete(k);
+  }
+}, 5 * 60 * 1000);
+function clientIp(req) {
+  return String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.ip || "unknown";
+}
+app.use((req, res, next) => {
+  const ip = clientIp(req);
+  // Auth : 20 tentatives / 15 min / IP
+  if (req.method === "POST" && (req.path === "/auth/login" || req.path === "/auth/register")) {
+    if (!rlAllow("auth_" + ip, 20, 15 * 60 * 1000)) {
+      return res.status(429).json({ ok: false, error: "Trop de tentatives, réessaie dans quelques minutes." });
+    }
+  }
+  // Global : 600 req / min / IP (très large, ne gêne aucun visiteur normal)
+  if (!rlAllow("g_" + ip, 600, 60 * 1000)) {
+    return res.status(429).json({ ok: false, error: "Trop de requêtes." });
+  }
+  next();
+});
+
+// ── SÉCURITÉ P1 : protège les endpoints /admin/* en LECTURE seule ─────────────
+// Ces endpoints exposaient des infos internes (ratings ligues, perfs agents,
+// état système…) sans auth. On exige désormais : identifiants admin (email+code)
+// OU le token d'Hermès (secret = HERMES_ADMIN_TLM_BOT) pour ne pas casser son
+// monitoring. Les routes admin sensibles (codes, mutations) ont déjà leur propre
+// contrôle — ceci ne fait que couvrir les lectures ops non protégées.
+const ADMIN_READONLY_PATHS = new Set([
+  "/admin/leagues", "/admin/agents", "/admin/journal", "/admin/markets",
+  "/admin/competitions", "/admin/health", "/admin/ai-specialization",
+  "/admin/monthly-history", "/admin/alerts", "/admin/scheduler-state",
+  "/admin/guardian-state", "/admin/datahub-state", "/admin/version",
+  "/admin/preflight", "/admin/heartbeat",
+]);
+app.use((req, res, next) => {
+  if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
+    const { email, code, secret } = req.query;
+    const ok = isAdmin(email, code) || (secret && secret === process.env.HERMES_ADMIN_TLM_BOT);
+    if (!ok) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  }
+  next();
+});
+
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);

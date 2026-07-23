@@ -78,6 +78,16 @@ Chaque IA qui travaille sur ce projet DOIT :
 
 > Note routage Caddy : le front appelle `/api/xxx` ; Caddy strippe `/api` → le serveur definit la route `/xxx`. Les pages SEO (`/pronostics`, `/pronostic/*`, `/sitemap-pronostics.xml`) ont des `handle` dedies dans le `Caddyfile`.
 
+## Securite (durcissement — juillet 2026)
+
+- **Rate limiting maison** (middleware apres `app.use(cors())`, sans dependance) :
+  `/auth/login` + `/auth/register` = 20/15min/IP ; global 600/min/IP → `429` si depasse.
+- **Endpoints `/admin/*` en LECTURE proteges** par middleware (liste `ADMIN_READONLY_PATHS`) :
+  acces = admin (email+code) OU token Hermes (`?secret=<HERMES_ADMIN_TLM_BOT>`).
+  ⚠️ **Le monitoring Hermes doit passer `?secret=<token>`** sur `/admin/health`, `/admin/scheduler-state`, etc.
+- **Stripe** : webhook verifie la signature (`constructEvent`) SI `STRIPE_WEBHOOK_SECRET` est defini → le garder en prod.
+- **A FAIRE** : restreindre CORS (`*`) au domaine (P3). Voir `RAPPORT-AUDIT-2026-07-23.md`.
+
 ## Regles metier OBLIGATOIRES
 
 ### ANJ (Autorite Nationale des Jeux) — LEGAL
