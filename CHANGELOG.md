@@ -12,6 +12,9 @@
 - Système de paliers **étape 1** : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
 - Système de paliers **étape 2** : `public/dashboard.html` affiche les stats par palier
   SELON le plan (free→Standard · premium→+Premium · elite→tout), paliers verrouillés floutés + CTA.
+- Système de paliers **étape 3** : `computeSignalTier()` classe chaque signal (Standard/Premium/Elite),
+  colonne `signal_tier` en base, diffusion Telegram filtrée par palier (gratuit = Standard+Premium,
+  premium = tout, admin = tout). Fenêtre d'analyse élargie 30-75' (était 35-75').
 - Docs de passation : `AGENTS.md`, `POUR-LES-IA.md`, `CODEX.md`, `backup-db.sh`.
 
 - Sécurité **P1 + P2** FAITES : rate limiting maison (auth 20/15min, global 600/min) +
@@ -22,8 +25,6 @@
 **🚧 À FAIRE (prochaines étapes) :**
 - **Sécurité P3** : restreindre le CORS (`app.use(cors())` = `*`) au domaine touslesmatchs.com (au moins /admin).
 - **Sécurité P4** : vérifier que `STRIPE_WEBHOOK_SECRET` est bien défini en prod (config .env, pas code).
-- **Paliers étape 3 (ZONE HERMÈS, à coordonner)** : diffusion Telegram par palier + récap quotidien.
-  Touche `council/` + Telegram → NE PAS faire sans accord d'Hermès. Réutiliser `rowIsArjel`, seuils 82/85/88.
 
 **📋 Plus tard :**
 - SEO : pages par équipe / championnat (en plus des pages par match).

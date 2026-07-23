@@ -411,6 +411,8 @@ ensureColumn("concile_analyses", "real_odd_source", "TEXT DEFAULT NULL");
 // poster le résultat (gagné/perdu) que sur les canaux qui ont vu le pick.
 ensureColumn("concile_analyses", "sig_sent_free",    "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_premium", "INTEGER DEFAULT 0");
+// Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
+ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
@@ -1711,6 +1713,23 @@ function bestBetGrade(match, bet, confidence, cote) {
   // Élite = valeur positive ET (confiance très haute OU segment historiquement gagnant)
   const elite = ev > 0 && ((Number(confidence) || 0) >= 88 || (segWr !== null && segWr >= 0.62));
   return { ev, segWr, elite };
+}
+
+// ── Palier du signal : Standard / Premium / Elite ──
+// Filtrage APRÈS analyse : le concile recommande librement, on classe ensuite.
+// Standard = crème (Under 2.5, ≥90%, envoyé 45-60') → peu de volume, très fiable
+// Premium  = solide (Under/Over 2.5, ≥86%, envoyé 40-65')
+// Elite    = tout le reste qualifié (≥82%, toute fenêtre)
+function computeSignalTier(bet, confidence, minute) {
+  const c = Number(confidence) || 0;
+  const m = Number(minute) || 60;
+  const b = String(bet || "").toLowerCase();
+  const isUnder = /under|moins de 2[.,]5/i.test(b);
+  const isOver = /over|plus de 2[.,]5/i.test(b);
+  if (c >= 90 && isUnder && m >= 45 && m <= 60) return "standard";
+  if (c >= 86 && (isUnder || isOver) && m >= 40 && m <= 65) return "premium";
+  if (c >= 82) return "elite";
+  return null;
 }
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
@@ -3068,40 +3087,42 @@ Réponds en JSON pur (pas de markdown):
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse exacte du Concile (sélection + raison) est réservée aux abonnés.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'analyse – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
-      // Canal premium : uniquement l'ÉLITE (meilleure valeur/segment), plafonné à 4/jour.
-      // L'admin, lui, reçoit TOUT (voir plus bas) — rien n'est perdu pour le suivi.
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
-      // Barrière ARJEL : les clients ne reçoivent QUE des paris jouables sur un
-      // bookmaker français agréé (cote réelle Betclic/Winamax/Unibet/PMU…). Sinon
-      // (cote estimée ou bookmaker non-ARJEL) → admin uniquement.
+      const minute = parseLiveMinuteValue(match.minute);
+      const sigTier = computeSignalTier(analysisResult.best_bet, analysisResult.confidence, minute);
+      const tierBadge = sigTier === "standard" ? "🥇 STANDARD" : sigTier === "premium" ? "🥈 PREMIUM" : "🥉 ELITE";
+      console.log(`[signal-fort] Palier: ${tierBadge} (${sigTier}) — ${analysisResult.best_bet} ${analysisResult.confidence}% min=${minute}`);
       const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a))
         || isArjelMajorCompetition(match);
       if (!arjelPlayable) {
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      // Premium/Elite : reçoit l'analyse complète de CHAQUE signal jouable ARJEL
-      // (plafonné à PREMIUM_SIGNAL_DAILY_CAP/jour). Les abonnés paient — ils reçoivent
-      // au moins autant que le gratuit, avec la sélection + la raison en clair.
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      // Diffusion par palier : Standard → tous les canaux, Premium → premium+free, Elite → premium seul
+      // Le canal gratuit ne reçoit que les meilleurs signaux (Standard ou Premium), 1/jour max.
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && sigTier && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
         markSignalSent(match.home, match.away, "sig_sent_premium");
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${grade.elite ? "ELITE " : ""}${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
+        const tierTag = `\n🏅 Palier : <b>${tierBadge}</b>`;
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${tierBadge} ${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
-      // Copie ADMIN : l'admin reçoit TOUS les signaux forts (même hors ARJEL), sans limite.
       if (TELEGRAM_ADMIN_CHAT_ID) {
         const adminHeader = arjelPlayable
-          ? `👑 <b>[ADMIN · copie signal]</b>\n🏦 Bookmaker : ${analysisResult.cote_source}`
+          ? `👑 <b>[ADMIN · ${tierBadge}]</b>\n🏦 Bookmaker : ${analysisResult.cote_source}`
           : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ Cote : ${analysisResult.cote_source || "estimation"} (pas de bookmaker français agréé)`;
         sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `${adminHeader}\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
       }
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      if (arjelPlayable && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+      // Canal gratuit : seulement Standard ou Premium (pas Elite) — 1/jour max
+      const freeEligible = sigTier === "standard" || sigTier === "premium";
+      if (arjelPlayable && freeEligible && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
         markSignalSent(match.home, match.away, "sig_sent_free");
         sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
+      } else if (arjelPlayable && !freeEligible) {
+        console.log(`[signal-fort] Free channel: signal Elite uniquement — pas diffusé en gratuit`);
       } else if (arjelPlayable) {
         console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
       }
@@ -3276,6 +3297,8 @@ function saveConcileAnalysis(match, result, pickBet) {
     const homeShots = liveStats?.shots?.home ?? liveStats?.shots_on_goal?.home ?? null;
     const awayShots = liveStats?.shots?.away ?? liveStats?.shots_on_goal?.away ?? null;
 
+    const sigTier = computeSignalTier(result.best_bet, result.confidence, minute);
+
     const existing = db.prepare("SELECT id, best_bet FROM concile_analyses WHERE match_key = ?").get(matchKey);
     if (existing) {
       const betChanged = existing.best_bet !== result.best_bet;
@@ -3286,7 +3309,8 @@ function saveConcileAnalysis(match, result, pickBet) {
           consensus_votes = ?, agents_json = ?, pick_bet = ?,
           learning_tier = ?, learning_note = ?,
           bet_category = ?, home_possession = ?, away_possession = ?,
-          home_shots = ?, away_shots = ?, real_odd = ?, real_odd_source = ?, analysed_at = datetime('now')
+          home_shots = ?, away_shots = ?, real_odd = ?, real_odd_source = ?,
+          signal_tier = ?, analysed_at = datetime('now')
           ${betChanged ? ", outcome = NULL, final_score_home = NULL, final_score_away = NULL, resolved_at = NULL" : ""}
         WHERE match_key = ?
       `).run(
@@ -3298,6 +3322,7 @@ function saveConcileAnalysis(match, result, pickBet) {
         learningAssessment.tier, learningAssessment.reasons.join("; "),
         betCat, homePoss, awayPoss, homeShots, awayShots,
         result.cote ?? null, result.cote_source ?? null,
+        sigTier,
         matchKey
       );
     } else {
@@ -3309,8 +3334,8 @@ function saveConcileAnalysis(match, result, pickBet) {
            sport, learning_tier, learning_note, home_logo, away_logo,
            bet_category, country, is_neutral,
            home_possession, away_possession, home_shots, away_shots,
-           real_odd, real_odd_source)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           real_odd, real_odd_source, signal_tier)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).run(
         matchKey,
         match.home, match.away, competition, minute,
@@ -3323,14 +3348,15 @@ function saveConcileAnalysis(match, result, pickBet) {
         match.home_logo || null, match.away_logo || null,
         betCat, country, neutral,
         homePoss, awayPoss, homeShots, awayShots,
-        result.cote ?? null, result.cote_source ?? null
+        result.cote ?? null, result.cote_source ?? null,
+        sigTier
       );
     }
     console.log(
       `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
       `${match.home} vs ${match.away} | minute=${minute ?? "?"} | ` +
       `score=${match.score_home ?? "?"}-${match.score_away ?? "?"} | ` +
-      `bet=${result.best_bet} | confidence=${result.confidence} | reason=${String(result.raison || "").slice(0, 180)}`
+      `bet=${result.best_bet} | confidence=${result.confidence} | tier=${sigTier || "none"} | reason=${String(result.raison || "").slice(0, 180)}`
     );
   } catch(e) { console.error("[concile-trace] save:", e.message); }
 }
@@ -4507,7 +4533,7 @@ function isNoiseForDisplay(match) {
   return false;                                        // on garde les gagnants (volume)
 }
 
-const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
+const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 30));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
 
 function shouldAutoObserveMatch(match) {
