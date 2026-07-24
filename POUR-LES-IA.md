@@ -13,7 +13,7 @@ Tu reprends le développement de TousLesMatchs.com (analyses sportives par IA �
 on ne dit JAMAIS le mot "pari", conformité ANJ obligatoire).
 
 1. AVANT TOUT, lis ces 2 fichiers à la racine du repo GitHub
-   "Gregus77/touslesmatchs-site", branche "claude/tiktok-arjel-automation-hgp1tv" :
+   "Gregus77/touslesmatchs-site", branche "codex/dashboard-premium-redesign" :
    - AGENTS.md   (architecture, endpoints, liens bookmakers, règles, pièges déploiement)
    - CHANGELOG.md (tout ce qui a déjà été fait)
 
@@ -32,13 +32,19 @@ on ne dit JAMAIS le mot "pari", conformité ANJ obligatoire).
 
 MON IDÉE / MA DEMANDE :
 👉 (Grégory écrit ici ce qu'il veut, en français simple)
+
+CONTEXTE ACTUEL 2026-07-24 :
+- Dernier commit fonctionnel Codex : 9e65437.
+- Accueil refait avec Standard 4,90 EUR/mois, Premium 14,90 EUR/mois, Elite/VIP 29,90 EUR/mois.
+- Liens Stripe branches, historique veille replie par defaut, matchs live cliquables vers les offres.
+- A faire ensuite : logos/fanions des equipes + vrais matchs temps reel plus visibles en haut du direct.
 ```
 
 ---
 
 ## 🟩 BLOC 2 — DÉPLOYER (à coller dans le terminal du serveur)
 
-Remplace `LA-BRANCHE` par la branche de l'IA (ex: `claude/tiktok-arjel-automation-hgp1tv`) :
+Remplace `LA-BRANCHE` par la branche de l'IA (ex: `codex/dashboard-premium-redesign`) :
 
 ```bash
 cd /opt/touslesmatchs && git fetch origin LA-BRANCHE && git checkout origin/LA-BRANCHE -- public/ scripts/ && docker compose up -d --build

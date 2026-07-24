@@ -3,7 +3,7 @@
 ## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
 
 **Dernière IA active :** Codex · **Branche :** `codex/dashboard-premium-redesign`
-**Date :** 2026-07-23
+**Date :** 2026-07-24
 
 **✅ Fait et déployé :**
 - Refonte conversion complète (Hero + vote multi-IA, preuves, Pourquoi nous, méthode 5 étapes,
@@ -23,9 +23,15 @@
 - Le groupe Telegram historique gratuit devient le groupe **Standard** : `TELEGRAM_STANDARD_CHANNEL_ID` prend le relais, avec fallback legacy sur `TELEGRAM_CHANNEL_ID`.
 - Accueil + emails alignes sur la gamme **Standard 4,90€ / Premium 14,90€ / Elite-VIP 29,90€** : suppression de la mise en avant publique du test 1 euro, ajout de `STRIPE_PRICE_ID_STANDARD`, quotas backend Standard=3 / Premium=10 / Elite-VIP=30 et page SEO `/signaux-sportifs-ia`.
 - Boutons Stripe accueil branches sur les Payment Links publics : Standard `00w14ncbGgo48c4fpA3VC05`, Premium `6oU3cvdfK4Fm0JC1yK3VC06`, Elite/VIP `4gM9AT5Nifk0gIA91c3VC07`, avec tentative backend checkout d'abord.
+- UX accueil : les resultats de la veille sont repliees par defaut ; les matchs live cliquables renvoient vers le choix Standard/Premium/Elite-VIP.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
-**🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
+**🚧 À FAIRE (prochaine étape immédiate — demandé par Grégory) :**
+- Ajouter les logos/fanions des equipes sur les cartes de matchs live et la carte du match du jour.
+- Remonter les vrais matchs en temps reel tout en haut de l'accueil/direct, avec donnees `/api/live-matches` et fallback propre si aucun match qualifie.
+- Au clic sur un match live, garder le tunnel clair : proposer Standard / Premium / Elite-VIP, sans afficher d'analyse payante directement.
+
+**🚧 À FAIRE (suite) — Paliers étape 2 :**
 - Dans `public/dashboard.html` (espace perso), afficher les stats **selon le plan de l'utilisateur** :
   - Standard → voit uniquement les stats du palier Standard
   - Premium (pro) → voit Standard + Premium

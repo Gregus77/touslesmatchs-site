@@ -4,7 +4,7 @@
 ## ⚡ HANDOFF RAPIDE — POUR TOUTE IA QUI REPREND (lis d'abord ceci)
 
 - **Repo GitHub** : `Gregus77/touslesmatchs-site`
-- **Branche de dev active** : `claude/tiktok-arjel-automation-hgp1tv` (le code le PLUS a jour est ici, PAS sur main)
+- **Branche de dev active** : `codex/dashboard-premium-redesign` (le code le PLUS a jour est ici, PAS sur main)
 - **Serveur (VPS Hostinger)** : `/opt/touslesmatchs` (Ubuntu 24.04)
 - **Ce fichier + `CHANGELOG.md`** = la source de verite. Lis les 2 avant de coder.
 
@@ -15,6 +15,11 @@
 - **Stripe, Telegram, Brevo, Concile** → voir "Ce qui ne doit JAMAIS casser".
 
 **Procedure de deploiement (IMPORTANT — pieges connus)** : voir section "Deploiement" en bas.
+
+**Etat Codex 2026-07-24 — important pour Claude :**
+- Dernier commit fonctionnel Codex : `9e65437 [Codex] Simplifie historique et conversion live`.
+- Accueil local refait avec gamme Standard/Premium/Elite-VIP, prix coherents, liens Stripe publics, historique veille replie par defaut, matchs live cliquables vers les offres.
+- Manque encore demande par Gregory : logos/fanions des equipes et vrais matchs temps reel visibles plus haut sur l'accueil/direct.
 
 ## REGLE ABSOLUE : NE RIEN CASSER
 
@@ -251,8 +256,8 @@ Regles moteur signaux (2026-07-24) :
 
 ```bash
 cd /opt/touslesmatchs
-git fetch origin claude/tiktok-arjel-automation-hgp1tv
-git checkout origin/claude/tiktok-arjel-automation-hgp1tv -- public/ scripts/api_server.js scripts/bookmakers.config.js
+git fetch origin codex/dashboard-premium-redesign
+git checkout origin/codex/dashboard-premium-redesign -- public/ scripts/api_server.js scripts/bookmakers.config.js
 docker compose up -d --build
 ```
 

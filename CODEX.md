@@ -14,7 +14,7 @@ conversation Claude t'est fourni juste au-dessus/à côté de ce message.
 
 **Où sont les fichiers :**
 - Repo GitHub : `Gregus77/touslesmatchs-site`
-- Branche à jour : `claude/tiktok-arjel-automation-hgp1tv` (le code récent est ICI, pas sur main)
+- Branche à jour : `codex/dashboard-premium-redesign` (le code récent est ICI, pas sur main)
 - Serveur (VPS) : `/opt/touslesmatchs`
 - Fichiers clés : `scripts/api_server.js` (toute l'API + SEO inline + paliers),
   `public/index.html` (accueil), `public/dashboard.html` (compte gratuit),
@@ -97,9 +97,16 @@ git diff HEAD~5 -- <fichier>
 TousLesMatchs.com est un site d'analyses sportives par IA. Le coeur :
 - 4 agents IA analysent les matchs (Concile Hermes, cote Python)
 - Une version JS simplifiee (Auto-Concile) tourne dans l'API pour le Live IA
-- Les utilisateurs achetent des abonnements via Stripe (1euro, 9.90, 19.90/mois)
+- Les utilisateurs achetent des abonnements via Stripe : Standard 4,90 EUR/mois, Premium 14,90 EUR/mois, Elite/VIP 29,90 EUR/mois
 - Le trafic vient de TikTok → site → Telegram → conversion
 - Conformite ANJ obligatoire (pas de "pari", disclaimer, pas de garantie de gains)
+
+## Reprise Claude apres Codex - 2026-07-24
+
+- Derniere branche a reprendre : `codex/dashboard-premium-redesign`
+- Dernier commit fonctionnel Codex : `9e65437 [Codex] Simplifie historique et conversion live`
+- Fait : accueil allege, gamme Standard/Premium/Elite-VIP, prix harmonises, liens Stripe publics, historique veille replie par defaut, matchs live cliquables vers les offres.
+- A faire ensuite : ajouter logos/fanions des equipes et remonter les vrais matchs en temps reel en haut de l'accueil/direct.
 
 ## En cas de doute
 
