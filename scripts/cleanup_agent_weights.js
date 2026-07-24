@@ -20,19 +20,28 @@
 
 const path = require("path");
 const fs = require("fs");
-const Database = require("better-sqlite3");
+
+// Le script est exécuté depuis /data (volume monté), or better-sqlite3 vit dans
+// /app/node_modules : Node résout les modules depuis le dossier du SCRIPT, pas le cwd.
+// On tente donc la résolution normale puis les emplacements connus du conteneur.
+let Database;
+for (const candidate of ["better-sqlite3", "/app/node_modules/better-sqlite3", "/usr/src/app/node_modules/better-sqlite3"]) {
+  try { Database = require(candidate); break; } catch { /* essai suivant */ }
+}
+if (!Database) {
+  console.error("\nModule better-sqlite3 introuvable.");
+  console.error("Relance en indiquant le chemin des modules du conteneur, par ex. :");
+  console.error("  docker exec -e NODE_PATH=/app/node_modules touslesmatchs-api node /data/cleanup_agent_weights.js\n");
+  process.exit(1);
+}
 
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const APPLY = process.argv.includes("--apply");
 
-// Roster actif = Concile principal + agents shadow (cf. agentNames et SHADOW_AGENTS
-// dans api_server.js). Toute ligne hors de cette liste est un vestige.
-const ACTIVE_AGENTS = [
-  // Concile principal
-  "Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief",
-  // Banc d'essai (shadow)
-  "Groq-Llama70B", "Groq-Llama8B", "Mistral-Small", "Cerebras-Llama", "OR-Mistral7B",
-];
+// Doit rester identique à CONCILE_AGENT_NAMES dans api_server.js — sinon le script
+// conserverait une ligne que refreshAgentWeights() purgerait au redémarrage suivant.
+// Les agents shadow n'entrent jamais ici : ils écrivent dans shadow_evals.
+const ACTIVE_AGENTS = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief"];
 
 let db;
 try {

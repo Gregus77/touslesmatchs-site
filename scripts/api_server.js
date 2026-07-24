@@ -409,8 +409,10 @@ ensureColumn("concile_analyses", "real_odd",        "REAL DEFAULT NULL");
 ensureColumn("concile_analyses", "real_odd_source", "TEXT DEFAULT NULL");
 // Traçage: sur quels canaux clients le signal a réellement été DIFFUSÉ. Sert à ne
 // poster le résultat (gagné/perdu) que sur les canaux qui ont vu le pick.
-ensureColumn("concile_analyses", "sig_sent_free",    "INTEGER DEFAULT 0");
-ensureColumn("concile_analyses", "sig_sent_premium", "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_free",     "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_standard", "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_premium",  "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_elite",    "INTEGER DEFAULT 0");
 // Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
 ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 
@@ -540,17 +542,21 @@ db.exec(`
   );
 `);
 
+// ── Roster ACTUEL du Concile — source de vérité unique ───────────────────────
+// Doit rester synchronisé avec `agentNames` dans runConcile(). agent_predictions
+// conserve l'historique des agents retirés (GROQ-Llama, GPT Analysis, GeminiFlash,
+// Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
+// agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
+// alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief"];
+
 // ── Initialise agent weights if empty ──
 try {
   const agentCount = db.prepare("SELECT COUNT(*) as c FROM agent_weights").get().c;
   if (agentCount === 0) {
-    // Roster ACTUEL du Concile (cf. agentNames dans runConcile). Ne jamais remettre ici
-    // les noms de l'ancien Concile (GROQ-Llama, GPT Analysis, GeminiFlash, Mistral-7B) :
-    // ce seed se rejoue dès que la table est vide et ressusciterait les agents fantômes.
-    const defaultAgents = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief"];
     const insert = db.prepare("INSERT OR IGNORE INTO agent_weights (agent_name, weight) VALUES (?, 1.0)");
-    for (const name of defaultAgents) insert.run(name);
-    console.log("[migration] Agent weights initialised with 5 agents");
+    for (const name of CONCILE_AGENT_NAMES) insert.run(name);
+    console.log(`[migration] Agent weights initialised with ${CONCILE_AGENT_NAMES.length} agents`);
   }
 } catch(e) { console.error("[migration] agent_weights init:", e.message); }
 
@@ -662,8 +668,14 @@ function refreshLeagueRatings() {
 }
 
 // ── Update agent weights from agent_predictions ──
+// Restreint au roster actif : agent_predictions garde l'historique des agents
+// retirés, mais leur agrégat ne doit pas réapparaître dans agent_weights à chaque
+// redémarrage (cet UPSERT tourne au boot). On purge donc aussi les lignes hors roster.
 function refreshAgentWeights() {
   try {
+    const ph = CONCILE_AGENT_NAMES.map(() => "?").join(",");
+    const pruned = db.prepare(`DELETE FROM agent_weights WHERE agent_name NOT IN (${ph})`).run(...CONCILE_AGENT_NAMES).changes;
+    if (pruned > 0) console.log(`[migration] Agent weights: ${pruned} ligne(s) hors roster purgée(s)`);
     const agents = db.prepare(`
       SELECT agent_name,
         COUNT(*) as total,
@@ -671,8 +683,9 @@ function refreshAgentWeights() {
         SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
       FROM agent_predictions
       WHERE outcome IS NOT NULL AND outcome != 'pending'
+        AND agent_name IN (${ph})
       GROUP BY agent_name
-    `).all();
+    `).all(...CONCILE_AGENT_NAMES);
     const upsert = db.prepare(`
       INSERT INTO agent_weights (agent_name, total_predictions, wins, losses, winrate, roi, weight, last_updated)
       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -3144,7 +3157,7 @@ Réponds en JSON pur (pas de markdown):
       // 🟢 STANDARD — cap 3/j
       if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP) {
         _standardSignalDaily.count++;
-        markSignalSent(match.home, match.away, "sig_sent_premium");
+        markSignalSent(match.home, match.away, "sig_sent_standard");
         sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
       }
 
@@ -3160,7 +3173,7 @@ Réponds en JSON pur (pas de markdown):
       // 🟠 ELITE/VIP — cap 30/j, multisport, alertes prioritaires
       if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
         _eliteSignalDaily.count++;
-        markSignalSent(match.home, match.away, "sig_sent_premium");
+        markSignalSent(match.home, match.away, "sig_sent_elite");
         const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
         sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL"}`));
       }
@@ -5450,20 +5463,26 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   // Cohérence : on ne poste le résultat QUE sur les canaux qui ont réellement reçu
   // le pick. Un signal jamais diffusé (bloqué/hors ARJEL/plafond) ne génère aucun
   // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
-  const sentPremium = analysis.sig_sent_premium === 1 || analysis.sig_sent_premium === true;
-  const sentFree = analysis.sig_sent_free === 1 || analysis.sig_sent_free === true;
-  if (!sentPremium && !sentFree) {
+  const flag = (v) => v === 1 || v === true;
+  const sentStandard = flag(analysis.sig_sent_standard);
+  const sentPremium  = flag(analysis.sig_sent_premium);
+  const sentElite    = flag(analysis.sig_sent_elite);
+  const sentFree     = flag(analysis.sig_sent_free);
+  if (!sentStandard && !sentPremium && !sentElite && !sentFree) {
     console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
     return;
   }
-  if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_CHANNEL_ID && sentFree) sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentPremium ? " premium" : ""})`);
+  if (TELEGRAM_STANDARD_CHANNEL_ID && sentStandard) sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium)   sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_ELITE_CHANNEL_ID && sentElite)       sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_CHANNEL_ID && sentFree)              sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentStandard ? " standard" : ""}${sentPremium ? " premium" : ""}${sentElite ? " elite" : ""})`);
 }
 
 // Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
+const SIGNAL_SENT_COLUMNS = ["sig_sent_free", "sig_sent_standard", "sig_sent_premium", "sig_sent_elite"];
 function markSignalSent(home, away, col) {
-  if (col !== "sig_sent_free" && col !== "sig_sent_premium") return;
+  if (!SIGNAL_SENT_COLUMNS.includes(col)) return;
   try {
     db.prepare(
       `UPDATE concile_analyses SET ${col}=1
