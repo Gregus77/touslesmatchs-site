@@ -1160,7 +1160,7 @@ footer{
   <div class="nav-center">
     <a href="#pick" data-i18n="pick_today">Analyse du jour</a>
     <a href="/live-ia"><span class="nav-live-dot" style="display:inline-block;margin-right:5px;vertical-align:middle"></span>Live IA</a>
-    <a href="/preuves">🏆 Résultats</a>
+    <a href="/performances">🏆 Résultats</a>
     <a href="/bankroll">💼 Ma bankroll</a>
     <a href="/performances">Performances</a>
     <a href="#methode">Méthode</a>
@@ -1180,7 +1180,7 @@ footer{
 <div class="mobile-menu" id="mmenu">
   <a href="/" data-i18n="mm_home">🏠 Accueil</a>
   <a href="/live-ia#historique" data-i18n="mm_hist">📊 Historique des picks</a>
-  <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
+  <a href="/performances" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="/bankroll">💼 Ma bankroll</a>
   <a href="/dashboard" style="color:#34d399" onclick="toggleMenu()">✨ Créer un compte gratuit</a>
@@ -1827,6 +1827,10 @@ footer{
     </div>
     <div style="position:relative;height:180px;width:100%">
       <canvas id="roi-chart"></canvas>
+    </div>
+    <div style="text-align:center;margin-top:22px">
+      <a href="/performances" id="roi-see-all" style="display:inline-block;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#eceaf4;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;transition:all .2s">📊 Voir <span id="roi-see-all-count">tous les</span> résultats vérifiés →</a>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Historique daté · winrate · ROI · filtrable par palier</div>
     </div>
   </div>
 </section>
@@ -2804,6 +2808,7 @@ function buildChart(){
     set('kpi-winrate', wr + '%');
     set('kpi-bankroll', '100€ → ' + bankrollFinal + '€');
     set('kpi-picks', tot);
+    set('roi-see-all-count', tot > 0 ? ('les ' + tot) : 'tous les');
     set('hs-total', tot);
     set('hs-winrate', wr + '%');
     set('hs-gain', (gain >= 0 ? '+' : '') + Math.round(gain) + '€');

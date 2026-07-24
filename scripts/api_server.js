@@ -7232,7 +7232,7 @@ app.get("/analysis-history", (req, res) => {
     // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
     const rows = db.prepare(`
       SELECT id, home, away, competition, sport, best_bet, confidence, raison,
-             consensus_votes, outcome, analysed_at, real_odd,
+             consensus_votes, outcome, analysed_at, real_odd, real_odd_source,
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
@@ -7280,6 +7280,15 @@ app.get("/analysis-history", (req, res) => {
     // doublons sont déjà éliminés en SQL ci-dessus.
     const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
 
+    // Palier d'une ligne (mêmes définitions que /tier-stats et la section #paliers) :
+    // standard = ARJEL & conf ≥ 88, premium = ARJEL & conf ≥ 85, sinon elite (tout ≥ 82).
+    const tierLabel = (r) => {
+      const arjel = rowIsArjel(r);
+      if (arjel && r.confidence >= 88) return "standard";
+      if (arjel && r.confidence >= 85) return "premium";
+      return "elite";
+    };
+
     const analyses = visibleRows.map(r => {
       let agents = [];
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
@@ -7301,6 +7310,8 @@ app.get("/analysis-history", (req, res) => {
         resolved_at: r.resolved_at,
         home_logo: r.home_logo, away_logo: r.away_logo,
         bet_category: r.bet_category,
+        arjel: rowIsArjel(r),
+        tier: tierLabel(r),
         agents_count: agents.length,
       };
     });
@@ -7309,30 +7320,75 @@ app.get("/analysis-history", (req, res) => {
     // source unique pour que la page Live IA et la page d'accueil affichent
     // exactement le même winrate / nombre de picks.
     const allResolved = db.prepare(`
-      SELECT home, away, competition, outcome, analysed_at FROM concile_analyses
+      SELECT home, away, competition, sport, outcome, analysed_at, confidence,
+             best_bet, real_odd, real_odd_source, final_score_home, final_score_away
+      FROM concile_analyses
       WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND date(analysed_at) >= '2026-07-03'
       ORDER BY analysed_at DESC
     `).all();
     const seenStat = new Set();
-    let sTotal = 0, sWins = 0;
+    const dedupResolved = [];
     for (const r of allResolved) {
       // Mêmes exclusions que la liste (jeunes / douteuses) pour un winrate cohérent.
       if (isNoiseForDisplay(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
-      sTotal++;
-      if (r.outcome === "win") sWins++;
+      dedupResolved.push(r);
     }
-    const stats = { total: sTotal, wins: sWins, losses: sTotal - sWins };
+
+    // Bloc de stats sur un sous-ensemble : total/wins/losses/winrate + ROI simulé
+    // (mise 10€), bénéfice, cote moyenne. Cohérent avec /premium-teaser (rowOdd).
+    const statBlock = (set) => {
+      let wins = 0, profit = 0, oddSum = 0;
+      for (const r of set) {
+        const cote = rowOdd(r);
+        oddSum += cote;
+        if (r.outcome === "win") { wins++; profit += 10 * cote - 10; } else { profit -= 10; }
+      }
+      const t = set.length;
+      return {
+        total: t, wins, losses: t - wins,
+        winrate: t ? Math.round(wins / t * 100) : 0,
+        profit10: Math.round(profit),
+        roi_pct: t ? Math.round(profit / (t * 10) * 1000) / 10 : 0,
+        avg_odds: t ? Math.round(oddSum / t * 100) / 100 : 0,
+      };
+    };
+
+    const global = statBlock(dedupResolved);
+    const tiers = {
+      standard: statBlock(dedupResolved.filter(r => rowIsArjel(r) && r.confidence >= 88)),
+      premium:  statBlock(dedupResolved.filter(r => rowIsArjel(r) && r.confidence >= 85)),
+      elite:    statBlock(dedupResolved),
+    };
+
+    // Analyses publiées non encore résolues (dédoublonnées, hors bruit) = "en attente".
+    const pendingRows = db.prepare(`
+      SELECT home, away, competition, sport, analysed_at FROM concile_analyses
+      WHERE (outcome IS NULL OR outcome NOT IN ('win','loss'))
+        AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND date(analysed_at) >= '2026-07-03'
+      ORDER BY analysed_at DESC
+    `).all();
+    const seenP = new Set();
+    let pending = 0;
+    for (const r of pendingRows) {
+      if (isNoiseForDisplay(r)) continue;
+      const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seenP.has(k)) continue;
+      seenP.add(k);
+      pending++;
+    }
 
     res.json({
       ok: true, analyses, total,
-      stats: { total: stats.total, wins: stats.wins, losses: stats.losses, winrate: stats.total > 0 ? Math.round(stats.wins / stats.total * 100) : 0 },
+      stats: { ...global, pending, tiers },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
-    res.json({ ok: true, analyses: [], total: 0, stats: { total: 0, wins: 0, losses: 0, winrate: 0 } });
+    res.json({ ok: true, analyses: [], total: 0, stats: { total: 0, wins: 0, losses: 0, winrate: 0, pending: 0, profit10: 0, roi_pct: 0, avg_odds: 0, tiers: {} } });
   }
 });
 
