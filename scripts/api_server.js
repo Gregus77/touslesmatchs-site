@@ -9276,26 +9276,30 @@ app.post("/chatbot/ask", express.json(), async (req, res) => {
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
 
-    // One-shot: ensure Elite access for lamatrice2012@gmail.com
-    try {
+    // ── Accès offert au testeur (Elite, 30 analyses/jour) ──────────────────────
+    // Date d'expiration FIXE : la version précédente calculait "aujourd'hui + 60 jours"
+    // à chaque démarrage, donc l'échéance était repoussée à chaque déploiement et
+    // l'accès ne se terminait jamais. Modifiable via .env sans toucher au code.
+    const TESTER_EMAIL   = process.env.TESTER_GRANT_EMAIL   || "lamatrice2012@gmail.com";
+    const TESTER_EXPIRES = process.env.TESTER_GRANT_EXPIRES || "2026-09-22"; // 2 mois à partir du 24/07/2026
+    if (TESTER_EMAIL) try {
       const _gdb = new Database(CODES_DB_PATH);
-      const _existing = _gdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get("lamatrice2012@gmail.com");
+      const _existing = _gdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get(TESTER_EMAIL);
+      // Le code d'accès n'est jamais écrit en clair dans les logs (ils sont partagés
+      // pour du support) — seuls les 2 premiers caractères servent de repère.
+      const _mask = (c) => String(c || "").slice(0, 2) + "••••••";
       if (_existing && _existing.plan === "elite") {
-        // Déjà Elite : on garantit quand même 30 analyses/jour et l'expiration.
-        const _exp = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
-        _gdb.prepare("UPDATE codes SET credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
-        console.log(`[admin-grant] lamatrice2012@gmail.com Elite confirmé (30/j): ${_existing.code}`);
+        _gdb.prepare("UPDATE codes SET credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(TESTER_EXPIRES, TESTER_EMAIL);
+        console.log(`[admin-grant] testeur Elite confirmé (30/j, ${_mask(_existing.code)}) — expire le ${TESTER_EXPIRES}`);
       } else if (_existing) {
-        const _exp = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
-        _gdb.prepare("UPDATE codes SET plan = 'elite', credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
-        console.log(`[admin-grant] lamatrice2012@gmail.com upgradé en Elite — Code: ${_existing.code} — Expire: ${_exp}`);
+        _gdb.prepare("UPDATE codes SET plan = 'elite', credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(TESTER_EXPIRES, TESTER_EMAIL);
+        console.log(`[admin-grant] testeur upgradé en Elite (${_mask(_existing.code)}) — expire le ${TESTER_EXPIRES}`);
       } else {
         const _chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         const _code = Array.from({ length: 8 }, () => _chars[Math.floor(Math.random() * _chars.length)]).join("");
-        const _exp = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
         const _today = new Date().toISOString().slice(0, 10);
-        _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,?)").run(_code, "lamatrice2012@gmail.com", "elite", _exp, 30, _today, new Date().toISOString());
-        console.log(`[admin-grant] Elite créé pour lamatrice2012@gmail.com — Code: ${_code} — Expire: ${_exp}`);
+        _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,?)").run(_code, TESTER_EMAIL, "elite", TESTER_EXPIRES, 30, _today, new Date().toISOString());
+        console.log(`[admin-grant] testeur Elite créé (${_mask(_code)}) — expire le ${TESTER_EXPIRES} — code complet visible dans la base`);
       }
       _gdb.close();
     } catch(e) { console.error("[admin-grant] erreur:", e.message); }
