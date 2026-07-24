@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TousLesMatchs — Hermes analyse. Tu décides.</title>
-<meta name="description" content="5 IA analysent chaque match. Le Chief tranche. Teste Hermes pour 1 euro et vois ce que le Concile pense vraiment.">
+<meta name="description" content="5 IA analysent chaque match. Le Chief tranche. Résultats vérifiables le lendemain sur le site. Analyses Live IA en Pro & Elite.">
 <link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
@@ -85,7 +85,7 @@
         { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
         { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort." } },
         { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort." } }
+        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. L'analyse du jour reste gratuite sur le site, avec son résultat vérifiable le lendemain." } }
       ]
     }
   ]
@@ -1526,16 +1526,16 @@ footer{
   })();
   </script>
 
-  <!-- CTA — voir l'analyse (friction basse) + test 1€ -->
+  <!-- CTA — voir l'analyse (friction basse) + offres Pro/Elite -->
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px">
     <a href="#pick"
        style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15);transition:all .25s;letter-spacing:-.01em"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55),0 0 80px rgba(16,185,129,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15)'">
       🔥 Voir l'analyse du jour
     </a>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <a href="#plans"
        style="font-size:14px;color:#a78bfa;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(167,139,250,.4);padding-bottom:1px">
-      ou tester le Conseil complet — 1€ →
+      ou recevoir tous les signaux — Pro &amp; Elite →
     </a>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
       <span style="font-size:12px;color:var(--muted2)">🔒 Stripe</span>
@@ -2023,31 +2023,15 @@ footer{
 
 <section class="plans-section" id="plans">
   <div class="s-eyebrow">Offres</div>
-  <div class="s-title">Teste. Puis decide.</div>
-  <div class="s-sub">1 euro pour tester Hermes sur le match de ton choix. Si ca te plait, passe Pro ou Elite.</div>
+  <div class="s-title">Choisis ton niveau d'acces.</div>
+  <div class="s-sub">Regarde l'analyse du jour gratuitement. Le lendemain, verifie sur le site si le pick etait bon. Convaincu ? Passe Pro ou Elite.</div>
   <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">
-    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#10b981">Code envoye instantanement par email</div>
+    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#10b981">Acces immediat apres paiement</div>
     <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--indigo2)">Paiement securise Stripe</div>
   </div>
   <div class="plans-grid">
-    <div class="pc feat" id="plan-carte" style="border-color:rgba(16,185,129,.4)">
-      <span class="pc-badge" style="background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3)">Recommande</span>
-      <div><div class="pc-price" style="background:linear-gradient(135deg,#34d399,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1€</div><div class="pc-name" style="margin-top:6px">Tester Hermes</div></div>
-      <div class="pc-desc">Choisis un match en direct. Hermes l'analyse en 30 secondes. Tu vois le verdict du Concile.</div>
-      <div class="pc-div"></div>
-      <div class="pc-features">
-        <div class="pcf"><span class="ok">✓</span>1 analyse complete Live IA</div>
-        <div class="pcf"><span class="ok">✓</span>Consensus 5 IA + verdict Chief</div>
-        <div class="pcf"><span class="ok">✓</span>Objections et confiance detaillee</div>
-        <div class="pcf"><span class="ok">✓</span>0 engagement, 0 abonnement</div>
-      </div>
-      <div class="pc-bottom">
-        <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">Tester Hermes — 1€</a>
-        <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">0 engagement — resultat en 30 secondes</div>
-      </div>
-    </div>
-    <div class="pc">
-      <span class="pc-badge b-pr">Pro</span>
+    <div class="pc feat" id="plan-carte" style="border-color:rgba(129,140,248,.45)">
+      <span class="pc-badge b-pr">⭐ Recommandé · Pro</span>
       <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Pro</div></div>
       <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses Live IA par jour + groupe Telegram Pro. Tu ne rates plus aucun match rentable.</div>
       <div class="pc-div"></div>
@@ -2105,17 +2089,17 @@ footer{
   <div class="cmp-wrap">
     <table class="cmp-table">
       <thead>
-        <tr><th>Ce que tu obtiens</th><th class="hl">1€ Test</th><th>Pro</th><th>Elite</th></tr>
+        <tr><th>Ce que tu obtiens</th><th class="hl">Pro</th><th>Elite</th></tr>
       </thead>
       <tbody>
-        <tr><td>Analyses Live IA</td><td class="cmp-col-hl cmp-val">1</td><td class="cmp-val">10 / jour</td><td class="cmp-val">30 / jour</td></tr>
-        <tr><td>Consensus 5 IA + verdict du Chief</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
-        <tr><td>Objections + score de confiance</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
-        <tr><td>Groupe Telegram</td><td class="cmp-col-hl cmp-no">—</td><td class="cmp-yes">Pro</td><td class="cmp-yes">Elite</td></tr>
-        <tr><td>Alertes Signal Fort automatiques</td><td class="cmp-col-hl cmp-no">—</td><td class="cmp-no">—</td><td class="cmp-yes">✓</td></tr>
-        <tr><td>Picks en avant-première</td><td class="cmp-col-hl cmp-no">—</td><td class="cmp-no">—</td><td class="cmp-yes">✓</td></tr>
-        <tr><td>Historique &amp; suivi des performances</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
-        <tr><td>Engagement</td><td class="cmp-col-hl cmp-val">Aucun</td><td class="cmp-val">Sans</td><td class="cmp-val">Sans</td></tr>
+        <tr><td>Analyses Live IA</td><td class="cmp-col-hl cmp-val">10 / jour</td><td class="cmp-val">30 / jour</td></tr>
+        <tr><td>Consensus 5 IA + verdict du Chief</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Objections + score de confiance</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Groupe Telegram</td><td class="cmp-col-hl cmp-yes">Pro</td><td class="cmp-yes">Elite</td></tr>
+        <tr><td>Alertes Signal Fort automatiques</td><td class="cmp-col-hl cmp-no">—</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Picks en avant-première</td><td class="cmp-col-hl cmp-no">—</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Historique &amp; suivi des performances</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Engagement</td><td class="cmp-col-hl cmp-val">Sans</td><td class="cmp-val">Sans</td></tr>
       </tbody>
     </table>
   </div>
@@ -2285,17 +2269,17 @@ function copyRefLink(){
 <section style="position:relative;z-index:1;padding:60px 32px;text-align:center;border-top:1px solid var(--b1)">
   <div style="max-width:500px;margin:0 auto">
     <div style="font-size:clamp(22px,3.5vw,34px);font-weight:900;letter-spacing:-.03em;margin-bottom:12px">
-      Pret a tester Hermes ?
+      Pret a suivre le Concile ?
     </div>
     <p style="font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:24px">
-      1 euro. 1 match. 30 secondes. Tu vois ce que 5 IA pensent vraiment — et tu decides.
+      L'analyse du jour est gratuite. Le lendemain, tu verifies son resultat sur le site. Convaincu ? Passe Pro ou Elite et recois tous les signaux en direct.
     </p>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <a href="#plans"
        style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4);transition:all .25s"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4)'">
-      Tester Hermes — 1€
+      Voir les offres Pro &amp; Elite
     </a>
-    <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paiement securise Stripe · 0 abonnement · Resultat immediat</div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paiement securise Stripe · Sans engagement · Annulable a tout moment</div>
   </div>
 </section>
 
@@ -2328,10 +2312,10 @@ function copyRefLink(){
 <!-- STICKY CTA BAR — Tester Hermes -->
 <div id="sticky-email-bar" style="display:none">
   <div class="seb-inner" style="justify-content:center;gap:16px">
-    <div style="font-size:14px;font-weight:800;color:var(--text)">Teste Hermes sur un vrai match</div>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <div style="font-size:14px;font-weight:800;color:var(--text)">Reçois tous les signaux du Concile</div>
+    <a href="#plans"
        style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(16,185,129,.3)">
-      1€ — Tester maintenant
+      Voir les offres →
     </a>
     <button class="seb-close" onclick="closeStickyBar()">×</button>
   </div>
@@ -2478,7 +2462,7 @@ function renderPick(){
         <div style="font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px">Recevez ces analyses en temps réel</div>
         <div style="font-size:12px;color:var(--muted2);margin-bottom:14px">Les membres Premium reçoivent chaque alerte avant que les cotes bougent</div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
-          <a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(212,175,55,.25)">⚡ Débloquer 1 analyse – 1 €</a>
+          <a href="#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(212,175,55,.25)">⚡ Recevoir les signaux — Pro &amp; Elite</a>
           <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:13px">📲 Ou rejoindre Telegram gratuitement</a>
         </div>
       </div>
@@ -2658,7 +2642,7 @@ function renderPick(){
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(6,8,15,.6);backdrop-filter:blur(2px)">
           <div style="font-size:28px">🔒</div>
           <div style="font-size:14px;font-weight:800;text-align:center">${i18n.t('locked_votes')}</div>
-          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · À la carte dès 1€</div>
+          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · sans engagement</div>
           <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">${i18n.t('subscribe_cta')}</a>
         </div>
       </div>`;
@@ -3141,7 +3125,7 @@ function renderPicksFeed() {
     html += `<div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px">
       🕐 Prochain pick conseillé bientôt — rejoins le groupe Telegram
       <div style="margin-top:14px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Rejoindre Telegram</a></div>
-      <div style="margin-top:8px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Analyse complète – 1 €</a></div>
+      <div style="margin-top:8px"><a href="#plans" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Recevoir les signaux — Pro &amp; Elite</a></div>
     </div>`;
   }
 
@@ -3527,7 +3511,7 @@ async function initPick(){
             </div>
           </div></div></div>`;
       } else {
-        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">💎</div><div style="font-size:16px;font-weight:700">Les membres Premium reçoivent les alertes en direct</div><div style="margin-top:12px"><a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⚡ Débloquer 1 analyse – 1 €</a></div><div style="margin-top:8px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:12px">📲 Ou rejoindre Telegram gratuitement</a></div></div>`;
+        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">💎</div><div style="font-size:16px;font-weight:700">Les membres Pro &amp; Elite reçoivent les alertes en direct</div><div style="margin-top:12px"><a href="#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⚡ Voir les offres Pro &amp; Elite</a></div><div style="margin-top:8px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:12px">📲 Ou rejoindre Telegram gratuitement</a></div></div>`;
       }
     }
   }
@@ -3548,7 +3532,7 @@ const FAQ_DATA = [
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit."},
+  {q:"Comment fonctionnent les abonnements ?", a:"Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit. L'analyse du jour reste gratuite sur le site, son résultat est vérifiable le lendemain."},
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);
@@ -4031,7 +4015,7 @@ document.addEventListener('click',function(e){
 </script>
 
 <!-- ── BARRE CTA FIXE MOBILE — levier de conversion n°1 sur trafic TikTok ──────
-     Toujours visible en bas de l'écran sur mobile. Renvoie vers le test à 1€.
+     Toujours visible en bas de l'écran sur mobile. Renvoie vers les offres Pro & Elite.
      Fermable (croix) ; l'état de fermeture dure la session. Masquée sur desktop. -->
 <style>
   #sticky-cta{
@@ -4063,10 +4047,10 @@ document.addEventListener('click',function(e){
 </style>
 <div id="sticky-cta" role="region" aria-label="Tester Hermes">
   <div class="sc-txt">
-    <div class="sc-t1">Teste le Concile IA</div>
-    <div class="sc-t2">1 analyse complète · sans engagement</div>
+    <div class="sc-t1">Reçois les signaux du Concile</div>
+    <div class="sc-t2">Pro &amp; Elite · sans engagement</div>
   </div>
-  <a class="sc-btn" href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" rel="noopener noreferrer">Tester — 1€</a>
+  <a class="sc-btn" href="#plans" rel="noopener noreferrer">Voir les offres</a>
   <button class="sc-close" aria-label="Fermer" onclick="(function(){document.getElementById('sticky-cta').classList.remove('show');document.body.classList.remove('has-sticky-cta');try{sessionStorage.setItem('scHidden','1')}catch(e){}})()">×</button>
 </div>
 <script>
