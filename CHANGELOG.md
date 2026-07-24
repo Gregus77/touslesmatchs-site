@@ -22,6 +22,7 @@
 - Auto-envoi prepare mais desactive par defaut : `TIER_SIGNALS_AUTO_SEND=1` requis pour declencher l'envoi periodique.
 - Le groupe Telegram historique gratuit devient le groupe **Standard** : `TELEGRAM_STANDARD_CHANNEL_ID` prend le relais, avec fallback legacy sur `TELEGRAM_CHANNEL_ID`.
 - Accueil + emails alignes sur la gamme **Standard 4.90 / Premium 14.90 / Elite-VIP 29.90** : suppression de la mise en avant publique du test 1 euro, ajout de `STRIPE_PRICE_ID_STANDARD`, quotas backend Standard=3 / Premium=10 / Elite-VIP=30 et page SEO `/signaux-sportifs-ia`.
+- Boutons Stripe accueil branches sur les Payment Links publics : Standard `00w14ncbGgo48c4fpA3VC05`, Premium `6oU3cvdfK4Fm0JC1yK3VC06`, Elite/VIP `4gM9AT5Nifk0gIA91c3VC07`, avec tentative backend checkout d'abord.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**

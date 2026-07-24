@@ -223,6 +223,10 @@ Si aucun objectif n'est rempli : NE PAS developper.
 - `STRIPE_PRICE_ID_STANDARD` doit pointer vers le produit Stripe Standard 4.90/mois.
 - `STRIPE_PRICE_ID_PREMIUM` doit pointer vers le produit Stripe Premium 14.90/mois.
 - `STRIPE_PRICE_ID_ELITE` / `STRIPE_PRICE_ID_VIP` doivent pointer vers les niveaux hauts 29.90/mois.
+- Liens Payment Links publics branches en fallback front :
+  - Standard : `https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05`
+  - Premium : `https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06`
+  - Elite/VIP : `https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07`
 - L'ancien 1 euro et les anciens libelles gratuits ne doivent plus etre mis en avant sur l'accueil.
 
 ## Systeme de paliers (Standard / Premium / Elite)
