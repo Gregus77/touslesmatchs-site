@@ -25,6 +25,7 @@
 - Boutons Stripe accueil branches sur les Payment Links publics : Standard `00w14ncbGgo48c4fpA3VC05`, Premium `6oU3cvdfK4Fm0JC1yK3VC06`, Elite/VIP `4gM9AT5Nifk0gIA91c3VC07`, avec tentative backend checkout d'abord.
 - UX accueil : les resultats de la veille sont repliees par defaut ; les matchs live cliquables renvoient vers le choix Standard/Premium/Elite-VIP.
 - Correctif UX accueil : les matchs live du haut se rafraichissent toutes les 30 secondes, l'ancienne ancre `#plans` ne force plus l'ouverture sur les abonnements, et le tableau comparatif ne repete plus les prix sous les cartes.
+- Correctif coherence tarifs : `public/js/i18n.js` ne reecrit plus les boutons Premium/Elite avec les anciens prix ; FAQ, Live IA et dashboard alignes sur Standard 4,90 / Premium 14,90 / Elite-VIP 29,90.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape immédiate — demandé par Grégory) :**

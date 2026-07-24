@@ -804,17 +804,17 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
   if (plan === 'carte') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Paiement recu — ton analyse est deverrouillee !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Tu as aime ? Avec <b style="color:#fff">Pro</b>, tu as <b style="color:#d4af37">10 analyses par jour</b> au lieu d\'une seule.<br>Soit <b>0.33€ par analyse</b> — sans engagement, annulable a tout moment.</div>' +
-      '<a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Pro — 9.90€/mois sans engagement</a>';
+      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Tu as aime ? Avec <b style="color:#fff">Premium</b>, tu as <b style="color:#d4af37">10 analyses par jour</b> + le groupe Telegram Premium.<br>Plus de volume, toujours filtre, sans engagement et annulable a tout moment.</div>' +
+      '<a href="https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Premium - 14,90€/mois</a>';
   } else if (plan === 'premium' || plan === 'standard') {
     upsellDiv.innerHTML = closeBtn +
-      '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue dans Pro — ton acces est actif !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite</b>, tu passes a <b style="color:#d4af37">30 analyses/jour</b> + <b>alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — sans engagement, annulable a tout moment.</div>' +
-      '<a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Elite — 19.90€/mois sans engagement</a>';
+      '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">Paiement recu - ton acces est actif !</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite/VIP</b>, tu passes a <b style="color:#d4af37">30 signaux/jour</b> + <b>alertes Signal Fort automatiques</b> sur football, basket, hockey et baseball.<br>Le niveau complet, sans engagement et annulable a tout moment.</div>' +
+      '<a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Elite/VIP - 29,90€/mois</a>';
   } else if (plan === 'elite' || plan === 'vip') {
     upsellDiv.innerHTML = closeBtn +
-      '<div style="color:#d4af37;font-weight:800;font-size:16px;margin-bottom:8px">👑 Bienvenue dans Elite — tu as acces a tout !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6">30 analyses/jour + alertes Signal Fort + picks en avant-premiere.<br>Rejoins le groupe Telegram Elite pour recevoir tes alertes.</div>';
+      '<div style="color:#d4af37;font-weight:800;font-size:16px;margin-bottom:8px">Bienvenue dans Elite/VIP - tu as acces a tout !</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6">30 signaux/jour + alertes Signal Fort + selections en avant-premiere.<br>Rejoins le groupe Telegram Elite/VIP pour recevoir tes alertes.</div>';
   }
 
   document.body.appendChild(upsellDiv);
