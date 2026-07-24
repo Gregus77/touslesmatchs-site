@@ -122,7 +122,7 @@ ${bodyHtml}
   <p>Chaque analyse repose sur le vote de 5 agents IA spécialisés : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
   <h2>Comment fonctionne le Conseil IA ?</h2>
   <p>Hermès collecte les données vérifiées du match, 5 agents analysent stats, forme et valeur, puis le Chief arbitre les désaccords. Si les signaux sont contradictoires, c'est NO BET. <a href="/#methode">Voir la méthode complète →</a></p>
-  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de toutes les analyses en direct ?</div><p style="margin-bottom:14px">Les membres Pro &amp; Elite reçoivent les analyses Live IA et les signaux du Concile en temps réel.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les offres Pro &amp; Elite</a></div>
+  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de toutes les analyses en direct ?</div><p style="margin-bottom:14px">Les membres Standard, Premium &amp; Elite reçoivent les analyses Live IA et les signaux du Concile en temps réel.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les offres</a></div>
   ${relatedHtml}`;
     return shell({ title, description, canonical, bodyHtml: body, schema });
   }
@@ -722,18 +722,25 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
-const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
-// Canal Elite (19.90€) : reçoit TOUT (y compris IA-seulement + signal fort). Si l'ID
-// n'est pas configuré dans le .env, on retombe automatiquement sur le canal Pro/Premium
-// pour ne rien casser tant que le 3e canal n'est pas créé.
+const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";        // Gratuit (vitrine)
+const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || ""; // Premium 9.90€
+// Canaux Standard (4.90€) et Elite (19.90€). Tant que l'ID n'est pas configuré dans le
+// .env, on retombe automatiquement sur le canal Premium pour ne rien casser en attendant
+// que le canal dédié soit créé. Le CODE applique les conditions par palier (voir plus bas).
+const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
+const _standardSignalDaily = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
 const _eliteSignalDaily = { date: "", count: 0 };
-const PREMIUM_SIGNAL_DAILY_CAP = 4; // qualité > volume : seuls les meilleurs paris du jour
-const ELITE_SIGNAL_DAILY_CAP = 12; // Elite = plus gros volume (tout le publié + IA-seulement)
+// Plafonds journaliers par palier (conditions données par le fondateur)
+const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : conf ≥ 88, cote réelle ARJEL ≥ 1.50
+const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : conf ≥ 90, avant-match ou live, cote ≥ 1.50
+const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : conf ≥ 90, foot/hockey/baseball/basket, cote ≥ 1.50
+const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 90, ELITE_MIN_CONF = 90;
+const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
+const ELITE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
@@ -3091,7 +3098,7 @@ Réponds en JSON pur (pas de markdown):
       const coteSig = (analysisResult.cote && _bmSig)
         ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
       const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte du Concile (pari + raison) est réservée aux membres Pro &amp; Elite.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct → <a href="https://www.touslesmatchs.com/#plans">Pro &amp; Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte du Concile (pari + raison) est réservée aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir la sélection en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
@@ -3103,54 +3110,71 @@ Réponds en JSON pur (pas de markdown):
       if (!arjelPlayable) {
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
+      // Réinitialisation des compteurs journaliers
+      if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = 0; }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
       if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = 0; }
-      // ── Diffusion 3 canaux (tarifs par groupe) ──────────────────────────────
-      //   Gratuit : 1 teaser/jour (Standard ou Premium), sans la sélection exacte.
-      //   Pro (9.90€) : Standard + Premium, ARJEL uniquement.
-      //   Elite (19.90€) : TOUT — tous paliers + matchs « IA seulement » (hors ARJEL) + signal fort.
-      // Si aucun canal Elite distinct n'est configuré, TELEGRAM_ELITE_CHANNEL_ID retombe sur le
-      // canal Pro : ce canal partagé ne reçoit alors QUE le périmètre ARJEL (pas d'IA-seulement),
-      // et on saute l'envoi Pro dédié pour éviter le doublon.
-      const eliteChannelDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
-      const tierTag = `\n🏅 Palier : <b>${tierBadge}</b>`;
-      const proEligible = sigTier === "standard" || sigTier === "premium";
+      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
 
-      // Canal ELITE : reçoit tout (tous paliers, y compris IA-seulement hors ARJEL).
-      const eliteCap = eliteChannelDistinct ? ELITE_SIGNAL_DAILY_CAP : PREMIUM_SIGNAL_DAILY_CAP;
-      const eliteScopeOk = eliteChannelDistinct ? true : arjelPlayable;
-      if (TELEGRAM_ELITE_CHANNEL_ID && sigTier && eliteScopeOk && _eliteSignalDaily.count < eliteCap) {
-        _eliteSignalDaily.count++;
+      // ── Diffusion par palier (conditions fondateur) ─────────────────────────
+      //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL ≥ 1.50 — max 3/j
+      //   🟣 Premium  (9.90€) : conf ≥ 90, foot, cote réelle ARJEL ≥ 1.50 — max 10/j (inclut Standard)
+      //   🟠 Elite    (19.90€): conf ≥ 90, foot/hockey/baseball/basket, cote réelle ARJEL ≥ 1.50 — max 30/j (inclut Premium)
+      //   Modèle imbriqué : un palier supérieur reçoit toujours au moins ce que reçoit l'inférieur.
+      //   « Cote réelle » = vraie cote bookmaker (jamais l'estimation). Repli auto sur Premium
+      //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
+      const conf = Number(analysisResult.confidence) || 0;
+      const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
+      const oddOk = realOdd >= TIER_MIN_REAL_ODD;
+      const sportLc = String(match.sport || "Football").toLowerCase();
+      const isFootball = sportLc.includes("foot");
+      const isEliteSport = ELITE_SPORTS.some(s => sportLc.includes(s));
+
+      const gradeStandard = arjelPlayable && oddOk && isFootball && conf >= STANDARD_MIN_CONF;
+      const gradePremium  = gradeStandard || (arjelPlayable && oddOk && isFootball && conf >= PREMIUM_MIN_CONF);
+      const gradeElite    = gradePremium  || (arjelPlayable && oddOk && isEliteSport && conf >= ELITE_MIN_CONF);
+
+      const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
+      const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
+      const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
+
+      // 🟢 STANDARD — cap 3/j
+      if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP) {
+        _standardSignalDaily.count++;
         markSignalSent(match.home, match.away, "sig_sent_premium");
-        const eliteExtra = arjelPlayable ? "" : "\n🧠 <i>Analyse IA seulement — pas de bookmaker FR agréé sur ce match</i>";
-        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag + eliteExtra).then(ok => console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${eliteCap}) ${tierBadge}${arjelPlayable ? "" : " HORS-ARJEL"}: ${ok ? "OK" : "FAIL"}`));
+        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
       }
 
-      // Canal PRO : Standard + Premium, ARJEL. Sauté si Pro == Elite (déjà servi ci-dessus).
-      if (eliteChannelDistinct && TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && proEligible && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      // 🟣 PREMIUM — cap 10/j (canal socle, toujours présent)
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
         markSignalSent(match.home, match.away, "sig_sent_premium");
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag).then(ok => console.log(`[signal-fort] Telegram pro (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${tierBadge} ${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
-      } else if (eliteChannelDistinct && TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && proEligible) {
-        console.log(`[signal-fort] Pro: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium) {
+        console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
+
+      // 🟠 ELITE/VIP — cap 30/j, multisport, alertes prioritaires
+      if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
+        _eliteSignalDaily.count++;
+        markSignalSent(match.home, match.away, "sig_sent_premium");
+        const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
+        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL"}`));
+      }
+
+      // 👑 ADMIN (Hermès) — supervision, reçoit tout y compris hors-ARJEL
       if (TELEGRAM_ADMIN_CHAT_ID) {
         const adminHeader = arjelPlayable
-          ? `👑 <b>[ADMIN · ${tierBadge}]</b>\n🏦 Bookmaker : ${analysisResult.cote_source}`
-          : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ Cote : ${analysisResult.cote_source || "estimation"} (pas de bookmaker français agréé)`;
+          ? `👑 <b>[ADMIN · conf ${conf}% · cote ${realOdd || "est."}]</b>\n🏦 ${analysisResult.cote_source || "estimation"}`
+          : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ ${analysisResult.cote_source || "estimation"} (pas de bookmaker FR agréé)`;
         sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `${adminHeader}\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
       }
-      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      // Canal gratuit : seulement Standard ou Premium (pas Elite) — 1/jour max
-      const freeEligible = sigTier === "standard" || sigTier === "premium";
-      if (arjelPlayable && freeEligible && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+
+      // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
+      if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
         markSignalSent(match.home, match.away, "sig_sent_free");
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
-      } else if (arjelPlayable && !freeEligible) {
-        console.log(`[signal-fort] Free channel: signal Elite uniquement — pas diffusé en gratuit`);
-      } else if (arjelPlayable) {
-        console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
+        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL"}`));
       }
     }
   }
@@ -5105,9 +5129,9 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Résultat vérifiable le lendemain", "Canal Telegram gratuit"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Pro/Elite"] },
-    { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Pro", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
-    { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88%", "Cote réelle ARJEL ≥ 1.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
+    { name: "🟣 Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 90%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
+    { name: "🟠 Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 90%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -5148,7 +5172,7 @@ function buildNurtureJ1Html(email) {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres Pro &amp; Elite →</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres →</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5173,12 +5197,12 @@ function buildNurtureJ3Html() {
           🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
         </div>
       </div>
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Pro.</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
       </div>
       <div style="text-align:center;margin-bottom:24px">
-        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir les offres Pro &amp; Elite</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir nos offres</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5217,7 +5241,7 @@ function buildNurtureJ5Html() {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Découvrir Pro &amp; Elite</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Découvrir nos offres</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -5249,7 +5273,7 @@ function buildNurtureJ7Html() {
       </div>
       <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;margin-bottom:20px;text-align:center">
         <div style="font-size:14px;color:#f59e0b;font-weight:700;margin-bottom:6px">Tu as reçu les signaux — mais pas les analyses complètes</div>
-        <div style="font-size:13px;color:#a8aec8">Les abonnés Pro et Elite ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
+        <div style="font-size:13px;color:#a8aec8">Les membres ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;text-align:center">Compare les plans en un coup d'oeil</div>
       ${buildPlanComparisonHtml()}
@@ -5257,7 +5281,7 @@ function buildNurtureJ7Html() {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(245,158,11,.3)">Passer à l'action →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir les offres Pro &amp; Elite</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir nos offres</a>
       </div>
       <div style="background:#0d1020;border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
         <div style="font-size:12px;color:#a8aec8">📱 Pas encore sur Telegram ?</div>
@@ -5337,7 +5361,7 @@ async function sendSignalFortBilanTelegram() {
   const threshold = getAdaptiveSignalThreshold();
   const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
 
-  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux — Pro &amp; Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
 
   if (TELEGRAM_PREMIUM_CHANNEL_ID) {
     const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
@@ -5413,8 +5437,8 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
     ``,
     outcome === "win"
-      ? `💎 Imagine si tu avais eu le pick en direct...\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux — Pro &amp; Elite</a>`
-      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux — Pro &amp; Elite</a>`,
+      ? `💎 Imagine si tu avais eu le pick en direct...\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`
+      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`,
     ``,
     `━━━━━━━━━━━━━━━━━━`,
     `🤖 Concile IA — TousLesMatchs`,
@@ -5496,7 +5520,7 @@ async function sendWeeklyConversionEmail() {
     <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
   </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir les offres Pro &amp; Elite</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir nos offres</a>
   </div>
   ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
@@ -7230,8 +7254,8 @@ async function sendDailyResultsFreeChannel() {
       `💰 <b>Bilan du jour à 10€/analyse : ${totalGain >= 0 ? "+" : ""}${totalGain.toFixed(0)}€</b>`,
       ``,
       winrate >= 60
-        ? `🚀 Ces résultats sont réservés aux membres Pro &amp; Elite.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux — Pro &amp; Elite</a>`
-        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux — Pro &amp; Elite</a>`,
+        ? `🚀 Ces résultats sont réservés aux membres.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`
+        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`,
       ``,
       `━━━━━━━━━━━━━━━━━━`,
       `🤖 Concile IA — TousLesMatchs`,
@@ -7997,7 +8021,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer l'analyse — 9.90€/mois →</a>
   </div>
   <div style="text-align:center;margin-bottom:20px">
-    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres Pro &amp; Elite</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres</a>
   </div>
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
     TousLesMatchs — Signal automatique Concile IA<br>
