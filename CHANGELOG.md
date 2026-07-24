@@ -26,6 +26,9 @@
 - UX accueil : les resultats de la veille sont repliees par defaut ; les matchs live cliquables renvoient vers le choix Standard/Premium/Elite-VIP.
 - Correctif UX accueil : les matchs live du haut se rafraichissent toutes les 30 secondes, l'ancienne ancre `#plans` ne force plus l'ouverture sur les abonnements, et le tableau comparatif ne repete plus les prix sous les cartes.
 - Correctif coherence tarifs : `public/js/i18n.js` ne reecrit plus les boutons Premium/Elite avec les anciens prix ; FAQ, Live IA et dashboard alignes sur Standard 4,90 / Premium 14,90 / Elite-VIP 29,90.
+- Correctif routage Stripe/Telegram : chaque paiement Standard/Premium/Elite-VIP cree maintenant une invitation vers le bon canal Telegram du plan ; ajout d'un endpoint admin `/admin/subscription-routing` sans exposition des IDs sensibles.
+- Rapport Hermes Admin 22h remplace par un rapport decisionnel : meilleurs candidats, volumes Standard/Premium/Elite, championnats/sports/IA qui performent, et etat de l'auto-diffusion clients.
+- Docker Compose expose maintenant a l'API `STRIPE_PRICE_ID_STANDARD`, `STRIPE_WEBHOOK_SECRET`, les canaux Telegram Standard/Elite, `HERMES_ADMIN_TLM_BOT` et `TIER_SIGNALS_AUTO_SEND`.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape immédiate — demandé par Grégory) :**

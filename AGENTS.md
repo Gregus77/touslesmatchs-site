@@ -251,6 +251,10 @@ Regles moteur signaux (2026-07-24) :
 - Elite = 30 signaux max/jour, confiance >= 90, football/basketball/hockey/baseball, cote reelle ARJEL >= 1.50.
 - Ne jamais forcer le volume : si la journee ne produit que 7 bons signaux Premium, envoyer 7.
 - Envoi automatique des paliers desactive par defaut ; activer seulement avec `TIER_SIGNALS_AUTO_SEND=1` apres verification des canaux `TELEGRAM_STANDARD_CHANNEL_ID`, `TELEGRAM_PREMIUM_CHANNEL_ID`, `TELEGRAM_ELITE_CHANNEL_ID`.
+- Stripe -> Telegram : apres webhook Stripe, `standard` doit inviter vers `TELEGRAM_STANDARD_CHANNEL_ID`, `premium` vers `TELEGRAM_PREMIUM_CHANNEL_ID`, `elite`/`vip` vers `TELEGRAM_ELITE_CHANNEL_ID` ou `TELEGRAM_VIP_CHANNEL_ID`.
+- Verification admin sans secret : `GET /admin/subscription-routing?email=...&code=...` renvoie seulement les booleens de configuration Stripe/Telegram/invitation.
+- Rapport Hermes Admin : `GET /admin/send-hermes-22h-report?email=...&code=...` envoie le rapport decisionnel 22h a `TELEGRAM_ADMIN_CHAT_ID`.
+- Le rapport 22h doit aider Greg a choisir les meilleurs signaux, pas a forcer du volume : candidats du jour, volumes par groupe, championnats/sports/IA qui performent, et etat `TIER_SIGNALS_AUTO_SEND`.
 
 ## Deploiement (procedure + pieges connus)
 

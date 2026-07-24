@@ -859,13 +859,13 @@ function sendTelegramMessage(chatId, text) {
   });
 }
 
-// Génère un lien d'invitation Telegram à usage unique vers le canal premium.
-// Le bot doit être administrateur du canal avec le droit d'inviter.
-function createPremiumInviteLink(labelEmail) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_PREMIUM_CHANNEL_ID) return Promise.resolve(null);
+// Genere un lien d'invitation Telegram a usage unique vers le canal du plan.
+// Le bot doit etre administrateur du canal avec le droit d'inviter.
+function createTelegramInviteLink(chatId, planLabel, labelEmail) {
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(null);
   const body = JSON.stringify({
-    chat_id: TELEGRAM_PREMIUM_CHANNEL_ID,
-    name: `Premium ${labelEmail || ""}`.slice(0, 32),
+    chat_id: chatId,
+    name: `${planLabel || "TLM"} ${labelEmail || ""}`.slice(0, 32),
     member_limit: 1,
     creates_join_request: false,
   });
@@ -892,6 +892,76 @@ function createPremiumInviteLink(labelEmail) {
     req.write(body);
     req.end();
   });
+}
+
+function telegramPlanAccess(status) {
+  if (status === "standard") {
+    return {
+      label: "Standard",
+      channelId: TELEGRAM_STANDARD_CHANNEL_ID,
+      color: "#10b981",
+      title: "Ton acces au groupe Telegram Standard",
+      description: "Lien personnel a usage unique. Tu y recois jusqu'a 3 signaux selectionnes par jour.",
+      cta: "Rejoindre le groupe Standard",
+    };
+  }
+  if (status === "premium") {
+    return {
+      label: "Premium",
+      channelId: TELEGRAM_PREMIUM_CHANNEL_ID,
+      color: "#22d3ee",
+      title: "Ton acces au groupe Telegram Premium",
+      description: "Lien personnel a usage unique. Tu y recois jusqu'a 10 analyses Live IA par jour.",
+      cta: "Rejoindre le groupe Premium",
+    };
+  }
+  if (status === "elite" || status === "vip") {
+    return {
+      label: "Elite/VIP",
+      channelId: TELEGRAM_ELITE_CHANNEL_ID,
+      color: "#d4af37",
+      title: "Ton acces au groupe Telegram Elite/VIP",
+      description: "Lien personnel a usage unique. Tu y recois jusqu'a 30 signaux multisport et les alertes Signal Fort.",
+      cta: "Rejoindre le groupe Elite/VIP",
+    };
+  }
+  return null;
+}
+
+function getSubscriptionRoutingStatus() {
+  const plans = [
+    { key: "standard", label: "Standard", priceConfigured: !!STRIPE_PRICE_ID_STANDARD, telegram: telegramPlanAccess("standard") },
+    { key: "premium", label: "Premium", priceConfigured: !!STRIPE_PRICE_ID_PREMIUM, telegram: telegramPlanAccess("premium") },
+    { key: "elite", label: "Elite/VIP", priceConfigured: !!(STRIPE_PRICE_ID_ELITE || STRIPE_PRICE_ID_VIP), telegram: telegramPlanAccess("elite") },
+  ];
+  return plans.map(p => ({
+    plan: p.key,
+    label: p.label,
+    stripePriceConfigured: p.priceConfigured,
+    telegramChannelConfigured: !!p.telegram?.channelId,
+    telegramInviteReady: !!(TELEGRAM_BOT_TOKEN && p.telegram?.channelId),
+  }));
+}
+
+function stripePlanFromAmount(session = {}) {
+  const currency = String(session.currency || "").toLowerCase();
+  const amount = Number(session.amount_total ?? session.amount_subtotal ?? 0);
+  if (currency && currency !== "eur") return null;
+  if (amount === 490) return { status: "standard", label: "Standard", durationDays: 32, creditsMax: 3 };
+  if (amount === 1490) return { status: "premium", label: "Premium", durationDays: 32, creditsMax: 10 };
+  if (amount === 2990) return { status: "elite", label: "Elite/VIP", durationDays: 32, creditsMax: 30 };
+  return null;
+}
+
+function resolveStripePlan(priceId, session = {}) {
+  const planMap = {
+    [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse Live IA", durationDays: 1,  creditsMax: 1 },
+    [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", label: "Standard",       durationDays: 32, creditsMax: 3 },
+    [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Premium",        durationDays: 32, creditsMax: 10 },
+    [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "Elite/VIP",      durationDays: 32, creditsMax: 30 },
+    [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite/VIP",      durationDays: 32, creditsMax: 30 },
+  };
+  return planMap[priceId] || stripePlanFromAmount(session) || { status: "premium", label: "Premium", durationDays: 32, creditsMax: 10 };
 }
 
 // ── Shadow API helpers ────────────────────────────────────────────────────────
@@ -6818,21 +6888,16 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     // ── Récupérer email client et prix ──────────────────────────────────────
     const customerEmail = (session.customer_details?.email || session.customer_email || "").toLowerCase().trim();
     let priceId = "";
+    let fullSession = session;
     try {
       const Stripe2 = require("stripe");
       const stripe2 = Stripe2(STRIPE_SECRET_KEY);
       const full = await stripe2.checkout.sessions.retrieve(session.id, { expand: ["line_items"] });
+      fullSession = full || session;
       priceId = full.line_items?.data?.[0]?.price?.id || "";
     } catch(e) { console.error("[stripe] retrieve error:", e.message); }
 
-    const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse Live IA", durationDays: 1 },
-      [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", label: "Standard",       durationDays: 32 },
-      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Premium",        durationDays: 32 },
-      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "Elite/VIP",      durationDays: 32 },
-      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite/VIP",      durationDays: 32 },
-    };
-    const { status = "premium", label: planLabel = "Premium", durationDays = 32 } = planMap[priceId] || {};
+    const { status = "premium", label: planLabel = "Premium", durationDays = 32 } = resolveStripePlan(priceId, fullSession);
 
     // ── Mettre à jour users table si userId connu ────────────────────────────
     const userId = parseInt(session.client_reference_id);
@@ -6876,18 +6941,19 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
              <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
           ).join("");
 
-          // Lien d'invitation unique au groupe Telegram Premium (Premium/Elite/VIP)
-          let premiumTelegramBlock = "";
-          if (["premium", "vip", "elite"].includes(status)) {
-            const inviteLink = await createPremiumInviteLink(customerEmail);
+          // Lien d'invitation unique vers le bon groupe Telegram du plan paye.
+          let planTelegramBlock = "";
+          const telegramAccess = telegramPlanAccess(status);
+          if (telegramAccess) {
+            const inviteLink = await createTelegramInviteLink(telegramAccess.channelId, telegramAccess.label, customerEmail);
             if (inviteLink) {
-              premiumTelegramBlock = `<div style="background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(79,70,229,.08));border:1px solid rgba(34,211,238,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                  <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:8px">📲 Ton acces au groupe Telegram Premium</div>
-                  <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Lien personnel a usage unique — ne le partage pas.<br>Tu y recois les signaux forts (confiance 80%+) en direct.</div>
-                  <a href="${inviteLink}" style="display:inline-block;background:linear-gradient(135deg,#22d3ee,#4f46e5);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">Rejoindre le groupe Premium →</a>
+              planTelegramBlock = `<div style="background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(79,70,229,.08));border:1px solid rgba(34,211,238,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
+                  <div style="font-size:14px;font-weight:700;color:${telegramAccess.color};margin-bottom:8px">📲 ${telegramAccess.title}</div>
+                  <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">${telegramAccess.description}<br>Ne partage pas ce lien : il est personnel et limite a une entree.</div>
+                  <a href="${inviteLink}" style="display:inline-block;background:linear-gradient(135deg,#22d3ee,#4f46e5);color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:700;text-decoration:none">${telegramAccess.cta} →</a>
                 </div>`;
             } else {
-              console.error(`[stripe] invite premium non généré pour ${customerEmail} — vérifier que le bot est admin du canal`);
+              console.error(`[stripe] invite ${telegramAccess.label} non genere pour ${customerEmail} — verifier bot admin + variable canal`);
             }
           }
 
@@ -6917,7 +6983,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
               <div style="text-align:center">
                 <a href="https://touslesmatchs.com/live-ia" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Acceder au Live IA →</a>
               </div>
-              ${premiumTelegramBlock}
+              ${planTelegramBlock}
               ${upsellBlock}
             </div>
           </div>`;
@@ -7206,6 +7272,19 @@ app.post("/admin/resolve-stale", async (req, res) => {
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 
+app.get("/admin/subscription-routing", (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  const plans = getSubscriptionRoutingStatus();
+  res.json({
+    ok: true,
+    telegramBotConfigured: !!TELEGRAM_BOT_TOKEN,
+    autoTierSignalsEnabled: TIER_SIGNALS_AUTO_SEND,
+    plans,
+    allReady: plans.every(p => p.stripePriceConfigured && p.telegramChannelConfigured && p.telegramInviteReady),
+  });
+});
+
 app.post("/admin/send-report", (req, res) => {
   const { email, code } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
@@ -7347,11 +7426,146 @@ ${recentLines}
   }
 }
 
+function _tierSentColumn(tier) {
+  return tier === "standard" ? "sig_sent_standard" : tier === "elite" ? "sig_sent_elite" : "sig_sent_premium";
+}
+
+function formatHermesCandidateLine(row, idx) {
+  const moment = row.minute_at_analysis ? `${row.minute_at_analysis}'` : "avant-match";
+  const pick = maskAiNamesGlobal(row.best_bet || row.bet || "selection IA");
+  const comp = row.competition || row.sport || "competition";
+  return `${idx}. ${row.home} vs ${row.away} | ${comp} | ${pick} | ${row.confidence}% | cote ${rowOdd(row).toFixed(2)} | ${moment}`;
+}
+
+function buildHermes22hDecisionReport() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const date = new Date().toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const candidates = selectTierSignalCandidates({ day: todayStr, limit: 120 });
+  const topCandidates = candidates.slice(0, 10)
+    .map((r, i) => formatHermesCandidateLine(r, i + 1))
+    .join("\n") || "Aucun candidat client assez fort pour le moment. Ne pas forcer le volume.";
+
+  const tierLines = ["standard", "premium", "elite"].map(tier => {
+    const rule = TIER_SIGNAL_RULES[tier];
+    const col = _tierSentColumn(tier);
+    const sent = countTierSignalsSentToday(tier, todayStr);
+    const remaining = Math.max(0, rule.dailyCap - sent);
+    const available = candidates.filter(r => r.eligible_tiers.includes(tier) && !r[col]).length;
+    return `${rule.label}: ${sent}/${rule.dailyCap} envoyes | ${available} candidats | reste ${remaining}`;
+  }).join("\n");
+
+  let resolved = [];
+  try {
+    resolved = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+             final_score_home, final_score_away, analysed_at
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+        AND analysed_at >= datetime('now','-30 days')
+      ORDER BY analysed_at DESC
+      LIMIT 500
+    `).all();
+  } catch (_) {}
+
+  const byCompetition = {};
+  const bySport = {};
+  for (const r of resolved) {
+    const comp = r.competition || "Inconnu";
+    const sport = normTierSport(r.sport || "Sport");
+    if (!byCompetition[comp]) byCompetition[comp] = { w: 0, l: 0 };
+    if (!bySport[sport]) bySport[sport] = { w: 0, l: 0 };
+    if (r.outcome === "win") { byCompetition[comp].w++; bySport[sport].w++; }
+    else { byCompetition[comp].l++; bySport[sport].l++; }
+  }
+
+  const topCompetitions = Object.entries(byCompetition)
+    .map(([name, s]) => ({ name, t: s.w + s.l, wr: Math.round((s.w / Math.max(1, s.w + s.l)) * 100), w: s.w, l: s.l }))
+    .filter(x => x.t >= 3)
+    .sort((a, b) => b.wr - a.wr || b.t - a.t)
+    .slice(0, 8)
+    .map(x => `${x.name}: ${x.wr}% (${x.w}W/${x.l}L)`)
+    .join("\n") || "Historique championnat encore trop faible sur 30 jours.";
+
+  const sportLines = Object.entries(bySport)
+    .map(([name, s]) => ({ name, t: s.w + s.l, wr: Math.round((s.w / Math.max(1, s.w + s.l)) * 100), w: s.w, l: s.l }))
+    .filter(x => x.t >= 2)
+    .sort((a, b) => b.wr - a.wr || b.t - a.t)
+    .slice(0, 5)
+    .map(x => `${x.name}: ${x.wr}% (${x.w}W/${x.l}L)`)
+    .join("\n") || "Historique sport en construction.";
+
+  const agents = Object.entries(getAgentPerformance())
+    .map(([name, p]) => {
+      const total = (p.wins || 0) + (p.losses || 0);
+      const wr = total ? Math.round((p.wins || 0) / total * 100) : 0;
+      return { name, wr, total, pending: p.pending || 0 };
+    })
+    .filter(a => a.total >= 5 || a.pending > 0)
+    .sort((a, b) => b.wr - a.wr || b.total - a.total)
+    .slice(0, 6)
+    .map(a => `${a.name}: ${a.total ? `${a.wr}% sur ${a.total}` : `${a.pending} en attente`}`)
+    .join("\n") || "Pas encore assez de votes IA resolus.";
+
+  const routing = getSubscriptionRoutingStatus();
+  const routingLines = routing.map(p => {
+    const ok = p.stripePriceConfigured && p.telegramChannelConfigured && p.telegramInviteReady;
+    return `${ok ? "OK" : "A VERIFIER"} ${p.label}: Stripe ${p.stripePriceConfigured ? "OK" : "NON"} | Telegram ${p.telegramChannelConfigured ? "OK" : "NON"} | invite ${p.telegramInviteReady ? "OK" : "NON"}`;
+  }).join("\n");
+
+  return `<b>RAPPORT HERMES ADMIN 22H - ${date}</b>
+
+<b>Meilleurs candidats clients maintenant</b>
+${topCandidates}
+
+<b>Volumes par groupe</b>
+${tierLines}
+
+<b>Championnats qui performent (30j)</b>
+${topCompetitions}
+
+<b>Sports qui performent (30j)</b>
+${sportLines}
+
+<b>IA les plus fiables</b>
+${agents}
+
+<b>Routage Stripe -> Telegram</b>
+${routingLines}
+
+<b>Decision operateur</b>
+Auto-diffusion clients: ${TIER_SIGNALS_AUTO_SEND ? "ON" : "OFF"}
+Regle: envoyer seulement les selections avec cote ARJEL reelle, seuil respecte, championnat autorise. Si le volume est faible, on garde la qualite.`;
+}
+
+async function sendHermes22hDecisionReportTelegram() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  try {
+    return await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, buildHermes22hDecisionReport());
+  } catch (e) {
+    console.error("[hermes-22h-report]", e.message);
+    return false;
+  }
+}
+
 app.get("/admin/send-stats-bilan", async (req, res) => {
   const { email, code } = req.query;
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
   const ok = await sendStatsBilanTelegram();
   res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
+});
+
+app.get("/admin/send-hermes-22h-report", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  const ok = await sendHermes22hDecisionReportTelegram();
+  res.json({ ok, message: ok ? "Rapport Hermes 22h envoye sur Telegram admin" : "Echec envoi" });
 });
 
 // ── Daily results summary → Standard Telegram group (22h Paris) ─────────────
@@ -7689,14 +7903,7 @@ app.post("/internal/stripe-verify", async (req, res) => {
     if (!session || session.payment_status !== "paid") return res.json({ ok: false, error: "Paiement non confirmé" });
 
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
-    const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
-      [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", durationDays: 32, creditsMax: 3 },
-      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
-      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 30 },
-      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
-    };
-    const { status = "premium", durationDays = 32, creditsMax = 10 } = planMap[priceId] || {};
+    const { status = "premium", durationDays = 32, creditsMax = 10 } = resolveStripePlan(priceId, session);
 
     // Chercher code existant
     const cdbr = new Database(CODES_DB_PATH, { readonly: true });
@@ -7739,14 +7946,7 @@ app.post("/payment-success", async (req, res) => {
     const email = (session.customer_details?.email || session.customer_email || "").toLowerCase().trim();
     if (!email) return res.json({ ok: false, error: "Email introuvable sur la session" });
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
-    const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
-      [STRIPE_PRICE_ID_STANDARD]:{ status: "standard", durationDays: 32, creditsMax: 3 },
-      [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
-      [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 30 },
-      [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
-    };
-    const { status = "premium", durationDays = 32, creditsMax = 10 } = planMap[priceId] || {};
+    const { status = "premium", durationDays = 32, creditsMax = 10 } = resolveStripePlan(priceId, session);
     const cdbr = new Database(CODES_DB_PATH, { readonly: true });
     let codeRow = cdbr.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get(email);
     cdbr.close();
@@ -8735,8 +8935,8 @@ function checkAnalyticsSchedule() {
 
   if (hour === 22 && _lastBilanDate !== todayKey) {
     _lastBilanDate = todayKey;
-    console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin...");
-    sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
+    console.log("[hermes-22h-report] Envoi rapport decisionnel 22h sur Telegram admin...");
+    sendHermes22hDecisionReportTelegram().then(ok => console.log(`[hermes-22h-report] ${ok ? "OK" : "ECHEC"}`));
     if (_lastFreeResultsBilanDate !== todayKey) {
       _lastFreeResultsBilanDate = todayKey;
       console.log("[daily-results-standard] Envoi résultats du jour sur groupe Standard...");
