@@ -21,7 +21,7 @@
 - Nouvelles routes : `GET /api/tier-signals`, `POST /internal/tier-signals/preview`, `POST /internal/tier-signals/send` (`dryRun` par defaut).
 - Auto-envoi prepare mais desactive par defaut : `TIER_SIGNALS_AUTO_SEND=1` requis pour declencher l'envoi periodique.
 - Le groupe Telegram historique gratuit devient le groupe **Standard** : `TELEGRAM_STANDARD_CHANNEL_ID` prend le relais, avec fallback legacy sur `TELEGRAM_CHANNEL_ID`.
-- Accueil aligne sur la gamme **Standard / Premium / Elite-VIP** : suppression de la mise en avant publique du test 1 euro, ajout de `STRIPE_PRICE_ID_STANDARD` et page SEO `/signaux-sportifs-ia`.
+- Accueil + emails alignes sur la gamme **Standard 4.90 / Premium 14.90 / Elite-VIP 29.90** : suppression de la mise en avant publique du test 1 euro, ajout de `STRIPE_PRICE_ID_STANDARD`, quotas backend Standard=3 / Premium=10 / Elite-VIP=30 et page SEO `/signaux-sportifs-ia`.
 - Hooks conserves : Stripe, Telegram, TikTok, bookmakers Winamax/Unibet/PMU, Brevo, historiques et endpoints front.
 
 **🚧 À FAIRE (prochaine étape) — Paliers étape 2 :**
@@ -48,7 +48,7 @@
 - Fallback ajoute pour garder le panneau central visible si `/api/council-vote` ne repond pas encore.
 - Verification locale Chrome : pas de debordement horizontal desktop/mobile, 7 liens Stripe, 10 liens Telegram, 28 references `/api/` detectees.
 - Passe design supplementaire : logos bookmakers visibles dans le hero + carte joueur stylisee dans la colonne droite, pour se rapprocher de la maquette dashboard premium.
-- Passe conversion : hero simplifie en parcours "matchs en cours -> 1 euro/Telegram -> bookmakers", avec fallback local vers l'API publique pour la preview.
+- Passe conversion : hero simplifie en parcours "matchs en cours -> Standard/Premium/Elite -> bookmakers", avec fallback local vers l'API publique pour la preview.
 - Passe sobriete apres retour fondateur : ticker masque, nav visible reduite, calendrier retire du premier ecran, tableau "Matchs en cours" branche a `/api/live-matches` et rendu mobile compacte.
 - Passe effet pro : photo sportive locale dans la carte Live IA, badges bookmakers inspires des couleurs de marque sans fichiers de logos officiels, et etat vide "Radar en cours" au lieu d'un grand tableau creux.
 - Moteur Telegram/site par palier : colonnes `sig_sent_standard` / `sig_sent_elite`, endpoint public de volumes du jour, routes internes Hermes preview/send, et section "#paliers" alignee sur les nouvelles regles.

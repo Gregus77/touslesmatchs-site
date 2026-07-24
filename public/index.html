@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TousLesMatchs — Hermes analyse. Tu décides.</title>
-<meta name="description" content="5 IA analysent chaque match. Le Chief tranche. Teste Hermes pour 1 euro et vois ce que le Concile pense vraiment.">
+<meta name="description" content="5 IA analysent chaque match. Le Chief tranche. Standard, Premium et Elite/VIP te donnent des signaux sportifs filtrés par confiance.">
 <link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
@@ -83,9 +83,9 @@
       "mainEntity": [
         { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants ; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable." } },
         { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
-        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le groupe Telegram Standard reçoit les analyses sélectionnées. Pro débloque les analyses Live IA et le groupe Premium. Elite/VIP ajoute les alertes de signal fort." } },
+        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Standard reçoit les signaux sélectionnés. Premium débloque les analyses Live IA et le groupe Premium. Elite/VIP ajoute les alertes de signal fort." } },
         { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Standard = groupe Telegram Standard et signaux sélectionnés. Premium = 10 analyses/jour + groupe Telegram Premium. Elite/VIP = 30 analyses/jour + groupe Telegram Elite/VIP + alertes signal fort." } }
+        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Standard = 4.90€/mois pour 3 signaux/jour. Premium = 14.90€/mois pour 10 signaux/jour + Live IA. Elite/VIP = 29.90€/mois pour 30 signaux/jour + alertes prioritaires." } }
       ]
     }
   ]
@@ -2428,7 +2428,7 @@ footer{
   <div class="plans-grid">
     <div class="pc feat" id="plan-carte" style="border-color:rgba(16,185,129,.4)">
       <span class="pc-badge" style="background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3)">Entrée</span>
-      <div><div class="pc-price" style="background:linear-gradient(135deg,#34d399,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Standard</div><div class="pc-name" style="margin-top:6px">Groupe Standard</div></div>
+      <div><div class="pc-price" style="background:linear-gradient(135deg,#34d399,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">4<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Standard</div></div>
       <div class="pc-desc">Le flux propre pour suivre les meilleurs signaux sélectionnés sans bruit inutile.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
@@ -2438,13 +2438,13 @@ footer{
         <div class="pcf"><span class="ok">✓</span>Résultats suivis dans l'historique</div>
       </div>
       <div class="pc-bottom">
-        <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">Rejoindre Standard</a>
+        <a href="#" onclick="startCheckout('standard', event)" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">S'abonner Standard</a>
         <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">Le niveau d'entrée pour suivre les meilleurs signaux</div>
       </div>
     </div>
     <div class="pc">
       <span class="pc-badge b-pr">Premium</span>
-      <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Premium</div></div>
+      <div><div class="pc-price">14<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Premium</div></div>
       <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses Live IA par jour + groupe Telegram Premium. Plus de volume, toujours filtré.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
@@ -2456,14 +2456,14 @@ footer{
         <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable à tout moment</b></div>
       </div>
       <div class="pc-bottom">
-        <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" target="_blank" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner Premium</a>
-        <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Lien Stripe actuel conservé</div>
-        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Ancien plan Pro renommé Premium côté site</div>
+        <a href="#" onclick="startCheckout('premium', event)" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner Premium</a>
+        <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Paiement sécurisé Stripe</div>
+        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Sans engagement</div>
       </div>
     </div>
     <div class="pc">
       <span class="pc-badge b-el">Elite/VIP</span>
-      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite/VIP</div></div>
+      <div><div class="pc-price">29<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite/VIP</div></div>
       <div class="pc-desc" data-i18n="plan_elite_desc">30 signaux par jour + alertes Signal Fort automatiques. Le niveau complet multisport.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
@@ -2475,8 +2475,8 @@ footer{
         <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable à tout moment</b></div>
       </div>
       <div class="pc-bottom">
-        <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner Elite/VIP</a>
-        <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Lien Stripe Elite actuel conservé</div>
+        <a href="#" onclick="startCheckout('elite', event)" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner Elite/VIP</a>
+        <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Paiement sécurisé Stripe</div>
         <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Le plus haut niveau de sélection</div>
       </div>
     </div>
@@ -2494,6 +2494,7 @@ footer{
     <table class="cmp-table">
       <thead><tr><th>Ce que tu obtiens</th><th class="hl">Standard</th><th>Premium</th><th>Elite/VIP</th></tr></thead>
       <tbody>
+        <tr><td>Prix</td><td class="cmp-col-hl cmp-val">4.90€ / mois</td><td class="cmp-val">14.90€ / mois</td><td class="cmp-val">29.90€ / mois</td></tr>
         <tr><td>Signaux Telegram</td><td class="cmp-col-hl cmp-val">3 / jour</td><td class="cmp-val">10 / jour</td><td class="cmp-val">30 / jour</td></tr>
         <tr><td>Confiance minimale</td><td class="cmp-col-hl cmp-val">88/100</td><td class="cmp-val">90/100</td><td class="cmp-val">90/100</td></tr>
         <tr><td>Cote réelle ARJEL min.</td><td class="cmp-col-hl cmp-yes">1.50</td><td class="cmp-yes">1.50</td><td class="cmp-yes">1.50</td></tr>
@@ -2514,7 +2515,7 @@ footer{
         <div style="font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:8px">💸 Programme parrainage</div>
         <div style="font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px">1 mois offert par filleul abonné</div>
         <div style="font-size:13px;color:var(--muted2);line-height:1.6">
-          Partage ton lien perso. Chaque ami qui s'abonne à Premium ou Elite/VIP te rapporte <strong style="color:#10b981">30 jours gratuits</strong>, automatiquement.
+          Partage ton lien perso. Chaque ami qui s'abonne à Premium ou Elite/VIP te rapporte <strong style="color:#10b981">30 jours offerts</strong>, automatiquement.
         </div>
       </div>
       <div id="ref-link-zone" style="flex:1;min-width:260px">
@@ -2635,7 +2636,7 @@ function copyRefLink(){
     <div class="step"><div class="step-n">1</div><div><div class="step-title" data-i18n="step1_title">Collecte vérifiée à 6h00</div><div class="step-desc">Hermès collecte les matchs via API-SPORTS, puis vérifie chaque donnée sur 3 sources indépendantes : SofaScore, FBref, Transfermarkt. Aucun match non confirmé n'est affiché. Aucun score inventé.</div></div></div>
     <div class="step"><div class="step-n">2</div><div><div class="step-title" data-i18n="step2_title">5 agents spécialisés + 1 Chief</div><div class="step-desc">Les agents analysent stats, tactique, value et marchés selon le sport. Le Chief arbitre les désaccords : si les objections sont trop fortes ou les données faibles, la décision devient NO BET.</div></div></div>
     <div class="step"><div class="step-n">3</div><div><div class="step-title">Seuls les verdicts solides sont publiés</div><div class="step-desc">Une analyse n'est diffusée que si la confiance du Conseil dépasse le seuil de qualité. En dessous, elle reste interne : tu ne vois que les décisions dans lesquelles le Conseil croit vraiment.</div></div></div>
-    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro débloque les analyses Live IA ; Elite/VIP reçoit aussi les alertes de signal fort.</div></div></div>
+    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Premium débloque les analyses Live IA ; Elite/VIP reçoit aussi les alertes de signal fort.</div></div></div>
     <div class="step"><div class="step-n">5</div><div><div class="step-title" data-i18n="step4_title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 </section>
@@ -3589,7 +3590,7 @@ function renderNavAuth(){
   if(email&&plan){
     const isElite=plan==='elite';
     el.innerHTML=`<div class="nav-user">
-      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite/VIP':'⚡ Premium'}</span>
       <button class="nav-logout" onclick="doLogout()" title="${i18n.t('logout')}">✕</button>
     </div>`;
   } else {
@@ -3896,12 +3897,12 @@ initPick();
 const FAQ_DATA = [
   {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
   {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
-  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le groupe Telegram Standard reçoit les signaux sélectionnés. Pro débloque les analyses Live IA et le groupe Premium. Elite/VIP ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
+  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Standard reçoit les signaux sélectionnés. Premium débloque les analyses Live IA et le groupe Premium. Elite/VIP ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
   {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
   {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"Standard = groupe Telegram Standard et signaux sélectionnés. Premium = 10 analyses/jour + groupe Telegram Premium. Elite/VIP = 30 analyses/jour + groupe Telegram Elite/VIP + alertes signal fort. Reset automatique à minuit."},
+  {q:"Comment fonctionnent les abonnements ?", a:"Standard = 4.90€/mois pour 3 signaux/jour. Premium = 14.90€/mois pour 10 signaux/jour + Live IA. Elite/VIP = 29.90€/mois pour 30 signaux/jour + alertes prioritaires. Reset automatique à minuit."},
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);

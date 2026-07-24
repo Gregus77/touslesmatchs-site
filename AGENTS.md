@@ -219,10 +219,10 @@ Si aucun objectif n'est rempli : NE PAS developper.
 
 ## Stripe — gamme publique 2026-07-24
 
-- Offre publique : **Standard / Premium / Elite-VIP**.
-- `STRIPE_PRICE_ID_STANDARD` est pret cote backend mais doit etre cree/configure dans Stripe avant paiement Standard.
-- `STRIPE_PRICE_ID_PREMIUM` conserve le lien actuel Premium.
-- `STRIPE_PRICE_ID_ELITE` / `STRIPE_PRICE_ID_VIP` conservent les niveaux hauts existants.
+- Offre publique : **Standard 4.90/mois / Premium 14.90/mois / Elite-VIP 29.90/mois**.
+- `STRIPE_PRICE_ID_STANDARD` doit pointer vers le produit Stripe Standard 4.90/mois.
+- `STRIPE_PRICE_ID_PREMIUM` doit pointer vers le produit Stripe Premium 14.90/mois.
+- `STRIPE_PRICE_ID_ELITE` / `STRIPE_PRICE_ID_VIP` doivent pointer vers les niveaux hauts 29.90/mois.
 - L'ancien 1 euro et les anciens libelles gratuits ne doivent plus etre mis en avant sur l'accueil.
 
 ## Systeme de paliers (Standard / Premium / Elite)
