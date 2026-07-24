@@ -1625,7 +1625,7 @@ footer{
     if(!d||!d.ok) return;
     var strip=document.getElementById('live-strip');
     var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
-    set('ls-analyses', d.analyses_today>0? d.analyses_today : (d.published_today||0));
+    set('ls-analyses', d.published_today||0);
     set('ls-ia', d.ia_active||5);
     set('ls-total', d.total_published||0);
     set('ls-signals', d.signals_today||0);
@@ -2721,7 +2721,7 @@ function renderPick(){
                 </div>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,8,15,.72);backdrop-filter:blur(2px);border-radius:12px;padding:18px">
                   <div style="font-size:20px">🔒</div>
-                  <div style="font-size:14px;font-weight:800;text-align:center;letter-spacing:-.01em">Le pari du Concile est réservé aux membres</div>
+                  <div style="font-size:14px;font-weight:800;text-align:center;letter-spacing:-.01em">Le pick du Concile est réservé aux membres</div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%;max-width:340px">
                     <input type="email" id="gate-email-input" placeholder="votre@email.com"
                       style="flex:1;min-width:140px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 13px;color:#eceaf4;font-size:13px;font-family:inherit;outline:none"
@@ -3502,7 +3502,7 @@ async function initPick(){
         const mc = MC[PICK.marketType]||MC['1'];
         root.innerHTML=`<div class="pick-outer"><div class="pick-inner">
           <div class="pick-head">
-            <div class="ph-left"><span class="ptag ptag-live">⚡ Pari du jour</span><span class="ptag-comp">${PICK.competition||''}</span></div>
+            <div class="ph-left"><span class="ptag ptag-live">⚡ Pick du jour</span><span class="ptag-comp">${PICK.competition||''}</span></div>
             <div class="ph-right">${PICK.time||''}</div>
           </div>
           <div class="pick-body">

@@ -707,7 +707,7 @@ setInterval(refreshLeagueRatings, 3600000);
 setInterval(refreshAgentWeights, 3600000);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
+const JWT_SECRET = process.env.JWT_SECRET || (() => { console.error("[SECURITY] JWT_SECRET non défini dans .env — auth désactivée"); return require("crypto").randomBytes(32).toString("hex"); })();
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.API_FOOTBALL_KEY || "";
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
