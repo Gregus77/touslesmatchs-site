@@ -731,6 +731,7 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE    = process.env.STRIPE_PRICE_ID_CARTE    || process.env.STRIPE_PRICE_CARTE   || "";
+const STRIPE_PRICE_ID_STANDARD = process.env.STRIPE_PRICE_ID_STANDARD || process.env.STRIPE_PRICE_STANDARD || "";
 const STRIPE_PRICE_ID_PREMIUM  = process.env.STRIPE_PRICE_ID_PREMIUM  || process.env.STRIPE_PRICE_PRO     || "";
 const STRIPE_PRICE_ID_ELITE    = process.env.STRIPE_PRICE_ID_ELITE    || process.env.STRIPE_PRICE_ELITE   || "";
 const STRIPE_PRICE_ID_VIP      = process.env.STRIPE_PRICE_ID_VIP      || process.env.STRIPE_PRICE_VIP     || "";
@@ -940,11 +941,21 @@ function sendTelegramMessage(chatId, text) {
 
 // Génère un lien d'invitation Telegram à usage unique vers le canal premium.
 // Le bot doit être administrateur du canal avec le droit d'inviter.
-function createPremiumInviteLink(labelEmail) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_PREMIUM_CHANNEL_ID) return Promise.resolve(null);
+// Canal correspondant au palier acheté. Sans cette résolution, un abonné Elite ou
+// Standard recevait une invitation vers le canal Premium (mauvais canal, mauvais
+// contenu). Un palier sans canal dédié configuré retombe sur Premium.
+function channelForStatus(status) {
+  if (status === "standard") return TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
+  if (status === "elite" || status === "vip") return TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
+  return TELEGRAM_PREMIUM_CHANNEL_ID;
+}
+
+function createPremiumInviteLink(labelEmail, status) {
+  const chatId = channelForStatus(status);
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(null);
   const body = JSON.stringify({
-    chat_id: TELEGRAM_PREMIUM_CHANNEL_ID,
-    name: `Premium ${labelEmail || ""}`.slice(0, 32),
+    chat_id: chatId,
+    name: `${(status || "premium").toUpperCase()} ${labelEmail || ""}`.slice(0, 32),
     member_limit: 1,
     creates_join_request: false,
   });
@@ -6733,7 +6744,8 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     } catch(e) { console.error("[stripe] retrieve error:", e.message); }
 
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro", durationDays: 1 },
+      [STRIPE_PRICE_ID_CARTE]:    { status: "carte",    label: "Analyse 1 euro", durationDays: 1 },
+      [STRIPE_PRICE_ID_STANDARD]: { status: "standard", label: "Standard",       durationDays: 32 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro",            durationDays: 32 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP",            durationDays: 32 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite",          durationDays: 32 },
@@ -6782,10 +6794,10 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
              <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
           ).join("");
 
-          // Lien d'invitation unique au groupe Telegram premium (Pro/VIP/Elite)
+          // Lien d'invitation unique vers le canal du palier acheté (Standard/Premium/Elite)
           let premiumTelegramBlock = "";
-          if (["premium", "vip", "elite"].includes(status)) {
-            const inviteLink = await createPremiumInviteLink(customerEmail);
+          if (["standard", "premium", "vip", "elite"].includes(status)) {
+            const inviteLink = await createPremiumInviteLink(customerEmail, status);
             if (inviteLink) {
               premiumTelegramBlock = `<div style="background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(79,70,229,.08));border:1px solid rgba(34,211,238,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                   <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:8px">📲 Ton acces au groupe Telegram premium</div>
@@ -7652,7 +7664,8 @@ app.post("/internal/stripe-verify", async (req, res) => {
 
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_CARTE]:    { status: "carte",    durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_STANDARD]: { status: "standard", durationDays: 32, creditsMax: 3 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
@@ -7701,7 +7714,8 @@ app.post("/payment-success", async (req, res) => {
     if (!email) return res.json({ ok: false, error: "Email introuvable sur la session" });
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_CARTE]:    { status: "carte",    durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_STANDARD]: { status: "standard", durationDays: 32, creditsMax: 3 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
