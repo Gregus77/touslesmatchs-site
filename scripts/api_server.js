@@ -132,16 +132,16 @@ ${bodyHtml}
     const canonical = `${SITE}/signaux-sportifs-ia`;
     const schema = { "@context": "https://schema.org", "@type": "FAQPage", name: title, url: canonical,
       mainEntity: [
-        { "@type": "Question", name: "Quelle est la difference entre Standard, Premium et Elite/VIP ?", acceptedAnswer: { "@type": "Answer", text: "Standard coute 4.90 euros par mois et recoit les signaux les plus selectifs, Premium coute 14.90 euros et ajoute plus de volume et le Live IA, Elite/VIP coute 29.90 euros et couvre le volume maximal multisport avec alertes prioritaires." } },
+        { "@type": "Question", name: "Quelle est la difference entre Standard, Premium et Elite/VIP ?", acceptedAnswer: { "@type": "Answer", text: "Standard coute 4,90 euros par mois et recoit les signaux les plus selectifs, Premium coute 14,90 euros et ajoute plus de volume et le Live IA, Elite/VIP coute 29,90 euros et couvre le volume maximal multisport avec alertes prioritaires." } },
         { "@type": "Question", name: "Les resultats sont-ils publics ?", acceptedAnswer: { "@type": "Answer", text: "Oui. Les performances sont suivies dans l'historique public, avec les signaux gagnes et perdus." } }
       ] };
     const body = `
   <div class="bc"><a href="/">Accueil</a> › Signaux sportifs IA</div>
   <h1>Signaux sportifs IA : Standard, Premium, Elite/VIP</h1>
   <p class="sub">TousLesMatchs filtre les matchs avec le Concile : 5 agents IA analysent les donnees, le Chief tranche, puis seuls les signaux avec cote reelle et confiance suffisante sont publies.</p>
-  <div class="card"><h2>Standard — 4.90€/mois</h2><p>Le groupe Standard recoit jusqu'a 3 signaux par jour, confiance minimale 88/100, cote reelle ARJEL minimum 1.50. C'est le niveau le plus selectif.</p></div>
-  <div class="card"><h2>Premium — 14.90€/mois</h2><p>Le groupe Premium recoit jusqu'a 10 signaux par jour, avec davantage de volume, acces Live IA et historique de performance consultable.</p></div>
-  <div class="card"><h2>Elite/VIP — 29.90€/mois</h2><p>Elite/VIP vise jusqu'a 30 signaux par jour sur football, basket, hockey et baseball, avec alertes prioritaires et suivi complet.</p></div>
+  <div class="card"><h2>Standard — 4,90€ / mois</h2><p>Le groupe Standard recoit jusqu'a 3 signaux par jour, confiance minimale 88/100, cote reelle ARJEL minimum 1.50. C'est le niveau le plus selectif.</p></div>
+  <div class="card"><h2>Premium — 14,90€ / mois</h2><p>Le groupe Premium recoit jusqu'a 10 signaux par jour, avec davantage de volume, acces Live IA et historique de performance consultable.</p></div>
+  <div class="card"><h2>Elite/VIP — 29,90€ / mois</h2><p>Elite/VIP vise jusqu'a 30 signaux par jour sur football, basket, hockey et baseball, avec alertes prioritaires et suivi complet.</p></div>
   <h2>Pourquoi une page dediee aux signaux IA ?</h2>
   <p>Les utilisateurs qui arrivent depuis Google, TikTok ou Telegram doivent comprendre immediatement quel groupe choisir. Cette page explique la methode, les seuils, les sports couverts et la difference entre les niveaux sans promettre de resultat certain.</p>
   <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Choisir un groupe Telegram</div><p style="margin-bottom:14px">Compare Standard, Premium et Elite/VIP sur la page d'accueil.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les abonnements</a></div>`;
@@ -5162,9 +5162,9 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "Standard", price: "4.90€/mois", color: "#22c55e", features: ["Jusqu'a 3 signaux/jour", "Confiance >= 88/100", "Groupe Telegram Standard", "Historique public"], locked: ["Live IA", "Volume Premium", "Elite/VIP"] },
-    { name: "Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Groupe Telegram Premium", "Consensus + verdict Chief", "Historique complet"], locked: ["Volume Elite/VIP"] },
-    { name: "Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Groupe Telegram Elite/VIP", "Alertes Signal Fort", "Multisport prioritaire", "Support direct"] },
+    { name: "Standard", price: "4,90€ / mois", color: "#22c55e", features: ["Jusqu'a 3 signaux/jour", "Confiance >= 88/100", "Groupe Telegram Standard", "Historique public"], locked: ["Live IA", "Volume Premium", "Elite/VIP"] },
+    { name: "Premium", price: "14,90€ / mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Groupe Telegram Premium", "Consensus + verdict Chief", "Historique complet"], locked: ["Volume Elite/VIP"] },
+    { name: "Elite/VIP", price: "29,90€ / mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Groupe Telegram Elite/VIP", "Alertes Signal Fort", "Multisport prioritaire", "Support direct"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -5232,7 +5232,7 @@ function buildNurtureJ3Html() {
       </div>
       <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Avec Premium, tu accèdes au pick complet, au Live IA sur les matchs disponibles et au groupe Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
-        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner Premium — 14.90€/mois →</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner Premium — 14,90€ / mois →</a>
       </div>
       <div style="text-align:center;margin-bottom:24px">
         <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir les offres Premium</a>
@@ -6894,14 +6894,14 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const upsellBlock = status === "carte"
             ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Premium, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
-                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Voir Premium — 14.90€/mois</a>
+                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Premium, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit moins de 0,05€ par analyse si tu utilises ton quota mensuel.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
+                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Voir Premium — 14,90€ / mois</a>
               </div>`
             : status === "premium"
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
                 <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Voir Elite/VIP — 29.90€/mois</a>
+                <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Voir Elite/VIP — 29,90€ / mois</a>
               </div>`
             : "";
 
@@ -8116,7 +8116,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     </div>
   </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer avec Premium — 14.90€/mois →</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer avec Premium — 14,90€ / mois →</a>
   </div>
   <div style="text-align:center;margin-bottom:20px">
     <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres Premium</a>
@@ -9278,7 +9278,7 @@ app.get("/admin/heartbeat", (req, res) => {
 // ---- Chatbot Mistral --------------------------------------------------------
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
-const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: Standard 4.90e, Premium 14.90e, Elite/VIP 29.90e. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram Standard. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
+const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: Standard 4,90e, Premium 14,90e, Elite/VIP 29,90e. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram Standard. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
 app.post("/chatbot/ask", express.json(), async (req, res) => {
   try {
     const { question, email, session } = req.body || {};
