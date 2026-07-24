@@ -887,6 +887,30 @@ const SHADOW_AGENTS = [
     enabled: () => !!COHERE_API_KEY,
     call: (prompt) => callCohere(prompt),
   },
+  // ── Nouveaux modèles au banc d'essai (test à blanc, aucun impact sur les picks) ──
+  // Les identifiants sont surchargeables par .env : si OpenRouter renomme un modèle
+  // ou si l'ID est erroné, on corrige sans redéployer. Un ID invalide se voit
+  // désormais dans les logs ("SANS RÉPONSE — model not found"), plus en silence.
+  {
+    name: "OR-Qwen37Max",
+    icon: "🌟",
+    enabled: () => !!OPENROUTER_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: OPENROUTER_API_KEY,
+      model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
+    }),
+  },
+  {
+    name: "OR-KimiK3",
+    icon: "🌙",
+    enabled: () => !!OPENROUTER_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: OPENROUTER_API_KEY,
+      model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3",
+    }),
+  },
 ];
 
 // ── Telegram helper ──────────────────────────────────────────────────────────
@@ -978,13 +1002,20 @@ function callOpenAICompat(prompt, { url, key, model }) {
       res.on("end", () => {
         try {
           const json = JSON.parse(data);
+          // Un modèle inexistant renvoie un JSON d'erreur parfaitement valide (404
+          // "model not found") : sans ce contrôle on résolvait ok:true avec un texte
+          // vide, et l'agent échouait en silence pour toujours.
+          if (json.error) {
+            return resolve({ ok: false, text: "", error: json.error.message || JSON.stringify(json.error) });
+          }
           const text = json.choices?.[0]?.message?.content || "";
+          if (!text) return resolve({ ok: false, text: "", error: `réponse vide (HTTP ${res.statusCode}, modèle ${model})` });
           resolve({ ok: true, text });
-        } catch { resolve({ ok: false, text: "" }); }
+        } catch { resolve({ ok: false, text: "", error: `réponse illisible (HTTP ${res.statusCode}): ${String(data).slice(0, 120)}` }); }
       });
     });
-    req.on("error", () => resolve({ ok: false, text: "" }));
-    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "" }); });
+    req.on("error", (e) => resolve({ ok: false, text: "", error: `réseau: ${e.message}` }));
+    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "", error: "timeout 15s" }); });
     req.write(body);
     req.end();
   });
@@ -1097,7 +1128,12 @@ async function runShadowEvaluation(match) {
       if (existing) continue;
 
       const result = await agent.call(prompt);
-      if (!result.ok || !result.text) continue;
+      if (!result.ok || !result.text) {
+        // Log explicite : un agent mal configuré (mauvais identifiant de modèle,
+        // clé absente, quota dépassé) doit se voir dans les logs, pas disparaître.
+        console.error(`[shadow] ${agent.name} SANS RÉPONSE — ${result.error || "raison inconnue"}`);
+        continue;
+      }
 
       const parsed = parseShadowResponse(result.text);
       // Avis multi-marchés du banc d'essai — même mécanique que les 4 agents

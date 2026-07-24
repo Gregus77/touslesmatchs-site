@@ -31,10 +31,31 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      # Clés lues par api_server.js mais qui n'étaient PAS transmises : sans elles,
+      # Perplexity-Web et Cohere-Command retombent silencieusement sur llama-3.3-70b
+      # (Groq) — soit le même modèle que Claude Chief, ce qui annule la diversité du
+      # Concile. Une variable absente du .env vaut "" : comportement identique à avant.
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      # Identifiants de modèles surchargeables (corriger un ID sans redéployer)
+      - OR_QWEN_MODEL=${OR_QWEN_MODEL}
+      - OR_KIMI_MODEL=${OR_KIMI_MODEL}
+      # Emails Brevo (nurturing, codes d'accès) — inopérants sans ces variables
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME}
+      # Secret de signature des sessions : sans lui, un secret aléatoire est régénéré
+      # à chaque redémarrage et TOUS les membres connectés sont déconnectés.
+      - JWT_SECRET=${JWT_SECRET}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       - STRIPE_PRICE_ID_PREMIUM=${STRIPE_PRICE_ID_PREMIUM}
       - STRIPE_PRICE_ID_VIP=${STRIPE_PRICE_ID_VIP}
       - STRIPE_PRICE_ID_ELITE=${STRIPE_PRICE_ID_ELITE}
+      - STRIPE_PRICE_ID_CARTE=${STRIPE_PRICE_ID_CARTE}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
       - TELEGRAM_STANDARD_CHANNEL_ID=${TELEGRAM_STANDARD_CHANNEL_ID}
