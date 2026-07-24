@@ -1874,7 +1874,7 @@ footer{
       </div>
       <a href="#pick" class="nav-cta" style="display:inline-flex;margin-top:4px;background:linear-gradient(135deg,#62ff00,#22c55e);color:#07120b;box-shadow:none">Voir le match du jour</a>
     </div>
-    <div class="tlm-live-now-card">
+    <div class="tlm-live-now-card" id="direct-live">
       <div class="tlm-live-now-head">
         <h3>Matchs en cours</h3>
         <a href="/live-ia">Voir Live IA</a>
@@ -1938,10 +1938,24 @@ footer{
     function apiUrl(path){
       return (location.hostname==='127.0.0.1'||location.hostname==='localhost') ? 'https://www.touslesmatchs.com'+path : path;
     }
+    function formatLiveMinute(m){
+      var raw = m.minute ?? m.elapsed ?? m.status_elapsed ?? m.status?.elapsed ?? m.fixture?.status?.elapsed ?? null;
+      if(raw !== null && raw !== undefined && raw !== ''){
+        var n = parseInt(raw,10);
+        if(!isNaN(n) && n > 0) return n + "'";
+        var s = String(raw).trim();
+        if(s && s !== '0') return s;
+      }
+      var status = String(m.status_short || m.status || m.state || '').toUpperCase();
+      if(status === 'HT') return 'Mi-temps';
+      if(status === 'LIVE' || status === 'IN_PLAY' || status === '1H' || status === '2H') return 'Live';
+      return 'Live';
+    }
     function fallback(){
       root.innerHTML='<div class="tlm-empty-live"><strong style="color:#fff">Aucun match qualifié en live maintenant.</strong><br>Rejoins Telegram ou ouvre Live IA pour recevoir les prochaines alertes.</div>';
     }
-    fetch(apiUrl('/api/live-matches'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    function refresh(){
+    fetch(apiUrl('/api/live-matches?force=1'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
       var arr = Array.isArray(d) ? d : (d.matches || d.live || d.data || []);
       arr = arr.filter(Boolean).slice(0,3);
       if(!arr.length){ fallback(); return; }
@@ -1949,7 +1963,7 @@ footer{
         var home=m.home||m.home_team||m.teamA||m.localteam||'Equipe A';
         var away=m.away||m.away_team||m.teamB||m.visitorteam||'Equipe B';
         var comp=m.competition||m.league||m.sport||'Live';
-        var minute=m.minute||m.elapsed||m.time||'Live';
+        var minute=formatLiveMinute(m);
         var sh=(m.score_home!=null?m.score_home:(m.home_score!=null?m.home_score:'?'));
         var sa=(m.score_away!=null?m.score_away:(m.away_score!=null?m.away_score:'?'));
         return '<div class="tlm-live-now-match" role="button" tabindex="0" onclick="openPlanChoicesFromLive(event)" onkeydown="if(event.keyCode===13||event.keyCode===32){openPlanChoicesFromLive(event)}">'
@@ -1958,6 +1972,9 @@ footer{
           +'</div>';
       }).join('');
     }).catch(fallback);
+    }
+    refresh();
+    setInterval(refresh,30000);
   })();
   </script>
 
@@ -1970,10 +1987,24 @@ footer{
     function apiUrl(path){
       return (location.hostname==='127.0.0.1'||location.hostname==='localhost') ? 'https://www.touslesmatchs.com'+path : path;
     }
+    function formatLiveMinute(m){
+      var raw = m.minute ?? m.elapsed ?? m.status_elapsed ?? m.status?.elapsed ?? m.fixture?.status?.elapsed ?? null;
+      if(raw !== null && raw !== undefined && raw !== ''){
+        var n = parseInt(raw,10);
+        if(!isNaN(n) && n > 0) return n + "'";
+        var s = String(raw).trim();
+        if(s && s !== '0') return s;
+      }
+      var status = String(m.status_short || m.status || m.state || '').toUpperCase();
+      if(status === 'HT') return 'Mi-temps';
+      if(status === 'LIVE' || status === 'IN_PLAY' || status === '1H' || status === '2H') return 'Live';
+      return 'Live';
+    }
     function fallback(){
       root.innerHTML=head+'<div class="tlm-dash-empty-state"><strong>Radar en cours</strong><span>Le prochain match qualifie apparaitra ici avec acces Live IA, Telegram et les liens bookmakers partenaires.</span><div class="tlm-dash-empty-actions"><a class="live" href="/live-ia">Ouvrir Live IA</a><a class="tg" href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer">Telegram</a></div></div>';
     }
-    fetch(apiUrl('/api/live-matches'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    function refresh(){
+    fetch(apiUrl('/api/live-matches?force=1'),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
       var arr=Array.isArray(d)?d:(d.matches||d.live||d.data||[]);
       arr=arr.filter(Boolean).slice(0,4);
       if(!arr.length){fallback();return;}
@@ -1981,7 +2012,7 @@ footer{
         var home=m.home||m.home_team||m.teamA||m.localteam||'Equipe A';
         var away=m.away||m.away_team||m.teamB||m.visitorteam||'Equipe B';
         var comp=m.competition||m.league||m.sport||'Live IA';
-        var minute=m.minute||m.elapsed||m.time||'Live';
+        var minute=formatLiveMinute(m);
         var sh=(m.score_home!=null?m.score_home:(m.home_score!=null?m.home_score:'-'));
         var sa=(m.score_away!=null?m.score_away:(m.away_score!=null?m.away_score:'-'));
         var bookmaker=m.best_bookmaker||m.bookmaker||'A comparer';
@@ -1995,6 +2026,9 @@ footer{
           +'</div>';
       }).join('');
     }).catch(fallback);
+    }
+    refresh();
+    setInterval(refresh,30000);
   })();
   </script>
 
@@ -2509,7 +2543,6 @@ footer{
     <table class="cmp-table">
       <thead><tr><th>Ce que tu obtiens</th><th class="hl">Standard</th><th>Premium</th><th>Elite/VIP</th></tr></thead>
       <tbody>
-        <tr><td>Prix</td><td class="cmp-col-hl cmp-val">4,90€ / mois</td><td class="cmp-val">14,90€ / mois</td><td class="cmp-val">29,90€ / mois</td></tr>
         <tr><td>Signaux Telegram</td><td class="cmp-col-hl cmp-val">3 / jour</td><td class="cmp-val">10 / jour</td><td class="cmp-val">30 / jour</td></tr>
         <tr><td>Confiance minimale</td><td class="cmp-col-hl cmp-val">88/100</td><td class="cmp-val">90/100</td><td class="cmp-val">90/100</td></tr>
         <tr><td>Cote réelle ARJEL min.</td><td class="cmp-col-hl cmp-yes">1.50</td><td class="cmp-yes">1.50</td><td class="cmp-yes">1.50</td></tr>
@@ -2742,10 +2775,21 @@ function copyRefLink(){
 <style>#plans,#plan-carte{scroll-margin-top:80px}</style>
 <script>
 window.addEventListener('load', function(){
+  if (location.hash === '#plans' && !sessionStorage.getItem('tlm_allow_plans_hash')) {
+    history.replaceState(null, '', location.pathname + location.search);
+    var live = document.getElementById('direct-live');
+    if (live) setTimeout(function(){ live.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
+    return;
+  }
+  sessionStorage.removeItem('tlm_allow_plans_hash');
   if (location.hash && location.hash.length > 1) {
     var el = document.querySelector(location.hash);
     if (el) setTimeout(function(){ el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 350);
   }
+});
+document.addEventListener('click', function(e){
+  var a = e.target.closest && e.target.closest('a[href="#plans"],a[href="/#plans"]');
+  if (a) sessionStorage.setItem('tlm_allow_plans_hash','1');
 });
 </script>
 
