@@ -758,6 +758,23 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : conf ≥ 90, fo
 const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 90, ELITE_MIN_CONF = 90;
 const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
 const ELITE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
+
+// Diffuse un message identique à tous les canaux payants. Le FORMAT est le même
+// partout — seul le volume diffère, via les plafonds et seuils de chaque palier.
+// Dédoublonnage par chat_id : tant qu'un palier n'a pas de canal dédié il retombe
+// sur Premium, et on ne veut pas envoyer deux fois le même message au même canal.
+// includeStandard=false réserve le message aux paliers supérieurs (modèle imbriqué).
+function sendToPaidChannels(text, opts = {}) {
+  const targets = [];
+  const push = (id, label) => { if (id && !targets.some(t => t.id === id)) targets.push({ id, label }); };
+  if (opts.includeStandard !== false) push(TELEGRAM_STANDARD_CHANNEL_ID, "standard");
+  push(TELEGRAM_PREMIUM_CHANNEL_ID, "premium");
+  push(TELEGRAM_ELITE_CHANNEL_ID, "elite");
+  return Promise.all(targets.map(t =>
+    sendTelegramMessage(t.id, text)
+      .then(ok => console.log(`[${opts.tag || "telegram"}] ${t.label}: ${ok ? "OK" : "FAIL"}`))
+  ));
+}
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
@@ -5426,10 +5443,8 @@ async function sendSignalFortBilanTelegram() {
 
   const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
 
-  if (TELEGRAM_PREMIUM_CHANNEL_ID) {
-    const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-    console.log(`[signal-fort-bilan] Telegram premium: ${ok ? "OK" : "FAIL"}`);
-  }
+  // Bilan de résultats : tous les paliers payants le reçoivent, à l'identique.
+  await sendToPaidChannels(premiumMsg, { tag: "signal-fort-bilan" });
   if (TELEGRAM_CHANNEL_ID) {
     const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
     console.log(`[signal-fort-bilan] Telegram free: ${ok ? "OK" : "FAIL"}`);
@@ -8115,10 +8130,9 @@ app.post("/internal/signal-notify", async (req, res) => {
     const tgIcon = sportIcons2[signal.sport] || "🎯";
     const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
     const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-    if (TELEGRAM_PREMIUM_CHANNEL_ID) {
-      const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremiumText);
-      console.log(`[signal-notify] Telegram premium: ${ok ? "OK" : "FAIL"}`);
-    }
+    // Signal de niveau Premium : Premium et Elite le reçoivent toujours (modèle
+    // imbriqué), Standard uniquement s'il atteint son seuil plus exigeant.
+    await sendToPaidChannels(tgPremiumText, { tag: "signal-notify", includeStandard: (Number(conf) || 0) >= STANDARD_MIN_CONF });
     if (TELEGRAM_CHANNEL_ID) {
       const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFreeText);
       console.log(`[signal-notify] Telegram free: ${ok ? "OK" : "FAIL"}`);
