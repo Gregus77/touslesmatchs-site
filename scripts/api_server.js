@@ -544,7 +544,10 @@ db.exec(`
 try {
   const agentCount = db.prepare("SELECT COUNT(*) as c FROM agent_weights").get().c;
   if (agentCount === 0) {
-    const defaultAgents = ["GROQ-Llama", "GPT Analysis", "GeminiFlash", "Mistral-7B", "Claude Chief"];
+    // Roster ACTUEL du Concile (cf. agentNames dans runConcile). Ne jamais remettre ici
+    // les noms de l'ancien Concile (GROQ-Llama, GPT Analysis, GeminiFlash, Mistral-7B) :
+    // ce seed se rejoue dès que la table est vide et ressusciterait les agents fantômes.
+    const defaultAgents = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief"];
     const insert = db.prepare("INSERT OR IGNORE INTO agent_weights (agent_name, weight) VALUES (?, 1.0)");
     for (const name of defaultAgents) insert.run(name);
     console.log("[migration] Agent weights initialised with 5 agents");
