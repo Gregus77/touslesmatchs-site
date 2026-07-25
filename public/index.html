@@ -1634,6 +1634,68 @@ footer{
 })();
 </script>
 
+<!-- Bandeau matchs en direct multi-sport -->
+<style>
+  .home-live-board{max-width:1080px;margin:24px auto 0;padding:0 24px}
+  .home-live-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:12px}
+  .home-live-title{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;color:#eceaf4;letter-spacing:-.02em}
+  .home-live-title .dot{width:8px;height:8px;border-radius:50%;background:#f43f5e;animation:cpPulse 1.8s infinite}
+  .home-live-link{font-size:12px;font-weight:800;color:#a78bfa;text-decoration:none}
+  .home-live-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .home-live-card{border:1px solid rgba(255,255,255,.09);background:rgba(13,16,32,.55);border-radius:12px;padding:13px 14px;display:grid;gap:10px;min-width:0}
+  .home-live-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#a4a1b8;font-weight:800;min-width:0}
+  .home-live-comp{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .home-live-sport{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.06);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .home-live-time{color:#fb7185;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.2);border-radius:999px;padding:3px 8px;white-space:nowrap}
+  .home-live-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+  .home-live-team{display:flex;align-items:center;gap:8px;min-width:0}
+  .home-live-team.away{justify-content:flex-end;text-align:right}
+  .home-live-logo{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:#141827;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:900;color:#eceaf4;flex:0 0 auto}
+  .home-live-logo img{width:100%;height:100%;object-fit:contain}
+  .home-live-name{font-size:13px;font-weight:800;color:#eceaf4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .home-live-score{font-size:18px;font-weight:950;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+  @media(max-width:760px){.home-live-grid{grid-template-columns:1fr}.home-live-board{padding:0 16px}.home-live-head{align-items:center}.home-live-card{padding:12px}}
+</style>
+<div class="home-live-board" id="home-live-board" style="display:none">
+  <div class="home-live-head">
+    <div class="home-live-title"><span class="dot"></span><span>En direct</span></div>
+    <a href="/live-ia" class="home-live-link">Ouvrir Live IA →</a>
+  </div>
+  <div class="home-live-grid" id="home-live-grid"></div>
+</div>
+<script>
+(function loadHomeLiveMatches(){
+  var SPORT_ICONS={Football:'⚽',Basketball:'🏀',Hockey:'🏒',Baseball:'⚾',Tennis:'🎾'};
+  var FLAGS={"Argentina":"🇦🇷","Brazil":"🇧🇷","Canada":"🇨🇦","France":"🇫🇷","Germany":"🇩🇪","Italy":"🇮🇹","Mexico":"🇲🇽","Spain":"🇪🇸","USA":"🇺🇸","United States":"🇺🇸","World":"🌍"};
+  function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
+  function initials(name){return String(name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(function(p){return p.charAt(0)}).join('').toUpperCase()||'?';}
+  function splitComp(raw){var p=String(raw||'').split(/\s+[·•]\s+/);return{league:p[0]||'',country:p.length>1?p[p.length-1]:''};}
+  function logo(src,name){return src?'<img src="'+esc(src)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">':esc(initials(name));}
+  function timeLabel(m){if(m.minute!==null&&m.minute!==undefined&&m.minute!=='')return esc(m.minute)+(typeof m.minute==='number'?"'":'');return 'Live';}
+  function diversify(list,max){
+    var order=['Baseball','Basketball','Hockey','Football'];
+    var picked=[], used=new Set();
+    order.forEach(function(s){var i=list.findIndex(function(m,idx){return !used.has(idx)&&m.sport===s});if(i>=0&&picked.length<max){picked.push(list[i]);used.add(i);}});
+    list.forEach(function(m,i){if(picked.length<max&&!used.has(i))picked.push(m);});
+    return picked;
+  }
+  fetch('/api/live-matches').then(function(r){return r.json();}).then(function(d){
+    var board=document.getElementById('home-live-board'), grid=document.getElementById('home-live-grid');
+    if(!d||!d.ok||!Array.isArray(d.matches)||!d.matches.length||!board||!grid)return;
+    var matches=diversify(d.matches,4);
+    grid.innerHTML=matches.map(function(m){
+      var comp=splitComp(m.competition||m.sport), flag=FLAGS[comp.country]||'', icon=SPORT_ICONS[m.sport]||'🏟️';
+      var sh=m.score_home==null?'-':m.score_home, sa=m.score_away==null?'-':m.score_away;
+      return '<div class="home-live-card">'+
+        '<div class="home-live-meta"><div class="home-live-comp"><span class="home-live-sport">'+icon+'</span><span>'+esc(comp.league||m.sport)+(comp.country?' · '+flag+' '+esc(comp.country):'')+'</span></div><span class="home-live-time">'+timeLabel(m)+'</span></div>'+
+        '<div class="home-live-row"><div class="home-live-team"><span class="home-live-logo">'+logo(m.home_logo,m.home)+'</span><span class="home-live-name">'+esc(m.home)+'</span></div><div class="home-live-score">'+esc(sh)+' — '+esc(sa)+'</div><div class="home-live-team away"><span class="home-live-name">'+esc(m.away)+'</span><span class="home-live-logo">'+logo(m.away_logo,m.away)+'</span></div></div>'+
+      '</div>';
+    }).join('');
+    board.style.display='block';
+  }).catch(function(){});
+})();
+</script>
+
 <!-- ── BANDEAU MARCHÉ CHAMPION — "But 1ère MT" 82% ──────────────────────── -->
 <!-- Bannière champion : winrate + total remplis en direct depuis /api/signal-fort-stats
      (voir #champ-winrate / #champ-total). Chiffres réels, jamais en dur. -->
