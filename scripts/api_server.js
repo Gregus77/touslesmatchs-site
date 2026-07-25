@@ -1580,7 +1580,7 @@ function handleApiSportsErrors(sport, data) {
   return true;
 }
 
-function httpPost(url, body, headers = {}) {
+function httpPost(url, body, headers = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const payload = JSON.stringify(body);
@@ -1589,6 +1589,7 @@ function httpPost(url, body, headers = {}) {
       path: opts.pathname + opts.search,
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload), ...headers },
+      timeout: timeoutMs,
     };
     const req = https.request(options, (res) => {
       let data = "";
@@ -1599,6 +1600,10 @@ function httpPost(url, body, headers = {}) {
       });
     });
     req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      resolve({});
+    });
     req.write(payload);
     req.end();
   });
@@ -3136,10 +3141,10 @@ Réponds en JSON pur (pas de markdown):
       for (const pv of providers) {
         try {
           if (pv.kind === "cohere") {
-            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` });
+            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, 6000);
             raw = cr.text || cr.chat_history?.slice(-1)[0]?.message || "{}";
           } else {
-            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` });
+            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, 6000);
             raw = rp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -3259,7 +3264,7 @@ Réponds en JSON pur (pas de markdown):
     let raw = "{}";
     for (const pv of chiefProviders) {
       try {
-        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` });
+        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` }, 6000);
         raw = rp.choices?.[0]?.message?.content || "{}";
         const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         if (probe && probe !== "{}" && probe.length > 8) break;
@@ -3271,7 +3276,13 @@ Réponds en JSON pur (pas de markdown):
     const parsed = JSON.parse(cleaned);
     const rawBet = parsed.bet || availableBets[0];
     const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
-    const fallbackRaison = `Consensus des agents : ${agentResults.map(a => a.bet).join(", ")}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`;
+    const activeVoteSummary = activedAgentResults
+      .filter(a => a.bet && a.bet !== "—" && a.bet !== "-")
+      .map(a => `${a.bet} (${a.confidence}%)`)
+      .join(", ");
+    const fallbackRaison = activeVoteSummary
+      ? `Synthèse du Concile : ${activeVoteSummary}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`
+      : `Analyse live basée sur le score ${match.score_home}-${match.score_away} à ${minuteDisplay}, le temps restant et les marchés disponibles. Signal prudent faute de consensus IA complet.`;
     const raisonFinal = corrected
       ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
       : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);

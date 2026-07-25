@@ -519,10 +519,16 @@ function requestAnalysis(btn, matchId, home, away) {
   btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></div> Analyse en cours...';
 
   var match = allMatches.find(function(m) { return (m.id || m.home + "_" + m.away) === matchId; });
+  var analysisTimer = null;
+  var controller = window.AbortController ? new AbortController() : null;
+  if (controller) {
+    analysisTimer = setTimeout(function(){ controller.abort(); }, 45000);
+  }
 
   fetch("/api/concile-analysis", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: controller ? controller.signal : undefined,
     body: JSON.stringify({
       email: userAuth.email,
       code: userAuth.code,
@@ -537,6 +543,7 @@ function requestAnalysis(btn, matchId, home, away) {
       }
     })
   }).then(function(r){ return r.json(); }).then(function(d) {
+    if (analysisTimer) clearTimeout(analysisTimer);
     var el = document.getElementById("analysis-" + matchId);
     if (d.ok) {
       var chief = d.agents ? d.agents[d.agents.length - 1] : null;
@@ -569,6 +576,12 @@ function requestAnalysis(btn, matchId, home, away) {
       btn.innerHTML = "🧠 Réessayer";
     }
   }).catch(function() {
+    if (analysisTimer) clearTimeout(analysisTimer);
+    var el = document.getElementById("analysis-" + matchId);
+    if (el) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">⚠️ Analyse trop longue. Réessaie dans quelques secondes.</div>';
+      el.classList.add("visible");
+    }
     btn.disabled = false;
     btn.innerHTML = "🧠 Réessayer";
   });
