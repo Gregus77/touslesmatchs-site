@@ -768,7 +768,69 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 // Aucune analyse au-dessus de 89 sur la période : un seuil à 90 ou 92 produit ZÉRO signal.
 const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 84, ELITE_MIN_CONF = 82;
 const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
-const ELITE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
+// Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
+// au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
+// signal football à 84 %, et un mardi sans football vidait le palier.
+const DIFFUSABLE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
+const ELITE_SPORTS = DIFFUSABLE_SPORTS; // conservé : encore référencé par tierEligible()
+
+// ── Seuils dynamiques par palier — garantissent le VOLUME vendu ───────────────
+// Un seuil FIXE est fragile : si le Concile devient moins confiant, le palier se
+// vide et le client paie pour rien (cas réel : seuil Standard à 92 → zéro signal).
+// Ici c'est la QUANTITÉ qui différencie les paliers, pas le seuil. On cherche
+// chaque jour le niveau de confiance qui a historiquement produit le quota visé :
+// « quel seuil laisse passer 3 signaux par jour ? » → c'est celui du Standard.
+// Conséquence : le quota est servi quel que soit le niveau de confiance du moment,
+// et le vivier commun inclut tous les sports (plus de palier à sec faute de football).
+const TIER_THRESHOLD_WINDOW_DAYS = 30;
+let _tierThresholdCache = { day: "", value: null };
+function getTierThresholds() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (_tierThresholdCache.day === today && _tierThresholdCache.value) return _tierThresholdCache.value;
+  // Repli : les constantes calées sur la mesure du 25/07/2026.
+  const fallback = { standard: STANDARD_MIN_CONF, premium: PREMIUM_MIN_CONF, elite: ELITE_MIN_CONF, source: "fixe" };
+  try {
+    const confs = db.prepare(`
+      SELECT confidence FROM concile_analyses
+      WHERE analysed_at >= datetime('now','-${TIER_THRESHOLD_WINDOW_DAYS} days')
+        AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND real_odd >= ${TIER_MIN_REAL_ODD}
+      ORDER BY confidence DESC
+    `).all().map(r => Number(r.confidence) || 0).filter(Boolean);
+    // Sous 30 analyses l'échantillon ne dit rien de fiable : on garde les constantes.
+    if (confs.length < 30) { _tierThresholdCache = { day: today, value: fallback }; return fallback; }
+    // Les confiances sont quantifiées (82, 83, 84, 85, 88, 89…) : un quantile brut
+    // tombe sur des ex æquo et déborde largement le quota. On retient donc la valeur
+    // DISTINCTE dont le nombre de signaux est le plus proche du quota visé.
+    const distinct = [...new Set(confs)].sort((a, b) => b - a);
+    const quantile = (perDay) => {
+      const target = Math.max(1, Math.round(perDay * TIER_THRESHOLD_WINDOW_DAYS));
+      let best = distinct[0], bestGap = Infinity;
+      for (const v of distinct) {
+        const gap = Math.abs(confs.filter(c => c >= v).length - target);
+        if (gap < bestGap) { bestGap = gap; best = v; }
+      }
+      return best;
+    };
+    const t = {
+      standard: quantile(STANDARD_SIGNAL_DAILY_CAP),
+      premium:  quantile(PREMIUM_SIGNAL_DAILY_CAP),
+      elite:    PUBLISHED_MIN_CONFIDENCE, // Elite reçoit tout le vivier diffusable
+      source: `${confs.length} analyses / ${TIER_THRESHOLD_WINDOW_DAYS} j`,
+    };
+    // Imbrication garantie : Standard ≥ Premium ≥ Elite (payer plus = recevoir plus).
+    t.premium = Math.min(t.premium, t.standard);
+    t.elite   = Math.min(t.elite, t.premium);
+    // Jamais sous le plancher de publication.
+    for (const k of ["standard", "premium", "elite"]) t[k] = Math.max(PUBLISHED_MIN_CONFIDENCE, t[k]);
+    console.log(`[tier-thresholds] Standard ≥${t.standard} · Premium ≥${t.premium} · Elite ≥${t.elite} (${t.source})`);
+    _tierThresholdCache = { day: today, value: t };
+    return t;
+  } catch (e) {
+    console.error("[tier-thresholds]", e.message);
+    return fallback;
+  }
+}
 
 // Vérifie au démarrage que chaque canal configuré existe et que le bot y a accès.
 // Un ID périmé (typiquement après migration d'un groupe en supergroupe, où l'ID
@@ -3252,12 +3314,16 @@ Réponds en JSON pur (pas de markdown):
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
       const oddOk = realOdd >= TIER_MIN_REAL_ODD;
       const sportLc = String(match.sport || "Football").toLowerCase();
-      const isFootball = sportLc.includes("foot");
-      const isEliteSport = ELITE_SPORTS.some(s => sportLc.includes(s));
+      // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
+      // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
+      // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
+      const diffusable = arjelPlayable && oddOk && DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
+      // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
+      const TH = getTierThresholds();
 
-      const gradeStandard = arjelPlayable && oddOk && isFootball && conf >= STANDARD_MIN_CONF;
-      const gradePremium  = gradeStandard || (arjelPlayable && oddOk && isFootball && conf >= PREMIUM_MIN_CONF);
-      const gradeElite    = gradePremium  || (arjelPlayable && oddOk && isEliteSport && conf >= ELITE_MIN_CONF);
+      const gradeStandard = diffusable && conf >= TH.standard;
+      const gradePremium  = gradeStandard || (diffusable && conf >= TH.premium);
+      const gradeElite    = gradePremium  || (diffusable && conf >= TH.elite);
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
