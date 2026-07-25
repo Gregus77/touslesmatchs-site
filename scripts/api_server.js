@@ -1272,9 +1272,9 @@ async function runShadowEvaluation(match) {
       }
 
       const parsed = parseShadowResponse(result.text);
-      // Avis multi-marchés du banc d'essai — même mécanique que les 4 agents
+      // Avis multi-marchés du banc d'essai — même mécanique que les 5 agents
       // du Concile, pour que TOUTES les IA (pas seulement Perplexity/DeepSeek/
-      // Mistral-Large/Cohere) apparaissent dans la matrice IA × marché.
+      // Mistral-Large/Cohere/Qwen) apparaissent dans la matrice IA × marché.
       if (parsed.marches) {
         saveAgentMarketPredictions(match, [{ name: agent.name, marches: parsed.marches }]);
       }
@@ -3013,7 +3013,7 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiquement invalide.`;
 
-  // Concile v3 — 4 familles d'IA radicalement différentes + Chief
+  // Concile v3 — 5 familles d'IA radicalement différentes + Chief
   // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
   // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
@@ -3022,6 +3022,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
   const usePerplexity = !!PERPLEXITY_API_KEY;
   const useMistral    = !!MISTRAL_API_KEY;
   const useCohere     = !!COHERE_API_KEY;
+  const useOpenRouter = !!OPENROUTER_API_KEY;
 
   const agentNames = [
     {
@@ -3043,8 +3044,16 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       icon: "🧬",
       useCohere,
     },
+    {
+      name: "OpenRouter-Qwen",
+      model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
+      icon: "🌟",
+      useOpenRouter,
+    },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
+  const CHIEF_INDEX = agentNames.length - 1;
+  const AGENT_INDEXES = agentNames.map((_, i) => i).filter(i => i !== CHIEF_INDEX);
 
   const webSearchNote = usePerplexity
     ? `\nATTENTION : tu as accès aux données web en temps réel. Cherche impérativement : forme récente de ${match.home} et ${match.away} (5 derniers matchs), blessures confirmées, confrontations directes récentes, et cotes actuelles chez les bookmakers. Cite tes sources. N'invente RIEN.`
@@ -3059,7 +3068,9 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
 
-    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 4 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.`,
+    `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
+
+    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -3069,7 +3080,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
   // Helper: run a single agent and return its result
   async function runSingleAgent(i) {
-    const isChief = i === 4;
+    const isChief = i === CHIEF_INDEX;
     const agCfg = agentNames[i];
     const temp = 0.3 + i * 0.05;
     const maxTok = isChief ? 400 : 300;
@@ -3113,10 +3124,12 @@ Réponds en JSON pur (pas de markdown):
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
+      if (agCfg.useOpenRouter && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
       if (!providers.length && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
       if (!providers.length && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: "mistral-small-latest" });
       if (GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
-      if (OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
+      if (OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+      if (OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
       if (CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       let raw = "{}";
@@ -3172,13 +3185,14 @@ Réponds en JSON pur (pas de markdown):
     }
   }
 
-  // Phase 1: Run 4 agents IN PARALLEL (not sequentially)
-  const agentResults = await Promise.all([0, 1, 2, 3].map(i => runSingleAgent(i)));
+  // Phase 1: Run 5 agents IN PARALLEL (not sequentially)
+  const agentResults = await Promise.all(AGENT_INDEXES.map(i => runSingleAgent(i)));
 
   // Phase 2: Run Chief AFTER, with all agent votes available
   // Filter weak agents (winrate < 52% AND resolved >= 30 predictions)
   const benchedAgents = [];
   const activedAgentResults = agentResults.filter((a) => {
+    if (a.failed) return false;
     const p = agentPerf[a.name];
     const resolved = p ? p.resolved : 0;
     const winrate = p ? p.winrate : null;
@@ -3209,7 +3223,7 @@ Réponds en JSON pur (pas de markdown):
     ? `\n\nNOTE: Agents exclus du vote (faible historique): ${benchedAgents.join(", ")} [ces agents ont <52% winrate sur 30+ prédictions résolues]`
     : "";
 
-  const chiefPrompt = `${personas[4]}
+  const chiefPrompt = `${personas[CHIEF_INDEX]}
 
 ${matchContext}
 
@@ -3238,7 +3252,8 @@ Réponds en JSON pur (pas de markdown):
     const chiefProviders = [];
     if (GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
     if (DEEPSEEK_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
-    if (OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
+    if (OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+    if (OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
     if (CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
     let raw = "{}";
@@ -3262,7 +3277,7 @@ Réponds en JSON pur (pas de markdown):
       : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
 
     agentResults.push({
-      name: agentNames[4].name, icon: agentNames[4].icon,
+      name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
       bet: validBet,
       confidence: Math.min(95, Math.max(50, isNaN(parseInt(parsed.confidence)) ? 55 : parseInt(parsed.confidence))),
       raison: raisonFinal,
@@ -3270,13 +3285,13 @@ Réponds en JSON pur (pas de markdown):
     });
   } catch (e) {
     console.error(`[concile] agent Chief erreur:`, e.message);
-    agentResults.push(getMockAgentAnalysis(agentNames[4], match, 4));
+    agentResults.push(getMockAgentAnalysis(agentNames[CHIEF_INDEX], match, CHIEF_INDEX));
   }
 
   // Find consensus bet
   const chief = agentResults[agentResults.length - 1];
   const betCounts = {};
-  agentResults.slice(0, 4).forEach((a) => {
+  activedAgentResults.forEach((a) => {
     betCounts[a.bet] = (betCounts[a.bet] || 0) + 1;
   });
   const consensusBet = chief.bet;
@@ -3298,7 +3313,8 @@ Réponds en JSON pur (pas de markdown):
     cote_source: oddInfo.source,
     raison: chief.raison,
     consensus_votes: consensusVotes + 1,
-    total_agents: 5,
+    total_agents: 6,
+    active_agents: activedAgentResults.length + 1,
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
@@ -3490,6 +3506,7 @@ function getMockAnalysis(match) {
     { name: "DeepSeek-V3", icon: "🔮", model: "deepseek-chat" },
     { name: "Mistral-Large", icon: "🌊", model: "mistral-large-latest" },
     { name: "Cohere-Command", icon: "🧬", model: "command-r-plus" },
+    { name: "OpenRouter-Qwen", icon: "🌟", model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" },
     { name: "Claude Chief", icon: "👑", model: "llama-3.3-70b-versatile", isChief: true },
   ];
   const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
@@ -3499,8 +3516,9 @@ function getMockAnalysis(match) {
     best_bet: chief.bet,
     confidence: chief.confidence,
     raison: chief.raison,
-    consensus_votes: 3,
-    total_agents: 5,
+    consensus_votes: 4,
+    total_agents: 6,
+    active_agents: 6,
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
   };
@@ -5345,7 +5363,7 @@ app.post("/subscribe-email", async (req, res) => {
       const welcomeHtml = `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
   <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
     <div style="font-size:26px;font-weight:900;color:#fff">Bienvenue sur TousLesMatchs</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">5 agents IA + 1 Chief. Tu décides avec plus de données.</div>
   </div>
   <div style="padding:32px">
     <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
@@ -5997,7 +6015,7 @@ app.get("/user/history", authMiddleware, (req, res) => {
     const analyses = rows.map(r => {
       let data = {};
       try { data = JSON.parse(r.analysis_json || "{}"); } catch {}
-      return { match_key: r.match_key, revealed_at: r.revealed_at, ...data };
+      return { match_key: r.match_key, revealed_at: r.revealed_at, ...sanitizeAnalysisForClient(data) };
     });
     res.json({ ok: true, analyses, total });
   } catch (e) {
@@ -6757,15 +6775,27 @@ function isAdminAccess(email, code) {
 }
 
 function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
-  if (allowAdminFields) return analysis;
   const clean = { ...analysis };
-  delete clean.agent_performance;
+  if (!allowAdminFields) delete clean.agent_performance;
   if (Array.isArray(clean.agents)) {
-    clean.agents = clean.agents.map((agent, index) => ({
-      ...agent,
-      name: `Agent IA ${index + 1}`,
-      model: "",
-    }));
+    clean.agents = clean.agents
+      .filter((agent) => {
+        const bet = String(agent?.bet || "").trim();
+        const reason = String(agent?.raison || "");
+        return !agent.failed
+          && bet
+          && bet !== "—"
+          && bet !== "-"
+          && agent.confidence !== null
+          && agent.confidence !== undefined
+          && !reason.includes("IA non joignable");
+      })
+      .map((agent, index, list) => ({
+        ...agent,
+        name: index === list.length - 1 && agent.isChief ? "Chief du Concile" : `Agent IA ${index + 1}`,
+        model: "",
+        raison: agent.isChief ? agent.raison : "",
+      }));
   }
   return clean;
 }
@@ -7052,7 +7082,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
             <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
               <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 5 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
             </div>
             <div style="padding:32px">
               <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
