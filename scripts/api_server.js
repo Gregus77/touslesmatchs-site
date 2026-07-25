@@ -726,6 +726,7 @@ setInterval(refreshAgentWeights, 3600000);
 const JWT_SECRET = process.env.JWT_SECRET || (() => { console.error("[SECURITY] JWT_SECRET non défini dans .env — auth désactivée"); return require("crypto").randomBytes(32).toString("hex"); })();
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.API_FOOTBALL_KEY || "";
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
+const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
@@ -2157,6 +2158,61 @@ async function fetchFromApiSports() {
   return results;
 }
 
+function normalizeTheSportsDbLiveEvent(event, fallbackSport) {
+  const rawSport = String(event?.strSport || fallbackSport || "").toLowerCase();
+  const sport = rawSport.includes("basket") ? "Basketball"
+    : rawSport.includes("hockey") ? "Hockey"
+    : rawSport.includes("baseball") ? "Baseball"
+    : "Football";
+  const home = event?.strHomeTeam || event?.strHome || event?.homeTeam || event?.home;
+  const away = event?.strAwayTeam || event?.strAway || event?.awayTeam || event?.away;
+  if (!home || !away) return null;
+  const homeScore = event?.intHomeScore ?? event?.homeScore ?? event?.scoreHome ?? null;
+  const awayScore = event?.intAwayScore ?? event?.awayScore ?? event?.scoreAway ?? null;
+  const minute = event?.intTime || event?.strTime || event?.strProgress || event?.strStatus || "Live";
+  const id = event?.idEvent || event?.idLiveScore || `${sport}-${home}-${away}`;
+  return {
+    id: "tsdb-" + String(id),
+    source: "thesportsdb",
+    sourceId: String(id),
+    fixtureId: null,
+    sport,
+    home,
+    away,
+    home_logo: event?.strHomeTeamBadge || event?.strHomeBadge || null,
+    away_logo: event?.strAwayTeamBadge || event?.strAwayBadge || null,
+    score_home: homeScore === "" ? null : homeScore,
+    score_away: awayScore === "" ? null : awayScore,
+    minute,
+    status: "IN_PLAY",
+    competition: event?.strLeague || event?.strLeagueAlternate || sport,
+    utcDate: event?.dateEvent || event?.strTimestamp || new Date().toISOString(),
+  };
+}
+
+async function fetchFromTheSportsDb() {
+  if (!THESPORTSDB_API_KEY) return null;
+  const url = "https://www.thesportsdb.com/api/v2/json/livescore/all";
+  const data = await httpGet(url, { "X-API-KEY": THESPORTSDB_API_KEY, "Content-Type": "application/json" });
+  const raw = Array.isArray(data?.livescore) ? data.livescore
+    : Array.isArray(data?.events) ? data.events
+    : Array.isArray(data?.response) ? data.response
+    : Array.isArray(data) ? data
+    : [];
+  const wanted = new Set(["Football", "Basketball", "Hockey", "Baseball"]);
+  const results = raw
+    .map((event) => normalizeTheSportsDbLiveEvent(event, event?.strSport))
+    .filter((event) => event && wanted.has(event.sport));
+  const counts = results.reduce((acc, event) => {
+    acc[event.sport] = (acc[event.sport] || 0) + 1;
+    return acc;
+  }, {});
+  for (const sport of wanted) console.log(`[live-matches] TheSportsDB ${sport}: ${counts[sport] || 0}`);
+  if (results.length === 0) return null;
+  console.log(`[live-matches] TheSportsDB total: ${results.length} événements`);
+  return results;
+}
+
 function sameLiveTeams(a, b) {
   return normalizeMatchName(a?.home) === normalizeMatchName(b?.home)
     && normalizeMatchName(a?.away) === normalizeMatchName(b?.away);
@@ -2225,13 +2281,17 @@ async function fetchLiveMatches() {
   if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
     return liveMatchesCache.data;
   }
-  const [footballDataMatches, apiSportsMatches] = await Promise.all([
+  const [footballDataMatches, apiSportsMatches, theSportsDbMatches] = await Promise.all([
     fetchFromFootballData(),
     fetchFromApiSports(),
+    fetchFromTheSportsDb(),
   ]);
   // If both failed, do not keep stale live matches on screen.
-  if (footballDataMatches === null && apiSportsMatches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
-  const matches = mergeLiveMatchSources(footballDataMatches || [], apiSportsMatches || []);
+  if (footballDataMatches === null && apiSportsMatches === null && theSportsDbMatches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
+  const matches = mergeLiveMatchSources(
+    mergeLiveMatchSources(footballDataMatches || [], apiSportsMatches || []),
+    theSportsDbMatches || []
+  );
 
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
