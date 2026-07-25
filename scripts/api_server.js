@@ -1551,13 +1551,6 @@ function httpGet(url, headers = {}) {
   });
 }
 
-function hasApiSportsErrors(data, label) {
-  const errors = data?.errors;
-  if (!errors || Object.keys(errors).length === 0) return false;
-  console.warn(`[live-matches] API-Sports ${label} indisponible: ${JSON.stringify(errors)}`);
-  return true;
-}
-
 function httpPost(url, body, headers = {}) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
@@ -2048,7 +2041,7 @@ async function fetchFromApiSports() {
   // Football live
   try {
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    if (!hasApiSportsErrors(data, "football")) {
+    if (!data.errors || Object.keys(data.errors).length === 0) {
       const items = (data.response || []).slice(0, 60).map(normalizeApiSportsFootballFixture);
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
@@ -2058,7 +2051,6 @@ async function fetchFromApiSports() {
   // Basketball live
   try {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    if (!hasApiSportsErrors(data, "basketball")) {
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
       source: "api-sports",
@@ -2072,14 +2064,12 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    console.log(`[live-matches] API-Sports basketball: ${items.length}`);
-    }
+    if (items.length) console.log(`[live-matches] API-Sports basketball: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports basketball:", e.message); }
 
   // Hockey live
   try {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    if (!hasApiSportsErrors(data, "hockey")) {
     const items = (data.response || []).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
@@ -2093,14 +2083,12 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    console.log(`[live-matches] API-Sports hockey: ${items.length}`);
-    }
+    if (items.length) console.log(`[live-matches] API-Sports hockey: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
   // Baseball live
   try {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    if (!hasApiSportsErrors(data, "baseball")) {
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
       source: "api-sports",
@@ -2116,12 +2104,35 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    console.log(`[live-matches] API-Sports baseball: ${items.length}`);
-    }
+    if (items.length) console.log(`[live-matches] API-Sports baseball: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports baseball:", e.message); }
 
-  // Tennis neutralise: l'ancien endpoint v1.tennis.api-sports.io ne resout plus
-  // et polluait les logs live. A reactiver uniquement avec un endpoint valide.
+  // Tennis live — filtré sur ATP (exclut WTA/ITF/Challenger via le nom du tournoi)
+  try {
+    const data = await httpGet("https://v1.tennis.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    const items = (data.response || [])
+      .filter(g => {
+        const t = String(g.league?.name || g.tournament?.name || "").toLowerCase();
+        return t.includes("atp") && !t.includes("wta");
+      })
+      .slice(0, 10)
+      .map((g) => ({
+        id: "tn-" + g.id, sport: "Tennis",
+        source: "api-sports",
+        sourceId: String(g.id),
+        fixtureId: null,
+        home: g.teams?.home?.name, away: g.teams?.away?.name,
+        home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
+        score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
+        score_away: g.scores?.away?.total ?? g.scores?.away ?? null,
+        minute: g.status?.long || g.status?.short || null,
+        status: "IN_PLAY",
+        competition: "ATP · " + (g.league?.name || g.tournament?.name || "Tennis"),
+        utcDate: g.date,
+      })).filter(g => g.home && g.away);
+    results.push(...items);
+    if (items.length) console.log(`[live-matches] API-Sports tennis ATP: ${items.length}`);
+  } catch(e) { console.error("[live-matches] API-Sports tennis:", e.message); }
 
   if (results.length === 0) return null;
   console.log(`[live-matches] API-Sports total: ${results.length} événements`);
@@ -6492,10 +6503,7 @@ app.get("/live-matches", async (req, res) => {
     const allMatches = await fetchLiveMatches();
     // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
     // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
-    const matches = allMatches.filter(m => {
-      const sport = String(m?.sport || "").trim();
-      return sport === "Football" ? !isLowTrustCompetition(m) : !isBlacklistedForLiveDisplay(m);
-    });
+    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
