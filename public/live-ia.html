@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Live IA — TousLesMatchs</title>
-<meta name="description" content="Matchs en direct analysés par le Concile IA. Football, Basketball, Hockey, Tennis — scores en temps réel.">
+<meta name="description" content="Matchs en direct analysés par le Concile IA. Football, Basketball, Hockey, Baseball — scores en temps réel.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -227,7 +227,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <button class="filter-btn" data-filter="Football">&#9917; Football</button>
   <button class="filter-btn" data-filter="Basketball">&#127936; Basketball</button>
   <button class="filter-btn" data-filter="Hockey">&#127954; Hockey</button>
-  <button class="filter-btn" data-filter="Tennis">&#127934; Tennis</button>
   <button class="filter-btn" data-filter="Baseball">&#9918; Baseball</button>
 </div>
 
@@ -300,7 +299,7 @@ if (location.hash === '#historique' || location.hash === '#stats') { setTimeout(
 // ── Sport config ──
 const SPORT_ICONS = {
   Football: "⚽", Basketball: "🏀", Hockey: "🏒",
-  Tennis: "🎾", Baseball: "⚾", Rugby: "🏉"
+  Baseball: "⚾", Rugby: "🏉"
 };
 
 const COUNTRY_FLAGS = {

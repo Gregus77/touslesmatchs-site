@@ -89,20 +89,6 @@ Match complet = toutes les manches jouées, manches supplémentaires incluses se
 
 ━━━━━━━━━━━━━━━━━━
 
-🎾 TENNIS
-
-🏆 Vainqueur
-Le joueur doit gagner le match.
-
-📊 Total de jeux
-Over 22.5 jeux = au moins 23 jeux joués.
-Under 22.5 jeux = 22 jeux ou moins.
-
-🎯 Handicap jeux
-Joueur A -3.5 = il doit gagner avec au moins 4 jeux d’écart au total.
-
-━━━━━━━━━━━━━━━━━━
-
 🔎 RÈGLE D’OR
 
 Avant de suivre un signal :

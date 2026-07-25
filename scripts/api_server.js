@@ -128,7 +128,7 @@ ${bodyHtml}
   }
   function renderIndex(items) {
     const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
-    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, tennis et plus. Verdict de 5 intelligences artificielles, confiance et historique public.";
+    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, hockey et baseball. Verdict de 5 intelligences artificielles, confiance et historique public.";
     const canonical = `${SITE}/pronostics`;
     const schema = { "@context": "https://schema.org", "@type": "CollectionPage", name: title, description, url: canonical };
     const rows = (items || []).map(it => {
@@ -3436,7 +3436,7 @@ Réponds en JSON pur (pas de markdown):
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
-      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
       const safeRaison = maskAiNames(String(analysisResult.raison || "").slice(0, 200));
       // Cote déjà calculée au moment de l'analyse (computeBestOdd) → aucun appel API
@@ -5764,7 +5764,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
 
   const icon = outcome === "win" ? "✅" : "❌";
   const resultText = outcome === "win" ? "GAGNÉ" : "PERDU";
-  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
   const coteAffichee = rowOdd(analysis).toFixed(2);
@@ -8456,7 +8456,7 @@ app.post("/internal/signal-notify", async (req, res) => {
       }
     } catch (e) { console.error("[signal-notify] free teaser:", e.message); }
 
-    const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾", Rugby:"🏉" };
+    const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
     const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
     const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
