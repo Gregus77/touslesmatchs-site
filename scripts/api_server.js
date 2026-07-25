@@ -8776,6 +8776,136 @@ app.get("/admin/learning-report", async (req, res) => {
 });
 
 let _lastPerfReportDate = "";
+let _lastHealthCheckDate = "";
+// Anti-spam des alertes « palier à sec » : une seule alerte par palier, réarmée
+// automatiquement dès qu'un signal repart sur ce palier.
+const _dryTierAlerted = { standard: false, premium: false, elite: false };
+
+// ── AUTO 1 — Bilan de santé quotidien (7h Paris, canal admin) ────────────────
+// Sert à détecter en 24h ce qui, sinon, passe inaperçu : un canal injoignable, un
+// palier qui ne diffuse plus, un agent muet. C'est exactement ce qui a manqué le
+// 24/07 quand le bot avait été exclu du canal Premium.
+async function sendDailyHealthCheck() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  try {
+    // Diffusion de la veille, comptée sur les colonnes réellement marquées à l'envoi.
+    const d = db.prepare(`
+      SELECT COUNT(*) AS analyses,
+             COALESCE(SUM(sig_sent_free),0)     AS free,
+             COALESCE(SUM(sig_sent_standard),0) AS standard,
+             COALESCE(SUM(sig_sent_premium),0)  AS premium,
+             COALESCE(SUM(sig_sent_elite),0)    AS elite
+      FROM concile_analyses
+      WHERE date(analysed_at) = date('now','-1 day')
+    `).get() || {};
+
+    // Résultats des matchs RÉSOLUS hier (resolved_at, pas analysed_at : une analyse
+    // de la veille peut n'être tranchée que le lendemain).
+    const r = db.prepare(`
+      SELECT COALESCE(SUM(outcome='win'),0) AS wins, COALESCE(SUM(outcome='loss'),0) AS losses,
+             COALESCE(SUM(CASE WHEN outcome='win' THEN real_odd*10-10 ELSE -10 END),0) AS profit
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss') AND date(resolved_at) = date('now','-1 day')
+        AND real_odd >= ${TIER_MIN_REAL_ODD}
+    `).get() || {};
+    const resolved = (r.wins || 0) + (r.losses || 0);
+    const wr = resolved > 0 ? Math.round((r.wins / resolved) * 1000) / 10 : null;
+
+    const agents = db.prepare(`
+      SELECT agent_name, winrate, total_predictions FROM agent_weights
+      WHERE total_predictions >= 50 ORDER BY winrate DESC
+    `).all();
+    const best = agents[0], worst = agents[agents.length - 1];
+
+    const paid = (d.standard || 0) + (d.premium || 0) + (d.elite || 0);
+    const head = paid === 0
+      ? "🔴 <b>BILAN SANTÉ — aucun signal payant hier</b>"
+      : "📊 <b>BILAN SANTÉ QUOTIDIEN</b>";
+
+    const lines = [
+      head, "",
+      `📡 <b>Diffusion d'hier</b> (${d.analyses || 0} analyses)`,
+      `🆓 Gratuit : ${d.free || 0}`,
+      `🟢 Standard : ${d.standard || 0} / ${STANDARD_SIGNAL_DAILY_CAP}`,
+      `🟣 Premium : ${d.premium || 0} / ${PREMIUM_SIGNAL_DAILY_CAP}`,
+      `🟠 Elite : ${d.elite || 0} / ${ELITE_SIGNAL_DAILY_CAP}`,
+      "",
+      `📈 <b>Résultats tranchés hier</b>`,
+      resolved > 0
+        ? `✅ ${r.wins} gagnés · ❌ ${r.losses} perdus · ${wr}%\n💰 ${r.profit >= 0 ? "+" : ""}${Math.round(r.profit)}€ (mise 10€)`
+        : `Aucun résultat tranché`,
+      "",
+      best ? `🏆 Meilleur agent : ${best.agent_name} (${best.winrate}%)` : "",
+      worst && worst !== best ? `⚠️ Plus faible : ${worst.agent_name} (${worst.winrate}%)` : "",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "👑 Hermès — supervision interne",
+    ].filter(Boolean);
+
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, lines.join("\n"));
+    console.log(`[health-check] bilan quotidien : ${ok ? "OK" : "ECHEC"}`);
+    return ok;
+  } catch (e) {
+    console.error("[health-check]", e.message);
+    return false;
+  }
+}
+
+// ── AUTO 2 — Alerte « palier à sec » (toutes les 6h) ─────────────────────────
+// Un abonné payant qui ne reçoit rien se désabonne sans prévenir. Les seuils sont
+// INVERSÉS par rapport à l'intuition d'Hermès : le palier d'entrée payant est le
+// plus fragile commercialement, pas le plus tolérant.
+const DRY_TIER_DAYS = { standard: 3, premium: 3, elite: 2 };
+async function checkDryTiers() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  try {
+    const q = db.prepare(`
+      SELECT
+        MAX(CASE WHEN sig_sent_standard=1 THEN analysed_at END) AS standard,
+        MAX(CASE WHEN sig_sent_premium=1  THEN analysed_at END) AS premium,
+        MAX(CASE WHEN sig_sent_elite=1    THEN analysed_at END) AS elite
+      FROM concile_analyses
+    `).get() || {};
+    // Distingue « plus de matchs analysés » de « filtre trop sévère » : c'est le
+    // diagnostic qui a manqué quand le seuil Standard à 92 ne laissait rien passer.
+    const produced = db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses WHERE analysed_at >= datetime('now','-1 day')
+    `).get().n || 0;
+
+    for (const tier of ["standard", "premium", "elite"]) {
+      const last = q[tier];
+      const days = last ? (Date.now() - new Date(last.replace(" ", "T") + "Z").getTime()) / 86400000 : 999;
+      const limit = DRY_TIER_DAYS[tier];
+      if (days < limit) { _dryTierAlerted[tier] = false; continue; } // réarmement
+      if (_dryTierAlerted[tier]) continue;                          // déjà alerté
+      _dryTierAlerted[tier] = true;
+
+      const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : ELITE_MIN_CONF;
+      const cause = produced === 0
+        ? "Aucune analyse produite sur 24h → problème d'alimentation (API matchs, scheduler)."
+        : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle ≥ ${TIER_MIN_REAL_ODD}).`;
+
+      const msg = [
+        `🚨 <b>PALIER À SEC — ${tier.toUpperCase()}</b>`, "",
+        `Aucun signal depuis <b>${last ? Math.floor(days) + " jour(s)" : "toujours"}</b> (seuil d'alerte : ${limit} j)`,
+        last ? `Dernier envoi : ${last}` : "",
+        "",
+        `🔍 ${cause}`,
+        "",
+        `📌 Vérifier la distribution avant de toucher aux seuils :`,
+        `<code>/tier-stats</code> et la requête §2 de ETAT_DES_LIEUX.md`,
+        "",
+        "━━━━━━━━━━━━━━━━━━",
+        "👑 Hermès — supervision interne",
+      ].filter(Boolean).join("\n");
+
+      const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+      console.log(`[dry-tier] alerte ${tier} (${Math.floor(days)}j sans signal) : ${ok ? "OK" : "ECHEC"}`);
+    }
+  } catch (e) {
+    console.error("[dry-tier]", e.message);
+  }
+}
 let _lastLearningReportDate = "";
 
 function checkAnalyticsSchedule() {
@@ -8820,6 +8950,16 @@ function checkAnalyticsSchedule() {
     console.log("[analytics] Envoi rapport performance hebdo (lundi 9h)...");
     sendPerformanceReportTelegram(7).then(ok => console.log(`[perf-report] ${ok ? "OK" : "ECHEC"}`));
   }
+
+  // AUTO 1 — bilan de santé quotidien (7h Paris)
+  if (hour === 7 && _lastHealthCheckDate !== todayKey) {
+    _lastHealthCheckDate = todayKey;
+    console.log("[health-check] Envoi bilan de santé quotidien (7h)...");
+    sendDailyHealthCheck();
+  }
+
+  // AUTO 2 — paliers à sec, contrôlé toutes les 6h (0h / 6h / 12h / 18h)
+  if (hour % 6 === 0) checkDryTiers();
 
   // Watchdog anti-perte : détecte une chute brutale du nombre d'analyses
   dataIntegrityWatchdog();
