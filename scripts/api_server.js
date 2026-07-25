@@ -2064,7 +2064,7 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports basketball: ${items.length}`);
+    console.log(`[live-matches] API-Sports basketball: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports basketball:", e.message); }
 
   // Hockey live
@@ -2083,7 +2083,7 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports hockey: ${items.length}`);
+    console.log(`[live-matches] API-Sports hockey: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
   // Baseball live
@@ -2104,7 +2104,7 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports baseball: ${items.length}`);
+    console.log(`[live-matches] API-Sports baseball: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports baseball:", e.message); }
 
   // Tennis live — filtré sur ATP (exclut WTA/ITF/Challenger via le nom du tournoi)
@@ -6503,7 +6503,10 @@ app.get("/live-matches", async (req, res) => {
     const allMatches = await fetchLiveMatches();
     // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
     // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
-    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
+    const matches = allMatches.filter(m => {
+      const sport = String(m?.sport || "").trim();
+      return sport === "Football" ? !isLowTrustCompetition(m) : !isBlacklistedForLiveDisplay(m);
+    });
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
