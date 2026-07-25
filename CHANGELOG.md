@@ -211,3 +211,13 @@
 ### Backups
 - Sauvegarde REFERENCE v1 : `REFERENCE-STABLE-20260721_2134.tar.gz` (commit d23daf6)
 - Sauvegarde REFERENCE v2 : `REFERENCE-STABLE-v2-20260721_2249.tar.gz` (commit 301cb50)
+
+---
+
+## 2026-07-25 - Handoff Codex a preserver
+
+- Sauvegarde de passation ajoutee : `docs/handoff/2026-07-25-codex-live-vote-ia.md`.
+- Etat a ne pas ecraser : Live IA multisport Football/Basketball/Hockey/Baseball via API-Sports + TheSportsDB, tennis retire, page Live IA enrichie, page accueil avec matchs en cours enrichis cote VPS.
+- Concile public aligne sur "vote de 5 IA independantes" : pas de Chief visible client, pas de messages techniques d'agents indisponibles/quota.
+- Regle de relais : Claude/Codex peuvent modifier site/API ; Hermes audite/recommande et ne pousse pas de MAJ site/API sans validation Greg.
+- Attention VPS : ne pas copier `public/index.html` sur `site/index.html` sans verification, car `site/` est le rendu public servi par Caddy.

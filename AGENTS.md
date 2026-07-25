@@ -7,6 +7,9 @@
 - **Branche de dev active** : `claude/tiktok-arjel-automation-hgp1tv` (le code le PLUS a jour est ici, PAS sur main)
 - **Serveur (VPS Hostinger)** : `/opt/touslesmatchs` (Ubuntu 24.04)
 - **Ce fichier + `CHANGELOG.md`** = la source de verite. Lis les 2 avant de coder.
+- **Handoff Codex 2026-07-25** : lire `docs/handoff/2026-07-25-codex-live-vote-ia.md` avant toute reprise site/API.
+- **Regle actuelle** : Claude/Codex modifient le site/API. Hermes audite et recommande ; il ne pousse pas de modification dans `public/`, `site/`, `scripts/api_server.js`, `scripts/bookmakers.config.js`, `docker-compose.yml` ou `Caddyfile` sans validation explicite de Greg.
+- **Etat produit a preserver** : Live multisport = Football, Basketball, Hockey, Baseball. Tennis est retire. Public = vote de 5 IA independantes, pas de "Chief" visible client.
 
 **A PRESERVER ABSOLUMENT (ne jamais casser) :**
 - **Liens bookmakers / affiliation** → `scripts/bookmakers.config.js` (+ variables `.env` : WINAMAX_LINK, UNIBET_LINK, PMU_LINK). **Betclic a ete retire volontairement.** Bookmakers actifs : Winamax, Unibet, PMU.

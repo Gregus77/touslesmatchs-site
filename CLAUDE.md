@@ -1,5 +1,14 @@
 # CLAUDE.md — TousLesMatchs
 
+## Handoff urgent Codex - 2026-07-25
+
+Avant toute reprise site/API, lire `docs/handoff/2026-07-25-codex-live-vote-ia.md`.
+
+- Etat valide a preserver : Live IA multisport Football/Basketball/Hockey/Baseball, tennis retire, TheSportsDB en secours, vote public de 5 IA independantes.
+- Ne pas reintroduire de "Chief" visible client et ne jamais afficher les agents indisponibles/quota aux clients.
+- Claude/Codex peuvent modifier site/API sur demande de Greg. Hermes audite/recommande ; Hermes ne doit pas pousser de modification dans `public/`, `site/`, `scripts/api_server.js`, `scripts/bookmakers.config.js`, `docker-compose.yml` ou `Caddyfile` sans validation explicite de Greg.
+- Piege VPS : `site/index.html` est le rendu public servi. Ne jamais ecraser `site/index.html` avec `public/index.html` sans verification navigateur/public.
+
 ## Regles automatiques (s'appliquent a CHAQUE session)
 
 ### Economie de tokens
