@@ -217,10 +217,15 @@ function fmtDate(d) {
 }
 
 // Appartenance d'une ligne à un palier (mêmes règles que l'API).
+// On s'appuie sur le champ `tier` calculé par l'API (palier le plus bas qui reçoit
+// l'analyse), au lieu de redupliquer les seuils ici : une seule source de vérité,
+// donc plus de risque que la page contredise les canaux Telegram.
+// Modèle imbriqué : Elite ⊇ Premium ⊇ Standard.
 function rowInTier(a, tier) {
-  if (tier === 'all' || tier === 'elite') return true;
-  if (tier === 'premium') return !!a.arjel && a.confidence >= 85;
-  if (tier === 'standard') return !!a.arjel && a.confidence >= 88;
+  if (tier === 'all') return true;
+  if (tier === 'standard') return a.tier === 'standard';
+  if (tier === 'premium') return a.tier === 'standard' || a.tier === 'premium';
+  if (tier === 'elite') return a.tier === 'standard' || a.tier === 'premium' || a.tier === 'elite';
   return true;
 }
 

@@ -6197,6 +6197,25 @@ function rowIsArjel(r) {
   return ARJEL_BOOKMAKERS.some(a => String(r.real_odd_source || "").toLowerCase().includes(a))
     || isArjelMajorCompetition(r);
 }
+
+// Éligibilité d'une analyse à un palier — MIROIR EXACT des règles de diffusion
+// Telegram (cf. gradeStandard/gradePremium/gradeElite dans runAutoConcile).
+// Les statistiques publiques décrivent ainsi ce que l'abonné reçoit réellement,
+// et non un échantillon plus large : c'est la seule façon que le track record
+// affiché corresponde au produit vendu.
+// Modèle imbriqué : Elite ⊇ Premium ⊇ Standard.
+function tierEligible(r, tier) {
+  const conf = Number(r.confidence) || 0;
+  if (!rowIsArjel(r)) return false;
+  if ((Number(r.real_odd) || 0) < TIER_MIN_REAL_ODD) return false;
+  const sport = String(r.sport || "Football").toLowerCase();
+  const isFoot = sport.includes("foot");
+  const std = isFoot && conf >= STANDARD_MIN_CONF;
+  if (tier === "standard") return std;
+  const prem = std || (isFoot && conf >= PREMIUM_MIN_CONF);
+  if (tier === "premium") return prem;
+  return prem || (ELITE_SPORTS.some(s => sport.includes(s)) && conf >= ELITE_MIN_CONF);
+}
 function tierStatsFor(set) {
   let wins = 0, roi = 0;
   for (const r of set) {
@@ -6234,9 +6253,9 @@ app.get("/tier-stats", (req, res) => {
       ORDER BY analysed_at DESC
     `).all();
     const clean = rows.filter(r => !isNoiseForDisplay(r));
-    const standard = clean.filter(r => r.confidence >= 88 && rowIsArjel(r));
-    const premium  = clean.filter(r => r.confidence >= 85 && rowIsArjel(r));
-    const elite    = clean; // tout le publié
+    const standard = clean.filter(r => tierEligible(r, "standard"));
+    const premium  = clean.filter(r => tierEligible(r, "premium"));
+    const elite    = clean.filter(r => tierEligible(r, "elite"));
     res.json({
       ok: true,
       tiers: {
@@ -7448,13 +7467,14 @@ app.get("/analysis-history", (req, res) => {
     // doublons sont déjà éliminés en SQL ci-dessus.
     const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
 
-    // Palier d'une ligne (mêmes définitions que /tier-stats et la section #paliers) :
-    // standard = ARJEL & conf ≥ 88, premium = ARJEL & conf ≥ 85, sinon elite (tout ≥ 82).
+    // Palier le plus bas qui reçoit cette analyse (cf. tierEligible : miroir exact
+    // des règles de diffusion Telegram). "hors-palier" = publiée sur le site mais
+    // diffusée sur aucun canal payant (cote non réelle, hors ARJEL, sport non couvert).
     const tierLabel = (r) => {
-      const arjel = rowIsArjel(r);
-      if (arjel && r.confidence >= 88) return "standard";
-      if (arjel && r.confidence >= 85) return "premium";
-      return "elite";
+      if (tierEligible(r, "standard")) return "standard";
+      if (tierEligible(r, "premium")) return "premium";
+      if (tierEligible(r, "elite")) return "elite";
+      return "hors-palier";
     };
 
     const analyses = visibleRows.map(r => {
@@ -7527,9 +7547,9 @@ app.get("/analysis-history", (req, res) => {
 
     const global = statBlock(dedupResolved);
     const tiers = {
-      standard: statBlock(dedupResolved.filter(r => rowIsArjel(r) && r.confidence >= 88)),
-      premium:  statBlock(dedupResolved.filter(r => rowIsArjel(r) && r.confidence >= 85)),
-      elite:    statBlock(dedupResolved),
+      standard: statBlock(dedupResolved.filter(r => tierEligible(r, "standard"))),
+      premium:  statBlock(dedupResolved.filter(r => tierEligible(r, "premium"))),
+      elite:    statBlock(dedupResolved.filter(r => tierEligible(r, "elite"))),
     };
 
     // Analyses publiées non encore résolues (dédoublonnées, hors bruit) = "en attente".
