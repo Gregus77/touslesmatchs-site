@@ -1,6 +1,6 @@
 const links = {
   winamax: process.env.WINAMAX_LINK || "https://www.winamax.fr/parrain?code=77953728",
-  unibet: process.env.UNIBET_LINK || "https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254",
+  unibet: process.env.UNIBET_LINK || "https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254",
   pmu: process.env.PMU_LINK || "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728",
 };
 
