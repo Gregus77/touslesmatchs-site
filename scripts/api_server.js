@@ -759,6 +759,40 @@ const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 90, ELITE_MIN_CONF = 90;
 const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
 const ELITE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
 
+// Vérifie au démarrage que chaque canal configuré existe et que le bot y a accès.
+// Un ID périmé (typiquement après migration d'un groupe en supergroupe, où l'ID
+// change) faisait échouer les envois EN SILENCE : sendTelegramMessage renvoie
+// simplement false. Ce contrôle rend le problème visible immédiatement.
+function verifyTelegramChannels() {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  const channels = [
+    ["Gratuit",  TELEGRAM_CHANNEL_ID],
+    ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
+    ["Premium",  TELEGRAM_PREMIUM_CHANNEL_ID],
+    ["Elite",    TELEGRAM_ELITE_CHANNEL_ID],
+    ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
+  ];
+  for (const [label, id] of channels) {
+    if (!id) { console.warn(`[telegram-check] ${label} : NON CONFIGURÉ`); continue; }
+    https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const j = JSON.parse(data);
+          if (!j.ok) {
+            console.error(`[telegram-check] ❌ ${label} (${id}) INJOIGNABLE — ${j.description || "erreur"} — les messages de ce palier ne partiront PAS`);
+          } else {
+            const t = j.result.type;
+            const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
+            console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
+          }
+        } catch { console.error(`[telegram-check] ${label} : réponse illisible`); }
+      });
+    }).on("error", (e) => console.error(`[telegram-check] ${label} : ${e.message}`));
+  }
+}
+
 // Diffuse un message identique à tous les canaux payants. Le FORMAT est le même
 // partout — seul le volume diffère, via les plafonds et seuils de chaque palier.
 // Dédoublonnage par chat_id : tant qu'un palier n'a pas de canal dédié il retombe
@@ -9289,6 +9323,7 @@ app.post("/chatbot/ask", express.json(), async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
+    verifyTelegramChannels();
 
     // ── Accès offert au testeur (Elite, 30 analyses/jour) ──────────────────────
     // Date d'expiration FIXE : la version précédente calculait "aujourd'hui + 60 jours"
