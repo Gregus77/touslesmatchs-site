@@ -114,14 +114,14 @@ ${bodyHtml}
   <div class="bc"><a href="/pronostics">Pronostics</a> › ${esc(item.home)} - ${esc(item.away)}</div>
   <h1>${esc(item.home)} - ${esc(item.away)} : le pronostic du Conseil IA</h1>
   <div class="sub">${item.competition ? esc(item.competition) + " · " : ""}${dateFr ? "Match du " + esc(dateFr) : ""}</div>
-  <div class="meta-row">${outcomeTag}<span class="tag">🧠 5 IA + 1 Chief</span>${item.sport ? `<span class="tag">${esc(item.sport)}</span>` : ""}</div>
+  <div class="meta-row">${outcomeTag}<span class="tag">🧠 Vote IA 5/5</span>${item.sport ? `<span class="tag">${esc(item.sport)}</span>` : ""}</div>
   <div class="card"><div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin-bottom:8px">🔥 Verdict du Conseil</div>
     <div class="verdict"><div class="big">${esc(item.bet || "Analyse IA")}</div><div class="pill g"><b>${item.confidence || ""}%</b><span>de confiance</span></div>${item.cote ? `<div class="pill c"><b>${item.cote}</b><span>cote</span></div>` : ""}</div></div>
   <h2>L'analyse en détail</h2>
-  <p>${item.reasoning ? esc(item.reasoning) : `Pour ${esc(item.home)} contre ${esc(item.away)}, le Concile a croisé le classement, la forme récente, les confrontations directes et la valeur du marché. Cinq intelligences artificielles ont voté séparément avant que le Chief ne tranche.`}</p>
+  <p>${item.reasoning ? esc(item.reasoning) : `Pour ${esc(item.home)} contre ${esc(item.away)}, le Concile a croisé le classement, la forme récente, les confrontations directes et la valeur du marché. Cinq intelligences artificielles ont voté séparément avant validation par convergence.`}</p>
   <p>Chaque analyse repose sur le vote de 5 agents IA spécialisés : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
   <h2>Comment fonctionne le Conseil IA ?</h2>
-  <p>Hermès collecte les données vérifiées du match, 5 agents analysent stats, forme et valeur, puis le Chief arbitre les désaccords. Si les signaux sont contradictoires, c'est NO BET. <a href="/#methode">Voir la méthode complète →</a></p>
+  <p>Hermès collecte les données vérifiées du match, 5 IA analysent stats, forme et valeur, puis le vote mesure la convergence. Si les signaux sont contradictoires, aucun signal n'est validé. <a href="/#methode">Voir la méthode complète →</a></p>
   <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de toutes les analyses en direct ?</div><p style="margin-bottom:14px">Les membres Standard, Premium &amp; Elite reçoivent les analyses Live IA et les signaux du Concile en temps réel.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les offres</a></div>
   ${relatedHtml}`;
     return shell({ title, description, canonical, bodyHtml: body, schema });
@@ -139,7 +139,7 @@ ${bodyHtml}
     const body = `
   <div class="bc"><a href="/">Accueil</a> › Pronostics</div>
   <h1>Pronostics & analyses IA</h1>
-  <p class="sub">Chaque match est analysé par le Conseil : 5 intelligences artificielles votent, le Chief tranche. Historique 100 % public — gagnés comme perdus.</p>
+  <p class="sub">Chaque match est analysé par le Conseil : 5 intelligences artificielles votent, la convergence valide. Historique 100 % public — gagnés comme perdus.</p>
   <div class="list">${rows || "<p>Aucune analyse publiée pour le moment.</p>"}</div>`;
     return shell({ title, description, canonical, bodyHtml: body, schema });
   }
@@ -548,7 +548,7 @@ db.exec(`
 // Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
 // agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
 // alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
-const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "Claude Chief"];
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Qwen"];
 
 // ── Initialise agent weights if empty ──
 try {
@@ -1578,6 +1578,38 @@ function handleApiSportsErrors(sport, data) {
   console.warn(`[live-matches] API-Sports ${sport} indisponible: ${JSON.stringify(errors)}`);
   if (isApiSportsQuotaError(errors)) apiSportsBlockedUntil[sport] = Date.now() + API_SPORTS_QUOTA_BLOCK_MS;
   return true;
+}
+
+function buildVoteSummary(activeAgents, selectedBet) {
+  const voters = (activeAgents || []).filter((a) => a && !a.failed && a.bet && a.bet !== "—" && a.bet !== "-");
+  const voteTotal = 5;
+  const voteActive = voters.length;
+  const counts = {};
+  for (const a of voters) counts[a.bet] = (counts[a.bet] || 0) + 1;
+  let voteTop = selectedBet || null;
+  let voteCount = voteTop ? counts[voteTop] || 0 : 0;
+  for (const [bet, count] of Object.entries(counts)) {
+    if (count > voteCount) { voteTop = bet; voteCount = count; }
+  }
+  const unanimous = voteCount === voteTotal;
+  const voteStatus = unanimous ? "elite" : voteCount >= 4 ? "strong" : voteCount >= 3 ? "trend" : "none";
+  const voteLabel = unanimous
+    ? "5/5 unanime"
+    : voteCount >= 4
+      ? "4/5 signal fort"
+      : voteCount >= 3
+        ? "3/5 tendance IA"
+        : `${voteCount}/${voteTotal} aucun signal`;
+  return {
+    vote_total: voteTotal,
+    vote_active: voteActive,
+    vote_count: voteCount,
+    vote_top: voteTop,
+    vote_label: voteLabel,
+    vote_status: voteStatus,
+    unanimous,
+    recommended: voteCount >= 4,
+  };
 }
 
 function httpPost(url, body, headers = {}, timeoutMs = 8000) {
@@ -3312,14 +3344,22 @@ Réponds en JSON pur (pas de markdown):
   for (const [bet, votes] of Object.entries(betCounts)) {
     if (votes > topVotes) { topBet = bet; topVotes = votes; }
   }
-  if (topBet && topVotes >= 3 && (chief.confidence < 65 || topBet !== chief.bet)) {
+  const voteSummary = buildVoteSummary(activedAgentResults, topBet || chief.bet);
+  if (topBet && topVotes >= 3) {
     const topAgents = activedAgentResults.filter(a => a.bet === topBet);
     const avgConfidence = Math.round(topAgents.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / topAgents.length);
     chief.bet = topBet;
-    chief.confidence = Math.max(65, Math.min(88, avgConfidence));
-    chief.raison = `Consensus fort du Concile : ${topVotes} agents actifs convergent sur ${topBet}. ${chief.raison || ""}`.trim();
+    chief.confidence = voteSummary.unanimous
+      ? Math.max(75, Math.min(90, avgConfidence))
+      : topVotes >= 4
+        ? Math.max(68, Math.min(86, avgConfidence))
+        : Math.max(58, Math.min(74, avgConfidence));
+    chief.raison = `${voteSummary.vote_label} : ${topVotes} IA indépendantes convergent sur ${topBet}. ${chief.raison || ""}`.trim();
     consensusBet = topBet;
     consensusVotes = topVotes;
+  } else {
+    chief.confidence = Math.min(55, Number(chief.confidence || 55));
+    chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
   }
 
   // Sauvegarder les prédictions pour le tracking de performance
@@ -3337,9 +3377,10 @@ Réponds en JSON pur (pas de markdown):
     cote: oddInfo.cote,
     cote_source: oddInfo.source,
     raison: chief.raison,
-    consensus_votes: consensusVotes + 1,
-    total_agents: 6,
-    active_agents: activedAgentResults.length + 1,
+    consensus_votes: consensusVotes,
+    total_agents: voteSummary.vote_total,
+    active_agents: voteSummary.vote_active,
+    vote_summary: buildVoteSummary(activedAgentResults, chief.bet),
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
@@ -3389,7 +3430,9 @@ Réponds en JSON pur (pas de markdown):
   if (lowTrust) {
     console.log(`[signal-fort] Bloqué — ligue douteuse (liste noire): ${match.competition || match.league || ""}`);
   }
-  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
+  const voteInfo = analysisResult.vote_summary || {};
+  const voteCountForSignal = Number(voteInfo.vote_count || analysisResult.consensus_votes || 0);
+  if (analysisResult.confidence >= signalThreshold && voteCountForSignal >= 3 && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
@@ -3403,8 +3446,9 @@ Réponds en JSON pur (pas de markdown):
       // On n'affiche la cote QUE si c'est une VRAIE cote bookmaker (jamais l'estimation).
       const coteSig = (analysisResult.cote && _bmSig)
         ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
-      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte du Concile (pari + raison) est réservée aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir la sélection en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const voteLine = voteInfo.vote_label ? `\n🧠 Vote IA : <b>${voteInfo.vote_label}</b>` : "";
+      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
@@ -3440,9 +3484,9 @@ Réponds en JSON pur (pas de markdown):
       // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
       const TH = getTierThresholds();
 
-      const gradeStandard = diffusable && conf >= TH.standard;
-      const gradePremium  = gradeStandard || (diffusable && conf >= TH.premium);
-      const gradeElite    = gradePremium  || (diffusable && conf >= TH.elite);
+      const gradeStandard = diffusable && voteCountForSignal >= 5 && conf >= TH.standard;
+      const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
+      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
@@ -3520,7 +3564,7 @@ function getMockAgentAnalysis(agent, match, index) {
     bet,
     confidence,
     raison: raisons[index] || raisons[0],
-    isChief: index === 4,
+    isChief: false,
   };
 }
 
@@ -3532,18 +3576,22 @@ function getMockAnalysis(match) {
     { name: "Mistral-Large", icon: "🌊", model: "mistral-large-latest" },
     { name: "Cohere-Command", icon: "🧬", model: "command-r-plus" },
     { name: "OpenRouter-Qwen", icon: "🌟", model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" },
-    { name: "Claude Chief", icon: "👑", model: "llama-3.3-70b-versatile", isChief: true },
   ];
   const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
-  const chief = agentResults[agentResults.length - 1];
+  const voteSummary = buildVoteSummary(agentResults, agentResults[0]?.bet);
+  const topAgents = agentResults.filter(a => a.bet === voteSummary.vote_top);
+  const avgConfidence = topAgents.length
+    ? Math.round(topAgents.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / topAgents.length)
+    : 55;
   return {
     match_key: `${match.home}_${match.away}`,
-    best_bet: chief.bet,
-    confidence: chief.confidence,
-    raison: chief.raison,
-    consensus_votes: 4,
-    total_agents: 6,
-    active_agents: 6,
+    best_bet: voteSummary.vote_top || agentResults[0]?.bet || "Analyse IA",
+    confidence: avgConfidence,
+    raison: `${voteSummary.vote_label} : simulation de secours du Concile IA.`,
+    consensus_votes: voteSummary.vote_count,
+    total_agents: voteSummary.vote_total,
+    active_agents: voteSummary.vote_active,
+    vote_summary: voteSummary,
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
   };
@@ -4960,12 +5008,13 @@ async function runAutoConcileObserver() {
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
-async function brevoAddContact(email, tag) {
+async function brevoAddContact(email, tag, lang = "FR") {
   if (!BREVO_API_KEY) return;
+  const contactLang = normalizeContactLang(lang, "");
   try {
     await httpPost(
       "https://api.brevo.com/v3/contacts",
-      { email, attributes: {}, listIds: [], updateEnabled: true },
+      { email, attributes: { LANG: contactLang }, listIds: [], updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
     await httpPost(
@@ -4976,10 +5025,10 @@ async function brevoAddContact(email, tag) {
     // Apply tag via attribute
     await httpPost(
       `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
-      { attributes: { PLAN: tag } },
+      { attributes: { PLAN: tag, LANG: contactLang } },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    console.log(`[brevo] contact upserted: ${email} tag=${tag}`);
+    console.log(`[brevo] contact upserted: ${email} tag=${tag} lang=${contactLang}`);
   } catch (e) {
     console.error("[brevo] error:", e.message);
   }
@@ -5344,6 +5393,18 @@ function isMarketAvailableInFrance(marketType, competition) {
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+function normalizeContactLang(lang = "", country = "") {
+  const raw = String(lang || "").toLowerCase();
+  const cc = String(country || "").toUpperCase();
+  if (raw.startsWith("fr") || ["FR", "BE", "CH", "CA", "LU", "MC"].includes(cc)) return "FR";
+  if (raw.startsWith("es") || ["ES", "MX", "AR", "CL", "CO", "PE", "UY", "PY", "BO", "EC", "VE", "CR", "PA", "DO", "GT", "HN", "NI", "SV"].includes(cc)) return "ES";
+  if (raw.startsWith("de") || ["DE", "AT"].includes(cc)) return "DE";
+  if (raw.startsWith("it") || cc === "IT") return "IT";
+  if (raw.startsWith("pt") || ["PT", "BR"].includes(cc)) return "PT";
+  if (raw.startsWith("nl") || ["NL", "BE"].includes(cc)) return "NL";
+  return "EN";
+}
+
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
 app.post("/subscribe-email", async (req, res) => {
   const { email, lang, ageRange, source, referrer, landingPage, utm } = req.body || {};
@@ -5354,10 +5415,12 @@ app.post("/subscribe-email", async (req, res) => {
   const langHeader = String(lang || req.headers["accept-language"] || "fr").slice(0, 16);
   const langCountry = (langHeader.match(/[-_]([A-Za-z]{2})/) || [])[1] || "";
   const country = String(req.headers["cf-ipcountry"] || req.headers["x-vercel-ip-country"] || req.headers["x-country-code"] || langCountry || "").slice(0, 2).toUpperCase();
+  const contactLang = normalizeContactLang(langHeader, country);
   const lead = {
     email: emailClean,
     created_at: new Date().toISOString(),
     lang: langHeader,
+    contact_lang: contactLang,
     country: country || "unknown",
     age_range: String(ageRange || "unknown").slice(0, 24),
     source: String(source || "direct").slice(0, 64),
@@ -5378,7 +5441,7 @@ app.post("/subscribe-email", async (req, res) => {
     }
     await httpPost(
       "https://api.brevo.com/v3/contacts",
-      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER" }, updateEnabled: true },
+      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER", LANG: contactLang }, updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
     console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} lang=${lead.lang} country=${lead.country}`);
@@ -5388,7 +5451,7 @@ app.post("/subscribe-email", async (req, res) => {
       const welcomeHtml = `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
   <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
     <div style="font-size:26px;font-weight:900;color:#fff">Bienvenue sur TousLesMatchs</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">5 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">5 IA indépendantes. Aucune émotion, seulement des données.</div>
   </div>
   <div style="padding:32px">
     <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
@@ -5506,7 +5569,7 @@ function buildNurtureJ3Html() {
           ✅ Niveau de confiance du Concile<br>
           🔒 Le pick exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
           🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
-          🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
+          🔒 La raison du signal — <span style="color:#6366f1">réservé Pro/Elite</span>
         </div>
       </div>
       <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
@@ -6817,7 +6880,7 @@ function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
       })
       .map((agent, index, list) => ({
         ...agent,
-        name: index === list.length - 1 && agent.isChief ? "Chief du Concile" : `Agent IA ${index + 1}`,
+        name: index === list.length - 1 && agent.isChief ? "Synthèse du Concile" : `Agent IA ${index + 1}`,
         model: "",
         raison: agent.isChief ? agent.raison : "",
       }));
@@ -7107,7 +7170,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
             <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
               <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 5 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 5 IA independantes. Aucune emotion, seulement des donnees.</div>
             </div>
             <div style="padding:32px">
               <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
