@@ -752,10 +752,13 @@ const _standardSignalDaily = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
 const _eliteSignalDaily = { date: "", count: 0 };
 // Plafonds journaliers par palier (conditions données par le fondateur)
-const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : conf ≥ 88, cote réelle ARJEL ≥ 1.50
-const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : conf ≥ 90, avant-match ou live, cote ≥ 1.50
-const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : conf ≥ 90, foot/hockey/baseball/basket, cote ≥ 1.50
-const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 90, ELITE_MIN_CONF = 90;
+const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 92, cote réelle ARJEL ≥ 1.50
+const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 88, cote ≥ 1.50 (inclut Standard)
+const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseball/basket ≥ 90 (inclut Premium)
+// Seuils volontairement décroissants : un palier supérieur est PLUS LARGE, donc reçoit
+// davantage. L'inverse (Standard ≥ 88 et Premium ≥ 90) rendait les deux paliers
+// identiques, puisque « ≥ 88 » contient déjà tout « ≥ 90 ».
+const STANDARD_MIN_CONF = 92, PREMIUM_MIN_CONF = 88, ELITE_MIN_CONF = 90;
 const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
 const ELITE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
 
@@ -5243,9 +5246,9 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88%", "Cote réelle ARJEL ≥ 1.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
-    { name: "🟣 Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 90%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 90%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 92% — le seuil le plus haut", "Cote réelle ARJEL ≥ 1.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
+    { name: "🟣 Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 88%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
+    { name: "🟠 Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 90% hors football", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
