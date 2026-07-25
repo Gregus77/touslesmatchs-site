@@ -2107,32 +2107,8 @@ async function fetchFromApiSports() {
     console.log(`[live-matches] API-Sports baseball: ${items.length}`);
   } catch(e) { console.error("[live-matches] API-Sports baseball:", e.message); }
 
-  // Tennis live — filtré sur ATP (exclut WTA/ITF/Challenger via le nom du tournoi)
-  try {
-    const data = await httpGet("https://v1.tennis.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    const items = (data.response || [])
-      .filter(g => {
-        const t = String(g.league?.name || g.tournament?.name || "").toLowerCase();
-        return t.includes("atp") && !t.includes("wta");
-      })
-      .slice(0, 10)
-      .map((g) => ({
-        id: "tn-" + g.id, sport: "Tennis",
-        source: "api-sports",
-        sourceId: String(g.id),
-        fixtureId: null,
-        home: g.teams?.home?.name, away: g.teams?.away?.name,
-        home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
-        score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
-        score_away: g.scores?.away?.total ?? g.scores?.away ?? null,
-        minute: g.status?.long || g.status?.short || null,
-        status: "IN_PLAY",
-        competition: "ATP · " + (g.league?.name || g.tournament?.name || "Tennis"),
-        utcDate: g.date,
-      })).filter(g => g.home && g.away);
-    results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports tennis ATP: ${items.length}`);
-  } catch(e) { console.error("[live-matches] API-Sports tennis:", e.message); }
+  // Tennis neutralise: l'ancien endpoint v1.tennis.api-sports.io ne resout plus
+  // et polluait les logs live. A reactiver uniquement avec un endpoint valide.
 
   if (results.length === 0) return null;
   console.log(`[live-matches] API-Sports total: ${results.length} événements`);
