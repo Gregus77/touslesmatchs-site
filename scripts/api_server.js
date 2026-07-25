@@ -1551,6 +1551,13 @@ function httpGet(url, headers = {}) {
   });
 }
 
+function hasApiSportsErrors(data, label) {
+  const errors = data?.errors;
+  if (!errors || Object.keys(errors).length === 0) return false;
+  console.warn(`[live-matches] API-Sports ${label} indisponible: ${JSON.stringify(errors)}`);
+  return true;
+}
+
 function httpPost(url, body, headers = {}) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
@@ -2041,7 +2048,7 @@ async function fetchFromApiSports() {
   // Football live
   try {
     const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    if (!data.errors || Object.keys(data.errors).length === 0) {
+    if (!hasApiSportsErrors(data, "football")) {
       const items = (data.response || []).slice(0, 60).map(normalizeApiSportsFootballFixture);
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
@@ -2051,6 +2058,7 @@ async function fetchFromApiSports() {
   // Basketball live
   try {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!hasApiSportsErrors(data, "basketball")) {
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
       source: "api-sports",
@@ -2065,11 +2073,13 @@ async function fetchFromApiSports() {
     })).filter(g => g.home && g.away);
     results.push(...items);
     console.log(`[live-matches] API-Sports basketball: ${items.length}`);
+    }
   } catch(e) { console.error("[live-matches] API-Sports basketball:", e.message); }
 
   // Hockey live
   try {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!hasApiSportsErrors(data, "hockey")) {
     const items = (data.response || []).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
@@ -2084,11 +2094,13 @@ async function fetchFromApiSports() {
     })).filter(g => g.home && g.away);
     results.push(...items);
     console.log(`[live-matches] API-Sports hockey: ${items.length}`);
+    }
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
   // Baseball live
   try {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!hasApiSportsErrors(data, "baseball")) {
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
       source: "api-sports",
@@ -2105,6 +2117,7 @@ async function fetchFromApiSports() {
     })).filter(g => g.home && g.away);
     results.push(...items);
     console.log(`[live-matches] API-Sports baseball: ${items.length}`);
+    }
   } catch(e) { console.error("[live-matches] API-Sports baseball:", e.message); }
 
   // Tennis neutralise: l'ancien endpoint v1.tennis.api-sports.io ne resout plus
