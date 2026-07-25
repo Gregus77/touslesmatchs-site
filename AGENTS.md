@@ -277,3 +277,85 @@ docker compose up -d --build
 - Meilleurs : UEFA Europa/CL ~87-91%, Serie A/B Bresil bons
 - Pires : Match nul ~50%, USL League Two ~58%, World Cup ~55% (exclus vitrine)
 - Meilleurs types : Victoire domicile 82%, Under X.5 78%
+
+---
+
+# COORDINATION ENTRE IA — ajout du 25/07/2026 par Claude
+
+## Cycle de travail
+
+1. **Hermès** audite les données et rédige une spécification
+2. **Claude / Codex / GPT** implémentent
+3. **Hermès** vérifie le résultat contre les données
+4. **Le fondateur** valide, puis déploiement
+
+## Zones de responsabilité
+
+| Zone | Responsable |
+|------|-------------|
+| `scripts/api_server.js`, `public/`, `Caddyfile`, sécurité | Claude / Codex / GPT |
+| `council/`, Brevo, emails, monitoring, analyses de données | Hermès |
+| `AGENTS.md`, `CHANGELOG.md`, `CODEX.md`, `ETAT_DES_LIEUX.md` | tous — **ajout uniquement**, ne jamais réécrire le travail d'un autre |
+
+⚠️ **`public/index.html` n'est PAS interdit** — c'est la page d'accueil, elle doit
+évoluer. La règle est : **modifications ciblées uniquement** (jamais de réécriture
+complète : 240 Ko, sections masquées volontairement), puis vérifier la syntaxe des
+17 scripts inline. Même règle pour le `Caddyfile`.
+⚠️ **`resultats.html` n'existe pas.** La page des résultats est `public/performances.html`.
+
+## DÉJÀ FAIT — NE PAS REFAIRE
+
+Ces demandes reviennent régulièrement dans les spécifications. Elles sont **traitées
+et déployées**. Les réexécuter crée des doublons ou casse quelque chose.
+
+| Demande récurrente | État réel |
+|---|---|
+| « Ajouter OR-Qwen37Max et OR-KimiK3 à SHADOW_AGENTS » | ✅ fait (commit `539d433`), identifiants vérifiés sur le catalogue OpenRouter |
+| « Supprimer les 7 agents morts de SHADOW_AGENTS » | ❌ **ils n'y ont jamais figuré.** Ils n'existaient que comme lignes dans `agent_weights`, supprimées via `scripts/cleanup_agent_weights.js`. Une protection empêche leur retour au redémarrage |
+| « `INSERT INTO agent_weights ... weight 0.60 / 0.65` pour les nouveaux agents » | ❌ **NE PAS FAIRE.** Cela fabriquerait une performance pour des agents à zéro analyse (interdit par `CLAUDE.md`), dans la mauvaise table (les agents shadow écrivent dans `shadow_evals`), et la ligne serait purgée au redémarrage par le filtre de roster |
+| « Implémenter les automatisations dans `council/hermes.py` » | ❌ **impossible.** Le conteneur `council` ne monte que `council_data:/app/data` : il n'a **aucun accès** à `/opt/touslesmatchs/data/tlm.db`. Tout doit aller dans `scripts/api_server.js`, qui a la base, `sendTelegramMessage` et le scheduler `checkAnalyticsSchedule` (interval 60 s) |
+| « Automatisation 1 (bilan santé) et 2 (palier à sec) » | ✅ faites (commit `71c2d00`) : `sendDailyHealthCheck()` à 7h Paris et `checkDryTiers()` toutes les 6h. **Les réimplémenter enverrait chaque alerte en double** |
+
+Restent à faire : automatisations 3 à 6 (distribution de confiance, doublons
+d'agents, candidat à la promotion, alertes Stripe).
+
+## VÉRIFIER LES SPÉCIFICATIONS AVANT DE CODER
+
+Erreurs réelles trouvées dans des spécifications reçues, toutes corrigées après
+vérification en base :
+
+- **Formule de profit** : `CASE WHEN outcome='win' THEN 10 ELSE -10` suppose une cote
+  constante de 2.00. Les cotes réelles tournent autour de 1,50-1,70 : cela surestime
+  le gain d'environ 45 %. La formule correcte est `cote × 10 − 10`.
+- **Alerte « winrate < 70 % ⇒ seuil trop bas »** : dangereux. La tranche 82-83 affiche
+  70,9 % mais c'est **la plus rentable en valeur absolue** (+428 €). Juger au profit,
+  jamais au winrate seul — c'est ce raisonnement qui a produit un palier à zéro signal.
+- **Agents inexistants** : une spécification a listé 7 agents comme présents dans
+  `SHADOW_AGENTS` ; 3 n'existaient nulle part dans le code.
+- **Tarifs inventés** : « $0.22/mois » pour un modèle OpenRouter — la facturation est
+  **au token**, jamais au mois.
+- **Fichier fantôme** : `SPECS_6_AUTOMATISATIONS_TLM.md` n'existe pas dans le dépôt.
+- **Comparaison invalide** : comparer le winrate de `shadow_evals` à celui de
+  `agent_weights` pour proposer une promotion — ces deux tables portent sur des
+  populations de matchs différentes. Comparer sur les mêmes `match_key`.
+
+**Règle : tout chiffre public doit venir de `/tier-stats` ou `/analysis-history`,
+jamais d'une requête SQL brute.** Une requête brute ignore le dédoublonnage, le filtre
+anti-bruit, le plancher de date et l'exigence de cote réelle : elle produit un chiffre
+qui contredit le site et inclut des analyses jamais diffusées.
+
+## LIMITE CONNUE — LES COTES RÉELLES SONT FOOTBALL SEULEMENT
+
+`fetchRealOdds()` n'interroge que `v3.football.api-sports.io/odds`, et
+`getVerifiedFixtureId()` renvoie `null` pour tout sport autre que le football.
+
+Comme la diffusion exige `real_odd >= 1.50`, **aucun signal basket, hockey ou baseball
+ne peut être diffusé aujourd'hui**, même si ces matchs sont analysés et même si les
+paliers les acceptent désormais (`DIFFUSABLE_SPORTS`).
+
+Conséquence : l'argument commercial « 4 sports analysés » n'est pas encore vrai côté
+signaux. Le goulot n'est pas le nombre de matchs disponibles mais le pipeline de cotes.
+Étendre `fetchRealOdds()` à `v1.basketball` / `v1.hockey` / `v1.baseball` est le
+chantier à plus forte valeur : il débloque le volume (≈ 7 signaux/jour aujourd'hui) et
+rend l'argument multi-sport honnête. Prévoir aussi des marchés adaptés : « Moins de
+2,5 buts » n'existe ni au basket ni au baseball.
