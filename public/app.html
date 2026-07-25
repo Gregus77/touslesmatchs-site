@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TousLesMatchs — Concile IA</title>
+<meta name="description" content="Le verdict du Concile IA : analyse du jour, signaux en direct et résultats vérifiables.">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0b0a14">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/logo192.png">
+<!-- iOS : autorise le plein écran une fois l'app ajoutée à l'écran d'accueil -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TousLesMatchs">
+<meta name="robots" content="noindex">
+<style>
+  :root{
+    --bg:#0b0a14; --bg2:#141227; --b1:rgba(255,255,255,.07); --b2:rgba(129,140,248,.18);
+    --text:#eceaf4; --muted:#a8aec8; --muted2:#7b82a0;
+    --indigo:#4f46e5; --indigo2:#818cf8; --violet:#7c3aed; --cyan:#22d3ee;
+    --green:#10b981; --amber:#f59e0b; --red:#ef4444;
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.5;
+    padding-bottom:calc(70px + var(--safe-b));
+    overscroll-behavior-y:contain;
+  }
+  a{color:var(--indigo2);text-decoration:none}
+
+  header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(11,10,20,.92);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--b1);
+    padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  .brand{font-weight:900;letter-spacing:-.02em;font-size:16px}
+  .brand span{background:linear-gradient(135deg,var(--indigo2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .plan-chip{font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;border:1px solid var(--b2);color:var(--muted)}
+  .plan-chip.paid{color:#34d399;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08)}
+
+  main{padding:16px}
+  section{display:none}
+  section.on{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  h2{font-size:19px;font-weight:900;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{font-size:12.5px;color:var(--muted2);margin:0 0 14px}
+
+  .card{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid var(--b2);border-radius:16px;padding:16px;margin-bottom:12px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .teams{font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .comp{font-size:12px;color:var(--muted2);margin-top:2px}
+  .verdict{margin-top:12px;padding-top:12px;border-top:1px solid var(--b1)}
+  .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted2);font-weight:700}
+  .val{font-weight:900;font-size:17px;margin-top:2px}
+  .conf-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:8px}
+  .conf-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--indigo),var(--cyan))}
+
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+  .kpi{background:var(--bg2);border:1px solid var(--b1);border-radius:13px;padding:13px}
+  .kpi .v{font-size:21px;font-weight:900;letter-spacing:-.02em}
+  .kpi .l{font-size:11px;color:var(--muted2);margin-top:2px}
+  .c-green{color:var(--green)} .c-cyan{color:var(--cyan)} .c-amber{color:var(--amber)} .c-red{color:var(--red)}
+
+  .tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:7px 14px;border-radius:999px;border:1px solid var(--b2);background:transparent;color:var(--muted);font-size:12.5px;font-weight:700}
+  .tab.on{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-color:transparent}
+
+  .item{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--b1)}
+  .item:last-child{border-bottom:none}
+  .item .mid{flex:1;min-width:0}
+  .item .t{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .m{font-size:11.5px;color:var(--muted2);margin-top:2px}
+  .badge{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:7px;white-space:nowrap}
+  .b-win{background:rgba(16,185,129,.14);color:#34d399}
+  .b-loss{background:rgba(239,68,68,.14);color:#f87171}
+  .b-wait{background:rgba(245,158,11,.14);color:var(--amber)}
+  .b-live{background:rgba(239,68,68,.16);color:#f87171}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .btn{display:block;width:100%;text-align:center;padding:14px;border-radius:12px;font-weight:800;font-size:15px;border:none;margin-top:10px}
+  .btn-p{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff}
+  .btn-g{background:linear-gradient(135deg,#059669,var(--green));color:#fff}
+  .btn-o{background:transparent;color:var(--indigo2);border:1px solid var(--b2)}
+
+  .state{text-align:center;padding:26px 14px;color:var(--muted2);font-size:13.5px}
+  .offline{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--amber);border-radius:11px;padding:10px 13px;font-size:12.5px;margin-bottom:12px}
+
+  input{width:100%;padding:13px;border-radius:11px;border:1px solid var(--b2);background:var(--bg2);color:var(--text);font-size:15px;margin-bottom:9px}
+  input::placeholder{color:var(--muted2)}
+
+  nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    background:rgba(11,10,20,.96);backdrop-filter:blur(14px);
+    border-top:1px solid var(--b1);
+    display:grid;grid-template-columns:repeat(4,1fr);
+    padding-bottom:var(--safe-b);
+  }
+  nav button{background:none;border:none;color:var(--muted2);padding:9px 4px 8px;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav button .ic{font-size:19px;line-height:1}
+  nav button.on{color:var(--indigo2)}
+
+  footer{padding:20px 16px 8px;font-size:10.5px;color:var(--muted2);line-height:1.65;text-align:center;border-top:1px solid var(--b1);margin-top:18px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">Tous<span>LesMatchs</span></div>
+  <div class="plan-chip" id="chip">Invité</div>
+</header>
+
+<main>
+  <div id="offline-note" class="offline" style="display:none">
+    ⚠️ Hors ligne — données de la dernière consultation.
+  </div>
+
+  <!-- ══ ANALYSE DU JOUR ══ -->
+  <section id="s-pick" class="on">
+    <h2>Analyse du jour</h2>
+    <p class="sub">Le verdict du Concile — 5 IA délibèrent, le Chief tranche.</p>
+    <div id="pick-box"><div class="state">Chargement…</div></div>
+  </section>
+
+  <!-- ══ EN DIRECT ══ -->
+  <section id="s-live">
+    <h2>En direct</h2>
+    <p class="sub">Matchs en cours suivis par le Conseil.</p>
+    <div id="live-box"><div class="state">Chargement…</div></div>
+  </section>
+
+  <!-- ══ PERFORMANCES ══ -->
+  <section id="s-perf">
+    <h2>Performances</h2>
+    <p class="sub">Résultats réels, gagnés comme perdus. Mise simulée de 10 €.</p>
+    <div class="tabs" id="perf-tabs">
+      <button class="tab on" data-t="all">Tous</button>
+      <button class="tab" data-t="standard">🟢 Standard</button>
+      <button class="tab" data-t="premium">🟣 Premium</button>
+      <button class="tab" data-t="elite">🟠 Elite</button>
+    </div>
+    <div class="kpis" id="perf-kpis"></div>
+    <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
+  </section>
+
+  <!-- ══ COMPTE ══ -->
+  <section id="s-me">
+    <h2>Mon compte</h2>
+    <p class="sub">Connecte-toi avec l'email et le code reçus après paiement.</p>
+    <div id="me-box"></div>
+  </section>
+</main>
+
+<nav>
+  <button data-tab="pick" class="on"><span class="ic">🎯</span>Analyse</button>
+  <button data-tab="live"><span class="ic">🔴</span>Direct</button>
+  <button data-tab="perf"><span class="ic">📊</span>Résultats</button>
+  <button data-tab="me"><span class="ic">👤</span>Compte</button>
+</nav>
+
+<footer>
+  LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits
+  familiaux, addiction. Conseils sur <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a> — 09 74 75 13 13, appel non surtaxé.<br>
+  18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // ── Utilitaires ────────────────────────────────────────────────────────────
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var num = function (v) { var n = Number(v); return isFinite(n) ? n : 0; };
+  var eur = function (v) { return (v >= 0 ? "+" : "") + Math.round(v) + "€"; };
+
+  function get(path) {
+    return fetch(path, { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, offline: true }; });
+  }
+  function flagOffline(d) {
+    if (d && d.offline) $("offline-note").style.display = "block";
+    return d;
+  }
+
+  // ── Session (mêmes clés que le site : une seule connexion pour les deux) ───
+  function plan() { try { return localStorage.getItem("tlm_plan") || "free"; } catch (e) { return "free"; } }
+  function token() { try { return localStorage.getItem("tlm_token") || ""; } catch (e) { return ""; } }
+  function isPaid() { var p = plan(); return !!p && p !== "free"; }
+
+  function renderChip() {
+    var c = $("chip"), p = plan();
+    var label = { standard: "🟢 Standard", premium: "🟣 Premium", vip: "🟠 Elite", elite: "🟠 Elite", admin: "👑 Admin" }[p];
+    c.textContent = label || "Invité";
+    c.className = "plan-chip" + (isPaid() ? " paid" : "");
+  }
+
+  // ── Onglets ───────────────────────────────────────────────────────────────
+  var loaded = {};
+  function show(tab) {
+    ["pick", "live", "perf", "me"].forEach(function (t) {
+      $("s-" + t).classList.toggle("on", t === tab);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
+      b.classList.toggle("on", b.getAttribute("data-tab") === tab);
+    });
+    try { history.replaceState(null, "", "?tab=" + tab); } catch (e) {}
+    if (!loaded[tab]) { loaded[tab] = true; load(tab); }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
+    b.addEventListener("click", function () { show(b.getAttribute("data-tab")); });
+  });
+
+  function load(tab) {
+    if (tab === "pick") loadPick();
+    if (tab === "live") loadLive();
+    if (tab === "perf") loadPerf();
+    if (tab === "me") renderMe();
+  }
+
+  // ── Analyse du jour ───────────────────────────────────────────────────────
+  function loadPick() {
+    get("/current-pick").then(flagOffline).then(function (d) {
+      var box = $("pick-box");
+      var p = d && d.pick;
+      if (!d || !d.ok || !p) {
+        box.innerHTML = '<div class="card"><div class="state">🕐 Prochaine analyse bientôt disponible.</div>'
+          + '<a class="btn btn-o" href="/#plans">Voir les offres</a></div>';
+        return;
+      }
+      var conf = num(p.confidence || p.consensus);
+      var a = (p.teamA && p.teamA.name) || p.home || "—";
+      var b = (p.teamB && p.teamB.name) || p.away || "—";
+      // Le contenu exact de l'analyse reste réservé aux membres : le verrou du site
+      // est reproduit ici à l'identique.
+      var locked = !isPaid();
+      box.innerHTML =
+        '<div class="card">'
+        + '<div class="row"><div><div class="teams">' + esc(a) + ' — ' + esc(b) + '</div>'
+        + '<div class="comp">' + esc(p.competition || "") + (p.time ? ' · ' + esc(p.time) : '') + '</div></div></div>'
+        + (conf ? '<div class="conf-bar"><div class="conf-fill" style="width:' + Math.min(100, conf) + '%"></div></div>'
+                + '<div class="lbl" style="margin-top:6px">Confiance ' + conf + '%</div>' : '')
+        + '<div class="verdict">'
+        + (locked
+            ? '<div class="lbl">Sélection du Concile</div><div class="val">🔒 Réservée aux membres</div>'
+              + '<a class="btn btn-g" href="/#plans">Recevoir les signaux dès 4,90€</a>'
+              + '<a class="btn btn-o" href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener">Rejoindre le canal gratuit</a>'
+            : '<div class="lbl">Sélection du Concile</div><div class="val">' + esc(p.bet || p.best_bet || "—") + '</div>'
+              + (p.cote ? '<div class="lbl" style="margin-top:9px">Cote</div><div class="val c-cyan">@' + esc(p.cote) + '</div>' : '')
+              + (p.raison ? '<div class="comp" style="margin-top:9px">' + esc(p.raison) + '</div>' : ''))
+        + '</div></div>';
+    });
+  }
+
+  // ── En direct ─────────────────────────────────────────────────────────────
+  function loadLive() {
+    get("/live-matches").then(flagOffline).then(function (d) {
+      var box = $("live-box");
+      var list = (d && (d.matches || d.live)) || [];
+      if (!list.length) {
+        box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';
+        return;
+      }
+      var icons = { Football: "⚽", Basketball: "🏀", Hockey: "🏒", Baseball: "⚾" };
+      var html = '<div class="card">';
+      list.slice(0, 25).forEach(function (m) {
+        var sh = (m.score_home == null ? "?" : m.score_home), sa = (m.score_away == null ? "?" : m.score_away);
+        html += '<div class="item"><span class="dot"></span><div class="mid">'
+          + '<div class="t">' + (icons[m.sport] || "🎯") + ' ' + esc(m.home) + ' — ' + esc(m.away) + '</div>'
+          + '<div class="m">' + esc(m.competition || m.sport || "") + (m.minute ? ' · ' + esc(m.minute) + "'" : '') + '</div>'
+          + '</div><span class="badge b-live">' + esc(sh) + '-' + esc(sa) + '</span></div>';
+      });
+      html += '</div>';
+      if (!isPaid()) {
+        html += '<div class="card"><div class="lbl">Analyses en direct</div>'
+          + '<div class="comp" style="margin-top:5px">Les membres reçoivent la sélection du Concile sur ces matchs, en temps réel.</div>'
+          + '<a class="btn btn-g" href="/#plans">Voir les offres</a></div>';
+      }
+      box.innerHTML = html;
+    });
+  }
+
+  // ── Performances ──────────────────────────────────────────────────────────
+  var perf = { rows: [], stats: null, tier: "all" };
+  Array.prototype.forEach.call(document.querySelectorAll("#perf-tabs .tab"), function (t) {
+    t.addEventListener("click", function () {
+      Array.prototype.forEach.call(document.querySelectorAll("#perf-tabs .tab"), function (x) { x.classList.remove("on"); });
+      t.classList.add("on");
+      perf.tier = t.getAttribute("data-t");
+      renderPerf();
+    });
+  });
+
+  function loadPerf() {
+    get("/analysis-history?limit=60").then(flagOffline).then(function (d) {
+      perf.rows = (d && d.analyses) || [];
+      perf.stats = (d && d.stats) || null;
+      renderPerf();
+    });
+  }
+
+  // Le champ `tier` est calculé par l'API (palier le plus bas qui reçoit l'analyse).
+  // On ne redéfinit AUCUN seuil ici : une seule source de vérité, comme sur le site.
+  function inTier(a) {
+    if (perf.tier === "all") return true;
+    if (perf.tier === "standard") return a.tier === "standard";
+    if (perf.tier === "premium") return a.tier === "standard" || a.tier === "premium";
+    return a.tier === "standard" || a.tier === "premium" || a.tier === "elite";
+  }
+
+  function renderPerf() {
+    var s = (perf.stats && perf.tier !== "all" && perf.stats.tiers && perf.stats.tiers[perf.tier]) || perf.stats || {};
+    var tot = num(s.total), wr = num(s.winrate), roi = num(s.roi_pct), prof = num(s.profit10);
+    $("perf-kpis").innerHTML =
+        kpi(tot || "—", "Analyses", "")
+      + kpi(tot ? wr + "%" : "—", "Réussite", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
+      + kpi(tot ? eur(prof) : "—", "Profit (10€/pick)", prof >= 0 ? "c-green" : "c-red")
+      + kpi(tot ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
+
+    var rows = perf.rows.filter(inTier);
+    if (!rows.length) {
+      $("perf-list").innerHTML = '<div class="state">Aucune analyse pour ce palier.</div>';
+      return;
+    }
+    var html = "";
+    rows.slice(0, 40).forEach(function (a) {
+      var b = a.outcome === "win" ? '<span class="badge b-win">✅ Gagné</span>'
+            : a.outcome === "loss" ? '<span class="badge b-loss">❌ Perdu</span>'
+            : '<span class="badge b-wait">⏳ En attente</span>';
+      var odd = num(a.real_odd) > 1 ? " · @" + num(a.real_odd).toFixed(2) : "";
+      html += '<div class="item"><div class="mid">'
+        + '<div class="t">' + esc(a.home) + ' — ' + esc(a.away) + '</div>'
+        + '<div class="m">' + esc((a.analysed_at || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + '</div>'
+        + '</div>' + b + '</div>';
+    });
+    $("perf-list").innerHTML = html;
+  }
+  function kpi(v, l, c) {
+    return '<div class="kpi"><div class="v ' + (c || "") + '">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
+  }
+
+  // ── Compte ────────────────────────────────────────────────────────────────
+  function renderMe() {
+    var box = $("me-box");
+    if (isPaid() || token()) {
+      box.innerHTML = '<div class="card"><div class="lbl">Formule active</div>'
+        + '<div class="val">' + esc($("chip").textContent) + '</div>'
+        + '<div class="comp" style="margin-top:9px">Tes signaux arrivent sur ton canal Telegram. Les résultats sont vérifiables dans l\'onglet Résultats.</div>'
+        + '<a class="btn btn-o" href="/live-ia.html">Ouvrir le Live IA</a>'
+        + '<button class="btn btn-o" id="btn-out">Se déconnecter</button></div>';
+      $("btn-out").addEventListener("click", function () {
+        try { localStorage.removeItem("tlm_token"); localStorage.removeItem("tlm_plan"); } catch (e) {}
+        renderChip(); renderMe();
+      });
+      return;
+    }
+    box.innerHTML = '<div class="card">'
+      + '<input id="in-mail" type="email" inputmode="email" autocomplete="email" placeholder="Ton email">'
+      + '<input id="in-code" type="text" autocomplete="one-time-code" placeholder="Ton code d\'accès">'
+      + '<button class="btn btn-p" id="btn-in">Accéder</button>'
+      + '<div class="state" id="log-msg" style="padding:9px 0 0"></div></div>'
+      + '<div class="card"><div class="lbl">Pas encore membre ?</div>'
+      + '<div class="comp" style="margin-top:5px">L\'analyse du jour est gratuite. Son résultat est vérifiable le lendemain dans l\'onglet Résultats.</div>'
+      + '<a class="btn btn-g" href="/#plans">Voir les offres dès 4,90€</a></div>';
+
+    $("btn-in").addEventListener("click", function () {
+      var email = $("in-mail").value.trim(), code = $("in-code").value.trim();
+      var msg = $("log-msg");
+      if (!email || !code) { msg.textContent = "Renseigne ton email et ton code."; return; }
+      msg.textContent = "Vérification…";
+      fetch("/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, code: code })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        if (d && d.ok) {
+          try {
+            if (d.token) localStorage.setItem("tlm_token", d.token);
+            localStorage.setItem("tlm_plan", d.plan || d.status || "premium");
+          } catch (e) {}
+          renderChip(); loaded.pick = false; renderMe(); show("pick");
+        } else {
+          msg.textContent = (d && d.error) || "Code invalide ou expiré.";
+        }
+      }).catch(function () { msg.textContent = "Connexion impossible. Réessaie."; });
+    });
+  }
+
+  // ── Démarrage ─────────────────────────────────────────────────────────────
+  renderChip();
+  var t = new URLSearchParams(location.search).get("tab");
+  show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : "pick");
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("/sw.js").catch(function () {});
+    });
+  }
+  window.addEventListener("online", function () { $("offline-note").style.display = "none"; });
+})();
+</script>
+</body>
+</html>
