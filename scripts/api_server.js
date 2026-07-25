@@ -2314,9 +2314,32 @@ function rejectScoreConflict(match, res) {
   return true;
 }
 
+function hasNonFootballLiveMatches(matches) {
+  return Array.isArray(matches) && matches.some((match) => {
+    const sport = String(match?.sport || "").trim();
+    return sport && sport !== "Football";
+  });
+}
+
+async function enrichFootballOnlyLiveCache(cacheData) {
+  if (!Array.isArray(cacheData) || hasNonFootballLiveMatches(cacheData)) return cacheData;
+  try {
+    const theSportsDbMatches = await fetchFromTheSportsDb();
+    if (!Array.isArray(theSportsDbMatches) || !theSportsDbMatches.length) return cacheData;
+    const enrichedMatches = mergeLiveMatchSources(cacheData, theSportsDbMatches)
+      .filter(m => !isFinishedOrTooLateForLiveIa(m));
+    liveMatchesCache = { data: enrichedMatches, ts: Date.now() };
+    console.log(`[live-matches] Cache enrichi TheSportsDB: ${enrichedMatches.length} événements`);
+    return enrichedMatches;
+  } catch (e) {
+    console.error("[live-matches] Enrichissement cache TheSportsDB:", e.message);
+    return cacheData;
+  }
+}
+
 async function fetchLiveMatches() {
   if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
-    return liveMatchesCache.data;
+    return await enrichFootballOnlyLiveCache(liveMatchesCache.data);
   }
   const [footballDataMatches, apiSportsMatches, theSportsDbMatches] = await Promise.all([
     fetchFromFootballData(),
@@ -6680,6 +6703,7 @@ app.delete("/admin/set-score", (req, res) => {
 // ── Live matches ──────────────────────────────────────────────────────────────
 app.get("/live-matches", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store, max-age=0");
     if (req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");

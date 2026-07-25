@@ -221,3 +221,4 @@
 - Concile public aligne sur "vote de 5 IA independantes" : pas de Chief visible client, pas de messages techniques d'agents indisponibles/quota.
 - Regle de relais : Claude/Codex peuvent modifier site/API ; Hermes audite/recommande et ne pousse pas de MAJ site/API sans validation Greg.
 - Attention VPS : ne pas copier `public/index.html` sur `site/index.html` sans verification, car `site/` est le rendu public servi par Caddy.
+- Correctif live : si le cache `/live-matches` contient seulement du football, l'API tente maintenant d'enrichir avec TheSportsDB avant de repondre. La route envoie aussi `Cache-Control: no-store` pour eviter une reponse navigateur ancienne.
