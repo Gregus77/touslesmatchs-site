@@ -4966,6 +4966,18 @@ function isNoiseForDisplay(match) {
   return false;                                        // on garde les gagnants (volume)
 }
 
+// Analyse des sports hors football — DÉSACTIVÉE par défaut, et ce n'est pas un oubli.
+// Le catalogue de marchés (BET_TYPES) et le garde-fou betIsPlayable() sont écrits pour
+// le football : sur un match de basket à 155 points cumulés, « Under 2.5 buts » est
+// mathématiquement perdu d'avance et « Over 2.5 buts » déjà atteint ; « Match nul » et
+// « BTTS » n'existent pas dans ces sports. Les faire analyser produit des sélections
+// incohérentes, les IA divergent et la confiance s'effondre.
+// Mesuré le 25/07/2026 : 109 analyses, 1 seule au-dessus de 85 % de confiance, ZÉRO
+// signal diffusé — contre 63 analyses et 16 signaux diffusés le 23/07 en football seul.
+// L'AFFICHAGE multisport du Live reste inchangé : seule l'ANALYSE est bridée.
+// À réactiver via AUTO_CONCILE_MULTISPORT=1 dès qu'il existe des marchés par sport
+// (totaux de points au basket, lignes de runs au baseball, etc.).
+const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 30));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
 
@@ -4975,7 +4987,13 @@ function shouldAutoObserveMatch(match) {
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (isWomenMatch(match)) return false;              // pas de matchs féminins
-  if (String(match.sport || "Football") !== "Football") return true;
+  // Hors football : les marchés disponibles ne correspondent pas à ces sports
+  // (voir AUTO_CONCILE_MULTISPORT). Le match reste affiché en direct, il n'est
+  // simplement pas soumis au Concile tant qu'aucun marché adapté n'existe.
+  if (String(match.sport || "Football") !== "Football") {
+    if (!AUTO_CONCILE_MULTISPORT) return false;
+    return true;
+  }
   // Analyse large pour remplir la journée : grandes ligues + coupes d'Europe
   // (dont qualifs). Le tri "premium" ne s'applique qu'au PICK du jour, pas à
   // l'activité affichée. On bloque juste les ligues non fiables hors UEFA.
