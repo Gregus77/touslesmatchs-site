@@ -767,7 +767,7 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 //   84-85 :  62 analyses · 83,9 % · +274 €   → Premium  (~3,3/jour cumulé)
 //   82-83 : 141 analyses · 70,9 % · +428 €   → Elite    (~9,7/jour cumulé)
 // Aucune analyse au-dessus de 89 sur la période : un seuil à 90 ou 92 produit ZÉRO signal.
-const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 84, ELITE_MIN_CONF = 82;
+const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 85;
 const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
@@ -816,14 +816,17 @@ function getTierThresholds() {
     const t = {
       standard: quantile(STANDARD_SIGNAL_DAILY_CAP),
       premium:  quantile(PREMIUM_SIGNAL_DAILY_CAP),
-      elite:    PUBLISHED_MIN_CONFIDENCE, // Elite reçoit tout le vivier diffusable
+      elite:    SIGNAL_FLOOR, // Elite = tout le vivier diffusable, au plancher du portail
       source: `${confs.length} analyses / ${TIER_THRESHOLD_WINDOW_DAYS} j`,
     };
     // Imbrication garantie : Standard ≥ Premium ≥ Elite (payer plus = recevoir plus).
     t.premium = Math.min(t.premium, t.standard);
     t.elite   = Math.min(t.elite, t.premium);
     // Jamais sous le plancher de publication.
-    for (const k of ["standard", "premium", "elite"]) t[k] = Math.max(PUBLISHED_MIN_CONFIDENCE, t[k]);
+    // Le portail de diffusion exige déjà SIGNAL_FLOOR : un seuil de palier inférieur
+    // serait lettre morte. C'est le plafond journalier (3/10/30) qui différencie les
+    // paliers, pas le seuil de confiance.
+    for (const k of ["standard", "premium", "elite"]) t[k] = Math.max(SIGNAL_FLOOR, t[k]);
     console.log(`[tier-thresholds] Standard ≥${t.standard} · Premium ≥${t.premium} · Elite ≥${t.elite} (${t.source})`);
     _tierThresholdCache = { day: today, value: t };
     return t;
@@ -1115,7 +1118,7 @@ function callOpenAICompat(prompt, { url, key, model }) {
     const body = JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 200,
+      max_tokens: 120, // réponse courte attendue : ne pas payer 200 tokens
       temperature: 0.3,
     });
     const u = new URL(url);
@@ -1163,7 +1166,7 @@ function callCohere(prompt) {
     const body = JSON.stringify({
       model: "command-r",
       message: prompt,
-      max_tokens: 200,
+      max_tokens: 120, // réponse courte attendue : ne pas payer 200 tokens
       temperature: 0.3,
     });
     const options = {
@@ -1250,6 +1253,19 @@ Pour MARCHES (avis rapide sur chaque marché, codes courts + confiance 40-90) :
 - mt1 : oui ou non (but en 1ère mi-temps)
 
 Ne mets rien d'autre. Si tu n'es pas sûr du pick principal, réponds NO BET (mais donne quand même MARCHES).`;
+}
+
+// Plafond journalier des tests à blanc — garde-fou de budget OpenRouter.
+// 20 matchs/jour suffisent largement : la promotion d'un challenger exige 50 picks
+// résolus, soit moins de 3 jours d'échantillon. Payer plus n'apporte rien.
+const SHADOW_DAILY_CAP = Math.max(1, Number(process.env.SHADOW_DAILY_CAP || 20));
+const _shadowDaily = { date: "", count: 0 };
+function shadowQuotaAllows() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (_shadowDaily.date !== today) { _shadowDaily.date = today; _shadowDaily.count = 0; }
+  if (_shadowDaily.count >= SHADOW_DAILY_CAP) return false;
+  _shadowDaily.count++;
+  return true;
 }
 
 async function runShadowEvaluation(match) {
@@ -3455,6 +3471,9 @@ Réponds en JSON pur (pas de markdown):
   }
   const voteInfo = analysisResult.vote_summary || {};
   const voteCountForSignal = Number(voteInfo.vote_count || analysisResult.consensus_votes || 0);
+  // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
+  // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
+  let shadowWorthy = false;
   if (analysisResult.confidence >= signalThreshold && voteCountForSignal >= 3 && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
@@ -3510,6 +3529,7 @@ Réponds en JSON pur (pas de markdown):
       const gradeStandard = diffusable && voteCountForSignal >= 5 && conf >= TH.standard;
       const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
       const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
+      shadowWorthy = gradeElite;
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
@@ -3556,8 +3576,18 @@ Réponds en JSON pur (pas de markdown):
     }
   }
 
-  // Évaluation shadow en parallèle (sans bloquer la réponse Concile)
-  runShadowEvaluation(match).catch(e => console.error("[shadow] bg:", e.message));
+  // ── Tests à blanc : uniquement sur les matchs RÉELLEMENT diffusables ────────
+  // Avant, cette évaluation tournait sur CHAQUE match analysé (109 le 25/07) avec
+  // 3 agents OpenRouter, soit ~330 appels/jour facturés au token — l'essentiel du
+  // budget OpenRouter, dépensé sur des matchs qui ne seront jamais diffusés.
+  // Deux bénéfices à ne tester que les picks diffusables :
+  //   1. environ 95 % d'appels en moins ;
+  //   2. les challengers sont évalués sur la MÊME population que les vrais picks,
+  //      donc le score de Brier devient comparable — sans quoi promouvoir un modèle
+  //      sur la base de ces chiffres n'aurait aucune validité statistique.
+  if (shadowWorthy && shadowQuotaAllows()) {
+    runShadowEvaluation(match).catch(e => console.error("[shadow] bg:", e.message));
+  }
 
   return analysisResult;
 }
