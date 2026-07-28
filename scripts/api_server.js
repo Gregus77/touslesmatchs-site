@@ -3325,12 +3325,17 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
   try {
+    // Un seul fournisseur retenu par match : chacun n'est ajouté que si AUCUN
+    // précédent n'est déjà en liste. Avant ce correctif, DeepSeek et OpenRouter
+    // (Qwen) étaient tous deux ajoutés inconditionnellement — dès que DeepSeek
+    // répondait vide/lentement (timeout 3.5s), Qwen était rappelé en plus, à
+    // chaque analyse où le Chief tranche. C'est la principale source identifiée
+    // de la surconsommation OpenRouter (audit du 28/07/2026).
     const chiefProviders = [];
     if (DEEPSEEK_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
-    if (OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
     if (!chiefProviders.length && GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
-    if (!chiefProviders.length && OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
     if (!chiefProviders.length && CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+    if (!chiefProviders.length && OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
 
     let raw = "{}";
     for (const pv of chiefProviders) {
