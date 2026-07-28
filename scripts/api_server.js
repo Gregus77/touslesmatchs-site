@@ -9780,6 +9780,16 @@ app.get("/admin/guardian-state", (req, res) => {
 });
 // ===== End M008 =====
 
+// Stats du garde-fou budgétaire IA (scripts/ai_budget_guard.js) — visibilité
+// demandée pour Hermès ("peut lire et afficher les informations de coût, ne
+// doit jamais lancer une analyse pour les calculer") et pour toi en dashboard.
+app.get("/admin/ai-budget-stats", (req, res) => {
+  try {
+    const guard = require("./ai_budget_guard");
+    res.json({ ok: true, stats: guard.getDailyStats(db) });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // ===== M009-M010: Data Hub state =====
 app.get("/admin/datahub-state", (req, res) => {
   try {
