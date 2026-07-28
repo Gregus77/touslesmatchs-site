@@ -13,7 +13,11 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      - /opt/touslesmatchs/site:/srv
+      # Racine web = public/ (source unique, alignée sur `COPY public /srv` du Dockerfile).
+      # NE JAMAIS remettre `site/` ici : site/ contient la page générée par le Concile
+      # (template.html + index.html auto-généré), qui était servie par erreur comme
+      # page d'accueil (vieille version 42 Ko sans widgets) — bug de fragmentation, juillet 2026.
+      - /opt/touslesmatchs/public:/srv
       - /opt/touslesmatchs/Caddyfile:/etc/caddy/Caddyfile
     networks:
       - web
@@ -99,12 +103,20 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_CHIEF_MODEL=${OPENROUTER_CHIEF_MODEL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # ID exact du modèle GPT-5 exposé par ton compte OpenAI (défaut "gpt-5")
+      - OPENAI_MODEL_GPT5=${OPENAI_MODEL_GPT5:-gpt-5}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      # Accès en lecture aux vraies stats agents (populées par l'API JS).
+      # Sans ce mount, get_agent_accuracy() renvoie 0 → filtre inopérant.
+      - API_STATS_DB=/shared_api/tlm.db
     volumes:
       - council_data:/app/data
+      # Read-only : Concile lit les perfs des agents pour son filtre,
+      # ne doit JAMAIS écrire dans la DB de l'API.
+      - /opt/touslesmatchs/data:/shared_api:ro
     networks:
       - web
 

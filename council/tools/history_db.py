@@ -203,10 +203,49 @@ def get_premium_stats():
 
 
 def get_agent_accuracy():
+    """Retourne la précision de chaque agent (nom → {total, correct, accuracy}).
+
+    Source prioritaire : /shared_api/tlm.db (populée par l'API JS, contient
+    plusieurs milliers de résultats vérifiés). Fallback : DB locale du Concile,
+    qui n'est plus vraiment alimentée depuis la migration JS de juillet 2026.
+
+    Sans le mount /shared_api, cette fonction renvoyait 0 pour tous les agents
+    et le filtre `filter_agents_by_accuracy` incluait tout par défaut (bug
+    historique du Concile Python — le filtrage n'a jamais fonctionné).
+    """
+    # 1) Source primaire : tlm.db de l'API (nommée agent_predictions)
+    api_db = os.environ.get("API_STATS_DB", "/shared_api/tlm.db")
+    result = {}
+    if os.path.exists(api_db):
+        try:
+            conn = sqlite3.connect(f"file:{api_db}?mode=ro", uri=True)
+            c = conn.cursor()
+            c.execute("""
+                SELECT agent_name,
+                       COUNT(*) AS total,
+                       SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) AS correct
+                FROM agent_predictions
+                WHERE outcome IN ('win','loss')
+                GROUP BY agent_name
+            """)
+            for name, total, correct in c.fetchall():
+                if not name:
+                    continue
+                result[name] = {
+                    "total": total,
+                    "correct": correct or 0,
+                    "accuracy": round((correct or 0) / total * 100, 1) if total > 0 else 0,
+                }
+            conn.close()
+        except Exception as e:
+            print(f"[get_agent_accuracy] erreur lecture {api_db} : {e}")
+
+    if result:
+        return result
+
+    # 2) Fallback : ancienne DB locale (agent_performance)
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-
-    # Global accuracy
     c.execute("""
         SELECT agent_name, COUNT(*) as total, SUM(was_correct) as correct, sport
         FROM agent_performance
@@ -215,7 +254,6 @@ def get_agent_accuracy():
     """)
     rows = c.fetchall()
     conn.close()
-    result = {}
     for row in rows:
         name, total, correct, sport = row
         if name not in result:

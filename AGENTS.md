@@ -116,6 +116,8 @@ TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 - Signal Fort : confiance >= 80%
 - Multi-sport : Football, Basketball, Hockey, Baseball, Tennis
 - Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 82 (regle par le fondateur)
+- R1 : aucun pronostic avant la 35e minute ni apres la 75e
+- R2 : aucun pronostic sur un match a finalite connue (ecart >= 3 buts)
 
 ### Comptes speciaux actifs
 - LaMatrice (lamatrice2012@gmail.com) : Elite, 30 analyses/jour, expire ~19 sept 2026

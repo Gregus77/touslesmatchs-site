@@ -1,7 +1,7 @@
 import os
 from agents.or_common import analyze_via_openrouter
 
-NAME = "DeepSeek"
+NAME = "DeepSeek-V3"  # aligné sur le nom utilisé par le JS Concile — même provider (deepseek-chat), stats partagées
 MODEL = (os.environ.get("OR_DEEPSEEK_MODEL") or "").strip() or "deepseek/deepseek-chat"
 
 

@@ -1,4 +1,22 @@
 www.touslesmatchs.com {
+    # ── Headers de sécurité (appliqués à toutes les réponses) ────────────────
+    # HSTS : force HTTPS pendant 1 an, tous sous-domaines inclus
+    # X-Content-Type-Options : empêche le MIME-sniffing (protection XSS)
+    # X-Frame-Options : empêche l'inclusion en iframe (protection clickjacking)
+    # Referrer-Policy : ne transmet pas l'URL complète aux domaines tiers
+    # Permissions-Policy : coupe l'accès aux capteurs sensibles par défaut
+    # CSP : whitelist stricte des sources autorisées (à ajuster si besoin)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "camera=(), microphone=(), geolocation=(), payment=(self)"
+        Content-Security-Policy   "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https: blob:; connect-src 'self' https://api.stripe.com https://www.google-analytics.com; frame-src https://js.stripe.com https://www.tiktok.com https://t.me; base-uri 'self'; form-action 'self' https://checkout.stripe.com"
+        # Cache l'entête Server qui divulgue la version Caddy
+        -Server
+    }
+
     # API proxy vers le backend
     handle /api/* {
         uri strip_prefix /api
