@@ -5303,18 +5303,36 @@ async function brevoAddContact(email, tag, lang = "FR") {
   }
 }
 
+// Plafond anti-spam : 1 email MARKETING par adresse et par jour. La clé porte la
+// date du jour — l'ancien setInterval remettait le compteur à zéro 24 h après le
+// démarrage du process, donc « par jour » dérivait à chaque redéploiement.
 const _emailDailyCap = new Map();
-setInterval(() => _emailDailyCap.clear(), 24 * 60 * 60 * 1000);
-
-async function brevoSendEmail(to, subject, htmlContent) {
-  if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
-  const key = to.toLowerCase();
-  const sent = _emailDailyCap.get(key) || 0;
-  if (sent >= 1) {
-    console.log(`[brevo] Cap 1 email/jour atteint pour ${key} — "${subject}" non envoyé`);
-    return;
+setInterval(() => {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const k of _emailDailyCap.keys()) {
+    if (!k.endsWith(`|${today}`)) _emailDailyCap.delete(k);
   }
-  _emailDailyCap.set(key, sent + 1);
+}, 60 * 60 * 1000);
+
+/**
+ * @param opts.critical  Email TRANSACTIONNEL (code d'accès, confirmation de
+ *   paiement, expiration d'abonnement) : jamais soumis au plafond anti-spam.
+ *   Sans ce drapeau, un lead ayant reçu un email de nurturing le matin puis
+ *   s'abonnant l'après-midi ne recevait PAS son code d'accès — il payait sans
+ *   rien recevoir, et l'échec n'apparaissait que dans les logs.
+ */
+async function brevoSendEmail(to, subject, htmlContent, opts = {}) {
+  if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `${to.toLowerCase()}|${today}`;
+  if (!opts.critical) {
+    const sent = _emailDailyCap.get(key) || 0;
+    if (sent >= 1) {
+      console.log(`[brevo] Cap 1 email marketing/jour atteint pour ${to.toLowerCase()} — "${subject}" non envoyé`);
+      return;
+    }
+    _emailDailyCap.set(key, sent + 1);
+  }
   return httpPostStrict(
     "https://api.brevo.com/v3/smtp/email",
     {
@@ -5393,7 +5411,8 @@ function creditReferrer(refCode, newSubscriberEmail) {
         <div style="font-size:20px;font-weight:800;margin-bottom:10px">🎉 ${newSubscriberEmail.replace(/@.*/, "***@***")} a rejoint grâce à toi !</div>
         <div style="color:#a8aec8;line-height:1.6;margin-bottom:20px">Ton abonnement vient d'être prolongé de <strong style="color:#10b981">30 jours</strong> automatiquement. Merci de faire confiance à TousLesMatchs et de le partager autour de toi.</div>
         <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700">Voir mes picks →</a>
-      </div>`
+      </div>`,
+      { critical: true } // récompense de parrainage : dû au client, jamais plafonné
     ).catch(() => {});
   }
   return true;
@@ -5532,7 +5551,7 @@ function runExpiryCron() {
           3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "elite" ? "Elite" : "Pro"}`,
           1: `🔴 Dernier jour — ton accès TousLesMatchs expire demain`,
         };
-        brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats))
+        brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats), { critical: true })
           .then(() => {
             sentSet.add(diff);
             _expirySentToday.set(sentKey, sentSet);
@@ -5542,7 +5561,7 @@ function runExpiryCron() {
       }
 
       if (diff === 0 && !sentSet.has(0)) {
-        brevoSendEmail(row.email, `🔴 Ton abonnement expire aujourd'hui — dernière chance`, renewalEmailHtml(row, 0, stats))
+        brevoSendEmail(row.email, `🔴 Ton abonnement expire aujourd'hui — dernière chance`, renewalEmailHtml(row, 0, stats), { critical: true })
           .then(() => { sentSet.add(0); _expirySentToday.set(sentKey, sentSet); })
           .catch(e => console.error(`[expiry-cron] email J-0 to ${row.email}:`, e.message));
       }
@@ -6342,7 +6361,7 @@ app.post("/forgot-code", async (req, res) => {
           <p style="margin:20px 0 0;color:#7b82a0;font-size:12px">Copiez ce code et connectez-vous sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a>.</p>
         </div>
       </div>`;
-    await brevoSendEmail(emailClean, "Votre code d'accès TousLesMatchs", html);
+    await brevoSendEmail(emailClean, "Votre code d'accès TousLesMatchs", html, { critical: true });
     console.log(`[forgot-code] Code(s) envoyé(s) à ${emailClean}`);
   } catch (e) {
     console.error("[forgot-code] error:", e.message);
@@ -7598,7 +7617,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             </div>
           </div>`;
 
-          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html);
+          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html, { critical: true });
           console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
         } catch(e) { console.error("[stripe] email error:", e.message); }
       })();
