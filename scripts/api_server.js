@@ -2147,6 +2147,21 @@ async function fetchFromFootballData() {
 }
 
 // ── Live matches — API-Sports (fallback) ──────────────────────────────────────
+// Statuts bruts API-Sports (basket/hockey/baseball) qui NE sont PAS du live
+// exploitable : match pas commence (NS), reporte, annule, suspendu, termine.
+// Sans ce filtre, ces matchs apparaissaient en "En direct" avec le statut force
+// a IN_PLAY, alors qu'ils ne sont pas analysables (aucun temps de jeu, aucune
+// dynamique, aucune cote pertinente).
+const API_SPORTS_NON_LIVE_STATUSES = new Set([
+  "NS", "TBD", "PST", "CANC", "ABD", "AWD", "WO", "SUSP", "INTR",
+  "FT", "AOT", "AP", "POST", "CANCELLED", "FINISHED",
+]);
+function isApiSportsLiveGame(g) {
+  const short = String(g?.status?.short || "").toUpperCase();
+  if (!short) return true; // statut absent : on ne bloque pas (comportement inchange)
+  return !API_SPORTS_NON_LIVE_STATUSES.has(short);
+}
+
 async function fetchFromApiSports() {
   if (!API_SPORTS_KEY) return null;
   const results = [];
@@ -2168,7 +2183,7 @@ async function fetchFromApiSports() {
     if (!shouldSkipApiSportsSport("basketball")) {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("basketball", data)) {
-    const items = (data.response || []).slice(0, 10).map((g) => ({
+    const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
       source: "api-sports",
       sourceId: String(g.id),
@@ -2191,7 +2206,7 @@ async function fetchFromApiSports() {
     if (!shouldSkipApiSportsSport("hockey")) {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("hockey", data)) {
-    const items = (data.response || []).slice(0, 30).map((g) => ({
+    const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
       sourceId: String(g.id),
@@ -2214,7 +2229,7 @@ async function fetchFromApiSports() {
     if (!shouldSkipApiSportsSport("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
-    const items = (data.response || []).slice(0, 10).map((g) => ({
+    const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
       source: "api-sports",
       sourceId: String(g.id),
