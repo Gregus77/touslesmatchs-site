@@ -67,6 +67,23 @@ const MODELS = {
     maxTokensOut: Number(process.env.AI_MODEL_GPT_MAX_TOKENS || 120),
     costPer1kTokensEur: 0.01,
   },
+  // ── Chatbot d'assistance client (/chat, /chatbot/ask) : ne fait AUCUNE
+  // analyse de match, mais reste soumis au meme devoir de tracabilite et de
+  // plafond budgetaire que tout appel IA du projet (regle finale du prompt
+  // maitre du 28/07/2026 : "aucune depense OpenRouter sans limite, verrou
+  // anti-doublon et tracabilite" — anti-doublon inapplicable a une conversation
+  // libre, budget/journalisation applicables).
+  mistral_chat: {
+    id: "mistral-small-latest",
+    provider: "mistral",
+    role: "official",
+    mode: "official",
+    enabled: true,
+    dailyLimit: Number(process.env.AI_MODEL_CHATBOT_DAILY_LIMIT || 300),
+    maxTokensOut: Number(process.env.AI_MODEL_CHATBOT_MAX_TOKENS || 500),
+    costPer1kTokensEur: 0.0006,
+  },
+
   claude: {
     id: process.env.OR_CLAUDE_MODEL || "anthropic/claude-3.5-haiku",
     provider: "openrouter",

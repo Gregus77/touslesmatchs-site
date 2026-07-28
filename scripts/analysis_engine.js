@@ -85,4 +85,81 @@ async function guardedShadowCall(db, agent, prompt, ctx) {
   return result;
 }
 
-module.exports = { guardedShadowCall, TRACKED_SHADOW_MODELS, SHADOW_PROMPT_VERSION };
+/**
+ * Concile officiel (5 agents + Chief) — chaque agent a UN fournisseur officiel
+ * dédié (sa propre clé : DeepSeek, Perplexity, Mistral, Cohere...). OpenRouter
+ * n'intervient QUE si ce fournisseur dédié n'est pas configuré (clé absente du
+ * .env) ET que les autres replis génériques (DeepSeek partagé, Mistral partagé,
+ * Groq) ont eux aussi échoué — un chemin rare, pas le fonctionnement courant.
+ *
+ * Volontairement chirurgical : cette fonction décide UNIQUEMENT si OpenRouter
+ * peut être ajouté à la liste des fournisseurs candidats. Elle ne touche jamais
+ * aux fournisseurs officiels eux-mêmes. Le pire cas d'un bug ici : un agent
+ * répond "pas de réponse" (déjà un cas existant et géré), jamais un blocage du
+ * Concile — ce qui publie les vrais picks et fait tourner de l'argent réel.
+ *
+ * Le coût est enregistré au moment où l'option est ajoutée à la liste, pas
+ * après confirmation de l'appel réel (qui se fait dans une boucle partagée de
+ * api_server.js, hors de portée de ce module sans la restructurer). Choix
+ * volontairement prudent : mieux vaut compter une tentative qui échoue
+ * finalement que sous-compter une dépense réelle.
+ */
+function allowOfficialOpenRouterFallback(db, { agentLabel, matchKey, competition, modelKey }) {
+  const check = guard.canProceed(db, {
+    modelKey,
+    matchKey,
+    competition,
+    market: "concile",
+    promptVersion: `fallback_${agentLabel}`,
+    estimatedTokensIn: 1500,
+    estimatedTokensOut: 400,
+  });
+  if (!check.allowed) {
+    console.warn(`[ai-guard] repli OpenRouter (${modelKey}) refusé pour "${agentLabel}" sur "${matchKey}": ${check.reason}`);
+    return false;
+  }
+  guard.recordCall(db, {
+    requestKey: check.requestKey, modelKey, matchKey, competition,
+    market: "concile", purpose: "official_fallback",
+    tokensIn: 1500, tokensOut: 400, status: "ok",
+  });
+  return true;
+}
+
+/**
+ * Chatbot d'assistance client — traçabilité + plafond, PAS les règles de
+ * publication de picks (confiance/cote/marché n'ont aucun sens pour une
+ * question du type "combien coûte Premium ?"). L'anti-doublon est
+ * volontairement neutralisé (clé unique par requête) : deux questions
+ * différentes d'un même client ne doivent jamais être bloquées comme
+ * "déjà traitées".
+ */
+function allowChatbotCall(db, { sessionId }) {
+  const uniqueKey = `${sessionId || "anon"}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const check = guard.canProceed(db, {
+    modelKey: "mistral_chat",
+    matchKey: uniqueKey, // jamais réutilisée : l'anti-doublon ne s'applique pas ici par construction
+    competition: null,
+    market: "chatbot",
+    promptVersion: "chat_v1",
+    estimatedTokensIn: 800,
+    estimatedTokensOut: 500,
+  });
+  if (!check.allowed) {
+    console.warn(`[ai-guard] chatbot refusé: ${check.reason}`);
+    return { allowed: false, reason: check.reason };
+  }
+  return {
+    allowed: true,
+    record: (tokensIn, tokensOut, status) => guard.recordCall(db, {
+      requestKey: check.requestKey, modelKey: "mistral_chat", matchKey: uniqueKey,
+      market: "chatbot", purpose: "customer_support",
+      tokensIn: tokensIn || 800, tokensOut: tokensOut || 500, status: status || "ok",
+    }),
+  };
+}
+
+module.exports = {
+  guardedShadowCall, TRACKED_SHADOW_MODELS, SHADOW_PROMPT_VERSION,
+  allowOfficialOpenRouterFallback, allowChatbotCall,
+};

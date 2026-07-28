@@ -3214,8 +3214,19 @@ Réponds en JSON pur (pas de markdown):
       if (!providers.length && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
       if (!providers.length && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: "mistral-small-latest" });
       if (!providers.length && GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
-      if (!providers.length && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
-      if (!providers.length && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
+      // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
+      // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
+      // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
+      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}`;
+      const _fallbackCompetition = match.competition || match.league || "";
+      if (!providers.length && OPENROUTER_API_KEY
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+      }
+      if (!providers.length && OPENROUTER_API_KEY
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
+      }
       if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       let raw = "{}";
@@ -3345,7 +3356,10 @@ Réponds en JSON pur (pas de markdown):
     if (DEEPSEEK_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
     if (!chiefProviders.length && GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
     if (!chiefProviders.length && CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
-    if (!chiefProviders.length && OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+    if (!chiefProviders.length && OPENROUTER_API_KEY
+        && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: "Chief", matchKey: `${match.home || "?"}_${match.away || "?"}`, competition: match.competition || match.league || "", modelKey: "qwen" })) {
+      chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+    }
 
     let raw = "{}";
     for (const pv of chiefProviders) {
@@ -6342,6 +6356,12 @@ app.post("/chat", async (req, res) => {
     { role: "user", content: msg },
   ];
 
+  // Traçabilité + plafond de dépense obligatoires pour tout appel IA (règle
+  // finale du prompt maître du 28/07/2026). L'anti-doublon ne s'applique pas à
+  // une conversation libre : voir allowChatbotCall (clé unique par requête).
+  const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: memKey });
+  if (!_chatGate.allowed) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+
   let reply = "";
   try {
     const rp = await httpPost(
@@ -6350,8 +6370,10 @@ app.post("/chat", async (req, res) => {
       { Authorization: `Bearer ${MISTRAL_API_KEY}` }
     );
     reply = rp?.choices?.[0]?.message?.content?.trim() || "";
+    _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
   } catch (e) {
     console.error("[chat] Mistral:", e.message);
+    _chatGate.record(0, 0, "error");
   }
 
   if (!reply) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
@@ -9829,13 +9851,27 @@ app.post("/chatbot/ask", express.json(), async (req, res) => {
     const { question, email, session } = req.body || {};
     if (!question) return res.json({ ok: false, error: "Question vide" });
     const userKey = email || session || "anon_" + Date.now();
+    // Traçabilité + plafond de dépense obligatoires pour tout appel IA (règle
+    // finale du prompt maître). Anti-doublon non applicable à une conversation
+    // libre : chaque requête a sa propre clé (voir allowChatbotCall).
+    const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: userKey });
+    if (!_chatGate.allowed) return res.json({ ok: true, answer: "Notre assistant est momentanement indisponible." });
     const hist = db.prepare("SELECT role, content FROM chat_messages WHERE user_key = ? ORDER BY id DESC LIMIT 10").all(userKey).reverse();
     hist.push({ role: "user", content: question });
     try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "user", question); } catch(e){}
-    const resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    const answer = data?.choices?.[0]?.message?.content || "Notre assistant est momentanement indisponible.";
+    let resp, data, answer;
+    try {
+      resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      data = await resp.json();
+      answer = data?.choices?.[0]?.message?.content || "Notre assistant est momentanement indisponible.";
+      _chatGate.record(data?.usage?.prompt_tokens, data?.usage?.completion_tokens, "ok");
+    } catch (e) {
+      // Enregistré même en échec : l'appel HTTP a potentiellement déjà eu lieu
+      // et un coût réel a pu être engagé avant l'erreur.
+      _chatGate.record(0, 0, "error");
+      throw e;
+    }
     try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "assistant", answer); } catch(e){}
     res.json({ ok: true, answer });
   } catch(e) {
