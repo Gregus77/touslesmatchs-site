@@ -8280,10 +8280,43 @@ async function sendDailyResultsFreeChannel() {
 }
 
 // ── Analysis history (public, past concile analyses) ────────────────────────
+// Colonne de diffusion correspondant au palier d'un membre. On filtre sur ce qui
+// a RÉELLEMENT été envoyé sur son canal (sig_sent_*), pas sur des critères
+// d'éligibilité théoriques : un abonné Standard doit voir les résultats des
+// signaux qu'il a effectivement reçus, ni plus (pas les signaux Elite qu'il n'a
+// pas eus) ni moins.
+const SIG_COLUMN_BY_PLAN = {
+  free:     "sig_sent_free",
+  carte:    "sig_sent_free",
+  standard: "sig_sent_standard",
+  premium:  "sig_sent_premium",
+  vip:      "sig_sent_premium",
+  elite:    "sig_sent_elite",
+};
+
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const offset = parseInt(req.query.offset) || 0;
   try {
+    // ── Périmètre du lecteur ────────────────────────────────────────────────
+    // Sans identifiants : vue publique inchangée (page /performances, preuve
+    // marketing — la restreindre couperait l'argument de vente).
+    // Avec identifiants : on ne montre que le palier réellement souscrit.
+    const qEmail = req.query.email, qCode = req.query.code;
+    let viewerPlan = null, isPaidViewer = false, viewerIsAdmin = false;
+    if (qEmail && qCode) {
+      try {
+        const a = verifyCode(qEmail, qCode);
+        viewerIsAdmin = isAdminAccess(qEmail, qCode);
+        if (a.valid && a.plan) viewerPlan = String(a.plan).toLowerCase();
+        else if (viewerIsAdmin) viewerPlan = "elite";
+        isPaidViewer = (a.valid && a.plan && a.plan !== "free") || viewerIsAdmin;
+      } catch (_) {}
+    }
+    // L'admin garde la vue complète (supervision), sinon on filtre sur le palier.
+    const sigColumn = (viewerPlan && !viewerIsAdmin) ? SIG_COLUMN_BY_PLAN[viewerPlan] : null;
+    // Nom de colonne issu d'une liste blanche, jamais d'une saisie utilisateur.
+    const tierFilterSql = sigColumn ? `AND ${sigColumn} = 1` : "";
     // Dédoublonnage en SQL : un match est analysé plusieurs fois par jour
     // (snapshots à différentes minutes). ROW_NUMBER garde UNE ligne par
     // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
@@ -8302,6 +8335,7 @@ app.get("/analysis-history", (req, res) => {
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
           AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          ${tierFilterSql}
       )
       WHERE _rn = 1
       ORDER BY analysed_at DESC
@@ -8313,21 +8347,14 @@ app.get("/analysis-history", (req, res) => {
         SELECT 1 FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
           AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          ${tierFilterSql}
         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
       )
     `).get()?.cnt || 0;
 
-    // Auth optionnelle : seuls les abonnés (ou l'admin) voient le pick des analyses
-    // EN COURS. Les visiteurs voient les résultats passés (preuve) mais pas les
-    // picks non encore résolus — sinon la réponse serait donnée gratuitement.
-    let isPaidViewer = false;
-    try {
-      const qEmail = req.query.email, qCode = req.query.code;
-      if (qEmail && qCode) {
-        const a = verifyCode(qEmail, qCode);
-        isPaidViewer = (a.valid && a.plan && a.plan !== "free") || isAdminAccess(qEmail, qCode);
-      }
-    } catch (_) {}
+    // isPaidViewer (résolu plus haut) : seuls les abonnés — ou l'admin — voient le
+    // pick des analyses EN COURS. Les visiteurs voient les résultats passés
+    // (preuve) mais pas les picks non résolus, sinon la réponse serait gratuite.
 
     // On montre tous les jours et tous les résultats, SAUF la couche indésirable :
     // jeunes (U17-U23), amateur/réserves, féminines et ligues douteuses/exotiques.
@@ -8443,6 +8470,10 @@ app.get("/analysis-history", (req, res) => {
     res.json({
       ok: true, analyses, total,
       stats: { ...global, pending, tiers },
+      // Périmètre appliqué, pour que le front puisse l'annoncer clairement
+      // ("Statistiques de ton palier Standard") au lieu de laisser croire à
+      // l'abonné qu'il consulte l'historique complet.
+      scope: sigColumn ? { filtered: true, plan: viewerPlan } : { filtered: false, plan: viewerPlan || null },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
