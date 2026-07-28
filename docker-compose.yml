@@ -34,6 +34,30 @@ services:
       - THESPORTSDB_API_KEY=${THESPORTSDB_API_KEY}
       - AUTO_CONCILE_MULTISPORT=${AUTO_CONCILE_MULTISPORT}
       - SHADOW_DAILY_CAP=${SHADOW_DAILY_CAP}
+      # ── Reglages lus par le code mais qui n'etaient PAS transmis au conteneur ──
+      # Sans ces lignes, les modifier dans .env n'avait AUCUN effet : le code
+      # retombait silencieusement sur ses valeurs par defaut. Constate le
+      # 28/07/2026 (budget passe a 3 dans .env, conteneur toujours a 2).
+      # Une variable absente du .env vaut "" -> le code garde son defaut, donc
+      # ajouter ces lignes ne change rien tant qu'on ne les renseigne pas.
+      # Budget / garde-fou IA (scripts/ai_budget_guard.js)
+      - OPENROUTER_DAILY_BUDGET_EUR=${OPENROUTER_DAILY_BUDGET_EUR}
+      - OPENROUTER_MAX_REQUESTS_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_DAY}
+      - OPENROUTER_MAX_MATCHES_PER_DAY=${OPENROUTER_MAX_MATCHES_PER_DAY}
+      - OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY}
+      - OPENROUTER_HARD_STOP=${OPENROUTER_HARD_STOP}
+      - OPENROUTER_TEST_MODE_ENABLED=${OPENROUTER_TEST_MODE_ENABLED}
+      # Debit d'analyse
+      - AUTO_CONCILE_MAX_MATCHES=${AUTO_CONCILE_MAX_MATCHES}
+      # Fenetre de temps (desactivee le 28/07/2026, remettre a 1 pour reactiver)
+      - AUTO_CONCILE_TIME_WINDOW=${AUTO_CONCILE_TIME_WINDOW}
+      - AUTO_CONCILE_WINDOW_MIN=${AUTO_CONCILE_WINDOW_MIN}
+      - AUTO_CONCILE_WINDOW_MAX=${AUTO_CONCILE_WINDOW_MAX}
+      # Fenetre de cote reelle ARJEL (1.30-2.50 par defaut)
+      - TIER_MIN_REAL_ODD=${TIER_MIN_REAL_ODD}
+      - TIER_MAX_REAL_ODD=${TIER_MAX_REAL_ODD}
+      - MIN_PLAYABLE_ODD=${MIN_PLAYABLE_ODD}
+      - MAX_PLAYABLE_ODD=${MAX_PLAYABLE_ODD}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
