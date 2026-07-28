@@ -5184,6 +5184,12 @@ function isNoiseForDisplay(match) {
 const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 30));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
+// Décision fondateur du 28/07/2026 : la sélection ne se fait plus sur la minute
+// mais sur la cote réelle ARJEL (fenêtre 1.30–2.50). La fenêtre de temps
+// produisait trop peu de signaux, et créait une incohérence visible : un match à
+// la 80e restait affiché en direct mais refusait l'analyse. Mettre
+// AUTO_CONCILE_TIME_WINDOW=1 dans .env pour la réactiver sans redéployer.
+const AUTO_CONCILE_TIME_WINDOW = process.env.AUTO_CONCILE_TIME_WINDOW === "1";
 
 // ── Règles métier gravées dans la pierre (ne pas assouplir) ───────────────────
 // R1 : aucun prono live avant la 35e minute ni après la 75e (données suffisantes
@@ -5201,9 +5207,17 @@ function isMatchDecided(match) {
 // Retourne null si le match peut être pronostiqué en live, sinon la raison du blocage.
 // Utilisé par l'auto-observer ET les endpoints d'analyse manuelle (pas le prématch).
 function livePickBlockReason(match) {
-  const minute = parseLiveMinuteValue(match && match.minute);
-  if (minute !== null && minute < AUTO_CONCILE_WINDOW_MIN) return `Analyse indisponible avant la ${AUTO_CONCILE_WINDOW_MIN}e minute.`;
-  if (minute !== null && minute > AUTO_CONCILE_WINDOW_MAX) return `Analyse indisponible après la ${AUTO_CONCILE_WINDOW_MAX}e minute.`;
+  // Fenêtre de temps désactivée par défaut depuis le 28/07/2026 (décision du
+  // fondateur) : c'est la COTE RÉELLE qui décide, pas la minute. Un match trop
+  // avancé ou déjà plié voit sa cote sortir de la fenêtre 1.30–2.50 et se trouve
+  // exclu de fait — sans priver d'analyse un match encore ouvert à la 80e.
+  // Réactivable par .env : AUTO_CONCILE_TIME_WINDOW=1.
+  if (AUTO_CONCILE_TIME_WINDOW) {
+    const minute = parseLiveMinuteValue(match && match.minute);
+    if (minute !== null && minute < AUTO_CONCILE_WINDOW_MIN) return `Analyse indisponible avant la ${AUTO_CONCILE_WINDOW_MIN}e minute.`;
+    if (minute !== null && minute > AUTO_CONCILE_WINDOW_MAX) return `Analyse indisponible après la ${AUTO_CONCILE_WINDOW_MAX}e minute.`;
+  }
+  // R2 conservée : un match à finalité connue n'a plus rien à offrir.
   if (isMatchDecided(match)) return "Analyse indisponible : match à finalité connue (écart de 3 buts ou plus).";
   return null;
 }
@@ -5227,9 +5241,13 @@ function shouldAutoObserveMatch(match) {
   if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
   if (isUnderperformingCompetition(match)) return false; // exclut les compétitions perdantes
   if (isMatchDecided(match)) return false;               // R2 : match à finalité connue (écart >= 3 buts)
-  // R1 : fenêtre 35-75' — assez de données jouées + cote encore offerte
-  const minute = parseLiveMinuteValue(match.minute);
-  return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
+  // Sélection par la COTE et non par la minute (décision du 28/07/2026). La
+  // fenêtre de temps reste disponible via AUTO_CONCILE_TIME_WINDOW=1.
+  if (AUTO_CONCILE_TIME_WINDOW) {
+    const minute = parseLiveMinuteValue(match.minute);
+    return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
+  }
+  return true;
 }
 
 function hasPredictionSnapshot(match) {

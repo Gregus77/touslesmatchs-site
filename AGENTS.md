@@ -116,7 +116,13 @@ TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 - Signal Fort : confiance >= 80%
 - Multi-sport : Football, Basketball, Hockey, Baseball, Tennis
 - Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 82 (regle par le fondateur)
-- R1 : aucun pronostic avant la 35e minute ni apres la 75e
+- **R1 (REMPLACEE le 28/07/2026, decision du fondateur)** : la selection ne se fait
+  PLUS sur la minute de jeu mais sur la COTE REELLE ARJEL, fenetre 1.30-2.50.
+  Motif : la fenetre de temps produisait trop peu de signaux et creait une
+  incoherence visible (match affiche en direct mais analyse refusee). Un match
+  plie voit de toute facon sa cote sortir de la fenetre. Ne pas retablir la
+  fenetre de temps sans accord explicite du fondateur
+  (reactivable ponctuellement par .env : AUTO_CONCILE_TIME_WINDOW=1).
 - R2 : aucun pronostic sur un match a finalite connue (ecart >= 3 buts)
 
 ### Comptes speciaux actifs
