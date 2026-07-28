@@ -18,6 +18,9 @@ const fs = require("fs");
 const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
+// Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
+// (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
+const analysisEngine = require("./analysis_engine");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
@@ -1149,7 +1152,9 @@ function callOpenAICompat(prompt, { url, key, model }) {
           }
           const text = json.choices?.[0]?.message?.content || "";
           if (!text) return resolve({ ok: false, text: "", error: `réponse vide (HTTP ${res.statusCode}, modèle ${model})` });
-          resolve({ ok: true, text });
+          // usage.* provient de l'API quand elle le fournit (cas OpenRouter/Groq) :
+          // sert à journaliser un coût réel plutôt qu'une estimation approximative.
+          resolve({ ok: true, text, usageIn: json.usage?.prompt_tokens || 0, usageOut: json.usage?.completion_tokens || 0 });
         } catch { resolve({ ok: false, text: "", error: `réponse illisible (HTTP ${res.statusCode}): ${String(data).slice(0, 120)}` }); }
       });
     });
@@ -1279,7 +1284,12 @@ async function runShadowEvaluation(match) {
       const existing = db.prepare("SELECT 1 FROM shadow_evals WHERE match_key = ? AND agent_name = ?").get(matchKey, agent.name);
       if (existing) continue;
 
-      const result = await agent.call(prompt);
+      // Passage obligatoire par le garde-fou pour Qwen/Kimi (budget, anti-doublon,
+      // coupe-circuit) ; les autres agents shadow ne sont pas concernés par ce
+      // budget OpenRouter (voir analysis_engine.js).
+      const result = await analysisEngine.guardedShadowCall(db, agent, prompt, {
+        matchKey, competition: match.competition || match.league || "",
+      });
       if (!result.ok || !result.text) {
         // Log explicite : un agent mal configuré (mauvais identifiant de modèle,
         // clé absente, quota dépassé) doit se voir dans les logs, pas disparaître.

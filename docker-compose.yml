@@ -115,7 +115,12 @@ services:
     container_name: touslesmatchs-hermes-admin
     restart: unless-stopped
     working_dir: /app
-    command: ["python", "-c", "import time; print('[hermes-admin] Idle — admin via api_server.js'); time.sleep(float('inf'))"]
+    # time.sleep(float('inf')) plante avec "OverflowError: timestamp out of range
+    # for platform time_t" sur cette plateforme — boucle de redemarrage en continu
+    # depuis 4 jours (trouve lors de l'audit budget du 28/07/2026, invisible
+    # jusque-la : `docker ps` affichait juste "Restarting"). Une boucle infinie
+    # avec un sommeil long et fini ne plante jamais et consomme un temps CPU nul.
+    command: ["python", "-c", "import time; print('[hermes-admin] Idle — admin via api_server.js — aucun appel IA depuis ce service'); [time.sleep(3600) for _ in iter(int, 1)]"]
     environment:
       - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
