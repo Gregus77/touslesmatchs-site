@@ -1,5 +1,37 @@
 # CODEX.md — Instructions pour GPT Codex (OpenAI)
 
+## 🔴 REPRISE APRÈS CLAUDE — LIS CECI EN PREMIER
+
+Tu prends le relais de Claude (session à court de crédit). L'historique de la
+conversation Claude t'est fourni juste au-dessus/à côté de ce message.
+
+**Étapes de reprise (dans l'ordre) :**
+1. Lis l'historique de conversation fourni → tu comprends le contexte immédiat.
+2. Lis `CHANGELOG.md` (racine du repo) → **section « 🔄 EN COURS — À REPRENDRE »** en
+   haut : c'est l'état EXACT (ce qui est fait, ce qui reste). Toujours à jour.
+3. Lis `AGENTS.md` (racine) → architecture, endpoints, liens bookmakers, pièges déploiement.
+4. Continue le travail **sans rien effacer** de ce que Claude a fait.
+
+**Où sont les fichiers :**
+- Repo GitHub : `Gregus77/touslesmatchs-site`
+- Branche à jour : `codex/dashboard-premium-redesign` (le code récent est ICI, pas sur main)
+- Serveur (VPS) : `/opt/touslesmatchs`
+- Fichiers clés : `scripts/api_server.js` (toute l'API + SEO inline + paliers),
+  `public/index.html` (accueil), `public/dashboard.html` (compte gratuit),
+  `scripts/bookmakers.config.js` (liens affiliés Winamax/Unibet/PMU),
+  `AGENTS.md` / `CHANGELOG.md` / `POUR-LES-IA.md` (docs).
+
+**Interdictions absolues (RIEN EFFACER) :**
+- Ne SUPPRIME aucun fichier, aucune fonction, aucun endpoint existant sans accord explicite.
+- Travaille sur TA branche (`codex/<tache>`), jamais sur `main` ni sur la branche de Claude.
+- **Après CHAQUE changement : mets à jour `CHANGELOG.md`** (ajoute ta ligne + tiens à jour
+  la section « 🔄 EN COURS — À REPRENDRE » pour la prochaine IA).
+- Ne casse pas : endpoints API, liens bookmakers (PAS de Betclic), Stripe, Telegram, Brevo, Concile.
+- Conformité ANJ : jamais le mot "pari". Jamais de clé/token dans le code. Jamais l'identité du fondateur.
+- Zone Telegram + Brevo + `council/` = Hermès → ne pas toucher sans accord.
+
+---
+
 ## Avant toute chose
 
 1. Lis `AGENTS.md` a la racine du projet — il contient TOUTES les regles partagees
@@ -29,7 +61,7 @@ Ne JAMAIS pusher sur `main` ou sur une branche `claude/*`.
 - Ne JAMAIS modifier `docker-compose.yml` sans accord explicite du fondateur
 - Ne JAMAIS modifier `Caddyfile` sans accord explicite
 - Ne JAMAIS changer les routes API existantes (tu peux en ajouter)
-- Ne JAMAIS baisser `PUBLISHED_MIN_CONFIDENCE` en dessous de 83
+- Ne JAMAIS changer `PUBLISHED_MIN_CONFIDENCE` (= 82) sans accord du fondateur
 - Ne JAMAIS utiliser le mot "pari" dans le contenu public
 - Ne JAMAIS exposer des cles API, tokens, ou secrets
 - Ne JAMAIS exposer l'identite du fondateur
@@ -65,9 +97,16 @@ git diff HEAD~5 -- <fichier>
 TousLesMatchs.com est un site d'analyses sportives par IA. Le coeur :
 - 4 agents IA analysent les matchs (Concile Hermes, cote Python)
 - Une version JS simplifiee (Auto-Concile) tourne dans l'API pour le Live IA
-- Les utilisateurs achetent des abonnements via Stripe (1euro, 9.90, 19.90/mois)
+- Les utilisateurs achetent des abonnements via Stripe : Standard 4,90 EUR/mois, Premium 14,90 EUR/mois, Elite/VIP 29,90 EUR/mois
 - Le trafic vient de TikTok → site → Telegram → conversion
 - Conformite ANJ obligatoire (pas de "pari", disclaimer, pas de garantie de gains)
+
+## Reprise Claude apres Codex - 2026-07-24
+
+- Derniere branche a reprendre : `codex/dashboard-premium-redesign`
+- Dernier commit fonctionnel Codex : `9e65437 [Codex] Simplifie historique et conversion live`
+- Fait : accueil allege, gamme Standard/Premium/Elite-VIP, prix harmonises, liens Stripe publics, historique veille replie par defaut, matchs live cliquables vers les offres.
+- A faire ensuite : ajouter logos/fanions des equipes et remonter les vrais matchs en temps reel en haut de l'accueil/direct.
 
 ## En cas de doute
 

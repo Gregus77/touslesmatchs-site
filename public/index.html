@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TousLesMatchs — Hermes analyse. Tu décides.</title>
-<meta name="description" content="5 IA analysent chaque match. Le Chief tranche. Teste Hermes pour 1 euro et vois ce que le Concile pense vraiment.">
+<meta name="description" content="5 IA indépendantes analysent chaque match sans émotion. Signaux validés par convergence statistique, résultats vérifiables le lendemain.">
 <link rel="canonical" href="https://www.touslesmatchs.com/">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/favicon.ico">
@@ -66,7 +66,7 @@
       "name": "TousLesMatchs",
       "url": "https://www.touslesmatchs.com/",
       "logo": "https://www.touslesmatchs.com/logo512.png",
-      "description": "Analyse sportive assistée par IA : 5 agents spécialisés + 1 Chief, picks vérifiés et historique transparent.",
+      "description": "Analyse sportive assistée par IA : 5 IA indépendantes, vote de convergence, picks vérifiés et historique transparent.",
       "sameAs": ["https://www.tiktok.com/@touslesmatchs.com"]
     },
     {
@@ -81,11 +81,11 @@
       "@type": "FAQPage",
       "@id": "https://www.touslesmatchs.com/#faq",
       "mainEntity": [
-        { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants ; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable." } },
-        { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
-        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort." } },
+        { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités ; le signal est mis en avant seulement si les votes convergent." } },
+        { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare les votes, la value, les données manquantes et le risque par sport. Un signal est conseillé uniquement quand la convergence statistique est forte." } },
+        { "@type": "Question", "name": "Est-ce que je peux recevoir les analyses sur Telegram ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Premium débloque les analyses Live IA et le groupe Premium. Elite ajoute les alertes de signal fort." } },
         { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort." } }
+        { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Premium (9.90€/mois) = 10 analyses/jour + Telegram Premium. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. L'analyse du jour reste gratuite sur le site, avec son résultat vérifiable le lendemain." } }
       ]
     }
   ]
@@ -1144,11 +1144,11 @@ footer{
 <div class="ticker">
   <div class="ticker-inner">
     <span id="t1">🕐 Prochain pick conseillé bientôt — <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#00d4ff;text-decoration:none">Rejoindre le groupe Telegram</a></span>
-    <span>📊 Concile V4.3 · 5 agents + Chief · 3 sources minimum · Aucun match inventé</span>
+    <span>📊 Concile V5 · 5 IA indépendantes · vote de convergence · Aucun match inventé</span>
     <span id="tw1">Statistiques en cours de synchronisation</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
     <span id="t2">🕐 Prochain pick conseillé bientôt — <a href="https://t.me/+qFnIuKg2ZhdlMmY8" style="color:#00d4ff;text-decoration:none">Rejoindre le groupe Telegram</a></span>
-    <span>📊 Concile V4.3 · 5 agents + Chief · 3 sources minimum · Aucun match inventé</span>
+    <span>📊 Concile V5 · 5 IA indépendantes · vote de convergence · Aucun match inventé</span>
     <span id="tw2">Statistiques en cours de synchronisation</span>
     <span>🔴 Live IA disponible — analysez chaque match en temps réel</span>
   </div>
@@ -1160,11 +1160,12 @@ footer{
   <div class="nav-center">
     <a href="#pick" data-i18n="pick_today">Analyse du jour</a>
     <a href="/live-ia"><span class="nav-live-dot" style="display:inline-block;margin-right:5px;vertical-align:middle"></span>Live IA</a>
-    <a href="/preuves">🏆 Résultats</a>
+    <a href="/performances">🏆 Résultats</a>
     <a href="/bankroll">💼 Ma bankroll</a>
     <a href="/performances">Performances</a>
     <a href="#methode">Méthode</a>
     <a href="#faq">FAQ</a>
+    <a href="/dashboard" style="color:#34d399!important">✨ Compte gratuit</a>
     <a href="#plans" data-i18n="nav_join">Abonnements</a>
     <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer" style="color:var(--cyan)!important">📱 Telegram</a>
     <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=nav&utm_campaign=prospection" target="_blank" rel="noopener noreferrer" style="color:#fb7185!important">TikTok</a>
@@ -1179,9 +1180,10 @@ footer{
 <div class="mobile-menu" id="mmenu">
   <a href="/" data-i18n="mm_home">🏠 Accueil</a>
   <a href="/live-ia#historique" data-i18n="mm_hist">📊 Historique des picks</a>
-  <a href="/preuves" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
+  <a href="/performances" data-i18n="mm_preuves">🏆 Preuves de résultats</a>
   <a href="/live-ia" data-i18n="mm_live">🔴 Live IA</a>
   <a href="/bankroll">💼 Ma bankroll</a>
+  <a href="/dashboard" style="color:#34d399" onclick="toggleMenu()">✨ Créer un compte gratuit</a>
   <a href="#" onclick="toggleMenu();openModal();" style="color:var(--muted2)">🔑 Se connecter</a>
   <div class="mm-sep"></div>
   <a href="/#plan-carte" class="mm-cta" onclick="toggleMenu()">Abonnement</a>
@@ -1432,26 +1434,108 @@ footer{
   <!-- Badge -->
   <div class="hero-badge" style="margin-bottom:20px">
     <span class="badge-dot"></span>
-    <span>Concile Hermes · 5 IA + 1 Chief</span>
+    <span>Le Conseil IA · 5 votes indépendants</span>
   </div>
 
-  <!-- Headline — storytelling -->
-  <h1 style="font-size:clamp(32px,5vw,62px);font-weight:900;line-height:1.05;letter-spacing:-.04em;margin-bottom:18px;max-width:700px;text-align:center">
-    Hermes analyse.<br>
-    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Tu décides.</span>
+  <!-- Headline — bénéfice + différenciateur (vote multi-IA) -->
+  <h1 style="font-size:clamp(32px,5vw,62px);font-weight:900;line-height:1.05;letter-spacing:-.04em;margin-bottom:18px;max-width:760px;text-align:center">
+    Ne décide plus seul.<br>
+    <span style="background:linear-gradient(105deg,#34d399 0%,#22d3ee 50%,#818cf8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">5 IA votent. La convergence valide.</span>
   </h1>
 
-  <!-- Subtitle — 1 phrase claire -->
-  <p class="hero-sub" style="font-size:17px;color:var(--muted2);max-width:440px;line-height:1.6;margin-bottom:28px;text-align:center">
-    5 intelligences artificielles croisent les données de chaque match. Le Chief tranche. Tu reçois le verdict.
+  <!-- Subtitle — différenciateur clair -->
+  <p class="hero-sub" style="font-size:17px;color:var(--muted2);max-width:480px;line-height:1.6;margin-bottom:26px;text-align:center">
+    Là où les autres te donnent l'avis d'<strong style="color:#eceaf4">une seule</strong> IA, nous croisons le vote de <strong style="color:#eceaf4">5 intelligences artificielles indépendantes</strong>. Aucune émotion : seulement données live, historique, dynamique et probabilités.
   </p>
 
-  <!-- CTA UNIQUE — Tester pour 1 euro -->
+  <!-- ══ LE CONSEIL DÉLIBÈRE — panneau vote multi-IA (effet WOW) ══ -->
+  <style>
+    .council-panel{width:100%;max-width:460px;margin:0 auto 26px;
+      background:linear-gradient(160deg,rgba(30,27,58,.75),rgba(15,14,30,.85));
+      border:1px solid rgba(129,140,248,.28);border-radius:20px;padding:18px 18px 20px;
+      box-shadow:0 20px 60px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.02) inset;
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);position:relative;overflow:hidden}
+    .council-panel::before{content:"";position:absolute;top:-40%;left:-30%;width:80%;height:80%;
+      background:radial-gradient(circle,rgba(129,140,248,.16),transparent 70%);pointer-events:none}
+    .cp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;position:relative}
+    .cp-live{display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:800;
+      letter-spacing:.08em;text-transform:uppercase;color:#a78bfa}
+    .cp-live-dot{width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:cpPulse 1.8s infinite}
+    @keyframes cpPulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.6)}70%{box-shadow:0 0 0 8px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+    .cp-match{font-size:11px;color:var(--muted2);font-weight:600;text-align:right;max-width:180px;line-height:1.2}
+    .cp-agent{display:flex;align-items:center;gap:11px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.05);opacity:0;transform:translateY(6px);animation:cpIn .5s forwards}
+    .cp-agent:last-of-type{border-bottom:none}
+    @keyframes cpIn{to{opacity:1;transform:none}}
+    .cp-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+    .cp-dot.g{background:#34d399;box-shadow:0 0 10px rgba(52,211,153,.5)}
+    .cp-dot.y{background:#fbbf24;box-shadow:0 0 10px rgba(251,191,36,.5)}
+    .cp-name{font-size:13px;font-weight:800;color:#c7d2fe;width:58px;flex-shrink:0}
+    .cp-bet{font-size:12.5px;color:#eceaf4;flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .cp-conf{font-size:13px;font-weight:900;flex-shrink:0}
+    .cp-conf.g{color:#34d399}.cp-conf.y{color:#fbbf24}
+    .cp-verdict{margin-top:14px;padding:15px 16px;border-radius:14px;
+      background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(52,211,153,.12));
+      border:1px solid rgba(124,58,237,.4);position:relative}
+    .cp-verdict-lbl{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#a78bfa;margin-bottom:5px}
+    .cp-verdict-bet{font-size:19px;font-weight:900;color:#fff;line-height:1.15;letter-spacing:-.02em}
+    .cp-verdict-meta{display:flex;align-items:center;gap:14px;margin-top:8px}
+    .cp-verdict-conf{display:inline-flex;align-items:baseline;gap:4px}
+    .cp-verdict-conf b{font-size:22px;font-weight:900;color:#34d399}
+    .cp-verdict-conf span{font-size:11px;color:var(--muted2)}
+    .cp-skel{height:38px;border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.08),rgba(255,255,255,.04));background-size:200% 100%;animation:cpShimmer 1.4s infinite;margin-bottom:6px}
+    @keyframes cpShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+    @media(max-width:640px){.council-panel{max-width:100%}.cp-name{width:52px;font-size:12px}}
+  </style>
+  <div class="council-panel" id="council-panel">
+    <div class="cp-head">
+      <span class="cp-live"><span class="cp-live-dot"></span>Le Conseil délibère</span>
+      <span class="cp-match" id="cp-match">Analyse du jour</span>
+    </div>
+    <div id="cp-body">
+      <div class="cp-skel"></div><div class="cp-skel"></div><div class="cp-skel"></div>
+    </div>
+  </div>
+  <script>
+  (function loadCouncilVote(){
+    var body=document.getElementById('cp-body');
+    var matchEl=document.getElementById('cp-match');
+    if(!body) return;
+    fetch('/api/council-vote').then(function(r){return r.json();}).then(function(d){
+      if(!d||!d.ok||!d.agents||!d.agents.length){ document.getElementById('council-panel').style.display='none'; return; }
+      if(d.match&&d.match.home){ matchEl.textContent=d.match.home+' — '+d.match.away; }
+      var html='';
+      d.agents.forEach(function(a,i){
+        var cls=a.aligned?'g':'y';
+        html+='<div class="cp-agent" style="animation-delay:'+(i*0.09)+'s">'
+          +'<span class="cp-dot '+cls+'"></span>'
+          +'<span class="cp-name">'+a.label+'</span>'
+          +'<span class="cp-bet">'+(a.bet||'')+'</span>'
+          +'<span class="cp-conf '+cls+'">'+a.confidence+'%</span>'
+          +'</div>';
+      });
+      var v=d.verdict||{};
+      html+='<div class="cp-verdict">'
+        +'<div class="cp-verdict-lbl">🔥 Verdict du Conseil</div>'
+        +'<div class="cp-verdict-bet">'+(v.bet||'—')+'</div>'
+        +'<div class="cp-verdict-meta">'
+        +'<span class="cp-verdict-conf"><b>'+(v.confidence||'')+'%</b><span>de confiance</span></span>'
+        +(v.cote?'<span class="cp-verdict-conf"><b style="color:#22d3ee">'+v.cote+'</b><span>cote</span></span>':'')
+        +'</div></div>';
+      body.innerHTML=html;
+    }).catch(function(){ document.getElementById('council-panel').style.display='none'; });
+  })();
+  </script>
+
+  <!-- CTA — voir l'analyse (friction basse) + offres Pro/Elite -->
   <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:28px">
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <a href="#pick"
        style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15);transition:all .25s;letter-spacing:-.01em"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55),0 0 80px rgba(16,185,129,.2)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4),0 0 60px rgba(16,185,129,.15)'">
-      Tester Hermes — 1€
+      🔥 Voir l'analyse du jour
+    </a>
+    <a href="#plans"
+       style="font-size:14px;color:#a78bfa;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(167,139,250,.4);padding-bottom:1px">
+      ou recevoir tous les signaux — Premium &amp; Elite →
     </a>
     <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center">
       <span style="font-size:12px;color:var(--muted2)">🔒 Stripe</span>
@@ -1489,14 +1573,18 @@ footer{
     </div>
   </div>
 
-  <!-- Stats bar — compact -->
+  <!-- Barre de preuves — chiffres réels -->
   <div class="hero-stats">
-    <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Winrate</div></div>
-    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simule</div></div>
-    <div class="hs"><div class="hs-val c-violet">5+1</div><div class="hs-label">IA</div></div>
+    <div class="hs"><div class="hs-val" style="color:#eceaf4" id="hs-total">—</div><div class="hs-label">Matchs analysés</div></div>
+    <div class="hs"><div class="hs-val c-green" id="hs-winrate">—</div><div class="hs-label">Réussite</div></div>
+    <div class="hs"><div class="hs-val c-cyan" id="hs-gain">—</div><div class="hs-label">Profit simulé</div></div>
+    <div class="hs"><div class="hs-val c-violet">5/5</div><div class="hs-label">Vote IA</div></div>
   </div>
 
-  <p style="font-size:10px;color:var(--muted);margin-top:12px;text-align:center">
+  <p style="font-size:11px;color:var(--muted2);margin-top:12px;text-align:center;font-weight:600">
+    🔄 Mise à jour toutes les heures · Historique 100&nbsp;% public
+  </p>
+  <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center">
     Aucune garantie de gain · 18+ · joueurs-info-service.fr
   </p>
 
@@ -1509,6 +1597,104 @@ footer{
 
   </div><!-- /z-index wrapper -->
 </section>
+
+<!-- ══ BANDEAU ACTIVITÉ EN DIRECT — compteurs réels (réassurance) ══ -->
+<style>
+  .live-strip{max-width:900px;margin:0 auto;padding:0 24px}
+  .live-strip-inner{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;
+    background:rgba(13,16,32,.55);border:1px solid rgba(129,140,248,.16);border-radius:14px;
+    backdrop-filter:blur(12px);overflow:hidden}
+  .ls-item{flex:1;min-width:140px;padding:14px 18px;text-align:center;border-right:1px solid rgba(255,255,255,.05)}
+  .ls-item:last-child{border-right:none}
+  .ls-val{font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1;margin-bottom:4px;color:#eceaf4}
+  .ls-val .ls-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#34d399;margin-right:5px;vertical-align:middle;animation:cpPulse 1.8s infinite}
+  .ls-lbl{font-size:11px;color:var(--muted2);font-weight:600;letter-spacing:.02em}
+  @media(max-width:560px){.ls-item{min-width:45%;flex:1 1 45%}.ls-item:nth-child(2){border-right:none}}
+</style>
+<div class="live-strip" id="live-strip" style="display:none">
+  <div class="live-strip-inner">
+    <div class="ls-item"><div class="ls-val"><span class="ls-live-dot"></span><span id="ls-analyses">—</span></div><div class="ls-lbl">Analyses aujourd'hui</div></div>
+    <div class="ls-item"><div class="ls-val" id="ls-ia">5</div><div class="ls-lbl">IA au vote</div></div>
+    <div class="ls-item"><div class="ls-val" id="ls-total">—</div><div class="ls-lbl">Matchs analysés</div></div>
+    <div class="ls-item"><div class="ls-val c-violet" style="color:#a78bfa" id="ls-signals">—</div><div class="ls-lbl">Signaux forts du jour</div></div>
+  </div>
+</div>
+<script>
+(function loadLiveActivity(){
+  fetch('/api/live-activity').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok) return;
+    var strip=document.getElementById('live-strip');
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('ls-analyses', d.published_today||0);
+    set('ls-ia', d.ia_active||5);
+    set('ls-total', d.total_published||0);
+    set('ls-signals', d.signals_today||0);
+    if((d.total_published||0)>0 || (d.analyses_today||0)>0) strip.style.display='block';
+  }).catch(function(){});
+})();
+</script>
+
+<!-- Bandeau matchs en direct multi-sport -->
+<style>
+  .home-live-board{max-width:1080px;margin:24px auto 0;padding:0 24px}
+  .home-live-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:12px}
+  .home-live-title{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:900;color:#eceaf4;letter-spacing:-.02em}
+  .home-live-title .dot{width:8px;height:8px;border-radius:50%;background:#f43f5e;animation:cpPulse 1.8s infinite}
+  .home-live-link{font-size:12px;font-weight:800;color:#a78bfa;text-decoration:none}
+  .home-live-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .home-live-card{border:1px solid rgba(255,255,255,.09);background:rgba(13,16,32,.55);border-radius:12px;padding:13px 14px;display:grid;gap:10px;min-width:0}
+  .home-live-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#a4a1b8;font-weight:800;min-width:0}
+  .home-live-comp{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .home-live-sport{width:26px;height:26px;border-radius:8px;background:rgba(255,255,255,.06);display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto}
+  .home-live-time{color:#fb7185;background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.2);border-radius:999px;padding:3px 8px;white-space:nowrap}
+  .home-live-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+  .home-live-team{display:flex;align-items:center;gap:8px;min-width:0}
+  .home-live-team.away{justify-content:flex-end;text-align:right}
+  .home-live-logo{width:30px;height:30px;border-radius:8px;border:1px solid rgba(255,255,255,.08);background:#141827;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:900;color:#eceaf4;flex:0 0 auto}
+  .home-live-logo img{width:100%;height:100%;object-fit:contain}
+  .home-live-name{font-size:13px;font-weight:800;color:#eceaf4;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .home-live-score{font-size:18px;font-weight:950;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap}
+  @media(max-width:760px){.home-live-grid{grid-template-columns:1fr}.home-live-board{padding:0 16px}.home-live-head{align-items:center}.home-live-card{padding:12px}}
+</style>
+<div class="home-live-board" id="home-live-board" style="display:none">
+  <div class="home-live-head">
+    <div class="home-live-title"><span class="dot"></span><span>En direct</span></div>
+    <a href="/live-ia" class="home-live-link">Ouvrir Live IA →</a>
+  </div>
+  <div class="home-live-grid" id="home-live-grid"></div>
+</div>
+<script>
+(function loadHomeLiveMatches(){
+  var SPORT_ICONS={Football:'⚽',Basketball:'🏀',Hockey:'🏒',Baseball:'⚾'};
+  var FLAGS={"Argentina":"🇦🇷","Brazil":"🇧🇷","Canada":"🇨🇦","France":"🇫🇷","Germany":"🇩🇪","Italy":"🇮🇹","Mexico":"🇲🇽","Spain":"🇪🇸","USA":"🇺🇸","United States":"🇺🇸","World":"🌍"};
+  function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
+  function initials(name){return String(name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(function(p){return p.charAt(0)}).join('').toUpperCase()||'?';}
+  function splitComp(raw){var p=String(raw||'').split(/\s+[·•]\s+/);return{league:p[0]||'',country:p.length>1?p[p.length-1]:''};}
+  function logo(src,name){return src?'<img src="'+esc(src)+'" alt="" loading="lazy" onerror="this.style.display=\'none\'">':esc(initials(name));}
+  function timeLabel(m){if(m.minute!==null&&m.minute!==undefined&&m.minute!=='')return esc(m.minute)+(typeof m.minute==='number'?"'":'');return 'Live';}
+  function diversify(list,max){
+    var order=['Baseball','Basketball','Hockey','Football'];
+    var picked=[], used=new Set();
+    order.forEach(function(s){var i=list.findIndex(function(m,idx){return !used.has(idx)&&m.sport===s});if(i>=0&&picked.length<max){picked.push(list[i]);used.add(i);}});
+    list.forEach(function(m,i){if(picked.length<max&&!used.has(i))picked.push(m);});
+    return picked;
+  }
+  fetch('/api/live-matches').then(function(r){return r.json();}).then(function(d){
+    var board=document.getElementById('home-live-board'), grid=document.getElementById('home-live-grid');
+    if(!d||!d.ok||!Array.isArray(d.matches)||!d.matches.length||!board||!grid)return;
+    var matches=diversify(d.matches,4);
+    grid.innerHTML=matches.map(function(m){
+      var comp=splitComp(m.competition||m.sport), flag=FLAGS[comp.country]||'', icon=SPORT_ICONS[m.sport]||'🏟️';
+      var sh=m.score_home==null?'-':m.score_home, sa=m.score_away==null?'-':m.score_away;
+      return '<div class="home-live-card">'+
+        '<div class="home-live-meta"><div class="home-live-comp"><span class="home-live-sport">'+icon+'</span><span>'+esc(comp.league||m.sport)+(comp.country?' · '+flag+' '+esc(comp.country):'')+'</span></div><span class="home-live-time">'+timeLabel(m)+'</span></div>'+
+        '<div class="home-live-row"><div class="home-live-team"><span class="home-live-logo">'+logo(m.home_logo,m.home)+'</span><span class="home-live-name">'+esc(m.home)+'</span></div><div class="home-live-score">'+esc(sh)+' — '+esc(sa)+'</div><div class="home-live-team away"><span class="home-live-name">'+esc(m.away)+'</span><span class="home-live-logo">'+logo(m.away_logo,m.away)+'</span></div></div>'+
+      '</div>';
+    }).join('');
+    board.style.display='block';
+  }).catch(function(){});
+})();
+</script>
 
 <!-- ── BANDEAU MARCHÉ CHAMPION — "But 1ère MT" 82% ──────────────────────── -->
 <!-- Bannière champion : winrate + total remplis en direct depuis /api/signal-fort-stats
@@ -1704,6 +1890,10 @@ footer{
     <div style="position:relative;height:180px;width:100%">
       <canvas id="roi-chart"></canvas>
     </div>
+    <div style="text-align:center;margin-top:22px">
+      <a href="/performances" id="roi-see-all" style="display:inline-block;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:#eceaf4;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;transition:all .2s">📊 Voir <span id="roi-see-all-count">tous les</span> résultats vérifiés →</a>
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">Historique daté · winrate · ROI · filtrable par palier</div>
+    </div>
   </div>
 </section>
 
@@ -1717,8 +1907,8 @@ footer{
     </div>
     <div class="community-card">
       <div class="community-icon">🤖</div>
-      <div class="community-val" style="color:#a855f7">5+1</div>
-      <div class="community-lbl">Agents + Chief</div>
+      <div class="community-val" style="color:#a855f7">5/5</div>
+      <div class="community-lbl">Votes IA</div>
     </div>
     <div class="community-card">
       <div class="community-icon">🌍</div>
@@ -1762,69 +1952,238 @@ footer{
 </section>
 
 <!-- PLANS -->
+<!-- ══ RÉSULTATS PAR PALIER (Standard / Premium / Elite) ══ -->
+<style>
+  .tier-section{max-width:1000px;margin:64px auto 0;padding:0 24px}
+  .tier-eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#a78bfa;text-align:center;margin-bottom:10px}
+  .tier-title{font-size:clamp(24px,4vw,38px);font-weight:900;letter-spacing:-.03em;text-align:center;line-height:1.12;margin-bottom:12px}
+  .tier-sub{font-size:15px;color:var(--muted2);text-align:center;max-width:600px;margin:0 auto 28px;line-height:1.6}
+  .tier-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:22px;flex-wrap:wrap}
+  .tier-tab{padding:11px 22px;border-radius:11px;font-size:14px;font-weight:800;cursor:pointer;border:1px solid var(--b2);background:rgba(13,16,32,.5);color:var(--muted2);transition:all .2s}
+  .tier-tab.active{color:#fff;border-color:transparent}
+  .tier-tab.active[data-t="standard"]{background:linear-gradient(135deg,#059669,#10b981)}
+  .tier-tab.active[data-t="premium"]{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+  .tier-tab.active[data-t="elite"]{background:linear-gradient(135deg,#d97706,#f59e0b)}
+  .tier-panel{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid var(--b2);border-radius:20px;padding:26px 24px;backdrop-filter:blur(10px)}
+  .tier-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+  .tier-kpi{text-align:center;padding:14px 10px;background:rgba(255,255,255,.03);border-radius:14px}
+  .tier-kpi .v{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1}
+  .tier-kpi .l{font-size:11px;color:var(--muted2);font-weight:600;margin-top:5px}
+  .tier-desc{font-size:12.5px;color:var(--muted2);text-align:center;margin-bottom:18px;line-height:1.5}
+  .tier-recent a,.tier-recent div.row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--b1);border-radius:10px;margin-bottom:7px;font-size:13px}
+  .tier-recent .b{flex-shrink:0}
+  .tier-recent .m{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);font-weight:600}
+  .tier-recent .c{flex-shrink:0;color:var(--cyan);font-size:12px}
+  .tier-recent .g{flex-shrink:0;font-weight:800;font-size:12px}
+  @media(max-width:520px){.tier-kpi .v{font-size:24px}}
+</style>
+<section class="tier-section" id="paliers">
+  <div class="tier-eyebrow">Performance par abonnement</div>
+  <h2 class="tier-title">Chaque palier, sa performance.</h2>
+  <p class="tier-sub">Comme au trading : le Standard reçoit les gros fleurons, le Premium plus de volume, l'Elite reçoit tout — y compris les analyses « IA seulement ». Trois track records, tous publics.</p>
+  <div class="tier-tabs">
+    <div class="tier-tab active" data-t="standard" onclick="showTier('standard')">🟢 Standard</div>
+    <div class="tier-tab" data-t="premium" onclick="showTier('premium')">🟣 Premium</div>
+    <div class="tier-tab" data-t="elite" onclick="showTier('elite')">🟠 Elite</div>
+  </div>
+  <div class="tier-panel">
+    <div class="tier-desc" id="tier-desc"></div>
+    <div class="tier-kpis">
+      <div class="tier-kpi"><div class="v c-green" id="tier-wr">—</div><div class="l">Réussite</div></div>
+      <div class="tier-kpi"><div class="v" style="color:#eceaf4" id="tier-total">—</div><div class="l">Analyses</div></div>
+      <div class="tier-kpi"><div class="v c-cyan" id="tier-roi">—</div><div class="l">Profit simulé (10€/pick)</div></div>
+    </div>
+    <div class="tier-recent" id="tier-recent"></div>
+  </div>
+</section>
+<script>
+(function(){
+  var DESCS={
+    standard:"🟢 Standard — football, confiance ≥ 88%, cote réelle ≥ 1.50 chez un opérateur agréé. Jusqu'à 3 signaux par jour : le tri le plus sévère du Conseil.",
+    premium:"🟣 Premium — football, confiance ≥ 84%, cote réelle ≥ 1.50 chez un opérateur agréé, avant-match et en direct. Jusqu'à 10 signaux par jour. Inclut tout le Standard.",
+    elite:"🟠 Elite / VIP — tout le Premium, plus basket, hockey et baseball (confiance ≥ 82% sur ces sports). Cote réelle ≥ 1.50 chez un opérateur agréé. Jusqu'à 30 signaux par jour."
+  };
+  var DATA=null, current='standard';
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);});}
+  window.showTier=function(t){
+    current=t;
+    document.querySelectorAll('.tier-tab').forEach(function(el){el.classList.toggle('active',el.dataset.t===t);});
+    var d=document.getElementById('tier-desc'); if(d)d.textContent=DESCS[t]||'';
+    if(!DATA||!DATA[t]){return;}
+    var s=DATA[t];
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+    set('tier-wr',(s.winrate||0)+'%');
+    set('tier-total',s.total||0);
+    set('tier-roi',((s.roi>=0?'+':'')+(s.roi||0))+'€');
+    var rec=document.getElementById('tier-recent');
+    if(rec){
+      if(!s.recent||!s.recent.length){rec.innerHTML='<div style="text-align:center;color:var(--muted);font-size:13px;padding:14px">Track record en construction pour ce palier.</div>';}
+      else{
+        rec.innerHTML=s.recent.map(function(r){
+          var win=r.outcome==='win';
+          var gain=win?('+'+Math.round((r.cote-1)*10)+'€'):'-10€';
+          return '<div class="row"><span class="b">'+(win?'✅':'❌')+'</span>'
+            +'<span class="m">'+esc(r.home)+' - '+esc(r.away)+'</span>'
+            +'<span class="c">@'+(r.cote||'')+'</span>'
+            +'<span class="g" style="color:'+(win?'var(--green)':'var(--red)')+'">'+gain+'</span></div>';
+        }).join('');
+      }
+    }
+  };
+  fetch('/api/tier-stats').then(function(r){return r.json();}).then(function(d){
+    if(!d||!d.ok||!d.tiers){document.getElementById('paliers').style.display='none';return;}
+    DATA=d.tiers; window.showTier('standard');
+  }).catch(function(){var p=document.getElementById('paliers');if(p)p.style.display='none';});
+})();
+</script>
+
+<!-- ══ TUNNEL — commence gratuitement en 3 étapes ══ -->
+<style>
+  .funnel-section{max-width:1000px;margin:60px auto 0;padding:0 24px;text-align:center}
+  .funnel-eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#34d399;margin-bottom:10px}
+  .funnel-title{font-size:clamp(24px,4vw,38px);font-weight:900;letter-spacing:-.03em;margin-bottom:34px;line-height:1.12}
+  .funnel-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:30px}
+  .funnel-step{position:relative;background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid rgba(129,140,248,.18);border-radius:16px;padding:26px 20px;text-align:left;backdrop-filter:blur(10px)}
+  .funnel-num{position:absolute;top:-14px;left:20px;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#fff;background:linear-gradient(135deg,#059669,#10b981);box-shadow:0 4px 14px rgba(16,185,129,.4)}
+  .funnel-step.s2 .funnel-num{background:linear-gradient(135deg,#4f46e5,#7c3aed);box-shadow:0 4px 14px rgba(124,58,237,.4)}
+  .funnel-step.s3 .funnel-num{background:linear-gradient(135deg,#d97706,#f59e0b);box-shadow:0 4px 14px rgba(245,158,11,.4)}
+  .funnel-h{font-size:16px;font-weight:800;color:#eceaf4;margin:12px 0 6px;letter-spacing:-.01em}
+  .funnel-p{font-size:13px;color:var(--muted2);line-height:1.55}
+  .funnel-badge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:6px;margin-bottom:2px}
+  .funnel-badge.free{color:#34d399;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.28)}
+  .funnel-badge.pay{color:#f59e0b;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.28)}
+  .funnel-cta{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:16px;font-weight:900;padding:16px 38px;border-radius:13px;text-decoration:none;box-shadow:0 8px 28px rgba(16,185,129,.35);transition:all .25s}
+  .funnel-cta:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(16,185,129,.5)}
+  @media(max-width:720px){.funnel-steps{grid-template-columns:1fr;gap:22px}}
+</style>
+<section class="funnel-section">
+  <div class="funnel-eyebrow">Commence gratuitement</div>
+  <h2 class="funnel-title">3 étapes. Zéro carte bancaire<br>pour démarrer.</h2>
+  <div class="funnel-steps">
+    <div class="funnel-step s1">
+      <div class="funnel-num">1</div>
+      <span class="funnel-badge free">Gratuit</span>
+      <div class="funnel-h">Regarde l'analyse du jour</div>
+      <div class="funnel-p">Le verdict du Conseil, le consensus des 5 IA et le score de confiance — visibles directement sur le site, sans inscription.</div>
+    </div>
+    <div class="funnel-step s2">
+      <div class="funnel-num">2</div>
+      <span class="funnel-badge free">Gratuit</span>
+      <div class="funnel-h">Crée ton compte</div>
+      <div class="funnel-p">Suis tes analyses, garde ton historique personnel et reçois les picks. Toujours sans engagement, sans carte.</div>
+    </div>
+    <div class="funnel-step s3">
+      <div class="funnel-num">3</div>
+      <span class="funnel-badge pay">Quand tu es convaincu</span>
+      <div class="funnel-h">Passe Premium ou Elite</div>
+      <div class="funnel-p">Débloque les analyses Live IA illimitées et les alertes Signal Fort. Annulable à tout moment.</div>
+    </div>
+  </div>
+  <a href="/dashboard" class="funnel-cta">✨ Créer mon compte gratuit</a>
+  <div style="margin-top:12px;font-size:12px;color:var(--muted2)">0€ · Sans carte bancaire · Désinscription en 1 clic</div>
+</section>
+
 <section class="plans-section" id="plans">
   <div class="s-eyebrow">Offres</div>
-  <div class="s-title">Teste. Puis decide.</div>
-  <div class="s-sub">1 euro pour tester Hermes sur le match de ton choix. Si ca te plait, passe Pro ou Elite.</div>
+  <div class="s-title">Choisis ton niveau d'acces.</div>
+  <div class="s-sub">Regarde l'analyse du jour gratuitement. Le lendemain, verifie sur le site si le pick etait bon. Convaincu ? Passe Premium ou Elite.</div>
   <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:28px">
-    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#10b981">Code envoye instantanement par email</div>
+    <div style="background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:#10b981">Acces immediat apres paiement</div>
     <div style="background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:10px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--indigo2)">Paiement securise Stripe</div>
   </div>
   <div class="plans-grid">
-    <div class="pc feat" id="plan-carte" style="border-color:rgba(16,185,129,.4)">
-      <span class="pc-badge" style="background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3)">Recommande</span>
-      <div><div class="pc-price" style="background:linear-gradient(135deg,#34d399,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">1€</div><div class="pc-name" style="margin-top:6px">Tester Hermes</div></div>
-      <div class="pc-desc">Choisis un match en direct. Hermes l'analyse en 30 secondes. Tu vois le verdict du Concile.</div>
+    <div class="pc">
+      <span class="pc-badge" style="background:rgba(16,185,129,.15);color:#34d399;border-color:rgba(16,185,129,.3)">🟢 Standard</span>
+      <div><div class="pc-price">4<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Standard</div></div>
+      <div class="pc-desc" data-i18n="plan_standard_desc">Le tri le plus sévère : jusqu'à 3 signaux/jour, confiance ≥ 88%, cote réelle ARJEL ≥ 1.50.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
-        <div class="pcf"><span class="ok">✓</span>1 analyse complete Live IA</div>
-        <div class="pcf"><span class="ok">✓</span>Consensus 5 IA + verdict Chief</div>
-        <div class="pcf"><span class="ok">✓</span>Objections et confiance detaillee</div>
-        <div class="pcf"><span class="ok">✓</span>0 engagement, 0 abonnement</div>
+        <div class="pcf"><span class="ok">✓</span>Jusqu'à 3 signaux par jour</div>
+        <div class="pcf"><span class="ok">✓</span>Confiance ≥ 88% — le seuil le plus haut</div>
+        <div class="pcf"><span class="ok">✓</span>Cote réelle ARJEL ≥ 1.50</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Standard</div>
+        <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable à tout moment</b></div>
       </div>
       <div class="pc-bottom">
-        <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" id="btn-carte" class="pc-btn prim" style="background:linear-gradient(135deg,#059669,#10b981)!important;box-shadow:0 6px 24px rgba(16,185,129,.35)">Tester Hermes — 1€</a>
-        <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--muted2)">0 engagement — resultat en 30 secondes</div>
+        <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" id="btn-standard" class="pc-btn prim" data-i18n="plan_standard_btn">S'abonner — 4.90€/mois</a>
+        <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Le premier pas vers le Concile</div>
+        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Haute exigence, faible volume — le tri le plus sélectif</div>
       </div>
     </div>
-    <div class="pc">
-      <span class="pc-badge b-pr">Pro</span>
-      <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Pro</div></div>
-      <div class="pc-desc" data-i18n="plan_pro_desc">10 analyses Live IA par jour + groupe Telegram Pro. Tu ne rates plus aucun match rentable.</div>
+    <div class="pc feat" id="plan-carte" style="border-color:rgba(129,140,248,.45)">
+      <span class="pc-badge b-pr">⭐ Recommandé · Premium</span>
+      <div><div class="pc-price">9<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Premium</div></div>
+      <div class="pc-desc" data-i18n="plan_pro_desc">Plus de volume exploitable : jusqu'à 10 signaux/jour, confiance ≥ 84%, avant-match ou live.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
-        <div class="pcf"><span class="ok">✓</span>10 analyses Live IA par jour</div>
-        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Pro avec alertes</div>
-        <div class="pcf"><span class="ok">✓</span>Consensus 5 IA + verdict Chief</div>
-        <div class="pcf"><span class="ok">✓</span>Analyse des matchs en direct</div>
-        <div class="pcf"><span class="ok">✓</span>Historique et suivi des performances</div>
-        <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable a tout moment</b></div>
+        <div class="pcf"><span class="ok">✓</span>Jusqu'à 10 signaux par jour</div>
+        <div class="pcf"><span class="ok">✓</span>Confiance ≥ 84%, avant-match ou live</div>
+        <div class="pcf"><span class="ok">✓</span>Cote réelle ARJEL ≥ 1.50</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Premium</div>
+        <div class="pcf"><span class="ok">✓</span>Tout le palier Standard inclus</div>
+        <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable à tout moment</b></div>
       </div>
       <div class="pc-bottom">
         <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" target="_blank" id="btn-pro" class="pc-btn prim" data-i18n="plan_pro_btn">S'abonner — 9.90€/mois</a>
         <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Sans engagement — annulable à tout moment</div>
-        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Soit 0.33€ par analyse — rentabilise en 1 seul pick gagnant</div>
+        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Le meilleur rapport volume / sélectivité</div>
       </div>
     </div>
     <div class="pc">
-      <span class="pc-badge b-el">Elite</span>
-      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite</div></div>
-      <div class="pc-desc" data-i18n="plan_elite_desc">30 analyses par jour + alertes Signal Fort automatiques. Le plan des membres les plus rentables.</div>
+      <span class="pc-badge b-el">🟠 Elite / VIP</span>
+      <div><div class="pc-price">19<span style="font-size:24px">.90€</span><span class="mo">/mois</span></div><div class="pc-name" style="margin-top:6px">Elite / VIP</div></div>
+      <div class="pc-desc" data-i18n="plan_elite_desc">Le radar complet multisport : jusqu'à 30 signaux/jour (foot, basket, hockey, baseball) + alertes prioritaires.</div>
       <div class="pc-div"></div>
       <div class="pc-features">
-        <div class="pcf"><span class="ok">✓</span>30 analyses Live IA par jour</div>
-        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Elite (picks prioritaires)</div>
-        <div class="pcf"><span class="ok">✓</span>Alertes Signal Fort automatiques (confiance 85%+)</div>
-        <div class="pcf"><span class="ok">✓</span>Picks en avant-premiere avant le site</div>
-        <div class="pcf"><span class="ok">✓</span>Support direct + canal dedie</div>
-        <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable a tout moment</b></div>
+        <div class="pcf"><span class="ok">✓</span>Jusqu'à 30 signaux par jour</div>
+        <div class="pcf"><span class="ok">✓</span>Football, basket, hockey, baseball</div>
+        <div class="pcf"><span class="ok">✓</span>Confiance ≥ 82% sur basket, hockey, baseball</div>
+        <div class="pcf"><span class="ok">✓</span>Alertes prioritaires</div>
+        <div class="pcf"><span class="ok">✓</span>Groupe Telegram Elite + tout le Premium</div>
+        <div class="pcf"><span class="ok">✓</span><b>Sans engagement — annulable à tout moment</b></div>
       </div>
       <div class="pc-bottom">
         <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" target="_blank" id="btn-elite" class="pc-btn prim" data-i18n="plan_elite_btn">S'abonner — 19.90€/mois</a>
         <div style="text-align:center;margin-top:8px;font-size:12px;color:#10b981;font-weight:700">✓ Sans engagement — annulable à tout moment</div>
-        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Soit 0.66€ par analyse — les alertes Signal Fort seules valent le prix</div>
+        <div style="text-align:center;margin-top:4px;font-size:11px;color:var(--muted2)">Le radar complet, tous sports confondus</div>
       </div>
     </div>
+  </div>
+
+  <!-- ══ COMPARATIF DES OFFRES ══ -->
+  <style>
+    .cmp-wrap{max-width:760px;margin:44px auto 0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .cmp-table{width:100%;min-width:520px;border-collapse:separate;border-spacing:0;
+      background:linear-gradient(160deg,rgba(30,27,58,.4),rgba(15,14,30,.5));
+      border:1px solid rgba(129,140,248,.18);border-radius:16px;overflow:hidden;backdrop-filter:blur(10px)}
+    .cmp-table th,.cmp-table td{padding:14px 16px;text-align:center;font-size:13.5px;border-bottom:1px solid rgba(255,255,255,.05)}
+    .cmp-table thead th{font-size:14px;font-weight:900;color:#eceaf4;background:rgba(255,255,255,.03)}
+    .cmp-table thead th.hl{color:#34d399}
+    .cmp-table tbody td:first-child,.cmp-table thead th:first-child{text-align:left;color:var(--muted2);font-weight:600}
+    .cmp-table tbody tr:last-child td{border-bottom:none}
+    .cmp-yes{color:#34d399;font-weight:900}
+    .cmp-no{color:#4b5169}
+    .cmp-val{color:#eceaf4;font-weight:800}
+    .cmp-col-hl{background:rgba(16,185,129,.06)}
+  </style>
+  <div class="cmp-wrap">
+    <table class="cmp-table">
+      <thead>
+        <tr><th>Ce que tu obtiens</th><th>🟢 Standard</th><th class="hl">🟣 Premium</th><th>🟠 Elite</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Prix</td><td class="cmp-val">4.90€</td><td class="cmp-col-hl cmp-val">9.90€</td><td class="cmp-val">19.90€</td></tr>
+        <tr><td>Signaux par jour</td><td class="cmp-val">3 max</td><td class="cmp-col-hl cmp-val">10 max</td><td class="cmp-val">30 max</td></tr>
+        <tr><td>Confiance minimale</td><td class="cmp-val">≥ 88%</td><td class="cmp-col-hl cmp-val">≥ 84%</td><td class="cmp-val">≥ 84% foot · ≥ 82% autres</td></tr>
+        <tr><td>Cote réelle ARJEL</td><td class="cmp-val">≥ 1.50</td><td class="cmp-col-hl cmp-val">≥ 1.50</td><td class="cmp-val">≥ 1.50</td></tr>
+        <tr><td>Sports couverts</td><td class="cmp-val">Football</td><td class="cmp-col-hl cmp-val">Football</td><td class="cmp-val">Foot, basket, hockey, baseball</td></tr>
+        <tr><td>Avant-match ou live</td><td class="cmp-no">Live</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Alertes prioritaires</td><td class="cmp-no">—</td><td class="cmp-col-hl cmp-no">—</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Groupe Telegram dédié</td><td class="cmp-yes">Standard</td><td class="cmp-col-hl cmp-yes">Premium</td><td class="cmp-yes">Elite</td></tr>
+        <tr><td>Résultats vérifiables sur le site</td><td class="cmp-yes">✓</td><td class="cmp-col-hl cmp-yes">✓</td><td class="cmp-yes">✓</td></tr>
+        <tr><td>Engagement</td><td class="cmp-val">Sans</td><td class="cmp-col-hl cmp-val">Sans</td><td class="cmp-val">Sans</td></tr>
+      </tbody>
+    </table>
   </div>
 </section>
 
@@ -1836,7 +2195,7 @@ footer{
         <div style="font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981;margin-bottom:8px">💸 Programme parrainage</div>
         <div style="font-size:20px;font-weight:900;color:var(--text);margin-bottom:8px">1 mois offert par filleul abonné</div>
         <div style="font-size:13px;color:var(--muted2);line-height:1.6">
-          Partage ton lien perso. Chaque ami qui s'abonne à Pro ou Elite te rapporte <strong style="color:#10b981">30 jours gratuits</strong>, automatiquement.
+          Partage ton lien perso. Chaque ami qui s'abonne à Premium ou Elite te rapporte <strong style="color:#10b981">30 jours gratuits</strong>, automatiquement.
         </div>
       </div>
       <div id="ref-link-zone" style="flex:1;min-width:260px">
@@ -1920,14 +2279,45 @@ function copyRefLink(){
 </section>
 
 <!-- HOW IT WORKS -->
+<!-- ══ POURQUOI NOUS — différenciateur multi-IA ══ -->
+<style>
+  .why-section{max-width:1100px;margin:40px auto 10px;padding:0 24px}
+  .why-eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#a78bfa;text-align:center;margin-bottom:10px}
+  .why-title{font-size:clamp(24px,4vw,40px);font-weight:900;letter-spacing:-.03em;text-align:center;line-height:1.12;margin-bottom:12px}
+  .why-title span{background:linear-gradient(105deg,#34d399,#22d3ee,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .why-sub{font-size:15px;color:var(--muted2);text-align:center;max-width:560px;margin:0 auto 34px;line-height:1.6}
+  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .why-card{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid rgba(129,140,248,.18);border-radius:16px;padding:22px 20px;transition:transform .2s,border-color .2s;backdrop-filter:blur(10px)}
+  .why-card:hover{transform:translateY(-4px);border-color:rgba(129,140,248,.45)}
+  .why-ico{font-size:26px;margin-bottom:12px;display:block}
+  .why-h{font-size:16px;font-weight:800;color:#eceaf4;margin-bottom:6px;letter-spacing:-.01em}
+  .why-p{font-size:13px;color:var(--muted2);line-height:1.55}
+  @media(max-width:820px){.why-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:520px){.why-grid{grid-template-columns:1fr}}
+</style>
+<section class="why-section">
+  <div class="why-eyebrow">Pourquoi TousLesMatchs</div>
+  <h2 class="why-title">Une seule IA se trompe.<br><span>Un Conseil se corrige.</span></h2>
+  <p class="why-sub">Les autres services te donnent l'avis d'une seule intelligence artificielle. Nous confrontons 5 IA indépendantes : leurs désaccords deviennent ta sécurité.</p>
+  <div class="why-grid">
+    <div class="why-card"><span class="why-ico">🧠</span><div class="why-h">5 IA, pas une opinion</div><div class="why-p">Cinq agents spécialisés analysent chaque match séparément. Aucune décision ne repose sur une seule source.</div></div>
+    <div class="why-card"><span class="why-ico">⚖️</span><div class="why-h">Analyses croisées</div><div class="why-p">Les 5 IA votent séparément. Si les votes divergent trop, aucun signal n'est validé — mieux vaut zéro analyse qu'une mauvaise.</div></div>
+    <div class="why-card"><span class="why-ico">🎯</span><div class="why-h">Score de confiance</div><div class="why-p">Chaque verdict affiche un pourcentage réel. Tu sais exactement à quel point le Conseil est convaincu.</div></div>
+    <div class="why-card"><span class="why-ico">📊</span><div class="why-h">Historique 100 % public</div><div class="why-p">Tous les résultats sont affichés — gagnés comme perdus. Aucun pick effacé, aucune stat maquillée.</div></div>
+    <div class="why-card"><span class="why-ico">📈</span><div class="why-h">ROI transparent</div><div class="why-p">Profit simulé calculé automatiquement sur une mise fixe. Les chiffres viennent de la base, jamais du marketing.</div></div>
+    <div class="why-card"><span class="why-ico">🔍</span><div class="why-h">Critères explicites</div><div class="why-p">Classement, forme, confrontations, value : chaque analyse détaille les critères qui ont pesé dans le vote.</div></div>
+  </div>
+</section>
+
 <section class="how-section" id="methode">
   <div class="s-eyebrow" data-i18n="sec_how_eye">Méthode</div>
   <div class="s-title" data-i18n="sec_how_title">Le Concile ne devine pas.</div>
   <div class="steps">
     <div class="step"><div class="step-n">1</div><div><div class="step-title" data-i18n="step1_title">Collecte vérifiée à 6h00</div><div class="step-desc">Hermès collecte les matchs via API-SPORTS, puis vérifie chaque donnée sur 3 sources indépendantes : SofaScore, FBref, Transfermarkt. Aucun match non confirmé n'est affiché. Aucun score inventé.</div></div></div>
-    <div class="step"><div class="step-n">2</div><div><div class="step-title" data-i18n="step2_title">5 agents spécialisés + 1 Chief</div><div class="step-desc">Les agents analysent stats, tactique, value et marchés selon le sport. Le Chief arbitre les désaccords : si les objections sont trop fortes ou les données faibles, la décision devient NO BET.</div></div></div>
-    <div class="step"><div class="step-n">3</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Pro débloque les analyses Live IA ; Elite reçoit aussi les alertes de signal fort.</div></div></div>
-    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step4_title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
+    <div class="step"><div class="step-n">2</div><div><div class="step-title" data-i18n="step2_title">5 IA indépendantes votent</div><div class="step-desc">Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA.</div></div></div>
+    <div class="step"><div class="step-n">3</div><div><div class="step-title">Seuls les verdicts solides sont publiés</div><div class="step-desc">Une analyse n'est diffusée que si la confiance du Conseil dépasse le seuil de qualité. En dessous, elle reste interne : tu ne vois que les décisions dans lesquelles le Conseil croit vraiment.</div></div></div>
+    <div class="step"><div class="step-n">4</div><div><div class="step-title" data-i18n="step3_title">Diffusion à 7h00</div><div class="step-desc">Pick publié sur le site, email Brevo aux abonnés, notification Telegram. Premium débloque les analyses Live IA ; Elite reçoit aussi les alertes de signal fort.</div></div></div>
+    <div class="step"><div class="step-n">5</div><div><div class="step-title" data-i18n="step4_title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats du site sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 </section>
 
@@ -1946,7 +2336,7 @@ function copyRefLink(){
       <a href="https://t.me/+I4mDxIa-1YBhM2U8" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.25);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:700;text-decoration:none;transition:all .2s"
          onmouseover="this.style.background='rgba(99,102,241,.2)'" onmouseout="this.style.background='rgba(99,102,241,.1)'">
-        ⚡ Pro &amp; Elite
+        ⚡ Premium &amp; Elite
       </a>
       <a href="https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=community_footer&utm_campaign=prospection" target="_blank" rel="noopener noreferrer"
          style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(255,0,80,.16),rgba(139,92,246,.14));color:#fb7185;border:1px solid rgba(251,113,133,.32);padding:12px 24px;border-radius:11px;font-size:14px;font-weight:800;text-decoration:none;transition:all .2s"
@@ -1961,17 +2351,17 @@ function copyRefLink(){
 <section style="position:relative;z-index:1;padding:60px 32px;text-align:center;border-top:1px solid var(--b1)">
   <div style="max-width:500px;margin:0 auto">
     <div style="font-size:clamp(22px,3.5vw,34px);font-weight:900;letter-spacing:-.03em;margin-bottom:12px">
-      Pret a tester Hermes ?
+      Pret a suivre le Concile ?
     </div>
     <p style="font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:24px">
-      1 euro. 1 match. 30 secondes. Tu vois ce que 5 IA pensent vraiment — et tu decides.
+      L'analyse du jour est gratuite. Le lendemain, tu verifies son resultat sur le site. Convaincu ? Passe Premium ou Elite et recois tous les signaux en direct.
     </p>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <a href="#plans"
        style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4);transition:all .25s"
        onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4)'">
-      Tester Hermes — 1€
+      Voir les offres Premium &amp; Elite
     </a>
-    <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paiement securise Stripe · 0 abonnement · Resultat immediat</div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paiement securise Stripe · Sans engagement · Annulable a tout moment</div>
   </div>
 </section>
 
@@ -1983,6 +2373,8 @@ function copyRefLink(){
     <span style="opacity:.55;font-size:11px;margin-top:6px;display:block">18+ - TousLesMatchs ne garantit aucun gain - Analyses informatives - Jouez uniquement ce que vous pouvez perdre.</span>
     <span style="display:block;margin-top:10px;font-size:11px;line-height:1.8">
       <a href="/performances" style="color:var(--muted);text-decoration:none;opacity:.6">Performances</a>
+      <span style="margin:0 6px;opacity:.3">·</span>
+      <a href="/pronostics" style="color:var(--muted);text-decoration:none;opacity:.6">Pronostics</a>
       <span style="margin:0 6px;opacity:.3">·</span>
       <a href="/faq" style="color:var(--muted);text-decoration:none;opacity:.6">FAQ</a>
       <span style="margin:0 6px;opacity:.3">·</span>
@@ -2002,10 +2394,10 @@ function copyRefLink(){
 <!-- STICKY CTA BAR — Tester Hermes -->
 <div id="sticky-email-bar" style="display:none">
   <div class="seb-inner" style="justify-content:center;gap:16px">
-    <div style="font-size:14px;font-weight:800;color:var(--text)">Teste Hermes sur un vrai match</div>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
+    <div style="font-size:14px;font-weight:800;color:var(--text)">Reçois tous les signaux du Concile</div>
+    <a href="#plans"
        style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(16,185,129,.3)">
-      1€ — Tester maintenant
+      Voir les offres →
     </a>
     <button class="seb-close" onclick="closeStickyBar()">×</button>
   </div>
@@ -2029,7 +2421,7 @@ window.addEventListener('load', function(){
 <div class="ep-bg" id="ep-bg" style="display:none!important"></div>
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="/js/i18n.js?v=concile-chief-20260623"></script>
+<script src="/js/i18n.js?v=vote-ia-20260725"></script>
 <script>if(typeof i18n==='undefined'){window.i18n={t:function(k){return k},init:function(){},setLang:function(){}}}</script>
 <script>
 // ══ ÉTOILES
@@ -2073,7 +2465,7 @@ const MC={
 
 const BM=[
   {name:"Winamax",cls:"bm-w",url:"https://www.winamax.fr/parrain?code=77953728"},
-  {name:"Unibet",  cls:"bm-u",url:"https://www.unibet.fr/inscription/?campaign=120526&parrain=5EBF919DF1008254"},
+  {name:"Unibet",  cls:"bm-u",url:"https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254"},
   {name:"PMU",     cls:"bm-p",url:"https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728"},
 ];
 
@@ -2152,7 +2544,7 @@ function renderPick(){
         <div style="font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px">Recevez ces analyses en temps réel</div>
         <div style="font-size:12px;color:var(--muted2);margin-bottom:14px">Les membres Premium reçoivent chaque alerte avant que les cotes bougent</div>
         <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
-          <a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(212,175,55,.25)">⚡ Débloquer 1 analyse – 1 €</a>
+          <a href="#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(212,175,55,.25)">⚡ Recevoir les signaux — Premium &amp; Elite</a>
           <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:13px">📲 Ou rejoindre Telegram gratuitement</a>
         </div>
       </div>
@@ -2332,7 +2724,7 @@ function renderPick(){
         <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:rgba(6,8,15,.6);backdrop-filter:blur(2px)">
           <div style="font-size:28px">🔒</div>
           <div style="font-size:14px;font-weight:800;text-align:center">${i18n.t('locked_votes')}</div>
-          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Pro · Elite · À la carte dès 1€</div>
+          <div style="font-size:12px;color:var(--muted2);text-align:center;max-width:200px">Standard · Premium · Elite</div>
           <a href="#plans" style="margin-top:4px;padding:9px 20px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none">${i18n.t('subscribe_cta')}</a>
         </div>
       </div>`;
@@ -2399,7 +2791,7 @@ function renderPick(){
                 </div>
                 <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(6,8,15,.72);backdrop-filter:blur(2px);border-radius:12px;padding:18px">
                   <div style="font-size:20px">🔒</div>
-                  <div style="font-size:14px;font-weight:800;text-align:center;letter-spacing:-.01em">Le pari du Concile est réservé aux membres</div>
+                  <div style="font-size:14px;font-weight:800;text-align:center;letter-spacing:-.01em">Le pick du Concile est réservé aux membres</div>
                   <div style="display:flex;gap:8px;flex-wrap:wrap;width:100%;max-width:340px">
                     <input type="email" id="gate-email-input" placeholder="votre@email.com"
                       style="flex:1;min-width:140px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:10px 13px;color:#eceaf4;font-size:13px;font-family:inherit;outline:none"
@@ -2424,6 +2816,7 @@ function renderPick(){
             <div class="cote-group">
               <div class="cl">${i18n.t('avg_odds')}</div>
               <div class="cn">${PICK.cote}</div>
+              ${PICK.bookmaker?`<div style="font-size:10px;color:var(--muted2);font-weight:600;margin-top:2px">chez ${PICK.bookmaker}</div>`:''}
             </div>
             ${_isPaid
               ? `<div class="vblock">
@@ -2481,6 +2874,8 @@ function buildChart(){
     set('kpi-winrate', wr + '%');
     set('kpi-bankroll', '100€ → ' + bankrollFinal + '€');
     set('kpi-picks', tot);
+    set('roi-see-all-count', tot > 0 ? ('les ' + tot) : 'tous les');
+    set('hs-total', tot);
     set('hs-winrate', wr + '%');
     set('hs-gain', (gain >= 0 ? '+' : '') + Math.round(gain) + '€');
     // Bannière + popup champion : MÊME source unique que le KPI (zéro contradiction)
@@ -2618,6 +3013,23 @@ const PICKS_FEED = [
 
 function renderPicksFeed() {
   const root = document.getElementById('pf-root');
+  // Dédoublonnage infaillible : un même match (home+away+date) ne peut apparaître
+  // qu'une seule fois, peu importe la source (analysis-history, signal-fort, hardcodé).
+  // On garde en priorité l'entrée résolue (win/loss), sinon la première rencontrée.
+  (function dedupeFeed(){
+    const seen = new Map();
+    for (const p of PICKS_FEED) {
+      const k = (String(p.home)+'|'+String(p.away)+'|'+String(p.date||'')).toLowerCase().replace(/\s+/g,'');
+      const prev = seen.get(k);
+      if (!prev) { seen.set(k, p); continue; }
+      const prevResolved = prev.result === 'win' || prev.result === 'loss';
+      const curResolved = p.result === 'win' || p.result === 'loss';
+      if (curResolved && !prevResolved) seen.set(k, p);
+    }
+    const deduped = Array.from(seen.values());
+    PICKS_FEED.length = 0;
+    for (const p of deduped) PICKS_FEED.push(p);
+  })();
   const pending = PICKS_FEED.filter(p => p.status === 'pending');
   const past = PICKS_FEED.filter(p => p.status === 'finished');
   const next = PICKS_FEED.find(p => p.status === 'upcoming');
@@ -2636,6 +3048,35 @@ function renderPicksFeed() {
 
     const todayISO = new Date().toISOString().slice(0,10);
     const ydayISO = new Date(Date.now()-86400000).toISOString().slice(0,10);
+
+    // ── Bilan du jour EN DIRECT : analyses du jour, gagnées/perdues/en attente + total ──
+    const todayItems = feedItems.filter(p => p.date === todayISO);
+    if (todayItems.length) {
+      const tResolved = todayItems.filter(p => p.result === 'win' || p.result === 'loss');
+      const tWins = tResolved.filter(p => p.result === 'win').length;
+      const tLoss = tResolved.length - tWins;
+      const tPending = todayItems.filter(p => p.status === 'pending').length;
+      let tTotal = 0;
+      tResolved.forEach(p => { tTotal += p.result === 'win' ? (p.cote - 1) * 10 : -10; });
+      tTotal = Math.round(tTotal);
+      const col = tTotal >= 0 ? 'var(--green)' : 'var(--red)';
+      const sign = tTotal >= 0 ? '+' : '';
+      html += `<div style="background:linear-gradient(135deg,rgba(124,58,237,.1),rgba(34,211,238,.06));border:1px solid rgba(124,58,237,.28);border-radius:16px;padding:16px 18px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+          <div style="display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#a78bfa">
+            <span style="width:8px;height:8px;border-radius:50%;background:#34d399;box-shadow:0 0 0 0 rgba(52,211,153,.6);animation:cpPulse 1.8s infinite"></span>Bilan du jour en direct
+          </div>
+          <div style="font-size:20px;font-weight:900;color:${col}">${sign}${tTotal}€</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:#eceaf4">${todayItems.length}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">Analyses</div></div>
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:var(--green)">${tWins}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">Gagnées</div></div>
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:var(--red)">${tLoss}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">Perdues</div></div>
+          <div style="flex:1;min-width:70px;text-align:center;background:rgba(255,255,255,.03);border-radius:10px;padding:10px 6px"><div style="font-size:20px;font-weight:900;color:var(--indigo2)">${tPending}</div><div style="font-size:10px;color:var(--muted2);font-weight:600">En attente</div></div>
+        </div>
+        ${tPending>0?`<div style="font-size:11px;color:var(--muted2);margin-top:10px;text-align:center">⏳ ${tPending} match${tPending>1?'s':''} en cours — bilan mis à jour à la résolution</div>`:''}
+      </div>`;
+    }
 
     const fmtDay = (iso) => {
       if(iso === todayISO) return "Aujourd'hui";
@@ -2766,7 +3207,7 @@ function renderPicksFeed() {
     html += `<div style="text-align:center;padding:32px 20px;color:var(--muted);font-size:14px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px">
       🕐 Prochain pick conseillé bientôt — rejoins le groupe Telegram
       <div style="margin-top:14px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:var(--cyan);text-decoration:none;font-weight:600;font-size:13px">📲 Rejoindre Telegram</a></div>
-      <div style="margin-top:8px"><a href="#plan-carte" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Analyse complète – 1 €</a></div>
+      <div style="margin-top:8px"><a href="#plans" style="color:#a78bfa;text-decoration:none;font-size:12px">⚡ Recevoir les signaux — Premium &amp; Elite</a></div>
     </div>`;
   }
 
@@ -2789,7 +3230,7 @@ async function requestPrematchAnalysis() {
     if(email && plan === 'free'){
       const resultDiv = document.getElementById('np-result');
       if(resultDiv) resultDiv.innerHTML=`<div style="background:rgba(79,70,229,.1);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:14px 16px;margin-top:12px;font-size:13px;color:var(--muted2)">
-        🔒 L'analyse pré-match est réservée aux plans <strong style="color:var(--indigo2)">Pro et Elite</strong>. Abonne-toi ci-dessous pour déverrouiller.
+        🔒 L'analyse pré-match est réservée aux plans <strong style="color:var(--indigo2)">Premium et Elite</strong>. Abonne-toi ci-dessous pour déverrouiller.
       </div>`;
     }
     return;
@@ -2860,7 +3301,7 @@ function renderNavAuth(){
   if(email&&plan){
     const isElite=plan==='elite';
     el.innerHTML=`<div class="nav-user">
-      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Pro'}</span>
+      <span class="nav-plan-badge${isElite?' elite':''}">${isElite?'👑 Elite':'⚡ Premium'}</span>
       <button class="nav-logout" onclick="doLogout()" title="${i18n.t('logout')}">✕</button>
     </div>`;
   } else {
@@ -3089,6 +3530,7 @@ async function initPick(){
     PICK.marketType = p.marketType||p.bet||PICK.marketType;
     PICK.marketLabel = p.marketLabel||p.prono||PICK.marketLabel;
     PICK.cote = parseFloat(p.cote)||PICK.cote;
+    PICK.bookmaker = p.bookmaker || PICK.bookmaker || null;
     PICK.status = (p.status==='win'||p.status==='loss'||p.status==='GAGNE'||p.status==='PERDU') ? 'result' : 'upcoming';
     PICK.result = p.result||(p.status==='win'||p.status==='GAGNE'?'win':p.status==='loss'||p.status==='PERDU'?'loss':null);
     if(p.scoreA!=null) PICK.scoreA=p.scoreA;
@@ -3111,7 +3553,7 @@ async function initPick(){
     PICK.verdictLabel = 'GO — Hermès';
     const conf = Math.min(99, Math.max(55, Math.round(Number(p.confidence||7)*10)));
     PICK.ia = [
-      {name:'Hermès Chief', pct:conf,                  fill:'f-claude',   ok:conf>=65, why:p.raison||''},
+      {name:'Synthèse Concile', pct:conf,              fill:'f-claude',   ok:conf>=65, why:p.raison||''},
       {name:'Stats live',   pct:Math.round(conf*0.90), fill:'f-perplexity',   ok:conf>=60, why:''},
       {name:'Value check',  pct:Math.round(conf*0.85), fill:'f-deepseek', ok:conf>=55, why:''},
       {name:'Risk filter',  pct:Math.round(conf*0.93), fill:'f-mistral',  ok:conf>=60, why:''},
@@ -3131,7 +3573,7 @@ async function initPick(){
         const mc = MC[PICK.marketType]||MC['1'];
         root.innerHTML=`<div class="pick-outer"><div class="pick-inner">
           <div class="pick-head">
-            <div class="ph-left"><span class="ptag ptag-live">⚡ Pari du jour</span><span class="ptag-comp">${PICK.competition||''}</span></div>
+            <div class="ph-left"><span class="ptag ptag-live">⚡ Pick du jour</span><span class="ptag-comp">${PICK.competition||''}</span></div>
             <div class="ph-right">${PICK.time||''}</div>
           </div>
           <div class="pick-body">
@@ -3151,7 +3593,7 @@ async function initPick(){
             </div>
           </div></div></div>`;
       } else {
-        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">💎</div><div style="font-size:16px;font-weight:700">Les membres Premium reçoivent les alertes en direct</div><div style="margin-top:12px"><a href="#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⚡ Débloquer 1 analyse – 1 €</a></div><div style="margin-top:8px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:12px">📲 Ou rejoindre Telegram gratuitement</a></div></div>`;
+        root.innerHTML=`<div class="no-bet" style="text-align:center;padding:48px 24px"><div style="font-size:32px;margin-bottom:12px">💎</div><div style="font-size:16px;font-weight:700">Les membres Premium &amp; Elite reçoivent les alertes en direct</div><div style="margin-top:12px"><a href="#plans" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px">⚡ Voir les offres Premium &amp; Elite</a></div><div style="margin-top:8px"><a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" style="color:#a78bfa;text-decoration:none;font-size:12px">📲 Ou rejoindre Telegram gratuitement</a></div></div>`;
       }
     }
   }
@@ -3165,14 +3607,14 @@ initPick();
 
 // ══ FAQ
 const FAQ_DATA = [
-  {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
-  {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
-  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
+  {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent."},
+  {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare vote, value, données manquantes et risque par sport. 5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA. Si le doute reste trop fort, aucun signal n'est validé."},
+  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Premium débloque les analyses Live IA et le groupe Premium. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
   {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
   {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
-  {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
+  {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le vote IA, le signal et la confiance, jamais les prompts internes."},
   {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit."},
+  {q:"Comment fonctionnent les abonnements ?", a:"Premium (9.90€/mois) = 10 analyses/jour + Telegram Premium. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit. L'analyse du jour reste gratuite sur le site, son résultat est vérifiable le lendemain."},
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);
@@ -3655,7 +4097,7 @@ document.addEventListener('click',function(e){
 </script>
 
 <!-- ── BARRE CTA FIXE MOBILE — levier de conversion n°1 sur trafic TikTok ──────
-     Toujours visible en bas de l'écran sur mobile. Renvoie vers le test à 1€.
+     Toujours visible en bas de l'écran sur mobile. Renvoie vers les offres Pro & Elite.
      Fermable (croix) ; l'état de fermeture dure la session. Masquée sur desktop. -->
 <style>
   #sticky-cta{
@@ -3687,10 +4129,10 @@ document.addEventListener('click',function(e){
 </style>
 <div id="sticky-cta" role="region" aria-label="Tester Hermes">
   <div class="sc-txt">
-    <div class="sc-t1">Teste le Concile IA</div>
-    <div class="sc-t2">1 analyse complète · sans engagement</div>
+    <div class="sc-t1">Reçois les signaux du Concile</div>
+    <div class="sc-t2">Premium &amp; Elite · sans engagement</div>
   </div>
-  <a class="sc-btn" href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" rel="noopener noreferrer">Tester — 1€</a>
+  <a class="sc-btn" href="#plans" rel="noopener noreferrer">Voir les offres</a>
   <button class="sc-close" aria-label="Fermer" onclick="(function(){document.getElementById('sticky-cta').classList.remove('show');document.body.classList.remove('has-sticky-cta');try{sessionStorage.setItem('scHidden','1')}catch(e){}})()">×</button>
 </div>
 <script>

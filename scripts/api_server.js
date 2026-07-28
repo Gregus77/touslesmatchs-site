@@ -18,7 +18,143 @@ const fs = require("fs");
 const https = require("https");
 const http  = require("http");
 const crypto = require("crypto");
+// Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
+// (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
+const analysisEngine = require("./analysis_engine");
 const { bookmakerButtons } = require("./bookmakers.config");
+
+// ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
+// (le Dockerfile ne copie que api_server.js + bookmakers.config.js). Rendu de
+// pages publiques indexables, conformes ANJ (pas de "pari", disclaimer, 18+).
+const seoPages = (function () {
+  const SITE = "https://www.touslesmatchs.com";
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function slugify(str) {
+    return String(str || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+  }
+  function matchSlug(item) {
+    const d = (item.date || "").slice(0, 10);
+    return `${slugify(item.home)}-${slugify(item.away)}${d ? "-" + d : ""}`;
+  }
+  function fmtDateFr(iso) {
+    if (!iso) return "";
+    const p = String(iso).slice(0, 10).split("-");
+    if (p.length !== 3) return iso;
+    const mois = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+      "août", "septembre", "octobre", "novembre", "décembre"];
+    return `${parseInt(p[2], 10)} ${mois[parseInt(p[1], 10) - 1]} ${p[0]}`;
+  }
+  function shell({ title, description, canonical, bodyHtml, schema }) {
+    return `<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(description)}">
+<link rel="canonical" href="${esc(canonical)}">
+<meta property="og:type" content="article"><meta property="og:title" content="${esc(title)}">
+<meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${esc(canonical)}">
+<meta property="og:site_name" content="TousLesMatchs"><meta name="twitter:card" content="summary">
+<meta name="robots" content="index,follow"><link rel="icon" href="/favicon.ico">
+${schema ? `<script type="application/ld+json">${JSON.stringify(schema)}</script>` : ""}
+<style>
+:root{--bg:#06080f;--text:#eceaf4;--muted:#7b82a0;--muted2:#a8aec8;--violet:#a78bfa;--green:#34d399;--cyan:#22d3ee;--b1:rgba(255,255,255,.06);--b2:rgba(129,140,248,.18)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--violet);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:820px;margin:0 auto;padding:28px 20px 60px}
+.topnav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--b1);position:sticky;top:0;background:rgba(6,8,15,.9);backdrop-filter:blur(10px);z-index:5}
+.brand{font-weight:900;letter-spacing:-.02em;color:var(--text)}
+.topnav a.cta{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:8px 16px;border-radius:9px;font-size:13px;font-weight:700}
+.bc{font-size:12px;color:var(--muted);margin-bottom:18px}
+h1{font-size:clamp(24px,4vw,34px);font-weight:900;letter-spacing:-.03em;line-height:1.15;margin-bottom:10px}
+h2{font-size:20px;font-weight:800;margin:28px 0 12px;letter-spacing:-.02em}
+.sub{color:var(--muted2);font-size:15px;margin-bottom:22px}
+.card{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid var(--b2);border-radius:16px;padding:22px;margin-bottom:20px}
+.verdict{display:flex;flex-wrap:wrap;gap:18px;align-items:center}.verdict .big{font-size:22px;font-weight:900;color:#fff}
+.pill{display:inline-flex;align-items:baseline;gap:5px}.pill b{font-size:22px;font-weight:900}
+.pill.g b{color:var(--green)}.pill.c b{color:var(--cyan)}.pill span{font-size:12px;color:var(--muted2)}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.tag{font-size:12px;font-weight:700;padding:5px 11px;border-radius:8px;background:rgba(129,140,248,.12);color:var(--violet);border:1px solid var(--b2)}
+.tag.win{background:rgba(16,185,129,.12);color:var(--green);border-color:rgba(16,185,129,.3)}
+.tag.loss{background:rgba(244,63,94,.1);color:#fb7185;border-color:rgba(244,63,94,.25)}
+p{margin-bottom:14px;color:var(--muted2)}
+.list a{display:flex;justify-content:space-between;gap:12px;padding:13px 15px;border:1px solid var(--b1);border-radius:12px;margin-bottom:9px;color:var(--text)}
+.list a:hover{border-color:var(--b2);text-decoration:none;background:rgba(129,140,248,.05)}
+.list .l-match{font-weight:700;font-size:14px}.list .l-meta{font-size:12px;color:var(--muted)}
+.disclaimer{margin-top:32px;padding-top:20px;border-top:1px solid var(--b1);font-size:11px;color:var(--muted);line-height:1.7}
+.footlinks{margin-top:18px;font-size:12px}.footlinks a{margin-right:14px;color:var(--muted2)}
+</style></head><body>
+<nav class="topnav"><a href="/" class="brand">TousLesMatchs</a><a href="/#plans" class="cta">Voir les offres</a></nav>
+<div class="wrap">
+${bodyHtml}
+<div class="disclaimer">Analyses sportives assistées par IA à but informatif. TousLesMatchs ne garantit aucun gain. Les jeux d'argent et de hasard peuvent être dangereux : pertes d'argent, conflits familiaux, addiction. 18+ · Interdit aux mineurs. Conseils et aide sur <a href="https://www.joueurs-info-service.fr" rel="nofollow">joueurs-info-service.fr</a> — 09 74 75 13 13 (appel non surtaxé).</div>
+<div class="footlinks"><a href="/">Accueil</a><a href="/pronostics">Tous les pronostics</a><a href="/live-ia">Live IA</a><a href="/performances">Performances</a><a href="/faq">FAQ</a></div>
+</div></body></html>`;
+  }
+  function renderDetail(item, related) {
+    const dateFr = fmtDateFr(item.date);
+    const resolved = item.outcome === "win" || item.outcome === "loss";
+    const title = `Pronostic ${item.home} - ${item.away}${item.competition ? " (" + item.competition + ")" : ""} | Analyse IA`;
+    const description = `Analyse IA de ${item.home} contre ${item.away}${dateFr ? " du " + dateFr : ""} : verdict du Conseil (${item.bet}), niveau de confiance ${item.confidence}% et cote. Le Concile de 5 IA décrypte le match.`;
+    const canonical = `${SITE}/pronostic/${matchSlug(item)}`;
+    const schema = { "@context": "https://schema.org", "@type": "SportsEvent",
+      name: `${item.home} - ${item.away}`, sport: item.sport || "Soccer",
+      startDate: (item.date || "").slice(0, 10) || undefined,
+      homeTeam: { "@type": "SportsTeam", name: item.home },
+      awayTeam: { "@type": "SportsTeam", name: item.away }, description, url: canonical };
+    const outcomeTag = resolved
+      ? `<span class="tag ${item.outcome === "win" ? "win" : "loss"}">${item.outcome === "win" ? "✅ Analyse gagnante" : "❌ Analyse perdue"}</span>`
+      : `<span class="tag">🔴 Analyse publiée</span>`;
+    const relatedHtml = (related || []).length
+      ? `<h2>Autres analyses du Conseil</h2><div class="list">${related.map(r =>
+          `<a href="/pronostic/${matchSlug(r)}"><span class="l-match">${esc(r.home)} - ${esc(r.away)}</span><span class="l-meta">${esc(r.competition || "")}</span></a>`).join("")}</div>`
+      : "";
+    const body = `
+  <div class="bc"><a href="/pronostics">Pronostics</a> › ${esc(item.home)} - ${esc(item.away)}</div>
+  <h1>${esc(item.home)} - ${esc(item.away)} : le pronostic du Conseil IA</h1>
+  <div class="sub">${item.competition ? esc(item.competition) + " · " : ""}${dateFr ? "Match du " + esc(dateFr) : ""}</div>
+  <div class="meta-row">${outcomeTag}<span class="tag">🧠 Vote IA 5/5</span>${item.sport ? `<span class="tag">${esc(item.sport)}</span>` : ""}</div>
+  <div class="card"><div style="font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--violet);margin-bottom:8px">🔥 Verdict du Conseil</div>
+    <div class="verdict"><div class="big">${esc(item.bet || "Analyse IA")}</div><div class="pill g"><b>${item.confidence || ""}%</b><span>de confiance</span></div>${item.cote ? `<div class="pill c"><b>${item.cote}</b><span>cote</span></div>` : ""}</div></div>
+  <h2>L'analyse en détail</h2>
+  <p>${item.reasoning ? esc(item.reasoning) : `Pour ${esc(item.home)} contre ${esc(item.away)}, le Concile a croisé le classement, la forme récente, les confrontations directes et la valeur du marché. Cinq intelligences artificielles ont voté séparément avant validation par convergence.`}</p>
+  <p>Chaque analyse repose sur le vote de 5 agents IA spécialisés : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
+  <h2>Comment fonctionne le Conseil IA ?</h2>
+  <p>Hermès collecte les données vérifiées du match, 5 IA analysent stats, forme et valeur, puis le vote mesure la convergence. Si les signaux sont contradictoires, aucun signal n'est validé. <a href="/#methode">Voir la méthode complète →</a></p>
+  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de toutes les analyses en direct ?</div><p style="margin-bottom:14px">Les membres Standard, Premium &amp; Elite reçoivent les analyses Live IA et les signaux du Concile en temps réel.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les offres</a></div>
+  ${relatedHtml}`;
+    return shell({ title, description, canonical, bodyHtml: body, schema });
+  }
+  function renderIndex(items) {
+    const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
+    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, hockey et baseball. Verdict de 5 intelligences artificielles, confiance et historique public.";
+    const canonical = `${SITE}/pronostics`;
+    const schema = { "@context": "https://schema.org", "@type": "CollectionPage", name: title, description, url: canonical };
+    const rows = (items || []).map(it => {
+      const resolved = it.outcome === "win" || it.outcome === "loss";
+      const badge = resolved ? (it.outcome === "win" ? "✅" : "❌") : "🔴";
+      return `<a href="/pronostic/${matchSlug(it)}"><span class="l-match">${badge} ${esc(it.home)} - ${esc(it.away)}</span><span class="l-meta">${esc(it.competition || it.sport || "")}${it.confidence ? " · " + it.confidence + "%" : ""}</span></a>`;
+    }).join("");
+    const body = `
+  <div class="bc"><a href="/">Accueil</a> › Pronostics</div>
+  <h1>Pronostics & analyses IA</h1>
+  <p class="sub">Chaque match est analysé par le Conseil : 5 intelligences artificielles votent, la convergence valide. Historique 100 % public — gagnés comme perdus.</p>
+  <div class="list">${rows || "<p>Aucune analyse publiée pour le moment.</p>"}</div>`;
+    return shell({ title, description, canonical, bodyHtml: body, schema });
+  }
+  function renderSitemap(items) {
+    const urls = [`${SITE}/pronostics`].concat((items || []).map(it => `${SITE}/pronostic/${matchSlug(it)}`));
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n")}
+</urlset>`;
+  }
+  return { slugify, matchSlug, renderDetail, renderIndex, renderSitemap };
+})();
 
 const app = express();
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
@@ -30,6 +166,64 @@ app.use((req, res, next) => {
   return jsonParser(req, res, next);
 });
 app.use(cors());
+
+// ── SÉCURITÉ P2 : rate limiting maison (aucune dépendance externe) ────────────
+// Strict sur l'authentification (anti-brute-force), très large ailleurs
+// (anti-scraping sans gêner les visiteurs). Stockage en mémoire, nettoyé.
+const _rlHits = new Map();
+function rlAllow(key, max, windowMs) {
+  const now = Date.now();
+  const arr = (_rlHits.get(key) || []).filter(t => now - t < windowMs);
+  arr.push(now);
+  _rlHits.set(key, arr);
+  return arr.length <= max;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, arr] of _rlHits) {
+    const keep = arr.filter(t => now - t < 15 * 60 * 1000);
+    if (keep.length) _rlHits.set(k, keep); else _rlHits.delete(k);
+  }
+}, 5 * 60 * 1000);
+function clientIp(req) {
+  return String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.ip || "unknown";
+}
+app.use((req, res, next) => {
+  const ip = clientIp(req);
+  // Auth : 20 tentatives / 15 min / IP
+  if (req.method === "POST" && (req.path === "/auth/login" || req.path === "/auth/register")) {
+    if (!rlAllow("auth_" + ip, 20, 15 * 60 * 1000)) {
+      return res.status(429).json({ ok: false, error: "Trop de tentatives, réessaie dans quelques minutes." });
+    }
+  }
+  // Global : 600 req / min / IP (très large, ne gêne aucun visiteur normal)
+  if (!rlAllow("g_" + ip, 600, 60 * 1000)) {
+    return res.status(429).json({ ok: false, error: "Trop de requêtes." });
+  }
+  next();
+});
+
+// ── SÉCURITÉ P1 : protège les endpoints /admin/* en LECTURE seule ─────────────
+// Ces endpoints exposaient des infos internes (ratings ligues, perfs agents,
+// état système…) sans auth. On exige désormais : identifiants admin (email+code)
+// OU le token d'Hermès (secret = HERMES_ADMIN_TLM_BOT) pour ne pas casser son
+// monitoring. Les routes admin sensibles (codes, mutations) ont déjà leur propre
+// contrôle — ceci ne fait que couvrir les lectures ops non protégées.
+const ADMIN_READONLY_PATHS = new Set([
+  "/admin/leagues", "/admin/agents", "/admin/journal", "/admin/markets",
+  "/admin/competitions", "/admin/health", "/admin/ai-specialization",
+  "/admin/monthly-history", "/admin/alerts", "/admin/scheduler-state",
+  "/admin/guardian-state", "/admin/datahub-state", "/admin/version",
+  "/admin/preflight", "/admin/heartbeat",
+]);
+app.use((req, res, next) => {
+  if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
+    const { email, code, secret } = req.query;
+    const ok = isAdmin(email, code) || (secret && secret === process.env.HERMES_ADMIN_TLM_BOT);
+    if (!ok) return res.status(403).json({ ok: false, error: "Accès admin requis" });
+  }
+  next();
+});
 
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
@@ -216,6 +410,14 @@ ensureColumn("concile_analyses", "home_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "away_possession", "INTEGER DEFAULT NULL");
 ensureColumn("concile_analyses", "real_odd",        "REAL DEFAULT NULL");
 ensureColumn("concile_analyses", "real_odd_source", "TEXT DEFAULT NULL");
+// Traçage: sur quels canaux clients le signal a réellement été DIFFUSÉ. Sert à ne
+// poster le résultat (gagné/perdu) que sur les canaux qui ont vu le pick.
+ensureColumn("concile_analyses", "sig_sent_free",     "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_standard", "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_premium",  "INTEGER DEFAULT 0");
+ensureColumn("concile_analyses", "sig_sent_elite",    "INTEGER DEFAULT 0");
+// Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
+ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
@@ -343,14 +545,21 @@ db.exec(`
   );
 `);
 
+// ── Roster ACTUEL du Concile — source de vérité unique ───────────────────────
+// Doit rester synchronisé avec `agentNames` dans runConcile(). agent_predictions
+// conserve l'historique des agents retirés (GROQ-Llama, GPT Analysis, GeminiFlash,
+// Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
+// agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
+// alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Qwen"];
+
 // ── Initialise agent weights if empty ──
 try {
   const agentCount = db.prepare("SELECT COUNT(*) as c FROM agent_weights").get().c;
   if (agentCount === 0) {
-    const defaultAgents = ["GROQ-Llama", "GPT Analysis", "GeminiFlash", "Mistral-7B", "Claude Chief"];
     const insert = db.prepare("INSERT OR IGNORE INTO agent_weights (agent_name, weight) VALUES (?, 1.0)");
-    for (const name of defaultAgents) insert.run(name);
-    console.log("[migration] Agent weights initialised with 5 agents");
+    for (const name of CONCILE_AGENT_NAMES) insert.run(name);
+    console.log(`[migration] Agent weights initialised with ${CONCILE_AGENT_NAMES.length} agents`);
   }
 } catch(e) { console.error("[migration] agent_weights init:", e.message); }
 
@@ -462,8 +671,14 @@ function refreshLeagueRatings() {
 }
 
 // ── Update agent weights from agent_predictions ──
+// Restreint au roster actif : agent_predictions garde l'historique des agents
+// retirés, mais leur agrégat ne doit pas réapparaître dans agent_weights à chaque
+// redémarrage (cet UPSERT tourne au boot). On purge donc aussi les lignes hors roster.
 function refreshAgentWeights() {
   try {
+    const ph = CONCILE_AGENT_NAMES.map(() => "?").join(",");
+    const pruned = db.prepare(`DELETE FROM agent_weights WHERE agent_name NOT IN (${ph})`).run(...CONCILE_AGENT_NAMES).changes;
+    if (pruned > 0) console.log(`[migration] Agent weights: ${pruned} ligne(s) hors roster purgée(s)`);
     const agents = db.prepare(`
       SELECT agent_name,
         COUNT(*) as total,
@@ -471,8 +686,9 @@ function refreshAgentWeights() {
         SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
       FROM agent_predictions
       WHERE outcome IS NOT NULL AND outcome != 'pending'
+        AND agent_name IN (${ph})
       GROUP BY agent_name
-    `).all();
+    `).all(...CONCILE_AGENT_NAMES);
     const upsert = db.prepare(`
       INSERT INTO agent_weights (agent_name, total_predictions, wins, losses, winrate, roi, weight, last_updated)
       VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
@@ -510,14 +726,16 @@ setInterval(refreshLeagueRatings, 3600000);
 setInterval(refreshAgentWeights, 3600000);
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const JWT_SECRET = process.env.JWT_SECRET || "tlm_secret_2026";
+const JWT_SECRET = process.env.JWT_SECRET || (() => { console.error("[SECURITY] JWT_SECRET non défini dans .env — auth désactivée"); return require("crypto").randomBytes(32).toString("hex"); })();
 const API_SPORTS_KEY = process.env.API_SPORTS_KEY || process.env.API_FOOTBALL_KEY || "";
 const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_DATA_API_KEY || "";
+const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE    = process.env.STRIPE_PRICE_ID_CARTE    || process.env.STRIPE_PRICE_CARTE   || "";
+const STRIPE_PRICE_ID_STANDARD = process.env.STRIPE_PRICE_ID_STANDARD || process.env.STRIPE_PRICE_STANDARD || "";
 const STRIPE_PRICE_ID_PREMIUM  = process.env.STRIPE_PRICE_ID_PREMIUM  || process.env.STRIPE_PRICE_PRO     || "";
 const STRIPE_PRICE_ID_ELITE    = process.env.STRIPE_PRICE_ID_ELITE    || process.env.STRIPE_PRICE_ELITE   || "";
 const STRIPE_PRICE_ID_VIP      = process.env.STRIPE_PRICE_ID_VIP      || process.env.STRIPE_PRICE_VIP     || "";
@@ -525,12 +743,152 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";
-const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";        // Gratuit (vitrine)
+const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || ""; // Premium 9.90€
+// Canaux Standard (4.90€) et Elite (19.90€). Tant que l'ID n'est pas configuré dans le
+// .env, on retombe automatiquement sur le canal Premium pour ne rien casser en attendant
+// que le canal dédié soit créé. Le CODE applique les conditions par palier (voir plus bas).
+const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
+const _standardSignalDaily = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
-const PREMIUM_SIGNAL_DAILY_CAP = 4; // qualité > volume : seuls les meilleurs paris du jour
+const _eliteSignalDaily = { date: "", count: 0 };
+// Plafonds journaliers par palier (conditions données par le fondateur)
+const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL ≥ 1.50
+const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote ≥ 1.50 (inclut Standard)
+const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseball/basket ≥ 82 (inclut Premium)
+// Seuils volontairement décroissants : un palier supérieur est PLUS LARGE, donc reçoit
+// davantage. L'inverse (Standard ≥ 88 et Premium ≥ 90) rendait les deux paliers
+// identiques, puisque « ≥ 88 » contient déjà tout « ≥ 90 ».
+//
+// Valeurs calées sur la distribution RÉELLE mesurée le 25/07/2026 (analyses résolues,
+// cote réelle ≥ 1.50, depuis le 03/07/2026) — surtout ne pas les remonter sans
+// remesurer, un seuil trop haut vide complètement un palier payant :
+//   ≥ 88 :  11 analyses · 100 % · +86 €     → Standard (~0,5/jour)
+//   84-85 :  62 analyses · 83,9 % · +274 €   → Premium  (~3,3/jour cumulé)
+//   82-83 : 141 analyses · 70,9 % · +428 €   → Elite    (~9,7/jour cumulé)
+// Aucune analyse au-dessus de 89 sur la période : un seuil à 90 ou 92 produit ZÉRO signal.
+const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 85;
+const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
+// Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
+// au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
+// signal football à 84 %, et un mardi sans football vidait le palier.
+const DIFFUSABLE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
+const ELITE_SPORTS = DIFFUSABLE_SPORTS; // conservé : encore référencé par tierEligible()
+
+// ── Seuils dynamiques par palier — garantissent le VOLUME vendu ───────────────
+// Un seuil FIXE est fragile : si le Concile devient moins confiant, le palier se
+// vide et le client paie pour rien (cas réel : seuil Standard à 92 → zéro signal).
+// Ici c'est la QUANTITÉ qui différencie les paliers, pas le seuil. On cherche
+// chaque jour le niveau de confiance qui a historiquement produit le quota visé :
+// « quel seuil laisse passer 3 signaux par jour ? » → c'est celui du Standard.
+// Conséquence : le quota est servi quel que soit le niveau de confiance du moment,
+// et le vivier commun inclut tous les sports (plus de palier à sec faute de football).
+const TIER_THRESHOLD_WINDOW_DAYS = 30;
+let _tierThresholdCache = { day: "", value: null };
+function getTierThresholds() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (_tierThresholdCache.day === today && _tierThresholdCache.value) return _tierThresholdCache.value;
+  // Repli : les constantes calées sur la mesure du 25/07/2026.
+  const fallback = { standard: STANDARD_MIN_CONF, premium: PREMIUM_MIN_CONF, elite: ELITE_MIN_CONF, source: "fixe" };
+  try {
+    const confs = db.prepare(`
+      SELECT confidence FROM concile_analyses
+      WHERE analysed_at >= datetime('now','-${TIER_THRESHOLD_WINDOW_DAYS} days')
+        AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND real_odd >= ${TIER_MIN_REAL_ODD}
+      ORDER BY confidence DESC
+    `).all().map(r => Number(r.confidence) || 0).filter(Boolean);
+    // Sous 30 analyses l'échantillon ne dit rien de fiable : on garde les constantes.
+    if (confs.length < 30) { _tierThresholdCache = { day: today, value: fallback }; return fallback; }
+    // Les confiances sont quantifiées (82, 83, 84, 85, 88, 89…) : un quantile brut
+    // tombe sur des ex æquo et déborde largement le quota. On retient donc la valeur
+    // DISTINCTE dont le nombre de signaux est le plus proche du quota visé.
+    const distinct = [...new Set(confs)].sort((a, b) => b - a);
+    const quantile = (perDay) => {
+      const target = Math.max(1, Math.round(perDay * TIER_THRESHOLD_WINDOW_DAYS));
+      let best = distinct[0], bestGap = Infinity;
+      for (const v of distinct) {
+        const gap = Math.abs(confs.filter(c => c >= v).length - target);
+        if (gap < bestGap) { bestGap = gap; best = v; }
+      }
+      return best;
+    };
+    const t = {
+      standard: quantile(STANDARD_SIGNAL_DAILY_CAP),
+      premium:  quantile(PREMIUM_SIGNAL_DAILY_CAP),
+      elite:    SIGNAL_FLOOR, // Elite = tout le vivier diffusable, au plancher du portail
+      source: `${confs.length} analyses / ${TIER_THRESHOLD_WINDOW_DAYS} j`,
+    };
+    // Imbrication garantie : Standard ≥ Premium ≥ Elite (payer plus = recevoir plus).
+    t.premium = Math.min(t.premium, t.standard);
+    t.elite   = Math.min(t.elite, t.premium);
+    // Jamais sous le plancher de publication.
+    // Le portail de diffusion exige déjà SIGNAL_FLOOR : un seuil de palier inférieur
+    // serait lettre morte. C'est le plafond journalier (3/10/30) qui différencie les
+    // paliers, pas le seuil de confiance.
+    for (const k of ["standard", "premium", "elite"]) t[k] = Math.max(SIGNAL_FLOOR, t[k]);
+    console.log(`[tier-thresholds] Standard ≥${t.standard} · Premium ≥${t.premium} · Elite ≥${t.elite} (${t.source})`);
+    _tierThresholdCache = { day: today, value: t };
+    return t;
+  } catch (e) {
+    console.error("[tier-thresholds]", e.message);
+    return fallback;
+  }
+}
+
+// Vérifie au démarrage que chaque canal configuré existe et que le bot y a accès.
+// Un ID périmé (typiquement après migration d'un groupe en supergroupe, où l'ID
+// change) faisait échouer les envois EN SILENCE : sendTelegramMessage renvoie
+// simplement false. Ce contrôle rend le problème visible immédiatement.
+function verifyTelegramChannels() {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  const channels = [
+    ["Gratuit",  TELEGRAM_CHANNEL_ID],
+    ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
+    ["Premium",  TELEGRAM_PREMIUM_CHANNEL_ID],
+    ["Elite",    TELEGRAM_ELITE_CHANNEL_ID],
+    ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
+  ];
+  for (const [label, id] of channels) {
+    if (!id) { console.warn(`[telegram-check] ${label} : NON CONFIGURÉ`); continue; }
+    https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`, (res) => {
+      let data = "";
+      res.on("data", d => data += d);
+      res.on("end", () => {
+        try {
+          const j = JSON.parse(data);
+          if (!j.ok) {
+            console.error(`[telegram-check] ❌ ${label} (${id}) INJOIGNABLE — ${j.description || "erreur"} — les messages de ce palier ne partiront PAS`);
+          } else {
+            const t = j.result.type;
+            const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
+            console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
+          }
+        } catch { console.error(`[telegram-check] ${label} : réponse illisible`); }
+      });
+    }).on("error", (e) => console.error(`[telegram-check] ${label} : ${e.message}`));
+  }
+}
+
+// Diffuse un message identique à tous les canaux payants. Le FORMAT est le même
+// partout — seul le volume diffère, via les plafonds et seuils de chaque palier.
+// Dédoublonnage par chat_id : tant qu'un palier n'a pas de canal dédié il retombe
+// sur Premium, et on ne veut pas envoyer deux fois le même message au même canal.
+// includeStandard=false réserve le message aux paliers supérieurs (modèle imbriqué).
+function sendToPaidChannels(text, opts = {}) {
+  const targets = [];
+  const push = (id, label) => { if (id && !targets.some(t => t.id === id)) targets.push({ id, label }); };
+  if (opts.includeStandard !== false) push(TELEGRAM_STANDARD_CHANNEL_ID, "standard");
+  push(TELEGRAM_PREMIUM_CHANNEL_ID, "premium");
+  push(TELEGRAM_ELITE_CHANNEL_ID, "elite");
+  return Promise.all(targets.map(t =>
+    sendTelegramMessage(t.id, text)
+      .then(ok => console.log(`[${opts.tag || "telegram"}] ${t.label}: ${ok ? "OK" : "FAIL"}`))
+  ));
+}
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
 const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
@@ -538,7 +896,7 @@ const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de conf
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
 // IA) qui ne part pas sur Telegram → on ne la montre pas comme un "pick". Réglable.
-const PUBLISHED_MIN_CONFIDENCE = 83;
+const PUBLISHED_MIN_CONFIDENCE = 82;
 
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
@@ -661,6 +1019,30 @@ const SHADOW_AGENTS = [
     enabled: () => !!COHERE_API_KEY,
     call: (prompt) => callCohere(prompt),
   },
+  // ── Nouveaux modèles au banc d'essai (test à blanc, aucun impact sur les picks) ──
+  // Les identifiants sont surchargeables par .env : si OpenRouter renomme un modèle
+  // ou si l'ID est erroné, on corrige sans redéployer. Un ID invalide se voit
+  // désormais dans les logs ("SANS RÉPONSE — model not found"), plus en silence.
+  {
+    name: "OR-Qwen37Max",
+    icon: "🌟",
+    enabled: () => !!OPENROUTER_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: OPENROUTER_API_KEY,
+      model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
+    }),
+  },
+  {
+    name: "OR-KimiK3",
+    icon: "🌙",
+    enabled: () => !!OPENROUTER_API_KEY,
+    call: (prompt) => callOpenAICompat(prompt, {
+      url: "https://openrouter.ai/api/v1/chat/completions",
+      key: OPENROUTER_API_KEY,
+      model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3",
+    }),
+  },
 ];
 
 // ── Telegram helper ──────────────────────────────────────────────────────────
@@ -690,11 +1072,21 @@ function sendTelegramMessage(chatId, text) {
 
 // Génère un lien d'invitation Telegram à usage unique vers le canal premium.
 // Le bot doit être administrateur du canal avec le droit d'inviter.
-function createPremiumInviteLink(labelEmail) {
-  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_PREMIUM_CHANNEL_ID) return Promise.resolve(null);
+// Canal correspondant au palier acheté. Sans cette résolution, un abonné Elite ou
+// Standard recevait une invitation vers le canal Premium (mauvais canal, mauvais
+// contenu). Un palier sans canal dédié configuré retombe sur Premium.
+function channelForStatus(status) {
+  if (status === "standard") return TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
+  if (status === "elite" || status === "vip") return TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
+  return TELEGRAM_PREMIUM_CHANNEL_ID;
+}
+
+function createPremiumInviteLink(labelEmail, status) {
+  const chatId = channelForStatus(status);
+  if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(null);
   const body = JSON.stringify({
-    chat_id: TELEGRAM_PREMIUM_CHANNEL_ID,
-    name: `Premium ${labelEmail || ""}`.slice(0, 32),
+    chat_id: chatId,
+    name: `${(status || "premium").toUpperCase()} ${labelEmail || ""}`.slice(0, 32),
     member_limit: 1,
     creates_join_request: false,
   });
@@ -729,7 +1121,7 @@ function callOpenAICompat(prompt, { url, key, model }) {
     const body = JSON.stringify({
       model,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 200,
+      max_tokens: 120, // réponse courte attendue : ne pas payer 200 tokens
       temperature: 0.3,
     });
     const u = new URL(url);
@@ -752,13 +1144,22 @@ function callOpenAICompat(prompt, { url, key, model }) {
       res.on("end", () => {
         try {
           const json = JSON.parse(data);
+          // Un modèle inexistant renvoie un JSON d'erreur parfaitement valide (404
+          // "model not found") : sans ce contrôle on résolvait ok:true avec un texte
+          // vide, et l'agent échouait en silence pour toujours.
+          if (json.error) {
+            return resolve({ ok: false, text: "", error: json.error.message || JSON.stringify(json.error) });
+          }
           const text = json.choices?.[0]?.message?.content || "";
-          resolve({ ok: true, text });
-        } catch { resolve({ ok: false, text: "" }); }
+          if (!text) return resolve({ ok: false, text: "", error: `réponse vide (HTTP ${res.statusCode}, modèle ${model})` });
+          // usage.* provient de l'API quand elle le fournit (cas OpenRouter/Groq) :
+          // sert à journaliser un coût réel plutôt qu'une estimation approximative.
+          resolve({ ok: true, text, usageIn: json.usage?.prompt_tokens || 0, usageOut: json.usage?.completion_tokens || 0 });
+        } catch { resolve({ ok: false, text: "", error: `réponse illisible (HTTP ${res.statusCode}): ${String(data).slice(0, 120)}` }); }
       });
     });
-    req.on("error", () => resolve({ ok: false, text: "" }));
-    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "" }); });
+    req.on("error", (e) => resolve({ ok: false, text: "", error: `réseau: ${e.message}` }));
+    req.on("timeout", () => { req.destroy(); resolve({ ok: false, text: "", error: "timeout 15s" }); });
     req.write(body);
     req.end();
   });
@@ -770,7 +1171,7 @@ function callCohere(prompt) {
     const body = JSON.stringify({
       model: "command-r",
       message: prompt,
-      max_tokens: 200,
+      max_tokens: 120, // réponse courte attendue : ne pas payer 200 tokens
       temperature: 0.3,
     });
     const options = {
@@ -859,6 +1260,19 @@ Pour MARCHES (avis rapide sur chaque marché, codes courts + confiance 40-90) :
 Ne mets rien d'autre. Si tu n'es pas sûr du pick principal, réponds NO BET (mais donne quand même MARCHES).`;
 }
 
+// Plafond journalier des tests à blanc — garde-fou de budget OpenRouter.
+// 20 matchs/jour suffisent largement : la promotion d'un challenger exige 50 picks
+// résolus, soit moins de 3 jours d'échantillon. Payer plus n'apporte rien.
+const SHADOW_DAILY_CAP = Math.max(1, Number(process.env.SHADOW_DAILY_CAP || 20));
+const _shadowDaily = { date: "", count: 0 };
+function shadowQuotaAllows() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (_shadowDaily.date !== today) { _shadowDaily.date = today; _shadowDaily.count = 0; }
+  if (_shadowDaily.count >= SHADOW_DAILY_CAP) return false;
+  _shadowDaily.count++;
+  return true;
+}
+
 async function runShadowEvaluation(match) {
   const prompt = buildShadowPrompt(match);
   const matchKey = `${(match.home || "").replace(/\s+/g, "_")}_${(match.away || "").replace(/\s+/g, "_")}_${(match.date || match.utcDate || "").slice(0, 10)}`;
@@ -870,13 +1284,23 @@ async function runShadowEvaluation(match) {
       const existing = db.prepare("SELECT 1 FROM shadow_evals WHERE match_key = ? AND agent_name = ?").get(matchKey, agent.name);
       if (existing) continue;
 
-      const result = await agent.call(prompt);
-      if (!result.ok || !result.text) continue;
+      // Passage obligatoire par le garde-fou pour Qwen/Kimi (budget, anti-doublon,
+      // coupe-circuit) ; les autres agents shadow ne sont pas concernés par ce
+      // budget OpenRouter (voir analysis_engine.js).
+      const result = await analysisEngine.guardedShadowCall(db, agent, prompt, {
+        matchKey, competition: match.competition || match.league || "",
+      });
+      if (!result.ok || !result.text) {
+        // Log explicite : un agent mal configuré (mauvais identifiant de modèle,
+        // clé absente, quota dépassé) doit se voir dans les logs, pas disparaître.
+        console.error(`[shadow] ${agent.name} SANS RÉPONSE — ${result.error || "raison inconnue"}`);
+        continue;
+      }
 
       const parsed = parseShadowResponse(result.text);
-      // Avis multi-marchés du banc d'essai — même mécanique que les 4 agents
+      // Avis multi-marchés du banc d'essai — même mécanique que les 5 agents
       // du Concile, pour que TOUTES les IA (pas seulement Perplexity/DeepSeek/
-      // Mistral-Large/Cohere) apparaissent dans la matrice IA × marché.
+      // Mistral-Large/Cohere/Qwen) apparaissent dans la matrice IA × marché.
       if (parsed.marches) {
         saveAgentMarketPredictions(match, [{ name: agent.name, marches: parsed.marches }]);
       }
@@ -1077,9 +1501,11 @@ function saveProofs(proofs) {
   } catch (e) { console.error("[preuves] save error:", e.message); }
 }
 
-// Cache live matches 10 minutes to stay under 100 req/day
+// Cache live matches pour limiter les appels API-Sports tout en gardant le live lisible.
 let liveMatchesCache = { data: null, ts: 0 };
-const CACHE_TTL = 30 * 1000; // 30 s : scores live quasi temps réel (cache global partagé, ~2 appels API/min max)
+const CACHE_TTL = 60 * 1000; // 60 s : cache global partage, evite de bruler le quota multi-sport.
+const API_SPORTS_QUOTA_BLOCK_MS = 12 * 60 * 60 * 1000;
+const apiSportsBlockedUntil = { football: 0, basketball: 0, hockey: 0, baseball: 0 };
 
 const TOKEN_LIMITS = { free: 0, carte: 1, essentiel: 10, elite: 30 };
 
@@ -1154,7 +1580,65 @@ function httpGet(url, headers = {}) {
   });
 }
 
-function httpPost(url, body, headers = {}) {
+function apiSportsErrors(data) {
+  const errors = data?.errors;
+  return errors && Object.keys(errors).length ? errors : null;
+}
+
+function isApiSportsQuotaError(errors) {
+  return /request limit|quota|upgrade your plan/i.test(JSON.stringify(errors || {}));
+}
+
+function shouldSkipApiSportsSport(sport) {
+  const blockedUntil = apiSportsBlockedUntil[sport] || 0;
+  if (Date.now() < blockedUntil) {
+    console.warn(`[live-matches] API-Sports ${sport} saute: quota bloque temporairement`);
+    return true;
+  }
+  return false;
+}
+
+function handleApiSportsErrors(sport, data) {
+  const errors = apiSportsErrors(data);
+  if (!errors) return false;
+  console.warn(`[live-matches] API-Sports ${sport} indisponible: ${JSON.stringify(errors)}`);
+  if (isApiSportsQuotaError(errors)) apiSportsBlockedUntil[sport] = Date.now() + API_SPORTS_QUOTA_BLOCK_MS;
+  return true;
+}
+
+function buildVoteSummary(activeAgents, selectedBet) {
+  const voters = (activeAgents || []).filter((a) => a && !a.failed && a.bet && a.bet !== "—" && a.bet !== "-");
+  const voteTotal = 5;
+  const voteActive = voters.length;
+  const counts = {};
+  for (const a of voters) counts[a.bet] = (counts[a.bet] || 0) + 1;
+  let voteTop = selectedBet || null;
+  let voteCount = voteTop ? counts[voteTop] || 0 : 0;
+  for (const [bet, count] of Object.entries(counts)) {
+    if (count > voteCount) { voteTop = bet; voteCount = count; }
+  }
+  const unanimous = voteCount === voteTotal;
+  const voteStatus = unanimous ? "elite" : voteCount >= 4 ? "strong" : voteCount >= 3 ? "trend" : "none";
+  const voteLabel = unanimous
+    ? "5/5 unanime"
+    : voteCount >= 4
+      ? "4/5 signal fort"
+      : voteCount >= 3
+        ? "3/5 tendance IA"
+        : `${voteCount}/${voteTotal} aucun signal`;
+  return {
+    vote_total: voteTotal,
+    vote_active: voteActive,
+    vote_count: voteCount,
+    vote_top: voteTop,
+    vote_label: voteLabel,
+    vote_status: voteStatus,
+    unanimous,
+    recommended: voteCount >= 4,
+  };
+}
+
+function httpPost(url, body, headers = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const payload = JSON.stringify(body);
@@ -1163,6 +1647,7 @@ function httpPost(url, body, headers = {}) {
       path: opts.pathname + opts.search,
       method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload), ...headers },
+      timeout: timeoutMs,
     };
     const req = https.request(options, (res) => {
       let data = "";
@@ -1173,6 +1658,10 @@ function httpPost(url, body, headers = {}) {
       });
     });
     req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      resolve({});
+    });
     req.write(payload);
     req.end();
   });
@@ -1518,6 +2007,23 @@ function bestBetGrade(match, bet, confidence, cote) {
   return { ev, segWr, elite };
 }
 
+// ── Palier du signal : Standard / Premium / Elite ──
+// Filtrage APRÈS analyse : le concile recommande librement, on classe ensuite.
+// Standard = crème (Under 2.5, ≥90%, envoyé 45-60') → peu de volume, très fiable
+// Premium  = solide (Under/Over 2.5, ≥86%, envoyé 40-65')
+// Elite    = tout le reste qualifié (≥82%, toute fenêtre)
+function computeSignalTier(bet, confidence, minute) {
+  const c = Number(confidence) || 0;
+  const m = Number(minute) || 60;
+  const b = String(bet || "").toLowerCase();
+  const isUnder = /under|moins de 2[.,]5/i.test(b);
+  const isOver = /over|plus de 2[.,]5/i.test(b);
+  if (c >= 90 && isUnder && m >= 45 && m <= 60) return "standard";
+  if (c >= 86 && (isUnder || isOver) && m >= 40 && m <= 65) return "premium";
+  if (c >= 82) return "elite";
+  return null;
+}
+
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
 const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.40));
 
@@ -1532,12 +2038,24 @@ function betIsPlayable(match, bet, cote) {
     const total = sh + sa;
     const b = String(bet || "").toLowerCase();
 
-    // Victoire déjà quasi acquise (écart >= 2 buts) → cote ridicule, pari déjà joué
-    if ((/victoire.*(dom|home)|domicile|^1$/.test(b)) && diff >= 2) {
-      return { ok: false, reason: `domicile mène déjà ${sh}-${sa} — victoire déjà jouée` };
-    }
-    if ((/victoire.*(ext|away)|ext[eé]rieur|^2$/.test(b)) && diff <= -2) {
-      return { ok: false, reason: `extérieur mène déjà ${sh}-${sa} — victoire déjà jouée` };
+    // Victoire déjà quasi acquise (écart >= 2 buts) → pari déjà joué, cote irréaliste.
+    // On reconnaît "Victoire domicile/extérieur" MAIS AUSSI "Victoire <nom d'équipe>"
+    // (ex: "Victoire Apollon Limassol" à 0-3 doit être bloqué — bug corrigé 23/07).
+    const isWinBet = /victoire|vainqueur|winner|\bwin\b/.test(b) || /^[12]$/.test(b);
+    if (isWinBet) {
+      const norm = (s) => String(s || "").toLowerCase().trim();
+      const homeN = norm(match?.home), awayN = norm(match?.away);
+      const firstWord = (s) => (s.split(/[\s.]+/).filter(Boolean)[0] || "");
+      const hMentioned = homeN && (b.includes(homeN) || (firstWord(homeN).length >= 3 && b.includes(firstWord(homeN))));
+      const aMentioned = awayN && (b.includes(awayN) || (firstWord(awayN).length >= 3 && b.includes(firstWord(awayN))));
+      const isHomeWin = /victoire.*(dom|home)|domicile|^1$/.test(b) || (hMentioned && !aMentioned);
+      const isAwayWin = /victoire.*(ext|away)|ext[eé]rieur|^2$/.test(b) || (aMentioned && !hMentioned);
+      if (isHomeWin && diff >= 2) {
+        return { ok: false, reason: `domicile mène déjà ${sh}-${sa} — victoire déjà jouée` };
+      }
+      if (isAwayWin && diff <= -2) {
+        return { ok: false, reason: `extérieur mène déjà ${sh}-${sa} — victoire déjà jouée` };
+      }
     }
     // Over / Under déjà tranchés par le score actuel
     const overM = b.match(/(?:over|plus de)\s*(\d+(?:\.5)?)/);
@@ -1614,17 +2132,21 @@ async function fetchFromApiSports() {
 
   // Football live
   try {
-    const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    if (!data.errors || Object.keys(data.errors).length === 0) {
+    if (!shouldSkipApiSportsSport("football")) {
+      const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
+      if (!handleApiSportsErrors("football", data)) {
       const items = (data.response || []).slice(0, 60).map(normalizeApiSportsFootballFixture);
       results.push(...items);
       console.log(`[live-matches] API-Sports football: ${items.length}`);
+      }
     }
   } catch(e) { console.error("[live-matches] API-Sports football:", e.message); }
 
   // Basketball live
   try {
+    if (!shouldSkipApiSportsSport("basketball")) {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!handleApiSportsErrors("basketball", data)) {
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
       source: "api-sports",
@@ -1638,12 +2160,16 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports basketball: ${items.length}`);
+    console.log(`[live-matches] API-Sports basketball: ${items.length}`);
+    }
+    }
   } catch(e) { console.error("[live-matches] API-Sports basketball:", e.message); }
 
   // Hockey live
   try {
+    if (!shouldSkipApiSportsSport("hockey")) {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!handleApiSportsErrors("hockey", data)) {
     const items = (data.response || []).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
@@ -1657,12 +2183,16 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports hockey: ${items.length}`);
+    console.log(`[live-matches] API-Sports hockey: ${items.length}`);
+    }
+    }
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
   // Baseball live
   try {
+    if (!shouldSkipApiSportsSport("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
+    if (!handleApiSportsErrors("baseball", data)) {
     const items = (data.response || []).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
       source: "api-sports",
@@ -1678,38 +2208,71 @@ async function fetchFromApiSports() {
       utcDate: g.date,
     })).filter(g => g.home && g.away);
     results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports baseball: ${items.length}`);
+    console.log(`[live-matches] API-Sports baseball: ${items.length}`);
+    }
+    }
   } catch(e) { console.error("[live-matches] API-Sports baseball:", e.message); }
 
-  // Tennis live — filtré sur ATP (exclut WTA/ITF/Challenger via le nom du tournoi)
-  try {
-    const data = await httpGet("https://v1.tennis.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
-    const items = (data.response || [])
-      .filter(g => {
-        const t = String(g.league?.name || g.tournament?.name || "").toLowerCase();
-        return t.includes("atp") && !t.includes("wta");
-      })
-      .slice(0, 10)
-      .map((g) => ({
-        id: "tn-" + g.id, sport: "Tennis",
-        source: "api-sports",
-        sourceId: String(g.id),
-        fixtureId: null,
-        home: g.teams?.home?.name, away: g.teams?.away?.name,
-        home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
-        score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
-        score_away: g.scores?.away?.total ?? g.scores?.away ?? null,
-        minute: g.status?.long || g.status?.short || null,
-        status: "IN_PLAY",
-        competition: "ATP · " + (g.league?.name || g.tournament?.name || "Tennis"),
-        utcDate: g.date,
-      })).filter(g => g.home && g.away);
-    results.push(...items);
-    if (items.length) console.log(`[live-matches] API-Sports tennis ATP: ${items.length}`);
-  } catch(e) { console.error("[live-matches] API-Sports tennis:", e.message); }
+  // Tennis neutralise: l'ancien endpoint v1.tennis.api-sports.io ne resout plus
+  // et polluait les logs live. A reactiver uniquement avec un endpoint valide.
 
   if (results.length === 0) return null;
   console.log(`[live-matches] API-Sports total: ${results.length} événements`);
+  return results;
+}
+
+function normalizeTheSportsDbLiveEvent(event, fallbackSport) {
+  const rawSport = String(event?.strSport || fallbackSport || "").toLowerCase();
+  const sport = rawSport.includes("basket") ? "Basketball"
+    : rawSport.includes("hockey") ? "Hockey"
+    : rawSport.includes("baseball") ? "Baseball"
+    : "Football";
+  const home = event?.strHomeTeam || event?.strHome || event?.homeTeam || event?.home;
+  const away = event?.strAwayTeam || event?.strAway || event?.awayTeam || event?.away;
+  if (!home || !away) return null;
+  const homeScore = event?.intHomeScore ?? event?.homeScore ?? event?.scoreHome ?? null;
+  const awayScore = event?.intAwayScore ?? event?.awayScore ?? event?.scoreAway ?? null;
+  const minute = event?.intTime || event?.strTime || event?.strProgress || event?.strStatus || "Live";
+  const id = event?.idEvent || event?.idLiveScore || `${sport}-${home}-${away}`;
+  return {
+    id: "tsdb-" + String(id),
+    source: "thesportsdb",
+    sourceId: String(id),
+    fixtureId: null,
+    sport,
+    home,
+    away,
+    home_logo: event?.strHomeTeamBadge || event?.strHomeBadge || null,
+    away_logo: event?.strAwayTeamBadge || event?.strAwayBadge || null,
+    score_home: homeScore === "" ? null : homeScore,
+    score_away: awayScore === "" ? null : awayScore,
+    minute,
+    status: "IN_PLAY",
+    competition: event?.strLeague || event?.strLeagueAlternate || sport,
+    utcDate: event?.dateEvent || event?.strTimestamp || new Date().toISOString(),
+  };
+}
+
+async function fetchFromTheSportsDb() {
+  if (!THESPORTSDB_API_KEY) return null;
+  const url = "https://www.thesportsdb.com/api/v2/json/livescore/all";
+  const data = await httpGet(url, { "X-API-KEY": THESPORTSDB_API_KEY, "Content-Type": "application/json" });
+  const raw = Array.isArray(data?.livescore) ? data.livescore
+    : Array.isArray(data?.events) ? data.events
+    : Array.isArray(data?.response) ? data.response
+    : Array.isArray(data) ? data
+    : [];
+  const wanted = new Set(["Football", "Basketball", "Hockey", "Baseball"]);
+  const results = raw
+    .map((event) => normalizeTheSportsDbLiveEvent(event, event?.strSport))
+    .filter((event) => event && wanted.has(event.sport));
+  const counts = results.reduce((acc, event) => {
+    acc[event.sport] = (acc[event.sport] || 0) + 1;
+    return acc;
+  }, {});
+  for (const sport of wanted) console.log(`[live-matches] TheSportsDB ${sport}: ${counts[sport] || 0}`);
+  if (results.length === 0) return null;
+  console.log(`[live-matches] TheSportsDB total: ${results.length} événements`);
   return results;
 }
 
@@ -1777,17 +2340,44 @@ function rejectScoreConflict(match, res) {
   return true;
 }
 
+function hasNonFootballLiveMatches(matches) {
+  return Array.isArray(matches) && matches.some((match) => {
+    const sport = String(match?.sport || "").trim();
+    return sport && sport !== "Football";
+  });
+}
+
+async function enrichFootballOnlyLiveCache(cacheData) {
+  if (!Array.isArray(cacheData) || hasNonFootballLiveMatches(cacheData)) return cacheData;
+  try {
+    const theSportsDbMatches = await fetchFromTheSportsDb();
+    if (!Array.isArray(theSportsDbMatches) || !theSportsDbMatches.length) return cacheData;
+    const enrichedMatches = mergeLiveMatchSources(cacheData, theSportsDbMatches)
+      .filter(m => !isFinishedOrTooLateForLiveIa(m));
+    liveMatchesCache = { data: enrichedMatches, ts: Date.now() };
+    console.log(`[live-matches] Cache enrichi TheSportsDB: ${enrichedMatches.length} événements`);
+    return enrichedMatches;
+  } catch (e) {
+    console.error("[live-matches] Enrichissement cache TheSportsDB:", e.message);
+    return cacheData;
+  }
+}
+
 async function fetchLiveMatches() {
   if (liveMatchesCache.data && Date.now() - liveMatchesCache.ts < CACHE_TTL) {
-    return liveMatchesCache.data;
+    return await enrichFootballOnlyLiveCache(liveMatchesCache.data);
   }
-  const [footballDataMatches, apiSportsMatches] = await Promise.all([
+  const [footballDataMatches, apiSportsMatches, theSportsDbMatches] = await Promise.all([
     fetchFromFootballData(),
     fetchFromApiSports(),
+    fetchFromTheSportsDb(),
   ]);
   // If both failed, do not keep stale live matches on screen.
-  if (footballDataMatches === null && apiSportsMatches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
-  const matches = mergeLiveMatchSources(footballDataMatches || [], apiSportsMatches || []);
+  if (footballDataMatches === null && apiSportsMatches === null && theSportsDbMatches === null) return resolveLiveMatchesAfterFetchFailure(liveMatchesCache);
+  const matches = mergeLiveMatchSources(
+    mergeLiveMatchSources(footballDataMatches || [], apiSportsMatches || []),
+    theSportsDbMatches || []
+  );
 
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
@@ -2115,9 +2705,12 @@ async function fetchRealOdds(match) {
     );
     const bookmakers = resp?.response?.[0]?.bookmakers || [];
     if (bookmakers.length) {
-      const chosen = bookmakers.find(bm =>
-        ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a))
-      ) || bookmakers[0];
+      // On privilégie NOS bookmakers partenaires (cliquables sur le site : Winamax,
+      // Unibet, PMU), puis n'importe quel ARJEL, puis le premier disponible.
+      const PARTNER = ["winamax", "unibet", "pmu"];
+      const chosen = bookmakers.find(bm => PARTNER.some(a => String(bm.name || "").toLowerCase().includes(a)))
+        || bookmakers.find(bm => ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a)))
+        || bookmakers[0];
       data = { bookmaker: chosen.name, bets: chosen.bets || [] };
     }
   } catch (e) { console.error("[odds]", e.message); data = null; }
@@ -2506,7 +3099,7 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiquement invalide.`;
 
-  // Concile v3 — 4 familles d'IA radicalement différentes + Chief
+  // Concile v3 — 5 familles d'IA radicalement différentes + Chief
   // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
   // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
@@ -2515,6 +3108,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
   const usePerplexity = !!PERPLEXITY_API_KEY;
   const useMistral    = !!MISTRAL_API_KEY;
   const useCohere     = !!COHERE_API_KEY;
+  const useOpenRouter = !!OPENROUTER_API_KEY;
 
   const agentNames = [
     {
@@ -2536,8 +3130,16 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       icon: "🧬",
       useCohere,
     },
+    {
+      name: "OpenRouter-Qwen",
+      model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
+      icon: "🌟",
+      useOpenRouter,
+    },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
+  const CHIEF_INDEX = agentNames.length - 1;
+  const AGENT_INDEXES = agentNames.map((_, i) => i).filter(i => i !== CHIEF_INDEX);
 
   const webSearchNote = usePerplexity
     ? `\nATTENTION : tu as accès aux données web en temps réel. Cherche impérativement : forme récente de ${match.home} et ${match.away} (5 derniers matchs), blessures confirmées, confrontations directes récentes, et cotes actuelles chez les bookmakers. Cite tes sources. N'invente RIEN.`
@@ -2552,7 +3154,9 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
 
-    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 4 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.`,
+    `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
+
+    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -2562,7 +3166,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
   // Helper: run a single agent and return its result
   async function runSingleAgent(i) {
-    const isChief = i === 4;
+    const isChief = i === CHIEF_INDEX;
     const agCfg = agentNames[i];
     const temp = 0.3 + i * 0.05;
     const maxTok = isChief ? 400 : 300;
@@ -2606,20 +3210,33 @@ Réponds en JSON pur (pas de markdown):
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
+      if (agCfg.useOpenRouter && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
       if (!providers.length && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
       if (!providers.length && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: "mistral-small-latest" });
-      if (GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
-      if (OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
-      if (CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+      if (!providers.length && GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
+      // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
+      // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
+      // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
+      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}`;
+      const _fallbackCompetition = match.competition || match.league || "";
+      if (!providers.length && OPENROUTER_API_KEY
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+      }
+      if (!providers.length && OPENROUTER_API_KEY
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
+      }
+      if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       let raw = "{}";
       for (const pv of providers) {
         try {
           if (pv.kind === "cohere") {
-            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` });
+            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, 3500);
             raw = cr.text || cr.chat_history?.slice(-1)[0]?.message || "{}";
           } else {
-            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` });
+            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, 3500);
             raw = rp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -2665,13 +3282,14 @@ Réponds en JSON pur (pas de markdown):
     }
   }
 
-  // Phase 1: Run 4 agents IN PARALLEL (not sequentially)
-  const agentResults = await Promise.all([0, 1, 2, 3].map(i => runSingleAgent(i)));
+  // Phase 1: Run 5 agents IN PARALLEL (not sequentially)
+  const agentResults = await Promise.all(AGENT_INDEXES.map(i => runSingleAgent(i)));
 
   // Phase 2: Run Chief AFTER, with all agent votes available
   // Filter weak agents (winrate < 52% AND resolved >= 30 predictions)
   const benchedAgents = [];
   const activedAgentResults = agentResults.filter((a) => {
+    if (a.failed) return false;
     const p = agentPerf[a.name];
     const resolved = p ? p.resolved : 0;
     const winrate = p ? p.winrate : null;
@@ -2702,7 +3320,7 @@ Réponds en JSON pur (pas de markdown):
     ? `\n\nNOTE: Agents exclus du vote (faible historique): ${benchedAgents.join(", ")} [ces agents ont <52% winrate sur 30+ prédictions résolues]`
     : "";
 
-  const chiefPrompt = `${personas[4]}
+  const chiefPrompt = `${personas[CHIEF_INDEX]}
 
 ${matchContext}
 
@@ -2728,16 +3346,25 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
   try {
+    // Un seul fournisseur retenu par match : chacun n'est ajouté que si AUCUN
+    // précédent n'est déjà en liste. Avant ce correctif, DeepSeek et OpenRouter
+    // (Qwen) étaient tous deux ajoutés inconditionnellement — dès que DeepSeek
+    // répondait vide/lentement (timeout 3.5s), Qwen était rappelé en plus, à
+    // chaque analyse où le Chief tranche. C'est la principale source identifiée
+    // de la surconsommation OpenRouter (audit du 28/07/2026).
     const chiefProviders = [];
-    if (GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
     if (DEEPSEEK_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
-    if (OPENROUTER_API_KEY) chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "meta-llama/llama-3.3-70b-instruct:free" });
-    if (CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+    if (!chiefProviders.length && GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
+    if (!chiefProviders.length && CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+    if (!chiefProviders.length && OPENROUTER_API_KEY
+        && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: "Chief", matchKey: `${match.home || "?"}_${match.away || "?"}`, competition: match.competition || match.league || "", modelKey: "qwen" })) {
+      chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+    }
 
     let raw = "{}";
     for (const pv of chiefProviders) {
       try {
-        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` });
+        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` }, 3500);
         raw = rp.choices?.[0]?.message?.content || "{}";
         const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         if (probe && probe !== "{}" && probe.length > 8) break;
@@ -2749,13 +3376,19 @@ Réponds en JSON pur (pas de markdown):
     const parsed = JSON.parse(cleaned);
     const rawBet = parsed.bet || availableBets[0];
     const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
-    const fallbackRaison = `Consensus des agents : ${agentResults.map(a => a.bet).join(", ")}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`;
+    const activeVoteSummary = activedAgentResults
+      .filter(a => a.bet && a.bet !== "—" && a.bet !== "-")
+      .map(a => `${a.bet} (${a.confidence}%)`)
+      .join(", ");
+    const fallbackRaison = activeVoteSummary
+      ? `Synthèse du Concile : ${activeVoteSummary}. Score ${match.score_home}-${match.score_away} à ${minuteDisplay}.`
+      : `Analyse live basée sur le score ${match.score_home}-${match.score_away} à ${minuteDisplay}, le temps restant et les marchés disponibles. Signal prudent faute de consensus IA complet.`;
     const raisonFinal = corrected
       ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
       : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
 
     agentResults.push({
-      name: agentNames[4].name, icon: agentNames[4].icon,
+      name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
       bet: validBet,
       confidence: Math.min(95, Math.max(50, isNaN(parseInt(parsed.confidence)) ? 55 : parseInt(parsed.confidence))),
       raison: raisonFinal,
@@ -2763,17 +3396,39 @@ Réponds en JSON pur (pas de markdown):
     });
   } catch (e) {
     console.error(`[concile] agent Chief erreur:`, e.message);
-    agentResults.push(getMockAgentAnalysis(agentNames[4], match, 4));
+    agentResults.push(getMockAgentAnalysis(agentNames[CHIEF_INDEX], match, CHIEF_INDEX));
   }
 
   // Find consensus bet
   const chief = agentResults[agentResults.length - 1];
   const betCounts = {};
-  agentResults.slice(0, 4).forEach((a) => {
+  activedAgentResults.forEach((a) => {
     betCounts[a.bet] = (betCounts[a.bet] || 0) + 1;
   });
-  const consensusBet = chief.bet;
-  const consensusVotes = betCounts[consensusBet] || 0;
+  let consensusBet = chief.bet;
+  let consensusVotes = betCounts[consensusBet] || 0;
+  let topBet = null;
+  let topVotes = 0;
+  for (const [bet, votes] of Object.entries(betCounts)) {
+    if (votes > topVotes) { topBet = bet; topVotes = votes; }
+  }
+  const voteSummary = buildVoteSummary(activedAgentResults, topBet || chief.bet);
+  if (topBet && topVotes >= 3) {
+    const topAgents = activedAgentResults.filter(a => a.bet === topBet);
+    const avgConfidence = Math.round(topAgents.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / topAgents.length);
+    chief.bet = topBet;
+    chief.confidence = voteSummary.unanimous
+      ? Math.max(75, Math.min(90, avgConfidence))
+      : topVotes >= 4
+        ? Math.max(68, Math.min(86, avgConfidence))
+        : Math.max(58, Math.min(74, avgConfidence));
+    chief.raison = `${voteSummary.vote_label} : ${topVotes} IA indépendantes convergent sur ${topBet}. ${chief.raison || ""}`.trim();
+    consensusBet = topBet;
+    consensusVotes = topVotes;
+  } else {
+    chief.confidence = Math.min(55, Number(chief.confidence || 55));
+    chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
+  }
 
   // Sauvegarder les prédictions pour le tracking de performance
   saveAgentPredictions(match, agentResults);
@@ -2790,8 +3445,10 @@ Réponds en JSON pur (pas de markdown):
     cote: oddInfo.cote,
     cote_source: oddInfo.source,
     raison: chief.raison,
-    consensus_votes: consensusVotes + 1,
-    total_agents: 5,
+    consensus_votes: consensusVotes,
+    total_agents: voteSummary.vote_total,
+    active_agents: voteSummary.vote_active,
+    vote_summary: buildVoteSummary(activedAgentResults, chief.bet),
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
@@ -2841,56 +3498,125 @@ Réponds en JSON pur (pas de markdown):
   if (lowTrust) {
     console.log(`[signal-fort] Bloqué — ligue douteuse (liste noire): ${match.competition || match.league || ""}`);
   }
-  if (analysisResult.confidence >= signalThreshold && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
+  const voteInfo = analysisResult.vote_summary || {};
+  const voteCountForSignal = Number(voteInfo.vote_count || analysisResult.consensus_votes || 0);
+  // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
+  // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
+  let shadowWorthy = false;
+  if (analysisResult.confidence >= signalThreshold && voteCountForSignal >= 3 && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       _signalSentCache.add(signalKey);
-      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+      const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
       const safeRaison = maskAiNames(String(analysisResult.raison || "").slice(0, 200));
-      const tgPremium = `🚨 <b>SIGNAL FORT — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b> (agents: IA1, IA2, IA3)\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}\n\n🔒 <b>L'analyse exacte du Concile (sélection + raison) est réservée aux abonnés.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'analyse – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      // Cote déjà calculée au moment de l'analyse (computeBestOdd) → aucun appel API
+      // supplémentaire. On l'envoie AVEC le signal, avec le bookmaker source si réel.
+      const _bmSig = (analysisResult.cote_source && !/estimation/i.test(String(analysisResult.cote_source)))
+        ? ` <i>(${analysisResult.cote_source})</i>` : "";
+      // On n'affiche la cote QUE si c'est une VRAIE cote bookmaker (jamais l'estimation).
+      const coteSig = (analysisResult.cote && _bmSig)
+        ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
+      const voteLine = voteInfo.vote_label ? `\n🧠 Vote IA : <b>${voteInfo.vote_label}</b>` : "";
+      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
-      // Canal premium : uniquement l'ÉLITE (meilleure valeur/segment), plafonné à 4/jour.
-      // L'admin, lui, reçoit TOUT (voir plus bas) — rien n'est perdu pour le suivi.
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
-      // Barrière ARJEL : les clients ne reçoivent QUE des paris jouables sur un
-      // bookmaker français agréé (cote réelle Betclic/Winamax/Unibet/PMU…). Sinon
-      // (cote estimée ou bookmaker non-ARJEL) → admin uniquement.
+      const minute = parseLiveMinuteValue(match.minute);
+      const sigTier = computeSignalTier(analysisResult.best_bet, analysisResult.confidence, minute);
+      const tierBadge = sigTier === "standard" ? "🥇 STANDARD" : sigTier === "premium" ? "🥈 PREMIUM" : "🥉 ELITE";
+      console.log(`[signal-fort] Palier: ${tierBadge} (${sigTier}) — ${analysisResult.best_bet} ${analysisResult.confidence}% min=${minute}`);
       const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a))
         || isArjelMajorCompetition(match);
       if (!arjelPlayable) {
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
+      // Réinitialisation des compteurs journaliers
+      if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = 0; }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      // Premium/Elite : reçoit l'analyse complète de CHAQUE signal jouable ARJEL
-      // (plafonné à PREMIUM_SIGNAL_DAILY_CAP/jour). Les abonnés paient — ils reçoivent
-      // au moins autant que le gratuit, avec la sélection + la raison en clair.
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
+      if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = 0; }
+      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
+
+      // ── Diffusion par palier (conditions fondateur) ─────────────────────────
+      //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL ≥ 1.50 — max 3/j
+      //   🟣 Premium  (9.90€) : conf ≥ 90, foot, cote réelle ARJEL ≥ 1.50 — max 10/j (inclut Standard)
+      //   🟠 Elite    (19.90€): conf ≥ 90, foot/hockey/baseball/basket, cote réelle ARJEL ≥ 1.50 — max 30/j (inclut Premium)
+      //   Modèle imbriqué : un palier supérieur reçoit toujours au moins ce que reçoit l'inférieur.
+      //   « Cote réelle » = vraie cote bookmaker (jamais l'estimation). Repli auto sur Premium
+      //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
+      const conf = Number(analysisResult.confidence) || 0;
+      const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
+      const oddOk = realOdd >= TIER_MIN_REAL_ODD;
+      const sportLc = String(match.sport || "Football").toLowerCase();
+      // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
+      // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
+      // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
+      const diffusable = arjelPlayable && oddOk && DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
+      // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
+      const TH = getTierThresholds();
+
+      const gradeStandard = diffusable && voteCountForSignal >= 5 && conf >= TH.standard;
+      const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
+      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
+      shadowWorthy = gradeElite;
+
+      const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
+      const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
+      const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
+
+      // 🟢 STANDARD — cap 3/j
+      if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP) {
+        _standardSignalDaily.count++;
+        markSignalSent(match.home, match.away, "sig_sent_standard");
+        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
+      }
+
+      // 🟣 PREMIUM — cap 10/j (canal socle, toujours présent)
+      if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) ${grade.elite ? "ELITE " : ""}${analysisResult.cote_source}: ${ok ? "OK" : "FAIL"}`));
-      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && arjelPlayable) {
+        markSignalSent(match.home, match.away, "sig_sent_premium");
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
+      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
-      // Copie ADMIN : l'admin reçoit TOUS les signaux forts (même hors ARJEL), sans limite.
+
+      // 🟠 ELITE/VIP — cap 30/j, multisport, alertes prioritaires
+      if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
+        _eliteSignalDaily.count++;
+        markSignalSent(match.home, match.away, "sig_sent_elite");
+        const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
+        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL"}`));
+      }
+
+      // 👑 ADMIN (Hermès) — supervision, reçoit tout y compris hors-ARJEL
       if (TELEGRAM_ADMIN_CHAT_ID) {
         const adminHeader = arjelPlayable
-          ? `👑 <b>[ADMIN · copie signal]</b>\n🏦 Bookmaker : ${analysisResult.cote_source}`
-          : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ Cote : ${analysisResult.cote_source || "estimation"} (pas de bookmaker français agréé)`;
+          ? `👑 <b>[ADMIN · conf ${conf}% · cote ${realOdd || "est."}]</b>\n🏦 ${analysisResult.cote_source || "estimation"}`
+          : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ ${analysisResult.cote_source || "estimation"} (pas de bookmaker FR agréé)`;
         sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `${adminHeader}\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
       }
-      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
-      if (arjelPlayable && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+
+      // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
+      if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram free: ${ok ? "OK" : "FAIL"}`));
-      } else if (arjelPlayable) {
-        console.log(`[signal-fort] Free channel: déjà 1 signal envoyé aujourd'hui, skip`);
+        markSignalSent(match.home, match.away, "sig_sent_free");
+        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL"}`));
       }
     }
   }
 
-  // Évaluation shadow en parallèle (sans bloquer la réponse Concile)
-  runShadowEvaluation(match).catch(e => console.error("[shadow] bg:", e.message));
+  // ── Tests à blanc : uniquement sur les matchs RÉELLEMENT diffusables ────────
+  // Avant, cette évaluation tournait sur CHAQUE match analysé (109 le 25/07) avec
+  // 3 agents OpenRouter, soit ~330 appels/jour facturés au token — l'essentiel du
+  // budget OpenRouter, dépensé sur des matchs qui ne seront jamais diffusés.
+  // Deux bénéfices à ne tester que les picks diffusables :
+  //   1. environ 95 % d'appels en moins ;
+  //   2. les challengers sont évalués sur la MÊME population que les vrais picks,
+  //      donc le score de Brier devient comparable — sans quoi promouvoir un modèle
+  //      sur la base de ces chiffres n'aurait aucune validité statistique.
+  if (shadowWorthy && shadowQuotaAllows()) {
+    runShadowEvaluation(match).catch(e => console.error("[shadow] bg:", e.message));
+  }
 
   return analysisResult;
 }
@@ -2920,7 +3646,7 @@ function getMockAgentAnalysis(agent, match, index) {
     bet,
     confidence,
     raison: raisons[index] || raisons[0],
-    isChief: index === 4,
+    isChief: false,
   };
 }
 
@@ -2931,17 +3657,23 @@ function getMockAnalysis(match) {
     { name: "DeepSeek-V3", icon: "🔮", model: "deepseek-chat" },
     { name: "Mistral-Large", icon: "🌊", model: "mistral-large-latest" },
     { name: "Cohere-Command", icon: "🧬", model: "command-r-plus" },
-    { name: "Claude Chief", icon: "👑", model: "llama-3.3-70b-versatile", isChief: true },
+    { name: "OpenRouter-Qwen", icon: "🌟", model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" },
   ];
   const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
-  const chief = agentResults[agentResults.length - 1];
+  const voteSummary = buildVoteSummary(agentResults, agentResults[0]?.bet);
+  const topAgents = agentResults.filter(a => a.bet === voteSummary.vote_top);
+  const avgConfidence = topAgents.length
+    ? Math.round(topAgents.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / topAgents.length)
+    : 55;
   return {
     match_key: `${match.home}_${match.away}`,
-    best_bet: chief.bet,
-    confidence: chief.confidence,
-    raison: chief.raison,
-    consensus_votes: 3,
-    total_agents: 5,
+    best_bet: voteSummary.vote_top || agentResults[0]?.bet || "Analyse IA",
+    confidence: avgConfidence,
+    raison: `${voteSummary.vote_label} : simulation de secours du Concile IA.`,
+    consensus_votes: voteSummary.vote_count,
+    total_agents: voteSummary.vote_total,
+    active_agents: voteSummary.vote_active,
+    vote_summary: voteSummary,
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
   };
@@ -3057,6 +3789,8 @@ function saveConcileAnalysis(match, result, pickBet) {
     const homeShots = liveStats?.shots?.home ?? liveStats?.shots_on_goal?.home ?? null;
     const awayShots = liveStats?.shots?.away ?? liveStats?.shots_on_goal?.away ?? null;
 
+    const sigTier = computeSignalTier(result.best_bet, result.confidence, minute);
+
     const existing = db.prepare("SELECT id, best_bet FROM concile_analyses WHERE match_key = ?").get(matchKey);
     if (existing) {
       const betChanged = existing.best_bet !== result.best_bet;
@@ -3067,7 +3801,8 @@ function saveConcileAnalysis(match, result, pickBet) {
           consensus_votes = ?, agents_json = ?, pick_bet = ?,
           learning_tier = ?, learning_note = ?,
           bet_category = ?, home_possession = ?, away_possession = ?,
-          home_shots = ?, away_shots = ?, real_odd = ?, real_odd_source = ?, analysed_at = datetime('now')
+          home_shots = ?, away_shots = ?, real_odd = ?, real_odd_source = ?,
+          signal_tier = ?, analysed_at = datetime('now')
           ${betChanged ? ", outcome = NULL, final_score_home = NULL, final_score_away = NULL, resolved_at = NULL" : ""}
         WHERE match_key = ?
       `).run(
@@ -3079,6 +3814,7 @@ function saveConcileAnalysis(match, result, pickBet) {
         learningAssessment.tier, learningAssessment.reasons.join("; "),
         betCat, homePoss, awayPoss, homeShots, awayShots,
         result.cote ?? null, result.cote_source ?? null,
+        sigTier,
         matchKey
       );
     } else {
@@ -3090,8 +3826,8 @@ function saveConcileAnalysis(match, result, pickBet) {
            sport, learning_tier, learning_note, home_logo, away_logo,
            bet_category, country, is_neutral,
            home_possession, away_possession, home_shots, away_shots,
-           real_odd, real_odd_source)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+           real_odd, real_odd_source, signal_tier)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       `).run(
         matchKey,
         match.home, match.away, competition, minute,
@@ -3104,14 +3840,15 @@ function saveConcileAnalysis(match, result, pickBet) {
         match.home_logo || null, match.away_logo || null,
         betCat, country, neutral,
         homePoss, awayPoss, homeShots, awayShots,
-        result.cote ?? null, result.cote_source ?? null
+        result.cote ?? null, result.cote_source ?? null,
+        sigTier
       );
     }
     console.log(
       `[concile-trace] saved ${matchKey} | ${match.competition || match.league || "competition inconnue"} | ` +
       `${match.home} vs ${match.away} | minute=${minute ?? "?"} | ` +
       `score=${match.score_home ?? "?"}-${match.score_away ?? "?"} | ` +
-      `bet=${result.best_bet} | confidence=${result.confidence} | reason=${String(result.raison || "").slice(0, 180)}`
+      `bet=${result.best_bet} | confidence=${result.confidence} | tier=${sigTier || "none"} | reason=${String(result.raison || "").slice(0, 180)}`
     );
   } catch(e) { console.error("[concile-trace] save:", e.message); }
 }
@@ -4288,7 +5025,19 @@ function isNoiseForDisplay(match) {
   return false;                                        // on garde les gagnants (volume)
 }
 
-const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 35));
+// Analyse des sports hors football — DÉSACTIVÉE par défaut, et ce n'est pas un oubli.
+// Le catalogue de marchés (BET_TYPES) et le garde-fou betIsPlayable() sont écrits pour
+// le football : sur un match de basket à 155 points cumulés, « Under 2.5 buts » est
+// mathématiquement perdu d'avance et « Over 2.5 buts » déjà atteint ; « Match nul » et
+// « BTTS » n'existent pas dans ces sports. Les faire analyser produit des sélections
+// incohérentes, les IA divergent et la confiance s'effondre.
+// Mesuré le 25/07/2026 : 109 analyses, 1 seule au-dessus de 85 % de confiance, ZÉRO
+// signal diffusé — contre 63 analyses et 16 signaux diffusés le 23/07 en football seul.
+// L'AFFICHAGE multisport du Live reste inchangé : seule l'ANALYSE est bridée.
+// À réactiver via AUTO_CONCILE_MULTISPORT=1 dès qu'il existe des marchés par sport
+// (totaux de points au basket, lignes de runs au baseball, etc.).
+const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
+const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 30));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
 
 function shouldAutoObserveMatch(match) {
@@ -4297,7 +5046,13 @@ function shouldAutoObserveMatch(match) {
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (isWomenMatch(match)) return false;              // pas de matchs féminins
-  if (String(match.sport || "Football") !== "Football") return true;
+  // Hors football : les marchés disponibles ne correspondent pas à ces sports
+  // (voir AUTO_CONCILE_MULTISPORT). Le match reste affiché en direct, il n'est
+  // simplement pas soumis au Concile tant qu'aucun marché adapté n'existe.
+  if (String(match.sport || "Football") !== "Football") {
+    if (!AUTO_CONCILE_MULTISPORT) return false;
+    return true;
+  }
   // Analyse large pour remplir la journée : grandes ligues + coupes d'Europe
   // (dont qualifs). Le tri "premium" ne s'applique qu'au PICK du jour, pas à
   // l'activité affichée. On bloque juste les ligues non fiables hors UEFA.
@@ -4353,12 +5108,13 @@ async function runAutoConcileObserver() {
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
-async function brevoAddContact(email, tag) {
+async function brevoAddContact(email, tag, lang = "FR") {
   if (!BREVO_API_KEY) return;
+  const contactLang = normalizeContactLang(lang, "");
   try {
     await httpPost(
       "https://api.brevo.com/v3/contacts",
-      { email, attributes: {}, listIds: [], updateEnabled: true },
+      { email, attributes: { LANG: contactLang }, listIds: [], updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
     await httpPost(
@@ -4369,10 +5125,10 @@ async function brevoAddContact(email, tag) {
     // Apply tag via attribute
     await httpPost(
       `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
-      { attributes: { PLAN: tag } },
+      { attributes: { PLAN: tag, LANG: contactLang } },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    console.log(`[brevo] contact upserted: ${email} tag=${tag}`);
+    console.log(`[brevo] contact upserted: ${email} tag=${tag} lang=${contactLang}`);
   } catch (e) {
     console.error("[brevo] error:", e.message);
   }
@@ -4737,6 +5493,18 @@ function isMarketAvailableInFrance(marketType, competition) {
 
 app.get("/health", (_, res) => res.json({ ok: true }));
 
+function normalizeContactLang(lang = "", country = "") {
+  const raw = String(lang || "").toLowerCase();
+  const cc = String(country || "").toUpperCase();
+  if (raw.startsWith("fr") || ["FR", "BE", "CH", "CA", "LU", "MC"].includes(cc)) return "FR";
+  if (raw.startsWith("es") || ["ES", "MX", "AR", "CL", "CO", "PE", "UY", "PY", "BO", "EC", "VE", "CR", "PA", "DO", "GT", "HN", "NI", "SV"].includes(cc)) return "ES";
+  if (raw.startsWith("de") || ["DE", "AT"].includes(cc)) return "DE";
+  if (raw.startsWith("it") || cc === "IT") return "IT";
+  if (raw.startsWith("pt") || ["PT", "BR"].includes(cc)) return "PT";
+  if (raw.startsWith("nl") || ["NL", "BE"].includes(cc)) return "NL";
+  return "EN";
+}
+
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
 app.post("/subscribe-email", async (req, res) => {
   const { email, lang, ageRange, source, referrer, landingPage, utm } = req.body || {};
@@ -4747,10 +5515,12 @@ app.post("/subscribe-email", async (req, res) => {
   const langHeader = String(lang || req.headers["accept-language"] || "fr").slice(0, 16);
   const langCountry = (langHeader.match(/[-_]([A-Za-z]{2})/) || [])[1] || "";
   const country = String(req.headers["cf-ipcountry"] || req.headers["x-vercel-ip-country"] || req.headers["x-country-code"] || langCountry || "").slice(0, 2).toUpperCase();
+  const contactLang = normalizeContactLang(langHeader, country);
   const lead = {
     email: emailClean,
     created_at: new Date().toISOString(),
     lang: langHeader,
+    contact_lang: contactLang,
     country: country || "unknown",
     age_range: String(ageRange || "unknown").slice(0, 24),
     source: String(source || "direct").slice(0, 64),
@@ -4771,7 +5541,7 @@ app.post("/subscribe-email", async (req, res) => {
     }
     await httpPost(
       "https://api.brevo.com/v3/contacts",
-      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER" }, updateEnabled: true },
+      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER", LANG: contactLang }, updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
     console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} lang=${lead.lang} country=${lead.country}`);
@@ -4781,7 +5551,7 @@ app.post("/subscribe-email", async (req, res) => {
       const welcomeHtml = `<div style="font-family:Inter,Arial,sans-serif;max-width:580px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
   <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
     <div style="font-size:26px;font-weight:900;color:#fff">Bienvenue sur TousLesMatchs</div>
-    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">4 agents IA + 1 Chief. Tu décides avec plus de données.</div>
+    <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">5 IA indépendantes. Aucune émotion, seulement des données.</div>
   </div>
   <div style="padding:32px">
     <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
@@ -4834,16 +5604,15 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "Gratuit", price: "0€", color: "#7b82a0", features: ["1 pick/jour (site)", "Stats publiques", "Canal Telegram gratuit"], locked: ["Live IA", "Alertes Signal Fort", "Telegram Pro/Elite"] },
-    { name: "1€ Test", price: "1€", color: "#22d3ee", features: ["1 analyse Live IA", "Consensus IA complet", "Verdict + cote + raison"], locked: ["Accès illimité", "Alertes Signal Fort"] },
-    { name: "Pro", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 analyses Live IA/jour", "Telegram Pro", "Consensus + verdict Chief", "Historique complet"], locked: ["Alertes Signal Fort"] },
-    { name: "Elite", price: "19.90€/mois", color: "#a855f7", features: ["30 analyses Live IA/jour", "Telegram Elite", "Alertes Signal Fort (≥80%)", "Picks en avant-première", "Support direct"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL ≥ 1.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
+    { name: "🟣 Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 84%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
+    { name: "🟠 Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 82% hors football", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
     const locks = (p.locked || []).map(f => `<div style="font-size:12px;color:#4a4e6a;line-height:1.8">🔒 ${f}</div>`).join("");
     const badge = p.badge ? `<div style="font-size:9px;font-weight:800;letter-spacing:.1em;background:${p.color};color:#fff;padding:2px 8px;border-radius:6px;display:inline-block;margin-bottom:6px">${p.badge}</div>` : "";
-    return `<td style="width:25%;vertical-align:top;padding:12px 8px;border-right:1px solid rgba(255,255,255,.04)">
+    return `<td style="width:33%;vertical-align:top;padding:12px 8px;border-right:1px solid rgba(255,255,255,.04)">
       ${badge}
       <div style="font-size:14px;font-weight:900;color:${p.color};margin-bottom:2px">${p.name}</div>
       <div style="font-size:18px;font-weight:900;color:#eceaf4;margin-bottom:10px">${p.price}</div>
@@ -4878,7 +5647,7 @@ function buildNurtureJ1Html(email) {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">Déverrouiller l'analyse complète →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€ →</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres →</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -4900,15 +5669,15 @@ function buildNurtureJ3Html() {
           ✅ Niveau de confiance du Concile<br>
           🔒 Le pick exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
           🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
-          🔒 La raison du Chief — <span style="color:#6366f1">réservé Pro/Elite</span>
+          🔒 La raison du signal — <span style="color:#6366f1">réservé Pro/Elite</span>
         </div>
       </div>
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Pro.</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
       </div>
       <div style="text-align:center;margin-bottom:24px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Tester 1 analyse pour 1€</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir nos offres</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -4947,7 +5716,7 @@ function buildNurtureJ5Html() {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Juste tester 1 analyse pour 1€</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Découvrir nos offres</a>
       </div>
       <p style="font-size:12px;color:#7b82a0;text-align:center">18+ · Jeu responsable · <a href="https://www.touslesmatchs.com/mentions-legales.html" style="color:#6366f1;text-decoration:none">Se désabonner</a></p>
     </div>
@@ -4979,7 +5748,7 @@ function buildNurtureJ7Html() {
       </div>
       <div style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2);border-radius:12px;padding:16px;margin-bottom:20px;text-align:center">
         <div style="font-size:14px;color:#f59e0b;font-weight:700;margin-bottom:6px">Tu as reçu les signaux — mais pas les analyses complètes</div>
-        <div style="font-size:13px;color:#a8aec8">Les abonnés Pro et Elite ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
+        <div style="font-size:13px;color:#a8aec8">Les membres ont eu chaque pick détaillé avec cote, raison et mise suggérée.</div>
       </div>
       <div style="font-size:13px;font-weight:700;color:#22d3ee;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;text-align:center">Compare les plans en un coup d'oeil</div>
       ${buildPlanComparisonHtml()}
@@ -4987,7 +5756,7 @@ function buildNurtureJ7Html() {
         <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(245,158,11,.3)">Passer à l'action →</a>
       </div>
       <div style="text-align:center;margin-bottom:20px">
-        <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester pour 1€ seulement</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir nos offres</a>
       </div>
       <div style="background:#0d1020;border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px;margin-bottom:20px;text-align:center">
         <div style="font-size:12px;color:#a8aec8">📱 Pas encore sur Telegram ?</div>
@@ -5067,12 +5836,10 @@ async function sendSignalFortBilanTelegram() {
   const threshold = getAdaptiveSignalThreshold();
   const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
 
-  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
 
-  if (TELEGRAM_PREMIUM_CHANNEL_ID) {
-    const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-    console.log(`[signal-fort-bilan] Telegram premium: ${ok ? "OK" : "FAIL"}`);
-  }
+  // Bilan de résultats : tous les paliers payants le reçoivent, à l'identique.
+  await sendToPaidChannels(premiumMsg, { tag: "signal-fort-bilan" });
   if (TELEGRAM_CHANNEL_ID) {
     const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
     console.log(`[signal-fort-bilan] Telegram free: ${ok ? "OK" : "FAIL"}`);
@@ -5097,11 +5864,17 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
 
   const icon = outcome === "win" ? "✅" : "❌";
   const resultText = outcome === "win" ? "GAGNÉ" : "PERDU";
-  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾" };
+  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
   const si = sportIcons[analysis.sport] || "🎯";
   const stats = getSignalFortStats();
   const coteAffichee = rowOdd(analysis).toFixed(2);
   const gain = (10 * parseFloat(coteAffichee)).toFixed(2);
+  // Nom du bookmaker source (transparence) — sauf si cote estimée
+  const _bm = analysis.real_odd_source && !/estimation/i.test(String(analysis.real_odd_source))
+    ? String(analysis.real_odd_source) : null;
+  const bmSuffix = _bm ? ` <i>(${_bm})</i>` : "";
+  // Cote/gain affichés UNIQUEMENT si vraie cote bookmaker (jamais l'estimation).
+  const hasReal = !!_bm;
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -5110,9 +5883,9 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
-    outcome === "win"
+    outcome === "win" && hasReal
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
       : ``,
     ``,
@@ -5128,27 +5901,52 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b> · Cote : <b>${coteAffichee}</b>`,
+    `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
-    outcome === "win"
+    outcome === "win" && hasReal
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
       : ``,
     ``,
     `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
     ``,
     outcome === "win"
-      ? `💎 Imagine si tu avais eu le pick...\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`
-      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Voir l'analyse complète – 1 €</a>`,
+      ? `💎 Imagine si tu avais eu le pick en direct...\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`
+      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`,
     ``,
     `━━━━━━━━━━━━━━━━━━`,
     `🤖 Concile IA — TousLesMatchs`,
   ].filter(Boolean).join("\n");
 
-  if (TELEGRAM_PREMIUM_CHANNEL_ID) sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_CHANNEL_ID) {
-    sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-    console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (envoyé free + premium)`);
+  // Cohérence : on ne poste le résultat QUE sur les canaux qui ont réellement reçu
+  // le pick. Un signal jamais diffusé (bloqué/hors ARJEL/plafond) ne génère aucun
+  // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
+  const flag = (v) => v === 1 || v === true;
+  const sentStandard = flag(analysis.sig_sent_standard);
+  const sentPremium  = flag(analysis.sig_sent_premium);
+  const sentElite    = flag(analysis.sig_sent_elite);
+  const sentFree     = flag(analysis.sig_sent_free);
+  if (!sentStandard && !sentPremium && !sentElite && !sentFree) {
+    console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
+    return;
   }
+  if (TELEGRAM_STANDARD_CHANNEL_ID && sentStandard) sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium)   sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_ELITE_CHANNEL_ID && sentElite)       sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, premiumMsg);
+  if (TELEGRAM_CHANNEL_ID && sentFree)              sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentStandard ? " standard" : ""}${sentPremium ? " premium" : ""}${sentElite ? " elite" : ""})`);
+}
+
+// Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
+const SIGNAL_SENT_COLUMNS = ["sig_sent_free", "sig_sent_standard", "sig_sent_premium", "sig_sent_elite"];
+function markSignalSent(home, away, col) {
+  if (!SIGNAL_SENT_COLUMNS.includes(col)) return;
+  try {
+    db.prepare(
+      `UPDATE concile_analyses SET ${col}=1
+       WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
+         AND date(analysed_at)=date('now')`
+    ).run(home, away);
+  } catch (e) { console.error("[signal-sent]", e.message); }
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
@@ -5201,7 +5999,7 @@ async function sendWeeklyConversionEmail() {
     <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Choisir mon plan →</a>
   </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Ou tester 1 analyse pour 1€</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Ou voir nos offres</a>
   </div>
   ${bookmakerEmailHtml()}
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
@@ -5405,7 +6203,7 @@ app.get("/user/history", authMiddleware, (req, res) => {
     const analyses = rows.map(r => {
       let data = {};
       try { data = JSON.parse(r.analysis_json || "{}"); } catch {}
-      return { match_key: r.match_key, revealed_at: r.revealed_at, ...data };
+      return { match_key: r.match_key, revealed_at: r.revealed_at, ...sanitizeAnalysisForClient(data) };
     });
     res.json({ ok: true, analyses, total });
   } catch (e) {
@@ -5526,7 +6324,7 @@ app.post("/bankroll/bets/delete", (req, res) => {
 // ── Chatbot Mistral — mémoire isolée par utilisateur ─────────────────────────
 const CHAT_UNAVAILABLE = "Notre assistant est momentanément indisponible. Réessaie dans un instant, ou écris-nous sur Telegram.";
 const CHAT_SYSTEM_PROMPT = `Tu es l'assistant virtuel de TousLesMatchs.com, un service d'analyses sportives par IA appelé le "Concile". Réponds en français, brièvement, clairement et avec le sourire.
-Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (1 € l'analyse à l'unité, Pro 9,90 €/mois, Elite 19,90 €/mois), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
+Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (Pro 9,90 €/mois, Elite 19,90 €/mois ; l'analyse du jour est gratuite sur le site avec son résultat vérifiable le lendemain), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
 RÈGLES STRICTES :
 - N'emploie JAMAIS le mot "pari" ni "parier" : dis "analyse", "sélection" ou "pick".
 - Ne garantis JAMAIS de gains ; rappelle que rien n'est certain et que le service est réservé aux 18 ans et plus.
@@ -5558,6 +6356,12 @@ app.post("/chat", async (req, res) => {
     { role: "user", content: msg },
   ];
 
+  // Traçabilité + plafond de dépense obligatoires pour tout appel IA (règle
+  // finale du prompt maître du 28/07/2026). L'anti-doublon ne s'applique pas à
+  // une conversation libre : voir allowChatbotCall (clé unique par requête).
+  const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: memKey });
+  if (!_chatGate.allowed) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+
   let reply = "";
   try {
     const rp = await httpPost(
@@ -5566,8 +6370,10 @@ app.post("/chat", async (req, res) => {
       { Authorization: `Bearer ${MISTRAL_API_KEY}` }
     );
     reply = rp?.choices?.[0]?.message?.content?.trim() || "";
+    _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
   } catch (e) {
     console.error("[chat] Mistral:", e.message);
+    _chatGate.record(0, 0, "error");
   }
 
   if (!reply) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
@@ -5624,7 +6430,7 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg " +
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
@@ -5652,7 +6458,9 @@ function refreshDailyPickFromDB() {
         sport: pick.sport || "Football",
         date: matchDate, time: "",
         best_bet: pick.best_bet || "Analyse IA", confidence: pick.confidence,
-        cote: Number(coteVal.toFixed(2)), raison: maskAiNamesGlobal(pick.raison || ""),
+        cote: Number(coteVal.toFixed(2)),
+        bookmaker: (pick.real_odd_source && !/estimation/i.test(String(pick.real_odd_source))) ? String(pick.real_odd_source) : null,
+        raison: maskAiNamesGlobal(pick.raison || ""),
         home_logo: pick.home_logo || null, away_logo: pick.away_logo || null,
         home_form: pick.home_form || null, away_form: pick.away_form || null,
         home_goals_avg: pick.home_goals_avg != null ? pick.home_goals_avg : null,
@@ -5695,6 +6503,246 @@ app.get("/current-pick", (req, res) => {
   } catch (e) { /* picks.json absent ou invalide */ }
   // 2. Fallback sur le pick manuel admin
   res.json({ ok: true, pick: normalizeCurrentPick(loadPick(), "manual-admin") });
+});
+
+// ── Pages SEO (pronostics) — contenu public indexable ────────────────────────
+// On ne génère des pages QUE pour les analyses résolues (win/loss) : ce sont des
+// preuves historiques (comme /performances), aucun pick payant n'est dévoilé.
+function seoPublishedRows(limit) {
+  try {
+    const rows = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence, raison, real_odd, outcome, analysed_at
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
+        ) AS _rn
+        FROM concile_analyses
+        WHERE date(analysed_at) >= '2026-07-03'
+          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND outcome IN ('win','loss')
+      ) WHERE _rn = 1
+      ORDER BY analysed_at DESC
+      LIMIT ?
+    `).all(limit);
+    return rows.filter(r => !isNoiseForDisplay(r)).map(r => ({
+      home: r.home, away: r.away, competition: r.competition, sport: r.sport || "Football",
+      date: r.analysed_at, bet: maskAiNamesGlobal(r.best_bet || "Analyse IA"),
+      confidence: r.confidence, cote: rowOdd(r), outcome: r.outcome,
+      reasoning: maskAiNamesGlobal(r.raison || ""),
+    }));
+  } catch (e) { console.error("[seo] rows:", e.message); return []; }
+}
+
+app.get("/pronostics", (req, res) => {
+  const items = seoPublishedRows(500);
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(seoPages.renderIndex(items));
+});
+
+app.get("/pronostic/:slug", (req, res) => {
+  const items = seoPublishedRows(500);
+  const slug = String(req.params.slug || "").toLowerCase();
+  const item = items.find(it => seoPages.matchSlug(it) === slug);
+  if (!item) { res.redirect(302, "/pronostics"); return; }
+  const related = items.filter(it => seoPages.matchSlug(it) !== slug).slice(0, 6);
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.send(seoPages.renderDetail(item, related));
+});
+
+app.get("/sitemap-pronostics.xml", (req, res) => {
+  const items = seoPublishedRows(1000);
+  res.set("Content-Type", "application/xml; charset=utf-8");
+  res.send(seoPages.renderSitemap(items));
+});
+
+// ── Stats par palier (Standard / Premium / Elite) — idée "signaux par palier" ─
+// Hybride : rang par confiance, contenu par dispo ARJEL.
+//   Standard = ARJEL & confiance >= 88 (les fleurons, faible volume)
+//   Premium  = ARJEL & confiance >= 85 (inclut Standard)
+//   Elite    = tout le publié >= PUBLISHED_MIN_CONFIDENCE (ARJEL + "IA seulement")
+// Lecture seule. Chaque palier a son propre track record (total, winrate, ROI simulé).
+function rowIsArjel(r) {
+  return ARJEL_BOOKMAKERS.some(a => String(r.real_odd_source || "").toLowerCase().includes(a))
+    || isArjelMajorCompetition(r);
+}
+
+// Éligibilité d'une analyse à un palier — MIROIR EXACT des règles de diffusion
+// Telegram (cf. gradeStandard/gradePremium/gradeElite dans runAutoConcile).
+// Les statistiques publiques décrivent ainsi ce que l'abonné reçoit réellement,
+// et non un échantillon plus large : c'est la seule façon que le track record
+// affiché corresponde au produit vendu.
+// Modèle imbriqué : Elite ⊇ Premium ⊇ Standard.
+function tierEligible(r, tier) {
+  const conf = Number(r.confidence) || 0;
+  if (!rowIsArjel(r)) return false;
+  if ((Number(r.real_odd) || 0) < TIER_MIN_REAL_ODD) return false;
+  const sport = String(r.sport || "Football").toLowerCase();
+  const isFoot = sport.includes("foot");
+  const std = isFoot && conf >= STANDARD_MIN_CONF;
+  if (tier === "standard") return std;
+  const prem = std || (isFoot && conf >= PREMIUM_MIN_CONF);
+  if (tier === "premium") return prem;
+  return prem || (ELITE_SPORTS.some(s => sport.includes(s)) && conf >= ELITE_MIN_CONF);
+}
+function tierStatsFor(set) {
+  let wins = 0, roi = 0;
+  for (const r of set) {
+    const cote = rowOdd(r);
+    if (r.outcome === "win") { wins++; roi += (cote - 1) * 10; } else { roi -= 10; }
+  }
+  const total = set.length;
+  return {
+    total, wins, losses: total - wins,
+    winrate: total ? Math.round(wins / total * 100) : 0,
+    roi: Math.round(roi),
+    recent: set.slice(0, 8).map(r => ({
+      home: r.home, away: r.away, competition: r.competition || r.sport || "",
+      bet: maskAiNamesGlobal(r.best_bet || ""), confidence: r.confidence,
+      cote: rowOdd(r), outcome: r.outcome,
+      score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+    })),
+  };
+}
+app.get("/tier-stats", (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT home, away, competition, sport, confidence, best_bet, outcome, real_odd,
+             real_odd_source, final_score_home, final_score_away, analysed_at
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
+        ) AS _rn
+        FROM concile_analyses
+        WHERE outcome IN ('win','loss')
+          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND date(analysed_at) >= '2026-07-03'
+      ) WHERE _rn = 1
+      ORDER BY analysed_at DESC
+    `).all();
+    const clean = rows.filter(r => !isNoiseForDisplay(r));
+    const standard = clean.filter(r => tierEligible(r, "standard"));
+    const premium  = clean.filter(r => tierEligible(r, "premium"));
+    const elite    = clean.filter(r => tierEligible(r, "elite"));
+    res.json({
+      ok: true,
+      tiers: {
+        standard: tierStatsFor(standard),
+        premium: tierStatsFor(premium),
+        elite: tierStatsFor(elite),
+      },
+    });
+  } catch (e) { console.error("[tier-stats]", e.message); res.json({ ok: false }); }
+});
+
+// ── Le Conseil délibère — votes anonymisés du pick du jour ───────────────────
+// Renvoie les votes individuels des agents (anonymisés Alpha→Sigma) + le verdict
+// du Conseil, pour le panneau "effet WOW" du Hero. Données réelles depuis
+// concile_analyses.agents_json. Aucun nom d'IA réel n'est exposé.
+const COUNCIL_LABELS = ["Alpha", "Beta", "Gamma", "Delta", "Sigma", "Omega"];
+app.get("/council-vote", (req, res) => {
+  try {
+    // 1. Match du pick du jour
+    let home = null, away = null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
+      const p = raw.currentPick;
+      if (p && p.home && p.home !== "Analyse en cours") { home = p.home; away = p.away; }
+    } catch (_) {}
+
+    // 2. Ligne d'analyse correspondante (la plus récente pour ce match)
+    let row = null;
+    if (home && away) {
+      row = db.prepare(
+        "SELECT home, away, competition, sport, best_bet, confidence, agents_json, real_odd, home_logo, away_logo " +
+        "FROM concile_analyses WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?)) " +
+        "ORDER BY analysed_at DESC LIMIT 1"
+      ).get(home, away);
+    }
+    // Fallback : dernière analyse publiée du jour (la plus confiante)
+    if (!row) {
+      row = db.prepare(
+        `SELECT home, away, competition, sport, best_bet, confidence, agents_json, real_odd, home_logo, away_logo
+         FROM concile_analyses
+         WHERE confidence >= ${PUBLISHED_MIN_CONFIDENCE} AND date(analysed_at)=date('now')
+         ORDER BY confidence DESC, analysed_at DESC LIMIT 1`
+      ).get();
+    }
+    if (!row) return res.json({ ok: false });
+
+    let agents = [];
+    try { agents = JSON.parse(row.agents_json || "[]"); } catch {}
+    // On garde les votants (hors doublon exact du verdict), anonymisés.
+    const verdictBet = row.best_bet || "";
+    const votes = agents.slice(0, 6).map((a, i) => {
+      const bet = maskAiNamesGlobal(String(a.bet || verdictBet || "Analyse"));
+      const conf = Math.max(50, Math.min(99, parseInt(a.confidence, 10) || row.confidence || 80));
+      const aligned = bet.toLowerCase().trim() === verdictBet.toLowerCase().trim();
+      return { label: COUNCIL_LABELS[i] || `IA ${i + 1}`, bet, confidence: conf, aligned };
+    });
+    // Si pas de votes stockés (pick Hermès sans agents), on synthétise un consensus
+    // honnête : tous alignés sur le verdict, confiance = confiance du Conseil.
+    const fallbackVotes = votes.length ? votes : COUNCIL_LABELS.slice(0, 5).map((l, i) => ({
+      label: l, bet: verdictBet || "Analyse", confidence: row.confidence || 82, aligned: true,
+    }));
+
+    res.json({
+      ok: true,
+      match: {
+        home: row.home, away: row.away,
+        competition: row.competition || row.sport || "Football",
+        home_logo: row.home_logo || null, away_logo: row.away_logo || null,
+      },
+      agents: fallbackVotes,
+      verdict: {
+        bet: maskAiNamesGlobal(verdictBet),
+        confidence: row.confidence || 82,
+        cote: row.real_odd && row.real_odd > 1 ? Math.round(row.real_odd * 100) / 100 : null,
+      },
+    });
+  } catch (e) {
+    console.error("[council-vote]", e.message);
+    res.json({ ok: false });
+  }
+});
+
+// ── Activité en direct — compteurs réels du jour (réassurance "site vivant") ──
+app.get("/live-activity", (req, res) => {
+  try {
+    const analysesToday = db.prepare(
+      "SELECT COUNT(*) AS c FROM concile_analyses WHERE date(analysed_at)=date('now')"
+    ).get()?.c || 0;
+    const publishedToday = db.prepare(
+      `SELECT COUNT(*) AS c FROM (
+         SELECT 1 FROM concile_analyses
+         WHERE date(analysed_at)=date('now') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+         GROUP BY lower(trim(home)), lower(trim(away))
+       )`
+    ).get()?.c || 0;
+    const totalPublished = db.prepare(
+      `SELECT COUNT(*) AS c FROM (
+         SELECT 1 FROM concile_analyses
+         WHERE confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
+       )`
+    ).get()?.c || 0;
+    const signalsToday = db.prepare(
+      `SELECT COUNT(*) AS c FROM concile_analyses
+       WHERE date(analysed_at)=date('now') AND confidence >= ?`
+    ).get(getAdaptiveSignalThreshold())?.c || 0;
+    res.json({
+      ok: true,
+      analyses_today: analysesToday,
+      published_today: publishedToday,
+      total_published: totalPublished,
+      signals_today: signalsToday,
+      ia_active: 5,
+    });
+  } catch (e) {
+    console.error("[live-activity]", e.message);
+    res.json({ ok: false });
+  }
 });
 
 app.post("/admin/set-pick", (req, res) => {
@@ -5740,6 +6788,7 @@ app.delete("/admin/set-score", (req, res) => {
 // ── Live matches ──────────────────────────────────────────────────────────────
 app.get("/live-matches", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store, max-age=0");
     if (req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
@@ -5747,7 +6796,10 @@ app.get("/live-matches", async (req, res) => {
     const allMatches = await fetchLiveMatches();
     // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
     // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
-    const matches = allMatches.filter(m => !isLowTrustCompetition(m));
+    const matches = allMatches.filter(m => {
+      const sport = String(m?.sport || "").trim();
+      return sport === "Football" ? !isLowTrustCompetition(m) : !isBlacklistedForLiveDisplay(m);
+    });
 
     // Injecter les signaux épinglés si le match n'est plus dans l'API
     const pinned = getActivePinnedSignals();
@@ -5920,15 +6972,27 @@ function isAdminAccess(email, code) {
 }
 
 function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
-  if (allowAdminFields) return analysis;
   const clean = { ...analysis };
-  delete clean.agent_performance;
+  if (!allowAdminFields) delete clean.agent_performance;
   if (Array.isArray(clean.agents)) {
-    clean.agents = clean.agents.map((agent, index) => ({
-      ...agent,
-      name: `Agent IA ${index + 1}`,
-      model: "",
-    }));
+    clean.agents = clean.agents
+      .filter((agent) => {
+        const bet = String(agent?.bet || "").trim();
+        const reason = String(agent?.raison || "");
+        return !agent.failed
+          && bet
+          && bet !== "—"
+          && bet !== "-"
+          && agent.confidence !== null
+          && agent.confidence !== undefined
+          && !reason.includes("IA non joignable");
+      })
+      .map((agent, index, list) => ({
+        ...agent,
+        name: index === list.length - 1 && agent.isChief ? "Synthèse du Concile" : `Agent IA ${index + 1}`,
+        model: "",
+        raison: agent.isChief ? agent.raison : "",
+      }));
   }
   return clean;
 }
@@ -6133,7 +7197,8 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     } catch(e) { console.error("[stripe] retrieve error:", e.message); }
 
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   label: "Analyse 1 euro", durationDays: 1 },
+      [STRIPE_PRICE_ID_CARTE]:    { status: "carte",    label: "Analyse 1 euro", durationDays: 1 },
+      [STRIPE_PRICE_ID_STANDARD]: { status: "standard", label: "Standard",       durationDays: 32 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", label: "Pro",            durationDays: 32 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     label: "VIP",            durationDays: 32 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   label: "Elite",          durationDays: 32 },
@@ -6182,10 +7247,10 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
              <td style="padding:8px 16px;font-size:12px;color:#7b82a0">${r.plan.toUpperCase()}</td></tr>`
           ).join("");
 
-          // Lien d'invitation unique au groupe Telegram premium (Pro/VIP/Elite)
+          // Lien d'invitation unique vers le canal du palier acheté (Standard/Premium/Elite)
           let premiumTelegramBlock = "";
-          if (["premium", "vip", "elite"].includes(status)) {
-            const inviteLink = await createPremiumInviteLink(customerEmail);
+          if (["standard", "premium", "vip", "elite"].includes(status)) {
+            const inviteLink = await createPremiumInviteLink(customerEmail, status);
             if (inviteLink) {
               premiumTelegramBlock = `<div style="background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(79,70,229,.08));border:1px solid rgba(34,211,238,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                   <div style="font-size:14px;font-weight:700;color:#22d3ee;margin-bottom:8px">📲 Ton acces au groupe Telegram premium</div>
@@ -6214,7 +7279,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
             <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
               <div style="font-size:24px;font-weight:800;color:#fff">✅ Abonnement ${planLabel} active !</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 4 agents IA + 1 Chief. Tu decides avec plus de donnees.</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">TousLesMatchs — 5 IA independantes. Aucune emotion, seulement des donnees.</div>
             </div>
             <div style="padding:32px">
               <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Merci pour ton abonnement ! Voici ton code d'acces :</p>
@@ -6712,8 +7777,8 @@ async function sendDailyResultsFreeChannel() {
       `💰 <b>Bilan du jour à 10€/analyse : ${totalGain >= 0 ? "+" : ""}${totalGain.toFixed(0)}€</b>`,
       ``,
       winrate >= 60
-        ? `🚀 Ces résultats sont réservés aux membres Premium.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`
-        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plan-carte">⚡ Débloquer l'accès – 1 €</a>`,
+        ? `🚀 Ces résultats sont réservés aux membres.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`
+        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`,
       ``,
       `━━━━━━━━━━━━━━━━━━`,
       `🤖 Concile IA — TousLesMatchs`,
@@ -6739,7 +7804,7 @@ app.get("/analysis-history", (req, res) => {
     // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
     const rows = db.prepare(`
       SELECT id, home, away, competition, sport, best_bet, confidence, raison,
-             consensus_votes, outcome, analysed_at, real_odd,
+             consensus_votes, outcome, analysed_at, real_odd, real_odd_source,
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
@@ -6787,6 +7852,16 @@ app.get("/analysis-history", (req, res) => {
     // doublons sont déjà éliminés en SQL ci-dessus.
     const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
 
+    // Palier le plus bas qui reçoit cette analyse (cf. tierEligible : miroir exact
+    // des règles de diffusion Telegram). "hors-palier" = publiée sur le site mais
+    // diffusée sur aucun canal payant (cote non réelle, hors ARJEL, sport non couvert).
+    const tierLabel = (r) => {
+      if (tierEligible(r, "standard")) return "standard";
+      if (tierEligible(r, "premium")) return "premium";
+      if (tierEligible(r, "elite")) return "elite";
+      return "hors-palier";
+    };
+
     const analyses = visibleRows.map(r => {
       let agents = [];
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
@@ -6808,6 +7883,8 @@ app.get("/analysis-history", (req, res) => {
         resolved_at: r.resolved_at,
         home_logo: r.home_logo, away_logo: r.away_logo,
         bet_category: r.bet_category,
+        arjel: rowIsArjel(r),
+        tier: tierLabel(r),
         agents_count: agents.length,
       };
     });
@@ -6816,30 +7893,75 @@ app.get("/analysis-history", (req, res) => {
     // source unique pour que la page Live IA et la page d'accueil affichent
     // exactement le même winrate / nombre de picks.
     const allResolved = db.prepare(`
-      SELECT home, away, competition, outcome, analysed_at FROM concile_analyses
+      SELECT home, away, competition, sport, outcome, analysed_at, confidence,
+             best_bet, real_odd, real_odd_source, final_score_home, final_score_away
+      FROM concile_analyses
       WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND date(analysed_at) >= '2026-07-03'
       ORDER BY analysed_at DESC
     `).all();
     const seenStat = new Set();
-    let sTotal = 0, sWins = 0;
+    const dedupResolved = [];
     for (const r of allResolved) {
       // Mêmes exclusions que la liste (jeunes / douteuses) pour un winrate cohérent.
       if (isNoiseForDisplay(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
-      sTotal++;
-      if (r.outcome === "win") sWins++;
+      dedupResolved.push(r);
     }
-    const stats = { total: sTotal, wins: sWins, losses: sTotal - sWins };
+
+    // Bloc de stats sur un sous-ensemble : total/wins/losses/winrate + ROI simulé
+    // (mise 10€), bénéfice, cote moyenne. Cohérent avec /premium-teaser (rowOdd).
+    const statBlock = (set) => {
+      let wins = 0, profit = 0, oddSum = 0;
+      for (const r of set) {
+        const cote = rowOdd(r);
+        oddSum += cote;
+        if (r.outcome === "win") { wins++; profit += 10 * cote - 10; } else { profit -= 10; }
+      }
+      const t = set.length;
+      return {
+        total: t, wins, losses: t - wins,
+        winrate: t ? Math.round(wins / t * 100) : 0,
+        profit10: Math.round(profit),
+        roi_pct: t ? Math.round(profit / (t * 10) * 1000) / 10 : 0,
+        avg_odds: t ? Math.round(oddSum / t * 100) / 100 : 0,
+      };
+    };
+
+    const global = statBlock(dedupResolved);
+    const tiers = {
+      standard: statBlock(dedupResolved.filter(r => tierEligible(r, "standard"))),
+      premium:  statBlock(dedupResolved.filter(r => tierEligible(r, "premium"))),
+      elite:    statBlock(dedupResolved.filter(r => tierEligible(r, "elite"))),
+    };
+
+    // Analyses publiées non encore résolues (dédoublonnées, hors bruit) = "en attente".
+    const pendingRows = db.prepare(`
+      SELECT home, away, competition, sport, analysed_at FROM concile_analyses
+      WHERE (outcome IS NULL OR outcome NOT IN ('win','loss'))
+        AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND date(analysed_at) >= '2026-07-03'
+      ORDER BY analysed_at DESC
+    `).all();
+    const seenP = new Set();
+    let pending = 0;
+    for (const r of pendingRows) {
+      if (isNoiseForDisplay(r)) continue;
+      const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
+      if (seenP.has(k)) continue;
+      seenP.add(k);
+      pending++;
+    }
 
     res.json({
       ok: true, analyses, total,
-      stats: { total: stats.total, wins: stats.wins, losses: stats.losses, winrate: stats.total > 0 ? Math.round(stats.wins / stats.total * 100) : 0 },
+      stats: { ...global, pending, tiers },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
-    res.json({ ok: true, analyses: [], total: 0, stats: { total: 0, wins: 0, losses: 0, winrate: 0 } });
+    res.json({ ok: true, analyses: [], total: 0, stats: { total: 0, wins: 0, losses: 0, winrate: 0, pending: 0, profit10: 0, roi_pct: 0, avg_odds: 0, tiers: {} } });
   }
 });
 
@@ -6996,7 +8118,8 @@ app.post("/internal/stripe-verify", async (req, res) => {
 
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_CARTE]:    { status: "carte",    durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_STANDARD]: { status: "standard", durationDays: 32, creditsMax: 3 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
@@ -7045,7 +8168,8 @@ app.post("/payment-success", async (req, res) => {
     if (!email) return res.json({ ok: false, error: "Email introuvable sur la session" });
     const priceId = session.line_items?.data?.[0]?.price?.id || "";
     const planMap = {
-      [STRIPE_PRICE_ID_CARTE]:   { status: "carte",   durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_CARTE]:    { status: "carte",    durationDays: 1,  creditsMax: 1 },
+      [STRIPE_PRICE_ID_STANDARD]: { status: "standard", durationDays: 32, creditsMax: 3 },
       [STRIPE_PRICE_ID_PREMIUM]: { status: "premium", durationDays: 32, creditsMax: 10 },
       [STRIPE_PRICE_ID_VIP]:     { status: "vip",     durationDays: 32, creditsMax: 20 },
       [STRIPE_PRICE_ID_ELITE]:   { status: "elite",   durationDays: 32, creditsMax: 30 },
@@ -7423,7 +8547,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer l'analyse — 9.90€/mois →</a>
   </div>
   <div style="text-align:center;margin-bottom:20px">
-    <a href="https://www.touslesmatchs.com/#plan-carte" style="color:#6366f1;font-size:13px;text-decoration:none">Tester 1 analyse pour 1€</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres</a>
   </div>
   <div style="text-align:center;font-size:11px;color:#7b82a0;line-height:1.6">
     TousLesMatchs — Signal automatique Concile IA<br>
@@ -7441,14 +8565,13 @@ app.post("/internal/signal-notify", async (req, res) => {
       }
     } catch (e) { console.error("[signal-notify] free teaser:", e.message); }
 
-    const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Tennis:"🎾", Rugby:"🏉" };
+    const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
     const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
     const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-    if (TELEGRAM_PREMIUM_CHANNEL_ID) {
-      const ok = await sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremiumText);
-      console.log(`[signal-notify] Telegram premium: ${ok ? "OK" : "FAIL"}`);
-    }
+    // Signal de niveau Premium : Premium et Elite le reçoivent toujours (modèle
+    // imbriqué), Standard uniquement s'il atteint son seuil plus exigeant.
+    await sendToPaidChannels(tgPremiumText, { tag: "signal-notify", includeStandard: (Number(conf) || 0) >= STANDARD_MIN_CONF });
     if (TELEGRAM_CHANNEL_ID) {
       const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFreeText);
       console.log(`[signal-notify] Telegram free: ${ok ? "OK" : "FAIL"}`);
@@ -8027,6 +9150,136 @@ app.get("/admin/learning-report", async (req, res) => {
 });
 
 let _lastPerfReportDate = "";
+let _lastHealthCheckDate = "";
+// Anti-spam des alertes « palier à sec » : une seule alerte par palier, réarmée
+// automatiquement dès qu'un signal repart sur ce palier.
+const _dryTierAlerted = { standard: false, premium: false, elite: false };
+
+// ── AUTO 1 — Bilan de santé quotidien (7h Paris, canal admin) ────────────────
+// Sert à détecter en 24h ce qui, sinon, passe inaperçu : un canal injoignable, un
+// palier qui ne diffuse plus, un agent muet. C'est exactement ce qui a manqué le
+// 24/07 quand le bot avait été exclu du canal Premium.
+async function sendDailyHealthCheck() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  try {
+    // Diffusion de la veille, comptée sur les colonnes réellement marquées à l'envoi.
+    const d = db.prepare(`
+      SELECT COUNT(*) AS analyses,
+             COALESCE(SUM(sig_sent_free),0)     AS free,
+             COALESCE(SUM(sig_sent_standard),0) AS standard,
+             COALESCE(SUM(sig_sent_premium),0)  AS premium,
+             COALESCE(SUM(sig_sent_elite),0)    AS elite
+      FROM concile_analyses
+      WHERE date(analysed_at) = date('now','-1 day')
+    `).get() || {};
+
+    // Résultats des matchs RÉSOLUS hier (resolved_at, pas analysed_at : une analyse
+    // de la veille peut n'être tranchée que le lendemain).
+    const r = db.prepare(`
+      SELECT COALESCE(SUM(outcome='win'),0) AS wins, COALESCE(SUM(outcome='loss'),0) AS losses,
+             COALESCE(SUM(CASE WHEN outcome='win' THEN real_odd*10-10 ELSE -10 END),0) AS profit
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss') AND date(resolved_at) = date('now','-1 day')
+        AND real_odd >= ${TIER_MIN_REAL_ODD}
+    `).get() || {};
+    const resolved = (r.wins || 0) + (r.losses || 0);
+    const wr = resolved > 0 ? Math.round((r.wins / resolved) * 1000) / 10 : null;
+
+    const agents = db.prepare(`
+      SELECT agent_name, winrate, total_predictions FROM agent_weights
+      WHERE total_predictions >= 50 ORDER BY winrate DESC
+    `).all();
+    const best = agents[0], worst = agents[agents.length - 1];
+
+    const paid = (d.standard || 0) + (d.premium || 0) + (d.elite || 0);
+    const head = paid === 0
+      ? "🔴 <b>BILAN SANTÉ — aucun signal payant hier</b>"
+      : "📊 <b>BILAN SANTÉ QUOTIDIEN</b>";
+
+    const lines = [
+      head, "",
+      `📡 <b>Diffusion d'hier</b> (${d.analyses || 0} analyses)`,
+      `🆓 Gratuit : ${d.free || 0}`,
+      `🟢 Standard : ${d.standard || 0} / ${STANDARD_SIGNAL_DAILY_CAP}`,
+      `🟣 Premium : ${d.premium || 0} / ${PREMIUM_SIGNAL_DAILY_CAP}`,
+      `🟠 Elite : ${d.elite || 0} / ${ELITE_SIGNAL_DAILY_CAP}`,
+      "",
+      `📈 <b>Résultats tranchés hier</b>`,
+      resolved > 0
+        ? `✅ ${r.wins} gagnés · ❌ ${r.losses} perdus · ${wr}%\n💰 ${r.profit >= 0 ? "+" : ""}${Math.round(r.profit)}€ (mise 10€)`
+        : `Aucun résultat tranché`,
+      "",
+      best ? `🏆 Meilleur agent : ${best.agent_name} (${best.winrate}%)` : "",
+      worst && worst !== best ? `⚠️ Plus faible : ${worst.agent_name} (${worst.winrate}%)` : "",
+      "",
+      "━━━━━━━━━━━━━━━━━━",
+      "👑 Hermès — supervision interne",
+    ].filter(Boolean);
+
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, lines.join("\n"));
+    console.log(`[health-check] bilan quotidien : ${ok ? "OK" : "ECHEC"}`);
+    return ok;
+  } catch (e) {
+    console.error("[health-check]", e.message);
+    return false;
+  }
+}
+
+// ── AUTO 2 — Alerte « palier à sec » (toutes les 6h) ─────────────────────────
+// Un abonné payant qui ne reçoit rien se désabonne sans prévenir. Les seuils sont
+// INVERSÉS par rapport à l'intuition d'Hermès : le palier d'entrée payant est le
+// plus fragile commercialement, pas le plus tolérant.
+const DRY_TIER_DAYS = { standard: 3, premium: 3, elite: 2 };
+async function checkDryTiers() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  try {
+    const q = db.prepare(`
+      SELECT
+        MAX(CASE WHEN sig_sent_standard=1 THEN analysed_at END) AS standard,
+        MAX(CASE WHEN sig_sent_premium=1  THEN analysed_at END) AS premium,
+        MAX(CASE WHEN sig_sent_elite=1    THEN analysed_at END) AS elite
+      FROM concile_analyses
+    `).get() || {};
+    // Distingue « plus de matchs analysés » de « filtre trop sévère » : c'est le
+    // diagnostic qui a manqué quand le seuil Standard à 92 ne laissait rien passer.
+    const produced = db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses WHERE analysed_at >= datetime('now','-1 day')
+    `).get().n || 0;
+
+    for (const tier of ["standard", "premium", "elite"]) {
+      const last = q[tier];
+      const days = last ? (Date.now() - new Date(last.replace(" ", "T") + "Z").getTime()) / 86400000 : 999;
+      const limit = DRY_TIER_DAYS[tier];
+      if (days < limit) { _dryTierAlerted[tier] = false; continue; } // réarmement
+      if (_dryTierAlerted[tier]) continue;                          // déjà alerté
+      _dryTierAlerted[tier] = true;
+
+      const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : ELITE_MIN_CONF;
+      const cause = produced === 0
+        ? "Aucune analyse produite sur 24h → problème d'alimentation (API matchs, scheduler)."
+        : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle ≥ ${TIER_MIN_REAL_ODD}).`;
+
+      const msg = [
+        `🚨 <b>PALIER À SEC — ${tier.toUpperCase()}</b>`, "",
+        `Aucun signal depuis <b>${last ? Math.floor(days) + " jour(s)" : "toujours"}</b> (seuil d'alerte : ${limit} j)`,
+        last ? `Dernier envoi : ${last}` : "",
+        "",
+        `🔍 ${cause}`,
+        "",
+        `📌 Vérifier la distribution avant de toucher aux seuils :`,
+        `<code>/tier-stats</code> et la requête §2 de ETAT_DES_LIEUX.md`,
+        "",
+        "━━━━━━━━━━━━━━━━━━",
+        "👑 Hermès — supervision interne",
+      ].filter(Boolean).join("\n");
+
+      const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+      console.log(`[dry-tier] alerte ${tier} (${Math.floor(days)}j sans signal) : ${ok ? "OK" : "ECHEC"}`);
+    }
+  } catch (e) {
+    console.error("[dry-tier]", e.message);
+  }
+}
 let _lastLearningReportDate = "";
 
 function checkAnalyticsSchedule() {
@@ -8071,6 +9324,16 @@ function checkAnalyticsSchedule() {
     console.log("[analytics] Envoi rapport performance hebdo (lundi 9h)...");
     sendPerformanceReportTelegram(7).then(ok => console.log(`[perf-report] ${ok ? "OK" : "ECHEC"}`));
   }
+
+  // AUTO 1 — bilan de santé quotidien (7h Paris)
+  if (hour === 7 && _lastHealthCheckDate !== todayKey) {
+    _lastHealthCheckDate = todayKey;
+    console.log("[health-check] Envoi bilan de santé quotidien (7h)...");
+    sendDailyHealthCheck();
+  }
+
+  // AUTO 2 — paliers à sec, contrôlé toutes les 6h (0h / 6h / 12h / 18h)
+  if (hour % 6 === 0) checkDryTiers();
 
   // Watchdog anti-perte : détecte une chute brutale du nombre d'analyses
   dataIntegrityWatchdog();
@@ -8588,13 +9851,27 @@ app.post("/chatbot/ask", express.json(), async (req, res) => {
     const { question, email, session } = req.body || {};
     if (!question) return res.json({ ok: false, error: "Question vide" });
     const userKey = email || session || "anon_" + Date.now();
+    // Traçabilité + plafond de dépense obligatoires pour tout appel IA (règle
+    // finale du prompt maître). Anti-doublon non applicable à une conversation
+    // libre : chaque requête a sa propre clé (voir allowChatbotCall).
+    const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: userKey });
+    if (!_chatGate.allowed) return res.json({ ok: true, answer: "Notre assistant est momentanement indisponible." });
     const hist = db.prepare("SELECT role, content FROM chat_messages WHERE user_key = ? ORDER BY id DESC LIMIT 10").all(userKey).reverse();
     hist.push({ role: "user", content: question });
     try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "user", question); } catch(e){}
-    const resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });
-    if (!resp.ok) throw new Error("HTTP " + resp.status);
-    const data = await resp.json();
-    const answer = data?.choices?.[0]?.message?.content || "Notre assistant est momentanement indisponible.";
+    let resp, data, answer;
+    try {
+      resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      data = await resp.json();
+      answer = data?.choices?.[0]?.message?.content || "Notre assistant est momentanement indisponible.";
+      _chatGate.record(data?.usage?.prompt_tokens, data?.usage?.completion_tokens, "ok");
+    } catch (e) {
+      // Enregistré même en échec : l'appel HTTP a potentiellement déjà eu lieu
+      // et un coût réel a pu être engagé avant l'erreur.
+      _chatGate.record(0, 0, "error");
+      throw e;
+    }
     try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "assistant", answer); } catch(e){}
     res.json({ ok: true, answer });
   } catch(e) {
@@ -8605,27 +9882,32 @@ app.post("/chatbot/ask", express.json(), async (req, res) => {
 
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
+    verifyTelegramChannels();
 
-    // One-shot: ensure Elite access for lamatrice2012@gmail.com
-    try {
+    // ── Accès offert au testeur (Elite, 30 analyses/jour) ──────────────────────
+    // Date d'expiration FIXE : la version précédente calculait "aujourd'hui + 60 jours"
+    // à chaque démarrage, donc l'échéance était repoussée à chaque déploiement et
+    // l'accès ne se terminait jamais. Modifiable via .env sans toucher au code.
+    const TESTER_EMAIL   = process.env.TESTER_GRANT_EMAIL   || "lamatrice2012@gmail.com";
+    const TESTER_EXPIRES = process.env.TESTER_GRANT_EXPIRES || "2026-09-22"; // 2 mois à partir du 24/07/2026
+    if (TESTER_EMAIL) try {
       const _gdb = new Database(CODES_DB_PATH);
-      const _existing = _gdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get("lamatrice2012@gmail.com");
+      const _existing = _gdb.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1").get(TESTER_EMAIL);
+      // Le code d'accès n'est jamais écrit en clair dans les logs (ils sont partagés
+      // pour du support) — seuls les 2 premiers caractères servent de repère.
+      const _mask = (c) => String(c || "").slice(0, 2) + "••••••";
       if (_existing && _existing.plan === "elite") {
-        // Déjà Elite : on garantit quand même 30 analyses/jour et l'expiration.
-        const _exp = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
-        _gdb.prepare("UPDATE codes SET credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
-        console.log(`[admin-grant] lamatrice2012@gmail.com Elite confirmé (30/j): ${_existing.code}`);
+        _gdb.prepare("UPDATE codes SET credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(TESTER_EXPIRES, TESTER_EMAIL);
+        console.log(`[admin-grant] testeur Elite confirmé (30/j, ${_mask(_existing.code)}) — expire le ${TESTER_EXPIRES}`);
       } else if (_existing) {
-        const _exp = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
-        _gdb.prepare("UPDATE codes SET plan = 'elite', credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(_exp, "lamatrice2012@gmail.com");
-        console.log(`[admin-grant] lamatrice2012@gmail.com upgradé en Elite — Code: ${_existing.code} — Expire: ${_exp}`);
+        _gdb.prepare("UPDATE codes SET plan = 'elite', credits_max = 30, expires_at = ? WHERE email = ? AND active = 1").run(TESTER_EXPIRES, TESTER_EMAIL);
+        console.log(`[admin-grant] testeur upgradé en Elite (${_mask(_existing.code)}) — expire le ${TESTER_EXPIRES}`);
       } else {
         const _chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         const _code = Array.from({ length: 8 }, () => _chars[Math.floor(Math.random() * _chars.length)]).join("");
-        const _exp = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
         const _today = new Date().toISOString().slice(0, 10);
-        _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,?)").run(_code, "lamatrice2012@gmail.com", "elite", _exp, 30, _today, new Date().toISOString());
-        console.log(`[admin-grant] Elite créé pour lamatrice2012@gmail.com — Code: ${_code} — Expire: ${_exp}`);
+        _gdb.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,?)").run(_code, TESTER_EMAIL, "elite", TESTER_EXPIRES, 30, _today, new Date().toISOString());
+        console.log(`[admin-grant] testeur Elite créé (${_mask(_code)}) — expire le ${TESTER_EXPIRES} — code complet visible dans la base`);
       }
       _gdb.close();
     } catch(e) { console.error("[admin-grant] erreur:", e.message); }

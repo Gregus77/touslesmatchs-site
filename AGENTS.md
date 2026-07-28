@@ -1,5 +1,25 @@
-# AGENTS.md — Fichier partage entre TOUTES les IA (Claude, Codex, Hermes, etc.)
-# Derniere mise a jour : 2026-07-21 par Claude
+# AGENTS.md — Fichier partage entre TOUTES les IA (Claude, Codex, Hermes, GPT, etc.)
+# Derniere mise a jour : 2026-07-23 par Claude
+
+## ⚡ HANDOFF RAPIDE — POUR TOUTE IA QUI REPREND (lis d'abord ceci)
+
+- **Repo GitHub** : `Gregus77/touslesmatchs-site`
+- **Branche de dev active** : `codex/dashboard-premium-redesign` (le code le PLUS a jour est ici, PAS sur main)
+- **Serveur (VPS Hostinger)** : `/opt/touslesmatchs` (Ubuntu 24.04)
+- **Ce fichier + `CHANGELOG.md`** = la source de verite. Lis les 2 avant de coder.
+
+**A PRESERVER ABSOLUMENT (ne jamais casser) :**
+- **Liens bookmakers / affiliation** → `scripts/bookmakers.config.js` (+ variables `.env` : WINAMAX_LINK, UNIBET_LINK, PMU_LINK). **Betclic a ete retire volontairement.** Bookmakers actifs : Winamax, Unibet, PMU.
+- **Endpoints API** → voir la table ci-dessous (routes exactes, ne pas renommer).
+- **Cles API / tokens** → uniquement dans `.env` sur le serveur, JAMAIS dans le code ni les commits.
+- **Stripe, Telegram, Brevo, Concile** → voir "Ce qui ne doit JAMAIS casser".
+
+**Procedure de deploiement (IMPORTANT — pieges connus)** : voir section "Deploiement" en bas.
+
+**Etat Codex 2026-07-24 — important pour Claude :**
+- Dernier commit fonctionnel Codex : `9e65437 [Codex] Simplifie historique et conversion live`.
+- Accueil local refait avec gamme Standard/Premium/Elite-VIP, prix coherents, liens Stripe publics, historique veille replie par defaut, matchs live cliquables vers les offres.
+- Manque encore demande par Gregory : logos/fanions des equipes et vrais matchs temps reel visibles plus haut sur l'accueil/direct.
 
 ## REGLE ABSOLUE : NE RIEN CASSER
 
@@ -52,6 +72,20 @@ Chaque IA qui travaille sur ce projet DOIT :
 | `/webhook` | POST | Webhook Stripe |
 | `/t` | GET | Pixel tracking visiteurs |
 | `/admin/analytics-report` | GET | Rapport analytics |
+| `/auth/register` `/auth/login` `/auth/me` | POST/GET | Comptes gratuits (dashboard.html) |
+| `/user/history` | GET | Historique perso d'un compte |
+| `/api/council-vote` | GET | Votes anonymises (panneau Hero "Le Conseil delibere") |
+| `/api/live-activity` | GET | Compteurs live reels (bandeau Hero) |
+| `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite/VIP |
+| `/api/tier-signals` | GET | Volumes du jour par palier (public, sans devoiler les analyses payantes) |
+| `/internal/tier-signals/preview` | POST | Preview interne Hermes des candidats Standard/Premium/Elite/VIP |
+| `/internal/tier-signals/send` | POST | Envoi interne Hermes des signaux par palier (dryRun par defaut) |
+| `/signaux-sportifs-ia` | GET | Page SEO organique Standard/Premium/Elite-VIP |
+| `/pronostics` | GET | Page SEO index (HTML) |
+| `/pronostic/:slug` | GET | Page SEO detail par match (HTML) |
+| `/sitemap-pronostics.xml` | GET | Sitemap dynamique des pronostics |
+
+> Note routage Caddy : le front appelle `/api/xxx` ; Caddy strippe `/api` → le serveur definit la route `/xxx`. Les pages SEO (`/pronostics`, `/pronostic/*`, `/sitemap-pronostics.xml`) ont des `handle` dedies dans le `Caddyfile`.
 
 ## Regles metier OBLIGATOIRES
 
@@ -71,7 +105,7 @@ Ne JAMAIS creer de fonctionnalite qui expose le nom, prenom, photo, voix, adress
 
 ### Tunnel de vente (ne JAMAIS complexifier)
 ```
-TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mois) -> Elite (19.90/mois)
+TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 ```
 
 ### Analyses sportives
@@ -81,7 +115,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 - Cotes : `Math.min(1.95, ((1 / (confidence / 100)) * 1.45))`, jamais > 1.95
 - Signal Fort : confiance >= 80%
 - Multi-sport : Football, Basketball, Hockey, Baseball, Tennis
-- Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 83 (ne pas baisser)
+- Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 82 (regle par le fondateur)
 
 ### Comptes speciaux actifs
 - LaMatrice (lamatrice2012@gmail.com) : Elite, 30 analyses/jour, expire ~19 sept 2026
@@ -89,7 +123,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 ## Ce qui ne doit JAMAIS casser
 
 - Stripe (paiements, webhooks)
-- Telegram (bots, canaux gratuit/premium)
+- Telegram (bots, groupes Standard/Premium/Elite/VIP)
 - Hermes / Concile IA
 - Live IA (analyse en direct + onglet Statistiques)
 - Brevo (emails, nurturing)
@@ -112,7 +146,12 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 | `NORM()` | Normalise accents (NFD) | Critique pour la resolution |
 | `matchToken()` | Extrait le mot distinctif d'un nom d'equipe | Evite les faux positifs FC/AC |
 | `refreshDailyPickFromDB()` | Charge le pick du jour depuis SQLite | Utilise isExcludedFromPicks |
-| `PUBLISHED_MIN_CONFIDENCE` | Seuil 83/100 pour la vitrine | NE PAS MODIFIER |
+| `PUBLISHED_MIN_CONFIDENCE` | Seuil 82/100 pour la vitrine | Regle par le fondateur |
+| `rowOdd()` | Vraie cote ARJEL stockee sinon estimation marche | Utiliser partout, PAS l'ancienne formule fake |
+| `computeBestOdd()` / `fetchRealOdds()` | Vraies cotes API-Sports /odds | Cotes reelles bookmakers |
+| `markSignalSent()` | Trace sig_sent_standard / sig_sent_premium / sig_sent_elite (sig_sent_free legacy) | Resultat Telegram poste QUE sur groupes ayant recu le pick |
+| `seoPages` (IIFE inline) | Rendu des pages SEO pronostics | Inline dans api_server.js (pas de module externe) |
+| `rowIsArjel()` / `tierStatsFor()` | Stats par palier | Standard>=88 ARJEL, Premium>=85 ARJEL, Elite>=82 tout |
 
 ## Bases de donnees SQLite
 
@@ -175,21 +214,80 @@ Si aucun objectif n'est rempli : NE PAS developper.
 [Hermes] Description courte du changement
 ```
 
-## Etat actuel du projet (juillet 2026)
+## Liens bookmakers / affiliation (SENSIBLE — revenus)
 
-### Version deployee (stable)
-- Commit de reference : `d23daf6` — seuil 83, filtres valides
-- Sauvegarde REFERENCE : `/opt/backups/REFERENCE-STABLE-20260721_2134.tar.gz`
+- **Fichier** : `scripts/bookmakers.config.js` — utilise par emails, Telegram, et importe cote front.
+- **Front** : tableau `BM` dans `public/index.html` (boutons sous l'analyse).
+- **Bookmakers actifs** : **Winamax, Unibet, PMU**. **Betclic RETIRE volontairement** (le fondateur n'etait pas sur que le lien etait le sien). NE PAS le remettre sans accord.
+- **Surcharge possible via .env** : `WINAMAX_LINK`, `UNIBET_LINK`, `PMU_LINK`.
+- `ARJEL_BOOKMAKERS` (dans api_server.js) sert au MATCHING des cotes reelles — garder "betclic" dedans est OK (c'est pour lire la cote, pas pour afficher un lien).
 
-### En attente de deploiement
-- Commit `77f4fb5` : filtre vitrine base sur performances reelles (LOSING_COMPETITIONS_RE)
-- Decision repoussee a mi-aout (reprise des championnats)
+## Stripe — gamme publique 2026-07-24
+
+- Offre publique : **Standard 4,90€ / mois / Premium 14,90€ / mois / Elite-VIP 29,90€ / mois**.
+- `STRIPE_PRICE_ID_STANDARD` doit pointer vers le produit Stripe Standard 4,90€ / mois.
+- `STRIPE_PRICE_ID_PREMIUM` doit pointer vers le produit Stripe Premium 14,90€ / mois.
+- `STRIPE_PRICE_ID_ELITE` / `STRIPE_PRICE_ID_VIP` doivent pointer vers les niveaux hauts 29,90€ / mois.
+- Liens Payment Links publics branches en fallback front :
+  - Standard : `https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05`
+  - Premium : `https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06`
+  - Elite/VIP : `https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07`
+- L'ancien 1 euro et les anciens libelles gratuits ne doivent plus etre mis en avant sur l'accueil.
+
+## Systeme de paliers (Standard / Premium / Elite)
+
+Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confiance, contenu par ARJEL) :
+- **Standard** = ARJEL & confiance >= 88 (fleurons, faible volume)
+- **Premium** = ARJEL & confiance >= 90 (inclut Standard, jusqu'a 10/jour)
+- **Elite** = ARJEL & confiance >= 90 (football/basketball/hockey/baseball, jusqu'a 30/jour)
+
+Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
+Etape 2 EN COURS : moteur `/tier-signals` + routes internes Hermes pour Standard/Premium/Elite/VIP.
+Etape 3 (a faire, ZONE HERMES) : scheduler Telegram par palier + recap quotidien — A COORDONNER.
+
+Regles moteur signaux (2026-07-24) :
+- Standard = 3 signaux max/jour, confiance >= 88, cote reelle ARJEL >= 1.50.
+- Premium = 10 signaux max/jour, confiance >= 90, avant-match ou live, cote reelle ARJEL >= 1.50.
+- Elite = 30 signaux max/jour, confiance >= 90, football/basketball/hockey/baseball, cote reelle ARJEL >= 1.50.
+- Ne jamais forcer le volume : si la journee ne produit que 7 bons signaux Premium, envoyer 7.
+- Envoi automatique des paliers desactive par defaut ; activer seulement avec `TIER_SIGNALS_AUTO_SEND=1` apres verification des canaux `TELEGRAM_STANDARD_CHANNEL_ID`, `TELEGRAM_PREMIUM_CHANNEL_ID`, `TELEGRAM_ELITE_CHANNEL_ID`.
+
+## Deploiement (procedure + pieges connus)
+
+```bash
+cd /opt/touslesmatchs
+git fetch origin codex/dashboard-premium-redesign
+git checkout origin/codex/dashboard-premium-redesign -- public/ scripts/api_server.js scripts/bookmakers.config.js
+docker compose up -d --build
+```
+
+**Pieges rencontres (IMPORTANT) :**
+1. **`git pull` echoue** ("local changes would be overwritten") car Docker modifie des fichiers montes. → Utiliser `git checkout origin/<branche> -- <fichiers>` (ecrase cible sans merge), PAS `git pull`.
+2. **Caddyfile immuable** (`chattr +i`, `lsattr` montre le flag `i`). Avant de le mettre a jour : `chattr -i Caddyfile` puis `git show origin/<branche>:Caddyfile > Caddyfile`.
+3. **Dossier `site/`** = fichiers Docker parfois immuables → ne pas essayer de `rm`/reset dessus, ce n'est pas source.
+4. **Dockerfile.api ne copie QUE `api_server.js` + `bookmakers.config.js`.** Tout nouveau module `require('./xxx')` fait CRASHER l'API (Cannot find module). → Inliner le code dans api_server.js (ex: `seoPages`).
+5. Toujours verifier apres deploiement : `docker compose ps` (api = Up, pas Restarting) + `docker logs touslesmatchs-api --tail 30`.
+
+## Sauvegardes (avant/apres tout correctif touchant la base)
+
+- **Script** : `./backup-db.sh <label>` → copie `tlm.db` dans `/opt/backups` ET `/root/backups`.
+- Faire `./backup-db.sh avant-x` AVANT, `./backup-db.sh apres-x` APRES.
+- Archive complete nocturne : `backup.sh` (cron).
+
+## Etat actuel du projet (2026-07-23)
+
+### Refonte produit FAITE (audit conversion) — deployee
+- Hero refait + panneau vote multi-IA + barre de preuves
+- Sections "Pourquoi nous", methode 5 etapes, comparatif offres
+- Bandeau activite live, tunnel de conversion, compte gratuit reconnecte
+- Pages SEO dynamiques (`/pronostics`, `/pronostic/:slug`, sitemap)
+- Stats par palier (etape 1)
+- Fixes : doublons vitrine, vraies cotes ARJEL, coherence resultats Telegram, Betclic retire
 
 ### Decisions strategiques en attente (mi-aout)
 - Ajuster les filtres de ligues avec les donnees de la vraie saison
-- Evaluer si le filtre performances (77f4fb5) doit remplacer le filtre actuel
 
-## Performances connues (412 analyses resolues, 77% WR)
-- Meilleurs : UEFA Europa 91%, UEFA CL 87%, Serie B Bresil 86%
-- Pires : Match nul 50%, USL League Two 58%, World Cup 55%
+## Performances connues (~360 analyses resolues, ~81% WR)
+- Meilleurs : UEFA Europa/CL ~87-91%, Serie A/B Bresil bons
+- Pires : Match nul ~50%, USL League Two ~58%, World Cup ~55% (exclus vitrine)
 - Meilleurs types : Victoire domicile 82%, Under X.5 78%

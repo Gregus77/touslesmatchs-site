@@ -22,13 +22,13 @@
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants ; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable." } },
+    { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent." } },
     { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
     { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Tous les résultats sont publics sur la page Performances. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
     { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort." } },
     { "@type": "Question", "name": "Quand les analyses sont-elles publiées ?", "acceptedAnswer": { "@type": "Answer", "text": "L'analyse du jour (pick quotidien) est publiée vers 12h (heure de Paris). Les analyses Live IA sont disponibles en temps réel pendant les matchs en direct, entre la 25e et la 65e minute." } },
     { "@type": "Question", "name": "Pourquoi entre 25 et 65 minutes uniquement ?", "acceptedAnswer": { "@type": "Answer", "text": "Avant 25 minutes, il n'y a pas assez de données de jeu pour une analyse fiable. Après 65 minutes, les cotes sont trop basses pour offrir de la valeur." } },
-    { "@type": "Question", "name": "Quels sports sont analysés ?", "acceptedAnswer": { "@type": "Answer", "text": "Football, Basketball, Hockey, Baseball et Tennis. Le football représente la majorité des analyses." } },
+    { "@type": "Question", "name": "Quels sports sont analysés ?", "acceptedAnswer": { "@type": "Answer", "text": "Football, Basketball, Hockey et Baseball. Le football représente la majorité des analyses." } },
     { "@type": "Question", "name": "Est-ce que TousLesMatchs garantit des gains ?", "acceptedAnswer": { "@type": "Answer", "text": "Non. Les analyses sont fournies à titre informatif. TousLesMatchs ne garantit aucun gain. Les jeux d'argent comportent des risques." } }
   ]
 }
@@ -104,7 +104,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <div class="faq-item open">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Qui est le Concile Hermès ? <span class="faq-arrow">+</span></div>
-    <div class="faq-a">Le Concile combine 5 agents IA spécialisés et 1 Chief. Chaque agent analyse le match de manière indépendante : statistiques, tactique, forme récente, valeur des cotes. Le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable. Si le consensus est faible, c'est NO BET — aucun pick n'est forcé.</div>
+    <div class="faq-a">Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent. Si la convergence est faible, aucun signal n'est forcé.</div>
   </div>
 
   <div class="faq-item">
@@ -139,7 +139,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Quels sports sont analysés ? <span class="faq-arrow">+</span></div>
-    <div class="faq-a">Football, Basketball, Hockey, Baseball et Tennis. Le football représente la majorité des analyses. Le Concile adapte sa méthode (marchés, statistiques clés) selon chaque sport.</div>
+    <div class="faq-a">Football, Basketball, Hockey et Baseball. Le football représente la majorité des analyses. Le Concile adapte sa méthode (marchés, statistiques clés) selon chaque sport.</div>
   </div>
 
   <div class="faq-item">
@@ -152,7 +152,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
     <div class="method-sub">Le Concile ne devine pas. Voici sa méthode en 4 étapes.</div>
 
     <div class="step"><div class="step-n">1</div><div><div class="step-title">Collecte vérifiée</div><div class="step-desc">Hermès collecte les matchs via API-Sports, puis vérifie chaque donnée sur 3 sources indépendantes. Aucun match non confirmé n'est analysé.</div></div></div>
-    <div class="step"><div class="step-n">2</div><div><div class="step-title">5 agents spécialisés + 1 Chief</div><div class="step-desc">Chaque agent analyse le match de manière indépendante : stats, tactique, forme, value. Le Chief arbitre les désaccords. Si les objections sont trop fortes, la décision devient NO BET.</div></div></div>
+    <div class="step"><div class="step-n">2</div><div><div class="step-title">5 IA indépendantes votent</div><div class="step-desc">Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA.</div></div></div>
     <div class="step"><div class="step-n">3</div><div><div class="step-title">Publication et diffusion</div><div class="step-desc">Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Pro et Elite accèdent aux analyses Live IA en temps réel.</div></div></div>
     <div class="step"><div class="step-n">4</div><div><div class="step-title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
