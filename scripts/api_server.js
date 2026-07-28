@@ -771,7 +771,11 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 //   82-83 : 141 analyses · 70,9 % · +428 €   → Elite    (~9,7/jour cumulé)
 // Aucune analyse au-dessus de 89 sur la période : un seuil à 90 ou 92 produit ZÉRO signal.
 const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 85;
-const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
+// Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
+// fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
+// c'est un longshot que le book juge improbable.
+const TIER_MIN_REAL_ODD = Number(process.env.TIER_MIN_REAL_ODD || 1.30);
+const TIER_MAX_REAL_ODD = Number(process.env.TIER_MAX_REAL_ODD || 2.50);
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
 // signal football à 84 %, et un mardi sans football vidait le palier.
@@ -799,6 +803,7 @@ function getTierThresholds() {
       WHERE analysed_at >= datetime('now','-${TIER_THRESHOLD_WINDOW_DAYS} days')
         AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
         AND real_odd >= ${TIER_MIN_REAL_ODD}
+        AND real_odd <= ${TIER_MAX_REAL_ODD}
       ORDER BY confidence DESC
     `).all().map(r => Number(r.confidence) || 0).filter(Boolean);
     // Sous 30 analyses l'échantillon ne dit rien de fiable : on garde les constantes.
@@ -2039,10 +2044,11 @@ function computeSignalTier(bet, confidence, minute) {
 }
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
-const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.40));
+const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.30));
 // Plafond de cote : au-delà, le book estime l'événement peu probable = longshot
-// perdant (ex: "Under 2.5 @ 3.65" du 15/07/2026 = -10€). Règle métier : cote max 1.95.
-const MAX_PLAYABLE_ODD = Math.min(3.0, Number(process.env.MAX_PLAYABLE_ODD || 1.95));
+// perdant (ex: "Under 2.5 @ 3.65" du 15/07/2026 = -10€).
+// Fenêtre réglée par le fondateur le 28/07/2026 : cote jouable entre 1.30 et 2.50.
+const MAX_PLAYABLE_ODD = Math.min(3.0, Number(process.env.MAX_PLAYABLE_ODD || 2.50));
 
 function betIsPlayable(match, bet, cote) {
   // Cote trop faible = aucune valeur (ex: victoire à 1.10 sur un 3-0)
@@ -2328,11 +2334,28 @@ function parseLiveMinuteValue(minute) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Codes de statut bruts (API-Sports / TheSportsDB) qui ne sont PAS du live
+// exploitable : match pas commencé (NS), reporté, annulé, interrompu, terminé.
+// Ces deux sources écrasent le champ "status" à "IN_PLAY" en dur (voir
+// normalizeTheSportsDbLiveEvent et fetchFromApiSports), donc le vrai état n'est
+// lisible que dans "minute" (ex: minute="NS"). Sans ce filtre, des matchs non
+// commencés s'affichaient en "En direct" sans temps de jeu ni cote exploitable.
+const NON_LIVE_RAW_STATUSES = new Set([
+  "NS", "TBD", "PST", "POSTP", "CANC", "ABD", "AWD", "WO", "SUSP", "INTR",
+  "FT", "AOT", "AP", "AET", "PEN", "ENDED", "FINISHED", "CANCELLED", "POSTPONED",
+  "NOT STARTED", "NOTSTARTED",
+]);
+
 function isFinishedOrTooLateForLiveIa(match) {
   const status = String(match?.status || "").toUpperCase();
   if (["CANCELLED", "POSTPONED"].includes(status)) return true;
   if (["SCHEDULED", "TIMED"].includes(status)) return false;
   if (["FINISHED", "FT", "AET", "PEN", "ENDED"].includes(status)) return true;
+
+  // Statut réel porté par "minute" quand la source a écrasé "status" à IN_PLAY.
+  const rawMinute = String(match?.minute ?? "").trim().toUpperCase();
+  if (rawMinute && NON_LIVE_RAW_STATUSES.has(rawMinute)) return true;
+
   const minute = parseLiveMinuteValue(match?.minute);
   return match?.sport === "Football" && minute !== null && minute >= 85;
 }
@@ -3602,7 +3625,7 @@ Réponds en JSON pur (pas de markdown):
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
       const conf = Number(analysisResult.confidence) || 0;
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
-      const oddOk = realOdd >= TIER_MIN_REAL_ODD;
+      const oddOk = realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD;
       const sportLc = String(match.sport || "Football").toLowerCase();
       // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
       // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
@@ -6758,7 +6781,8 @@ function rowIsArjel(r) {
 function tierEligible(r, tier) {
   const conf = Number(r.confidence) || 0;
   if (!rowIsArjel(r)) return false;
-  if ((Number(r.real_odd) || 0) < TIER_MIN_REAL_ODD) return false;
+  const _ro = Number(r.real_odd) || 0;
+  if (_ro < TIER_MIN_REAL_ODD || _ro > TIER_MAX_REAL_ODD) return false;
   const sport = String(r.sport || "Football").toLowerCase();
   const isFoot = sport.includes("foot");
   const std = isFoot && conf >= STANDARD_MIN_CONF;
@@ -9526,6 +9550,7 @@ async function sendDailyHealthCheck() {
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND date(resolved_at) = date('now','-1 day')
         AND real_odd >= ${TIER_MIN_REAL_ODD}
+        AND real_odd <= ${TIER_MAX_REAL_ODD}
     `).get() || {};
     const resolved = (r.wins || 0) + (r.losses || 0);
     const wr = resolved > 0 ? Math.round((r.wins / resolved) * 1000) / 10 : null;
@@ -9602,7 +9627,7 @@ async function checkDryTiers() {
       const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : ELITE_MIN_CONF;
       const cause = produced === 0
         ? "Aucune analyse produite sur 24h → problème d'alimentation (API matchs, scheduler)."
-        : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle ≥ ${TIER_MIN_REAL_ODD}).`;
+        : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle entre ${TIER_MIN_REAL_ODD} et ${TIER_MAX_REAL_ODD}).`;
 
       const msg = [
         `🚨 <b>PALIER À SEC — ${tier.toUpperCase()}</b>`, "",
