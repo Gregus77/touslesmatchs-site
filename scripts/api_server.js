@@ -438,6 +438,20 @@ try {
   }
 } catch (e) { console.error("[migration] dedup:", e.message); }
 
+// ── Idempotence des webhooks Stripe ──────────────────────────────────────────
+// Stripe REJOUE un webhook si notre réponse tarde ou échoue, et peut livrer un
+// même événement plusieurs fois. Sans verrou, un `checkout.session.completed`
+// rejoué renvoyait au client un 2e email de confirmation ET générait un 2e lien
+// d'invitation Telegram à usage unique (le code d'accès, lui, était déjà
+// protégé). Table persistée sur disque : le verrou survit à un redémarrage.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS stripe_processed_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT,
+    processed_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 // ── Nurturing emails table (persistent across restarts) ──────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS scheduled_emails (
@@ -7421,6 +7435,26 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       : JSON.parse(req.body);
   } catch (e) {
     return res.status(400).json({ error: e.message });
+  }
+
+  // ── Verrou anti-rejeu ───────────────────────────────────────────────────────
+  // Placé APRÈS la vérification de signature (jamais avant : sinon n'importe qui
+  // pourrait saturer la table). On répond 200 à un rejeu pour que Stripe cesse
+  // de réessayer — un 4xx/5xx le ferait au contraire recommencer en boucle.
+  if (event.id) {
+    try {
+      const claim = db.prepare(
+        "INSERT OR IGNORE INTO stripe_processed_events (event_id, event_type) VALUES (?,?)"
+      ).run(event.id, event.type || "");
+      if (claim.changes === 0) {
+        console.log(`[stripe] événement ${event.id} (${event.type}) déjà traité — rejeu ignoré`);
+        return res.json({ received: true, duplicate: true });
+      }
+    } catch (e) {
+      // Un incident sur la table de verrou ne doit jamais bloquer un paiement :
+      // on journalise et on laisse passer (comportement d'avant ce garde-fou).
+      console.error("[stripe] verrou idempotence indisponible:", e.message);
+    }
   }
 
   if (event.type === "checkout.session.completed") {
