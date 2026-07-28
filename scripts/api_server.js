@@ -3627,6 +3627,15 @@ Réponds en JSON pur (pas de markdown):
   if (analysisResult.confidence >= signalThreshold && voteCountForSignal >= 3 && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
+      // La clé porte l'heure courante (…THH). Sans purge, ce Set ne fait que
+      // grossir tant que le conteneur tourne. On ne garde que l'heure en cours :
+      // les clés plus anciennes ne peuvent plus provoquer de collision.
+      if (_signalSentCache.size > 500) {
+        const currentHour = signalKey.slice(-13); // "YYYY-MM-DDTHH"
+        for (const k of _signalSentCache) {
+          if (!k.endsWith(currentHour)) _signalSentCache.delete(k);
+        }
+      }
       _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
@@ -3658,7 +3667,7 @@ Réponds en JSON pur (pas de markdown):
       if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = signalsSentToday("sig_sent_standard"); }
       if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = signalsSentToday("sig_sent_premium"); }
       if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = signalsSentToday("sig_sent_elite"); }
-      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
+      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = signalsSentToday("sig_sent_free"); }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
       //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL ≥ 1.50 — max 3/j
