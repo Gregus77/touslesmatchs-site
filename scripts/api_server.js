@@ -2318,9 +2318,33 @@ async function fetchFromTheSportsDb() {
   return results;
 }
 
+// Deux sources nomment rarement une équipe pareil : « Dila » vs « Dila Gori »,
+// « Vardar » vs « Vardar Skopje », « Thun » vs « FC Thun ». Une comparaison
+// stricte laissait donc passer le même match deux fois dans la liste live (et
+// risquait de le faire analyser deux fois par le Concile).
+// Règle : égalité stricte, OU un nom contenu dans l'autre (« dila » ⊂ « dila
+// gori »), OU même mot distinctif au sens de matchToken() (« fc thun » → « thun »).
+function sameLiveTeamName(a, b) {
+  const na = normalizeMatchName(a);
+  const nb = normalizeMatchName(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  // Inclusion sur mot entier uniquement : évite que « inter » matche « winterthur ».
+  const words = (s) => s.split(" ").filter(Boolean);
+  const wa = words(na), wb = words(nb);
+  const shorter = wa.length <= wb.length ? wa : wb;
+  const longer = wa.length <= wb.length ? wb : wa;
+  if (shorter.length && shorter.every((w) => longer.includes(w))) return true;
+  const ta = matchToken(a), tb = matchToken(b);
+  return !!ta && ta.length >= 3 && ta === tb;
+}
+
 function sameLiveTeams(a, b) {
-  return normalizeMatchName(a?.home) === normalizeMatchName(b?.home)
-    && normalizeMatchName(a?.away) === normalizeMatchName(b?.away);
+  // Ne jamais fusionner deux sports différents, même si les noms se ressemblent.
+  const sportA = String(a?.sport || "Football");
+  const sportB = String(b?.sport || "Football");
+  if (sportA !== sportB) return false;
+  return sameLiveTeamName(a?.home, b?.home) && sameLiveTeamName(a?.away, b?.away);
 }
 
 function hasKnownScore(match) {
@@ -2369,6 +2393,10 @@ function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) 
   const merged = [...footballDataMatches];
   for (const apiMatch of apiSportsMatches) {
     const existingIndex = merged.findIndex((m) => sameLiveTeams(m, apiMatch) && m.status !== "FINISHED");
+    // Doublon sur un sport non-Football : on garde l'entrée déjà présente au lieu
+    // de l'ajouter une seconde fois (l'arbitrage de score ci-dessous ne concerne
+    // que le football, où deux APIs fournissent le score).
+    if (existingIndex >= 0 && apiMatch.sport !== "Football") continue;
     if (existingIndex >= 0 && apiMatch.sport === "Football") {
       const previous = merged[existingIndex];
       merged[existingIndex] = scoresDiffer(previous, apiMatch)
