@@ -10087,6 +10087,14 @@ app.get("/admin/scheduler-state", (req, res) => {
 // ===== End M007 =====
 
 // ===== M008: Data Guardian state =====
+// Stats du garde-fou budgetaire IA
+app.get("/admin/ai-budget-stats", (req, res) => {
+  try {
+    const guard = require("./ai_budget_guard");
+    res.json({ ok: true, stats: guard.getDailyStats(db) });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.get("/admin/guardian-state", (req, res) => {
   try {
     const fs = require("fs");
