@@ -3653,9 +3653,11 @@ Réponds en JSON pur (pas de markdown):
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
       // Réinitialisation des compteurs journaliers
-      if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = 0; }
-      if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = 0; }
+      // Au changement de jour ET au premier passage après un redémarrage
+      // (date === ""), on repart du nombre réellement diffusé, lu en base.
+      if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = signalsSentToday("sig_sent_standard"); }
+      if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = signalsSentToday("sig_sent_premium"); }
+      if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = signalsSentToday("sig_sent_elite"); }
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
@@ -6194,6 +6196,26 @@ function markSignalSent(home, away, col) {
          AND date(analysed_at)=date('now')`
     ).run(home, away);
   } catch (e) { console.error("[signal-sent]", e.message); }
+}
+
+// Nombre de signaux RÉELLEMENT diffusés aujourd'hui sur un canal, lu depuis la
+// base et non depuis un compteur mémoire. Les plafonds journaliers (3/jour en
+// Standard, etc.) sont une promesse commerciale affichée sur la page tarifs :
+// un compteur en mémoire repartait de zéro à chaque redémarrage du conteneur,
+// donc un jour à plusieurs redéploiements pouvait dépasser le plafond annoncé.
+// Même convention de date (UTC) que markSignalSent, pour rester cohérent.
+function signalsSentToday(col) {
+  if (!SIGNAL_SENT_COLUMNS.includes(col)) return 0;
+  try {
+    const row = db.prepare(
+      `SELECT COUNT(*) AS n FROM concile_analyses
+       WHERE ${col} = 1 AND date(analysed_at) = date('now')`
+    ).get();
+    return Number(row?.n) || 0;
+  } catch (e) {
+    console.error("[signal-sent] comptage:", e.message);
+    return 0; // en cas d'incident, on ne bloque pas la diffusion
+  }
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
