@@ -2825,15 +2825,39 @@ function isArjelMajorCompetition(match) {
   return ARJEL_MAJOR_COMPETITIONS.some(k => hay.includes(k));
 }
 
+// Endpoint de cotes par sport chez API-Sports. Le football utilise le
+// paramètre "fixture", les autres sports "game" — et chacun son sous-domaine.
+// Sans cette table, seul le football obtenait une vraie cote : or la diffusion
+// exige une vraie cote bookmaker, donc basket, hockey et baseball ne pouvaient
+// JAMAIS être diffusés, alors que le palier Elite promet 30 signaux/jour
+// multisport. Le palier était structurellement intenable.
+const ODDS_ENDPOINT_BY_SPORT = {
+  football:   { host: "v3.football.api-sports.io",   param: "fixture", key: "football" },
+  basketball: { host: "v1.basketball.api-sports.io", param: "game",    key: "basketball" },
+  hockey:     { host: "v1.hockey.api-sports.io",     param: "game",    key: "hockey" },
+  baseball:   { host: "v1.baseball.api-sports.io",   param: "game",    key: "baseball" },
+};
+
 async function fetchRealOdds(match) {
-  if (!API_SPORTS_KEY || match.source !== "api-sports" || match.sport !== "Football" || !match.fixtureId) return null;
-  const ck = `odds_${match.fixtureId}`;
+  if (!API_SPORTS_KEY || match.source !== "api-sports") return null;
+  const sportLc = String(match.sport || "Football").toLowerCase();
+  const cfg = ODDS_ENDPOINT_BY_SPORT[sportLc];
+  if (!cfg) return null;
+  // Football : fixtureId. Autres sports : l'identifiant du match est dans sourceId
+  // (fixtureId y vaut null, cf. fetchFromApiSports).
+  const gameId = sportLc === "football" ? match.fixtureId : (match.sourceId || match.fixtureId);
+  if (!gameId) return null;
+  // Respecte le disjoncteur de quota déjà en place : inutile d'insister sur un
+  // sport dont l'API nous a déjà renvoyé un dépassement.
+  if (typeof shouldSkipApiSportsSport === "function" && shouldSkipApiSportsSport(cfg.key)) return null;
+
+  const ck = `odds_${sportLc}_${gameId}`;
   const c = oddsCache.get(ck);
   if (c && Date.now() - c.ts < 10 * 60 * 1000) return c.data;
   let data = null;
   try {
     const resp = await httpGet(
-      `https://v3.football.api-sports.io/odds?fixture=${match.fixtureId}`,
+      `https://${cfg.host}/odds?${cfg.param}=${gameId}`,
       { "x-apisports-key": API_SPORTS_KEY }
     );
     const bookmakers = resp?.response?.[0]?.bookmakers || [];
@@ -3750,7 +3774,11 @@ Réponds en JSON pur (pas de markdown):
       // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
       const TH = getTierThresholds();
 
-      const gradeStandard = diffusable && voteCountForSignal >= 5 && conf >= TH.standard;
+      // Standard exigeait l'UNANIMITE des 5 agents : une condition si rare que le
+      // palier restait vide la plupart des jours (0/3 le 28/07/2026). Une majorite
+      // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
+      // eleve que les autres paliers, qui porte l'exigence Standard.
+      const gradeStandard = diffusable && voteCountForSignal >= 4 && conf >= TH.standard;
       const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
       const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
       shadowWorthy = gradeElite;
