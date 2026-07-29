@@ -775,8 +775,8 @@ const _standardSignalDaily = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
 const _eliteSignalDaily = { date: "", count: 0 };
 // Plafonds journaliers par palier (conditions données par le fondateur)
-const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL ≥ 1.50
-const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote ≥ 1.50 (inclut Standard)
+const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL 1.30-2.50
+const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote 1.30-2.50 (inclut Standard)
 const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseball/basket ≥ 82 (inclut Premium)
 // Seuils volontairement décroissants : un palier supérieur est PLUS LARGE, donc reçoit
 // davantage. L'inverse (Standard ≥ 88 et Premium ≥ 90) rendait les deux paliers
@@ -3873,9 +3873,9 @@ Réponds en JSON pur (pas de markdown):
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = signalsSentToday("sig_sent_free"); }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
-      //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL ≥ 1.50 — max 3/j
-      //   🟣 Premium  (9.90€) : conf ≥ 90, foot, cote réelle ARJEL ≥ 1.50 — max 10/j (inclut Standard)
-      //   🟠 Elite    (19.90€): conf ≥ 90, foot/hockey/baseball/basket, cote réelle ARJEL ≥ 1.50 — max 30/j (inclut Premium)
+      //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL 1.30-2.50 — max 3/j
+      //   🟣 Premium  (9.90€) : conf ≥ 90, foot, cote réelle ARJEL 1.30-2.50 — max 10/j (inclut Standard)
+      //   🟠 Elite    (19.90€): conf ≥ 90, foot/hockey/baseball/basket, cote réelle ARJEL 1.30-2.50 — max 30/j (inclut Premium)
       //   Modèle imbriqué : un palier supérieur reçoit toujours au moins ce que reçoit l'inférieur.
       //   « Cote réelle » = vraie cote bookmaker (jamais l'estimation). Repli auto sur Premium
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
@@ -6190,7 +6190,7 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL ≥ 1.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
     { name: "🟣 Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 84%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
     { name: "🟠 Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 82% hors football", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
