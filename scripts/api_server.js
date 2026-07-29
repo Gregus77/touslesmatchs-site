@@ -416,6 +416,11 @@ ensureColumn("concile_analyses", "sig_sent_free",     "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_standard", "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_premium",  "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_elite",    "INTEGER DEFAULT 0");
+// Motif pour lequel une analyse n'a ete diffusee sur AUCUN canal payant. Sans
+// cette trace, un "0 signal aujourd'hui" reste inexplicable : impossible de
+// savoir si le probleme vient de la confiance, de la cote, du sport ou du
+// filtre qualite. Renseigne a chaque analyse, lu par /admin/funnel-report.
+ensureColumn("concile_analyses", "diffusion_block",   "TEXT DEFAULT NULL");
 // Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
 ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 
@@ -3651,7 +3656,25 @@ Réponds en JSON pur (pas de markdown):
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
-  if (analysisResult.confidence >= signalThreshold && voteCountForSignal >= 3 && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
+
+  // ── Traçage du tunnel de diffusion ──────────────────────────────────────────
+  // Premier motif bloquant, dans l'ordre où le code les évalue. Permet de
+  // répondre factuellement à "pourquoi 0 signal aujourd'hui ?" au lieu de
+  // supposer. Écrit en base plus bas, agrégé par /admin/funnel-report.
+  let _tierBlock = null; // motif de non-diffusion detecte dans le bloc palier
+  const _blockReason = (() => {
+    if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
+    if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
+    if (voteCountForSignal < 3) return `votes ${voteCountForSignal} < 3`;
+    if (!hasRealData) return "donnees stats/H2H indisponibles";
+    if (!qualityGate.ok) return `filtre qualite: ${qualityGate.reason}`;
+    if (!playable.ok) return `cote: ${playable.reason}`;
+    if (isWomen) return "match feminin (exclu)";
+    if (lowTrust) return "ligue non fiable";
+    return null;
+  })();
+
+  if (!_blockReason) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
       // La clé porte l'heure courante (…THH). Sans purge, ce Set ne fait que
@@ -3710,7 +3733,20 @@ Réponds en JSON pur (pas de markdown):
       // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
       // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
       // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
-      const diffusable = arjelPlayable && oddOk && DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
+      const sportDiffusable = DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
+      const diffusable = arjelPlayable && oddOk && sportDiffusable;
+      // Motif précis quand l'analyse a franchi tous les filtres qualité mais
+      // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
+      // des corrections très différentes.
+      if (!diffusable) {
+        _tierBlock = !sportDiffusable
+          ? `sport non diffusable: ${match.sport || "?"}`
+          : !arjelPlayable
+            ? `hors ARJEL (source cote: ${analysisResult.cote_source || "estimation"})`
+            : realOdd === 0
+              ? "pas de vraie cote bookmaker (estimation seulement)"
+              : `cote ${realOdd} hors fenetre ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}`;
+      }
       // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
       const TH = getTierThresholds();
 
@@ -3763,6 +3799,16 @@ Réponds en JSON pur (pas de markdown):
       }
     }
   }
+
+  // Trace du motif de non-diffusion (null si le signal est bien parti).
+  try {
+    const motif = _blockReason || _tierBlock || null;
+    db.prepare(
+      `UPDATE concile_analyses SET diffusion_block = ?
+       WHERE lower(trim(home)) = lower(trim(?)) AND lower(trim(away)) = lower(trim(?))
+         AND date(analysed_at) = date('now')`
+    ).run(motif, match.home, match.away);
+  } catch (e) { console.error("[funnel] trace:", e.message); }
 
   // ── Tests à blanc : uniquement sur les matchs RÉELLEMENT diffusables ────────
   // Avant, cette évaluation tournait sur CHAQUE match analysé (109 le 25/07) avec
@@ -10375,6 +10421,60 @@ app.get("/admin/scheduler-state", (req, res) => {
 // ===== End M007 =====
 
 // ===== M008: Data Guardian state =====
+// Ou meurent les signaux : repartition des motifs de non-diffusion. Repond
+// factuellement a "pourquoi 0 signal payant aujourd'hui ?" — chaque motif
+// appelle une correction differente, et sans cette vue on corrige a l'aveugle.
+app.get("/admin/funnel-report", (req, res) => {
+  try {
+    const jours = Math.min(30, Math.max(1, parseInt(req.query.jours) || 3));
+    const rows = db.prepare(`
+      SELECT diffusion_block, sport, COUNT(*) AS n
+      FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+      GROUP BY diffusion_block, sport
+      ORDER BY n DESC
+    `).all(`-${jours} days`);
+
+    const total = rows.reduce((s, r) => s + r.n, 0);
+    const diffuses = rows.filter(r => r.diffusion_block === null).reduce((s, r) => s + r.n, 0);
+    const parMotif = {};
+    for (const r of rows) {
+      if (r.diffusion_block === null) continue;
+      const k = r.diffusion_block;
+      parMotif[k] = parMotif[k] || { analyses: 0, sports: {} };
+      parMotif[k].analyses += r.n;
+      parMotif[k].sports[r.sport || "?"] = (parMotif[k].sports[r.sport || "?"] || 0) + r.n;
+    }
+    const motifs = Object.entries(parMotif)
+      .map(([motif, o]) => ({ motif, analyses: o.analyses, part: total ? Math.round(o.analyses / total * 100) + "%" : "0%", sports: o.sports }))
+      .sort((a, b) => b.analyses - a.analyses);
+
+    // Diffusions reellement parties, par canal, sur la meme fenetre
+    const envois = db.prepare(`
+      SELECT
+        SUM(sig_sent_standard) AS standard,
+        SUM(sig_sent_premium)  AS premium,
+        SUM(sig_sent_elite)    AS elite,
+        SUM(sig_sent_free)     AS gratuit
+      FROM concile_analyses WHERE analysed_at >= datetime('now', ?)
+    `).get(`-${jours} days`);
+
+    res.json({
+      ok: true,
+      fenetre_jours: jours,
+      analyses_totales: total,
+      analyses_diffusables: diffuses,
+      taux_diffusion: total ? Math.round(diffuses / total * 100) + "%" : "0%",
+      envois_par_canal: envois,
+      quotas_vendus: {
+        standard: STANDARD_SIGNAL_DAILY_CAP, premium: PREMIUM_SIGNAL_DAILY_CAP, elite: ELITE_SIGNAL_DAILY_CAP,
+      },
+      motifs_de_blocage: motifs,
+      note: "Un motif nul = analyse diffusee. Les motifs sont classes du plus frequent au moins frequent : le premier est le goulot d'etranglement a traiter.",
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // Vue "creme de la creme" : ce qui gagne et ce qui perd, par segment, avec le
 // verdict du filtre qualite. Repond a la question "sur quoi doit-on se
 // concentrer et quoi doit-on couper", sans avoir a lire la base a la main.
