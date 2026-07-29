@@ -3273,6 +3273,16 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiquement invalide.`;
 
+  // Delai d'attente accorde a chaque agent du Concile. 3,5 s etait bien trop
+  // court : les agents tournent en parallele (Promise.all), donc ce delai ne
+  // coute que le temps du PLUS LENT, pas la somme des cinq. A 3,5 s, les modeles
+  // naturellement lents expiraient en silence — mesure sur 7 jours : Qwen 85 %
+  // de votes vides, Perplexity 81 % (il fait une recherche web avant de
+  // repondre), Mistral-Large 61 %, contre 36 % pour DeepSeek et Cohere, les plus
+  // rapides. Consequence : 69 % des analyses avaient moins de 3 votes, donc une
+  // confiance forcee a 55 et aucune diffusion possible.
+  const AGENT_TIMEOUT_MS = Math.max(2000, Number(process.env.AGENT_TIMEOUT_MS) || 10000);
+
   // Concile v3 — 5 familles d'IA radicalement différentes + Chief
   // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
@@ -3409,10 +3419,10 @@ Réponds en JSON pur (pas de markdown):
       for (const pv of providers) {
         try {
           if (pv.kind === "cohere") {
-            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, 3500);
+            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = cr.text || cr.chat_history?.slice(-1)[0]?.message || "{}";
           } else {
-            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, 3500);
+            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = rp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -3426,11 +3436,14 @@ Réponds en JSON pur (pas de markdown):
 
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
       if (!modelGaveBet) {
-        console.error(`[concile] agent ${agCfg.name} : réponse vide (IA non joignable — quota/clé)`);
+        // Message factuel : la cause la plus frequente est le depassement du delai,
+        // pas un probleme de quota ou de cle. Un diagnostic errone ici a longtemps
+        // fait chercher le probleme au mauvais endroit.
+        console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable (delai ${AGENT_TIMEOUT_MS}ms depasse, reponse illisible, ou quota/cle)`);
         return {
           name: agCfg.name, icon: agCfg.icon,
           bet: "—", confidence: null,
-          raison: "⚠️ IA non joignable (quota épuisé ou clé manquante) — non comptée dans le verdict.",
+          raison: "⚠️ Agent sans réponse exploitable dans le délai imparti — non compté dans le verdict.",
           isChief: false, failed: true,
         };
       }
@@ -3540,7 +3553,7 @@ Réponds en JSON pur (pas de markdown):
     let raw = "{}";
     for (const pv of chiefProviders) {
       try {
-        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` }, 3500);
+        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
         raw = rp.choices?.[0]?.message?.content || "{}";
         const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         if (probe && probe !== "{}" && probe.length > 8) break;

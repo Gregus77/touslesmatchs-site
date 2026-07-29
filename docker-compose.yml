@@ -49,6 +49,8 @@ services:
       - OPENROUTER_TEST_MODE_ENABLED=${OPENROUTER_TEST_MODE_ENABLED}
       # Debit d'analyse
       - AUTO_CONCILE_MAX_MATCHES=${AUTO_CONCILE_MAX_MATCHES}
+      # Delai accorde a chaque agent du Concile (defaut 10000 ms)
+      - AGENT_TIMEOUT_MS=${AGENT_TIMEOUT_MS}
       # Fenetre de temps (desactivee le 28/07/2026, remettre a 1 pour reactiver)
       - AUTO_CONCILE_TIME_WINDOW=${AUTO_CONCILE_TIME_WINDOW}
       - AUTO_CONCILE_WINDOW_MIN=${AUTO_CONCILE_WINDOW_MIN}
