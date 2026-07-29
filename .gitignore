@@ -14,3 +14,6 @@ __pycache__/
 *.log
 /var/
 tmp/
+
+# Fichier généré par le Concile Hermès (write-only) — ne pas suivre
+site/index.html

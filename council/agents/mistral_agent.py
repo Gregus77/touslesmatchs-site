@@ -1,7 +1,7 @@
 import os
 from agents.or_common import analyze_via_openrouter
 
-NAME = "Mistral"
+NAME = "Mistral-Large"  # aligné sur le nom utilisé par le JS Concile — même provider (mistral-large-latest), stats partagées
 MODEL = (os.environ.get("OR_MISTRAL_MODEL") or "").strip() or "mistralai/mistral-large"
 
 

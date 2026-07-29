@@ -13,7 +13,11 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-      - /opt/touslesmatchs/site:/srv
+      # Racine web = public/ (source unique, alignée sur `COPY public /srv` du Dockerfile).
+      # NE JAMAIS remettre `site/` ici : site/ contient la page générée par le Concile
+      # (template.html + index.html auto-généré), qui était servie par erreur comme
+      # page d'accueil (vieille version 42 Ko sans widgets) — bug de fragmentation, juillet 2026.
+      - /opt/touslesmatchs/public:/srv
       - /opt/touslesmatchs/Caddyfile:/etc/caddy/Caddyfile
     networks:
       - web
@@ -30,6 +34,32 @@ services:
       - THESPORTSDB_API_KEY=${THESPORTSDB_API_KEY}
       - AUTO_CONCILE_MULTISPORT=${AUTO_CONCILE_MULTISPORT}
       - SHADOW_DAILY_CAP=${SHADOW_DAILY_CAP}
+      # ── Reglages lus par le code mais qui n'etaient PAS transmis au conteneur ──
+      # Sans ces lignes, les modifier dans .env n'avait AUCUN effet : le code
+      # retombait silencieusement sur ses valeurs par defaut. Constate le
+      # 28/07/2026 (budget passe a 3 dans .env, conteneur toujours a 2).
+      # Une variable absente du .env vaut "" -> le code garde son defaut, donc
+      # ajouter ces lignes ne change rien tant qu'on ne les renseigne pas.
+      # Budget / garde-fou IA (scripts/ai_budget_guard.js)
+      - OPENROUTER_DAILY_BUDGET_EUR=${OPENROUTER_DAILY_BUDGET_EUR}
+      - OPENROUTER_MAX_REQUESTS_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_DAY}
+      - OPENROUTER_MAX_MATCHES_PER_DAY=${OPENROUTER_MAX_MATCHES_PER_DAY}
+      - OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY}
+      - OPENROUTER_HARD_STOP=${OPENROUTER_HARD_STOP}
+      - OPENROUTER_TEST_MODE_ENABLED=${OPENROUTER_TEST_MODE_ENABLED}
+      # Debit d'analyse
+      - AUTO_CONCILE_MAX_MATCHES=${AUTO_CONCILE_MAX_MATCHES}
+      # Delai accorde a chaque agent du Concile (defaut 10000 ms)
+      - AGENT_TIMEOUT_MS=${AGENT_TIMEOUT_MS}
+      # Fenetre de temps (desactivee le 28/07/2026, remettre a 1 pour reactiver)
+      - AUTO_CONCILE_TIME_WINDOW=${AUTO_CONCILE_TIME_WINDOW}
+      - AUTO_CONCILE_WINDOW_MIN=${AUTO_CONCILE_WINDOW_MIN}
+      - AUTO_CONCILE_WINDOW_MAX=${AUTO_CONCILE_WINDOW_MAX}
+      # Fenetre de cote reelle ARJEL (1.30-2.50 par defaut)
+      - TIER_MIN_REAL_ODD=${TIER_MIN_REAL_ODD}
+      - TIER_MAX_REAL_ODD=${TIER_MAX_REAL_ODD}
+      - MIN_PLAYABLE_ODD=${MIN_PLAYABLE_ODD}
+      - MAX_PLAYABLE_ODD=${MAX_PLAYABLE_ODD}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
@@ -99,12 +129,20 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - OPENROUTER_CHIEF_MODEL=${OPENROUTER_CHIEF_MODEL}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # ID exact du modèle GPT-5 exposé par ton compte OpenAI (défaut "gpt-5")
+      - OPENAI_MODEL_GPT5=${OPENAI_MODEL_GPT5:-gpt-5}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      # Accès en lecture aux vraies stats agents (populées par l'API JS).
+      # Sans ce mount, get_agent_accuracy() renvoie 0 → filtre inopérant.
+      - API_STATS_DB=/shared_api/tlm.db
     volumes:
       - council_data:/app/data
+      # Read-only : Concile lit les perfs des agents pour son filtre,
+      # ne doit JAMAIS écrire dans la DB de l'API.
+      - /opt/touslesmatchs/data:/shared_api:ro
     networks:
       - web
 

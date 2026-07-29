@@ -27,7 +27,7 @@ from tools.telegram_bot import (
     send_premium_stats, send_daily_report, is_configured as telegram_ok
 )
 from agents import gpt_agent, gemini_agent, mistral_agent, groq_agent, claude_chief
-from agents import opus_agent, gpt4o_agent
+from agents import opus_agent, gpt4o_agent, gpt5_agent
 
 logging.basicConfig(
     level=logging.INFO,
@@ -40,7 +40,10 @@ logging.basicConfig(
 log = logging.getLogger("hermes")
 
 IMPROVEMENT_NOTES_PATH = "/app/data/improvement_notes.txt"
-MIN_AGENT_ACCURACY = 80.0
+# Seuil de qualification : un agent en dessous est exclu du vote (mais garde
+# ses stats — il peut revenir s'il remonte). 55% est un compromis : au-dessus
+# du random (50%) avec marge, en-dessous du seuil d'excellence du JS Concile (65%).
+MIN_AGENT_ACCURACY = 55.0
 
 
 def load_improvement_notes():
@@ -80,11 +83,27 @@ def run_agent(agent_module, date, matches_text, history_text, stats):
 
 
 def filter_agents_by_accuracy(agents, agent_accuracy):
-    """Keep only agents with >= 80% accuracy (or all if not enough data)."""
+    """Keep only agents with >= 80% accuracy (or all if not enough data).
+
+    Le mapping ci-dessous DOIT correspondre EXACTEMENT aux noms
+    stockés dans concile_analyses / agent_predictions (colonne agent_name),
+    sinon le filtre ne détecte jamais la sous-performance et tous les
+    agents sont conservés (bug historique juillet 2026)."""
+    # Le mapping doit correspondre au NAME défini dans chaque module d'agent
+    # AINSI qu'à ce qui est stocké en base (agent_predictions.agent_name).
+    # Les agents gpt/mistral ont été renommés (DeepSeek-V3 / Mistral-Large)
+    # pour hériter des stats de leurs providers déjà utilisés par le JS Concile
+    # (mêmes APIs, mêmes modèles, donc perf attendue équivalente).
+    # gemini/groq gardent leurs anciens noms historiques (perf sous-performante
+    # confirmée sur 96-113 pronos → seront exclus par le filtre).
     agent_name_map = {
-        "gpt": "DeepSeek", "gemini": "Gemini Flash",
-        "mistral": "Mistral", "groq": "Groq/Llama3",
-        "opus": "Opus", "gpt4o": "GPT-4o",
+        "gpt":     "DeepSeek-V3",   # ~67% hérité du champion JS
+        "mistral": "Mistral-Large", # ~70% hérité du champion JS
+        "gemini":  "GeminiFlash",   # 49% historique → EXCLU
+        "groq":    "GROQ-Llama",    # 47% historique → EXCLU
+        "opus":    "Opus",
+        "gpt4o":   "GPT-4o",
+        "gpt5":    "GPT-5",
     }
     qualified = []
     excluded = []
@@ -145,13 +164,14 @@ def run_council():
         ("gemini", gemini_agent),
         ("mistral", mistral_agent),
         ("groq", groq_agent),
+        ("gpt5", gpt5_agent),
     ]
     qualified_agents, excluded_agents = filter_agents_by_accuracy(all_agents, agent_accuracy)
 
     # 4. Run qualified agents in parallel
     log.info(f"Lancement de {len(qualified_agents)} agents qualifiés...")
     agent_reports = {}
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {
             executor.submit(run_agent, module, date_str, matches_text, history_text, stats): key
             for key, module in qualified_agents

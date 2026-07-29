@@ -416,6 +416,11 @@ ensureColumn("concile_analyses", "sig_sent_free",     "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_standard", "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_premium",  "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "sig_sent_elite",    "INTEGER DEFAULT 0");
+// Motif pour lequel une analyse n'a ete diffusee sur AUCUN canal payant. Sans
+// cette trace, un "0 signal aujourd'hui" reste inexplicable : impossible de
+// savoir si le probleme vient de la confiance, de la cote, du sport ou du
+// filtre qualite. Renseigne a chaque analyse, lu par /admin/funnel-report.
+ensureColumn("concile_analyses", "diffusion_block",   "TEXT DEFAULT NULL");
 // Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
 ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 
@@ -437,6 +442,20 @@ try {
     console.log(`[migration] Supprimé ${dupeCount} doublons concile_analyses`);
   }
 } catch (e) { console.error("[migration] dedup:", e.message); }
+
+// ── Idempotence des webhooks Stripe ──────────────────────────────────────────
+// Stripe REJOUE un webhook si notre réponse tarde ou échoue, et peut livrer un
+// même événement plusieurs fois. Sans verrou, un `checkout.session.completed`
+// rejoué renvoyait au client un 2e email de confirmation ET générait un 2e lien
+// d'invitation Telegram à usage unique (le code d'accès, lui, était déjà
+// protégé). Table persistée sur disque : le verrou survit à un redémarrage.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS stripe_processed_events (
+    event_id TEXT PRIMARY KEY,
+    event_type TEXT,
+    processed_at TEXT DEFAULT (datetime('now'))
+  );
+`);
 
 // ── Nurturing emails table (persistent across restarts) ──────────────────────
 db.exec(`
@@ -771,7 +790,11 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 //   82-83 : 141 analyses · 70,9 % · +428 €   → Elite    (~9,7/jour cumulé)
 // Aucune analyse au-dessus de 89 sur la période : un seuil à 90 ou 92 produit ZÉRO signal.
 const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 85;
-const TIER_MIN_REAL_ODD = 1.50; // cote réelle ARJEL minimale pour diffuser sur un canal payant
+// Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
+// fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
+// c'est un longshot que le book juge improbable.
+const TIER_MIN_REAL_ODD = Number(process.env.TIER_MIN_REAL_ODD || 1.30);
+const TIER_MAX_REAL_ODD = Number(process.env.TIER_MAX_REAL_ODD || 2.50);
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
 // signal football à 84 %, et un mardi sans football vidait le palier.
@@ -799,6 +822,7 @@ function getTierThresholds() {
       WHERE analysed_at >= datetime('now','-${TIER_THRESHOLD_WINDOW_DAYS} days')
         AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
         AND real_odd >= ${TIER_MIN_REAL_ODD}
+        AND real_odd <= ${TIER_MAX_REAL_ODD}
       ORDER BY confidence DESC
     `).all().map(r => Number(r.confidence) || 0).filter(Boolean);
     // Sous 30 analyses l'échantillon ne dit rien de fiable : on garde les constantes.
@@ -897,6 +921,21 @@ const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de conf
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
 // IA) qui ne part pas sur Telegram → on ne la montre pas comme un "pick". Réglable.
 const PUBLISHED_MIN_CONFIDENCE = 82;
+// ── Seuils spécifiques par marché ────────────────────────────────────────────
+// Certains marchés ont un winrate historique nettement supérieur → seuil abaissé.
+// "But 1ère MT" est notre point fort : 82% de winrate sur 931 pronos historiques
+// (Cohere-Command, juillet 2026). On peut donc émettre à 75% de confiance sans
+// dégrader la qualité perçue.
+const MARKET_SIGNAL_FLOORS = {
+  "But en 1ère mi-temps":       75,
+  "Aucun but en 1ère mi-temps": 75,
+};
+
+function getSignalThresholdForBet(bet) {
+  const overrideForBet = MARKET_SIGNAL_FLOORS[bet];
+  if (overrideForBet !== undefined) return overrideForBet;
+  return getAdaptiveSignalThreshold();
+}
 
 function getAdaptiveSignalThreshold() {
   const now = Date.now();
@@ -973,16 +1012,9 @@ const SHADOW_AGENTS = [
       model: "llama-3.3-70b-versatile",
     }),
   },
-  {
-    name: "Groq-Llama8B",
-    icon: "🐎",
-    enabled: () => !!GROQ_API_KEY,
-    call: (prompt) => callOpenAICompat(prompt, {
-      url: "https://api.groq.com/openai/v1/chat/completions",
-      key: GROQ_API_KEY,
-      model: "llama-3.1-8b-instant",
-    }),
-  },
+  // Groq-Llama8B retiré le 15 juillet 2026 : 43% de winrate sur 255 résolus
+  // (audit /admin/full-agents-audit). Sous-performance chronique. À réactiver
+  // seulement si Groq publie une v2 sensiblement meilleure.
   {
     name: "Mistral-Small",
     icon: "🌊",
@@ -1787,6 +1819,12 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   // Divisions inférieures asiatiques (2e/3e divisions — volatiles, cause de pertes)
   "k league 2", "k-league 2", "j2 league", "j3 league", "j2-league", "j3-league",
   "china league one", "chinese league two",
+  // Coupe de Corée + divisions amateurs coréennes (K3/K4) : équipes semi-pro,
+  // scores fous (4-0, 4-3, 5-0), 6 pertes le 15/07/2026. On garde la K-League 1.
+  // ⚠️ Ces entrées DOIVENT rester avant TRUSTED "fa cup" (ordre : LOW_TRUST gagne).
+  "fa cup · south-korea", "fa cup · korea", "korea · fa cup", "korean fa cup",
+  "korea fa cup", "coupe de corée", "coupe de coree", "korea cup",
+  "k3 league", "k3-league", "k4 league", "k4-league", "k3 · korea", "k4 · korea",
   // Amérique du Sud — ligues secondaires
   "chile", "bolivia", "peru", "venezuela", "ecuador",
   "paraguay", "uruguay · segunda", "colombia · b",
@@ -1945,20 +1983,32 @@ let _segmentStatsCache = { data: null, ts: 0 };
 
 function getSegmentStats() {
   if (_segmentStatsCache.data && Date.now() - _segmentStatsCache.ts < 60 * 60 * 1000) return _segmentStatsCache.data;
-  const data = { comp: {}, market: {}, compMarket: {} };
+  const data = { comp: {}, market: {}, compMarket: {}, sport: {}, sportMarket: {} };
   try {
-    const rows = db.prepare(`
-      SELECT competition, best_bet, outcome FROM concile_analyses
+    const raw = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, outcome, analysed_at
+      FROM concile_analyses
       WHERE outcome IN ('win','loss')
     `).all();
+    // Déduplication indispensable ICI aussi : ces statistiques décident quels
+    // segments sont bloqués. Un même match remonté par deux sources sous des
+    // noms légèrement différents comptait double — et quand les deux analyses
+    // portaient des paris opposés (cas du 28/07/2026), le moteur apprenait
+    // simultanément qu'un segment gagne ET qu'il perd, sur le même événement.
+    const rows = dedupeAnalysesByMatch(raw);
     const bump = (obj, key, win) => { const o = (obj[key] = obj[key] || { w: 0, t: 0 }); o.t++; if (win) o.w++; };
     for (const r of rows) {
       const comp = String(r.competition || "").toLowerCase();
+      const sport = String(r.sport || "Football").toLowerCase();
       const mk = categorizeBet(r.best_bet);
       const win = r.outcome === "win";
       if (comp) bump(data.comp, comp, win);
       if (mk !== "NO BET") bump(data.market, mk, win);
       if (comp && mk !== "NO BET") bump(data.compMarket, comp + "||" + mk, win);
+      // Dimension sport : un marché peut très bien marcher au football et
+      // s'effondrer au baseball, où la dynamique n'a rien à voir.
+      if (sport) bump(data.sport, sport, win);
+      if (sport && mk !== "NO BET") bump(data.sportMarket, sport + "||" + mk, win);
     }
   } catch (e) { console.error("[segment-stats]", e.message); }
   _segmentStatsCache = { data, ts: Date.now() };
@@ -1981,6 +2031,21 @@ function passesHistoricalQualityGate(match, bet) {
   const c = stats.comp[comp];
   if (c && c.t >= 12 && wr(c) < 0.52) {
     return { ok: false, reason: `ligue ${match.competition} : ${Math.round(wr(c) * 100)}% (${c.t} analyses)` };
+  }
+  // 2 bis) Sport × marché — un marché rentable au football peut s'effondrer sur
+  // un sport à dynamique différente. Seuil volontairement plus exigeant en
+  // volume (>=10) : les sports hors football ont peu d'historique, on évite de
+  // condamner un segment sur un échantillon trop mince.
+  const sport = String(match?.sport || "Football").toLowerCase();
+  const sm = stats.sportMarket[sport + "||" + mk];
+  if (sm && sm.t >= 10 && wr(sm) < 0.50) {
+    return { ok: false, reason: `${mk} en ${match.sport || "Football"} : ${Math.round(wr(sm) * 100)}% (${sm.t} analyses)` };
+  }
+  // 2 ter) Sport seul — >=30 analyses et <50%. Bloquer un sport entier est la
+  // décision la plus lourde du filtre, donc le volume exigé est le plus élevé.
+  const sp = stats.sport[sport];
+  if (sp && sp.t >= 30 && wr(sp) < 0.50) {
+    return { ok: false, reason: `sport ${match.sport || "Football"} : ${Math.round(wr(sp) * 100)}% (${sp.t} analyses)` };
   }
   // 3) Marché seul — >=25 analyses et <50% => on bloque.
   const m = stats.market[mk];
@@ -2025,12 +2090,20 @@ function computeSignalTier(bet, confidence, minute) {
 }
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
-const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.40));
+const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.30));
+// Plafond de cote : au-delà, le book estime l'événement peu probable = longshot
+// perdant (ex: "Under 2.5 @ 3.65" du 15/07/2026 = -10€).
+// Fenêtre réglée par le fondateur le 28/07/2026 : cote jouable entre 1.30 et 2.50.
+const MAX_PLAYABLE_ODD = Math.min(3.0, Number(process.env.MAX_PLAYABLE_ODD || 2.50));
 
 function betIsPlayable(match, bet, cote) {
   // Cote trop faible = aucune valeur (ex: victoire à 1.10 sur un 3-0)
   if (cote && cote < MIN_PLAYABLE_ODD) {
     return { ok: false, reason: `cote ${cote} < ${MIN_PLAYABLE_ODD} (trop faible, pas de valeur)` };
+  }
+  // Cote trop haute = longshot que le book juge improbable (règle métier : max 1.95)
+  if (cote && cote > MAX_PLAYABLE_ODD) {
+    return { ok: false, reason: `cote ${cote} > ${MAX_PLAYABLE_ODD} (longshot, trop risqué)` };
   }
   const sh = Number(match?.score_home), sa = Number(match?.score_away);
   if (Number.isFinite(sh) && Number.isFinite(sa)) {
@@ -2126,6 +2199,21 @@ async function fetchFromFootballData() {
 }
 
 // ── Live matches — API-Sports (fallback) ──────────────────────────────────────
+// Statuts bruts API-Sports (basket/hockey/baseball) qui NE sont PAS du live
+// exploitable : match pas commence (NS), reporte, annule, suspendu, termine.
+// Sans ce filtre, ces matchs apparaissaient en "En direct" avec le statut force
+// a IN_PLAY, alors qu'ils ne sont pas analysables (aucun temps de jeu, aucune
+// dynamique, aucune cote pertinente).
+const API_SPORTS_NON_LIVE_STATUSES = new Set([
+  "NS", "TBD", "PST", "CANC", "ABD", "AWD", "WO", "SUSP", "INTR",
+  "FT", "AOT", "AP", "POST", "CANCELLED", "FINISHED",
+]);
+function isApiSportsLiveGame(g) {
+  const short = String(g?.status?.short || "").toUpperCase();
+  if (!short) return true; // statut absent : on ne bloque pas (comportement inchange)
+  return !API_SPORTS_NON_LIVE_STATUSES.has(short);
+}
+
 async function fetchFromApiSports() {
   if (!API_SPORTS_KEY) return null;
   const results = [];
@@ -2147,7 +2235,7 @@ async function fetchFromApiSports() {
     if (!shouldSkipApiSportsSport("basketball")) {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("basketball", data)) {
-    const items = (data.response || []).slice(0, 10).map((g) => ({
+    const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bk-" + g.id, sport: "Basketball",
       source: "api-sports",
       sourceId: String(g.id),
@@ -2170,7 +2258,7 @@ async function fetchFromApiSports() {
     if (!shouldSkipApiSportsSport("hockey")) {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("hockey", data)) {
-    const items = (data.response || []).slice(0, 30).map((g) => ({
+    const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 30).map((g) => ({
       id: "hk-" + g.id, sport: "Hockey",
       source: "api-sports",
       sourceId: String(g.id),
@@ -2193,7 +2281,7 @@ async function fetchFromApiSports() {
     if (!shouldSkipApiSportsSport("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
-    const items = (data.response || []).slice(0, 10).map((g) => ({
+    const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
       id: "bb-" + g.id, sport: "Baseball",
       source: "api-sports",
       sourceId: String(g.id),
@@ -2276,9 +2364,33 @@ async function fetchFromTheSportsDb() {
   return results;
 }
 
+// Deux sources nomment rarement une équipe pareil : « Dila » vs « Dila Gori »,
+// « Vardar » vs « Vardar Skopje », « Thun » vs « FC Thun ». Une comparaison
+// stricte laissait donc passer le même match deux fois dans la liste live (et
+// risquait de le faire analyser deux fois par le Concile).
+// Règle : égalité stricte, OU un nom contenu dans l'autre (« dila » ⊂ « dila
+// gori »), OU même mot distinctif au sens de matchToken() (« fc thun » → « thun »).
+function sameLiveTeamName(a, b) {
+  const na = normalizeMatchName(a);
+  const nb = normalizeMatchName(b);
+  if (!na || !nb) return false;
+  if (na === nb) return true;
+  // Inclusion sur mot entier uniquement : évite que « inter » matche « winterthur ».
+  const words = (s) => s.split(" ").filter(Boolean);
+  const wa = words(na), wb = words(nb);
+  const shorter = wa.length <= wb.length ? wa : wb;
+  const longer = wa.length <= wb.length ? wb : wa;
+  if (shorter.length && shorter.every((w) => longer.includes(w))) return true;
+  const ta = matchToken(a), tb = matchToken(b);
+  return !!ta && ta.length >= 3 && ta === tb;
+}
+
 function sameLiveTeams(a, b) {
-  return normalizeMatchName(a?.home) === normalizeMatchName(b?.home)
-    && normalizeMatchName(a?.away) === normalizeMatchName(b?.away);
+  // Ne jamais fusionner deux sports différents, même si les noms se ressemblent.
+  const sportA = String(a?.sport || "Football");
+  const sportB = String(b?.sport || "Football");
+  if (sportA !== sportB) return false;
+  return sameLiveTeamName(a?.home, b?.home) && sameLiveTeamName(a?.away, b?.away);
 }
 
 function hasKnownScore(match) {
@@ -2292,11 +2404,28 @@ function parseLiveMinuteValue(minute) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+// Codes de statut bruts (API-Sports / TheSportsDB) qui ne sont PAS du live
+// exploitable : match pas commencé (NS), reporté, annulé, interrompu, terminé.
+// Ces deux sources écrasent le champ "status" à "IN_PLAY" en dur (voir
+// normalizeTheSportsDbLiveEvent et fetchFromApiSports), donc le vrai état n'est
+// lisible que dans "minute" (ex: minute="NS"). Sans ce filtre, des matchs non
+// commencés s'affichaient en "En direct" sans temps de jeu ni cote exploitable.
+const NON_LIVE_RAW_STATUSES = new Set([
+  "NS", "TBD", "PST", "POSTP", "CANC", "ABD", "AWD", "WO", "SUSP", "INTR",
+  "FT", "AOT", "AP", "AET", "PEN", "ENDED", "FINISHED", "CANCELLED", "POSTPONED",
+  "NOT STARTED", "NOTSTARTED",
+]);
+
 function isFinishedOrTooLateForLiveIa(match) {
   const status = String(match?.status || "").toUpperCase();
   if (["CANCELLED", "POSTPONED"].includes(status)) return true;
   if (["SCHEDULED", "TIMED"].includes(status)) return false;
   if (["FINISHED", "FT", "AET", "PEN", "ENDED"].includes(status)) return true;
+
+  // Statut réel porté par "minute" quand la source a écrasé "status" à IN_PLAY.
+  const rawMinute = String(match?.minute ?? "").trim().toUpperCase();
+  if (rawMinute && NON_LIVE_RAW_STATUSES.has(rawMinute)) return true;
+
   const minute = parseLiveMinuteValue(match?.minute);
   return match?.sport === "Football" && minute !== null && minute >= 85;
 }
@@ -2330,6 +2459,10 @@ function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) 
   const merged = [...footballDataMatches];
   for (const apiMatch of apiSportsMatches) {
     const existingIndex = merged.findIndex((m) => sameLiveTeams(m, apiMatch) && m.status !== "FINISHED");
+    // Doublon sur un sport non-Football : on garde l'entrée déjà présente au lieu
+    // de l'ajouter une seconde fois (l'arbitrage de score ci-dessous ne concerne
+    // que le football, où deux APIs fournissent le score).
+    if (existingIndex >= 0 && apiMatch.sport !== "Football") continue;
     if (existingIndex >= 0 && apiMatch.sport === "Football") {
       const previous = merged[existingIndex];
       // Cette affectation écrasait auparavant l'entrée API-Sports par celle de
@@ -2721,15 +2854,39 @@ function isArjelMajorCompetition(match) {
   return ARJEL_MAJOR_COMPETITIONS.some(k => hay.includes(k));
 }
 
+// Endpoint de cotes par sport chez API-Sports. Le football utilise le
+// paramètre "fixture", les autres sports "game" — et chacun son sous-domaine.
+// Sans cette table, seul le football obtenait une vraie cote : or la diffusion
+// exige une vraie cote bookmaker, donc basket, hockey et baseball ne pouvaient
+// JAMAIS être diffusés, alors que le palier Elite promet 30 signaux/jour
+// multisport. Le palier était structurellement intenable.
+const ODDS_ENDPOINT_BY_SPORT = {
+  football:   { host: "v3.football.api-sports.io",   param: "fixture", key: "football" },
+  basketball: { host: "v1.basketball.api-sports.io", param: "game",    key: "basketball" },
+  hockey:     { host: "v1.hockey.api-sports.io",     param: "game",    key: "hockey" },
+  baseball:   { host: "v1.baseball.api-sports.io",   param: "game",    key: "baseball" },
+};
+
 async function fetchRealOdds(match) {
-  if (!API_SPORTS_KEY || match.source !== "api-sports" || match.sport !== "Football" || !match.fixtureId) return null;
-  const ck = `odds_${match.fixtureId}`;
+  if (!API_SPORTS_KEY || match.source !== "api-sports") return null;
+  const sportLc = String(match.sport || "Football").toLowerCase();
+  const cfg = ODDS_ENDPOINT_BY_SPORT[sportLc];
+  if (!cfg) return null;
+  // Football : fixtureId. Autres sports : l'identifiant du match est dans sourceId
+  // (fixtureId y vaut null, cf. fetchFromApiSports).
+  const gameId = sportLc === "football" ? match.fixtureId : (match.sourceId || match.fixtureId);
+  if (!gameId) return null;
+  // Respecte le disjoncteur de quota déjà en place : inutile d'insister sur un
+  // sport dont l'API nous a déjà renvoyé un dépassement.
+  if (typeof shouldSkipApiSportsSport === "function" && shouldSkipApiSportsSport(cfg.key)) return null;
+
+  const ck = `odds_${sportLc}_${gameId}`;
   const c = oddsCache.get(ck);
   if (c && Date.now() - c.ts < 10 * 60 * 1000) return c.data;
   let data = null;
   try {
     const resp = await httpGet(
-      `https://v3.football.api-sports.io/odds?fixture=${match.fixtureId}`,
+      `https://${cfg.host}/odds?${cfg.param}=${gameId}`,
       { "x-apisports-key": API_SPORTS_KEY }
     );
     const bookmakers = resp?.response?.[0]?.bookmakers || [];
@@ -2942,6 +3099,23 @@ function computeAvailableBets(match) {
 
 // Correction post-IA : si l'IA recommande quand même un pari impossible, on corrige
 function validateAndCorrectBet(bet, match, availableBets) {
+  // R2 (finalité connue) : jamais de "Victoire" d'une équipe qui mène déjà de >= 3 buts.
+  // Le résultat est décidé, le book ne cote plus — aucune valeur. Ex: 0-3 → pas de "Victoire extérieur".
+  {
+    const sc = readKnownScore(match);
+    if (sc) {
+      const gap = sc.home - sc.away;
+      const decidedWin =
+        (bet === "Victoire domicile" && gap >= DECIDED_MATCH_GAP) ||
+        (bet === "Victoire extérieur" && -gap >= DECIDED_MATCH_GAP);
+      if (decidedWin) {
+        const alt = availableBets.find(b => b !== bet && !/Victoire/i.test(b)) || availableBets[0];
+        console.log(`[concile] Finalité connue (${sc.home}-${sc.away}) : "${bet}" rejeté → "${alt}"`);
+        return { bet: alt, corrected: true, original: bet };
+      }
+    }
+  }
+
   if (availableBets.includes(bet)) return { bet, corrected: false };
 
   // Corrections logiques
@@ -3128,6 +3302,16 @@ IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathémat
 → ${availableBets.join(", ")}
 Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiquement invalide.`;
 
+  // Delai d'attente accorde a chaque agent du Concile. 3,5 s etait bien trop
+  // court : les agents tournent en parallele (Promise.all), donc ce delai ne
+  // coute que le temps du PLUS LENT, pas la somme des cinq. A 3,5 s, les modeles
+  // naturellement lents expiraient en silence — mesure sur 7 jours : Qwen 85 %
+  // de votes vides, Perplexity 81 % (il fait une recherche web avant de
+  // repondre), Mistral-Large 61 %, contre 36 % pour DeepSeek et Cohere, les plus
+  // rapides. Consequence : 69 % des analyses avaient moins de 3 votes, donc une
+  // confiance forcee a 55 et aucune diffusion possible.
+  const AGENT_TIMEOUT_MS = Math.max(2000, Number(process.env.AGENT_TIMEOUT_MS) || 10000);
+
   // Concile v3 — 5 familles d'IA radicalement différentes + Chief
   // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
@@ -3185,7 +3369,9 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
 
-    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.`,
+    `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.
+
+RÈGLE CHAMPION : le marché "But en 1ère mi-temps" a un winrate historique prouvé de 82% (931 pronos vérifiés). À qualité égale (écart de confiance ≤ 5 points), tu DOIS privilégier ce marché sur les autres. Si un agent le vote avec confiance ≥ 75% et que ton propre pick est un autre marché avec confiance équivalente, aligne-toi sur "But en 1ère mi-temps" — c'est notre marché champion prouvé.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -3262,10 +3448,10 @@ Réponds en JSON pur (pas de markdown):
       for (const pv of providers) {
         try {
           if (pv.kind === "cohere") {
-            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, 3500);
+            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = cr.text || cr.chat_history?.slice(-1)[0]?.message || "{}";
           } else {
-            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, 3500);
+            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = rp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -3279,11 +3465,14 @@ Réponds en JSON pur (pas de markdown):
 
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
       if (!modelGaveBet) {
-        console.error(`[concile] agent ${agCfg.name} : réponse vide (IA non joignable — quota/clé)`);
+        // Message factuel : la cause la plus frequente est le depassement du delai,
+        // pas un probleme de quota ou de cle. Un diagnostic errone ici a longtemps
+        // fait chercher le probleme au mauvais endroit.
+        console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable (delai ${AGENT_TIMEOUT_MS}ms depasse, reponse illisible, ou quota/cle)`);
         return {
           name: agCfg.name, icon: agCfg.icon,
           bet: "—", confidence: null,
-          raison: "⚠️ IA non joignable (quota épuisé ou clé manquante) — non comptée dans le verdict.",
+          raison: "⚠️ Agent sans réponse exploitable dans le délai imparti — non compté dans le verdict.",
           isChief: false, failed: true,
         };
       }
@@ -3393,7 +3582,7 @@ Réponds en JSON pur (pas de markdown):
     let raw = "{}";
     for (const pv of chiefProviders) {
       try {
-        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` }, 3500);
+        const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: chiefPrompt }], temperature: 0.5, max_tokens: 400 }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
         raw = rp.choices?.[0]?.message?.content || "{}";
         const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         if (probe && probe !== "{}" && probe.length > 8) break;
@@ -3507,7 +3696,8 @@ Réponds en JSON pur (pas de markdown):
 
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
   // ET vraies données présentes ET segment (ligue/marché) prouvé gagnant historiquement.
-  const signalThreshold = getAdaptiveSignalThreshold();
+  // Seuil abaissé sur "But 1ère MT" (marché à 82% de winrate historique).
+  const signalThreshold = getSignalThresholdForBet(analysisResult.best_bet);
   const hasRealData = statsStatus.available || !!h2hBlock || !!deepBlock;
   const qualityGate = passesHistoricalQualityGate(match, analysisResult.best_bet);
   if (!qualityGate.ok) {
@@ -3532,9 +3722,36 @@ Réponds en JSON pur (pas de markdown):
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
-  if (analysisResult.confidence >= signalThreshold && voteCountForSignal >= 3 && hasRealData && qualityGate.ok && playable.ok && !isWomen && !lowTrust && TELEGRAM_BOT_TOKEN) {
+
+  // ── Traçage du tunnel de diffusion ──────────────────────────────────────────
+  // Premier motif bloquant, dans l'ordre où le code les évalue. Permet de
+  // répondre factuellement à "pourquoi 0 signal aujourd'hui ?" au lieu de
+  // supposer. Écrit en base plus bas, agrégé par /admin/funnel-report.
+  let _tierBlock = null; // motif de non-diffusion detecte dans le bloc palier
+  const _blockReason = (() => {
+    if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
+    if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
+    if (voteCountForSignal < 3) return `votes ${voteCountForSignal} < 3`;
+    if (!hasRealData) return "donnees stats/H2H indisponibles";
+    if (!qualityGate.ok) return `filtre qualite: ${qualityGate.reason}`;
+    if (!playable.ok) return `cote: ${playable.reason}`;
+    if (isWomen) return "match feminin (exclu)";
+    if (lowTrust) return "ligue non fiable";
+    return null;
+  })();
+
+  if (!_blockReason) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
     if (!_signalSentCache.has(signalKey)) {
+      // La clé porte l'heure courante (…THH). Sans purge, ce Set ne fait que
+      // grossir tant que le conteneur tourne. On ne garde que l'heure en cours :
+      // les clés plus anciennes ne peuvent plus provoquer de collision.
+      if (_signalSentCache.size > 500) {
+        const currentHour = signalKey.slice(-13); // "YYYY-MM-DDTHH"
+        for (const k of _signalSentCache) {
+          if (!k.endsWith(currentHour)) _signalSentCache.delete(k);
+        }
+      }
       _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
@@ -3561,10 +3778,12 @@ Réponds en JSON pur (pas de markdown):
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
       // Réinitialisation des compteurs journaliers
-      if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = 0; }
-      if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = 0; }
-      if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = 0; }
-      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = 0; }
+      // Au changement de jour ET au premier passage après un redémarrage
+      // (date === ""), on repart du nombre réellement diffusé, lu en base.
+      if (_standardSignalDaily.date !== todayStr) { _standardSignalDaily.date = todayStr; _standardSignalDaily.count = signalsSentToday("sig_sent_standard"); }
+      if (_premiumSignalDaily.date !== todayStr) { _premiumSignalDaily.date = todayStr; _premiumSignalDaily.count = signalsSentToday("sig_sent_premium"); }
+      if (_eliteSignalDaily.date !== todayStr) { _eliteSignalDaily.date = todayStr; _eliteSignalDaily.count = signalsSentToday("sig_sent_elite"); }
+      if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = signalsSentToday("sig_sent_free"); }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
       //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL ≥ 1.50 — max 3/j
@@ -3575,16 +3794,33 @@ Réponds en JSON pur (pas de markdown):
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
       const conf = Number(analysisResult.confidence) || 0;
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
-      const oddOk = realOdd >= TIER_MIN_REAL_ODD;
+      const oddOk = realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD;
       const sportLc = String(match.sport || "Football").toLowerCase();
       // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
       // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
       // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
-      const diffusable = arjelPlayable && oddOk && DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
+      const sportDiffusable = DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
+      const diffusable = arjelPlayable && oddOk && sportDiffusable;
+      // Motif précis quand l'analyse a franchi tous les filtres qualité mais
+      // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
+      // des corrections très différentes.
+      if (!diffusable) {
+        _tierBlock = !sportDiffusable
+          ? `sport non diffusable: ${match.sport || "?"}`
+          : !arjelPlayable
+            ? `hors ARJEL (source cote: ${analysisResult.cote_source || "estimation"})`
+            : realOdd === 0
+              ? "pas de vraie cote bookmaker (estimation seulement)"
+              : `cote ${realOdd} hors fenetre ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}`;
+      }
       // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
       const TH = getTierThresholds();
 
-      const gradeStandard = diffusable && voteCountForSignal >= 5 && conf >= TH.standard;
+      // Standard exigeait l'UNANIMITE des 5 agents : une condition si rare que le
+      // palier restait vide la plupart des jours (0/3 le 28/07/2026). Une majorite
+      // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
+      // eleve que les autres paliers, qui porte l'exigence Standard.
+      const gradeStandard = diffusable && voteCountForSignal >= 4 && conf >= TH.standard;
       const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
       const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
       shadowWorthy = gradeElite;
@@ -3633,6 +3869,16 @@ Réponds en JSON pur (pas de markdown):
       }
     }
   }
+
+  // Trace du motif de non-diffusion (null si le signal est bien parti).
+  try {
+    const motif = _blockReason || _tierBlock || null;
+    db.prepare(
+      `UPDATE concile_analyses SET diffusion_block = ?
+       WHERE lower(trim(home)) = lower(trim(?)) AND lower(trim(away)) = lower(trim(?))
+         AND date(analysed_at) = date('now')`
+    ).run(motif, match.home, match.away);
+  } catch (e) { console.error("[funnel] trace:", e.message); }
 
   // ── Tests à blanc : uniquement sur les matchs RÉELLEMENT diffusables ────────
   // Avant, cette évaluation tournait sur CHAQUE match analysé (109 le 25/07) avec
@@ -4026,6 +4272,10 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
     ).all(`%${first}%`, `%${away.split(' ')[0]}%`);
 
     if (pending.length) {
+      // PROTECTION IMMUTABILITÉ : le AND outcome IS NULL en clause WHERE garantit
+      // que la DB rejette l'update si un outcome a déjà été enregistré entre le
+      // SELECT et l'UPDATE (course, appel concurrent, retry auto). Immuable
+      // par contrainte, pas seulement par convention applicative.
       const upd = db.prepare(`
         UPDATE concile_analyses
         SET outcome = ?,
@@ -4033,7 +4283,7 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
             final_score_away = ?,
             resolved_at = datetime('now'),
             result_source = ?
-        WHERE id = ?
+        WHERE id = ? AND outcome IS NULL AND final_score_home IS NULL
       `);
       pending.forEach(r => {
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet) || resolveTeamWinBet(r.best_bet, home, away, h, a);
@@ -4777,6 +5027,17 @@ function getFinalScoreFromPick(pick) {
   return { score_home: Number(match[1]), score_away: Number(match[2]) };
 }
 
+// ── PROTECTION IMMUTABILITÉ ──────────────────────────────────────────────
+// Toute résolution stockée en base est IMMUABLE. On refuse toute mise à jour
+// qui écraserait un outcome, un score final ou une valeur déjà renseignée.
+// Seul un admin peut passer par /admin/resolve-match (traçabilité complète).
+function isProtectedFromOverwrite(existing) {
+  if (!existing) return false;
+  return existing.outcome != null
+      || existing.final_score_home != null
+      || existing.resolved_at != null;
+}
+
 function autoResolvePredictions(match) {
   const { home, away, score_home, score_away } = match;
   if (score_home === null || score_home === undefined || score_away === null || score_away === undefined) return;
@@ -4857,6 +5118,56 @@ function matchToken(name) {
   return pool.sort((a, b) => b.length - a.length)[0] || "";
 }
 
+/**
+ * Clé canonique d'une rencontre, insensible aux variantes de nom entre sources.
+ *
+ * Deux APIs nomment rarement une équipe pareil (« Dila » / « Dila Gori »,
+ * « Riga » / « Riga FC », « Mjällby » / « Mjallby AIF »). Les dédoublonnages
+ * comparaient les noms caractère par caractère : le même match passait donc deux
+ * fois. Constaté sur le bilan du 28/07/2026 diffusé aux abonnés, où le même
+ * Apollon Limassol – Dila (4-0) apparaissait avec DEUX pronostics opposés
+ * (Over 2.5 gagnant ET Under 2.5 perdant) — l'un devait forcément perdre, et le
+ * winrate affiché était calculé sur des doublons.
+ *
+ * On s'appuie sur matchToken (mot distinctif, accents et préfixes FC/AC ignorés),
+ * déjà utilisé pour la résolution des scores et la fusion des matchs live.
+ */
+function canonicalMatchKey(home, away, day) {
+  const h = matchToken(home) || NORM(home);
+  const a = matchToken(away) || NORM(away);
+  return day ? `${h}_${a}_${String(day).slice(0, 10)}` : `${h}_${a}`;
+}
+
+/**
+ * Retire les doublons d'une liste d'analyses en comparant les noms de façon
+ * tolérante aux variantes de source.
+ *
+ * Départage, dans l'ordre :
+ *   1. une ligne résolue (win/loss) l'emporte sur une ligne en attente ;
+ *   2. à statut égal, la PLUS ANCIENNE l'emporte — c'est le signal réellement
+ *      diffusé en premier aux abonnés.
+ *
+ * Le critère d'ancienneté n'est pas un détail : deux analyses d'un même match
+ * peuvent porter des pronostics OPPOSÉS (constaté le 28/07/2026 : Over 2.5
+ * gagnant et Under 2.5 perdant sur Apollon Limassol – Dila 4-0). Garder
+ * « la première rencontrée » revenait à conserver le gagnant et à gonfler le
+ * winrate affiché — exactement ce que la règle ANJ interdit. L'ancienneté est
+ * neutre, déterministe, et correspond à ce que l'abonné a réellement reçu.
+ */
+function dedupeAnalysesByMatch(rows) {
+  const resolved = (x) => x && (x.outcome === "win" || x.outcome === "loss");
+  const stamp = (x) => String(x?.analysed_at || x?.created_at || "");
+  const best = new Map();
+  for (const r of rows || []) {
+    const key = canonicalMatchKey(r.home, r.away, r.analysed_at || r.created_at);
+    const previous = best.get(key);
+    if (!previous) { best.set(key, r); continue; }
+    if (resolved(r) && !resolved(previous)) { best.set(key, r); continue; }
+    if (resolved(r) === resolved(previous) && stamp(r) < stamp(previous)) best.set(key, r);
+  }
+  return [...best.values()];
+}
+
 let staleResolveRunning = false;
 async function resolveStalePredictions() {
   if (staleResolveRunning || (!FOOTBALL_DATA_KEY && !API_SPORTS_KEY)) return;
@@ -4873,7 +5184,6 @@ async function resolveStalePredictions() {
         SELECT home, away, 'Football' AS sport, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-90 minutes')
         AND created_at >= datetime('now','-7 days')
-      LIMIT 200
     `).all();
     if (!staleRows.length) return;
 
@@ -5000,7 +5310,6 @@ async function resolveStalePredictions() {
 setInterval(resolveStalePredictions, 20 * 60 * 1000);
 setTimeout(resolveStalePredictions, 30 * 1000);
 
-// ── Résolution rapide Signal Fort (toutes les 10 min, délai 90 min) ──────────
 let signalFortResolveRunning = false;
 async function resolveSignalFortFast() {
   if (signalFortResolveRunning || !API_SPORTS_KEY) return;
@@ -5153,6 +5462,43 @@ function isNoiseForDisplay(match) {
 const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
 const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 30));
 const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
+// Décision fondateur du 28/07/2026 : la sélection ne se fait plus sur la minute
+// mais sur la cote réelle ARJEL (fenêtre 1.30–2.50). La fenêtre de temps
+// produisait trop peu de signaux, et créait une incohérence visible : un match à
+// la 80e restait affiché en direct mais refusait l'analyse. Mettre
+// AUTO_CONCILE_TIME_WINDOW=1 dans .env pour la réactiver sans redéployer.
+const AUTO_CONCILE_TIME_WINDOW = process.env.AUTO_CONCILE_TIME_WINDOW === "1";
+
+// ── Règles métier gravées dans la pierre (ne pas assouplir) ───────────────────
+// R1 : aucun prono live avant la 35e minute ni après la 75e (données suffisantes
+//      jouées + cote encore offerte par les books).
+// R2 : aucun prono sur un match à finalité connue (écart >= 3 buts). Le book ne
+//      cote plus un résultat décidé — ex : 0-3 → "Victoire extérieur" interdit.
+const DECIDED_MATCH_GAP = 3;
+
+function isMatchDecided(match) {
+  const score = readKnownScore(match);
+  if (!score) return false;
+  return Math.abs(score.home - score.away) >= DECIDED_MATCH_GAP;
+}
+
+// Retourne null si le match peut être pronostiqué en live, sinon la raison du blocage.
+// Utilisé par l'auto-observer ET les endpoints d'analyse manuelle (pas le prématch).
+function livePickBlockReason(match) {
+  // Fenêtre de temps désactivée par défaut depuis le 28/07/2026 (décision du
+  // fondateur) : c'est la COTE RÉELLE qui décide, pas la minute. Un match trop
+  // avancé ou déjà plié voit sa cote sortir de la fenêtre 1.30–2.50 et se trouve
+  // exclu de fait — sans priver d'analyse un match encore ouvert à la 80e.
+  // Réactivable par .env : AUTO_CONCILE_TIME_WINDOW=1.
+  if (AUTO_CONCILE_TIME_WINDOW) {
+    const minute = parseLiveMinuteValue(match && match.minute);
+    if (minute !== null && minute < AUTO_CONCILE_WINDOW_MIN) return `Analyse indisponible avant la ${AUTO_CONCILE_WINDOW_MIN}e minute.`;
+    if (minute !== null && minute > AUTO_CONCILE_WINDOW_MAX) return `Analyse indisponible après la ${AUTO_CONCILE_WINDOW_MAX}e minute.`;
+  }
+  // R2 conservée : un match à finalité connue n'a plus rien à offrir.
+  if (isMatchDecided(match)) return "Analyse indisponible : match à finalité connue (écart de 3 buts ou plus).";
+  return null;
+}
 
 function shouldAutoObserveMatch(match) {
   if (!match || match.scoreConflict) return false;
@@ -5172,9 +5518,14 @@ function shouldAutoObserveMatch(match) {
   // l'activité affichée. On bloque juste les ligues non fiables hors UEFA.
   if (!isUefaCompetition(match) && isLowTrustCompetition(match)) return false;
   if (isUnderperformingCompetition(match)) return false; // exclut les compétitions perdantes
-  // Fenêtre 35-75' : assez de données jouées + cote encore intéressante
-  const minute = parseLiveMinuteValue(match.minute);
-  return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
+  if (isMatchDecided(match)) return false;               // R2 : match à finalité connue (écart >= 3 buts)
+  // Sélection par la COTE et non par la minute (décision du 28/07/2026). La
+  // fenêtre de temps reste disponible via AUTO_CONCILE_TIME_WINDOW=1.
+  if (AUTO_CONCILE_TIME_WINDOW) {
+    const minute = parseLiveMinuteValue(match.minute);
+    return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
+  }
+  return true;
 }
 
 function hasPredictionSnapshot(match) {
@@ -5248,18 +5599,36 @@ async function brevoAddContact(email, tag, lang = "FR") {
   }
 }
 
+// Plafond anti-spam : 1 email MARKETING par adresse et par jour. La clé porte la
+// date du jour — l'ancien setInterval remettait le compteur à zéro 24 h après le
+// démarrage du process, donc « par jour » dérivait à chaque redéploiement.
 const _emailDailyCap = new Map();
-setInterval(() => _emailDailyCap.clear(), 24 * 60 * 60 * 1000);
-
-async function brevoSendEmail(to, subject, htmlContent) {
-  if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
-  const key = to.toLowerCase();
-  const sent = _emailDailyCap.get(key) || 0;
-  if (sent >= 1) {
-    console.log(`[brevo] Cap 1 email/jour atteint pour ${key} — "${subject}" non envoyé`);
-    return;
+setInterval(() => {
+  const today = new Date().toISOString().slice(0, 10);
+  for (const k of _emailDailyCap.keys()) {
+    if (!k.endsWith(`|${today}`)) _emailDailyCap.delete(k);
   }
-  _emailDailyCap.set(key, sent + 1);
+}, 60 * 60 * 1000);
+
+/**
+ * @param opts.critical  Email TRANSACTIONNEL (code d'accès, confirmation de
+ *   paiement, expiration d'abonnement) : jamais soumis au plafond anti-spam.
+ *   Sans ce drapeau, un lead ayant reçu un email de nurturing le matin puis
+ *   s'abonnant l'après-midi ne recevait PAS son code d'accès — il payait sans
+ *   rien recevoir, et l'échec n'apparaissait que dans les logs.
+ */
+async function brevoSendEmail(to, subject, htmlContent, opts = {}) {
+  if (!BREVO_API_KEY) throw new Error("BREVO_API_KEY manquante");
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `${to.toLowerCase()}|${today}`;
+  if (!opts.critical) {
+    const sent = _emailDailyCap.get(key) || 0;
+    if (sent >= 1) {
+      console.log(`[brevo] Cap 1 email marketing/jour atteint pour ${to.toLowerCase()} — "${subject}" non envoyé`);
+      return;
+    }
+    _emailDailyCap.set(key, sent + 1);
+  }
   return httpPostStrict(
     "https://api.brevo.com/v3/smtp/email",
     {
@@ -5338,7 +5707,8 @@ function creditReferrer(refCode, newSubscriberEmail) {
         <div style="font-size:20px;font-weight:800;margin-bottom:10px">🎉 ${newSubscriberEmail.replace(/@.*/, "***@***")} a rejoint grâce à toi !</div>
         <div style="color:#a8aec8;line-height:1.6;margin-bottom:20px">Ton abonnement vient d'être prolongé de <strong style="color:#10b981">30 jours</strong> automatiquement. Merci de faire confiance à TousLesMatchs et de le partager autour de toi.</div>
         <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700">Voir mes picks →</a>
-      </div>`
+      </div>`,
+      { critical: true } // récompense de parrainage : dû au client, jamais plafonné
     ).catch(() => {});
   }
   return true;
@@ -5477,7 +5847,7 @@ function runExpiryCron() {
           3: `⏳ Plus que 3 jours — renouvelle ton abonnement ${row.plan === "elite" ? "Elite" : "Pro"}`,
           1: `🔴 Dernier jour — ton accès TousLesMatchs expire demain`,
         };
-        brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats))
+        brevoSendEmail(row.email, subjects[diff], renewalEmailHtml(row, diff, stats), { critical: true })
           .then(() => {
             sentSet.add(diff);
             _expirySentToday.set(sentKey, sentSet);
@@ -5487,7 +5857,7 @@ function runExpiryCron() {
       }
 
       if (diff === 0 && !sentSet.has(0)) {
-        brevoSendEmail(row.email, `🔴 Ton abonnement expire aujourd'hui — dernière chance`, renewalEmailHtml(row, 0, stats))
+        brevoSendEmail(row.email, `🔴 Ton abonnement expire aujourd'hui — dernière chance`, renewalEmailHtml(row, 0, stats), { critical: true })
           .then(() => { sentSet.add(0); _expirySentToday.set(sentKey, sentSet); })
           .catch(e => console.error(`[expiry-cron] email J-0 to ${row.email}:`, e.message));
       }
@@ -5653,12 +6023,26 @@ app.post("/subscribe-email", async (req, res) => {
       console.log(`[subscribe-email] Brevo non configure - lead sauvegarde: ${emailClean}`);
       return res.json({ ok: true });
     }
+    // Envoi Brevo avec attributs UTM pour segmentation par canal d'acquisition.
+    // Ces attributs permettent dans Brevo de créer des LISTES automatiques
+    // (ex: "Leads TikTok Romuald") et des séquences email spécifiques par source.
+    const brevoAttributes = {
+      PLAN: "FREE_SUBSCRIBER",
+      SOURCE: lead.source || "direct",
+      UTM_SOURCE: (lead.utm && lead.utm.source) || "",
+      UTM_MEDIUM: (lead.utm && lead.utm.medium) || "",
+      UTM_CAMPAIGN: (lead.utm && lead.utm.campaign) || "",
+      LANDING: lead.landing_page || "",
+      LANG: (lead.lang || "fr").slice(0, 2),
+      COUNTRY: lead.country || "",
+      SIGNUP_DATE: lead.created_at.slice(0, 10),
+    };
     await httpPost(
       "https://api.brevo.com/v3/contacts",
       { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER", LANG: contactLang }, updateEnabled: true },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} lang=${lead.lang} country=${lead.country}`);
+    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} utm=${JSON.stringify(lead.utm)} lang=${lead.lang} country=${lead.country}`);
 
     // Email de bienvenue uniquement pour les nouveaux inscrits
     if (!existing) {
@@ -5668,9 +6052,6 @@ app.post("/subscribe-email", async (req, res) => {
     <div style="font-size:14px;color:rgba(255,255,255,.75);margin-top:6px">5 IA indépendantes. Aucune émotion, seulement des données.</div>
   </div>
   <div style="padding:32px">
-    <p style="font-size:15px;margin:0 0 20px;color:#a8aec8">Tu es maintenant inscrit et tu recevras <strong style="color:#eceaf4">le pick du jour</strong> dès qu'Hermès le publie (chaque matin vers 00h05).</p>
-    <div style="background:#0d1020;border:1px solid rgba(99,102,241,.25);border-radius:12px;padding:20px;margin-bottom:24px">
-      <div style="font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#22d3ee;margin-bottom:12px">Ce que tu vas recevoir</div>
       <div style="font-size:14px;color:#a8aec8;line-height:1.8">
         ✅ Pick du jour validé par le Concile IA<br>
         ✅ Cote + probabilité + raison analytique<br>
@@ -5913,7 +6294,7 @@ function getSignalFortStats() {
     const raw = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome,
              score_home_at_analysis, score_away_at_analysis,
-             final_score_home, final_score_away, analysed_at, real_odd
+             final_score_home, final_score_away, analysed_at, real_odd, minute_at_analysis
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
@@ -5966,8 +6347,84 @@ setInterval(() => {
   if (now.getDay() === 0 && now.getHours() === 20 && now.getMinutes() < 60) {
     sendSignalFortBilanTelegram().catch(e => console.error("[signal-fort-bilan]", e.message));
     sendWeeklyConversionEmail().catch(e => console.error("[weekly-conversion]", e.message));
+    sendWeeklyAgentsAudit().catch(e => console.error("[weekly-agents-audit]", e.message));
   }
 }, 60 * 60 * 1000);
+
+// ── Rapport hebdomadaire de perf des IA (dimanche 20h, Telegram admin) ────────
+// Garantit que TU vois chaque semaine où en sont les agents (officiels + shadow)
+// sans avoir à lancer une commande. Si une IA se met à sous-performer, elle
+// apparaîtra dans le rapport avec son winrate en baisse — signal d'alerte visuel.
+async function sendWeeklyAgentsAudit() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  try {
+    const officialAgents = db.prepare(`
+      SELECT agent_name, COUNT(*) total,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_predictions
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name
+    `).all().map(r => ({ ...r, resolved: r.wins + r.losses, winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null }))
+      .sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    const shadowAgents = db.prepare(`
+      SELECT agent_name, COUNT(*) total,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM shadow_evals
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name
+    `).all().map(r => ({ ...r, resolved: r.wins + r.losses, winrate: r.wins + r.losses > 0 ? Math.round(r.wins / (r.wins + r.losses) * 100) : null }))
+      .sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    // Meilleur agent par marché — piloter la boucle vertueuse
+    const matrixRows = db.prepare(`
+      SELECT agent_name, market_line,
+             COUNT(*) total,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions
+      WHERE outcome IN ('win','loss')
+      GROUP BY agent_name, market_line
+    `).all();
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+    const bestByMarket = {};
+    matrixRows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      if (resolved < 5) return;
+      const wr = Math.round(r.wins / resolved * 100);
+      if (!bestByMarket[r.market_line] || wr > bestByMarket[r.market_line].winrate) {
+        bestByMarket[r.market_line] = { agent: r.agent_name, winrate: wr, resolved, label: lineLabels[r.market_line] || r.market_line };
+      }
+    });
+
+    const fmt = (a) => `  ${a.winrate !== null ? `${a.winrate}%` : "n/a"} — ${a.agent_name} (${a.wins}W/${a.losses}L)`;
+    const msg = [
+      `📊 <b>AUDIT HEBDOMADAIRE DES IA</b>`,
+      `📅 Semaine du ${new Date(Date.now() - 7*86400000).toISOString().slice(0,10)} au ${new Date().toISOString().slice(0,10)}`,
+      ``,
+      `<b>🎯 IA officielles</b>`,
+      officialAgents.length ? officialAgents.map(fmt).join("\n") : "  (aucune donnée)",
+      ``,
+      `<b>⚪ IA blanches (banc d'essai)</b>`,
+      shadowAgents.length ? shadowAgents.map(fmt).join("\n") : "  (aucune donnée)",
+      ``,
+      `<b>🏆 Meilleur agent par marché</b>`,
+      Object.keys(bestByMarket).length
+        ? Object.values(bestByMarket).map(b => `  🏆 ${b.label} → ${b.agent} (${b.winrate}% sur ${b.resolved})`).join("\n")
+        : "  (pas assez de données)",
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      `🤖 Rapport auto · TousLesMatchs`,
+    ].join("\n");
+
+    const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+    console.log(`[weekly-agents-audit] Telegram admin: ${ok ? "OK" : "FAIL"}`);
+  } catch (e) {
+    console.error("[weekly-agents-audit] error:", e.message);
+  }
+}
 
 // ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
 const _signalResultSentCache = new Set();
@@ -5989,6 +6446,9 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   const bmSuffix = _bm ? ` <i>(${_bm})</i>` : "";
   // Cote/gain affichés UNIQUEMENT si vraie cote bookmaker (jamais l'estimation).
   const hasReal = !!_bm;
+  const minuteStr = analysis.minute_at_analysis !== null && analysis.minute_at_analysis !== undefined
+    ? ` (donné à la ${analysis.minute_at_analysis}e min)`
+    : "";
 
   const premiumMsg = [
     `${icon} <b>SIGNAL FORT ${resultText}</b>`,
@@ -5996,7 +6456,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `💡 Analyse IA : <b>${analysis.best_bet}</b>`,
+    `💡 Analyse IA : <b>${analysis.best_bet}${minuteStr}</b>`,
     `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
     outcome === "win" && hasReal
@@ -6061,6 +6521,26 @@ function markSignalSent(home, away, col) {
          AND date(analysed_at)=date('now')`
     ).run(home, away);
   } catch (e) { console.error("[signal-sent]", e.message); }
+}
+
+// Nombre de signaux RÉELLEMENT diffusés aujourd'hui sur un canal, lu depuis la
+// base et non depuis un compteur mémoire. Les plafonds journaliers (3/jour en
+// Standard, etc.) sont une promesse commerciale affichée sur la page tarifs :
+// un compteur en mémoire repartait de zéro à chaque redémarrage du conteneur,
+// donc un jour à plusieurs redéploiements pouvait dépasser le plafond annoncé.
+// Même convention de date (UTC) que markSignalSent, pour rester cohérent.
+function signalsSentToday(col) {
+  if (!SIGNAL_SENT_COLUMNS.includes(col)) return 0;
+  try {
+    const row = db.prepare(
+      `SELECT COUNT(*) AS n FROM concile_analyses
+       WHERE ${col} = 1 AND date(analysed_at) = date('now')`
+    ).get();
+    return Number(row?.n) || 0;
+  } catch (e) {
+    console.error("[signal-sent] comptage:", e.message);
+    return 0; // en cas d'incident, on ne bloque pas la diffusion
+  }
 }
 
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
@@ -6178,7 +6658,7 @@ app.post("/forgot-code", async (req, res) => {
           <p style="margin:20px 0 0;color:#7b82a0;font-size:12px">Copiez ce code et connectez-vous sur <a href="https://touslesmatchs.com" style="color:#6366f1">touslesmatchs.com</a>.</p>
         </div>
       </div>`;
-    await brevoSendEmail(emailClean, "Votre code d'accès TousLesMatchs", html);
+    await brevoSendEmail(emailClean, "Votre code d'accès TousLesMatchs", html, { critical: true });
     console.log(`[forgot-code] Code(s) envoyé(s) à ${emailClean}`);
   } catch (e) {
     console.error("[forgot-code] error:", e.message);
@@ -6690,7 +7170,8 @@ function rowIsArjel(r) {
 function tierEligible(r, tier) {
   const conf = Number(r.confidence) || 0;
   if (!rowIsArjel(r)) return false;
-  if ((Number(r.real_odd) || 0) < TIER_MIN_REAL_ODD) return false;
+  const _ro = Number(r.real_odd) || 0;
+  if (_ro < TIER_MIN_REAL_ODD || _ro > TIER_MAX_REAL_ODD) return false;
   const sport = String(r.sport || "Football").toLowerCase();
   const isFoot = sport.includes("foot");
   const std = isFoot && conf >= STANDARD_MIN_CONF;
@@ -6735,7 +7216,7 @@ app.get("/tier-stats", (req, res) => {
       ) WHERE _rn = 1
       ORDER BY analysed_at DESC
     `).all();
-    const clean = rows.filter(r => !isNoiseForDisplay(r));
+    const clean = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
     const standard = clean.filter(r => tierEligible(r, "standard"));
     const premium  = clean.filter(r => tierEligible(r, "premium"));
     const elite    = clean.filter(r => tierEligible(r, "elite"));
@@ -6942,7 +7423,19 @@ app.get("/live-matches", async (req, res) => {
       }
     }
 
-    res.json({ ok: true, matches });
+    // Verdict d'analysabilité calculé par le SERVEUR et joint à chaque match.
+    // Le front appliquait sa propre règle 25e–65e minute, codée en dur : elle
+    // contredisait la règle serveur (sélection par la cote depuis le 28/07/2026)
+    // et, sur les sports sans minutes, parseInt("IN9") donnait NaN — donc tout
+    // le baseball, le basket et le hockey étaient bloqués en permanence avec un
+    // message parlant de minutes de football. Une seule source de vérité ici.
+    const withVerdict = matches.map((m) => {
+      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null };
+      const reason = livePickBlockReason(m);
+      return { ...m, analysable: !reason, block_reason: reason };
+    });
+
+    res.json({ ok: true, matches: withVerdict });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
@@ -6974,6 +7467,8 @@ app.post("/analyse", async (req, res) => {
     const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
     if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
     if (rejectScoreConflict(verifiedMatch, res)) return;
+    const blockReason = livePickBlockReason(verifiedMatch);
+    if (blockReason) return res.json({ ok: false, error: blockReason });
     const analysis = await runConcileAnalysis(verifiedMatch);
     const chief = analysis.agents[analysis.agents.length - 1];
 
@@ -6999,6 +7494,8 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
   const verifiedMatch = await requireVerifiedLiveMatch({ id: match_id, home, away });
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
   if (rejectScoreConflict(verifiedMatch, res)) return;
+  const blockReason = livePickBlockReason(verifiedMatch);
+  if (blockReason) return res.json({ ok: false, error: blockReason });
 
   const matchKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${getTodayStr()}`;
 
@@ -7132,6 +7629,8 @@ app.post("/concile-analysis", async (req, res) => {
   const verifiedMatch = await requireVerifiedLiveMatch(match);
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
   if (rejectScoreConflict(verifiedMatch, res)) return;
+  const blockReason = livePickBlockReason(verifiedMatch);
+  if (blockReason) return res.json({ ok: false, error: blockReason });
 
   const liveMinute = parseInt(verifiedMatch.minute || match.minute, 10);
   if (isNaN(liveMinute) || liveMinute < 25 || liveMinute > 65) {
@@ -7297,6 +7796,26 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     return res.status(400).json({ error: e.message });
   }
 
+  // ── Verrou anti-rejeu ───────────────────────────────────────────────────────
+  // Placé APRÈS la vérification de signature (jamais avant : sinon n'importe qui
+  // pourrait saturer la table). On répond 200 à un rejeu pour que Stripe cesse
+  // de réessayer — un 4xx/5xx le ferait au contraire recommencer en boucle.
+  if (event.id) {
+    try {
+      const claim = db.prepare(
+        "INSERT OR IGNORE INTO stripe_processed_events (event_id, event_type) VALUES (?,?)"
+      ).run(event.id, event.type || "");
+      if (claim.changes === 0) {
+        console.log(`[stripe] événement ${event.id} (${event.type}) déjà traité — rejeu ignoré`);
+        return res.json({ received: true, duplicate: true });
+      }
+    } catch (e) {
+      // Un incident sur la table de verrou ne doit jamais bloquer un paiement :
+      // on journalise et on laisse passer (comportement d'avant ce garde-fou).
+      console.error("[stripe] verrou idempotence indisponible:", e.message);
+    }
+  }
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
@@ -7407,7 +7926,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             </div>
           </div>`;
 
-          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html);
+          await brevoSendEmail(customerEmail, `🎉 Ton abonnement ${planLabel} est actif — voici ton code`, html, { critical: true });
           console.log(`[stripe] Email confirmation envoyé à ${customerEmail}`);
         } catch(e) { console.error("[stripe] email error:", e.message); }
       })();
@@ -7666,7 +8185,7 @@ app.get("/public-history", (req, res) => {
 
 app.post("/admin/resolve-match", (req, res) => {
   const { email, code, home, away, score_home, score_away } = req.body || {};
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   if (!home || !away || score_home === undefined || score_away === undefined) {
     return res.json({ ok: false, error: "home, away, score_home, score_away requis" });
   }
@@ -7677,7 +8196,7 @@ app.post("/admin/resolve-match", (req, res) => {
 // Forcer le rattrapage de TOUTES les prédictions en attente (matchs finis)
 app.post("/admin/resolve-stale", async (req, res) => {
   const { email, code } = req.body || {};
-  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
   const countPending = () => db.prepare(`
     SELECT (SELECT COUNT(*) FROM agent_predictions WHERE outcome IS NULL)
          + (SELECT COUNT(*) FROM agent_market_predictions WHERE outcome IS NULL) AS n
@@ -7686,6 +8205,149 @@ app.post("/admin/resolve-stale", async (req, res) => {
   await resolveStalePredictions();
   const after = countPending();
   res.json({ ok: true, resolved: before - after, pending_before: before, pending_after: after });
+});
+
+// Audit complet : perf de CHAQUE IA (officielles + shadow "IA blanches"), matrice
+// IA×marché, meilleur agent par type de pari — le tout envoyé sur Telegram Hermes Admin.
+app.get("/admin/full-agents-audit", async (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  try {
+    // 1) IA officielles (vote + décision) — depuis agent_predictions
+    const officialAgents = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) pending,
+        ROUND(AVG(confidence),0) avg_conf
+      FROM agent_predictions
+      GROUP BY agent_name
+    `).all().map(r => {
+      const resolved = r.wins + r.losses;
+      return { ...r, resolved, winrate: resolved > 0 ? Math.round(r.wins / resolved * 100) : null };
+    }).sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    // 2) IA blanches (banc d'essai) — depuis shadow_evals, jamais publiées
+    const shadowAgents = db.prepare(`
+      SELECT agent_name,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses,
+        SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END) pending,
+        ROUND(AVG(confidence),0) avg_conf
+      FROM shadow_evals
+      GROUP BY agent_name
+    `).all().map(r => {
+      const resolved = r.wins + r.losses;
+      return { ...r, resolved, winrate: resolved > 0 ? Math.round(r.wins / resolved * 100) : null };
+    }).sort((a, b) => (b.winrate ?? -1) - (a.winrate ?? -1));
+
+    // 3) Matrice IA × type de pari — quelle IA est meilleure sur quoi
+    const matrixRows = db.prepare(`
+      SELECT agent_name, market_line,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions
+      GROUP BY agent_name, market_line
+    `).all();
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+    const bestByMarket = {};
+    matrixRows.forEach(r => {
+      const resolved = r.wins + r.losses;
+      if (resolved < 5) return;                       // seuil : min 5 résolus pour avis fiable
+      const wr = Math.round(r.wins / resolved * 100);
+      if (!bestByMarket[r.market_line] || wr > bestByMarket[r.market_line].winrate) {
+        bestByMarket[r.market_line] = { agent: r.agent_name, winrate: wr, resolved, label: lineLabels[r.market_line] || r.market_line };
+      }
+    });
+
+    // 4) Formater le message Telegram
+    const fmtAgent = (a) => `  ${a.winrate !== null ? `${a.winrate}%` : "n/a"} — ${a.agent_name} (${a.wins}W/${a.losses}L, ${a.pending} en attente, conf. moy ${a.avg_conf || 0}%)`;
+    const officialBlock = officialAgents.length ? officialAgents.map(fmtAgent).join("\n") : "  (aucune donnée)";
+    const shadowBlock   = shadowAgents.length   ? shadowAgents.map(fmtAgent).join("\n")   : "  (aucune donnée)";
+    const bestBlock = Object.keys(bestByMarket).length
+      ? Object.values(bestByMarket).map(b => `  🏆 ${b.label} → <b>${b.agent}</b> (${b.winrate}% sur ${b.resolved})`).join("\n")
+      : "  (pas assez de données ≥5 résolus par marché)";
+
+    const msg = [
+      `🧠 <b>AUDIT COMPLET DES IA</b>`,
+      `📅 ${new Date().toISOString().slice(0, 16).replace("T", " ")}`,
+      ``,
+      `<b>🎯 IA officielles (Concile)</b>`,
+      officialBlock,
+      ``,
+      `<b>⚪ IA blanches (banc d'essai)</b>`,
+      shadowBlock,
+      ``,
+      `<b>🏆 Meilleure IA par type de pari</b>`,
+      bestBlock,
+      ``,
+      `━━━━━━━━━━━━━━━━━━`,
+      `Verrou v1918412 · règles R1/R2 actives`,
+    ].join("\n");
+
+    let telegramSent = false;
+    if (TELEGRAM_ADMIN_CHAT_ID) {
+      telegramSent = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+    }
+
+    res.json({
+      ok: true,
+      telegram_sent: telegramSent,
+      official_agents: officialAgents,
+      shadow_agents: shadowAgents,
+      best_by_market: bestByMarket,
+      message_preview: msg,
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// Audit quotidien : tous les pronos du jour (résolus + en attente) avec score final
+// Utilisé pour valider "il manque X résultats" — vue exhaustive et transparente.
+app.get("/admin/daily-audit", (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  const day = (req.query.day || new Date().toISOString().slice(0, 10)).slice(0, 10);
+  try {
+    const rows = db.prepare(`
+      SELECT id, home, away, competition, sport, best_bet, confidence,
+             minute_at_analysis, score_home_at_analysis, score_away_at_analysis,
+             final_score_home, final_score_away, outcome, analysed_at, resolved_at
+      FROM concile_analyses
+      WHERE substr(analysed_at,1,10) = ?
+      ORDER BY analysed_at ASC
+    `).all(day);
+    const wins    = rows.filter(r => r.outcome === "win").length;
+    const losses  = rows.filter(r => r.outcome === "loss").length;
+    const pending = rows.filter(r => !r.outcome).length;
+    res.json({
+      ok: true, day, total: rows.length, wins, losses, pending,
+      items: rows.map(r => ({
+        id: r.id,
+        match: `${r.home} vs ${r.away}`,
+        competition: r.competition || r.sport || "",
+        bet: r.best_bet,
+        confidence: r.confidence,
+        minute_at_analysis: r.minute_at_analysis,
+        score_at_analysis: r.score_home_at_analysis != null
+          ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        final_score: r.final_score_home != null
+          ? `${r.final_score_home}-${r.final_score_away}` : null,
+        outcome: r.outcome || "pending",
+        analysed_at: r.analysed_at,
+        resolved_at: r.resolved_at,
+        display: r.final_score_home != null && r.minute_at_analysis != null
+          ? `Score final ${r.final_score_home}-${r.final_score_away}, ${r.best_bet} donné à la ${r.minute_at_analysis}e min`
+          : null,
+      })),
+    });
+  } catch (e) {
+    res.json({ ok: false, error: e.message });
+  }
 });
 
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
@@ -7853,14 +8515,10 @@ async function sendDailyResultsFreeChannel() {
       ORDER BY analysed_at DESC
     `).all(todayStr);
 
-    const seen = new Set();
-    const unique = [];
-    for (const r of rows) {
-      const k = `${r.home}_${r.away}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      unique.push(r);
-    }
+    // Dédoublonnage tolérant aux variantes de nom entre sources : sans lui, le
+    // bilan diffusé affichait deux fois le même match, parfois avec deux
+    // pronostics opposés, et calculait le winrate sur ces doublons.
+    const unique = dedupeAnalysesByMatch(rows);
     if (unique.length < 3) return false;
 
     const wins = unique.filter(r => r.outcome === "win");
@@ -7909,10 +8567,43 @@ async function sendDailyResultsFreeChannel() {
 }
 
 // ── Analysis history (public, past concile analyses) ────────────────────────
+// Colonne de diffusion correspondant au palier d'un membre. On filtre sur ce qui
+// a RÉELLEMENT été envoyé sur son canal (sig_sent_*), pas sur des critères
+// d'éligibilité théoriques : un abonné Standard doit voir les résultats des
+// signaux qu'il a effectivement reçus, ni plus (pas les signaux Elite qu'il n'a
+// pas eus) ni moins.
+const SIG_COLUMN_BY_PLAN = {
+  free:     "sig_sent_free",
+  carte:    "sig_sent_free",
+  standard: "sig_sent_standard",
+  premium:  "sig_sent_premium",
+  vip:      "sig_sent_premium",
+  elite:    "sig_sent_elite",
+};
+
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const offset = parseInt(req.query.offset) || 0;
   try {
+    // ── Périmètre du lecteur ────────────────────────────────────────────────
+    // Sans identifiants : vue publique inchangée (page /performances, preuve
+    // marketing — la restreindre couperait l'argument de vente).
+    // Avec identifiants : on ne montre que le palier réellement souscrit.
+    const qEmail = req.query.email, qCode = req.query.code;
+    let viewerPlan = null, isPaidViewer = false, viewerIsAdmin = false;
+    if (qEmail && qCode) {
+      try {
+        const a = verifyCode(qEmail, qCode);
+        viewerIsAdmin = isAdminAccess(qEmail, qCode);
+        if (a.valid && a.plan) viewerPlan = String(a.plan).toLowerCase();
+        else if (viewerIsAdmin) viewerPlan = "elite";
+        isPaidViewer = (a.valid && a.plan && a.plan !== "free") || viewerIsAdmin;
+      } catch (_) {}
+    }
+    // L'admin garde la vue complète (supervision), sinon on filtre sur le palier.
+    const sigColumn = (viewerPlan && !viewerIsAdmin) ? SIG_COLUMN_BY_PLAN[viewerPlan] : null;
+    // Nom de colonne issu d'une liste blanche, jamais d'une saisie utilisateur.
+    const tierFilterSql = sigColumn ? `AND ${sigColumn} = 1` : "";
     // Dédoublonnage en SQL : un match est analysé plusieurs fois par jour
     // (snapshots à différentes minutes). ROW_NUMBER garde UNE ligne par
     // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
@@ -7931,6 +8622,7 @@ app.get("/analysis-history", (req, res) => {
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
           AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          ${tierFilterSql}
       )
       WHERE _rn = 1
       ORDER BY analysed_at DESC
@@ -7942,21 +8634,14 @@ app.get("/analysis-history", (req, res) => {
         SELECT 1 FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
           AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          ${tierFilterSql}
         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
       )
     `).get()?.cnt || 0;
 
-    // Auth optionnelle : seuls les abonnés (ou l'admin) voient le pick des analyses
-    // EN COURS. Les visiteurs voient les résultats passés (preuve) mais pas les
-    // picks non encore résolus — sinon la réponse serait donnée gratuitement.
-    let isPaidViewer = false;
-    try {
-      const qEmail = req.query.email, qCode = req.query.code;
-      if (qEmail && qCode) {
-        const a = verifyCode(qEmail, qCode);
-        isPaidViewer = (a.valid && a.plan && a.plan !== "free") || isAdminAccess(qEmail, qCode);
-      }
-    } catch (_) {}
+    // isPaidViewer (résolu plus haut) : seuls les abonnés — ou l'admin — voient le
+    // pick des analyses EN COURS. Les visiteurs voient les résultats passés
+    // (preuve) mais pas les picks non résolus, sinon la réponse serait gratuite.
 
     // On montre tous les jours et tous les résultats, SAUF la couche indésirable :
     // jeunes (U17-U23), amateur/réserves, féminines et ligues douteuses/exotiques.
@@ -7964,7 +8649,9 @@ app.get("/analysis-history", (req, res) => {
     // donc aucun jour ne disparaît — on retire juste les matchs douteux.
     // Retrait de la couche indésirable (jeunes/féminines/douteuses) ; les
     // doublons sont déjà éliminés en SQL ci-dessus.
-    const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
+    // Le PARTITION BY SQL ne dedoublonne que sur des noms strictement egaux :
+    // on repasse avec la comparaison tolerante aux variantes de source.
+    const visibleRows = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
 
     // Palier le plus bas qui reçoit cette analyse (cf. tierEligible : miroir exact
     // des règles de diffusion Telegram). "hors-palier" = publiée sur le site mais
@@ -8072,6 +8759,10 @@ app.get("/analysis-history", (req, res) => {
     res.json({
       ok: true, analyses, total,
       stats: { ...global, pending, tiers },
+      // Périmètre appliqué, pour que le front puisse l'annoncer clairement
+      // ("Statistiques de ton palier Standard") au lieu de laisser croire à
+      // l'abonné qu'il consulte l'historique complet.
+      scope: sigColumn ? { filtered: true, plan: viewerPlan } : { filtered: false, plan: viewerPlan || null },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
@@ -8421,6 +9112,10 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
 
 app.get("/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();
+  const formatPronoTimestamp = (bet, minute) => {
+    if (!bet || minute === null || minute === undefined) return bet;
+    return `${bet} (à la ${minute}e min)`;
+  };
   res.json({
     ok: true,
     total: stats.total,
@@ -8436,6 +9131,7 @@ app.get("/signal-fort-stats", (req, res) => {
       outcome: r.outcome,
       cote: rowOdd(r),
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+      bet_with_timestamp: formatPronoTimestamp(r.best_bet, r.minute_at_analysis),
       date: r.analysed_at,
     })),
     picks_feed: stats.recent.map(r => ({
@@ -8445,7 +9141,7 @@ app.get("/signal-fort-stats", (req, res) => {
       competition: r.competition || r.sport || "",
       home: r.home,
       away: r.away,
-      pick: r.best_bet || `Signal Fort ${r.confidence}%`,
+      pick: formatPronoTimestamp(r.best_bet || `Signal Fort ${r.confidence}%`, r.minute_at_analysis),
       cote: rowOdd(r),
       status: "finished",
       result: r.outcome === "win" ? "win" : "loss",
@@ -8463,7 +9159,7 @@ app.get("/premium-teaser", (req, res) => {
 
     const allRows = db.prepare(`
       SELECT home, away, competition, outcome, confidence, best_bet, real_odd,
-        final_score_home, final_score_away, sport, analysed_at
+        final_score_home, final_score_away, sport, analysed_at, minute_at_analysis
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
       ORDER BY analysed_at DESC
@@ -8504,7 +9200,11 @@ app.get("/premium-teaser", (req, res) => {
 
     const todaySignals = todayRows.length;
 
-    const recentResults = todayRows.length > 0 ? todayRows : deduped.slice(0, 20);
+    // `recent` doit contenir aujourd'hui ET hier pour que le front puisse
+    // déplier les deux onglets ("Aujourd'hui" et "Hier"). Avant, seul today
+    // était inclus quand il y avait des matchs du jour → clic "Hier" vide.
+    const merged = [...todayRows, ...yesterdayRows];
+    const recentResults = merged.length > 0 ? merged : deduped.slice(0, 20);
 
     // Courbe de bankroll chronologique (mise 10€, capital départ 100€)
     // sur toutes les analyses — source unique pour le graphique ROI du site.
@@ -8535,12 +9235,17 @@ app.get("/premium-teaser", (req, res) => {
       recent: recentResults.map(r => {
         const cote = rowOdd(r);
         const gain10 = r.outcome === 'win' ? Math.round((cote * 10 - 10) * 100) / 100 : -10;
+        const betWithTime = r.minute_at_analysis !== null && r.minute_at_analysis !== undefined
+          ? `${r.best_bet} (à la ${r.minute_at_analysis}e min)`
+          : r.best_bet;
         return {
           match: `${r.home} vs ${r.away}`,
           competition: r.competition || '',
           outcome: r.outcome,
           sport: r.sport || 'Football',
           score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+          bet: r.best_bet,
+          bet_with_timestamp: betWithTime,
           date: r.analysed_at ? r.analysed_at.slice(0, 10) : null,
           cote: Math.round(cote * 100) / 100,
           gain10,
@@ -9295,6 +10000,7 @@ async function sendDailyHealthCheck() {
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND date(resolved_at) = date('now','-1 day')
         AND real_odd >= ${TIER_MIN_REAL_ODD}
+        AND real_odd <= ${TIER_MAX_REAL_ODD}
     `).get() || {};
     const resolved = (r.wins || 0) + (r.losses || 0);
     const wr = resolved > 0 ? Math.round((r.wins / resolved) * 1000) / 10 : null;
@@ -9371,7 +10077,7 @@ async function checkDryTiers() {
       const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : ELITE_MIN_CONF;
       const cause = produced === 0
         ? "Aucune analyse produite sur 24h → problème d'alimentation (API matchs, scheduler)."
-        : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle ≥ ${TIER_MIN_REAL_ODD}).`;
+        : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle entre ${TIER_MIN_REAL_ODD} et ${TIER_MAX_REAL_ODD}).`;
 
       const msg = [
         `🚨 <b>PALIER À SEC — ${tier.toUpperCase()}</b>`, "",
@@ -9871,6 +10577,154 @@ app.get("/admin/scheduler-state", (req, res) => {
 // ===== End M007 =====
 
 // ===== M008: Data Guardian state =====
+// Ou meurent les signaux : repartition des motifs de non-diffusion. Repond
+// factuellement a "pourquoi 0 signal payant aujourd'hui ?" — chaque motif
+// appelle une correction differente, et sans cette vue on corrige a l'aveugle.
+app.get("/admin/funnel-report", (req, res) => {
+  try {
+    const jours = Math.min(30, Math.max(1, parseInt(req.query.jours) || 3));
+    const rows = db.prepare(`
+      SELECT diffusion_block, sport, COUNT(*) AS n
+      FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+      GROUP BY diffusion_block, sport
+      ORDER BY n DESC
+    `).all(`-${jours} days`);
+
+    const total = rows.reduce((s, r) => s + r.n, 0);
+    // La verite sur ce qui est parti vient des colonnes sig_sent_*, PAS de
+    // diffusion_block : cette colonne est nulle aussi bien pour une analyse
+    // diffusee que pour une analyse anterieure a l'instrumentation. Les
+    // confondre affichait "100% diffusables, 0 envoi" — contradictoire.
+    const diffuses = db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+        AND (sig_sent_standard = 1 OR sig_sent_premium = 1 OR sig_sent_elite = 1)
+    `).get(`-${jours} days`)?.n || 0;
+    const nonTracees = db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+        AND diffusion_block IS NULL
+        AND sig_sent_standard = 0 AND sig_sent_premium = 0 AND sig_sent_elite = 0
+    `).get(`-${jours} days`)?.n || 0;
+    const parMotif = {};
+    for (const r of rows) {
+      if (r.diffusion_block === null) continue;
+      const k = r.diffusion_block;
+      parMotif[k] = parMotif[k] || { analyses: 0, sports: {} };
+      parMotif[k].analyses += r.n;
+      parMotif[k].sports[r.sport || "?"] = (parMotif[k].sports[r.sport || "?"] || 0) + r.n;
+    }
+    const motifs = Object.entries(parMotif)
+      .map(([motif, o]) => ({ motif, analyses: o.analyses, part: total ? Math.round(o.analyses / total * 100) + "%" : "0%", sports: o.sports }))
+      .sort((a, b) => b.analyses - a.analyses);
+
+    // Diffusions reellement parties, par canal, sur la meme fenetre
+    const envois = db.prepare(`
+      SELECT
+        SUM(sig_sent_standard) AS standard,
+        SUM(sig_sent_premium)  AS premium,
+        SUM(sig_sent_elite)    AS elite,
+        SUM(sig_sent_free)     AS gratuit
+      FROM concile_analyses WHERE analysed_at >= datetime('now', ?)
+    `).get(`-${jours} days`);
+
+    // Diagnostic immediat, calcule sur des colonnes deja renseignees depuis
+    // toujours (confiance, cote reelle, sport). Ne depend donc pas de
+    // l'instrumentation, et repond des maintenant a "ou meurent les signaux ?".
+    const TH = getTierThresholds();
+    const d = db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN real_odd IS NULL OR real_odd <= 1 THEN 1 ELSE 0 END) AS sans_cote_reelle,
+        SUM(CASE WHEN real_odd > 1 AND real_odd < ${TIER_MIN_REAL_ODD} THEN 1 ELSE 0 END) AS cote_trop_basse,
+        SUM(CASE WHEN real_odd > ${TIER_MAX_REAL_ODD} THEN 1 ELSE 0 END) AS cote_trop_haute,
+        SUM(CASE WHEN real_odd >= ${TIER_MIN_REAL_ODD} AND real_odd <= ${TIER_MAX_REAL_ODD} THEN 1 ELSE 0 END) AS cote_dans_fenetre,
+        SUM(CASE WHEN lower(COALESCE(sport,'football')) = 'football' THEN 1 ELSE 0 END) AS football,
+        SUM(CASE WHEN lower(COALESCE(sport,'football')) != 'football' THEN 1 ELSE 0 END) AS autres_sports
+      FROM concile_analyses WHERE analysed_at >= datetime('now', ?)
+    `).get(`-${jours} days`);
+    // Combien franchiraient TOUS les criteres chiffres d'un palier donne ?
+    const eligibles = (seuilConf) => db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+        AND confidence >= ?
+        AND real_odd >= ${TIER_MIN_REAL_ODD} AND real_odd <= ${TIER_MAX_REAL_ODD}
+    `).get(`-${jours} days`, seuilConf)?.n || 0;
+
+    res.json({
+      ok: true,
+      fenetre_jours: jours,
+      analyses_totales: total,
+      analyses_diffusees: diffuses,
+      analyses_non_tracees: nonTracees,
+      note_tracage: nonTracees
+        ? `${nonTracees} analyses anterieures a l'instrumentation : leur motif de blocage est inconnu. Se fier a "diagnostic_donnees" ci-dessous en attendant.`
+        : "Toutes les analyses de la fenetre sont tracees.",
+      diagnostic_donnees: {
+        ...d,
+        seuils_confiance_du_jour: TH,
+        eligibles_standard: eligibles(TH.standard),
+        eligibles_premium: eligibles(TH.premium),
+        eligibles_elite: eligibles(TH.elite),
+        lecture: "sans_cote_reelle = aucune vraie cote bookmaker recuperee : ces analyses ne peuvent PAS etre diffusees, quel que soit leur niveau de confiance.",
+      },
+      envois_par_canal: envois,
+      quotas_vendus: {
+        standard: STANDARD_SIGNAL_DAILY_CAP, premium: PREMIUM_SIGNAL_DAILY_CAP, elite: ELITE_SIGNAL_DAILY_CAP,
+      },
+      motifs_de_blocage: motifs,
+      note: "Un motif nul = analyse diffusee. Les motifs sont classes du plus frequent au moins frequent : le premier est le goulot d'etranglement a traiter.",
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Vue "creme de la creme" : ce qui gagne et ce qui perd, par segment, avec le
+// verdict du filtre qualite. Repond a la question "sur quoi doit-on se
+// concentrer et quoi doit-on couper", sans avoir a lire la base a la main.
+app.get("/admin/segment-report", (req, res) => {
+  try {
+    const stats = getSegmentStats();
+    const minSample = Math.max(1, parseInt(req.query.min) || 5);
+    const toList = (obj, seuilBlocage) => Object.entries(obj)
+      .map(([key, o]) => ({
+        segment: key,
+        analyses: o.t,
+        gagnes: o.w,
+        perdus: o.t - o.w,
+        winrate: o.t ? Math.round((o.w / o.t) * 100) : 0,
+      }))
+      .filter((x) => x.analyses >= minSample)
+      .sort((a, b) => b.winrate - a.winrate || b.analyses - a.analyses)
+      .map((x) => ({
+        ...x,
+        // Reprend exactement les seuils appliques par passesHistoricalQualityGate
+        verdict: x.analyses >= seuilBlocage.volume && x.winrate < seuilBlocage.winrate
+          ? "BLOQUE"
+          : (x.winrate >= 70 ? "EXCELLENT" : x.winrate >= 55 ? "correct" : "a surveiller"),
+      }));
+
+    res.json({
+      ok: true,
+      note: "Statistiques dedoublonnees. 'BLOQUE' = le filtre qualite refuse deja ce segment.",
+      echantillon_minimum: minSample,
+      marches: toList(stats.market, { volume: 25, winrate: 50 }),
+      sports: toList(stats.sport, { volume: 30, winrate: 50 }),
+      sport_x_marche: toList(stats.sportMarket, { volume: 10, winrate: 50 }),
+      competitions: toList(stats.comp, { volume: 12, winrate: 52 }),
+      competition_x_marche: toList(stats.compMarket, { volume: 6, winrate: 50 }),
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// Stats du garde-fou budgetaire IA
+app.get("/admin/ai-budget-stats", (req, res) => {
+  try {
+    const guard = require("./ai_budget_guard");
+    res.json({ ok: true, stats: guard.getDailyStats(db) });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 app.get("/admin/guardian-state", (req, res) => {
   try {
     const fs = require("fs");

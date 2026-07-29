@@ -19,6 +19,11 @@
 
 **Procedure de deploiement (IMPORTANT — pieges connus)** : voir section "Deploiement" en bas.
 
+**Etat Codex 2026-07-24 — important pour Claude :**
+- Dernier commit fonctionnel Codex : `9e65437 [Codex] Simplifie historique et conversion live`.
+- Accueil local refait avec gamme Standard/Premium/Elite-VIP, prix coherents, liens Stripe publics, historique veille replie par defaut, matchs live cliquables vers les offres.
+- Manque encore demande par Gregory : logos/fanions des equipes et vrais matchs temps reel visibles plus haut sur l'accueil/direct.
+
 ## REGLE ABSOLUE : NE RIEN CASSER
 
 Avant de modifier quoi que ce soit, lis ce fichier EN ENTIER.
@@ -74,7 +79,11 @@ Chaque IA qui travaille sur ce projet DOIT :
 | `/user/history` | GET | Historique perso d'un compte |
 | `/api/council-vote` | GET | Votes anonymises (panneau Hero "Le Conseil delibere") |
 | `/api/live-activity` | GET | Compteurs live reels (bandeau Hero) |
-| `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite |
+| `/api/tier-stats` | GET | Stats par palier Standard/Premium/Elite/VIP |
+| `/api/tier-signals` | GET | Volumes du jour par palier (public, sans devoiler les analyses payantes) |
+| `/internal/tier-signals/preview` | POST | Preview interne Hermes des candidats Standard/Premium/Elite/VIP |
+| `/internal/tier-signals/send` | POST | Envoi interne Hermes des signaux par palier (dryRun par defaut) |
+| `/signaux-sportifs-ia` | GET | Page SEO organique Standard/Premium/Elite-VIP |
 | `/pronostics` | GET | Page SEO index (HTML) |
 | `/pronostic/:slug` | GET | Page SEO detail par match (HTML) |
 | `/sitemap-pronostics.xml` | GET | Sitemap dynamique des pronostics |
@@ -109,7 +118,7 @@ Ne JAMAIS creer de fonctionnalite qui expose le nom, prenom, photo, voix, adress
 
 ### Tunnel de vente (ne JAMAIS complexifier)
 ```
-TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mois) -> Elite (19.90/mois)
+TikTok -> TousLesMatchs.com -> Standard -> Premium -> Elite/VIP
 ```
 
 ### Analyses sportives
@@ -120,6 +129,14 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 - Signal Fort : confiance >= 80%
 - Multi-sport : Football, Basketball, Hockey, Baseball, Tennis
 - Seuil vitrine : PUBLISHED_MIN_CONFIDENCE = 82 (regle par le fondateur)
+- **R1 (REMPLACEE le 28/07/2026, decision du fondateur)** : la selection ne se fait
+  PLUS sur la minute de jeu mais sur la COTE REELLE ARJEL, fenetre 1.30-2.50.
+  Motif : la fenetre de temps produisait trop peu de signaux et creait une
+  incoherence visible (match affiche en direct mais analyse refusee). Un match
+  plie voit de toute facon sa cote sortir de la fenetre. Ne pas retablir la
+  fenetre de temps sans accord explicite du fondateur
+  (reactivable ponctuellement par .env : AUTO_CONCILE_TIME_WINDOW=1).
+- R2 : aucun pronostic sur un match a finalite connue (ecart >= 3 buts)
 
 ### Comptes speciaux actifs
 - LaMatrice (lamatrice2012@gmail.com) : Elite, 30 analyses/jour, expire ~19 sept 2026
@@ -127,7 +144,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 ## Ce qui ne doit JAMAIS casser
 
 - Stripe (paiements, webhooks)
-- Telegram (bots, canaux gratuit/premium)
+- Telegram (bots, groupes Standard/Premium/Elite/VIP)
 - Hermes / Concile IA
 - Live IA (analyse en direct + onglet Statistiques)
 - Brevo (emails, nurturing)
@@ -153,7 +170,7 @@ TikTok -> TousLesMatchs.com -> Telegram Gratuit -> Analyse 1euro -> Pro (9.90/mo
 | `PUBLISHED_MIN_CONFIDENCE` | Seuil 82/100 pour la vitrine | Regle par le fondateur |
 | `rowOdd()` | Vraie cote ARJEL stockee sinon estimation marche | Utiliser partout, PAS l'ancienne formule fake |
 | `computeBestOdd()` / `fetchRealOdds()` | Vraies cotes API-Sports /odds | Cotes reelles bookmakers |
-| `markSignalSent()` | Trace sig_sent_free / sig_sent_premium | Resultat Telegram poste QUE sur canaux ayant recu le pick |
+| `markSignalSent()` | Trace sig_sent_standard / sig_sent_premium / sig_sent_elite (sig_sent_free legacy) | Resultat Telegram poste QUE sur groupes ayant recu le pick |
 | `seoPages` (IIFE inline) | Rendu des pages SEO pronostics | Inline dans api_server.js (pas de module externe) |
 | `rowIsArjel()` / `tierStatsFor()` | Stats par palier | Standard>=88 ARJEL, Premium>=85 ARJEL, Elite>=82 tout |
 
@@ -226,20 +243,35 @@ Si aucun objectif n'est rempli : NE PAS developper.
 - **Surcharge possible via .env** : `WINAMAX_LINK`, `UNIBET_LINK`, `PMU_LINK`.
 - `ARJEL_BOOKMAKERS` (dans api_server.js) sert au MATCHING des cotes reelles — garder "betclic" dedans est OK (c'est pour lire la cote, pas pour afficher un lien).
 
+## Stripe — gamme publique 2026-07-24
+
+- Offre publique : **Standard 4,90€ / mois / Premium 14,90€ / mois / Elite-VIP 29,90€ / mois**.
+- `STRIPE_PRICE_ID_STANDARD` doit pointer vers le produit Stripe Standard 4,90€ / mois.
+- `STRIPE_PRICE_ID_PREMIUM` doit pointer vers le produit Stripe Premium 14,90€ / mois.
+- `STRIPE_PRICE_ID_ELITE` / `STRIPE_PRICE_ID_VIP` doivent pointer vers les niveaux hauts 29,90€ / mois.
+- Liens Payment Links publics branches en fallback front :
+  - Standard : `https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05`
+  - Premium : `https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06`
+  - Elite/VIP : `https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07`
+- L'ancien 1 euro et les anciens libelles gratuits ne doivent plus etre mis en avant sur l'accueil.
+
 ## Systeme de paliers (Standard / Premium / Elite)
 
 Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confiance, contenu par ARJEL) :
 - **Standard** = ARJEL & confiance >= 88 (fleurons, faible volume)
-- **Premium** = ARJEL & confiance >= 85 (inclut Standard)
-- **Elite** = tout le publie >= 82 (ARJEL + "IA seulement", gros volume)
+- **Premium** = ARJEL & confiance >= 90 (inclut Standard, jusqu'a 10/jour)
+- **Elite** = ARJEL & confiance >= 90 (football/basketball/hockey/baseball, jusqu'a 30/jour)
 
 Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
-Etape 2 FAITE : `public/dashboard.html` affiche les stats par palier SELON le plan.
-  Mapping plan -> paliers visibles (fonction `tiersForPlan` dans dashboard.html) :
-  - `free`    -> Standard (Premium + Elite verrouilles, floutes + CTA)
-  - `premium` -> Standard + Premium (Elite verrouille)
-  - `elite`   -> Standard + Premium + Elite (matchs "IA seulement" inclus)
-Etape 3 (a faire, ZONE HERMES) : diffusion Telegram par palier + recap quotidien — A COORDONNER.
+Etape 2 EN COURS : moteur `/tier-signals` + routes internes Hermes pour Standard/Premium/Elite/VIP.
+Etape 3 (a faire, ZONE HERMES) : scheduler Telegram par palier + recap quotidien — A COORDONNER.
+
+Regles moteur signaux (2026-07-24) :
+- Standard = 3 signaux max/jour, confiance >= 88, cote reelle ARJEL entre 1.30 et 2.50.
+- Premium = 10 signaux max/jour, confiance >= 90, avant-match ou live, cote reelle ARJEL entre 1.30 et 2.50.
+- Elite = 30 signaux max/jour, confiance >= 90, football/basketball/hockey/baseball, cote reelle ARJEL entre 1.30 et 2.50.
+- Ne jamais forcer le volume : si la journee ne produit que 7 bons signaux Premium, envoyer 7.
+- Envoi automatique des paliers desactive par defaut ; activer seulement avec `TIER_SIGNALS_AUTO_SEND=1` apres verification des canaux `TELEGRAM_STANDARD_CHANNEL_ID`, `TELEGRAM_PREMIUM_CHANNEL_ID`, `TELEGRAM_ELITE_CHANNEL_ID`.
 
 ## Deploiement (procedure + pieges connus)
 
@@ -349,15 +381,19 @@ qui contredit le site et inclut des analyses jamais diffusées.
 
 ## LIMITE CONNUE — LES COTES RÉELLES SONT FOOTBALL SEULEMENT
 
-`fetchRealOdds()` n'interroge que `v3.football.api-sports.io/odds`, et
-`getVerifiedFixtureId()` renvoie `null` pour tout sport autre que le football.
+CORRIGE le 28/07/2026 : `ODDS_ENDPOINT_BY_SPORT` donne desormais a chaque sport son
+sous-domaine et son parametre (`fixture` pour le football, `game` pour basket, hockey
+et baseball), donc les quatre sports peuvent obtenir une vraie cote.
 
-Comme la diffusion exige `real_odd >= 1.50`, **aucun signal basket, hockey ou baseball
-ne peut être diffusé aujourd'hui**, même si ces matchs sont analysés et même si les
-paliers les acceptent désormais (`DIFFUSABLE_SPORTS`).
+CORRIGE le 29/07/2026 : `mergeLiveMatchSources()` conservait l'identite TheSportsDB
+quand un match arrivait des deux sources, ce qui detruisait le `fixtureId` et rendait
+toute cote impossible — 305 analyses sur 481 en 7 jours etaient concernees, donc
+structurellement non diffusables. La fusion garde maintenant l'identite porteuse de
+cote (`mergeKeepingOddsIdentity`).
 
-Conséquence : l'argument commercial « 4 sports analysés » n'est pas encore vrai côté
-signaux. Le goulot n'est pas le nombre de matchs disponibles mais le pipeline de cotes.
+Le goulot restant : un match present UNIQUEMENT chez TheSportsDB n'a toujours aucune
+cote possible. Si la mesure du soir montre que beaucoup de matchs analyses sont dans
+ce cas, il faudra les resoudre vers une fixture API-Sports par nom et date.
 Étendre `fetchRealOdds()` à `v1.basketball` / `v1.hockey` / `v1.baseball` est le
 chantier à plus forte valeur : il débloque le volume (≈ 7 signaux/jour aujourd'hui) et
 rend l'argument multi-sport honnête. Prévoir aussi des marchés adaptés : « Moins de

@@ -1,5 +1,41 @@
 # CLAUDE.md — TousLesMatchs
 
+## 📖 ORDRE DE LECTURE OBLIGATOIRE À CHAQUE SESSION
+
+1. `PROJECT_STATE.md` — mémoire vivante, état courant, chantiers ouverts
+2. `VERSION_LOCK.md` — commit de référence interdit de rollback
+3. `CLAUDE.md` — ce fichier (règles + économie de tokens)
+4. `docs/CONSTITUTION.md` — vision, organisation, départements
+5. `docs/INFRASTRUCTURE.md` — VPS, Docker, sécurité, backups
+6. `docs/HERMES_COUNCIL.md` — moteur IA, agents, consensus
+7. `docs/BUSINESS_GROWTH.md` — roadmap commercial, priorisation ROI
+
+Ces 7 fichiers constituent la **fondation** du projet. Toute IA reprenant
+le projet DOIT les lire avant d'agir, dans cet ordre.
+
+## 🔒 VERSION VERROUILLÉE — LIRE `VERSION_LOCK.md` EN PREMIER
+
+**Avant TOUTE action** (lecture, écriture, git op), consulter `VERSION_LOCK.md`
+à la racine du projet. Ce fichier définit le commit de référence stable
+(`1918412`, 14 juillet 2026) et interdit tout retour à une version antérieure
+sans validation utilisateur explicite.
+
+**Interdits sans validation utilisateur :**
+- `git reset --hard <commit-antérieur-à-1918412>`
+- `git revert` d'un commit récent
+- Restauration d'un backup antérieur au 14 juillet 2026, 22h00
+- Modification du `docker-compose.yml` remettant `site/` comme web root
+
+**Règles métier gravées dans la pierre :**
+- **R1 (REMPLACEE le 28/07/2026, decision du fondateur)** : la selection ne se fait
+  PLUS sur la minute de jeu mais sur la COTE REELLE ARJEL, fenetre 1.30-2.50.
+  Motif : la fenetre de temps produisait trop peu de signaux et creait une
+  incoherence visible (match affiche en direct mais analyse refusee). Un match
+  plie voit de toute facon sa cote sortir de la fenetre. Ne pas retablir la
+  fenetre de temps sans accord explicite du fondateur
+  (reactivable ponctuellement par .env : AUTO_CONCILE_TIME_WINDOW=1).
+- R2 : Aucun prono sur un match à finalité connue (écart ≥ 3 buts)
+
 ## Handoff urgent Codex - 2026-07-25
 
 Avant toute reprise site/API, lire `docs/handoff/2026-07-25-codex-live-vote-ia.md`.

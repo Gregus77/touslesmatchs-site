@@ -258,9 +258,9 @@ function loadDashboard() {
     var u = d.user;
     document.getElementById('dash-email').textContent = u.email;
     var planEl = document.getElementById('dash-plan');
-    var planLabel = u.status === 'elite' ? 'Elite' : u.status === 'premium' ? 'Pro' : 'Gratuit';
+    var planLabel = u.status === 'elite' || u.status === 'vip' ? 'Elite/VIP' : u.status === 'premium' ? 'Premium' : 'Standard';
     planEl.textContent = planLabel;
-    planEl.className = 'dash-plan ' + (u.status === 'elite' ? 'elite' : u.status === 'premium' ? 'premium' : 'free');
+    planEl.className = 'dash-plan ' + ((u.status === 'elite' || u.status === 'vip') ? 'elite' : u.status === 'premium' ? 'premium' : 'standard');
 
     var remaining = Math.max(0, u.tokens_limit - u.tokens_today);
     document.getElementById('d-tokens').textContent = u.tokens_limit > 0 ? remaining + '/' + u.tokens_limit : '∞';
