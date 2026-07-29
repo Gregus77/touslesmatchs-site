@@ -2385,12 +2385,55 @@ function sameLiveTeamName(a, b) {
   return !!ta && ta.length >= 3 && ta === tb;
 }
 
+// Mots distinctifs d'un nom d'équipe : au moins 4 lettres et hors préfixes
+// génériques (fc, ac, united, city…). « Gimpo Citizen » → ["gimpo"].
+function teamPlaceWords(name) {
+  return NORM(name).replace(/[^a-z0-9 ]/g, " ").split(/\s+/)
+    .filter((w) => w.length >= 4 && !GENERIC_CLUB_TOKENS.has(w));
+}
+
+function teamsSharePlaceWord(a, b) {
+  const wa = teamPlaceWords(a);
+  if (!wa.length) return false;
+  const wb = teamPlaceWords(b);
+  return wa.some((w) => wb.includes(w));
+}
+
+// Deux relevés du même match doivent afficher un temps de jeu voisin. Sert de
+// garde-fou : sans lui, un côté identique suffirait à confondre deux rencontres.
+function liveMinutesAreClose(a, b, tolerance = 15) {
+  const ma = parseLiveMinuteValue(a && a.minute);
+  const mb = parseLiveMinuteValue(b && b.minute);
+  if (ma === null || mb === null) return true; // sport sans minute exploitable
+  return Math.abs(ma - mb) <= tolerance;
+}
+
 function sameLiveTeams(a, b) {
   // Ne jamais fusionner deux sports différents, même si les noms se ressemblent.
   const sportA = String(a?.sport || "Football");
   const sportB = String(b?.sport || "Football");
   if (sportA !== sportB) return false;
-  return sameLiveTeamName(a?.home, b?.home) && sameLiveTeamName(a?.away, b?.away);
+  const homeOk = sameLiveTeamName(a?.home, b?.home);
+  const awayOk = sameLiveTeamName(a?.away, b?.away);
+  if (homeOk && awayOk) return true;
+
+  // Reconnaissance assouplie. Les deux sources nomment souvent la même équipe
+  // très différemment : « Chungnam Asan » / « Asan Mugunghwa », « Gimpo FC » /
+  // « Gimpo Citizen », « Ulsan HD » / « Ulsan Hyundai FC ». Un seul côté échoue,
+  // et le match n'est plus reconnu comme identique : on conserve alors deux
+  // entrées, dont celle de TheSportsDB qui ne permet AUCUNE cote — donc aucune
+  // diffusion possible. Constaté le 29/07/2026 sur la FA Cup coréenne : les 5
+  // matchs présents dans les deux sources étaient tous concernés.
+  //
+  // Trois conditions cumulées, jamais une seule : un côté strictement reconnu,
+  // l'autre partageant un mot distinctif (ville/région, 4 lettres minimum), et
+  // un temps de jeu cohérent. Associer deux rencontres différentes donnerait une
+  // cote appartenant à un autre match — d'où la prudence.
+  if (homeOk === awayOk) return false; // aucun côté sûr, ou déjà traité au-dessus
+  const autreCote = homeOk
+    ? teamsSharePlaceWord(a?.away, b?.away)
+    : teamsSharePlaceWord(a?.home, b?.home);
+  return autreCote && liveMinutesAreClose(a, b);
 }
 
 function hasKnownScore(match) {
