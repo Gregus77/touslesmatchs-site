@@ -2435,6 +2435,26 @@ function scoresDiffer(a, b) {
   return Number(a.score_home) !== Number(b.score_home) || Number(a.score_away) !== Number(b.score_away);
 }
 
+// Seule une entrée API-Sports porte un identifiant exploitable par l'endpoint
+// /odds. TheSportsDB ne fournit aucune cote.
+function carriesOddsIdentity(m) {
+  return !!(m && m.source === "api-sports" && (m.fixtureId || m.sourceId));
+}
+
+// Quand le même match arrive des deux sources, on conserve l'identité capable de
+// ramener une vraie cote et on ne reprend de l'autre source que les données de
+// jeu (score, minute, statut).
+function mergeKeepingOddsIdentity(previous, incoming) {
+  if (!carriesOddsIdentity(previous) || carriesOddsIdentity(incoming)) return incoming;
+  return {
+    ...previous,
+    score_home: incoming.score_home ?? previous.score_home,
+    score_away: incoming.score_away ?? previous.score_away,
+    minute:     incoming.minute     ?? previous.minute,
+    status:     incoming.status     ?? previous.status,
+  };
+}
+
 function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) {
   const merged = [...footballDataMatches];
   for (const apiMatch of apiSportsMatches) {
@@ -2445,16 +2465,25 @@ function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) 
     if (existingIndex >= 0 && apiMatch.sport !== "Football") continue;
     if (existingIndex >= 0 && apiMatch.sport === "Football") {
       const previous = merged[existingIndex];
+      // Cette affectation écrasait auparavant l'entrée API-Sports par celle de
+      // TheSportsDB (passée en 2e argument par fetchLiveMatches). Le fixtureId
+      // disparaissait, fetchRealOdds() sortait sur `source !== "api-sports"`,
+      // la cote retombait sur "estimation", donc realOdd = 0, donc oddOk = false,
+      // donc diffusable = false : AUCUN signal ne pouvait plus partir, quels que
+      // soient le vote et la confiance. Constaté le 29/07/2026 — 305 analyses sur
+      // 481 en 7 jours portaient une identité tsdb- structurellement incotable.
       merged[existingIndex] = scoresDiffer(previous, apiMatch)
         ? {
-            ...apiMatch,
+            // Scores contradictoires : l'analyse est bloquée de toute façon, on
+            // ne mélange pas les deux jeux de données.
+            ...(carriesOddsIdentity(previous) && !carriesOddsIdentity(apiMatch) ? previous : apiMatch),
             scoreConflict: true,
             scoreConflictSources: {
               footballData: `${previous.score_home}-${previous.score_away}`,
               apiSports: `${apiMatch.score_home}-${apiMatch.score_away}`,
             },
           }
-        : apiMatch;
+        : mergeKeepingOddsIdentity(previous, apiMatch);
     } else {
       merged.push(apiMatch);
     }
@@ -3990,11 +4019,97 @@ function assessLearningProfile(profile, minResolved = 5) {
   return { tier: clientSafe ? "elite_candidate" : "learning", score: clientSafe ? 100 : Math.max(0, 70 - reasons.length * 15), clientSafe, reasons };
 }
 
+// Le nom d'une ligue pris seul est ambigu : "Canadian Premier League" contient
+// "Premier League" (→ Angleterre) et "Brazilian Serie B" contient "Serie B"
+// (→ Italie). Les deux erreurs étaient réellement en base le 29/07/2026 et
+// faussaient l'analyse par championnat et par pays. On teste donc D'ABORD le
+// gentilé ou le nom de pays explicitement présent dans l'intitulé.
+const COUNTRY_BY_NATIONALITY = [
+  ["Canada",       ["canadian", "canada"]],
+  ["Brésil",       ["brazilian", "brasileir", "brazil", "brasil"]],
+  ["Chili",        ["chilean", "chile"]],
+  ["Argentine",    ["argentin"]],
+  ["Mexique",      ["mexican", "mexico", "liga mx"]],
+  ["Colombie",     ["colombian", "colombia"]],
+  ["Pérou",        ["peruvian", "peru"]],
+  ["Équateur",     ["ecuadorian", "ecuador"]],
+  ["Bolivie",      ["bolivian", "bolivia"]],
+  ["Uruguay",      ["uruguayan", "uruguay"]],
+  ["Paraguay",     ["paraguayan", "paraguay"]],
+  ["Venezuela",    ["venezuelan", "venezuela"]],
+  ["Australie",    ["australian", "australia", "a-league"]],
+  ["Japon",        ["japanese", "japan", "j-league", "j1 league", "j2 league"]],
+  ["Corée du Sud", ["korean", "korea", "k league", "k-league"]],
+  ["Chine",        ["chinese", "china"]],
+  ["Inde",         ["indian", "india"]],
+  ["Arabie Saoudite", ["saudi"]],
+  ["Qatar",        ["qatari", "qatar"]],
+  ["Émirats",      ["emirates", "uae"]],
+  ["Égypte",       ["egyptian", "egypt"]],
+  ["Maroc",        ["moroccan", "morocco", "botola"]],
+  ["Algérie",      ["algerian", "algeria"]],
+  ["Tunisie",      ["tunisian", "tunisia"]],
+  ["Afrique du Sud", ["south african", "south africa"]],
+  ["Nigeria",      ["nigerian", "nigeria"]],
+  ["Russie",       ["russian", "russia"]],
+  ["Ukraine",      ["ukrainian", "ukraine"]],
+  ["Pologne",      ["polish", "poland", "ekstraklasa"]],
+  ["Tchéquie",     ["czech"]],
+  ["Slovaquie",    ["slovak"]],
+  ["Hongrie",      ["hungarian", "hungary"]],
+  ["Roumanie",     ["romanian", "romania"]],
+  ["Bulgarie",     ["bulgarian", "bulgaria"]],
+  ["Serbie",       ["serbian", "serbia"]],
+  ["Croatie",      ["croatian", "croatia"]],
+  ["Slovénie",     ["slovenian", "slovenia"]],
+  ["Grèce",        ["greek", "greece", "super league greece"]],
+  ["Chypre",       ["cypriot", "cyprus"]],
+  ["Israël",       ["israeli", "israel"]],
+  ["Autriche",     ["austrian", "austria"]],
+  ["Suisse",       ["swiss", "switzerland"]],
+  ["Suède",        ["swedish", "sweden", "allsvenskan", "superettan"]],
+  ["Norvège",      ["norwegian", "norway", "eliteserien"]],
+  ["Danemark",     ["danish", "denmark", "superliga"]],
+  ["Finlande",     ["finnish", "finland", "veikkausliiga"]],
+  ["Islande",      ["icelandic", "iceland"]],
+  ["Irlande",      ["irish", "ireland"]],
+  ["Écosse",       ["scottish", "scotland"]],
+  ["Pays de Galles", ["welsh", "wales"]],
+  ["Estonie",      ["estonian", "estonia"]],
+  ["Lettonie",     ["latvian", "latvia"]],
+  ["Lituanie",     ["lithuanian", "lithuania"]],
+  ["Géorgie",      ["georgian"]],
+  ["Kazakhstan",   ["kazakh"]],
+  ["Turquie",      ["turkish", "turkey"]],
+  ["Portugal",     ["portuguese", "portugal"]],
+  ["Pays-Bas",     ["dutch", "netherlands"]],
+  ["Belgique",     ["belgian", "belgium"]],
+  ["Allemagne",    ["german", "germany"]],
+  ["Italie",       ["italian", "italy"]],
+  ["Espagne",      ["spanish", "spain"]],
+  ["Angleterre",   ["english", "england"]],
+  ["France",       ["french", "france"]],
+  ["USA",          ["usa", "united states", "american"]],
+];
+
 function extractCountry(competition) {
   if (!competition) return null;
+  // Correspondance par mot entier, pas par sous-chaîne. Trois erreurs réelles
+  // corrigées par cette règle : "Copa Sudamericana" contenait "american" (→ USA),
+  // et surtout "Bundesliga" contenait "liga" (→ Espagne), donc TOUS les matchs
+  // allemands étaient comptabilisés en Espagne dans l'analyse par pays.
+  const comp = String(competition).toLowerCase();
+  const hasWord = (k) => new RegExp(
+    `(^|[^a-z])${String(k).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^a-z]|$)`
+  ).test(comp);
+  for (const [country, keys] of COUNTRY_BY_NATIONALITY) {
+    if (keys.some(hasWord)) return country;
+  }
   const map = {
     "France": ["Ligue 1","Ligue 2","Coupe de France","National"],
-    "Espagne": ["La Liga","Liga","Segunda","Copa del Rey","LaLiga"],
+    // "Liga" seul est trop générique : il capturait "Primeira Liga" (Portugal),
+    // "Liga MX" (Mexique) et "Liga Profesional" (Argentine).
+    "Espagne": ["La Liga","LaLiga","Segunda","Copa del Rey"],
     "Angleterre": ["Premier League","Championship","FA Cup","EFL","League One","League Two"],
     "Allemagne": ["Bundesliga","2. Bundesliga","DFB","3. Liga"],
     "Italie": ["Serie A","Serie B","Serie C","Coppa Italia"],
@@ -4003,14 +4118,13 @@ function extractCountry(competition) {
     "Belgique": ["Pro League","First Division","Division 1"],
     "Turquie": ["Süper Lig","Super Lig","TFF"],
     "Brésil": ["Brasileirao","Serie A Brazil","Serie B Brazil","Serie C"],
-    "USA": ["MLS","USL","NWSL","MLS Next"],
+    "USA": ["MLS","USL","NWSL","MLS Next","Major League Soccer"],
     "Chili": ["Primera Division","Copa Chile","Segunda Division"],
     "Argentine": ["Liga Profesional","Primera Nacional","Copa Argentina"],
-    "International": ["World Cup","Copa América","Euro","Champions League","Europa League","Nations League","AFC","CAF","CONCACAF","FIFA"],
+    "International": ["World Cup","Copa América","Euro","Champions League","Europa League","Conference League","Nations League","Copa Sudamericana","Sudamericana","Libertadores","AFC","CAF","CONCACAF","FIFA"],
   };
-  const comp = competition.toLowerCase();
   for (const [country, keywords] of Object.entries(map)) {
-    if (keywords.some(k => comp.includes(k.toLowerCase()))) return country;
+    if (keywords.some(hasWord)) return country;
   }
   return null;
 }
