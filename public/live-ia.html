@@ -477,21 +477,20 @@ function renderMatches() {
     }
 
     if (isLive && !isDone) {
-      var min = parseInt(m.minute, 10);
-      var tooEarly = isNaN(min) || min < 25;
-      var tooLate = !isNaN(min) && min > 65;
-      var blocked = tooEarly || tooLate;
+      // Le SERVEUR décide si un match est analysable (champ "analysable" fourni
+      // par /live-matches). Avant, le front appliquait sa propre fenêtre 25e-65e
+      // minute codée en dur : elle contredisait la règle serveur (sélection par
+      // la cote réelle, pas par la minute), et sur les sports sans minutes
+      // parseInt("IN9") donnait NaN — donc baseball, basket et hockey étaient
+      // bloqués en permanence avec un message parlant de minutes de football.
+      var blocked = (m.analysable === false);
       html += '<div class="mc-cta">';
       if (blocked) {
         html += '  <button class="mc-analyse-btn" disabled style="opacity:.5;cursor:not-allowed">';
         html += '    🧠 Analyser ce match';
         html += '  </button>';
         html += '  <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">';
-        if (tooEarly) {
-          html += '⏳ Pas assez de statistiques avant la 25<sup>e</sup> minute';
-        } else {
-          html += '⏰ Cotes trop basses après la 65<sup>e</sup> minute';
-        }
+        html += escHtml(m.block_reason || "Analyse indisponible pour ce match.");
         html += '</div>';
       } else {
         html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';

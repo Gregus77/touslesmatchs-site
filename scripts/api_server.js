@@ -4890,6 +4890,56 @@ function matchToken(name) {
   return pool.sort((a, b) => b.length - a.length)[0] || "";
 }
 
+/**
+ * Clé canonique d'une rencontre, insensible aux variantes de nom entre sources.
+ *
+ * Deux APIs nomment rarement une équipe pareil (« Dila » / « Dila Gori »,
+ * « Riga » / « Riga FC », « Mjällby » / « Mjallby AIF »). Les dédoublonnages
+ * comparaient les noms caractère par caractère : le même match passait donc deux
+ * fois. Constaté sur le bilan du 28/07/2026 diffusé aux abonnés, où le même
+ * Apollon Limassol – Dila (4-0) apparaissait avec DEUX pronostics opposés
+ * (Over 2.5 gagnant ET Under 2.5 perdant) — l'un devait forcément perdre, et le
+ * winrate affiché était calculé sur des doublons.
+ *
+ * On s'appuie sur matchToken (mot distinctif, accents et préfixes FC/AC ignorés),
+ * déjà utilisé pour la résolution des scores et la fusion des matchs live.
+ */
+function canonicalMatchKey(home, away, day) {
+  const h = matchToken(home) || NORM(home);
+  const a = matchToken(away) || NORM(away);
+  return day ? `${h}_${a}_${String(day).slice(0, 10)}` : `${h}_${a}`;
+}
+
+/**
+ * Retire les doublons d'une liste d'analyses en comparant les noms de façon
+ * tolérante aux variantes de source.
+ *
+ * Départage, dans l'ordre :
+ *   1. une ligne résolue (win/loss) l'emporte sur une ligne en attente ;
+ *   2. à statut égal, la PLUS ANCIENNE l'emporte — c'est le signal réellement
+ *      diffusé en premier aux abonnés.
+ *
+ * Le critère d'ancienneté n'est pas un détail : deux analyses d'un même match
+ * peuvent porter des pronostics OPPOSÉS (constaté le 28/07/2026 : Over 2.5
+ * gagnant et Under 2.5 perdant sur Apollon Limassol – Dila 4-0). Garder
+ * « la première rencontrée » revenait à conserver le gagnant et à gonfler le
+ * winrate affiché — exactement ce que la règle ANJ interdit. L'ancienneté est
+ * neutre, déterministe, et correspond à ce que l'abonné a réellement reçu.
+ */
+function dedupeAnalysesByMatch(rows) {
+  const resolved = (x) => x && (x.outcome === "win" || x.outcome === "loss");
+  const stamp = (x) => String(x?.analysed_at || x?.created_at || "");
+  const best = new Map();
+  for (const r of rows || []) {
+    const key = canonicalMatchKey(r.home, r.away, r.analysed_at || r.created_at);
+    const previous = best.get(key);
+    if (!previous) { best.set(key, r); continue; }
+    if (resolved(r) && !resolved(previous)) { best.set(key, r); continue; }
+    if (resolved(r) === resolved(previous) && stamp(r) < stamp(previous)) best.set(key, r);
+  }
+  return [...best.values()];
+}
+
 let staleResolveRunning = false;
 async function resolveStalePredictions() {
   if (staleResolveRunning || (!FOOTBALL_DATA_KEY && !API_SPORTS_KEY)) return;
@@ -6937,7 +6987,7 @@ app.get("/tier-stats", (req, res) => {
       ) WHERE _rn = 1
       ORDER BY analysed_at DESC
     `).all();
-    const clean = rows.filter(r => !isNoiseForDisplay(r));
+    const clean = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
     const standard = clean.filter(r => tierEligible(r, "standard"));
     const premium  = clean.filter(r => tierEligible(r, "premium"));
     const elite    = clean.filter(r => tierEligible(r, "elite"));
@@ -7144,7 +7194,19 @@ app.get("/live-matches", async (req, res) => {
       }
     }
 
-    res.json({ ok: true, matches });
+    // Verdict d'analysabilité calculé par le SERVEUR et joint à chaque match.
+    // Le front appliquait sa propre règle 25e–65e minute, codée en dur : elle
+    // contredisait la règle serveur (sélection par la cote depuis le 28/07/2026)
+    // et, sur les sports sans minutes, parseInt("IN9") donnait NaN — donc tout
+    // le baseball, le basket et le hockey étaient bloqués en permanence avec un
+    // message parlant de minutes de football. Une seule source de vérité ici.
+    const withVerdict = matches.map((m) => {
+      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null };
+      const reason = livePickBlockReason(m);
+      return { ...m, analysable: !reason, block_reason: reason };
+    });
+
+    res.json({ ok: true, matches: withVerdict });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
@@ -8224,14 +8286,10 @@ async function sendDailyResultsFreeChannel() {
       ORDER BY analysed_at DESC
     `).all(todayStr);
 
-    const seen = new Set();
-    const unique = [];
-    for (const r of rows) {
-      const k = `${r.home}_${r.away}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      unique.push(r);
-    }
+    // Dédoublonnage tolérant aux variantes de nom entre sources : sans lui, le
+    // bilan diffusé affichait deux fois le même match, parfois avec deux
+    // pronostics opposés, et calculait le winrate sur ces doublons.
+    const unique = dedupeAnalysesByMatch(rows);
     if (unique.length < 3) return false;
 
     const wins = unique.filter(r => r.outcome === "win");
@@ -8362,7 +8420,9 @@ app.get("/analysis-history", (req, res) => {
     // donc aucun jour ne disparaît — on retire juste les matchs douteux.
     // Retrait de la couche indésirable (jeunes/féminines/douteuses) ; les
     // doublons sont déjà éliminés en SQL ci-dessus.
-    const visibleRows = rows.filter(r => !isNoiseForDisplay(r));
+    // Le PARTITION BY SQL ne dedoublonne que sur des noms strictement egaux :
+    // on repasse avec la comparaison tolerante aux variantes de source.
+    const visibleRows = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
 
     // Palier le plus bas qui reçoit cette analyse (cf. tierEligible : miroir exact
     // des règles de diffusion Telegram). "hors-palier" = publiée sur le site mais
