@@ -3755,17 +3755,26 @@ Réponds en JSON pur (pas de markdown):
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
 
-  // Masquer les noms d'IA dans le raisonnement public
+  // Vrais noms des 5 agents officiels dans le texte public (demande fondateur,
+  // 29/07/2026 : "ca fait plus pro"). Deux regles restent en vigueur :
+  //  - "Chief" (l'arbitre interne) n'est JAMAIS nomme cote client, quel que soit
+  //    le modele qui le fait tourner en coulisses (voir handoff Codex 25/07/2026).
+  //  - Les modeles de repli internes (fallbacks Groq/Cerebras/GPT/Gemini quand un
+  //    agent officiel est indisponible) restent generiques : ce sont des details
+  //    d'implementation, pas les 5 IA marketees, et les exposer ferait plus
+  //    confus que "plus pro".
   function maskAiNames(text) {
     if (!text) return "";
     const map = [
-      [/Perplexity[- ]?Web/gi, "IA 1"], [/DeepSeek[- ]?V3/gi, "IA 2"],
-      [/Mistral[- ]?Large/gi, "IA 3"], [/Cohere[- ]?Command/gi, "IA 4"],
-      [/Groq[- ]?Llama\d*/gi, "IA 5"], [/Claude[- ]?Chief/gi, "Concile"],
+      [/Perplexity[- ]?Web/gi, "Perplexity"], [/DeepSeek[- ]?V3/gi, "DeepSeek"],
+      [/Mistral[- ]?Large/gi, "Mistral"], [/Cohere[- ]?Command/gi, "Cohere"],
+      [/OpenRouter[- ]?Qwen/gi, "Qwen"],
+      [/Claude[- ]?Chief/gi, "Concile"],
       [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
       [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
       [/Mistral[- ]?7B/gi, "IA"], [/Cerebras[- ]?Llama/gi, "IA"],
-      [/OR[- ]?Mistral7B/gi, "IA"], [/Llama[- ]?\d+[bB]?/gi, "IA"],
+      [/OR[- ]?Mistral7B/gi, "IA"], [/Groq[- ]?Llama\d*/gi, "IA"],
+      [/Llama[- ]?\d+[bB]?/gi, "IA"],
     ];
     let r = text;
     for (const [re, rep] of map) r = r.replace(re, rep);
@@ -7083,19 +7092,21 @@ app.post("/chat/history", (req, res) => {
 // Le Concile Python ne peut pas écrire /picks/picks.json (pas de volume partagé),
 // donc l'API régénère elle-même le pick du jour depuis ses analyses. Ainsi le match
 // du jour se met à jour tout seul chaque jour, sans jamais afficher une ligue exclue.
-// Masque les noms d'IA dans un texte public (version réutilisable)
+// Vrais noms des 5 agents officiels dans un texte public (version réutilisable,
+// meme regle que maskAiNames plus haut dans runConcileAnalysis : jamais "Chief",
+// fallbacks internes restent generiques).
 function maskAiNamesGlobal(text) {
   if (!text) return "";
   const map = [
-    [/Perplexity[- ]?Web/gi, "IA 1"], [/DeepSeek[- ]?V3/gi, "IA 2"],
-    [/Mistral[- ]?Large/gi, "IA 3"], [/Cohere[- ]?Command/gi, "IA 4"],
-    [/Groq[- ]?Llama\d*/gi, "IA 5"], [/Claude[- ]?Chief/gi, "Concile"],
+    [/Perplexity[- ]?Web/gi, "Perplexity"], [/DeepSeek[- ]?V3/gi, "DeepSeek"],
+    [/Mistral[- ]?Large/gi, "Mistral"], [/Cohere[- ]?Command/gi, "Cohere"],
+    [/OpenRouter[- ]?Qwen/gi, "Qwen"],
+    [/Claude[- ]?Chief/gi, "Concile"],
     [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
     [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
     [/Mistral[- ]?7B/gi, "IA"], [/Cerebras[- ]?Llama/gi, "IA"],
-    [/OR[- ]?Mistral7B/gi, "IA"], [/Llama[- ]?\d+[bB]?/gi, "IA"],
-    [/DeepSeek/gi, "IA"], [/Mistral/gi, "IA"], [/Cohere/gi, "IA"],
-    [/Perplexity/gi, "IA"], [/Gemini/gi, "IA"], [/Groq/gi, "IA"],
+    [/OR[- ]?Mistral7B/gi, "IA"], [/Groq[- ]?Llama\d*/gi, "IA"],
+    [/Llama[- ]?\d+[bB]?/gi, "IA"], [/Gemini/gi, "IA"],
   ];
   let r = text;
   for (const [re, rep] of map) r = r.replace(re, rep);
