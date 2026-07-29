@@ -763,8 +763,8 @@ const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmat
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";        // Gratuit (vitrine)
-const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || ""; // Premium 9.90€
-// Canaux Standard (4.90€) et Elite (19.90€). Tant que l'ID n'est pas configuré dans le
+const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || ""; // Premium 14.90€
+// Canaux Standard (4.90€) et Elite (29.90€). Tant que l'ID n'est pas configuré dans le
 // .env, on retombe automatiquement sur le canal Premium pour ne rien casser en attendant
 // que le canal dédié soit créé. Le CODE applique les conditions par palier (voir plus bas).
 const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
@@ -3878,9 +3878,9 @@ Réponds en JSON pur (pas de markdown):
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = signalsSentToday("sig_sent_free"); }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
-      //   🟢 Standard (4.90€) : conf ≥ 88, foot, cote réelle ARJEL 1.30-2.50 — max 3/j
-      //   🟣 Premium  (9.90€) : conf ≥ 90, foot, cote réelle ARJEL 1.30-2.50 — max 10/j (inclut Standard)
-      //   🟠 Elite    (19.90€): conf ≥ 90, foot/hockey/baseball/basket, cote réelle ARJEL 1.30-2.50 — max 30/j (inclut Premium)
+      //   🟢 Standard (4.90€)  : conf ≥ 88, foot, cote réelle ARJEL 1.30-2.50 — max 3/j
+      //   🟣 Premium  (14.90€) : conf ≥ 85, foot, cote réelle ARJEL 1.30-2.50 — max 10/j (inclut Standard)
+      //   🟠 Elite    (29.90€) : conf ≥ 82, foot/hockey/baseball/basket, cote réelle ARJEL 1.30-2.50 — max 30/j (inclut Premium)
       //   Modèle imbriqué : un palier supérieur reçoit toujours au moins ce que reçoit l'inférieur.
       //   « Cote réelle » = vraie cote bookmaker (jamais l'estimation). Repli auto sur Premium
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
@@ -6196,8 +6196,8 @@ function scheduleNurturingEmails(email) {
 function buildPlanComparisonHtml() {
   const plans = [
     { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
-    { name: "🟣 Premium", price: "9.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 84%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "19.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 82% hors football", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
+    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 82%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -6258,14 +6258,14 @@ function buildNurtureJ3Html() {
         <div style="font-size:14px;color:#a8aec8;line-height:2">
           ✅ Match + compétition<br>
           ✅ Niveau de confiance du Concile<br>
-          🔒 Le pick exact — <span style="color:#6366f1">réservé Pro/Elite</span><br>
-          🔒 La cote recommandée — <span style="color:#6366f1">réservé Pro/Elite</span><br>
-          🔒 La raison du signal — <span style="color:#6366f1">réservé Pro/Elite</span>
+          🔒 Le pick exact — <span style="color:#6366f1">réservé Premium/Elite</span><br>
+          🔒 La cote recommandée — <span style="color:#6366f1">réservé Premium/Elite</span><br>
+          🔒 La raison du signal — <span style="color:#6366f1">réservé Premium/Elite</span>
         </div>
       </div>
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">9.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">14.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
-        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 9.90€/mois →</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 14.90€/mois →</a>
       </div>
       <div style="text-align:center;margin-bottom:24px">
         <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir nos offres</a>
@@ -8011,17 +8011,15 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             }
           }
 
-          const upsellBlock = status === "carte"
-            ? `<div style="background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(99,102,241,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:8px">Tu as aime ton analyse ?</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Avec Pro, tu as <b style="color:#eceaf4">10 analyses par jour</b> — soit 0.33€ par analyse.<br><b style="color:#10b981">Sans engagement</b>, annulable a tout moment.</div>
-                <a href="https://buy.stripe.com/4gM3cv4Je9ZG2RK3GS3VC00" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Pro — 9.90€/mois</a>
-              </div>`
-            : status === "premium"
+          // "carte" (offre 1€) retiree du parcours actif le 29/07/2026 : la branche
+          // d'upsell dediee est supprimee, seul un webhook historique pourrait encore
+          // porter ce statut et tombe alors sur le cas par defaut ci-dessous (aucun
+          // upsell affiche plutot qu'une offre qui n'existe plus).
+          const upsellBlock = status === "premium"
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite : <b style="color:#eceaf4">30 analyses/jour</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://buy.stripe.com/28E8wPdfK7RybogfpA3VC04" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite — 19.90€/mois</a>
+                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour multisport</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
+                <a href="https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite / VIP — 29.90€/mois</a>
               </div>`
             : "";
 
@@ -9488,7 +9486,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     </div>
   </div>
   <div style="text-align:center;margin-bottom:16px">
-    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer l'analyse — 9.90€/mois →</a>
+    <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;box-shadow:0 4px 20px rgba(79,70,229,.4)">Débloquer l'analyse — 14.90€/mois →</a>
   </div>
   <div style="text-align:center;margin-bottom:20px">
     <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Voir les offres</a>
