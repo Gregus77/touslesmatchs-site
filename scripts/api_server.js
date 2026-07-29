@@ -3490,6 +3490,13 @@ Réponds en JSON pur (pas de markdown):
       const providers = [];
       if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: agCfg.model });
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
+      // Repli OpenRouter pour Perplexity-Web : la cle Perplexity directe est a
+      // sec de credit depuis le 29/07/2026 (HTTP 401 constate en production).
+      // OpenRouter heberge les memes modeles Sonar, factures sur le budget
+      // OpenRouter (2 EUR/jour) au lieu d'un abonnement Perplexity separe. Cet
+      // essai passe apres la tentative directe : si une cle Perplexity valide
+      // est un jour remise, elle reste prioritaire et ce repli ne sert plus.
+      if (agCfg.name === "Perplexity-Web" && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "perplexity/sonar-pro" });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
       if (agCfg.useOpenRouter && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
