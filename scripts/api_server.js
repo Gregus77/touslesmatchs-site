@@ -3382,7 +3382,10 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
     },
     {
       name: "Cohere-Command",
-      model: useCohere ? "command-r-plus" : "llama-3.3-70b-versatile",
+      // "command-r-plus" a ete retire par Cohere le 15/09/2025 (HTTP 404 constate
+      // le 29/07/2026). command-r-plus-08-2024 est le modele equivalent toujours
+      // actif, verifie via /v1/models sur la cle en production.
+      model: useCohere ? "command-r-plus-08-2024" : "llama-3.3-70b-versatile",
       icon: "🧬",
       useCohere,
     },
@@ -3491,8 +3494,12 @@ Réponds en JSON pur (pas de markdown):
       for (const pv of providers) {
         try {
           if (pv.kind === "cohere") {
-            const cr = await httpPost("https://api.cohere.ai/v1/chat", { model: pv.model, message: prompt, max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
-            raw = cr.text || cr.chat_history?.slice(-1)[0]?.message || "{}";
+            // v1/chat (api.cohere.ai) est retiree : HTTP 404 constate le 29/07/2026,
+            // quel que soit le modele demande. v2/chat (api.cohere.com) est l'API
+            // active ; format de requete et de reponse tous deux differents (messages
+            // OpenAI-like en entree, message.content[] en sortie, pas de champ "text").
+            const cr = await httpPost("https://api.cohere.com/v2/chat", { model: pv.model, messages: [{ role: "user", content: prompt }], max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
+            raw = cr.message?.content?.[0]?.text || cr.text || "{}";
           } else {
             const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = rp.choices?.[0]?.message?.content || "{}";
