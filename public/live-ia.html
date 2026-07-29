@@ -413,7 +413,11 @@ function showEmpty() {
 // ── Render ──
 function renderMatches() {
   var wrap = document.getElementById("matches-wrap");
-  var filtered = currentFilter === "all" ? allMatches : allMatches.filter(function(m){ return m.sport === currentFilter; });
+  // Filet de sécurité : /live-matches ne renvoie déjà plus les matchs non
+  // jouables, mais si un cache ancien en laisse passer un, il ne doit pas
+  // s'afficher. La page ne montre que ce qui est jouable à l'instant T.
+  var playable = allMatches.filter(function(m){ return m.pinnedSignal || m.analysable !== false; });
+  var filtered = currentFilter === "all" ? playable : playable.filter(function(m){ return m.sport === currentFilter; });
 
   if (!filtered.length) {
     if (currentFilter !== "all") {
@@ -476,27 +480,16 @@ function renderMatches() {
       html += '</div>';
     }
 
-    if (isLive && !isDone) {
-      // Le SERVEUR décide si un match est analysable (champ "analysable" fourni
-      // par /live-matches). Avant, le front appliquait sa propre fenêtre 25e-65e
-      // minute codée en dur : elle contredisait la règle serveur (sélection par
-      // la cote réelle, pas par la minute), et sur les sports sans minutes
-      // parseInt("IN9") donnait NaN — donc baseball, basket et hockey étaient
-      // bloqués en permanence avec un message parlant de minutes de football.
-      var blocked = (m.analysable === false);
+    // Bouton d'analyse uniquement sur les matchs réellement jouables maintenant.
+    // Les matchs non analysables ne sont plus affichés du tout (filtrés par
+    // /live-matches puis par renderMatches), donc plus de bouton grisé ni de
+    // message d'excuse : la page ne propose que ce qui est jouable à l'instant T.
+    // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
+    if (isLive && !isDone && !m.pinnedSignal) {
       html += '<div class="mc-cta">';
-      if (blocked) {
-        html += '  <button class="mc-analyse-btn" disabled style="opacity:.5;cursor:not-allowed">';
-        html += '    🧠 Analyser ce match';
-        html += '  </button>';
-        html += '  <div style="font-size:12px;color:var(--muted);margin-top:6px;text-align:center">';
-        html += escHtml(m.block_reason || "Analyse indisponible pour ce match.");
-        html += '</div>';
-      } else {
-        html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';
-        html += (userAuth ? '    🧠 Analyser ce match' : '    🔓 Débloquer l\'analyse');
-        html += '  </button>';
-      }
+      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';
+      html += (userAuth ? '    🧠 Analyser ce match' : '    🔓 Débloquer l\'analyse');
+      html += '  </button>';
       html += '</div>';
       html += '<div class="mc-analysis" id="analysis-' + escAttr(matchId) + '"></div>';
     }

@@ -7435,7 +7435,14 @@ app.get("/live-matches", async (req, res) => {
       return { ...m, analysable: !reason, block_reason: reason };
     });
 
-    res.json({ ok: true, matches: withVerdict });
+    // Live IA ne montre QUE ce qui est jouable à l'instant T (décision du
+    // fondateur, 29/07/2026). Afficher un match puis refuser de l'analyser est
+    // une incohérence visible pour le visiteur : soit le match est proposable,
+    // soit il n'a rien à faire sur la page. Les signaux épinglés font exception —
+    // ils sont une vitrine de résultat, pas une invitation à analyser.
+    const visible = withVerdict.filter(m => m.pinnedSignal || m.analysable !== false);
+
+    res.json({ ok: true, matches: visible });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
