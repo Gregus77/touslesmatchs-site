@@ -10464,7 +10464,21 @@ app.get("/admin/funnel-report", (req, res) => {
     `).all(`-${jours} days`);
 
     const total = rows.reduce((s, r) => s + r.n, 0);
-    const diffuses = rows.filter(r => r.diffusion_block === null).reduce((s, r) => s + r.n, 0);
+    // La verite sur ce qui est parti vient des colonnes sig_sent_*, PAS de
+    // diffusion_block : cette colonne est nulle aussi bien pour une analyse
+    // diffusee que pour une analyse anterieure a l'instrumentation. Les
+    // confondre affichait "100% diffusables, 0 envoi" — contradictoire.
+    const diffuses = db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+        AND (sig_sent_standard = 1 OR sig_sent_premium = 1 OR sig_sent_elite = 1)
+    `).get(`-${jours} days`)?.n || 0;
+    const nonTracees = db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+        AND diffusion_block IS NULL
+        AND sig_sent_standard = 0 AND sig_sent_premium = 0 AND sig_sent_elite = 0
+    `).get(`-${jours} days`)?.n || 0;
     const parMotif = {};
     for (const r of rows) {
       if (r.diffusion_block === null) continue;
@@ -10487,12 +10501,46 @@ app.get("/admin/funnel-report", (req, res) => {
       FROM concile_analyses WHERE analysed_at >= datetime('now', ?)
     `).get(`-${jours} days`);
 
+    // Diagnostic immediat, calcule sur des colonnes deja renseignees depuis
+    // toujours (confiance, cote reelle, sport). Ne depend donc pas de
+    // l'instrumentation, et repond des maintenant a "ou meurent les signaux ?".
+    const TH = getTierThresholds();
+    const d = db.prepare(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN real_odd IS NULL OR real_odd <= 1 THEN 1 ELSE 0 END) AS sans_cote_reelle,
+        SUM(CASE WHEN real_odd > 1 AND real_odd < ${TIER_MIN_REAL_ODD} THEN 1 ELSE 0 END) AS cote_trop_basse,
+        SUM(CASE WHEN real_odd > ${TIER_MAX_REAL_ODD} THEN 1 ELSE 0 END) AS cote_trop_haute,
+        SUM(CASE WHEN real_odd >= ${TIER_MIN_REAL_ODD} AND real_odd <= ${TIER_MAX_REAL_ODD} THEN 1 ELSE 0 END) AS cote_dans_fenetre,
+        SUM(CASE WHEN lower(COALESCE(sport,'football')) = 'football' THEN 1 ELSE 0 END) AS football,
+        SUM(CASE WHEN lower(COALESCE(sport,'football')) != 'football' THEN 1 ELSE 0 END) AS autres_sports
+      FROM concile_analyses WHERE analysed_at >= datetime('now', ?)
+    `).get(`-${jours} days`);
+    // Combien franchiraient TOUS les criteres chiffres d'un palier donne ?
+    const eligibles = (seuilConf) => db.prepare(`
+      SELECT COUNT(*) AS n FROM concile_analyses
+      WHERE analysed_at >= datetime('now', ?)
+        AND confidence >= ?
+        AND real_odd >= ${TIER_MIN_REAL_ODD} AND real_odd <= ${TIER_MAX_REAL_ODD}
+    `).get(`-${jours} days`, seuilConf)?.n || 0;
+
     res.json({
       ok: true,
       fenetre_jours: jours,
       analyses_totales: total,
-      analyses_diffusables: diffuses,
-      taux_diffusion: total ? Math.round(diffuses / total * 100) + "%" : "0%",
+      analyses_diffusees: diffuses,
+      analyses_non_tracees: nonTracees,
+      note_tracage: nonTracees
+        ? `${nonTracees} analyses anterieures a l'instrumentation : leur motif de blocage est inconnu. Se fier a "diagnostic_donnees" ci-dessous en attendant.`
+        : "Toutes les analyses de la fenetre sont tracees.",
+      diagnostic_donnees: {
+        ...d,
+        seuils_confiance_du_jour: TH,
+        eligibles_standard: eligibles(TH.standard),
+        eligibles_premium: eligibles(TH.premium),
+        eligibles_elite: eligibles(TH.elite),
+        lecture: "sans_cote_reelle = aucune vraie cote bookmaker recuperee : ces analyses ne peuvent PAS etre diffusees, quel que soit leur niveau de confiance.",
+      },
       envois_par_canal: envois,
       quotas_vendus: {
         standard: STANDARD_SIGNAL_DAILY_CAP, premium: PREMIUM_SIGNAL_DAILY_CAP, elite: ELITE_SIGNAL_DAILY_CAP,
