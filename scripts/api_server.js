@@ -10029,7 +10029,27 @@ let _lastPerfReportDate = "";
 let _lastHealthCheckDate = "";
 // Anti-spam des alertes « palier à sec » : une seule alerte par palier, réarmée
 // automatiquement dès qu'un signal repart sur ce palier.
-const _dryTierAlerted = { standard: false, premium: false, elite: false };
+// Persistee en base, pas en memoire : un `_dryTierAlerted` en RAM repartait a
+// zero a chaque redemarrage du conteneur (docker compose up --build), donc
+// chaque deploiement pendant une heure multiple de 6 relancait l'alerte. Trois
+// deploiements en une heure = neuf messages "PALIER A SEC" identiques recus
+// le 29/07/2026 (12h26, 12h35, 12h47) alors que rien n'avait change entre eux.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS dry_tier_alerts (
+    tier TEXT PRIMARY KEY,
+    alerted_at TEXT NOT NULL
+  );
+`);
+function dryTierAlreadySent(tier) {
+  const row = db.prepare("SELECT alerted_at FROM dry_tier_alerts WHERE tier = ?").get(tier);
+  return !!row;
+}
+function markDryTierAlerted(tier) {
+  db.prepare("INSERT INTO dry_tier_alerts (tier, alerted_at) VALUES (?, datetime('now')) ON CONFLICT(tier) DO UPDATE SET alerted_at = excluded.alerted_at").run(tier);
+}
+function clearDryTierAlert(tier) {
+  db.prepare("DELETE FROM dry_tier_alerts WHERE tier = ?").run(tier);
+}
 
 // ── AUTO 1 — Bilan de santé quotidien (7h Paris, canal admin) ────────────────
 // Sert à détecter en 24h ce qui, sinon, passe inaperçu : un canal injoignable, un
@@ -10127,9 +10147,9 @@ async function checkDryTiers() {
       const last = q[tier];
       const days = last ? (Date.now() - new Date(last.replace(" ", "T") + "Z").getTime()) / 86400000 : 999;
       const limit = DRY_TIER_DAYS[tier];
-      if (days < limit) { _dryTierAlerted[tier] = false; continue; } // réarmement
-      if (_dryTierAlerted[tier]) continue;                          // déjà alerté
-      _dryTierAlerted[tier] = true;
+      if (days < limit) { clearDryTierAlert(tier); continue; } // réarmement
+      if (dryTierAlreadySent(tier)) continue;                  // déjà alerté, survit à un redémarrage
+      markDryTierAlerted(tier);
 
       const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : ELITE_MIN_CONF;
       const cause = produced === 0
