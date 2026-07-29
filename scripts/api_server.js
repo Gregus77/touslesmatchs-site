@@ -1978,20 +1978,32 @@ let _segmentStatsCache = { data: null, ts: 0 };
 
 function getSegmentStats() {
   if (_segmentStatsCache.data && Date.now() - _segmentStatsCache.ts < 60 * 60 * 1000) return _segmentStatsCache.data;
-  const data = { comp: {}, market: {}, compMarket: {} };
+  const data = { comp: {}, market: {}, compMarket: {}, sport: {}, sportMarket: {} };
   try {
-    const rows = db.prepare(`
-      SELECT competition, best_bet, outcome FROM concile_analyses
+    const raw = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, outcome, analysed_at
+      FROM concile_analyses
       WHERE outcome IN ('win','loss')
     `).all();
+    // Déduplication indispensable ICI aussi : ces statistiques décident quels
+    // segments sont bloqués. Un même match remonté par deux sources sous des
+    // noms légèrement différents comptait double — et quand les deux analyses
+    // portaient des paris opposés (cas du 28/07/2026), le moteur apprenait
+    // simultanément qu'un segment gagne ET qu'il perd, sur le même événement.
+    const rows = dedupeAnalysesByMatch(raw);
     const bump = (obj, key, win) => { const o = (obj[key] = obj[key] || { w: 0, t: 0 }); o.t++; if (win) o.w++; };
     for (const r of rows) {
       const comp = String(r.competition || "").toLowerCase();
+      const sport = String(r.sport || "Football").toLowerCase();
       const mk = categorizeBet(r.best_bet);
       const win = r.outcome === "win";
       if (comp) bump(data.comp, comp, win);
       if (mk !== "NO BET") bump(data.market, mk, win);
       if (comp && mk !== "NO BET") bump(data.compMarket, comp + "||" + mk, win);
+      // Dimension sport : un marché peut très bien marcher au football et
+      // s'effondrer au baseball, où la dynamique n'a rien à voir.
+      if (sport) bump(data.sport, sport, win);
+      if (sport && mk !== "NO BET") bump(data.sportMarket, sport + "||" + mk, win);
     }
   } catch (e) { console.error("[segment-stats]", e.message); }
   _segmentStatsCache = { data, ts: Date.now() };
@@ -2014,6 +2026,21 @@ function passesHistoricalQualityGate(match, bet) {
   const c = stats.comp[comp];
   if (c && c.t >= 12 && wr(c) < 0.52) {
     return { ok: false, reason: `ligue ${match.competition} : ${Math.round(wr(c) * 100)}% (${c.t} analyses)` };
+  }
+  // 2 bis) Sport × marché — un marché rentable au football peut s'effondrer sur
+  // un sport à dynamique différente. Seuil volontairement plus exigeant en
+  // volume (>=10) : les sports hors football ont peu d'historique, on évite de
+  // condamner un segment sur un échantillon trop mince.
+  const sport = String(match?.sport || "Football").toLowerCase();
+  const sm = stats.sportMarket[sport + "||" + mk];
+  if (sm && sm.t >= 10 && wr(sm) < 0.50) {
+    return { ok: false, reason: `${mk} en ${match.sport || "Football"} : ${Math.round(wr(sm) * 100)}% (${sm.t} analyses)` };
+  }
+  // 2 ter) Sport seul — >=30 analyses et <50%. Bloquer un sport entier est la
+  // décision la plus lourde du filtre, donc le volume exigé est le plus élevé.
+  const sp = stats.sport[sport];
+  if (sp && sp.t >= 30 && wr(sp) < 0.50) {
+    return { ok: false, reason: `sport ${match.sport || "Football"} : ${Math.round(wr(sp) * 100)}% (${sp.t} analyses)` };
   }
   // 3) Marché seul — >=25 analyses et <50% => on bloque.
   const m = stats.market[mk];
@@ -10348,6 +10375,44 @@ app.get("/admin/scheduler-state", (req, res) => {
 // ===== End M007 =====
 
 // ===== M008: Data Guardian state =====
+// Vue "creme de la creme" : ce qui gagne et ce qui perd, par segment, avec le
+// verdict du filtre qualite. Repond a la question "sur quoi doit-on se
+// concentrer et quoi doit-on couper", sans avoir a lire la base a la main.
+app.get("/admin/segment-report", (req, res) => {
+  try {
+    const stats = getSegmentStats();
+    const minSample = Math.max(1, parseInt(req.query.min) || 5);
+    const toList = (obj, seuilBlocage) => Object.entries(obj)
+      .map(([key, o]) => ({
+        segment: key,
+        analyses: o.t,
+        gagnes: o.w,
+        perdus: o.t - o.w,
+        winrate: o.t ? Math.round((o.w / o.t) * 100) : 0,
+      }))
+      .filter((x) => x.analyses >= minSample)
+      .sort((a, b) => b.winrate - a.winrate || b.analyses - a.analyses)
+      .map((x) => ({
+        ...x,
+        // Reprend exactement les seuils appliques par passesHistoricalQualityGate
+        verdict: x.analyses >= seuilBlocage.volume && x.winrate < seuilBlocage.winrate
+          ? "BLOQUE"
+          : (x.winrate >= 70 ? "EXCELLENT" : x.winrate >= 55 ? "correct" : "a surveiller"),
+      }));
+
+    res.json({
+      ok: true,
+      note: "Statistiques dedoublonnees. 'BLOQUE' = le filtre qualite refuse deja ce segment.",
+      echantillon_minimum: minSample,
+      marches: toList(stats.market, { volume: 25, winrate: 50 }),
+      sports: toList(stats.sport, { volume: 30, winrate: 50 }),
+      sport_x_marche: toList(stats.sportMarket, { volume: 10, winrate: 50 }),
+      competitions: toList(stats.comp, { volume: 12, winrate: 52 }),
+      competition_x_marche: toList(stats.compMarket, { volume: 6, winrate: 50 }),
+    });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
 // Stats du garde-fou budgetaire IA
 app.get("/admin/ai-budget-stats", (req, res) => {
   try {
