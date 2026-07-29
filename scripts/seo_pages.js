@@ -94,7 +94,7 @@ ${schema ? `<script type="application/ld+json">${JSON.stringify(schema)}</script
 <body>
 <nav class="topnav">
   <a href="/" class="brand">TousLesMatchs</a>
-  <a href="/#plan-carte" class="cta">Tester le Conseil — 1€</a>
+  <a href="/#plans" class="cta">Voir les abonnements</a>
 </nav>
 <div class="wrap">
 ${bodyHtml}
@@ -148,7 +148,7 @@ function renderDetail(item, related) {
   <div class="sub">${item.competition ? escapeHtml(item.competition) + " · " : ""}${dateFr ? "Match du " + escapeHtml(dateFr) : ""}</div>
   <div class="meta-row">
     ${outcomeTag}
-    <span class="tag">🧠 5 IA + 1 Chief</span>
+    <span class="tag">🧠 5 IA indépendantes</span>
     ${item.sport ? `<span class="tag">${escapeHtml(item.sport)}</span>` : ""}
   </div>
   <div class="card">
@@ -160,14 +160,14 @@ function renderDetail(item, related) {
     </div>
   </div>
   <h2>L'analyse en détail</h2>
-  <p>${item.reasoning ? escapeHtml(item.reasoning) : `Pour ${escapeHtml(item.home)} contre ${escapeHtml(item.away)}, le Concile a croisé le classement, la forme récente, les confrontations directes et la valeur du marché. Cinq intelligences artificielles ont voté séparément avant que le Chief ne tranche.`}</p>
-  <p>Chaque analyse repose sur le vote de 5 agents IA spécialisés : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
+  <p>${item.reasoning ? escapeHtml(item.reasoning) : `Pour ${escapeHtml(item.home)} contre ${escapeHtml(item.away)}, le Concile a croisé le classement, la forme récente, les confrontations directes et la valeur du marché. Perplexity, DeepSeek, Mistral, Cohere et Qwen ont voté séparément avant que le Concile ne tranche.`}</p>
+  <p>Chaque analyse repose sur le vote de 5 IA indépendantes : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
   <h2>Comment fonctionne le Conseil IA ?</h2>
-  <p>Hermès collecte les données vérifiées du match, 5 agents analysent stats, forme et valeur, puis le Chief arbitre les désaccords. Si les signaux sont contradictoires, c'est NO BET. <a href="/#methode">Voir la méthode complète →</a></p>
+  <p>Hermès collecte les données vérifiées du match, 5 IA analysent stats, forme et valeur, puis le Concile arbitre les désaccords. Si les signaux sont contradictoires, c'est NO BET. <a href="/#methode">Voir la méthode complète →</a></p>
   <div class="card" style="text-align:center">
     <div style="font-weight:800;margin-bottom:8px">Envie de l'analyse complète en direct ?</div>
-    <p style="margin-bottom:14px">Teste le Conseil sur le match de ton choix, en temps réel.</p>
-    <a href="/#plan-carte" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Tester le Conseil — 1€</a>
+    <p style="margin-bottom:14px">Rejoins le Concile et suis les matchs en direct.</p>
+    <a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les abonnements</a>
   </div>
   ${relatedHtml}
   `;
@@ -200,7 +200,7 @@ function renderIndex(items) {
   const body = `
   <div class="bc"><a href="/">Accueil</a> › Pronostics</div>
   <h1>Pronostics & analyses IA</h1>
-  <p class="sub">Chaque match est analysé par le Conseil : 5 intelligences artificielles votent, le Chief tranche. Historique 100 % public — gagnés comme perdus.</p>
+  <p class="sub">Chaque match est analysé par le Conseil : 5 intelligences artificielles votent, la convergence tranche. Historique 100 % public — gagnés comme perdus.</p>
   <div class="list">${rows || "<p>Aucune analyse publiée pour le moment.</p>"}</div>
   `;
 

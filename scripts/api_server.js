@@ -789,7 +789,12 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 //   84-85 :  62 analyses · 83,9 % · +274 €   → Premium  (~3,3/jour cumulé)
 //   82-83 : 141 analyses · 70,9 % · +428 €   → Elite    (~9,7/jour cumulé)
 // Aucune analyse au-dessus de 89 sur la période : un seuil à 90 ou 92 produit ZÉRO signal.
-const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 85;
+// Elite valait 85 ici, identique a Premium : aucun assouplissement reel malgre
+// le discours commercial "Elite = le plus permissif". C'etait deja contraire a
+// la calibration du 25/07/2026 juste au-dessus (82-83 pour Elite, 84-85 pour
+// Premium). Corrige le 29/07/2026 sur decision du fondateur : Elite redescend
+// a 82, seul vrai levier de volume propre a ce palier (en plus du multisport).
+const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 82;
 // Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
 // fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
 // c'est un longshot que le book juge improbable.
@@ -8056,9 +8061,18 @@ async function handleCreateCheckout(req, res) {
   const { plan, user_id } = req.body || {};
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
+  // "carte" (offre 1€) retiree du parcours actif le 29/07/2026, decision fondateur
+  // — plus aucune nouvelle session de paiement ne doit pouvoir la creer. Le prix
+  // reste neanmoins connu par les mappings webhook plus bas (planLookup, statuts
+  // d'activation) pour continuer a traiter d'eventuels evenements historiques.
+  //
+  // "standard" pointait par erreur vers STRIPE_PRICE_ID_PREMIUM : un appel a cet
+  // endpoint pour Standard aurait facture le prix Premium. Corrige au passage —
+  // constate le 29/07/2026, mais AUCUN bouton visible n'appelle cet endpoint (les
+  // boutons d'abonnement utilisent des Payment Links Stripe directs), donc aucun
+  // client n'a ete facture au mauvais prix par ce chemin precis.
   const priceMap = {
-    carte:    STRIPE_PRICE_ID_CARTE,
-    standard: STRIPE_PRICE_ID_PREMIUM,
+    standard: STRIPE_PRICE_ID_STANDARD,
     premium:  STRIPE_PRICE_ID_PREMIUM,
     vip:      STRIPE_PRICE_ID_VIP,
     elite:    STRIPE_PRICE_ID_ELITE,

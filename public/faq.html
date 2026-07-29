@@ -25,7 +25,7 @@
     { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent." } },
     { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
     { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Tous les résultats sont publics sur la page Performances. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-    { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort." } },
+    { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Trois paliers sans engagement : Standard (jusqu'à 3 signaux/jour, confiance ≥ 88%), Premium (jusqu'à 10 signaux/jour, confiance ≥ 85%, inclut Standard), Elite/VIP (jusqu'à 30 signaux/jour multisport, confiance ≥ 82%, inclut Premium)." } },
     { "@type": "Question", "name": "Quand les analyses sont-elles publiées ?", "acceptedAnswer": { "@type": "Answer", "text": "L'analyse du jour (pick quotidien) est publiée vers 12h (heure de Paris). Les analyses Live IA sont disponibles en temps réel pendant les matchs en direct, entre la 25e et la 65e minute." } },
     { "@type": "Question", "name": "Pourquoi entre 25 et 65 minutes uniquement ?", "acceptedAnswer": { "@type": "Answer", "text": "Avant 25 minutes, il n'y a pas assez de données de jeu pour une analyse fiable. Après 65 minutes, les cotes sont trop basses pour offrir de la valeur." } },
     { "@type": "Question", "name": "Quels sports sont analysés ?", "acceptedAnswer": { "@type": "Answer", "text": "Football, Basketball, Hockey et Baseball. Le football représente la majorité des analyses." } },
@@ -120,21 +120,21 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Comment fonctionnent les abonnements ? <span class="faq-arrow">+</span></div>
     <div class="faq-a">
-      <strong>À la carte (1€)</strong> — 1 analyse Live IA, sans engagement.<br>
-      <strong>Pro (9,90€/mois)</strong> — 10 analyses/jour + accès au groupe Telegram Pro.<br>
-      <strong>Elite (19,90€/mois)</strong> — 30 analyses/jour + Telegram Elite + alertes Signal Fort.<br><br>
-      Paiement sécurisé par Stripe. Annulation possible à tout moment.
+      <strong>Standard</strong> — jusqu'à 3 signaux/jour, confiance ≥ 88%, Telegram Standard.<br>
+      <strong>Premium</strong> — jusqu'à 10 signaux/jour, confiance ≥ 85%, Telegram Premium, inclut Standard.<br>
+      <strong>Elite / VIP</strong> — jusqu'à 30 signaux/jour multisport, confiance ≥ 82%, Telegram Elite, inclut Premium.<br><br>
+      Voir les tarifs à jour sur la <a href="/#plans" style="color:var(--cyan)">page d'accueil</a>. Paiement sécurisé par Stripe. Annulation possible à tout moment.
     </div>
   </div>
 
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Quand les analyses sont-elles publiées ? <span class="faq-arrow">+</span></div>
-    <div class="faq-a">L'analyse du jour (pick quotidien) est publiée vers 12h (heure de Paris). Les analyses Live IA sont disponibles en temps réel pendant les matchs en direct, entre la 25<sup>e</sup> et la 65<sup>e</sup> minute — la fenêtre où les données sont suffisantes et les cotes encore intéressantes.</div>
+    <div class="faq-a">L'analyse du jour (pick quotidien) est publiée vers 12h (heure de Paris). Les analyses Live IA sont disponibles en temps réel pendant les matchs en direct, tant que la cote réelle chez un opérateur agréé reste dans une fourchette jouable — un match déjà plié voit sa cote sortir de cette fourchette et n'est plus proposé.</div>
   </div>
 
   <div class="faq-item">
-    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Pourquoi entre 25 et 65 minutes uniquement ? <span class="faq-arrow">+</span></div>
-    <div class="faq-a">Avant 25 minutes, il n'y a pas assez de données de jeu (tirs, possession, corners) pour une analyse fiable. Après 65 minutes, les cotes sont trop basses pour offrir de la valeur — le risque/rendement n'est plus favorable.</div>
+    <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Pourquoi certains matchs en direct ne sont-ils pas analysables ? <span class="faq-arrow">+</span></div>
+    <div class="faq-a">La sélection se fait sur la cote réelle chez un opérateur agréé (entre 1.30 et 2.50), pas sur la minute de jeu. Un match à finalité déjà connue (écart de 3 buts ou plus) est aussi automatiquement écarté.</div>
   </div>
 
   <div class="faq-item">
@@ -152,15 +152,15 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
     <div class="method-sub">Le Concile ne devine pas. Voici sa méthode en 4 étapes.</div>
 
     <div class="step"><div class="step-n">1</div><div><div class="step-title">Collecte vérifiée</div><div class="step-desc">Hermès collecte les matchs via API-Sports, puis vérifie chaque donnée sur 3 sources indépendantes. Aucun match non confirmé n'est analysé.</div></div></div>
-    <div class="step"><div class="step-n">2</div><div><div class="step-title">5 IA indépendantes votent</div><div class="step-desc">Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA.</div></div></div>
-    <div class="step"><div class="step-n">3</div><div><div class="step-title">Publication et diffusion</div><div class="step-desc">Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Pro et Elite accèdent aux analyses Live IA en temps réel.</div></div></div>
+    <div class="step"><div class="step-n">2</div><div><div class="step-title">Perplexity, DeepSeek, Mistral, Cohere et Qwen votent</div><div class="step-desc">Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA.</div></div></div>
+    <div class="step"><div class="step-n">3</div><div><div class="step-title">Publication et diffusion</div><div class="step-desc">Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Premium et Elite accèdent aux analyses Live IA en temps réel.</div></div></div>
     <div class="step"><div class="step-n">4</div><div><div class="step-title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 
   <div class="cta-box">
     <h3>Prêt à tester Hermès ?</h3>
-    <p>1 euro. 1 match. 30 secondes. Tu vois ce que 5 IA pensent vraiment.</p>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank" class="cta-btn">Tester — 1€</a>
+    <p>Rejoins le Concile dès 4,90€/mois. Tu vois ce que 5 IA pensent vraiment.</p>
+    <a href="/#plans" class="cta-btn">Voir les abonnements</a>
   </div>
 </div>
 

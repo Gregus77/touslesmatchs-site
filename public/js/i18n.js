@@ -37,7 +37,7 @@ const i18n = (function(){
       plan_pop: "Populaire",
       plan_standard_desc: "Le tri le plus sévère : jusqu’à 3 signaux/jour, confiance ≥ 88%, cote réelle ARJEL entre 1.30 et 2.50.",
       plan_standard_btn: "S’abonner — 4.90€/mois",
-      plan_pro_desc: "Plus de volume exploitable : jusqu’à 10 signaux/jour, confiance ≥ 84%, avant-match ou live.",
+      plan_pro_desc: "Plus de volume exploitable : jusqu’à 10 signaux/jour, confiance ≥ 85%, avant-match ou live.",
       plan_pro_btn: "S’abonner — 9.90€/mois",
       plan_elite_desc: "Le radar complet multisport : jusqu’à 30 signaux/jour (foot, basket, hockey, baseball) + alertes prioritaires.",
       plan_elite_btn: "S’abonner — 19.90€/mois",
