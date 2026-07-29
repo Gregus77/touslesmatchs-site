@@ -7558,6 +7558,13 @@ app.post("/analyse", async (req, res) => {
     if (rejectScoreConflict(verifiedMatch, res)) return;
     const blockReason = livePickBlockReason(verifiedMatch);
     if (blockReason) return res.json({ ok: false, error: blockReason });
+    // Cet endpoint ne passe PAS par shouldAutoObserveMatch (reserve au moteur
+    // automatique) : sans ce garde-fou, un appel direct pouvait faire analyser
+    // un match jeunes/amical/ligue douteuse en contournant tout le filtre de
+    // fiabilite. Constate le 29/07/2026 sur un U19 norvegien, visible nulle
+    // part sur le site (deja masque par le filtre d'affichage) mais toujours
+    // atteignable via cet endpoint appele directement.
+    if (isExcludedFromPicks(verifiedMatch)) return res.json({ ok: false, error: "Analyse indisponible pour cette competition." });
     const analysis = await runConcileAnalysis(verifiedMatch);
     const chief = analysis.agents[analysis.agents.length - 1];
 
@@ -7585,6 +7592,10 @@ app.post("/live-ia/analyse", authMiddleware, async (req, res) => {
   if (rejectScoreConflict(verifiedMatch, res)) return;
   const blockReason = livePickBlockReason(verifiedMatch);
   if (blockReason) return res.json({ ok: false, error: blockReason });
+  // Meme garde-fou que /analyse : ce endpoint est token-gated (abonne connecte)
+  // mais ne verifiait pas non plus la fiabilite de la competition avant d'appeler
+  // le Concile.
+  if (isExcludedFromPicks(verifiedMatch)) return res.json({ ok: false, error: "Analyse indisponible pour cette competition." });
 
   const matchKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${getTodayStr()}`;
 
