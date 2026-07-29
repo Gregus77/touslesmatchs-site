@@ -1784,22 +1784,32 @@ function normalizeApiSportsFootballFixture(f) {
   return { ...match, lowTrustCompetition: isLowTrustCompetition(match) };
 }
 
+// Categories interdites quel que soit le pays ou la competition. AUCUNE
+// exemption (pas meme UEFA) ne doit pouvoir les laisser passer : constate le
+// 29/07/2026, "Nasjonal U19 Champions League · Norway" a ete analysee car
+// isUefaCompetition() matche sur le simple mot "champions league" contenu
+// dans le nom d'une ligue jeunes norvegienne sans aucun rapport avec l'UEFA,
+// et l'exemption UEFA court-circuitait alors tout le filtre low-trust. Un
+// match U19 n'a rien a faire dans le Concile — cf. regles ANJ/conformite.
+const CATEGORY_BAN_KEYWORDS = [
+  "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
+  "u17", "u18", "u19", "u20", "u21", "u23",
+  "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
+  "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
+  "regional cup", "state cup", "state league",
+  "world cup", "coupe du monde", "fifa world", "copa del mundo",
+];
+
 const LOW_TRUST_COMPETITION_KEYWORDS = [
   // Ligues exclues manuellement (performances négatives — rapports Hermes)
   "bulgaria", "serbia", "usl league two",
   "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
   "· china", "china", "chinese",
   "australia cup",
-  // Catégories génériques non fiables
-  "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
-  "u17", "u18", "u19", "u20", "u21", "u23",
-  "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
+  ...CATEGORY_BAN_KEYWORDS,
   // Divisions inférieures / groupes régionaux — données live lentes et peu fiables
   "kakkonen", "ykkonen", "lohko", "kolmonen", "regionalliga", "oberliga",
   "national league north", "national league south", "isthmian", "northern premier",
-  "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
-  "regional cup", "state cup", "state league",
-  "world cup", "coupe du monde", "fifa world", "copa del mundo",
   // Afrique
   "ethiopia", "nigeria", "npfl", "tanzania", "kenya", "uganda",
   "ghana", "zambia", "zimbabwe", "mozambique", "cameroon", "cameroun",
@@ -1913,6 +1923,17 @@ function isLowTrustCompetition(matchOrCompetition = "") {
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
   return true;
+}
+
+// Categorie interdite (jeunes, amateur, amical, Coupe du Monde...) : bannissement
+// absolu, jamais leve par l'exemption UEFA. A verifier AVANT tout court-circuit
+// "!isUefaCompetition(match) && ...", jamais a la place.
+function isCategoryBanned(matchOrCompetition = "") {
+  const raw = typeof matchOrCompetition === "string"
+    ? matchOrCompetition
+    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+  const value = String(raw || "").toLowerCase();
+  return CATEGORY_BAN_KEYWORDS.some((keyword) => value.includes(keyword));
 }
 
 // Filtre allégé pour l'AFFICHAGE de la page Live IA (menu de matchs à analyser).
@@ -3763,7 +3784,7 @@ Réponds en JSON pur (pas de markdown):
   if (isWomen) {
     console.log(`[signal-fort] Bloqué — match féminin (liste noire): ${match.home} vs ${match.away}`);
   }
-  const lowTrust = !isUefaCompetition(match) && isLowTrustCompetition(match);
+  const lowTrust = isCategoryBanned(match) || (!isUefaCompetition(match) && isLowTrustCompetition(match));
   if (lowTrust) {
     console.log(`[signal-fort] Bloqué — ligue douteuse (liste noire): ${match.competition || match.league || ""}`);
   }
@@ -5458,6 +5479,7 @@ function isUefaQualifier(match) {
 // Un match doit-il être écarté des picks/vitrine ? Ligue non fiable (hors UEFA)
 // OU tour de qualification européen.
 function isExcludedFromPicks(match) {
+  if (isCategoryBanned(match)) return true;
   if (isUefaQualifier(match)) return true;
   return !isUefaCompetition(match) && isLowTrustCompetition(match);
 }
@@ -5563,6 +5585,9 @@ function shouldAutoObserveMatch(match) {
     if (!AUTO_CONCILE_MULTISPORT) return false;
     return true;
   }
+  // Categorie bannie (jeunes, amical, reserve...) : jamais d'exemption UEFA
+  // possible, a verifier avant le court-circuit ci-dessous.
+  if (isCategoryBanned(match)) return false;
   // Analyse large pour remplir la journée : grandes ligues + coupes d'Europe
   // (dont qualifs). Le tri "premium" ne s'applique qu'au PICK du jour, pas à
   // l'activité affichée. On bloque juste les ligues non fiables hors UEFA.
