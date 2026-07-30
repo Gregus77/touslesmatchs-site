@@ -7319,8 +7319,14 @@ function refreshDailyPickFromDB() {
     // R1 (décision fondateur 28/07/2026) : la sélection se fait sur la cote réelle
     // ARJEL, plus sur la minute — l'ancienne fenêtre 25-65' est supprimée ici aussi
     // pour rester cohérente avec le reste du pipeline (voir AUTO_CONCILE_TIME_WINDOW).
-    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r));
-    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
+    // confidence >= PUBLISHED_MIN_CONFIDENCE (seuil Elite, le plus permissif) :
+    // sans ce filtre, le pick gratuit affiché en vitrine sur l'accueil pouvait
+    // etre plus faible que TOUT ce qui part reellement sur Telegram (constate
+    // le 30/07/2026 : pick a 77% affiche alors que le seuil minimum de
+    // diffusion, meme Elite, est 82% — impression trompeuse d'un signal
+    // "trouve" mais jamais envoye, alors qu'il n'a jamais ete assez solide).
+    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r) && Number(r.confidence) >= PUBLISHED_MIN_CONFIDENCE);
+    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + PUBLISHED_MIN_CONFIDENCE + "%) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI (en cours d'abord = actionnable, sinon le plus confiant du jour).
     // Priorité 2 : sinon, la meilleure gagnante récente (vitrine).
     const todays = eligible.filter(r => (r.analysed_at || "").slice(0, 10) === todayISO);
@@ -7363,6 +7369,10 @@ function storedPickIsFresh() {
     const pDate = (p.date || (p.publishedAt || "").slice(0, 10) || "").slice(0, 10);
     if (pDate !== todayISO) return false;
     if (isExcludedFromPicks(p)) return false;
+    // Force une regeneration si le pick stocke est sous le seuil de diffusion
+    // reel (voir refreshDailyPickFromDB) — sinon un pick deja "frais"
+    // aujourd'hui mais trop faible resterait affiche jusqu'a minuit.
+    if (p.confidence != null && Number(p.confidence) < PUBLISHED_MIN_CONFIDENCE) return false;
     return true;
   } catch { return false; }
 }
@@ -7375,7 +7385,8 @@ app.get("/current-pick", (req, res) => {
   try {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
-    if (p && p.home && p.home !== "Analyse en cours" && !isExcludedFromPicks(p)) {
+    const belowThreshold = p && p.confidence != null && Number(p.confidence) < PUBLISHED_MIN_CONFIDENCE;
+    if (p && p.home && p.home !== "Analyse en cours" && !isExcludedFromPicks(p) && !belowThreshold) {
       return res.json({ ok: true, pick: normalizeCurrentPick(p, p.source || "hermes") });
     }
   } catch (e) { /* picks.json absent ou invalide */ }
