@@ -166,7 +166,10 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .pick-vs{font-size:12px;font-weight:800;color:var(--muted);flex:0 0 auto}
 .pick-bet{font-size:13px;color:var(--tx2);text-align:center}
 .pick-conf{font-size:23px;font-weight:900;color:var(--violet2);margin-top:10px;text-align:center}
-.pick-lock{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px}
+.pick-lock{margin-top:14px;padding:14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);text-align:center}
+.pick-lock-title{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px}
+.pick-lock-sub{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.pick-lock-btn{display:inline-block;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:8px 18px;border-radius:8px;text-decoration:none}
 .mini-table{width:100%;border-collapse:collapse;font-size:12px}
 .mini-table th{text-align:left;color:var(--muted);font-weight:700;padding:5px 4px;border-bottom:1px solid var(--b1);font-size:11px}
 .mini-table td{padding:6px 4px;border-bottom:1px solid var(--b1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
@@ -663,7 +666,13 @@ async function loadPick(){
     var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
     var comp=splitComp(p.competition||p.sport||'');
     var flag=COUNTRY_FLAGS[comp.country]||'';
-    var lockHtml=loggedIn?'':'<div class="pick-lock">🔒 Crée un compte gratuit pour le détail complet</div>';
+    var lockHtml=loggedIn?'':(
+      '<div class="pick-lock">'+
+        '<div class="pick-lock-title">🔒 Sélection et raisonnement masqués</div>'+
+        '<div class="pick-lock-sub">Pour voir le pari recommandé du Concile, entre juste ton email (+ un mot de passe) — c\'est gratuit, sans carte bancaire, ça prend 20 secondes.</div>'+
+        '<a href="/dashboard" class="pick-lock-btn">Débloquer avec mon email →</a>'+
+      '</div>'
+    );
     box.innerHTML='<div class="pick-comp">'+(flag?'<span class="flag">'+flag+'</span>':'')+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+'</div>'+
       '<div class="pick-match">'+
         '<div class="pick-team"><div class="pick-team-logo">'+logo(homeLogo,homeName)+'</div><div class="pick-team-name">'+esc(homeName)+'</div></div>'+
