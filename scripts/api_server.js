@@ -1083,6 +1083,15 @@ const SHADOW_AGENTS = [
 ];
 
 // ── Telegram helper ──────────────────────────────────────────────────────────
+// Echappe le texte insere dans un message Telegram en parse_mode HTML. Sans
+// ca, un simple "<" ou "&" dans un texte dynamique (raison generee par une IA,
+// nom d'equipe/competition venant de l'API) fait rejeter le message ENTIER par
+// Telegram ("can't parse entities"). N'echappe jamais la balise elle-meme :
+// a utiliser uniquement sur le contenu injecte, pas sur les <b>/<i> qu'on ecrit.
+function escTgHtml(text) {
+  return String(text ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function sendTelegramMessage(chatId, text) {
   if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(false);
   const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true });
@@ -1097,11 +1106,25 @@ function sendTelegramMessage(chatId, text) {
       let data = "";
       res.on("data", d => data += d);
       res.on("end", () => {
-        try { resolve(JSON.parse(data).ok === true); } catch { resolve(false); }
+        // La cause reelle d'un echec (entites HTML mal formees, chat_id invalide,
+        // bot banni, rate limit 429...) etait jusque-la totalement invisible :
+        // seul un booleen remontait, jamais le message d'erreur de Telegram.
+        // Constate le 30/07/2026 : impossible de diagnostiquer pourquoi des
+        // signaux "envoyes" n'arrivaient jamais sans cette trace.
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.ok !== true) {
+            console.error(`[telegram] echec envoi chat_id=${chatId}: ${parsed.description || "raison inconnue"} (code ${parsed.error_code || "?"})`);
+          }
+          resolve(parsed.ok === true);
+        } catch (e) {
+          console.error(`[telegram] reponse illisible chat_id=${chatId}: ${data.slice(0, 200)}`);
+          resolve(false);
+        }
       });
     });
-    req.on("error", () => resolve(false));
-    req.on("timeout", () => { req.destroy(); resolve(false); });
+    req.on("error", (e) => { console.error(`[telegram] erreur reseau chat_id=${chatId}: ${e.message}`); resolve(false); });
+    req.on("timeout", () => { req.destroy(); console.error(`[telegram] timeout chat_id=${chatId}`); resolve(false); });
     req.write(body);
     req.end();
   });
@@ -3847,7 +3870,11 @@ Réponds en JSON pur (pas de markdown):
       _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
-      const safeRaison = maskAiNames(String(analysisResult.raison || "").slice(0, 200));
+      // escTgHtml APRES maskAiNames : maskAiNames travaille sur des noms de
+      // modeles connus (regex simples), aucun risque d'echapper puis de rater
+      // un remplacement. Le texte reste une phrase generee par une IA — jamais
+      // garanti exempt de "<", ">" ou "&" avant ce point.
+      const safeRaison = escTgHtml(maskAiNames(String(analysisResult.raison || "").slice(0, 200)));
       // Cote déjà calculée au moment de l'analyse (computeBestOdd) → aucun appel API
       // supplémentaire. On l'envoie AVEC le signal, avec le bookmaker source si réel.
       const _bmSig = (analysisResult.cote_source && !/estimation/i.test(String(analysisResult.cote_source)))
@@ -3856,8 +3883,15 @@ Réponds en JSON pur (pas de markdown):
       const coteSig = (analysisResult.cote && _bmSig)
         ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
       const voteLine = voteInfo.vote_label ? `\n🧠 Vote IA : <b>${voteInfo.vote_label}</b>` : "";
-      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${analysisResult.best_bet}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${match.home} vs ${match.away}</b>\n🏆 ${match.competition || match.league || match.sport || ""}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      // Noms d'equipe/competition venant de l'API sportive : jamais garantis
+      // exempts de "&" ou de guillemets/chevrons dans les competitions moins
+      // courantes. Echappes pour la meme raison que safeRaison ci-dessus.
+      const homeEsc = escTgHtml(match.home);
+      const awayEsc = escTgHtml(match.away);
+      const compEsc = escTgHtml(match.competition || match.league || match.sport || "");
+      const betEsc = escTgHtml(analysisResult.best_bet);
+      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
