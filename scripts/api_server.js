@@ -2428,7 +2428,12 @@ async function fetchFromTheSportsDb() {
     : Array.isArray(data?.response) ? data.response
     : Array.isArray(data) ? data
     : [];
-  const wanted = new Set(["Football", "Basketball", "Hockey", "Baseball"]);
+  // Baseball retire le 30/07/2026 (decision fondateur) : aucune resolution
+  // d'issue possible pour ce sport (cf. BASEBALL_LIVE_ENABLED plus haut dans
+  // ce fichier) — sans ce retrait ICI AUSSI, TheSportsDB continuait de faire
+  // apparaitre des matchs de baseball (MLB, honkbal neerlandais...) sur le
+  // site alors que la source API-Sports, elle, avait deja ete coupee.
+  const wanted = new Set(["Football", "Basketball", "Hockey"]);
   const results = raw
     .map((event) => normalizeTheSportsDbLiveEvent(event, event?.strSport))
     .filter((event) => event && wanted.has(event.sport));
