@@ -5432,7 +5432,7 @@ async function resolveStalePredictions() {
         UNION ALL
         SELECT home, away, 'Football' AS sport, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-90 minutes')
-        AND created_at >= datetime('now','-7 days')
+        AND created_at >= datetime('now','-30 days')
     `).all();
     if (!staleRows.length) return;
 
@@ -5455,14 +5455,14 @@ async function resolveStalePredictions() {
       if (r.day) neededDates.add(r.day);
       neededSports.add(String(r.sport || "Football"));
     }
-    const dates = [...neededDates].sort().slice(-7);
+    const dates = [...neededDates].sort().slice(-30);
 
     const finished = [];
 
     // Source 1 : football-data — une seule requête couvre 7 jours de matchs finis
     if (FOOTBALL_DATA_KEY) {
       try {
-        const from = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
         const d = await httpGet(
           `https://api.football-data.org/v4/matches?status=FINISHED&dateFrom=${from}&dateTo=${today}`,
           { "X-Auth-Token": FOOTBALL_DATA_KEY }
