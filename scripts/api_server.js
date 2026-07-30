@@ -1912,7 +1912,12 @@ const TRUSTED_COMPETITIONS = [
   "k league", "k-league",
   "chinese super league",
   "canadian premier",
-  "nhl", "nba", "mlb", "atp", "wta", "grand slam",
+  // MLB retire le 30/07/2026 : aucune resolution automatique des issues
+  // n'existe pour le baseball (resolveStalePredictions ne couvre que
+  // Football/Basketball/Hockey) -> les analyses restaient "en attente"
+  // indefiniment, et le sport pesait sur le quota API-Sports partage sans
+  // jamais pouvoir se resoudre. NBA/NHL restent actifs, eux sont resolus.
+  "nhl", "nba", "atp", "wta", "grand slam",
   "top 14", "pro d2", "premiership rugby", "urc",
   "euroleague", "euroligue",
   "a-league", "a league · australia",
@@ -2343,9 +2348,15 @@ async function fetchFromApiSports() {
     }
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
-  // Baseball live
+  // Baseball live — DESACTIVE le 30/07/2026 (decision fondateur) : le sport
+  // n'a aucune resolution automatique des issues (resolveStalePredictions ne
+  // couvre que Football/Basketball/Hockey), donc chaque analyse restait "en
+  // attente" indefiniment tout en consommant le quota API-Sports partage avec
+  // basket/hockey. Repasser BASEBALL_LIVE_ENABLED a true si une resolution
+  // dediee est ajoutee.
+  const BASEBALL_LIVE_ENABLED = false;
   try {
-    if (!shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
+    if (BASEBALL_LIVE_ENABLED && !shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
