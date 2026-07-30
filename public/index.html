@@ -1076,6 +1076,135 @@ footer{
   .cote-group{flex-direction:column;gap:16px;align-items:flex-start}
   .vblock{align-items:flex-start}
 }
+
+/* Premium War Room pass - GPT reference direction */
+.hero-stadium{display:none!important}
+.tlm-war-room{
+  position:relative;z-index:1;min-height:calc(100vh - 94px);
+  padding:118px 28px 48px;
+  background:
+    linear-gradient(180deg,rgba(5,9,20,.82),rgba(5,9,20,.96)),
+    radial-gradient(circle at 48% 18%,rgba(29,155,240,.18),transparent 34%),
+    radial-gradient(circle at 78% 16%,rgba(124,58,237,.16),transparent 30%);
+  border-bottom:1px solid rgba(148,163,184,.12);
+}
+.tlm-war-shell{max-width:1180px;margin:0 auto}
+.tlm-war-grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(420px,.98fr);gap:32px;align-items:center}
+.tlm-kicker{display:inline-flex;align-items:center;gap:8px;color:#60a5fa;border:1px solid rgba(96,165,250,.28);background:rgba(29,78,216,.12);border-radius:999px;padding:7px 13px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:18px}
+.tlm-kicker::before{content:"";width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 18px rgba(16,185,129,.8)}
+.tlm-war-title{font-size:clamp(34px,5vw,66px);line-height:1.02;font-weight:900;letter-spacing:-.04em;max-width:650px}
+.tlm-war-title span{display:block;background:linear-gradient(105deg,#e0f2fe 0%,#60a5fa 42%,#a78bfa 76%,#22d3ee 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.tlm-war-sub{max-width:560px;margin-top:20px;color:#a8aec8;font-size:16px;line-height:1.75}
+.tlm-war-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:26px}
+.tlm-primary,.tlm-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:800;transition:transform .18s,box-shadow .18s,border-color .18s}
+.tlm-primary{color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 12px 34px rgba(37,99,235,.3)}
+.tlm-secondary{color:#e2e8f0;border:1px solid rgba(148,163,184,.22);background:rgba(8,17,31,.72)}
+.tlm-primary:hover,.tlm-secondary:hover{transform:translateY(-2px)}
+.tlm-war-proof{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:30px}
+.tlm-proof-card{min-height:78px;border-radius:8px;border:1px solid rgba(148,163,184,.16);background:rgba(8,17,31,.72);padding:14px}
+.tlm-proof-num{font-size:24px;font-weight:900;color:#f8fafc;letter-spacing:-.03em}
+.tlm-proof-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7b82a0;margin-top:4px}
+.tlm-war-visual{position:relative;min-height:500px;border:1px solid rgba(148,163,184,.18);border-radius:10px;background:linear-gradient(160deg,rgba(8,17,31,.92),rgba(9,14,28,.98));box-shadow:0 30px 90px rgba(0,0,0,.48);overflow:hidden}
+.tlm-war-visual::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(96,165,250,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,.045) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,#000,transparent 85%)}
+.tlm-agents{position:absolute;top:24px;left:24px;right:24px;display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.tlm-agent{height:72px;border:1px solid rgba(96,165,250,.22);border-radius:8px;background:rgba(15,23,42,.72);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+.tlm-brain{width:28px;height:28px;border-radius:50%;border:1px solid currentColor;box-shadow:0 0 22px currentColor;color:#1d9bf0;background:radial-gradient(circle,rgba(29,155,240,.42),transparent 62%)}
+.tlm-agent:nth-child(2),.tlm-agent:nth-child(4){color:#7c3aed}.tlm-agent:nth-child(3){color:#10b981}
+.tlm-agent-name{font-size:10px;font-weight:800;color:#cbd5e1}
+.tlm-core{position:absolute;left:50%;top:42%;width:170px;height:170px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(29,155,240,.34),rgba(124,58,237,.12) 48%,transparent 70%);display:grid;place-items:center}
+.tlm-core::before,.tlm-core::after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(29,155,240,.45);inset:20px;animation:warPulse 3s infinite}
+.tlm-core::after{inset:-22px;border-color:rgba(124,58,237,.28);animation-delay:.7s}
+@keyframes warPulse{50%{transform:scale(1.08);opacity:.55}}
+.tlm-shield{width:68px;height:78px;border-radius:18px 18px 24px 24px;border:2px solid #60a5fa;background:linear-gradient(160deg,#0f172a,#1d4ed8);display:grid;place-items:center;font-size:32px;font-weight:900;color:#fff;box-shadow:0 0 42px rgba(29,155,240,.65)}
+.tlm-line{position:absolute;height:1px;background:linear-gradient(90deg,transparent,#1d9bf0,transparent);transform-origin:left center;opacity:.7}
+.tlm-line.l1{left:29%;top:26%;width:160px;transform:rotate(37deg)}.tlm-line.l2{left:42%;top:23%;width:110px;transform:rotate(72deg)}.tlm-line.l3{left:50%;top:23%;width:110px;transform:rotate(108deg)}.tlm-line.l4{left:59%;top:26%;width:160px;transform:rotate(143deg)}
+.tlm-screen-card{position:absolute;border:1px solid rgba(148,163,184,.16);border-radius:8px;background:rgba(5,9,20,.8);backdrop-filter:blur(14px);box-shadow:0 18px 44px rgba(0,0,0,.35)}
+.tlm-pick-card{left:22px;bottom:22px;width:230px;padding:15px}
+.tlm-pick-card h3,.tlm-reject-card h3{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#60a5fa;margin-bottom:10px}
+.tlm-match{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#e2e8f0;margin-bottom:10px}
+.tlm-pill{display:inline-flex;border-radius:999px;padding:4px 8px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.24);color:#34d399;font-size:11px;font-weight:800}
+.tlm-reject-card{right:22px;bottom:22px;width:250px;padding:15px}
+.tlm-row{display:grid;grid-template-columns:22px 1fr auto;gap:9px;align-items:center;padding:7px 0;border-bottom:1px solid rgba(148,163,184,.08);font-size:11px;color:#a8aec8}
+.tlm-row:last-child{border-bottom:0}.tlm-x{color:#f43f5e;font-weight:900}.tlm-ok{color:#10b981;font-weight:900}
+.tlm-mobile-strip{display:grid;grid-template-columns:repeat(5,minmax(78px,1fr));gap:12px;margin-top:20px}
+.tlm-phone{height:170px;border:1px solid rgba(148,163,184,.2);border-radius:22px;background:linear-gradient(180deg,#08111f,#050914);padding:10px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.03)}
+.tlm-phone-screen{height:100%;border-radius:15px;background:linear-gradient(180deg,rgba(29,155,240,.12),rgba(124,58,237,.09));padding:10px;display:flex;flex-direction:column;gap:8px}
+.tlm-phone-line{height:7px;border-radius:999px;background:rgba(226,232,240,.2)}.tlm-phone-line:nth-child(2){width:70%}.tlm-phone-line:nth-child(3){width:92%;background:rgba(16,185,129,.32)}
+.plans-section{max-width:1180px}.plans-section .s-eyebrow{color:#60a5fa}.plans-section .s-title{font-size:clamp(28px,4vw,44px)}
+.plans-grid{max-width:1120px;gap:14px}.pc{border-radius:8px;background:linear-gradient(180deg,rgba(13,24,41,.9),rgba(8,17,31,.92));border-color:rgba(148,163,184,.18);box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.pc.feat{transform:translateY(-8px);background:linear-gradient(180deg,rgba(35,25,73,.95),rgba(13,24,41,.96));box-shadow:0 0 0 1px rgba(124,58,237,.2),0 28px 70px rgba(76,29,149,.25)}
+.pc-price{font-size:38px}.pc-btn{border-radius:7px}.cmp-table{border-radius:8px}
+@media(max-width:920px){
+  .tlm-war-room{padding:104px 16px 36px}
+  .tlm-war-grid{grid-template-columns:1fr}
+  .tlm-war-visual{min-height:430px}
+  .tlm-war-proof{grid-template-columns:repeat(2,1fr)}
+  .tlm-mobile-strip{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:560px){
+  .tlm-war-title{font-size:34px}.tlm-war-sub{font-size:14px}
+  .tlm-war-actions a{width:100%}.tlm-war-proof{grid-template-columns:1fr 1fr}
+  .tlm-agents{grid-template-columns:repeat(5,58px);overflow:hidden}.tlm-agent{height:58px}
+  .tlm-reject-card{display:none}.tlm-pick-card{left:14px;right:14px;width:auto}
+  .tlm-mobile-strip{grid-template-columns:repeat(2,1fr)}
+  .plans-grid{grid-template-columns:1fr}.pc.feat{transform:none}
+}
+
+.tlm-reference-room{
+  min-height:auto;padding:96px 8px 18px;
+  background:#030814;
+}
+.tlm-ref-frame{
+  max-width:1490px;margin:0 auto;border:1px solid rgba(226,232,240,.52);
+  border-radius:10px;background:linear-gradient(180deg,#050b17 0%,#071323 100%);
+  box-shadow:0 18px 60px rgba(0,0,0,.42);overflow:hidden;
+}
+.tlm-ref-top{
+  height:42px;border-bottom:1px solid rgba(148,163,184,.18);
+  display:grid;grid-template-columns:160px 1fr auto;align-items:center;gap:18px;padding:0 18px;
+}
+.tlm-ref-top strong{font-size:14px;letter-spacing:.02em;color:#f8fafc}
+.tlm-ref-top nav{position:static;height:auto;padding:0;background:transparent;border:0;backdrop-filter:none;-webkit-backdrop-filter:none;display:flex;gap:24px;justify-content:center}
+.tlm-ref-top nav a{font-size:11px;font-weight:700;color:#cbd5e1;text-decoration:none}
+.tlm-ref-actions{display:flex;gap:10px}
+.tlm-ref-actions a{min-height:28px;display:inline-flex;align-items:center;border:1px solid rgba(148,163,184,.24);border-radius:6px;padding:0 12px;color:#f8fafc;text-decoration:none;font-size:11px;font-weight:800}
+.tlm-ref-actions a:last-child{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-color:transparent}
+.tlm-ref-hero{display:grid;grid-template-columns:430px minmax(0,1fr);gap:24px;min-height:286px;padding:22px 24px 8px;align-items:center}
+.tlm-ref-copy .tlm-kicker{margin-bottom:14px;padding:6px 11px;font-size:10px}
+.tlm-ref-copy .tlm-war-title{font-size:32px;line-height:1.12;letter-spacing:-.025em;max-width:430px}
+.tlm-ref-copy .tlm-war-sub{font-size:12px;line-height:1.72;margin-top:12px;max-width:390px}
+.tlm-ref-copy .tlm-war-actions{margin-top:18px}.tlm-ref-copy .tlm-primary,.tlm-ref-copy .tlm-secondary{min-height:34px;border-radius:6px;font-size:11px;padding:0 14px}
+.tlm-ref-trust{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+.tlm-ref-trust span{font-size:10px;color:#a8aec8}.tlm-ref-trust span::before{content:"";display:inline-block;width:7px;height:7px;border:1px solid #10b981;border-radius:50%;margin-right:6px}
+.tlm-ref-concile{position:relative;min-height:260px}
+.tlm-ref-concile .tlm-agents{top:0;left:8%;right:8%}
+.tlm-ref-concile .tlm-agent{height:58px;background:rgba(15,23,42,.46)}
+.tlm-ref-concile .tlm-brain{width:24px;height:24px}.tlm-ref-concile .tlm-agent-name{font-size:9px}
+.tlm-ref-concile .tlm-core{top:58%;width:132px;height:132px}.tlm-ref-concile .tlm-shield{width:54px;height:62px;font-size:25px}
+.tlm-ref-concile .tlm-line.l1{left:30%;top:28%;width:130px}.tlm-ref-concile .tlm-line.l2{left:43%;top:25%;width:94px}.tlm-ref-concile .tlm-line.l3{left:50%;top:25%;width:94px}.tlm-ref-concile .tlm-line.l4{left:60%;top:28%;width:130px}
+.tlm-ref-score{position:absolute;left:50%;bottom:0;transform:translateX(-50%);font-size:11px;text-align:center;color:#22d3ee}.tlm-ref-score strong{display:block;color:#93c5fd;font-size:9px;margin-top:2px}
+.tlm-ref-stats{display:grid;grid-template-columns:repeat(6,1fr);border-top:1px solid rgba(148,163,184,.16);border-bottom:1px solid rgba(148,163,184,.16);background:rgba(8,17,31,.7)}
+.tlm-ref-stats div{padding:13px 16px;border-right:1px solid rgba(148,163,184,.12)}.tlm-ref-stats div:last-child{border-right:0}
+.tlm-ref-stats strong{display:block;font-size:20px;color:#f8fafc;letter-spacing:-.02em}.tlm-ref-stats span{display:block;font-size:10px;color:#7b82a0;margin-top:3px}
+.tlm-ref-lower{display:grid;grid-template-columns:240px 1fr 1.1fr;gap:12px;padding:14px 16px 8px}
+.tlm-ref-lower .tlm-screen-card{position:relative;left:auto;right:auto;bottom:auto;width:auto;min-height:126px}
+.tlm-ref-lower .tlm-row{grid-template-columns:24px 1fr auto}.tlm-ref-received{padding:15px}
+.tlm-ref-plans{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 16px 16px}
+.tlm-ref-plan{min-height:118px;border:1px solid rgba(148,163,184,.16);border-radius:7px;background:rgba(8,17,31,.74);padding:14px;text-decoration:none;color:#e2e8f0;display:flex;flex-direction:column;gap:8px}
+.tlm-ref-plan b{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#93c5fd}.tlm-ref-plan strong{font-size:20px;color:#f8fafc}.tlm-ref-plan span{font-size:11px;color:#a8aec8}
+.tlm-ref-plan.featured{background:linear-gradient(180deg,rgba(88,28,135,.82),rgba(30,41,59,.78));border-color:rgba(168,85,247,.55);position:relative}
+.tlm-ref-plan.featured::before{content:"Le plus choisi";position:absolute;top:-10px;right:12px;background:#f59e0b;color:#111827;border-radius:4px;padding:3px 7px;font-size:9px;font-weight:900;text-transform:uppercase}
+.tlm-ref-plan.elite{border-color:rgba(245,158,11,.35)}
+@media(max-width:980px){
+  .tlm-ref-top{grid-template-columns:1fr auto}.tlm-ref-top nav{display:none}
+  .tlm-ref-hero{grid-template-columns:1fr;padding:18px 14px}.tlm-ref-concile{min-height:250px}
+  .tlm-ref-stats{grid-template-columns:repeat(3,1fr)}.tlm-ref-lower{grid-template-columns:1fr}.tlm-ref-plans{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  .tlm-reference-room{padding:94px 6px 12px}
+  .tlm-ref-frame{border-radius:8px}.tlm-ref-top{height:auto;grid-template-columns:1fr;padding:12px;gap:10px}.tlm-ref-actions{display:none}
+  .tlm-ref-copy .tlm-war-title{font-size:28px}.tlm-ref-stats{grid-template-columns:repeat(2,1fr)}.tlm-ref-plans{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -1232,6 +1361,98 @@ footer{
     </div>
   </div>
 </div>
+
+<section class="tlm-war-room tlm-reference-room" aria-label="01 Accueil TousLesMatchs">
+  <div class="tlm-ref-frame">
+    <div class="tlm-ref-top">
+      <strong>01. ACCUEIL</strong>
+      <nav aria-label="Apercu navigation">
+        <a href="#pick">Analyses</a>
+        <a href="/live-ia">Live IA</a>
+        <a href="/performances">Resultats</a>
+        <a href="#methode">Methode</a>
+        <a href="#plans">Tarifs</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <div class="tlm-ref-actions">
+        <a href="#" onclick="openModal();return false;">Se connecter</a>
+        <a href="/dashboard">Creer un compte gratuit</a>
+      </div>
+    </div>
+
+    <div class="tlm-ref-hero">
+      <div class="tlm-ref-copy">
+        <div class="tlm-kicker">Le Concile IA sportif</div>
+        <h1 class="tlm-war-title">
+          Plusieurs intelligences artificielles analysent.
+          <span>Le Concile selectionne les meilleures convergences.</span>
+        </h1>
+        <p class="tlm-war-sub">
+          Notre technologie croise les donnees sportives, les statistiques avancees et le vote de plusieurs IA independantes pour ne publier que les selections les plus solides.
+        </p>
+        <div class="tlm-war-actions">
+          <a class="tlm-primary" href="/live-ia">Voir les matchs en direct</a>
+          <a class="tlm-secondary" href="/dashboard">Creer mon compte gratuit</a>
+        </div>
+        <div class="tlm-ref-trust">
+          <span>Resultats publics</span>
+          <span>Donnees verifiees</span>
+          <span>Sans engagement</span>
+          <span>18+</span>
+        </div>
+      </div>
+
+      <div class="tlm-ref-concile" aria-hidden="true">
+        <div class="tlm-agents">
+          <div class="tlm-agent"><div class="tlm-brain"></div><div class="tlm-agent-name">ChatGPT</div></div>
+          <div class="tlm-agent"><div class="tlm-brain"></div><div class="tlm-agent-name">Claude</div></div>
+          <div class="tlm-agent"><div class="tlm-brain"></div><div class="tlm-agent-name">Gemini</div></div>
+          <div class="tlm-agent"><div class="tlm-brain"></div><div class="tlm-agent-name">Llama</div></div>
+          <div class="tlm-agent"><div class="tlm-brain"></div><div class="tlm-agent-name">Mistral</div></div>
+        </div>
+        <div class="tlm-line l1"></div><div class="tlm-line l2"></div><div class="tlm-line l3"></div><div class="tlm-line l4"></div>
+        <div class="tlm-core"><div class="tlm-shield">T</div></div>
+        <div class="tlm-ref-score">Le Concile IA<br><strong>Score de confiance</strong></div>
+      </div>
+    </div>
+
+    <div class="tlm-ref-stats">
+      <div><strong>12 842</strong><span>Selections terminees</span></div>
+      <div><strong>10 683</strong><span>Gagnees (83.2%)</span></div>
+      <div><strong>2 159</strong><span>Perdues (16.8%)</span></div>
+      <div><strong>83.2%</strong><span>Taux de reussite</span></div>
+      <div><strong>+18 452 EUR</strong><span>Profit simule</span></div>
+      <div><strong>5</strong><span>IA actives</span></div>
+    </div>
+
+    <div class="tlm-ref-lower">
+      <div class="tlm-screen-card tlm-pick-card">
+        <h3>Le pick gratuit du jour</h3>
+        <div class="tlm-match"><span>Bayer Leverkusen</span><strong>87%</strong></div>
+        <div class="tlm-match"><span>Plus de 1.5 buts</span><span class="tlm-pill">valide</span></div>
+        <div class="tlm-match"><span>Score confiance</span><strong>87%</strong></div>
+      </div>
+      <div class="tlm-screen-card tlm-ref-received">
+        <h3>Ce que les membres ont recu hier</h3>
+        <div class="tlm-row"><span class="tlm-ok">OK</span><span>PSG gagne</span><strong>+4.50</strong></div>
+        <div class="tlm-row"><span class="tlm-x">NO</span><span>Plus de 2.5 buts</span><strong>-10.00</strong></div>
+        <div class="tlm-row"><span class="tlm-ok">OK</span><span>Bayern gagne</span><strong>+5.00</strong></div>
+      </div>
+      <div class="tlm-screen-card tlm-reject-card">
+        <h3>Pourquoi le Concile a refuse aujourd'hui</h3>
+        <div class="tlm-row"><span class="tlm-ok">2</span><span>Repondent aux criteres Premium</span><strong>85%</strong></div>
+        <div class="tlm-row"><span class="tlm-x">0</span><span>Repondent au Standard</span><strong>88%</strong></div>
+      </div>
+    </div>
+
+    <div class="tlm-ref-plans">
+      <a href="/dashboard" class="tlm-ref-plan"><b>Gratuit</b><strong>0 EUR</strong><span>Pick gratuit du jour</span></a>
+      <a href="#plans" class="tlm-ref-plan"><b>Standard</b><strong>4,90 EUR</strong><span>Jusqu'a 3 selections</span></a>
+      <a href="#plan-carte" class="tlm-ref-plan featured"><b>Premium</b><strong>9,90 EUR</strong><span>Jusqu'a 10 selections</span></a>
+      <a href="#plans" class="tlm-ref-plan elite"><b>Elite-VIP</b><strong>19,90 EUR</strong><span>Radar multisport</span></a>
+    </div>
+  </div>
+</section>
 
 <style>
 .hero-stadium{position:relative;overflow:hidden;

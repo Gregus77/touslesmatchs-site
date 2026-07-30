@@ -176,6 +176,57 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   .filter-btn{padding:6px 12px;font-size:11px}
   .tab-btn{font-size:13px;padding:12px 10px}
 }
+
+/* Premium War Room app shell */
+body{
+  background:
+    radial-gradient(circle at 22% 0%,rgba(29,155,240,.13),transparent 34%),
+    radial-gradient(circle at 80% 0%,rgba(124,58,237,.12),transparent 32%),
+    #050914;
+}
+.nav{height:62px;background:rgba(5,9,20,.86);border-bottom:1px solid rgba(148,163,184,.14)}
+.nav-logo{font-size:16px}.nav-logo span{color:#60a5fa}
+.page-header{max-width:1180px;margin:0 auto;text-align:left;padding:34px 24px 12px}
+.page-title{font-size:32px}.page-sub{margin:0;max-width:720px}
+.tab-bar{max-width:1180px;justify-content:flex-start;margin-bottom:16px}
+.tab-btn{flex:0 0 auto;min-width:150px;border-radius:8px!important;background:rgba(8,17,31,.76);border-color:rgba(148,163,184,.16);border-bottom:1px solid rgba(148,163,184,.16)}
+.tab-btn.active{background:linear-gradient(135deg,rgba(37,99,235,.2),rgba(124,58,237,.16));border-color:rgba(96,165,250,.28);color:#dbeafe}
+.live-dashboard-shell{max-width:1180px;margin:0 auto 60px;padding:0 16px;display:grid;grid-template-columns:238px minmax(0,1fr) 270px;gap:14px;align-items:start}
+.live-sidebar,.live-main-panel,.live-access-panel{border:1px solid rgba(148,163,184,.16);background:linear-gradient(180deg,rgba(8,17,31,.88),rgba(5,9,20,.92));border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.live-sidebar{position:sticky;top:78px;padding:16px}
+.live-main-panel{min-height:520px;overflow:hidden}
+.live-access-panel{position:sticky;top:78px;padding:16px}
+.live-panel-title{font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#60a5fa;margin-bottom:10px}
+.auth-bar{max-width:none;padding:0;margin:0 0 14px;display:block}
+.auth-info{border:1px solid rgba(148,163,184,.14);background:rgba(15,23,42,.62);border-radius:8px;padding:11px 12px;margin-bottom:10px;line-height:1.5}
+.auth-login-btn{width:100%;border-radius:8px;background:linear-gradient(135deg,#2563eb,#7c3aed)}
+.filters{display:grid;grid-template-columns:1fr;gap:8px;justify-content:stretch;padding:0}
+.filter-btn{width:100%;text-align:left;border-radius:8px;background:rgba(15,23,42,.62);border-color:rgba(148,163,184,.14);padding:10px 12px}
+.filter-btn.active{background:rgba(37,99,235,.18);border-color:rgba(96,165,250,.3);color:#dbeafe}
+.refresh-bar{text-align:left;padding:14px 16px;border-bottom:1px solid rgba(148,163,184,.12);background:rgba(15,23,42,.34)}
+.matches-wrap{max-width:none;padding:14px 14px 20px}
+.match-card{border-radius:8px;background:rgba(8,17,31,.78);border-color:rgba(148,163,184,.14);padding:16px;margin-bottom:10px}
+.match-card:hover{border-color:rgba(96,165,250,.32);transform:none}
+.mc-body{background:rgba(15,23,42,.42);border:1px solid rgba(148,163,184,.08);border-radius:8px;padding:10px}
+.mc-score{font-size:24px;color:#f8fafc}.mc-analyse-btn{border-radius:7px}
+.live-access-card{border:1px solid rgba(148,163,184,.13);border-radius:8px;padding:13px;margin-bottom:10px;background:rgba(15,23,42,.54)}
+.live-access-card h3{font-size:13px;margin-bottom:5px}
+.live-access-card p{font-size:12px;color:#a8aec8;line-height:1.55}
+.live-access-btn{display:flex;align-items:center;justify-content:center;min-height:38px;margin-top:10px;border-radius:7px;background:linear-gradient(135deg,#2563eb,#7c3aed);color:#fff;text-decoration:none;font-size:12px;font-weight:800}
+.live-metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.live-metric{border:1px solid rgba(148,163,184,.12);border-radius:8px;background:rgba(5,9,20,.58);padding:10px}
+.live-metric strong{display:block;font-size:20px;color:#10b981}.live-metric span{font-size:10px;color:#7b82a0;text-transform:uppercase;letter-spacing:.06em}
+.history-section{max-width:1180px;border:1px solid rgba(148,163,184,.16);border-radius:10px;background:rgba(8,17,31,.72);padding:20px;margin-bottom:60px}
+@media(max-width:980px){
+  .live-dashboard-shell{grid-template-columns:1fr}
+  .live-sidebar,.live-access-panel{position:static}
+  .filters{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:560px){
+  .page-header{padding:24px 16px 10px}.tab-bar{padding:0 16px}.tab-btn{min-width:0;flex:1}
+  .live-dashboard-shell{padding:0 10px}.filters{grid-template-columns:1fr}
+  .live-access-panel{display:none}
+}
 </style>
 </head>
 <body>
@@ -206,11 +257,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <!-- TAB: EN DIRECT -->
 <div class="tab-content active" id="tab-live">
 
+<div class="live-dashboard-shell">
+  <aside class="live-sidebar">
+    <div class="live-panel-title">Acces</div>
+
 <!-- AUTH BAR -->
 <div class="auth-bar" id="auth-bar">
   <div class="auth-info" id="auth-info">Connecte-toi pour analyser les matchs</div>
   <button class="auth-login-btn" id="auth-btn" onclick="openLoginModal()">Connexion</button>
 </div>
+
+    <div class="live-panel-title" style="margin-top:16px">Sports</div>
 
 <!-- CLASSEMENT AGENTS IA — Elite only (en haut) -->
 <div id="agent-ranking" style="display:none;max-width:720px;margin:32px auto;padding:0 16px">
@@ -230,6 +287,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <button class="filter-btn" data-filter="Baseball">&#9918; Baseball</button>
 </div>
 
+  </aside>
+  <main class="live-main-panel">
+
 <!-- REFRESH -->
 <div class="refresh-bar" id="refresh-bar">
   Dernière mise à jour : <span id="last-update">—</span>
@@ -242,6 +302,31 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="spinner"></div>
     <div style="font-size:14px;color:var(--muted2)">Chargement des matchs en direct...</div>
   </div>
+</div>
+
+  </main>
+  <aside class="live-access-panel">
+    <div class="live-panel-title">Comment acceder aux analyses ?</div>
+    <div class="live-access-card">
+      <h3>Compte gratuit</h3>
+      <p>Creer un compte permet de suivre son espace et de garder un point d'entree propre vers les analyses.</p>
+      <a class="live-access-btn" href="/dashboard">Creer mon compte</a>
+    </div>
+    <div class="live-access-card">
+      <h3>Premium</h3>
+      <p>Debloque les analyses Live IA et le groupe Telegram Premium, avec le palier Standard inclus.</p>
+      <a class="live-access-btn" href="/#plan-carte">Voir Premium</a>
+    </div>
+    <div class="live-access-card">
+      <h3>Elite</h3>
+      <p>Acces complet multisport : football, basketball, hockey, baseball et alertes prioritaires.</p>
+      <a class="live-access-btn" href="/#plans">Comparer les offres</a>
+    </div>
+    <div class="live-metric-grid">
+      <div class="live-metric"><strong>5</strong><span>IA au vote</span></div>
+      <div class="live-metric"><strong>82+</strong><span>Seuil vitrine</span></div>
+    </div>
+  </aside>
 </div>
 
 <!-- LOGIN MODAL -->
