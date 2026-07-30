@@ -925,8 +925,12 @@ function sendToPaidChannels(text, opts = {}) {
   ));
 }
 const _freeResultDailyDate = { date: "", count: 0 };
-let _adaptiveThresholdCache = { value: 85, computedAt: 0 };
-const SIGNAL_FLOOR = 85; // plancher : un signal fort exige au moins 85% de confiance
+let _adaptiveThresholdCache = { value: 82, computedAt: 0 };
+// Plancher aligné sur la promesse Elite-VIP ("≥82% de confiance", CLAUDE.md).
+// Avant : 85, ce qui bloquait tout signal Elite entre 82 et 84% alors que le
+// palier est vendu à partir de 82% — constaté le 30/07/2026 (analyse à 82%
+// jamais diffusée malgré éligibilité Elite).
+const SIGNAL_FLOOR = 82;
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
@@ -962,6 +966,7 @@ function getAdaptiveSignalThreshold() {
       return SIGNAL_FLOOR;
     }
     const brackets = [
+      { min: 82, max: 85, wins: 0, total: 0 },
       { min: 85, max: 88, wins: 0, total: 0 },
       { min: 88, max: 91, wins: 0, total: 0 },
       { min: 91, max: 94, wins: 0, total: 0 },
