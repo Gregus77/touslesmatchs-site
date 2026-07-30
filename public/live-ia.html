@@ -394,6 +394,28 @@ let userAuth = null;
 // simple bouton "Analyser" à chaque rafraîchissement.
 let analysisCache = {};
 
+// ── Minute affichée : traduit les codes bruts de l'API en français clair.
+// "0" est un chiffre valide (coup d'envoi) mais falsy en JS — sans check
+// explicite typeof === "number", la minute disparaissait a la 0e minute.
+// Les autres codes (P, BT, HT, ET...) viennent tels quels des sources
+// sportives (API-Sports/football-data) : les afficher bruts ("P", "BT")
+// est incomprehensible pour un client, d'ou la table de traduction.
+var STATUS_CODE_LABELS = {
+  HT: "Mi-temps", "1H": "1ère mi-temps", "2H": "2nde mi-temps",
+  ET: "Prolongation", AET: "Fin des prolongations",
+  BT: "Pause (avant tirs au but)", P: "Tirs au but", PEN: "Tirs au but",
+  INT: "Interrompu", SUSP: "Suspendu", ABD: "Match arrêté",
+  TBD: "Horaire à confirmer", NS: "Pas encore commencé",
+};
+function minuteLabel(m) {
+  if (m.status === "HT") return "Mi-temps";
+  if (typeof m.minute === "number") return m.minute + "'";
+  var raw = String(m.minute || "").trim();
+  if (!raw) return "En direct";
+  if (/^\d+\+?\d*$/.test(raw)) return raw + "'"; // "45+2" etc.
+  return STATUS_CODE_LABELS[raw.toUpperCase()] || "En direct";
+}
+
 // ── Confiance : couleur/label selon le pourcentage (même échelle que Telegram) ──
 function confMeta(conf) {
   var c = Number(conf) || 0;
@@ -594,8 +616,8 @@ function renderMatches() {
     var dotHtml = isLive ? '<span class="st-dot"></span>' : "";
 
     var minuteHtml = "";
-    if (m.minute && isLive) {
-      minuteHtml = '<div class="mc-minute">' + m.minute + (typeof m.minute === "number" ? "'" : "") + '</div>';
+    if (isLive) {
+      minuteHtml = '<div class="mc-minute">' + escHtml(minuteLabel(m)) + '</div>';
     } else if (isDone) {
       minuteHtml = '<div class="mc-minute done">FT</div>';
     }

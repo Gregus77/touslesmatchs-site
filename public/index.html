@@ -470,6 +470,14 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 <script>
 function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
+var STATUS_CODE_LABELS={HT:"Mi-temps","1H":"1ère MT","2H":"2nde MT",ET:"Prolongation",AET:"Fin prolongation",BT:"Pause (avant TAB)",P:"Tirs au but",PEN:"Tirs au but",INT:"Interrompu",SUSP:"Suspendu"};
+function minLabelOf(m){
+  if(typeof m.minute==='number') return m.minute+"'";
+  var raw=String(m.minute||'').trim();
+  if(!raw) return 'Live';
+  if(/^\d+\+?\d*$/.test(raw)) return raw+"'";
+  return STATUS_CODE_LABELS[raw.toUpperCase()]||'Live';
+}
 function toggleMenu(){document.getElementById('mmenu').classList.toggle('open');}
 
 /* ══ HERO — 5 IA en eventail, traits vers le coeur du Concile ══ */
@@ -624,7 +632,7 @@ async function loadLive(){
     grid.innerHTML=matches.map(function(m){
       var icon=SPORT_ICO[m.sport]||'🏟️';
       var sh=m.score_home==null?'-':m.score_home, sa=m.score_away==null?'-':m.score_away;
-      var minLabel=(m.minute!==null&&m.minute!==undefined&&m.minute!=='')?esc(m.minute)+(typeof m.minute==='number'?"'":''):'Live';
+      var minLabel=esc(minLabelOf(m));
       var fid=encodeURIComponent(m.id||(m.home+'_'+m.away));
       return '<div class="live-row">'+
         '<div class="live-comp"><div class="live-comp-name">'+icon+' '+esc((m.competition||m.sport||'').split(/\s*[·•]\s*/)[0]).slice(0,12)+'</div><div class="live-comp-min">'+minLabel+'</div></div>'+
