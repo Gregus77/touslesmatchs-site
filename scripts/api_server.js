@@ -5846,6 +5846,27 @@ async function brevoAddContact(email, tag, lang = "FR") {
   }
 }
 
+// ── Capture email a friction minimale (page /resultats-quotidiens) ───────────
+// Contrairement a la creation de compte (/dashboard), aucun mot de passe ni
+// code : juste l'email, pour capter des prospects pas encore prets a
+// s'inscrire. Alimente Brevo avec un tag dedie, sert de reservoir pour la
+// campagne de nurturing "ce que tu aurais gagne" (sendOutperformEmails).
+const _leadCaptureRate = new Map();
+app.post("/lead-capture", (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.json({ ok: false, error: "Email invalide" });
+  }
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const last = _leadCaptureRate.get(ip) || 0;
+  if (now - last < 5000) return res.json({ ok: false, error: "Trop de requêtes, réessaie dans quelques secondes." });
+  _leadCaptureRate.set(ip, now);
+  brevoAddContact(email, "lead_resultats_quotidiens").catch(() => {});
+  console.log(`[lead-capture] ${email}`);
+  res.json({ ok: true });
+});
+
 // Plafond anti-spam : 1 email MARKETING par adresse et par jour. La clé porte la
 // date du jour — l'ancien setInterval remettait le compteur à zéro 24 h après le
 // démarrage du process, donc « par jour » dérivait à chaque redéploiement.
@@ -7445,6 +7466,93 @@ function tierStatsFor(set) {
       score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
     })),
   };
+}
+
+// ── Campagne "ce que tu aurais gagné" (Brevo, mardi + vendredi) ──────────────
+// Simule le profit de la veille (mise 10€) pour le palier reellement souscrit
+// par l'abonne + le palier immediatement superieur, meme methode de calcul
+// que la page /performances (tierEligible/tierStatsFor, source unique de
+// verite pour ne jamais afficher un chiffre different du site).
+const TIER_ABOVE = { standard: "premium", premium: "elite" };
+const TIER_LABEL = { standard: "Standard", premium: "Premium", elite: "Elite/VIP" };
+
+function fetchResolvedRowsForDate(dateStr) {
+  const rows = db.prepare(`
+    SELECT home, away, competition, sport, best_bet, confidence, outcome,
+           real_odd, real_odd_source, final_score_home, final_score_away, analysed_at
+    FROM concile_analyses
+    WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+      AND date(analysed_at) = ?
+  `).all(dateStr);
+  return dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
+}
+
+function outperformEmailHtml(email, ownTier, ownStats, aboveTier, aboveStats, dateLabel) {
+  const fmtEur = (n) => (n >= 0 ? "+" : "") + Math.round(n) + "€";
+  const ownColor = ownStats.roi >= 0 ? "#10b981" : "#f43f5e";
+  const aboveColor = aboveStats.roi >= 0 ? "#10b981" : "#f43f5e";
+  const upsellUrl = ownTier === "standard"
+    ? "https://buy.stripe.com/9B600jgrW3Bi63W0uG3VC08"
+    : "https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09";
+  return `
+  <div style="font-family:Inter,-apple-system,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;padding:32px 24px">
+    <div style="font-size:13px;color:#7b82a0;margin-bottom:18px">Récap du ${dateLabel} — palier ${TIER_LABEL[ownTier]}</div>
+    <h2 style="font-size:20px;margin:0 0 16px">Voici ce qu'aurait rapporté ton palier hier</h2>
+    <div style="background:#0d1020;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:20px;margin-bottom:16px">
+      <div style="font-size:12px;color:#7b82a0;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">${TIER_LABEL[ownTier]} — ${ownStats.total} sélection${ownStats.total > 1 ? "s" : ""}</div>
+      <div style="font-size:30px;font-weight:900;color:${ownColor}">${ownStats.total ? fmtEur(ownStats.roi) : "—"}</div>
+      <div style="font-size:12px;color:#a8aec8;margin-top:4px">${ownStats.total ? `${ownStats.wins} gagnée${ownStats.wins > 1 ? "s" : ""} / ${ownStats.losses} perdue${ownStats.losses > 1 ? "s" : ""} (mise 10€ chacune)` : "Aucune sélection résolue sur cette période pour ce palier."}</div>
+    </div>
+    ${aboveTier ? `
+    <div style="background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.3);border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:12px;color:#c4b5fd;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Avec ${TIER_LABEL[aboveTier]} — ${aboveStats.total} sélection${aboveStats.total > 1 ? "s" : ""}</div>
+      <div style="font-size:30px;font-weight:900;color:${aboveColor}">${aboveStats.total ? fmtEur(aboveStats.roi) : "—"}</div>
+      <div style="font-size:12px;color:#a8aec8;margin-top:8px">
+        <a href="${upsellUrl}" style="color:#fff;background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:9px 18px;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;display:inline-block">Passer ${TIER_LABEL[aboveTier]} →</a>
+      </div>
+    </div>` : ""}
+    <div style="font-size:11px;color:#7b82a0;line-height:1.7;border-top:1px solid rgba(255,255,255,.08);padding-top:16px">
+      Simulation à titre informatif, mise fixe de 10€ par sélection, sur les résultats réellement publiés. Les performances passées ne garantissent pas les résultats futurs. TousLesMatchs ne garantit aucun gain.<br>
+      LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX — joueurs-info-service.fr, 09 74 75 13 13.<br>
+      <a href="https://www.touslesmatchs.com/performances" style="color:#818cf8">Voir l'historique complet</a>
+    </div>
+  </div>`;
+}
+
+let _lastOutperformEmailDate = "";
+async function sendOutperformEmails() {
+  if (!BREVO_API_KEY) return;
+  try {
+    const yesterday = new Date(Date.now() - 86400000);
+    const dateStr = yesterday.toISOString().slice(0, 10);
+    const dateLabel = yesterday.toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
+    const rows = fetchResolvedRowsForDate(dateStr);
+
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const subs = codesDb.prepare(
+      "SELECT DISTINCT email, plan FROM codes WHERE plan IN ('standard','premium') AND active = 1 AND email IS NOT NULL"
+    ).all();
+    codesDb.close();
+
+    let sent = 0;
+    for (const sub of subs) {
+      const ownTier = sub.plan;
+      const aboveTier = TIER_ABOVE[ownTier] || null;
+      const ownStats = tierStatsFor(rows.filter(r => tierEligible(r, ownTier)));
+      if (!ownStats.total) continue; // rien a montrer, on n'envoie pas un email vide
+      const aboveStats = aboveTier ? tierStatsFor(rows.filter(r => tierEligible(r, aboveTier))) : null;
+      const html = outperformEmailHtml(sub.email, ownTier, ownStats, aboveTier, aboveStats, dateLabel);
+      try {
+        await brevoSendEmail(sub.email, `📊 Ce que ${TIER_LABEL[ownTier]} aurait rapporté le ${dateLabel}`, html);
+        sent++;
+      } catch (e) {
+        console.error(`[outperform-email] ${sub.email}:`, e.message);
+      }
+    }
+    console.log(`[outperform-email] ${sent}/${subs.length} emails envoyés (données du ${dateLabel})`);
+  } catch (e) {
+    console.error("[outperform-email]", e.message);
+  }
 }
 app.get("/tier-stats", (req, res) => {
   try {
@@ -10468,6 +10576,15 @@ function checkAnalyticsSchedule() {
     _lastLearningReportDate = todayKey;
     console.log("[analytics] Envoi rapport d'apprentissage quotidien (23h)...");
     sendLearningReportTelegram().then(ok => console.log(`[learning-report] ${ok ? "OK" : "ECHEC"}`));
+  }
+
+  // Campagne nurturing "ce que tu aurais gagne" — mardi + vendredi, 10h Paris.
+  // Frequence volontairement faible (pas quotidienne) pour ne pas lasser les
+  // abonnes (demande fondateur, 30/07/2026).
+  if ((day === "Tuesday" || day === "Friday") && hour === 10 && _lastOutperformEmailDate !== todayKey) {
+    _lastOutperformEmailDate = todayKey;
+    console.log("[outperform-email] Envoi campagne nurturing (mar/ven 10h)...");
+    sendOutperformEmails();
   }
 
   if (day === "Monday" && hour === 8 && _lastWeeklyReportDate !== todayKey) {
