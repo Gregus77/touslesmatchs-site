@@ -156,11 +156,17 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .pcard{padding:16px;display:flex;flex-direction:column;min-height:0}
 .pcard-title{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
 .pcard-title .badge{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:rgba(51,196,129,.14);color:var(--green);border:1px solid rgba(51,196,129,.3);padding:3px 8px;border-radius:999px}
-.pick-comp{font-size:12px;color:var(--muted)}
-.pick-match{font-size:15px;font-weight:800;margin:4px 0 8px}
-.pick-bet{font-size:13px;color:var(--tx2)}
-.pick-conf{font-size:23px;font-weight:900;color:var(--violet2);margin-top:10px}
-.pick-lock{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.pick-comp{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.pick-comp .flag{font-size:14px}
+.pick-match{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 10px}
+.pick-team{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0}
+.pick-team-logo{width:48px;height:48px;border-radius:12px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.pick-team-logo img{width:100%;height:100%;object-fit:contain}
+.pick-team-name{font-size:13px;font-weight:800;text-align:center;line-height:1.25;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pick-vs{font-size:12px;font-weight:800;color:var(--muted);flex:0 0 auto}
+.pick-bet{font-size:13px;color:var(--tx2);text-align:center}
+.pick-conf{font-size:23px;font-weight:900;color:var(--violet2);margin-top:10px;text-align:center}
+.pick-lock{margin-top:10px;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:5px}
 .mini-table{width:100%;border-collapse:collapse;font-size:12px}
 .mini-table th{text-align:left;color:var(--muted);font-weight:700;padding:5px 4px;border-bottom:1px solid var(--b1);font-size:11px}
 .mini-table td{padding:6px 4px;border-bottom:1px solid var(--b1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
@@ -606,6 +612,8 @@ loadProof();
 /* ══ MATCHS EN DIRECT ══ */
 var SPORT_ICO={Football:'⚽',Basketball:'🏀',Hockey:'🏒'};
 function initials(n){return String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(function(p){return p.charAt(0)}).join('').toUpperCase()||'?';}
+var COUNTRY_FLAGS={"Argentina":"🇦🇷","Australia":"🇦🇺","Austria":"🇦🇹","Belgium":"🇧🇪","Brazil":"🇧🇷","Canada":"🇨🇦","Chile":"🇨🇱","China":"🇨🇳","Colombia":"🇨🇴","Croatia":"🇭🇷","Denmark":"🇩🇰","England":"🏴","Finland":"🇫🇮","France":"🇫🇷","Germany":"🇩🇪","Greece":"🇬🇷","Italy":"🇮🇹","Japan":"🇯🇵","Mexico":"🇲🇽","Netherlands":"🇳🇱","Norway":"🇳🇴","Poland":"🇵🇱","Portugal":"🇵🇹","Scotland":"🏴","Spain":"🇪🇸","Sweden":"🇸🇪","Switzerland":"🇨🇭","Turkey":"🇹🇷","USA":"🇺🇸","United States":"🇺🇸","World":"🌍"};
+function splitComp(raw){var parts=String(raw||'').split(/\s*[·•]\s*/);return {league:parts[0]||'',country:parts.length>1?parts[parts.length-1]:''};}
 function logo(src,name){return src?'<img src="'+esc(src)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display=\'none\'">':esc(initials(name));}
 async function loadLive(){
   var grid=document.getElementById('live-rows');
@@ -651,9 +659,17 @@ async function loadPick(){
       return;
     }
     var betLabel=p.marketLabel||p.marketType||p.best_bet||'';
+    var homeLogo=p.home_logo||(p.teamA&&p.teamA.logo)||null;
+    var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
+    var comp=splitComp(p.competition||p.sport||'');
+    var flag=COUNTRY_FLAGS[comp.country]||'';
     var lockHtml=loggedIn?'':'<div class="pick-lock">🔒 Crée un compte gratuit pour le détail complet</div>';
-    box.innerHTML='<div class="pick-comp">'+esc(p.competition||p.sport||'')+'</div>'+
-      '<div class="pick-match">'+esc(homeName)+' vs '+esc(awayName)+'</div>'+
+    box.innerHTML='<div class="pick-comp">'+(flag?'<span class="flag">'+flag+'</span>':'')+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+'</div>'+
+      '<div class="pick-match">'+
+        '<div class="pick-team"><div class="pick-team-logo">'+logo(homeLogo,homeName)+'</div><div class="pick-team-name">'+esc(homeName)+'</div></div>'+
+        '<div class="pick-vs">VS</div>'+
+        '<div class="pick-team"><div class="pick-team-logo">'+logo(awayLogo,awayName)+'</div><div class="pick-team-name">'+esc(awayName)+'</div></div>'+
+      '</div>'+
       '<div class="pick-bet">'+(loggedIn?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
       '<div class="pick-conf">'+esc(p.confidence)+'%</div>'+
       lockHtml;
