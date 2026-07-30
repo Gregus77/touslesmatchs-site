@@ -13,9 +13,9 @@
 set -euo pipefail
 
 REPO="/opt/touslesmatchs"
-BRANCH="claude/consensus-engine-architecture-sy3gqg"
+BRANCH="claude/tiktok-arjel-automation-hgp1tv"
 DOMAIN="https://www.touslesmatchs.com"
-MIN_BYTES=100000            # vraie page ~197 Ko ; ancienne buggée ~42 Ko
+MIN_BYTES=40000              # nouvelle page d'accueil ~49 Ko (design "dash wrap", sans widgets.js)
 cd "$REPO"
 
 # Alerte Telegram admin (best-effort, ne bloque jamais le script)
@@ -67,13 +67,14 @@ echo "▶ 6/6 — Garde-fou : la page en ligne est-elle la bonne version ?"
 docker logs touslesmatchs-api --tail 40 2>&1 | grep -q "running on" \
   && echo "   API   : OK" || echo "   API   : ⚠️ vérifier les logs"
 
-BYTES=$(curl -sk "$DOMAIN/" | wc -c)
-HASWIDGETS=$(curl -sk "$DOMAIN/" | grep -c widgets.js || true)
+PAGE="$(curl -sk "$DOMAIN/")"
+BYTES=$(printf '%s' "$PAGE" | wc -c)
+HASMARKER=$(printf '%s' "$PAGE" | grep -c 'dash wrap' || true)
 echo "   Taille page : ${BYTES} octets (min ${MIN_BYTES})"
-echo "   widgets.js  : ${HASWIDGETS} (attendu ≥ 1)"
+echo "   dash wrap   : ${HASMARKER} (attendu ≥ 1)"
 
-if [ "$BYTES" -lt "$MIN_BYTES" ] || [ "$HASWIDGETS" -lt 1 ]; then
-  fail "Page servie invalide (${BYTES} o, widgets=${HASWIDGETS}). Probable retour du bug site/. Vérifie le montage."
+if [ "$BYTES" -lt "$MIN_BYTES" ] || [ "$HASMARKER" -lt 1 ]; then
+  fail "Page servie invalide (${BYTES} o, marker=${HASMARKER}). Probable retour du bug site/. Vérifie le montage."
 fi
 
 echo "✅ Déploiement OK — bonne version en ligne — $(date '+%H:%M')"
