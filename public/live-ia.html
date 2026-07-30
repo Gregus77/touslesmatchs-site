@@ -395,6 +395,7 @@ function loadMatches(force) {
       allMatches = d.matches;
       renderMatches();
       document.getElementById("last-update").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      preselectFromFixtureParam();
     } else {
       showEmpty();
     }
@@ -403,6 +404,33 @@ function loadMatches(force) {
     document.getElementById("loading").style.display = "none";
     showEmpty();
   });
+}
+
+// Présélection depuis /live-ia?fixture=ID (lien "Ouvrir dans Live IA" de la
+// page d'accueil) : fait défiler jusqu'à la carte du match réel identifié par
+// l'API et la met en surbrillance. N'ouvre PAS automatiquement l'analyse —
+// ça reste un geste explicite de l'utilisateur, pas une dépense de crédit
+// déclenchée par un simple clic depuis l'accueil.
+var _fixturePreselectDone = false;
+function preselectFromFixtureParam() {
+  if (_fixturePreselectDone) return;
+  var fixture = new URLSearchParams(location.search).get("fixture");
+  if (!fixture) return;
+  var target = allMatches.find(function(m) {
+    var id = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
+    return id === fixture || String(m.id) === fixture;
+  });
+  if (!target) return;
+  _fixturePreselectDone = true;
+  var matchId = target.id || (target.home + "_" + target.away).replace(/\s+/g, "_");
+  setTimeout(function() {
+    var card = document.querySelector('[data-id="' + CSS.escape(matchId) + '"]');
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.style.outline = "2px solid var(--violet, #7c5cff)";
+    card.style.outlineOffset = "3px";
+    setTimeout(function() { card.style.outline = ""; }, 3000);
+  }, 150);
 }
 
 function showEmpty() {
