@@ -386,23 +386,6 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
     </div>
   </div>
 
-  <div class="row" style="grid-template-columns:1fr 1fr">
-    <div class="card side-card acc-green">
-      <div class="side-title">Pourquoi nous faire confiance ?</div>
-      <div class="trust-item"><span class="trust-ico">✓</span>Résultats gagnés et perdus affichés</div>
-      <div class="trust-item"><span class="trust-ico">✓</span>Historique daté et vérifiable</div>
-      <div class="trust-item"><span class="trust-ico">✓</span>Paiement sécurisé par Stripe</div>
-      <div class="trust-item"><span class="trust-ico">✓</span>Abonnement sans engagement</div>
-      <div class="trust-item"><span class="trust-ico">✓</span>Données personnelles protégées</div>
-      <div class="trust-item" style="margin-bottom:0"><span class="trust-ico">✓</span>Critères de sélection transparents</div>
-    </div>
-
-    <div class="card side-card acc-violet" id="faq">
-      <div class="side-title">Questions fréquentes <a href="#faq" class="live-panel-link" style="font-size:10px">Voir toutes les questions</a></div>
-      <div id="faq-list"></div>
-    </div>
-  </div>
-
 </div>
 
 <footer>
@@ -422,7 +405,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <a href="/dashboard">Créer un compte gratuit</a><a href="#" onclick="openModal();return false">Se connecter</a><a href="/dashboard">Gérer mon abonnement</a>
       </div>
       <div class="foot-col"><div class="foot-h">Support</div>
-        <a href="#faq">FAQ</a><a href="mailto:contact@touslesmatchs.com">Contact</a>
+        <a href="/faq">FAQ</a><a href="mailto:contact@touslesmatchs.com">Contact</a>
       </div>
     </div>
     <div class="foot-legal">
@@ -694,25 +677,6 @@ async function loadStandardYesterday(){
 loadStandardYesterday();
 
 /* ══ FAQ ══ */
-var FAQ_DATA=[
-  {q:'Comment fonctionne le Concile IA ?',a:'Cinq IA indépendantes (Perplexity, DeepSeek, Mistral, Cohere, Qwen) analysent chaque match séparément. Un vote de convergence établit un score de confiance. Le signal n\'est publié que si ce score dépasse le seuil du palier.'},
-  {q:'Que représente le score de confiance ?',a:'L\'indicateur interne de convergence entre les IA. Il n\'est pas une garantie de résultat : l\'issue d\'un événement sportif reste incertaine.'},
-  {q:'Combien de sélections vais-je recevoir ?',a:'Les volumes (3, 10 ou 30/jour) sont des maximums, pas des garanties. Le nombre réel dépend des matchs atteignant le seuil du jour.'},
-  {q:'Pourquoi certaines journées comportent-elles moins de sélections ?',a:'Le Concile ne publie que si la convergence dépasse le seuil — mieux vaut zéro signal qu\'un signal faible.'},
-  {q:'Quelle différence entre Standard, Premium et Elite-VIP ?',a:'Standard (4,90€) ≥88% confiance, 3/jour max. Premium (14,90€) ≥85%, 10/jour, inclut Standard. Elite-VIP (29,90€) ≥82%, multisport, 30/jour, inclut Premium.'},
-  {q:'Comment fonctionne le compte gratuit ?',a:'Pick gratuit du jour, résultats publics, aperçu Standard de la veille, matchs en direct — sans carte bancaire.'},
-  {q:'Comment rejoindre le groupe Telegram ?',a:'Le lien du groupe correspondant à ton palier t\'est envoyé par email après ton abonnement.'},
-  {q:'Puis-je résilier mon abonnement ?',a:'Oui, sans engagement, résiliable à tout moment depuis le portail Stripe.'},
-  {q:'Comment les résultats sont-ils calculés ?',a:'Cote réelle enregistrée à l\'envoi, résultat vérifié après la fin officielle du match. Winrate et profit calculés uniquement sur les sélections terminées.'},
-];
-function renderFAQ(){
-  var el=document.getElementById('faq-list');
-  el.innerHTML=FAQ_DATA.map(function(f,i){
-    return '<div class="faq-item" id="faq-'+i+'"><div class="faq-q" onclick="toggleFaq('+i+')">'+esc(f.q)+'<span class="faq-arrow">+</span></div><div class="faq-a">'+esc(f.a)+'</div></div>';
-  }).join('');
-}
-function toggleFaq(i){ document.getElementById('faq-'+i).classList.toggle('open'); }
-renderFAQ();
 </script>
 <script src="/js/cookie-consent.js" defer></script>
 </body>
