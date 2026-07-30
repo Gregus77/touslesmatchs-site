@@ -689,7 +689,10 @@ function requestAnalysis(btn, matchId, home, away) {
         + '</div>';
 
       var cm = confMeta(confText);
-      var arjelHtml = d.arjel_avg_odd ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ARJEL : ' + Number(d.arjel_avg_odd).toFixed(2) + (d.arjel_bookmakers_count ? ' (' + d.arjel_bookmakers_count + ' bookmakers)' : '') + '</div>' : "";
+      // "Moyenne" n'a de sens qu'a partir de 2 bookmakers — sinon c'est juste
+      // la cote d'un seul operateur, deja affichee ailleurs sous "Cote".
+      var arjelHtml = (d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
+        ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ARJEL : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
       el.innerHTML = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
         + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
         + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
