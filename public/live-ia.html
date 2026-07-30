@@ -702,6 +702,11 @@ function requestAnalysis(btn, matchId, home, away) {
         + '</div>';
 
       var cm = confMeta(confText);
+      // Pas de pari valide = pas d'absence de pastille, mais une pastille ROUGE
+      // explicite "ne pas jouer" — sinon la couleur disparait justement sur le
+      // cas le plus important a signaler clairement.
+      var noSignalHtml = !betText
+        ? '<div class="conf-badge red"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
       // "Moyenne" n'a de sens qu'a partir de 2 bookmakers — sinon c'est juste
       // la cote d'un seul operateur, deja affichee ailleurs sous "Cote". Et
       // sans pari valide (betText vide), une cote affichee ne se rattache a
@@ -711,6 +716,7 @@ function requestAnalysis(btn, matchId, home, away) {
       el.innerHTML = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
         + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
         + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
+        + noSignalHtml
         + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "% · " + cm.label : "") + '</div>' : "")
         + arjelHtml
         + agentsHtml
