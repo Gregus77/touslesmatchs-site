@@ -34,6 +34,20 @@ const MODELS = {
     costPer1kTokensEur: 0.0002, // ordre de grandeur — DeepSeek est le moins cher du registre
   },
 
+  // ── Repli OpenRouter pour un agent officiel dont la clé directe est morte
+  // (Perplexity, HTTP 401 depuis le 29/07/2026) : compte sur le budget
+  // OpenRouter comme les autres, sous garde-fou — voir allowOfficialOpenRouterFallback.
+  perplexity: {
+    id: "perplexity/sonar-pro",
+    provider: "openrouter",
+    role: "official_fallback",
+    mode: "official",
+    enabled: true,
+    dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
+    maxTokensOut: Number(process.env.AI_MODEL_PERPLEXITY_MAX_TOKENS || 400),
+    costPer1kTokensEur: 0.003,
+  },
+
   // ── Test à blanc uniquement : ne décident jamais, ne publient jamais ───
   qwen: {
     id: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",

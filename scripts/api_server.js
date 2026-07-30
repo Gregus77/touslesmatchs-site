@@ -3516,6 +3516,13 @@ Réponds en JSON pur (pas de markdown):
 
     try {
       const providers = [];
+      // Cle anti-doublon/budget partagee par TOUS les repli OpenRouter de cet
+      // agent (voir analysis_engine.js) — doit exister avant le premier appel
+      // au garde-fou, pas seulement avant les replis du bas de liste : c'est
+      // l'absence de cette garde sur les deux appels ci-dessous (Perplexity et
+      // Qwen "titulaires") qui a vide le budget OpenRouter le 29-30/07/2026.
+      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}`;
+      const _fallbackCompetition = match.competition || match.league || "";
       if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: agCfg.model });
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       // Repli OpenRouter pour Perplexity-Web : la cle Perplexity directe est a
@@ -3524,18 +3531,30 @@ Réponds en JSON pur (pas de markdown):
       // OpenRouter (2 EUR/jour) au lieu d'un abonnement Perplexity separe. Cet
       // essai passe apres la tentative directe : si une cle Perplexity valide
       // est un jour remise, elle reste prioritaire et ce repli ne sert plus.
-      if (agCfg.name === "Perplexity-Web" && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "perplexity/sonar-pro" });
+      // Passe desormais sous le meme garde-fou budget que les autres replis
+      // OpenRouter — l'appel direct etait sans limite et a vide le budget
+      // partage en quelques heures le 29-30/07/2026.
+      if (agCfg.name === "Perplexity-Web" && OPENROUTER_API_KEY
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "perplexity" })) {
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "perplexity/sonar-pro" });
+      }
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
-      if (agCfg.useOpenRouter && OPENROUTER_API_KEY) providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
+      // Agent titulaire "OpenRouter-Qwen" : tournait a chaque cycle auto-concile
+      // (~toutes les 10 min) sans aucune limite avant ce correctif — le modele
+      // "qwen" du registre est concu comme un test a blanc plafonne (30
+      // requetes/jour), pas comme un agent titulaire illimite. Meme garde-fou
+      // que les autres replis OpenRouter desormais.
+      if (agCfg.useOpenRouter && OPENROUTER_API_KEY
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
+      }
       if (!providers.length && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
       if (!providers.length && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: "mistral-small-latest" });
       if (!providers.length && GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
       // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
       // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
       // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
-      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}`;
-      const _fallbackCompetition = match.competition || match.league || "";
       if (!providers.length && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
