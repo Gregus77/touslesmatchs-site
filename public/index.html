@@ -153,7 +153,8 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 
 /* ── RANGEE 4 : formules + confiance + faq (6 colonnes) ── */
 .row-6{grid-template-columns:repeat(4,1fr) 1.1fr 1.1fr;align-items:start}
-.plan{padding:26px 22px;position:relative;display:flex;flex-direction:column}
+.plan{padding:26px 22px;position:relative;display:flex;flex-direction:column;min-height:440px}
+@media(max-width:600px){.plan{min-height:0}}
 .plan.hl{border-color:rgba(155,123,255,.4);background:linear-gradient(180deg,rgba(124,92,255,.08),var(--panel))}
 .plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:var(--violet);color:#fff;padding:4px 11px;border-radius:999px;white-space:nowrap}
 .plan-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:22px}
