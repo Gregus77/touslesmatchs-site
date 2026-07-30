@@ -758,6 +758,12 @@ const STRIPE_PRICE_ID_STANDARD = process.env.STRIPE_PRICE_ID_STANDARD || process
 const STRIPE_PRICE_ID_PREMIUM  = process.env.STRIPE_PRICE_ID_PREMIUM  || process.env.STRIPE_PRICE_PRO     || "";
 const STRIPE_PRICE_ID_ELITE    = process.env.STRIPE_PRICE_ID_ELITE    || process.env.STRIPE_PRICE_ELITE   || "";
 const STRIPE_PRICE_ID_VIP      = process.env.STRIPE_PRICE_ID_VIP      || process.env.STRIPE_PRICE_VIP     || "";
+// Offre de lancement temporaire (demande fondateur 30/07/2026, "pour l'instant") :
+// tout nouvel abonne Elite-VIP recoit 1 mois offert en plus. Toggle par env var
+// pour pouvoir l'arreter sans toucher au code quand la periode de lancement
+// sera terminee.
+const ELITE_LAUNCH_BONUS_ENABLED = String(process.env.ELITE_LAUNCH_BONUS_ENABLED ?? "true").toLowerCase() !== "false";
+const ELITE_LAUNCH_BONUS_DAYS = Number(process.env.ELITE_LAUNCH_BONUS_DAYS || 30);
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
@@ -5955,18 +5961,36 @@ function creditReferrer(refCode, newSubscriberEmail) {
   ref.referrals.push(newSubscriberEmail);
   ref.monthsEarned = (ref.monthsEarned || 0) + 1;
   saveReferrals(data);
-  // Prolonger l'abonnement du parrain de 30 jours
-  try {
-    const codesDb = new Database(CODES_DB_PATH);
-    const row = codesDb.prepare("SELECT expires_at FROM codes WHERE email = ? AND active = 1").get(ref.ownerEmail);
-    if (row) {
-      const base = row.expires_at ? new Date(row.expires_at) : new Date();
-      if (base < new Date()) base.setTime(Date.now());
-      base.setDate(base.getDate() + 30);
-      codesDb.prepare("UPDATE codes SET expires_at = ? WHERE email = ? AND active = 1").run(base.toISOString(), ref.ownerEmail);
-    }
-    codesDb.close();
-  } catch (e) { console.error("[referral] extend:", e.message); }
+  // Prolonge l'abonnement du parrain ET du filleul de 30 jours chacun
+  // (demande fondateur 30/07/2026 : recompenser les deux cotes, pas
+  // seulement le parrain).
+  function extendByDays(email, days) {
+    try {
+      const codesDb = new Database(CODES_DB_PATH);
+      const row = codesDb.prepare("SELECT expires_at FROM codes WHERE email = ? AND active = 1").get(email);
+      if (row) {
+        const base = row.expires_at ? new Date(row.expires_at) : new Date();
+        if (base < new Date()) base.setTime(Date.now());
+        base.setDate(base.getDate() + days);
+        codesDb.prepare("UPDATE codes SET expires_at = ? WHERE email = ? AND active = 1").run(base.toISOString(), email);
+      }
+      codesDb.close();
+    } catch (e) { console.error("[referral] extend:", e.message); }
+  }
+  extendByDays(ref.ownerEmail, 30);
+  extendByDays(newSubscriberEmail, 30);
+  // Email au filleul
+  if (BREVO_API_KEY) {
+    brevoSendEmail(newSubscriberEmail, "🎁 1 mois offert pour avoir rejoint via un parrainage !",
+      `<div style="background:#06080f;padding:32px;font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;color:#eceaf4">
+        <div style="font-size:24px;font-weight:900;background:linear-gradient(135deg,#6366f1,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px">TousLesMatchs</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:10px">🎁 Merci d'avoir rejoint via un parrainage !</div>
+        <div style="color:#a8aec8;line-height:1.6;margin-bottom:20px">Ton abonnement vient d'être prolongé de <strong style="color:#10b981">30 jours</strong> automatiquement, offert pour avoir utilisé un lien de parrainage.</div>
+        <a href="https://www.touslesmatchs.com" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700">Voir mes picks →</a>
+      </div>`,
+      { critical: true }
+    ).catch(() => {});
+  }
   // Email au parrain
   if (BREVO_API_KEY) {
     brevoSendEmail(ref.ownerEmail, "🎉 Tu viens de gagner 1 mois offert !",
@@ -8245,15 +8269,18 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       try {
         const codeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         const newCode = Array.from({ length: 8 }, () => codeChars[Math.floor(Math.random() * codeChars.length)]).join("");
-        const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
-        const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
         const cdbw = new Database(CODES_DB_PATH);
         const existing = cdbw.prepare("SELECT code FROM codes WHERE email = ? AND plan = ? AND active = 1").get(customerEmail, status);
+        // Offre de lancement Elite : +1 mois offert, uniquement pour un tout
+        // premier abonnement (jamais renouvele en boucle a chaque paiement).
+        const eliteBonusDays = (status === "elite" && ELITE_LAUNCH_BONUS_ENABLED && !existing) ? ELITE_LAUNCH_BONUS_DAYS : 0;
+        const expiresAt = new Date(Date.now() + (durationDays + eliteBonusDays) * 86400000).toISOString().slice(0, 10);
+        const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
         if (!existing) {
           cdbw.prepare(
             "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
           ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr());
-          console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}`);
+          console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}${eliteBonusDays ? ` (+${eliteBonusDays}j offerts, offre de lancement)` : ""}`);
         }
         cdbw.close();
       } catch(e) { console.error("[stripe] code creation error:", e.message); }
