@@ -10,7 +10,7 @@
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
     background: #06080f; color: #eceaf4; line-height: 1.55;
-    min-height: 100vh; padding: 0 16px 60px;
+    min-height: 100vh; padding: 72px 16px 60px;
   }
   a { color: #6366f1; text-decoration: none; }
   .wrap { max-width: 640px; margin: 0 auto; }
@@ -45,6 +45,21 @@
   .row { display: flex; gap: 10px; }
   .err { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
   .hidden { display: none; }
+
+  /* Nav homogene avec le reste du site (accueil, Live IA, Performances, FAQ) */
+  nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:rgba(6,8,15,.9);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px)}
+  .nav-brand{font-size:16px;font-weight:800;color:#eceaf4;text-decoration:none;flex:0 0 auto}
+  .nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;flex:1}
+  .nav-links a{font-size:13px;color:#a8aec8;text-decoration:none;padding:6px 14px;border-radius:8px;font-weight:500}
+  .nav-links a:hover{color:#eceaf4;background:rgba(255,255,255,.06)}
+  .nav-links a.active{color:#818cf8}
+  .nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+  .nav-cta{font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;text-decoration:none;white-space:nowrap}
+  .nav-hamburger{display:none;background:none;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#eceaf4;width:34px;height:34px;font-size:16px;cursor:pointer}
+  @media(max-width:900px){ .nav-links{display:none} .nav-hamburger{display:block} }
+  .mmenu{display:none;position:fixed;inset:0;z-index:199;background:rgba(6,8,15,.98);padding:90px 24px 24px;flex-direction:column;gap:18px}
+  .mmenu.open{display:flex}
+  .mmenu a{font-size:18px;font-weight:700;color:#eceaf4;text-decoration:none;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}
 
   /* Bankroll display */
   .bankroll-view { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
@@ -91,12 +106,38 @@
 </style>
 </head>
 <body>
+<nav>
+  <a href="/" class="nav-brand">TousLesMatchs</a>
+  <div class="nav-links">
+    <a href="/#pick">Analyses</a>
+    <a href="/live-ia">Live IA</a>
+    <a href="/performances">Résultats</a>
+    <a href="/bankroll" class="active">Bankroll</a>
+    <a href="/#methode">Méthode</a>
+    <a href="/#plans">Tarifs</a>
+  </div>
+  <div class="nav-right">
+    <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
+    <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+<div class="mmenu" id="mmenu">
+  <a href="/#pick" onclick="toggleMenu()">Analyses</a>
+  <a href="/live-ia" onclick="toggleMenu()">Live IA</a>
+  <a href="/performances" onclick="toggleMenu()">Résultats</a>
+  <a href="/bankroll" onclick="toggleMenu()">Bankroll</a>
+  <a href="/#methode" onclick="toggleMenu()">Méthode</a>
+  <a href="/#plans" onclick="toggleMenu()">Tarifs</a>
+  <a href="/dashboard" onclick="toggleMenu()">Créer mon compte gratuit</a>
+</div>
+<script>
+function toggleMenu(){document.getElementById('mmenu').classList.toggle('open');}
+if (localStorage.getItem('tlm_plan')) {
+  var _navCta = document.getElementById('nav-cta-top');
+  if (_navCta) _navCta.style.display = 'none';
+}
+</script>
 <div class="wrap">
-  <header>
-    <div class="logo">TousLesMatchs</div>
-    <a class="back" href="/">← Accueil</a>
-  </header>
-
   <h1>💼 Gestion de capital</h1>
   <p class="subtitle">Outil pédagogique de gestion de votre capital. Selon votre capital et la cote, visualisez une mise adaptée à votre niveau de prudence. Aucune incitation, aucune garantie de gain.</p>
 
