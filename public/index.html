@@ -152,16 +152,16 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 @media(max-width:600px){.row-4{grid-template-columns:1fr}}
 
 /* ── RANGEE 4 : formules + confiance + faq (6 colonnes) ── */
-.row-6{grid-template-columns:repeat(4,1fr) 1.1fr 1.1fr}
-.plan{padding:18px 16px;position:relative;display:flex;flex-direction:column}
+.row-6{grid-template-columns:repeat(4,1fr) 1.1fr 1.1fr;align-items:start}
+.plan{padding:26px 22px;position:relative;display:flex;flex-direction:column}
 .plan.hl{border-color:rgba(155,123,255,.4);background:linear-gradient(180deg,rgba(124,92,255,.08),var(--panel))}
 .plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:var(--violet);color:#fff;padding:4px 11px;border-radius:999px;white-space:nowrap}
-.plan-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
-.plan-name{font-size:12.5px;font-weight:800}
-.plan-price{font-size:22px;font-weight:900;margin:4px 0 12px}
-.plan-price span{font-size:11px;font-weight:600;color:var(--muted)}
-.plan-feats{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px;flex:1}
-.plan-feats li{font-size:10.8px;color:var(--tx2);display:flex;gap:6px}
+.plan-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:22px}
+.plan-name{font-size:14px;font-weight:800;letter-spacing:.04em}
+.plan-price{font-size:32px;font-weight:900;margin:8px 0 20px}
+.plan-price span{font-size:13px;font-weight:600;color:var(--muted)}
+.plan-feats{list-style:none;margin:0 0 22px;padding:0;display:flex;flex-direction:column;gap:12px;flex:1}
+.plan-feats li{font-size:13px;color:var(--tx2);display:flex;gap:8px;line-height:1.4}
 .plan-check{color:var(--green);flex:0 0 auto}
 @media(max-width:1300px){.row-6{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.row-6{grid-template-columns:1fr}}
@@ -313,7 +313,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <li><span class="plan-check">✓</span>Aperçu Standard de la veille</li>
         <li><span class="plan-check">✓</span>Aucune carte bancaire</li>
       </ul>
-      <a href="/dashboard" class="btn btn-ghost btn-block btn-sm">Créer mon compte gratuit</a>
+      <a href="/dashboard" class="btn btn-ghost btn-block">Créer mon compte gratuit</a>
     </div>
 
     <div class="card plan">
@@ -326,7 +326,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <li><span class="plan-check">✓</span>Confiance minimum 88%</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block btn-sm">Choisir Standard</a>
+      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block">Choisir Standard</a>
     </div>
 
     <div class="card plan hl">
@@ -341,7 +341,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <li><span class="plan-check">✓</span>Équilibre sélectivité/volume</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="https://buy.stripe.com/9B600jgrW3Bi63W0uG3VC08" target="_blank" class="btn btn-prim btn-block btn-sm">Choisir Premium</a>
+      <a href="https://buy.stripe.com/9B600jgrW3Bi63W0uG3VC08" target="_blank" class="btn btn-prim btn-block">Choisir Premium</a>
     </div>
 
     <div class="card plan">
@@ -355,7 +355,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <li><span class="plan-check">✓</span>Multisport, accès complet</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09" target="_blank" class="btn btn-ghost btn-block btn-sm">Rejoindre Elite-VIP</a>
+      <a href="https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09" target="_blank" class="btn btn-ghost btn-block">Rejoindre Elite-VIP</a>
     </div>
 
     <div class="card side-card">
@@ -450,7 +450,7 @@ function toggleMenu(){document.getElementById('mmenu').classList.toggle('open');
 /* ══ HERO — 5 IA en eventail, traits vers le coeur du Concile ══ */
 (function(){
   var names=['Perplexity','DeepSeek','Mistral','Cohere','Qwen'];
-  var icons=['🌐','🔮','🌊','🧬','🌟'];
+  var icons=['🧠','🧠','🧠','🧠','🧠']; // meme icone (cerveau) pour les 5, comme sur la reference — seul le nom distingue chaque IA
   var xs=[6,26,50,74,94]; // % gauche a droite (centre horizontal du noeud)
   var ys=[38,8,0,8,38];   // % haut (arc), sommet du noeud
   // Centre de l'icone = sommet du noeud + moitie de sa hauteur (52px sur un
