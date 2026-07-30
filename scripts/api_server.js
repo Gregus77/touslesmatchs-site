@@ -7219,12 +7219,10 @@ function refreshDailyPickFromDB() {
     ).all();
     _db.close();
     const todayISO = new Date().toISOString().slice(0, 10);
-    // Fenêtre minute : un prono live n'a de valeur qu'entre la 25e et la 65e minute
-    // (avant = trop incertain, après = cotes bookmaker trop basses). On tolère les
-    // analyses sans minute (pré-match / sports sans minute).
-    const PICK_MIN_MINUTE = 25, PICK_MAX_MINUTE = 65;
-    const minuteOk = (m) => m == null || (m >= PICK_MIN_MINUTE && m <= PICK_MAX_MINUTE);
-    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r) && minuteOk(r.minute_at_analysis));
+    // R1 (décision fondateur 28/07/2026) : la sélection se fait sur la cote réelle
+    // ARJEL, plus sur la minute — l'ancienne fenêtre 25-65' est supprimée ici aussi
+    // pour rester cohérente avec le reste du pipeline (voir AUTO_CONCILE_TIME_WINDOW).
+    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r));
     if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI (en cours d'abord = actionnable, sinon le plus confiant du jour).
     // Priorité 2 : sinon, la meilleure gagnante récente (vitrine).
