@@ -639,14 +639,22 @@ async function loadPick(){
     var r=await fetch('/api/current-pick?t='+Date.now());
     var d=await r.json();
     var p=d.pick&&d.pick.currentPick?d.pick.currentPick:d.pick;
-    if(!p||!p.home){
+    // /current-pick passe toujours par normalizeCurrentPick() cote serveur,
+    // qui renvoie teamA/teamB/marketLabel (partage avec d'autres consommateurs,
+    // ex. generateur d'image Telegram) — jamais home/away/best_bet. Ce code
+    // lisait les mauvais champs : un pick valide avec confiance s'affichait
+    // comme "aucun pick disponible" (constate le 30/07/2026).
+    var homeName=p&&(p.teamA&&p.teamA.name||p.home);
+    var awayName=p&&(p.teamB&&p.teamB.name||p.away);
+    if(!p||!homeName){
       box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.<br>Le Concile n\'a identifié aucune sélection correspondant aux critères du compte gratuit.</div>';
       return;
     }
+    var betLabel=p.marketLabel||p.marketType||p.best_bet||'';
     var lockHtml=loggedIn?'':'<div class="pick-lock">🔒 Crée un compte gratuit pour le détail complet</div>';
     box.innerHTML='<div class="pick-comp">'+esc(p.competition||p.sport||'')+'</div>'+
-      '<div class="pick-match">'+esc(p.home)+' vs '+esc(p.away)+'</div>'+
-      '<div class="pick-bet">'+(loggedIn?esc(p.best_bet||''):'Sélection réservée aux membres')+'</div>'+
+      '<div class="pick-match">'+esc(homeName)+' vs '+esc(awayName)+'</div>'+
+      '<div class="pick-bet">'+(loggedIn?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
       '<div class="pick-conf">'+esc(p.confidence)+'%</div>'+
       lockHtml;
   } catch(e){
