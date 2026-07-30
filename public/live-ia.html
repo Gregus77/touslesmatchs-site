@@ -140,6 +140,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .search-input:focus{outline:none;border-color:var(--indigo2)}
 .search-input::placeholder{color:var(--muted)}
 
+/* Legende confiance — pense-bete toujours visible */
+.conf-legend{max-width:900px;margin:0 auto;padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.conf-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--bg3);border:1px solid var(--b1)}
+.conf-legend-item .conf-dot{width:11px;height:11px;margin-right:0}
+
 /* Sport popup */
 .sport-popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:250;align-items:center;justify-content:center;padding:20px}
 .sport-popup-overlay.open{display:flex}
@@ -268,6 +273,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <!-- SEARCH -->
 <div class="search-bar">
   <input type="text" class="search-input" id="match-search" placeholder="🔍 Rechercher une équipe ou un match..." oninput="onSearchInput(this.value)">
+</div>
+
+<!-- LEGENDE CONFIANCE -->
+<div class="conf-legend">
+  <span class="conf-legend-item"><span class="conf-dot green"></span>≥85% Fiable</span>
+  <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84% Bon</span>
+  <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74% Risqué</span>
+  <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65% Prudence</span>
 </div>
 
 <!-- FILTERS -->

@@ -123,6 +123,14 @@ nav{
 .freshness-banner{display:flex;align-items:center;gap:10px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.2);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--muted2);line-height:1.5}
 .freshness-banner .fb-icon{font-size:18px;flex-shrink:0}
 
+.conf-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.conf-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--bg2);border:1px solid var(--b2)}
+.conf-legend-item .conf-dot{width:10px;height:10px;border-radius:50%}
+.conf-legend-item .conf-dot.green{background:var(--green)}
+.conf-legend-item .conf-dot.yellow{background:#eab308}
+.conf-legend-item .conf-dot.orange{background:var(--amber)}
+.conf-legend-item .conf-dot.red{background:var(--red)}
+
 .load-more{display:block;margin:0 auto;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid var(--b2);color:var(--text);cursor:pointer;transition:all .2s}
 .load-more:hover{background:rgba(255,255,255,.1);border-color:var(--b3)}
 
@@ -196,6 +204,12 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   <div class="roi-caption" id="roi-caption"></div>
 
   <div class="section-title">Historique daté</div>
+  <div class="conf-legend">
+    <span class="conf-legend-item"><span class="conf-dot green"></span>≥85% Fiable</span>
+    <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84% Bon</span>
+    <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74% Risqué</span>
+    <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65% Prudence</span>
+  </div>
   <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
   <div class="section-hint" id="history-hint">Chaque ligne = une analyse. Cote réelle ARJEL quand disponible, sinon estimation marché.</div>
   <div id="history-list" class="history-list">
