@@ -3922,17 +3922,31 @@ Réponds en JSON pur (pas de markdown):
       const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
 
       // 🟢 STANDARD — cap 3/j
+      // markSignalSent() APRES confirmation d'envoi, jamais avant : marquer en
+      // base puis ignorer le resultat de sendTelegramMessage() faisait croire au
+      // systeme qu'un signal etait diffuse alors que Telegram l'avait refuse.
+      // Consequences reelles constatees le 30/07/2026 : le message de RESULTAT
+      // ("match gagne") partait alors que l'abonne n'avait jamais recu le pick,
+      // le site affichait l'analyse comme diffusee, et le quota journalier etait
+      // consomme pour rien — bloquant les vrais signaux suivants. En cas d'echec
+      // on rend donc aussi le credit de quota.
       if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP) {
         _standardSignalDaily.count++;
-        markSignalSent(match.home, match.away, "sig_sent_standard");
-        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
+        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => {
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_standard");
+          else _standardSignalDaily.count--;
+          console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+        });
       }
 
       // 🟣 PREMIUM — cap 10/j (canal socle, toujours présent)
       if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
-        markSignalSent(match.home, match.away, "sig_sent_premium");
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL"}`));
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => {
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_premium");
+          else _premiumSignalDaily.count--;
+          console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+        });
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
@@ -3940,9 +3954,12 @@ Réponds en JSON pur (pas de markdown):
       // 🟠 ELITE/VIP — cap 30/j, multisport, alertes prioritaires
       if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
         _eliteSignalDaily.count++;
-        markSignalSent(match.home, match.away, "sig_sent_elite");
         const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
-        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL"}`));
+        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => {
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_elite");
+          else _eliteSignalDaily.count--;
+          console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+        });
       }
 
       // 👑 ADMIN (Hermès) — supervision, reçoit tout y compris hors-ARJEL
@@ -3956,8 +3973,11 @@ Réponds en JSON pur (pas de markdown):
       // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
       if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
-        markSignalSent(match.home, match.away, "sig_sent_free");
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL"}`));
+        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => {
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_free");
+          else _freeSignalDailyDate.count--;
+          console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+        });
       }
     }
   }
@@ -9231,6 +9251,59 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
   if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
   await sendSignalFortBilanTelegram();
   res.json({ ok: true, stats: getSignalFortStats() });
+});
+
+// Vitrine du compte gratuit : ce que les abonnes Standard ont reellement recu
+// hier. Sert la preuve par l'exemple sans rien devoiler des signaux EN COURS
+// (uniquement des matchs deja termines et officiellement regles).
+// Mise de reference fixe a 10 EUR, affichee explicitement cote client — jamais
+// presentee comme un gain reel, uniquement comme une simulation.
+app.get("/standard-yesterday", (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT home, away, competition, sport, best_bet, confidence,
+             real_odd, real_odd_source, outcome, analysed_at,
+             final_score_home, final_score_away
+      FROM concile_analyses
+      WHERE sig_sent_standard = 1
+        AND date(analysed_at) = date('now','-1 day')
+        AND outcome IN ('win','loss')
+      ORDER BY analysed_at ASC
+    `).all();
+
+    const MISE = 10;
+    let profit = 0, wins = 0, losses = 0;
+    const selections = rows.map(r => {
+      const cote = rowOdd(r);
+      const gagne = r.outcome === "win";
+      const gain = gagne ? Math.round((cote - 1) * MISE * 100) / 100 : -MISE;
+      profit += gain;
+      if (gagne) wins++; else losses++;
+      return {
+        date: r.analysed_at,
+        competition: r.competition || r.sport || "",
+        home: r.home, away: r.away,
+        bet: r.best_bet,
+        cote,
+        confidence: r.confidence,
+        outcome: r.outcome,
+        score_final: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+        gain: Math.round(gain * 100) / 100,
+      };
+    });
+
+    res.json({
+      ok: true,
+      mise_reference: MISE,
+      selections,
+      total: selections.length,
+      wins, losses,
+      profit: Math.round(profit * 100) / 100,
+    });
+  } catch (e) {
+    console.error("[standard-yesterday]", e.message);
+    res.json({ ok: true, selections: [], total: 0, wins: 0, losses: 0, profit: 0, mise_reference: 10 });
+  }
 });
 
 app.get("/signal-fort-stats", (req, res) => {
