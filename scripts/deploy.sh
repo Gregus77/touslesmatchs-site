@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO="/opt/touslesmatchs"
-BRANCH="claude/consensus-engine-architecture-sy3gqg"
+BRANCH="claude/tiktok-arjel-automation-hgp1tv"
 DOMAIN="https://www.touslesmatchs.com"
 MIN_BYTES=100000            # vraie page ~197 Ko ; ancienne buggée ~42 Ko
 cd "$REPO"
