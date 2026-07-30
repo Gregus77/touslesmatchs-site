@@ -275,7 +275,7 @@
         box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';
         return;
       }
-      var icons = { Football: "⚽", Basketball: "🏀", Hockey: "🏒", Baseball: "⚾" };
+      var icons = { Football: "⚽", Basketball: "🏀", Hockey: "🏒" };
       var html = '<div class="card">';
       list.slice(0, 25).forEach(function (m) {
         var sh = (m.score_home == null ? "?" : m.score_home), sa = (m.score_away == null ? "?" : m.score_away);

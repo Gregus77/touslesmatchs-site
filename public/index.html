@@ -598,7 +598,7 @@ async function loadProof(){
 loadProof();
 
 /* ══ MATCHS EN DIRECT ══ */
-var SPORT_ICO={Football:'⚽',Basketball:'🏀',Hockey:'🏒',Baseball:'⚾'};
+var SPORT_ICO={Football:'⚽',Basketball:'🏀',Hockey:'🏒'};
 function initials(n){return String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(function(p){return p.charAt(0)}).join('').toUpperCase()||'?';}
 function logo(src,name){return src?'<img src="'+esc(src)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display=\'none\'">':esc(initials(name));}
 async function loadLive(){

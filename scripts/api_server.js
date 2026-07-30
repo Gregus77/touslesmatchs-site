@@ -131,7 +131,7 @@ ${bodyHtml}
   }
   function renderIndex(items) {
     const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
-    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, hockey et baseball. Verdict de 5 intelligences artificielles, confiance et historique public.";
+    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket et hockey. Verdict de 5 intelligences artificielles, confiance et historique public.";
     const canonical = `${SITE}/pronostics`;
     const schema = { "@context": "https://schema.org", "@type": "CollectionPage", name: title, description, url: canonical };
     const rows = (items || []).map(it => {
@@ -6343,7 +6343,7 @@ function buildPlanComparisonHtml() {
   const plans = [
     { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
     { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey, baseball", "Confiance ≥ 82%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey", "Confiance ≥ 82%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");

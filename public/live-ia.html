@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Live IA — TousLesMatchs</title>
-<meta name="description" content="Matchs en direct analysés par le Concile IA. Football, Basketball, Hockey, Baseball — scores en temps réel.">
+<meta name="description" content="Matchs en direct analysés par le Concile IA. Football, Basketball, Hockey — scores en temps réel.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -289,7 +289,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <button class="filter-btn active" data-filter="Football">&#9917; Football</button>
   <button class="filter-btn" data-filter="Basketball">&#127936; Basketball</button>
   <button class="filter-btn" data-filter="Hockey">&#127954; Hockey</button>
-  <button class="filter-btn" data-filter="Baseball">&#9918; Baseball</button>
 </div>
 
 <!-- REFRESH -->
@@ -303,7 +302,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="sport-popup">
     <div class="sport-popup-icon">⚽</div>
     <div class="sport-popup-title">Football affiché par défaut</div>
-    <div class="sport-popup-text">Cette page affiche le football en priorité. Pour voir un autre sport (basket, hockey, baseball) ou tous les matchs en même temps, clique simplement sur le sport de ton choix dans la barre au-dessus.</div>
+    <div class="sport-popup-text">Cette page affiche le football en priorité. Pour voir un autre sport (basket, hockey) ou tous les matchs en même temps, clique simplement sur le sport de ton choix dans la barre au-dessus.</div>
     <button class="sport-popup-btn" onclick="closeSportPopup()">J'ai compris</button>
   </div>
 </div>
@@ -371,7 +370,7 @@ if (location.hash === '#historique' || location.hash === '#stats') { setTimeout(
 // ── Sport config ──
 const SPORT_ICONS = {
   Football: "⚽", Basketball: "🏀", Hockey: "🏒",
-  Baseball: "⚾", Rugby: "🏉"
+  Rugby: "🏉"
 };
 
 const COUNTRY_FLAGS = {
