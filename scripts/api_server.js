@@ -2263,6 +2263,24 @@ function isApiSportsLiveGame(g) {
   return !API_SPORTS_NON_LIVE_STATUSES.has(short);
 }
 
+// Basketball/hockey/baseball sont facturés par API-Sports sur un quota SEPARE
+// de celui du football (100 requêtes/jour chacun sur le plan actuel), mais
+// partageaient jusqu'ici le même cache 60 s que le football — un simple
+// visiteur avec l'onglet Live IA ouvert (poll 60 s) suffisait à épuiser leur
+// quota en ~1h40. Ces 3 sports sont secondaires (peu de matchs, peu de trafic
+// dessus) : on ne les interroge réellement qu'au maximum une fois toutes les
+// SECONDARY_SPORT_MIN_INTERVAL_MS, quel que soit le rythme de rafraîchissement
+// du cache global. Le football garde son cadencement normal (produit principal).
+const SECONDARY_SPORT_MIN_INTERVAL_MS = Math.max(1, Number(process.env.SECONDARY_SPORT_POLL_MIN_MINUTES || 10)) * 60 * 1000;
+const apiSportsLastFetch = { basketball: 0, hockey: 0, baseball: 0 };
+
+function shouldSkipSecondarySportPoll(sport) {
+  const last = apiSportsLastFetch[sport] || 0;
+  if (Date.now() - last < SECONDARY_SPORT_MIN_INTERVAL_MS) return true;
+  apiSportsLastFetch[sport] = Date.now();
+  return false;
+}
+
 async function fetchFromApiSports() {
   if (!API_SPORTS_KEY) return null;
   const results = [];
@@ -2281,7 +2299,7 @@ async function fetchFromApiSports() {
 
   // Basketball live
   try {
-    if (!shouldSkipApiSportsSport("basketball")) {
+    if (!shouldSkipApiSportsSport("basketball") && !shouldSkipSecondarySportPoll("basketball")) {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("basketball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
@@ -2304,7 +2322,7 @@ async function fetchFromApiSports() {
 
   // Hockey live
   try {
-    if (!shouldSkipApiSportsSport("hockey")) {
+    if (!shouldSkipApiSportsSport("hockey") && !shouldSkipSecondarySportPoll("hockey")) {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("hockey", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 30).map((g) => ({
@@ -2327,7 +2345,7 @@ async function fetchFromApiSports() {
 
   // Baseball live
   try {
-    if (!shouldSkipApiSportsSport("baseball")) {
+    if (!shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
