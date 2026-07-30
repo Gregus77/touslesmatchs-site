@@ -297,37 +297,16 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
     </div>
   </div>
 
-  <!-- RANGEE 3 : PICK GRATUIT / STANDARD HIER / METHODE / RESULTATS RECENTS -->
-  <div class="row row-4" id="pick">
+  <!-- RANGEE 3 : PICK GRATUIT DU JOUR (seul, immediatement visible) -->
+  <div class="row" style="grid-template-columns:1fr" id="pick">
     <div class="card pcard acc-green" id="pick-card">
       <div class="pcard-title">Le pick gratuit du jour <span class="badge">Gratuit</span></div>
       <div id="pick-body" class="empty-note">Chargement…</div>
     </div>
-
-    <div class="card pcard acc-blue">
-      <div class="pcard-title">Ce que Standard a reçu hier</div>
-      <table class="mini-table"><thead><tr><th>Match</th><th>Sél.</th><th>Rés.</th></tr></thead>
-        <tbody id="std-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
-      </table>
-    </div>
-
-    <div class="card pcard acc-violet" id="methode">
-      <div class="pcard-title">Comment ça fonctionne ? <a href="#methode" class="live-panel-link" style="font-size:10px">Voir la méthode</a></div>
-      <div class="method-step"><div class="method-n">1</div><div><div class="method-t">Les données sont collectées</div><div class="method-d">Hermès vérifie chaque donnée sur plusieurs sources.</div></div></div>
-      <div class="method-step"><div class="method-n">2</div><div><div class="method-t">Les IA analysent séparément</div><div class="method-d">Perplexity, DeepSeek, Mistral, Cohere, Qwen votent.</div></div></div>
-      <div class="method-step" style="margin-bottom:0"><div class="method-n">3</div><div><div class="method-t">Le Concile calcule le score</div><div class="method-d">Publié seulement si la convergence dépasse le seuil.</div></div></div>
-    </div>
-
-    <div class="card pcard acc-cyan">
-      <div class="pcard-title">Résultats récents <a href="/performances" class="live-panel-link" style="font-size:10px">Voir tout →</a></div>
-      <table class="mini-table"><thead><tr><th>Match</th><th>Cote</th><th>Rés.</th></tr></thead>
-        <tbody id="res-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
-      </table>
-    </div>
   </div>
 
-  <!-- RANGEE 4 : FORMULES + CONFIANCE + FAQ -->
-  <div class="row row-6" id="plans">
+  <!-- RANGEE 4 : FORMULES (parcours principal : hero -> preuve -> pick gratuit -> formules) -->
+  <div class="row row-4" id="plans">
     <div class="card plan">
       <div class="plan-ico" style="background:rgba(167,173,208,.12);color:var(--tx2)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
       <div class="plan-name">GRATUIT</div>
@@ -382,7 +361,38 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       </ul>
       <a href="https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09" target="_blank" class="btn btn-ghost btn-block">Rejoindre Elite-VIP</a>
     </div>
+  </div>
+  <div class="row" style="grid-template-columns:1fr;padding-top:0">
+    <div class="plans-note">Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.</div>
+  </div>
 
+  <!-- RANGEE 5 : CONTENU SECONDAIRE (methode, preuves detaillees) — sous le
+       parcours principal, pas avant : un client presse va direct au pick
+       gratuit puis aux formules sans avoir a traverser tout ca. -->
+  <div class="row row-4">
+    <div class="card pcard acc-blue">
+      <div class="pcard-title">Ce que Standard a reçu hier</div>
+      <table class="mini-table"><thead><tr><th>Match</th><th>Sél.</th><th>Rés.</th></tr></thead>
+        <tbody id="std-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card pcard acc-violet" id="methode">
+      <div class="pcard-title">Comment ça fonctionne ? <a href="#methode" class="live-panel-link" style="font-size:10px">Voir la méthode</a></div>
+      <div class="method-step"><div class="method-n">1</div><div><div class="method-t">Les données sont collectées</div><div class="method-d">Hermès vérifie chaque donnée sur plusieurs sources.</div></div></div>
+      <div class="method-step"><div class="method-n">2</div><div><div class="method-t">Les IA analysent séparément</div><div class="method-d">Perplexity, DeepSeek, Mistral, Cohere, Qwen votent.</div></div></div>
+      <div class="method-step" style="margin-bottom:0"><div class="method-n">3</div><div><div class="method-t">Le Concile calcule le score</div><div class="method-d">Publié seulement si la convergence dépasse le seuil.</div></div></div>
+    </div>
+
+    <div class="card pcard acc-cyan">
+      <div class="pcard-title">Résultats récents <a href="/performances" class="live-panel-link" style="font-size:10px">Voir tout →</a></div>
+      <table class="mini-table"><thead><tr><th>Match</th><th>Cote</th><th>Rés.</th></tr></thead>
+        <tbody id="res-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row" style="grid-template-columns:1fr 1fr">
     <div class="card side-card acc-green">
       <div class="side-title">Pourquoi nous faire confiance ?</div>
       <div class="trust-item"><span class="trust-ico">✓</span>Résultats gagnés et perdus affichés</div>
@@ -397,8 +407,6 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="side-title">Questions fréquentes <a href="#faq" class="live-panel-link" style="font-size:10px">Voir toutes les questions</a></div>
       <div id="faq-list"></div>
     </div>
-
-    <div class="plans-note">Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.</div>
   </div>
 
 </div>
