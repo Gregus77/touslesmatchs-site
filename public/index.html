@@ -200,10 +200,16 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 @media(max-width:1300px){.row-6{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.row-6{grid-template-columns:1fr}}
 .plans-note{grid-column:1/-1;text-align:center;font-size:11.5px;color:var(--muted);max-width:640px;margin:2px auto 0;line-height:1.6}
-.partner-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-.partner-btn{display:inline-flex;align-items:center;justify-content:center;min-width:140px;padding:13px 28px;border-radius:10px;color:#fff;font-weight:900;font-size:15px;letter-spacing:-.01em;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.3);transition:transform .15s}
-.partner-btn:hover{transform:translateY(-2px)}
-@media(max-width:600px){.partner-btn{min-width:0;flex:1 1 auto;padding:12px 16px;font-size:13px}}
+.partner-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center}
+.partner-btn{display:inline-flex;align-items:center;justify-content:center;min-width:140px;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s}
+.partner-btn:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+/* Chaque bouton reprend l'esprit visuel de la marque (couleurs, forme,
+   typo) sans copier le logo reel — inspire de, pas une reproduction. */
+.partner-btn.pb-winamax{padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#ff7a00,#e2001a);color:#fff;font-weight:900;font-style:italic;font-size:16px;letter-spacing:-.02em}
+.partner-btn.pb-unibet{padding:13px 30px;border-radius:8px;background:#0a7a3d;color:#fff;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;border:2px solid #0fae5a}
+.partner-btn.pb-pmu{padding:13px 30px;border-radius:6px;background:#00287a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.08em}
+.partner-btn.pb-betclic{padding:13px 30px 10px;border-radius:4px;background:#e2001a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.02em;border-bottom:4px solid #16110f}
+@media(max-width:600px){.partner-btn{min-width:0;flex:1 1 auto;font-size:13px;padding:12px 16px}}
 
 .side-card{padding:26px 22px}
 .side-title{font-size:16px;font-weight:800;margin-bottom:12px;display:flex;justify-content:space-between}
@@ -404,10 +410,10 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div style="font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:4px">Nos partenaires bookmakers agréés ARJEL</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:18px">En passant par nos liens, tu soutiens le site — sans surcoût pour toi.</div>
       <div class="partner-row">
-        <a href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener sponsored" class="partner-btn" style="background:linear-gradient(135deg,#ff5a00,#ff0000)">Winamax</a>
-        <a href="https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" target="_blank" rel="noopener sponsored" class="partner-btn" style="background:linear-gradient(135deg,#006442,#00a651)">Unibet</a>
-        <a href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener sponsored" class="partner-btn" style="background:linear-gradient(135deg,#003087,#0057b8)">PMU</a>
-        <a href="https://go.onelink.me/2887093520/6c3132b8?af_sub5=GREGA3GZ" target="_blank" rel="noopener sponsored" class="partner-btn" style="background:linear-gradient(135deg,#c1001f,#e2001a)">Betclic</a>
+        <a href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener sponsored" class="partner-btn pb-winamax">Winamax</a>
+        <a href="https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" target="_blank" rel="noopener sponsored" class="partner-btn pb-unibet">Unibet</a>
+        <a href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener sponsored" class="partner-btn pb-pmu">PMU</a>
+        <a href="https://go.onelink.me/2887093520/6c3132b8?af_sub5=GREGA3GZ" target="_blank" rel="noopener sponsored" class="partner-btn pb-betclic">Betclic</a>
       </div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:1.6">18+ · Jeu responsable · Ouvrir un compte chez un partenaire ne garantit aucun gain.</div>
     </div>
