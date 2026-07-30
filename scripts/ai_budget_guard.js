@@ -134,11 +134,29 @@ function tripBreaker(db, type, detail) {
   }
 }
 
+// Types dont le declenchement signale un vrai epuisement de quota JOURNALIER
+// (montant en euros, nombre de requetes) : rester bloque jusqu'a minuit est
+// correct, le quota ne se reconstitue pas avant.
+const DAILY_SCOPED_BREAKERS = new Set(["daily_budget", "daily_requests"]);
+// "spike"/"duplicate_burst" signalent un SURSAUT PONCTUEL (boucle probable,
+// ou pic legitime type soiree europeenne a 8 matchs simultanes). Les laisser
+// actifs jusqu'a minuit desactivait silencieusement des agents du Concile
+// pendant des heures pour un pic qui n'a dure que quelques minutes — constate
+// le 30/07/2026 : declenche a 17h47, encore actif a 20h30, zero signal envoye
+// de la soiree alors que le budget/quota reel n'etait qu'a 15% de la limite.
+const SPIKE_COOLDOWN_MINUTES = 30;
+
 function isBreakerTripped(db, type) {
   ensureSchema(db);
-  const today = new Date().toISOString().slice(0, 10);
   const row = db.prepare("SELECT tripped_at FROM ai_circuit_breaker WHERE breach_type = ?").get(type);
-  return !!row && row.tripped_at && row.tripped_at.slice(0, 10) === today;
+  if (!row || !row.tripped_at) return false;
+  if (DAILY_SCOPED_BREAKERS.has(type)) {
+    const today = new Date().toISOString().slice(0, 10);
+    return row.tripped_at.slice(0, 10) === today;
+  }
+  // Cooldown glissant depuis le DERNIER declenchement, pas depuis minuit.
+  const trippedMs = new Date(row.tripped_at.replace(" ", "T") + "Z").getTime();
+  return Date.now() - trippedMs < SPIKE_COOLDOWN_MINUTES * 60 * 1000;
 }
 
 /**
