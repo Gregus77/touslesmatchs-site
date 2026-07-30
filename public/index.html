@@ -240,7 +240,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <h1>Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
         <div class="hero-sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
         <div class="hero-cta">
-          <a href="#live" class="btn btn-prim">Voir les matchs en direct</a>
+          <a href="/live-ia" class="btn btn-prim">Voir les matchs en direct</a>
           <a href="/dashboard" class="btn btn-ghost">Créer mon compte gratuit</a>
         </div>
         <div class="hero-reassure"><span>✓ Résultats publics</span><span>✓ Données vérifiées</span><span>✓ Sans engagement</span><span>18+</span></div>
@@ -447,17 +447,26 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
 function toggleMenu(){document.getElementById('mmenu').classList.toggle('open');}
 
-/* ══ HERO — 5 IA en eventail vers le coeur du Concile ══ */
+/* ══ HERO — 5 IA en eventail, traits vers le coeur du Concile ══ */
 (function(){
   var names=['Perplexity','DeepSeek','Mistral','Cohere','Qwen'];
   var icons=['🌐','🔮','🌊','🧬','🌟'];
-  var xs=[6,26,50,74,94]; // % gauche a droite
-  var ys=[38,8,0,8,38];   // % haut (arc)
-  var html='';
+  var xs=[6,26,50,74,94]; // % gauche a droite (centre horizontal du noeud)
+  var ys=[38,8,0,8,38];   // % haut (arc), sommet du noeud
+  // Centre de l'icone = sommet du noeud + moitie de sa hauteur (52px sur un
+  // conteneur de 230px). Centre du coeur = bas:0, hauteur 76px, x=50%.
+  var iconYOff = 52/230*50; // 11.3
+  var coreX = 50, coreY = (230-76/2)/230*100; // 83.5
+  var lines='';
+  for(var i=0;i<5;i++){
+    lines+='<line x1="'+xs[i]+'" y1="'+(ys[i]+iconYOff)+'" x2="'+coreX+'" y2="'+coreY+'" stroke="rgba(155,123,255,.4)" stroke-width="1" vector-effect="non-scaling-stroke"/>';
+  }
+  var svg='<svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none">'+lines+'</svg>';
+  var html=svg;
   for(var i=0;i<5;i++){
     html+='<div class="brain-node" style="left:'+xs[i]+'%;top:'+ys[i]+'%;transform:translateX(-50%)"><div class="ico">'+icons[i]+'</div><div class="lbl">'+names[i]+'</div></div>';
   }
-  html+='<div class="brain-core"><b>CONCILE</b><span>Score de confiance</span></div>';
+  html+='<div class="brain-core"><b>CONCILE</b><span>Claude</span></div>';
   document.getElementById('brain-fan').innerHTML=html;
 })();
 
