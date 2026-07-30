@@ -1912,7 +1912,7 @@ const TRUSTED_COMPETITIONS = [
   "k league", "k-league",
   "chinese super league",
   "canadian premier",
-  "nhl", "nba", "atp", "wta", "grand slam",
+  "nhl", "nba", "mlb", "atp", "wta", "grand slam",
   "top 14", "pro d2", "premiership rugby", "urc",
   "euroleague", "euroligue",
   "a-league", "a league · australia",
