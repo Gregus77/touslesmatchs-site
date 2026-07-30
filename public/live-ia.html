@@ -375,6 +375,11 @@ let allMatches = [];
 let currentFilter = "Football"; // le foot est affiché par défaut ; les autres sports se choisissent via les filtres
 let searchTerm = "";
 let userAuth = null;
+// Analyses déjà obtenues, gardées en mémoire le temps de la session. loadMatches()
+// tourne toutes les 60s et reconstruit tout le HTML des cartes (scores en direct) —
+// sans ce cache, une analyse tout juste ouverte se refermait et redevenait un
+// simple bouton "Analyser" à chaque rafraîchissement.
+let analysisCache = {};
 
 // ── Confiance : couleur/label selon le pourcentage (même échelle que Telegram) ──
 function confMeta(conf) {
@@ -615,12 +620,13 @@ function renderMatches() {
     // message d'excuse : la page ne propose que ce qui est jouable à l'instant T.
     // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
     if (isLive && !isDone && !m.pinnedSignal) {
+      var cached = analysisCache[matchId];
       html += '<div class="mc-cta">';
-      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + '>';
-      html += (userAuth ? '    🧠 Analyser ce match' : '    🔓 Débloquer l\'analyse');
+      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + (cached ? " disabled" : "") + '>';
+      html += (cached ? '✅ Analyse terminée' : (userAuth ? '🧠 Analyser ce match' : '🔓 Débloquer l\'analyse'));
       html += '  </button>';
       html += '</div>';
-      html += '<div class="mc-analysis" id="analysis-' + escAttr(matchId) + '"></div>';
+      html += '<div class="mc-analysis' + (cached ? ' visible' : '') + '" id="analysis-' + escAttr(matchId) + '">' + (cached ? cached : '') + '</div>';
     }
 
     html += '</div>';
@@ -693,6 +699,8 @@ function requestAnalysis(btn, matchId, home, away) {
         + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
       el.classList.add("visible");
       btn.innerHTML = "✅ Analyse terminée";
+      // Persistée : survit au rafraîchissement auto des scores toutes les 60s.
+      analysisCache[matchId] = el.innerHTML;
       // Met à jour le compteur de la barre du haut
       if (userAuth && d.credits_left !== undefined) {
         userAuth.credits_left = d.credits_left;
