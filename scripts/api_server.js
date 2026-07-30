@@ -7186,7 +7186,7 @@ app.post("/bankroll/bets/delete", (req, res) => {
 // ── Chatbot Mistral — mémoire isolée par utilisateur ─────────────────────────
 const CHAT_UNAVAILABLE = "Notre assistant est momentanément indisponible. Réessaie dans un instant, ou écris-nous sur Telegram.";
 const CHAT_SYSTEM_PROMPT = `Tu es l'assistant virtuel de TousLesMatchs.com, un service d'analyses sportives par IA appelé le "Concile". Réponds en français, brièvement, clairement et avec le sourire.
-Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (Pro 9,90 €/mois, Elite 19,90 €/mois ; l'analyse du jour est gratuite sur le site avec son résultat vérifiable le lendemain), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
+Tu aides sur : le fonctionnement du site, les analyses du Concile IA, les formules (Standard 4,90 €/mois, Premium 14,90 €/mois, Elite-VIP 29,90 €/mois ; l'analyse du jour est gratuite sur le site avec son résultat vérifiable le lendemain), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
 RÈGLES STRICTES :
 - N'emploie JAMAIS le mot "pari" ni "parier" : dis "analyse", "sélection" ou "pick".
 - Ne garantis JAMAIS de gains ; rappelle que rien n'est certain et que le service est réservé aux 18 ans et plus.
@@ -7202,7 +7202,7 @@ app.post("/chat", async (req, res) => {
   const auth = (email && code) ? bankrollAuth(email, code) : null;
   const memKey = auth ? auth.email : null;
 
-  if (!MISTRAL_API_KEY) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+  if (!PERPLEXITY_API_KEY && !MISTRAL_API_KEY) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
 
   // Historique de CET utilisateur uniquement (jamais celui d'un autre).
   let history = [];
@@ -7224,17 +7224,33 @@ app.post("/chat", async (req, res) => {
   const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: memKey });
   if (!_chatGate.allowed) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
 
+  // Perplexity (modele "sonar", pas "sonar-pro" — recherche web reelle pour
+  // un cout par appel bien plus bas, largement suffisant pour un chat grand
+  // public) prioritaire : contrairement a Mistral, il consulte le web avant
+  // de repondre, donc il connait les evenements recents (ex: un resultat
+  // sportif de cette annee) au lieu de rester bloque a sa date d'entrainement.
+  // Repli sur Mistral si la cle Perplexity n'est pas configuree.
   let reply = "";
   try {
-    const rp = await httpPost(
-      "https://api.mistral.ai/v1/chat/completions",
-      { model: "mistral-small-latest", messages, temperature: 0.4, max_tokens: 500 },
-      { Authorization: `Bearer ${MISTRAL_API_KEY}` }
-    );
-    reply = rp?.choices?.[0]?.message?.content?.trim() || "";
-    _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
+    if (PERPLEXITY_API_KEY) {
+      const rp = await httpPost(
+        "https://api.perplexity.ai/chat/completions",
+        { model: "sonar", messages, temperature: 0.4, max_tokens: 500 },
+        { Authorization: `Bearer ${PERPLEXITY_API_KEY}` }
+      );
+      reply = rp?.choices?.[0]?.message?.content?.trim() || "";
+      _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
+    } else {
+      const rp = await httpPost(
+        "https://api.mistral.ai/v1/chat/completions",
+        { model: "mistral-small-latest", messages, temperature: 0.4, max_tokens: 500 },
+        { Authorization: `Bearer ${MISTRAL_API_KEY}` }
+      );
+      reply = rp?.choices?.[0]?.message?.content?.trim() || "";
+      _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
+    }
   } catch (e) {
-    console.error("[chat] Mistral:", e.message);
+    console.error("[chat] IA:", e.message);
     _chatGate.record(0, 0, "error");
   }
 
