@@ -88,6 +88,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-analysis-title{font-size:13px;font-weight:700;color:var(--indigo2);margin-bottom:8px}
 .mc-analysis-text{font-size:13px;color:var(--muted2);line-height:1.7}
 .mc-analysis-bet{display:inline-block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-top:8px}
+.conf-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.conf-dot.green{background:var(--green);box-shadow:0 0 8px rgba(16,185,129,.6)}
+.conf-dot.yellow{background:#eab308;box-shadow:0 0 8px rgba(234,179,8,.6)}
+.conf-dot.orange{background:var(--amber);box-shadow:0 0 8px rgba(245,158,11,.6)}
+.conf-dot.red{background:var(--red);box-shadow:0 0 8px rgba(244,63,94,.6)}
+.conf-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-top:8px;margin-right:6px}
+.conf-badge.green{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:var(--green)}
+.conf-badge.yellow{background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.25);color:#eab308}
+.conf-badge.orange{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);color:var(--amber)}
+.conf-badge.red{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--red)}
 
 /* Empty state */
 .empty-state{text-align:center;padding:80px 24px}
@@ -123,6 +133,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 /* Refresh bar */
 .refresh-bar{text-align:center;padding:8px;font-size:11px;color:var(--muted)}
 .refresh-bar button{background:none;border:none;color:var(--cyan);cursor:pointer;font-size:11px;font-weight:700;margin-left:6px}
+
+/* Search */
+.search-bar{max-width:900px;margin:0 auto;padding:0 16px 12px}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--b2);color:var(--text);padding:11px 16px;border-radius:12px;font-size:14px}
+.search-input:focus{outline:none;border-color:var(--indigo2)}
+.search-input::placeholder{color:var(--muted)}
+
+/* Sport popup */
+.sport-popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:250;align-items:center;justify-content:center;padding:20px}
+.sport-popup-overlay.open{display:flex}
+.sport-popup{background:var(--bg2);border:1px solid var(--b2);border-radius:18px;padding:26px;max-width:380px;text-align:center}
+.sport-popup-icon{font-size:36px;margin-bottom:10px}
+.sport-popup-title{font-size:17px;font-weight:800;margin-bottom:8px}
+.sport-popup-text{font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:18px}
+.sport-popup-btn{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:11px 24px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
 
 /* History section */
 .history-section{max-width:900px;margin:0 auto;padding:0 16px 40px}
@@ -240,10 +265,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
+<!-- SEARCH -->
+<div class="search-bar">
+  <input type="text" class="search-input" id="match-search" placeholder="🔍 Rechercher une équipe ou un match..." oninput="onSearchInput(this.value)">
+</div>
+
 <!-- FILTERS -->
 <div class="filters" id="filters">
-  <button class="filter-btn active" data-filter="all">Tous</button>
-  <button class="filter-btn" data-filter="Football">&#9917; Football</button>
+  <button class="filter-btn" data-filter="all">Tous les sports</button>
+  <button class="filter-btn active" data-filter="Football">&#9917; Football</button>
   <button class="filter-btn" data-filter="Basketball">&#127936; Basketball</button>
   <button class="filter-btn" data-filter="Hockey">&#127954; Hockey</button>
   <button class="filter-btn" data-filter="Baseball">&#9918; Baseball</button>
@@ -253,6 +283,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <div class="refresh-bar" id="refresh-bar">
   Dernière mise à jour : <span id="last-update">—</span>
   <button onclick="loadMatches(true)">Actualiser</button>
+</div>
+
+<!-- SPORT POPUP (premiere visite) -->
+<div class="sport-popup-overlay" id="sport-popup-overlay">
+  <div class="sport-popup">
+    <div class="sport-popup-icon">⚽</div>
+    <div class="sport-popup-title">Football affiché par défaut</div>
+    <div class="sport-popup-text">Cette page affiche le football en priorité. Pour voir un autre sport (basket, hockey, baseball) ou tous les matchs en même temps, clique simplement sur le sport de ton choix dans la barre au-dessus.</div>
+    <button class="sport-popup-btn" onclick="closeSportPopup()">J'ai compris</button>
+  </div>
 </div>
 
 <!-- MATCHES -->
@@ -332,8 +372,18 @@ const COUNTRY_FLAGS = {
 
 // ── State ──
 let allMatches = [];
-let currentFilter = "all";
+let currentFilter = "Football"; // le foot est affiché par défaut ; les autres sports se choisissent via les filtres
+let searchTerm = "";
 let userAuth = null;
+
+// ── Confiance : couleur/label selon le pourcentage (même échelle que Telegram) ──
+function confMeta(conf) {
+  var c = Number(conf) || 0;
+  if (c >= 85) return { cls: "green",  emoji: "🟢", label: "Fiable" };
+  if (c >= 75) return { cls: "yellow", emoji: "🟡", label: "Bon" };
+  if (c >= 65) return { cls: "orange", emoji: "🟠", label: "Risqué" };
+  return { cls: "red", emoji: "🔴", label: "Prudence" };
+}
 
 // ── Init ──
 (function init() {
@@ -356,7 +406,22 @@ let userAuth = null;
     currentFilter = btn.dataset.filter;
     renderMatches();
   });
+
+  // Popup explicatif "foot par défaut" — une seule fois par visiteur.
+  if (!localStorage.getItem("tlm_sport_popup_seen")) {
+    setTimeout(function(){ document.getElementById("sport-popup-overlay").classList.add("open"); }, 600);
+  }
 })();
+
+function closeSportPopup() {
+  document.getElementById("sport-popup-overlay").classList.remove("open");
+  localStorage.setItem("tlm_sport_popup_seen", "1");
+}
+
+function onSearchInput(v) {
+  searchTerm = String(v || "").trim().toLowerCase();
+  renderMatches();
+}
 
 // Récupère le compteur de jetons à jour depuis le serveur (au chargement).
 function refreshCredits() {
@@ -461,9 +526,18 @@ function renderMatches() {
   // s'afficher. La page ne montre que ce qui est jouable à l'instant T.
   var playable = allMatches.filter(function(m){ return m.pinnedSignal || m.analysable !== false; });
   var filtered = currentFilter === "all" ? playable : playable.filter(function(m){ return m.sport === currentFilter; });
+  if (searchTerm) {
+    filtered = filtered.filter(function(m) {
+      return (m.home || "").toLowerCase().indexOf(searchTerm) !== -1
+        || (m.away || "").toLowerCase().indexOf(searchTerm) !== -1
+        || (m.competition || "").toLowerCase().indexOf(searchTerm) !== -1;
+    });
+  }
 
   if (!filtered.length) {
-    if (currentFilter !== "all") {
+    if (searchTerm) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Aucun résultat pour "' + escHtml(searchTerm) + '"</div><div class="empty-sub">Vérifie l\'orthographe ou essaie un autre sport dans les filtres.</div></div>';
+    } else if (currentFilter !== "all") {
       wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">' + (SPORT_ICONS[currentFilter] || "🏟️") + '</div><div class="empty-title">Aucun match ' + currentFilter + ' en direct</div><div class="empty-sub">Aucun match de ' + currentFilter + ' en cours. Essaie un autre sport ou reviens plus tard.</div></div>';
     } else {
       showEmpty();
@@ -471,10 +545,19 @@ function renderMatches() {
     return;
   }
 
-  // Sort: live first, then scheduled, then finished
+  // Tri : en direct d'abord (des matchs les plus avancés vers les débuts de
+  // match), puis à venir, puis terminés — pour remonter en haut les matchs
+  // les plus proches de leur fin, où l'analyse a le plus de valeur immédiate.
   var order = { IN_PLAY: 0, PINNED_SIGNAL: 0, HT: 1, SCHEDULED: 2, TIMED: 2, FINISHED: 3 };
+  function minuteOf(m) {
+    var n = parseInt(m.minute, 10);
+    return isNaN(n) ? -1 : n;
+  }
   filtered.sort(function(a, b) {
-    return (order[a.status] || 1) - (order[b.status] || 1);
+    var oa = order[a.status] || 1, ob = order[b.status] || 1;
+    if (oa !== ob) return oa - ob;
+    if (oa === 0) return minuteOf(b) - minuteOf(a); // tri secondaire : minute décroissante pour les matchs en direct
+    return 0;
   });
 
   var html = "";
@@ -519,7 +602,10 @@ function renderMatches() {
       html += '<div class="mc-analysis visible">';
       html += '  <div class="mc-analysis-title">📡 Signal Fort — Analyse épinglée</div>';
       html += '  <div class="mc-analysis-text">' + escHtml(m.pinnedReason || "") + '</div>';
-      if (m.pinnedBet) html += '<div class="mc-analysis-bet">🎯 ' + escHtml(m.pinnedBet) + (m.pinnedConfidence ? " · " + m.pinnedConfidence + "%" : "") + '</div>';
+      if (m.pinnedBet) {
+        var pcm = confMeta(m.pinnedConfidence);
+        html += '<div class="conf-badge ' + pcm.cls + '"><span class="conf-dot ' + pcm.cls + '"></span>🎯 ' + escHtml(m.pinnedBet) + (m.pinnedConfidence ? " · " + m.pinnedConfidence + "% · " + pcm.label : "") + '</div>';
+      }
       html += '</div>';
     }
 
@@ -596,10 +682,13 @@ function requestAnalysis(btn, matchId, home, away) {
         + '5 IA indépendantes votent sans émotion — Perplexity, DeepSeek, Mistral, Cohere et Qwen — à partir des statistiques live, de l\'historique, de la dynamique et des probabilités.'
         + '</div>';
 
+      var cm = confMeta(confText);
+      var arjelHtml = d.arjel_avg_odd ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ARJEL : ' + Number(d.arjel_avg_odd).toFixed(2) + (d.arjel_bookmakers_count ? ' (' + d.arjel_bookmakers_count + ' bookmakers)' : '') + '</div>' : "";
       el.innerHTML = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
         + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
         + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
-        + (betText ? '<div class="mc-analysis-bet">🎯 ' + escHtml(betText) + (confText ? " · " + confText + "%" : "") + '</div>' : "")
+        + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "% · " + cm.label : "") + '</div>' : "")
+        + arjelHtml
         + agentsHtml
         + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
       el.classList.add("visible");

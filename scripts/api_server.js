@@ -3007,7 +3007,12 @@ async function fetchRealOdds(match) {
       const chosen = bookmakers.find(bm => PARTNER.some(a => String(bm.name || "").toLowerCase().includes(a)))
         || bookmakers.find(bm => ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a)))
         || bookmakers[0];
-      data = { bookmaker: chosen.name, bets: chosen.bets || [] };
+      data = {
+        bookmaker: chosen.name, bets: chosen.bets || [],
+        // Tous les bookmakers ARJEL renvoyés par l'API pour ce match — sert à
+        // calculer une cote MOYENNE (pas juste celle d'un seul opérateur).
+        arjelBookmakers: bookmakers.filter(bm => ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a))),
+      };
     }
   } catch (e) { console.error("[odds]", e.message); data = null; }
   oddsCache.set(ck, { data, ts: Date.now() });
@@ -3065,16 +3070,48 @@ function estimateMarketOdd(confidence, betLabel) {
   return Math.round(odd * 100) / 100;
 }
 
+// Pastille de couleur selon le % de confiance — même échelle utilisée sur la
+// page Live IA (fonction confMeta côté client) et dans les messages Telegram,
+// pour que le client voie le même code couleur partout.
+function confidenceEmoji(conf) {
+  const c = Number(conf) || 0;
+  if (c >= 85) return "🟢";
+  if (c >= 75) return "🟡";
+  if (c >= 65) return "🟠";
+  return "🔴";
+}
+
+// Moyenne des cotes ARJEL disponibles pour ce pari, tous bookmakers confondus
+// (Winamax, Unibet, PMU, Betclic, Zebet...). Différent de la "cote réelle"
+// retenue pour le tier (celle-là vient d'UN SEUL bookmaker, priorisé sur nos
+// partenaires) — la moyenne donne au client une vision du marché dans son
+// ensemble, demandée pour affichage Live IA + diffusion Telegram.
+function computeArjelAverageOdd(oddsData, betLabel, match) {
+  if (!oddsData?.arjelBookmakers?.length) return null;
+  const vals = [];
+  for (const bm of oddsData.arjelBookmakers) {
+    const v = pickRealOdd({ bets: bm.bets || [] }, betLabel, match);
+    if (v) vals.push(v);
+  }
+  if (!vals.length) return null;
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return { avg: Math.round(avg * 100) / 100, count: vals.length };
+}
+
 // Retourne la meilleure cote disponible : vraie cote ARJEL sinon estimation marché.
 async function computeBestOdd(match, betLabel, confidence) {
   try {
     const oddsData = await fetchRealOdds(match);
     const real = pickRealOdd(oddsData, betLabel, match);
+    const arjelAvgInfo = computeArjelAverageOdd(oddsData, betLabel, match);
     if (real) {
-      return { cote: real, source: oddsData.bookmaker || "bookmaker" };
+      return {
+        cote: real, source: oddsData.bookmaker || "bookmaker",
+        arjelAvg: arjelAvgInfo?.avg || null, arjelCount: arjelAvgInfo?.count || 0,
+      };
     }
   } catch (e) { console.error("[odds] compute:", e.message); }
-  return { cote: estimateMarketOdd(confidence, betLabel), source: "estimation" };
+  return { cote: estimateMarketOdd(confidence, betLabel), source: "estimation", arjelAvg: null, arjelCount: 0 };
 }
 
 // Cote d'une ligne concile_analyses : vraie cote stockée sinon estimation par marché.
@@ -3805,6 +3842,8 @@ Réponds en JSON pur (pas de markdown):
     confidence: chief.confidence,
     cote: oddInfo.cote,
     cote_source: oddInfo.source,
+    arjel_avg_odd: oddInfo.arjelAvg,
+    arjel_bookmakers_count: oddInfo.arjelCount,
     raison: chief.raison,
     consensus_votes: consensusVotes,
     total_agents: voteSummary.vote_total,
@@ -3919,7 +3958,12 @@ Réponds en JSON pur (pas de markdown):
       // On n'affiche la cote QUE si c'est une VRAIE cote bookmaker (jamais l'estimation).
       const coteSig = (analysisResult.cote && _bmSig)
         ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
+      // Cote moyenne ARJEL (tous bookmakers agréés confondus), distincte de la
+      // cote "réelle" ci-dessus qui vient d'un seul opérateur choisi.
+      const arjelAvgLine = (analysisResult.arjel_avg_odd && analysisResult.arjel_bookmakers_count >= 2)
+        ? `\n📈 Cote moyenne ARJEL : <b>${Number(analysisResult.arjel_avg_odd).toFixed(2)}</b> <i>(${analysisResult.arjel_bookmakers_count} bookmakers)</i>` : "";
       const voteLine = voteInfo.vote_label ? `\n🧠 Vote IA : <b>${voteInfo.vote_label}</b>` : "";
+      const confDot = confidenceEmoji(analysisResult.confidence);
       // Noms d'equipe/competition venant de l'API sportive : jamais garantis
       // exempts de "&" ou de guillemets/chevrons dans les competitions moins
       // courantes. Echappes pour la meme raison que safeRaison ci-dessus.
@@ -3927,8 +3971,8 @@ Réponds en JSON pur (pas de markdown):
       const awayEsc = escTgHtml(match.away);
       const compEsc = escTgHtml(match.competition || match.league || match.sport || "");
       const betEsc = escTgHtml(analysisResult.best_bet);
-      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>${coteSig}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${confDot} ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Confiance : ${confDot} <b>${analysisResult.confidence}%</b>${coteSig}${arjelAvgLine}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${confDot} ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : ${confDot} <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
