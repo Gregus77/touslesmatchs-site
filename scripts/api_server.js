@@ -7837,14 +7837,6 @@ app.post("/concile-analysis", async (req, res) => {
   const blockReason = livePickBlockReason(verifiedMatch);
   if (blockReason) return res.json({ ok: false, error: blockReason });
 
-  const liveMinute = parseInt(verifiedMatch.minute || match.minute, 10);
-  if (isNaN(liveMinute) || liveMinute < 25 || liveMinute > 65) {
-    const reason = isNaN(liveMinute) || liveMinute < 25
-      ? "Pas assez de statistiques avant la 25e minute"
-      : "Cotes trop basses apres la 65e minute";
-    return res.json({ ok: false, error: reason });
-  }
-
   const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   // Cache partagé par match+état (pas par user) pour économiser les tokens Groq
   const scoreState = verifiedMatch.score_home !== null ? `${verifiedMatch.score_home}-${verifiedMatch.score_away}_${Math.floor((verifiedMatch.minute || 0) / 15)}` : "prematch";
