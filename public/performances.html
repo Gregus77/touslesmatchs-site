@@ -166,10 +166,18 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
     <a href="/#plans">Tarifs</a>
   </div>
   <div class="nav-right">
-    <a href="/dashboard" class="nav-cta">Créer mon compte gratuit</a>
+    <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
 </nav>
+<script>
+// Pas de systeme de connexion sur cette page, mais tlm_plan (localStorage)
+// est partage avec Live IA : si deja abonne, inutile de proposer le CTA gratuit.
+if (localStorage.getItem('tlm_plan')) {
+  var _navCta = document.getElementById('nav-cta-top');
+  if (_navCta) _navCta.style.display = 'none';
+}
+</script>
 <div class="mmenu" id="mmenu">
   <a href="/#pick" onclick="toggleMenu()">Analyses</a>
   <a href="/live-ia" onclick="toggleMenu()">Live IA</a>

@@ -228,7 +228,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <a href="/#plans">Tarifs</a>
   </div>
   <div class="nav-right">
-    <a href="/dashboard" class="nav-cta">Créer mon compte gratuit</a>
+    <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
 </nav>
@@ -482,6 +482,9 @@ function refreshCredits() {
 function updateAuthBar() {
   var info = document.getElementById("auth-info");
   var btn = document.getElementById("auth-btn");
+  var navCta = document.getElementById("nav-cta-top");
+  // Inutile de proposer "Creer un compte" a quelqu'un deja abonne.
+  if (navCta) navCta.style.display = userAuth ? "none" : "";
   if (userAuth) {
     var isElite = userAuth.plan === "elite";
     var planName = userAuth.plan.charAt(0).toUpperCase() + userAuth.plan.slice(1);
