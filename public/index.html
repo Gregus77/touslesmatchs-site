@@ -169,6 +169,9 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .pick-vs{font-size:12px;font-weight:800;color:var(--muted);flex:0 0 auto}
 .pick-bet{font-size:13px;color:var(--tx2);text-align:center}
 .pick-conf{font-size:23px;font-weight:900;color:var(--violet2);margin-top:10px;text-align:center}
+.pick-score-badge{text-align:center;font-size:15px;font-weight:800;margin-top:8px;padding:6px 12px;border-radius:8px;display:inline-block;width:100%;box-sizing:border-box}
+.pick-score-badge.win{color:#33c481;background:rgba(51,196,129,.1);border:1px solid rgba(51,196,129,.3)}
+.pick-score-badge.loss{color:#ef5a6f;background:rgba(239,90,111,.1);border:1px solid rgba(239,90,111,.3)}
 .pick-lock{margin-top:14px;padding:14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);text-align:center}
 .pick-lock-title{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px}
 .pick-lock-sub{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:10px}
@@ -695,7 +698,17 @@ async function loadPick(){
     var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
     var comp=splitComp(p.competition||p.sport||'');
     var flag=COUNTRY_FLAGS[comp.country]||'';
-    var lockHtml=loggedIn?'':(
+    // Match termine (win/loss) : le score final et le pari conseille
+    // deviennent une preuve historique, plus une info a proteger — on les
+    // affiche a tout le monde, meme sans compte. Demande de Greg le
+    // 31/07/2026 : mettre a jour le pick avec le score des que le match
+    // est fini, montrer le nouveau pick + pari conseille le lendemain.
+    var resolved=(p.status==='win'||p.status==='loss');
+    var showBet=loggedIn||resolved;
+    var scoreHtml=(resolved&&p.scoreA!=null&&p.scoreB!=null)
+      ? '<div class="pick-score-badge '+(p.status==='win'?'win':'loss')+'">'+esc(p.scoreA)+' - '+esc(p.scoreB)+' · '+(p.status==='win'?'✓ Gagné':'✗ Perdu')+'</div>'
+      : '';
+    var lockHtml=showBet?'':(
       '<div class="pick-lock">'+
         '<div class="pick-lock-title">🔒 Sélection et raisonnement masqués</div>'+
         '<div class="pick-lock-sub">Pour voir le pari recommandé du Concile, entre juste ton email (+ un mot de passe) — c\'est gratuit, sans carte bancaire, ça prend 20 secondes.</div>'+
@@ -708,7 +721,8 @@ async function loadPick(){
         '<div class="pick-vs">VS</div>'+
         '<div class="pick-team"><div class="pick-team-logo">'+logo(awayLogo,awayName)+'</div><div class="pick-team-name">'+esc(awayName)+'</div></div>'+
       '</div>'+
-      '<div class="pick-bet">'+(loggedIn?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
+      scoreHtml+
+      '<div class="pick-bet">'+(showBet?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
       '<div class="pick-conf">'+esc(p.confidence)+'%</div>'+
       lockHtml;
   } catch(e){

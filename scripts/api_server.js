@@ -7426,7 +7426,7 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg " +
+      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg, final_score_home, final_score_away " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
@@ -7465,7 +7465,14 @@ function refreshDailyPickFromDB() {
         home_form: pick.home_form || null, away_form: pick.away_form || null,
         home_goals_avg: pick.home_goals_avg != null ? pick.home_goals_avg : null,
         away_goals_avg: pick.away_goals_avg != null ? pick.away_goals_avg : null,
-        source: "auto-api", publishedAt: new Date().toISOString(), status: "upcoming"
+        source: "auto-api", publishedAt: new Date().toISOString(),
+        // Score et statut reels du match : permettent d'afficher le resultat
+        // (score final + gagne/perdu) des que le match est termine, sans
+        // attendre le prochain changement de jour. Mis a jour par le meme
+        // refresh horaire (voir setInterval refreshDailyPickFromDB, 1h).
+        status: pick.outcome === "win" ? "win" : pick.outcome === "loss" ? "loss" : "upcoming",
+        score: (pick.final_score_home != null && pick.final_score_away != null)
+          ? `${pick.final_score_home}-${pick.final_score_away}` : null,
       }
     };
     try { fs.writeFileSync(HERMES_PICKS_PATH, JSON.stringify(data, null, 2)); }
@@ -11498,10 +11505,15 @@ app.listen(PORT, () => {
     setInterval(checkAnalyticsSchedule, 60000);
     console.log("[analytics] Scheduler actif: rapport quotidien 23h + hebdo lundi 8h");
 
-    // Pick du jour auto : régénère au démarrage puis vérifie chaque heure
+    // Pick du jour auto : régénère au démarrage puis vérifie chaque heure.
+    // Le check horaire est INCONDITIONNEL (pas de garde storedPickIsFresh) :
+    // un pick "frais" (toujours aujourd'hui) peut voir son match se terminer
+    // en cours de journée, et c'est justement ce qu'on veut détecter pour
+    // afficher le score final + gagné/perdu sans attendre le lendemain.
+    // Demande de Greg le 31/07/2026.
     setTimeout(() => { if (!storedPickIsFresh()) refreshDailyPickFromDB(); }, 15000);
-    setInterval(() => { if (!storedPickIsFresh()) refreshDailyPickFromDB(); }, 3600000);
-    console.log("[daily-pick] Auto-refresh actif (démarrage + horaire, hors ligues exclues)");
+    setInterval(refreshDailyPickFromDB, 3600000);
+    console.log("[daily-pick] Auto-refresh actif (démarrage + horaire inconditionnel, hors ligues exclues)");
   });
 }
 
