@@ -7500,10 +7500,23 @@ function storedPickIsFresh() {
   } catch { return false; }
 }
 
+// Dernier refresh forcé du pick du jour (indépendant de storedPickIsFresh,
+// qui ne détecte qu'un changement de jour — pas une résolution de match en
+// cours de journée). Plafonné à 1x/2min pour ne pas taper la DB à chaque
+// chargement de page, tout en restant quasi temps réel pour l'utilisateur.
+let _lastCurrentPickRefresh = 0;
 // ── Pick du jour — lit picks.json (Hermès/manuel/auto-API) ───────────────────
 app.get("/current-pick", (req, res) => {
   // Si le pick stocké n'est pas d'aujourd'hui ou vient d'une ligue exclue, on régénère
   if (!storedPickIsFresh()) refreshDailyPickFromDB();
+  // Sinon, on vérifie quand même si le match du pick affiché s'est terminé
+  // entre-temps (score/statut) — sans ça, il fallait attendre le prochain
+  // passage horaire pour voir le résultat, jusqu'à 1h de retard après un
+  // déploiement. Demande de Greg le 31/07/2026.
+  else if (Date.now() - _lastCurrentPickRefresh > 120000) {
+    _lastCurrentPickRefresh = Date.now();
+    refreshDailyPickFromDB();
+  }
   // 1. Essaie picks.json (source de vérité), en excluant les ligues blacklistées
   try {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
