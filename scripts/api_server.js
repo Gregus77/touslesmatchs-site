@@ -339,6 +339,22 @@ db.exec(`
   );
 `);
 
+// Historique du "pick du jour" affiché en vitrine sur l'accueil — permet de
+// montrer un vrai palmarès (page /performances, onglet dédié) plutôt que de
+// perdre la trace du pick dès qu'il change. Une ligne par jour calendaire.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS daily_pick_log (
+    date TEXT PRIMARY KEY,
+    home TEXT, away TEXT, competition TEXT, sport TEXT,
+    bet TEXT, confidence INTEGER, cote REAL,
+    outcome TEXT DEFAULT NULL,
+    final_score_home INTEGER DEFAULT NULL,
+    final_score_away INTEGER DEFAULT NULL,
+    home_logo TEXT, away_logo TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 function ensureColumn(table, column, definition) {
   const columns = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
   if (!columns.includes(column)) {
@@ -7442,8 +7458,18 @@ function refreshDailyPickFromDB() {
     // le 30/07/2026 : pick a 77% affiche alors que le seuil minimum de
     // diffusion, meme Elite, est 82% — impression trompeuse d'un signal
     // "trouve" mais jamais envoye, alors qu'il n'a jamais ete assez solide).
-    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r) && Number(r.confidence) >= PUBLISHED_MIN_CONFIDENCE);
-    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + PUBLISHED_MIN_CONFIDENCE + "%) — pick inchangé"); return false; }
+    // Pick du jour restreint à 4 marchés simples à comprendre pour un visiteur
+    // non-initié (demande de Greg le 31/07/2026) : Victoire domicile/extérieur,
+    // BTTS, Under 2.5 buts. Exclut "Match nul", "Over 2.5", double chance...
+    // qui n'ont pas leur place en vitrine grand public. Élimine aussi de facto
+    // les sports non-football (basket/hockey n'ont pas ces marchés), ce qui
+    // règle par la même occasion le cas des données live corrompues côté
+    // basket (voir le correctif du 31/07/2026 sur Toronto Tempo/Minnesota Lynx).
+    const DAILY_PICK_ALLOWED_BETS = new Set(["Victoire domicile", "Victoire extérieur", "BTTS Oui", "BTTS Non", "Under 2.5 buts"]);
+    const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r)
+      && Number(r.confidence) >= PUBLISHED_MIN_CONFIDENCE
+      && DAILY_PICK_ALLOWED_BETS.has(String(r.best_bet || "").trim()));
+    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + PUBLISHED_MIN_CONFIDENCE + "%, marches autorises) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI RECEMMENT analysé et encore non résolu
     //   (vraiment en cours, actionnable).
     // Priorité 2 : sinon, un match d'aujourd'hui déjà RESOLU (score final connu,
@@ -7502,10 +7528,45 @@ function refreshDailyPickFromDB() {
     };
     try { fs.writeFileSync(HERMES_PICKS_PATH, JSON.stringify(data, null, 2)); }
     catch (e) { console.error("[daily-pick] ecriture:", e.message); return false; }
+    // Historique persistant — une ligne par jour, mise a jour (pas dupliquee)
+    // tant que la date ne change pas, meme si le pick change plusieurs fois
+    // dans la journee ou se resout entre deux passages.
+    try {
+      db.prepare(`
+        INSERT INTO daily_pick_log (date, home, away, competition, sport, bet, confidence, cote, outcome, final_score_home, final_score_away, home_logo, away_logo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(date) DO UPDATE SET
+          home=excluded.home, away=excluded.away, competition=excluded.competition, sport=excluded.sport,
+          bet=excluded.bet, confidence=excluded.confidence, cote=excluded.cote, outcome=excluded.outcome,
+          final_score_home=excluded.final_score_home, final_score_away=excluded.final_score_away,
+          home_logo=excluded.home_logo, away_logo=excluded.away_logo
+      `).run(
+        matchDate, pick.home, pick.away, pick.competition || pick.sport || "Football", pick.sport || "Football",
+        pick.best_bet || "", pick.confidence, Number(coteVal.toFixed(2)), pick.outcome || null,
+        pick.final_score_home != null ? pick.final_score_home : null,
+        pick.final_score_away != null ? pick.final_score_away : null,
+        pick.home_logo || null, pick.away_logo || null
+      );
+    } catch (e) { console.error("[daily-pick] log historique:", e.message); }
     console.log(`[daily-pick] auto: ${pick.home} vs ${pick.away} (${pick.competition}) conf ${pick.confidence}`);
     return true;
   } catch (e) { console.error("[daily-pick]", e.message); return false; }
 }
+
+// Historique du pick du jour — alimente l'onglet dédié sur /performances.
+app.get("/daily-pick-history", (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 30, 100);
+    const rows = db.prepare(`
+      SELECT date, home, away, competition, sport, bet, confidence, cote, outcome, final_score_home, final_score_away, home_logo, away_logo
+      FROM daily_pick_log ORDER BY date DESC LIMIT ?
+    `).all(limit);
+    res.json({ ok: true, picks: rows });
+  } catch (e) {
+    console.error("[daily-pick-history]", e.message);
+    res.status(500).json({ ok: false, error: "internal_error" });
+  }
+});
 
 // Le pick stocké est-il frais (aujourd'hui) et d'une ligue autorisée ?
 function storedPickIsFresh() {

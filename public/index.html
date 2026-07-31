@@ -173,6 +173,8 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .pick-score-badge{text-align:center;font-size:15px;font-weight:800;margin-top:8px;padding:6px 12px;border-radius:8px;display:inline-block;width:100%;box-sizing:border-box}
 .pick-score-badge.win{color:#33c481;background:rgba(51,196,129,.1);border:1px solid rgba(51,196,129,.3)}
 .pick-score-badge.loss{color:#ef5a6f;background:rgba(239,90,111,.1);border:1px solid rgba(239,90,111,.3)}
+.pick-email-btn{display:block;width:100%;margin-top:12px;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;font-size:13px;font-weight:800;cursor:pointer;text-align:center}
+.pick-email-btn:hover{opacity:.92}
 .pick-lock{margin-top:14px;padding:14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);text-align:center}
 .pick-lock-title{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px}
 .pick-lock-sub{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:10px}
@@ -738,7 +740,8 @@ async function loadPick(){
       scoreHtml+
       '<div class="pick-bet">'+(showBet?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
       '<div class="pick-conf">'+esc(p.confidence)+'%</div>'+
-      lockHtml;
+      lockHtml+
+      (loggedIn?'':'<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le pick du jour par email</button>');
   } catch(e){
     box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.</div>';
   }

@@ -198,6 +198,7 @@ if (localStorage.getItem('tlm_plan')) {
 
   <div class="tier-tabs" id="tier-tabs">
     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
+    <div class="tier-tab" data-tier="dailypick" onclick="selectTier('dailypick')">🎯 Pick du jour</div>
     <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥇 Standard</div>
     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
     <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
@@ -412,12 +413,38 @@ function renderList() {
   document.getElementById('load-more').style.display = allAnalyses.length < totalCount ? 'block' : 'none';
 }
 
+// Historique du pick du jour (onglet dédié) — source distincte de
+// /api/analysis-history : une ligne par jour calendaire, pas par palier.
+var dailyPickRows = null;
+function renderDailyPickRow(p) {
+  var win = p.outcome === 'win', loss = p.outcome === 'loss';
+  var score = (p.final_score_home != null && p.final_score_away != null) ? (p.final_score_home + '-' + p.final_score_away) : '';
+  return renderRow({
+    analysed_at: p.date, home: p.home, away: p.away, competition: p.competition, sport: p.sport,
+    bet: p.bet, confidence: p.confidence, cote: p.cote, outcome: p.outcome, final_score: score, tier: null, locked: false
+  });
+}
+function loadDailyPickHistory() {
+  var el = document.getElementById('history-list');
+  document.getElementById('load-more').style.display = 'none';
+  if (dailyPickRows) { el.innerHTML = dailyPickRows.length ? dailyPickRows.map(renderDailyPickRow).join('') : '<div class="state-box">Aucun historique de pick du jour pour l\'instant.</div>'; return; }
+  el.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  fetch('/api/daily-pick-history?limit=60')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      dailyPickRows = (d && d.ok && Array.isArray(d.picks)) ? d.picks : [];
+      el.innerHTML = dailyPickRows.length ? dailyPickRows.map(renderDailyPickRow).join('') : '<div class="state-box">Aucun historique de pick du jour pour l\'instant.</div>';
+    })
+    .catch(function(){ el.innerHTML = '<div class="state-box">Impossible de charger l\'historique du pick du jour.</div>'; });
+}
+
 function selectTier(tier) {
   currentTier = tier;
   var tabs = document.querySelectorAll('.tier-tab');
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tier') === tier);
   }
+  if (tier === 'dailypick') { loadDailyPickHistory(); return; }
   renderKpis();
   renderList();
 }
