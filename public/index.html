@@ -619,8 +619,20 @@ async function maybeOfferBiometric(email,code){
     var attResp=await SimpleWebAuthnBrowser.startRegistration({optionsJSON:d1.options});
     var r2=await fetch('/api/webauthn/register-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code,credential:attResp,deviceLabel:navigator.userAgent.slice(0,80)})});
     var d2=await r2.json();
-    if(d2.ok) localStorage.setItem('tlm_webauthn_email',email);
-  }catch(e){ console.error('[webauthn register]',e); }
+    if(d2.ok){
+      localStorage.setItem('tlm_webauthn_email',email);
+      alert('✓ Empreinte / Face ID activée sur cet appareil. La prochaine connexion se fera automatiquement.');
+    } else {
+      alert('Échec de l\'activation biométrique : '+(d2.error||'erreur inconnue')+'. Réessaie depuis "Se connecter" après ta prochaine connexion par code.');
+    }
+  }catch(e){
+    console.error('[webauthn register]',e);
+    // L'utilisateur a accepte la popup mais l'enregistrement (create()) a
+    // echoue ou a ete annule au niveau OS — sans ce message, tlm_webauthn_email
+    // ne se pose jamais et rien ne se represente jamais a la prochaine
+    // connexion, sans qu'on comprenne pourquoi (signale par Greg le 01/08/2026).
+    alert('Échec de l\'activation biométrique ('+(e&&e.message?e.message:'annulée')+'). Tu peux réessayer à ta prochaine connexion.');
+  }
 }
 async function doBiometricLogin(){
   var email=localStorage.getItem('tlm_webauthn_email');
