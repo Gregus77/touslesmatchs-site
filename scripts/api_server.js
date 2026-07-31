@@ -8693,7 +8693,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
         const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
         if (!existing) {
           cdbw.prepare(
-            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))"
           ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr());
           console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}${eliteBonusDays ? ` (+${eliteBonusDays}j offerts, offre de lancement)` : ""}`);
         }
@@ -9734,7 +9734,7 @@ app.post("/admin/create-code", (req, res) => {
     const newCode = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
     const expiresAt = new Date(Date.now() + duration_days * 86400000).toISOString().slice(0, 10);
     cdbw.prepare(
-      "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+      "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))"
     ).run(newCode, target_email, plan, expiresAt, creditsMax, getTodayStr());
     cdbw.close();
     console.log(`[admin] Code créé: ${newCode} pour ${target_email} plan ${plan} expire ${expiresAt}`);
@@ -9784,7 +9784,7 @@ app.post("/internal/stripe-verify", async (req, res) => {
       const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
       const cdbw = new Database(CODES_DB_PATH);
       cdbw.prepare(
-        "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)"
+        "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))"
       ).run(newCode, email, status, expiresAt, creditsMax, getTodayStr());
       cdbw.close();
       codeRow = { code: newCode, plan: status };
@@ -9829,7 +9829,7 @@ app.post("/payment-success", async (req, res) => {
       const newCode = Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
       const expiresAt = new Date(Date.now() + durationDays * 86400000).toISOString().slice(0, 10);
       const cdbw = new Database(CODES_DB_PATH);
-      cdbw.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date) VALUES (?,?,?,1,?,?,0,?)")
+      cdbw.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))")
         .run(newCode, email, status, expiresAt, creditsMax, getTodayStr());
       cdbw.close();
       codeRow = { code: newCode, plan: status };
