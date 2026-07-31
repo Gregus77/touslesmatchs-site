@@ -7245,7 +7245,13 @@ app.post("/webauthn/register-options", async (req, res) => {
       rpID: WEBAUTHN_RP_ID,
       userName: cleanEmail,
       attestationType: "none",
-      authenticatorSelection: { residentKey: "preferred", userVerification: "preferred", authenticatorAttachment: "platform" },
+      // residentKey:"discouraged" — sur Android/Chrome, "preferred"/"required"
+      // route la creation vers le Credential Manager de Google (passkeys),
+      // qui echoue frequemment avec "An unknown error occurred while talking
+      // to the credential manager" (constate le 01/08/2026, Samsung/Chrome).
+      // On connait deja l'email au moment du login donc on n'a pas besoin
+      // d'un credential decouvrable — "discouraged" evite ce chemin bugue.
+      authenticatorSelection: { residentKey: "discouraged", userVerification: "preferred", authenticatorAttachment: "platform" },
     });
     putWebauthnChallenge(cleanEmail, options.challenge);
     res.json({ ok: true, options });
