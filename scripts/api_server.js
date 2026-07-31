@@ -3842,11 +3842,21 @@ Réponds en JSON pur (pas de markdown):
     const topAgents = activedAgentResults.filter(a => a.bet === topBet);
     const avgConfidence = Math.round(topAgents.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / topAgents.length);
     chief.bet = topBet;
+    // Plafonds par niveau de consensus : plus les IA convergent, plus la confiance
+    // publiable est haute. Le plafond 3 votes était à 74, soit SOUS le plancher de
+    // diffusion (SIGNAL_FLOOR = 82) : la règle Elite « 3 IA suffisent » (voir
+    // gradeElite plus bas) ne pouvait donc JAMAIS se déclencher, et le palier le
+    // plus cher ne tournait en réalité que sur les signaux 4-5 votes de Premium.
+    // Constaté le 31/07/2026 : 23 analyses bloquées à exactement 74 % en 24 h.
+    // Porté à 84 — au-dessus du plancher pour rendre la règle Elite atteignable,
+    // sous le plafond 4 votes (86) pour préserver la hiérarchie des consensus.
+    // Ce n'est PAS une inflation : on retire un plafond, la valeur publiée reste
+    // la moyenne réelle des IA d'accord (Math.min), jamais un chiffre inventé.
     chief.confidence = voteSummary.unanimous
       ? Math.max(75, Math.min(90, avgConfidence))
       : topVotes >= 4
         ? Math.max(68, Math.min(86, avgConfidence))
-        : Math.max(58, Math.min(74, avgConfidence));
+        : Math.max(58, Math.min(84, avgConfidence));
     chief.raison = `${voteSummary.vote_label} : ${topVotes} IA indépendantes convergent sur ${topBet}. ${chief.raison || ""}`.trim();
     consensusBet = topBet;
     consensusVotes = topVotes;
