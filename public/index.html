@@ -480,6 +480,8 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div id="modal-saved-banner" style="display:none;background:rgba(51,196,129,.08);border:1px solid rgba(51,196,129,.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--green);align-items:center;gap:8px">
         <span>✓</span><span>Identifiants mémorisés — clique sur Accéder.</span>
       </div>
+      <button id="biometric-login-btn" onclick="doBiometricLogin()" style="display:none;width:100%;margin-bottom:14px;padding:12px;border-radius:10px;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.08);color:var(--tx1);font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:8px">👆 Se connecter avec Face ID / empreinte</button>
+      <div id="biometric-err" class="modal-err"></div>
       <label class="modal-label">Email</label>
       <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
       <label class="modal-label">Code d'accès</label>
@@ -566,6 +568,61 @@ function openModal(){
   var banner=document.getElementById('modal-saved-banner');
   if(savedEmail&&savedCode){ banner.style.display='flex'; } else { banner.style.display='none'; }
   showLoginView();
+  var bioBtn=document.getElementById('biometric-login-btn');
+  document.getElementById('biometric-err').style.display='none';
+  if(localStorage.getItem('tlm_webauthn_email')){
+    biometricSupported().then(function(ok){ bioBtn.style.display=ok?'flex':'none'; });
+  } else { bioBtn.style.display='none'; }
+}
+
+/* ══ CONNEXION BIOMETRIQUE (Face ID / empreinte, mobile) ══ */
+function isMobileDevice(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); }
+async function biometricSupported(){
+  try{
+    return isMobileDevice() && window.PublicKeyCredential && typeof SimpleWebAuthnBrowser!=='undefined' && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(e){ return false; }
+}
+async function maybeOfferBiometric(email,code){
+  if(!(await biometricSupported())) return;
+  if(localStorage.getItem('tlm_webauthn_email')===email) return;
+  if(localStorage.getItem('tlm_webauthn_declined_'+email)==='1') return;
+  if(!confirm('Activer la connexion par Face ID / empreinte sur ce téléphone pour la prochaine fois ?')){
+    localStorage.setItem('tlm_webauthn_declined_'+email,'1');
+    return;
+  }
+  try{
+    var r1=await fetch('/api/webauthn/register-options',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code})});
+    var d1=await r1.json();
+    if(!d1.ok) throw new Error(d1.error||'options');
+    var attResp=await SimpleWebAuthnBrowser.startRegistration({optionsJSON:d1.options});
+    var r2=await fetch('/api/webauthn/register-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code,credential:attResp,deviceLabel:navigator.userAgent.slice(0,80)})});
+    var d2=await r2.json();
+    if(d2.ok) localStorage.setItem('tlm_webauthn_email',email);
+  }catch(e){ console.error('[webauthn register]',e); }
+}
+async function doBiometricLogin(){
+  var email=localStorage.getItem('tlm_webauthn_email');
+  var errEl=document.getElementById('biometric-err'), btn=document.getElementById('biometric-login-btn');
+  if(!email) return;
+  errEl.style.display='none';
+  btn.disabled=true;
+  try{
+    var r1=await fetch('/api/webauthn/login-options',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+    var d1=await r1.json();
+    if(!d1.ok) throw new Error(d1.error||'Aucun appareil enregistré');
+    var asseResp=await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:d1.options});
+    var r2=await fetch('/api/webauthn/login-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,credential:asseResp})});
+    var d2=await r2.json();
+    if(!d2.ok) throw new Error(d2.error||'Vérification échouée');
+    localStorage.setItem('tlm_email',d2.email);
+    localStorage.setItem('tlm_code',d2.code);
+    localStorage.setItem('tlm_plan',d2.plan);
+    closeModal();renderNavAuth();loadPick();
+  }catch(e){
+    errEl.textContent=(e&&e.message)||'Connexion biométrique impossible.';
+    errEl.style.display='block';
+  }
+  btn.disabled=false;
 }
 function closeModal(){document.getElementById('modal-login').classList.remove('open')}
 function showLoginView(){
@@ -603,7 +660,7 @@ async function doLogin(){
       localStorage.setItem('tlm_plan',d.plan);
       okEl.textContent='✓ Connecté — Plan '+d.plan;
       okEl.style.display='block';
-      setTimeout(function(){closeModal();renderNavAuth();loadPick();},1000);
+      setTimeout(function(){closeModal();renderNavAuth();loadPick();if(remember)maybeOfferBiometric(email,code);},1000);
     } else {
       errEl.textContent=d.error||'Code invalide.';errEl.style.display='block';
       btn.disabled=false;btn.textContent='Accéder →';
@@ -812,5 +869,6 @@ loadStandardYesterday();
 /* ══ FAQ ══ */
 </script>
 <script src="/js/cookie-consent.js" defer></script>
+<script src="https://unpkg.com/@simplewebauthn/browser@13/dist/bundle/index.umd.min.js"></script>
 </body>
 </html>

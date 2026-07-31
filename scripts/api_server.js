@@ -355,6 +355,23 @@ db.exec(`
   );
 `);
 
+// Connexion biométrique (Face ID / empreinte) — un credential WebAuthn par
+// appareil, rattaché au couple email/code deja valide cote codes.db. Permet
+// de re-injecter email+code dans le localStorage apres verif biometrique,
+// sans toucher au systeme de login existant.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS webauthn_credentials (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    public_key TEXT NOT NULL,
+    counter INTEGER DEFAULT 0,
+    device_label TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_used_at TEXT DEFAULT NULL
+  );
+`);
+
 function ensureColumn(table, column, definition) {
   const columns = db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
   if (!columns.includes(column)) {
@@ -7197,6 +7214,121 @@ app.post("/verify-code", (req, res) => {
   } catch (e) {
     console.error("[verify-code] error:", e.message);
     return res.json({ valid: false, error: "Erreur de vérification" });
+  }
+});
+
+// ── Connexion biométrique (WebAuthn — Face ID / empreinte digitale) ───────────
+const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } = require("@simplewebauthn/server");
+const WEBAUTHN_RP_NAME = "TousLesMatchs";
+const WEBAUTHN_RP_ID = "touslesmatchs.com";
+const WEBAUTHN_ORIGINS = ["https://touslesmatchs.com", "https://www.touslesmatchs.com"];
+const webauthnChallenges = new Map(); // email -> { challenge, expires }
+function putWebauthnChallenge(email, challenge) {
+  webauthnChallenges.set(email, { challenge, expires: Date.now() + 5 * 60000 });
+}
+function takeWebauthnChallenge(email) {
+  const row = webauthnChallenges.get(email);
+  webauthnChallenges.delete(email);
+  if (!row || row.expires < Date.now()) return null;
+  return row.challenge;
+}
+
+app.post("/webauthn/register-options", async (req, res) => {
+  const { email, code } = req.body || {};
+  if (!email || !code) return res.status(400).json({ ok: false, error: "Email et code requis" });
+  const auth = verifyCode(email, code);
+  if (!auth.valid) return res.status(403).json({ ok: false, error: "Code invalide" });
+  const cleanEmail = email.toLowerCase().trim();
+  try {
+    const options = await generateRegistrationOptions({
+      rpName: WEBAUTHN_RP_NAME,
+      rpID: WEBAUTHN_RP_ID,
+      userName: cleanEmail,
+      attestationType: "none",
+      authenticatorSelection: { residentKey: "preferred", userVerification: "preferred", authenticatorAttachment: "platform" },
+    });
+    putWebauthnChallenge(cleanEmail, options.challenge);
+    res.json({ ok: true, options });
+  } catch (e) {
+    console.error("[webauthn/register-options]", e.message);
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+app.post("/webauthn/register-verify", async (req, res) => {
+  const { email, code, credential, deviceLabel } = req.body || {};
+  if (!email || !code || !credential) return res.status(400).json({ ok: false, error: "Requête incomplète" });
+  const auth = verifyCode(email, code);
+  if (!auth.valid) return res.status(403).json({ ok: false, error: "Code invalide" });
+  const cleanEmail = email.toLowerCase().trim();
+  const expectedChallenge = takeWebauthnChallenge(cleanEmail);
+  if (!expectedChallenge) return res.status(400).json({ ok: false, error: "Challenge expiré, réessaie." });
+  try {
+    const verification = await verifyRegistrationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: WEBAUTHN_ORIGINS,
+      expectedRPID: WEBAUTHN_RP_ID,
+    });
+    if (!verification.verified || !verification.registrationInfo) {
+      return res.status(400).json({ ok: false, error: "Vérification échouée" });
+    }
+    const { credential: regCred } = verification.registrationInfo;
+    db.prepare(
+      "INSERT OR REPLACE INTO webauthn_credentials (id, email, code, public_key, counter, device_label) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(regCred.id, cleanEmail, code.toUpperCase().trim(), Buffer.from(regCred.publicKey).toString("base64"), regCred.counter, deviceLabel || null);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("[webauthn/register-verify]", e.message);
+    res.status(400).json({ ok: false, error: "Vérification échouée" });
+  }
+});
+
+app.post("/webauthn/login-options", async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ ok: false, error: "Email requis" });
+  const cleanEmail = email.toLowerCase().trim();
+  const creds = db.prepare("SELECT id FROM webauthn_credentials WHERE email = ?").all(cleanEmail);
+  if (!creds.length) return res.status(404).json({ ok: false, error: "Aucun appareil enregistré pour cet email" });
+  try {
+    const options = await generateAuthenticationOptions({
+      rpID: WEBAUTHN_RP_ID,
+      userVerification: "preferred",
+      allowCredentials: creds.map(c => ({ id: c.id })),
+    });
+    putWebauthnChallenge(cleanEmail, options.challenge);
+    res.json({ ok: true, options });
+  } catch (e) {
+    console.error("[webauthn/login-options]", e.message);
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+app.post("/webauthn/login-verify", async (req, res) => {
+  const { email, credential } = req.body || {};
+  if (!email || !credential) return res.status(400).json({ ok: false, error: "Requête incomplète" });
+  const cleanEmail = email.toLowerCase().trim();
+  const expectedChallenge = takeWebauthnChallenge(cleanEmail);
+  if (!expectedChallenge) return res.status(400).json({ ok: false, error: "Challenge expiré, réessaie." });
+  const stored = db.prepare("SELECT * FROM webauthn_credentials WHERE id = ? AND email = ?").get(credential.id, cleanEmail);
+  if (!stored) return res.status(404).json({ ok: false, error: "Appareil non reconnu" });
+  try {
+    const verification = await verifyAuthenticationResponse({
+      response: credential,
+      expectedChallenge,
+      expectedOrigin: WEBAUTHN_ORIGINS,
+      expectedRPID: WEBAUTHN_RP_ID,
+      credential: { id: stored.id, publicKey: Buffer.from(stored.public_key, "base64"), counter: stored.counter },
+    });
+    if (!verification.verified) return res.status(400).json({ ok: false, error: "Vérification échouée" });
+    db.prepare("UPDATE webauthn_credentials SET counter = ?, last_used_at = datetime('now') WHERE id = ?")
+      .run(verification.authenticationInfo.newCounter, stored.id);
+    const auth = verifyCode(stored.email, stored.code);
+    if (!auth.valid) return res.status(403).json({ ok: false, error: "Abonnement expiré, reconnecte-toi avec ton code." });
+    res.json({ ok: true, email: stored.email, code: stored.code, plan: auth.plan });
+  } catch (e) {
+    console.error("[webauthn/login-verify]", e.message);
+    res.status(400).json({ ok: false, error: "Vérification échouée" });
   }
 });
 

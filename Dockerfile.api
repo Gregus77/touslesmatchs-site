@@ -9,7 +9,8 @@ RUN npm install --save \
   bcryptjs \
   jsonwebtoken \
   better-sqlite3 \
-  stripe
+  stripe \
+  @simplewebauthn/server@13
 
 RUN mkdir -p /data
 
