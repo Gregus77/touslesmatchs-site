@@ -1528,6 +1528,7 @@ function normalizeCurrentPick(p, defaultSource) {
     teamB: buildPickTeam(p.teamB, awayName, "#7c3aed"),
     competition: p.competition || p.league || p.sport || "",
     time: p.time || "",
+    matchTime: p.matchTime || null,
     date: p.date || null,
     source: p.source || defaultSource || "hermes",
     updatedAt: p.updatedAt || null,
@@ -7465,6 +7466,11 @@ function refreshDailyPickFromDB() {
         home_form: pick.home_form || null, away_form: pick.away_form || null,
         home_goals_avg: pick.home_goals_avg != null ? pick.home_goals_avg : null,
         away_goals_avg: pick.away_goals_avg != null ? pick.away_goals_avg : null,
+        // Heure du match en UTC explicite (SQLite stocke analysed_at en UTC
+        // sans suffixe) : le navigateur du visiteur la reconvertit ensuite
+        // dans SON fuseau local via toLocaleTimeString(), peu importe le
+        // pays de connexion. Demande de Greg le 31/07/2026.
+        matchTime: pick.analysed_at ? String(pick.analysed_at).replace(" ", "T") + "Z" : null,
         source: "auto-api", publishedAt: new Date().toISOString(),
         // Score et statut reels du match : permettent d'afficher le resultat
         // (score final + gagne/perdu) des que le match est termine, sans

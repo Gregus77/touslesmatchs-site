@@ -160,6 +160,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .pcard-title{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
 .pcard-title .badge{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:rgba(51,196,129,.14);color:var(--green);border:1px solid rgba(51,196,129,.3);padding:3px 8px;border-radius:999px}
 .pick-comp{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.pick-time{margin-left:auto;color:var(--tx2);font-weight:800}
 .pick-comp .flag{font-size:14px}
 .pick-match{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 10px}
 .pick-team{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0}
@@ -698,6 +699,19 @@ async function loadPick(){
     var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
     var comp=splitComp(p.competition||p.sport||'');
     var flag=COUNTRY_FLAGS[comp.country]||'';
+    var sportIco=SPORT_ICO[p.sport]||'🏟️';
+    // Heure locale du visiteur : le navigateur convertit automatiquement
+    // matchTime (UTC) dans SON fuseau, quel que soit le pays de connexion —
+    // pas besoin de geolocaliser l'IP. Demande de Greg le 31/07/2026.
+    var timeHtml='';
+    if(p.matchTime){
+      try{
+        var _d=new Date(p.matchTime);
+        if(!isNaN(_d.getTime())){
+          timeHtml='<span class="pick-time">🕐 '+_d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+'</span>';
+        }
+      }catch(e){}
+    }
     // Match termine (win/loss) : le score final et le pari conseille
     // deviennent une preuve historique, plus une info a proteger — on les
     // affiche a tout le monde, meme sans compte. Demande de Greg le
@@ -715,7 +729,7 @@ async function loadPick(){
         '<a href="/dashboard" class="pick-lock-btn">Débloquer avec mon email →</a>'+
       '</div>'
     );
-    box.innerHTML='<div class="pick-comp">'+(flag?'<span class="flag">'+flag+'</span>':'')+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+'</div>'+
+    box.innerHTML='<div class="pick-comp">'+sportIco+' '+(flag?'<span class="flag">'+flag+'</span>':'')+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+timeHtml+'</div>'+
       '<div class="pick-match">'+
         '<div class="pick-team"><div class="pick-team-logo">'+logo(homeLogo,homeName)+'</div><div class="pick-team-name">'+esc(homeName)+'</div></div>'+
         '<div class="pick-vs">VS</div>'+
