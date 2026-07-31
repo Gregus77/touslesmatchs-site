@@ -2702,8 +2702,19 @@ function resolveLiveMatchesAfterFetchFailure() {
   return [];
 }
 
+// Lettres latines "spéciales" qui ne sont PAS des accents décomposables en
+// Unicode NFD (contrairement à é/à/ü) : ø, æ, ß... restent identiques après
+// normalize("NFD"), donc "Bodø" et "Bodo" ne matchent jamais entre une source
+// qui garde l'unicode complet et une autre qui translittère. Constaté le
+// 31/07/2026 : "Bodø/Glimt" (TheSportsDB) affiché en double à côté de
+// "Bodo/Glimt" (api-sports) sur la page Live IA, même score, même minute.
+const SPECIAL_LATIN_MAP = { "ø": "o", "æ": "ae", "œ": "oe", "ð": "d", "þ": "th", "ł": "l", "đ": "d", "ß": "ss", "ı": "i" };
+function stripSpecialLatin(s) {
+  return String(s || "").replace(/[øæœðþłđßı]/gi, (c) => SPECIAL_LATIN_MAP[c.toLowerCase()] || c);
+}
+
 function normalizeMatchName(value) {
-  return String(value || "").trim().toLowerCase()
+  return stripSpecialLatin(String(value || "").trim().toLowerCase())
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/\bman(chester)?\b/g, "man")
     .replace(/\b(united|utd)\b/g, "utd")
@@ -5366,7 +5377,7 @@ function autoResolvePredictions(match) {
 
 // Normalise un nom d'équipe : minuscules + suppression des accents (« Göteborg »
 // → « goteborg »), pour que le rapprochement API↔DB ne casse pas sur les accents.
-const NORM = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+const NORM = (s) => stripSpecialLatin(String(s || "").toLowerCase()).normalize("NFD").replace(/[̀-ͯ]/g, "");
 // Préfixes de clubs trop génériques pour identifier un match (« FC », « AC »…).
 const GENERIC_CLUB_TOKENS = new Set([
   "fc", "ac", "sc", "afc", "cf", "sk", "fk", "us", "as", "ss", "ssc", "cd",
