@@ -96,6 +96,20 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 .foot-text{font-size:12px;color:var(--muted);line-height:1.9;max-width:500px;margin:0 auto}
 
 @media(max-width:480px){nav{padding:0 16px}}
+.nav-login-btn{background:transparent;border:1px solid var(--b3);color:var(--text);padding:7px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nav-login-btn:hover{border-color:var(--violet)}
+@media(max-width:560px){ .nav-cta{display:none} }
+.modal-bg{position:fixed;inset:0;z-index:300;background:rgba(5,6,13,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--b3);border-radius:16px;padding:26px;max-width:380px;width:100%;position:relative}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+.modal-label{font-size:12px;font-weight:700;color:var(--muted2);margin-bottom:6px;display:block}
+.modal-input{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:11px 12px;color:var(--text);font-size:15px;margin-bottom:12px;font-family:inherit}
+.modal-btn{width:100%;background:linear-gradient(135deg,var(--violet),var(--indigo2));color:#fff;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px}
+.modal-err{color:#ef4444;font-size:13px;margin-bottom:10px;display:none}
+.modal-ok{color:var(--green);font-size:13px;margin-bottom:10px;display:none}
 </style>
 </head>
 <body>
@@ -111,14 +125,70 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
     <a href="/#plans">Tarifs</a>
   </div>
   <div class="nav-right">
+    <button class="nav-login-btn" id="nav-se-connecter" onclick="openModal()">Se connecter</button>
     <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
 </nav>
+<div class="modal-bg" id="modal-login">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">Accès membre</div>
+    <div class="modal-sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
+    <label class="modal-label">Email</label>
+    <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
+    <label class="modal-label">Code d'accès</label>
+    <input class="modal-input" id="login-code" type="text" placeholder="STANDARD-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
+    <div class="modal-err" id="login-err"></div>
+    <div class="modal-ok" id="login-ok"></div>
+    <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center">Pas encore de code ? <a href="/#plans" onclick="closeModal()" style="color:var(--indigo2);text-decoration:none">Voir les abonnements</a></div>
+  </div>
+</div>
 <script>
 if (localStorage.getItem('tlm_plan')) {
   var _navCta = document.getElementById('nav-cta-top');
   if (_navCta) _navCta.style.display = 'none';
+  var _navLogin = document.getElementById('nav-se-connecter');
+  if (_navLogin) _navLogin.style.display = 'none';
+}
+function openModal(){
+  document.getElementById('modal-login').classList.add('open');
+  document.getElementById('login-email').value = localStorage.getItem('tlm_email') || '';
+  document.getElementById('login-code').value = localStorage.getItem('tlm_code') || '';
+}
+function closeModal(){ document.getElementById('modal-login').classList.remove('open'); }
+document.getElementById('modal-login').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
+document.getElementById('login-code').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLogin(); });
+async function doLogin(){
+  var email = document.getElementById('login-email').value.trim().toLowerCase();
+  var code = document.getElementById('login-code').value.trim().toUpperCase();
+  var errEl = document.getElementById('login-err'), okEl = document.getElementById('login-ok'), btn = document.getElementById('login-btn');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!email || !code) { errEl.textContent = 'Email et code requis.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Vérification…';
+  try {
+    var r = await fetch('/api/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, code: code }) });
+    var d = await r.json();
+    if (d.valid) {
+      localStorage.setItem('tlm_email', email);
+      localStorage.setItem('tlm_code', code);
+      localStorage.setItem('tlm_plan', d.plan);
+      okEl.textContent = '✓ Connecté — Plan ' + d.plan;
+      okEl.style.display = 'block';
+      setTimeout(function(){
+        closeModal();
+        var _navCta = document.getElementById('nav-cta-top'); if (_navCta) _navCta.style.display = 'none';
+        var _navLogin = document.getElementById('nav-se-connecter'); if (_navLogin) _navLogin.style.display = 'none';
+      }, 800);
+    } else {
+      errEl.textContent = d.error || 'Code invalide.'; errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Accéder →';
+    }
+  } catch (e) {
+    errEl.textContent = 'Erreur réseau.'; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Accéder →';
+  }
 }
 </script>
 <div class="mmenu" id="mmenu">

@@ -28,6 +28,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
 .nav-cta{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;text-decoration:none;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;white-space:nowrap;transition:all .2s}
 .nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.3)}
+.nav-login-btn{background:transparent;border:1px solid rgba(255,255,255,.16);color:var(--text);padding:7px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nav-login-btn:hover{border-color:var(--violet)}
+@media(max-width:560px){ .nav-cta{display:none} }
 .nav-hamburger{display:none;background:none;border:1px solid var(--b2);border-radius:8px;color:var(--text);width:34px;height:34px;font-size:16px;cursor:pointer}
 @media(max-width:900px){ .nav-center{display:none} .nav-hamburger{display:block} }
 .mmenu{display:none;position:fixed;inset:0;z-index:199;background:rgba(10,12,26,.98);padding:90px 24px 24px;flex-direction:column;gap:18px}
@@ -229,6 +232,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <a href="/#plans">Tarifs</a>
   </div>
   <div class="nav-right">
+    <button class="nav-login-btn" id="nav-se-connecter" onclick="openLoginModal()">Se connecter</button>
     <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
@@ -485,8 +489,10 @@ function updateAuthBar() {
   var info = document.getElementById("auth-info");
   var btn = document.getElementById("auth-btn");
   var navCta = document.getElementById("nav-cta-top");
-  // Inutile de proposer "Creer un compte" a quelqu'un deja abonne.
+  var navLogin = document.getElementById("nav-se-connecter");
+  // Inutile de proposer "Creer un compte" ou "Se connecter" a quelqu'un deja abonne.
   if (navCta) navCta.style.display = userAuth ? "none" : "";
+  if (navLogin) navLogin.style.display = userAuth ? "none" : "";
   if (userAuth) {
     var isElite = userAuth.plan === "elite";
     var planName = userAuth.plan.charAt(0).toUpperCase() + userAuth.plan.slice(1);
