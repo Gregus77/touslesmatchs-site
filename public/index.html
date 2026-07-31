@@ -28,7 +28,7 @@
         { "@type": "Question", "name": "Comment fonctionne le Concile IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Cinq intelligences artificielles indépendantes (Perplexity, DeepSeek, Mistral, Cohere, Qwen) analysent chaque match séparément à partir des statistiques, de l'historique et du contexte. Un vote de convergence établit un score de confiance. Le signal n'est publié que si ce score dépasse le seuil du palier." } },
         { "@type": "Question", "name": "Que représente le score de confiance ?", "acceptedAnswer": { "@type": "Answer", "text": "C'est l'indicateur interne utilisé par le Concile pour classer ses analyses selon le niveau de convergence entre les IA. Il n'est pas une garantie de résultat : l'issue d'un événement sportif reste incertaine." } },
         { "@type": "Question", "name": "Combien de sélections vais-je recevoir ?", "acceptedAnswer": { "@type": "Answer", "text": "Les volumes affichés (3, 10 ou 30 par jour) sont des maximums, pas des garanties. Le nombre réel dépend des matchs qui atteignent le seuil de confiance du palier ce jour-là." } },
-        { "@type": "Question", "name": "Quelle différence entre Standard, Premium et Elite-VIP ?", "acceptedAnswer": { "@type": "Answer", "text": "Standard (4,90€/mois) exige une confiance ≥88%, jusqu'à 3 signaux/jour. Premium (14,90€/mois) descend à 85%, jusqu'à 10 signaux/jour, inclut Standard. Elite-VIP (29,90€/mois) descend à 82% et couvre le multisport, jusqu'à 30 signaux/jour, inclut Premium." } },
+        { "@type": "Question", "name": "Quelle différence entre Standard, Premium et Elite-VIP ?", "acceptedAnswer": { "@type": "Answer", "text": "Confiance minimum 82% sur les trois paliers. Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour, inclut Standard. Elite-VIP (29,90€/mois) couvre tout le vivier diffusable et le multisport, jusqu'à 30 signaux/jour, inclut Premium." } },
         { "@type": "Question", "name": "Comment fonctionne le compte gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Le compte gratuit donne accès au pick gratuit du jour, aux résultats publics, à un aperçu des sélections Standard de la veille, et à la liste des matchs en direct — sans carte bancaire." } },
         { "@type": "Question", "name": "Puis-je résilier mon abonnement ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les abonnements sont sans engagement et résiliables à tout moment depuis le portail Stripe." } },
         { "@type": "Question", "name": "Comment les résultats sont-ils calculés ?", "acceptedAnswer": { "@type": "Answer", "text": "Chaque sélection est enregistrée avec sa cote réelle au moment de l'envoi. Le résultat (gagné, perdu) est vérifié après la fin officielle du match. Le winrate et le profit simulé sont calculés uniquement sur les sélections terminées, gagnées comme perdues." } }
@@ -344,7 +344,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="plan-price">4.90€ <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span>Jusqu'à 3 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Confiance minimum 88%</li>
+        <li><span class="plan-check">✓</span>Confiance minimum 82%, sélection la plus stricte du jour</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block">Choisir Standard</a>
@@ -357,7 +357,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="plan-price">14.90€ <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span>Jusqu'à 10 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Confiance minimum 85%</li>
+        <li><span class="plan-check">✓</span>Confiance minimum 82%, sélection élargie</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <a href="https://buy.stripe.com/9B600jgrW3Bi63W0uG3VC08" target="_blank" class="btn btn-prim btn-block">Choisir Premium</a>
@@ -370,7 +370,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="plan-price">29.90€ <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span>Jusqu'à 30 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Confiance minimum 82%</li>
+        <li><span class="plan-check">✓</span>Confiance minimum 82%, tout le vivier multisport</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin:-4px 0 12px">🎁 1 mois offert pour ton 1er abonnement Elite-VIP. Parraine un ami (n'importe quelle formule) : vous recevez chacun 1 mois offert en plus.</div>
@@ -721,7 +721,7 @@ async function loadStandardYesterday(){
     var r=await fetch('/api/standard-yesterday');
     var d=await r.json();
     if(!d.ok||!d.selections||!d.selections.length){
-      tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Standard hier.<br>Aucun match n\'a atteint 88% de confiance.</td></tr>';
+      tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Standard hier.<br>Aucun match n\'a atteint le niveau de confiance requis.</td></tr>';
       return;
     }
     tbody.innerHTML=d.selections.map(function(s){
