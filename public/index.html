@@ -741,7 +741,7 @@ async function loadPick(){
       '<div class="pick-bet">'+(showBet?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
       '<div class="pick-conf">'+esc(p.confidence)+'%</div>'+
       lockHtml+
-      (loggedIn?'':'<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le pick du jour par email</button>');
+      '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le pick du jour par email</button>';
   } catch(e){
     box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.</div>';
   }
