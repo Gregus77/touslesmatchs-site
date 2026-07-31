@@ -2850,13 +2850,15 @@ async function fetchH2H(match) {
       h2hCache.set(ck, { data: null, ts: Date.now() });
       return null;
     }
-    let totalGoals = 0, under25 = 0, btts = 0, homeWins = 0, awayWins = 0, draws = 0;
+    let totalGoals = 0, under25 = 0, btts = 0, homeWins = 0, awayWins = 0, draws = 0, htGoal = 0;
     for (const r of rows) {
       const gh = r.goals.home, ga = r.goals.away;
       const tot = gh + ga;
       totalGoals += tot;
       if (tot <= 2) under25++;
       if (gh > 0 && ga > 0) btts++;
+      const htH = r.score?.halftime?.home, htA = r.score?.halftime?.away;
+      if (htH != null && htA != null && (htH + htA) > 0) htGoal++;
       // Ramener au point de vue de l'équipe "home" actuelle (via id)
       const curHomeIsRowHome = r.teams?.home?.id === homeId;
       const curHomeGoals = curHomeIsRowHome ? gh : ga;
@@ -2869,6 +2871,7 @@ async function fetchH2H(match) {
     const h2h = {
       n,
       avgGoals: Math.round((totalGoals / n) * 100) / 100,
+      htGoalPct: Math.round((htGoal / n) * 100),
       under25Pct: Math.round((under25 / n) * 100),
       bttsPct: Math.round((btts / n) * 100),
       homeWins, awayWins, draws,
@@ -2880,6 +2883,81 @@ async function fetchH2H(match) {
     return null;
   }
 }
+
+// ── Matchs à venir (pré-match) — demande de Greg le 31/07/2026 ───────────────
+// Contrairement au reste du Concile (analyse EN DIRECT, cote ARJEL réelle),
+// ces picks portent sur des matchs qui n'ont pas encore commencé : meilleures
+// cotes, mais aucune donnée live. On s'appuie donc uniquement sur le H2H réel
+// (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
+// appel IA payant, juste des statistiques de confrontations directes.
+let _upcomingPicksCache = { ts: 0, data: [] };
+async function computeUpcomingPicks() {
+  if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache.data;
+  if (!API_SPORTS_KEY) return _upcomingPicksCache.data;
+  const picks = [];
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/fixtures?date=${today}&status=NS`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const fixtures = (data.response || []).filter(f => {
+      const kickoff = new Date(f.fixture.date).getTime();
+      const hoursAway = (kickoff - Date.now()) / 3600000;
+      return hoursAway > 0 && hoursAway <= 12;
+    });
+    for (const f of fixtures.slice(0, 40)) {
+      const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football" };
+      if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
+      const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
+      if (!h2h || h2h.n < 5) continue;
+      const candidates = [
+        { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
+        { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
+        { bet: "BTTS Oui", confidence: h2h.bttsPct },
+        { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
+      ].filter(c => c.confidence >= PUBLISHED_MIN_CONFIDENCE).sort((a, b) => b.confidence - a.confidence);
+      if (!candidates.length) continue;
+      picks.push({
+        home: f.teams.home.name, away: f.teams.away.name,
+        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
+        sport: "Football", kickoff: f.fixture.date,
+        bet: candidates[0].bet, confidence: candidates[0].confidence,
+        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+      });
+    }
+  } catch (e) { console.error("[upcoming-picks]", e.message); }
+  picks.sort((a, b) => b.confidence - a.confidence);
+  const top = picks.slice(0, 6);
+  _upcomingPicksCache = { ts: Date.now(), data: top };
+  return top;
+}
+
+app.get("/upcoming-picks", async (req, res) => {
+  try {
+    const qEmail = req.query.email, qCode = req.query.code;
+    let unlocked = false;
+    if (qEmail && qCode) {
+      try {
+        const a = verifyCode(qEmail, qCode);
+        unlocked = !!((a.valid && a.plan) || isAdminAccess(qEmail, qCode));
+      } catch (_) {}
+    }
+    const picks = await computeUpcomingPicks();
+    res.json({
+      ok: true,
+      picks: picks.map(p => ({
+        home: p.home, away: p.away, competition: p.competition, sport: p.sport,
+        kickoff: p.kickoff, confidence: p.confidence,
+        bet: unlocked ? p.bet : null, locked: !unlocked,
+        home_logo: p.home_logo, away_logo: p.away_logo,
+      })),
+    });
+  } catch (e) {
+    console.error("[upcoming-picks] endpoint:", e.message);
+    res.status(500).json({ ok: false, error: "internal_error" });
+  }
+});
 
 function buildH2HBlock(h2h, homeName, awayName) {
   if (!h2h) return "";

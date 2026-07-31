@@ -133,6 +133,15 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .live-panel-title .dot{width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;margin-right:7px;animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .live-panel-link{font-size:12.5px;font-weight:700;color:var(--violet2);text-decoration:none}
+.upcoming-sep{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx2);margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)}
+.upcoming-sep .dot.up{width:7px;height:7px;border-radius:50%;background:#3ec9e8;display:inline-block}
+.upcoming-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b1)}
+.upcoming-item:last-child{border-bottom:none}
+.upcoming-info{flex:1;min-width:0}
+.upcoming-teams{font-size:13px;font-weight:700}
+.upcoming-comp{font-size:11px;color:var(--muted);margin-top:2px}
+.upcoming-conf{font-size:12px;font-weight:800;color:#3ec9e8;white-space:nowrap}
+.upcoming-lock-btn{font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:6px 12px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap}
 .live-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--b1)}
 .live-row:first-of-type{border-top:none}
 .live-comp{width:46px;flex:0 0 auto}
@@ -309,6 +318,8 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
       </div>
       <div id="live-rows"><div class="empty-note">Chargement…</div></div>
+      <div class="upcoming-sep"><span class="dot up"></span>Matchs à venir — meilleures cotes</div>
+      <div id="upcoming-rows"><div class="empty-note">Chargement…</div></div>
     </div>
   </div>
 
@@ -676,6 +687,35 @@ async function loadLive(){
   } catch(e){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.</div>'; }
 }
 loadLive();
+
+/* ══ MATCHS A VENIR (pre-match, H2H) ══ */
+async function loadUpcoming(){
+  var box=document.getElementById('upcoming-rows');
+  var email=localStorage.getItem('tlm_email'), code=localStorage.getItem('tlm_code');
+  var authQs=(email&&code)?('&email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code)):'';
+  try{
+    var r=await fetch('/api/upcoming-picks?t='+Date.now()+authQs);
+    var d=await r.json();
+    var picks=(d.picks||[]);
+    if(!picks.length){ box.innerHTML='<div class="empty-note">Aucun match à venir ne dépasse le seuil de confiance pour le moment.</div>'; return; }
+    box.innerHTML=picks.map(function(p){
+      var comp=splitComp(p.competition||'');
+      var flag=COUNTRY_FLAGS[comp.country]||'';
+      var kt='';
+      try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+      var right=p.locked
+        ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'
+        : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'%</div>';
+      return '<div class="upcoming-item">'+
+        '<div class="upcoming-info">'+
+          '<div class="upcoming-teams">'+(flag?flag+' ':'')+esc(p.home)+' — '+esc(p.away)+'</div>'+
+          '<div class="upcoming-comp">'+esc(comp.league)+(kt?' · '+kt:'')+'</div>'+
+        '</div>'+right+
+      '</div>';
+    }).join('');
+  } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
+}
+loadUpcoming();
 
 /* ══ PICK GRATUIT DU JOUR ══ */
 async function loadPick(){
