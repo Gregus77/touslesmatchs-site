@@ -7444,10 +7444,29 @@ function refreshDailyPickFromDB() {
     // "trouve" mais jamais envoye, alors qu'il n'a jamais ete assez solide).
     const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r) && Number(r.confidence) >= PUBLISHED_MIN_CONFIDENCE);
     if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + PUBLISHED_MIN_CONFIDENCE + "%) — pick inchangé"); return false; }
-    // Priorité 1 : un match d'AUJOURD'HUI (en cours d'abord = actionnable, sinon le plus confiant du jour).
-    // Priorité 2 : sinon, la meilleure gagnante récente (vitrine).
+    // Priorité 1 : un match d'AUJOURD'HUI RECEMMENT analysé et encore non résolu
+    //   (vraiment en cours, actionnable).
+    // Priorité 2 : sinon, un match d'aujourd'hui déjà RESOLU (score final connu,
+    //   affichage sûr).
+    // Priorité 3 : sinon, le plus confiant du jour quel que soit son état.
+    // Priorité 4 : sinon, repli historique (vitrine).
+    //
+    // Avant, un match non résolu l'emportait TOUJOURS sur un match résolu, même
+    // vieux de plusieurs heures — un match à données corrompues (score
+    // incohérent, ex. 72-104 à la 10e minute d'un match de basket) qui ne se
+    // résout jamais restait donc affiché toute la journée comme "pick du jour",
+    // alors que 10+ matchs plus récents et sains existaient. Constaté le
+    // 31/07/2026 sur "Toronto Tempo vs Minnesota Lynx" (analysé 01h59, jamais
+    // résolu, resté affiché jusqu'au soir).
+    const RECENT_UNRESOLVED_MS = 4 * 3600000; // 4h : au-delà, on considère le match abandonné/corrompu, pas "en cours"
+    const analysedAtMs = (r) => {
+      const t = new Date(String(r.analysed_at || "").replace(" ", "T") + "Z").getTime();
+      return Number.isFinite(t) ? t : 0;
+    };
     const todays = eligible.filter(r => (r.analysed_at || "").slice(0, 10) === todayISO);
-    let pick = todays.find(r => r.outcome === null) || todays[0]
+    let pick = todays.find(r => r.outcome === null && (Date.now() - analysedAtMs(r)) < RECENT_UNRESOLVED_MS)
+            || todays.find(r => r.outcome === "win" || r.outcome === "loss")
+            || todays[0]
             || eligible.find(r => r.outcome === "win") || eligible[0];
     if (!pick) { console.log("[daily-pick] aucun pick eligible"); return false; }
     const matchDate = (pick.analysed_at || "").slice(0, 10) || todayISO;
