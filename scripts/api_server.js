@@ -5471,14 +5471,14 @@ async function resolveStalePredictions() {
   staleResolveRunning = true;
   try {
     const staleRows = db.prepare(`
-      SELECT DISTINCT home, away, sport, substr(created_at, 1, 10) AS day FROM (
-        SELECT home, away, 'Football' AS sport, created_at FROM agent_predictions WHERE outcome IS NULL
+      SELECT DISTINCT home, away, sport, competition, substr(created_at, 1, 10) AS day FROM (
+        SELECT home, away, 'Football' AS sport, '' AS competition, created_at FROM agent_predictions WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, 'Football' AS sport, created_at FROM agent_market_predictions WHERE outcome IS NULL
+        SELECT home, away, 'Football' AS sport, '' AS competition, created_at FROM agent_market_predictions WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, COALESCE(sport, 'Football') AS sport, analysed_at AS created_at FROM concile_analyses WHERE outcome IS NULL
+        SELECT home, away, COALESCE(sport, 'Football') AS sport, COALESCE(competition, '') AS competition, analysed_at AS created_at FROM concile_analyses WHERE outcome IS NULL
         UNION ALL
-        SELECT home, away, 'Football' AS sport, created_at FROM shadow_evals WHERE outcome IS NULL
+        SELECT home, away, 'Football' AS sport, '' AS competition, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-90 minutes')
         AND created_at >= datetime('now','-30 days')
     `).all();
@@ -5601,6 +5601,31 @@ async function resolveStalePredictions() {
           }
           return false;
         });
+      }
+      // Dernier repli, scope compétition : quand les deux mots-clés d'équipe
+      // restent trop différents (transliteration cyrillique/latine, nom
+      // complet vs raccourci), on restreint d'abord aux matchs de la MEME
+      // ligue/pays (mot distinctif partagé dans le nom de competition), puis
+      // on accepte une tolerance plus large sur les deux cotes a la fois —
+      // le scope competition rend ce relachement sur sans risque de
+      // rapprocher deux matchs differents. Demande explicite de Greg le
+      // 31/07/2026 : "voir les matchs du pays et de la ligue en question,
+      // et le nom qui se rapproche le plus".
+      if (!m && s.competition) {
+        const compWordsA = new Set(NORM(s.competition).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 4));
+        if (compWordsA.size) {
+          const sameCompetition = finished.filter((f) => {
+            if (!f.competition) return false;
+            const compWordsB = NORM(f.competition).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 4);
+            return compWordsB.some((w) => compWordsA.has(w));
+          });
+          m = sameCompetition.find((f) => {
+            const fh = NORM(f.home), fa = NORM(f.away);
+            const homeClose = fh.includes(hw) || teamPlaceWords(f.home).some((w) => levenshteinAtMost(w, hw, 3));
+            const awayClose = fa.includes(aw) || teamPlaceWords(f.away).some((w) => levenshteinAtMost(w, aw, 3));
+            return homeClose && awayClose;
+          });
+        }
       }
       if (m) {
         // Réordonne le score si le match a été trouvé dans le sens inverse
