@@ -2486,6 +2486,28 @@ function teamPlaceWords(name) {
     .filter((w) => w.length >= 4 && !GENERIC_CLUB_TOKENS.has(w));
 }
 
+// Distance de Levenshtein plafonnee avec sortie anticipee — utilisee pour
+// rapprocher deux noms d'equipe orthographies differemment selon la source
+// (ex: "Polissya" / "Polessya") sans faire exploser le cout sur des mots longs.
+function levenshteinAtMost(a, b, maxDist) {
+  if (Math.abs(a.length - b.length) > maxDist) return false;
+  const m = a.length, n = b.length;
+  const dp = new Array(n + 1);
+  for (let j = 0; j <= n; j++) dp[j] = j;
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0]; dp[0] = i;
+    let rowMin = dp[0];
+    for (let j = 1; j <= n; j++) {
+      const tmp = dp[j];
+      dp[j] = a[i - 1] === b[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = tmp;
+      if (dp[j] < rowMin) rowMin = dp[j];
+    }
+    if (rowMin > maxDist) return false;
+  }
+  return dp[n] <= maxDist;
+}
+
 function teamsSharePlaceWord(a, b) {
   const wa = teamPlaceWords(a);
   if (!wa.length) return false;
@@ -5556,11 +5578,30 @@ async function resolveStalePredictions() {
       const hw = matchToken(s.home);
       const aw = matchToken(s.away);
       if (!hw || !aw) continue;
-      const m = finished.find(f => {
+      let m = finished.find(f => {
         const fh = NORM(f.home);
         const fa = NORM(f.away);
         return (fh.includes(hw) && fa.includes(aw)) || (fh.includes(aw) && fa.includes(hw));
       });
+      // Repli flou : variante orthographique a 1-2 lettres pres (ex: "Polissya"
+      // chez nous / "Polessya" chez api-sports — translitteration differente
+      // selon la source, constate le 31/07/2026 sur Zhytomyr). Un seul cote
+      // peut etre flou, l'autre doit rester une inclusion stricte pour eviter
+      // de rapprocher deux matchs differents.
+      if (!m) {
+        m = finished.find(f => {
+          const fh = NORM(f.home);
+          const fa = NORM(f.away);
+          const homeStrict = fh.includes(hw), awayStrict = fa.includes(aw);
+          if (homeStrict && !awayStrict && aw.length >= 6) {
+            return teamPlaceWords(f.away).some(w => levenshteinAtMost(w, aw, 2));
+          }
+          if (awayStrict && !homeStrict && hw.length >= 6) {
+            return teamPlaceWords(f.home).some(w => levenshteinAtMost(w, hw, 2));
+          }
+          return false;
+        });
+      }
       if (m) {
         // Réordonne le score si le match a été trouvé dans le sens inverse
         const reversed = NORM(m.home).includes(aw) && !NORM(m.home).includes(hw);
