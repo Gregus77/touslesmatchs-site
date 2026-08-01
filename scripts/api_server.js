@@ -165,7 +165,22 @@ app.use((req, res, next) => {
   if (req.originalUrl === "/stripe/webhook") return next();
   return jsonParser(req, res, next);
 });
-app.use(cors());
+// CORS restreint au domaine du site (revue de securite du 01/08/2026) —
+// app.use(cors()) sans options autorisait n'importe quel site tiers a
+// appeler l'API. Risque limite ici (l'auth passe par un token colle
+// manuellement en JS, jamais un cookie envoye automatiquement par le
+// navigateur), mais defense en profondeur peu couteuse. Pas d'origin
+// (curl, apps mobiles, webhooks Stripe server-to-server) reste autorise.
+const ALLOWED_ORIGINS = new Set([
+  "https://touslesmatchs.com",
+  "https://www.touslesmatchs.com",
+]);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);
+    return callback(null, false);
+  },
+}));
 
 // ── SÉCURITÉ P2 : rate limiting maison (aucune dépendance externe) ────────────
 // Strict sur l'authentification (anti-brute-force), très large ailleurs
@@ -191,7 +206,12 @@ function clientIp(req) {
 app.use((req, res, next) => {
   const ip = clientIp(req);
   // Auth : 20 tentatives / 15 min / IP
-  if (req.method === "POST" && (req.path === "/auth/login" || req.path === "/auth/register")) {
+  // /verify-code ajoute le 01/08/2026 (revue de securite) : ce code d'acces
+  // reste valable des mois (pas un OTP a courte duree de vie comme /auth/*),
+  // donc jamais rate-limite jusqu'ici cote IP — seul l'espace de recherche
+  // (8 caracteres, ~1400 milliards de combinaisons) rendait un brute-force
+  // impraticable. Defense en profondeur, pas une faille activement exploitee.
+  if (req.method === "POST" && (req.path === "/auth/login" || req.path === "/auth/register" || req.path === "/verify-code")) {
     if (!rlAllow("auth_" + ip, 20, 15 * 60 * 1000)) {
       return res.status(429).json({ ok: false, error: "Trop de tentatives, réessaie dans quelques minutes." });
     }
