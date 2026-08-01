@@ -7226,8 +7226,12 @@ app.post("/forgot-code", async (req, res) => {
   res.json({ ok: true });
   // Async: look up codes and send
   try {
-    const CODES_DB = "/var/touslesmatchs/codes.db";
-    const cdb = new Database(CODES_DB, { readonly: true });
+    // Ancien chemin en dur "/var/touslesmatchs/codes.db" inexistant sur le
+    // conteneur — la vraie base est CODES_DB_PATH ("/data/codes.db"), utilisee
+    // partout ailleurs. Resultat : aucun code n'etait jamais trouve, donc
+    // aucun email n'etait jamais envoye, silencieusement (constate par
+    // Greg le 01/08/2026 — bug preexistant, sans lien avec l'OTP).
+    const cdb = new Database(CODES_DB_PATH, { readonly: true });
     const rows = cdb.prepare(
       "SELECT code, plan FROM codes WHERE email = ? AND active = 1"
     ).all(emailClean);
