@@ -63,7 +63,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .dash-status.expired,.dash-status.cancelled{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.25)}
 .dash-renewal{font-size:12.5px;color:var(--muted);margin-top:8px}
 .dash-actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 36px}
-.dash-action-btn{background:var(--bg2);border:1px solid var(--b2);color:var(--text);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s}
+.dash-action-btn{background:var(--bg2);border:1px solid var(--b2);color:var(--text);font-family:inherit;font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s}
 .dash-action-btn:hover{border-color:rgba(99,102,241,.4)}
 
 .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px}
@@ -162,7 +162,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
     <div class="dash-actions" id="dash-actions" style="display:none">
       <button class="dash-action-btn" id="telegram-btn" onclick="openTelegram()">📩 Rejoindre le canal Telegram</button>
-      <a class="dash-action-btn" href="mailto:hermes@touslesmatchs.com?subject=Gestion%20de%20mon%20abonnement">⚙️ Gérer / résilier mon abonnement</a>
+      <button class="dash-action-btn" id="billing-btn" onclick="openBillingPortal()">⚙️ Gérer / résilier mon abonnement</button>
       <a class="dash-action-btn" href="/#plans">↗️ Changer d'offre</a>
     </div>
 
@@ -402,6 +402,22 @@ function openTelegram() {
   })
   .catch(function() {
     btn.disabled = false; btn.textContent = '📩 Rejoindre le canal Telegram';
+    alert('Erreur réseau.');
+  });
+}
+
+function openBillingPortal() {
+  var btn = document.getElementById('billing-btn');
+  btn.disabled = true; btn.textContent = 'Ouverture...';
+  fetch('/api/auth/billing-portal', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    btn.disabled = false; btn.textContent = '⚙️ Gérer / résilier mon abonnement';
+    if (!d.ok) { alert(d.error || 'Portail indisponible.'); return; }
+    window.location.href = d.url;
+  })
+  .catch(function() {
+    btn.disabled = false; btn.textContent = '⚙️ Gérer / résilier mon abonnement';
     alert('Erreur réseau.');
   });
 }

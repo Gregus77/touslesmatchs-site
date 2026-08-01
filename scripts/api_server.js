@@ -7329,6 +7329,13 @@ try {
       created_at TEXT DEFAULT (datetime('now'))
     );
   `);
+  // stripe_customer_id : necessaire pour ouvrir le vrai portail de facturation
+  // Stripe (Phase 4, 01/08/2026) sans avoir a rechercher le client par email
+  // (une recherche par email peut renvoyer plusieurs clients Stripe distincts).
+  const _cdbCols = _cdb.prepare("PRAGMA table_info(codes)").all().map(c => c.name);
+  if (!_cdbCols.includes("stripe_customer_id")) {
+    _cdb.exec("ALTER TABLE codes ADD COLUMN stripe_customer_id TEXT DEFAULT NULL");
+  }
   _cdb.close();
 } catch(e) { console.error("[codes-db] init error:", e.message); }
 
@@ -7558,6 +7565,31 @@ app.get("/auth/telegram-link", requireSession, async (req, res) => {
     res.json({ ok: true, link });
   } catch (e) {
     console.error("[telegram-link]", e.message);
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+// Vrai portail de facturation Stripe (Phase 4, 01/08/2026) — remplace le
+// mailto: placeholder du dashboard. L'utilisateur y gere/annule/change de
+// carte lui-meme, cote Stripe, sans qu'on ait a manipuler quoi que ce soit.
+app.post("/auth/billing-portal", requireSession, async (req, res) => {
+  try {
+    if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
+    const cdb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = cdb.prepare("SELECT stripe_customer_id FROM codes WHERE email = ? AND stripe_customer_id IS NOT NULL ORDER BY rowid DESC LIMIT 1").get(req.session.email);
+    cdb.close();
+    if (!row || !row.stripe_customer_id) {
+      return res.json({ ok: false, error: "Aucun abonnement Stripe trouve pour ce compte. Contacte-nous si tu penses que c'est une erreur." });
+    }
+    const Stripe5 = require("stripe");
+    const stripe5 = Stripe5(STRIPE_SECRET_KEY);
+    const portalSession = await stripe5.billingPortal.sessions.create({
+      customer: row.stripe_customer_id,
+      return_url: "https://touslesmatchs.com/dashboard",
+    });
+    res.json({ ok: true, url: portalSession.url });
+  } catch (e) {
+    console.error("[billing-portal]", e.message);
     res.status(500).json({ ok: false, error: "Erreur serveur" });
   }
 });
@@ -9076,9 +9108,13 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
         const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
         if (!existing) {
           cdbw.prepare(
-            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))"
-          ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr());
+            "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at, stripe_customer_id) VALUES (?,?,?,1,?,?,0,?,datetime('now'),?)"
+          ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr(), session.customer || null);
           console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}${eliteBonusDays ? ` (+${eliteBonusDays}j offerts, offre de lancement)` : ""}`);
+        } else if (session.customer) {
+          // Renseigne stripe_customer_id meme sur un compte deja cree avant ce champ
+          // (migration retroactive douce, sans casser les codes existants).
+          cdbw.prepare("UPDATE codes SET stripe_customer_id = ? WHERE email = ? AND plan = ? AND active = 1").run(session.customer, customerEmail, status);
         }
         cdbw.close();
       } catch(e) { console.error("[stripe] code creation error:", e.message); }
@@ -9151,6 +9187,66 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
   if (event.type === "customer.subscription.deleted") {
     const sub = event.data.object;
     db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
+  }
+
+  // Renouvellement paye — jusqu'ici totalement absent : le code d'acces cree au
+  // premier paiement (checkout.session.completed) n'etait JAMAIS prolonge aux
+  // paiements suivants. Un abonne qui payait depuis des mois voyait son code
+  // expirer au bout de 32 jours pile, meme abonnement toujours actif cote
+  // Stripe. On aligne expires_at sur la fin de periode facturee par Stripe
+  // (source de verite), en ABSOLU (jamais additif) : idempotent quel que soit
+  // le nombre de fois ou l'evenement est rejoue. Constate lors de l'audit
+  // Phase 4 du 01/08/2026.
+  if (event.type === "invoice.paid") {
+    const inv = event.data.object;
+    const email = (inv.customer_email || "").toLowerCase().trim();
+    const periodEnd = inv.lines?.data?.[0]?.period?.end || inv.period_end;
+    if (email && periodEnd) {
+      const expiresAt = new Date(periodEnd * 1000).toISOString().slice(0, 10);
+      try {
+        const cdbw = new Database(CODES_DB_PATH);
+        const info = cdbw.prepare("UPDATE codes SET active = 1, expires_at = ? WHERE email = ? AND plan != 'free'").run(expiresAt, email);
+        cdbw.close();
+        if (info.changes > 0) console.log(`[stripe] renouvellement: ${email} -> actif jusqu'au ${expiresAt} (${info.changes} code(s))`);
+      } catch (e) { console.error("[stripe] invoice.paid:", e.message); }
+    }
+  }
+
+  // Changement de palier (upgrade/downgrade en cours d'abonnement, via le
+  // portail client Stripe) — jusqu'ici jamais repercute : le code d'acces
+  // gardait l'ancien plan indefiniment. Le prix Stripe (source de verite,
+  // jamais un parametre fourni par le client) determine le nouveau palier.
+  if (event.type === "customer.subscription.updated") {
+    const sub = event.data.object;
+    (async () => {
+      try {
+        const priceId = sub.items?.data?.[0]?.price?.id || "";
+        const planMapSub = {
+          [STRIPE_PRICE_ID_STANDARD]: "standard",
+          [STRIPE_PRICE_ID_PREMIUM]: "premium",
+          [STRIPE_PRICE_ID_VIP]: "vip",
+          [STRIPE_PRICE_ID_ELITE]: "elite",
+        };
+        const newPlan = planMapSub[priceId];
+        if (!newPlan) return;
+        const Stripe4 = require("stripe");
+        const stripe4 = Stripe4(STRIPE_SECRET_KEY);
+        const customer = await stripe4.customers.retrieve(sub.customer);
+        const email = (customer.email || "").toLowerCase().trim();
+        if (!email) return;
+        const cdbw = new Database(CODES_DB_PATH);
+        const existingRow = cdbw.prepare("SELECT plan FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1").get(email);
+        if (existingRow && existingRow.plan !== newPlan) {
+          const creditsMax = newPlan === "elite" ? 30 : 10;
+          cdbw.prepare("UPDATE codes SET plan = ?, credits_max = ? WHERE email = ? AND active = 1").run(newPlan, creditsMax, email);
+          console.log(`[stripe] changement de palier: ${email} ${existingRow.plan} -> ${newPlan}`);
+          if (TELEGRAM_ADMIN_CHAT_ID) {
+            sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `🔄 <b>Changement de palier Stripe</b>\n${email} : ${existingRow.plan} → ${newPlan}`).catch(() => {});
+          }
+        }
+        cdbw.close();
+      } catch (e) { console.error("[stripe] subscription.updated:", e.message); }
+    })();
   }
 
   // Paiement de renouvellement refusé — jusqu'ici totalement invisible (aucune
