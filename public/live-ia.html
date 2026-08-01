@@ -85,6 +85,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-analyse-btn{flex:1;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(124,58,237,.12));border:1px solid rgba(99,102,241,.25);color:var(--indigo2);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
 .mc-analyse-btn:hover{background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(124,58,237,.2));transform:translateY(-1px)}
 .mc-analyse-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.mc-not-playable{flex:1;background:rgba(255,255,255,.03);border:1px solid var(--b1);color:var(--muted2);padding:10px 16px;border-radius:10px;font-size:12.5px;text-align:center}
 
 /* Analysis result */
 .mc-analysis{margin-top:14px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:12px;padding:16px;display:none}
@@ -413,13 +414,29 @@ var STATUS_CODE_LABELS = {
   INT: "Interrompu", SUSP: "Suspendu", ABD: "Match arrêté",
   TBD: "Horaire à confirmer", NS: "Pas encore commencé",
 };
+// Quart-temps (basket) / periodes (hockey) — codes bruts renvoyes par
+// API-Sports (status.short). Sans traduction, le client voit juste un
+// chrono ("9'") sans savoir a quel quart-temps il correspond (signale
+// par Greg le 01/08/2026).
+var PERIOD_LABELS = {
+  Q1: "1er quart-temps", Q2: "2e quart-temps", Q3: "3e quart-temps", Q4: "4e quart-temps",
+  OT: "Prolongation", BT: "Pause",
+  P1: "1ère période", P2: "2e période", P3: "3e période", SO: "Tirs au but",
+};
 function minuteLabel(m) {
   if (m.status === "HT") return "Mi-temps";
-  if (typeof m.minute === "number") return m.minute + "'";
-  var raw = String(m.minute || "").trim();
-  if (!raw) return "En direct";
-  if (/^\d+\+?\d*$/.test(raw)) return raw + "'"; // "45+2" etc.
-  return STATUS_CODE_LABELS[raw.toUpperCase()] || "En direct";
+  var periodLbl = m.period ? (PERIOD_LABELS[String(m.period).toUpperCase()] || "") : "";
+  var clock = "";
+  if (typeof m.minute === "number") clock = m.minute + "'";
+  else {
+    var raw = String(m.minute || "").trim();
+    if (raw && /^\d+\+?\d*$/.test(raw)) clock = raw + "'"; // "45+2" etc.
+  }
+  if (periodLbl) return clock ? periodLbl + " · " + clock : periodLbl;
+  if (clock) return clock;
+  var raw2 = String(m.minute || "").trim();
+  if (!raw2) return "En direct";
+  return STATUS_CODE_LABELS[raw2.toUpperCase()] || "En direct";
 }
 
 // ── Confiance : couleur/label selon le pourcentage (même échelle que Telegram) ──
@@ -582,11 +599,10 @@ function showEmpty() {
 // ── Render ──
 function renderMatches() {
   var wrap = document.getElementById("matches-wrap");
-  // Filet de sécurité : /live-matches ne renvoie déjà plus les matchs non
-  // jouables, mais si un cache ancien en laisse passer un, il ne doit pas
-  // s'afficher. La page ne montre que ce qui est jouable à l'instant T.
-  var playable = allMatches.filter(function(m){ return m.pinnedSignal || m.analysable !== false; });
-  var filtered = currentFilter === "all" ? playable : playable.filter(function(m){ return m.sport === currentFilter; });
+  // Tous les matchs live restent affichés, jouables ou non (voir /live-matches) —
+  // ça montre que le site suit vraiment l'activité en direct, même quand rien
+  // n'est encore assez fort pour être analysé (demande de Greg le 01/08/2026).
+  var filtered = currentFilter === "all" ? allMatches : allMatches.filter(function(m){ return m.sport === currentFilter; });
   if (searchTerm) {
     filtered = filtered.filter(function(m) {
       return (m.home || "").toLowerCase().indexOf(searchTerm) !== -1
@@ -670,19 +686,22 @@ function renderMatches() {
       html += '</div>';
     }
 
-    // Bouton d'analyse uniquement sur les matchs réellement jouables maintenant.
-    // Les matchs non analysables ne sont plus affichés du tout (filtrés par
-    // /live-matches puis par renderMatches), donc plus de bouton grisé ni de
-    // message d'excuse : la page ne propose que ce qui est jouable à l'instant T.
+    // Bouton d'analyse si le match est jouable maintenant ; sinon, étiquette
+    // expliquant pourquoi (au lieu de faire disparaître le match — demande
+    // de Greg le 01/08/2026, ça montre que le site suit le match).
     // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
     if (isLive && !isDone && !m.pinnedSignal) {
-      var cached = analysisCache[matchId];
-      html += '<div class="mc-cta">';
-      html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + (cached ? " disabled" : "") + '>';
-      html += (cached ? '✅ Analyse terminée' : (userAuth ? '🧠 Analyser ce match' : '🔓 Débloquer l\'analyse'));
-      html += '  </button>';
-      html += '</div>';
-      html += '<div class="mc-analysis' + (cached ? ' visible' : '') + '" id="analysis-' + escAttr(matchId) + '">' + (cached ? cached : '') + '</div>';
+      if (m.analysable === false) {
+        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
+      } else {
+        var cached = analysisCache[matchId];
+        html += '<div class="mc-cta">';
+        html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + (cached ? " disabled" : "") + '>';
+        html += (cached ? '✅ Analyse terminée' : (userAuth ? '🧠 Analyser ce match' : '🔓 Débloquer l\'analyse'));
+        html += '  </button>';
+        html += '</div>';
+        html += '<div class="mc-analysis' + (cached ? ' visible' : '') + '" id="analysis-' + escAttr(matchId) + '">' + (cached ? cached : '') + '</div>';
+      }
     }
 
     html += '</div>';

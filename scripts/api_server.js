@@ -2367,6 +2367,9 @@ async function fetchFromApiSports() {
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? null, score_away: g.scores?.away?.total ?? null,
       minute: g.status?.timer ?? null, status: "IN_PLAY",
+      // Quart-temps (Q1-Q4, OT, MT...) — sans lui, l'horloge affichée seule
+      // ne dit pas dans quel quart-temps on est (signalé par Greg le 01/08/2026).
+      period: g.status?.short || null,
       competition: (g.league?.name || "Basketball") + (g.country?.name ? " · " + g.country.name : ""),
       utcDate: g.date,
     })).filter(g => g.home && g.away);
@@ -2390,6 +2393,7 @@ async function fetchFromApiSports() {
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home ?? null, score_away: g.scores?.away ?? null,
       minute: g.status?.timer ?? null, status: "IN_PLAY",
+      period: g.status?.short || null,
       competition: (g.league?.name || "Hockey") + (g.country?.name ? " · " + g.country.name : ""),
       utcDate: g.date,
     })).filter(g => g.home && g.away);
@@ -8303,14 +8307,13 @@ app.get("/live-matches", async (req, res) => {
       return { ...m, analysable: !reason, block_reason: reason };
     });
 
-    // Live IA ne montre QUE ce qui est jouable à l'instant T (décision du
-    // fondateur, 29/07/2026). Afficher un match puis refuser de l'analyser est
-    // une incohérence visible pour le visiteur : soit le match est proposable,
-    // soit il n'a rien à faire sur la page. Les signaux épinglés font exception —
-    // ils sont une vitrine de résultat, pas une invitation à analyser.
-    const visible = withVerdict.filter(m => m.pinnedSignal || m.analysable !== false);
-
-    res.json({ ok: true, matches: visible });
+    // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
+    // 01/08/2026 sur demande de Greg : un match sans signal disparaissait
+    // entièrement au bout de quelques minutes, ce qui donnait l'impression
+    // que le site n'analysait rien. Tous les matchs live restent maintenant
+    // visibles — analysable/block_reason indiquent au front s'il y a un
+    // bouton d'analyse ou juste une étiquette explicative.
+    res.json({ ok: true, matches: withVerdict });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
