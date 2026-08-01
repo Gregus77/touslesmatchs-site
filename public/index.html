@@ -524,6 +524,16 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   </div>
 </div>
 
+<div class="modal-bg" id="modal-bookmakers">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeBookmakerModal()">×</button>
+    <div class="modal-title">Comparer la cote</div>
+    <div class="modal-sub" id="bm-modal-match">Où miser ce pronostic — bookmakers agréés ANJ.</div>
+    <div id="bm-modal-links" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0"></div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6">18+ · Jeu responsable · joueurs-info-service.fr · La cote finale se vérifie toujours chez le bookmaker.</div>
+  </div>
+</div>
+
 <script>
 function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
 var STATUS_CODE_LABELS={HT:"Mi-temps","1H":"1ère MT","2H":"2nde MT",ET:"Prolongation",AET:"Fin prolongation",BT:"Pause (avant TAB)",P:"Tirs au but",PEN:"Tirs au but",INT:"Interrompu",SUSP:"Suspendu"};
@@ -659,6 +669,26 @@ async function doBiometricLogin(){
   btn.disabled=false;
 }
 function closeModal(){document.getElementById('modal-login').classList.remove('open')}
+var _bmLinksCache=null;
+function openBookmakerModal(matchLabel){
+  document.getElementById('bm-modal-match').textContent=matchLabel?('Pour "'+matchLabel+'" — bookmakers agréés ANJ.'):'Où miser ce pronostic — bookmakers agréés ANJ.';
+  document.getElementById('modal-bookmakers').classList.add('open');
+  var box=document.getElementById('bm-modal-links');
+  var render=function(links){
+    var colors=['#ef4444','#3b82f6','#22c55e','#06b6d4'];
+    box.innerHTML=links.map(function(b,i){
+      return '<a href="'+b.url+'" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:rgba(255,255,255,.04);border:1px solid '+(colors[i]||'#64748b')+';color:#fff;padding:12px 8px;border-radius:10px;text-decoration:none;font-weight:800;font-size:14px">'+esc(b.text)+'</a>';
+    }).join('');
+  };
+  if(_bmLinksCache){ render(_bmLinksCache); return; }
+  box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px">Chargement...</div>';
+  fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok||!d.links){ box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px">Indisponible pour le moment.</div>'; return; }
+    _bmLinksCache=d.links;
+    render(d.links);
+  }).catch(function(){ box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px">Indisponible pour le moment.</div>'; });
+}
+function closeBookmakerModal(){document.getElementById('modal-bookmakers').classList.remove('open')}
 function showLoginView(){
   document.getElementById('modal-view-login').style.display='';
   document.getElementById('modal-view-forgot').style.display='none';
@@ -804,10 +834,13 @@ async function loadUpcoming(){
       var icon=SPORT_ICO[p.sport]||'🏟️';
       var kt='';
       try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+      var matchLabel=esc(p.home)+' — '+esc(p.away);
       var right=p.locked
         ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'
         : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'/100</div>';
-      return '<div class="upcoming-item">'+
+      var jsSafeLabel=matchLabel.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      var clickAttr=p.locked ? '' : ' onclick="openBookmakerModal(\''+jsSafeLabel+'\')" style="cursor:pointer"';
+      return '<div class="upcoming-item"'+clickAttr+'>'+
         '<div class="upcoming-info">'+
           '<div class="upcoming-teams">'+icon+' '+(flag?flag+' ':'')+esc(p.home)+' — '+esc(p.away)+'</div>'+
           '<div class="upcoming-comp">'+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+(kt?' · '+kt:'')+'</div>'+
