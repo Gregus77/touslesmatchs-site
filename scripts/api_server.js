@@ -5974,16 +5974,23 @@ function shouldAutoObserveMatch(match) {
   if (!["IN_PLAY", "LIVE"].includes(status)) return false;
   if (isFinishedOrTooLateForLiveIa(match)) return false;
   if (isWomenMatch(match)) return false;              // pas de matchs féminins
-  // Hors football : les marchés disponibles ne correspondent pas à ces sports
-  // (voir AUTO_CONCILE_MULTISPORT). Le match reste affiché en direct, il n'est
-  // simplement pas soumis au Concile tant qu'aucun marché adapté n'existe.
-  if (String(match.sport || "Football") !== "Football") {
-    if (!AUTO_CONCILE_MULTISPORT) return false;
-    return true;
-  }
   // Categorie bannie (jeunes, amical, reserve...) : jamais d'exemption UEFA
   // possible, a verifier avant le court-circuit ci-dessous.
   if (isCategoryBanned(match)) return false;
+  // Hors football : les marchés disponibles ne correspondent pas à ces sports
+  // (voir AUTO_CONCILE_MULTISPORT). Le match reste affiché en direct, il n'est
+  // simplement pas soumis au Concile tant qu'aucun marché adapté n'existe.
+  // Ces matchs sautaient TOUTES les autres barrières qualite (ligue douteuse,
+  // competition sous-performante) en plus — constate le 01/08/2026 : des
+  // matchs WNBA/basketball canadien consommaient des jetons IA pour un
+  // "Match nul" a 55-66%, alors qu'ils ne peuvent de toute facon jamais
+  // devenir le pick du jour (marches football uniquement, DAILY_PICK_ALLOWED_BETS).
+  if (String(match.sport || "Football") !== "Football") {
+    if (!AUTO_CONCILE_MULTISPORT) return false;
+    if (isLowTrustCompetition(match)) return false;
+    if (isUnderperformingCompetition(match)) return false;
+    return true;
+  }
   // Analyse large pour remplir la journée : grandes ligues + coupes d'Europe
   // (dont qualifs). Le tri "premium" ne s'applique qu'au PICK du jour, pas à
   // l'activité affichée. On bloque juste les ligues non fiables hors UEFA.
@@ -6018,7 +6025,16 @@ async function runAutoConcileObserver() {
     const observed = matches
       .filter(shouldAutoObserveMatch)
       .filter(m => !hasPredictionSnapshot(m));
-    const candidates = observed.slice(0, AUTO_CONCILE_MAX_MATCHES);
+    // Priorite jetons : le foot en ligue fiable est le seul a pouvoir devenir
+    // le pick du jour (DAILY_PICK_ALLOWED_BETS = marches foot uniquement) —
+    // on l'analyse toujours en premier, le reste (autres sports) ne consomme
+    // le budget restant qu'ensuite (decision Greg du 01/08/2026).
+    const prioritized = [...observed].sort((a, b) => {
+      const aFoot = String(a.sport || "Football") === "Football" ? 0 : 1;
+      const bFoot = String(b.sport || "Football") === "Football" ? 0 : 1;
+      return aFoot - bFoot;
+    });
+    const candidates = prioritized.slice(0, AUTO_CONCILE_MAX_MATCHES);
     console.log(
       `[auto-concile] live=${matches.length} eligible=${observed.length} analysed_this_cycle=${candidates.length} ` +
       `skipped_low_trust=${matches.filter(isLowTrustCompetition).length}`
