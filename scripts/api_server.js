@@ -7330,7 +7330,7 @@ function lookupAccountByEmail(email) {
   try {
     const cdb = new Database(CODES_DB_PATH, { readonly: true });
     const row = cdb.prepare(
-      "SELECT plan, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
+      "SELECT plan, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1"
     ).get(email);
     cdb.close();
     return row || null;
@@ -7348,7 +7348,7 @@ function lookupFullAccountStatus(email) {
   try {
     const cdb = new Database(CODES_DB_PATH, { readonly: true });
     const row = cdb.prepare(
-      "SELECT plan, active, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? ORDER BY id DESC LIMIT 1"
+      "SELECT plan, active, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? ORDER BY rowid DESC LIMIT 1"
     ).get(email);
     cdb.close();
     if (!row) return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: null };
