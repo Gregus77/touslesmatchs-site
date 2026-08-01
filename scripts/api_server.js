@@ -1995,6 +1995,9 @@ const TRUSTED_COMPETITIONS = [
   // indefiniment, et le sport pesait sur le quota API-Sports partage sans
   // jamais pouvoir se resoudre. NBA/NHL restent actifs, eux sont resolus.
   "nhl", "nba", "atp", "wta", "grand slam",
+  "mlb", "major league baseball",
+  "npb", "nippon professional baseball",
+  "kbo", "kbo league",
   "top 14", "pro d2", "premiership rugby", "urc",
   "euroleague", "euroligue",
   "a-league", "a league · australia",
@@ -2429,13 +2432,11 @@ async function fetchFromApiSports() {
     }
   } catch(e) { console.error("[live-matches] API-Sports hockey:", e.message); }
 
-  // Baseball live — DESACTIVE le 30/07/2026 (decision fondateur) : le sport
-  // n'a aucune resolution automatique des issues (resolveStalePredictions ne
-  // couvre que Football/Basketball/Hockey), donc chaque analyse restait "en
-  // attente" indefiniment tout en consommant le quota API-Sports partage avec
-  // basket/hockey. Repasser BASEBALL_LIVE_ENABLED a true si une resolution
-  // dediee est ajoutee.
-  const BASEBALL_LIVE_ENABLED = false;
+  // Baseball live — REACTIVE le 01/08/2026 (decision fondateur, trêve
+  // football estivale) : resolveStalePredictions couvre desormais le baseball
+  // (voir plus bas), le blocage "en attente" indefini qui avait motive la
+  // desactivation du 30/07/2026 n'existe plus.
+  const BASEBALL_LIVE_ENABLED = true;
   try {
     if (BASEBALL_LIVE_ENABLED && !shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
@@ -2509,12 +2510,10 @@ async function fetchFromTheSportsDb() {
     : Array.isArray(data?.response) ? data.response
     : Array.isArray(data) ? data
     : [];
-  // Baseball retire le 30/07/2026 (decision fondateur) : aucune resolution
-  // d'issue possible pour ce sport (cf. BASEBALL_LIVE_ENABLED plus haut dans
-  // ce fichier) — sans ce retrait ICI AUSSI, TheSportsDB continuait de faire
-  // apparaitre des matchs de baseball (MLB, honkbal neerlandais...) sur le
-  // site alors que la source API-Sports, elle, avait deja ete coupee.
-  const wanted = new Set(["Football", "Basketball", "Hockey"]);
+  // Baseball reintegre le 01/08/2026 (decision fondateur) en meme temps que
+  // BASEBALL_LIVE_ENABLED plus haut dans ce fichier : resolveStalePredictions
+  // sait desormais resoudre ses issues.
+  const wanted = new Set(["Football", "Basketball", "Hockey", "Baseball"]);
   const results = raw
     .map((event) => normalizeTheSportsDbLiveEvent(event, event?.strSport))
     .filter((event) => event && wanted.has(event.sport));
@@ -3420,13 +3419,14 @@ function readKnownScore(match) {
 
 function computeAvailableBets(match) {
   const sport = String(match.sport || "Football");
-  // Basketball/Hockey n'ont pas de match nul (prolongation/tirs au but
-  // obligatoires) et les marches buts (Over/Under 2.5, BTTS) sont calibres
-  // pour le football, pas pour un score de basket. Sans ce filtre, la
-  // correction post-IA (validateAndCorrectBet, R2) pouvait retomber sur
-  // "Match nul" comme repli pour un match de basket plie a 53-93 —
-  // resultat impossible pour ce sport. Constate le 01/08/2026.
-  if (sport === "Basketball" || sport === "Hockey") {
+  // Basketball/Hockey/Baseball n'ont pas de match nul (prolongation/tirs au
+  // but obligatoires, ou pas de nul possible au baseball) et les marches buts
+  // (Over/Under 2.5, BTTS) sont calibres pour le football, pas pour un score
+  // de basket/baseball. Sans ce filtre, la correction post-IA
+  // (validateAndCorrectBet, R2) pouvait retomber sur "Match nul" comme repli
+  // pour un match de basket plie a 53-93 — resultat impossible pour ce sport.
+  // Constate le 01/08/2026, etendu au baseball a la reactivation du sport.
+  if (sport === "Basketball" || sport === "Hockey" || sport === "Baseball") {
     return ["Victoire domicile", "Victoire extérieur"];
   }
 
@@ -3499,7 +3499,11 @@ function validateAndCorrectBet(bet, match, availableBets) {
   // équipe) au lieu de laisser l'IA prédire la victoire — pourtant correcte
   // avec un tel écart. Constate le 01/08/2026.
   const sportForGap = String(match.sport || "Football");
-  if (sportForGap !== "Basketball" && sportForGap !== "Hockey") {
+  // Baseball exclu au meme titre que basket/hockey : un ecart de 3 points
+  // (calibre foot/buts) n'a rien de decisif au baseball (un ecart de 3 runs
+  // se rattrape sur plusieurs manches), et le sport n'a pas d'alternative
+  // "sans vainqueur" non plus. Ajoute a la reactivation du 01/08/2026.
+  if (sportForGap !== "Basketball" && sportForGap !== "Hockey" && sportForGap !== "Baseball") {
     const sc = readKnownScore(match);
     if (sc) {
       const gap = sc.home - sc.away;
@@ -3528,8 +3532,8 @@ function validateAndCorrectBet(bet, match, availableBets) {
   if (score && (bet === "Over 2.5 buts") && availableBets.includes("Under 2.5 buts")) corrected = "Under 2.5 buts";
   else if (score && (bet === "Under 2.5 buts") && total > 2.5 && availableBets.includes("Over 2.5 buts")) corrected = "Over 2.5 buts";
   else if (score && (bet === "BTTS Non") && h > 0 && a > 0 && availableBets.includes("BTTS Oui")) corrected = "BTTS Oui";
-  else if (score && (sportForGap === "Basketball" || sportForGap === "Hockey") && h !== a) {
-    // Basket/hockey n'ont que 2 issues possibles ici (pas de match nul) : le
+  else if (score && (sportForGap === "Basketball" || sportForGap === "Hockey" || sportForGap === "Baseball") && h !== a) {
+    // Basket/hockey/baseball n'ont que 2 issues possibles ici (pas de match nul) : le
     // repli generique "premier pari disponible" pouvait tomber sur l'equipe
     // qui PERD. On corrige vers l'equipe reellement en tete plutot qu'un
     // choix arbitraire.
@@ -5764,6 +5768,24 @@ async function resolveStalePredictions() {
               }
             });
           } catch (e) { console.error("[catch-up] api-sports hockey:", e.message); }
+        }
+        if (neededSports.has("Baseball")) {
+          try {
+            const data = await httpGet(
+              `https://v1.baseball.api-sports.io/games?date=${date}&status=FT`,
+              { "x-apisports-key": API_SPORTS_KEY }
+            );
+            (data.response || []).forEach(g => {
+              const sh = g.scores?.home?.total ?? g.scores?.home;
+              const sa = g.scores?.away?.total ?? g.scores?.away;
+              if (g.teams?.home?.name && g.teams?.away?.name && sh != null && sa != null) {
+                finished.push({
+                  home: g.teams.home.name, away: g.teams.away.name,
+                  score_home: sh, score_away: sa,
+                });
+              }
+            });
+          } catch (e) { console.error("[catch-up] api-sports baseball:", e.message); }
         }
       }
     }
