@@ -7301,7 +7301,7 @@ function lookupAccountByEmail(email) {
   try {
     const cdb = new Database(CODES_DB_PATH, { readonly: true });
     const row = cdb.prepare(
-      "SELECT plan, expires_at, credits_max, credits_used FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
+      "SELECT plan, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
     ).get(email);
     cdb.close();
     return row || null;
@@ -7423,6 +7423,7 @@ app.get("/auth/session", requireSession, (req, res) => {
       expires_at: account?.expires_at || null,
       credits_max: account?.credits_max ?? null,
       credits_used: account?.credits_used ?? null,
+      created_at: account?.created_at || null,
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: "Erreur serveur" });
