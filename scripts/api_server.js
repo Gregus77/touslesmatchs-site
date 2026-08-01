@@ -9040,13 +9040,21 @@ app.post("/stripe/create-checkout", authMiddleware, async (req, res) => {
 app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false });
 
+  // Echec ferme : sans STRIPE_WEBHOOK_SECRET, un POST non signe etait accepte
+  // tel quel (JSON.parse direct) — n'importe qui aurait pu forger un faux
+  // "checkout.session.completed" et se creer un code Elite gratuit. Trouve
+  // lors de la revue de securite du 01/08/2026 ; jamais exploite en prod
+  // (la cle est presente), corrige par prudence.
+  if (!STRIPE_WEBHOOK_SECRET) {
+    console.error("[stripe] STRIPE_WEBHOOK_SECRET manquant — webhook rejete (echec ferme)");
+    return res.status(500).json({ error: "Configuration webhook manquante" });
+  }
+
   let event;
   try {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
-    event = STRIPE_WEBHOOK_SECRET
-      ? stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET)
-      : JSON.parse(req.body);
+    event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET);
   } catch (e) {
     return res.status(400).json({ error: e.message });
   }
