@@ -6,6 +6,7 @@ Exécuté automatiquement à 11h59 chaque jour via le scheduler.
 import os
 import sys
 import json
+import html
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -358,40 +359,47 @@ def _send_daily_report(decision, agent_reports, shadow_reports, excluded_agents,
     }
     sports_line = " | ".join(f"{s}: {c}" for s, c in sorted(sport_counts.items()))
 
+    # Echappement HTML : ce texte vient d'IA (raisonnement, noms de match) et
+    # n'est jamais garanti exempt de "<"/">"/"&", qui cassent le parse_mode
+    # HTML de Telegram ("Unsupported start tag"). Constate le 01/08/2026 sur
+    # le rapport admin quotidien.
+    def esc(v):
+        return html.escape(str(v)) if v is not None else "-"
+
     agents_lines = []
     for key, report in agent_reports.items():
         name = name_map.get(key, key)
-        rec = report.get("recommendation", "?")
+        rec = esc(report.get("recommendation", "?"))
         conf = report.get("confidence", 0)
-        match = report.get("match", "-")
-        agents_lines.append(f"  {name}: {rec} ({conf}/10) — {match}")
+        match = esc(report.get("match", "-"))
+        agents_lines.append(f"  {esc(name)}: {rec} ({conf}/10) — {match}")
 
     for key, report in shadow_reports.items():
         name = name_map.get(key, key)
-        rec = report.get("recommendation", "?")
+        rec = esc(report.get("recommendation", "?"))
         conf = report.get("confidence", 0)
-        match = report.get("match", "-")
-        agents_lines.append(f"  👻 {name} (shadow): {rec} ({conf}/10) — {match}")
+        match = esc(report.get("match", "-"))
+        agents_lines.append(f"  👻 {esc(name)} (shadow): {rec} ({conf}/10) — {match}")
 
     excluded_lines = []
     for key, name, accuracy in excluded_agents:
-        excluded_lines.append(f"  {name}: {accuracy}% (< 80%)")
+        excluded_lines.append(f"  {esc(name)}: {accuracy}% (< 80%)")
 
     report_data = {
         "date": date_str,
-        "sports": sports_line,
+        "sports": esc(sports_line),
         "total_matches": sum(sport_counts.values()),
         "decision": "PICK" if not is_nopick else "NOPICK",
-        "match": decision.get("match", "-"),
-        "bet": decision.get("bet", "-"),
-        "odds": decision.get("odds", "-"),
+        "match": esc(decision.get("match", "-")),
+        "bet": esc(decision.get("bet", "-")),
+        "odds": esc(decision.get("odds", "-")),
         "confidence": decision.get("confidence", 0),
         "agents": "\n".join(agents_lines),
         "excluded": "\n".join(excluded_lines) if excluded_lines else "Aucun",
         "winrate": stats.get("winrate", 0),
         "roi": stats.get("roi", 0),
         "total_picks": stats.get("wins", 0) + stats.get("losses", 0),
-        "improvement": decision.get("improvement_notes", "")[:200],
+        "improvement": esc(decision.get("improvement_notes", "")[:200]),
     }
 
     try:
