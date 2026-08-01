@@ -6162,7 +6162,12 @@ async function runAutoConcileObserver() {
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
-async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null) {
+// extraAttrs (Phase 5, 01/08/2026) : attributs Brevo au-dela de PLAN/LANG,
+// utilises par le pilotage/segmentation cote Brevo (jamais l'inverse — Brevo
+// ne decide jamais de droits, voir doctrine architecture 31/07/2026). Fusionnes
+// tels quels, aucune valeur par defaut inventee ici : chaque appelant ne passe
+// que ce qu'il connait reellement.
+async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null, extraAttrs = null) {
   if (!BREVO_API_KEY) return;
   const contactLang = normalizeContactLang(lang, "");
   try {
@@ -6182,6 +6187,7 @@ async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null)
     // (paiement, verification de code...).
     const attrs = { PLAN: tag, LANG: contactLang };
     if (marketingConsent !== null) attrs.MARKETING_CONSENT = marketingConsent ? "YES" : "NO";
+    if (extraAttrs) Object.assign(attrs, extraAttrs);
     await httpPost(
       `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
       { attributes: attrs },
@@ -7464,6 +7470,9 @@ app.post("/auth/verify-otp", (req, res) => {
     const account = lookupAccountByEmail(email);
 
     console.log(`[otp] connexion réussie: ${email}`);
+    brevoAddContact(email, (account?.plan || "free").toUpperCase(), "FR", null, {
+      LAST_LOGIN_AT: new Date().toISOString(),
+    }).catch(() => {});
     res.json({ ok: true, token, email, plan: account?.plan || "free" });
   } catch (e) {
     console.error("[otp] verify-otp:", e.message);
@@ -7618,7 +7627,7 @@ app.post("/verify-code", (req, res) => {
 
     // Sync with Brevo asynchronously (don't block the response)
     const tag = row.plan === "free" ? "FREE" : row.plan === "premium" ? "PREMIUM" : row.plan === "elite" ? "ELITE" : "VIP";
-    brevoAddContact(row.email, tag).catch(() => {});
+    brevoAddContact(row.email, tag, "FR", null, { LAST_LOGIN_AT: new Date().toISOString() }).catch(() => {});
 
     return res.json({ valid: true, plan: row.plan, credits_left, credits_max: row.credits_max, email: row.email });
   } catch (e) {
@@ -9111,6 +9120,13 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at, stripe_customer_id) VALUES (?,?,?,1,?,?,0,?,datetime('now'),?)"
           ).run(newCode, customerEmail, status, expiresAt, creditsMax, getTodayStr(), session.customer || null);
           console.log(`[stripe] Code créé: ${newCode} pour ${customerEmail} plan ${status}${eliteBonusDays ? ` (+${eliteBonusDays}j offerts, offre de lancement)` : ""}`);
+          const tagStripe = status === "elite" ? "ELITE" : status === "vip" ? "VIP" : status.toUpperCase();
+          brevoAddContact(customerEmail, tagStripe, "FR", null, {
+            SUBSCRIPTION_STATUS: "active",
+            STRIPE_CUSTOMER_ID: session.customer || "",
+            SOURCE: "stripe",
+            CREATED_AT: new Date().toISOString(),
+          }).catch(() => {});
         } else if (session.customer) {
           // Renseigne stripe_customer_id meme sur un compte deja cree avant ce champ
           // (migration retroactive douce, sans casser les codes existants).
@@ -9206,8 +9222,16 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       try {
         const cdbw = new Database(CODES_DB_PATH);
         const info = cdbw.prepare("UPDATE codes SET active = 1, expires_at = ? WHERE email = ? AND plan != 'free'").run(expiresAt, email);
+        const renewedRow = cdbw.prepare("SELECT plan FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1").get(email);
         cdbw.close();
-        if (info.changes > 0) console.log(`[stripe] renouvellement: ${email} -> actif jusqu'au ${expiresAt} (${info.changes} code(s))`);
+        if (info.changes > 0) {
+          console.log(`[stripe] renouvellement: ${email} -> actif jusqu'au ${expiresAt} (${info.changes} code(s))`);
+          if (renewedRow) {
+            brevoAddContact(email, renewedRow.plan.toUpperCase(), "FR", null, {
+              SUBSCRIPTION_STATUS: "active", PAYMENT_FAILED: "NO",
+            }).catch(() => {});
+          }
+        }
       } catch (e) { console.error("[stripe] invoice.paid:", e.message); }
     }
   }
@@ -9245,6 +9269,10 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           }
         }
         cdbw.close();
+        brevoAddContact(email, newPlan.toUpperCase(), "FR", null, {
+          CANCEL_AT_PERIOD_END: sub.cancel_at_period_end ? "YES" : "NO",
+          SUBSCRIPTION_END: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : "",
+        }).catch(() => {});
       } catch (e) { console.error("[stripe] subscription.updated:", e.message); }
     })();
   }
@@ -9260,6 +9288,17 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     const email = (inv.customer_email || "").toLowerCase().trim();
     const amount = inv.amount_due ? (inv.amount_due / 100).toFixed(2) + "€" : "montant inconnu";
     console.log(`[stripe] paiement refusé: ${email || "email inconnu"} (${amount})`);
+    if (email) {
+      // PLAN reste le vrai palier du client (jamais un pseudo-statut) : Brevo
+      // segmente sur PAYMENT_FAILED en plus, pas a la place, de PLAN.
+      try {
+        const cdbr = new Database(CODES_DB_PATH, { readonly: true });
+        const codeRow = cdbr.prepare("SELECT plan FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1").get(email);
+        cdbr.close();
+        const tagPF = codeRow ? codeRow.plan.toUpperCase() : "FREE";
+        brevoAddContact(email, tagPF, "FR", null, { PAYMENT_FAILED: "YES" }).catch(() => {});
+      } catch (e) { console.error("[stripe] brevo payment_failed:", e.message); }
+    }
     if (TELEGRAM_ADMIN_CHAT_ID) {
       sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `⚠️ <b>Paiement Stripe refusé</b>\n${email || "email inconnu"} — ${amount}\nStripe va réessayer automatiquement.`)
         .catch(() => {});
@@ -9281,6 +9320,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
         cdbw.prepare("UPDATE codes SET active = 0 WHERE email = ?").run(email);
         cdbw.close();
       } catch (e) { console.error("[stripe] refund codes:", e.message); }
+      brevoAddContact(email, "FREE", "FR", null, { SUBSCRIPTION_STATUS: "cancelled" }).catch(() => {});
     }
     if (TELEGRAM_ADMIN_CHAT_ID) {
       sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `🔴 <b>Remboursement Stripe</b>\n${email || "email inconnu"} — ${amount}\nAccès désactivé.`)
