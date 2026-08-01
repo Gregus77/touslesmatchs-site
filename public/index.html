@@ -789,7 +789,8 @@ async function loadUpcoming(){
     var d=await r.json();
     var picks=(d.picks||[]);
     if(!picks.length){
-      box.innerHTML='<div class="empty-note">Aucun match à venir ne dépasse notre seuil de confiance pour le moment.<br>'+
+      box.innerHTML='<div class="empty-note">😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !<br>'+
+        'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
         '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
       return;
     }
