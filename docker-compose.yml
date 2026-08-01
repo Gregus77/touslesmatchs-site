@@ -66,6 +66,11 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      # Generation des miniatures quotidiennes "combien on aurait gagne"
+      # (01/08/2026) — facturation deja active sur ce compte (deja utilise
+      # par le Concile pour GPT-5), contrairement a Google dont le quota
+      # image etait a 0.
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       # Clés lues par api_server.js mais qui n'étaient PAS transmises : sans elles,
       # Perplexity-Web et Cohere-Command retombent silencieusement sur llama-3.3-70b
       # (Groq) — soit le même modèle que Claude Chief, ce qui annule la diversité du

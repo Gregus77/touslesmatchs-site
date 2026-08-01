@@ -830,7 +830,11 @@ const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_
 const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
-const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
+// Utilisee pour la generation d'image (miniatures "combien on aurait gagne").
+// Gemini (GOOGLE_API_KEY) essaye en premier le 01/08/2026 mais bloque par un
+// quota de facturation image a 0 sur le compte Google — bascule sur OpenAI,
+// dont la facturation est deja active (utilise par le Concile pour GPT-5).
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE    = process.env.STRIPE_PRICE_ID_CARTE    || process.env.STRIPE_PRICE_CARTE   || "";
@@ -8509,9 +8513,9 @@ function sendTelegramPhoto(chatId, imageBuffer, caption) {
 }
 
 async function generateGainImage(tier, stats, dateLabel) {
-  if (!GOOGLE_API_KEY) return null;
+  if (!OPENAI_API_KEY) return null;
   const fmtEur = (n) => (n >= 0 ? "+" : "") + Math.round(n) + "€";
-  const prompt = `Cree une image verticale format story (1080x1920), fond degrade bleu nuit tres sombre et violet neon, ambiance application premium type fintech moderne. INTERDIT : logo ou mascotte d'un bookmaker existant (Winamax, Betclic, PMU, Unibet...), jetons de casino, des, symboles de jeu d'argent, humain photorealiste.
+  const prompt = `Cree une image verticale format story (1024x1536), fond degrade bleu nuit tres sombre et violet neon, ambiance application premium type fintech moderne. INTERDIT : logo ou mascotte d'un bookmaker existant (Winamax, Betclic, PMU, Unibet...), jetons de casino, des, symboles de jeu d'argent, humain photorealiste.
 En haut, texte tres lisible en majuscules : "${TIER_LABEL[tier].toUpperCase()}".
 Au centre, ENORME et tres lisible, le montant "${fmtEur(stats.roi)}" en blanc avec un halo neon ${stats.roi >= 0 ? "vert emeraude" : "rouge"}.
 Juste en dessous, plus petit : "${stats.wins} gagnees / ${stats.losses} perdues sur ${stats.total} selections".
@@ -8522,14 +8526,12 @@ Texte entierement en francais, sans faute d'orthographe, sans watermark d'IA gen
 
   try {
     const resp = await httpPostStrict(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`,
-      { contents: [{ parts: [{ text: prompt }] }] },
-      {}
+      "https://api.openai.com/v1/images/generations",
+      { model: "gpt-image-1", prompt, size: "1024x1536" },
+      { Authorization: `Bearer ${OPENAI_API_KEY}` }
     );
-    const parts = resp?.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find((p) => p.inlineData?.data || p.inline_data?.data);
-    const b64 = imgPart?.inlineData?.data || imgPart?.inline_data?.data;
-    if (!b64) { console.error(`[gain-image] ${tier}: pas de donnees image dans la reponse Gemini`); return null; }
+    const b64 = resp?.data?.[0]?.b64_json;
+    if (!b64) { console.error(`[gain-image] ${tier}: pas de donnees image dans la reponse OpenAI`); return null; }
     return Buffer.from(b64, "base64");
   } catch (e) {
     console.error(`[gain-image] ${tier} generation:`, e.message);
