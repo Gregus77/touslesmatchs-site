@@ -11303,9 +11303,15 @@ function buildDailyVisitorReport() {
   let mrr = 0;
   try {
     const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    // stripe_customer_id IS NOT NULL : seul un vrai paiement Stripe (webhook
+    // checkout.session.completed) renseigne ce champ. Sans ce filtre, les
+    // codes admin/test/famille (ELITE-ADMIN*, comptes de test) gonflaient le
+    // MRR affiche a Greg alors qu'aucun d'eux n'est un client reel — constate
+    // le 01/08/2026 : les 6 codes actifs avaient TOUS stripe_customer_id=null.
     const tierRows = codesDb.prepare(`
       SELECT plan, COUNT(*) c FROM codes
-      WHERE active = 1 AND plan != 'free' AND (expires_at IS NULL OR expires_at > datetime('now'))
+      WHERE active = 1 AND plan != 'free' AND stripe_customer_id IS NOT NULL
+        AND (expires_at IS NULL OR expires_at > datetime('now'))
       GROUP BY plan
     `).all();
     codesDb.close();
@@ -11380,9 +11386,12 @@ async function buildWeeklyMarketingReport() {
   let revenue = 0;
   try {
     const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    // stripe_customer_id IS NOT NULL : voir commentaire equivalent sur le
+    // rapport quotidien (01/08/2026) — exclut les codes admin/test/famille du
+    // CA affiche.
     const subs = codesDb.prepare(`
       SELECT plan, COUNT(*) as cnt FROM codes
-      WHERE active = 1 AND plan != 'free' AND created_at >= ?
+      WHERE active = 1 AND plan != 'free' AND stripe_customer_id IS NOT NULL AND created_at >= ?
       GROUP BY plan
     `).all(weekAgo);
     codesDb.close();
