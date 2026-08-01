@@ -778,7 +778,7 @@ function requestAnalysis(btn, matchId, home, away) {
       // sans pari valide (betText vide), une cote affichee ne se rattache a
       // rien de concret pour le client : on ne la montre que si un signal existe.
       var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
-        ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ARJEL : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
+        ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
       el.innerHTML = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
         + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
         + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'

@@ -8834,6 +8834,45 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
     db.prepare("UPDATE users SET status = 'free' WHERE stripe_subscription_id = ?").run(sub.id);
   }
 
+  // Paiement de renouvellement refusé — jusqu'ici totalement invisible (aucune
+  // alerte n'existait). Stripe réessaie automatiquement plusieurs fois avant
+  // d'annuler l'abonnement (customer.subscription.deleted prendra le relais
+  // le moment venu), donc on n'y touche pas l'accès ici — juste une alerte
+  // pour que Greg puisse relancer le client si besoin. Constate via l'audit
+  // du 01/08/2026.
+  if (event.type === "invoice.payment_failed") {
+    const inv = event.data.object;
+    const email = (inv.customer_email || "").toLowerCase().trim();
+    const amount = inv.amount_due ? (inv.amount_due / 100).toFixed(2) + "€" : "montant inconnu";
+    console.log(`[stripe] paiement refusé: ${email || "email inconnu"} (${amount})`);
+    if (TELEGRAM_ADMIN_CHAT_ID) {
+      sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `⚠️ <b>Paiement Stripe refusé</b>\n${email || "email inconnu"} — ${amount}\nStripe va réessayer automatiquement.`)
+        .catch(() => {});
+    }
+  }
+
+  // Remboursement — l'argent est déjà reparti, l'accès doit s'arrêter tout de
+  // suite (contrairement à une simple résiliation, qui va au bout de la
+  // période déjà payée). Egalement invisible jusqu'ici.
+  if (event.type === "charge.refunded") {
+    const charge = event.data.object;
+    const email = (charge.billing_details?.email || "").toLowerCase().trim();
+    const amount = charge.amount_refunded ? (charge.amount_refunded / 100).toFixed(2) + "€" : "montant inconnu";
+    console.log(`[stripe] remboursement: ${email || "email inconnu"} (${amount})`);
+    if (email) {
+      try { db.prepare("UPDATE users SET status = 'free' WHERE email = ?").run(email); } catch (e) { console.error("[stripe] refund users:", e.message); }
+      try {
+        const cdbw = new Database(CODES_DB_PATH);
+        cdbw.prepare("UPDATE codes SET active = 0 WHERE email = ?").run(email);
+        cdbw.close();
+      } catch (e) { console.error("[stripe] refund codes:", e.message); }
+    }
+    if (TELEGRAM_ADMIN_CHAT_ID) {
+      sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `🔴 <b>Remboursement Stripe</b>\n${email || "email inconnu"} — ${amount}\nAccès désactivé.`)
+        .catch(() => {});
+    }
+  }
+
   res.json({ received: true });
 });
 

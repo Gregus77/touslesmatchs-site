@@ -274,7 +274,7 @@ async function doLogin(){
     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
     <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
   </div>
-  <div class="tier-note" id="tier-note">Les paliers sont cumulatifs : Standard = les analyses les plus solides (cote ARJEL, confiance ≥ 88 %), Premium ajoute la confiance ≥ 85 %, Elite regroupe toutes les analyses publiées (≥ 82 %).</div>
+  <div class="tier-note" id="tier-note">Les paliers sont cumulatifs, confiance minimum 82 % sur les trois : Standard = la sélection la plus stricte du jour (cote réelle ANJ), Premium l'élargit, Elite regroupe tout le vivier diffusable.</div>
 
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Analyses</div></div>
@@ -296,7 +296,7 @@ async function doLogin(){
     <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65% Prudence</span>
   </div>
   <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
-  <div class="section-hint" id="history-hint">Chaque ligne = une analyse. Cote réelle ARJEL quand disponible, sinon estimation marché.</div>
+  <div class="section-hint" id="history-hint">Chaque ligne = une analyse. Cote réelle ANJ quand disponible, sinon estimation marché.</div>
   <div id="history-list" class="history-list">
     <div class="spinner-wrap"><div class="spinner"></div></div>
   </div>
