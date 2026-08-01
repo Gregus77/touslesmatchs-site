@@ -2917,11 +2917,16 @@ async function fetchH2H(match) {
 // cotes, mais aucune donnée live. On s'appuie donc uniquement sur le H2H réel
 // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
 // appel IA payant, juste des statistiques de confrontations directes.
-let _upcomingPicksCache = { ts: 0, data: [] };
+let _upcomingPicksCache = { ts: 0, data: [], stats: null };
 async function computeUpcomingPicks() {
-  if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache.data;
-  if (!API_SPORTS_KEY) return _upcomingPicksCache.data;
+  if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
+  if (!API_SPORTS_KEY) return _upcomingPicksCache;
   const picks = [];
+  // Compteurs exposes au client pour expliquer honnetement un tab vide —
+  // demande de Greg le 01/08/2026 : montrer le travail reel (X matchs
+  // regardes, Y avec assez d'historique, Z retenus) plutot qu'un message
+  // generique "aucun match".
+  const stats = { totalFixtures: 0, trustedChecked: 0, h2hEligible: 0, qualified: 0 };
   try {
     // Sur une seule journee, la plupart des matchs "NS" tombent hors d'une
     // fenetre de 12h selon l'heure a laquelle on regarde (constate le
@@ -2941,15 +2946,18 @@ async function computeUpcomingPicks() {
       const hoursAway = (kickoff - Date.now()) / 3600000;
       return hoursAway > 0 && hoursAway <= 36;
     });
+    stats.totalFixtures = fixtures.length;
     for (const f of fixtures.slice(0, 60)) {
       const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football" };
       if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
+      stats.trustedChecked++;
       const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
       // n>=5 confrontations directes exactes entre les deux memes equipes est
       // trop rare (beaucoup de paires ne se sont jamais croisees 5 fois),
       // d'ou une section quasi-toujours vide (signale par Greg le 01/08/2026).
       // n>=3 reste un echantillon reel, juste moins exigeant sur la rarete.
       if (!h2h || h2h.n < 3) continue;
+      stats.h2hEligible++;
       const candidates = [
         { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
         { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
@@ -2957,6 +2965,7 @@ async function computeUpcomingPicks() {
         { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
       ].filter(c => c.confidence >= PUBLISHED_MIN_CONFIDENCE).sort((a, b) => b.confidence - a.confidence);
       if (!candidates.length) continue;
+      stats.qualified++;
       picks.push({
         home: f.teams.home.name, away: f.teams.away.name,
         competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
@@ -2971,8 +2980,8 @@ async function computeUpcomingPicks() {
   // à venir, dans l'ordre, plutôt que juste les mieux notés (01/08/2026).
   picks.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
   const top = picks.slice(0, 12);
-  _upcomingPicksCache = { ts: Date.now(), data: top };
-  return top;
+  _upcomingPicksCache = { ts: Date.now(), data: top, stats };
+  return _upcomingPicksCache;
 }
 
 app.get("/upcoming-picks", async (req, res) => {
@@ -2985,15 +2994,16 @@ app.get("/upcoming-picks", async (req, res) => {
         unlocked = !!((a.valid && a.plan) || isAdminAccess(qEmail, qCode));
       } catch (_) {}
     }
-    const picks = await computeUpcomingPicks();
+    const result = await computeUpcomingPicks();
     res.json({
       ok: true,
-      picks: picks.map(p => ({
+      picks: result.data.map(p => ({
         home: p.home, away: p.away, competition: p.competition, sport: p.sport,
         kickoff: p.kickoff, confidence: p.confidence,
         bet: unlocked ? p.bet : null, locked: !unlocked,
         home_logo: p.home_logo, away_logo: p.away_logo,
       })),
+      stats: result.stats,
     });
   } catch (e) {
     console.error("[upcoming-picks] endpoint:", e.message);
@@ -10754,7 +10764,7 @@ async function seedDailyPickIfMissingForToday() {
     if (hasToday) return; // un match du jour existe déjà, rien à semer
 
     const DAILY_PICK_ALLOWED_BETS = new Set(["Victoire domicile", "Victoire extérieur", "BTTS Oui", "BTTS Non", "Under 2.5 buts"]);
-    const upcoming = await computeUpcomingPicks();
+    const upcoming = (await computeUpcomingPicks()).data;
     const seedable = upcoming.filter(p =>
       (p.kickoff || "").slice(0, 10) === todayISO && DAILY_PICK_ALLOWED_BETS.has(p.bet)
     );
