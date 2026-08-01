@@ -6089,7 +6089,7 @@ async function runAutoConcileObserver() {
 }
 
 // ── Brevo helpers ─────────────────────────────────────────────────────────────
-async function brevoAddContact(email, tag, lang = "FR") {
+async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null) {
   if (!BREVO_API_KEY) return;
   const contactLang = normalizeContactLang(lang, "");
   try {
@@ -6103,10 +6103,15 @@ async function brevoAddContact(email, tag, lang = "FR") {
       {},
       { "api-key": BREVO_API_KEY }
     );
-    // Apply tag via attribute
+    // Apply tag via attribute — MARKETING_CONSENT n'est pose que quand
+    // l'appelant le precise explicitement (consentement reellement recueilli
+    // cote client), jamais par defaut sur les contacts transactionnels
+    // (paiement, verification de code...).
+    const attrs = { PLAN: tag, LANG: contactLang };
+    if (marketingConsent !== null) attrs.MARKETING_CONSENT = marketingConsent ? "YES" : "NO";
     await httpPost(
       `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
-      { attributes: { PLAN: tag, LANG: contactLang } },
+      { attributes: attrs },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
     console.log(`[brevo] contact upserted: ${email} tag=${tag} lang=${contactLang}`);
@@ -6126,13 +6131,20 @@ app.post("/lead-capture", (req, res) => {
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.json({ ok: false, error: "Email invalide" });
   }
+  // Consentement marketing explicite requis (case a cocher, non cochee par
+  // defaut, cote client) — cette page EST une inscription a des emails
+  // promotionnels, donc pas d'ajout Brevo sans ce consentement. Constate
+  // via l'audit du 01/08/2026 : rien ne demandait ce consentement avant.
+  if (req.body?.consent !== true) {
+    return res.json({ ok: false, error: "Consentement requis pour recevoir les emails." });
+  }
   const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
   const now = Date.now();
   const last = _leadCaptureRate.get(ip) || 0;
   if (now - last < 5000) return res.json({ ok: false, error: "Trop de requêtes, réessaie dans quelques secondes." });
   _leadCaptureRate.set(ip, now);
-  brevoAddContact(email, "lead_resultats_quotidiens").catch(() => {});
-  console.log(`[lead-capture] ${email}`);
+  brevoAddContact(email, "lead_resultats_quotidiens", "FR", true).catch(() => {});
+  console.log(`[lead-capture] ${email} (consentement donné)`);
   res.json({ ok: true });
 });
 

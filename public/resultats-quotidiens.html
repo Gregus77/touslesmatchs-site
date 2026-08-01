@@ -66,6 +66,10 @@ footer{margin-top:48px;font-size:11px;color:var(--muted);line-height:1.8;text-al
         <input type="email" id="lead-email" placeholder="ton@email.com" autocomplete="email" required>
         <button type="submit" class="btn" id="lead-btn">Je veux recevoir ça</button>
       </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:12.5px;color:var(--muted);cursor:pointer;text-align:left">
+        <input type="checkbox" id="lead-consent" required style="margin-top:2px;flex-shrink:0">
+        <span>J'accepte de recevoir les résultats, actualités et offres de TousLesMatchs par email.</span>
+      </label>
       <div class="msg" id="lead-msg"></div>
     </form>
     <div class="fineprint">Aucune carte bancaire. Désabonnement en un clic sur chaque email. Tes données ne sont jamais revendues.</div>
@@ -89,15 +93,21 @@ footer{margin-top:48px;font-size:11px;color:var(--muted);line-height:1.8;text-al
 document.getElementById('lead-form').addEventListener('submit', function(e){
   e.preventDefault();
   var email = document.getElementById('lead-email').value.trim();
+  var consent = document.getElementById('lead-consent').checked;
   var btn = document.getElementById('lead-btn');
   var msg = document.getElementById('lead-msg');
   msg.className = 'msg';
+  if (!consent) {
+    msg.textContent = '⚠️ Coche la case pour accepter de recevoir les emails.';
+    msg.className = 'msg err';
+    return;
+  }
   btn.disabled = true;
   btn.textContent = 'Envoi...';
   fetch('/api/lead-capture', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email })
+    body: JSON.stringify({ email: email, consent: consent })
   }).then(function(r){ return r.json(); }).then(function(d){
     if (d.ok) {
       msg.textContent = '✅ Merci ! Tu recevras bientôt ton premier récap.';
