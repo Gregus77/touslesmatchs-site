@@ -1515,6 +1515,14 @@ function bookmakerEmailHtml() {
   </div>`;
 }
 
+// Expose les liens d'affiliation bookmakers (source unique : bookmakers.config.js)
+// au frontend, pour les afficher sur le site (pas seulement dans les emails).
+// Demande de Greg le 01/08/2026 : les liens n'apparaissaient nulle part sur
+// le site, seulement dans certains emails/Telegram.
+app.get("/bookmaker-links", (req, res) => {
+  res.json({ ok: true, links: bookmakerButtons });
+});
+
 // Preuves storage file
 const PREUVES_PATH = "/var/touslesmatchs/preuves.json";
 const SCORE_PATH = "/var/touslesmatchs/live_score.json";
@@ -9320,6 +9328,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
               </div>
               ${premiumTelegramBlock}
               ${upsellBlock}
+              ${bookmakerEmailHtml()}
             </div>
           </div>`;
 

@@ -254,6 +254,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="page-sub">Matchs en direct analysés par le Concile IA. Analyses automatiques et statistiques en temps réel.</div>
 </div>
 
+<!-- BOOKMAKERS — comparer la cote chez un bookmaker agréé ANJ -->
+<div id="bookmaker-bar" style="max-width:720px;margin:0 auto 20px;padding:14px 16px;display:none">
+  <div style="font-size:11px;color:#7b82a0;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px;text-align:center">Comparer la cote chez un bookmaker agréé ANJ</div>
+  <div id="bookmaker-links" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px"></div>
+</div>
+<script>
+fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(d){
+  if (!d.ok || !d.links || !d.links.length) return;
+  var colors = ['#ef4444','#3b82f6','#22c55e','#06b6d4'];
+  var el = document.getElementById('bookmaker-links');
+  el.innerHTML = d.links.map(function(b, i){
+    return '<a href="' + b.url + '" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:rgba(255,255,255,.04);border:1px solid ' + (colors[i] || '#64748b') + ';color:#fff;padding:10px 8px;border-radius:10px;text-decoration:none;font-weight:800;font-size:13px">' + b.text + '</a>';
+  }).join('');
+  document.getElementById('bookmaker-bar').style.display = 'block';
+}).catch(function(){});
+</script>
+
 <!-- TAB BAR -->
 <div class="tab-bar">
   <button class="tab-btn active" onclick="switchTab('live')">🔴 En direct</button>
