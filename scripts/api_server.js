@@ -3419,6 +3419,17 @@ function readKnownScore(match) {
 }
 
 function computeAvailableBets(match) {
+  const sport = String(match.sport || "Football");
+  // Basketball/Hockey n'ont pas de match nul (prolongation/tirs au but
+  // obligatoires) et les marches buts (Over/Under 2.5, BTTS) sont calibres
+  // pour le football, pas pour un score de basket. Sans ce filtre, la
+  // correction post-IA (validateAndCorrectBet, R2) pouvait retomber sur
+  // "Match nul" comme repli pour un match de basket plie a 53-93 —
+  // resultat impossible pour ce sport. Constate le 01/08/2026.
+  if (sport === "Basketball" || sport === "Hockey") {
+    return ["Victoire domicile", "Victoire extérieur"];
+  }
+
   const score = readKnownScore(match);
   if (!score) return [...BET_TYPES];
   const h = score.home;
@@ -3481,7 +3492,14 @@ function computeAvailableBets(match) {
 function validateAndCorrectBet(bet, match, availableBets) {
   // R2 (finalité connue) : jamais de "Victoire" d'une équipe qui mène déjà de >= 3 buts.
   // Le résultat est décidé, le book ne cote plus — aucune valeur. Ex: 0-3 → pas de "Victoire extérieur".
-  {
+  // Calibré pour le football (écart en BUTS) — ne s'applique pas au basket/hockey,
+  // qui n'ont pas d'alternative "sans vainqueur" (pas de match nul). Sans cette
+  // exclusion, un basket plié à 53-93 se faisait "corriger" vers un repli
+  // arbitraire (Match nul, impossible dans ce sport, ou pire la mauvaise
+  // équipe) au lieu de laisser l'IA prédire la victoire — pourtant correcte
+  // avec un tel écart. Constate le 01/08/2026.
+  const sportForGap = String(match.sport || "Football");
+  if (sportForGap !== "Basketball" && sportForGap !== "Hockey") {
     const sc = readKnownScore(match);
     if (sc) {
       const gap = sc.home - sc.away;
@@ -3510,6 +3528,13 @@ function validateAndCorrectBet(bet, match, availableBets) {
   if (score && (bet === "Over 2.5 buts") && availableBets.includes("Under 2.5 buts")) corrected = "Under 2.5 buts";
   else if (score && (bet === "Under 2.5 buts") && total > 2.5 && availableBets.includes("Over 2.5 buts")) corrected = "Over 2.5 buts";
   else if (score && (bet === "BTTS Non") && h > 0 && a > 0 && availableBets.includes("BTTS Oui")) corrected = "BTTS Oui";
+  else if (score && (sportForGap === "Basketball" || sportForGap === "Hockey") && h !== a) {
+    // Basket/hockey n'ont que 2 issues possibles ici (pas de match nul) : le
+    // repli generique "premier pari disponible" pouvait tomber sur l'equipe
+    // qui PERD. On corrige vers l'equipe reellement en tete plutot qu'un
+    // choix arbitraire.
+    corrected = h > a ? "Victoire domicile" : "Victoire extérieur";
+  }
   else corrected = availableBets[0]; // fallback sur premier pari disponible
 
   console.log(`[concile] Correction: "${bet}" → "${corrected}" (mathématiquement invalide à ${minute}', score ${h}-${a})`);
