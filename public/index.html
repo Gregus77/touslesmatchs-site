@@ -792,6 +792,7 @@ async function loadUpcoming(){
     box.innerHTML=picks.map(function(p){
       var comp=splitComp(p.competition||'');
       var flag=COUNTRY_FLAGS[comp.country]||'';
+      var icon=SPORT_ICO[p.sport]||'🏟️';
       var kt='';
       try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       var right=p.locked
@@ -799,8 +800,8 @@ async function loadUpcoming(){
         : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'%</div>';
       return '<div class="upcoming-item">'+
         '<div class="upcoming-info">'+
-          '<div class="upcoming-teams">'+(flag?flag+' ':'')+esc(p.home)+' — '+esc(p.away)+'</div>'+
-          '<div class="upcoming-comp">'+esc(comp.league)+(kt?' · '+kt:'')+'</div>'+
+          '<div class="upcoming-teams">'+icon+' '+(flag?flag+' ':'')+esc(p.home)+' — '+esc(p.away)+'</div>'+
+          '<div class="upcoming-comp">'+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+(kt?' · '+kt:'')+'</div>'+
         '</div>'+right+
       '</div>';
     }).join('');

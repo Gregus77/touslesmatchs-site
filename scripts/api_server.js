@@ -1879,6 +1879,12 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
   "· china", "china", "chinese",
   "australia cup",
+  // Divisions regionales/amateurs australiennes (NPL par etat) — le mot
+  // "championship" du TRUSTED_COMPETITIONS (Championship anglaise) matchait
+  // par erreur "Tasmania Northern Championship" etc. en sous-chaine, faisant
+  // passer des ligues semi-pro pour fiables (constate le 01/08/2026, Greg —
+  // match Tasmanie affiche a 100% de confiance sur "Matchs a venir").
+  "tasmania", "npl", "national premier league",
   ...CATEGORY_BAN_KEYWORDS,
   // Divisions inférieures / groupes régionaux — données live lentes et peu fiables
   "kakkonen", "ykkonen", "lohko", "kolmonen", "regionalliga", "oberliga",
