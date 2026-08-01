@@ -2941,11 +2941,15 @@ async function computeUpcomingPicks() {
       const hoursAway = (kickoff - Date.now()) / 3600000;
       return hoursAway > 0 && hoursAway <= 36;
     });
-    for (const f of fixtures.slice(0, 40)) {
+    for (const f of fixtures.slice(0, 60)) {
       const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football" };
       if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
       const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
-      if (!h2h || h2h.n < 5) continue;
+      // n>=5 confrontations directes exactes entre les deux memes equipes est
+      // trop rare (beaucoup de paires ne se sont jamais croisees 5 fois),
+      // d'ou une section quasi-toujours vide (signale par Greg le 01/08/2026).
+      // n>=3 reste un echantillon reel, juste moins exigeant sur la rarete.
+      if (!h2h || h2h.n < 3) continue;
       const candidates = [
         { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
         { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },

@@ -788,7 +788,11 @@ async function loadUpcoming(){
     var r=await fetch('/api/upcoming-picks?t='+Date.now()+authQs);
     var d=await r.json();
     var picks=(d.picks||[]);
-    if(!picks.length){ box.innerHTML='<div class="empty-note">Aucun match à venir ne dépasse le seuil de confiance pour le moment.</div>'; return; }
+    if(!picks.length){
+      box.innerHTML='<div class="empty-note">Aucun match à venir ne dépasse notre seuil de confiance pour le moment.<br>'+
+        '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
+      return;
+    }
     box.innerHTML=picks.map(function(p){
       var comp=splitComp(p.competition||'');
       var flag=COUNTRY_FLAGS[comp.country]||'';
