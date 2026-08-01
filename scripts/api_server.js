@@ -490,6 +490,32 @@ db.exec(`
   );
 `);
 
+// ── Auth unifiée email + OTP + sessions (Phase 2, 01/08/2026) ─────────────────
+// Nouveau systeme, additif : ne touche ni ne remplace encore le systeme email+
+// code reutilisable existant (codes.db, /verify-code) utilise sur le reste du
+// site. Vise a devenir la SEULE methode de connexion (dashboard d'abord, puis
+// le reste du site dans une etape ulterieure validee separement).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS otp_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    used INTEGER DEFAULT 0,
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_otp_codes_email ON otp_codes(email);
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_seen_at TEXT DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_email ON sessions(email);
+`);
+
 // ── Nurturing emails table (persistent across restarts) ──────────────────────
 db.exec(`
   CREATE TABLE IF NOT EXISTS scheduled_emails (
@@ -7254,6 +7280,140 @@ try {
   `);
   _cdb.close();
 } catch(e) { console.error("[codes-db] init error:", e.message); }
+
+// ── OTP + sessions ──────────────────────────────────────────────────────────
+const OTP_TTL_MS = 10 * 60000;             // code valable 10 min
+const OTP_REQUEST_COOLDOWN_MS = 60000;      // 1 demande / email / minute
+const OTP_MAX_ATTEMPTS = 5;                 // au-dela, le code est grille
+const SESSION_TTL_MS = 30 * 24 * 3600000;   // session glissante 30 jours
+
+const _otpRequestCooldown = new Map(); // email -> timestamp derniere demande
+
+function hashOtp(code) {
+  return crypto.createHash("sha256").update(code).digest("hex");
+}
+
+app.post("/auth/request-otp", async (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.json({ ok: false, error: "Email invalide" });
+  }
+  const now = Date.now();
+  const last = _otpRequestCooldown.get(email) || 0;
+  if (now - last < OTP_REQUEST_COOLDOWN_MS) {
+    return res.json({ ok: false, error: "Merci de patienter avant de redemander un code." });
+  }
+  _otpRequestCooldown.set(email, now);
+
+  // Reponse volontairement identique qu'un compte existe ou non — ne jamais
+  // reveler publiquement l'existence d'un email (demande explicite Phase 2).
+  try {
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+    const expiresAt = new Date(now + OTP_TTL_MS).toISOString();
+    db.prepare("INSERT INTO otp_codes (email, code_hash, expires_at) VALUES (?,?,?)")
+      .run(email, hashOtp(code), expiresAt);
+    // Purge legere des vieux codes perimes non utilises pour cet email.
+    db.prepare("DELETE FROM otp_codes WHERE email = ? AND used = 0 AND expires_at < datetime('now')").run(email);
+
+    if (BREVO_API_KEY) {
+      const html = `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="margin-bottom:4px">Ton code de connexion TousLesMatchs</h2>
+        <p style="font-size:34px;font-weight:900;letter-spacing:.12em;color:#4f46e5">${code}</p>
+        <p style="color:#555">Ce code expire dans 10 minutes et ne peut être utilisé qu'une seule fois.</p>
+        <p style="color:#999;font-size:12px">Si tu n'es pas à l'origine de cette demande, ignore simplement cet email.</p>
+      </div>`;
+      brevoSendEmail(email, `${code} — ton code de connexion TousLesMatchs`, html, { critical: true })
+        .catch(e => console.error("[otp] envoi email:", e.message));
+    }
+    console.log(`[otp] code demandé pour ${email}`);
+  } catch (e) {
+    console.error("[otp] request-otp:", e.message);
+  }
+  res.json({ ok: true, message: "Si ce compte existe, un code vient d'être envoyé par email." });
+});
+
+app.post("/auth/verify-otp", (req, res) => {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  const code = String(req.body?.code || "").trim();
+  if (!email || !code) return res.json({ ok: false, error: "Email et code requis" });
+
+  try {
+    const row = db.prepare(
+      "SELECT * FROM otp_codes WHERE email = ? AND used = 0 ORDER BY id DESC LIMIT 1"
+    ).get(email);
+    // Meme message generique en cas d'echec, quelle qu'en soit la raison
+    // (code inexistant, expire, deja utilise, ou mauvaise valeur) — evite de
+    // laisser deviner si un email a un compte ou non.
+    const genericError = "Code invalide ou expiré.";
+    if (!row) return res.json({ ok: false, error: genericError });
+    if (new Date(row.expires_at) < new Date()) return res.json({ ok: false, error: genericError });
+    if (row.attempts >= OTP_MAX_ATTEMPTS) return res.json({ ok: false, error: "Trop de tentatives, redemande un code." });
+
+    if (hashOtp(code) !== row.code_hash) {
+      db.prepare("UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?").run(row.id);
+      return res.json({ ok: false, error: genericError });
+    }
+
+    db.prepare("UPDATE otp_codes SET used = 1 WHERE id = ?").run(row.id);
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    db.prepare("INSERT INTO sessions (token, email, expires_at) VALUES (?,?,?)").run(token, email, expiresAt);
+
+    // Plan actuel : source de verite = table codes, alimentee par le webhook
+    // Stripe — le nouveau systeme de connexion ne cree ni ne devine aucun droit.
+    const account = db.prepare(
+      "SELECT plan, expires_at, credits_max, credits_used FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
+    ).get(email);
+
+    console.log(`[otp] connexion réussie: ${email}`);
+    res.json({ ok: true, token, email, plan: account?.plan || "free" });
+  } catch (e) {
+    console.error("[otp] verify-otp:", e.message);
+    res.json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+function requireSession(req, res, next) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : String(req.query.session || req.body?.session || "");
+  if (!token) return res.status(401).json({ ok: false, error: "Non connecté" });
+  try {
+    const row = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token);
+    if (!row || new Date(row.expires_at) < new Date()) return res.status(401).json({ ok: false, error: "Session expirée" });
+    db.prepare("UPDATE sessions SET last_seen_at = datetime('now') WHERE token = ?").run(token);
+    req.session = { email: row.email, token };
+    next();
+  } catch (e) {
+    res.status(401).json({ ok: false, error: "Session invalide" });
+  }
+}
+
+app.post("/auth/logout", (req, res) => {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : String(req.body?.session || "");
+  if (token) {
+    try { db.prepare("DELETE FROM sessions WHERE token = ?").run(token); } catch (e) { /* rien a faire */ }
+  }
+  res.json({ ok: true });
+});
+
+app.get("/auth/session", requireSession, (req, res) => {
+  try {
+    const account = db.prepare(
+      "SELECT plan, expires_at, credits_max, credits_used FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
+    ).get(req.session.email);
+    res.json({
+      ok: true, email: req.session.email,
+      plan: account?.plan || "free",
+      expires_at: account?.expires_at || null,
+      credits_max: account?.credits_max ?? null,
+      credits_used: account?.credits_used ?? null,
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
 
 app.post("/verify-code", (req, res) => {
   const { email, code } = req.body || {};
