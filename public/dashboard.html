@@ -327,12 +327,14 @@ function loadDashboard() {
   .catch(function() { logout(); });
 }
 
-// Quels paliers un plan débloque : standard→Standard · premium→+Premium · elite/vip→tout
+// Quels paliers un plan débloque : le palier Standard sert de vitrine/preuve
+// et reste visible même sans abonnement (comme sur le reste du site) ;
+// Premium et Elite restent verrouillés tant qu'on n'est pas abonné au moins
+// au palier correspondant.
 function tiersForPlan(plan) {
   if (plan === 'elite' || plan === 'vip') return { standard: true, premium: true, elite: true };
   if (plan === 'premium') return { standard: true, premium: true, elite: false };
-  if (plan === 'standard') return { standard: true, premium: false, elite: false };
-  return { standard: false, premium: false, elite: false };
+  return { standard: true, premium: false, elite: false };
 }
 
 // Affiche les 3 paliers : débloqués selon le plan, verrouillés (floutés + CTA) sinon.
@@ -365,9 +367,10 @@ function renderTierStats(status) {
       return '<div class="tc ' + k + (unlocked ? '' : ' locked') + '">' + body + lock + '</div>';
     }).join('');
     if (note) {
-      if (status === 'elite') note.textContent = 'Accès complet aux 3 paliers, matchs « IA seulement » inclus.';
+      if (status === 'elite' || status === 'vip') note.textContent = 'Accès complet aux 3 paliers, matchs « IA seulement » inclus.';
       else if (status === 'premium') note.textContent = 'Tu vois Standard + Premium. Elite débloque tout le volume, y compris les analyses « IA seulement ».';
-      else note.textContent = 'Tu vois le palier Standard. Premium et Elite débloquent plus de volume d\'analyses.';
+      else if (status === 'standard') note.textContent = 'Tu vois le palier Standard. Premium et Elite débloquent plus de volume d\'analyses.';
+      else note.textContent = 'Palier Standard visible en aperçu. Abonne-toi pour débloquer les analyses en direct.';
     }
   }).catch(function() { container.innerHTML = '<div class="empty-state">Erreur de chargement des paliers</div>'; });
 }
