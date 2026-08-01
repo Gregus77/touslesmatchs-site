@@ -7611,6 +7611,24 @@ app.get("/auth/telegram-link", requireSession, async (req, res) => {
   }
 });
 
+// Lien de parrainage (session OTP) — le systeme existait deja (/referral/get-link)
+// mais exigeait l'ancien email+code reutilisable, incompatible avec le
+// dashboard desormais 100% OTP/session (Phase 2/3). Demande de Greg le
+// 01/08/2026 : rendre le parrainage visible, pas de nouveau systeme de recompense.
+app.get("/auth/referral-link", requireSession, (req, res) => {
+  try {
+    const email = req.session.email;
+    const refCode = getOrCreateRefCode(email);
+    const link = `https://www.touslesmatchs.com/ref/${refCode}`;
+    const data = loadReferrals();
+    const ref = data.refs[refCode] || {};
+    res.json({ ok: true, refCode, link, referrals: (ref.referrals || []).length, monthsEarned: ref.monthsEarned || 0 });
+  } catch (e) {
+    console.error("[referral-link]", e.message);
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
 // Vrai portail de facturation Stripe (Phase 4, 01/08/2026) — remplace le
 // mailto: placeholder du dashboard. L'utilisateur y gere/annule/change de
 // carte lui-meme, cote Stripe, sans qu'on ait a manipuler quoi que ce soit.
