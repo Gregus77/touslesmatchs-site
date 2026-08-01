@@ -2913,15 +2913,23 @@ async function computeUpcomingPicks() {
   if (!API_SPORTS_KEY) return _upcomingPicksCache.data;
   const picks = [];
   try {
-    const today = new Date().toISOString().slice(0, 10);
-    const data = await httpGet(
-      `https://v3.football.api-sports.io/fixtures?date=${today}&status=NS`,
-      { "x-apisports-key": API_SPORTS_KEY }
-    );
-    const fixtures = (data.response || []).filter(f => {
+    // Sur une seule journee, la plupart des matchs "NS" tombent hors d'une
+    // fenetre de 12h selon l'heure a laquelle on regarde (constate le
+    // 01/08/2026 : 12 matchs NS le jour meme, 0 dans les 12h). On regarde
+    // aujourd'hui ET demain, avec une fenetre de 36h, pour avoir un vrai
+    // volume de candidats quelle que soit l'heure de consultation.
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+    const [dataToday, dataTomorrow] = await Promise.all([
+      httpGet(`https://v3.football.api-sports.io/fixtures?date=${today}&status=NS`, { "x-apisports-key": API_SPORTS_KEY }),
+      httpGet(`https://v3.football.api-sports.io/fixtures?date=${tomorrow}&status=NS`, { "x-apisports-key": API_SPORTS_KEY }),
+    ]);
+    const allFixtures = [...(dataToday.response || []), ...(dataTomorrow.response || [])];
+    const fixtures = allFixtures.filter(f => {
       const kickoff = new Date(f.fixture.date).getTime();
       const hoursAway = (kickoff - Date.now()) / 3600000;
-      return hoursAway > 0 && hoursAway <= 12;
+      return hoursAway > 0 && hoursAway <= 36;
     });
     for (const f of fixtures.slice(0, 40)) {
       const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football" };
