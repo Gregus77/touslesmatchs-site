@@ -156,6 +156,27 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .upcoming-comp{font-size:11px;color:var(--muted);margin-top:2px}
 .upcoming-conf{font-size:12px;font-weight:800;color:#3ec9e8;white-space:nowrap}
 .upcoming-lock-btn{font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:6px 12px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap}
+/* ── Comparateur de matchs ── */
+.compare-sub{font-size:13px;color:var(--tx2);margin:2px 0 14px}
+.compare-chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:6px;scrollbar-width:thin}
+.compare-chip{flex:0 0 auto;background:var(--panel2);border:1px solid var(--b2);color:var(--tx2);padding:9px 14px;border-radius:10px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s}
+.compare-chip:hover{border-color:rgba(155,123,255,.4);color:var(--tx)}
+.compare-chip.active{background:linear-gradient(135deg,var(--violet),var(--blue));border-color:transparent;color:#fff}
+.compare-detail{margin-top:16px}
+.compare-detail-head{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:4px}
+.compare-detail-team{display:flex;flex-direction:column;align-items:center;gap:6px;width:110px}
+.compare-detail-logo{width:36px;height:36px;border-radius:8px;background:var(--panel2);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:800}
+.compare-detail-logo img{width:100%;height:100%;object-fit:contain}
+.compare-detail-name{font-size:12.5px;font-weight:700;text-align:center}
+.compare-detail-vs{font-size:12px;color:var(--muted);font-weight:800}
+.compare-detail-comp{text-align:center;font-size:11.5px;color:var(--muted);margin:6px 0 18px}
+.compare-bar-row{margin-bottom:14px}
+.compare-bar-label{font-size:12px;color:var(--tx2);margin-bottom:5px;display:flex;justify-content:space-between}
+.compare-bar-value{font-weight:800;color:var(--tx)}
+.compare-bar-track{height:8px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.compare-bar-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--cyan));transition:width .5s ease}
+.compare-cta{margin-top:18px;text-align:center;padding-top:16px;border-top:1px solid var(--b1)}
+.compare-cta-note{font-size:11.5px;color:var(--muted);margin-top:8px}
 .live-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--b1)}
 .live-row:first-of-type{border-top:none}
 .live-comp{width:46px;flex:0 0 auto}
@@ -334,6 +355,18 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div id="live-rows"><div class="empty-note">Chargement…</div></div>
       <div class="upcoming-sep"><span class="dot up"></span>Matchs à venir — meilleures cotes</div>
       <div id="upcoming-rows"><div class="empty-note">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- RANGEE 1.5 : COMPARATEUR DE MATCHS (gratuit, sans compte — outil d'acquisition) -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card acc-cyan" id="compare-card">
+      <div class="live-panel-head">
+        <div class="live-panel-title">🎯 Comparateur de matchs</div>
+      </div>
+      <div class="compare-sub">Choisis un match à venir et regarde les vraies statistiques derrière — gratuit, sans compte.</div>
+      <div id="compare-chips" class="compare-chips"><div class="empty-note">Chargement…</div></div>
+      <div id="compare-detail" class="compare-detail"></div>
     </div>
   </div>
 
@@ -817,6 +850,64 @@ async function loadUpcoming(){
   } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
 }
 loadUpcoming();
+
+/* ══ COMPARATEUR DE MATCHS (gratuit, sans compte) ══ */
+var compareMatches=[];
+var compareSelected=null;
+async function loadCompareList(){
+  var box=document.getElementById('compare-chips');
+  try{
+    var r=await fetch('/api/match-compare-list?t='+Date.now());
+    var d=await r.json();
+    compareMatches=(d.matches||[]);
+    if(!compareMatches.length){
+      box.innerHTML='<div class="empty-note">Pas encore de match éligible pour le comparateur — les grands championnats reprennent mi-août.</div>';
+      return;
+    }
+    box.innerHTML=compareMatches.map(function(m,i){
+      return '<button type="button" class="compare-chip'+(i===0?' active':'')+'" data-fx="'+esc(m.fixtureId)+'" onclick="selectCompareMatch(\''+esc(m.fixtureId)+'\')">'+esc(m.home)+' - '+esc(m.away)+'</button>';
+    }).join('');
+    selectCompareMatch(compareMatches[0].fixtureId);
+  } catch(e){ box.innerHTML='<div class="empty-note">Comparateur indisponible pour le moment.</div>'; }
+}
+async function selectCompareMatch(fixtureId){
+  compareSelected=fixtureId;
+  document.querySelectorAll('.compare-chip').forEach(function(b){ b.classList.toggle('active', b.dataset.fx===String(fixtureId)); });
+  var box=document.getElementById('compare-detail');
+  box.innerHTML='<div class="empty-note">Chargement des statistiques…</div>';
+  try{
+    var r=await fetch('/api/match-compare?fixtureId='+encodeURIComponent(fixtureId)+'&t='+Date.now());
+    var d=await r.json();
+    if(!d.ok||!d.match||!d.match.bars||!d.match.bars.length){
+      box.innerHTML='<div class="empty-note">Statistiques pas encore assez fournies pour ce match — essaie-en un autre.</div>';
+      return;
+    }
+    var m=d.match;
+    var comp=splitComp(m.competition||'');
+    var loggedIn=!!(localStorage.getItem('tlm_email')&&localStorage.getItem('tlm_plan'));
+    var html='<div class="compare-detail-head">';
+    html+='<div class="compare-detail-team"><div class="compare-detail-logo">'+logo(m.home_logo,m.home)+'</div><div class="compare-detail-name">'+esc(m.home)+'</div></div>';
+    html+='<div class="compare-detail-vs">VS</div>';
+    html+='<div class="compare-detail-team"><div class="compare-detail-logo">'+logo(m.away_logo,m.away)+'</div><div class="compare-detail-name">'+esc(m.away)+'</div></div>';
+    html+='</div>';
+    html+='<div class="compare-detail-comp">'+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+'</div>';
+    html+=m.bars.map(function(b){
+      var pct=Math.max(0,Math.min(10,b.value))*10;
+      return '<div class="compare-bar-row"><div class="compare-bar-label"><span>'+esc(b.label)+'</span><span class="compare-bar-value">'+esc(b.value)+'/10</span></div>'+
+        '<div class="compare-bar-track"><div class="compare-bar-fill" style="width:'+pct+'%"></div></div></div>';
+    }).join('');
+    html+='<div class="compare-cta">';
+    if(loggedIn){
+      html+='<a href="/live-ia" class="btn btn-prim btn-sm">Voir le verdict du Concile IA →</a>';
+    } else {
+      html+='<button type="button" class="btn btn-prim btn-sm" onclick="openModal()">🔓 Débloquer le verdict du Concile IA sur ce match</button>';
+      html+='<div class="compare-cta-note">Gratuit à la création du compte — aucune carte bancaire requise.</div>';
+    }
+    html+='</div>';
+    box.innerHTML=html;
+  } catch(e){ box.innerHTML='<div class="empty-note">Erreur de chargement, réessaie.</div>'; }
+}
+loadCompareList();
 
 /* ══ PICK GRATUIT DU JOUR ══ */
 async function loadPick(){

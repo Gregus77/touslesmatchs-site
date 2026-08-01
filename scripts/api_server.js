@@ -3051,6 +3051,12 @@ async function fetchTeamStatistics(leagueId, season, teamId) {
       gaAvg: parseFloat(r.goals?.against?.average?.total ?? 0) || 0,
       cleanSheet: r.clean_sheet?.total ?? 0,
       failedToScore: r.failed_to_score?.total ?? 0,
+      // Splits domicile/exterieur — utilises par le Comparateur de matchs
+      // (demande de Greg le 01/08/2026), pas seulement le total.
+      winsHome: r.fixtures?.wins?.home ?? 0,
+      winsAway: r.fixtures?.wins?.away ?? 0,
+      playedHome: r.fixtures?.played?.home ?? 0,
+      playedAway: r.fixtures?.played?.away ?? 0,
     };
     teamStatsCache.set(ck, { data: out, ts: Date.now() });
     return out;
@@ -3076,6 +3082,140 @@ async function fetchStandings(leagueId, season) {
     return out;
   } catch (e) { console.error("[standings]", e.message); return null; }
 }
+
+// ── Comparateur de matchs — outil d'acquisition gratuit (demande de Greg,
+// 01/08/2026). Barres 0-10 basées uniquement sur des stats réelles (H2H,
+// stats saison, classement) — jamais de chiffre inventé. Gratuit et
+// accessible sans compte : le but est de faire jouer le visiteur avec
+// plusieurs matchs pour le retenir sur le site, avant de le pousser vers
+// l'inscription pour débloquer le verdict du Concile.
+let _compareListCache = { ts: 0, data: [] };
+async function getComparableFixtures() {
+  if (Date.now() - _compareListCache.ts < 30 * 60000) return _compareListCache.data;
+  if (!API_SPORTS_KEY) return _compareListCache.data;
+  const list = [];
+  try {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
+    const [dataToday, dataTomorrow] = await Promise.all([
+      httpGet(`https://v3.football.api-sports.io/fixtures?date=${today}&status=NS`, { "x-apisports-key": API_SPORTS_KEY }),
+      httpGet(`https://v3.football.api-sports.io/fixtures?date=${tomorrow}&status=NS`, { "x-apisports-key": API_SPORTS_KEY }),
+    ]);
+    const all = [...(dataToday.response || []), ...(dataTomorrow.response || [])];
+    const inWindow = all.filter(f => {
+      const h = (new Date(f.fixture.date).getTime() - Date.now()) / 3600000;
+      return h > 0 && h <= 36;
+    });
+    for (const f of inWindow) {
+      const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football" };
+      if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
+      list.push({
+        fixtureId: f.fixture.id,
+        home: f.teams.home.name, away: f.teams.away.name,
+        homeId: f.teams.home.id, awayId: f.teams.away.id,
+        leagueId: f.league.id, season: f.league.season,
+        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
+        kickoff: f.fixture.date,
+        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+      });
+      if (list.length >= 15) break;
+    }
+  } catch (e) { console.error("[match-compare] liste:", e.message); }
+  list.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+  _compareListCache = { ts: Date.now(), data: list };
+  return list;
+}
+
+// Score 0-10 : proximité de la zone "chaude" du classement (relégation OU
+// montée/Europe, ~15% du nombre d'équipes en haut et en bas). Purement
+// positionnel, basé sur le classement réel — pas une estimation de forme.
+function stakesScore(rank, total) {
+  if (!rank || !total) return null;
+  const zoneSize = Math.max(1, Math.round(total * 0.15));
+  const distTop = rank - 1;
+  const distBottom = total - rank;
+  const distToHotZone = Math.min(Math.max(0, distTop - zoneSize + 1), Math.max(0, distBottom - zoneSize + 1));
+  return Math.max(0, Math.min(10, 10 - distToHotZone));
+}
+
+const _matchCompareCache = new Map();
+async function computeMatchCompare(fixtureId) {
+  const cacheKey = String(fixtureId);
+  const cached = _matchCompareCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < 3 * 3600 * 1000) return cached.data;
+
+  const list = await getComparableFixtures();
+  const fx = list.find(f => String(f.fixtureId) === cacheKey);
+  if (!fx) return null;
+
+  const [homeStats, awayStats, standings, h2h] = await Promise.all([
+    fetchTeamStatistics(fx.leagueId, fx.season, fx.homeId),
+    fetchTeamStatistics(fx.leagueId, fx.season, fx.awayId),
+    fetchStandings(fx.leagueId, fx.season),
+    fetchH2H({ source: "api-sports", sport: "Football", homeId: fx.homeId, awayId: fx.awayId }),
+  ]);
+
+  const formWinsScore = (form) => {
+    if (!form) return null;
+    const wins = (form.match(/W/g) || []).length;
+    return Math.round((wins / form.length) * 10);
+  };
+  const homeRank = standings?.rows.find(r => r.teamId === fx.homeId)?.rank || null;
+  const awayRank = standings?.rows.find(r => r.teamId === fx.awayId)?.rank || null;
+  const totalTeams = standings?.total || null;
+  const homeStakes = stakesScore(homeRank, totalTeams);
+  const awayStakes = stakesScore(awayRank, totalTeams);
+  const stakes = (homeStakes != null && awayStakes != null) ? Math.max(homeStakes, awayStakes) : (homeStakes ?? awayStakes);
+
+  const bars = [];
+  if (homeStats && homeStats.playedHome) {
+    bars.push({ key: "home_win", label: "Victoire " + fx.home + " (à domicile, cette saison)", value: Math.round((homeStats.winsHome / homeStats.playedHome) * 10) });
+  }
+  if (awayStats && awayStats.playedAway) {
+    bars.push({ key: "away_win", label: "Victoire " + fx.away + " (à l'extérieur, cette saison)", value: Math.round((awayStats.winsAway / awayStats.playedAway) * 10) });
+  }
+  const homeForm = formWinsScore(homeStats?.form);
+  if (homeForm != null) bars.push({ key: "home_form", label: "Forme récente — " + fx.home + " (5 derniers matchs)", value: homeForm });
+  const awayForm = formWinsScore(awayStats?.form);
+  if (awayForm != null) bars.push({ key: "away_form", label: "Forme récente — " + fx.away + " (5 derniers matchs)", value: awayForm });
+  if (stakes != null) bars.push({ key: "stakes", label: "Enjeu du match (position au classement)", value: Math.round(stakes) });
+  if (h2h) {
+    bars.push({ key: "h2h_ht", label: "But en 1ère mi-temps (historique du duel)", value: Math.round(h2h.htGoalPct / 10) });
+    bars.push({ key: "h2h_btts", label: "Les deux équipes marquent (historique du duel)", value: Math.round(h2h.bttsPct / 10) });
+  }
+
+  const result = {
+    fixtureId: fx.fixtureId, home: fx.home, away: fx.away, competition: fx.competition,
+    kickoff: fx.kickoff, home_logo: fx.home_logo, away_logo: fx.away_logo,
+    h2hCount: h2h ? h2h.n : 0, bars,
+  };
+  _matchCompareCache.set(cacheKey, { ts: Date.now(), data: result });
+  return result;
+}
+
+app.get("/match-compare-list", async (req, res) => {
+  try {
+    const list = await getComparableFixtures();
+    res.json({ ok: true, matches: list.map(f => ({
+      fixtureId: f.fixtureId, home: f.home, away: f.away, competition: f.competition,
+      kickoff: f.kickoff, home_logo: f.home_logo, away_logo: f.away_logo,
+    })) });
+  } catch (e) { res.json({ ok: true, matches: [] }); }
+});
+
+app.get("/match-compare", async (req, res) => {
+  try {
+    const fixtureId = req.query.fixtureId;
+    if (!fixtureId) return res.status(400).json({ ok: false, error: "fixtureId requis" });
+    const data = await computeMatchCompare(fixtureId);
+    if (!data) return res.json({ ok: false, error: "Données indisponibles pour ce match." });
+    res.json({ ok: true, match: data });
+  } catch (e) {
+    console.error("[match-compare] endpoint:", e.message);
+    res.status(500).json({ ok: false, error: "internal_error" });
+  }
+});
 
 async function fetchInjuries(match) {
   if (!API_SPORTS_KEY || !match.fixtureId) return null;
