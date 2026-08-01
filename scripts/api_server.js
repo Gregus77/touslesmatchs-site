@@ -830,6 +830,7 @@ const FOOTBALL_DATA_KEY = process.env.FOOTBALL_DATA_KEY || process.env.FOOTBALL_
 const THESPORTSDB_API_KEY = process.env.THESPORTSDB_API_KEY || "";
 const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || "";
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || "";
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || "";
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || "";
 const STRIPE_PRICE_ID_CARTE    = process.env.STRIPE_PRICE_ID_CARTE    || process.env.STRIPE_PRICE_CARTE   || "";
@@ -8465,6 +8466,105 @@ async function sendOutperformEmails() {
     console.error("[outperform-email]", e.message);
   }
 }
+
+// ── Miniature quotidienne "combien on aurait gagné" (Telegram, minuit) ──────
+// Meme source de verite que outperformEmailHtml (tierEligible/tierStatsFor,
+// mise fixe 10€) — jamais un chiffre invente. Genere une image via Gemini
+// (Nano Banana), jamais une capture de bookmaker existant (Winamax etc, voir
+// discussion du 01/08/2026 : reprendre leur logo/mascotte serait une
+// contrefacon en plus d'un risque de conformite ANJ). Verrou de lancement :
+// DAILY_GAIN_IMAGE_PUBLIC="1" bascule de l'apercu admin vers les vrais
+// groupes Standard/Premium/Elite, une fois le rendu valide par Greg.
+const DAILY_GAIN_IMAGE_PUBLIC = process.env.DAILY_GAIN_IMAGE_PUBLIC === "1";
+
+function sendTelegramPhoto(chatId, imageBuffer, caption) {
+  return new Promise((resolve) => {
+    if (!TELEGRAM_BOT_TOKEN || !chatId || !imageBuffer) return resolve(false);
+    const boundary = "tlmGainImg" + Date.now();
+    const nl = "\r\n";
+    const head = [];
+    head.push(`--${boundary}${nl}Content-Disposition: form-data; name="chat_id"${nl}${nl}${chatId}${nl}`);
+    if (caption) {
+      head.push(`--${boundary}${nl}Content-Disposition: form-data; name="caption"${nl}${nl}${caption}${nl}`);
+      head.push(`--${boundary}${nl}Content-Disposition: form-data; name="parse_mode"${nl}${nl}HTML${nl}`);
+    }
+    head.push(`--${boundary}${nl}Content-Disposition: form-data; name="photo"; filename="gain.png"${nl}Content-Type: image/png${nl}${nl}`);
+    const body = Buffer.concat([Buffer.from(head.join(""), "utf8"), imageBuffer, Buffer.from(`${nl}--${boundary}--${nl}`, "utf8")]);
+    const req = https.request({
+      hostname: "api.telegram.org",
+      path: `/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`,
+      method: "POST",
+      headers: { "Content-Type": `multipart/form-data; boundary=${boundary}`, "Content-Length": body.length },
+    }, (res) => {
+      let data = "";
+      res.on("data", (c) => (data += c));
+      res.on("end", () => {
+        try { resolve(!!JSON.parse(data).ok); } catch { resolve(false); }
+      });
+    });
+    req.on("error", () => resolve(false));
+    req.write(body);
+    req.end();
+  });
+}
+
+async function generateGainImage(tier, stats, dateLabel) {
+  if (!GOOGLE_API_KEY) return null;
+  const fmtEur = (n) => (n >= 0 ? "+" : "") + Math.round(n) + "€";
+  const prompt = `Cree une image verticale format story (1080x1920), fond degrade bleu nuit tres sombre et violet neon, ambiance application premium type fintech moderne. INTERDIT : logo ou mascotte d'un bookmaker existant (Winamax, Betclic, PMU, Unibet...), jetons de casino, des, symboles de jeu d'argent, humain photorealiste.
+En haut, texte tres lisible en majuscules : "${TIER_LABEL[tier].toUpperCase()}".
+Au centre, ENORME et tres lisible, le montant "${fmtEur(stats.roi)}" en blanc avec un halo neon ${stats.roi >= 0 ? "vert emeraude" : "rouge"}.
+Juste en dessous, plus petit : "${stats.wins} gagnees / ${stats.losses} perdues sur ${stats.total} selections".
+Sous ce texte, encore plus petit : "Simulation mise fixe 10 euros par selection".
+Un petit robot/IA stylise amical et minimaliste (pas humain, pas de mascotte de marque) peut apparaitre, avec quelques confettis discrets si le montant est positif, aucun element si negatif.
+Tout en bas de l'image, tres petit mais parfaitement lisible : "18+ Jeu responsable - joueurs-info-service.fr - TousLesMatchs - Simulation informative, aucun gain garanti."
+Texte entierement en francais, sans faute d'orthographe, sans watermark d'IA generative.`;
+
+  try {
+    const resp = await httpPostStrict(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GOOGLE_API_KEY}`,
+      { contents: [{ parts: [{ text: prompt }] }] },
+      {}
+    );
+    const parts = resp?.candidates?.[0]?.content?.parts || [];
+    const imgPart = parts.find((p) => p.inlineData?.data || p.inline_data?.data);
+    const b64 = imgPart?.inlineData?.data || imgPart?.inline_data?.data;
+    if (!b64) { console.error(`[gain-image] ${tier}: pas de donnees image dans la reponse Gemini`); return null; }
+    return Buffer.from(b64, "base64");
+  } catch (e) {
+    console.error(`[gain-image] ${tier} generation:`, e.message);
+    return null;
+  }
+}
+
+async function sendDailyGainImages() {
+  try {
+    const yesterday = new Date(Date.now() - 86400000);
+    const dateStr = yesterday.toISOString().slice(0, 10);
+    const dateLabel = yesterday.toLocaleDateString("fr-FR", { day: "2-digit", month: "long" });
+    const rows = fetchResolvedRowsForDate(dateStr);
+    const targets = {
+      standard: TELEGRAM_STANDARD_CHANNEL_ID,
+      premium: TELEGRAM_PREMIUM_CHANNEL_ID,
+      elite: TELEGRAM_ELITE_CHANNEL_ID,
+    };
+    for (const tier of ["standard", "premium", "elite"]) {
+      const stats = tierStatsFor(rows.filter((r) => tierEligible(r, tier)));
+      if (!stats.total) { console.log(`[gain-image] ${tier}: rien a montrer le ${dateLabel}, skip`); continue; }
+      const img = await generateGainImage(tier, stats, dateLabel);
+      if (!img) continue;
+      const destChat = DAILY_GAIN_IMAGE_PUBLIC ? targets[tier] : TELEGRAM_ADMIN_CHAT_ID;
+      if (!destChat) continue;
+      const caption = DAILY_GAIN_IMAGE_PUBLIC
+        ? `📊 <b>${TIER_LABEL[tier]}</b> — récap du ${dateLabel}`
+        : `📊 <b>${TIER_LABEL[tier]}</b> — récap du ${dateLabel}\n<i>Aperçu admin (DAILY_GAIN_IMAGE_PUBLIC=off) — pas encore envoyé aux abonnés.</i>`;
+      const ok = await sendTelegramPhoto(destChat, img, caption);
+      console.log(`[gain-image] ${tier}: ${ok ? "envoyé" : "échec envoi"} ${DAILY_GAIN_IMAGE_PUBLIC ? "(public)" : "(aperçu admin)"}`);
+    }
+  } catch (e) {
+    console.error("[gain-image] sendDailyGainImages:", e.message);
+  }
+}
 app.get("/tier-stats", (req, res) => {
   try {
     const rows = db.prepare(`
@@ -9921,6 +10021,13 @@ ${recentLines}
   }
 }
 
+app.get("/admin/send-gain-images", async (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  sendDailyGainImages().catch((e) => console.error("[gain-image] admin trigger:", e.message));
+  res.json({ ok: true, message: `Génération lancée (${DAILY_GAIN_IMAGE_PUBLIC ? "envoi public" : "aperçu admin"}) — vérifie Telegram dans 10-30s.` });
+});
+
 app.get("/admin/send-stats-bilan", async (req, res) => {
   const { email, code } = req.query;
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
@@ -11340,6 +11447,7 @@ let _lastDailyReportDate = "";
 let _lastWeeklyReportDate = "";
 let _lastBilanDate = "";
 let _lastDailyPickSeedDate = "";
+let _lastGainImageDate = "";
 
 // Garantit un pick du jour daté d'AUJOURD'HUI en ligne au plus tard vers
 // 4h-5h du matin (demande de Greg le 01/08/2026). L'auto-concile ne
@@ -11734,6 +11842,14 @@ function checkAnalyticsSchedule() {
   const hour = parseInt(timePart.split(":")[0]);
   const day = now.toLocaleDateString("en-US", { timeZone: "Europe/Paris", weekday: "long" });
   const todayKey = now.toISOString().slice(0, 10);
+
+  // Miniature "combien on aurait gagne" a minuit (demande de Greg, 01/08/2026).
+  // Envoyee en apercu admin tant que DAILY_GAIN_IMAGE_PUBLIC n'est pas active.
+  if (hour === 0 && _lastGainImageDate !== todayKey) {
+    _lastGainImageDate = todayKey;
+    console.log("[gain-image] Génération miniatures quotidiennes (minuit)...");
+    sendDailyGainImages();
+  }
 
   // Garantit un pick du jour daté d'aujourd'hui en ligne au plus tard 4h-5h
   // du matin (demande de Greg, 01/08/2026) — voir seedDailyPickIfMissingForToday.
