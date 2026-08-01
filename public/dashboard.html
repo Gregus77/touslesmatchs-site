@@ -58,6 +58,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .dash-plan.free{background:rgba(120,120,140,.1);color:var(--muted2);border:1px solid rgba(120,120,140,.2)}
 .dash-plan.premium{background:rgba(99,102,241,.1);color:var(--indigo2);border:1px solid rgba(99,102,241,.25)}
 .dash-plan.elite{background:rgba(124,58,237,.1);color:#c084fc;border:1px solid rgba(124,58,237,.25)}
+.dash-status{display:inline-block;font-size:11px;font-weight:700;padding:4px 12px;border-radius:6px;margin-left:8px;text-transform:uppercase;letter-spacing:.06em}
+.dash-status.active{background:rgba(16,185,129,.1);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.dash-status.expired,.dash-status.cancelled{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.25)}
+.dash-renewal{font-size:12.5px;color:var(--muted);margin-top:8px}
+.dash-actions{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0 36px}
+.dash-action-btn{background:var(--bg2);border:1px solid var(--b2);color:var(--text);font-size:13px;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:border-color .15s}
+.dash-action-btn:hover{border-color:rgba(99,102,241,.4)}
 
 .kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:40px}
 .kpi{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:22px;text-align:center}
@@ -149,7 +156,14 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   <div id="dash-section" style="display:none">
     <div class="dash-header">
       <div class="dash-welcome" id="dash-welcome">Mon espace</div>
-      <div><span class="dash-email" id="dash-email"></span><span class="dash-plan" id="dash-plan"></span></div>
+      <div><span class="dash-email" id="dash-email"></span><span class="dash-plan" id="dash-plan"></span><span class="dash-status" id="dash-status"></span></div>
+      <div class="dash-renewal" id="dash-renewal" style="display:none"></div>
+    </div>
+
+    <div class="dash-actions" id="dash-actions" style="display:none">
+      <button class="dash-action-btn" id="telegram-btn" onclick="openTelegram()">📩 Rejoindre le canal Telegram</button>
+      <a class="dash-action-btn" href="mailto:hermes@touslesmatchs.com?subject=Gestion%20de%20mon%20abonnement">⚙️ Gérer / résilier mon abonnement</a>
+      <a class="dash-action-btn" href="/#plans">↗️ Changer d'offre</a>
     </div>
 
     <div class="kpi-grid">
@@ -164,9 +178,9 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
     </div>
     <div class="tier-note" id="tier-note"></div>
 
-    <div class="section-title" style="margin-top:40px">Résultats vérifiés</div>
-    <div class="empty-state" style="text-align:left;padding:20px 0">
-      L'historique personnel détaillé arrive bientôt ici. En attendant, tous les résultats — gagnés et perdus, sans exception — sont publics sur <a href="/performances" style="color:var(--cyan)">la page Performances</a>.
+    <div class="section-title" style="margin-top:40px">Mes derniers résultats</div>
+    <div id="recent-results" class="history-list">
+      <div class="empty-state">Chargement...</div>
     </div>
 
     <div class="upgrade-box" id="upgrade-box" style="display:none">
@@ -288,22 +302,46 @@ function fmtDate(d) {
   } catch(e) { return d; }
 }
 
+var STATUS_LABELS = { active: 'Actif', expired: 'Expiré', cancelled: 'Résilié', free: '' };
+
 function loadDashboard() {
   document.getElementById('auth-section').style.display = 'none';
   document.getElementById('dash-section').style.display = 'block';
   document.getElementById('nav-logout').style.display = 'block';
 
-  fetch('/api/auth/session', { headers: { 'Authorization': 'Bearer ' + token } })
+  fetch('/api/auth/dashboard-data', { headers: { 'Authorization': 'Bearer ' + token } })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (!d.ok) { logout(); return; }
     document.getElementById('dash-email').textContent = d.email;
     var plan = d.plan || 'free';
+    var status = d.status || 'free';
     var isElite = plan === 'elite' || plan === 'vip';
+    var isPaidActive = plan !== 'free' && status === 'active';
+
     var planEl = document.getElementById('dash-plan');
     var planLabel = isElite ? 'Elite/VIP' : plan === 'premium' ? 'Premium' : plan === 'standard' ? 'Standard' : 'Gratuit';
     planEl.textContent = planLabel;
     planEl.className = 'dash-plan ' + (isElite ? 'elite' : plan === 'premium' ? 'premium' : 'standard');
+
+    var statusEl = document.getElementById('dash-status');
+    if (STATUS_LABELS[status]) {
+      statusEl.textContent = STATUS_LABELS[status];
+      statusEl.className = 'dash-status ' + status;
+      statusEl.style.display = 'inline-block';
+    } else {
+      statusEl.style.display = 'none';
+    }
+
+    var renewalEl = document.getElementById('dash-renewal');
+    if (d.expires_at) {
+      renewalEl.textContent = (status === 'active' ? 'Prochain renouvellement : ' : 'Accès jusqu\'au : ') + fmtDate(d.expires_at);
+      renewalEl.style.display = 'block';
+    } else {
+      renewalEl.style.display = 'none';
+    }
+
+    document.getElementById('dash-actions').style.display = isPaidActive ? 'flex' : 'none';
 
     var used = d.credits_used || 0;
     var max = d.credits_max;
@@ -320,11 +358,52 @@ function loadDashboard() {
     } else if (plan === 'premium') {
       document.getElementById('upgrade-box').style.display = 'block';
       document.getElementById('upgrade-text').textContent = 'Passe à Elite pour 30 analyses/jour et les alertes Signal Fort.';
+    } else {
+      document.getElementById('upgrade-box').style.display = 'none';
     }
 
     renderTierStats(plan);
+    renderRecentResults(d.recent || [], isPaidActive);
   })
   .catch(function() { logout(); });
+}
+
+function renderRecentResults(recent, isPaidActive) {
+  var el = document.getElementById('recent-results');
+  if (!isPaidActive) {
+    el.innerHTML = '<div class="empty-state" style="text-align:left;padding:20px 0">Réservé aux abonnés actifs. Tous les résultats — gagnés et perdus, sans exception — restent publics sur <a href="/performances" style="color:var(--cyan)">la page Performances</a>.</div>';
+    return;
+  }
+  if (!recent.length) {
+    el.innerHTML = '<div class="empty-state">Aucun résultat pour le moment.</div>';
+    return;
+  }
+  el.innerHTML = recent.map(function(a) {
+    var win = a.outcome === 'win';
+    return '<div class="h-item">' +
+      '<div class="h-match">' +
+        '<div class="h-teams">' + esc(a.home) + ' — ' + esc(a.away) + (a.score ? ' (' + esc(a.score) + ')' : '') + '</div>' +
+        '<div class="h-meta">' + esc(a.bet) + ' · ' + esc(a.confidence) + '/100</div>' +
+      '</div>' +
+      '<div class="h-date" style="color:' + (win ? 'var(--green)' : 'var(--red)') + '">' + (win ? '✓ Gagné' : '✗ Perdu') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openTelegram() {
+  var btn = document.getElementById('telegram-btn');
+  btn.disabled = true; btn.textContent = 'Génération du lien...';
+  fetch('/api/auth/telegram-link', { headers: { 'Authorization': 'Bearer ' + token } })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    btn.disabled = false; btn.textContent = '📩 Rejoindre le canal Telegram';
+    if (!d.ok) { alert(d.error || 'Lien indisponible.'); return; }
+    window.open(d.link, '_blank');
+  })
+  .catch(function() {
+    btn.disabled = false; btn.textContent = '📩 Rejoindre le canal Telegram';
+    alert('Erreur réseau.');
+  });
 }
 
 // Quels paliers un plan débloque : le palier Standard sert de vitrine/preuve

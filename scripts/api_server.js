@@ -7340,6 +7340,29 @@ function lookupAccountByEmail(email) {
   }
 }
 
+// Statut complet (Phase 3) : contrairement a lookupAccountByEmail (qui ne
+// regarde que les codes actifs), celle-ci regarde aussi les codes desactives
+// pour distinguer "jamais abonne" de "resilie" — necessaire pour l'affichage
+// du vrai statut dans /dashboard.
+function lookupFullAccountStatus(email) {
+  try {
+    const cdb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = cdb.prepare(
+      "SELECT plan, active, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? ORDER BY id DESC LIMIT 1"
+    ).get(email);
+    cdb.close();
+    if (!row) return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: null };
+    let status;
+    if (!row.active) status = "cancelled";
+    else if (row.expires_at && new Date(row.expires_at) < new Date()) status = "expired";
+    else status = "active";
+    return { status, plan: row.plan, expires_at: row.expires_at, credits_max: row.credits_max, credits_used: row.credits_used, created_at: row.created_at };
+  } catch (e) {
+    console.error("[otp] lookupFullAccountStatus:", e.message);
+    return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: null };
+  }
+}
+
 app.post("/auth/request-otp", async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -7455,6 +7478,64 @@ app.get("/auth/session", requireSession, (req, res) => {
       created_at: account?.created_at || null,
     });
   } catch (e) {
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+// ── Phase 3 : vrai contenu du dashboard client ────────────────────────────────
+app.get("/auth/dashboard-data", requireSession, (req, res) => {
+  try {
+    const email = req.session.email;
+    const account = lookupFullAccountStatus(email);
+    const isPaid = ["standard", "premium", "vip", "elite"].includes(account.plan) && account.status === "active";
+
+    // Derniers resultats : uniquement si abonnement actif — jamais de bet/raison
+    // envoye au navigateur pour un compte non autorise, meme masque visuellement
+    // (regle explicite de Greg, Phase 3). Seuil de confiance identique a celui
+    // qui declenche reellement un signal (SIGNAL_FLOOR), pas un seuil different
+    // par palier — les paliers sont cumulatifs sur un socle commun.
+    let recent = [];
+    if (isPaid) {
+      const rows = db.prepare(`
+        SELECT home, away, competition, sport, best_bet, confidence, outcome,
+               final_score_home, final_score_away, analysed_at
+        FROM concile_analyses
+        WHERE outcome IN ('win','loss') AND confidence >= ?
+        ORDER BY analysed_at DESC LIMIT 10
+      `).all(SIGNAL_FLOOR);
+      recent = dedupeAnalysesByMatch(rows).slice(0, 10).map(r => ({
+        home: r.home, away: r.away, competition: r.competition, sport: r.sport,
+        bet: r.best_bet, confidence: r.confidence, outcome: r.outcome,
+        score: (r.final_score_home != null && r.final_score_away != null) ? `${r.final_score_home}-${r.final_score_away}` : null,
+        analysed_at: r.analysed_at,
+      }));
+    }
+
+    res.json({
+      ok: true, email,
+      plan: account.plan, status: account.status,
+      expires_at: account.expires_at, created_at: account.created_at,
+      credits_max: account.credits_max, credits_used: account.credits_used,
+      recent,
+    });
+  } catch (e) {
+    console.error("[dashboard-data]", e.message);
+    res.status(500).json({ ok: false, error: "Erreur serveur" });
+  }
+});
+
+// Lien Telegram genere a la demande, uniquement pour un abonnement actif —
+// jamais pre-genere ni expose a qui que ce soit d'autre.
+app.get("/auth/telegram-link", requireSession, async (req, res) => {
+  try {
+    const account = lookupFullAccountStatus(req.session.email);
+    const isPaid = ["standard", "premium", "vip", "elite"].includes(account.plan) && account.status === "active";
+    if (!isPaid) return res.json({ ok: false, error: "Abonnement actif requis." });
+    const link = await createPremiumInviteLink(req.session.email, account.plan);
+    if (!link) return res.json({ ok: false, error: "Lien indisponible pour le moment, réessaie plus tard." });
+    res.json({ ok: true, link });
+  } catch (e) {
+    console.error("[telegram-link]", e.message);
     res.status(500).json({ ok: false, error: "Erreur serveur" });
   }
 });
