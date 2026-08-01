@@ -2958,8 +2958,11 @@ async function computeUpcomingPicks() {
       });
     }
   } catch (e) { console.error("[upcoming-picks]", e.message); }
-  picks.sort((a, b) => b.confidence - a.confidence);
-  const top = picks.slice(0, 6);
+  // Tri chronologique (pas par confiance) : Greg veut que quelqu'un qui ne
+  // se connecte qu'une fois dans la journée voie tout le programme qualifié
+  // à venir, dans l'ordre, plutôt que juste les mieux notés (01/08/2026).
+  picks.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+  const top = picks.slice(0, 12);
   _upcomingPicksCache = { ts: Date.now(), data: top };
   return top;
 }

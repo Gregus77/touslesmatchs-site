@@ -553,6 +553,16 @@ function preselectFromFixtureParam() {
   });
   if (!target) return;
   _fixturePreselectDone = true;
+  // Le filtre par defaut est "Football" — un match d'un autre sport ouvert
+  // depuis "Voir" sur l'accueil ne se rendait jamais dans le DOM, donc le
+  // scrollIntoView ne trouvait rien (signale par Greg le 01/08/2026). On
+  // bascule sur "Tous les sports" pour garantir que le match cible est visible
+  // quel que soit son sport.
+  if (currentFilter !== "all" && target.sport && target.sport !== currentFilter) {
+    currentFilter = "all";
+    document.querySelectorAll(".filter-btn").forEach(function(b){ b.classList.toggle("active", b.dataset.filter === "all"); });
+    renderMatches();
+  }
   var matchId = target.id || (target.home + "_" + target.away).replace(/\s+/g, "_");
   setTimeout(function() {
     var card = document.querySelector('[data-id="' + CSS.escape(matchId) + '"]');
