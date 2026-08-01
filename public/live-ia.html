@@ -285,10 +285,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <!-- LEGENDE CONFIANCE -->
 <div class="conf-legend">
-  <span class="conf-legend-item"><span class="conf-dot green"></span>≥85% Fiable</span>
-  <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84% Bon</span>
-  <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74% Risqué</span>
-  <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65% Prudence</span>
+  <span class="conf-legend-item"><span class="conf-dot green"></span>≥85/100 Fiable</span>
+  <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84/100 Bon</span>
+  <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74/100 Risqué</span>
+  <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
 </div>
 
 <!-- FILTERS -->
@@ -681,7 +681,7 @@ function renderMatches() {
       html += '  <div class="mc-analysis-text">' + escHtml(m.pinnedReason || "") + '</div>';
       if (m.pinnedBet) {
         var pcm = confMeta(m.pinnedConfidence);
-        html += '<div class="conf-badge ' + pcm.cls + '"><span class="conf-dot ' + pcm.cls + '"></span>🎯 ' + escHtml(m.pinnedBet) + (m.pinnedConfidence ? " · " + m.pinnedConfidence + "% · " + pcm.label : "") + '</div>';
+        html += '<div class="conf-badge ' + pcm.cls + '"><span class="conf-dot ' + pcm.cls + '"></span>🎯 ' + escHtml(m.pinnedBet) + (m.pinnedConfidence ? " · " + m.pinnedConfidence + "/100 · " + pcm.label : "") + '</div>';
       }
       html += '</div>';
     }
@@ -783,7 +783,7 @@ function requestAnalysis(btn, matchId, home, away) {
         + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
         + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
         + noSignalHtml
-        + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "% · " + cm.label : "") + '</div>' : "")
+        + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
         + coteHtml
         + arjelHtml
         + agentsHtml
@@ -1034,7 +1034,7 @@ function renderHistoryList(analyses, append) {
     html += '  <div class="h-bottom">';
     html += '    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
     html += '      <span class="h-bet">🎯 ' + escHtml(a.bet || 'Analyse') + '</span>';
-    html += '      <span class="h-conf">⚡ ' + (a.confidence || '?') + '%</span>';
+    html += '      <span class="h-conf">⚡ ' + (a.confidence || '?') + '/100</span>';
     if (scoreHtml) html += '      ' + scoreHtml;
     html += '    </div>';
     html += '    ' + outcomeHtml;

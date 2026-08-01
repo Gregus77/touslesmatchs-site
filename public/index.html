@@ -28,7 +28,7 @@
         { "@type": "Question", "name": "Comment fonctionne le Concile IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Cinq intelligences artificielles indépendantes (Perplexity, DeepSeek, Mistral, Cohere, Qwen) analysent chaque match séparément à partir des statistiques, de l'historique et du contexte. Un vote de convergence établit un score de confiance. Le signal n'est publié que si ce score dépasse le seuil du palier." } },
         { "@type": "Question", "name": "Que représente le score de confiance ?", "acceptedAnswer": { "@type": "Answer", "text": "C'est l'indicateur interne utilisé par le Concile pour classer ses analyses selon le niveau de convergence entre les IA. Il n'est pas une garantie de résultat : l'issue d'un événement sportif reste incertaine." } },
         { "@type": "Question", "name": "Combien de sélections vais-je recevoir ?", "acceptedAnswer": { "@type": "Answer", "text": "Les volumes affichés (3, 10 ou 30 par jour) sont des maximums, pas des garanties. Le nombre réel dépend des matchs qui atteignent le seuil de confiance du palier ce jour-là." } },
-        { "@type": "Question", "name": "Quelle différence entre Standard, Premium et Elite-VIP ?", "acceptedAnswer": { "@type": "Answer", "text": "Confiance minimum 82% sur les trois paliers. Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour, inclut Standard. Elite-VIP (29,90€/mois) couvre tout le vivier diffusable et le multisport, jusqu'à 30 signaux/jour, inclut Premium." } },
+        { "@type": "Question", "name": "Quelle différence entre Standard, Premium et Elite-VIP ?", "acceptedAnswer": { "@type": "Answer", "text": "Score de confiance minimum 82/100 sur les trois paliers. Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour, inclut Standard. Elite-VIP (29,90€/mois) couvre tout le vivier diffusable et le multisport, jusqu'à 30 signaux/jour, inclut Premium." } },
         { "@type": "Question", "name": "Comment fonctionne le compte gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Le compte gratuit donne accès au pick gratuit du jour, aux résultats publics, à un aperçu des sélections Standard de la veille, et à la liste des matchs en direct — sans carte bancaire." } },
         { "@type": "Question", "name": "Puis-je résilier mon abonnement ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les abonnements sont sans engagement et résiliables à tout moment depuis le portail Stripe." } },
         { "@type": "Question", "name": "Comment les résultats sont-ils calculés ?", "acceptedAnswer": { "@type": "Answer", "text": "Chaque sélection est enregistrée avec sa cote réelle au moment de l'envoi. Le résultat (gagné, perdu) est vérifié après la fin officielle du match. Le winrate et le profit simulé sont calculés uniquement sur les sélections terminées, gagnées comme perdues." } }
@@ -378,7 +378,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="plan-price">4.90€ <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span>Jusqu'à 3 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Confiance minimum 82%, sélection la plus stricte du jour</li>
+        <li><span class="plan-check">✓</span>Score de confiance minimum 82/100, sélection la plus stricte du jour</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block">Choisir Standard</a>
@@ -391,7 +391,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="plan-price">14.90€ <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span>Jusqu'à 10 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Confiance minimum 82%, sélection élargie</li>
+        <li><span class="plan-check">✓</span>Score de confiance minimum 82/100, sélection élargie</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <a href="https://buy.stripe.com/9B600jgrW3Bi63W0uG3VC08" target="_blank" class="btn btn-prim btn-block">Choisir Premium</a>
@@ -404,7 +404,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
       <div class="plan-price">29.90€ <span>/mois</span></div>
       <ul class="plan-feats">
         <li><span class="plan-check">✓</span>Jusqu'à 30 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Confiance minimum 82%, tout le vivier multisport</li>
+        <li><span class="plan-check">✓</span>Score de confiance minimum 82/100, tout le vivier multisport</li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin:-4px 0 12px">🎁 1 mois offert pour ton 1er abonnement Elite-VIP. Parraine un ami (n'importe quelle formule) : vous recevez chacun 1 mois offert en plus.</div>
@@ -791,7 +791,7 @@ async function loadUpcoming(){
     if(!picks.length){
       var s=d.stats;
       var detail=(s&&s.totalFixtures)
-        ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre seuil de 82% de confiance pour l\'instant.'
+        ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (82/100) pour l\'instant.'
         : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
       box.innerHTML='<div class="empty-note">'+detail+'<br>'+
         'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
@@ -806,7 +806,7 @@ async function loadUpcoming(){
       try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       var right=p.locked
         ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'
-        : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'%</div>';
+        : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'/100</div>';
       return '<div class="upcoming-item">'+
         '<div class="upcoming-info">'+
           '<div class="upcoming-teams">'+icon+' '+(flag?flag+' ':'')+esc(p.home)+' — '+esc(p.away)+'</div>'+
@@ -880,7 +880,7 @@ async function loadPick(){
       '</div>'+
       scoreHtml+
       '<div class="pick-bet">'+(showBet?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
-      '<div class="pick-conf">'+esc(p.confidence)+'%</div>'+
+      '<div class="pick-conf">'+esc(p.confidence)+'/100</div>'+
       lockHtml+
       '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le pick du jour par email</button>';
   } catch(e){

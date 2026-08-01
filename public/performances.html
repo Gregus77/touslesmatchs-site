@@ -274,7 +274,7 @@ async function doLogin(){
     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
     <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
   </div>
-  <div class="tier-note" id="tier-note">Les paliers sont cumulatifs, confiance minimum 82 % sur les trois : Standard = la sélection la plus stricte du jour (cote réelle ANJ), Premium l'élargit, Elite regroupe tout le vivier diffusable.</div>
+  <div class="tier-note" id="tier-note">Les paliers sont cumulatifs, score de confiance minimum 82/100 sur les trois : Standard = la sélection la plus stricte du jour (cote réelle ANJ), Premium l'élargit, Elite regroupe tout le vivier diffusable.</div>
 
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Analyses</div></div>
@@ -290,10 +290,10 @@ async function doLogin(){
 
   <div class="section-title">Historique daté</div>
   <div class="conf-legend">
-    <span class="conf-legend-item"><span class="conf-dot green"></span>≥85% Fiable</span>
-    <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84% Bon</span>
-    <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74% Risqué</span>
-    <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65% Prudence</span>
+    <span class="conf-legend-item"><span class="conf-dot green"></span>≥85/100 Fiable</span>
+    <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84/100 Bon</span>
+    <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74/100 Risqué</span>
+    <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
   </div>
   <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
   <div class="section-hint" id="history-hint">Chaque ligne = une analyse. Cote réelle ANJ quand disponible, sinon estimation marché.</div>
@@ -443,7 +443,7 @@ function renderRow(a) {
   var cote = (a.cote != null && a.cote > 1) ? '@' + Number(a.cote).toFixed(2) : '';
   var cm = confMeta(a.confidence);
   var confPillHtml = a.confidence != null
-    ? '<span class="conf-pill ' + cm.cls + '"><span class="conf-dot"></span>' + Math.round(a.confidence) + '% · ' + cm.label + '</span>'
+    ? '<span class="conf-pill ' + cm.cls + '"><span class="conf-dot"></span>' + Math.round(a.confidence) + '/100 · ' + cm.label + '</span>'
     : '';
 
   var gainHtml = '';

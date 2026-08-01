@@ -99,7 +99,7 @@ ${bodyHtml}
     const dateFr = fmtDateFr(item.date);
     const resolved = item.outcome === "win" || item.outcome === "loss";
     const title = `Pronostic ${item.home} - ${item.away}${item.competition ? " (" + item.competition + ")" : ""} | Analyse IA`;
-    const description = `Analyse IA de ${item.home} contre ${item.away}${dateFr ? " du " + dateFr : ""} : verdict du Conseil (${item.bet}), niveau de confiance ${item.confidence}% et cote. Le Concile de 5 IA décrypte le match.`;
+    const description = `Analyse IA de ${item.home} contre ${item.away}${dateFr ? " du " + dateFr : ""} : verdict du Conseil (${item.bet}), score de confiance ${item.confidence}/100 et cote. Le Concile de 5 IA décrypte le match.`;
     const canonical = `${SITE}/pronostic/${matchSlug(item)}`;
     const schema = { "@context": "https://schema.org", "@type": "SportsEvent",
       name: `${item.home} - ${item.away}`, sport: item.sport || "Soccer",
@@ -4188,8 +4188,8 @@ Réponds en JSON pur (pas de markdown):
       const awayEsc = escTgHtml(match.away);
       const compEsc = escTgHtml(match.competition || match.league || match.sport || "");
       const betEsc = escTgHtml(analysisResult.best_bet);
-      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${confDot} ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Confiance : ${confDot} <b>${analysisResult.confidence}%</b>${coteSig}${arjelAvgLine}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${confDot} ${analysisResult.confidence}%</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Confiance : ${confDot} <b>${analysisResult.confidence}%</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>${coteSig}${arjelAvgLine}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
@@ -6740,7 +6740,7 @@ function buildNurtureJ5Html() {
   const winsBlock = recentWins.length > 0
     ? recentWins.map(r => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04)">
         <span style="font-size:16px">✅</span>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#eceaf4">${r.home} vs ${r.away}</div><div style="font-size:11px;color:#7b82a0">${r.final_score_home}-${r.final_score_away} · ${r.confidence}% confiance</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#eceaf4">${r.home} vs ${r.away}</div><div style="font-size:11px;color:#7b82a0">${r.final_score_home}-${r.final_score_away} · score de confiance ${r.confidence}/100</div></div>
         <div style="font-size:13px;font-weight:800;color:#10b981">GAGNÉ</div>
       </div>`).join("")
     : `<div style="font-size:13px;color:#a8aec8;text-align:center;padding:12px">Le Concile IA analyse des dizaines de matchs chaque semaine.</div>`;
@@ -6880,13 +6880,13 @@ async function sendSignalFortBilanTelegram() {
   const recentLines = stats.recent.slice(0, 10).map(r => {
     const icon = r.outcome === "win" ? "✅" : "❌";
     const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
-    return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}%`;
+    return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}/100`;
   }).join("\n");
 
   const threshold = getAdaptiveSignalThreshold();
-  const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}% de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
+  const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}/100 de score de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — ${stats.total} signaux analysés`;
 
-  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}% de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
+  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}/100 de score de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Concile IA — TousLesMatchs`;
 
   // Bilan de résultats : tous les paliers payants le reçoivent, à l'identique.
   await sendToPaidChannels(premiumMsg, { tag: "signal-fort-bilan" });
@@ -7012,7 +7012,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
     `💡 Analyse IA : <b>${analysis.best_bet}${minuteStr}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
+    `📊 Score de confiance : <b>${analysis.confidence}/100</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
     outcome === "win" && hasReal
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
@@ -7030,7 +7030,7 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
     analysis.competition ? `🏆 ${analysis.competition}` : "",
     `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Confiance : <b>${analysis.confidence}%</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
+    `📊 Score de confiance : <b>${analysis.confidence}/100</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
     ``,
     outcome === "win" && hasReal
       ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
@@ -9983,7 +9983,7 @@ app.post("/internal/pick-notify", async (req, res) => {
       <div style="font-size:20px;font-weight:800;color:#eceaf4">${pick.prono || pick.bet || ""}</div>
       <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap">
         <span style="font-size:13px;color:#22d3ee">📊 Cote : <strong>${pick.cote}</strong></span>
-        <span style="font-size:13px;color:#10b981">✅ Confiance : <strong>${pick.confidenceTg || pick.confidence+"/10" || ""}</strong></span>
+        <span style="font-size:13px;color:#10b981">✅ Score de confiance : <strong>${pick.confidenceTg || pick.confidence+"/10" || ""}</strong></span>
       </div>
     </div>
     ${pick.raison ? `<div style="font-size:13px;color:#a8aec8;line-height:1.6;font-style:italic;border-left:2px solid rgba(99,102,241,.4);padding-left:12px">${pick.raison}</div>` : ""}
@@ -10299,7 +10299,7 @@ app.post("/internal/signal-notify", async (req, res) => {
         <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#10b981">🚨 Signal fort détecté</div>
         <div style="font-size:11px;color:#7b82a0">${signal.competition || signal.sport || ""}</div>
       </div>
-      <div style="margin-left:auto;background:${confColor}18;border:1px solid ${confColor};border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:${confColor}">${conf}%</div>
+      <div style="margin-left:auto;background:${confColor}18;border:1px solid ${confColor};border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:${confColor}">${conf}/100</div>
     </div>
     <div style="font-size:20px;font-weight:900;color:#eceaf4;margin-bottom:6px">${logoHtml}${signal.home} vs ${signal.away}</div>
     ${signal.minute ? `<div style="font-size:12px;color:#22d3ee;margin-bottom:12px">⏱ ${signal.minute}' en cours${signal.score_home != null ? " · Score : " + signal.score_home + "-" + signal.score_away : ""}</div>` : ""}
@@ -10323,7 +10323,7 @@ app.post("/internal/signal-notify", async (req, res) => {
     const emails = [...new Set(rows.map(r => r.email).filter(Boolean))];
     for (const email of emails) {
       try {
-        await brevoSendEmail(email, `🚨 Signal fort ${conf}% — ${signal.home} vs ${signal.away} (${signal.sport || "Sport"})`, htmlContent);
+        await brevoSendEmail(email, `🚨 Signal fort ${conf}/100 — ${signal.home} vs ${signal.away} (${signal.sport || "Sport"})`, htmlContent);
         sent++;
       } catch (e) {
         console.error(`[signal-notify] email to ${email}:`, e.message);
@@ -10350,12 +10350,12 @@ app.post("/internal/signal-notify", async (req, res) => {
         <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#f59e0b">🚨 Signal fort détecté</div>
         <div style="font-size:11px;color:#7b82a0">${signal.competition || signal.sport || ""}</div>
       </div>
-      <div style="margin-left:auto;background:${confColor}18;border:1px solid ${confColor};border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:${confColor}">${conf}%</div>
+      <div style="margin-left:auto;background:${confColor}18;border:1px solid ${confColor};border-radius:10px;padding:4px 12px;font-size:14px;font-weight:900;color:${confColor}">${conf}/100</div>
     </div>
     <div style="font-size:20px;font-weight:900;color:#eceaf4;margin-bottom:6px">${logoHtml}${signal.home} vs ${signal.away}</div>
     ${signal.minute ? `<div style="font-size:12px;color:#22d3ee;margin-bottom:12px">⏱ ${signal.minute}' en cours</div>` : ""}
     <div style="background:rgba(79,70,229,.12);border:1px solid rgba(79,70,229,.25);border-radius:10px;padding:16px;text-align:center">
-      <div style="font-size:14px;color:#a8aec8;margin-bottom:8px">Le Concile IA a identifié une analyse à <strong style="color:#eceaf4">${conf}% de confiance</strong></div>
+      <div style="font-size:14px;color:#a8aec8;margin-bottom:8px">Le Concile IA a identifié une analyse à <strong style="color:#eceaf4">${conf}/100 de score de confiance</strong></div>
       <div style="font-size:16px;font-weight:800;color:#6366f1">🔒 Analyse réservée aux abonnés</div>
     </div>
   </div>
@@ -10373,7 +10373,7 @@ app.post("/internal/signal-notify", async (req, res) => {
         let freeSent = 0;
         for (const fe of freeEmails.slice(0, 200)) {
           try {
-            await brevoSendEmail(fe, `🚨 Signal fort ${conf}% détecté — ${signal.home} vs ${signal.away}`, teaserHtml);
+            await brevoSendEmail(fe, `🚨 Signal fort ${conf}/100 détecté — ${signal.home} vs ${signal.away}`, teaserHtml);
             freeSent++;
           } catch (_) {}
         }
@@ -10383,8 +10383,8 @@ app.post("/internal/signal-notify", async (req, res) => {
 
     const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
-    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Confiance : <b>${conf}%</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}%</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Score de confiance : <b>${conf}/100</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
     // Signal de niveau Premium : Premium et Elite le reçoivent toujours (modèle
     // imbriqué), Standard uniquement s'il atteint son seuil plus exigeant.
     await sendToPaidChannels(tgPremiumText, { tag: "signal-notify", includeStandard: (Number(conf) || 0) >= STANDARD_MIN_CONF });

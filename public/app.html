@@ -254,7 +254,7 @@
         + '<div class="row"><div><div class="teams">' + esc(a) + ' — ' + esc(b) + '</div>'
         + '<div class="comp">' + esc(p.competition || "") + (p.time ? ' · ' + esc(p.time) : '') + '</div></div></div>'
         + (conf ? '<div class="conf-bar"><div class="conf-fill" style="width:' + Math.min(100, conf) + '%"></div></div>'
-                + '<div class="lbl" style="margin-top:6px">Confiance ' + conf + '%</div>' : '')
+                + '<div class="lbl" style="margin-top:6px">Score de confiance ' + conf + '/100</div>' : '')
         + '<div class="verdict">'
         + (locked
             ? '<div class="lbl">Sélection du Concile</div><div class="val">🔒 Réservée aux membres</div>'
