@@ -11071,6 +11071,13 @@ app.get("/t", (req, res) => {
   res.send(TRACKING_GIF);
 });
 
+// Grille tarifaire actuelle (CGV du 14/07/2026) — source unique reutilisee
+// par le rapport quotidien ET l'hebdo. L'hebdo utilisait jusqu'ici des prix
+// perimes (9.90/19.90 au lieu de 4.90/14.90/29.90, cle "standard" absente) :
+// le CA/MRR affiches a Greg etaient sous-estimes. Constate lors de la
+// Phase 6 (rapport quotidien enrichi) du 01/08/2026.
+const PLAN_PRICES = { standard: 4.90, premium: 14.90, vip: 29.90, elite: 29.90 };
+
 // ── Analytics — daily visitor report (23:00 Paris) ──────────────────────────
 function getParisHour() {
   return new Date().toLocaleString("en-US", { timeZone: "Europe/Paris", hour: "numeric", hour12: false });
@@ -11115,16 +11122,84 @@ function buildDailyVisitorReport() {
     .map(([p, c]) => `  ${p}: ${c} vues`)
     .join("\n");
 
+  // ── Volet business (Phase 6, 01/08/2026) ──────────────────────────────────
+  // Repose entierement sur des donnees DEJA collectees ailleurs (aucune nouvelle
+  // table) : signups depuis leads.json, connexions depuis la table sessions
+  // (OTP), evenements Stripe reellement traites depuis stripe_processed_events
+  // (qui sert deja de verrou d'idempotence webhook, double usage en journal),
+  // abonnes actifs + MRR depuis codes.db. Les clics bookmakers et les vues de
+  // la section tarifs ne sont PAS inclus : aucune instrumentation frontend ne
+  // les capture aujourd'hui (le pixel /t ne logue que des chargements de page
+  // entiers), ce serait un chantier a part, pas juste une lecture de donnees
+  // existantes.
+  let signupsToday = 0;
+  try {
+    const leadsData = loadLeads();
+    signupsToday = leadsData.leads.filter(l => (l.created_at || "").slice(0, 10) === today).length;
+  } catch {}
+
+  let loginsToday = 0;
+  try {
+    loginsToday = db.prepare("SELECT COUNT(DISTINCT email) c FROM sessions WHERE date(created_at) = ?").get(today)?.c || 0;
+  } catch {}
+
+  let stripeLines = "  Aucun événement";
+  try {
+    const evRows = db.prepare(`
+      SELECT event_type, COUNT(*) c FROM stripe_processed_events
+      WHERE date(processed_at) = ? GROUP BY event_type ORDER BY c DESC
+    `).all(today);
+    const evLabels = {
+      "checkout.session.completed": "Nouveaux paiements",
+      "invoice.paid": "Renouvellements",
+      "invoice.payment_failed": "Paiements refusés",
+      "charge.refunded": "Remboursements",
+      "customer.subscription.updated": "Changements de palier",
+      "customer.subscription.deleted": "Résiliations effectives",
+    };
+    if (evRows.length) {
+      stripeLines = evRows.map(r => `  ${evLabels[r.event_type] || r.event_type}: ${r.c}`).join("\n");
+    }
+  } catch (e) { console.error("[analytics] stripe events:", e.message); }
+
+  let tiersLines = "  Aucun abonné actif";
+  let mrr = 0;
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const tierRows = codesDb.prepare(`
+      SELECT plan, COUNT(*) c FROM codes
+      WHERE active = 1 AND plan != 'free' AND (expires_at IS NULL OR expires_at > datetime('now'))
+      GROUP BY plan
+    `).all();
+    codesDb.close();
+    if (tierRows.length) {
+      tiersLines = tierRows.map(r => {
+        const price = PLAN_PRICES[r.plan] || 0;
+        mrr += price * r.c;
+        return `  ${r.plan.toUpperCase()}: ${r.c} (${(price * r.c).toFixed(2)}€)`;
+      }).join("\n");
+    }
+  } catch (e) { console.error("[analytics] tiers query:", e.message); }
+
   return `📊 <b>RAPPORT VISITEURS — ${today}</b>
 
 👥 <b>Visiteurs uniques :</b> ${uniqueVisitors}
 👁 <b>Pages vues :</b> ${totalViews}
+📧 <b>Nouveaux emails captés :</b> ${signupsToday}
+🔑 <b>Connexions (comptes distincts) :</b> ${loginsToday}
 
 🔗 <b>Sources :</b>
 ${sourcesLines || "  Aucune visite"}
 
 📄 <b>Pages :</b>
 ${pagesLines || "  Aucune visite"}
+
+💳 <b>Événements Stripe du jour :</b>
+${stripeLines}
+
+👑 <b>Abonnés actifs par palier :</b>
+${tiersLines}
+💰 <b>MRR actuel :</b> ${mrr.toFixed(2)}€
 
 ━━━━━━━━━━━━━━━━━━
 🤖 Hermès Analytics — Rapport quotidien`;
@@ -11174,10 +11249,9 @@ async function buildWeeklyMarketingReport() {
       GROUP BY plan
     `).all(weekAgo);
     codesDb.close();
-    const prices = { carte: 1, premium: 9.90, vip: 19.90, elite: 19.90 };
     subs.forEach(s => {
       newSubs += s.cnt;
-      revenue += (prices[s.plan] || 0) * s.cnt;
+      revenue += (PLAN_PRICES[s.plan] || 0) * s.cnt;
     });
   } catch (e) {
     console.error("[analytics] codes query:", e.message);
