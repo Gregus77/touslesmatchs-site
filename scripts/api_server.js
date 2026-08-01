@@ -7293,6 +7293,24 @@ function hashOtp(code) {
   return crypto.createHash("sha256").update(code).digest("hex");
 }
 
+// La table `codes` vit dans CODES_DB_PATH (codes.db), pas dans DB_PATH
+// (tlm.db) — interroger `codes` via la connexion `db` principale echoue
+// silencieusement ("no such table"). Constate le 01/08/2026 lors du premier
+// test reel de /auth/verify-otp.
+function lookupAccountByEmail(email) {
+  try {
+    const cdb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = cdb.prepare(
+      "SELECT plan, expires_at, credits_max, credits_used FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
+    ).get(email);
+    cdb.close();
+    return row || null;
+  } catch (e) {
+    console.error("[otp] lookupAccountByEmail:", e.message);
+    return null;
+  }
+}
+
 app.post("/auth/request-otp", async (req, res) => {
   const email = String(req.body?.email || "").trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -7362,9 +7380,7 @@ app.post("/auth/verify-otp", (req, res) => {
 
     // Plan actuel : source de verite = table codes, alimentee par le webhook
     // Stripe — le nouveau systeme de connexion ne cree ni ne devine aucun droit.
-    const account = db.prepare(
-      "SELECT plan, expires_at, credits_max, credits_used FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
-    ).get(email);
+    const account = lookupAccountByEmail(email);
 
     console.log(`[otp] connexion réussie: ${email}`);
     res.json({ ok: true, token, email, plan: account?.plan || "free" });
@@ -7400,9 +7416,7 @@ app.post("/auth/logout", (req, res) => {
 
 app.get("/auth/session", requireSession, (req, res) => {
   try {
-    const account = db.prepare(
-      "SELECT plan, expires_at, credits_max, credits_used FROM codes WHERE email = ? AND active = 1 ORDER BY id DESC LIMIT 1"
-    ).get(req.session.email);
+    const account = lookupAccountByEmail(req.session.email);
     res.json({
       ok: true, email: req.session.email,
       plan: account?.plan || "free",
