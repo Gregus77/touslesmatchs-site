@@ -5769,7 +5769,15 @@ async function resolveStalePredictions() {
         resolvedMatches++;
       }
     }
-    if (resolvedMatches) console.log(`[catch-up] ${resolvedMatches}/${stale.length} matchs en attente résolus (football-data + api-sports)`);
+    if (resolvedMatches) {
+      console.log(`[catch-up] ${resolvedMatches}/${stale.length} matchs en attente résolus (football-data + api-sports)`);
+      // Propage immediatement le score au pick du jour au lieu d'attendre le
+      // prochain passage horaire de refreshDailyPickFromDB — sinon un match
+      // resolu ici pouvait mettre jusqu'a ~1h20 (20 min de cycle + 1h de
+      // refresh) avant d'apparaitre sur le site, au-dela du delai d'1h maximum
+      // demande par Greg le 01/08/2026.
+      try { refreshDailyPickFromDB(); } catch (e) { console.error("[catch-up] refresh pick du jour:", e.message); }
+    }
   } catch (e) {
     console.error("[catch-up] resolveStalePredictions:", e.message);
   } finally {
@@ -10718,6 +10726,57 @@ function sendWeeklyMarketingReport() {
 let _lastDailyReportDate = "";
 let _lastWeeklyReportDate = "";
 let _lastBilanDate = "";
+let _lastDailyPickSeedDate = "";
+
+// Garantit un pick du jour daté d'AUJOURD'HUI en ligne au plus tard vers
+// 4h-5h du matin (demande de Greg le 01/08/2026). L'auto-concile ne
+// travaille que sur des matchs déjà EN COURS : très tôt le matin, il n'y a
+// souvent encore aucune analyse live datée du jour, et le pick du jour
+// restait alors celui de la veille jusqu'à ce qu'un match démarre dans la
+// journée. On sème donc, seulement si rien n'existe encore pour aujourd'hui,
+// un pick à partir du pool pré-match H2H (déjà filtré ligues fiables +
+// seuil 82%, même pipeline que "Matchs à venir" — zéro coût IA).
+async function seedDailyPickIfMissingForToday() {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  try {
+    const _db = new Database(DB_PATH, { readonly: true });
+    const hasToday = _db.prepare(
+      "SELECT 1 FROM concile_analyses WHERE date(analysed_at) = ? AND confidence >= ? LIMIT 1"
+    ).get(todayISO, PUBLISHED_MIN_CONFIDENCE);
+    _db.close();
+    if (hasToday) return; // un match du jour existe déjà, rien à semer
+
+    const DAILY_PICK_ALLOWED_BETS = new Set(["Victoire domicile", "Victoire extérieur", "BTTS Oui", "BTTS Non", "Under 2.5 buts"]);
+    const upcoming = await computeUpcomingPicks();
+    const seedable = upcoming.filter(p =>
+      (p.kickoff || "").slice(0, 10) === todayISO && DAILY_PICK_ALLOWED_BETS.has(p.bet)
+    );
+    if (!seedable.length) { console.log("[daily-pick] seed 4-5h : aucun candidat H2H pour aujourd'hui, pick inchangé"); return; }
+    const best = seedable[0];
+    const data = { currentPick: {
+      home: best.home, away: best.away, competition: best.competition, sport: best.sport,
+      date: todayISO, time: "", best_bet: best.bet, confidence: best.confidence,
+      cote: null, bookmaker: null, raison: "Statistique de confrontations directes (H2H) réelles.",
+      home_logo: best.home_logo || null, away_logo: best.away_logo || null,
+      home_form: null, away_form: null, home_goals_avg: null, away_goals_avg: null,
+      matchTime: best.kickoff || null, source: "auto-h2h-seed", publishedAt: new Date().toISOString(),
+      status: "upcoming", score: null,
+    } };
+    try { fs.writeFileSync(HERMES_PICKS_PATH, JSON.stringify(data, null, 2)); }
+    catch (e) { console.error("[daily-pick] seed ecriture:", e.message); return; }
+    try {
+      db.prepare(`
+        INSERT INTO daily_pick_log (date, home, away, competition, sport, bet, confidence, cote, outcome, final_score_home, final_score_away, home_logo, away_logo)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?)
+        ON CONFLICT(date) DO UPDATE SET
+          home=excluded.home, away=excluded.away, competition=excluded.competition, sport=excluded.sport,
+          bet=excluded.bet, confidence=excluded.confidence, cote=excluded.cote,
+          home_logo=excluded.home_logo, away_logo=excluded.away_logo
+      `).run(todayISO, best.home, best.away, best.competition, best.sport, best.bet, best.confidence, null, best.home_logo || null, best.away_logo || null);
+    } catch (e) { console.error("[daily-pick] seed log historique:", e.message); }
+    console.log(`[daily-pick] seed 4-5h: ${best.home} vs ${best.away} (${best.competition}) conf ${best.confidence}`);
+  } catch (e) { console.error("[daily-pick] seedDailyPickIfMissingForToday:", e.message); }
+}
 
 // ── Rapport de performance hebdo : où l'on gagne / où l'on perd ───────────────
 function buildPerformanceReport(days = 7) {
@@ -11062,6 +11121,13 @@ function checkAnalyticsSchedule() {
   const hour = parseInt(timePart.split(":")[0]);
   const day = now.toLocaleDateString("en-US", { timeZone: "Europe/Paris", weekday: "long" });
   const todayKey = now.toISOString().slice(0, 10);
+
+  // Garantit un pick du jour daté d'aujourd'hui en ligne au plus tard 4h-5h
+  // du matin (demande de Greg, 01/08/2026) — voir seedDailyPickIfMissingForToday.
+  if (hour === 4 && _lastDailyPickSeedDate !== todayKey) {
+    _lastDailyPickSeedDate = todayKey;
+    seedDailyPickIfMissingForToday();
+  }
 
   if (hour === 22 && _lastBilanDate !== todayKey) {
     _lastBilanDate = todayKey;
