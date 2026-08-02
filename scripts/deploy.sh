@@ -85,14 +85,21 @@ fi
 echo "▶ 7/7 — Garde-fou : test de fumée des endpoints critiques…"
 smoke_check() {
   local label="$1" url="$2"
-  local body
-  body="$(curl -sk --max-time 8 "$url" || echo '')"
-  if printf '%s' "$body" | grep -q '"ok":true'; then
-    echo "   ✅ $label"
-  else
-    echo "   ❌ $label — réponse: $(printf '%s' "$body" | head -c 200)"
-    SMOKE_FAILED=1
-  fi
+  local body attempt
+  # Jusqu'à 5 tentatives (5s d'écart) : une migration ponctuelle lourde au
+  # démarrage (ex: backfill sur des dizaines de milliers de lignes) peut
+  # retarder l'API de plus que le délai fixe d'avant — on ne veut pas
+  # confondre "encore en train de démarrer" avec "vraiment cassé".
+  for attempt in 1 2 3 4 5; do
+    body="$(curl -sk --max-time 8 "$url" || echo '')"
+    if printf '%s' "$body" | grep -q '"ok":true'; then
+      echo "   ✅ $label"
+      return 0
+    fi
+    [ "$attempt" -lt 5 ] && sleep 5
+  done
+  echo "   ❌ $label — réponse: $(printf '%s' "$body" | head -c 200)"
+  SMOKE_FAILED=1
 }
 SMOKE_FAILED=0
 smoke_check "current-pick"      "$DOMAIN/current-pick"
