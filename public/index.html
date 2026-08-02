@@ -358,6 +358,20 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
     </div>
   </div>
 
+  <!-- RANGEE 3.5 : CAPTURE EMAIL (active la sequence de nurturing J0/J+1/J+3 deja codee cote API,
+       jusque-la jamais branchee a aucun formulaire du site) -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card" id="email-capture-card">
+      <div class="pcard-title" style="margin-bottom:6px">Reçois le pick gratuit chaque matin par email</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Aucun spam, aucune carte bancaire — juste le pick du jour et les résultats vérifiés dans ta boîte mail.</div>
+      <form id="email-capture-form" style="display:flex;gap:10px;flex-wrap:wrap" onsubmit="return submitEmailCapture(event)">
+        <input class="modal-input" id="email-capture-input" type="email" placeholder="toi@exemple.com" autocomplete="email" required style="flex:1;min-width:200px">
+        <button type="submit" class="btn btn-prim" id="email-capture-btn" style="flex:0 0 auto">S'inscrire</button>
+      </form>
+      <div id="email-capture-msg" style="font-size:13px;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+
   <!-- RANGEE 4 : FORMULES (parcours principal : hero -> preuve -> pick gratuit -> formules) -->
   <div class="row row-4" id="plans">
     <div class="card plan">
@@ -778,6 +792,45 @@ async function loadProof(){
   } catch(e){ console.error('[proof]',e); }
 }
 loadProof();
+
+/* ══ CAPTURE EMAIL (active la sequence nurturing J0/J+1/J+3 deja codee cote API) ══ */
+function submitEmailCapture(ev) {
+  ev.preventDefault();
+  var input = document.getElementById('email-capture-input');
+  var btn = document.getElementById('email-capture-btn');
+  var msg = document.getElementById('email-capture-msg');
+  var email = (input.value || '').trim();
+  if (!email || email.indexOf('@') === -1) return false;
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+  fetch('/subscribe-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, source: 'homepage_capture', landingPage: location.pathname })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      msg.style.display = 'block';
+      if (d && d.ok) {
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✓ Inscrit ! Vérifie ta boîte mail (et les spams).';
+        input.value = '';
+      } else {
+        msg.style.color = 'var(--red)';
+        msg.textContent = (d && d.error) || "Une erreur est survenue, réessaie.";
+      }
+    })
+    .catch(function() {
+      msg.style.display = 'block';
+      msg.style.color = 'var(--red)';
+      msg.textContent = "Erreur de connexion, réessaie.";
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.textContent = "S'inscrire";
+    });
+  return false;
+}
 
 /* ══ MATCHS EN DIRECT ══ */
 var SPORT_ICO={Football:'⚽'};
