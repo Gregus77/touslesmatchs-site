@@ -5745,8 +5745,17 @@ function alreadySignaledToday(match) {
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
     const key = canonicalMatchKey(match.home, match.away);
+    // diffusion_block IS NULL, PAS signal_tier IS NOT NULL : signal_tier n'est
+    // qu'une CLASSIFICATION de confiance (computeSignalTier), posee des qu'un
+    // seuil est franchi, INDEPENDAMMENT du filtre qualite/cote/ligue/feminin
+    // qui vient apres. Bug reel deploye le 02/08/2026 : avec signal_tier, un
+    // match dont la 1ere passe etait classee "elite" mais bloquee par un
+    // filtre plus loin faisait croire aux passes suivantes qu'un signal etait
+    // "deja envoye", alors qu'aucun message n'etait jamais parti — plus aucun
+    // signal reel ne sortait. diffusion_block est ecrit APRES tous les
+    // filtres (null = vraiment diffuse, sinon le motif exact du blocage).
     const rows = db.prepare(
-      "SELECT home, away FROM concile_analyses WHERE date(analysed_at) = ? AND signal_tier IS NOT NULL"
+      "SELECT home, away FROM concile_analyses WHERE date(analysed_at) = ? AND diffusion_block IS NULL"
     ).all(todayStr);
     return rows.some((r) => canonicalMatchKey(r.home, r.away) === key);
   } catch (e) {
@@ -10184,19 +10193,17 @@ async function sendDailyResultsFreeChannel() {
   if (!TELEGRAM_CHANNEL_ID || !TELEGRAM_BOT_TOKEN) return false;
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
-    // signal_tier IS NOT NULL : seule condition fiable pour "reellement envoye
-    // a un abonne" (renseigne uniquement au moment de la diffusion reelle,
-    // voir plus haut dans le fichier). Sans ce filtre, le bilan melangeait des
-    // analyses internes jamais diffusees (confiance 55, sous tous les seuils)
-    // avec de vrais signaux, ce qui gonflait artificiellement le nombre de
-    // matchs affiches et faussait le winrate visible par les abonnes.
-    // Constate le 02/08/2026 sur le bilan du 01/08 (plusieurs lignes a
-    // confiance 55 n'ayant jamais pu declencher un signal reel).
+    // diffusion_block IS NULL, PAS signal_tier IS NOT NULL : signal_tier est
+    // une classification de confiance posee AVANT le filtre qualite/cote/
+    // ligue/feminin (voir alreadySignaledToday plus haut, correction du
+    // 02/08/2026 sur le meme malentendu — celui-la bloquait carrement tout
+    // signal reel). diffusion_block est ecrit APRES tous les filtres :
+    // null = vraiment diffuse, sinon le motif exact.
     const rows = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome, real_odd,
              final_score_home, final_score_away
       FROM concile_analyses
-      WHERE date(analysed_at) = ? AND outcome IN ('win','loss') AND signal_tier IS NOT NULL
+      WHERE date(analysed_at) = ? AND outcome IN ('win','loss') AND diffusion_block IS NULL
       ORDER BY analysed_at DESC
     `).all(todayStr);
 
