@@ -517,7 +517,24 @@ function selectTier(tier) {
   }
   if (tier === 'dailypick') { loadDailyPickHistory(); return; }
   renderKpis();
-  renderList();
+  ensureTierData(tier, 0);
+}
+
+// Les jours à faible confiance (peu de signaux ≥88/85), la première page de 50
+// lignes peut ne contenir aucune analyse d'un palier donné alors qu'il en
+// existe plus loin dans l'historique (les KPI, eux, portent sur tout
+// l'historique). On charge automatiquement des pages supplémentaires tant que
+// l'onglet sélectionné est vide, pour éviter un faux "Aucune analyse".
+function ensureTierData(tier, tries) {
+  if (currentTier !== tier) return; // l'utilisateur a changé d'onglet entre-temps
+  var rows = visibleRows();
+  if (rows.length > 0 || allAnalyses.length >= totalCount || tries >= 6) {
+    renderList();
+    return;
+  }
+  document.getElementById('history-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  currentOffset += pageSize;
+  fetchData(false).then(function () { ensureTierData(tier, tries + 1); });
 }
 
 function loadMore() {
@@ -541,7 +558,7 @@ function fetchData(initial) {
   var _email = localStorage.getItem('tlm_email');
   var _code = localStorage.getItem('tlm_code');
   var _authQs = (_email && _code) ? '&email=' + encodeURIComponent(_email) + '&code=' + encodeURIComponent(_code) : '';
-  fetch('/api/analysis-history?limit=' + pageSize + '&offset=' + currentOffset + _authQs)
+  return fetch('/api/analysis-history?limit=' + pageSize + '&offset=' + currentOffset + _authQs)
     .then(function(r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
