@@ -77,4 +77,35 @@ if [ "$BYTES" -lt "$MIN_BYTES" ] || [ "$HASMARKER" -lt 1 ]; then
   fail "Page servie invalide (${BYTES} o, marker=${HASMARKER}). Probable retour du bug site/. Vérifie le montage."
 fi
 
-echo "✅ Déploiement OK — bonne version en ligne — $(date '+%H:%M')"
+# ── G4 — Test de fumée : les endpoints critiques répondent-ils "ok":true ? ──
+# Ajouté le 02/08/2026 après un déploiement qui n'avait rien cassé côté code
+# mais qu'on a mis du temps à disculper faute de vérification automatique.
+# But : savoir en 10 secondes, à chaque déploiement, si quelque chose de
+# fonctionnel est cassé — avant que ce soit l'utilisateur qui le découvre.
+echo "▶ 7/7 — Garde-fou : test de fumée des endpoints critiques…"
+smoke_check() {
+  local label="$1" url="$2"
+  local body
+  body="$(curl -sk --max-time 8 "$url" || echo '')"
+  if printf '%s' "$body" | grep -q '"ok":true'; then
+    echo "   ✅ $label"
+  else
+    echo "   ❌ $label — réponse: $(printf '%s' "$body" | head -c 200)"
+    SMOKE_FAILED=1
+  fi
+}
+SMOKE_FAILED=0
+smoke_check "current-pick"      "$DOMAIN/current-pick"
+smoke_check "live-matches"      "$DOMAIN/live-matches"
+smoke_check "signal-fort-stats" "$DOMAIN/signal-fort-stats"
+smoke_check "analysis-history"  "$DOMAIN/api/analysis-history?limit=1"
+if [ -n "${ADMIN_EMAIL:-}" ] && [ -n "${ADMIN_CODE:-}" ]; then
+  smoke_check "agent-performance (admin)" "$DOMAIN/api/agent-performance?email=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" "$ADMIN_EMAIL")&code=$ADMIN_CODE"
+else
+  echo "   ⏭️  agent-performance ignoré (lance avec ADMIN_EMAIL=... ADMIN_CODE=... bash scripts/deploy.sh pour l'inclure)"
+fi
+if [ "$SMOKE_FAILED" -ne 0 ]; then
+  fail "Au moins un endpoint critique ne répond pas correctement après déploiement — vérifie les logs (docker logs touslesmatchs-api --tail 80) avant d'annoncer que c'est en ligne."
+fi
+
+echo "✅ Déploiement OK — bonne version en ligne, endpoints critiques vérifiés — $(date '+%H:%M')"
