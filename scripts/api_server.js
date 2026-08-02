@@ -3987,6 +3987,8 @@ RÈGLE CHAMPION : le marché "But en 1ère mi-temps" a un winrate historique pro
 
   // Charger les performances historiques pour pondérer le verdict du Chief
   const agentPerf = getAgentPerformance();
+  const agentMarketPerf = getAgentMarketPerformance();
+  const MIN_MARKET_SAMPLE = 20; // sous ce seuil, le winrate marché est trop bruité — on retombe sur le winrate global
 
   const agentMarketList = []; // avis multi-marchés de chaque agent (hors Chief)
 
@@ -4180,10 +4182,17 @@ Réponds en JSON pur (pas de markdown):
   const previousVotes = activedAgentResults.map((a) => {
     const p = agentPerf[a.name];
     const resolved = p ? p.resolved : 0;
-    const weight = resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50;
-    const perfNote = resolved >= 5
-      ? ` — historique: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
-      : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
+    const line = marketLineForBet(a.bet);
+    const marketStat = line ? agentMarketPerf[a.name]?.[line] : null;
+    const useMarket = marketStat && marketStat.total >= MIN_MARKET_SAMPLE;
+    const weight = useMarket
+      ? Math.max(10, Math.min(95, Math.round(marketStat.winrate)))
+      : (resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50);
+    const perfNote = useMarket
+      ? ` — historique sur ce marché précis "${a.bet}": ${Math.round(marketStat.winrate)}% winrate (${marketStat.total} résolus) → POIDS: ${weight}%`
+      : resolved >= 5
+        ? ` — historique global: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
+        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
     return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
   }).join("\n");
 
@@ -5548,6 +5557,35 @@ function getAgentPerformance() {
     console.error("[agent-perf] load:", e.message);
     return {};
   }
+}
+
+// Perf par agent × marché (Under/Over, BTTS, résultat, 1ère MT) — plus précis
+// que le winrate global d'un agent : une IA peut être forte sur "Victoire
+// domicile" et faible sur "BTTS". Alimente le POIDS envoyé au Chief.
+function getAgentMarketPerformance() {
+  try {
+    const rows = db.prepare(
+      "SELECT agent_name, market_line, total, winrate FROM ai_market_specialization"
+    ).all();
+    const perf = {};
+    rows.forEach(r => {
+      if (!perf[r.agent_name]) perf[r.agent_name] = {};
+      perf[r.agent_name][r.market_line] = { total: r.total, winrate: r.winrate };
+    });
+    return perf;
+  } catch (e) {
+    console.error("[agent-market-perf] load:", e.message);
+    return {};
+  }
+}
+const MARKET_LINE_BY_BET = {
+  "Over 2.5 buts": "buts", "Under 2.5 buts": "buts",
+  "BTTS Oui": "btts", "BTTS Non": "btts",
+  "Victoire domicile": "resultat", "Victoire extérieur": "resultat", "Match nul": "resultat",
+  "But en 1ère mi-temps": "mt1", "Aucun but en 1ère mi-temps": "mt1",
+};
+function marketLineForBet(bet) {
+  return MARKET_LINE_BY_BET[bet] || null;
 }
 
 function normalizeHistoryKey(s) {
