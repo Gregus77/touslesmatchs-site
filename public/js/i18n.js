@@ -39,7 +39,7 @@ const i18n = (function(){
       plan_standard_btn: "S’abonner — 4.90€/mois",
       plan_pro_desc: "Plus de volume exploitable : jusqu’à 10 signaux/jour, score de confiance ≥ 82/100, avant-match ou live.",
       plan_pro_btn: "S’abonner — 14.90€/mois",
-      plan_elite_desc: "Le radar complet multisport : jusqu’à 30 signaux/jour (foot, basket, hockey) + alertes prioritaires.",
+      plan_elite_desc: "Le radar complet football : jusqu’à 30 signaux/jour + alertes prioritaires.",
       plan_elite_btn: "S’abonner — 29.90€/mois",
       sec_how_eye: "Méthode",
       sec_how_title: "Le Concile ne devine pas.",

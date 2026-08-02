@@ -2521,9 +2521,11 @@ async function fetchFromApiSports() {
     }
   } catch(e) { console.error("[live-matches] API-Sports football:", e.message); }
 
-  // Basketball live
+  // Basketball live — desactive quand AUTO_CONCILE_MULTISPORT=0 (decision
+  // fondateur 02/08/2026 : focus football, ne plus gaspiller de requetes/tokens
+  // sur des sports dont aucune analyse n'est de toute facon diffusee).
   try {
-    if (!shouldSkipApiSportsSport("basketball") && !shouldSkipSecondarySportPoll("basketball")) {
+    if (AUTO_CONCILE_MULTISPORT && !shouldSkipApiSportsSport("basketball") && !shouldSkipSecondarySportPoll("basketball")) {
     const data = await httpGet("https://v1.basketball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("basketball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
@@ -2547,9 +2549,9 @@ async function fetchFromApiSports() {
     }
   } catch(e) { console.error("[live-matches] API-Sports basketball:", e.message); }
 
-  // Hockey live
+  // Hockey live — desactive quand AUTO_CONCILE_MULTISPORT=0 (voir basketball ci-dessus)
   try {
-    if (!shouldSkipApiSportsSport("hockey") && !shouldSkipSecondarySportPoll("hockey")) {
+    if (AUTO_CONCILE_MULTISPORT && !shouldSkipApiSportsSport("hockey") && !shouldSkipSecondarySportPoll("hockey")) {
     const data = await httpGet("https://v1.hockey.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("hockey", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 30).map((g) => ({
@@ -2577,7 +2579,7 @@ async function fetchFromApiSports() {
   // desactivation du 30/07/2026 n'existe plus.
   const BASEBALL_LIVE_ENABLED = true;
   try {
-    if (BASEBALL_LIVE_ENABLED && !shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
+    if (AUTO_CONCILE_MULTISPORT && BASEBALL_LIVE_ENABLED && !shouldSkipApiSportsSport("baseball") && !shouldSkipSecondarySportPoll("baseball")) {
     const data = await httpGet("https://v1.baseball.api-sports.io/games?live=all", { "x-apisports-key": API_SPORTS_KEY });
     if (!handleApiSportsErrors("baseball", data)) {
     const items = (data.response || []).filter(isApiSportsLiveGame).slice(0, 10).map((g) => ({
@@ -2652,7 +2654,9 @@ async function fetchFromTheSportsDb() {
   // Baseball reintegre le 01/08/2026 (decision fondateur) en meme temps que
   // BASEBALL_LIVE_ENABLED plus haut dans ce fichier : resolveStalePredictions
   // sait desormais resoudre ses issues.
-  const wanted = new Set(["Football", "Basketball", "Hockey", "Baseball"]);
+  const wanted = AUTO_CONCILE_MULTISPORT
+    ? new Set(["Football", "Basketball", "Hockey", "Baseball"])
+    : new Set(["Football"]);
   const results = raw
     .map((event) => normalizeTheSportsDbLiveEvent(event, event?.strSport))
     .filter((event) => event && wanted.has(event.sport));
@@ -8709,11 +8713,19 @@ function tierEligible(r, tier) {
   if (_ro < TIER_MIN_REAL_ODD || _ro > TIER_MAX_REAL_ODD) return false;
   const sport = String(r.sport || "Football").toLowerCase();
   const isFoot = sport.includes("foot");
-  const std = isFoot && conf >= STANDARD_MIN_CONF;
+  // Seuils DYNAMIQUES (getTierThresholds), pas les constantes figees
+  // STANDARD_MIN_CONF/PREMIUM_MIN_CONF/ELITE_MIN_CONF : la diffusion Telegram
+  // reelle (runAutoConcile, gradeStandard/gradePremium/gradeElite) utilise deja
+  // le seuil dynamique recalibre chaque jour. Avant ce correctif, /performances
+  // affichait un seuil Standard fige a 88 alors que la diffusion reelle
+  // tournait a 85 ce jour-la — les stats publiques ne refletaient donc pas ce
+  // que les abonnes recevaient vraiment (signale par Greg le 02/08/2026).
+  const TH = getTierThresholds();
+  const std = isFoot && conf >= TH.standard;
   if (tier === "standard") return std;
-  const prem = std || (isFoot && conf >= PREMIUM_MIN_CONF);
+  const prem = std || (isFoot && conf >= TH.premium);
   if (tier === "premium") return prem;
-  return prem || (ELITE_SPORTS.some(s => sport.includes(s)) && conf >= ELITE_MIN_CONF);
+  return prem || (ELITE_SPORTS.some(s => sport.includes(s)) && conf >= TH.elite);
 }
 function tierStatsFor(set) {
   let wins = 0, roi = 0;

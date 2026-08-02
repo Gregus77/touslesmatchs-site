@@ -25,10 +25,10 @@
     { "@type": "Question", "name": "Qui est le Concile Hermès ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent." } },
     { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
     { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Tous les résultats sont publics sur la page Performances. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-    { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Trois paliers sans engagement, score de confiance minimum 82/100 : Standard (jusqu'à 3 signaux/jour, sélection la plus stricte du jour), Premium (jusqu'à 10 signaux/jour, sélection élargie, inclut Standard), Elite/VIP (jusqu'à 30 signaux/jour multisport, tout le vivier diffusable, inclut Premium)." } },
+    { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Trois paliers sans engagement, score de confiance minimum 82/100 : Standard (jusqu'à 3 signaux/jour, sélection la plus stricte du jour), Premium (jusqu'à 10 signaux/jour, sélection élargie, inclut Standard), Elite/VIP (jusqu'à 30 signaux/jour, tout le vivier diffusable, inclut Premium)." } },
     { "@type": "Question", "name": "Quand les analyses sont-elles publiées ?", "acceptedAnswer": { "@type": "Answer", "text": "L'analyse du jour (pick quotidien) est publiée vers 12h (heure de Paris). Les analyses Live IA sont disponibles en temps réel pendant les matchs en direct, dès que la cote réelle du marché entre dans la fenêtre jouable (1.30 à 2.50)." } },
     { "@type": "Question", "name": "Pourquoi certains matchs en direct ne sont pas analysables ?", "acceptedAnswer": { "@type": "Answer", "text": "La sélection se fait sur la cote réelle du marché, pas sur la minute de jeu : un match n'est proposé que si sa cote réelle se situe entre 1.30 et 2.50. En dessous, il n'y a plus de valeur ; au-dessus, l'issue est trop incertaine. Un match trop avancé ou déjà plié voit naturellement sa cote sortir de cette fenêtre." } },
-    { "@type": "Question", "name": "Quels sports sont analysés ?", "acceptedAnswer": { "@type": "Answer", "text": "Football, Basketball et Hockey. Le football représente la majorité des analyses." } },
+    { "@type": "Question", "name": "Quels sports sont analysés ?", "acceptedAnswer": { "@type": "Answer", "text": "Le football uniquement." } },
     { "@type": "Question", "name": "Est-ce que TousLesMatchs garantit des gains ?", "acceptedAnswer": { "@type": "Answer", "text": "Non. Les analyses sont fournies à titre informatif. TousLesMatchs ne garantit aucun gain. Les jeux d'argent comportent des risques." } }
   ]
 }
@@ -226,7 +226,7 @@ async function doLogin(){
       Score de confiance minimum 82/100 sur les trois paliers.<br>
       <strong>Standard</strong> — jusqu'à 3 signaux/jour, sélection la plus stricte du jour, Telegram Standard.<br>
       <strong>Premium</strong> — jusqu'à 10 signaux/jour, sélection élargie, Telegram Premium, inclut Standard.<br>
-      <strong>Elite / VIP</strong> — jusqu'à 30 signaux/jour multisport, tout le vivier diffusable, Telegram Elite, inclut Premium.<br><br>
+      <strong>Elite / VIP</strong> — jusqu'à 30 signaux/jour, tout le vivier diffusable, Telegram Elite, inclut Premium.<br><br>
       Voir les tarifs à jour sur la <a href="/#plans" style="color:var(--cyan)">page d'accueil</a>. Paiement sécurisé par Stripe. Annulation possible à tout moment.
     </div>
   </div>
@@ -243,7 +243,7 @@ async function doLogin(){
 
   <div class="faq-item">
     <div class="faq-q" onclick="this.parentElement.classList.toggle('open')">Quels sports sont analysés ? <span class="faq-arrow">+</span></div>
-    <div class="faq-a">Football, Basketball et Hockey. Le football représente la majorité des analyses. Le Concile adapte sa méthode (marchés, statistiques clés) selon chaque sport.</div>
+    <div class="faq-a">Le football uniquement.</div>
   </div>
 
   <div class="faq-item">

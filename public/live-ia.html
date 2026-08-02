@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Live IA — TousLesMatchs</title>
-<meta name="description" content="Matchs en direct analysés par le Concile IA. Football, Basketball, Hockey — scores en temps réel.">
+<meta name="description" content="Matchs de football en direct analysés par le Concile IA — scores en temps réel.">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -151,13 +151,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .conf-legend-item .conf-dot{width:11px;height:11px;margin-right:0}
 
 /* Sport popup */
-.sport-popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:250;align-items:center;justify-content:center;padding:20px}
-.sport-popup-overlay.open{display:flex}
-.sport-popup{background:var(--bg2);border:1px solid var(--b2);border-radius:18px;padding:26px;max-width:380px;text-align:center}
-.sport-popup-icon{font-size:36px;margin-bottom:10px}
-.sport-popup-title{font-size:17px;font-weight:800;margin-bottom:8px}
-.sport-popup-text{font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:18px}
-.sport-popup-btn{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:11px 24px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer}
 
 /* History section */
 .history-section{max-width:900px;margin:0 auto;padding:0 16px 40px}
@@ -310,26 +303,13 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
 
 <!-- FILTERS -->
 <div class="filters" id="filters">
-  <button class="filter-btn" data-filter="all">Tous les sports</button>
   <button class="filter-btn active" data-filter="Football">&#9917; Football</button>
-  <button class="filter-btn" data-filter="Basketball">&#127936; Basketball</button>
-  <button class="filter-btn" data-filter="Hockey">&#127954; Hockey</button>
 </div>
 
 <!-- REFRESH -->
 <div class="refresh-bar" id="refresh-bar">
   Dernière mise à jour : <span id="last-update">—</span>
   <button onclick="loadMatches(true)">Actualiser</button>
-</div>
-
-<!-- SPORT POPUP (premiere visite) -->
-<div class="sport-popup-overlay" id="sport-popup-overlay">
-  <div class="sport-popup">
-    <div class="sport-popup-icon">⚽</div>
-    <div class="sport-popup-title">Football affiché par défaut</div>
-    <div class="sport-popup-text">Cette page affiche le football en priorité. Pour voir un autre sport (basket, hockey) ou tous les matchs en même temps, clique simplement sur le sport de ton choix dans la barre au-dessus.</div>
-    <button class="sport-popup-btn" onclick="closeSportPopup()">J'ai compris</button>
-  </div>
 </div>
 
 <!-- MATCHES -->
@@ -487,16 +467,7 @@ function confMeta(conf) {
     renderMatches();
   });
 
-  // Popup explicatif "foot par défaut" — une seule fois par visiteur.
-  if (!localStorage.getItem("tlm_sport_popup_seen")) {
-    setTimeout(function(){ document.getElementById("sport-popup-overlay").classList.add("open"); }, 600);
-  }
 })();
-
-function closeSportPopup() {
-  document.getElementById("sport-popup-overlay").classList.remove("open");
-  localStorage.setItem("tlm_sport_popup_seen", "1");
-}
 
 function onSearchInput(v) {
   searchTerm = String(v || "").trim().toLowerCase();
@@ -1085,7 +1056,7 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
   if (plan === 'premium' || plan === 'standard') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue — ton acces est actif !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite / VIP</b>, tu passes a <b style="color:#d4af37">30 signaux/jour multisport</b> + <b>alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — sans engagement, annulable a tout moment.</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite / VIP</b>, tu passes a <b style="color:#d4af37">30 signaux/jour</b> + <b>alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — sans engagement, annulable a tout moment.</div>' +
       '<a href="https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Elite / VIP — 29.90€/mois sans engagement</a>';
   } else if (plan === 'elite' || plan === 'vip') {
     upsellDiv.innerHTML = closeBtn +
