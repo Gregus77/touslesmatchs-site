@@ -1704,6 +1704,37 @@ const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX
 const AUTO_CONCILE_MIN_MINUTE = Math.max(1, Number(process.env.AUTO_CONCILE_MIN_MINUTE || 10));
 const AUTO_CONCILE_BUCKET_MINUTES = Math.max(5, Number(process.env.AUTO_CONCILE_BUCKET_MINUTES || 15));
 
+// ── Rationnement du quota gratuit API-Sports (02/08/2026) ────────────────────
+// Sans budget, le quota journalier (souvent ~100 requetes/jour sur un plan
+// gratuit) se vide en 1-2h sur une grosse journee de matchs, puis plus aucun
+// signal ne peut sortir le reste de la journee (constate le 02/08/2026 —
+// quota epuise des 14h). Faute de budget pour upgrader le plan tout de
+// suite, on etale la consommation heure par heure au lieu de la cramer d'un
+// coup : chaque heure ne peut consommer que sa part du budget quotidien.
+// Pas une solution au manque de quota (le total de signaux/jour reste
+// limite), juste un etalement pour ne pas mourir en milieu d'apres-midi.
+const API_SPORTS_DAILY_BUDGET = Math.max(1, Number(process.env.API_SPORTS_DAILY_BUDGET || 90));
+const API_SPORTS_HOURLY_BUDGET = Math.max(1, Math.ceil(API_SPORTS_DAILY_BUDGET / 24));
+db.exec(`
+  CREATE TABLE IF NOT EXISTS api_sports_usage (
+    bucket TEXT PRIMARY KEY,
+    count INTEGER DEFAULT 0
+  );
+`);
+function apiSportsBudgetOk() {
+  try {
+    const bucket = new Date().toISOString().slice(0, 13); // "YYYY-MM-DDTHH"
+    const row = db.prepare("SELECT count FROM api_sports_usage WHERE bucket = ?").get(bucket);
+    const used = row ? row.count : 0;
+    if (used >= API_SPORTS_HOURLY_BUDGET) return false;
+    db.prepare("INSERT INTO api_sports_usage (bucket, count) VALUES (?, 1) ON CONFLICT(bucket) DO UPDATE SET count = count + 1").run(bucket);
+    return true;
+  } catch (e) {
+    console.error("[api-sports-budget]", e.message);
+    return true; // en cas d'erreur de comptage, ne jamais bloquer un appel reel
+  }
+}
+
 function getTokenRow(userId) {
   return db.prepare("SELECT * FROM user_tokens WHERE user_id = ?").get(userId);
 }
@@ -2915,6 +2946,7 @@ async function fetchMatchStatsForMatch(match) {
   const fixtureId = getVerifiedFixtureId(match);
   if (!API_SPORTS_KEY) return buildStatsStatus(match, null, "api_sports_key_missing");
   if (!fixtureId) return buildStatsStatus(match, null, "missing_api_sports_fixture");
+  if (!apiSportsBudgetOk()) return buildStatsStatus(match, null, "api_sports_budget_horaire_atteint");
 
   const stats = await fetchMatchStats(fixtureId);
   if (!stats) return buildStatsStatus({ ...match, fixtureId }, null, "api_sports_stats_unavailable");
@@ -2932,6 +2964,9 @@ async function fetchH2H(match) {
   const ck = `h2h_${homeId}_${awayId}`;
   const cached = h2hCache.get(ck);
   if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
+  // Budget verifie APRES le cache : une paire deja connue (cache 6h) ne
+  // consomme aucun quota reseau, inutile de la bloquer.
+  if (!apiSportsBudgetOk()) return null;
 
   try {
     const data = await httpGet(
@@ -3212,6 +3247,10 @@ function stakeLabel(rank, total) {
 async function fetchDeepContext(match) {
   if (!DEEP_CONTEXT_ENABLED) return "";
   if (match.source !== "api-sports" || match.sport !== "Football" || !match.homeId || !match.awayId) return "";
+  // 4 appels potentiels (stats domicile/exterieur, classement, blessures) —
+  // un seul jeton de budget suffit a les autoriser ou les bloquer ensemble,
+  // pas la peine d'un jeton par sous-appel.
+  if (!apiSportsBudgetOk()) return "";
   try {
     const [homeStats, awayStats, standings, injuries] = await Promise.all([
       fetchTeamStatistics(match.leagueId, match.season, match.homeId),
