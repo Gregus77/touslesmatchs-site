@@ -476,6 +476,13 @@ ensureColumn("concile_analyses", "sig_sent_elite",    "INTEGER DEFAULT 0");
 ensureColumn("concile_analyses", "diffusion_block",   "TEXT DEFAULT NULL");
 // Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
 ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
+// Distingue les analyses live (auto-concile, en cours de match) des
+// analyses pre-match (H2H, "Matchs a venir"). Demande de Greg le
+// 02/08/2026 : comparer les vrais winrates des deux approches avant de
+// decider de donner plus de poids au pre-match (cotes plus grosses mais
+// moins de contexte disponible qu'en live). Defaut 'live' : couvre tout
+// l'historique existant, qui vient exclusivement du pipeline live.
+ensureColumn("concile_analyses", "source_type",       "TEXT DEFAULT 'live'");
 
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
@@ -2973,6 +2980,32 @@ async function fetchH2H(match) {
   }
 }
 
+// Enregistre un pick pré-match dans concile_analyses (source_type='prematch')
+// s'il n'y est pas déjà, pour qu'il entre dans le pipeline de résolution
+// automatique (resolveStalePredictions) au même titre qu'un signal live —
+// c'est ce qui permet de comparer plus tard un vrai winrate pré-match vs
+// live. Idempotent : computeUpcomingPicks tourne toutes les 30 min sur la
+// même fenêtre de 36h, sans ce garde-fou le même match serait ré-inséré à
+// chaque recalcul.
+function savePrematchPickIfNew(pick) {
+  try {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const matchKey = `prematch_${canonicalMatchKey(pick.home, pick.away)}_${todayStr}`;
+    const existing = db.prepare("SELECT id FROM concile_analyses WHERE match_key = ?").get(matchKey);
+    if (existing) return;
+    db.prepare(`
+      INSERT INTO concile_analyses
+        (match_key, home, away, competition, sport, best_bet, confidence,
+         raison, consensus_votes, source_type, home_logo, away_logo)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+    `).run(
+      matchKey, pick.home, pick.away, pick.competition, pick.sport,
+      pick.bet, pick.confidence, "Pick pré-match (H2H)", 0, "prematch",
+      pick.home_logo || null, pick.away_logo || null
+    );
+  } catch (e) { console.error("[upcoming-picks] savePrematchPickIfNew:", e.message); }
+}
+
 // ── Matchs à venir (pré-match) — demande de Greg le 31/07/2026 ───────────────
 // Contrairement au reste du Concile (analyse EN DIRECT, cote ARJEL réelle),
 // ces picks portent sur des matchs qui n'ont pas encore commencé : meilleures
@@ -3032,13 +3065,15 @@ async function computeUpcomingPicks() {
       ].filter(c => c.confidence >= PUBLISHED_MIN_CONFIDENCE).sort((a, b) => b.confidence - a.confidence);
       if (!candidates.length) continue;
       stats.qualified++;
-      picks.push({
+      const pick = {
         home: f.teams.home.name, away: f.teams.away.name,
         competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
         sport: "Football", kickoff: f.fixture.date,
         bet: candidates[0].bet, confidence: candidates[0].confidence,
         home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
-      });
+      };
+      picks.push(pick);
+      savePrematchPickIfNew(pick);
     }
   } catch (e) { console.error("[upcoming-picks]", e.message); }
   // Tri chronologique (pas par confiance) : Greg veut que quelqu'un qui ne
@@ -4267,6 +4302,7 @@ Réponds en JSON pur (pas de markdown):
     if (!playable.ok) return `cote: ${playable.reason}`;
     if (isWomen) return "match feminin (exclu)";
     if (lowTrust) return "ligue non fiable";
+    if (alreadySignaledToday(match)) return "signal deja envoye aujourd'hui pour ce match";
     return null;
   })();
 
@@ -5698,6 +5734,27 @@ function matchToken(name) {
  * On s'appuie sur matchToken (mot distinctif, accents et préfixes FC/AC ignorés),
  * déjà utilisé pour la résolution des scores et la fusion des matchs live.
  */
+// Garde-fou persistant anti-doublon (02/08/2026) : _signalSentCache (Set en
+// memoire) ne survit pas a un redemarrage du conteneur, et sa cle par HEURE
+// laissait passer un second signal si le match franchissait une frontiere
+// d'heure entre deux scans. Constate concretement : "Corinthians vs Remo"
+// diffuse deux fois le meme jour (45e puis 69e minute, meme pari, meme
+// cote). Cette verification interroge la base (source de verite qui
+// survit aux redemarrages) avant tout envoi.
+function alreadySignaledToday(match) {
+  try {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const key = canonicalMatchKey(match.home, match.away);
+    const rows = db.prepare(
+      "SELECT home, away FROM concile_analyses WHERE date(analysed_at) = ? AND signal_tier IS NOT NULL"
+    ).all(todayStr);
+    return rows.some((r) => canonicalMatchKey(r.home, r.away) === key);
+  } catch (e) {
+    console.error("[signal-fort] alreadySignaledToday:", e.message);
+    return false; // en cas d'erreur de lecture, ne jamais bloquer un vrai signal
+  }
+}
+
 function canonicalMatchKey(home, away, day) {
   const h = matchToken(home) || NORM(home);
   const a = matchToken(away) || NORM(away);
@@ -10083,6 +10140,29 @@ ${recentLines}
     return false;
   }
 }
+
+// Comparaison winrate pre-match (H2H, cotes plus grosses) vs live (auto-
+// concile, contexte du score en direct) — demande de Greg le 02/08/2026.
+app.get("/admin/source-type-stats", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorise" });
+  try {
+    const rows = db.prepare(`
+      SELECT source_type,
+        COUNT(*) as total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) as losses
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+      GROUP BY source_type
+    `).all();
+    res.json({ ok: true, stats: rows.map(r => ({
+      source_type: r.source_type || "live",
+      total: r.total, wins: r.wins, losses: r.losses,
+      winrate: r.total > 0 ? Math.round(r.wins / r.total * 100) : 0,
+    })) });
+  } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
+});
 
 app.get("/admin/send-gain-images", async (req, res) => {
   const { email, code } = req.query;
