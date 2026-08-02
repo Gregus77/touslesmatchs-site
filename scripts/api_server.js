@@ -484,6 +484,34 @@ ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 // l'historique existant, qui vient exclusivement du pipeline live.
 ensureColumn("concile_analyses", "source_type",       "TEXT DEFAULT 'live'");
 
+// Championnat de chaque avis agent x marche — absent jusqu'ici (voir
+// commentaire plus bas), impossible donc de savoir "quelle IA est forte sur
+// quel type de pari DANS quel championnat" comme demande par Greg le
+// 02/08/2026. Backfill par jointure sur home/away/jour avec concile_analyses,
+// qui a toujours eu la competition — fiable car un match donne n'a qu'une
+// seule competition possible ce jour-la.
+ensureColumn("agent_market_predictions", "competition", "TEXT DEFAULT NULL");
+try {
+  const toBackfill = db.prepare(
+    "SELECT COUNT(*) AS n FROM agent_market_predictions WHERE competition IS NULL"
+  ).get()?.n || 0;
+  if (toBackfill > 0) {
+    const updated = db.prepare(`
+      UPDATE agent_market_predictions
+      SET competition = (
+        SELECT ca.competition FROM concile_analyses ca
+        WHERE ca.home = agent_market_predictions.home
+          AND ca.away = agent_market_predictions.away
+          AND date(ca.analysed_at) = date(agent_market_predictions.created_at)
+          AND ca.competition IS NOT NULL
+        LIMIT 1
+      )
+      WHERE competition IS NULL
+    `).run();
+    console.log(`[agent-market] backfill competition: ${updated.changes}/${toBackfill} lignes completees`);
+  }
+} catch (e) { console.error("[agent-market] backfill competition:", e.message); }
+
 // ── Migration: deduplicate old concile_analyses (keep latest row per match per day)
 try {
   const dupeCount = db.prepare(`
@@ -4056,7 +4084,9 @@ RÈGLE CHAMPION : le marché "But en 1ère mi-temps" a un winrate historique pro
   // Charger les performances historiques pour pondérer le verdict du Chief
   const agentPerf = getAgentPerformance();
   const agentMarketPerf = getAgentMarketPerformance();
+  const agentMarketCompPerf = getAgentMarketCompetitionPerformance();
   const MIN_MARKET_SAMPLE = 20; // sous ce seuil, le winrate marché est trop bruité — on retombe sur le winrate global
+  const MIN_COMPETITION_SAMPLE = 15; // championnat : echantillon forcement plus petit, seuil plus bas mais toujours filtre
 
   const agentMarketList = []; // avis multi-marchés de chaque agent (hors Chief)
 
@@ -4251,16 +4281,25 @@ Réponds en JSON pur (pas de markdown):
     const p = agentPerf[a.name];
     const resolved = p ? p.resolved : 0;
     const line = marketLineForBet(a.bet);
+    // Cascade a 3 niveaux, du plus precis au plus general : championnat >
+    // marche > historique global. On ne descend au niveau suivant que si
+    // l'echantillon du niveau precedent est trop mince pour etre fiable.
+    const compStat = line && match.competition ? agentMarketCompPerf[a.name]?.[line]?.[match.competition] : null;
+    const useComp = compStat && compStat.total >= MIN_COMPETITION_SAMPLE;
     const marketStat = line ? agentMarketPerf[a.name]?.[line] : null;
-    const useMarket = marketStat && marketStat.total >= MIN_MARKET_SAMPLE;
-    const weight = useMarket
-      ? Math.max(10, Math.min(95, Math.round(marketStat.winrate)))
-      : (resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50);
-    const perfNote = useMarket
-      ? ` — historique sur ce marché précis "${a.bet}": ${Math.round(marketStat.winrate)}% winrate (${marketStat.total} résolus) → POIDS: ${weight}%`
-      : resolved >= 5
-        ? ` — historique global: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
-        : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
+    const useMarket = !useComp && marketStat && marketStat.total >= MIN_MARKET_SAMPLE;
+    const weight = useComp
+      ? Math.max(10, Math.min(95, Math.round(compStat.winrate)))
+      : useMarket
+        ? Math.max(10, Math.min(95, Math.round(marketStat.winrate)))
+        : (resolved >= 5 ? Math.max(10, Math.min(95, p.winrate)) : 50);
+    const perfNote = useComp
+      ? ` — historique sur "${a.bet}" en ${match.competition}: ${Math.round(compStat.winrate)}% winrate (${compStat.total} résolus) → POIDS: ${weight}%`
+      : useMarket
+        ? ` — historique sur ce marché précis "${a.bet}" (tous championnats): ${Math.round(marketStat.winrate)}% winrate (${marketStat.total} résolus) → POIDS: ${weight}%`
+        : resolved >= 5
+          ? ` — historique global: ${p.winrate}% winrate (${p.wins}/${resolved} résolus) → POIDS: ${weight}%`
+          : resolved > 0 ? ` — (${resolved} prédiction(s), pas assez pour peser) → POIDS: ${weight}% (neutre)` : ` — (sans historique) → POIDS: ${weight}% (neutre)`;
     return `${a.name}: ${a.bet} (${a.confidence}%)${perfNote}`;
   }).join("\n");
 
@@ -5646,6 +5685,38 @@ function getAgentMarketPerformance() {
     return {};
   }
 }
+// Perf par agent × marché × championnat — troisième niveau, le plus précis :
+// une IA peut être forte sur "Under 2.5" en général mais faible spécifiquement
+// en Ligue 1. Demande de Greg le 02/08/2026 : utiliser tout l'historique
+// (2000+ analyses) pour repondre a "quelle IA est la meilleure sur quel type
+// de pari, DANS quel championnat". Lu directement dans agent_market_predictions
+// (colonne competition ajoutee + backfillee plus haut), pas dans
+// ai_market_specialization qui n'a pas cette dimension.
+function getAgentMarketCompetitionPerformance() {
+  try {
+    const rows = db.prepare(`
+      SELECT agent_name, market_line, competition,
+        COUNT(*) AS total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) AS wins
+      FROM agent_market_predictions
+      WHERE outcome IS NOT NULL AND competition IS NOT NULL
+      GROUP BY agent_name, market_line, competition
+    `).all();
+    const perf = {};
+    rows.forEach(r => {
+      if (!perf[r.agent_name]) perf[r.agent_name] = {};
+      if (!perf[r.agent_name][r.market_line]) perf[r.agent_name][r.market_line] = {};
+      perf[r.agent_name][r.market_line][r.competition] = {
+        total: r.total,
+        winrate: r.total > 0 ? Math.round((r.wins / r.total) * 10000) / 100 : 0,
+      };
+    });
+    return perf;
+  } catch (e) {
+    console.error("[agent-market-competition-perf] load:", e.message);
+    return {};
+  }
+}
 const MARKET_LINE_BY_BET = {
   "Over 2.5 buts": "buts", "Under 2.5 buts": "buts",
   "BTTS Oui": "btts", "BTTS Non": "btts",
@@ -5800,7 +5871,7 @@ function saveAgentMarketPredictions(match, agentMarketList) {
   const matchKey = getPredictionSnapshotKey(match);
   try {
     const stmt = db.prepare(
-      "INSERT OR IGNORE INTO agent_market_predictions (match_key, home, away, agent_name, market_line, bet, confidence) VALUES (?,?,?,?,?,?,?)"
+      "INSERT OR IGNORE INTO agent_market_predictions (match_key, home, away, agent_name, market_line, bet, confidence, competition) VALUES (?,?,?,?,?,?,?,?)"
     );
     agentMarketList.forEach(am => {
       const m = am.marches || {};
@@ -5809,7 +5880,7 @@ function saveAgentMarketPredictions(match, agentMarketList) {
         const code = typeof val === "object" ? val.p : val;
         const conf = typeof val === "object" ? (parseInt(val.c) || 60) : 60;
         const bet = canonicalMarketBet(line, code);
-        if (bet) stmt.run(matchKey, match.home, match.away, am.name, line, bet, Math.min(95, Math.max(40, conf)));
+        if (bet) stmt.run(matchKey, match.home, match.away, am.name, line, bet, Math.min(95, Math.max(40, conf)), match.competition || null);
       });
     });
   } catch (e) { console.error("[agent-market] save:", e.message); }
@@ -10068,6 +10139,52 @@ app.get("/agent-market-matrix", (req, res) => {
       }
     });
     res.json({ ok: true, matrix, best_by_market: bestByLine });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+// ── Admin — matrice IA x marche x CHAMPIONNAT (troisieme niveau) ─────────────
+// Demande de Greg le 02/08/2026 : "quelle IA est plus forte sur quel type de
+// pari ET quel championnat" — /agent-market-matrix ci-dessus n'a que 2
+// dimensions (agent x marche). Celui-ci ajoute le championnat, avec un
+// minimum de 15 resolus pour eviter d'afficher un "100% winrate" sur 2 matchs.
+app.get("/admin/agent-market-competition-matrix", (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  try {
+    const minResolved = Math.max(1, parseInt(req.query.min) || 15);
+    const rows = db.prepare(`
+      SELECT agent_name, market_line, competition,
+        COUNT(*) total,
+        SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins
+      FROM agent_market_predictions
+      WHERE outcome IS NOT NULL AND competition IS NOT NULL
+      GROUP BY agent_name, market_line, competition
+      HAVING total >= ?
+      ORDER BY total DESC
+    `).all(minResolved);
+    const lineLabels = { buts: "Over/Under 2.5", btts: "BTTS", resultat: "Résultat 1X2", mt1: "But 1ère MT" };
+    const rangs = rows.map(r => ({
+      agent: r.agent_name,
+      marche: lineLabels[r.market_line] || r.market_line,
+      championnat: r.competition,
+      resolus: r.total,
+      winrate: Math.round((r.wins / r.total) * 10000) / 100,
+    }));
+    // Meilleure IA par (marché, championnat) — la reponse directe a la question de Greg.
+    const meilleureParCombo = {};
+    for (const r of rangs) {
+      const k = `${r.marche} · ${r.championnat}`;
+      if (!meilleureParCombo[k] || r.winrate > meilleureParCombo[k].winrate) {
+        meilleureParCombo[k] = { agent: r.agent, winrate: r.winrate, resolus: r.resolus };
+      }
+    }
+    res.json({
+      ok: true,
+      seuil_min_resolus: minResolved,
+      combinaisons_couvertes: rangs.length,
+      meilleure_ia_par_marche_x_championnat: meilleureParCombo,
+      details: rangs,
+    });
   } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
