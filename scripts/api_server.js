@@ -3970,8 +3970,21 @@ Réponds en JSON pur (pas de markdown):
         isChief: false, corrected: corrected || false,
       };
     } catch (e) {
-      console.error(`[concile] agent ${agCfg.name} erreur:`, e.message);
-      return getMockAgentAnalysis(agCfg, match, i);
+      // Ne JAMAIS remplacer un echec de parsing par un vote invente
+      // (getMockAgentAnalysis produit un pari heuristique + une confiance
+      // aleatoire 60-85, qui entrait auparavant dans le consensus comme si
+      // c'etait un vrai avis de l'IA). Constate le 02/08/2026 sur
+      // Perplexity-Web : JSON tronque/mal forme regulierement (reponse
+      // coupee par max_tokens), chaque echec injectait silencieusement un
+      // faux vote dans "5 IA independantes votent". Meme traitement que
+      // l'absence de reponse exploitable : exclu du decompte, jamais invente.
+      console.error(`[concile] agent ${agCfg.name} erreur JSON:`, e.message);
+      return {
+        name: agCfg.name, icon: agCfg.icon,
+        bet: "—", confidence: null,
+        raison: "⚠️ Réponse illisible (JSON malformé) — non compté dans le verdict.",
+        isChief: false, failed: true,
+      };
     }
   }
 
@@ -4088,8 +4101,21 @@ Réponds en JSON pur (pas de markdown):
       isChief: true, corrected: corrected || false,
     });
   } catch (e) {
-    console.error(`[concile] agent Chief erreur:`, e.message);
-    agentResults.push(getMockAgentAnalysis(agentNames[CHIEF_INDEX], match, CHIEF_INDEX));
+    // Meme correction que pour les agents (02/08/2026) : le Chief est
+    // l'arbitre interne dont la decision finale devient litteralement le
+    // pari publie (chief = agentResults[agentResults.length-1] plus bas).
+    // Le remplacer par un mock aleatoire signifiait qu'un JSON malforme
+    // pouvait publier un pari totalement invente avec une fausse confiance
+    // 60-85%. Sans, le consensus des 4 autres agents (s'ils convergent a 3+)
+    // prend le relais normalement ; sinon la confiance retombe a 55 (deja
+    // sous tous les seuils de diffusion), jamais de faux signal envoye.
+    console.error(`[concile] agent Chief erreur JSON:`, e.message);
+    agentResults.push({
+      name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
+      bet: "—", confidence: null,
+      raison: "⚠️ Réponse illisible (JSON malformé) — non compté dans le verdict.",
+      isChief: true, failed: true,
+    });
   }
 
   // Find consensus bet
