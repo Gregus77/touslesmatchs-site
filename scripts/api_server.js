@@ -2103,7 +2103,11 @@ function isWomenMatch(match) {
   const comp = String(match.competition || match.league || "").toLowerCase();
   const home = String(match.home || "").trim();
   const away = String(match.away || "").trim();
-  const compHit = /\bwomen\b|f[ée]minin|femenin|femminile|frauen|\bnwsl\b|\bwsl\b|wk-league|w-league|w league|kobiet|damallsvenskan|\bfeminine\b|\bwomens?\b/.test(comp);
+  // "femenil" (orthographe espagnole reelle, ex: "Liga MX Femenil") manquait —
+  // seul "femenin" etait couvert. Une Liga MX Femenil est passee a travers ce
+  // trou le 02/08/2026 (rattrapee par le teamHit sur "W" en fin de nom, mais
+  // ne pas dependre d'un seul filet).
+  const compHit = /\bwomen\b|f[ée]minin|femenin|femenil|femminile|frauen|\bnwsl\b|\bwsl\b|wk-league|w-league|w league|kobiet|damallsvenskan|\bfeminine\b|\bwomens?\b/.test(comp);
   const teamHit = /(\s|\()w\)?$/i.test(home) || /(\s|\()w\)?$/i.test(away) || /\bwomen\b/i.test(home) || /\bwomen\b/i.test(away);
   return compHit || teamHit;
 }
@@ -3006,8 +3010,12 @@ async function computeUpcomingPicks() {
     });
     stats.totalFixtures = fixtures.length;
     for (const f of fixtures.slice(0, 60)) {
-      const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football" };
+      const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football", home: f.teams.home?.name || "", away: f.teams.away?.name || "" };
       if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
+      // isWomenMatch() manquait sur ce pipeline pre-match (H2H) — seul le direct
+      // (shouldAutoObserveMatch) l'appliquait. Une Liga MX Femenil a ete analysee
+      // et diffusee via ce chemin, constate le 02/08/2026 (Cruz Azul W - Atlas W).
+      if (isWomenMatch(compObj)) continue;
       stats.trustedChecked++;
       const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
       // n>=5 confrontations directes exactes entre les deux memes equipes est
@@ -10096,11 +10104,19 @@ async function sendDailyResultsFreeChannel() {
   if (!TELEGRAM_CHANNEL_ID || !TELEGRAM_BOT_TOKEN) return false;
   try {
     const todayStr = new Date().toISOString().slice(0, 10);
+    // signal_tier IS NOT NULL : seule condition fiable pour "reellement envoye
+    // a un abonne" (renseigne uniquement au moment de la diffusion reelle,
+    // voir plus haut dans le fichier). Sans ce filtre, le bilan melangeait des
+    // analyses internes jamais diffusees (confiance 55, sous tous les seuils)
+    // avec de vrais signaux, ce qui gonflait artificiellement le nombre de
+    // matchs affiches et faussait le winrate visible par les abonnes.
+    // Constate le 02/08/2026 sur le bilan du 01/08 (plusieurs lignes a
+    // confiance 55 n'ayant jamais pu declencher un signal reel).
     const rows = db.prepare(`
       SELECT home, away, competition, sport, best_bet, confidence, outcome, real_odd,
              final_score_home, final_score_away
       FROM concile_analyses
-      WHERE date(analysed_at) = ? AND outcome IN ('win','loss')
+      WHERE date(analysed_at) = ? AND outcome IN ('win','loss') AND signal_tier IS NOT NULL
       ORDER BY analysed_at DESC
     `).all(todayStr);
 
@@ -10114,12 +10130,14 @@ async function sendDailyResultsFreeChannel() {
     const losses = unique.filter(r => r.outcome === "loss");
     const winrate = Math.round(wins.length / unique.length * 100);
 
+    const sportIcons = { Football: "⚽", Basketball: "🏀", Hockey: "🏒", Baseball: "⚾" };
     const matchLines = unique.map(r => {
       const icon = r.outcome === "win" ? "✅" : "❌";
+      const sportIcon = sportIcons[r.sport] || "🎯";
       const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
       const cote = rowOdd(r);
       const gainStr = r.outcome === "win" ? `+${(10 * cote - 10).toFixed(0)}€` : "-10€";
-      return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote.toFixed(2)} → ${gainStr}`;
+      return `${icon}${sportIcon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote.toFixed(2)} → ${gainStr}`;
     }).join("\n");
 
     const totalGain = unique.reduce((sum, r) => {
