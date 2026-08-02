@@ -34,6 +34,10 @@ services:
       - THESPORTSDB_API_KEY=${THESPORTSDB_API_KEY}
       - AUTO_CONCILE_MULTISPORT=${AUTO_CONCILE_MULTISPORT}
       - SHADOW_DAILY_CAP=${SHADOW_DAILY_CAP}
+      # Rationnement horaire API-Sports (scripts/api_server.js, apiSportsBudgetOk) —
+      # absente d'ici, cette variable ne passait jamais du .env au conteneur et le
+      # budget par defaut (90/j, ~4/h) s'appliquait meme si .env disait autre chose.
+      - API_SPORTS_DAILY_BUDGET=${API_SPORTS_DAILY_BUDGET}
       # ── Reglages lus par le code mais qui n'etaient PAS transmis au conteneur ──
       # Sans ces lignes, les modifier dans .env n'avait AUCUN effet : le code
       # retombait silencieusement sur ses valeurs par defaut. Constate le

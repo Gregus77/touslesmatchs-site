@@ -1745,11 +1745,17 @@ function apiSportsBudgetOk() {
 // logs d'erreur.
 let _apiQuotaAlertSentDate = "";
 async function checkApiSportsRealQuota() {
-  if (!API_SPORTS_KEY) return null;
+  // Renvoie toujours un objet { error } explicite en cas d'échec, jamais null
+  // silencieux — sinon /admin/api-quota-status affiche un message générique
+  // et il faut aller fouiller les logs docker pour savoir si c'est une clé
+  // manquante, un quota vraiment épuisé, ou une panne réseau.
+  if (!API_SPORTS_KEY) return { error: "API_SPORTS_KEY / API_FOOTBALL_KEY absente de l'environnement du conteneur" };
   try {
     const data = await httpGet("https://v3.football.api-sports.io/status", { "x-apisports-key": API_SPORTS_KEY });
     const req = data?.response?.requests;
-    if (!req || req.limit_day == null) return null;
+    if (!req || req.limit_day == null) {
+      return { error: `réponse inattendue de l'API: ${JSON.stringify(data).slice(0, 300)}` };
+    }
     const used = Number(req.current) || 0;
     const limit = Number(req.limit_day) || 0;
     const pct = limit > 0 ? Math.round((used / limit) * 100) : 0;
@@ -1763,7 +1769,7 @@ async function checkApiSportsRealQuota() {
     return { used, limit, pct, plan: data?.response?.subscription?.plan || null, ends: data?.response?.subscription?.end || null };
   } catch (e) {
     console.error("[api-sports-quota]", e.message);
-    return null;
+    return { error: e.message };
   }
 }
 setInterval(() => checkApiSportsRealQuota(), 1800000);
