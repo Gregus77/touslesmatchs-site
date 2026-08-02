@@ -7812,6 +7812,21 @@ function lookupAccountByEmail(email) {
 // regarde que les codes actifs), celle-ci regarde aussi les codes desactives
 // pour distinguer "jamais abonne" de "resilie" — necessaire pour l'affichage
 // du vrai statut dans /dashboard.
+// Un compte gratuit pur (jamais de code, jamais paye) n'a aucune ligne dans
+// codes -- sans repli, "Membre depuis" restait vide sur le dashboard (signale
+// par Greg le 02/08/2026). La premiere session de connexion est le meilleur
+// proxy disponible : pour un compte OTP-only, le premier login EST la creation
+// du compte.
+function firstSeenFallback(email) {
+  try {
+    const row = db.prepare("SELECT MIN(created_at) AS first_seen FROM sessions WHERE email = ?").get(email);
+    return row?.first_seen || null;
+  } catch (e) {
+    console.error("[otp] firstSeenFallback:", e.message);
+    return null;
+  }
+}
+
 function lookupFullAccountStatus(email) {
   try {
     const cdb = new Database(CODES_DB_PATH, { readonly: true });
@@ -7819,15 +7834,15 @@ function lookupFullAccountStatus(email) {
       "SELECT plan, active, expires_at, credits_max, credits_used, created_at FROM codes WHERE email = ? ORDER BY rowid DESC LIMIT 1"
     ).get(email);
     cdb.close();
-    if (!row) return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: null };
+    if (!row) return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: firstSeenFallback(email) };
     let status;
     if (!row.active) status = "cancelled";
     else if (row.expires_at && new Date(row.expires_at) < new Date()) status = "expired";
     else status = "active";
-    return { status, plan: row.plan, expires_at: row.expires_at, credits_max: row.credits_max, credits_used: row.credits_used, created_at: row.created_at };
+    return { status, plan: row.plan, expires_at: row.expires_at, credits_max: row.credits_max, credits_used: row.credits_used, created_at: row.created_at || firstSeenFallback(email) };
   } catch (e) {
     console.error("[otp] lookupFullAccountStatus:", e.message);
-    return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: null };
+    return { status: "free", plan: "free", expires_at: null, credits_max: null, credits_used: null, created_at: firstSeenFallback(email) };
   }
 }
 
