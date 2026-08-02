@@ -2748,7 +2748,15 @@ function carriesOddsIdentity(m) {
 // ramener une vraie cote et on ne reprend de l'autre source que les données de
 // jeu (score, minute, statut).
 function mergeKeepingOddsIdentity(previous, incoming) {
-  if (!carriesOddsIdentity(previous) || carriesOddsIdentity(incoming)) return incoming;
+  // fdSourceId : conserve l'identite Football-Data.org meme quand
+  // l'identite API-Sports gagne le merge, pour permettre a fetchH2H() de
+  // relayer sur Football-Data.org quand API-Sports est indisponible pour ce
+  // match (quota epuise). Sans ca, l'ID Football-Data etait perdu des qu'un
+  // match etait connu des deux fournisseurs. Ajoute le 02/08/2026.
+  const fdSourceId = previous.source === "football-data" ? previous.sourceId : previous.fdSourceId;
+  if (!carriesOddsIdentity(previous) || carriesOddsIdentity(incoming)) {
+    return fdSourceId ? { ...incoming, fdSourceId } : incoming;
+  }
   return {
     ...previous,
     score_home: incoming.score_home ?? previous.score_home,
@@ -2956,44 +2964,53 @@ async function fetchMatchStatsForMatch(match) {
 // ── H2H (confrontations directes) — donnée factuelle pour ancrer l'analyse ────
 const h2hCache = new Map();
 
-async function fetchH2H(match) {
-  if (!API_SPORTS_KEY || match.source !== "api-sports" || match.sport !== "Football") return null;
-  const homeId = match.homeId, awayId = match.awayId;
-  if (!homeId || !awayId) return null;
-
-  const ck = `h2h_${homeId}_${awayId}`;
+// Relais Football-Data.org (02/08/2026) : quand API-Sports est indisponible
+// (quota epuise) ou que ce n'est pas la source du match, on tente le H2H via
+// l'abonnement Football-Data.org deja paye et sous-utilise. Safe : utilise
+// l'ID de match PROPRE a Football-Data (match.fdSourceId / sourceId), jamais
+// de recherche par nom d'equipe entre fournisseurs differents (source de
+// mauvais matching evitee). Meme forme de retour que la version API-Sports
+// pour que le reste du pipeline (candidats, buildH2HBlock) n'ait rien a
+// changer.
+async function fetchH2HFromFootballData(match) {
+  const fdId = match.source === "football-data" ? match.sourceId : match.fdSourceId;
+  if (!FOOTBALL_DATA_KEY || !fdId) return null;
+  const ck = `h2h_fd_${fdId}`;
   const cached = h2hCache.get(ck);
   if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
-  // Budget verifie APRES le cache : une paire deja connue (cache 6h) ne
-  // consomme aucun quota reseau, inutile de la bloquer.
-  if (!apiSportsBudgetOk()) return null;
-
   try {
     const data = await httpGet(
-      `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeId}-${awayId}&last=10`,
-      { "x-apisports-key": API_SPORTS_KEY }
+      `https://api.football-data.org/v4/matches/${fdId}/head2head?limit=10`,
+      { "X-Auth-Token": FOOTBALL_DATA_KEY }
     );
-    const rows = (data?.response || []).filter(r =>
-      r?.goals?.home != null && r?.goals?.away != null &&
-      ["FT", "AET", "PEN"].includes(r?.fixture?.status?.short)
+    const list = Array.isArray(data?.matches) ? data.matches : null;
+    if (!list) {
+      // Forme de reponse differente de ce qui est attendu : on log la
+      // reponse brute (tronquee) pour corriger vite plutot que d'inventer
+      // des chiffres a partir d'un champ qui n'existe pas.
+      console.error("[h2h-fd] forme de reponse inattendue:", JSON.stringify(data).slice(0, 300));
+      return null;
+    }
+    const rows = list.filter(r =>
+      r?.score?.fullTime?.home != null && r?.score?.fullTime?.away != null && r?.status === "FINISHED"
     );
     if (rows.length < 2) {
       h2hCache.set(ck, { data: null, ts: Date.now() });
       return null;
     }
+    const homeName = NORM(match.home);
     let totalGoals = 0, under25 = 0, btts = 0, homeWins = 0, awayWins = 0, draws = 0, htGoal = 0;
     for (const r of rows) {
-      const gh = r.goals.home, ga = r.goals.away;
+      const gh = r.score.fullTime.home, ga = r.score.fullTime.away;
       const tot = gh + ga;
       totalGoals += tot;
       if (tot <= 2) under25++;
       if (gh > 0 && ga > 0) btts++;
-      const htH = r.score?.halftime?.home, htA = r.score?.halftime?.away;
+      const htH = r.score?.halfTime?.home, htA = r.score?.halfTime?.away;
       if (htH != null && htA != null && (htH + htA) > 0) htGoal++;
-      // Ramener au point de vue de l'équipe "home" actuelle (via id)
-      const curHomeIsRowHome = r.teams?.home?.id === homeId;
-      const curHomeGoals = curHomeIsRowHome ? gh : ga;
-      const curAwayGoals = curHomeIsRowHome ? ga : gh;
+      const rowHomeIsCurrentHome = NORM(r.homeTeam?.name || "") === homeName;
+      const curHomeGoals = rowHomeIsCurrentHome ? gh : ga;
+      const curAwayGoals = rowHomeIsCurrentHome ? ga : gh;
       if (curHomeGoals > curAwayGoals) homeWins++;
       else if (curHomeGoals < curAwayGoals) awayWins++;
       else draws++;
@@ -3008,11 +3025,78 @@ async function fetchH2H(match) {
       homeWins, awayWins, draws,
     };
     h2hCache.set(ck, { data: h2h, ts: Date.now() });
+    console.log(`[h2h-fd] Relais Football-Data reussi ${match.home} vs ${match.away}: ${n} matchs`);
     return h2h;
   } catch (e) {
-    console.error("[h2h] Erreur:", e.message);
+    console.error("[h2h-fd] Erreur:", e.message);
     return null;
   }
+}
+
+async function fetchH2H(match) {
+  if (match.sport !== "Football") return null;
+
+  if (API_SPORTS_KEY && match.source === "api-sports" && match.homeId && match.awayId) {
+    const homeId = match.homeId, awayId = match.awayId;
+    const ck = `h2h_${homeId}_${awayId}`;
+    const cached = h2hCache.get(ck);
+    if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
+
+    // Budget verifie APRES le cache : une paire deja connue (cache 6h) ne
+    // consomme aucun quota reseau, inutile de la bloquer.
+    if (apiSportsBudgetOk()) {
+      try {
+        const data = await httpGet(
+          `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeId}-${awayId}&last=10`,
+          { "x-apisports-key": API_SPORTS_KEY }
+        );
+        const rows = (data?.response || []).filter(r =>
+          r?.goals?.home != null && r?.goals?.away != null &&
+          ["FT", "AET", "PEN"].includes(r?.fixture?.status?.short)
+        );
+        if (rows.length < 2) {
+          h2hCache.set(ck, { data: null, ts: Date.now() });
+          return null;
+        }
+        let totalGoals = 0, under25 = 0, btts = 0, homeWins = 0, awayWins = 0, draws = 0, htGoal = 0;
+        for (const r of rows) {
+          const gh = r.goals.home, ga = r.goals.away;
+          const tot = gh + ga;
+          totalGoals += tot;
+          if (tot <= 2) under25++;
+          if (gh > 0 && ga > 0) btts++;
+          const htH = r.score?.halftime?.home, htA = r.score?.halftime?.away;
+          if (htH != null && htA != null && (htH + htA) > 0) htGoal++;
+          // Ramener au point de vue de l'équipe "home" actuelle (via id)
+          const curHomeIsRowHome = r.teams?.home?.id === homeId;
+          const curHomeGoals = curHomeIsRowHome ? gh : ga;
+          const curAwayGoals = curHomeIsRowHome ? ga : gh;
+          if (curHomeGoals > curAwayGoals) homeWins++;
+          else if (curHomeGoals < curAwayGoals) awayWins++;
+          else draws++;
+        }
+        const n = rows.length;
+        const h2h = {
+          n,
+          avgGoals: Math.round((totalGoals / n) * 100) / 100,
+          htGoalPct: Math.round((htGoal / n) * 100),
+          under25Pct: Math.round((under25 / n) * 100),
+          bttsPct: Math.round((btts / n) * 100),
+          homeWins, awayWins, draws,
+        };
+        h2hCache.set(ck, { data: h2h, ts: Date.now() });
+        return h2h;
+      } catch (e) {
+        console.error("[h2h] Erreur:", e.message);
+        // On tente quand meme le relais Football-Data ci-dessous plutot que
+        // d'abandonner sur une simple erreur reseau ponctuelle.
+      }
+    }
+  }
+
+  // Repli : API-Sports indisponible pour ce match (quota, pas la source, ou
+  // erreur reseau) — tente Football-Data.org si ce match y est aussi connu.
+  return fetchH2HFromFootballData(match);
 }
 
 // Enregistre un pick pré-match dans concile_analyses (source_type='prematch')
