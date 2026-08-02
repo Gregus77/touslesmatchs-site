@@ -8842,8 +8842,8 @@ function outperformEmailHtml(email, ownTier, ownStats, aboveTier, aboveStats, da
   const ownColor = ownStats.roi >= 0 ? "#10b981" : "#f43f5e";
   const aboveColor = aboveStats.roi >= 0 ? "#10b981" : "#f43f5e";
   const upsellUrl = ownTier === "standard"
-    ? "https://buy.stripe.com/9B600jgrW3Bi63W0uG3VC08"
-    : "https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09";
+    ? "https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06"
+    : "https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07";
   return `
   <div style="font-family:Inter,-apple-system,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;padding:32px 24px">
     <div style="font-size:13px;color:#7b82a0;margin-bottom:18px">Récap du ${dateLabel} — palier ${TIER_LABEL[ownTier]}</div>
@@ -9736,7 +9736,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
                 <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour multisport</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://buy.stripe.com/aFa7sL4Je0p6dwocdo3VC09" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite / VIP — 29.90€/mois</a>
+                <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite / VIP — 29.90€/mois</a>
               </div>`
             : "";
 
