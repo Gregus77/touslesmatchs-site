@@ -1735,6 +1735,64 @@ function apiSportsBudgetOk() {
   }
 }
 
+// ── Quota REEL du plan API-Sports (pas juste notre estimation interne) ──────
+// Le rationnement horaire ci-dessus part d'un budget suppose (env var, 90 par
+// defaut) qui peut etre faux si le vrai plan paye est different. Ici on
+// interroge l'endpoint /status d'API-Sports, qui renvoie l'usage REEL du
+// jour cote leur serveur (requests.current / requests.limit_day), et on
+// alerte sur Telegram Admin des que le quota reel approche de la limite —
+// pour le savoir AVANT que les signaux s'arretent, pas apres coup dans les
+// logs d'erreur.
+let _apiQuotaAlertSentDate = "";
+async function checkApiSportsRealQuota() {
+  if (!API_SPORTS_KEY) return null;
+  try {
+    const data = await httpGet("https://v3.football.api-sports.io/status", { "x-apisports-key": API_SPORTS_KEY });
+    const req = data?.response?.requests;
+    if (!req || req.limit_day == null) return null;
+    const used = Number(req.current) || 0;
+    const limit = Number(req.limit_day) || 0;
+    const pct = limit > 0 ? Math.round((used / limit) * 100) : 0;
+    const today = getTodayStr();
+    if (pct >= 85 && _apiQuotaAlertSentDate !== today && TELEGRAM_ADMIN_CHAT_ID) {
+      _apiQuotaAlertSentDate = today;
+      sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID,
+        `⚠️ <b>Quota API-Sports proche de la limite</b>\n${used}/${limit} requêtes utilisées aujourd'hui (${pct}%).\nLes stats live vont bientôt basculer sur Football-Data (H2H seulement, moins riche).`
+      ).catch(() => {});
+    }
+    return { used, limit, pct, plan: data?.response?.subscription?.plan || null, ends: data?.response?.subscription?.end || null };
+  } catch (e) {
+    console.error("[api-sports-quota]", e.message);
+    return null;
+  }
+}
+setInterval(() => checkApiSportsRealQuota(), 1800000);
+// Appel initial différé : TELEGRAM_ADMIN_CHAT_ID est déclaré plus bas dans ce
+// fichier (const), un appel synchrone ici au chargement du module lèverait
+// une erreur de zone morte temporelle avant que cette constante existe.
+setTimeout(() => checkApiSportsRealQuota(), 5000);
+
+// Verif manuelle a tout moment : curl /api/admin/api-quota-status?email=...&code=...
+app.get("/admin/api-quota-status", async (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  const apiSports = await checkApiSportsRealQuota();
+  const bucket = new Date().toISOString().slice(0, 13);
+  const row = db.prepare("SELECT count FROM api_sports_usage WHERE bucket = ?").get(bucket);
+  res.json({
+    ok: true,
+    api_sports: apiSports || { error: "indisponible (cle manquante ou API injoignable)" },
+    rationnement_interne: {
+      budget_horaire_suppose: API_SPORTS_HOURLY_BUDGET,
+      deja_utilise_cette_heure: row ? row.count : 0,
+    },
+    fallback_actifs: {
+      football_data_org: !!FOOTBALL_DATA_KEY,
+      thesportsdb: !!THESPORTSDB_API_KEY,
+    },
+  });
+});
+
 function getTokenRow(userId) {
   return db.prepare("SELECT * FROM user_tokens WHERE user_id = ?").get(userId);
 }
