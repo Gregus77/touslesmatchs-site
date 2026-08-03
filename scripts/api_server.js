@@ -2174,24 +2174,14 @@ const TRUSTED_COMPETITIONS = [
   "top 14", "pro d2", "premiership rugby", "urc",
   "euroleague", "euroligue",
   "a-league", "a league · australia",
-  "swiss super league", "super league · switzerland",
-  "scottish premiership", "scottish · premiership",
-  "danish superliga", "superliga · denmark",
-  "norwegian eliteserien", "eliteserien",
-  "finnish veikkausliiga",
-  "czech first league", "czech liga",
-  "polish ekstraklasa", "ekstraklasa",
-  "croatian hnl", "hnl · croatia",
-  "serbian superliga", "super liga · serbia",
-  "greek super league", "super league · greece",
-  "romanian superliga", "liga i · romania",
-  "ukrainian premier",
-  "russian premier",
-  "austrian bundesliga",
-  "hungarian nb i", "nb i · hungary",
-  "bulgarian first", "first league · bulgaria",
-  "slovak super liga",
-  "cypriot first", "first division · cyprus",
+  // Ligues europeennes "moyennes" retirees le 03/08/2026 (Greg) : trop
+  // souvent des faux signaux a forte confiance sur un volume de donnees
+  // reduit (H2H peu fiable, ex. Cracovia-Pogon Ekstraklasa donne 100% BTTS
+  // pre-match, perdu 0-2). Ne reste que la "creme de la creme" —
+  // championnats majeurs + grandes competitions continentales/mondiales.
+  // Retirees : Belgique, Croatie, Serbie, Grece, Suisse, Ecosse, Danemark,
+  // Norvege, Finlande, Rep. Tcheque, Roumanie, Autriche, Hongrie,
+  // Bulgarie, Slovaquie, Chypre, Pologne, Russie, Ukraine.
   "saudi pro league", "roshn",
   "uae pro league",
   "qsl", "qatar stars",
