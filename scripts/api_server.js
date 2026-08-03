@@ -4034,7 +4034,7 @@ async function runConcileAnalysis(match) {
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
 
   // H2H factuel + contexte profond (forme, classement, enjeu, blessés) en parallèle
-  let h2hBlock = "", deepBlock = "";
+  let h2hBlock = "", deepBlock = "", h2hData = null;
   try {
     const [h2h, deep] = await Promise.all([
       fetchH2H(match),
@@ -4042,6 +4042,7 @@ async function runConcileAnalysis(match) {
     ]);
     h2hBlock = buildH2HBlock(h2h, match.home, match.away);
     deepBlock = deep || "";
+    h2hData = h2h;
     if (h2h) console.log(`[concile] H2H récupéré ${match.home} vs ${match.away}: ${h2h.n} matchs, moy ${h2h.avgGoals} buts, Under2.5 ${h2h.under25Pct}%`);
   } catch (e) {
     console.error("[concile] H2H/deep:", e.message);
@@ -4527,6 +4528,18 @@ Réponds en JSON pur (pas de markdown):
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
+    // Marches secondaires (BTTS%, but 1ere mi-temps%, victoire dom/ext%, Under
+    // 2.5%) issus du meme H2H reel deja utilise pour le prompt IA — jamais
+    // invente, jamais un nouveau calcul separe. Demande de Greg le 03/08/2026 :
+    // afficher plusieurs marches sous l'analyse, pas juste le pick principal.
+    h2h_markets: (h2hData && h2hData.n >= 3) ? {
+      n: h2hData.n,
+      btts_pct: h2hData.bttsPct,
+      first_half_goal_pct: h2hData.htGoalPct,
+      home_win_pct: Math.round((h2hData.homeWins / h2hData.n) * 100),
+      away_win_pct: Math.round((h2hData.awayWins / h2hData.n) * 100),
+      under25_pct: h2hData.under25Pct,
+    } : null,
   };
 
   // Tracer l'analyse pour la boucle d'apprentissage

@@ -760,6 +760,27 @@ function buildAnalysisHtml(d) {
     ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
   var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
     ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
+  // Marches secondaires (H2H reel) — demande de Greg le 03/08/2026 : montrer
+  // plusieurs marches sous l'analyse (BTTS%, 1ere mi-temps%, vainqueur%...),
+  // pas juste le pick principal. Base sur le meme H2H que l'analyse IA, jamais
+  // un chiffre invente. n<3 confrontations = trop peu fiable, on n'affiche pas.
+  var marketsHtml = "";
+  if (d.h2h_markets) {
+    var hm = d.h2h_markets;
+    var mkRow = function(label, pct) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--b1)">'
+        + '<span style="color:var(--muted2);font-size:12.5px">' + label + '</span>'
+        + '<span style="font-weight:800;font-size:13px">' + pct + '%</span></div>';
+    };
+    marketsHtml = '<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px">'
+      + '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Autres marches — ' + hm.n + ' confrontations directes</div>'
+      + mkRow('BTTS (les 2 marquent)', hm.btts_pct)
+      + mkRow('But en 1ère mi-temps', hm.first_half_goal_pct)
+      + mkRow('Victoire domicile', hm.home_win_pct)
+      + mkRow('Victoire extérieur', hm.away_win_pct)
+      + mkRow('Under 2.5 buts', hm.under25_pct)
+      + '</div>';
+  }
   var html = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
     + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
     + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
@@ -767,6 +788,7 @@ function buildAnalysisHtml(d) {
     + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
     + coteHtml
     + arjelHtml
+    + marketsHtml
     + agentsHtml
     + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
   return { html: html, voteLabel: voteLabel, betText: betText, confText: confText, resumeText: resumeText };
