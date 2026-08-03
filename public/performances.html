@@ -229,11 +229,12 @@ async function doLogin(){
   if (!email || !code) { errEl.textContent = 'Email et code requis.'; errEl.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = 'Vérification…';
   try {
-    var r = await fetch('/api/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, code: code }) });
+    var r = await fetch('/api/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, code: code, login: true }) });
     var d = await r.json();
     if (d.valid) {
       localStorage.setItem('tlm_email', email);
       localStorage.setItem('tlm_code', code);
+      localStorage.setItem('tlm_session', d.session_token || '');
       localStorage.setItem('tlm_plan', d.plan);
       okEl.textContent = '✓ Connecté — Plan ' + d.plan;
       okEl.style.display = 'block';

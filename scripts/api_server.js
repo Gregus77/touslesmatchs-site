@@ -7775,6 +7775,11 @@ try {
   if (!_cdbCols.includes("stripe_customer_id")) {
     _cdb.exec("ALTER TABLE codes ADD COLUMN stripe_customer_id TEXT DEFAULT NULL");
   }
+  // Jeton de session unique (une seule connexion active a la fois, voir
+  // /verify-code et /session-check, demande de Greg le 03/08/2026).
+  if (!_cdbCols.includes("session_token")) {
+    _cdb.exec("ALTER TABLE codes ADD COLUMN session_token TEXT DEFAULT NULL");
+  }
   _cdb.close();
 } catch(e) { console.error("[codes-db] init error:", e.message); }
 
@@ -8077,7 +8082,7 @@ app.post("/auth/billing-portal", requireSession, async (req, res) => {
 });
 
 app.post("/verify-code", (req, res) => {
-  const { email, code } = req.body || {};
+  const { email, code, login } = req.body || {};
   if (!email || !code) return res.json({ valid: false, error: "Email et code requis" });
 
   try {
@@ -8098,14 +8103,54 @@ app.post("/verify-code", (req, res) => {
       ? Math.max(0, row.credits_max - row.credits_used)
       : row.credits_max;
 
+    // Une seule connexion active a la fois (demande de Greg le 03/08/2026) :
+    // une VRAIE connexion (login:true, envoye uniquement par le formulaire
+    // "Acceder", jamais par les appels de simple rafraichissement de credits
+    // comme refreshCredits()) genere un nouveau jeton de session et l'ecrit
+    // en base, invalidant immediatement celui de tout autre appareil deja
+    // connecte avec le meme code. Sans ce flag, /verify-code garde son
+    // comportement d'origine (aucune rotation) pour ne pas deconnecter les
+    // gens tout seuls a chaque rafraichissement automatique.
+    let sessionToken = null;
+    if (login === true) {
+      sessionToken = crypto.randomBytes(24).toString("hex");
+      try {
+        const codesDbw = new Database(CODES_DB_PATH);
+        codesDbw.prepare("UPDATE codes SET session_token = ? WHERE code = ? AND email = ?")
+          .run(sessionToken, row.code, row.email);
+        codesDbw.close();
+      } catch (e) { console.error("[verify-code] session_token:", e.message); }
+    }
+
     // Sync with Brevo asynchronously (don't block the response)
     const tag = row.plan === "free" ? "FREE" : row.plan === "premium" ? "PREMIUM" : row.plan === "elite" ? "ELITE" : "VIP";
     brevoAddContact(row.email, tag, "FR", null, { LAST_LOGIN_AT: new Date().toISOString() }).catch(() => {});
 
-    return res.json({ valid: true, plan: row.plan, credits_left, credits_max: row.credits_max, email: row.email });
+    return res.json({ valid: true, plan: row.plan, credits_left, credits_max: row.credits_max, email: row.email, session_token: sessionToken });
   } catch (e) {
     console.error("[verify-code] error:", e.message);
     return res.json({ valid: false, error: "Erreur de vérification" });
+  }
+});
+
+// Heartbeat de session unique : une page connectee interroge ceci
+// periodiquement (voir widgets.js). Si le jeton ne correspond plus (un autre
+// appareil s'est connecte avec le meme code entre-temps), on renvoie
+// active:false et le client se deconnecte de lui-meme.
+app.get("/session-check", (req, res) => {
+  const { email, code, session } = req.query || {};
+  if (!email || !code || !session) return res.json({ active: false });
+  try {
+    const codesDb = new Database(CODES_DB_PATH, { readonly: true });
+    const row = codesDb.prepare(
+      "SELECT session_token FROM codes WHERE code = ? AND email = ? AND active = 1"
+    ).get(String(code).toUpperCase().trim(), String(email).toLowerCase().trim());
+    codesDb.close();
+    if (!row) return res.json({ active: false });
+    return res.json({ active: row.session_token === session });
+  } catch (e) {
+    console.error("[session-check] error:", e.message);
+    return res.json({ active: true }); // panne serveur : ne pas deconnecter tout le monde par erreur
   }
 });
 

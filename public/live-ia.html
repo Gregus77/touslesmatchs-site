@@ -830,12 +830,13 @@ function doLogin() {
   fetch("/api/verify-code", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: email, code: code })
+    body: JSON.stringify({ email: email, code: code, login: true })
   }).then(function(r){ return r.json(); }).then(function(d) {
     if (d.valid) {
       userAuth = { email: email, code: code, plan: d.plan, credits_left: d.credits_left, credits_max: d.credits_max };
       localStorage.setItem("tlm_email", email);
       localStorage.setItem("tlm_code", code);
+      localStorage.setItem("tlm_session", d.session_token || "");
       localStorage.setItem("tlm_plan", d.plan);
       closeLoginModal();
       updateAuthBar();
@@ -859,6 +860,7 @@ function doLogout() {
   userAuth = null;
   localStorage.removeItem("tlm_email");
   localStorage.removeItem("tlm_code");
+  localStorage.removeItem("tlm_session");
   localStorage.removeItem("tlm_plan");
   updateAuthBar();
   document.getElementById("agent-ranking").style.display = "none";

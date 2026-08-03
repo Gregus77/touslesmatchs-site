@@ -132,4 +132,30 @@
   panel.querySelector("#tlm-chatclose").addEventListener("click", closePanel);
   sendBtn.addEventListener("click", send);
   input.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
+
+  // ── Session unique (une seule connexion active a la fois) ──────────────────
+  // Demande de Greg le 03/08/2026 : deux personnes ne doivent pas pouvoir
+  // utiliser le meme code en meme temps. /verify-code genere un nouveau
+  // jeton a chaque connexion reussie (stocke en localStorage sous tlm_session)
+  // et l'ecrit en base, invalidant celui de tout autre appareil. Ce heartbeat,
+  // charge une seule fois via widgets.js sur toutes les pages protegees,
+  // detecte quand SON jeton n'est plus le bon et deconnecte l'appareil.
+  function sessionHeartbeat() {
+    var email = localStorage.getItem("tlm_email");
+    var code = localStorage.getItem("tlm_code");
+    var session = localStorage.getItem("tlm_session");
+    if (!email || !code || !session) return; // pas connecte via ce systeme, ou connexion faite avant ce correctif
+    fetch("/api/session-check?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code) + "&session=" + encodeURIComponent(session))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.active === false) {
+          localStorage.removeItem("tlm_email");
+          localStorage.removeItem("tlm_code");
+          localStorage.removeItem("tlm_session");
+          location.reload();
+        }
+      })
+      .catch(function () {}); // panne reseau : on ne deconnecte jamais sur une simple erreur
+  }
+  setInterval(sessionHeartbeat, 25000);
 })();

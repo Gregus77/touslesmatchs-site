@@ -305,12 +305,13 @@ function openLoginModal(){
     btn.disabled = true; btn.textContent = 'Vérification...';
     fetch('/api/verify-code', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email, code: code })
+      body: JSON.stringify({ email: email, code: code, login: true })
     }).then(function(r){ return r.json(); }).then(function(d) {
       if (d.valid) {
         userAuth = { email: email, code: code };
         localStorage.setItem('tlm_email', email);
         localStorage.setItem('tlm_code', code);
+        localStorage.setItem('tlm_session', d.session_token || '');
         localStorage.setItem('tlm_plan', d.plan);
         document.getElementById('login-card').classList.add('hidden');
         var _navLogin = document.getElementById('nav-se-connecter');
