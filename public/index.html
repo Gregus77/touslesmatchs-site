@@ -920,7 +920,15 @@ async function loadUpcoming(){
       var kt='';
       try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       var matchLabel=esc(p.home)+' — '+esc(p.away);
-      var oddHtml=p.real_odd?(' · <span class="upcoming-odd" style="color:var(--violet);font-weight:700">Cote '+esc(p.real_odd)+'</span>'):'';
+      var oddAge='';
+      if(p.real_odd_fetched_at){
+        try{
+          var fetchedMs=new Date(p.real_odd_fetched_at).getTime();
+          var minsAgo=Math.max(0,Math.round((Date.now()-fetchedMs)/60000));
+          oddAge=' <span title="Cote recuperee chez '+esc(p.real_odd_bookmaker||'un bookmaker ARJEL')+' a '+esc(new Date(p.real_odd_fetched_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}))+'" style="color:var(--muted);font-weight:600;font-size:10.5px">(il y a '+(minsAgo<1?'&lt;1':minsAgo)+' min)</span>';
+        }catch(e){}
+      }
+      var oddHtml=p.real_odd?(' · <span class="upcoming-odd" style="color:var(--violet);font-weight:700">Cote '+esc(p.real_odd)+'</span>'+oddAge):'';
       var confClass='upcoming-conf'+(p.confidence>=100?' upcoming-conf-100':'');
       var right=p.locked
         ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'

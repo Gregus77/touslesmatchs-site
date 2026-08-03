@@ -3343,7 +3343,7 @@ async function computeUpcomingPicks() {
       const isArjel = oddsData && ARJEL_BOOKMAKERS.some(a => String(oddsData.bookmaker || "").toLowerCase().includes(a));
       if (isArjel) {
         const realOdd = pickRealOdd(oddsData, p.bet, p);
-        if (realOdd) { p.real_odd = realOdd; p.real_odd_bookmaker = oddsData.bookmaker; }
+        if (realOdd) { p.real_odd = realOdd; p.real_odd_bookmaker = oddsData.bookmaker; p.real_odd_fetched_at = oddsData.fetchedAt; }
       }
     } catch (e) { console.error("[upcoming-picks] odds:", e.message); }
     delete p._fixtureId;
@@ -3376,6 +3376,7 @@ app.get("/upcoming-picks", async (req, res) => {
         kickoff: p.kickoff, confidence: p.confidence,
         bet: unlocked ? p.bet : null, locked: !unlocked,
         real_odd: unlocked ? (p.real_odd || null) : null,
+        real_odd_fetched_at: unlocked ? (p.real_odd_fetched_at || null) : null,
         home_logo: p.home_logo, away_logo: p.away_logo,
       })),
       stats: result.stats,
@@ -3598,6 +3599,12 @@ async function fetchRealOdds(match) {
         // Tous les bookmakers ARJEL renvoyés par l'API pour ce match — sert à
         // calculer une cote MOYENNE (pas juste celle d'un seul opérateur).
         arjelBookmakers: bookmakers.filter(bm => ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a))),
+        // Horodatage de la VRAIE recuperation (pas du cache) — affiche cote
+        // client pour que la fraicheur soit verifiable, pas juste affirmee.
+        // Reste correct meme servi depuis oddsCache : c'est l'heure de ce bloc
+        // qui compte, pas celle de la lecture cache. Demande de Greg le
+        // 03/08/2026 ("comment je sais si tu as les cotes en temps reel").
+        fetchedAt: new Date().toISOString(),
       };
     }
   } catch (e) { console.error("[odds]", e.message); data = null; }
