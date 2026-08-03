@@ -262,10 +262,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <script>
 fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(d){
   if (!d.ok || !d.links || !d.links.length) return;
-  var colors = ['#ef4444','#3b82f6','#22c55e','#06b6d4'];
+  var brand = {Winamax:{bg:'#E2001A',fg:'#fff'},Unibet:{bg:'#0C7A3D',fg:'#fff'},PMU:{bg:'#003DA5',fg:'#fff'},Betclic:{bg:'#FFD100',fg:'#111'}};
   var el = document.getElementById('bookmaker-links');
-  el.innerHTML = d.links.map(function(b, i){
-    return '<a href="' + b.url + '" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:rgba(255,255,255,.04);border:1px solid ' + (colors[i] || '#64748b') + ';color:#fff;padding:10px 8px;border-radius:10px;text-decoration:none;font-weight:800;font-size:13px">' + b.text + '</a>';
+  el.innerHTML = d.links.map(function(b){
+    var c = brand[b.text] || {bg:'#334155', fg:'#fff'};
+    return '<a href="' + b.url + '" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:' + c.bg + ';color:' + c.fg + ';padding:10px 8px;border-radius:10px;text-decoration:none;font-weight:900;font-size:13px;letter-spacing:-.01em">' + b.text + '</a>';
   }).join('');
   document.getElementById('bookmaker-bar').style.display = 'block';
 }).catch(function(){});

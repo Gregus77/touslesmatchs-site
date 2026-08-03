@@ -689,9 +689,12 @@ function openBookmakerModal(matchLabel){
   document.getElementById('modal-bookmakers').classList.add('open');
   var box=document.getElementById('bm-modal-links');
   var render=function(links){
-    var colors=['#ef4444','#3b82f6','#22c55e','#06b6d4'];
-    box.innerHTML=links.map(function(b,i){
-      return '<a href="'+b.url+'" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:rgba(255,255,255,.04);border:1px solid '+(colors[i]||'#64748b')+';color:#fff;padding:12px 8px;border-radius:10px;text-decoration:none;font-weight:800;font-size:14px">'+esc(b.text)+'</a>';
+    // Couleurs de marque reelles (pas des couleurs generiques) : chaque bouton
+    // ressemble au bookmaker qu'il represente, plus reconnaissable au clic.
+    var brand={Winamax:{bg:'#E2001A',fg:'#fff'},Unibet:{bg:'#0C7A3D',fg:'#fff'},PMU:{bg:'#003DA5',fg:'#fff'},Betclic:{bg:'#FFD100',fg:'#111'}};
+    box.innerHTML=links.map(function(b){
+      var c=brand[b.text]||{bg:'#334155',fg:'#fff'};
+      return '<a href="'+b.url+'" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:'+c.bg+';color:'+c.fg+';padding:12px 8px;border-radius:10px;text-decoration:none;font-weight:900;font-size:14px;letter-spacing:-.01em">'+esc(b.text)+'</a>';
     }).join('');
   };
   if(_bmLinksCache){ render(_bmLinksCache); return; }
