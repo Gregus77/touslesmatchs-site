@@ -569,6 +569,16 @@ db.exec(`
     expires_at TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_sessions_email ON sessions(email);
+  -- Journal des connexions concurrentes detectees sur le systeme email+code
+  -- (partage de compte). Demande de Greg le 03/08/2026 : reperer qui partage
+  -- son code pour, plus tard, envoyer un rappel avant risque de bannissement.
+  CREATE TABLE IF NOT EXISTS session_kicks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    kicked_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_session_kicks_email ON session_kicks(email);
 `);
 
 // ── Nurturing emails table (persistent across restarts) ──────────────────────
@@ -8126,6 +8136,15 @@ app.post("/verify-code", (req, res) => {
           .run(sessionToken, row.code, row.email);
         codesDbw.close();
       } catch (e) { console.error("[verify-code] session_token:", e.message); }
+      // Un session_token deja present avant cette connexion = quelqu'un etait
+      // deja connecte avec ce meme code -- vraie preuve de partage, pas juste
+      // une reconnexion normale (premiere connexion = session_token NULL).
+      if (row.session_token) {
+        try {
+          db.prepare("INSERT INTO session_kicks (email, code) VALUES (?, ?)").run(row.email, row.code);
+          console.log(`[session-kick] connexion concurrente detectee: ${row.email} (${row.code})`);
+        } catch (e) { console.error("[session-kick] log:", e.message); }
+      }
     }
 
     // Sync with Brevo asynchronously (don't block the response)
@@ -8158,6 +8177,25 @@ app.get("/session-check", (req, res) => {
     console.error("[session-check] error:", e.message);
     return res.json({ active: true }); // panne serveur : ne pas deconnecter tout le monde par erreur
   }
+});
+
+// Liste des comptes qui partagent leur code (connexions concurrentes
+// detectees) -- pour reperer qui contacter avant risque de bannissement.
+// Demande de Greg le 03/08/2026.
+app.get("/admin/shared-accounts", (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  try {
+    const jours = Math.min(90, Math.max(1, parseInt(req.query.jours) || 30));
+    const rows = db.prepare(`
+      SELECT email, code, COUNT(*) AS nb_detections, MAX(kicked_at) AS derniere_detection, MIN(kicked_at) AS premiere_detection
+      FROM session_kicks
+      WHERE kicked_at >= datetime('now', ?)
+      GROUP BY email, code
+      ORDER BY nb_detections DESC
+    `).all(`-${jours} days`);
+    res.json({ ok: true, fenetre_jours: jours, comptes: rows });
+  } catch (e) { res.json({ ok: false, error: e.message }); }
 });
 
 // ── Connexion biométrique (WebAuthn — Face ID / empreinte digitale) ───────────

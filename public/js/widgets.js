@@ -157,5 +157,6 @@
       })
       .catch(function () {}); // panne reseau : on ne deconnecte jamais sur une simple erreur
   }
-  setInterval(sessionHeartbeat, 25000);
+  sessionHeartbeat(); // verification immediate au chargement, pas d'attente du premier intervalle
+  setInterval(sessionHeartbeat, 8000);
 })();
