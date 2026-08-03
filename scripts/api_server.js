@@ -3598,6 +3598,12 @@ function pickRealOdd(oddsData, betLabel, match) {
     const wantNo = /\bnon\b|\bno\b/.test(b);
     return valOf(bt, s => wantNo ? s === "no" : s === "yes");
   }
+  if (/but.*1(ère|ere|\s)?\s*mi-?temps|goal.*first half/.test(b)) {
+    // "But en 1ère mi-temps" = au moins un but marque en 1ere periode = Over 0.5
+    // sur le marche "Goals Over/Under First Half" (nom confirme cote Unibet le
+    // 03/08/2026, cf. diagnostic de Greg).
+    return valOf(findBet(["goals over/under first half", "over/under first half"]), s => s.includes("over 0.5"));
+  }
   if (/double chance/.test(b)) {
     const bt = findBet(["double chance"]);
     if (/1x|domicile.*nul|home.*draw/.test(b)) return valOf(bt, s => s.includes("home/draw") || s === "1x");
