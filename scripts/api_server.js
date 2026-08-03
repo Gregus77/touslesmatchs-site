@@ -3273,7 +3273,20 @@ async function computeUpcomingPicks() {
     // BTTS 100% (Cracovia-Pogon, Ekstraklasa) disparu pour cette seule raison.
     fixtures.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
     stats.totalFixtures = fixtures.length;
+    // Anti-doublon : l'API renvoie parfois la meme rencontre deux fois (diffusee
+    // dans deux competitions/flux distincts, ou chevauchement des deux requetes
+    // aujourd'hui/demain) — constate par Greg le 03/08/2026, un match apparaissait
+    // deux fois dans "Matchs a venir". On ne garde que la premiere occurrence par
+    // ID de fixture ET par paire d'equipes (au cas ou l'ID different mais memes
+    // equipes/horaire, ex. rediffusion sous deux fixtureId distincts).
+    const seenFixtureIds = new Set();
+    const seenPairs = new Set();
     for (const f of fixtures.slice(0, 60)) {
+      if (seenFixtureIds.has(f.fixture.id)) continue;
+      seenFixtureIds.add(f.fixture.id);
+      const pairKey = `${f.teams.home?.name || ""}_${f.teams.away?.name || ""}_${String(f.fixture.date || "").slice(0, 13)}`.toLowerCase();
+      if (seenPairs.has(pairKey)) continue;
+      seenPairs.add(pairKey);
       const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football", home: f.teams.home?.name || "", away: f.teams.away?.name || "" };
       if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
       // isWomenMatch() manquait sur ce pipeline pre-match (H2H) — seul le direct
