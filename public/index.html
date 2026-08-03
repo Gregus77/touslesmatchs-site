@@ -147,8 +147,10 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .live-panel-title .dot{width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;margin-right:7px;animation:pulse 1.6s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 .live-panel-link{font-size:12.5px;font-weight:700;color:var(--violet2);text-decoration:none}
-.upcoming-sep{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:800;color:var(--tx2);margin-top:14px;padding-top:14px;border-top:1px solid var(--b1)}
-.upcoming-sep .dot.up{width:7px;height:7px;border-radius:50%;background:#3ec9e8;display:inline-block}
+.upcoming-sep{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:800;color:#fff;margin:16px 0 12px;padding:11px 15px;border-radius:11px;background:linear-gradient(135deg,rgba(62,201,232,.22),rgba(99,102,241,.22));border:1px solid rgba(62,201,232,.4)}
+.upcoming-sep .dot.up{width:9px;height:9px;border-radius:50%;background:#3ec9e8;display:inline-block;box-shadow:0 0 8px #3ec9e8;animation:pulse 1.6s infinite}
+.upcoming-conf-100{animation:blink100 1s infinite;box-shadow:0 0 0 rgba(255,214,10,.6)}
+@keyframes blink100{0%,100%{background:rgba(255,214,10,.22);color:#ffd60a;box-shadow:0 0 10px rgba(255,214,10,.5)}50%{background:rgba(255,214,10,.55);color:#fff;box-shadow:0 0 18px rgba(255,214,10,.9)}}
 .upcoming-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--b1);border-radius:14px;margin-bottom:10px;background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(124,58,237,.03));transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
 .upcoming-item:last-child{margin-bottom:0}
 .upcoming-item[onclick]:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(99,102,241,.2);border-color:var(--violet)}
@@ -896,9 +898,10 @@ async function loadUpcoming(){
       try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       var matchLabel=esc(p.home)+' — '+esc(p.away);
       var oddHtml=p.real_odd?(' · <span class="upcoming-odd" style="color:var(--violet);font-weight:700">Cote '+esc(p.real_odd)+'</span>'):'';
+      var confClass='upcoming-conf'+(p.confidence>=100?' upcoming-conf-100':'');
       var right=p.locked
         ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'
-        : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'/100'+oddHtml+'</div>';
+        : '<div class="'+confClass+'">'+(p.confidence>=100?'🔥 ':'')+esc(p.bet)+' · '+esc(p.confidence)+'/100'+oddHtml+'</div>';
       var jsSafeLabel=matchLabel.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;');
       var clickAttr=p.locked ? '' : ' onclick="openBookmakerModal(\''+jsSafeLabel+'\')" style="cursor:pointer"';
       return '<div class="upcoming-item"'+clickAttr+'>'+
