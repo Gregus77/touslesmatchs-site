@@ -143,8 +143,12 @@
   function sessionHeartbeat() {
     var email = localStorage.getItem("tlm_email");
     var code = localStorage.getItem("tlm_code");
-    var session = localStorage.getItem("tlm_session");
-    if (!email || !code || !session) return; // pas connecte via ce systeme, ou connexion faite avant ce correctif
+    var session = localStorage.getItem("tlm_session") || "";
+    if (!email || !code) return; // pas connecte via ce systeme
+    // session peut etre vide pour une connexion faite AVANT ce correctif
+    // (le jeton n'existait pas encore) -- on interroge quand meme : le
+    // serveur sait dire si c'est perime ou s'il n'y a simplement rien a
+    // comparer pour l'instant (voir /session-check).
     fetch("/api/session-check?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code) + "&session=" + encodeURIComponent(session))
       .then(function (r) { return r.json(); })
       .then(function (d) {

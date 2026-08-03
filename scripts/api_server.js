@@ -8163,8 +8163,9 @@ app.post("/verify-code", (req, res) => {
 // appareil s'est connecte avec le meme code entre-temps), on renvoie
 // active:false et le client se deconnecte de lui-meme.
 app.get("/session-check", (req, res) => {
-  const { email, code, session } = req.query || {};
-  if (!email || !code || !session) return res.json({ active: false });
+  const { email, code } = req.query || {};
+  const session = req.query?.session || "";
+  if (!email || !code) return res.json({ active: false });
   try {
     const codesDb = new Database(CODES_DB_PATH, { readonly: true });
     const row = codesDb.prepare(
@@ -8172,6 +8173,13 @@ app.get("/session-check", (req, res) => {
     ).get(String(code).toUpperCase().trim(), String(email).toLowerCase().trim());
     codesDb.close();
     if (!row) return res.json({ active: false });
+    // Aucun jeton attribue a ce code depuis le lancement de cette fonctionnalite
+    // (session_token NULL en base) : rien a comparer, ne pas deconnecter une
+    // connexion legitime qui n'a simplement pas encore ete rafraichie.
+    if (!row.session_token) return res.json({ active: true });
+    // Un jeton existe en base mais le navigateur n'en a aucun localement
+    // (connexion faite AVANT ce correctif) : perimee par definition.
+    if (!session) return res.json({ active: false });
     return res.json({ active: row.session_token === session });
   } catch (e) {
     console.error("[session-check] error:", e.message);
