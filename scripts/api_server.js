@@ -2762,7 +2762,13 @@ function teamsSharePlaceWord(a, b) {
   const wa = teamPlaceWords(a);
   if (!wa.length) return false;
   const wb = teamPlaceWords(b);
-  return wa.some((w) => wb.includes(w));
+  if (wa.some((w) => wb.includes(w))) return true;
+  // Suffixe adjectival proche (ex. hongrois "-i" : "Zalaegerszegi" vs
+  // "Zalaegerszeg") : tolerance de 2 caracteres sur des mots de 6+ lettres.
+  // Sans ca, "Zalaegerszegi TE" (une source) et "Zalaegerszeg" (l'autre) ne se
+  // reconnaissaient jamais comme le meme club — doublon constate par Greg le
+  // 03/08/2026 (meme match, deux minutes differentes affichees).
+  return wa.some((w) => w.length >= 6 && wb.some((w2) => w2.length >= 6 && levenshteinAtMost(w, w2, 2)));
 }
 
 // Deux relevés du même match doivent afficher un temps de jeu voisin. Sert de
@@ -9373,6 +9379,11 @@ app.get("/live-matches", async (req, res) => {
     // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
     const matches = allMatches.filter(m => {
       const sport = String(m?.sport || "").trim();
+      // isWomenMatch() manquait cote football : isLowTrustCompetition ne verifie
+      // que la fiabilite de la ligue, jamais le genre. Une Liga MX Femenil (donc
+      // Football) passait ainsi telle quelle sur "En direct" avec un bouton
+      // "Analyser ce match" — constate par Greg le 03/08/2026.
+      if (isWomenMatch(m)) return false;
       return sport === "Football" ? !isLowTrustCompetition(m) : !isBlacklistedForLiveDisplay(m);
     });
 
