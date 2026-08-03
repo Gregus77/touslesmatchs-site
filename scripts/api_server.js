@@ -7909,6 +7909,13 @@ app.post("/auth/verify-otp", (req, res) => {
 
     db.prepare("UPDATE otp_codes SET used = 1 WHERE id = ?").run(row.id);
 
+    // Une seule connexion active a la fois par compte (demande de Greg le
+    // 03/08/2026, apres partage suspecte du code du frere) : toute nouvelle
+    // connexion invalide immediatement les sessions precedentes de ce meme
+    // email. Un appareil deja connecte se fait rejeter au prochain appel
+    // authentifie (requireSession ne trouve plus son token).
+    db.prepare("DELETE FROM sessions WHERE email = ?").run(email);
+
     const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
     db.prepare("INSERT INTO sessions (token, email, expires_at) VALUES (?,?,?)").run(token, email, expiresAt);
