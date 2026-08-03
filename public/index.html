@@ -803,10 +803,12 @@ function submitEmailCapture(ev) {
   if (!email || email.indexOf('@') === -1) return false;
   btn.disabled = true;
   btn.textContent = 'Envoi…';
+  var q = new URLSearchParams(location.search);
+  var utm = { source: q.get('utm_source') || '', medium: q.get('utm_medium') || '', campaign: q.get('utm_campaign') || '' };
   fetch('/subscribe-email', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: email, source: 'homepage_capture', landingPage: location.pathname })
+    body: JSON.stringify({ email: email, source: utm.source || 'homepage_capture', landingPage: location.pathname, utm: utm })
   })
     .then(function(r){ return r.json(); })
     .then(function(d) {
@@ -997,6 +999,22 @@ async function loadStandardYesterday(){
 loadStandardYesterday();
 
 /* ══ FAQ ══ */
+</script>
+<script>
+(function(){
+  // Pixel de tracking visiteurs (page_views) -- manquait sur l'accueil, la
+  // seule page qui recoit reellement le trafic TikTok/bio-link. Sans ca,
+  // aucune visibilite sur combien de visiteurs viennent de TikTok ni si
+  // ils convertissent (repere le 03/08/2026 en travaillant l'acquisition).
+  var q=new URLSearchParams(location.search);
+  var r=document.referrer||'';
+  new Image().src='/api/t?p='+encodeURIComponent(location.pathname)
+    +'&r='+encodeURIComponent(r)
+    +'&s='+encodeURIComponent(q.get('utm_source')||'')
+    +'&m='+encodeURIComponent(q.get('utm_medium')||'')
+    +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
+    +'&_='+Date.now();
+})();
 </script>
 <script src="/js/widgets.js" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
