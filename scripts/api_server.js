@@ -8144,6 +8144,21 @@ app.post("/verify-code", (req, res) => {
           db.prepare("INSERT INTO session_kicks (email, code) VALUES (?, ?)").run(row.email, row.code);
           console.log(`[session-kick] connexion concurrente detectee: ${row.email} (${row.code})`);
         } catch (e) { console.error("[session-kick] log:", e.message); }
+        // Rappel automatique a chaque partage detecte (pas juste le premier) —
+        // demande de Greg le 03/08/2026 : prevenir le titulaire du compte que
+        // le partage est interdit, sous risque de bannissement.
+        if (BREVO_API_KEY) {
+          brevoSendEmail(
+            row.email,
+            "⚠️ Connexion partagée détectée sur ton compte TousLesMatchs",
+            `<p>Bonjour,</p>
+             <p>Nous avons détecté une nouvelle connexion à ton compte alors qu'une session était déjà active ailleurs.</p>
+             <p><strong>Le partage d'identifiants (email + code) entre plusieurs personnes n'est pas autorisé</strong> — chaque abonnement est prévu pour un seul utilisateur.</p>
+             <p>Si ce n'était pas toi, connecte-toi et vérifie ton compte. Si tu partages ton accès, merci d'y mettre fin : en cas de récidive, le compte pourra être suspendu sans préavis.</p>
+             <p>— L'équipe TousLesMatchs</p>`,
+            { critical: true }
+          ).catch(e => console.error("[session-kick] email:", e.message));
+        }
       }
     }
 
