@@ -5,16 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Mon espace — TousLesMatchs</title>
 <meta name="robots" content="noindex, nofollow">
-<meta name="theme-color" content="#06080f">
+<meta name="theme-color" content="#12152a">
 <link rel="icon" href="/favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#06080f;--bg2:#0d1020;--bg3:#141828;--bg4:#1c2236;
-  --b1:rgba(255,255,255,.05);--b2:rgba(255,255,255,.09);--b3:rgba(255,255,255,.14);
-  --text:#eceaf4;--muted:#7b82a0;--muted2:#a8aec8;
+  --bg:#12152a;--bg2:#171b34;--bg3:#1e2340;--bg4:#262c4d;
+  --b1:rgba(255,255,255,.11);--b2:rgba(255,255,255,.18);--b3:rgba(255,255,255,.24);
+  --text:#f6f7ff;--muted:#949bc4;--muted2:#c4c9e6;
   --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;
   --cyan:#22d3ee;--green:#10b981;--red:#f43f5e;--amber:#f59e0b;
 }
@@ -25,11 +25,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-s
 nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.75);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%)}
 .nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--text);text-decoration:none}
 .nav-links{display:flex;align-items:center;gap:6px}
-.nav-links a{font-size:13px;color:#a8aec8;text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center}
+.nav-links a{font-size:13px;color:#c4c9e6;text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center}
 .nav-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f43f5e;margin-right:6px;animation:navPulseDot 1.5s infinite}
 .nav-live-link{color:#22d3ee !important}
 @keyframes navPulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(244,63,94,0)}}
-.nav-links a:hover{color:#eceaf4;background:rgba(255,255,255,.06)}
+.nav-links a:hover{color:#f6f7ff;background:rgba(255,255,255,.11)}
 .nav-logout{font-size:13px;color:var(--muted);background:none;border:1px solid var(--b2);padding:6px 16px;border-radius:8px;cursor:pointer;transition:all .15s}
 .nav-logout:hover{color:var(--red);border-color:rgba(244,63,94,.3)}
 
@@ -41,7 +41,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:cen
 .auth-sub{font-size:14px;color:var(--muted2);text-align:center;margin-bottom:32px}
 .auth-card{background:var(--bg2);border:1px solid var(--b2);border-radius:18px;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .auth-label{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--indigo2);margin-bottom:6px;display:block}
-.auth-input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--b2);border-radius:9px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;margin-bottom:14px;box-sizing:border-box;transition:border-color .15s}
+.auth-input{width:100%;background:rgba(255,255,255,.11);border:1px solid var(--b2);border-radius:9px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;margin-bottom:14px;box-sizing:border-box;transition:border-color .15s}
 .auth-input:focus{outline:none;border-color:rgba(99,102,241,.5)}
 .auth-btn{width:100%;padding:13px;border-radius:10px;font-size:14px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer;box-shadow:0 6px 24px rgba(79,70,229,.3);transition:all .2s;margin-bottom:12px}
 .auth-btn:hover{box-shadow:0 8px 32px rgba(79,70,229,.5);transform:translateY(-1px)}

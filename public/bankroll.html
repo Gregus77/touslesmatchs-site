@@ -9,7 +9,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-    background: #06080f; color: #eceaf4; line-height: 1.55;
+    background: #12152a; color: #f6f7ff; line-height: 1.55;
     min-height: 100vh; padding: 72px 16px 60px;
   }
   a { color: #6366f1; text-decoration: none; }
@@ -21,18 +21,18 @@
   .logo { font-size: 20px; font-weight: 900;
     background: linear-gradient(135deg, #6366f1, #7c3aed);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-  .back { font-size: 13px; color: #7b82a0; }
+  .back { font-size: 13px; color: #949bc4; }
   h1 { font-size: clamp(28px,4vw,44px); font-weight: 900; letter-spacing: -.035em; margin-bottom: 6px; }
-  .subtitle { font-size: 13px; color: #7b82a0; margin-bottom: 24px; }
+  .subtitle { font-size: 13px; color: #949bc4; margin-bottom: 24px; }
   .card {
-    background: #0d1020; border: 1px solid rgba(99,102,241,.22);
+    background: #171b34; border: 1px solid rgba(99,102,241,.22);
     border-radius: 16px; padding: 22px; margin-bottom: 18px;
   }
   .label { font-size: 11px; font-weight: 700; letter-spacing: .1em;
-    text-transform: uppercase; color: #7b82a0; margin-bottom: 10px; }
+    text-transform: uppercase; color: #949bc4; margin-bottom: 10px; }
   input[type="text"], input[type="email"], input[type="number"] {
-    width: 100%; background: #06080f; border: 1px solid rgba(255,255,255,.12);
-    border-radius: 10px; padding: 13px 14px; color: #eceaf4; font-size: 15px;
+    width: 100%; background: #12152a; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; padding: 13px 14px; color: #f6f7ff; font-size: 15px;
   }
   input:focus { outline: none; border-color: #6366f1; }
   .btn {
@@ -41,31 +41,31 @@
     padding: 13px 20px; border: none; border-radius: 10px; font-weight: 700; font-size: 15px;
   }
   .btn:disabled { opacity: .6; }
-  .btn.secondary { background: transparent; border: 1px solid rgba(255,255,255,.15); color: #a8aec8; }
+  .btn.secondary { background: transparent; border: 1px solid rgba(255,255,255,.15); color: #c4c9e6; }
   .row { display: flex; gap: 10px; }
   .err { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
   .hidden { display: none; }
 
   /* Nav homogene avec le reste du site (accueil, Live IA, Performances, FAQ) */
-  nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:rgba(6,8,15,.9);border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px)}
-  .nav-brand{font-size:16px;font-weight:800;color:#eceaf4;text-decoration:none;flex:0 0 auto}
+  nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:56px;background:rgba(6,8,15,.9);border-bottom:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px)}
+  .nav-brand{font-size:16px;font-weight:800;color:#f6f7ff;text-decoration:none;flex:0 0 auto}
   .nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;flex:1}
-  .nav-links a{font-size:13px;color:#a8aec8;text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center}
+  .nav-links a{font-size:13px;color:#c4c9e6;text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center}
   .nav-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f43f5e;margin-right:6px;animation:navPulseDot 1.5s infinite}
   .nav-live-link{color:#22d3ee !important}
   @keyframes navPulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(244,63,94,0)}}
-  .nav-links a:hover{color:#eceaf4;background:rgba(255,255,255,.06)}
+  .nav-links a:hover{color:#f6f7ff;background:rgba(255,255,255,.11)}
   .nav-links a.active{color:#818cf8}
   .nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
   .nav-cta{font-size:13px;font-weight:700;padding:8px 18px;border-radius:9px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;text-decoration:none;white-space:nowrap}
-  .nav-login-btn{background:transparent;border:1px solid rgba(255,255,255,.16);color:#eceaf4;padding:7px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .nav-login-btn{background:transparent;border:1px solid rgba(255,255,255,.16);color:#f6f7ff;padding:7px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
   .nav-login-btn:hover{border-color:#6366f1}
-  .nav-hamburger{display:none;background:none;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#eceaf4;width:34px;height:34px;font-size:16px;cursor:pointer}
+  .nav-hamburger{display:none;background:none;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#f6f7ff;width:34px;height:34px;font-size:16px;cursor:pointer}
   @media(max-width:900px){ .nav-links{display:none} .nav-hamburger{display:block} }
   @media(max-width:560px){ .nav-cta{display:none} }
   .mmenu{display:none;position:fixed;inset:0;z-index:199;background:rgba(6,8,15,.98);padding:90px 24px 24px;flex-direction:column;gap:18px}
   .mmenu.open{display:flex}
-  .mmenu a{font-size:18px;font-weight:700;color:#eceaf4;text-decoration:none;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .mmenu a{font-size:18px;font-weight:700;color:#f6f7ff;text-decoration:none;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.12)}
 
   /* Bankroll display */
   .bankroll-view { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
@@ -77,37 +77,37 @@
   input[type="range"] { width: 100%; accent-color: #6366f1; height: 6px; }
   .presets { display: flex; gap: 8px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
   .chip {
-    background: #06080f; border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
-    padding: 7px 15px; font-size: 13px; color: #a8aec8; cursor: pointer;
+    background: #12152a; border: 1px solid rgba(255,255,255,.24); border-radius: 999px;
+    padding: 7px 15px; font-size: 13px; color: #c4c9e6; cursor: pointer;
   }
-  .chip.active { border-color: #6366f1; color: #eceaf4; background: rgba(99,102,241,.12); }
+  .chip.active { border-color: #6366f1; color: #f6f7ff; background: rgba(99,102,241,.12); }
 
   /* Stake results */
-  .stake { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .stake { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,.11); }
   .stake:last-child { border-bottom: none; }
   .stake-ico { font-size: 26px; width: 34px; text-align: center; }
   .stake-info { flex: 1; }
   .stake-name { font-size: 15px; font-weight: 800; }
-  .stake-desc { font-size: 12px; color: #7b82a0; }
+  .stake-desc { font-size: 12px; color: #949bc4; }
   .stake-amount { font-size: 20px; font-weight: 900; }
-  .stake-gain { font-size: 11px; color: #7b82a0; }
+  .stake-gain { font-size: 11px; color: #949bc4; }
   .c-prudent { color: #10b981; } .c-normal { color: #f59e0b; } .c-risque { color: #ef4444; }
 
   /* Suivi gains/pertes */
   .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
-  .ttile { background: #06080f; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 11px 4px; text-align: center; }
+  .ttile { background: #12152a; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 11px 4px; text-align: center; }
   .tval { font-size: 16px; font-weight: 900; }
-  .tlbl { font-size: 10px; color: #7b82a0; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
-  .bet-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .tlbl { font-size: 10px; color: #949bc4; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+  .bet-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.11); font-size: 13px; }
   .bet-item:last-child { border-bottom: none; }
   .bet-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bet-profit { font-weight: 800; white-space: nowrap; }
-  .bet-del { color: #6b7186; cursor: pointer; font-size: 15px; }
-  .empty { color: #7b82a0; font-size: 13px; text-align: center; padding: 16px 0; }
+  .bet-del { color: #8a90b0; cursor: pointer; font-size: 15px; }
+  .empty { color: #949bc4; font-size: 13px; text-align: center; padding: 16px 0; }
 
   .disclaimer {
-    font-size: 11px; color: #6b7186; line-height: 1.7; margin-top: 24px;
-    padding: 16px; background: rgba(255,255,255,.02); border-radius: 12px; border: 1px solid rgba(255,255,255,.05);
+    font-size: 11px; color: #8a90b0; line-height: 1.7; margin-top: 24px;
+    padding: 16px; background: rgba(255,255,255,.02); border-radius: 12px; border: 1px solid rgba(255,255,255,.11);
   }
 </style>
 </head>
@@ -163,7 +163,7 @@ function openLoginModal(){
     <div style="margin-bottom:14px"><input type="text" id="login-code" placeholder="Votre code d'accès" autocomplete="off"></div>
     <button class="btn" id="login-btn" onclick="doLogin()">Accéder →</button>
     <div class="err" id="login-error"></div>
-    <p style="font-size:12px;color:#7b82a0;margin-top:14px">Pas encore de code ? <a href="/#plans">Voir les offres</a></p>
+    <p style="font-size:12px;color:#949bc4;margin-top:14px">Pas encore de code ? <a href="/#plans">Voir les offres</a></p>
   </div>
 
   <!-- APP -->
@@ -235,7 +235,7 @@ function openLoginModal(){
 
     <!-- Note visiteur gratuit -->
     <div id="guest-note" class="card hidden" style="text-align:center">
-      <div style="font-size:14px;color:#a8aec8;line-height:1.6">💡 Les stratégies de mise ci-dessus sont <b>gratuites pour tous</b>.<br>Pour <b>enregistrer et suivre tes paris</b> (gains/pertes sauvegardés), connecte-toi.</div>
+      <div style="font-size:14px;color:#c4c9e6;line-height:1.6">💡 Les stratégies de mise ci-dessus sont <b>gratuites pour tous</b>.<br>Pour <b>enregistrer et suivre tes paris</b> (gains/pertes sauvegardés), connecte-toi.</div>
       <div style="margin-top:14px"><a href="/#plans" class="btn" style="display:inline-block;text-decoration:none">Voir les offres →</a></div>
     </div>
 
@@ -368,7 +368,7 @@ function openLoginModal(){
       var pos = b.profit >= 0;
       return '<div class="bet-item">' +
         '<div class="bet-label">' + escapeHtml(b.label) +
-        ' <span style="color:#7b82a0">· ' + b.stake + '€ @ ' + b.odds + '</span></div>' +
+        ' <span style="color:#949bc4">· ' + b.stake + '€ @ ' + b.odds + '</span></div>' +
         '<div class="bet-profit ' + (pos ? 'c-prudent' : 'c-risque') + '">' + (pos ? '+' : '') + euro(b.profit) + '</div>' +
         '<span class="bet-del" onclick="delBet(' + b.id + ')">🗑</span></div>';
     }).join('');
