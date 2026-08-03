@@ -31,6 +31,11 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://www.touslesmatchs.com/resultats-quotidiens</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://www.touslesmatchs.com/mentions-legales</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>

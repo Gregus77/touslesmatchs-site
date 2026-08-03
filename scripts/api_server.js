@@ -8753,6 +8753,13 @@ function seoPublishedRows(limit) {
   } catch (e) { console.error("[seo] rows:", e.message); return []; }
 }
 
+// Route proxyee par Caddy mais sans gestionnaire depuis sa creation initiale
+// (aucune trace de handler retrouvee) -- redirige vers la page qui couvre deja
+// cette intention de recherche plutot que de laisser une 404 sur une URL cible.
+app.get("/signaux-sportifs-ia", (req, res) => {
+  res.redirect(301, "/pronostics");
+});
+
 app.get("/pronostics", (req, res) => {
   const items = seoPublishedRows(500);
   res.set("Content-Type", "text/html; charset=utf-8");
