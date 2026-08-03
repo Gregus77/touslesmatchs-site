@@ -50,6 +50,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .page-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:600px;margin:0 auto}
 .live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;animation:pulse-dot 1.5s infinite}
 @keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(244,63,94,0)}}
+@keyframes popupPulse{0%,100%{box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 rgba(255,214,10,.4)}50%{box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 24px rgba(255,214,10,.7)}}
 
 /* FILTERS */
 .filters{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px 24px 24px}
@@ -465,6 +466,7 @@ function confMeta(conf) {
   }
   loadMatches();
   setInterval(function(){ loadMatches(); refreshCredits(); }, 60000);
+  setTimeout(checkWatchedForUpdates, 8000);
 
   document.getElementById("filters").addEventListener("click", function(e) {
     var btn = e.target.closest(".filter-btn");
@@ -788,6 +790,11 @@ function requestAnalysis(btn, matchId, home, away) {
       btn.innerHTML = "✅ Analyse terminée";
       // Persistée : survit au rafraîchissement auto des scores toutes les 60s.
       analysisCache[matchId] = el.innerHTML;
+      // Un jeton vient d'être dépensé sur ce match : on le surveille désormais
+      // en arrière-plan (voir watchMatch/checkWatchedForUpdates) pour prévenir
+      // si le vote du Concile évolue, même si le client a 30 onglets ouverts et
+      // ne regarde plus cette carte. Demande de Greg le 03/08/2026.
+      watchMatch(matchId, home, away, voteLabel, betText, confText, resumeText);
       // Met à jour le compteur de la barre du haut
       if (userAuth && d.credits_left !== undefined) {
         userAuth.credits_left = d.credits_left;
@@ -811,6 +818,93 @@ function requestAnalysis(btn, matchId, home, away) {
     btn.disabled = false;
     btn.innerHTML = "🧠 Réessayer";
   });
+}
+
+// ── Surveillance des matchs déjà analysés (jeton dépensé) ──────────────────
+// Objectif : un client qui a payé un jeton sur un match ne doit pas rater une
+// évolution du vote Concile juste parce qu'il regarde un autre match parmi les
+// 30 ouverts. On revérifie périodiquement (voir checkWatchedForUpdates) et un
+// popup alerte en cas de changement — demande de Greg le 03/08/2026.
+var WATCH_KEY = "tlm_watched_matches";
+function loadWatched() {
+  try { return JSON.parse(localStorage.getItem(WATCH_KEY) || "{}"); } catch (e) { return {}; }
+}
+function saveWatched(obj) {
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+function watchMatch(matchId, home, away, voteLabel, betText, confText, resumeText) {
+  var w = loadWatched();
+  w[matchId] = { home: home, away: away, voteLabel: voteLabel || "", betText: betText || "", confText: confText || "", resumeText: resumeText || "", ts: Date.now() };
+  saveWatched(w);
+}
+function unwatchMatch(matchId) {
+  var w = loadWatched();
+  delete w[matchId];
+  saveWatched(w);
+}
+
+function checkWatchedForUpdates() {
+  if (!userAuth) return;
+  var w = loadWatched();
+  var ids = Object.keys(w);
+  if (!ids.length) return;
+  ids.forEach(function (matchId) {
+    var entry = w[matchId];
+    var match = allMatches.find(function (m) { return (m.id || m.home + "_" + m.away) === matchId; });
+    if (!match) { unwatchMatch(matchId); return; } // plus en direct : match termine/disparu
+    fetch("/api/concile-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: userAuth.email, code: userAuth.code,
+        match: { id: match.id, home: match.home, away: match.away, score_home: match.score_home, score_away: match.score_away, minute: match.minute, competition: match.competition }
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) return;
+      var vote = d.vote_summary || {};
+      var voteLabel = vote.vote_label || (d.consensus_votes && d.total_agents ? (d.consensus_votes + "/" + d.total_agents) : "");
+      var betText = d.value_bet ? d.value_bet.marche : "";
+      var confText = d.value_bet ? d.value_bet.prob : "";
+      var resumeText = d.resume || "";
+      if (voteLabel && voteLabel !== entry.voteLabel) {
+        showUpdatePopup(match.home, match.away, voteLabel, betText, confText, resumeText);
+      }
+      watchMatch(matchId, match.home, match.away, voteLabel, betText, confText, resumeText);
+      if (userAuth && d.credits_left !== undefined) { userAuth.credits_left = d.credits_left; updateAuthBar(); }
+    }).catch(function () {});
+  });
+}
+setInterval(checkWatchedForUpdates, 45000);
+
+function showUpdatePopup(home, away, voteLabel, betText, confText, resumeText) {
+  var old = document.getElementById("update-popup");
+  if (old) old.remove();
+  var pop = document.createElement("div");
+  pop.id = "update-popup";
+  pop.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;max-width:420px;width:calc(100% - 32px);background:linear-gradient(135deg,#1e2340,#262c4d);border:2px solid #ffd60a;border-radius:16px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:popupPulse 1.2s infinite";
+  var betHtml = betText ? '<div style="margin-top:8px;font-size:13px;color:#c4c9e6"><b style="color:#f6f7ff">🎯 ' + escHtml(betText) + '</b>' + (confText ? " · " + confText + "/100" : "") + '</div>' : "";
+  var resumeHtml = resumeText ? '<div style="margin-top:6px;font-size:12px;color:#949bc4;line-height:1.4">' + escHtml(resumeText).slice(0, 160) + '</div>' : "";
+  pop.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">' +
+      '<div style="font-weight:900;font-size:14px;color:#ffd60a">🔥 Mise à jour Concile</div>' +
+      '<span onclick="document.getElementById(\'update-popup\').remove()" style="cursor:pointer;color:#949bc4;font-size:18px;line-height:1;padding:0 4px">×</span>' +
+    '</div>' +
+    '<div style="margin-top:4px;font-size:13.5px;font-weight:700;color:#f6f7ff">' + escHtml(home) + ' — ' + escHtml(away) + '</div>' +
+    '<div style="margin-top:6px;display:inline-block;background:rgba(255,214,10,.16);color:#ffd60a;font-weight:900;font-size:13px;padding:5px 10px;border-radius:8px">Vote IA : ' + escHtml(voteLabel) + '</div>' +
+    betHtml + resumeHtml +
+    '<div id="update-popup-bm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-top:12px"></div>';
+  document.body.appendChild(pop);
+  fetch('/api/bookmaker-links').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.ok || !d.links || !d.links.length) return;
+    var brand = { Winamax: { bg: '#E2001A', fg: '#fff' }, Unibet: { bg: '#0C7A3D', fg: '#fff' }, PMU: { bg: '#003DA5', fg: '#fff' }, Betclic: { bg: '#FFD100', fg: '#111' } };
+    var el = document.getElementById('update-popup-bm');
+    if (!el) return;
+    el.innerHTML = d.links.map(function (b) {
+      var c = brand[b.text] || { bg: '#334155', fg: '#fff' };
+      return '<a href="' + b.url + '" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:' + c.bg + ';color:' + c.fg + ';padding:8px 6px;border-radius:8px;text-decoration:none;font-weight:900;font-size:11.5px">' + b.text + '</a>';
+    }).join('');
+  }).catch(function () {});
+  setTimeout(function () { var p = document.getElementById("update-popup"); if (p) p.remove(); }, 45000);
 }
 
 // ── Auth ──

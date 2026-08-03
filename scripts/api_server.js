@@ -3363,9 +3363,15 @@ app.get("/upcoming-picks", async (req, res) => {
       } catch (_) {}
     }
     const result = await computeUpcomingPicks();
+    // Le cache dure 30 min : un match peut avoir donne son coup d'envoi entre
+    // deux recalculs et rester affiche avec sa cote figee d'avant-match, alors
+    // qu'il est deja en direct ailleurs sur le site. Filtre applique a chaque
+    // requete (pas au calcul), donc jamais plus de quelques secondes de retard
+    // meme entre deux recalculs. Signale par Greg le 03/08/2026.
+    const stillUpcoming = result.data.filter(p => new Date(p.kickoff).getTime() > Date.now());
     res.json({
       ok: true,
-      picks: result.data.map(p => ({
+      picks: stillUpcoming.map(p => ({
         home: p.home, away: p.away, competition: p.competition, sport: p.sport,
         kickoff: p.kickoff, confidence: p.confidence,
         bet: unlocked ? p.bet : null, locked: !unlocked,
