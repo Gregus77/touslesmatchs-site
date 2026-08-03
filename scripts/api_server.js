@@ -10774,14 +10774,21 @@ app.get("/analysis-history", (req, res) => {
         isPaidViewer = (a.valid && a.plan && a.plan !== "free") || viewerIsAdmin;
       } catch (_) {}
     }
-    // L'admin garde la vue complète (supervision), sinon on filtre sur le palier.
-    const sigColumn = (viewerPlan && !viewerIsAdmin) ? SIG_COLUMN_BY_PLAN[viewerPlan] : null;
-    // Nom de colonne issu d'une liste blanche, jamais d'une saisie utilisateur.
-    const tierFilterSql = sigColumn ? `AND ${sigColumn} = 1` : "";
+    // L'admin garde la vue complète (supervision), sinon on filtre sur le palier —
+    // via tierEligible (critères qualité du palier), pas via les envois Telegram
+    // réels (sig_sent_*) : ceux-ci sont plafonnés/jour et sous-représentaient
+    // largement ce que le palier a vraiment mérité (signalé par Greg le
+    // 03/08/2026 — la page affichait 2-3 lignes par palier alors que le Concile
+    // tourne depuis des semaines). tierEligible est déjà la source du bloc
+    // stats.tiers plus bas : on aligne la liste détaillée dessus pour cohérence.
+    const tierFilter = (viewerPlan && !viewerIsAdmin) ? viewerPlan : null;
     // Dédoublonnage en SQL : un match est analysé plusieurs fois par jour
     // (snapshots à différentes minutes). ROW_NUMBER garde UNE ligne par
     // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
-    const rows = db.prepare(`
+    // Pas de LIMIT/OFFSET ici quand un filtre de palier s'applique : tierEligible
+    // ne s'exprime pas en SQL (dépend de seuils dynamiques + regex JS), donc on
+    // filtre après coup et on pagine sur le résultat filtré.
+    const rawRows = db.prepare(`
       SELECT id, home, away, competition, sport, best_bet, confidence, raison,
              consensus_votes, outcome, analysed_at, real_odd, real_odd_source,
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
@@ -10796,22 +10803,13 @@ app.get("/analysis-history", (req, res) => {
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
           AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
-          ${tierFilterSql}
       )
       WHERE _rn = 1
       ORDER BY analysed_at DESC
-      LIMIT ? OFFSET ?
-    `).all(limit, offset);
-
-    const total = db.prepare(`
-      SELECT COUNT(*) AS cnt FROM (
-        SELECT 1 FROM concile_analyses
-        WHERE date(analysed_at) >= '2026-07-03'
-          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
-          ${tierFilterSql}
-        GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-      )
-    `).get()?.cnt || 0;
+    `).all();
+    const tierFilteredRows = tierFilter ? rawRows.filter(r => tierEligible(r, tierFilter)) : rawRows;
+    const total = tierFilteredRows.length;
+    const rows = tierFilteredRows.slice(offset, offset + limit);
 
     // isPaidViewer (résolu plus haut) : seuls les abonnés — ou l'admin — voient le
     // pick des analyses EN COURS. Les visiteurs voient les résultats passés
@@ -10936,7 +10934,7 @@ app.get("/analysis-history", (req, res) => {
       // Périmètre appliqué, pour que le front puisse l'annoncer clairement
       // ("Statistiques de ton palier Standard") au lieu de laisser croire à
       // l'abonné qu'il consulte l'historique complet.
-      scope: sigColumn ? { filtered: true, plan: viewerPlan } : { filtered: false, plan: viewerPlan || null },
+      scope: tierFilter ? { filtered: true, plan: viewerPlan } : { filtered: false, plan: viewerPlan || null },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
