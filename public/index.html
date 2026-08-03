@@ -893,9 +893,10 @@ async function loadUpcoming(){
       var kt='';
       try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
       var matchLabel=esc(p.home)+' — '+esc(p.away);
+      var oddHtml=p.real_odd?(' · <span class="upcoming-odd" style="color:var(--violet);font-weight:700">Cote '+esc(p.real_odd)+'</span>'):'';
       var right=p.locked
         ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'
-        : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'/100</div>';
+        : '<div class="upcoming-conf">'+esc(p.bet)+' · '+esc(p.confidence)+'/100'+oddHtml+'</div>';
       var jsSafeLabel=matchLabel.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;');
       var clickAttr=p.locked ? '' : ' onclick="openBookmakerModal(\''+jsSafeLabel+'\')" style="cursor:pointer"';
       return '<div class="upcoming-item"'+clickAttr+'>'+

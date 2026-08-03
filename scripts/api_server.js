@@ -3302,6 +3302,7 @@ async function computeUpcomingPicks() {
         sport: "Football", kickoff: f.fixture.date,
         bet: candidates[0].bet, confidence: candidates[0].confidence,
         home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+        _fixtureId: f.fixture.id,
       };
       picks.push(pick);
       savePrematchPickIfNew(pick);
@@ -3312,6 +3313,22 @@ async function computeUpcomingPicks() {
   // à venir, dans l'ordre, plutôt que juste les mieux notés (01/08/2026).
   picks.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
   const top = picks.slice(0, 12);
+  // Cote ARJEL réelle (demande de Greg le 03/08/2026) — uniquement sur les
+  // picks retenus (top 12, pas les 60 candidats bruts) pour ménager le quota
+  // API-Sports. On n'affiche la cote QUE si le bookmaker qui l'a fournie est
+  // reconnu ARJEL (cf. ARJEL_BOOKMAKERS) — jamais de repli sur un bookmaker
+  // non-ARJEL, sinon on afficherait une cote sous un label trompeur.
+  for (const p of top) {
+    try {
+      const oddsData = await fetchRealOdds({ source: "api-sports", sport: "Football", fixtureId: p._fixtureId });
+      const isArjel = oddsData && ARJEL_BOOKMAKERS.some(a => String(oddsData.bookmaker || "").toLowerCase().includes(a));
+      if (isArjel) {
+        const realOdd = pickRealOdd(oddsData, p.bet, p);
+        if (realOdd) { p.real_odd = realOdd; p.real_odd_bookmaker = oddsData.bookmaker; }
+      }
+    } catch (e) { console.error("[upcoming-picks] odds:", e.message); }
+    delete p._fixtureId;
+  }
   _upcomingPicksCache = { ts: Date.now(), data: top, stats };
   return _upcomingPicksCache;
 }
@@ -3333,6 +3350,7 @@ app.get("/upcoming-picks", async (req, res) => {
         home: p.home, away: p.away, competition: p.competition, sport: p.sport,
         kickoff: p.kickoff, confidence: p.confidence,
         bet: unlocked ? p.bet : null, locked: !unlocked,
+        real_odd: unlocked ? (p.real_odd || null) : null,
         home_logo: p.home_logo, away_logo: p.away_logo,
       })),
       stats: result.stats,
