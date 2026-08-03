@@ -3256,6 +3256,12 @@ async function computeUpcomingPicks() {
       const hoursAway = (kickoff - Date.now()) / 3600000;
       return hoursAway > 0 && hoursAway <= 36;
     });
+    // Tri par coup d'envoi le plus proche AVANT de couper a 60 : sans ca, un
+    // match a 19h pouvait ne jamais etre examine simplement parce qu'il
+    // arrivait en position 57+ dans l'ordre brut renvoye par l'API (aucun
+    // rapport avec sa qualite) - constate par Greg le 03/08/2026 sur un pick
+    // BTTS 100% (Cracovia-Pogon, Ekstraklasa) disparu pour cette seule raison.
+    fixtures.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date));
     stats.totalFixtures = fixtures.length;
     for (const f of fixtures.slice(0, 60)) {
       const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football", home: f.teams.home?.name || "", away: f.teams.away?.name || "" };
