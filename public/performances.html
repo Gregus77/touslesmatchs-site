@@ -577,7 +577,46 @@ function fetchData(initial) {
     .catch(function() { if (initial) showError(); });
 }
 
-fetchData(true);
+// Le pick du jour (vitrine gratuite, /api/daily-pick-history) vivait dans son
+// propre onglet, invisible des onglets Tous/Standard/Premium/Elite — Greg
+// voulait qu'il apparaisse partout (03/08/2026). tier:'standard' le fait
+// remonter dans tous les onglets grace au modele imbrique de rowInTier
+// (Standard ⊆ Premium ⊆ Elite ⊆ Tous). Dédoublonné contre /analysis-history
+// au cas où le même match y figurerait déjà (même home/away/jour).
+function normalizeDailyPick(p) {
+  var score = (p.final_score_home != null && p.final_score_away != null) ? (p.final_score_home + '-' + p.final_score_away) : '';
+  return {
+    analysed_at: p.date, home: p.home, away: p.away, competition: p.competition, sport: p.sport,
+    bet: p.bet, confidence: p.confidence, cote: p.cote, outcome: p.outcome, final_score: score,
+    tier: 'standard', locked: false
+  };
+}
+function mergeDailyPicksIntoList(picks) {
+  var existingKeys = {};
+  allAnalyses.forEach(function (a) {
+    var k = (a.home || '').toLowerCase().trim() + '_' + (a.away || '').toLowerCase().trim() + '_' + String(a.analysed_at || '').slice(0, 10);
+    existingKeys[k] = true;
+  });
+  var added = [];
+  picks.forEach(function (p) {
+    var norm = normalizeDailyPick(p);
+    var k = (norm.home || '').toLowerCase().trim() + '_' + (norm.away || '').toLowerCase().trim() + '_' + String(norm.analysed_at || '').slice(0, 10);
+    if (existingKeys[k]) return;
+    existingKeys[k] = true;
+    added.push(norm);
+  });
+  if (added.length) {
+    allAnalyses = allAnalyses.concat(added).sort(function (a, b) { return new Date(b.analysed_at) - new Date(a.analysed_at); });
+    totalCount += added.length;
+    if (currentTier !== 'dailypick') renderList();
+  }
+}
+
+fetchData(true).then(function () {
+  return fetch('/api/daily-pick-history?limit=60').then(function (r) { return r.json(); });
+}).then(function (d) {
+  if (d && d.ok && Array.isArray(d.picks)) mergeDailyPicksIntoList(d.picks);
+}).catch(function () {});
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
