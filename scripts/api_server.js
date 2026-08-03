@@ -6162,7 +6162,25 @@ function dedupeAnalysesByMatch(rows) {
     if (resolved(r) && !resolved(previous)) { best.set(key, r); continue; }
     if (resolved(r) === resolved(previous) && stamp(r) < stamp(previous)) best.set(key, r);
   }
-  return [...best.values()];
+  // Deuxieme passe : deux cles exactes differentes peuvent malgre tout designer
+  // le meme match reel si les sources l'ont nomme differemment (ex.
+  // "Zalaegerszegi TE" / "Zalaegerszeg", suffixe adjectival hongrois "-i").
+  // canonicalMatchKey exige une egalite stricte du token dominant ; on rattrape
+  // ici les cas proches avec la meme tolerance que la fusion des flux live
+  // (sameLiveTeams). Constate par Greg le 03/08/2026 sur /performances : la
+  // meme rencontre affichee deux fois avec deux confiances differentes.
+  const merged = [];
+  for (const r of best.values()) {
+    const day = String(r.analysed_at || r.created_at || "").slice(0, 10);
+    const dupIdx = merged.findIndex(m =>
+      String(m.analysed_at || m.created_at || "").slice(0, 10) === day && sameLiveTeams(m, r)
+    );
+    if (dupIdx < 0) { merged.push(r); continue; }
+    const dup = merged[dupIdx];
+    if (resolved(r) && !resolved(dup)) { merged[dupIdx] = r; continue; }
+    if (resolved(r) === resolved(dup) && stamp(r) < stamp(dup)) merged[dupIdx] = r;
+  }
+  return merged;
 }
 
 let staleResolveRunning = false;
