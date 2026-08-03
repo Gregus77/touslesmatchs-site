@@ -405,7 +405,30 @@ let userAuth = null;
 // tourne toutes les 60s et reconstruit tout le HTML des cartes (scores en direct) —
 // sans ce cache, une analyse tout juste ouverte se refermait et redevenait un
 // simple bouton "Analyser" à chaque rafraîchissement.
-let analysisCache = {};
+// Persisté en localStorage (pas juste en mémoire) : un jeton payé doit rester
+// visible même après un rechargement de page ou une revisite plus tard dans
+// le match, pas seulement pendant la session en cours. Demande de Greg le
+// 03/08/2026. Purge les entrées de plus de 12h (matchs forcément terminés).
+var ANALYSIS_CACHE_KEY = "tlm_analysis_cache";
+function loadAnalysisCache() {
+  try {
+    var raw = JSON.parse(localStorage.getItem(ANALYSIS_CACHE_KEY) || "{}");
+    var now = Date.now(), fresh = {};
+    Object.keys(raw).forEach(function (k) {
+      var entry = raw[k];
+      if (entry && entry.ts && (now - entry.ts) < 12 * 3600 * 1000) fresh[k] = entry.html;
+    });
+    return fresh;
+  } catch (e) { return {}; }
+}
+function saveAnalysisCache() {
+  try {
+    var out = {};
+    Object.keys(analysisCache).forEach(function (k) { out[k] = { html: analysisCache[k], ts: Date.now() }; });
+    localStorage.setItem(ANALYSIS_CACHE_KEY, JSON.stringify(out));
+  } catch (e) {}
+}
+let analysisCache = loadAnalysisCache();
 
 // ── Minute affichée : traduit les codes bruts de l'API en français clair.
 // "0" est un chiffre valide (coup d'envoi) mais falsy en JS — sans check
@@ -709,6 +732,46 @@ function renderMatches() {
 }
 
 // ── Analysis ──
+// Construction du HTML du verdict — partagee entre le clic manuel
+// (requestAnalysis) et la revérification silencieuse en arrière-plan
+// (checkWatchedForUpdates), pour que les deux affichent exactement la même
+// chose et que le panneau déjà ouvert se mette à jour tout seul.
+function buildAnalysisHtml(d) {
+  var synthese = d.agents ? d.agents[d.agents.length - 1] : null;
+  var resumeText = d.resume || (synthese ? synthese.raison : "Analyse terminée");
+  var betText = d.value_bet ? d.value_bet.marche : (synthese ? synthese.bet : "");
+  var confText = d.value_bet ? d.value_bet.prob : (synthese ? synthese.confidence : "");
+  var vote = d.vote_summary || {};
+  var voteLabel = vote.vote_label || (d.consensus_votes && d.total_agents ? (d.consensus_votes + "/" + d.total_agents) : "");
+  var voteStatus = vote.vote_status === "elite" ? "Signal Elite"
+    : vote.vote_status === "strong" ? "Signal Fort"
+    : vote.vote_status === "trend" ? "Tendance IA"
+    : "Aucun signal validé";
+  if (vote.vote_status === "none") betText = "";
+
+  var agentsHtml = '<div style="font-size:12px;color:var(--muted2);margin-top:10px;padding:10px 12px;border-top:1px solid var(--b1);background:rgba(255,255,255,.03);border-radius:10px">'
+    + '5 IA indépendantes votent sans émotion — Perplexity, DeepSeek, Mistral, Cohere et Qwen — à partir des statistiques live, de l\'historique, de la dynamique et des probabilités.'
+    + '</div>';
+
+  var cm = confMeta(confText);
+  var noSignalHtml = !betText
+    ? '<div class="conf-badge red"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
+  var coteHtml = (betText && d.cote && Number(d.cote) > 1)
+    ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
+  var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
+    ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
+  var html = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
+    + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
+    + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
+    + noSignalHtml
+    + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
+    + coteHtml
+    + arjelHtml
+    + agentsHtml
+    + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
+  return { html: html, voteLabel: voteLabel, betText: betText, confText: confText, resumeText: resumeText };
+}
+
 function requestAnalysis(btn, matchId, home, away) {
   if (!userAuth) {
     openLoginModal();
@@ -745,56 +808,22 @@ function requestAnalysis(btn, matchId, home, away) {
     if (analysisTimer) clearTimeout(analysisTimer);
     var el = document.getElementById("analysis-" + matchId);
     if (d.ok) {
-      var synthese = d.agents ? d.agents[d.agents.length - 1] : null;
-      var resumeText = d.resume || (synthese ? synthese.raison : "Analyse terminée");
-      var betText = d.value_bet ? d.value_bet.marche : (synthese ? synthese.bet : "");
-      var confText = d.value_bet ? d.value_bet.prob : (synthese ? synthese.confidence : "");
-      var vote = d.vote_summary || {};
-      var voteLabel = vote.vote_label || (d.consensus_votes && d.total_agents ? (d.consensus_votes + "/" + d.total_agents) : "");
-      var voteStatus = vote.vote_status === "elite" ? "Signal Elite"
-        : vote.vote_status === "strong" ? "Signal Fort"
-        : vote.vote_status === "trend" ? "Tendance IA"
-        : "Aucun signal validé";
-      if (vote.vote_status === "none") betText = "";
-
-      var agentsHtml = '<div style="font-size:12px;color:var(--muted2);margin-top:10px;padding:10px 12px;border-top:1px solid var(--b1);background:rgba(255,255,255,.03);border-radius:10px">'
-        + '5 IA indépendantes votent sans émotion — Perplexity, DeepSeek, Mistral, Cohere et Qwen — à partir des statistiques live, de l\'historique, de la dynamique et des probabilités.'
-        + '</div>';
-
-      var cm = confMeta(confText);
-      // Pas de pari valide = pas d'absence de pastille, mais une pastille ROUGE
-      // explicite "ne pas jouer" — sinon la couleur disparait justement sur le
-      // cas le plus important a signaler clairement.
-      var noSignalHtml = !betText
-        ? '<div class="conf-badge red"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
-      // Cote reelle (un seul bookmaker, celle retenue pour le signal) — elle
-      // n'etait envoyee que sur Telegram, jamais affichee sur cette page.
-      var coteHtml = (betText && d.cote && Number(d.cote) > 1)
-        ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
-      // "Moyenne" n'a de sens qu'a partir de 2 bookmakers — sinon c'est juste
-      // la cote d'un seul operateur, deja affichee ci-dessus sous "Cote". Et
-      // sans pari valide (betText vide), une cote affichee ne se rattache a
-      // rien de concret pour le client : on ne la montre que si un signal existe.
-      var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
-        ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
-      el.innerHTML = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
-        + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
-        + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
-        + noSignalHtml
-        + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
-        + coteHtml
-        + arjelHtml
-        + agentsHtml
-        + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
+      var built = buildAnalysisHtml(d);
+      el.innerHTML = built.html;
       el.classList.add("visible");
       btn.innerHTML = "✅ Analyse terminée";
-      // Persistée : survit au rafraîchissement auto des scores toutes les 60s.
+      // Persistée en localStorage (pas juste en mémoire JS) : le panneau doit
+      // rester ouvert tant que le match n'est pas fini, MEME apres un
+      // rechargement de page ou une revisite plus tard — demande de Greg le
+      // 03/08/2026 ("l'analyse doit rester ouverte en permanence a partir du
+      // moment ou j'ai paye mon jeton et pendant tout le match").
       analysisCache[matchId] = el.innerHTML;
+      saveAnalysisCache();
       // Un jeton vient d'être dépensé sur ce match : on le surveille désormais
       // en arrière-plan (voir watchMatch/checkWatchedForUpdates) pour prévenir
       // si le vote du Concile évolue, même si le client a 30 onglets ouverts et
       // ne regarde plus cette carte. Demande de Greg le 03/08/2026.
-      watchMatch(matchId, home, away, voteLabel, betText, confText, resumeText);
+      watchMatch(matchId, home, away, built.voteLabel, built.betText, built.confText, built.resumeText);
       // Met à jour le compteur de la barre du haut
       if (userAuth && d.credits_left !== undefined) {
         userAuth.credits_left = d.credits_left;
@@ -851,7 +880,13 @@ function checkWatchedForUpdates() {
   ids.forEach(function (matchId) {
     var entry = w[matchId];
     var match = allMatches.find(function (m) { return (m.id || m.home + "_" + m.away) === matchId; });
-    if (!match) { unwatchMatch(matchId); return; } // plus en direct : match termine/disparu
+    if (!match) {
+      // Plus en direct (match termine/disparu de l'API) : on arrete de le
+      // surveiller, mais on garde le panneau visible s'il l'etait deja —
+      // c'est la preuve/derniere analyse, utile meme apres la fin du match.
+      unwatchMatch(matchId);
+      return;
+    }
     fetch("/api/concile-analysis", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -861,15 +896,19 @@ function checkWatchedForUpdates() {
       })
     }).then(function (r) { return r.json(); }).then(function (d) {
       if (!d.ok) return;
-      var vote = d.vote_summary || {};
-      var voteLabel = vote.vote_label || (d.consensus_votes && d.total_agents ? (d.consensus_votes + "/" + d.total_agents) : "");
-      var betText = d.value_bet ? d.value_bet.marche : "";
-      var confText = d.value_bet ? d.value_bet.prob : "";
-      var resumeText = d.resume || "";
-      if (voteLabel && voteLabel !== entry.voteLabel) {
-        showUpdatePopup(match.home, match.away, voteLabel, betText, confText, resumeText);
+      var built = buildAnalysisHtml(d);
+      if (built.voteLabel && built.voteLabel !== entry.voteLabel) {
+        showUpdatePopup(match.home, match.away, built.voteLabel, built.betText, built.confText, built.resumeText);
       }
-      watchMatch(matchId, match.home, match.away, voteLabel, betText, confText, resumeText);
+      watchMatch(matchId, match.home, match.away, built.voteLabel, built.betText, built.confText, built.resumeText);
+      // Le panneau deja ouvert (ou retrouve au chargement via le cache
+      // persistant) doit refleter le dernier avis du Concile, meme si le
+      // client ne l'a pas rouvert manuellement — sinon le popup annonce un
+      // changement que la carte elle-meme ne montre pas encore.
+      analysisCache[matchId] = built.html;
+      saveAnalysisCache();
+      var domEl = document.getElementById("analysis-" + matchId);
+      if (domEl) { domEl.innerHTML = built.html; domEl.classList.add("visible"); }
       if (userAuth && d.credits_left !== undefined) { userAuth.credits_left = d.credits_left; updateAuthBar(); }
     }).catch(function () {});
   });
