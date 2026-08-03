@@ -160,6 +160,20 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .upcoming-conf{font-size:12.5px;font-weight:800;color:#3ec9e8;white-space:nowrap;background:rgba(62,201,232,.12);padding:6px 11px;border-radius:9px;display:inline-block}
 .upcoming-odd{background:rgba(124,58,237,.16);padding:2px 8px;border-radius:7px}
 .upcoming-lock-btn{font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:6px 12px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap}
+.day-acc-item{border:1px solid var(--b1);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.day-acc-item:last-child{margin-bottom:0}
+.day-acc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;cursor:pointer;background:rgba(255,255,255,.02);transition:background .15s}
+.day-acc-head:hover{background:rgba(124,92,255,.06)}
+.day-acc-date{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.day-acc-caret{transition:transform .2s;color:var(--muted);font-size:12px}
+.day-acc-item.open .day-acc-caret{transform:rotate(90deg)}
+.day-acc-summary{font-size:12.5px;font-weight:700;white-space:nowrap}
+.day-acc-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
+.day-acc-item.open .day-acc-body{max-height:600px}
+.day-acc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px;border-top:1px solid var(--b1);font-size:12.5px}
+.day-acc-row-teams{font-weight:700;flex:1;min-width:0}
+.day-acc-row-bet{color:var(--tx2);font-size:11.5px;margin-top:2px}
+.day-acc-row-badge{font-weight:800;white-space:nowrap;padding:4px 9px;border-radius:7px;font-size:11.5px}
 .live-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--b1)}
 .live-row:first-of-type{border-top:none}
 .live-comp{width:46px;flex:0 0 auto}
@@ -351,6 +365,15 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
         <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl">Profit simulé (mise 10€)</div></div></div>
       </div>
       <div class="proof-note">Performances calculées sur les sélections officiellement terminées. Les performances passées ne garantissent pas les résultats futurs.</div>
+    </div>
+  </div>
+
+  <!-- RANGEE 2.5 : DERNIERS VERDICTS DU CONCILE (accordeon par jour, plusieurs
+       jours d'affilee) -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card">
+      <div class="pcard-title" style="margin-bottom:10px">Derniers verdicts du Concile</div>
+      <div id="daily-accordion"><div class="empty-note">Chargement…</div></div>
     </div>
   </div>
 
@@ -914,6 +937,63 @@ async function loadUpcoming(){
   } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
 }
 loadUpcoming();
+
+/* ══ DERNIERS VERDICTS DU CONCILE — accordéon par jour ══ */
+function fmtSignedEur(n){var v=Math.round(Number(n)||0);return (v>0?'+':'')+v+'€';}
+function fmtDayLabel(d){
+  try{
+    var dt=new Date(String(d)+'T12:00:00');
+    if(isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  }catch(e){ return String(d); }
+}
+function toggleDayAcc(idx){
+  var el=document.querySelector('[data-day-idx="'+idx+'"]');
+  if(el) el.classList.toggle('open');
+}
+async function loadDailyAccordion(){
+  var box=document.getElementById('daily-accordion');
+  try{
+    var r=await fetch('/api/analysis-history?limit=200&t='+Date.now());
+    var d=await r.json();
+    var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
+    if(!rows.length){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
+    var byDay={};
+    var order=[];
+    rows.forEach(function(a){
+      var day=String(a.analysed_at||'').slice(0,10);
+      if(!byDay[day]){ byDay[day]=[]; order.push(day); }
+      byDay[day].push(a);
+    });
+    order.sort(function(a,b){ return new Date(b)-new Date(a); });
+    box.innerHTML=order.slice(0,10).map(function(day,idx){
+      var list=byDay[day];
+      var wins=list.filter(function(a){ return a.outcome==='win'; }).length;
+      var profit=0;
+      list.forEach(function(a){
+        var cote=Number(a.cote)>1?Number(a.cote):0;
+        profit += a.outcome==='win' ? (cote?cote*10-10:0) : -10;
+      });
+      var rowsHtml=list.map(function(a){
+        var win=a.outcome==='win';
+        var badgeStyle=win?'background:rgba(51,196,129,.14);color:var(--green)':'background:rgba(239,90,111,.14);color:var(--red)';
+        var cote=(a.cote!=null && a.cote>1)?'@'+Number(a.cote).toFixed(2):'';
+        return '<div class="day-acc-row">'
+          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div></div>'
+          + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
+          + '</div>';
+      }).join('');
+      return '<div class="day-acc-item" data-day-idx="'+idx+'">'
+        + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
+        +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
+        +   '<div class="day-acc-summary" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+wins+'/'+list.length+' gagnés · '+fmtSignedEur(profit)+'</div>'
+        + '</div>'
+        + '<div class="day-acc-body">'+rowsHtml+'</div>'
+        + '</div>';
+    }).join('');
+  }catch(e){ box.innerHTML='<div class="empty-note">Impossible de charger les verdicts pour le moment.</div>'; }
+}
+loadDailyAccordion();
 
 /* ══ PICK GRATUIT DU JOUR ══ */
 async function loadPick(){
