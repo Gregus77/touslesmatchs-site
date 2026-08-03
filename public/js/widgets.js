@@ -1,6 +1,6 @@
 /* ══════════════════════════════════════════════════════════════════════════
    FloatingWidgets — composant global unique de TousLesMatchs
-   Chargé UNE SEULE FOIS par page via <script src="/js/widgets.js" defer></script>.
+   Chargé UNE SEULE FOIS par page via <script src="/js/widgets.js?v=2" defer></script>.
    Rend UN SEUL conteneur position:fixed (bas-droite), en flex column :
         💬 Chatbot   (au-dessus)
         TikTok       (dessous)
