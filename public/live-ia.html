@@ -335,43 +335,14 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
   <button class="filter-btn active" data-filter="Football">&#9917; Football</button>
 </div>
 
-<!-- ADVANCED FILTERS -->
-<div class="adv-filters-toggle">
-  <button class="af-highlight-btn" id="adv-filters-btn" onclick="toggleAdvFilters()">🎚️ Choisis TON match selon tes critères</button>
-</div>
-<div class="adv-filters-panel" id="adv-filters-panel" style="display:block">
-  <div class="af-title">Règle tes critères — 100% gratuit, aucun jeton dépensé tant que tu ne cliques pas sur un match</div>
-  <div class="af-row">
-    <label for="af-btts">BTTS historique (les 2 marquent) ≥</label>
-    <input type="range" id="af-btts" min="0" max="100" step="5" value="0" oninput="syncAdvLabel('af-btts','%')">
-    <span class="af-val" id="af-btts-val">0%</span>
-  </div>
-  <div class="af-row">
-    <label for="af-ht">But en 1ère mi-temps (historique) ≥</label>
-    <input type="range" id="af-ht" min="0" max="100" step="5" value="0" oninput="syncAdvLabel('af-ht','%')">
-    <span class="af-val" id="af-ht-val">0%</span>
-  </div>
-  <div class="af-row">
-    <label for="af-under25">Peu de buts probable (Under 2.5 historique) ≥</label>
-    <input type="range" id="af-under25" min="0" max="100" step="5" value="0" oninput="syncAdvLabel('af-under25','%')">
-    <span class="af-val" id="af-under25-val">0%</span>
-  </div>
-  <div class="af-row">
-    <label for="af-goaldiff">Match serré — écart de buts actuel ≤</label>
-    <input type="range" id="af-goaldiff" min="0" max="5" step="1" value="5" oninput="syncAdvLabel('af-goaldiff','')">
-    <span class="af-val" id="af-goaldiff-val">5</span>
-  </div>
-  <div class="af-row">
-    <label for="af-minute">2ème période — minute de jeu ≥</label>
-    <input type="range" id="af-minute" min="0" max="90" step="5" value="0" oninput="syncAdvLabel('af-minute',\"'\")">
-    <span class="af-val" id="af-minute-val">0'</span>
-  </div>
-  <div class="af-actions">
-    <button class="af-apply" onclick="applyAdvFilters()">Appliquer</button>
-    <button class="af-reset" onclick="resetAdvFilters()">Réinitialiser</button>
-    <span class="af-count" id="af-count"></span>
-  </div>
-</div>
+<!-- ADVANCED FILTERS — desactives temporairement le 04/08/2026 (demande du
+     fondateur) : un curseur restait bloque au maximum et ne revenait jamais a
+     zero, ni via "Reinitialiser" ni au rechargement de la page, malgre deux
+     correctifs successifs (bypass des matchs deja payes, reflow force des
+     sliders). Cache cote client en attendant d'isoler la cause reelle plutot
+     que de laisser un filtre casse actif sur le site. Le JS (toggleAdvFilters,
+     applyAdvFilters, resetAdvFilters, matchPassesAdvFilters) reste en place,
+     inoffensif tant que rien ne l'appelle — reactivable en remettant ce bloc. -->
 
 <!-- REFRESH -->
 <div class="refresh-bar" id="refresh-bar">
