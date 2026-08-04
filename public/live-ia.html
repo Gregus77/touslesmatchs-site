@@ -488,6 +488,11 @@ function resetAdvFilters() {
 }
 function matchPassesAdvFilters(m) {
   if (!advFilters.active) return true;
+  // Un match deja analyse (jeton depense) ne doit jamais disparaitre a cause
+  // d'un curseur de filtre — sinon le client perd de vue une analyse qu'il a
+  // payee des qu'il ajuste un critere. Constate le 04/08/2026.
+  var matchId = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
+  if (analysisCache[matchId] || loadWatched()[matchId]) return true;
   var h2h = m.h2h_markets;
   if (advFilters.btts > 0 && (!h2h || h2h.btts_pct == null || h2h.btts_pct < advFilters.btts)) return false;
   if (advFilters.ht > 0 && (!h2h || h2h.first_half_goal_pct == null || h2h.first_half_goal_pct < advFilters.ht)) return false;
