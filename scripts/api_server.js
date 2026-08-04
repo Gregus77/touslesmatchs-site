@@ -2933,9 +2933,15 @@ function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) 
 function rejectScoreConflict(match, res) {
   if (!match?.scoreConflict) return false;
   const sources = match.scoreConflictSources || {};
+  // Message clarifie le 04/08/2026 : le blocage n'est pas un bug, c'est le
+  // garde-fou R2 (jamais de prono sur un score non confirme) qui se declenche
+  // pendant que nos fournisseurs (football-data.org + API-Sports) rattrapent
+  // un but que Flashscore, sur flux payant instantane, affiche deja. Sans
+  // cette explication le message ressemblait a une panne plutot qu'a une
+  // protection qui fait son travail.
   res.json({
     ok: false,
-    error: `Score live contradictoire entre les APIs (${sources.footballData || "?"} vs ${sources.apiSports || "?"}). Analyse bloquee jusqu'a confirmation.`,
+    error: `Nos deux sources de scores ne sont pas encore d'accord (${sources.footballData || "?"} vs ${sources.apiSports || "?"}) — probablement un but tres recent pas encore remonte partout. Analyse bloquee pour ne jamais te proposer un pari sur un score faux. Reessaie dans 1 a 2 minutes.`,
     scoreConflict: true,
   });
   return true;
