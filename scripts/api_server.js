@@ -5193,10 +5193,20 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
   }
 
   try {
-    const first = home.split(' ')[0];
-    const pending = db.prepare(
-      "SELECT * FROM concile_analyses WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
-    ).all(`%${first}%`, `%${away.split(' ')[0]}%`);
+    // LIKE brut sur le premier mot AVANT normalisation des accents : un club
+    // dont le nom contient un caractere accentue (Győri, Železničar, Śląsk...)
+    // pouvait rester bloque "en attente" pour toujours si la source live et
+    // la ligne enregistree en base ne codaient pas l'accent EXACTEMENT pareil
+    // (forme Unicode NFC/NFD differente, translitteration, corruption
+    // d'encodage). Constate par Greg le 04/08/2026 sur plusieurs jours de
+    // matchs jamais resolus. matchToken()/NORM() (deja utilises par le
+    // rattrapage resolveStalePredictions) suppriment les accents avant de
+    // comparer — memes garde-fous ici plutot qu'un LIKE naïf.
+    const hw = matchToken(home), aw = matchToken(away);
+    const candidates = hw && aw ? db.prepare(
+      "SELECT * FROM concile_analyses WHERE outcome IS NULL AND analysed_at >= datetime('now','-30 days')"
+    ).all() : [];
+    const pending = candidates.filter(r => matchToken(r.home) === hw && matchToken(r.away) === aw);
 
     if (pending.length) {
       // PROTECTION IMMUTABILITÉ : le AND outcome IS NULL en clause WHERE garantit
@@ -6055,10 +6065,15 @@ function autoResolvePredictions(match) {
   betResults["BTTS Non"] = (h > 0 && a > 0) ? "loss" : "win";
 
   try {
-    const firstWord = home.split(' ')[0];
-    const pending = db.prepare(
-      "SELECT * FROM agent_predictions WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
-    ).all(`%${firstWord}%`, `%${away.split(' ')[0]}%`);
+    // Meme correctif que resolveConcileAnalyses : LIKE brut sans normaliser
+    // les accents laissait des clubs comme "Győri"/"Železničar" bloques "en
+    // attente" indefiniment. matchToken()/NORM() suppriment l'accent avant
+    // de comparer. Constate par Greg le 04/08/2026.
+    const hw = matchToken(home), aw = matchToken(away);
+    const candidates = hw && aw ? db.prepare(
+      "SELECT * FROM agent_predictions WHERE outcome IS NULL AND created_at >= datetime('now','-30 days')"
+    ).all() : [];
+    const pending = candidates.filter(p => matchToken(p.home) === hw && matchToken(p.away) === aw);
 
     if (pending.length) {
       const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
