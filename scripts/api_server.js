@@ -9206,8 +9206,13 @@ function refreshDailyPickFromDB() {
       return Number.isFinite(t) ? t : 0;
     };
     const todays = eligible.filter(r => (r.analysed_at || "").slice(0, 10) === todayISO);
+    // Priorité 2 triée par RÉCENCE (pas confiance) : sinon un vieux pick à
+    // 85% gagné il y a 6 jours reste éternellement champion face à des picks
+    // d'aujourd'hui à 80-84% pas encore résolus (match en cours) — constaté
+    // le 04/08/2026, le pick du jour restait bloqué sur un match du 30/07.
+    const byRecency = eligible.slice().sort((a, b) => analysedAtMs(b) - analysedAtMs(a));
     let pick = todays.find(r => r.outcome === "win" || r.outcome === "loss")
-            || eligible.find(r => r.outcome === "win")
+            || byRecency.find(r => r.outcome === "win")
             || todays.find(r => r.outcome === null && (Date.now() - analysedAtMs(r)) < RECENT_UNRESOLVED_MS)
             || todays[0]
             || eligible[0];
