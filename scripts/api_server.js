@@ -2866,6 +2866,23 @@ function scoresDiffer(a, b) {
   return Number(a.score_home) !== Number(b.score_home) || Number(a.score_away) !== Number(b.score_away);
 }
 
+// Un score au foot ne peut que monter, jamais descendre pendant un match. Si
+// l'un des deux scores domine l'autre terme a terme (chaque equipe a un total
+// >= a celui de l'autre source), ce n'est pas une vraie contradiction — c'est
+// une source simplement en retard sur un but recent (ex: 0-1 vs 1-2, les deux
+// equipes ont progresse). On retient alors le score le plus a jour au lieu de
+// bloquer l'analyse pour rien. Seul un vrai conflit — une equipe qui "redescend"
+// d'une source a l'autre, impossible en vrai — reste bloque : ca signale un
+// match mal identifie ou une donnee corrompue, jamais un simple retard.
+// Demande du fondateur le 04/08/2026.
+function dominantScore(a, b) {
+  const ah = Number(a.score_home), aa = Number(a.score_away);
+  const bh = Number(b.score_home), ba = Number(b.score_away);
+  if (ah >= bh && aa >= ba) return a;
+  if (bh >= ah && ba >= aa) return b;
+  return null;
+}
+
 // Seule une entrée API-Sports porte un identifiant exploitable par l'endpoint
 // /odds. TheSportsDB ne fournit aucune cote.
 function carriesOddsIdentity(m) {
@@ -2911,18 +2928,27 @@ function mergeLiveMatchSources(footballDataMatches = [], apiSportsMatches = []) 
       // donc diffusable = false : AUCUN signal ne pouvait plus partir, quels que
       // soient le vote et la confiance. Constaté le 29/07/2026 — 305 analyses sur
       // 481 en 7 jours portaient une identité tsdb- structurellement incotable.
-      merged[existingIndex] = scoresDiffer(previous, apiMatch)
-        ? {
-            // Scores contradictoires : l'analyse est bloquée de toute façon, on
-            // ne mélange pas les deux jeux de données.
-            ...(carriesOddsIdentity(previous) && !carriesOddsIdentity(apiMatch) ? previous : apiMatch),
-            scoreConflict: true,
-            scoreConflictSources: {
-              footballData: `${previous.score_home}-${previous.score_away}`,
-              apiSports: `${apiMatch.score_home}-${apiMatch.score_away}`,
-            },
-          }
-        : mergeKeepingOddsIdentity(previous, apiMatch);
+      const scoreWinner = scoresDiffer(previous, apiMatch) ? dominantScore(previous, apiMatch) : null;
+      merged[existingIndex] = !scoresDiffer(previous, apiMatch)
+        ? mergeKeepingOddsIdentity(previous, apiMatch)
+        : scoreWinner
+          ? {
+              // Un score domine l'autre (retard, pas contradiction) : on garde
+              // l'identite qui porte la cote, avec le score le plus a jour.
+              ...(carriesOddsIdentity(previous) && !carriesOddsIdentity(apiMatch) ? previous : apiMatch),
+              score_home: scoreWinner.score_home, score_away: scoreWinner.score_away,
+            }
+          : {
+              // Vrai conflit (une equipe "redescend" d'une source a l'autre) :
+              // l'analyse est bloquée de toute façon, on ne mélange pas les
+              // deux jeux de données.
+              ...(carriesOddsIdentity(previous) && !carriesOddsIdentity(apiMatch) ? previous : apiMatch),
+              scoreConflict: true,
+              scoreConflictSources: {
+                footballData: `${previous.score_home}-${previous.score_away}`,
+                apiSports: `${apiMatch.score_home}-${apiMatch.score_away}`,
+              },
+            };
     } else {
       merged.push(apiMatch);
     }
