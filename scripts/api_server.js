@@ -11038,6 +11038,64 @@ app.get("/admin/daily-audit", (req, res) => {
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 
+// ── Bot email Hermes (hermes@touslesmatchs.com) — brouillons validés à un clic
+// depuis Telegram admin, jamais d'envoi automatique (voir hermes_mail_bot.js).
+const hermesMailBot = require("./hermes_mail_bot");
+const MAIL_BOT_ADMIN_TOKEN = process.env.MAIL_BOT_ADMIN_TOKEN || "";
+const HERMES_MAIL_USER = process.env.HERMES_MAIL_USER || "";
+const HERMES_MAIL_APP_PASSWORD = process.env.HERMES_MAIL_APP_PASSWORD || "";
+const HERMES_MAIL_IMAP_HOST = process.env.HERMES_MAIL_IMAP_HOST || "imap.hostinger.com";
+const HERMES_MAIL_IMAP_PORT = Number(process.env.HERMES_MAIL_IMAP_PORT || 993);
+const HERMES_MAIL_SMTP_HOST = process.env.HERMES_MAIL_SMTP_HOST || "smtp.hostinger.com";
+const HERMES_MAIL_SMTP_PORT = Number(process.env.HERMES_MAIL_SMTP_PORT || 465);
+const SITE_BASE_URL = process.env.SITE_BASE_URL || "https://www.touslesmatchs.com";
+
+function htmlAdminAction(title, message) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
+  <style>body{font-family:sans-serif;background:#0b1220;color:#e5e7eb;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+  div{text-align:center;padding:24px}</style></head><body><div><h2>${title}</h2><p>${message}</p></div></body></html>`;
+}
+
+app.get("/admin/mail-drafts/:id/approve", async (req, res) => {
+  if (!MAIL_BOT_ADMIN_TOKEN || req.query.token !== MAIL_BOT_ADMIN_TOKEN) {
+    return res.status(403).send(htmlAdminAction("Non autorisé", "Lien invalide."));
+  }
+  const result = await hermesMailBot.sendApprovedDraft(db, req.params.id, {
+    smtpHost: HERMES_MAIL_SMTP_HOST, smtpPort: HERMES_MAIL_SMTP_PORT,
+    user: HERMES_MAIL_USER, password: HERMES_MAIL_APP_PASSWORD,
+  });
+  if (result.ok) return res.send(htmlAdminAction("✅ Envoyé", "La réponse a bien été envoyée au client."));
+  res.status(400).send(htmlAdminAction("Erreur", result.error || "Envoi impossible."));
+});
+
+app.get("/admin/mail-drafts/:id/reject", (req, res) => {
+  if (!MAIL_BOT_ADMIN_TOKEN || req.query.token !== MAIL_BOT_ADMIN_TOKEN) {
+    return res.status(403).send(htmlAdminAction("Non autorisé", "Lien invalide."));
+  }
+  const result = hermesMailBot.rejectDraft(db, req.params.id);
+  if (result.ok) return res.send(htmlAdminAction("❌ Rejeté", "Le brouillon a été écarté, rien n'a été envoyé."));
+  res.status(400).send(htmlAdminAction("Erreur", result.error || "Rejet impossible."));
+});
+
+if (HERMES_MAIL_USER && HERMES_MAIL_APP_PASSWORD) {
+  const pollMailbox = () => {
+    let stripeClient = null;
+    try { if (STRIPE_SECRET_KEY) stripeClient = require("stripe")(STRIPE_SECRET_KEY); } catch {}
+    hermesMailBot.pollHermesMailbox(db, {
+      user: HERMES_MAIL_USER, password: HERMES_MAIL_APP_PASSWORD,
+      imapHost: HERMES_MAIL_IMAP_HOST, imapPort: HERMES_MAIL_IMAP_PORT,
+      stripe: stripeClient, brevoApiKey: BREVO_API_KEY, mistralApiKey: MISTRAL_API_KEY,
+      analysisEngine, sendTelegramMessage, telegramAdminChatId: TELEGRAM_ADMIN_CHAT_ID,
+      siteBaseUrl: SITE_BASE_URL, adminToken: MAIL_BOT_ADMIN_TOKEN,
+    }).catch(e => console.error("[hermes-mail] interval:", e.message));
+  };
+  setInterval(pollMailbox, 5 * 60000);
+  setTimeout(pollMailbox, 15000);
+  console.log("[hermes-mail] bot email actif (relève toutes les 5 min)");
+} else {
+  console.log("[hermes-mail] non configuré (HERMES_MAIL_USER/HERMES_MAIL_APP_PASSWORD absents) — inactif");
+}
+
 app.post("/admin/send-report", (req, res) => {
   const { email, code } = req.body || {};
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });

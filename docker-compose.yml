@@ -111,6 +111,16 @@ services:
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
       - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID}
       - SHOW_TELEGRAM_MEMBER_COUNT=${SHOW_TELEGRAM_MEMBER_COUNT}
+      # Bot email Hermes (hermes@touslesmatchs.com) — voir scripts/hermes_mail_bot.js.
+      # Absent = bot inactif (no-op), rien ne casse si ces variables manquent.
+      - HERMES_MAIL_USER=${HERMES_MAIL_USER}
+      - HERMES_MAIL_APP_PASSWORD=${HERMES_MAIL_APP_PASSWORD}
+      - HERMES_MAIL_IMAP_HOST=${HERMES_MAIL_IMAP_HOST}
+      - HERMES_MAIL_IMAP_PORT=${HERMES_MAIL_IMAP_PORT}
+      - HERMES_MAIL_SMTP_HOST=${HERMES_MAIL_SMTP_HOST}
+      - HERMES_MAIL_SMTP_PORT=${HERMES_MAIL_SMTP_PORT}
+      - MAIL_BOT_ADMIN_TOKEN=${MAIL_BOT_ADMIN_TOKEN}
+      - SITE_BASE_URL=${SITE_BASE_URL}
     volumes:
       # Bind-mount sur le disque hôte : la base survit à `docker compose down -v`,
       # `docker volume rm` et `docker system prune --volumes`. NE JAMAIS remettre
