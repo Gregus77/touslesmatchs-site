@@ -1978,6 +1978,8 @@ function handleApiSportsErrors(sport, data) {
 // toujours la moyenne de ce que les agents ont reellement renvoye.
 const MARKET_SCORE_LABELS = {
   resultat: { dom: "Victoire domicile", ext: "Victoire extérieur", nul: "Match nul" },
+  ou05: { "o0.5": "Over 0.5 buts", "u0.5": "Under 0.5 buts" },
+  ou15: { "o1.5": "Over 1.5 buts", "u1.5": "Under 1.5 buts" },
   buts: { "o2.5": "Over 2.5 buts", "u2.5": "Under 2.5 buts" },
   btts: { oui: "BTTS Oui", non: "BTTS Non" },
   mt1: { oui: "But en 1ère mi-temps", non: "Aucun but en 1ère mi-temps" },
@@ -4402,6 +4404,8 @@ DIRECTIVE MARCHÉ :
 
 Donne AUSSI ton avis rapide sur chaque marché (objet "marches", codes courts + confiance 40-90) :
 - buts: "o2.5" (plus de 2.5) ou "u2.5" (moins de 2.5)
+- ou05: "o0.5" (plus de 0.5, au moins 1 but) ou "u0.5" (0 but, 0-0)
+- ou15: "o1.5" (plus de 1.5) ou "u1.5" (moins de 1.5)
 - btts: "oui" ou "non" (les deux équipes marquent)
 - resultat: "dom", "ext" ou "nul"
 - mt1: "oui" ou "non" (au moins un but en 1ère mi-temps)
@@ -4411,7 +4415,7 @@ Réponds en JSON pur (pas de markdown):
   "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 50-90 argumenté, PAS 70 par défaut>,
   "raison": "<2 phrases avec au moins 2 données chiffrées concrètes (forme, H2H, blessés, enjeu, stats)>",
-  "marches": {"buts":{"p":"o2.5","c":70},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55}}
+  "marches": {"buts":{"p":"o2.5","c":70},"ou05":{"p":"o0.5","c":80},"ou15":{"p":"o1.5","c":75},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55}}
 }`;
 
     try {
@@ -6172,6 +6176,8 @@ function getPredictionSnapshotKey(match) {
 function canonicalMarketBet(line, code) {
   const c = String(code || "").toLowerCase();
   if (line === "buts")     return /o|over|plus|\+/.test(c) ? "Over 2.5 buts" : "Under 2.5 buts";
+  if (line === "ou05")     return /o|over|plus|\+/.test(c) ? "Over 0.5 buts" : "Under 0.5 buts";
+  if (line === "ou15")     return /o|over|plus|\+/.test(c) ? "Over 1.5 buts" : "Under 1.5 buts";
   if (line === "btts")     return /^o|oui|yes/.test(c) ? "BTTS Oui" : "BTTS Non";
   if (line === "resultat") return /^d|dom/.test(c) ? "Victoire domicile" : /^e|ext/.test(c) ? "Victoire extérieur" : "Match nul";
   if (line === "mt1")      return /^o|oui|yes/.test(c) ? "But en 1ère mi-temps" : "Aucun but en 1ère mi-temps";
@@ -6183,6 +6189,10 @@ function resolveMarketBet(bet, h, a, htTotal) {
   switch (bet) {
     case "Over 2.5 buts":  return total > 2.5 ? "win" : "loss";
     case "Under 2.5 buts": return total < 2.5 ? "win" : "loss";
+    case "Over 0.5 buts":  return total > 0.5 ? "win" : "loss";
+    case "Under 0.5 buts": return total < 0.5 ? "win" : "loss";
+    case "Over 1.5 buts":  return total > 1.5 ? "win" : "loss";
+    case "Under 1.5 buts": return total < 1.5 ? "win" : "loss";
     case "BTTS Oui":       return (h > 0 && a > 0) ? "win" : "loss";
     case "BTTS Non":       return (h > 0 && a > 0) ? "loss" : "win";
     case "Victoire domicile":  return h > a ? "win" : "loss";
@@ -6203,7 +6213,7 @@ function saveAgentMarketPredictions(match, agentMarketList) {
     );
     agentMarketList.forEach(am => {
       const m = am.marches || {};
-      [["buts", m.buts], ["btts", m.btts], ["resultat", m.resultat], ["mt1", m.mt1]].forEach(([line, val]) => {
+      [["buts", m.buts], ["ou05", m.ou05], ["ou15", m.ou15], ["btts", m.btts], ["resultat", m.resultat], ["mt1", m.mt1]].forEach(([line, val]) => {
         if (!val) return;
         const code = typeof val === "object" ? val.p : val;
         const conf = typeof val === "object" ? (parseInt(val.c) || 60) : 60;
