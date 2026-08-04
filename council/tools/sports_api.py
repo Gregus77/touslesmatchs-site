@@ -285,11 +285,16 @@ def get_todays_matches():
 
     all_matches.extend(_get_football_matches(today))
 
+    # Tennis retire le 04/08/2026 (coherent avec le cote Live IA JS, ou l'endpoint
+    # v1.tennis.api-sports.io "ne resout plus" — cf. api_server.js). Le Concile
+    # continuait d'appeler ce meme endpoint casse et de demander aux agents de
+    # picker du tennis malgre la decision deja prise de le retirer. _get_tennis_matches
+    # reste definie plus haut, juste plus appelee, pour pouvoir le reactiver
+    # facilement si l'endpoint redevient fiable.
     for fetcher, sport in [
         (_get_basketball_matches, "Basketball"),
         (_get_hockey_matches, "Hockey"),
         (_get_baseball_matches, "Baseball"),
-        (_get_tennis_matches, "Tennis"),
     ]:
         try:
             all_matches.extend(fetcher(today))

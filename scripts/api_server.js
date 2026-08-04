@@ -2243,7 +2243,10 @@ const TRUSTED_COMPETITIONS = [
   "usl championship",
   "ahl",
   "nbl", "nbl · australia",
-  "australia cup",
+  // "australia cup" retiree le 04/08/2026 : deja bannie dans
+  // LOW_TRUST_COMPETITION_KEYWORDS (ligne ~2135, LOW_TRUST gagne toujours),
+  // cette entree ici n'avait donc jamais aucun effet — contradiction
+  // trouvee en audit, pas un changement de politique.
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {
