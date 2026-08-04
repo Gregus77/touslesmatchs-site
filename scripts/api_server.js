@@ -1983,6 +1983,11 @@ const MARKET_SCORE_LABELS = {
   buts: { "o2.5": "Over 2.5 buts", "u2.5": "Under 2.5 buts" },
   btts: { oui: "BTTS Oui", non: "BTTS Non" },
   mt1: { oui: "But en 1ère mi-temps", non: "Aucun but en 1ère mi-temps" },
+  mt1_dom: { oui: "Domicile marque en 1ère MT", non: "Domicile ne marque pas en 1ère MT" },
+  mt1_ext: { oui: "Extérieur marque en 1ère MT", non: "Extérieur ne marque pas en 1ère MT" },
+  mt2: { oui: "But en 2ème mi-temps", non: "Aucun but en 2ème mi-temps" },
+  mt2_dom: { oui: "Domicile marque en 2ème MT", non: "Domicile ne marque pas en 2ème MT" },
+  mt2_ext: { oui: "Extérieur marque en 2ème MT", non: "Extérieur ne marque pas en 2ème MT" },
 };
 function aggregateMarketScores(agentMarketList) {
   const out = [];
@@ -4408,14 +4413,19 @@ Donne AUSSI ton avis rapide sur chaque marché (objet "marches", codes courts + 
 - ou15: "o1.5" (plus de 1.5) ou "u1.5" (moins de 1.5)
 - btts: "oui" ou "non" (les deux équipes marquent)
 - resultat: "dom", "ext" ou "nul"
-- mt1: "oui" ou "non" (au moins un but en 1ère mi-temps)
+- mt1: "oui" ou "non" (au moins un but en 1ère mi-temps, les deux équipes confondues)
+- mt1_dom: "oui" ou "non" (${match.home} marque en 1ère mi-temps)
+- mt1_ext: "oui" ou "non" (${match.away} marque en 1ère mi-temps)
+- mt2: "oui" ou "non" (au moins un but en 2ème mi-temps, les deux équipes confondues)
+- mt2_dom: "oui" ou "non" (${match.home} marque en 2ème mi-temps)
+- mt2_ext: "oui" ou "non" (${match.away} marque en 2ème mi-temps)
 
 Réponds en JSON pur (pas de markdown):
 {
   "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 50-90 argumenté, PAS 70 par défaut>,
   "raison": "<2 phrases avec au moins 2 données chiffrées concrètes (forme, H2H, blessés, enjeu, stats)>",
-  "marches": {"buts":{"p":"o2.5","c":70},"ou05":{"p":"o0.5","c":80},"ou15":{"p":"o1.5","c":75},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55}}
+  "marches": {"buts":{"p":"o2.5","c":70},"ou05":{"p":"o0.5","c":80},"ou15":{"p":"o1.5","c":75},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55},"mt1_dom":{"p":"oui","c":58},"mt1_ext":{"p":"non","c":52},"mt2":{"p":"oui","c":65},"mt2_dom":{"p":"oui","c":60},"mt2_ext":{"p":"non","c":50}}
 }`;
 
     try {
@@ -6181,11 +6191,25 @@ function canonicalMarketBet(line, code) {
   if (line === "btts")     return /^o|oui|yes/.test(c) ? "BTTS Oui" : "BTTS Non";
   if (line === "resultat") return /^d|dom/.test(c) ? "Victoire domicile" : /^e|ext/.test(c) ? "Victoire extérieur" : "Match nul";
   if (line === "mt1")      return /^o|oui|yes/.test(c) ? "But en 1ère mi-temps" : "Aucun but en 1ère mi-temps";
+  if (line === "mt1_dom")  return /^o|oui|yes/.test(c) ? "Domicile marque en 1ère mi-temps" : "Domicile ne marque pas en 1ère mi-temps";
+  if (line === "mt1_ext")  return /^o|oui|yes/.test(c) ? "Extérieur marque en 1ère mi-temps" : "Extérieur ne marque pas en 1ère mi-temps";
+  if (line === "mt2")      return /^o|oui|yes/.test(c) ? "But en 2ème mi-temps" : "Aucun but en 2ème mi-temps";
+  if (line === "mt2_dom")  return /^o|oui|yes/.test(c) ? "Domicile marque en 2ème mi-temps" : "Domicile ne marque pas en 2ème mi-temps";
+  if (line === "mt2_ext")  return /^o|oui|yes/.test(c) ? "Extérieur marque en 2ème mi-temps" : "Extérieur ne marque pas en 2ème mi-temps";
   return null;
 }
 
-function resolveMarketBet(bet, h, a, htTotal) {
+function resolveMarketBet(bet, h, a, htHome, htAway) {
   const total = h + a;
+  // htHome/htAway = score a la mi-temps par equipe (peut etre null si
+  // inconnu). Le 2e mi-temps se deduit du score final moins la mi-temps —
+  // les deux doivent etre connus pour resoudre les marches 2e MT et
+  // domicile/exterieur marque en 1ere ou 2e MT.
+  const htKnown = htHome != null && htAway != null;
+  const htTotal = htKnown ? Number(htHome) + Number(htAway) : null;
+  const secondHalfHome = htKnown ? h - Number(htHome) : null;
+  const secondHalfAway = htKnown ? a - Number(htAway) : null;
+  const secondHalfTotal = htKnown ? secondHalfHome + secondHalfAway : null;
   switch (bet) {
     case "Over 2.5 buts":  return total > 2.5 ? "win" : "loss";
     case "Under 2.5 buts": return total < 2.5 ? "win" : "loss";
@@ -6200,6 +6224,16 @@ function resolveMarketBet(bet, h, a, htTotal) {
     case "Match nul":      return h === a ? "win" : "loss";
     case "But en 1ère mi-temps":       return htTotal == null ? null : (htTotal > 0 ? "win" : "loss");
     case "Aucun but en 1ère mi-temps": return htTotal == null ? null : (htTotal === 0 ? "win" : "loss");
+    case "Domicile marque en 1ère mi-temps":    return htHome == null ? null : (Number(htHome) > 0 ? "win" : "loss");
+    case "Domicile ne marque pas en 1ère mi-temps": return htHome == null ? null : (Number(htHome) === 0 ? "win" : "loss");
+    case "Extérieur marque en 1ère mi-temps":   return htAway == null ? null : (Number(htAway) > 0 ? "win" : "loss");
+    case "Extérieur ne marque pas en 1ère mi-temps": return htAway == null ? null : (Number(htAway) === 0 ? "win" : "loss");
+    case "But en 2ème mi-temps":       return secondHalfTotal == null ? null : (secondHalfTotal > 0 ? "win" : "loss");
+    case "Aucun but en 2ème mi-temps": return secondHalfTotal == null ? null : (secondHalfTotal === 0 ? "win" : "loss");
+    case "Domicile marque en 2ème mi-temps":    return secondHalfHome == null ? null : (secondHalfHome > 0 ? "win" : "loss");
+    case "Domicile ne marque pas en 2ème mi-temps": return secondHalfHome == null ? null : (secondHalfHome === 0 ? "win" : "loss");
+    case "Extérieur marque en 2ème mi-temps":   return secondHalfAway == null ? null : (secondHalfAway > 0 ? "win" : "loss");
+    case "Extérieur ne marque pas en 2ème mi-temps": return secondHalfAway == null ? null : (secondHalfAway === 0 ? "win" : "loss");
     default: return getBetOutcomeForScore(bet, h, a);
   }
 }
@@ -6213,7 +6247,9 @@ function saveAgentMarketPredictions(match, agentMarketList) {
     );
     agentMarketList.forEach(am => {
       const m = am.marches || {};
-      [["buts", m.buts], ["ou05", m.ou05], ["ou15", m.ou15], ["btts", m.btts], ["resultat", m.resultat], ["mt1", m.mt1]].forEach(([line, val]) => {
+      [["buts", m.buts], ["ou05", m.ou05], ["ou15", m.ou15], ["btts", m.btts], ["resultat", m.resultat],
+       ["mt1", m.mt1], ["mt1_dom", m.mt1_dom], ["mt1_ext", m.mt1_ext],
+       ["mt2", m.mt2], ["mt2_dom", m.mt2_dom], ["mt2_ext", m.mt2_ext]].forEach(([line, val]) => {
         if (!val) return;
         const code = typeof val === "object" ? val.p : val;
         const conf = typeof val === "object" ? (parseInt(val.c) || 60) : 60;
@@ -6224,7 +6260,7 @@ function saveAgentMarketPredictions(match, agentMarketList) {
   } catch (e) { console.error("[agent-market] save:", e.message); }
 }
 
-function resolveAgentMarketPredictions(home, away, h, a, htTotal) {
+function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
   try {
     const hw = String(home || "").split(" ")[0];
     const aw = String(away || "").split(" ")[0];
@@ -6235,7 +6271,7 @@ function resolveAgentMarketPredictions(home, away, h, a, htTotal) {
     if (!pending.length) return;
     const upd = db.prepare("UPDATE agent_market_predictions SET outcome = ? WHERE id = ?");
     let n = 0;
-    pending.forEach(p => { const o = resolveMarketBet(p.bet, h, a, htTotal); if (o) { upd.run(o, p.id); n++; } });
+    pending.forEach(p => { const o = resolveMarketBet(p.bet, h, a, htHome, htAway); if (o) { upd.run(o, p.id); n++; } });
     if (n) console.log(`[agent-market] résolu ${n}/${pending.length} avis marché: ${home} vs ${away}`);
   } catch (e) { console.error("[agent-market] resolve:", e.message); }
 }
@@ -6331,11 +6367,12 @@ function autoResolvePredictions(match) {
     }
   } catch(e) { console.error("[agent-perf] auto-resolve:", e.message); }
 
-  // Résoudre aussi les avis multi-marchés de chaque agent
-  const htTotal = (match.ht_home != null && match.ht_away != null)
-    ? Number(match.ht_home) + Number(match.ht_away)
-    : (match.ht_total != null ? Number(match.ht_total) : null);
-  resolveAgentMarketPredictions(home, away, h, a, htTotal);
+  // Résoudre aussi les avis multi-marchés de chaque agent — htHome/htAway
+  // separes (pas juste le total) pour pouvoir resoudre "domicile/exterieur
+  // marque en 1ere/2e mi-temps", pas seulement "un but en 1ere mi-temps".
+  const htHome = match.ht_home != null ? Number(match.ht_home) : null;
+  const htAway = match.ht_away != null ? Number(match.ht_away) : null;
+  resolveAgentMarketPredictions(home, away, h, a, htHome, htAway);
 
   // Résoudre aussi les traces Concile
   resolveConcileAnalyses(home, away, score_home, score_away);
