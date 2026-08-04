@@ -7786,6 +7786,64 @@ function signalsSentToday(col) {
   }
 }
 
+// Jetons restants d'un abonné : un budget UNIQUE partagé entre les signaux
+// Telegram réellement diffusés aujourd'hui sur son palier (canal commun, donc
+// identique pour tout le palier) et ses propres analyses ouvertes à la demande
+// sur le site (Live IA). Décision fondateur du 04/08/2026 : un abonné Standard
+// (3 jetons/j) qui a déjà reçu 2 signaux Telegram aujourd'hui ne peut plus
+// ouvrir qu'1 analyse manuelle avant minuit — sinon on lui promet 3 alertes/j
+// ET 3 analyses/j en plus, soit 6, ce qui n'est jamais ce qui a été vendu.
+// Quota de jetons/jour par palier — decision fondateur du 04/08/2026.
+// "carte" = achat ponctuel a 1€ (voir STRIPE_PRICE_ID_CARTE) : 1 jeton unique.
+function defaultCreditsMaxForPlan(plan) {
+  switch (String(plan || "").toLowerCase()) {
+    case "carte":    return 1;
+    case "free":     return 1;
+    case "standard": return 3;
+    case "premium":
+    case "vip":      return 10;
+    case "elite":    return 30;
+    default:         return 10;
+  }
+}
+
+// Achat ponctuel d'un jeton à 1€ (offre "carte") pour un abonné DÉJÀ actif :
+// on ne crée pas un second compte parallèle, on ajoute +1 jeton à SON compte
+// existant pour aujourd'hui seulement (demande fondateur 04/08/2026 — cas
+// d'usage réel : un abonné Standard qui a épuisé ses 3 jetons du jour et veut
+// en racheter un sans changer de code d'accès). credits_used peut passer sous
+// zéro sans conséquence : creditsLeftForPlan() plafonne déjà à 0 côté lecture,
+// et credits_date repart à zéro le lendemain de toute façon.
+// Retourne true si un compte existant a été crédité, false si aucun trouvé
+// (dans ce cas l'appelant crée un code "carte" autonome, comportement inchangé).
+function grantCarteCreditToExistingAccount(email) {
+  try {
+    const today = getTodayStr();
+    const wdb = new Database(CODES_DB_PATH);
+    const row = wdb.prepare(
+      "SELECT code, plan, credits_used, credits_date FROM codes WHERE email = ? AND active = 1 AND plan != 'carte' ORDER BY rowid DESC LIMIT 1"
+    ).get(email);
+    if (!row) { wdb.close(); return false; }
+    if (row.credits_date === today) {
+      wdb.prepare("UPDATE codes SET credits_used = credits_used - 1 WHERE code = ? AND email = ?").run(row.code, email);
+    } else {
+      wdb.prepare("UPDATE codes SET credits_used = -1, credits_date = ? WHERE code = ? AND email = ?").run(today, row.code, email);
+    }
+    wdb.close();
+    console.log(`[carte] +1 jeton bonus crédité sur le compte ${row.plan} existant de ${email}`);
+    return true;
+  } catch (e) { console.error("[carte] grantCarteCreditToExistingAccount:", e.message); return false; }
+}
+
+function creditsLeftForPlan(plan, creditsMax, creditsUsed, creditsDate) {
+  if (!creditsMax || creditsMax <= 0) return null; // illimité (admin, etc.)
+  const today = new Date().toISOString().slice(0, 10);
+  const usedManual = creditsDate === today ? (Number(creditsUsed) || 0) : 0;
+  const col = SIG_COLUMN_BY_PLAN[String(plan || "").toLowerCase()] || null;
+  const usedTelegram = col ? signalsSentToday(col) : 0;
+  return Math.max(0, creditsMax - usedManual - usedTelegram);
+}
+
 // ── Email hebdomadaire de conversion aux leads gratuits ──────────────────────
 async function sendWeeklyConversionEmail() {
   if (!BREVO_API_KEY) return;
@@ -8262,10 +8320,7 @@ app.post("/verify-code", (req, res) => {
       return res.json({ valid: false, error: "Code expiré" });
     }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const credits_left = row.credits_date === today
-      ? Math.max(0, row.credits_max - row.credits_used)
-      : row.credits_max;
+    const credits_left = creditsLeftForPlan(row.plan, row.credits_max, row.credits_used, row.credits_date);
 
     // Une seule connexion active a la fois (demande de Greg le 03/08/2026) :
     // une VRAIE connexion (login:true, envoye uniquement par le formulaire
@@ -9674,14 +9729,11 @@ function verifyCode(email, code) {
     if (row.expires_at && new Date(row.expires_at) < new Date()) {
       return { valid: false, error: "Code expiré" };
     }
-    const today = new Date().toISOString().slice(0, 10);
     // Les codes ELITE-ADMIN ont des crédits illimités
     const isAdminCode = code.toUpperCase().startsWith('ELITE-ADMIN');
     const credits_left = isAdminCode
       ? 999999
-      : (row.credits_date === today
-          ? Math.max(0, row.credits_max - row.credits_used)
-          : row.credits_max);
+      : creditsLeftForPlan(row.plan, row.credits_max, row.credits_used, row.credits_date);
     return { valid: true, plan: row.plan, credits_left, email: row.email };
   } catch (e) {
     console.error("[verifyCode] error:", e.message);
@@ -9784,12 +9836,11 @@ app.post("/concile-analysis", async (req, res) => {
     if (!allowAdminFields) {
       try {
         const rdb = new Database(CODES_DB_PATH, { readonly: true });
-        const cr = rdb.prepare("SELECT credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
+        const cr = rdb.prepare("SELECT plan, credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
           .get(code.toUpperCase().trim(), email.toLowerCase().trim());
         rdb.close();
         if (cr && cr.credits_max > 0) {
-          const used = cr.credits_date === today ? cr.credits_used : 0;
-          creditFields = { credits_left: Math.max(0, cr.credits_max - used), credits_max: cr.credits_max };
+          creditFields = { credits_left: creditsLeftForPlan(cr.plan, cr.credits_max, cr.credits_used, cr.credits_date), credits_max: cr.credits_max };
         }
       } catch(_) {}
     }
@@ -9961,6 +10012,13 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
       db.prepare("INSERT OR REPLACE INTO user_tokens (user_id, tokens_today, reset_date) VALUES (?,?,?)").run(userId, limit, getTodayStr());
     }
 
+    // "carte" (jeton 1€) : si le client a déjà un abonnement actif, on lui
+    // crédite +1 jeton dessus au lieu de lui créer un second compte séparé.
+    if (customerEmail && status === "carte" && grantCarteCreditToExistingAccount(customerEmail)) {
+      console.log(`[stripe] Jeton 1€ crédité sur le compte existant de ${customerEmail}`);
+      return res.json({ received: true });
+    }
+
     // ── Créer code d'accès dans codes.db si pas encore existant ─────────────
     if (customerEmail) {
       try {
@@ -9972,7 +10030,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
         // premier abonnement (jamais renouvele en boucle a chaque paiement).
         const eliteBonusDays = (status === "elite" && ELITE_LAUNCH_BONUS_ENABLED && !existing) ? ELITE_LAUNCH_BONUS_DAYS : 0;
         const expiresAt = new Date(Date.now() + (durationDays + eliteBonusDays) * 86400000).toISOString().slice(0, 10);
-        const creditsMax = status === "carte" ? 1 : status === "elite" ? 30 : 10;
+        const creditsMax = defaultCreditsMaxForPlan(status);
         if (!existing) {
           cdbw.prepare(
             "INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at, stripe_customer_id) VALUES (?,?,?,1,?,?,0,?,datetime('now'),?)"
@@ -10195,9 +10253,9 @@ async function handleCreateCheckout(req, res) {
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
   // "carte" (offre 1€) retiree du parcours actif le 29/07/2026, decision fondateur
-  // — plus aucune nouvelle session de paiement ne doit pouvoir la creer. Le prix
-  // reste neanmoins connu par les mappings webhook plus bas (planLookup, statuts
-  // d'activation) pour continuer a traiter d'eventuels evenements historiques.
+  // — reactivee le 04/08/2026, mais UNIQUEMENT pour le rachat de jeton depuis le
+  // bouton "quota epuise" sur Live IA (voir CREDITS_EXHAUSTED cote front) : pas
+  // remise en avant dans le tunnel de vente/marketing general.
   //
   // "standard" pointait par erreur vers STRIPE_PRICE_ID_PREMIUM : un appel a cet
   // endpoint pour Standard aurait facture le prix Premium. Corrige au passage —
@@ -10205,6 +10263,7 @@ async function handleCreateCheckout(req, res) {
   // boutons d'abonnement utilisent des Payment Links Stripe directs), donc aucun
   // client n'a ete facture au mauvais prix par ce chemin precis.
   const priceMap = {
+    carte:    STRIPE_PRICE_ID_CARTE,
     standard: STRIPE_PRICE_ID_STANDARD,
     premium:  STRIPE_PRICE_ID_PREMIUM,
     vip:      STRIPE_PRICE_ID_VIP,
@@ -11220,8 +11279,7 @@ app.post("/admin/create-code", (req, res) => {
   const { target_email, plan = "elite", duration_days = 32 } = req.body || {};
   if (!target_email) return res.json({ ok: false, error: "target_email requis" });
 
-  const creditsMap = { carte: 1, premium: 10, vip: 20, elite: 30 };
-  const creditsMax = creditsMap[plan] || 10;
+  const creditsMax = defaultCreditsMaxForPlan(plan);
 
   try {
     const cdbw = new Database(CODES_DB_PATH);
