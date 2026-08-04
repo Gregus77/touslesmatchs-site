@@ -480,10 +480,25 @@ function applyAdvFilters() {
   document.getElementById("adv-filters-btn").classList.toggle("active", advFilters.active);
   renderMatches();
 }
+// Certains navigateurs mobiles (Safari iOS, webview TikTok/Instagram) ne
+// repositionnent pas visuellement le curseur quand on change .value en JS
+// sans forcer un reflow — le curseur reste affiche a son ancienne position
+// meme si applyAdvFilters() utilise deja la bonne valeur. Constate le
+// 04/08/2026 : le rond restait a droite apres "Reinitialiser" malgre un
+// filtre reellement remis a 0. Le forcage de reflow (lecture offsetHeight
+// apres un display:none/'') corrige l'affichage sur tous les navigateurs testes.
+function setRangeValue(id, val) {
+  var el = document.getElementById(id);
+  el.value = val;
+  el.style.display = "none";
+  void el.offsetHeight;
+  el.style.display = "";
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
 function resetAdvFilters() {
-  ["af-btts", "af-ht", "af-under25"].forEach(function(id) { document.getElementById(id).value = 0; syncAdvLabel(id, "%"); });
-  document.getElementById("af-goaldiff").value = 5; syncAdvLabel("af-goaldiff", "");
-  document.getElementById("af-minute").value = 0; syncAdvLabel("af-minute", "'");
+  ["af-btts", "af-ht", "af-under25"].forEach(function(id) { setRangeValue(id, 0); syncAdvLabel(id, "%"); });
+  setRangeValue("af-goaldiff", 5); syncAdvLabel("af-goaldiff", "");
+  setRangeValue("af-minute", 0); syncAdvLabel("af-minute", "'");
   applyAdvFilters();
 }
 function matchPassesAdvFilters(m) {
