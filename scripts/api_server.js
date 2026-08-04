@@ -6421,6 +6421,35 @@ async function resolveStalePredictions() {
       // demande par Greg le 01/08/2026.
       try { refreshDailyPickFromDB(); } catch (e) { console.error("[catch-up] refresh pick du jour:", e.message); }
     }
+
+    // Expiration : au-dela d'un certain age, une prediction non resolue ne le
+    // sera jamais et doit sortir du statut "en attente" (constate le 04/08/2026 —
+    // le plan gratuit api-sports refuse categoriquement les dates anciennes pour
+    // Basketball/Hockey/Baseball : "Free plans do not have access to this date").
+    // outcome='pending' (et non NULL) la sort des compteurs "en attente" ET des
+    // stats win/loss (toutes les requetes de stats du fichier excluent deja
+    // outcome != 'pending' — convention reprise ici, pas inventee).
+    try {
+      const expireNonFootball = db.prepare(`
+        UPDATE concile_analyses SET outcome = 'pending'
+        WHERE outcome IS NULL AND sport IS NOT NULL AND sport != 'Football'
+          AND analysed_at <= datetime('now','-5 days')
+      `).run();
+      const expireOld = db.prepare(`
+        UPDATE concile_analyses SET outcome = 'pending'
+        WHERE outcome IS NULL AND analysed_at <= datetime('now','-30 days')
+      `).run();
+      const expireAgentOld = db.prepare(`
+        UPDATE agent_predictions SET outcome = 'pending'
+        WHERE outcome IS NULL AND created_at <= datetime('now','-30 days')
+      `).run();
+      const expireAgentMarketOld = db.prepare(`
+        UPDATE agent_market_predictions SET outcome = 'pending'
+        WHERE outcome IS NULL AND created_at <= datetime('now','-30 days')
+      `).run();
+      const n = expireNonFootball.changes + expireOld.changes + expireAgentOld.changes + expireAgentMarketOld.changes;
+      if (n) console.log(`[catch-up] ${n} analyses invérifiables expirées (retirées de "en attente", exclues des stats)`);
+    } catch (e) { console.error("[catch-up] expiration:", e.message); }
   } catch (e) {
     console.error("[catch-up] resolveStalePredictions:", e.message);
   } finally {
