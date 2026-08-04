@@ -1116,8 +1116,12 @@ function getAdaptiveSignalThreshold() {
       _adaptiveThresholdCache = { value: getSignalFloor(), computedAt: now };
       return getSignalFloor();
     }
+    // La tranche basse part du plancher saisonnier (getSignalFloor(), 75 jusqu'au
+    // 15/08 puis 82) et non d'une valeur figee a 82 — sinon la promesse Elite a 75%
+    // ne peut jamais s'appliquer, quelle que soit la qualite des picks 75-82%
+    // (constate le 04/08/2026 : signal a 77% bloque alors que l'Elite promet 75%).
     const brackets = [
-      { min: 82, max: 85, wins: 0, total: 0 },
+      { min: getSignalFloor(), max: 85, wins: 0, total: 0 },
       { min: 85, max: 88, wins: 0, total: 0 },
       { min: 88, max: 91, wins: 0, total: 0 },
       { min: 91, max: 94, wins: 0, total: 0 },
