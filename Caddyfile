@@ -77,3 +77,7 @@ www.touslesmatchs.com {
 touslesmatchs.com {
     redir https://www.touslesmatchs.com{uri} permanent
 }
+
+touslesmatchs.fr, www.touslesmatchs.fr {
+    redir https://www.touslesmatchs.com{uri} permanent
+}
