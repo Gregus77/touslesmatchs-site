@@ -12600,39 +12600,45 @@ function checkAnalyticsSchedule() {
 
   // Miniature "combien on aurait gagne" a minuit (demande de Greg, 01/08/2026).
   // Envoyee en apercu admin tant que DAILY_GAIN_IMAGE_PUBLIC n'est pas active.
-  if (hour === 0 && _lastGainImageDate !== todayKey) {
+  // Toutes les taches de ce planificateur utilisent ">=" (pas "===") : un
+  // redemarrage du conteneur qui tombe pile sur le creneau horaire faisait
+  // sauter la tache pour toute la journee, sans aucune trace d'erreur (bilan
+  // du 03/08/2026 jamais envoye, constate par Greg le 04/08/2026 — le
+  // conteneur avait redemarre plusieurs fois ce jour-la). ">=" rattrape la
+  // tache des le prochain passage de checkAnalyticsSchedule, meme apres 22h.
+  if (hour >= 0 && _lastGainImageDate !== todayKey) {
     _lastGainImageDate = todayKey;
-    console.log("[gain-image] Génération miniatures quotidiennes (minuit)...");
+    console.log("[gain-image] Génération miniatures quotidiennes (minuit, rattrapage si necessaire)...");
     sendDailyGainImages();
   }
 
   // Garantit un pick du jour daté d'aujourd'hui en ligne au plus tard 4h-5h
   // du matin (demande de Greg, 01/08/2026) — voir seedDailyPickIfMissingForToday.
-  if (hour === 4 && _lastDailyPickSeedDate !== todayKey) {
+  if (hour >= 4 && _lastDailyPickSeedDate !== todayKey) {
     _lastDailyPickSeedDate = todayKey;
     seedDailyPickIfMissingForToday();
   }
 
-  if (hour === 22 && _lastBilanDate !== todayKey) {
+  if (hour >= 22 && _lastBilanDate !== todayKey) {
     _lastBilanDate = todayKey;
-    console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin...");
+    console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin (rattrapage si necessaire)...");
     sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
     if (_lastFreeResultsBilanDate !== todayKey) {
       _lastFreeResultsBilanDate = todayKey;
-      console.log("[daily-results-free] Envoi résultats du jour sur canal gratuit...");
+      console.log("[daily-results-free] Envoi résultats du jour sur canal gratuit (rattrapage si necessaire)...");
       sendDailyResultsFreeChannel().then(ok => console.log(`[daily-results-free] ${ok ? "OK" : "SKIP/ECHEC"}`));
     }
   }
 
-  if (hour === 23 && _lastDailyReportDate !== todayKey) {
+  if (hour >= 23 && _lastDailyReportDate !== todayKey) {
     _lastDailyReportDate = todayKey;
-    console.log("[analytics] Envoi rapport visiteurs quotidien (23h)...");
+    console.log("[analytics] Envoi rapport visiteurs quotidien (23h, rattrapage si necessaire)...");
     sendDailyVisitorReport();
   }
 
-  if (hour === 23 && _lastLearningReportDate !== todayKey) {
+  if (hour >= 23 && _lastLearningReportDate !== todayKey) {
     _lastLearningReportDate = todayKey;
-    console.log("[analytics] Envoi rapport d'apprentissage quotidien (23h)...");
+    console.log("[analytics] Envoi rapport d'apprentissage quotidien (23h, rattrapage si necessaire)...");
     sendLearningReportTelegram().then(ok => console.log(`[learning-report] ${ok ? "OK" : "ECHEC"}`));
   }
 
