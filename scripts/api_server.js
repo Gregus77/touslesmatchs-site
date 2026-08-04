@@ -10955,6 +10955,7 @@ app.get("/analysis-history", (req, res) => {
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
           AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND (outcome IS NULL OR outcome != 'pending')
       )
       WHERE _rn = 1
       ORDER BY analysed_at DESC
