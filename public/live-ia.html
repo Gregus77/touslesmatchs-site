@@ -57,6 +57,20 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .filter-btn{background:var(--bg3);border:1px solid var(--b1);color:var(--muted2);padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
 .filter-btn:hover,.filter-btn.active{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.3);color:var(--indigo2)}
 
+/* ADVANCED FILTERS (curseurs multi-criteres) */
+.adv-filters-toggle{max-width:900px;margin:0 auto;padding:0 16px}
+.adv-filters-panel{max-width:900px;margin:10px auto 0;padding:18px 20px;background:var(--bg3);border:1px solid var(--b1);border-radius:14px}
+.adv-filters-panel .af-title{font-weight:800;font-size:14px;margin-bottom:12px;color:var(--indigo2, #7c5cff)}
+.af-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.af-row label{flex:0 0 220px;font-size:12px;color:var(--muted2);font-weight:600}
+.af-row input[type=range]{flex:1;accent-color:#7c5cff}
+.af-row .af-val{flex:0 0 48px;text-align:right;font-size:12px;font-weight:700;color:#fff}
+.af-actions{display:flex;gap:10px;margin-top:6px}
+.af-actions button{border:none;border-radius:9px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer}
+.af-apply{background:linear-gradient(135deg,#7c5cff,#5b3ff5);color:#fff}
+.af-reset{background:var(--bg2, #1e2340);color:var(--muted2);border:1px solid var(--b1)!important}
+.af-count{font-size:11px;color:var(--muted2);margin-left:auto;align-self:center}
+
 /* MATCH GRID */
 .matches-wrap{max-width:900px;margin:0 auto;padding:0 16px 60px}
 .match-card{background:var(--bg3);border:1px solid var(--b1);border-radius:16px;padding:20px;margin-bottom:12px;transition:all .25s;cursor:default}
@@ -315,6 +329,44 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
   <button class="filter-btn active" data-filter="Football">&#9917; Football</button>
 </div>
 
+<!-- ADVANCED FILTERS -->
+<div class="adv-filters-toggle">
+  <button class="filter-btn" id="adv-filters-btn" onclick="toggleAdvFilters()">🎚️ Trouve TON match (filtres avancés)</button>
+</div>
+<div class="adv-filters-panel" id="adv-filters-panel" style="display:none">
+  <div class="af-title">Règle tes critères — 100% gratuit, aucun jeton dépensé tant que tu ne cliques pas sur un match</div>
+  <div class="af-row">
+    <label for="af-btts">BTTS historique (les 2 marquent) ≥</label>
+    <input type="range" id="af-btts" min="0" max="100" step="5" value="0" oninput="syncAdvLabel('af-btts','%')">
+    <span class="af-val" id="af-btts-val">0%</span>
+  </div>
+  <div class="af-row">
+    <label for="af-ht">But en 1ère mi-temps (historique) ≥</label>
+    <input type="range" id="af-ht" min="0" max="100" step="5" value="0" oninput="syncAdvLabel('af-ht','%')">
+    <span class="af-val" id="af-ht-val">0%</span>
+  </div>
+  <div class="af-row">
+    <label for="af-under25">Peu de buts probable (Under 2.5 historique) ≥</label>
+    <input type="range" id="af-under25" min="0" max="100" step="5" value="0" oninput="syncAdvLabel('af-under25','%')">
+    <span class="af-val" id="af-under25-val">0%</span>
+  </div>
+  <div class="af-row">
+    <label for="af-goaldiff">Match serré — écart de buts actuel ≤</label>
+    <input type="range" id="af-goaldiff" min="0" max="5" step="1" value="5" oninput="syncAdvLabel('af-goaldiff','')">
+    <span class="af-val" id="af-goaldiff-val">5</span>
+  </div>
+  <div class="af-row">
+    <label for="af-minute">2ème période — minute de jeu ≥</label>
+    <input type="range" id="af-minute" min="0" max="90" step="5" value="0" oninput="syncAdvLabel('af-minute',\"'\")">
+    <span class="af-val" id="af-minute-val">0'</span>
+  </div>
+  <div class="af-actions">
+    <button class="af-apply" onclick="applyAdvFilters()">Appliquer</button>
+    <button class="af-reset" onclick="resetAdvFilters()">Réinitialiser</button>
+    <span class="af-count" id="af-count"></span>
+  </div>
+</div>
+
 <!-- REFRESH -->
 <div class="refresh-bar" id="refresh-bar">
   Dernière mise à jour : <span id="last-update">—</span>
@@ -400,6 +452,50 @@ const COUNTRY_FLAGS = {
 let allMatches = [];
 let currentFilter = "Football"; // le foot est affiché par défaut ; les autres sports se choisissent via les filtres
 let searchTerm = "";
+// Filtres avances (curseurs) : 100% gratuit et cote client, aucun jeton
+// depense tant que l'utilisateur ne clique pas sur "Analyser" un match.
+// maxGoalDiff=5 et minMinute=0 = valeurs neutres (pas de filtre applique).
+let advFilters = { btts: 0, ht: 0, under25: 0, maxGoalDiff: 5, minMinute: 0, active: false };
+
+function toggleAdvFilters() {
+  var p = document.getElementById("adv-filters-panel");
+  p.style.display = (p.style.display === "none") ? "block" : "none";
+}
+function syncAdvLabel(id, suffix) {
+  document.getElementById(id + "-val").textContent = document.getElementById(id).value + (suffix || "");
+}
+function applyAdvFilters() {
+  advFilters.btts = Number(document.getElementById("af-btts").value) || 0;
+  advFilters.ht = Number(document.getElementById("af-ht").value) || 0;
+  advFilters.under25 = Number(document.getElementById("af-under25").value) || 0;
+  advFilters.maxGoalDiff = Number(document.getElementById("af-goaldiff").value);
+  advFilters.minMinute = Number(document.getElementById("af-minute").value) || 0;
+  advFilters.active = advFilters.btts > 0 || advFilters.ht > 0 || advFilters.under25 > 0 || advFilters.maxGoalDiff < 5 || advFilters.minMinute > 0;
+  document.getElementById("adv-filters-btn").classList.toggle("active", advFilters.active);
+  renderMatches();
+}
+function resetAdvFilters() {
+  ["af-btts", "af-ht", "af-under25"].forEach(function(id) { document.getElementById(id).value = 0; syncAdvLabel(id, "%"); });
+  document.getElementById("af-goaldiff").value = 5; syncAdvLabel("af-goaldiff", "");
+  document.getElementById("af-minute").value = 0; syncAdvLabel("af-minute", "'");
+  applyAdvFilters();
+}
+function matchPassesAdvFilters(m) {
+  if (!advFilters.active) return true;
+  var h2h = m.h2h_markets;
+  if (advFilters.btts > 0 && (!h2h || h2h.btts_pct == null || h2h.btts_pct < advFilters.btts)) return false;
+  if (advFilters.ht > 0 && (!h2h || h2h.first_half_goal_pct == null || h2h.first_half_goal_pct < advFilters.ht)) return false;
+  if (advFilters.under25 > 0 && (!h2h || h2h.under25_pct == null || h2h.under25_pct < advFilters.under25)) return false;
+  if (advFilters.maxGoalDiff < 5) {
+    var gd = (m.score_home != null && m.score_away != null) ? Math.abs(m.score_home - m.score_away) : null;
+    if (gd == null || gd > advFilters.maxGoalDiff) return false;
+  }
+  if (advFilters.minMinute > 0) {
+    var min = parseInt(m.minute, 10);
+    if (isNaN(min) || min < advFilters.minMinute) return false;
+  }
+  return true;
+}
 let userAuth = null;
 // Analyses déjà obtenues, gardées en mémoire le temps de la session. loadMatches()
 // tourne toutes les 60s et reconstruit tout le HTML des cartes (scores en direct) —
@@ -631,9 +727,16 @@ function renderMatches() {
         || (m.competition || "").toLowerCase().indexOf(searchTerm) !== -1;
     });
   }
+  if (advFilters.active) {
+    filtered = filtered.filter(matchPassesAdvFilters);
+  }
+  var afCountEl = document.getElementById("af-count");
+  if (afCountEl) afCountEl.textContent = advFilters.active ? (filtered.length + " match" + (filtered.length !== 1 ? "s" : "") + " trouvé" + (filtered.length !== 1 ? "s" : "")) : "";
 
   if (!filtered.length) {
-    if (searchTerm) {
+    if (advFilters.active) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🎚️</div><div class="empty-title">Aucun match ne correspond à tes critères</div><div class="empty-sub">Essaie d\'assouplir un curseur, ou reviens dans quelques minutes — de nouveaux matchs évoluent en permanence.</div></div>';
+    } else if (searchTerm) {
       wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Aucun résultat pour "' + escHtml(searchTerm) + '"</div><div class="empty-sub">Vérifie l\'orthographe ou essaie un autre sport dans les filtres.</div></div>';
     } else if (currentFilter !== "all") {
       wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">' + (SPORT_ICONS[currentFilter] || "🏟️") + '</div><div class="empty-title">Aucun match ' + currentFilter + ' en direct</div><div class="empty-sub">Aucun match de ' + currentFilter + ' en cours. Essaie un autre sport ou reviens plus tard.</div></div>';

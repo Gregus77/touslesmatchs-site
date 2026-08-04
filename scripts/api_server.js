@@ -9592,7 +9592,31 @@ app.get("/live-matches", async (req, res) => {
     // que le site n'analysait rien. Tous les matchs live restent maintenant
     // visibles — analysable/block_reason indiquent au front s'il y a un
     // bouton d'analyse ou juste une étiquette explicative.
-    res.json({ ok: true, matches: withVerdict });
+
+    // Filtres avancés Live IA (04/08/2026, demande fondateur) : chaque match
+    // porte ses stats H2H (BTTS/1ère MT/Under 2.5) pour permettre un filtrage
+    // multi-critères CÔTÉ CLIENT, gratuit, sans dépenser de jeton. fetchH2H est
+    // déjà cache-aware (6h) et budget-gardé (apiSportsBudgetOk) — l'appeler ici
+    // pour tous les matchs live ne coûte donc rien de plus que ce que coûterait
+    // déjà l'ouverture individuelle de chaque analyse le même jour.
+    const withH2H = await Promise.all(withVerdict.map(async (m) => {
+      if (m.pinnedSignal || m.sport !== "Football" || m.source !== "api-sports" || !m.homeId || !m.awayId) {
+        return { ...m, h2h_markets: null };
+      }
+      try {
+        const h2h = await fetchH2H(m);
+        return {
+          ...m,
+          h2h_markets: (h2h && h2h.n >= 3) ? {
+            n: h2h.n, btts_pct: h2h.bttsPct, first_half_goal_pct: h2h.htGoalPct, under25_pct: h2h.under25Pct,
+          } : null,
+        };
+      } catch (_) {
+        return { ...m, h2h_markets: null };
+      }
+    }));
+
+    res.json({ ok: true, matches: withH2H });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
