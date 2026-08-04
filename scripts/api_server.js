@@ -1997,6 +1997,14 @@ function buildVoteSummary(activeAgents, selectedBet) {
   };
 }
 
+// Un timeout ou une erreur HTTP (401/429/5xx) resolvait silencieusement en
+// `{}` — indiscernable d'une reponse IA simplement vide. Consequence reelle
+// constatee le 04/08/2026 : impossible de savoir si les agents du Concile
+// timeoutent vraiment, ou si une cle expiree/un quota depasse renvoie une
+// erreur JSON valide mais sans "choices", noyee dans le meme `{}`. Les
+// marqueurs _httpStatus/_httpTimedOut/_httpParseError sont ajoutes SANS
+// toucher aux champs habituels (.choices, .message...) — aucun appelant
+// existant n'est affecte, seuls ceux qui les lisent explicitement en profitent.
 function httpPost(url, body, headers = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
@@ -2012,14 +2020,17 @@ function httpPost(url, body, headers = {}, timeoutMs = 8000) {
       let data = "";
       res.on("data", (c) => (data += c));
       res.on("end", () => {
-        try { resolve(JSON.parse(data)); }
-        catch { resolve({}); }
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode >= 400 && parsed && typeof parsed === "object") parsed._httpStatus = res.statusCode;
+          resolve(parsed);
+        } catch { resolve({ _httpStatus: res.statusCode, _httpParseError: true, _raw: data.slice(0, 300) }); }
       });
     });
     req.on("error", reject);
     req.on("timeout", () => {
       req.destroy();
-      resolve({});
+      resolve({ _httpTimedOut: true });
     });
     req.write(payload);
     req.end();
@@ -4402,22 +4413,36 @@ Réponds en JSON pur (pas de markdown):
       if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       let raw = "{}";
+      let lastDiag = "aucun fournisseur configure";
       for (const pv of providers) {
         try {
+          let resp;
           if (pv.kind === "cohere") {
             // v1/chat (api.cohere.ai) est retiree : HTTP 404 constate le 29/07/2026,
             // quel que soit le modele demande. v2/chat (api.cohere.com) est l'API
             // active ; format de requete et de reponse tous deux differents (messages
             // OpenAI-like en entree, message.content[] en sortie, pas de champ "text").
-            const cr = await httpPost("https://api.cohere.com/v2/chat", { model: pv.model, messages: [{ role: "user", content: prompt }], max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
-            raw = cr.message?.content?.[0]?.text || cr.text || "{}";
+            resp = await httpPost("https://api.cohere.com/v2/chat", { model: pv.model, messages: [{ role: "user", content: prompt }], max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
+            raw = resp.message?.content?.[0]?.text || resp.text || "{}";
           } else {
-            const rp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
-            raw = rp.choices?.[0]?.message?.content || "{}";
+            resp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
+            raw = resp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          if (probe && probe !== "{}" && probe.length > 8) break;
+          if (probe && probe !== "{}" && probe.length > 8) { lastDiag = null; break; }
+          // Reponse HTTP recue sans exception, mais sans contenu exploitable —
+          // diagnostic precis a partir des marqueurs poses par httpPost() plutot
+          // que de deviner "timeout" par defaut (constate le 04/08/2026 : la
+          // quasi-totalite des votes echouaient et le message generique empechait
+          // de savoir si c'etait un vrai timeout ou une cle/quota en erreur).
+          const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
+          lastDiag = resp?._httpTimedOut ? `timeout ${AGENT_TIMEOUT_MS}ms (${pvHost})`
+            : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost}) — ${JSON.stringify(resp).slice(0, 200)}`
+            : resp?._httpParseError ? `reponse illisible (${pvHost}): ${resp._raw}`
+            : `reponse sans contenu exploitable (${pvHost})`;
         } catch (e) {
+          const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
+          lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
           console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
       }
@@ -4426,10 +4451,7 @@ Réponds en JSON pur (pas de markdown):
 
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
       if (!modelGaveBet) {
-        // Message factuel : la cause la plus frequente est le depassement du delai,
-        // pas un probleme de quota ou de cle. Un diagnostic errone ici a longtemps
-        // fait chercher le probleme au mauvais endroit.
-        console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable (delai ${AGENT_TIMEOUT_MS}ms depasse, reponse illisible, ou quota/cle)`);
+        console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable — ${lastDiag || "raison inconnue"}`);
         return {
           name: agCfg.name, icon: agCfg.icon,
           bet: "—", confidence: null,
