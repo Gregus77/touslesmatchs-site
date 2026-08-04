@@ -160,6 +160,19 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .upcoming-conf{font-size:12.5px;font-weight:800;color:#3ec9e8;white-space:nowrap;background:rgba(62,201,232,.12);padding:6px 11px;border-radius:9px;display:inline-block}
 .upcoming-odd{background:rgba(124,58,237,.16);padding:2px 8px;border-radius:7px}
 .upcoming-lock-btn{font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:6px 12px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap}
+
+/* ── PANNEAU MATCHS A VENIR (encart distinct, separe de "en cours") ── */
+.upcoming-panel{border-top:3px solid #3ec9e8;padding:20px;display:flex;flex-direction:column;gap:10px}
+.live-panel-title .dot.up{background:#3ec9e8;box-shadow:0 0 8px #3ec9e8}
+.upcoming-highlight{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;margin-bottom:4px;background:linear-gradient(135deg,rgba(62,201,232,.18),rgba(99,102,241,.14));border:1.5px solid rgba(62,201,232,.45)}
+.upcoming-highlight-badge{font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#3ec9e8;background:rgba(62,201,232,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
+.upcoming-highlight-teams{font-size:17px;font-weight:900}
+.upcoming-highlight-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.upcoming-highlight-bet{font-size:13.5px;font-weight:800;color:#3ec9e8;white-space:nowrap;margin-left:auto}
+@media(max-width:700px){
+  .upcoming-highlight{flex-direction:column;align-items:flex-start;gap:8px}
+  .upcoming-highlight-bet{margin-left:0}
+}
 .day-acc-item{border:1px solid var(--b1);border-radius:12px;margin-bottom:8px;overflow:hidden}
 .day-acc-item:last-child{margin-bottom:0}
 .day-acc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;cursor:pointer;background:rgba(255,255,255,.02);transition:background .15s}
@@ -346,11 +359,21 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
     <div class="card live-panel" id="live">
       <div class="live-panel-head">
-        <div class="live-panel-title"><span class="dot"></span>Matchs en direct</div>
+        <div class="live-panel-title"><span class="dot"></span>Matchs en cours</div>
         <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
       </div>
       <div id="live-rows"><div class="empty-note">Chargement…</div></div>
-      <div class="upcoming-sep"><span class="dot up"></span>Matchs à venir — meilleures cotes</div>
+    </div>
+  </div>
+
+  <!-- RANGEE 1bis : MATCHS A VENIR — encart distinct -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card upcoming-panel" id="upcoming-panel">
+      <div class="live-panel-head">
+        <div class="live-panel-title"><span class="dot up"></span>Matchs à venir — prochaines 24h</div>
+        <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
+      </div>
+      <div id="upcoming-highlight"></div>
       <div id="upcoming-rows"><div class="empty-note">Chargement…</div></div>
     </div>
   </div>
@@ -895,25 +918,7 @@ async function loadLive(){
 loadLive();
 
 /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
-async function loadUpcoming(){
-  var box=document.getElementById('upcoming-rows');
-  var email=localStorage.getItem('tlm_email'), code=localStorage.getItem('tlm_code');
-  var authQs=(email&&code)?('&email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code)):'';
-  try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now()+authQs);
-    var d=await r.json();
-    var picks=(d.picks||[]);
-    if(!picks.length){
-      var s=d.stats;
-      var detail=(s&&s.totalFixtures)
-        ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
-        : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
-      box.innerHTML='<div class="empty-note">'+detail+'<br>'+
-        'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
-        '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
-      return;
-    }
-    box.innerHTML=picks.map(function(p){
+function renderUpcomingItem(p){
       var comp=splitComp(p.competition||'');
       var flag=COUNTRY_FLAGS[comp.country]||'';
       var icon=SPORT_ICO[p.sport]||'🏟️';
@@ -941,7 +946,58 @@ async function loadUpcoming(){
           '<div class="upcoming-comp">'+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+(kt?' · '+kt:'')+'</div>'+
         '</div>'+right+
       '</div>';
-    }).join('');
+}
+async function loadUpcoming(){
+  var box=document.getElementById('upcoming-rows');
+  var hl=document.getElementById('upcoming-highlight');
+  var email=localStorage.getItem('tlm_email'), code=localStorage.getItem('tlm_code');
+  var authQs=(email&&code)?('&email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code)):'';
+  try{
+    var r=await fetch('/api/upcoming-picks?t='+Date.now()+authQs);
+    var d=await r.json();
+    var allPicks=(d.picks||[]);
+    // Encart "prochaines 24h" : demande explicite de Greg le 04/08/2026 —
+    // distinct du panneau "matchs en cours", fenetre resserree a 24h pour
+    // rester pertinent (le reste de la liste, au-dela, s'affiche quand meme
+    // en dessous si dispo, juste pas dans le grand encart mis en avant).
+    var in24h=allPicks.filter(function(p){
+      var kd=new Date(p.kickoff);
+      if(isNaN(kd.getTime())) return true;
+      return (kd.getTime()-Date.now()) <= 24*3600*1000;
+    });
+    var picks=in24h.length?in24h:allPicks;
+    if(!picks.length){
+      hl.innerHTML='';
+      var s=d.stats;
+      var detail=(s&&s.totalFixtures)
+        ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
+        : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
+      box.innerHTML='<div class="empty-note">'+detail+'<br>'+
+        'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
+        '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
+      return;
+    }
+    // Le meilleur pick (confiance la plus haute, verrouille ou non) mis en
+    // valeur seul dans un encart distinct — le reste de la liste suit en dessous.
+    var sorted=picks.slice().sort(function(a,b){ return (b.confidence||0)-(a.confidence||0); });
+    var top=sorted[0];
+    var rest=picks.filter(function(p){ return p!==top; });
+    var comp0=splitComp(top.competition||'');
+    var flag0=COUNTRY_FLAGS[comp0.country]||'';
+    var icon0=SPORT_ICO[top.sport]||'🏟️';
+    var kt0='';
+    try{ var kd0=new Date(top.kickoff); if(!isNaN(kd0.getTime())) kt0=kd0.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+    var bet0=top.locked
+      ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter pour voir</button>'
+      : '<div class="upcoming-highlight-bet">'+(top.confidence>=100?'🔥 ':'')+esc(top.bet)+' · '+esc(top.confidence)+'/100</div>';
+    hl.innerHTML='<div class="upcoming-highlight">'+
+      '<div class="upcoming-highlight-badge">⭐ Notre sélection</div>'+
+      '<div>'+
+        '<div class="upcoming-highlight-teams">'+icon0+' '+(flag0?flag0+' ':'')+esc(top.home)+' — '+esc(top.away)+'</div>'+
+        '<div class="upcoming-highlight-sub">'+esc(comp0.league)+(comp0.country?' · '+esc(comp0.country):'')+(kt0?' · '+kt0:'')+'</div>'+
+      '</div>'+bet0+
+    '</div>';
+    box.innerHTML=rest.map(renderUpcomingItem).join('');
   } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
 }
 loadUpcoming();

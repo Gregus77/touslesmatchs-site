@@ -70,6 +70,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .af-apply{background:linear-gradient(135deg,#7c5cff,#5b3ff5);color:#fff}
 .af-reset{background:var(--bg2, #1e2340);color:var(--muted2);border:1px solid var(--b1)!important}
 .af-count{font-size:11px;color:var(--muted2);margin-left:auto;align-self:center}
+.af-highlight-btn{background:linear-gradient(135deg,#ff3b5c,#7c5cff);color:#fff;border:none;padding:12px 22px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 0 rgba(255,59,92,.5);animation:afPulse 1.8s infinite}
+.af-highlight-btn.active{animation:none;box-shadow:none}
+@keyframes afPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.55)}50%{box-shadow:0 0 0 10px rgba(255,59,92,0)}}
 
 /* MATCH GRID */
 .matches-wrap{max-width:900px;margin:0 auto;padding:0 16px 60px}
@@ -331,9 +334,9 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
 
 <!-- ADVANCED FILTERS -->
 <div class="adv-filters-toggle">
-  <button class="filter-btn" id="adv-filters-btn" onclick="toggleAdvFilters()">🎚️ Trouve TON match (filtres avancés)</button>
+  <button class="af-highlight-btn" id="adv-filters-btn" onclick="toggleAdvFilters()">🎚️ Choisis TON match selon tes critères</button>
 </div>
-<div class="adv-filters-panel" id="adv-filters-panel" style="display:none">
+<div class="adv-filters-panel" id="adv-filters-panel" style="display:block">
   <div class="af-title">Règle tes critères — 100% gratuit, aucun jeton dépensé tant que tu ne cliques pas sur un match</div>
   <div class="af-row">
     <label for="af-btts">BTTS historique (les 2 marquent) ≥</label>
