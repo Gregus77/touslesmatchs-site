@@ -8536,9 +8536,26 @@ app.post("/webauthn/login-verify", async (req, res) => {
     if (!verification.verified) return res.status(400).json({ ok: false, error: "Vérification échouée" });
     db.prepare("UPDATE webauthn_credentials SET counter = ?, last_used_at = datetime('now') WHERE id = ?")
       .run(verification.authenticationInfo.newCounter, stored.id);
-    const auth = verifyCode(stored.email, stored.code);
+    // Le code stocke sur l'empreinte est celui du jour de l'ENREGISTREMENT du
+    // doigt, pas forcement celui d'aujourd'hui : un renouvellement/changement
+    // de palier genere un nouveau code actif et desactive l'ancien, ce qui
+    // rejetait alors la connexion biometrique meme si l'abonnement est bien
+    // valide (constate le 04/08/2026 — argent.conscient@proton.me bloque avec
+    // son doigt apres renouvellement, faux "abonnement expire"). On revalide
+    // donc sur le code ACTIF actuel de cet email, pas sur celui fige au doigt.
+    let currentCode = stored.code;
+    try {
+      const cdb = new Database(CODES_DB_PATH, { readonly: true });
+      const row = cdb.prepare("SELECT code FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1").get(stored.email);
+      cdb.close();
+      if (row?.code) currentCode = row.code;
+    } catch (_) {}
+    const auth = verifyCode(stored.email, currentCode);
     if (!auth.valid) return res.status(403).json({ ok: false, error: "Abonnement expiré, reconnecte-toi avec ton code." });
-    res.json({ ok: true, email: stored.email, code: stored.code, plan: auth.plan });
+    if (currentCode !== stored.code) {
+      try { db.prepare("UPDATE webauthn_credentials SET code = ? WHERE id = ?").run(currentCode, stored.id); } catch (_) {}
+    }
+    res.json({ ok: true, email: stored.email, code: currentCode, plan: auth.plan });
   } catch (e) {
     console.error("[webauthn/login-verify]", e.message);
     res.status(400).json({ ok: false, error: "Vérification échouée" });
