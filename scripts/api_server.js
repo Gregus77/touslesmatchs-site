@@ -934,15 +934,17 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 // explicitement sur Elite seul. Promesse commerciale "Elite ≥82%" mise a jour
 // en "≥75%" partout (site, emails, Telegram) en meme temps que ce seuil.
 const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85;
-// Seuil Elite saisonnier — decision fondateur du 04/08/2026 : 75% tant que le
-// calendrier est creux (peu de championnats actifs, il fallait du volume),
-// remonte automatiquement a 82% des le 15 aout quand TOUS les championnats
-// redemarrent (gros volume de matchs => on peut redevenir strict sans manquer
-// de signaux). Fonction (pas une const figee au demarrage) : le serveur peut
-// tourner plusieurs jours sans redeploiement, la bascule doit avoir lieu meme
-// sans redemarrer le conteneur.
+// Seuil Elite saisonnier — releve de 75% a 80% le 04/08/2026 (decision
+// fondateur) : le plancher a 75% laissait passer des signaux dont le winrate
+// reel ne tenait pas la promesse (72-75% constate sur le canal Pro le meme
+// jour), juge insuffisant pour des abonnes payants. 80% devient le plancher,
+// jusqu'a la remontee prevue a 82% le 15 aout quand tous les championnats
+// redemarrent (gros volume de matchs => plus besoin d'un plancher bas pour
+// avoir du volume). Fonction (pas une const figee au demarrage) : le serveur
+// peut tourner plusieurs jours sans redeploiement, la bascule doit avoir lieu
+// meme sans redemarrer le conteneur.
 const ELITE_TIER_RAMP_UP_DATE = new Date("2026-08-15T00:00:00Z").getTime();
-function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 82; }
+function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 80 : 82; }
 // Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
 // fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
 // c'est un longshot que le book juge improbable.
