@@ -3593,7 +3593,14 @@ async function fetchRealOdds(match) {
   // sport dont l'API nous a déjà renvoyé un dépassement.
   if (typeof shouldSkipApiSportsSport === "function" && shouldSkipApiSportsSport(cfg.key)) return null;
 
-  const ck = `odds_${sportLc}_${gameId}`;
+  // Le score fait partie de la cle : un but change les cotes instantanement,
+  // mais le cache durait 10 min meme en direct — un abonne pouvait recevoir
+  // une cote d'avant-but perimee jusqu'a 10 min apres qu'elle ait bouge.
+  // Inclure le score force un refetch des qu'il change, tout en gardant le
+  // cache 10 min tant que rien ne bouge (protege le quota API-Sports).
+  // Constate le 04/08/2026 : Unibet affiche a 2.00 alors que la cote reelle
+  // etait deja retombee a 1.50 apres un but.
+  const ck = `odds_${sportLc}_${gameId}_${match.score_home ?? "x"}_${match.score_away ?? "x"}`;
   const c = oddsCache.get(ck);
   if (c && Date.now() - c.ts < 10 * 60 * 1000) return c.data;
   let data = null;
