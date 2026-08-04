@@ -704,7 +704,7 @@ async function maybeOfferBiometric(email,code){
     // L'utilisateur a accepte la popup mais l'enregistrement (create()) a
     // echoue ou a ete annule au niveau OS — sans ce message, tlm_webauthn_email
     // ne se pose jamais et rien ne se represente jamais a la prochaine
-    // connexion, sans qu'on comprenne pourquoi (signale par Greg le 01/08/2026).
+    // connexion, sans qu'on comprenne pourquoi (signalé par le fondateur le 01/08/2026).
     alert('Échec de l\'activation biométrique ('+(e&&e.message?e.message:'annulée')+'). Tu peux réessayer à ta prochaine connexion.');
   }
 }
@@ -956,7 +956,7 @@ async function loadUpcoming(){
     var r=await fetch('/api/upcoming-picks?t='+Date.now()+authQs);
     var d=await r.json();
     var allPicks=(d.picks||[]);
-    // Encart "prochaines 24h" : demande explicite de Greg le 04/08/2026 —
+    // Encart "prochaines 24h" : demande explicite du fondateur le 04/08/2026 —
     // distinct du panneau "matchs en cours", fenetre resserree a 24h pour
     // rester pertinent (le reste de la liste, au-dela, s'affiche quand meme
     // en dessous si dispo, juste pas dans le grand encart mis en avant).
@@ -1081,9 +1081,9 @@ async function loadPick(){
     // Le pick affiché peut retomber sur le meilleur résultat des 7 derniers
     // jours quand rien n'est encore résolu aujourd'hui (voir refreshDailyPickFromDB
     // côté serveur). Affichait avant un match vieux de plusieurs jours comme
-    // s'il était du jour même (constaté par Greg le 04/08/2026 : Instituto
+    // s'il était du jour même (constaté par le fondateur le 04/08/2026 : Instituto
     // Cordoba-Platense du 30/07). Un premier correctif a ajouté la date, mais
-    // Greg préfère un état vide plutôt qu'un match ancien même daté — donc on
+    // Le fondateur préfère un état vide plutôt qu'un match ancien même daté — donc on
     // n'affiche plus DU TOUT un pick qui n'est pas d'aujourd'hui.
     var isOldPick=false;
     if(p.matchTime){
@@ -1104,7 +1104,7 @@ async function loadPick(){
     var sportIco=SPORT_ICO[p.sport]||'🏟️';
     // Heure locale du visiteur : le navigateur convertit automatiquement
     // matchTime (UTC) dans SON fuseau, quel que soit le pays de connexion —
-    // pas besoin de geolocaliser l'IP. Demande de Greg le 31/07/2026.
+    // pas besoin de geolocaliser l'IP. Demande du fondateur le 31/07/2026.
     var timeHtml='';
     if(p.matchTime){
       try{
@@ -1116,7 +1116,7 @@ async function loadPick(){
     }
     // Match termine (win/loss) : le score final et le pari conseille
     // deviennent une preuve historique, plus une info a proteger — on les
-    // affiche a tout le monde, meme sans compte. Demande de Greg le
+    // affiche a tout le monde, meme sans compte. Demande du fondateur le
     // 31/07/2026 : mettre a jour le pick avec le score des que le match
     // est fini, montrer le nouveau pick + pari conseille le lendemain.
     var resolved=(p.status==='win'||p.status==='loss');

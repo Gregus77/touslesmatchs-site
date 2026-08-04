@@ -11,7 +11,8 @@
 <meta property="og:description" content="Matchs de football en direct analysés par le Concile IA — scores en temps réel.">
 <meta property="og:url" content="https://www.touslesmatchs.com/live-ia">
 <meta property="og:site_name" content="TousLesMatchs">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
+<meta name="twitter:card" content="summary_large_image">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -508,7 +509,7 @@ let userAuth = null;
 // simple bouton "Analyser" à chaque rafraîchissement.
 // Persisté en localStorage (pas juste en mémoire) : un jeton payé doit rester
 // visible même après un rechargement de page ou une revisite plus tard dans
-// le match, pas seulement pendant la session en cours. Demande de Greg le
+// le match, pas seulement pendant la session en cours. Demande du fondateur le
 // 03/08/2026. Purge les entrées de plus de 12h (matchs forcément terminés).
 var ANALYSIS_CACHE_KEY = "tlm_analysis_cache";
 function loadAnalysisCache() {
@@ -547,7 +548,7 @@ var STATUS_CODE_LABELS = {
 // Quart-temps (basket) / periodes (hockey) — codes bruts renvoyes par
 // API-Sports (status.short). Sans traduction, le client voit juste un
 // chrono ("9'") sans savoir a quel quart-temps il correspond (signale
-// par Greg le 01/08/2026).
+// par le fondateur le 01/08/2026).
 var PERIOD_LABELS = {
   Q1: "1er quart-temps", Q2: "2e quart-temps", Q3: "3e quart-temps", Q4: "4e quart-temps",
   OT: "Prolongation", BT: "Pause",
@@ -694,7 +695,7 @@ function preselectFromFixtureParam() {
   _fixturePreselectDone = true;
   // Le filtre par defaut est "Football" — un match d'un autre sport ouvert
   // depuis "Voir" sur l'accueil ne se rendait jamais dans le DOM, donc le
-  // scrollIntoView ne trouvait rien (signale par Greg le 01/08/2026). On
+  // scrollIntoView ne trouvait rien (signalé par le fondateur le 01/08/2026). On
   // bascule sur "Tous les sports" pour garantir que le match cible est visible
   // quel que soit son sport.
   if (currentFilter !== "all" && target.sport && target.sport !== currentFilter) {
@@ -723,7 +724,7 @@ function renderMatches() {
   var wrap = document.getElementById("matches-wrap");
   // Tous les matchs live restent affichés, jouables ou non (voir /live-matches) —
   // ça montre que le site suit vraiment l'activité en direct, même quand rien
-  // n'est encore assez fort pour être analysé (demande de Greg le 01/08/2026).
+  // n'est encore assez fort pour être analysé (demande du fondateur le 01/08/2026).
   var filtered = currentFilter === "all" ? allMatches : allMatches.filter(function(m){ return m.sport === currentFilter; });
   if (searchTerm) {
     filtered = filtered.filter(function(m) {
@@ -817,7 +818,7 @@ function renderMatches() {
 
     // Bouton d'analyse si le match est jouable maintenant ; sinon, étiquette
     // expliquant pourquoi (au lieu de faire disparaître le match — demande
-    // de Greg le 01/08/2026, ça montre que le site suit le match).
+    // du fondateur le 01/08/2026, ça montre que le site suit le match).
     // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
     if (isLive && !isDone && !m.pinnedSignal) {
       if (m.analysable === false) {
@@ -868,7 +869,7 @@ function buildAnalysisHtml(d) {
     ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
   var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
     ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
-  // Marches secondaires (H2H reel) — demande de Greg le 03/08/2026 : montrer
+  // Marches secondaires (H2H reel) — demande du fondateur le 03/08/2026 : montrer
   // plusieurs marches sous l'analyse (BTTS%, 1ere mi-temps%, vainqueur%...),
   // pas juste le pick principal. Base sur le meme H2H que l'analyse IA, jamais
   // un chiffre invente. n<3 confrontations = trop peu fiable, on n'affiche pas.
@@ -955,7 +956,7 @@ function requestAnalysis(btn, matchId, home, away) {
       btn.innerHTML = "✅ Analyse terminée";
       // Persistée en localStorage (pas juste en mémoire JS) : le panneau doit
       // rester ouvert tant que le match n'est pas fini, MEME apres un
-      // rechargement de page ou une revisite plus tard — demande de Greg le
+      // rechargement de page ou une revisite plus tard — demande du fondateur le
       // 03/08/2026 ("l'analyse doit rester ouverte en permanence a partir du
       // moment ou j'ai paye mon jeton et pendant tout le match").
       analysisCache[matchId] = el.innerHTML;
@@ -963,7 +964,7 @@ function requestAnalysis(btn, matchId, home, away) {
       // Un jeton vient d'être dépensé sur ce match : on le surveille désormais
       // en arrière-plan (voir watchMatch/checkWatchedForUpdates) pour prévenir
       // si le vote du Concile évolue, même si le client a 30 onglets ouverts et
-      // ne regarde plus cette carte. Demande de Greg le 03/08/2026.
+      // ne regarde plus cette carte. Demande du fondateur le 03/08/2026.
       watchMatch(matchId, home, away, built.voteLabel, built.betText, built.confText, built.resumeText);
       // Met à jour le compteur de la barre du haut
       if (userAuth && d.credits_left !== undefined) {
@@ -1003,7 +1004,7 @@ function requestAnalysis(btn, matchId, home, away) {
 // Objectif : un client qui a payé un jeton sur un match ne doit pas rater une
 // évolution du vote Concile juste parce qu'il regarde un autre match parmi les
 // 30 ouverts. On revérifie périodiquement (voir checkWatchedForUpdates) et un
-// popup alerte en cas de changement — demande de Greg le 03/08/2026.
+// popup alerte en cas de changement — demande du fondateur le 03/08/2026.
 var WATCH_KEY = "tlm_watched_matches";
 function loadWatched() {
   try { return JSON.parse(localStorage.getItem(WATCH_KEY) || "{}"); } catch (e) { return {}; }
