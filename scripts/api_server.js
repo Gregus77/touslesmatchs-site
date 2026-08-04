@@ -933,7 +933,16 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 // certains jours (0-3 signaux). Standard/Premium INCHANGES — la demande porte
 // explicitement sur Elite seul. Promesse commerciale "Elite ≥82%" mise a jour
 // en "≥75%" partout (site, emails, Telegram) en meme temps que ce seuil.
-const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 75;
+const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85;
+// Seuil Elite saisonnier — decision fondateur du 04/08/2026 : 75% tant que le
+// calendrier est creux (peu de championnats actifs, il fallait du volume),
+// remonte automatiquement a 82% des le 15 aout quand TOUS les championnats
+// redemarrent (gros volume de matchs => on peut redevenir strict sans manquer
+// de signaux). Fonction (pas une const figee au demarrage) : le serveur peut
+// tourner plusieurs jours sans redeploiement, la bascule doit avoir lieu meme
+// sans redemarrer le conteneur.
+const ELITE_TIER_RAMP_UP_DATE = new Date("2026-08-15T00:00:00Z").getTime();
+function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 82; }
 // Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
 // fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
 // c'est un longshot que le book juge improbable.
@@ -959,12 +968,12 @@ function getTierThresholds() {
   const today = new Date().toISOString().slice(0, 10);
   if (_tierThresholdCache.day === today && _tierThresholdCache.value) return _tierThresholdCache.value;
   // Repli : les constantes calées sur la mesure du 25/07/2026.
-  const fallback = { standard: STANDARD_MIN_CONF, premium: PREMIUM_MIN_CONF, elite: ELITE_MIN_CONF, source: "fixe" };
+  const fallback = { standard: STANDARD_MIN_CONF, premium: PREMIUM_MIN_CONF, elite: getEliteMinConf(), source: "fixe" };
   try {
     const confs = db.prepare(`
       SELECT confidence FROM concile_analyses
       WHERE analysed_at >= datetime('now','-${TIER_THRESHOLD_WINDOW_DAYS} days')
-        AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND confidence >= ${getPublishedMinConfidence()}
         AND real_odd >= ${TIER_MIN_REAL_ODD}
         AND real_odd <= ${TIER_MAX_REAL_ODD}
       ORDER BY confidence DESC
@@ -987,17 +996,17 @@ function getTierThresholds() {
     const t = {
       standard: quantile(STANDARD_SIGNAL_DAILY_CAP),
       premium:  quantile(PREMIUM_SIGNAL_DAILY_CAP),
-      elite:    SIGNAL_FLOOR, // Elite = tout le vivier diffusable, au plancher du portail
+      elite:    getSignalFloor(), // Elite = tout le vivier diffusable, au plancher du portail
       source: `${confs.length} analyses / ${TIER_THRESHOLD_WINDOW_DAYS} j`,
     };
     // Imbrication garantie : Standard ≥ Premium ≥ Elite (payer plus = recevoir plus).
     t.premium = Math.min(t.premium, t.standard);
     t.elite   = Math.min(t.elite, t.premium);
     // Jamais sous le plancher de publication.
-    // Le portail de diffusion exige déjà SIGNAL_FLOOR : un seuil de palier inférieur
+    // Le portail de diffusion exige déjà getSignalFloor() : un seuil de palier inférieur
     // serait lettre morte. C'est le plafond journalier (3/10/30) qui différencie les
     // paliers, pas le seuil de confiance.
-    for (const k of ["standard", "premium", "elite"]) t[k] = Math.max(SIGNAL_FLOOR, t[k]);
+    for (const k of ["standard", "premium", "elite"]) t[k] = Math.max(getSignalFloor(), t[k]);
     console.log(`[tier-thresholds] Standard ≥${t.standard} · Premium ≥${t.premium} · Elite ≥${t.elite} (${t.source})`);
     _tierThresholdCache = { day: today, value: t };
     return t;
@@ -1067,15 +1076,17 @@ let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
 // volume certains jours. Standard/Premium ne sont PAS concernés — leur seuil
 // réel vient de quantile() ci-dessus, qui cible un volume précis (3/j, 10/j)
 // et reste naturellement bien au-dessus de ce plancher.
-const SIGNAL_FLOOR = 75;
+// Devenu saisonnier le 04/08/2026 : voir getEliteMinConf() — 75 jusqu'au 15
+// aout, 82 ensuite. Fonction (pas une const) pour retomber a 82 sans redeploiement.
+function getSignalFloor() { return getEliteMinConf(); }
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
 // IA) qui ne part pas sur Telegram → on ne la montre pas comme un "pick". Réglable.
-// Alignée sur SIGNAL_FLOOR (75) le 03/08/2026 pour que le site affiche bien
+// Alignée sur getSignalFloor() le 03/08/2026 pour que le site affiche bien
 // tout ce qui part réellement sur Telegram Elite — éviter un signal envoyé
 // aux abonnés mais absent des résultats publics du site.
-const PUBLISHED_MIN_CONFIDENCE = 75;
+function getPublishedMinConfidence() { return getSignalFloor(); }
 // ── Seuils spécifiques par marché ────────────────────────────────────────────
 // Certains marchés ont un winrate historique nettement supérieur → seuil abaissé.
 // "But 1ère MT" est notre point fort : 82% de winrate sur 931 pronos historiques
@@ -1098,12 +1109,12 @@ function getAdaptiveSignalThreshold() {
   try {
     const rows = db.prepare(`
       SELECT confidence, outcome FROM concile_analyses
-      WHERE confidence >= ${SIGNAL_FLOOR} AND outcome IN ('win','loss')
+      WHERE confidence >= ${getSignalFloor()} AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC LIMIT 100
     `).all();
     if (rows.length < 15) {
-      _adaptiveThresholdCache = { value: SIGNAL_FLOOR, computedAt: now };
-      return SIGNAL_FLOOR;
+      _adaptiveThresholdCache = { value: getSignalFloor(), computedAt: now };
+      return getSignalFloor();
     }
     const brackets = [
       { min: 82, max: 85, wins: 0, total: 0 },
@@ -1121,7 +1132,7 @@ function getAdaptiveSignalThreshold() {
         }
       }
     }
-    let threshold = SIGNAL_FLOOR;
+    let threshold = getSignalFloor();
     let cumTotal = 0, cumWins = 0;
     for (const b of brackets) {
       cumTotal += b.total;
@@ -1144,7 +1155,7 @@ function getAdaptiveSignalThreshold() {
     return threshold;
   } catch (e) {
     console.error("[adaptive-threshold]", e.message);
-    return _adaptiveThresholdCache.value || SIGNAL_FLOOR;
+    return _adaptiveThresholdCache.value || getSignalFloor();
   }
 }
 
@@ -3313,7 +3324,7 @@ async function computeUpcomingPicks() {
         { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
         { bet: "BTTS Oui", confidence: h2h.bttsPct },
         { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
-      ].filter(c => c.confidence >= PUBLISHED_MIN_CONFIDENCE).sort((a, b) => b.confidence - a.confidence);
+      ].filter(c => c.confidence >= getPublishedMinConfidence()).sort((a, b) => b.confidence - a.confidence);
       if (!candidates.length) continue;
       stats.qualified++;
       const pick = {
@@ -4494,7 +4505,7 @@ Réponds en JSON pur (pas de markdown):
     chief.bet = topBet;
     // Plafonds par niveau de consensus : plus les IA convergent, plus la confiance
     // publiable est haute. Le plafond 3 votes était à 74, soit SOUS le plancher de
-    // diffusion (SIGNAL_FLOOR = 82) : la règle Elite « 3 IA suffisent » (voir
+    // diffusion (getSignalFloor() = 82) : la règle Elite « 3 IA suffisent » (voir
     // gradeElite plus bas) ne pouvait donc JAMAIS se déclencher, et le palier le
     // plus cher ne tournait en réalité que sur les signaux 4-5 votes de Premium.
     // Constaté le 31/07/2026 : 23 analyses bloquées à exactement 74 % en 24 h.
@@ -8143,7 +8154,7 @@ app.get("/auth/dashboard-data", requireSession, (req, res) => {
     // Derniers resultats : uniquement si abonnement actif — jamais de bet/raison
     // envoye au navigateur pour un compte non autorise, meme masque visuellement
     // (regle explicite de Greg, Phase 3). Seuil de confiance identique a celui
-    // qui declenche reellement un signal (SIGNAL_FLOOR), pas un seuil different
+    // qui declenche reellement un signal (getSignalFloor()), pas un seuil different
     // par palier — les paliers sont cumulatifs sur un socle commun.
     let recent = [];
     if (isPaid) {
@@ -8153,7 +8164,7 @@ app.get("/auth/dashboard-data", requireSession, (req, res) => {
         FROM concile_analyses
         WHERE outcome IN ('win','loss') AND confidence >= ?
         ORDER BY analysed_at DESC LIMIT 10
-      `).all(SIGNAL_FLOOR);
+      `).all(getSignalFloor());
       recent = dedupeAnalysesByMatch(rows).slice(0, 10).map(r => ({
         home: r.home, away: r.away, competition: r.competition, sport: r.sport,
         bet: r.best_bet, confidence: r.confidence, outcome: r.outcome,
@@ -8809,7 +8820,7 @@ function refreshDailyPickFromDB() {
     // R1 (décision fondateur 28/07/2026) : la sélection se fait sur la cote réelle
     // ARJEL, plus sur la minute — l'ancienne fenêtre 25-65' est supprimée ici aussi
     // pour rester cohérente avec le reste du pipeline (voir AUTO_CONCILE_TIME_WINDOW).
-    // confidence >= PUBLISHED_MIN_CONFIDENCE (seuil Elite, le plus permissif) :
+    // confidence >= getPublishedMinConfidence() (seuil Elite, le plus permissif) :
     // sans ce filtre, le pick gratuit affiché en vitrine sur l'accueil pouvait
     // etre plus faible que TOUT ce qui part reellement sur Telegram (constate
     // le 30/07/2026 : pick a 77% affiche alors que le seuil minimum de
@@ -8824,9 +8835,9 @@ function refreshDailyPickFromDB() {
     // basket (voir le correctif du 31/07/2026 sur Toronto Tempo/Minnesota Lynx).
     const DAILY_PICK_ALLOWED_BETS = new Set(["Victoire domicile", "Victoire extérieur", "BTTS Oui", "BTTS Non", "Under 2.5 buts"]);
     const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r)
-      && Number(r.confidence) >= PUBLISHED_MIN_CONFIDENCE
+      && Number(r.confidence) >= getPublishedMinConfidence()
       && DAILY_PICK_ALLOWED_BETS.has(String(r.best_bet || "").trim()));
-    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + PUBLISHED_MIN_CONFIDENCE + "%, marches autorises) — pick inchangé"); return false; }
+    if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + getPublishedMinConfidence() + "%, marches autorises) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI déjà RESOLU (score final réellement
     //   confirmé par nos sources — c'est la seule garantie qu'on affiche un
     //   match qui existe vraiment et pas un doublon/donnée corrompue).
@@ -8945,7 +8956,7 @@ function storedPickIsFresh() {
     // Force une regeneration si le pick stocke est sous le seuil de diffusion
     // reel (voir refreshDailyPickFromDB) — sinon un pick deja "frais"
     // aujourd'hui mais trop faible resterait affiche jusqu'a minuit.
-    if (p.confidence != null && Number(p.confidence) < PUBLISHED_MIN_CONFIDENCE) return false;
+    if (p.confidence != null && Number(p.confidence) < getPublishedMinConfidence()) return false;
     return true;
   } catch { return false; }
 }
@@ -8971,7 +8982,7 @@ app.get("/current-pick", (req, res) => {
   try {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
-    const belowThreshold = p && p.confidence != null && Number(p.confidence) < PUBLISHED_MIN_CONFIDENCE;
+    const belowThreshold = p && p.confidence != null && Number(p.confidence) < getPublishedMinConfidence();
     if (p && p.home && p.home !== "Analyse en cours" && !isExcludedFromPicks(p) && !belowThreshold) {
       return res.json({ ok: true, pick: normalizeCurrentPick(p, p.source || "hermes") });
     }
@@ -8994,7 +9005,7 @@ function seoPublishedRows(limit) {
         ) AS _rn
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
-          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND confidence >= ${getPublishedMinConfidence()}
           AND outcome IN ('win','loss')
       ) WHERE _rn = 1
       ORDER BY analysed_at DESC
@@ -9042,7 +9053,7 @@ app.get("/sitemap-pronostics.xml", (req, res) => {
 // Hybride : rang par confiance, contenu par dispo ARJEL.
 //   Standard = ARJEL & confiance >= 88 (les fleurons, faible volume)
 //   Premium  = ARJEL & confiance >= 85 (inclut Standard)
-//   Elite    = tout le publié >= PUBLISHED_MIN_CONFIDENCE (ARJEL + "IA seulement")
+//   Elite    = tout le publié >= getPublishedMinConfidence() (ARJEL + "IA seulement")
 // Lecture seule. Chaque palier a son propre track record (total, winrate, ROI simulé).
 function rowIsArjel(r) {
   return ARJEL_BOOKMAKERS.some(a => String(r.real_odd_source || "").toLowerCase().includes(a))
@@ -9063,7 +9074,7 @@ function tierEligible(r, tier) {
   const sport = String(r.sport || "Football").toLowerCase();
   const isFoot = sport.includes("foot");
   // Seuils DYNAMIQUES (getTierThresholds), pas les constantes figees
-  // STANDARD_MIN_CONF/PREMIUM_MIN_CONF/ELITE_MIN_CONF : la diffusion Telegram
+  // STANDARD_MIN_CONF/PREMIUM_MIN_CONF/getEliteMinConf() : la diffusion Telegram
   // reelle (runAutoConcile, gradeStandard/gradePremium/gradeElite) utilise deja
   // le seuil dynamique recalibre chaque jour. Avant ce correctif, /performances
   // affichait un seuil Standard fige a 88 alors que la diffusion reelle
@@ -9109,7 +9120,7 @@ function fetchResolvedRowsForDate(dateStr) {
     SELECT home, away, competition, sport, best_bet, confidence, outcome,
            real_odd, real_odd_source, final_score_home, final_score_away, analysed_at
     FROM concile_analyses
-    WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+    WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
       AND date(analysed_at) = ?
   `).all(dateStr);
   return dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
@@ -9291,7 +9302,7 @@ app.get("/tier-stats", (req, res) => {
         ) AS _rn
         FROM concile_analyses
         WHERE outcome IN ('win','loss')
-          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND confidence >= ${getPublishedMinConfidence()}
           AND date(analysed_at) >= '2026-07-03'
       ) WHERE _rn = 1
       ORDER BY analysed_at DESC
@@ -9340,7 +9351,7 @@ app.get("/council-vote", (req, res) => {
       row = db.prepare(
         `SELECT home, away, competition, sport, best_bet, confidence, agents_json, real_odd, home_logo, away_logo
          FROM concile_analyses
-         WHERE confidence >= ${PUBLISHED_MIN_CONFIDENCE} AND date(analysed_at)=date('now')
+         WHERE confidence >= ${getPublishedMinConfidence()} AND date(analysed_at)=date('now')
          ORDER BY confidence DESC, analysed_at DESC LIMIT 1`
       ).get();
     }
@@ -9391,14 +9402,14 @@ app.get("/live-activity", (req, res) => {
     const publishedToday = db.prepare(
       `SELECT COUNT(*) AS c FROM (
          SELECT 1 FROM concile_analyses
-         WHERE date(analysed_at)=date('now') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+         WHERE date(analysed_at)=date('now') AND confidence >= ${getPublishedMinConfidence()}
          GROUP BY lower(trim(home)), lower(trim(away))
        )`
     ).get()?.c || 0;
     const totalPublished = db.prepare(
       `SELECT COUNT(*) AS c FROM (
          SELECT 1 FROM concile_analyses
-         WHERE confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+         WHERE confidence >= ${getPublishedMinConfidence()}
          GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
        )`
     ).get()?.c || 0;
@@ -10959,7 +10970,7 @@ app.get("/analysis-history", (req, res) => {
         ) AS _rn
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
-          AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+          AND confidence >= ${getPublishedMinConfidence()}
           AND (outcome IS NULL OR outcome != 'pending')
       )
       WHERE _rn = 1
@@ -11027,7 +11038,7 @@ app.get("/analysis-history", (req, res) => {
       SELECT home, away, competition, sport, outcome, analysed_at, confidence,
              best_bet, real_odd, real_odd_source, final_score_home, final_score_away
       FROM concile_analyses
-      WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+      WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
         AND date(analysed_at) >= '2026-07-03'
       ORDER BY analysed_at DESC
     `).all();
@@ -11072,7 +11083,7 @@ app.get("/analysis-history", (req, res) => {
     const pendingRows = db.prepare(`
       SELECT home, away, competition, sport, analysed_at FROM concile_analyses
       WHERE (outcome IS NULL OR outcome NOT IN ('win','loss'))
-        AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+        AND confidence >= ${getPublishedMinConfidence()}
         AND date(analysed_at) >= '2026-07-03'
       ORDER BY analysed_at DESC
     `).all();
@@ -11544,7 +11555,7 @@ app.get("/premium-teaser", (req, res) => {
       SELECT home, away, competition, outcome, confidence, best_bet, real_odd,
         final_score_home, final_score_away, sport, analysed_at, minute_at_analysis
       FROM concile_analyses
-      WHERE outcome IN ('win','loss') AND confidence >= ${PUBLISHED_MIN_CONFIDENCE}
+      WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
       ORDER BY analysed_at DESC
     `).all();
 
@@ -12268,7 +12279,7 @@ async function seedDailyPickIfMissingForToday() {
     const _db = new Database(DB_PATH, { readonly: true });
     const hasToday = _db.prepare(
       "SELECT 1 FROM concile_analyses WHERE date(analysed_at) = ? AND confidence >= ? LIMIT 1"
-    ).get(todayISO, PUBLISHED_MIN_CONFIDENCE);
+    ).get(todayISO, getPublishedMinConfidence());
     _db.close();
     if (hasToday) return; // un match du jour existe déjà, rien à semer
 
@@ -12612,7 +12623,7 @@ async function checkDryTiers() {
       if (dryTierAlreadySent(tier)) continue;                  // déjà alerté, survit à un redémarrage
       markDryTierAlerted(tier);
 
-      const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : ELITE_MIN_CONF;
+      const conf = tier === "standard" ? STANDARD_MIN_CONF : tier === "premium" ? PREMIUM_MIN_CONF : getEliteMinConf();
       const cause = produced === 0
         ? "Aucune analyse produite sur 24h → problème d'alimentation (API matchs, scheduler)."
         : `${produced} analyses produites sur 24h mais aucune retenue → filtre trop sévère (confiance ≥ ${conf} ou cote réelle entre ${TIER_MIN_REAL_ODD} et ${TIER_MAX_REAL_ODD}).`;
