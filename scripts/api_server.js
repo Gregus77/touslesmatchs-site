@@ -12293,6 +12293,37 @@ app.get("/t", (req, res) => {
   res.send(TRACKING_GIF);
 });
 
+// ── Lien bio TikTok traqué → Telegram gratuit ─────────────────────────────────
+// Un lien "https://t.me/..." mis directement en bio TikTok n'est JAMAIS
+// visible dans page_views (Telegram n'est pas notre serveur). Ce redirect
+// passe par nous d'abord : on trace le clic (utm_source=tiktok, ?v= pour
+// distinguer chaque video) puis on renvoie vers le canal gratuit. Sans ça,
+// impossible de savoir si une video ramene vraiment du monde — constate le
+// 04/08/2026 : zero trafic TikTok mesurable malgre le tunnel construit
+// autour de TikTok, faute d'un lien traçable a mettre en bio.
+const TELEGRAM_FREE_INVITE_LINK = "https://t.me/+qFnIuKg2ZhdlMmY8";
+app.get("/go/tiktok", (req, res) => {
+  try {
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
+    const ipHash = crypto.createHash("sha256").update(ip + "tlm-salt").digest("hex").slice(0, 16);
+    db.prepare(`
+      INSERT INTO page_views (page, referrer, utm_source, utm_medium, utm_campaign, ip_hash, user_agent)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      "/go/tiktok",
+      "tiktok_bio_link",
+      "tiktok",
+      "bio_link",
+      String(req.query.v || "bio").slice(0, 100),
+      ipHash,
+      String(req.headers["user-agent"] || "").slice(0, 300),
+    );
+  } catch (e) {
+    console.error("[tracking] /go/tiktok:", e.message);
+  }
+  res.redirect(302, TELEGRAM_FREE_INVITE_LINK);
+});
+
 // Grille tarifaire actuelle (CGV du 14/07/2026) — source unique reutilisee
 // par le rapport quotidien ET l'hebdo. L'hebdo utilisait jusqu'ici des prix
 // perimes (9.90/19.90 au lieu de 4.90/14.90/29.90, cle "standard" absente) :

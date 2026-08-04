@@ -52,6 +52,12 @@ www.touslesmatchs.com {
     handle /t {
         reverse_proxy api:3001
     }
+    # Lien bio TikTok traqué -> redirige vers Telegram gratuit (voir /go/tiktok
+    # dans api_server.js). Sans cette route, Caddy servirait le fallback SPA
+    # (index.html) au lieu de router vers l'API, et rien ne se tracerait.
+    handle /go/* {
+        reverse_proxy api:3001
+    }
     handle /create-checkout-session {
         reverse_proxy api:3001
     }
