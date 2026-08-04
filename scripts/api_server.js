@@ -3711,26 +3711,38 @@ function confidenceEmoji(conf) {
 function computeArjelAverageOdd(oddsData, betLabel, match) {
   if (!oddsData?.arjelBookmakers?.length) return null;
   const vals = [];
+  const names = [];
   for (const bm of oddsData.arjelBookmakers) {
     const v = pickRealOdd({ bets: bm.bets || [] }, betLabel, match);
-    if (v) vals.push(v);
+    if (v) { vals.push(v); names.push(bm.name); }
   }
   if (!vals.length) return null;
   const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
-  return { avg: Math.round(avg * 100) / 100, count: vals.length };
+  return { avg: Math.round(avg * 100) / 100, count: vals.length, names };
 }
 
-// Retourne la meilleure cote disponible : vraie cote ARJEL sinon estimation marché.
+// Retourne la meilleure cote disponible : moyenne des bookmakers ARJEL trouves
+// pour ce marche, sinon la cote d'un seul bookmaker (partenaire en priorite),
+// sinon une estimation. Avant, un SEUL bookmaker (Winamax>Unibet>PMU) faisait
+// foi meme quand plusieurs bookmakers ARJEL etaient disponibles — un prix isole
+// peut diverger fortement du marche (constate le 04/08/2026 : Unibet a 1.60
+// affiche alors que Winamax etait a 1.20 au meme instant). La moyenne lisse
+// ce risque. Le "source" garde les noms des bookmakers moyennes : necessaire
+// pour que arjelPlayable (plus bas) reconnaisse toujours un operateur ARJEL.
 async function computeBestOdd(match, betLabel, confidence) {
   try {
     const oddsData = await fetchRealOdds(match);
-    const real = pickRealOdd(oddsData, betLabel, match);
     const arjelAvgInfo = computeArjelAverageOdd(oddsData, betLabel, match);
-    if (real) {
+    if (arjelAvgInfo) {
+      const namesLabel = [...new Set(arjelAvgInfo.names)].join(", ");
       return {
-        cote: real, source: oddsData.bookmaker || "bookmaker",
-        arjelAvg: arjelAvgInfo?.avg || null, arjelCount: arjelAvgInfo?.count || 0,
+        cote: arjelAvgInfo.avg, source: `moyenne ARJEL ${arjelAvgInfo.count > 1 ? `(${arjelAvgInfo.count} bookmakers: ${namesLabel})` : `(${namesLabel})`}`,
+        arjelAvg: arjelAvgInfo.avg, arjelCount: arjelAvgInfo.count,
       };
+    }
+    const real = pickRealOdd(oddsData, betLabel, match);
+    if (real) {
+      return { cote: real, source: oddsData.bookmaker || "bookmaker", arjelAvg: null, arjelCount: 0 };
     }
   } catch (e) { console.error("[odds] compute:", e.message); }
   return { cote: estimateMarketOdd(confidence, betLabel), source: "estimation", arjelAvg: null, arjelCount: 0 };
@@ -4680,9 +4692,11 @@ Réponds en JSON pur (pas de markdown):
       // On n'affiche la cote QUE si c'est une VRAIE cote bookmaker (jamais l'estimation).
       const coteSig = (analysisResult.cote && _bmSig)
         ? `\n💰 Cote : <b>${Number(analysisResult.cote).toFixed(2)}</b>${_bmSig}` : "";
-      // Cote moyenne ARJEL (tous bookmakers agréés confondus), distincte de la
-      // cote "réelle" ci-dessus qui vient d'un seul opérateur choisi.
-      const arjelAvgLine = (analysisResult.arjel_avg_odd && analysisResult.arjel_bookmakers_count >= 2)
+      // Cote moyenne ARJEL (tous bookmakers agréés confondus) — n'affiche cette
+      // ligne QUE si la cote principale ci-dessus vient d'un bookmaker isole,
+      // sinon "Cote" est deja cette meme moyenne (voir computeBestOdd) et cette
+      // ligne ferait doublon avec le meme chiffre.
+      const arjelAvgLine = (analysisResult.arjel_avg_odd && analysisResult.arjel_bookmakers_count >= 2 && !/^moyenne ARJEL/i.test(String(analysisResult.cote_source || "")))
         ? `\n📈 Cote moyenne ARJEL : <b>${Number(analysisResult.arjel_avg_odd).toFixed(2)}</b> <i>(${analysisResult.arjel_bookmakers_count} bookmakers)</i>` : "";
       const voteLine = voteInfo.vote_label ? `\n🧠 Vote IA : <b>${voteInfo.vote_label}</b>` : "";
       const confDot = confidenceEmoji(analysisResult.confidence);

@@ -887,7 +887,11 @@ function buildAnalysisHtml(d) {
     ? '<div class="conf-badge red blink-badge"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
   var coteHtml = (betText && d.cote && Number(d.cote) > 1)
     ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
-  var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
+  // Depuis le 04/08/2026, "Cote" EST deja la moyenne ARJEL quand elle est
+  // disponible (voir computeBestOdd cote serveur) — cet encart ne doit
+  // s'afficher que si la cote principale vient d'un bookmaker isole (cote_source
+  // ne commence pas par "moyenne ARJEL"), sinon on duplique le meme chiffre.
+  var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2 && !/^moyenne ARJEL/i.test(String(d.cote_source || "")))
     ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
   // Marches secondaires (H2H reel) — demande du fondateur le 03/08/2026 : montrer
   // plusieurs marches sous l'analyse (BTTS%, 1ere mi-temps%, vainqueur%...),
