@@ -3847,7 +3847,13 @@ async function computeBestOdd(match, betLabel, confidence) {
     if (arjelAvgInfo) console.log(`[odds] moyenne ARJEL rejetee (implausible face a minute/score): ${arjelAvgInfo.avg} pour "${betLabel}" — ${match.home} vs ${match.away}`);
     const real = pickRealOdd(oddsData, betLabel, match);
     if (real && isPlausibleRealOdd(betLabel, real, match)) {
-      return { cote: real, source: oddsData.bookmaker || "bookmaker", arjelAvg: null, arjelCount: 0 };
+      // Meme format d'etiquette que le cas "moyenne" ci-dessus (juste 1 seul
+      // bookmaker trouve ici) — le client ne doit jamais voir deux libelles
+      // differents ("moyenne ARJEL (X)" vs "(X)") pour la meme situation.
+      // Demande du fondateur le 04/08/2026 : "je veux que tu mette partout
+      // cote moyenne arjel".
+      const bmName = oddsData.bookmaker || "bookmaker";
+      return { cote: real, source: `moyenne ARJEL (${bmName})`, arjelAvg: null, arjelCount: 0 };
     }
     if (real) console.log(`[odds] cote bookmaker rejetee (implausible face a minute/score): ${real} pour "${betLabel}" — ${match.home} vs ${match.away}`);
   } catch (e) { console.error("[odds] compute:", e.message); }
