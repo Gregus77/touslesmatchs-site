@@ -3845,26 +3845,34 @@ function isPlausibleRealOdd(betLabel, odd, match) {
 // ce risque. Le "source" garde les noms des bookmakers moyennes : necessaire
 // pour que arjelPlayable (plus bas) reconnaisse toujours un operateur ARJEL.
 async function computeBestOdd(match, betLabel, confidence) {
+  // Minute a laquelle la cote est recuperee, ajoutee a l'etiquette pour que le
+  // client sache exactement de quand elle date (demande du fondateur le
+  // 04/08/2026 : "comme ca on sait exactement ou on en est, ce n'est plus
+  // flou vis-a-vis des abonnes").
+  const oddMinute = match.minute || estimateMinute(match) || null;
+  const minuteTag = oddMinute ? ` · cote à la ${oddMinute}e minute` : "";
   try {
     const oddsData = await fetchRealOdds(match);
     const arjelAvgInfo = computeArjelAverageOdd(oddsData, betLabel, match);
     if (arjelAvgInfo && isPlausibleRealOdd(betLabel, arjelAvgInfo.avg, match)) {
+      // Un seul bookmaker trouve = SA cote reelle, jamais appelee "moyenne"
+      // (mensonger). Plusieurs bookmakers = vraie moyenne, tous nommes plutot
+      // qu'attribuee a un seul (demande du fondateur le 04/08/2026 : ne pas
+      // afficher "Unibet" quand ce n'est pas vraiment sa cote isolee).
       const namesLabel = [...new Set(arjelAvgInfo.names)].join(", ");
+      const label = arjelAvgInfo.count > 1
+        ? `moyenne ARJEL (${arjelAvgInfo.count} bookmakers: ${namesLabel})`
+        : namesLabel;
       return {
-        cote: arjelAvgInfo.avg, source: `moyenne ARJEL ${arjelAvgInfo.count > 1 ? `(${arjelAvgInfo.count} bookmakers: ${namesLabel})` : `(${namesLabel})`}`,
+        cote: arjelAvgInfo.avg, source: `${label}${minuteTag}`,
         arjelAvg: arjelAvgInfo.avg, arjelCount: arjelAvgInfo.count,
       };
     }
     if (arjelAvgInfo) console.log(`[odds] moyenne ARJEL rejetee (implausible face a minute/score): ${arjelAvgInfo.avg} pour "${betLabel}" — ${match.home} vs ${match.away}`);
     const real = pickRealOdd(oddsData, betLabel, match);
     if (real && isPlausibleRealOdd(betLabel, real, match)) {
-      // Meme format d'etiquette que le cas "moyenne" ci-dessus (juste 1 seul
-      // bookmaker trouve ici) — le client ne doit jamais voir deux libelles
-      // differents ("moyenne ARJEL (X)" vs "(X)") pour la meme situation.
-      // Demande du fondateur le 04/08/2026 : "je veux que tu mette partout
-      // cote moyenne arjel".
       const bmName = oddsData.bookmaker || "bookmaker";
-      return { cote: real, source: `moyenne ARJEL (${bmName})`, arjelAvg: null, arjelCount: 0 };
+      return { cote: real, source: `${bmName}${minuteTag}`, arjelAvg: null, arjelCount: 0 };
     }
     if (real) console.log(`[odds] cote bookmaker rejetee (implausible face a minute/score): ${real} pour "${betLabel}" — ${match.home} vs ${match.away}`);
   } catch (e) { console.error("[odds] compute:", e.message); }
