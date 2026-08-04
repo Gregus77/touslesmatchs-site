@@ -6430,10 +6430,15 @@ async function resolveStalePredictions() {
     // stats win/loss (toutes les requetes de stats du fichier excluent deja
     // outcome != 'pending' — convention reprise ici, pas inventee).
     try {
+      // 2 jours (pas 5) : le plan gratuit api-sports pour Basketball/Hockey/
+      // Baseball ne couvre qu'une fenetre glissante d'environ 3 jours autour
+      // d'aujourd'hui ("Free plans do not have access to this date" constate
+      // le 04/08/2026 sur une date vieille de 11 jours) — passe ce delai, la
+      // resolution automatique est structurellement impossible.
       const expireNonFootball = db.prepare(`
         UPDATE concile_analyses SET outcome = 'pending'
         WHERE outcome IS NULL AND sport IS NOT NULL AND sport != 'Football'
-          AND analysed_at <= datetime('now','-5 days')
+          AND analysed_at <= datetime('now','-2 days')
       `).run();
       const expireOld = db.prepare(`
         UPDATE concile_analyses SET outcome = 'pending'
