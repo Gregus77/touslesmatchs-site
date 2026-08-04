@@ -1787,19 +1787,38 @@ const AUTO_CONCILE_BUCKET_MINUTES = Math.max(5, Number(process.env.AUTO_CONCILE_
 // Pas une solution au manque de quota (le total de signaux/jour reste
 // limite), juste un etalement pour ne pas mourir en milieu d'apres-midi.
 const API_SPORTS_DAILY_BUDGET = Math.max(1, Number(process.env.API_SPORTS_DAILY_BUDGET || 90));
-const API_SPORTS_HOURLY_BUDGET = Math.max(1, Math.ceil(API_SPORTS_DAILY_BUDGET / 24));
 db.exec(`
   CREATE TABLE IF NOT EXISTS api_sports_usage (
     bucket TEXT PRIMARY KEY,
     count INTEGER DEFAULT 0
   );
 `);
+// Plafond horaire DYNAMIQUE (remplace le partage fixe daily/24 le 04/08/2026,
+// demande du fondateur) : une heure creuse sous-consommee ne doit pas gaspiller
+// son quota, il doit grossir l'enveloppe des heures suivantes — typiquement la
+// soirée, où plusieurs matchs tombent en même temps. On recalcule a chaque
+// appel : budget qu'il reste aujourd'hui / heures qu'il reste aujourd'hui
+// (heure en cours incluse). Le total consommable sur la journee reste borne
+// par API_SPORTS_DAILY_BUDGET, seule la repartition heure par heure s'adapte
+// a l'usage reel au lieu d'etre figee a l'avance.
+function apiSportsDynamicHourlyBudget() {
+  const now = new Date();
+  const todayPrefix = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const usedTodayRow = db.prepare(
+    "SELECT COALESCE(SUM(count),0) AS total FROM api_sports_usage WHERE bucket LIKE ?"
+  ).get(`${todayPrefix}%`);
+  const usedToday = usedTodayRow ? usedTodayRow.total : 0;
+  const remainingBudget = Math.max(0, API_SPORTS_DAILY_BUDGET - usedToday);
+  const hoursRemaining = Math.max(1, 24 - now.getUTCHours()); // heure en cours incluse
+  return Math.max(1, Math.ceil(remainingBudget / hoursRemaining));
+}
 function apiSportsBudgetOk() {
   try {
     const bucket = new Date().toISOString().slice(0, 13); // "YYYY-MM-DDTHH"
+    const dynamicBudget = apiSportsDynamicHourlyBudget();
     const row = db.prepare("SELECT count FROM api_sports_usage WHERE bucket = ?").get(bucket);
     const used = row ? row.count : 0;
-    if (used >= API_SPORTS_HOURLY_BUDGET) return false;
+    if (used >= dynamicBudget) return false;
     db.prepare("INSERT INTO api_sports_usage (bucket, count) VALUES (?, 1) ON CONFLICT(bucket) DO UPDATE SET count = count + 1").run(bucket);
     return true;
   } catch (e) {
@@ -1862,7 +1881,8 @@ app.get("/admin/api-quota-status", async (req, res) => {
     ok: true,
     api_sports: apiSports || { error: "indisponible (cle manquante ou API injoignable)" },
     rationnement_interne: {
-      budget_horaire_suppose: API_SPORTS_HOURLY_BUDGET,
+      budget_quotidien: API_SPORTS_DAILY_BUDGET,
+      budget_horaire_dynamique_actuel: apiSportsDynamicHourlyBudget(),
       deja_utilise_cette_heure: row ? row.count : 0,
     },
     fallback_actifs: {
