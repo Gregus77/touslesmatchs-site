@@ -1965,6 +1965,51 @@ function handleApiSportsErrors(sport, data) {
   return true;
 }
 
+// ── Score de confiance par marché (pas juste le pick principal) ─────────────
+// Chaque agent note deja 4 marches en interne (buts O/U, BTTS, resultat,
+// 1ere mi-temps — voir "marches" dans le prompt) pour le suivi de
+// performance (saveAgentMarketPredictions), mais seul le pick retenu par le
+// Chief remontait au client. Cette fonction agrege ce qui est DEJA calcule
+// (zero appel IA supplementaire, zero cout) en une liste triee — demande du
+// fondateur le 04/08/2026 : montrer plusieurs scores classes (ex. Victoire
+// domicile 86/100, BTTS 80/100, Under 2.5 60/100...) plutot qu'un seul pari.
+// Pour chaque categorie, on retient le cote majoritaire parmi les agents qui
+// se sont prononces, avec leur confiance moyenne — jamais un chiffre invente,
+// toujours la moyenne de ce que les agents ont reellement renvoye.
+const MARKET_SCORE_LABELS = {
+  resultat: { dom: "Victoire domicile", ext: "Victoire extérieur", nul: "Match nul" },
+  buts: { "o2.5": "Over 2.5 buts", "u2.5": "Under 2.5 buts" },
+  btts: { oui: "BTTS Oui", non: "BTTS Non" },
+  mt1: { oui: "But en 1ère mi-temps", non: "Aucun but en 1ère mi-temps" },
+};
+function aggregateMarketScores(agentMarketList) {
+  const out = [];
+  for (const marketKey of Object.keys(MARKET_SCORE_LABELS)) {
+    const votesBySide = {};
+    for (const am of agentMarketList || []) {
+      const entry = am?.marches?.[marketKey];
+      const side = String(entry?.p || "").toLowerCase();
+      const conf = Number(entry?.c);
+      if (!side || !Number.isFinite(conf)) continue;
+      (votesBySide[side] = votesBySide[side] || []).push(conf);
+    }
+    let bestSide = null, bestCount = 0;
+    for (const side of Object.keys(votesBySide)) {
+      if (votesBySide[side].length > bestCount) { bestCount = votesBySide[side].length; bestSide = side; }
+    }
+    const label = bestSide && MARKET_SCORE_LABELS[marketKey][bestSide];
+    if (!label) continue;
+    const confs = votesBySide[bestSide];
+    out.push({
+      market: label,
+      confidence: Math.round(confs.reduce((a, b) => a + b, 0) / confs.length),
+      agents_agreeing: confs.length,
+    });
+  }
+  out.sort((a, b) => b.confidence - a.confidence);
+  return out;
+}
+
 function buildVoteSummary(activeAgents, selectedBet) {
   const voters = (activeAgents || []).filter((a) => a && !a.failed && a.bet && a.bet !== "—" && a.bet !== "-");
   const voteTotal = 5;
@@ -4720,6 +4765,7 @@ Réponds en JSON pur (pas de markdown):
     total_agents: voteSummary.vote_total,
     active_agents: voteSummary.vote_active,
     vote_summary: buildVoteSummary(activedAgentResults, chief.bet),
+    market_scores: aggregateMarketScores(agentMarketList),
     agents: agentResults,
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,

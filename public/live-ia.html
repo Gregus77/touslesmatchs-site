@@ -885,6 +885,25 @@ function buildAnalysisHtml(d) {
       + mkRow('Under 2.5 buts', hm.under25_pct)
       + '</div>';
   }
+  // Score de confiance du Concile par marche (pas juste le pick principal) —
+  // demande du fondateur le 04/08/2026 : "victoire domicile 86/100, en dessous
+  // BTTS 80/100, en dessous under 2.5 60/100...". Vient de market_scores
+  // (deja calcule cote serveur a partir des votes reels des agents, zero appel
+  // IA supplementaire). Different de marketsHtml ci-dessus : ici c'est la
+  // confiance du Concile, pas un pourcentage historique H2H.
+  var scoresHtml = "";
+  if (Array.isArray(d.market_scores) && d.market_scores.length) {
+    var scoreRow = function(item) {
+      var cm2 = confMeta(item.confidence);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--b1)">'
+        + '<span style="color:var(--muted2);font-size:12.5px">' + escHtml(item.market) + '</span>'
+        + '<span class="conf-badge ' + cm2.cls + '" style="margin:0;padding:2px 9px;font-size:12px">' + item.confidence + '/100</span></div>';
+    };
+    scoresHtml = '<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px">'
+      + '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Score du Concile par marché</div>'
+      + d.market_scores.map(scoreRow).join("")
+      + '</div>';
+  }
   var voteReportHtml = voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "";
   var html = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
     + noSignalHtml
@@ -893,6 +912,7 @@ function buildAnalysisHtml(d) {
     + coteHtml
     + arjelHtml
     + marketsHtml
+    + scoresHtml
     + agentsHtml
     + voteReportHtml
     + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
