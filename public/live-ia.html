@@ -128,6 +128,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .conf-badge.yellow{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:#facc15}
 .conf-badge.orange{background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#f97316}
 .conf-badge.red{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--red)}
+@keyframes blinkNoPlay{0%,100%{opacity:1}50%{opacity:.35}}
+.blink-badge{animation:blinkNoPlay 1s ease-in-out infinite}
 
 /* Empty state */
 .empty-state{text-align:center;padding:80px 24px}
@@ -861,7 +863,7 @@ function buildAnalysisHtml(d) {
 
   var cm = confMeta(confText);
   var noSignalHtml = !betText
-    ? '<div class="conf-badge red"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
+    ? '<div class="conf-badge red blink-badge"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
   var coteHtml = (betText && d.cote && Number(d.cote) > 1)
     ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
   var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2)
@@ -887,15 +889,16 @@ function buildAnalysisHtml(d) {
       + mkRow('Under 2.5 buts', hm.under25_pct)
       + '</div>';
   }
+  var voteReportHtml = voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "";
   var html = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
-    + (voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "")
-    + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
     + noSignalHtml
+    + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
     + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
     + coteHtml
     + arjelHtml
     + marketsHtml
     + agentsHtml
+    + voteReportHtml
     + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
   return { html: html, voteLabel: voteLabel, betText: betText, confText: confText, resumeText: resumeText };
 }
