@@ -10249,7 +10249,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
 });
 
 async function handleCreateCheckout(req, res) {
-  const { plan, user_id } = req.body || {};
+  const { plan, user_id, email } = req.body || {};
   if (!STRIPE_SECRET_KEY) return res.json({ ok: false, error: "Configuration Stripe manquante" });
 
   // "carte" (offre 1€) retiree du parcours actif le 29/07/2026, decision fondateur
@@ -10276,6 +10276,7 @@ async function handleCreateCheckout(req, res) {
     const Stripe = require("stripe");
     const stripe = Stripe(STRIPE_SECRET_KEY);
     const mode = plan === "carte" ? "payment" : "subscription";
+    const cleanEmail = String(email || "").toLowerCase().trim();
     const session = await stripe.checkout.sessions.create({
       mode,
       payment_method_types: ["card"],
@@ -10283,6 +10284,11 @@ async function handleCreateCheckout(req, res) {
       success_url: `https://www.touslesmatchs.com/live-ia?success=1&plan=${plan}`,
       cancel_url: "https://www.touslesmatchs.com/subscription",
       client_reference_id: String(user_id || ""),
+      // Verrouille l'email a celui du compte connecte pour "carte" (rachat de
+      // jeton) : sinon un acheteur qui saisit une autre adresse a la caisse
+      // creerait un second compte au lieu de crediter le sien (voir
+      // grantCarteCreditToExistingAccount) — constate le 04/08/2026.
+      ...(cleanEmail ? { customer_email: cleanEmail } : {}),
     });
     res.json({ ok: true, url: session.url });
   } catch (e) {

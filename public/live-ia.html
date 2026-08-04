@@ -795,7 +795,7 @@ function buildAnalysisHtml(d) {
 }
 
 function buyCarteToken() {
-  fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: 'carte' }) })
+  fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: 'carte', email: userAuth && userAuth.email }) })
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (d.ok && d.url) { location.href = d.url; }
