@@ -3782,6 +3782,46 @@ function computeArjelAverageOdd(oddsData, betLabel, match) {
   return { avg: Math.round(avg * 100) / 100, count: vals.length, names };
 }
 
+// ── Garde-fou de plausibilite Over/Under 2.5 ──────────────────────────────────
+// API-Sports peut renvoyer une cote Over/Under perimee sans le signaler —
+// constate le 04/08/2026 : Under 2.5 buts affiche a 1.60 (implique ~62% de
+// probabilite) a la 48e minute d'un 0-0, alors que le vrai marche (Winamax,
+// meme instant) etait a 1.04 (~96%). Le score-based cache fix garantit un
+// refetch a chaque but, mais si le FOURNISSEUR lui-meme n'a pas rafraichi son
+// prix, refetcher ne change rien.
+//
+// Un modele a taux de buts fixe (Poisson) a ete essaye puis abandonne : un
+// seul taux ne colle jamais aux deux bouts du match a la fois (trop tolerant
+// en fin de match scoreless, trop strict en debut de match ou l'incertitude
+// est normale). A la place, la verification ne s'active que dans la zone ou
+// on peut juger avec certitude SANS modele — a partir de la 45e minute, avec
+// peu de buts deja marques, un marche Over/Under est deja tres largement
+// tranche par les bookmakers reels (ex. verifie ici : Under 2.5 a 1.04 a la
+// 50e minute d'un 0-0). En dehors de cette zone, l'incertitude est trop
+// grande pour juger une cote sans se tromper : on ne bloque rien.
+function isPlausibleRealOdd(betLabel, odd, match) {
+  const b = String(betLabel || "").toLowerCase();
+  const isUnder = /under|moins de|-2\.5/.test(b);
+  const isOver = /over|plus de|\+2\.5/.test(b);
+  if (!isUnder && !isOver) return true; // marche non couvert par ce modele
+  const score = readKnownScore(match);
+  if (!score) return true; // score inconnu, rien a comparer
+  const minute = estimateMinute(match);
+  if (minute < 45) return true; // trop tot pour juger sans modele fiable
+  if (score.total >= 3) return true; // marche deja tranche, hors scope
+  if (isUnder) {
+    // Under quasi verrouille en 2e mi-temps avec 0-2 buts au compteur : une
+    // cote encore genereuse (>1.5) sent la cote perimee.
+    return odd <= 1.5;
+  }
+  // Over encore incertain en 2e mi-temps avec 0-1 but marque (il en faut 2+
+  // de plus) : une cote deja tres basse (<1.5) sent la cote perimee dans
+  // l'autre sens. Avec 2 buts deja marques, Over redevient plausible a des
+  // cotes variees — pas de verification dans ce cas.
+  if (score.total <= 1) return odd >= 1.5;
+  return true;
+}
+
 // Retourne la meilleure cote disponible : moyenne des bookmakers ARJEL trouves
 // pour ce marche, sinon la cote d'un seul bookmaker (partenaire en priorite),
 // sinon une estimation. Avant, un SEUL bookmaker (Winamax>Unibet>PMU) faisait
@@ -3794,17 +3834,19 @@ async function computeBestOdd(match, betLabel, confidence) {
   try {
     const oddsData = await fetchRealOdds(match);
     const arjelAvgInfo = computeArjelAverageOdd(oddsData, betLabel, match);
-    if (arjelAvgInfo) {
+    if (arjelAvgInfo && isPlausibleRealOdd(betLabel, arjelAvgInfo.avg, match)) {
       const namesLabel = [...new Set(arjelAvgInfo.names)].join(", ");
       return {
         cote: arjelAvgInfo.avg, source: `moyenne ARJEL ${arjelAvgInfo.count > 1 ? `(${arjelAvgInfo.count} bookmakers: ${namesLabel})` : `(${namesLabel})`}`,
         arjelAvg: arjelAvgInfo.avg, arjelCount: arjelAvgInfo.count,
       };
     }
+    if (arjelAvgInfo) console.log(`[odds] moyenne ARJEL rejetee (implausible face a minute/score): ${arjelAvgInfo.avg} pour "${betLabel}" — ${match.home} vs ${match.away}`);
     const real = pickRealOdd(oddsData, betLabel, match);
-    if (real) {
+    if (real && isPlausibleRealOdd(betLabel, real, match)) {
       return { cote: real, source: oddsData.bookmaker || "bookmaker", arjelAvg: null, arjelCount: 0 };
     }
+    if (real) console.log(`[odds] cote bookmaker rejetee (implausible face a minute/score): ${real} pour "${betLabel}" — ${match.home} vs ${match.away}`);
   } catch (e) { console.error("[odds] compute:", e.message); }
   return { cote: estimateMarketOdd(confidence, betLabel), source: "estimation", arjelAvg: null, arjelCount: 0 };
 }
