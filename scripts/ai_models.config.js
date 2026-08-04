@@ -22,21 +22,45 @@ const bool = (v, def) => {
 };
 
 const MODELS = {
-  // ── Officiel : utilisé pour de vraies décisions du Concile ──────────────
+  // ── Consolidation OpenRouter du 04/08/2026 (decision du fondateur) ──────
+  // Perplexity (cle expiree, HTTP 401), Cohere (quota d'essai epuise, HTTP
+  // 429), DeepSeek (solde a zero, HTTP 402) et Mistral (rate-limit, HTTP 429)
+  // ont chacun leur propre compte a recharger separement — invisible et
+  // incontrolable depuis un seul endroit. Les 4 passent desormais par
+  // OpenRouter, sous le MEME garde-fou budgetaire (2€/jour, tous agents
+  // confondus) que Perplexity/Qwen avant eux — un seul compte a surveiller
+  // et recharger au lieu de cinq. Les comptes directs restent en repli dans
+  // le code (voir runConcileAnalysis) si jamais re-alimentes un jour.
   deepseek: {
-    id: "deepseek-chat",
-    provider: "deepseek",
-    role: "official",
+    id: "deepseek/deepseek-chat",
+    provider: "openrouter",
+    role: "official_fallback",
     mode: "official",
     enabled: true,
-    dailyLimit: Number(process.env.AI_MODEL_DEEPSEEK_DAILY_LIMIT || 200),
+    dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
     maxTokensOut: Number(process.env.AI_MODEL_DEEPSEEK_MAX_TOKENS || 400),
-    costPer1kTokensEur: 0.0002, // ordre de grandeur — DeepSeek est le moins cher du registre
+    costPer1kTokensEur: 0.0003,
   },
-
-  // ── Repli OpenRouter pour un agent officiel dont la clé directe est morte
-  // (Perplexity, HTTP 401 depuis le 29/07/2026) : compte sur le budget
-  // OpenRouter comme les autres, sous garde-fou — voir allowOfficialOpenRouterFallback.
+  mistral: {
+    id: "mistralai/mistral-large",
+    provider: "openrouter",
+    role: "official_fallback",
+    mode: "official",
+    enabled: true,
+    dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
+    maxTokensOut: Number(process.env.AI_MODEL_MISTRAL_MAX_TOKENS || 400),
+    costPer1kTokensEur: 0.004,
+  },
+  cohere: {
+    id: "cohere/command-r-plus",
+    provider: "openrouter",
+    role: "official_fallback",
+    mode: "official",
+    enabled: true,
+    dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
+    maxTokensOut: Number(process.env.AI_MODEL_COHERE_MAX_TOKENS || 400),
+    costPer1kTokensEur: 0.003,
+  },
   perplexity: {
     id: "perplexity/sonar-pro",
     provider: "openrouter",
