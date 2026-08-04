@@ -1022,6 +1022,24 @@ async function loadPick(){
       box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.<br>Le Concile n\'a identifié aucune sélection correspondant aux critères du compte gratuit.</div>';
       return;
     }
+    // Le pick affiché peut retomber sur le meilleur résultat des 7 derniers
+    // jours quand rien n'est encore résolu aujourd'hui (voir refreshDailyPickFromDB
+    // côté serveur). Affichait avant un match vieux de plusieurs jours comme
+    // s'il était du jour même (constaté par Greg le 04/08/2026 : Instituto
+    // Cordoba-Platense du 30/07). Un premier correctif a ajouté la date, mais
+    // Greg préfère un état vide plutôt qu'un match ancien même daté — donc on
+    // n'affiche plus DU TOUT un pick qui n'est pas d'aujourd'hui.
+    var isOldPick=false;
+    if(p.matchTime){
+      try{
+        var _d=new Date(p.matchTime);
+        if(!isNaN(_d.getTime())) isOldPick=(_d.toDateString()!==new Date().toDateString());
+      }catch(e){}
+    }
+    if(isOldPick){
+      box.innerHTML='<div class="empty-note">Aucun pick gratuit disponible pour l\'instant aujourd\'hui.<br>Le Concile n\'a pas encore identifié de sélection correspondant à nos critères — reviens plus tard dans la journée.</div>';
+      return;
+    }
     var betLabel=p.marketLabel||p.marketType||p.best_bet||'';
     var homeLogo=p.home_logo||(p.teamA&&p.teamA.logo)||null;
     var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
@@ -1031,27 +1049,15 @@ async function loadPick(){
     // Heure locale du visiteur : le navigateur convertit automatiquement
     // matchTime (UTC) dans SON fuseau, quel que soit le pays de connexion —
     // pas besoin de geolocaliser l'IP. Demande de Greg le 31/07/2026.
-    // Le pick affiché peut retomber sur le meilleur résultat des 7 derniers
-    // jours quand rien n'est encore résolu aujourd'hui (voir refreshDailyPickFromDB
-    // côté serveur) — sans la date, un match vieux de plusieurs jours semblait
-    // être celui du jour même (constaté par Greg le 04/08/2026 : Instituto
-    // Cordoba-Platense du 30/07 affiché sans rien indiquer d'ancien).
     var timeHtml='';
-    var isOldPick=false;
     if(p.matchTime){
       try{
         var _d=new Date(p.matchTime);
         if(!isNaN(_d.getTime())){
-          var todayLocal=new Date().toDateString();
-          isOldPick=(_d.toDateString()!==todayLocal);
-          var dateLabel=isOldPick?(_d.toLocaleDateString(undefined,{day:'2-digit',month:'2-digit'})+' · '):'';
-          timeHtml='<span class="pick-time">🕐 '+dateLabel+_d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+'</span>';
+          timeHtml='<span class="pick-time">🕐 '+_d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+'</span>';
         }
       }catch(e){}
     }
-    var oldPickNoteHtml=isOldPick
-      ? '<div style="font-size:11px;color:var(--muted);margin-top:6px">ℹ️ Dernier pick vérifié — aucun match n\'a encore atteint nos critères aujourd\'hui.</div>'
-      : '';
     // Match termine (win/loss) : le score final et le pari conseille
     // deviennent une preuve historique, plus une info a proteger — on les
     // affiche a tout le monde, meme sans compte. Demande de Greg le
@@ -1078,7 +1084,6 @@ async function loadPick(){
       scoreHtml+
       '<div class="pick-bet">'+(showBet?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
       '<div class="pick-conf">'+esc(p.confidence)+'/100</div>'+
-      oldPickNoteHtml+
       lockHtml+
       '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le pick du jour par email</button>';
   } catch(e){
