@@ -944,7 +944,11 @@ const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85;
 // peut tourner plusieurs jours sans redeploiement, la bascule doit avoir lieu
 // meme sans redemarrer le conteneur.
 const ELITE_TIER_RAMP_UP_DATE = new Date("2026-08-15T00:00:00Z").getTime();
-function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 80 : 82; }
+// Plancher general redescendu 80->75 le 05/08/2026 : analyse sur 30 jours
+// (874 signaux) montrant un winrate reel IDENTIQUE entre 75-79% (75.9%) et
+// 80-84% (75.7%) — le seuil 80% coupait des matchs sans aucun gain de
+// fiabilite, juste moins de volume. Decision fondateur.
+function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 82; }
 // Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
 // fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
 // c'est un longshot que le book juge improbable.
@@ -1149,7 +1153,13 @@ function getAdaptiveSignalThreshold() {
       const aboveTotal = cumTotal - runTotal;
       const aboveWins = cumWins - runWins;
       const aboveWinrate = aboveTotal > 0 ? Math.round(aboveWins / aboveTotal * 100) : 0;
-      if (aboveWinrate >= 65 && aboveTotal >= 5) {
+      // Barre relevee 65->82 le 05/08/2026 : avec 65%, ce seuil convergeait quasiment
+      // vers le plancher general lui-meme (deja ~76-79% de winrate reel au-dessus du
+      // plancher), donc "Signal Fort" ne signifiait presque rien de plus que "publie".
+      // A 82%, seule la tranche reellement superieure (85%+, 85.3% de winrate reel sur
+      // 30j) passe la barre — Signal Fort redevient un marqueur de qualite distinct,
+      // qui se recalibre tout seul (cache 30 min) si la distribution reelle change.
+      if (aboveWinrate >= 82 && aboveTotal >= 5) {
         threshold = b.min;
         break;
       }
@@ -8139,7 +8149,7 @@ async function sendWeeklyConversionEmail() {
   <div style="background:#0d1020;border:1px solid rgba(16,185,129,.3);border-radius:16px;padding:24px;margin-bottom:20px">
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:48px;font-weight:900;color:#10b981">${stats.winrate}%</div>
-      <div style="font-size:14px;color:#a8aec8">Winrate Signal Fort (≥80% confiance)</div>
+      <div style="font-size:14px;color:#a8aec8">Winrate Signal Fort (≥${getAdaptiveSignalThreshold()}% confiance)</div>
       <div style="font-size:13px;color:#7b82a0;margin-top:4px">${stats.wins} gagnés · ${stats.losses} perdus · ${stats.total} signaux</div>
     </div>
     <table style="width:100%;border-collapse:collapse">
