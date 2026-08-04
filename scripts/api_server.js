@@ -929,7 +929,11 @@ const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseba
 // la calibration du 25/07/2026 juste au-dessus (82-83 pour Elite, 84-85 pour
 // Premium). Corrige le 29/07/2026 sur decision du fondateur : Elite redescend
 // a 82, seul vrai levier de volume propre a ce palier (en plus du multisport).
-const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 82;
+// Redescendu a 75 le 03/08/2026 (Greg) : le palier Elite manquait de volume
+// certains jours (0-3 signaux). Standard/Premium INCHANGES — la demande porte
+// explicitement sur Elite seul. Promesse commerciale "Elite ≥82%" mise a jour
+// en "≥75%" partout (site, emails, Telegram) en meme temps que ce seuil.
+const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85, ELITE_MIN_CONF = 75;
 // Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
 // fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
 // c'est un longshot que le book juge improbable.
@@ -1054,17 +1058,24 @@ function sendToPaidChannels(text, opts = {}) {
   ));
 }
 const _freeResultDailyDate = { date: "", count: 0 };
-let _adaptiveThresholdCache = { value: 82, computedAt: 0 };
-// Plancher aligné sur la promesse Elite-VIP ("≥82% de confiance", CLAUDE.md).
+let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
+// Plancher aligné sur la promesse Elite-VIP ("≥75% de confiance", CLAUDE.md).
 // Avant : 85, ce qui bloquait tout signal Elite entre 82 et 84% alors que le
 // palier est vendu à partir de 82% — constaté le 30/07/2026 (analyse à 82%
 // jamais diffusée malgré éligibilité Elite).
-const SIGNAL_FLOOR = 82;
+// Redescendu de 82 à 75 le 03/08/2026 (Greg) : le palier Elite manquait de
+// volume certains jours. Standard/Premium ne sont PAS concernés — leur seuil
+// réel vient de quantile() ci-dessus, qui cible un volume précis (3/j, 10/j)
+// et reste naturellement bien au-dessus de ce plancher.
+const SIGNAL_FLOOR = 75;
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
 // IA) qui ne part pas sur Telegram → on ne la montre pas comme un "pick". Réglable.
-const PUBLISHED_MIN_CONFIDENCE = 82;
+// Alignée sur SIGNAL_FLOOR (75) le 03/08/2026 pour que le site affiche bien
+// tout ce qui part réellement sur Telegram Elite — éviter un signal envoyé
+// aux abonnés mais absent des résultats publics du site.
+const PUBLISHED_MIN_CONFIDENCE = 75;
 // ── Seuils spécifiques par marché ────────────────────────────────────────────
 // Certains marchés ont un winrate historique nettement supérieur → seuil abaissé.
 // "But 1ère MT" est notre point fort : 82% de winrate sur 931 pronos historiques
@@ -7273,7 +7284,7 @@ function buildPlanComparisonHtml() {
   const plans = [
     { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
     { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey", "Confiance ≥ 82%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey", "Confiance ≥ 75%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
