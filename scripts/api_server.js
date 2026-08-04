@@ -1763,8 +1763,17 @@ function getTodayStr() {
 }
 
 const AUTO_CONCILE_OBSERVER = process.env.AUTO_CONCILE_OBSERVER !== "0";
-const AUTO_CONCILE_INTERVAL_MS = Math.max(5, Number(process.env.AUTO_CONCILE_INTERVAL_MIN || 10)) * 60 * 1000;
-const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX_MATCHES || 8));
+// Plafonds relevés le 04/08/2026 (decision du fondateur, "fais ce que tu penses
+// etre le mieux") : 10 min / 8 matchs laissait des soirees a fort volume (Coupe
+// d'Europe, plusieurs matchs simultanes) sans analyse auto, forcant un clic
+// manuel "Analyser" pour obtenir un signal. hasPredictionSnapshot() garantit
+// que chaque match n'est analyse qu'une fois quel que soit le nombre de cycles
+// — un intervalle plus court reduit surtout le RETARD avant qu'un match en
+// surplus soit traite, sans multiplier le volume total d'appels IA. Le plafond
+// par cycle monte plus prudemment (8->12) car lui seul augmente reellement
+// le cout par cycle charge.
+const AUTO_CONCILE_INTERVAL_MS = Math.max(5, Number(process.env.AUTO_CONCILE_INTERVAL_MIN || 6)) * 60 * 1000;
+const AUTO_CONCILE_MAX_MATCHES = Math.max(1, Number(process.env.AUTO_CONCILE_MAX_MATCHES || 12));
 const AUTO_CONCILE_MIN_MINUTE = Math.max(1, Number(process.env.AUTO_CONCILE_MIN_MINUTE || 10));
 const AUTO_CONCILE_BUCKET_MINUTES = Math.max(5, Number(process.env.AUTO_CONCILE_BUCKET_MINUTES || 15));
 
