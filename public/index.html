@@ -309,6 +309,13 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 .modal-btn{width:100%;background:linear-gradient(135deg,var(--violet),var(--blue));color:#fff;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px}
 .modal-err{display:none;color:var(--red);font-size:12.5px;margin-bottom:8px}
 .modal-ok{display:none;color:var(--green);font-size:12.5px;margin-bottom:8px}
+
+/* ── Selecteur de langue (menu burger) ── */
+.mm-lang{margin-top:12px;padding-top:12px;border-top:1px solid var(--b1)}
+.mm-lang-h{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.mm-lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mm-lang-grid button{background:var(--panel2);border:1px solid var(--b1);color:var(--tx2);border-radius:8px;padding:8px 6px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s}
+.mm-lang-grid button:hover{border-color:var(--violet2);color:var(--tx)}
 </style>
 <!-- Google Analytics (GA4) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
@@ -325,27 +332,38 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 <nav>
   <div class="nav-brand">TOUSLES<b>MATCHS</b></div>
   <div class="nav-center">
-    <a href="#pick">Analyses</a>
-    <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span>Live IA</a>
-    <a href="/performances">Résultats</a>
-    <a href="/bankroll">Bankroll</a>
-    <a href="#methode">Méthode</a>
-    <a href="#plans">Tarifs</a>
+    <a href="#pick" data-i18n="nav_analyses">Analyses</a>
+    <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
+    <a href="/performances" data-i18n="nav_results">Résultats</a>
+    <a href="/bankroll" data-i18n="nav_bankroll">Bankroll</a>
+    <a href="#methode" data-i18n="nav_method">Méthode</a>
+    <a href="#plans" data-i18n="nav_plans">Tarifs</a>
   </div>
   <div class="nav-right">
-    <div id="nav-auth"><button class="btn btn-ghost" onclick="openModal()">Se connecter</button></div>
-    <a href="/dashboard" class="btn btn-prim">Créer mon compte gratuit</a>
+    <div id="nav-auth"><button class="btn btn-ghost" onclick="openModal()" data-i18n="nav_login">Se connecter</button></div>
+    <a href="/dashboard" class="btn btn-prim" data-i18n="nav_signup">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
 </nav>
 <div class="mmenu" id="mmenu">
-  <a href="#pick" onclick="toggleMenu()">Analyses</a>
-  <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span>Live IA</a>
-  <a href="/performances">Résultats</a>
-  <a href="/bankroll">Bankroll</a>
-  <a href="#methode" onclick="toggleMenu()">Méthode</a>
-  <a href="#plans" onclick="toggleMenu()">Tarifs</a>
-  <a href="/dashboard">Créer mon compte gratuit</a>
+  <a href="#pick" onclick="toggleMenu()" data-i18n="nav_analyses">Analyses</a>
+  <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
+  <a href="/performances" data-i18n="nav_results">Résultats</a>
+  <a href="/bankroll" data-i18n="nav_bankroll">Bankroll</a>
+  <a href="#methode" onclick="toggleMenu()" data-i18n="nav_method">Méthode</a>
+  <a href="#plans" onclick="toggleMenu()" data-i18n="nav_plans">Tarifs</a>
+  <a href="/dashboard" data-i18n="nav_signup">Créer mon compte gratuit</a>
+  <div class="mm-lang">
+    <div class="mm-lang-h"><span data-i18n="lang_label">Langue</span> · <span id="lang-current">Français</span></div>
+    <div class="mm-lang-grid">
+      <button type="button" onclick="i18n.setLang('fr')">Français</button>
+      <button type="button" onclick="i18n.setLang('en')">English</button>
+      <button type="button" onclick="i18n.setLang('es')">Español</button>
+      <button type="button" onclick="i18n.setLang('pt')">Português</button>
+      <button type="button" onclick="i18n.setLang('ru')">Русский</button>
+      <button type="button" onclick="i18n.setLang('zh')">中文</button>
+    </div>
+  </div>
 </div>
 
 <div class="dash wrap">
@@ -354,21 +372,21 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   <div class="row row-hero">
     <div class="card hero-card">
       <div>
-        <div class="hero-badge">Le Concile IA sportif</div>
-        <h1>Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
-        <div class="hero-sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
+        <div class="hero-badge" data-i18n="hero_badge">Le Concile IA sportif</div>
+        <h1 data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
+        <div class="hero-sub" data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
         <div class="hero-cta">
-          <a href="/live-ia" class="btn btn-prim">Voir les matchs en direct</a>
-          <a href="/dashboard" class="btn btn-ghost">Créer mon compte gratuit</a>
+          <a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a>
+          <a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a>
         </div>
-        <div class="hero-reassure"><span>✓ Résultats publics</span><span>✓ Données vérifiées</span><span>✓ Sans engagement</span><span>18+</span></div>
+        <div class="hero-reassure"><span data-i18n="hero_r1">✓ Résultats publics</span><span data-i18n="hero_r2">✓ Données vérifiées</span><span data-i18n="hero_r3">✓ Sans engagement</span><span>18+</span></div>
       </div>
       <div class="brain-fan" id="brain-fan"></div>
     </div>
 
     <div class="card live-panel" id="live">
       <div class="live-panel-head">
-        <div class="live-panel-title"><span class="dot"></span>Matchs en cours</div>
+        <div class="live-panel-title"><span class="dot"></span><span data-i18n="live_now">Matchs en cours</span></div>
         <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
       </div>
       <div id="live-rows"><div class="empty-note">Chargement…</div></div>
@@ -379,7 +397,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   <div class="row" style="grid-template-columns:1fr">
     <div class="card upcoming-panel" id="upcoming-panel">
       <div class="live-panel-head">
-        <div class="live-panel-title"><span class="dot up"></span>Matchs à venir — prochaines 24h</div>
+        <div class="live-panel-title"><span class="dot up"></span><span data-i18n="live_upcoming">Matchs à venir — prochaines 24h</span></div>
         <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
       </div>
       <div id="upcoming-highlight"></div>
@@ -391,12 +409,12 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   <div class="row" style="grid-template-columns:1fr">
     <div class="card">
       <div class="proof-bar" id="proof-bar">
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl">Sélections terminées</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl">Gagnées / Perdues</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl">Taux de réussite</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl">Profit simulé (mise 10€)</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl" data-i18n="proof_total">Sélections terminées</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl" data-i18n="proof_wl">Gagnées / Perdues</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl" data-i18n="proof_winrate">Taux de réussite</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl" data-i18n="proof_profit">Profit simulé (mise 10€)</div></div></div>
       </div>
-      <div class="proof-note">Performances calculées sur les sélections officiellement terminées. Les performances passées ne garantissent pas les résultats futurs.</div>
+      <div class="proof-note" data-i18n="proof_note">Performances calculées sur les sélections officiellement terminées. Les performances passées ne garantissent pas les résultats futurs.</div>
     </div>
   </div>
 
@@ -404,7 +422,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
        jours d'affilee) -->
   <div class="row" style="grid-template-columns:1fr">
     <div class="card">
-      <div class="pcard-title" style="margin-bottom:10px">Derniers verdicts du Concile</div>
+      <div class="pcard-title" style="margin-bottom:10px" data-i18n="verdicts_title">Derniers verdicts du Concile</div>
       <div id="daily-accordion"><div class="empty-note">Chargement…</div></div>
     </div>
   </div>
@@ -412,7 +430,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   <!-- RANGEE 3 : PICK GRATUIT DU JOUR (seul, immediatement visible) -->
   <div class="row" style="grid-template-columns:1fr" id="pick">
     <div class="card pcard acc-green" id="pick-card">
-      <div class="pcard-title">Le pick gratuit du jour <span class="badge">Gratuit</span></div>
+      <div class="pcard-title"><span data-i18n="pick_title">Le pick gratuit du jour</span> <span class="badge" data-i18n="badge_free">Gratuit</span></div>
       <div id="pick-body" class="empty-note">Chargement…</div>
     </div>
   </div>
@@ -421,11 +439,11 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
        jusque-la jamais branchee a aucun formulaire du site) -->
   <div class="row" style="grid-template-columns:1fr">
     <div class="card" id="email-capture-card">
-      <div class="pcard-title" style="margin-bottom:6px">Reçois le pick gratuit chaque matin par email</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Aucun spam, aucune carte bancaire — juste le pick du jour et les résultats vérifiés dans ta boîte mail.</div>
+      <div class="pcard-title" style="margin-bottom:6px" data-i18n="capture_title">Reçois le pick gratuit chaque matin par email</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px" data-i18n="capture_sub">Aucun spam, aucune carte bancaire — juste le pick du jour et les résultats vérifiés dans ta boîte mail.</div>
       <form id="email-capture-form" style="display:flex;gap:10px;flex-wrap:wrap" onsubmit="return submitEmailCapture(event)">
-        <input class="modal-input" id="email-capture-input" type="email" placeholder="toi@exemple.com" autocomplete="email" required style="flex:1;min-width:200px">
-        <button type="submit" class="btn btn-prim" id="email-capture-btn" style="flex:0 0 auto">S'inscrire</button>
+        <input class="modal-input" id="email-capture-input" type="email" placeholder="toi@exemple.com" data-i18n-ph="capture_ph" autocomplete="email" required style="flex:1;min-width:200px">
+        <button type="submit" class="btn btn-prim" id="email-capture-btn" style="flex:0 0 auto" data-i18n="capture_btn">S'inscrire</button>
       </form>
       <div id="email-capture-msg" style="font-size:13px;margin-top:10px;display:none"></div>
     </div>
@@ -435,57 +453,57 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   <div class="row row-4" id="plans">
     <div class="card plan">
       <div class="plan-ico" style="background:rgba(167,173,208,.12);color:var(--tx2)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
-      <div class="plan-name">GRATUIT</div>
+      <div class="plan-name" data-i18n="plan_free">GRATUIT</div>
       <div class="plan-price">0€ <span>/mois</span></div>
       <ul class="plan-feats">
-        <li><span class="plan-check">✓</span>Pick gratuit du jour</li>
-        <li><span class="plan-check">✓</span>Résultats publics</li>
-        <li><span class="plan-check">✓</span>Aucune carte bancaire</li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_free_1">Pick gratuit du jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_free_2">Résultats publics</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_free_3">Aucune carte bancaire</span></li>
       </ul>
-      <a href="/dashboard" class="btn btn-ghost btn-block">Créer mon compte gratuit</a>
+      <a href="/dashboard" class="btn btn-ghost btn-block" data-i18n="nav_signup">Créer mon compte gratuit</a>
     </div>
 
     <div class="card plan">
       <div class="plan-ico" style="background:rgba(91,141,239,.14);color:var(--standard)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
-      <div class="plan-name" style="color:var(--standard)">STANDARD</div>
+      <div class="plan-name" style="color:var(--standard)" data-i18n="plan_std">STANDARD</div>
       <div class="plan-price">4.90€ <span>/mois</span></div>
       <ul class="plan-feats">
-        <li><span class="plan-check">✓</span>Jusqu'à 3 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Score de confiance minimum 82/100, sélection la plus stricte du jour</li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_std_1">Jusqu'à 3 sélections/jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_std_2">Score de confiance minimum 82/100, sélection la plus stricte du jour</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block">Choisir Standard</a>
+      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block" data-i18n="plan_btn_std">Choisir Standard</a>
     </div>
 
     <div class="card plan hl">
-      <div class="plan-badge">Le plus choisi</div>
+      <div class="plan-badge" data-i18n="plan_popular">Le plus choisi</div>
       <div class="plan-ico" style="background:rgba(155,123,255,.16);color:var(--premium)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
-      <div class="plan-name" style="color:var(--premium)">PREMIUM</div>
+      <div class="plan-name" style="color:var(--premium)" data-i18n="plan_prem">PREMIUM</div>
       <div class="plan-price">14.90€ <span>/mois</span></div>
       <ul class="plan-feats">
-        <li><span class="plan-check">✓</span>Jusqu'à 10 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Score de confiance minimum 82/100, sélection élargie</li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_1">Jusqu'à 10 sélections/jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Score de confiance minimum 82/100, sélection élargie</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06" target="_blank" class="btn btn-prim btn-block">Choisir Premium</a>
+      <a href="https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06" target="_blank" class="btn btn-prim btn-block" data-i18n="plan_btn_prem">Choisir Premium</a>
     </div>
 
     <div class="card plan">
       <div class="plan-badge" style="background:linear-gradient(135deg,#d4af37,#f5c842);color:#1a1a1a">🎁 1er mois offert</div>
       <div class="plan-ico" style="background:rgba(224,166,60,.16);color:var(--elite)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
-      <div class="plan-name" style="color:var(--elite)">ELITE-VIP</div>
+      <div class="plan-name" style="color:var(--elite)" data-i18n="plan_elite">ELITE-VIP</div>
       <div class="plan-price">29.90€ <span>/mois</span></div>
       <ul class="plan-feats">
-        <li><span class="plan-check">✓</span>Jusqu'à 30 sélections/jour</li>
-        <li><span class="plan-check">✓</span>Score de confiance minimum 75/100, tout le vivier football diffusable</li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_elite_1">Jusqu'à 30 sélections/jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_elite_2">Score de confiance minimum 75/100, tout le vivier football diffusable</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
       <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin:-4px 0 12px">🎁 1 mois offert pour ton 1er abonnement Elite-VIP. Parraine un ami (n'importe quelle formule) : vous recevez chacun 1 mois offert en plus.</div>
-      <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" class="btn btn-ghost btn-block">Rejoindre Elite-VIP</a>
+      <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" class="btn btn-ghost btn-block" data-i18n="plan_btn_elite">Rejoindre Elite-VIP</a>
     </div>
   </div>
   <div class="row" style="grid-template-columns:1fr;padding-top:0">
-    <div class="plans-note">Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.</div>
+    <div class="plans-note" data-i18n-html="plans_note">Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.</div>
   </div>
 
   <!-- RANGEE 5 : CONTENU SECONDAIRE (methode, preuves detaillees) — sous le
@@ -493,7 +511,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
        gratuit puis aux formules sans avoir a traverser tout ca. -->
   <div class="row row-4">
     <div class="card pcard acc-blue">
-      <div class="pcard-title">Ce que Standard a reçu hier</div>
+      <div class="pcard-title" data-i18n="std_yesterday">Ce que Standard a reçu hier</div>
       <table class="mini-table"><thead><tr><th>Match</th><th>Sél.</th><th>Rés.</th></tr></thead>
         <tbody id="std-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
       </table>
@@ -501,9 +519,9 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
     <div class="card pcard acc-violet" id="methode">
       <div class="pcard-title">Comment ça fonctionne ? <a href="#methode" class="live-panel-link" style="font-size:10px">Voir la méthode</a></div>
-      <div class="method-step"><div class="method-n">1</div><div><div class="method-t">Les données sont collectées</div><div class="method-d">Hermès vérifie chaque donnée sur plusieurs sources.</div></div></div>
-      <div class="method-step"><div class="method-n">2</div><div><div class="method-t">Les IA analysent séparément</div><div class="method-d">Perplexity, DeepSeek, Mistral, Cohere, Qwen votent.</div></div></div>
-      <div class="method-step" style="margin-bottom:0"><div class="method-n">3</div><div><div class="method-t">Le Concile calcule le score</div><div class="method-d">Publié seulement si la convergence dépasse le seuil.</div></div></div>
+      <div class="method-step"><div class="method-n">1</div><div><div class="method-t" data-i18n="method_1t">Les données sont collectées</div><div class="method-d" data-i18n="method_1d">Hermès vérifie chaque donnée sur plusieurs sources.</div></div></div>
+      <div class="method-step"><div class="method-n">2</div><div><div class="method-t" data-i18n="method_2t">Les IA analysent séparément</div><div class="method-d" data-i18n="method_2d">Perplexity, DeepSeek, Mistral, Cohere, Qwen votent.</div></div></div>
+      <div class="method-step" style="margin-bottom:0"><div class="method-n">3</div><div><div class="method-t" data-i18n="method_3t">Le Concile calcule le score</div><div class="method-d" data-i18n="method_3d">Publié seulement si la convergence dépasse le seuil.</div></div></div>
     </div>
 
     <div class="card pcard acc-cyan">
@@ -516,15 +534,15 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
   <div class="row" style="grid-template-columns:1fr">
     <div class="card" style="text-align:center">
-      <div style="font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:4px">Nos partenaires bookmakers agréés ANJ</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:18px">En passant par nos liens, tu soutiens le site — sans surcoût pour toi.</div>
+      <div style="font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:4px" data-i18n="partners_title">Nos partenaires bookmakers agréés ANJ</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:18px" data-i18n="partners_sub">En passant par nos liens, tu soutiens le site — sans surcoût pour toi.</div>
       <div class="partner-row">
         <a href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener sponsored" class="partner-btn pb-winamax">Winamax</a>
         <a href="https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" target="_blank" rel="noopener sponsored" class="partner-btn pb-unibet">Unibet</a>
         <a href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener sponsored" class="partner-btn pb-pmu">PMU</a>
         <a href="https://go.onelink.me/2887093520/6c3132b8?af_sub5=GREGA3GZ" target="_blank" rel="noopener sponsored" class="partner-btn pb-betclic">Betclic</a>
       </div>
-      <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:1.6">18+ · Jeu responsable · Ouvrir un compte chez un partenaire ne garantit aucun gain.</div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:1.6" data-i18n="partners_legal">18+ · Jeu responsable · Ouvrir un compte chez un partenaire ne garantit aucun gain.</div>
     </div>
   </div>
 
@@ -535,12 +553,12 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
     <div class="foot-grid">
       <div>
         <div class="foot-brand">TOUSLES<span style="color:var(--violet2)">MATCHS</span></div>
-        <div class="foot-tag">Le Concile IA sportif au service de tes analyses.</div>
+        <div class="foot-tag" data-i18n="foot_tag">Le Concile IA sportif au service de tes analyses.</div>
       </div>
-      <div class="foot-col"><div class="foot-h">Navigation</div>
+      <div class="foot-col"><div class="foot-h" data-i18n="foot_nav">Navigation</div>
         <a href="/live-ia">Live IA</a><a href="/performances">Résultats</a><a href="/bankroll">Bankroll</a><a href="#methode">Méthode</a><a href="#plans">Tarifs</a>
       </div>
-      <div class="foot-col"><div class="foot-h">Légal</div>
+      <div class="foot-col"><div class="foot-h" data-i18n="foot_legal">Légal</div>
         <a href="/mentions-legales">Mentions légales</a><a href="/cgu">CGU</a><a href="/cgv">CGV</a><a href="/confidentialite">Confidentialité</a>
       </div>
       <div class="foot-col"><div class="foot-h">Mon compte</div>
@@ -1197,6 +1215,7 @@ loadStandardYesterday();
 })();
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
+<script src="/js/i18n.js" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
 <script src="/js/simplewebauthn-browser.js"></script>
 </body>

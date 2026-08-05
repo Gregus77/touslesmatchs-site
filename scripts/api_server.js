@@ -6895,6 +6895,16 @@ function isYouthOrWomen(match) {
 const LOSING_COMPETITIONS_RE = /world cup|coupe du monde|fifa world|queensland|usl league two|usl2\b/i;
 function isNoiseForDisplay(match) {
   if (isYouthOrWomen(match)) return true;              // jeunes/féminines : jamais vendables
+  // Ligues explicitement blacklistees (Ouzbekistan, Kazakhstan, divisions
+  // amateurs...) : elles etaient deja refusees a l'ANALYSE, mais ce filtre
+  // d'affichage ne les consultait pas — les analyses deja en base restaient
+  // donc visibles publiquement (signale par Greg le 05/08/2026 :
+  // "Olimpik-Mobiuz — Jayxun · Pro League A · Uzbekistan" affiche a 80/100
+  // dans les verdicts publics). On utilise isBlacklistedForLiveDisplay et
+  // NON isLowTrustCompetition : le premier ne bloque que ce qui est
+  // explicitement banni, le second bloquerait aussi tout ce qui n'est pas
+  // dans la whitelist et viderait la page de resultats.
+  if (isBlacklistedForLiveDisplay(match)) return true;
   const raw = typeof match === "string"
     ? match
     : [match?.competition, match?.league].filter(Boolean).join(" ");
