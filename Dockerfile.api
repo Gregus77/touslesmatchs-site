@@ -3,22 +3,30 @@ WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
 
-# Versions verrouillees (audit securite du 05/08/2026, point #9). Avant, un
-# simple `npm install` sans version rejouait les DERNIERES versions publiees a
-# chaque reconstruction : une dependance compromise en amont entrait en
-# production sans qu'aucun commit ne change ici. Le `~` autorise uniquement les
-# correctifs de securite (x.y.Z), jamais un changement de comportement.
-RUN npm install --save --no-audit --no-fund \
-  express@~5.2.1 \
-  cors@~2.8.6 \
-  bcryptjs@~3.0.3 \
-  jsonwebtoken@~9.0.3 \
-  better-sqlite3@~13.0.2 \
-  stripe@~22.4.0 \
-  @simplewebauthn/server@~13.3.2 \
-  imapflow@~1.6.5 \
-  mailparser@~3.9.14 \
-  nodemailer@~9.0.4
+# ⚠️ NE PAS EPINGLER LES VERSIONS ICI SANS TEST PREALABLE.
+# Tentative du 05/08/2026 (audit securite point #9) : epingler les dix paquets
+# en ~x.y.z a fait planter l'API en boucle avec le code de sortie 139
+# (segmentation fault) — signature d'un module natif casse, ici better-sqlite3,
+# dont le binding compile ne survivait pas a la reinstallation forcee.
+# L'API est restee indisponible jusqu'au retour a cette version.
+#
+# Le besoin de securite reste valide (un `npm install` sans version rejoue les
+# dernieres versions publiees a chaque reconstruction, donc une dependance
+# compromise en amont entre en production sans qu'aucun commit ne change ici).
+# La bonne facon de le traiter est un package-lock.json genere et teste hors
+# production, puis `npm ci` — pas un epinglage ecrit a la main et deploye
+# directement. A refaire posement, avec le site sous surveillance.
+RUN npm install --save \
+  express \
+  cors \
+  bcryptjs \
+  jsonwebtoken \
+  better-sqlite3 \
+  stripe \
+  @simplewebauthn/server@13 \
+  imapflow \
+  mailparser \
+  nodemailer
 
 RUN mkdir -p /data
 
