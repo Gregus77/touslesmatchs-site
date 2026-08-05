@@ -1207,10 +1207,14 @@ async function loadDailyAccordion(){
       // visiteur pour qu'il voie concretement quel abonnement il lui aurait
       // fallu ce jour-la. Les paliers sont cumulatifs : Standard recoit la
       // selection la plus stricte, Premium l'elargit, Elite prend tout.
+      // Noms REELS des canaux Telegram, tels que verifies au demarrage de l'API
+      // ([telegram-check] : "TousLesMatchs Standard", "TousLesMatchs Premium",
+      // "TousLesMatchs Elite-VIP"). Greg veut que le visiteur sache sur quel
+      // canal precis le signal est parti, pas seulement le nom du palier.
       var TIER_META={
-        standard:{ico:'🥇',nom:'Standard',c:'var(--standard)'},
-        premium :{ico:'🥈',nom:'Premium', c:'var(--premium)'},
-        elite   :{ico:'🥉',nom:'Elite',   c:'var(--elite)'}
+        standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
+        premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
+        elite   :{ico:'🥉',nom:'Telegram Elite-VIP',court:'Elite',    c:'var(--elite)'}
       };
       var TIER_ORDRE=['standard','premium','elite'];
       var rowsHtml=list.map(function(a){
@@ -1234,7 +1238,7 @@ async function loadDailyAccordion(){
           // Publie sur le site mais diffuse sur aucun canal payant (cote hors
           // fenetre ARJEL, sport non couvert...) : le dire plutot que de
           // laisser un blanc que le visiteur interpreterait de travers.
-          tierBadge='<span class="tier-recu tier-none">Non diffusé sur les canaux</span>';
+          tierBadge='<span class="tier-recu tier-none">Publié sur le site, non envoyé sur Telegram</span>';
         }
         return '<div class="day-acc-row">'
           + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+' '+tierBadge+'</div></div>'
@@ -1251,7 +1255,7 @@ async function loadDailyAccordion(){
       TIER_ORDRE.forEach(function(t){ if(tiersGagnants.indexOf(t)!==-1) tierRequis=t; });
       var tmReq=tierRequis?TIER_META[tierRequis]:null;
       var tierJour=tmReq
-        ? '<span class="tier-chip tier-chip-day" style="color:'+tmReq.c+'" title="Abonnement minimum pour avoir reçu TOUS les signaux gagnants de cette journée">il fallait '+tmReq.ico+' '+tmReq.nom+'</span>'
+        ? '<span class="tier-chip tier-chip-day" style="color:'+tmReq.c+'" title="Abonnement minimum pour avoir reçu TOUS les signaux gagnants de cette journée">il fallait '+tmReq.ico+' '+tmReq.court+'</span>'
         : '';
       return '<div class="day-acc-item" data-day-idx="'+idx+'">'
         + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
