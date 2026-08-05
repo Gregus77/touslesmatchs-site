@@ -6967,16 +6967,16 @@ function isYouthOrWomen(match) {
 const LOSING_COMPETITIONS_RE = /world cup|coupe du monde|fifa world|queensland|usl league two|usl2\b/i;
 function isNoiseForDisplay(match) {
   if (isYouthOrWomen(match)) return true;              // jeunes/féminines : jamais vendables
-  // Ligues explicitement blacklistees (Ouzbekistan, Kazakhstan, divisions
-  // amateurs...) : elles etaient deja refusees a l'ANALYSE, mais ce filtre
-  // d'affichage ne les consultait pas — les analyses deja en base restaient
-  // donc visibles publiquement (signale par Greg le 05/08/2026 :
-  // "Olimpik-Mobiuz — Jayxun · Pro League A · Uzbekistan" affiche a 80/100
-  // dans les verdicts publics). On utilise isBlacklistedForLiveDisplay et
-  // NON isLowTrustCompetition : le premier ne bloque que ce qui est
-  // explicitement banni, le second bloquerait aussi tout ce qui n'est pas
-  // dans la whitelist et viderait la page de resultats.
-  if (isBlacklistedForLiveDisplay(match)) return true;
+  // ⚠️ NE PAS brancher ici la blacklist complete des ligues (tentative du
+  // 05/08/2026, annulee le jour meme). Elle masquait 222 analyses resolues sur
+  // 584 — essentiellement des ligues blacklistees PARCE QU'ELLES PERDAIENT
+  // (USL League Two, FA Cup Coree, K League 2...). Les retirer retroactivement
+  // faisait remonter le winrate public artificiellement, en contradiction
+  // directe avec la promesse affichee sur /performances ("Aucun pick cache,
+  // aucune statistique modifiee") et avec la regle ANJ de ne jamais falsifier
+  // de statistiques. Une ligue jugee non fiable doit etre bloquee A L'ANALYSE
+  // (isLowTrustCompetition, en amont), pas effacee de l'historique une fois
+  // les resultats connus.
   const raw = typeof match === "string"
     ? match
     : [match?.competition, match?.league].filter(Boolean).join(" ");
