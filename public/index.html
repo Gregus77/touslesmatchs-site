@@ -340,20 +340,23 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 
 <style id="tlm-plans-overflow-fix">
-/* Correction visuelle des cartes d'abonnement — aucun lien ni fonctionnement modifié */
-#plans{align-items:stretch}
+/* Correction définitive des cartes d'abonnement — visuel uniquement */
+#plans{
+  align-items:stretch;
+  overflow:visible;
+}
 #plans .plan{
   min-width:0;
-  overflow:hidden;
-  padding:24px 20px;
+  overflow:visible;
+  padding:24px 20px 22px;
 }
 #plans .plan-price{
-  font-size:clamp(30px,2.4vw,35px);
+  font-size:clamp(29px,2.25vw,34px);
   line-height:1.05;
   white-space:nowrap;
   margin:8px 0 18px;
 }
-#plans .plan-price span{font-size:14px}
+#plans .plan-price span{font-size:13px}
 #plans .plan-feats{
   min-width:0;
   gap:10px;
@@ -362,13 +365,13 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 #plans .plan-feats li{
   min-width:0;
   align-items:flex-start;
-  font-size:14px;
+  font-size:13.5px;
   line-height:1.42;
 }
 #plans .plan-feats li > span:last-child{
   min-width:0;
   max-width:100%;
-  overflow-wrap:anywhere;
+  overflow-wrap:break-word;
   word-break:normal;
 }
 #plans .btn{
@@ -376,17 +379,32 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   max-width:100%;
   box-sizing:border-box;
   white-space:normal;
-  line-height:1.25;
+  line-height:1.2;
   min-height:42px;
+  padding-left:12px;
+  padding-right:12px;
 }
-#plans .plan-badge{max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis}
+#plans .plan-badge{
+  top:12px;
+  left:auto;
+  right:14px;
+  transform:none;
+  max-width:calc(100% - 82px);
+  overflow:visible;
+  text-overflow:clip;
+  font-size:9px;
+  padding:4px 9px;
+  z-index:2;
+}
+#plans .plan-ico{margin-top:0}
 @media(max-width:1300px){
-  #plans .plan{padding:24px 22px}
-  #plans .plan-feats li{font-size:14.5px}
+  #plans .plan{padding:24px 22px 22px}
+  #plans .plan-feats li{font-size:14px}
 }
 @media(max-width:600px){
-  #plans .plan{padding:24px 18px}
-  #plans .plan-price{font-size:32px}
+  #plans .plan{padding:22px 18px}
+  #plans .plan-price{font-size:31px}
+  #plans .plan-badge{right:12px;max-width:calc(100% - 78px)}
 }
 </style>
 
