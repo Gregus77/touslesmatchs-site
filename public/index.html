@@ -335,7 +335,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
    L’image est intégrée au fichier : aucun asset externe requis.
    ═══════════════════════════════════════════════════════════════ */
 .row-hero{grid-template-columns:1fr}
-.hero-card-premium{padding:0;display:block;overflow:hidden;background:#02051a;border-color:rgba(124,92,255,.55);box-shadow:0 0 30px rgba(72,57,255,.14)}
+.hero-card-premium{padding:0;display:block;overflow:hidden;background:#02051a;border-color:rgba(124,92,255,.55);box-shadow:0 0 30px rgba(72,57,255,.14);width:84%;max-width:1080px;margin-inline:auto}
 .hero-premium-shot{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:#02051a;isolation:isolate}
 .hero-premium-image{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;z-index:1;user-select:none;-webkit-user-drag:none}
 .hero-signal-layer{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible}
@@ -358,7 +358,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 @media(max-width:700px){
   .hero-premium-shot{display:none}
   .hero-mobile-fallback{display:block}
-  .hero-card-premium{overflow:visible}
+  .hero-card-premium{overflow:visible;width:100%;max-width:none}
 }
 @media(prefers-reduced-motion:reduce){
   .signal-flow,.concile-pulse{animation:none}
