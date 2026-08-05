@@ -373,6 +373,11 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   border:1px solid rgba(255,255,255,.12);white-space:nowrap;vertical-align:middle}
 .tier-chip-day{margin-left:8px;font-size:11px}
 @media(max-width:520px){ .tier-chip-day{display:block;margin:4px 0 0 0;width:fit-content} }
+
+/* Liste cumulative des groupes ayant recu le signal */
+.tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;
+  font-size:10.5px;color:var(--muted);font-weight:600}
+.tier-none{font-style:italic;opacity:.75}
 </style>
 <!-- Google Analytics (GA4) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
@@ -1212,10 +1217,25 @@ async function loadDailyAccordion(){
         var win=a.outcome==='win';
         var badgeStyle=win?'background:rgba(51,196,129,.14);color:var(--green)':'background:rgba(239,90,111,.14);color:var(--red)';
         var cote=(a.cote!=null && a.cote>1)?'@'+Number(a.cote).toFixed(2):'';
-        var tm=TIER_META[a.tier];
-        var tierBadge=tm
-          ? '<span class="tier-chip" style="color:'+tm.c+'" title="Signal reçu par les abonnés '+tm.nom+' et au-dessus">'+tm.ico+' '+tm.nom+'</span>'
-          : '';
+        // Les paliers sont CUMULATIFS : un signal envoye sur Standard part aussi
+        // sur Premium et Elite. N'afficher qu'un seul palier laissait croire
+        // l'inverse (signale par Greg le 05/08/2026). On liste donc TOUS les
+        // groupes qui ont reellement recu le signal, du plus bas au plus haut.
+        var iDep=TIER_ORDRE.indexOf(a.tier);
+        var tierBadge='';
+        if(iDep!==-1){
+          tierBadge='<span class="tier-recu">Reçu par '
+            + TIER_ORDRE.slice(iDep).map(function(t){
+                var m=TIER_META[t];
+                return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
+              }).join('')
+            + '</span>';
+        } else if(a.tier==='hors-palier'){
+          // Publie sur le site mais diffuse sur aucun canal payant (cote hors
+          // fenetre ARJEL, sport non couvert...) : le dire plutot que de
+          // laisser un blanc que le visiteur interpreterait de travers.
+          tierBadge='<span class="tier-recu tier-none">Non diffusé sur les canaux</span>';
+        }
         return '<div class="day-acc-row">'
           + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+' '+tierBadge+'</div></div>'
           + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
@@ -1231,7 +1251,7 @@ async function loadDailyAccordion(){
       TIER_ORDRE.forEach(function(t){ if(tiersGagnants.indexOf(t)!==-1) tierRequis=t; });
       var tmReq=tierRequis?TIER_META[tierRequis]:null;
       var tierJour=tmReq
-        ? '<span class="tier-chip tier-chip-day" style="color:'+tmReq.c+'" title="Abonnement minimum pour avoir reçu tous les signaux gagnants de ce jour">'+tmReq.ico+' '+tmReq.nom+'</span>'
+        ? '<span class="tier-chip tier-chip-day" style="color:'+tmReq.c+'" title="Abonnement minimum pour avoir reçu TOUS les signaux gagnants de cette journée">il fallait '+tmReq.ico+' '+tmReq.nom+'</span>'
         : '';
       return '<div class="day-acc-item" data-day-idx="'+idx+'">'
         + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
