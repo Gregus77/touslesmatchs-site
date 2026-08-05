@@ -235,6 +235,13 @@ const ADMIN_READONLY_PATHS = new Set([
   "/admin/monthly-history", "/admin/alerts", "/admin/scheduler-state",
   "/admin/guardian-state", "/admin/datahub-state", "/admin/version",
   "/admin/preflight", "/admin/heartbeat",
+  // Ajoutes le 05/08/2026 (audit securite) : ces 4 routes etaient restees
+  // publiques et exposaient des donnees business sensibles a n'importe qui
+  // connaissant l'URL — winrate/ROI reels, taux de conversion du tunnel,
+  // performance par segment, et depense IA quotidienne. Aucune donnee
+  // personnelle ni credential, mais de quoi renseigner un concurrent.
+  "/admin/stats", "/admin/funnel-report", "/admin/segment-report",
+  "/admin/ai-budget-stats",
 ]);
 app.use((req, res, next) => {
   if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
@@ -13811,15 +13818,10 @@ app.get("/admin/guardian-state", (req, res) => {
 });
 // ===== End M008 =====
 
-// Stats du garde-fou budgétaire IA (scripts/ai_budget_guard.js) — visibilité
-// demandée pour Hermès ("peut lire et afficher les informations de coût, ne
-// doit jamais lancer une analyse pour les calculer") et pour toi en dashboard.
-app.get("/admin/ai-budget-stats", (req, res) => {
-  try {
-    const guard = require("./ai_budget_guard");
-    res.json({ ok: true, stats: guard.getDailyStats(db) });
-  } catch (e) { res.json({ ok: false, error: e.message }); }
-});
+// (Doublon de /admin/ai-budget-stats retire le 05/08/2026 : la route etait
+// declaree deux fois a l'identique, la seconde n'etait jamais atteinte —
+// Express sert toujours la premiere correspondance. Definition conservee
+// plus haut, avec la meme visibilite pour Hermes et le dashboard.)
 
 // ===== M009-M010: Data Hub state =====
 app.get("/admin/datahub-state", (req, res) => {
