@@ -121,6 +121,105 @@
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+
+<style id="bankroll-premium-v2">
+:root{
+  --br-bg:#050817;--br-bg2:#080d24;--br-panel:rgba(12,18,49,.76);
+  --br-panel2:rgba(15,23,62,.9);--br-line:rgba(116,142,255,.22);
+  --br-line2:rgba(179,112,255,.42);--br-text:#f7f8ff;--br-muted:#aab2d8;
+  --br-cyan:#32d9ff;--br-blue:#4f7cff;--br-violet:#8a5cff;--br-pink:#ed5dff;
+}
+body.tlm-page-bankroll{
+  padding:0!important;min-height:100vh;color:var(--br-text)!important;
+  background:
+    radial-gradient(circle at 78% 14%,rgba(119,63,255,.22),transparent 28%),
+    radial-gradient(circle at 16% 8%,rgba(21,151,255,.17),transparent 26%),
+    linear-gradient(145deg,#050817 0%,#070b20 47%,#130729 100%)!important;
+}
+body.tlm-page-bankroll:before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.34;
+  background-image:linear-gradient(rgba(104,129,255,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(104,129,255,.055) 1px,transparent 1px);
+  background-size:46px 46px;mask-image:linear-gradient(to bottom,#000,transparent 82%);
+}
+body.tlm-page-bankroll .wrap{max-width:1180px!important;margin:0 auto!important;padding:108px 28px 72px!important}
+.br-hero{position:relative;overflow:hidden;border:1px solid var(--br-line);border-radius:28px;padding:36px 38px;margin-bottom:22px;background:linear-gradient(135deg,rgba(11,17,48,.94),rgba(20,11,55,.78));box-shadow:0 28px 85px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.06)}
+.br-hero:before{content:"";position:absolute;width:410px;height:410px;border-radius:50%;right:-135px;top:-225px;background:radial-gradient(circle,rgba(237,93,255,.35),rgba(79,124,255,.08) 48%,transparent 70%);filter:blur(2px)}
+.br-hero:after{content:"";position:absolute;right:36px;bottom:-62px;width:330px;height:190px;border:1px solid rgba(99,138,255,.25);border-radius:50%;transform:perspective(420px) rotateX(65deg);box-shadow:0 0 55px rgba(100,78,255,.23),inset 0 0 45px rgba(50,217,255,.08)}
+.br-kicker{display:inline-flex;align-items:center;gap:9px;padding:8px 13px;border-radius:999px;border:1px solid rgba(50,217,255,.36);background:rgba(18,31,73,.7);font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:#dff8ff;margin-bottom:18px;box-shadow:0 0 24px rgba(50,217,255,.11)}
+.br-kicker-dot{width:8px;height:8px;border-radius:50%;background:var(--br-cyan);box-shadow:0 0 14px var(--br-cyan)}
+.br-hero h1{position:relative;z-index:1;font-size:clamp(38px,5vw,66px)!important;line-height:.98!important;letter-spacing:-.055em!important;margin:0 0 16px!important;max-width:760px}
+.br-gradient{background:linear-gradient(90deg,#fff 0%,#cbdcff 35%,#7ddfff 62%,#dd73ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.br-subtitle{position:relative;z-index:1;max-width:700px;color:var(--br-muted);font-size:15px;line-height:1.7;margin:0 0 22px}
+.br-trust{display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:1}
+.br-trust span{display:inline-flex;align-items:center;gap:7px;padding:8px 11px;border-radius:10px;background:rgba(9,14,39,.76);border:1px solid rgba(130,151,255,.17);font-size:12px;color:#dbe1ff}
+.br-trust i{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,var(--br-cyan),var(--br-violet));box-shadow:0 0 10px rgba(79,124,255,.75)}
+.br-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:stretch}
+body.tlm-page-bankroll .card{position:relative;overflow:hidden;background:linear-gradient(145deg,var(--br-panel),rgba(9,14,38,.88))!important;border:1px solid var(--br-line)!important;border-radius:22px!important;padding:25px!important;margin:0!important;box-shadow:0 18px 52px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.045);transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}
+body.tlm-page-bankroll .card:hover{transform:translateY(-2px);border-color:rgba(131,105,255,.42)!important;box-shadow:0 23px 62px rgba(0,0,0,.31),0 0 34px rgba(81,77,255,.07)}
+.br-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+.br-card-icon{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(50,217,255,.14),rgba(138,92,255,.2));border:1px solid rgba(94,159,255,.3);box-shadow:0 0 24px rgba(79,124,255,.12);font-size:20px}
+.br-card-title{font-size:18px;font-weight:850;letter-spacing:-.025em;margin-bottom:4px}
+.br-card-copy{font-size:12px;color:var(--br-muted);line-height:1.5}
+body.tlm-page-bankroll .label{font-size:10px!important;letter-spacing:.14em!important;color:#b7c2ec!important;margin:0 0 8px!important}
+.br-capital-card{min-height:264px}
+.br-capital-layout{display:flex;align-items:flex-end;justify-content:space-between;gap:22px;margin-top:20px}
+body.tlm-page-bankroll .bankroll-view{display:block!important;margin:0!important}
+body.tlm-page-bankroll .bankroll-amount{font-size:clamp(43px,6vw,70px)!important;line-height:1!important;letter-spacing:-.055em;color:#fff!important;text-shadow:0 0 28px rgba(50,217,255,.16)}
+body.tlm-page-bankroll .edit-link{display:inline-flex;margin-top:12px;padding:8px 12px;border:1px solid rgba(111,139,255,.3);border-radius:9px;color:#b9c9ff!important;background:rgba(59,81,169,.12);font-weight:750;cursor:pointer}
+.br-orbit{width:126px;height:126px;flex:0 0 auto;border-radius:50%;position:relative;display:grid;place-items:center;background:radial-gradient(circle,rgba(81,105,255,.18),transparent 61%);border:1px solid rgba(113,137,255,.18);box-shadow:inset 0 0 30px rgba(83,66,255,.14)}
+.br-orbit:before,.br-orbit:after{content:"";position:absolute;border-radius:50%;border:1px solid rgba(84,208,255,.23)}
+.br-orbit:before{inset:13px}.br-orbit:after{inset:30px;border-color:rgba(221,93,255,.28)}
+.br-orbit-core{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--br-cyan),var(--br-pink));box-shadow:0 0 25px rgba(106,143,255,.9);animation:brPulse 2.4s ease-in-out infinite}
+@keyframes brPulse{50%{transform:scale(1.25);box-shadow:0 0 38px rgba(221,93,255,.88)}}
+.br-odds-card{min-height:264px}
+body.tlm-page-bankroll .odds-value{font-size:54px!important;line-height:1!important;text-align:left!important;margin:18px 0 23px!important;color:var(--br-cyan)!important;letter-spacing:-.04em;text-shadow:0 0 25px rgba(50,217,255,.2)}
+body.tlm-page-bankroll input[type="range"]{appearance:none;height:8px!important;border-radius:999px;background:linear-gradient(90deg,var(--br-blue),var(--br-violet),var(--br-pink));outline:none}
+body.tlm-page-bankroll input[type="range"]::-webkit-slider-thumb{appearance:none;width:23px;height:23px;border-radius:50%;background:#fff;border:5px solid #6e67ff;box-shadow:0 0 20px rgba(112,98,255,.65);cursor:pointer}
+body.tlm-page-bankroll .presets{justify-content:flex-start!important;margin-top:20px!important}
+body.tlm-page-bankroll .chip{background:rgba(8,13,36,.88)!important;border:1px solid rgba(129,148,255,.24)!important;color:#c8d0f2!important;padding:8px 15px!important}
+body.tlm-page-bankroll .chip.active{border-color:#7e70ff!important;background:rgba(106,86,255,.18)!important;box-shadow:0 0 20px rgba(99,82,255,.12)}
+.br-strategy-card{grid-column:1/-1}
+.br-strategy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-top:18px}
+body.tlm-page-bankroll .stake{display:block!important;position:relative;border:1px solid rgba(119,142,255,.18)!important;border-radius:17px;padding:20px!important;background:linear-gradient(145deg,rgba(15,23,61,.78),rgba(7,12,34,.87));min-height:170px}
+body.tlm-page-bankroll .stake:after{content:"";position:absolute;left:18px;right:18px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(100,218,255,.65),rgba(220,96,255,.55),transparent)}
+body.tlm-page-bankroll .stake-ico{width:40px!important;height:40px!important;border-radius:12px;display:grid!important;place-items:center;background:rgba(95,91,255,.13);font-size:19px!important;margin-bottom:18px}
+body.tlm-page-bankroll .stake-info{margin-bottom:18px}
+body.tlm-page-bankroll .stake-name{font-size:16px!important;color:#fff!important;margin-bottom:5px}
+body.tlm-page-bankroll .stake-desc{font-size:12px!important;color:var(--br-muted)!important;min-height:36px}
+body.tlm-page-bankroll .stake>div:last-child{text-align:left!important}
+body.tlm-page-bankroll .stake-amount{font-size:29px!important;line-height:1;color:var(--br-cyan)!important;letter-spacing:-.035em}
+body.tlm-page-bankroll .stake-gain{margin-top:7px;color:#aeb8df!important}
+.br-follow-card{grid-column:1/-1}
+body.tlm-page-bankroll .totals{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:11px!important;margin:20px 0!important}
+body.tlm-page-bankroll .ttile{background:rgba(7,12,34,.78)!important;border:1px solid rgba(113,136,255,.18)!important;border-radius:14px!important;padding:16px 9px!important}
+body.tlm-page-bankroll .tval{font-size:22px!important;color:#fff!important}
+body.tlm-page-bankroll .tlbl{color:#919bc3!important}
+.br-form-grid{display:grid;grid-template-columns:1.6fr .7fr .7fr;gap:10px;margin-bottom:10px}
+body.tlm-page-bankroll input[type="text"],body.tlm-page-bankroll input[type="email"],body.tlm-page-bankroll input[type="number"]{background:rgba(5,9,27,.83)!important;border:1px solid rgba(124,146,255,.22)!important;border-radius:12px!important;padding:14px 15px!important;color:#fff!important}
+body.tlm-page-bankroll input:focus{border-color:#776dff!important;box-shadow:0 0 0 3px rgba(106,91,255,.12)}
+.br-action-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+body.tlm-page-bankroll .btn{border-radius:12px!important;padding:14px 18px!important;background:linear-gradient(110deg,#2b73ff,#7459ff 55%,#d64bff)!important;box-shadow:0 10px 25px rgba(77,78,255,.2);transition:transform .18s,box-shadow .18s}
+body.tlm-page-bankroll .btn:hover{transform:translateY(-1px);box-shadow:0 14px 32px rgba(103,75,255,.3)}
+.br-win{background:linear-gradient(110deg,#197ca6,#2e6de8,#6b55ff)!important}.br-loss{background:linear-gradient(110deg,#71375e,#a63c7c,#7a4ed7)!important}
+body.tlm-page-bankroll .bet-item{background:rgba(7,12,34,.66);border:1px solid rgba(112,136,255,.14)!important;border-radius:11px;padding:12px 14px!important;margin-top:8px}
+body.tlm-page-bankroll .guest-note{grid-column:1/-1}
+body.tlm-page-bankroll .disclaimer{margin:20px 0 0!important;padding:18px 20px!important;border-radius:16px!important;background:rgba(11,16,42,.68)!important;border:1px solid rgba(121,140,240,.16)!important;color:#8993bd!important;text-align:left!important}
+body.tlm-page-bankroll .hidden{display:none!important}
+@media(max-width:840px){
+  body.tlm-page-bankroll .wrap{padding:92px 17px 50px!important}
+  .br-hero{padding:28px 23px;border-radius:22px}.br-hero:after{display:none}
+  .br-grid{grid-template-columns:1fr}.br-strategy-card,.br-follow-card{grid-column:auto}
+  .br-strategy-grid{grid-template-columns:1fr}.br-capital-layout{align-items:center}.br-orbit{width:100px;height:100px}
+  .br-form-grid{grid-template-columns:1fr 1fr}.br-form-grid input:first-child{grid-column:1/-1}
+}
+@media(max-width:540px){
+  .br-hero h1{font-size:40px!important}.br-trust span{width:100%}
+  body.tlm-page-bankroll .totals{grid-template-columns:repeat(2,1fr)!important}
+  .br-action-row{grid-template-columns:1fr}.br-capital-layout{display:block}.br-orbit{display:none}
+  body.tlm-page-bankroll .card{padding:20px!important}.br-form-grid{grid-template-columns:1fr}.br-form-grid input:first-child{grid-column:auto}
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-bankroll">
 <nav>
@@ -164,120 +263,123 @@ function openLoginModal(){
 }
 </script>
 <div class="wrap">
-  <h1>💼 Gestion de capital</h1>
-  <p class="subtitle">Outil pédagogique de gestion de votre capital. Selon votre capital et la cote, visualisez une mise adaptée à votre niveau de prudence. Aucune incitation, aucune garantie de gain.</p>
+  <section class="br-hero">
+    <div class="br-kicker"><span class="br-kicker-dot"></span> Gestion intelligente du capital</div>
+    <h1><span class="br-gradient">Ma bankroll.</span><br>Maîtriser le risque.</h1>
+    <p class="br-subtitle">Ajustez votre capital et la cote pour obtenir trois niveaux de mise clairs. L’objectif n’est pas de miser plus, mais de garder une méthode cohérente et lisible.</p>
+    <div class="br-trust">
+      <span><i></i> Calcul instantané</span>
+      <span><i></i> Capital enregistré</span>
+      <span><i></i> Suivi gains et pertes</span>
+      <span><i></i> Outil pédagogique 18+</span>
+    </div>
+  </section>
 
-  <!-- LOGIN -->
   <div id="login-card" class="card hidden">
-    <div class="label">Connexion</div>
+    <div class="br-card-head">
+      <div><div class="label">Espace membre</div><div class="br-card-title">Connexion sécurisée</div><div class="br-card-copy">Retrouvez votre capital et votre historique personnel.</div></div>
+      <div class="br-card-icon">↗</div>
+    </div>
     <div style="margin-bottom:12px"><input type="email" id="login-email" placeholder="Votre email" autocomplete="email"></div>
     <div style="margin-bottom:14px"><input type="text" id="login-code" placeholder="Votre code d'accès" autocomplete="off"></div>
-    <button class="btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <button class="btn" id="login-btn" onclick="doLogin()">Accéder à mon espace →</button>
     <div class="err" id="login-error"></div>
-    <p style="font-size:12px;color:#949bc4;margin-top:14px">Pas encore de code ? <a href="/#plans">Voir les offres</a></p>
+    <p style="font-size:12px;color:#9ba6d0;margin-top:14px">Pas encore de code ? <a href="/#plans">Voir les offres</a></p>
   </div>
 
-  <!-- APP -->
-  <div id="app" class="hidden">
-    <!-- Bankroll -->
-    <div class="card">
-      <div class="label">Votre capital</div>
-      <div id="bankroll-display">
-        <div class="bankroll-view">
-          <span class="bankroll-amount" id="bankroll-amount">—</span>
-          <span class="edit-link" onclick="showBankrollEdit()">modifier</span>
-        </div>
+  <div id="app" class="hidden br-grid">
+    <section class="card br-capital-card">
+      <div class="br-card-head">
+        <div><div class="label">Étape 1</div><div class="br-card-title">Votre capital actuel</div><div class="br-card-copy">La base utilisée pour calculer les trois niveaux de mise.</div></div>
+        <div class="br-card-icon">€</div>
       </div>
-      <div id="bankroll-edit" class="hidden">
-        <div style="margin-bottom:12px"><input type="number" id="bankroll-input" placeholder="Ex : 200" min="0" step="10" inputmode="decimal"></div>
-        <div class="row">
-          <button class="btn" id="bankroll-save" onclick="saveBankroll()">Enregistrer</button>
-          <button class="btn secondary" onclick="cancelBankrollEdit()">Annuler</button>
+      <div class="br-capital-layout">
+        <div>
+          <div id="bankroll-display">
+            <div class="bankroll-view">
+              <span class="bankroll-amount" id="bankroll-amount">—</span>
+              <span class="edit-link" onclick="showBankrollEdit()">Modifier le capital</span>
+            </div>
+          </div>
+          <div id="bankroll-edit" class="hidden">
+            <div style="margin-bottom:12px"><input type="number" id="bankroll-input" placeholder="Ex : 200" min="0" step="10" inputmode="decimal"></div>
+            <div class="row">
+              <button class="btn" id="bankroll-save" onclick="saveBankroll()">Enregistrer</button>
+              <button class="btn secondary" onclick="cancelBankrollEdit()">Annuler</button>
+            </div>
+            <div class="err" id="bankroll-error"></div>
+          </div>
         </div>
-        <div class="err" id="bankroll-error"></div>
+        <div class="br-orbit" aria-hidden="true"><span class="br-orbit-core"></span></div>
       </div>
-    </div>
+    </section>
 
-    <!-- Cote -->
-    <div class="card">
-      <div class="label">Cote du bookmaker</div>
+    <section class="card br-odds-card">
+      <div class="br-card-head">
+        <div><div class="label">Étape 2</div><div class="br-card-title">Cote du bookmaker</div><div class="br-card-copy">Une cote élevée réduit automatiquement la mise proposée.</div></div>
+        <div class="br-card-icon">×</div>
+      </div>
       <div class="odds-value" id="odds-value">2.00</div>
       <input type="range" id="odds-slider" min="1.2" max="10" step="0.1" value="2">
       <div class="presets" id="presets"></div>
-    </div>
+    </section>
 
-    <!-- Résultats -->
-    <div class="card">
-      <div class="label">Mise conseillée selon votre prudence</div>
-      <div class="stake">
-        <div class="stake-ico">🛡️</div>
-        <div class="stake-info">
-          <div class="stake-name c-prudent">Prudent</div>
-          <div class="stake-desc">Bon père de famille · préserve le capital</div>
+    <section class="card br-strategy-card">
+      <div class="br-card-head">
+        <div><div class="label">Étape 3</div><div class="br-card-title">Choisissez votre niveau de prudence</div><div class="br-card-copy">Trois repères simples, calculés à partir de votre capital et de la cote sélectionnée.</div></div>
+        <div class="br-card-icon">◎</div>
+      </div>
+      <div class="br-strategy-grid">
+        <div class="stake">
+          <div class="stake-ico">◉</div>
+          <div class="stake-info"><div class="stake-name">Prudent</div><div class="stake-desc">Exposition minimale pour préserver le capital.</div></div>
+          <div><div class="stake-amount" id="s-prudent">—</div><div class="stake-gain" id="g-prudent"></div></div>
         </div>
-        <div style="text-align:right">
-          <div class="stake-amount c-prudent" id="s-prudent">—</div>
-          <div class="stake-gain" id="g-prudent"></div>
+        <div class="stake">
+          <div class="stake-ico">◈</div>
+          <div class="stake-info"><div class="stake-name">Équilibré</div><div class="stake-desc">Compromis entre prudence et potentiel.</div></div>
+          <div><div class="stake-amount" id="s-normal">—</div><div class="stake-gain" id="g-normal"></div></div>
+        </div>
+        <div class="stake">
+          <div class="stake-ico">◆</div>
+          <div class="stake-info"><div class="stake-name">Offensif</div><div class="stake-desc">Exposition plus forte et variance plus élevée.</div></div>
+          <div><div class="stake-amount" id="s-risque">—</div><div class="stake-gain" id="g-risque"></div></div>
         </div>
       </div>
-      <div class="stake">
-        <div class="stake-ico">⚖️</div>
-        <div class="stake-info">
-          <div class="stake-name c-normal">Équilibré</div>
-          <div class="stake-desc">Mise mesurée · bon compromis</div>
-        </div>
-        <div style="text-align:right">
-          <div class="stake-amount c-normal" id="s-normal">—</div>
-          <div class="stake-gain" id="g-normal"></div>
-        </div>
-      </div>
-      <div class="stake">
-        <div class="stake-ico">🔥</div>
-        <div class="stake-info">
-          <div class="stake-name c-risque">Offensif</div>
-          <div class="stake-desc">Preneur de risque · variance élevée</div>
-        </div>
-        <div style="text-align:right">
-          <div class="stake-amount c-risque" id="s-risque">—</div>
-          <div class="stake-gain" id="g-risque"></div>
-        </div>
-      </div>
-    </div>
+    </section>
 
-    <!-- Note visiteur gratuit -->
-    <div id="guest-note" class="card hidden" style="text-align:center">
-      <div style="font-size:14px;color:#c4c9e6;line-height:1.6">💡 Les stratégies de mise ci-dessus sont <b>gratuites pour tous</b>.<br>Pour <b>enregistrer et suivre tes paris</b> (gains/pertes sauvegardés), connecte-toi.</div>
-      <div style="margin-top:14px"><a href="/#plans" class="btn" style="display:inline-block;text-decoration:none">Voir les offres →</a></div>
-    </div>
+    <section id="guest-note" class="card hidden guest-note" style="text-align:center">
+      <div style="font-size:14px;color:#cbd3f1;line-height:1.7">Les stratégies de mise restent gratuites. La sauvegarde de vos résultats personnels nécessite une connexion.</div>
+      <div style="margin-top:14px"><a href="/#plans" class="btn" style="display:inline-block;text-decoration:none;width:auto">Découvrir les offres →</a></div>
+    </section>
 
-    <!-- Mon suivi gains / pertes -->
-    <div class="card" id="suivi-card">
-      <div class="label">Mon suivi — gains &amp; pertes</div>
+    <section class="card br-follow-card" id="suivi-card">
+      <div class="br-card-head">
+        <div><div class="label">Tableau personnel</div><div class="br-card-title">Suivi des gains et pertes</div><div class="br-card-copy">Enregistrez chaque résultat pour suivre l’évolution réelle de votre capital.</div></div>
+        <div class="br-card-icon">↗</div>
+      </div>
       <div class="totals">
         <div class="ttile"><div class="tval" id="t-solde">0 €</div><div class="tlbl">Solde net</div></div>
-        <div class="ttile"><div class="tval c-prudent" id="t-gagne">0 €</div><div class="tlbl">Gagné</div></div>
-        <div class="ttile"><div class="tval c-risque" id="t-perdu">0 €</div><div class="tlbl">Perdu</div></div>
-        <div class="ttile"><div class="tval c-normal" id="t-winrate">0%</div><div class="tlbl">Réussite</div></div>
+        <div class="ttile"><div class="tval" id="t-gagne">0 €</div><div class="tlbl">Gagné</div></div>
+        <div class="ttile"><div class="tval" id="t-perdu">0 €</div><div class="tlbl">Perdu</div></div>
+        <div class="ttile"><div class="tval" id="t-winrate">0%</div><div class="tlbl">Réussite</div></div>
       </div>
-      <div style="margin-bottom:8px"><input type="text" id="bet-label" placeholder="Match (ex : PSG - OM)" maxlength="80"></div>
-      <div class="row" style="margin-bottom:8px">
+      <div class="br-form-grid">
+        <input type="text" id="bet-label" placeholder="Match (ex : PSG - OM)" maxlength="80">
         <input type="number" id="bet-stake" placeholder="Mise €" min="0" step="1" inputmode="decimal">
         <input type="number" id="bet-odds" placeholder="Cote" min="1" step="0.05" inputmode="decimal">
       </div>
-      <div class="row">
-        <button class="btn" style="background:linear-gradient(135deg,#059669,#10b981)" onclick="addBet('win')">✅ Gagné</button>
-        <button class="btn" style="background:linear-gradient(135deg,#b91c1c,#ef4444)" onclick="addBet('loss')">❌ Perdu</button>
+      <div class="br-action-row">
+        <button class="btn br-win" onclick="addBet('win')">Résultat gagnant</button>
+        <button class="btn br-loss" onclick="addBet('loss')">Résultat perdant</button>
       </div>
       <div class="err" id="bet-error"></div>
       <div id="bets-list" style="margin-top:16px"></div>
-    </div>
+    </section>
   </div>
 
-  <div class="disclaimer">
-    ⚠️ 18+ · Cet outil est un <b>simulateur pédagogique de gestion de capital</b>. Il ne constitue ni un conseil, ni une incitation, ni une garantie de gain. Les montants affichés sont de simples repères de gestion du risque calculés sur le capital que vous saisissez. Jouer comporte des risques : endettement, isolement, dépendance. Appelez le 09 74 75 13 13 (appel non surtaxé) — <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a>.
-  </div>
+  <div class="disclaimer">⚠️ 18+ · Cet outil est un simulateur pédagogique de gestion de capital. Il ne constitue ni un conseil, ni une incitation, ni une garantie de gain. Jouer comporte des risques : endettement, isolement, dépendance. Appelez le 09 74 75 13 13 — <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">Joueurs Info Service</a>.</div>
 </div>
-
 <script>
   var userAuth = null;
 
