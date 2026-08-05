@@ -789,8 +789,8 @@ function renderMatches() {
       minuteHtml = '<div class="mc-minute done">FT</div>';
     }
 
-    var homeLogo = m.home_logo ? '<img src="' + m.home_logo + '" alt="" loading="lazy">' : escHtml(initials(m.home));
-    var awayLogo = m.away_logo ? '<img src="' + m.away_logo + '" alt="" loading="lazy">' : escHtml(initials(m.away));
+    var homeLogo = m.home_logo ? '<img src="' + safeImgUrl(m.home_logo) + '" alt="" loading="lazy">' : escHtml(initials(m.home));
+    var awayLogo = m.away_logo ? '<img src="' + safeImgUrl(m.away_logo) + '" alt="" loading="lazy">' : escHtml(initials(m.away));
 
     var matchId = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
 
@@ -1178,6 +1178,17 @@ function doLogout() {
 
 // ── Utils ──
 function escHtml(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+// Les URLs de logos viennent d'API externes (api-sports, TheSportsDB) et
+// etaient injectees brutes dans src="..." : une valeur piegee du type
+// " onerror="... sortait de l'attribut et executait du script (audit du
+// 05/08/2026). On n'autorise que http(s) et on neutralise les guillemets ;
+// toute autre valeur (javascript:, data:, relative douteuse) rend une chaine
+// vide, ce qui affiche simplement l'image cassee au lieu d'executer du code.
+function safeImgUrl(u) {
+  var raw = String(u || "").trim();
+  if (!/^https?:\/\//i.test(raw)) return "";
+  return raw.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 function escAttr(s) { return String(s || "").replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
 function initials(name) {
   return String(name || "?").split(/\s+/).filter(Boolean).slice(0,2).map(function(p){ return p.charAt(0); }).join("").toUpperCase() || "?";
@@ -1210,7 +1221,8 @@ function loadAgentRanking() {
     document.getElementById("agent-ranking").style.display = "none";
     return;
   }
-  fetch("/api/agent-performance?email=" + encodeURIComponent(userAuth.email) + "&code=" + encodeURIComponent(userAuth.code))
+  // Identifiants en en-tetes (jamais dans l'URL, cf. audit securite 05/08/2026)
+  fetch("/api/agent-performance", { headers: { "X-TLM-Email": userAuth.email, "X-TLM-Code": userAuth.code } })
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if (!d.ok || !d.performance) return;
@@ -1305,8 +1317,8 @@ function renderHistoryList(analyses, append) {
   var html = append ? el.innerHTML : "";
   analyses.forEach(function(a) {
     var sportIcon = SPORT_ICONS[a.sport] || "⚽";
-    var homeLogo = a.home_logo ? '<img src="' + a.home_logo + '" alt="" loading="lazy">' : sportIcon;
-    var awayLogo = a.away_logo ? '<img src="' + a.away_logo + '" alt="" loading="lazy">' : sportIcon;
+    var homeLogo = a.home_logo ? '<img src="' + safeImgUrl(a.home_logo) + '" alt="" loading="lazy">' : sportIcon;
+    var awayLogo = a.away_logo ? '<img src="' + safeImgUrl(a.away_logo) + '" alt="" loading="lazy">' : sportIcon;
 
     var outcomeHtml = '';
     if (a.outcome === 'win') outcomeHtml = '<span class="h-outcome win">✅ Gagné</span>';

@@ -180,7 +180,34 @@ app.use(cors({
     if (!origin || ALLOWED_ORIGINS.has(origin)) return callback(null, true);
     return callback(null, false);
   },
+  // Sans cette liste, le navigateur refuserait les en-têtes d'identifiants
+  // ajoutés ci-dessous (X-TLM-Email / X-TLM-Code) lors du contrôle préalable.
+  allowedHeaders: ["Content-Type", "Authorization", "X-TLM-Email", "X-TLM-Code"],
 }));
+
+// ── SÉCURITÉ : identifiants en EN-TÊTES plutôt qu'en query string ────────────
+// Les codes d'accès transitaient en ?email=…&code=… : une URL finit dans
+// l'historique du navigateur, les journaux du reverse proxy, et l'en-tête
+// Referer envoyé aux domaines tiers. Un en-tête HTTP ne subit aucun de ces
+// trois sorts (audit du 05/08/2026, point #3).
+//
+// Ce middleware recopie simplement les en-têtes vers req.query : TOUS les
+// endpoints existants continuent de lire req.query.email / req.query.code
+// sans une seule modification, et les anciennes URL avec query string
+// restent acceptées — aucun lien en circulation ni marque-page ne casse.
+// Le front, lui, n'envoie plus que des en-têtes (voir public/*.html).
+app.use((req, _res, next) => {
+  const hEmail = req.headers["x-tlm-email"];
+  const hCode = req.headers["x-tlm-code"];
+  if (hEmail || hCode) {
+    // req.query est en lecture seule sur Express 5 : on reconstruit l'objet.
+    const merged = { ...req.query };
+    if (hEmail && !merged.email) merged.email = String(hEmail);
+    if (hCode && !merged.code) merged.code = String(hCode);
+    Object.defineProperty(req, "query", { value: merged, configurable: true });
+  }
+  next();
+});
 
 // ── SÉCURITÉ P2 : rate limiting maison (aucune dépendance externe) ────────────
 // Strict sur l'authentification (anti-brute-force), très large ailleurs

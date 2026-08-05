@@ -1001,9 +1001,11 @@ async function loadUpcoming(){
   var box=document.getElementById('upcoming-rows');
   var hl=document.getElementById('upcoming-highlight');
   var email=localStorage.getItem('tlm_email'), code=localStorage.getItem('tlm_code');
-  var authQs=(email&&code)?('&email='+encodeURIComponent(email)+'&code='+encodeURIComponent(code)):'';
+  // Identifiants en EN-TETES, plus en query string : une URL finit dans
+  // l'historique du navigateur, les journaux du proxy et l'en-tete Referer.
+  var authHdr=(email&&code)?{'X-TLM-Email':email,'X-TLM-Code':code}:{};
   try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now()+authQs);
+    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{headers:authHdr});
     var d=await r.json();
     var allPicks=(d.picks||[]);
     // Encart "prochaines 24h" : demande explicite du fondateur le 04/08/2026 —
