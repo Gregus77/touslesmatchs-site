@@ -12470,8 +12470,13 @@ app.get("/t", (req, res) => {
 // 04/08/2026 : zero trafic TikTok mesurable malgre le tunnel construit
 // autour de TikTok, faute d'un lien traçable a mettre en bio.
 const TELEGRAM_FREE_INVITE_LINK = "https://t.me/+qFnIuKg2ZhdlMmY8";
+// Lien traqué generique reutilise par tous les canaux (TikTok, Telegram,
+// Reddit...) — ?src= choisit la source (defaut "tiktok" pour ne pas casser
+// les liens deja en circulation sur la bio TikTok), ?v= identifie la
+// campagne/le post precis a l'interieur de cette source.
 app.get("/go/tiktok", (req, res) => {
   try {
+    const src = String(req.query.src || "tiktok").toLowerCase().slice(0, 40);
     const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "";
     const ipHash = crypto.createHash("sha256").update(ip + "tlm-salt").digest("hex").slice(0, 16);
     db.prepare(`
@@ -12479,9 +12484,9 @@ app.get("/go/tiktok", (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       "/go/tiktok",
-      "tiktok_bio_link",
-      "tiktok",
-      "bio_link",
+      `${src}_link`,
+      src,
+      "community_link",
       String(req.query.v || "bio").slice(0, 100),
       ipHash,
       String(req.headers["user-agent"] || "").slice(0, 300),
