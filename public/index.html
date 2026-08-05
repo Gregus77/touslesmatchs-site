@@ -1221,24 +1221,37 @@ async function loadDailyAccordion(){
         var win=a.outcome==='win';
         var badgeStyle=win?'background:rgba(51,196,129,.14);color:var(--green)':'background:rgba(239,90,111,.14);color:var(--red)';
         var cote=(a.cote!=null && a.cote>1)?'@'+Number(a.cote).toFixed(2):'';
-        // Les paliers sont CUMULATIFS : un signal envoye sur Standard part aussi
-        // sur Premium et Elite. N'afficher qu'un seul palier laissait croire
-        // l'inverse (signale par Greg le 05/08/2026). On liste donc TOUS les
-        // groupes qui ont reellement recu le signal, du plus bas au plus haut.
-        var iDep=TIER_ORDRE.indexOf(a.tier);
+        // On lit la diffusion REELLE (champ sent, alimente par sig_sent_*) et non
+        // le palier theorique : une analyse peut correspondre aux criteres d'un
+        // palier sans avoir ete envoyee (plafond journalier, cote sortie de la
+        // fenetre ARJEL au moment de l'envoi...). Afficher le palier theorique
+        // en pretendant montrer la diffusion trompait le visiteur.
+        var envoye=a.sent||{};
+        var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
         var tierBadge='';
-        if(iDep!==-1){
-          tierBadge='<span class="tier-recu">Reçu par '
-            + TIER_ORDRE.slice(iDep).map(function(t){
+        if(canaux.length){
+          tierBadge='<span class="tier-recu">Envoyé sur '
+            + canaux.map(function(t){
                 var m=TIER_META[t];
                 return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
               }).join('')
             + '</span>';
-        } else if(a.tier==='hors-palier'){
-          // Publie sur le site mais diffuse sur aucun canal payant (cote hors
-          // fenetre ARJEL, sport non couvert...) : le dire plutot que de
-          // laisser un blanc que le visiteur interpreterait de travers.
-          tierBadge='<span class="tier-recu tier-none">Publié sur le site, non envoyé sur Telegram</span>';
+        } else {
+          // Non envoye : on donne le MOTIF plutot qu'un constat sec. Le visiteur
+          // comprend que la selection est filtree, pas que le systeme a rate
+          // quelque chose — c'est meme un argument de serieux.
+          var motif=a.diffusion_block||'';
+          var lisible=motif
+            ? (/confiance/i.test(motif)      ? 'confiance sous le seuil de diffusion'
+             : /ARJEL|cote/i.test(motif)      ? 'cote hors fenêtre ARJEL'
+             : /votes/i.test(motif)           ? 'accord des IA insuffisant'
+             : /qualite|qualité/i.test(motif) ? 'écartée par le filtre qualité'
+             : /deja|déjà/i.test(motif)       ? 'signal déjà envoyé ce jour-là'
+             : /feminin|féminin/i.test(motif) ? 'match féminin (exclu)'
+             : /ligue/i.test(motif)           ? 'ligue non fiable'
+             : 'critères de diffusion non atteints')
+            : 'critères de diffusion non atteints';
+          tierBadge='<span class="tier-recu tier-none">Analyse publique, non envoyée sur Telegram — '+esc(lisible)+'</span>';
         }
         return '<div class="day-acc-row">'
           + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+' '+tierBadge+'</div></div>'
@@ -1249,8 +1262,13 @@ async function loadDailyAccordion(){
       // tous les signaux gagnants du jour. Si les gagnants se repartissent sur
       // plusieurs paliers, on affiche le plus eleve — c'est celui qu'il fallait
       // reellement avoir pour ne rien rater.
-      var tiersGagnants=list.filter(function(a){return a.outcome==='win' && TIER_META[a.tier];})
-                            .map(function(a){return a.tier;});
+      // Palier requis calcule sur la diffusion REELLE, pas sur le palier theorique.
+      var tiersGagnants=[];
+      list.forEach(function(a){
+        if(a.outcome!=='win') return;
+        var e=a.sent||{};
+        TIER_ORDRE.forEach(function(t){ if(e[t]) tiersGagnants.push(t); });
+      });
       var tierRequis=null;
       TIER_ORDRE.forEach(function(t){ if(tiersGagnants.indexOf(t)!==-1) tierRequis=t; });
       var tmReq=tierRequis?TIER_META[tierRequis]:null;

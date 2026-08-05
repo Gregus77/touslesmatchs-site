@@ -11534,6 +11534,8 @@ app.get("/analysis-history", (req, res) => {
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free,
+             diffusion_block,
              agents_json
       FROM (
         SELECT *, ROW_NUMBER() OVER (
@@ -11599,6 +11601,21 @@ app.get("/analysis-history", (req, res) => {
         bet_category: r.bet_category,
         arjel: rowIsArjel(r),
         tier: tierLabel(r),
+        // Diffusion REELLE sur Telegram, a ne pas confondre avec `tier` :
+        // tier dit a quel palier l'analyse CORRESPONDAIT (criteres de qualite),
+        // ces champs disent sur quels canaux elle est REELLEMENT partie. Une
+        // analyse peut satisfaire les criteres Elite sans avoir ete envoyee
+        // (plafond journalier atteint, cote hors fenetre ARJEL au moment de
+        // l'envoi...). Afficher `tier` en pretendant montrer la diffusion
+        // induisait le visiteur en erreur — signale par Greg le 05/08/2026.
+        sent: {
+          standard: r.sig_sent_standard === 1 || r.sig_sent_standard === true,
+          premium: r.sig_sent_premium === 1 || r.sig_sent_premium === true,
+          elite: r.sig_sent_elite === 1 || r.sig_sent_elite === true,
+          free: r.sig_sent_free === 1 || r.sig_sent_free === true,
+        },
+        // Motif lisible du non-envoi (null si le signal est bien parti).
+        diffusion_block: r.diffusion_block || null,
         agents_count: agents.length,
       };
     });
