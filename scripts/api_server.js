@@ -13959,19 +13959,41 @@ app.get("/admin/heartbeat", (req, res) => {
 const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 const MISTRAL_KEY = process.env.MISTRAL_API_KEY || "";
 const CB_SYS = "Tu es l assistant client de TousLesMatchs.com. Reponds en francais. Connais: Abonnements: 1e, 9.90e Pro, 19.90e Elite. Live IA: 5 IA en direct. Winrate: 78%. Paiement Stripe. Telegram @TousLesMatchs_Free. Championnats: L1, PL, LaLiga, Serie A, BL, Brasileirao, Argentina. Sois poli et concis.";
-app.post("/chatbot/ask", express.json(), async (req, res) => {
+app.post("/chatbot/ask", express.json({ limit: "16kb" }), async (req, res) => {
   try {
-    const { question, email, session } = req.body || {};
+    const { question, email, code, session } = req.body || {};
     if (!question) return res.json({ ok: false, error: "Question vide" });
-    const userKey = email || session || "anon_" + Date.now();
+
+    // ── Correctif securite 05/08/2026 ────────────────────────────────────────
+    // user_key etait pris directement dans le corps de la requete : en envoyant
+    // {email:"victime@x.com"} n'importe qui relisait l'historique de chat de ce
+    // compte (les 10 derniers messages sont recharges dans le contexte). On
+    // n'accepte donc l'email comme cle QUE s'il est prouve par un code valide ;
+    // sinon on derive une cle opaque, non devinable, de l'identifiant de session.
+    const authed = email && code && verifyCode(email, code).valid;
+    const userKey = authed
+      ? String(email).toLowerCase()
+      : "anon_" + crypto.createHash("sha256")
+          .update(String(session || req.ip || "") + "tlm-chat-salt")
+          .digest("hex").slice(0, 24);
+
+    // Question bornee : sans limite, un seul POST pouvait pousser un prompt
+    // enorme vers Mistral (cout reel) et gonfler la table chat_messages.
+    const q = String(question).slice(0, 1000);
+
+    // Anti-spam : chaque appel coute de l'argent (Mistral). 10 questions par
+    // 10 minutes et par cle suffisent largement a un usage humain normal.
+    if (!rlAllow("chat_" + userKey, 10, 10 * 60000)) {
+      return res.status(429).json({ ok: true, answer: "Trop de questions d'un coup — réessaie dans quelques minutes." });
+    }
     // Traçabilité + plafond de dépense obligatoires pour tout appel IA (règle
     // finale du prompt maître). Anti-doublon non applicable à une conversation
     // libre : chaque requête a sa propre clé (voir allowChatbotCall).
     const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: userKey });
     if (!_chatGate.allowed) return res.json({ ok: true, answer: "Notre assistant est momentanement indisponible." });
     const hist = db.prepare("SELECT role, content FROM chat_messages WHERE user_key = ? ORDER BY id DESC LIMIT 10").all(userKey).reverse();
-    hist.push({ role: "user", content: question });
-    try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "user", question); } catch(e){}
+    hist.push({ role: "user", content: q });
+    try { db.prepare("INSERT INTO chat_messages (user_key,role,content,created_at) VALUES (?,?,?,datetime('now'))").run(userKey, "user", q); } catch(e){}
     let resp, data, answer;
     try {
       resp = await fetch(MISTRAL_API_URL, { method: "POST", headers: { "Content-Type": "application/json", "Authorization": "Bearer " + MISTRAL_KEY }, body: JSON.stringify({ model: "mistral-small-latest", messages: [{ role: "system", content: CB_SYS }, ...hist], max_tokens: 300, temperature: 0.3 }) });

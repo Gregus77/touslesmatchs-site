@@ -17,3 +17,10 @@ tmp/
 
 # Fichier généré par le Concile Hermès (write-only) — ne pas suivre
 site/index.html
+
+# Sauvegardes de donnees : ne doivent jamais etre versionnees ni servies
+# publiquement (elles contenaient d'anciens picks avec le mot "pari",
+# non conforme ANJ, et des stats perimees contredisant celles du site).
+*.backup
+*.backup-*
+public/data/*.backup*

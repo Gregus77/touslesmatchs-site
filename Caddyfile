@@ -65,6 +65,16 @@ www.touslesmatchs.com {
         reverse_proxy api:3001
     }
 
+    # Defense en profondeur : meme si un fichier sensible se retrouvait un jour
+    # dans /srv, il ne serait jamais servi. Ajoute apres l'audit du 05/08/2026,
+    # ou 9 fichiers picks.json.backup-* etaient publiquement telechargeables
+    # (donnees perimees, et le mot "pari" non conforme ANJ dedans).
+    @sensibles {
+        path *.backup *.backup-* *.bak *.db *.sqlite *.sqlite3 *.env *.log *.sql
+        path /.env* /.git/* /*.pem /*.key
+    }
+    respond @sensibles 404
+
     # Frontend statique
     handle {
         root * /srv
