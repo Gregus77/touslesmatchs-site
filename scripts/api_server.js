@@ -2307,7 +2307,7 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "sierra leone", "liberia", "gambia", "eritrea", "djibouti", "comoros",
   "south africa", "algeria · ligue", "tunisia · ligue", "egypt · premier",
   // Asie
-  "kazakhstan", "uzbekistan", "tajikistan", "kyrgyzstan", "turkmenistan",
+  "kazakhstan", "uzbekistan", "uzbek", "tajikistan", "kyrgyzstan", "turkmenistan",
   "myanmar", "cambodia", "laos", "vietnam", "v.league",
   "bangladesh", "nepal", "mongolia", "bhutan", "maldives", "brunei", "timor",
   "palestine", "jordan · ", "iraq", "syria", "yemen", "oman", "bahrain",
@@ -2404,9 +2404,17 @@ const TRUSTED_COMPETITIONS = [
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {
+  // On lit AUSSI league et country : selon la source (api-sports construit
+  // "Ligue · Pays" dans competition, TheSportsDB laisse le pays a part), le nom
+  // du pays peut n'exister que dans country — et la blacklist, qui raisonne
+  // beaucoup par pays, passait alors a cote. Cas constate le 05/08/2026 :
+  // "Olimpik-Mobiuz vs Jayxun · Pro League A · Uzbekistan" analyse malgre
+  // "uzbekistan" present dans la liste depuis longtemps.
   const raw = typeof matchOrCompetition === "string"
     ? matchOrCompetition
-    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+    : [matchOrCompetition?.competition, matchOrCompetition?.league,
+       matchOrCompetition?.country, matchOrCompetition?.home,
+       matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
@@ -2430,9 +2438,12 @@ function isCategoryBanned(matchOrCompetition = "") {
 // pas dans la whitelist. Le filtre strict isLowTrustCompetition reste utilisé pour
 // ce qu'Hermes recommande (pick quotidien, auto-concile).
 function isBlacklistedForLiveDisplay(matchOrCompetition = "") {
+  // league/country lus aussi, meme raison que dans isLowTrustCompetition.
   const raw = typeof matchOrCompetition === "string"
     ? matchOrCompetition
-    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
+    : [matchOrCompetition?.competition, matchOrCompetition?.league,
+       matchOrCompetition?.country, matchOrCompetition?.home,
+       matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (typeof matchOrCompetition === "object" && isWomenMatch(matchOrCompetition)) return true;
@@ -3527,7 +3538,21 @@ async function computeUpcomingPicks() {
       const pairKey = `${f.teams.home?.name || ""}_${f.teams.away?.name || ""}_${String(f.fixture.date || "").slice(0, 13)}`.toLowerCase();
       if (seenPairs.has(pairKey)) continue;
       seenPairs.add(pairKey);
-      const compObj = { competition: f.league?.name || "", league: f.league?.name || "", sport: "Football", home: f.teams.home?.name || "", away: f.teams.away?.name || "" };
+      // country DOIT figurer ici. Sur ce pipeline pre-match, f.league.name vaut
+      // le nom seul ("Pro League A"), contrairement au flux direct qui concatene
+      // "Nom · Pays". Sans le pays, la blacklist — qui raisonne largement par
+      // pays — ne pouvait rien bloquer : c'est ainsi que "Olimpik-Mobiuz vs
+      // Jayxun · Pro League A · Uzbekistan" s'est retrouve en "Notre selection"
+      // dans les matchs a venir, malgre "uzbekistan" present dans la liste
+      // (signale trois fois par Greg les 04 et 05/08/2026).
+      const compObj = {
+        competition: f.league?.name || "",
+        league: f.league?.name || "",
+        country: f.league?.country || "",
+        sport: "Football",
+        home: f.teams.home?.name || "",
+        away: f.teams.away?.name || "",
+      };
       if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
       // isWomenMatch() manquait sur ce pipeline pre-match (H2H) — seul le direct
       // (shouldAutoObserveMatch) l'appliquait. Une Liga MX Femenil a ete analysee

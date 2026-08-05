@@ -365,6 +365,14 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   .signal-particles{display:none}
 }
 
+
+/* Pastille de palier dans l'accordeon des verdicts : montre quel abonnement
+   il aurait fallu avoir pour recevoir le signal (argument de conversion). */
+.tier-chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;
+  padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);white-space:nowrap;vertical-align:middle}
+.tier-chip-day{margin-left:8px;font-size:11px}
+@media(max-width:520px){ .tier-chip-day{display:block;margin:4px 0 0 0;width:fit-content} }
 </style>
 <!-- Google Analytics (GA4) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
@@ -1189,19 +1197,46 @@ async function loadDailyAccordion(){
         var cote=Number(a.cote)>1?Number(a.cote):0;
         profit += a.outcome==='win' ? (cote?cote*10-10:0) : -10;
       });
+      // Palier minimum requis pour avoir recu chaque signal. L'API renvoie deja
+      // ce champ (voir tierLabel dans /analysis-history) : on le montre au
+      // visiteur pour qu'il voie concretement quel abonnement il lui aurait
+      // fallu ce jour-la. Les paliers sont cumulatifs : Standard recoit la
+      // selection la plus stricte, Premium l'elargit, Elite prend tout.
+      var TIER_META={
+        standard:{ico:'🥇',nom:'Standard',c:'var(--standard)'},
+        premium :{ico:'🥈',nom:'Premium', c:'var(--premium)'},
+        elite   :{ico:'🥉',nom:'Elite',   c:'var(--elite)'}
+      };
+      var TIER_ORDRE=['standard','premium','elite'];
       var rowsHtml=list.map(function(a){
         var win=a.outcome==='win';
         var badgeStyle=win?'background:rgba(51,196,129,.14);color:var(--green)':'background:rgba(239,90,111,.14);color:var(--red)';
         var cote=(a.cote!=null && a.cote>1)?'@'+Number(a.cote).toFixed(2):'';
+        var tm=TIER_META[a.tier];
+        var tierBadge=tm
+          ? '<span class="tier-chip" style="color:'+tm.c+'" title="Signal reçu par les abonnés '+tm.nom+' et au-dessus">'+tm.ico+' '+tm.nom+'</span>'
+          : '';
         return '<div class="day-acc-row">'
-          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div></div>'
+          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+' '+tierBadge+'</div></div>'
           + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
           + '</div>';
       }).join('');
+      // Resume de la journee : le palier le PLUS BAS suffisant pour avoir eu
+      // tous les signaux gagnants du jour. Si les gagnants se repartissent sur
+      // plusieurs paliers, on affiche le plus eleve — c'est celui qu'il fallait
+      // reellement avoir pour ne rien rater.
+      var tiersGagnants=list.filter(function(a){return a.outcome==='win' && TIER_META[a.tier];})
+                            .map(function(a){return a.tier;});
+      var tierRequis=null;
+      TIER_ORDRE.forEach(function(t){ if(tiersGagnants.indexOf(t)!==-1) tierRequis=t; });
+      var tmReq=tierRequis?TIER_META[tierRequis]:null;
+      var tierJour=tmReq
+        ? '<span class="tier-chip tier-chip-day" style="color:'+tmReq.c+'" title="Abonnement minimum pour avoir reçu tous les signaux gagnants de ce jour">'+tmReq.ico+' '+tmReq.nom+'</span>'
+        : '';
       return '<div class="day-acc-item" data-day-idx="'+idx+'">'
         + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
         +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
-        +   '<div class="day-acc-summary" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+wins+'/'+list.length+' gagnés · '+fmtSignedEur(profit)+'</div>'
+        +   '<div class="day-acc-summary" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+wins+'/'+list.length+' gagnés · '+fmtSignedEur(profit)+' '+tierJour+'</div>'
         + '</div>'
         + '<div class="day-acc-body">'+rowsHtml+'</div>'
         + '</div>';
