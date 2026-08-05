@@ -316,6 +316,18 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 .mm-lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .mm-lang-grid button{background:var(--panel2);border:1px solid var(--b1);color:var(--tx2);border-radius:8px;padding:8px 6px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s}
 .mm-lang-grid button:hover{border-color:var(--violet2);color:var(--tx)}
+
+/* ── Selecteur de langue (barre du haut, desktop) ── */
+.nav-lang{position:relative}
+.nav-lang-btn{background:transparent;border:1px solid var(--b2);color:var(--tx2);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
+.nav-lang-btn:hover{border-color:var(--violet2);color:var(--tx)}
+.nav-lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:210;background:var(--panel);border:1px solid var(--b2);border-radius:10px;padding:6px;min-width:150px;box-shadow:0 16px 34px -12px rgba(0,0,0,.6)}
+.nav-lang-menu.open{display:block}
+.nav-lang-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--tx2);padding:9px 12px;border-radius:7px;font-size:13.5px;font-family:inherit;cursor:pointer}
+.nav-lang-menu button:hover{background:var(--panel2);color:var(--tx)}
+/* Sur mobile le selecteur du menu burger suffit : on masque celui de la nav
+   pour ne pas surcharger une barre deja serree (cf. media queries 480/560px). */
+@media(max-width:900px){ .nav-lang{display:none} }
 </style>
 <!-- Google Analytics (GA4) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
@@ -340,6 +352,17 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
     <a href="#plans" data-i18n="nav_plans">Tarifs</a>
   </div>
   <div class="nav-right">
+    <div class="nav-lang">
+      <button type="button" class="nav-lang-btn" onclick="toggleLangMenu()" aria-haspopup="true">🌐 <span id="lang-current">Français</span> ▾</button>
+      <div class="nav-lang-menu" id="nav-lang-menu">
+        <button type="button" onclick="pickLang('fr')">Français</button>
+        <button type="button" onclick="pickLang('en')">English</button>
+        <button type="button" onclick="pickLang('es')">Español</button>
+        <button type="button" onclick="pickLang('pt')">Português</button>
+        <button type="button" onclick="pickLang('ru')">Русский</button>
+        <button type="button" onclick="pickLang('zh')">中文</button>
+      </div>
+    </div>
     <div id="nav-auth"><button class="btn btn-ghost" onclick="openModal()" data-i18n="nav_login">Se connecter</button></div>
     <a href="/dashboard" class="btn btn-prim" data-i18n="nav_signup">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
@@ -354,7 +377,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
   <a href="#plans" onclick="toggleMenu()" data-i18n="nav_plans">Tarifs</a>
   <a href="/dashboard" data-i18n="nav_signup">Créer mon compte gratuit</a>
   <div class="mm-lang">
-    <div class="mm-lang-h"><span data-i18n="lang_label">Langue</span> · <span id="lang-current">Français</span></div>
+    <div class="mm-lang-h"><span data-i18n="lang_label">Langue</span></div>
     <div class="mm-lang-grid">
       <button type="button" onclick="i18n.setLang('fr')">Français</button>
       <button type="button" onclick="i18n.setLang('en')">English</button>
@@ -1216,6 +1239,16 @@ loadStandardYesterday();
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/i18n.js" defer></script>
+<script>
+function toggleLangMenu(){ document.getElementById('nav-lang-menu').classList.toggle('open'); }
+function pickLang(l){ i18n.setLang(l); document.getElementById('nav-lang-menu').classList.remove('open'); }
+// Clic en dehors : on referme, sinon le menu reste ouvert sur la page.
+document.addEventListener('click', function(e){
+  var box = document.querySelector('.nav-lang');
+  var menu = document.getElementById('nav-lang-menu');
+  if (box && menu && !box.contains(e.target)) menu.classList.remove('open');
+});
+</script>
 <script src="/js/cookie-consent.js" defer></script>
 <script src="/js/simplewebauthn-browser.js"></script>
 </body>
