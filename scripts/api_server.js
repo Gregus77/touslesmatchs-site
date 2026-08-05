@@ -1995,6 +1995,51 @@ function handleApiSportsErrors(sport, data) {
 // Pour chaque categorie, on retient le cote majoritaire parmi les agents qui
 // se sont prononces, avec leur confiance moyenne — jamais un chiffre invente,
 // toujours la moyenne de ce que les agents ont reellement renvoye.
+// ── Traduction anglaise des libelles d'analyse (bloc bilingue Telegram) ──────
+// Un canal Telegram diffuse le MEME message a tous les abonnes : impossible
+// d'envoyer une langue par personne. Decision fondateur du 05/08/2026 :
+// chaque signal porte le bloc francais puis un bloc anglais compact.
+// Les noms d'equipes, scores, cotes et pourcentages sont deja universels et
+// ne sont pas dupliques — seuls les libelles et la mention legale le sont.
+const BET_LABEL_EN = {
+  "Victoire domicile": "Home win",
+  "Victoire extérieur": "Away win",
+  "Match nul": "Draw",
+  "BTTS Oui": "Both teams to score - Yes",
+  "BTTS Non": "Both teams to score - No",
+  "Over 0.5 buts": "Over 0.5 goals",
+  "Under 0.5 buts": "Under 0.5 goals",
+  "Over 1.5 buts": "Over 1.5 goals",
+  "Under 1.5 buts": "Under 1.5 goals",
+  "Over 2.5 buts": "Over 2.5 goals",
+  "Under 2.5 buts": "Under 2.5 goals",
+  "But en 1ère mi-temps": "Goal in the 1st half",
+  "Aucun but en 1ère mi-temps": "No goal in the 1st half",
+  "But en 2ème mi-temps": "Goal in the 2nd half",
+  "Aucun but en 2ème mi-temps": "No goal in the 2nd half",
+  "Domicile marque en 1ère MT": "Home team to score in the 1st half",
+  "Domicile ne marque pas en 1ère MT": "Home team not to score in the 1st half",
+  "Extérieur marque en 1ère MT": "Away team to score in the 1st half",
+  "Extérieur ne marque pas en 1ère MT": "Away team not to score in the 1st half",
+  "Domicile marque en 2ème MT": "Home team to score in the 2nd half",
+  "Domicile ne marque pas en 2ème MT": "Home team not to score in the 2nd half",
+  "Extérieur marque en 2ème MT": "Away team to score in the 2nd half",
+  "Extérieur ne marque pas en 2ème MT": "Away team not to score in the 2nd half",
+  "Double chance 1X": "Double chance 1X",
+  "Double chance X2": "Double chance X2",
+};
+// Repli volontaire sur le libelle francais si un nouveau marche apparait sans
+// traduction : mieux vaut un mot francais qu'un blanc dans le message.
+function betLabelEn(bet) {
+  const raw = String(bet || "").trim();
+  if (!raw) return "";
+  if (BET_LABEL_EN[raw]) return BET_LABEL_EN[raw];
+  // "Victoire Shamrock Rovers" & co : nom d'equipe accole, on traduit le verbe.
+  const m = raw.match(/^Victoire\s+(.+)$/i);
+  if (m) return `${m[1]} to win`;
+  return raw;
+}
+
 const MARKET_SCORE_LABELS = {
   resultat: { dom: "Victoire domicile", ext: "Victoire extérieur", nul: "Match nul" },
   ou05: { "o0.5": "Over 0.5 buts", "u0.5": "Under 0.5 buts" },
@@ -8007,6 +8052,12 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     ``,
     `━━━━━━━━━━━━━━━━━━`,
     `🤖 Concile IA — TousLesMatchs`,
+    // Bloc anglais compact (voir BET_LABEL_EN) : le score final et le bilan
+    // chiffres sont deja lisibles tels quels, on ne traduit que le verdict
+    // et le type d'analyse.
+    ``,
+    `🇬🇧 <b>STRONG SIGNAL ${outcome === "win" ? "WON" : "LOST"}</b> — ${betLabelEn(analysis.best_bet)}`,
+    `⚠️ 18+ — Responsible gaming`,
   ].filter(Boolean).join("\n");
 
   const freeMsg = [
@@ -8029,6 +8080,9 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     ``,
     `━━━━━━━━━━━━━━━━━━`,
     `🤖 Concile IA — TousLesMatchs`,
+    ``,
+    `🇬🇧 <b>STRONG SIGNAL ${outcome === "win" ? "WON" : "LOST"}</b> — every result stays public, wins and losses alike.`,
+    `⚠️ 18+ — Responsible gaming`,
   ].filter(Boolean).join("\n");
 
   // Cohérence : on ne poste le résultat QUE sur les canaux qui ont réellement reçu
@@ -12245,8 +12299,14 @@ app.post("/internal/signal-notify", async (req, res) => {
 
     const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Rugby:"🏉" };
     const tgIcon = sportIcons2[signal.sport] || "🎯";
-    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Score de confiance : <b>${conf}/100</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+    // Bloc anglais compact : on ne repete PAS les noms d'equipes, le score ni la
+    // competition (deja universels quelques lignes plus haut) — uniquement ce
+    // qu'un non-francophone ne peut pas deviner : le type d'analyse et la
+    // mention legale. Message ~6 lignes plus long, pas deux fois plus long.
+    const enPremium = `\n\n🇬🇧 AI analysis: <b>${betLabelEn(signal.bet)}</b>\n📊 Confidence: <b>${conf}/100</b>\n⚠️ 18+ — Responsible gaming`;
+    const enFree = `\n\n🇬🇧 The exact selection and full analysis are reserved for Premium/Elite subscribers.\n⚠️ 18+ — Responsible gaming`;
+    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Score de confiance : <b>${conf}/100</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enPremium}`;
+    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enFree}`;
     // Signal de niveau Premium : Premium et Elite le reçoivent toujours (modèle
     // imbriqué), Standard uniquement s'il atteint son seuil plus exigeant.
     await sendToPaidChannels(tgPremiumText, { tag: "signal-notify", includeStandard: (Number(conf) || 0) >= STANDARD_MIN_CONF });
