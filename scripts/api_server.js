@@ -6401,9 +6401,20 @@ function saveAgentPredictions(match, agentResults) {
     const stmt = db.prepare(
       "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence) VALUES (?,?,?,?,?,?)"
     );
+    // Un agent qui n'a rien renvoye produisait une ligne avec bet="—". Ces
+    // lignes ne peuvent JAMAIS etre resolues (il n'y a pas de pronostic a
+    // confronter au score) : elles restaient donc eternellement "en attente"
+    // et representaient 66% des predictions non resolues (10 689 sur 16 241,
+    // mesure le 06/08/2026). Elles faussaient le taux de resolution affiche
+    // et noyaient les vraies predictions en attente dans les journaux.
+    // On ne les enregistre plus — une non-reponse n'est pas une prediction.
+    let ignorees = 0;
     agentResults.forEach(a => {
-      stmt.run(matchKey, match.home, match.away, a.name, a.bet, a.confidence ?? 55);
+      const bet = String(a.bet || "").trim();
+      if (!bet || bet === "—" || bet === "-" || bet === "N/A") { ignorees++; return; }
+      stmt.run(matchKey, match.home, match.away, a.name, bet, a.confidence ?? 55);
     });
+    if (ignorees) console.log(`[agent-perf] ${ignorees} agent(s) sans pronostic exploitable — non enregistres`);
     console.log(`[agent-perf] ${agentResults.length} prédictions sauvegardées: ${match.home} vs ${match.away}`);
   } catch(e) { console.error("[agent-perf] save:", e.message); }
 }
