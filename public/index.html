@@ -356,9 +356,18 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 .hero-mobile-fallback{display:none;padding:28px}
 .hero-card-premium + .live-panel{width:100%}
 @media(max-width:700px){
-  .hero-premium-shot{display:none}
-  .hero-mobile-fallback{display:block}
+  /* Le visuel du Concile (5 IA envoyant leurs analyses) etait masque sous
+     700px et remplace par une version texte. Demande de Greg le 06/08/2026 :
+     le garder sur mobile, c'est l'element qui donne son identite au site.
+     On CONSERVE le bloc texte en dessous : les boutons dessines dans le SVG
+     deviennent petits sur un telephone, le fallback assure des CTA lisibles
+     et confortables au doigt. */
+  .hero-premium-shot{display:block}
+  .hero-mobile-fallback{display:block;padding-top:12px}
   .hero-card-premium{overflow:visible;width:100%;max-width:none}
+  /* Zones cliquables du SVG neutralisees sur mobile : trop petites pour etre
+     touchees sans erreur, les vrais boutons sont ceux du bloc texte. */
+  .hero-hotspot{display:none}
 }
 @media(prefers-reduced-motion:reduce){
   .signal-flow,.concile-pulse{animation:none}
