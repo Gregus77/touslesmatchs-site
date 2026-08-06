@@ -4554,7 +4554,25 @@ Réponds en JSON pur (pas de markdown):
       // au garde-fou, pas seulement avant les replis du bas de liste : c'est
       // l'absence de cette garde sur les deux appels ci-dessous (Perplexity et
       // Qwen "titulaires") qui a vide le budget OpenRouter le 29-30/07/2026.
-      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}`;
+      // La cle anti-doublon du garde-fou budgetaire doit inclure l'ETAT du match,
+      // pas seulement les equipes. Sans cela, la 2e analyse d'un match en direct
+      // (l'auto-concile repasse toutes les 6 minutes, le score ayant evolue)
+      // etait refusee comme "deja traite aujourd'hui" : OpenRouter etait bloque
+      // et le systeme se rabattait sur les comptes directs — Cohere (quota
+      // d'essai epuise), Perplexity (cle invalide), DeepSeek (solde nul). Plus
+      // aucun agent ne votait, la confiance tombait a 55% (absence de consensus)
+      // et AUCUN signal ne partait. Diagnostique le 06/08/2026 apres deux jours
+      // sans diffusion, alors que le budget n'etait qu'a 1,03 EUR sur 3.
+      //
+      // On garde la protection anti-boucle : le score et une tranche de 15
+      // minutes suffisent a distinguer deux etats reellement differents, tout en
+      // bloquant un worker qui rappellerait le meme instant en rafale.
+      const _stateTag = [
+        match.score_home ?? "x",
+        match.score_away ?? "x",
+        Math.floor(Number(match.minute || 0) / 15),
+      ].join("-");
+      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}_${_stateTag}`;
       const _fallbackCompetition = match.competition || match.league || "";
       // Consolidation OpenRouter du 04/08/2026 (decision du fondateur) :
       // Perplexity, DeepSeek, Mistral et Cohere avaient chacun leur propre
