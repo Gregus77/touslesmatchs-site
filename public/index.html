@@ -337,6 +337,15 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 .row-hero{grid-template-columns:1fr}
 .hero-card-premium{padding:0;display:block;overflow:hidden;background:#02051a;border-color:rgba(124,92,255,.55);box-shadow:0 0 30px rgba(72,57,255,.14);width:84%;max-width:1080px;margin-inline:auto}
 .hero-premium-shot{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:#02051a;isolation:isolate}
+/* Repli de hauteur pour les navigateurs sans aspect-ratio (Mi Browser, Chrome
+   Android ancien...). Sans lui, le conteneur n'a AUCUNE hauteur — ses enfants
+   sont tous en position absolue — et le visuel du Concile reste invisible,
+   sans erreur ni message. Constate le 06/08/2026 : visible sur Galaxy Z Fold 5
+   (ecran large, deja au-dessus du seuil) mais absent sur Redmi.
+   La technique du padding-top en pourcentage reproduit le ratio 4/3 (3/4=75%)
+   et fonctionne partout depuis toujours. */
+.hero-premium-shot::before{content:"";display:block;padding-top:75%}
+@supports (aspect-ratio:4/3){ .hero-premium-shot::before{display:none} }
 .hero-premium-image{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover;z-index:1;user-select:none;-webkit-user-drag:none}
 .hero-signal-layer{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible}
 .signal-glow,.signal-flow{fill:none;stroke-linecap:round;stroke-linejoin:round}
