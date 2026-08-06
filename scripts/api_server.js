@@ -1187,13 +1187,16 @@ function getAdaptiveSignalThreshold() {
       const aboveTotal = cumTotal - runTotal;
       const aboveWins = cumWins - runWins;
       const aboveWinrate = aboveTotal > 0 ? Math.round(aboveWins / aboveTotal * 100) : 0;
-      // Barre relevee 65->82 le 05/08/2026 : avec 65%, ce seuil convergeait quasiment
-      // vers le plancher general lui-meme (deja ~76-79% de winrate reel au-dessus du
-      // plancher), donc "Signal Fort" ne signifiait presque rien de plus que "publie".
-      // A 82%, seule la tranche reellement superieure (85%+, 85.3% de winrate reel sur
-      // 30j) passe la barre — Signal Fort redevient un marqueur de qualite distinct,
-      // qui se recalibre tout seul (cache 30 min) si la distribution reelle change.
-      if (aboveWinrate >= 82 && aboveTotal >= 5) {
+      // ⚠️ Barre remise a 65 le 06/08/2026 apres un aller-retour.
+      // Je l'avais relevee a 82 la veille pour que "Signal Fort" designe une
+      // tranche vraiment superieure. Effet reel mesure le lendemain : le seuil
+      // de diffusion a converge a 85, et PLUS AUCUN signal n'est parti pendant
+      // deux jours (motifs "confiance X < seuil 85" sur toutes les analyses).
+      // Le raisonnement de depart n'etait pas faux, mais il portait sur le
+      // libelle d'un badge ; le cout etait l'arret complet de la diffusion.
+      // Ne pas relever cette valeur sans verifier, sur plusieurs jours, combien
+      // de signaux passent encore reellement.
+      if (aboveWinrate >= 65 && aboveTotal >= 5) {
         threshold = b.min;
         break;
       }
