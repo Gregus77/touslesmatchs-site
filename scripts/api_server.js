@@ -13475,6 +13475,83 @@ function checkAnalyticsSchedule() {
 
   // Watchdog anti-perte : détecte une chute brutale du nombre d'analyses
   dataIntegrityWatchdog();
+
+  // AUTO 3 — surveillance du Concile, contrôlée toutes les heures
+  concileHealthWatchdog();
+}
+
+// ── Surveillance du Concile (07/08/2026) ──────────────────────────────────────
+// Ne existait pas : Hermes produisait les analyses mais rien ne surveillait leur
+// QUALITE. Constate ce jour-la sur 7 jours : 311 analyses, 5 signaux diffuses,
+// 192 analyses (62%) sorties a 55% « aucun consensus », 76 sans le moindre vote,
+// et jamais une seule fois les 5 IA d'accord. Personne n'a ete prevenu — le
+// fondateur l'a decouvert en demandant trois fois pourquoi il ne recevait rien.
+//
+// Un systeme qui tourne seul la nuit doit crier quand il deraille. Trois
+// signaux d'alerte, chacun limite a un envoi par 12h pour ne pas harceler.
+const CONCILE_ALERT_COOLDOWN_MS = 12 * 3600 * 1000;
+const _concileAlerts = { agents: 0, consensus: 0, diffusion: 0 };
+
+function concileHealthWatchdog() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  try {
+    const depuis24h = new Date(Date.now() - 24 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
+    const depuis48h = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
+    const rows24 = db.prepare(
+      "SELECT confidence, consensus_votes, sig_sent_standard, sig_sent_premium, sig_sent_elite" +
+      " FROM concile_analyses WHERE analysed_at >= ?"
+    ).all(depuis24h);
+    // Sous 20 analyses, les pourcentages ne veulent rien dire (treve, nuit,
+    // redemarrage). On ne declenche rien plutot que d'alerter sur du bruit.
+    if (rows24.length < 20) return;
+
+    const maintenant = Date.now();
+    const alerte = (cle, msg) => {
+      if (maintenant - _concileAlerts[cle] < CONCILE_ALERT_COOLDOWN_MS) return;
+      _concileAlerts[cle] = maintenant;
+      console.error(`[concile-watchdog] ${cle} : alerte envoyee`);
+      sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg).catch(() => {});
+    };
+
+    // 1. Agents muets — le plus grave : le Concile ne delibere pas du tout.
+    const sansVote = rows24.filter(r => !r.consensus_votes).length;
+    const pctSansVote = Math.round((sansVote / rows24.length) * 100);
+    if (pctSansVote >= 25) {
+      alerte("agents", `🔴 <b>Concile : les IA ne repondent plus</b>\n\n` +
+        `<b>${sansVote}</b> analyses sur ${rows24.length} (${pctSansVote}%) n'ont recu <b>aucun vote</b> en 24h.\n\n` +
+        `Les agents echouent silencieusement : cle expiree, quota depasse ou fournisseur injoignable. ` +
+        `Tant que ca dure, chaque analyse coute des jetons pour un verdict vide.\n\n` +
+        `<code>docker logs touslesmatchs-api --tail 400 | grep "aucun vote exploitable"</code>`);
+    }
+
+    // 2. Non-consensus chronique — les IA repondent mais ne convergent jamais.
+    const sansConsensus = rows24.filter(r => Number(r.confidence) <= 55).length;
+    const pctSansConsensus = Math.round((sansConsensus / rows24.length) * 100);
+    if (pctSansConsensus >= 50) {
+      alerte("consensus", `🟠 <b>Concile : pas de consensus</b>\n\n` +
+        `<b>${sansConsensus}</b> analyses sur ${rows24.length} (${pctSansConsensus}%) sortent a 55% ` +
+        `« aucun consensus » en 24h.\n\n` +
+        `Il faut 3 IA d'accord sur le MEME marche pour qu'un signal existe. ` +
+        `Au-dela de 50%, ce n'est plus de la prudence, c'est un dysfonctionnement : ` +
+        `agents en echec, ou marches proposes trop dispersés pour converger.`);
+    }
+
+    // 3. Production sans diffusion — le tunnel se remplit, rien n'en sort.
+    const rows48 = db.prepare(
+      "SELECT sig_sent_standard, sig_sent_premium, sig_sent_elite" +
+      " FROM concile_analyses WHERE analysed_at >= ?"
+    ).all(depuis48h);
+    const diffuses48 = rows48.filter(r => r.sig_sent_standard === 1 || r.sig_sent_premium === 1 || r.sig_sent_elite === 1).length;
+    if (rows48.length >= 30 && diffuses48 === 0) {
+      alerte("diffusion", `🟡 <b>Aucun signal diffuse depuis 48h</b>\n\n` +
+        `<b>${rows48.length}</b> analyses produites, <b>0</b> envoyee sur Telegram.\n\n` +
+        `Le budget IA est consomme sans qu'aucun abonne ne recoive quoi que ce soit. ` +
+        `Motifs a verifier :\n` +
+        `<code>docker exec touslesmatchs-api node -e "const d=require('better-sqlite3');const b=new d('/data/tlm.db',{readonly:true});const c=new Date(Date.now()-48*36e5).toISOString().slice(0,19).replace('T',' ');const m={};b.prepare('SELECT diffusion_block b FROM concile_analyses WHERE analysed_at>=?').all(c).forEach(x=>{const k=x.b||'(aucun)';m[k]=(m[k]||0)+1});console.log(m)"</code>`);
+    }
+  } catch (e) {
+    console.error("[concile-watchdog]", e.message);
+  }
 }
 
 // ── Watchdog d'intégrité : alerte si la base perd des données ──────────────────
