@@ -2389,7 +2389,7 @@ const CATEGORY_BAN_KEYWORDS = [
 
 const LOW_TRUST_COMPETITION_KEYWORDS = [
   // Ligues exclues manuellement (performances négatives — rapports Hermes)
-  "bulgaria", "serbia", "usl league two",
+  "serbia", "usl league two",
   "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
   "· china", "china", "chinese",
   "australia cup",
@@ -2446,6 +2446,10 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   // computeUpcomingPicks, qui ne transmettait meme pas le pays. On les inscrit
   // donc EN DUR : LOW_TRUST est verifie en premier et gagne toujours, quel que
   // soit le chemin.
+  // Finlande et Bulgarie RETIREES de cette liste le 07/08/2026 : elles passent
+  // en trusted_secondary / watchlist_shadow (voir LEAGUE_TIERS). Les divisions
+  // inferieures finlandaises restent bannies plus bas (kakkonen, ykkonen,
+  // lohko, kolmonen) — seule la premiere division est concernee.
   "poland", "pologne", "ekstraklasa", "i liga · poland",
   "czech", "tchequie", "fortuna liga", "chance liga",
   // Pas de "liga i" / "liga ii" ici : la correspondance se fait en sous-chaine,
@@ -2454,9 +2458,8 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "romania", "roumanie", "superliga · romania",
   "russia", "russie", "russian premier", "fnl",
   "ukraine", "ukrainian premier",
-  "finland", "finlande", "veikkausliiga",
-  // Europe — divisions inférieures/ligues exotiques
-  "estonia", "latvia", "lithuania", "faroe", "gibraltar",
+    // Europe — divisions inférieures/ligues exotiques
+  "estonia", "latvia", "faroe", "gibraltar",
   "andorra", "malta", "san marino", "kosovo", "north macedonia",
   "albania", "moldova", "belarus", "armenia",
   "georgia · erovnuli", "georgian erovnuli",
@@ -2474,6 +2477,48 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "npsl", "nisa", "mls next", "mls next pro",
   "us open cup", "usl w league",
 ];
+
+// ── Classification des ligues (07/08/2026, decision du fondateur) ────────────
+// Objectif : augmenter le volume analysable avant la reprise des grands
+// championnats, sans degrader la qualite ni envoyer des signaux faibles.
+//
+//   trusted_major      — TRUSTED_COMPETITIONS, regime normal
+//   trusted_secondary  — analyse ET diffusion autorisees, mais sous conditions
+//                        strictes : cote REELLE obligatoire (jamais estimee),
+//                        confiance rehaussee, resultat tracable
+//   watchlist_shadow   — analyse SEULEMENT. Jamais de diffusion abonne, jamais
+//                        de canal payant. On accumule des resultats resolus
+//                        avant de decider si on les ouvre.
+//
+// Finlande et Bulgarie ont ete retirees de la liste noire pour rendre ceci
+// possible ; leurs divisions inferieures y restent.
+const LEAGUE_TIER_SECONDARY = [
+  "superliga · denmark", "danish superliga", "superligaen", "denmark · superliga",
+  "veikkausliiga", "finland · veikkausliiga",
+  "nb i", "nb1", "otp bank liga", "hungary · nb", "hungarian nb",
+];
+const LEAGUE_TIER_WATCHLIST = [
+  "prvaliga", "slovenia · prva", "slovenian prvaliga",
+  "parva liga", "first league · bulgaria", "bulgaria · first", "efbet liga",
+  "a lyga", "lithuania · a lyga", "lithuanian a lyga",
+];
+// Points de confiance exiges EN PLUS du seuil normal pour une ligue secondaire.
+const SECONDARY_CONF_BONUS = Math.max(0, Number(process.env.SECONDARY_CONF_BONUS || 2));
+
+function leagueHaystack(match) {
+  if (typeof match === "string") return match.toLowerCase();
+  return [match?.competition, match?.league, match?.country]
+    .filter(Boolean).join(" · ").toLowerCase();
+}
+// trusted_major | trusted_secondary | watchlist_shadow | null (non classee)
+function leagueTier(match) {
+  const h = leagueHaystack(match);
+  if (!h) return null;
+  if (LEAGUE_TIER_WATCHLIST.some(k => h.includes(k))) return "watchlist_shadow";
+  if (LEAGUE_TIER_SECONDARY.some(k => h.includes(k))) return "trusted_secondary";
+  if (TRUSTED_COMPETITIONS.some(k => h.includes(k))) return "trusted_major";
+  return null;
+}
 
 const TRUSTED_COMPETITIONS = [
   "ligue 1", "ligue 2", "coupe de france",
@@ -2541,6 +2586,13 @@ function isLowTrustCompetition(matchOrCompetition = "") {
   const value = String(raw || "").toLowerCase();
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
+  // Ligues classees secondaire ou en observation (07/08/2026) : elles ne sont
+  // pas "de confiance" au sens du regime normal, mais elles doivent pouvoir
+  // etre ANALYSEES. Ce sont les barrieres de DIFFUSION, plus bas, qui decident
+  // ce qui sort — cote reelle obligatoire, confiance rehaussee, et aucune
+  // diffusion du tout pour l'observation.
+  if (LEAGUE_TIER_SECONDARY.some(k => value.includes(k))) return false;
+  if (LEAGUE_TIER_WATCHLIST.some(k => value.includes(k))) return false;
   return true;
 }
 
@@ -5193,7 +5245,35 @@ Réponds en JSON pur (pas de markdown):
   // répondre factuellement à "pourquoi 0 signal aujourd'hui ?" au lieu de
   // supposer. Écrit en base plus bas, agrégé par /admin/funnel-report.
   let _tierBlock = null; // motif de non-diffusion detecte dans le bloc palier
+  // ── Regime par classe de ligue (07/08/2026, decision du fondateur) ─────────
+  // "Le but n'est pas d'avoir plus de signaux a tout prix. Le but est de
+  // reperer les ligues qui peuvent devenir rentables sans salir l'historique."
+  // On evalue ces barrieres AVANT les autres : une ligue en observation ne doit
+  // jamais sortir, quel que soit son score par ailleurs.
+  const _tier = leagueTier(match);
+  const _coteReelle = Number(analysisResult.cote) > 1
+    && !!analysisResult.cote_source
+    && !/estimation/i.test(String(analysisResult.cote_source));
+  const _blockTier = (() => {
+    if (_tier === "watchlist_shadow") {
+      // Deux motifs distincts, parce qu'ils ne mènent pas à la même décision
+      // dans trois mois : une analyse sans cote reelle ne pourra JAMAIS compter
+      // dans le bilan d'ouverture de la ligue, celle avec cote si.
+      return _coteReelle
+        ? "watchlist_shadow_only"
+        : "missing_real_odd_watchlist (signal sportif fort, mais disponibilite bookmaker a verifier)";
+    }
+    if (_tier !== "trusted_secondary") return null;
+    // Ligue secondaire : cote REELLE obligatoire, jamais une estimation.
+    if (!_coteReelle) return "missing_real_odd_secondary (signal sportif fort, mais disponibilite bookmaker a verifier)";
+    if (analysisResult.confidence < signalThreshold + SECONDARY_CONF_BONUS) {
+      return `secondary_league_threshold (confiance ${analysisResult.confidence} < ${signalThreshold + SECONDARY_CONF_BONUS})`;
+    }
+    return null;
+  })();
+
   const _blockReason = (() => {
+    if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
     if (voteCountForSignal < 3) return `votes ${voteCountForSignal} < 3`;
