@@ -45,6 +45,40 @@ Avant toute reprise site/API, lire `docs/handoff/2026-07-25-codex-live-vote-ia.m
 - Claude/Codex peuvent modifier site/API sur demande de Greg. Hermes audite/recommande ; Hermes ne doit pas pousser de modification dans `public/`, `site/`, `scripts/api_server.js`, `scripts/bookmakers.config.js`, `docker-compose.yml` ou `Caddyfile` sans validation explicite de Greg.
 - Piege VPS : `site/index.html` est le rendu public servi. Ne jamais ecraser `site/index.html` avec `public/index.html` sans verification navigateur/public.
 
+## Regle de collaboration GPT / Claude sur `public/index.html` (07/08/2026)
+
+Etablie par le fondateur apres qu'une refonte visuelle a supprime sans le
+vouloir des fonctions metier livrees la veille (pastilles de palier), et
+qu'une reprise cote API a failli ecraser du travail graphique.
+
+**Ne JAMAIS remplacer `public/index.html` en entier.**
+
+| Responsable | Perimetre |
+|-------------|-----------|
+| **GPT** | Rendu visuel : hero Concile (cerveaux, electricite), layout, cartes, typographie, animations, CSS |
+| **Claude** | Logique metier : appels API, `TIER_META`, `tier-recu`, `loadDailyAccordion`, `sent` / `diffusion_block`, Stripe, Telegram, Brevo, historique |
+
+Avant de modifier un bloc :
+1. Identifier s'il est **visuel**, **fonctionnel** ou **mixte**.
+2. Si mixte : demander a Greg ou a l'autre IA avant de toucher.
+3. Modifier le minimum necessaire, jamais le fichier entier.
+4. Verifier que ces marqueurs existent toujours apres modification :
+   `hero-exact-img`, `hero-concile-wow.webp`, `TIER_META`, `tier-recu`,
+   `loadDailyAccordion`, `nav-lang`.
+5. Ne jamais supprimer une fonction JS liee a `fetch('/api/...')` sans
+   accord explicite de Greg.
+
+Objectif : garder le design GPT intact — en particulier le hero Concile avec
+cerveaux et electricite — tout en conservant les fonctions Claude : pastilles
+de palier, diffusion Telegram reelle, image optimisee, logique API.
+
+Controle rapide avant de declarer un travail termine sur ce fichier :
+```bash
+for m in hero-exact-img hero-concile-wow.webp TIER_META tier-recu loadDailyAccordion nav-lang; do
+  printf "  %-24s %s\n" "$m" "$(grep -c "$m" public/index.html)"; done
+```
+Un zero sur n'importe quelle ligne = regression, ne pas livrer.
+
 ## Regles automatiques (s'appliquent a CHAQUE session)
 
 ### Economie de tokens

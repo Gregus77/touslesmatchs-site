@@ -2341,6 +2341,23 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "honduras", "guatemala", "el salvador", "nicaragua",
   "costa rica", "panama · liga", "haiti", "jamaica", "trinidad",
   "dominican", "cuba", "belize", "suriname", "guyana",
+  // Championnats europeens retires de TRUSTED le 03/08/2026 : ils n'etaient
+  // bloques que par le "default = refuser" en fin de filtre. Greg les voyait
+  // malgre tout apparaitre (07/08/2026, liste dictee : Pologne, Rep. Tcheque,
+  // Roumanie L2, Russie, Finlande...). Un default ne protege que si TOUS les
+  // chemins d'appel passent par le filtre — ce n'etait pas le cas de
+  // computeUpcomingPicks, qui ne transmettait meme pas le pays. On les inscrit
+  // donc EN DUR : LOW_TRUST est verifie en premier et gagne toujours, quel que
+  // soit le chemin.
+  "poland", "pologne", "ekstraklasa", "i liga · poland",
+  "czech", "tchequie", "fortuna liga", "chance liga",
+  // Pas de "liga i" / "liga ii" ici : la correspondance se fait en sous-chaine,
+  // ces motifs trop courts matcheraient des championnats legitimes. "romania"
+  // suffit, le pays accompagne toujours le nom de la division.
+  "romania", "roumanie", "superliga · romania",
+  "russia", "russie", "russian premier", "fnl",
+  "ukraine", "ukrainian premier",
+  "finland", "finlande", "veikkausliiga",
   // Europe — divisions inférieures/ligues exotiques
   "estonia", "latvia", "lithuania", "faroe", "gibraltar",
   "andorra", "malta", "san marino", "kosovo", "north macedonia",

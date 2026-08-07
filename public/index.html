@@ -656,6 +656,13 @@ body :where(
 
 }
 
+
+/* Paliers ayant reellement recu le signal (source : sig_sent_* cote API) */
+.tier-chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;
+  padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.06);white-space:nowrap}
+.tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;
+  font-size:10.5px;color:var(--muted);font-weight:600}
+.tier-none{font-style:italic;opacity:.75}
 </style>
 
 </head>
@@ -715,7 +722,7 @@ body :where(
   <div class="row row-hero">
     <section class="card hero-exact-card hero" aria-labelledby="hero-title">
       <div class="hero-exact-wrap" aria-hidden="true">
-        <img class="hero-exact-img" src="/assets/hero-concile-wow-hd.png" alt="">
+        <picture><source srcset="/img/hero-concile-wow.webp" type="image/webp"><img class="hero-exact-img" src="/img/hero-concile-wow.jpg" width="1448" height="1086" loading="eager" decoding="async" alt="Les cinq IA du Concile deliberant sur une analyse"></picture>
         <svg class="hero-wave-overlay" viewBox="0 0 815 611" preserveAspectRatio="none" aria-hidden="true">
           <defs>
             <filter id="glowBlue" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
@@ -1442,6 +1449,12 @@ async function loadDailyAccordion(){
       byDay[day].push(a);
     });
     order.sort(function(a,b){ return new Date(b)-new Date(a); });
+    var TIER_META={
+      standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
+      premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
+      elite   :{ico:'🥉',nom:'Telegram Elite-VIP',court:'Elite',    c:'var(--elite)'}
+    };
+    var TIER_ORDRE=['standard','premium','elite'];
     box.innerHTML=order.slice(0,10).map(function(day,idx){
       var list=byDay[day];
       var wins=list.filter(function(a){ return a.outcome==='win'; }).length;
@@ -1454,8 +1467,41 @@ async function loadDailyAccordion(){
         var win=a.outcome==='win';
         var badgeStyle=win?'background:rgba(51,196,129,.14);color:var(--green)':'background:rgba(239,90,111,.14);color:var(--red)';
         var cote=(a.cote!=null && a.cote>1)?'@'+Number(a.cote).toFixed(2):'';
+        // On lit la diffusion REELLE (champ sent, alimente par sig_sent_*) et non
+        // le palier theorique : une analyse peut remplir les criteres d'un palier
+        // sans avoir ete envoyee (plafond journalier, cote sortie de la fenetre
+        // ARJEL au moment de l'envoi...). Afficher le palier theorique en
+        // pretendant montrer la diffusion trompait le visiteur.
+        // Cumulatif : un signal parti sur Standard part aussi sur Premium et Elite.
+        var envoye=a.sent||{};
+        var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
+        var tierBadge='';
+        if(canaux.length){
+          tierBadge='<span class="tier-recu">Envoyé sur '
+            + canaux.map(function(t){
+                var m=TIER_META[t];
+                return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
+              }).join('')
+            + '</span>';
+        } else {
+          // Non envoye : on donne le MOTIF plutot qu'un constat sec. Le visiteur
+          // comprend que la selection est filtree, pas que le systeme a rate
+          // quelque chose — c'est meme un argument de serieux.
+          var motif=a.diffusion_block||'';
+          var lisible=motif
+            ? (/confiance/i.test(motif)      ? 'confiance sous le seuil de diffusion'
+             : /ARJEL|cote/i.test(motif)      ? 'cote hors fenêtre ARJEL'
+             : /votes/i.test(motif)           ? 'accord des IA insuffisant'
+             : /qualite|qualité/i.test(motif) ? 'écartée par le filtre qualité'
+             : /deja|déjà/i.test(motif)       ? 'signal déjà envoyé ce jour-là'
+             : /feminin|féminin/i.test(motif) ? 'match féminin (exclu)'
+             : /ligue/i.test(motif)           ? 'ligue non fiable'
+             : 'critères de diffusion non atteints')
+            : 'critères de diffusion non atteints';
+          tierBadge='<span class="tier-recu tier-none">Analyse publique, non envoyée sur Telegram — '+esc(lisible)+'</span>';
+        }
         return '<div class="day-acc-row">'
-          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div></div>'
+          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+'</div>'
           + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
           + '</div>';
       }).join('');
@@ -1539,7 +1585,7 @@ async function loadPick(){
     var lockHtml=showBet?'':(
       '<div class="pick-lock">'+
         '<div class="pick-lock-title">🔒 Sélection et raisonnement masqués</div>'+
-        '<div class="pick-lock-sub">Pour voir le pari recommandé du Concile, entre juste ton email (+ un mot de passe) — c\'est gratuit, sans carte bancaire, ça prend 20 secondes.</div>'+
+        '<div class="pick-lock-sub">Pour voir la sélection recommandée du Concile, entre juste ton email (+ un mot de passe) — c\'est gratuit, sans carte bancaire, ça prend 20 secondes.</div>'+
         '<a href="/dashboard" class="pick-lock-btn">Débloquer avec mon email →</a>'+
       '</div>'
     );
