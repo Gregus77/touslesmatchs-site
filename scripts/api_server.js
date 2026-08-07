@@ -1966,6 +1966,26 @@ setTimeout(() => checkApiSportsRealQuota(), 5000);
 // Verif manuelle a tout moment : curl /api/admin/api-quota-status?email=...&code=...
 // Declenchement manuel de l'audit matinal : sert a le verifier sans attendre
 // 6h du matin, et a le relancer apres un correctif pour confirmer la reparation.
+// Composition reelle du Concile, exposee au site public. Les noms des IA
+// etaient ecrits en dur dans public/index.html : a chaque promotion ou
+// substitution de modele, la page annoncait des IA qui n'analysaient plus rien.
+// Le nom affiche est deduit de l'identifiant reellement appele, substitutions
+// comprises — la page dit donc toujours la verite, sans intervention.
+app.get("/concile-roster", (_req, res) => {
+  const jolinom = (id) => {
+    const fam = String(id).split("/")[0];
+    return ({ perplexity: "Perplexity", deepseek: "DeepSeek", mistralai: "Mistral",
+              cohere: "Cohere", qwen: "Qwen", moonshotai: "Kimi", "meta-llama": "Llama",
+              google: "Gemini", "x-ai": "Grok", anthropic: "Claude", openai: "GPT" })[fam]
+           || fam.charAt(0).toUpperCase() + fam.slice(1);
+  };
+  const sieges = ["perplexity/sonar-pro", "deepseek/deepseek-chat", "mistralai/mistral-large",
+                  "cohere/command-r-plus", "qwen/qwen3.7-max"];
+  const noms = sieges.map(sg => jolinom(resolveModel(sg)));
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({ ok: true, names: noms, count: noms.length });
+});
+
 app.get("/admin/audit-matinal", async (req, res) => {
   const { email, code } = req.query || {};
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
@@ -13497,6 +13517,125 @@ async function auditAndRepairModels() {
   return { lignes, pannes, repares };
 }
 
+// ── Promotion d'un challenger au Concile (07/08/2026) ────────────────────────
+// Demande du fondateur : "si tu trouves une IA meilleure que celle du Concile,
+// tu la remplaces". Source de verite choisie par lui : SA propre base, pas un
+// classement public. Un modele qui domine un classement generaliste n'est pas
+// forcement bon pour predire un Under 2.5 sur un match de Conference League —
+// seul le winrate sur ses vrais matchs le dit.
+//
+// Le banc d'essai (shadow_evals) tourne deja : les challengers analysent les
+// memes matchs que les titulaires, en parallele, sans influencer aucun signal
+// diffuse. Il manquait uniquement la decision.
+// Correspondance agent -> identifiant logique de son modele. Sert a appliquer
+// une promotion : on fait pointer le siege du titulaire sortant vers le modele
+// du challenger, via la meme table model_overrides que les substitutions.
+// Les challengers hors OpenRouter (Groq, Cerebras, Mistral direct) ne sont pas
+// listes : leur promotion demanderait de changer de fournisseur au milieu du
+// Concile, ce qui n'est pas une bascule d'identifiant mais un autre chantier.
+const MODELE_DES_AGENTS = {
+  "Perplexity-Web": "perplexity/sonar-pro",
+  "DeepSeek-V3": "deepseek/deepseek-chat",
+  "Mistral-Large": "mistralai/mistral-large",
+  "Cohere-Command": "cohere/command-r-plus",
+  "OpenRouter-Qwen": "qwen/qwen3.7-max",
+  "OR-Qwen37Max": "qwen/qwen3.7-max",
+  "OR-KimiK3": "moonshotai/kimi-k3",
+  "OR-Mistral7B": "mistralai/mistral-7b-instruct:free",
+};
+
+const PROMO_MIN_RESOLUS = Math.max(20, Number(process.env.PROMO_MIN_RESOLUS || 50));
+const PROMO_MARGE_MINI = Math.max(1, Number(process.env.PROMO_MARGE_MINI || 5));
+
+function auditAgentsEtPromotion() {
+  const lignes = [];
+  const promotions = [];
+  try {
+    const stats = (table) => db.prepare(`
+      SELECT agent_name,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM ${table} WHERE outcome IN ('win','loss') GROUP BY agent_name
+    `).all().map(r => {
+      const resolus = (r.wins || 0) + (r.losses || 0);
+      return { nom: r.agent_name, resolus, winrate: resolus ? Math.round(r.wins / resolus * 100) : null };
+    }).filter(r => r.resolus >= PROMO_MIN_RESOLUS)
+      .sort((a, b) => b.winrate - a.winrate);
+
+    const titulaires = stats("agent_predictions");
+    const challengers = stats("shadow_evals");
+    if (!titulaires.length || !challengers.length) {
+      lignes.push(`ℹ️ Classement IA — echantillon insuffisant (${PROMO_MIN_RESOLUS} pronostics resolus requis par IA)`);
+      return { lignes, promotions };
+    }
+
+    const meilleurChallenger = challengers[0];
+    const plusFaibleTitulaire = titulaires[titulaires.length - 1];
+    lignes.push(`📊 Meilleur titulaire ${titulaires[0].nom} ${titulaires[0].winrate}% · plus faible ${plusFaibleTitulaire.nom} ${plusFaibleTitulaire.winrate}% · meilleur challenger ${meilleurChallenger.nom} ${meilleurChallenger.winrate}%`);
+
+    // Marge exigee : un ecart de 1 ou 2 points sur quelques dizaines de matchs
+    // n'est que du bruit. On ne remplace un titulaire que sur un ecart net.
+    const ecart = meilleurChallenger.winrate - plusFaibleTitulaire.winrate;
+    if (ecart < PROMO_MARGE_MINI) {
+      lignes.push(`✅ Concile — aucun challenger ne depasse un titulaire de ${PROMO_MARGE_MINI} points (ecart actuel ${ecart})`);
+      return { lignes, promotions };
+    }
+
+    // Promotion APPLIQUEE automatiquement (decision du fondateur, 07/08/2026 :
+    // "tu dois toujours garder les meilleurs, et si tu fais un changement tu me
+    // le dis"). Le siege du titulaire sortant est pointe vers le modele du
+    // challenger, via la meme table model_overrides que les substitutions de
+    // modeles morts. Le changement est annonce dans le rapport du matin.
+    const cibleSortant = MODELE_DES_AGENTS[plusFaibleTitulaire.nom];
+    const modeleEntrant = MODELE_DES_AGENTS[meilleurChallenger.nom];
+    if (cibleSortant && modeleEntrant) {
+      const vraiModeleEntrant = resolveModel(modeleEntrant);
+      db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
+                  VALUES (?,?,datetime('now'),?)
+                  ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
+                    replaced_at=excluded.replaced_at, reason=excluded.reason`)
+        .run(cibleSortant, vraiModeleEntrant,
+             `promotion : ${meilleurChallenger.nom} ${meilleurChallenger.winrate}% remplace ${plusFaibleTitulaire.nom} ${plusFaibleTitulaire.winrate}%`);
+      _modelOverrideCache.at = 0;
+      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart, modele: vraiModeleEntrant });
+      lignes.push(`🏅 <b>CHANGEMENT AU CONCILE</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) remplace ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}), ecart ${ecart} points`);
+      lignes.push(`   → siege ${plusFaibleTitulaire.nom} pointe desormais sur <b>${vraiModeleEntrant}</b>`);
+      console.log(`[promotion] ${meilleurChallenger.nom} remplace ${plusFaibleTitulaire.nom} (${cibleSortant} -> ${vraiModeleEntrant})`);
+    } else {
+      // Challenger hors OpenRouter : on ne peut pas basculer par simple
+      // changement d'identifiant, on signale sans rien casser.
+      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart, modele: null });
+      lignes.push(`🏅 <b>Promotion a faire a la main</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}%) bat ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}%) de ${ecart} points, mais il change de fournisseur : bascule manuelle requise`);
+    }
+
+    // Meilleur agent PAR MARCHE : une IA peut etre moyenne au general et
+    // excellente sur un marche precis. C'est la que se gagne le winrate.
+    const marches = db.prepare(`
+      SELECT agent_name, market_line,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions WHERE outcome IN ('win','loss')
+      GROUP BY agent_name, market_line
+    `).all();
+    const libelles = { buts: "Plus/moins de 2.5", btts: "Les deux marquent", resultat: "Victoire dom/ext", mt1: "But 1re mi-temps" };
+    const meilleurs = {};
+    marches.forEach(r => {
+      const resolus = (r.wins || 0) + (r.losses || 0);
+      if (resolus < 15) return;
+      const wr = Math.round(r.wins / resolus * 100);
+      if (!meilleurs[r.market_line] || wr > meilleurs[r.market_line].wr) {
+        meilleurs[r.market_line] = { nom: r.agent_name, wr, resolus };
+      }
+    });
+    const parMarche = Object.entries(meilleurs)
+      .map(([k, v]) => `${libelles[k] || k} → ${v.nom} ${v.wr}% (${v.resolus})`);
+    if (parMarche.length) lignes.push(`🎯 Meilleure IA par marche : ${parMarche.join(" · ")}`);
+  } catch (e) {
+    lignes.push(`🔴 Classement IA — ${String(e.message).slice(0, 60)}`);
+  }
+  return { lignes, promotions };
+}
+
 async function runMorningAudit() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   const lignes = [];
@@ -13512,15 +13651,46 @@ async function runMorningAudit() {
     }
   };
 
-  // 1. Le compte OpenRouter : cle valide et credit disponible.
-  await test("Compte OpenRouter", async () => {
+  // 1. Le compte OpenRouter : solde restant et autonomie estimee.
+  //    Demande du fondateur (07/08/2026) : "dis-moi chaque jour combien il reste
+  //    sur OpenRouter pour qu'on ne soit pas sans analyse". /api/v1/key ne donne
+  //    que la consommation ; le solde reellement recharge est dans
+  //    /api/v1/credits. On croise les deux pour sortir une autonomie en JOURS,
+  //    seul chiffre qui permette de recharger avant la panne plutot qu'apres.
+  await test("Solde OpenRouter", async () => {
     if (!OPENROUTER_API_KEY) return { ok: false, info: "aucune cle configuree" };
-    const info = await httpGet("https://openrouter.ai/api/v1/key", { Authorization: `Bearer ${OPENROUTER_API_KEY}` });
-    const d = info?.data;
+    const entete = { Authorization: `Bearer ${OPENROUTER_API_KEY}` };
+    const cle = await httpGet("https://openrouter.ai/api/v1/key", entete);
+    const d = cle?.data;
     if (!d) return { ok: false, info: "cle refusee par OpenRouter" };
-    const restant = d.limit === null || d.limit === undefined ? null : Number(d.limit) - Number(d.usage || 0);
-    if (restant !== null && restant <= 0) return { ok: false, info: `credits epuises (limite ${d.limit})` };
-    return { ok: true, info: restant === null ? `sans plafond, ${Number(d.usage || 0).toFixed(2)}$ consommes` : `${restant.toFixed(2)}$ restants` };
+
+    const parJour = Number(d.usage_daily || 0);
+    const credits = await httpGet("https://openrouter.ai/api/v1/credits", entete);
+    const achetes = Number(credits?.data?.total_credits ?? NaN);
+    const consommes = Number(credits?.data?.total_usage ?? d.usage ?? 0);
+    // Un plafond de cle, s'il existe, prime : il coupe avant le solde reel.
+    const plafond = d.limit === null || d.limit === undefined ? null : Number(d.limit) - Number(d.usage || 0);
+    const solde = Number.isFinite(achetes) ? achetes - consommes : plafond;
+
+    if (solde === null || !Number.isFinite(solde)) {
+      return { ok: true, info: `${consommes.toFixed(2)}$ consommes au total · ${parJour.toFixed(2)}$ aujourd'hui · solde non communique par OpenRouter` };
+    }
+    // Autonomie sur la moyenne des 7 derniers jours de production, plus fiable
+    // que la consommation du jour meme (nulle a 6h du matin).
+    let moyenne = parJour;
+    try {
+      const r = db.prepare("SELECT COUNT(*) n FROM concile_analyses WHERE analysed_at >= ?")
+        .get(new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 19).replace("T", " "));
+      // 5 appels IA par analyse, cout observe ~0.0012$ l'appel.
+      const estime = ((r?.n || 0) / 7) * 5 * 0.0012;
+      moyenne = Math.max(parJour, estime);
+    } catch (e) { /* on garde parJour */ }
+    const jours = moyenne > 0.005 ? Math.floor(solde / moyenne) : null;
+    const detail = `<b>${solde.toFixed(2)}$ restants</b> · ${parJour.toFixed(2)}$ consommes aujourd'hui` +
+      (jours !== null ? ` · autonomie ~${jours} jour${jours > 1 ? "s" : ""}` : "");
+    if (solde <= 1) return { ok: false, info: `${detail} — RECHARGE MAINTENANT, les analyses vont s'arreter` };
+    if (jours !== null && jours <= 7) return { ok: false, info: `${detail} — a recharger cette semaine` };
+    return { ok: true, info: detail };
   });
 
   // 1bis. Chaque modele du Concile, teste sur les six marches reellement
@@ -13602,6 +13772,14 @@ async function runMorningAudit() {
     });
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
+
+  // 9. Classement des IA sur les resultats reels + proposition de promotion.
+  try {
+    const cl = auditAgentsEtPromotion();
+    lignes.push("", ...cl.lignes);
+  } catch (e) {
+    lignes.push(`🔴 Classement IA — ${String(e.message).slice(0, 60)}`);
+  }
 
   const repares = reparation.repares || [];
   if (repares.length) lignes.push("", `🔧 <b>${repares.length} modele(s) remplace(s) automatiquement</b> : ${repares.join(" · ")}`);
