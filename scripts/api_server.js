@@ -2496,6 +2496,16 @@ const LEAGUE_TIER_SECONDARY = [
   "superliga · denmark", "danish superliga", "superligaen", "denmark · superliga",
   "veikkausliiga", "finland · veikkausliiga",
   "nb i", "nb1", "otp bank liga", "hungary · nb", "hungarian nb",
+  // Autriche ajoutee le 07/08/2026. Elle avait ete retiree de la liste blanche
+  // le 03/08 avec la Pologne et la Russie, mais elle y rentrait quand meme par
+  // la porte de derriere : la comparaison se fait en sous-chaine, et
+  // "Austrian Bundesliga" contient "bundesliga", present pour l'Allemagne.
+  // Elle etait donc traitee au meme rang que la Bundesliga allemande, par
+  // accident. Meme mecanisme que le bug ouzbek du matin.
+  // leagueTier() teste SECONDARY avant TRUSTED : ces motifs plus specifiques
+  // gagnent donc sur le "bundesliga" generique, et l'Allemagne reste majeure.
+  "austrian bundesliga", "bundesliga · austria", "austria · bundesliga",
+  "admiral bundesliga", "osterreichische bundesliga", "österreichische bundesliga",
 ];
 const LEAGUE_TIER_WATCHLIST = [
   "prvaliga", "slovenia · prva", "slovenian prvaliga",
