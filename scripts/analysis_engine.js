@@ -104,6 +104,53 @@ async function guardedShadowCall(db, agent, prompt, ctx) {
  * volontairement prudent : mieux vaut compter une tentative qui échoue
  * finalement que sous-compter une dépense réelle.
  */
+/**
+ * Repli OpenRouter apres qu'un fournisseur DIRECT a ete ecarte (401/402/403/429
+ * enregistres dans provider_health). Ajoute le 07/08/2026 : le coupe-circuit
+ * "spike" bloquait ces replis, donc les agents restaient muets, donc aucun
+ * quorum de 3 et zero signal — alors que le spike ne visait pas ce cas.
+ *
+ * Le franchissement est etroit et plafonne :
+ *   - seul le coupe-circuit "spike" est franchi, jamais le budget quotidien,
+ *     jamais l'anti-doublon, jamais le duplicate_burst ;
+ *   - un seul repli par agent et par match, garanti par la cle anti-doublon
+ *     (matchKey + modelKey + promptVersion) qui reste opposable ;
+ *   - plafond journalier configurable, defaut 60.
+ */
+const FALLBACK_DAILY_CAP = Math.max(1, Number(process.env.OPENROUTER_FALLBACK_DAILY_CAP || 60));
+
+function allowFallbackAfterProviderDown(db, { agentLabel, matchKey, competition, modelKey }) {
+  let dejaAujourdhui = 0;
+  try {
+    dejaAujourdhui = db.prepare(
+      "SELECT COUNT(*) n FROM ai_call_budget_log WHERE date(created_at) = date('now') AND purpose = 'provider_down_fallback' AND status = 'ok'"
+    ).get().n;
+  } catch (e) { /* table creee par ensureSchema au premier appel */ }
+  if (dejaAujourdhui >= FALLBACK_DAILY_CAP) {
+    console.warn(`[ai-guard] repli de secours refuse pour "${agentLabel}" : plafond journalier atteint (${dejaAujourdhui}/${FALLBACK_DAILY_CAP})`);
+    return false;
+  }
+  const check = guard.canProceed(db, {
+    modelKey, matchKey, competition,
+    market: "concile",
+    promptVersion: `secours_${agentLabel}`,
+    estimatedTokensIn: 1500,
+    estimatedTokensOut: 400,
+    allowDespiteSpike: true,
+  });
+  if (!check.allowed) {
+    console.warn(`[ai-guard] repli de secours refuse pour "${agentLabel}" sur "${matchKey}": ${check.reason}`);
+    return false;
+  }
+  guard.recordCall(db, {
+    requestKey: check.requestKey, modelKey, matchKey, competition,
+    market: "concile", purpose: "provider_down_fallback",
+    tokensIn: 1500, tokensOut: 400, status: "ok",
+  });
+  console.log(`[ai-guard] repli OpenRouter autorise car provider direct ecarte — ${agentLabel} (${dejaAujourdhui + 1}/${FALLBACK_DAILY_CAP} aujourd'hui)`);
+  return true;
+}
+
 function allowOfficialOpenRouterFallback(db, { agentLabel, matchKey, competition, modelKey }) {
   const check = guard.canProceed(db, {
     modelKey,
@@ -160,6 +207,7 @@ function allowChatbotCall(db, { sessionId }) {
 }
 
 module.exports = {
+  allowFallbackAfterProviderDown,
   guardedShadowCall, TRACKED_SHADOW_MODELS, SHADOW_PROMPT_VERSION,
   allowOfficialOpenRouterFallback, allowChatbotCall,
 };

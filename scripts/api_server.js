@@ -4659,6 +4659,11 @@ function hoteDuProvider(pv) {
 }
 
 async function runConcileAnalysis(match) {
+  // Plafond de replis de secours pour CETTE analyse (5 agents = 5 maximum).
+  // Empeche qu'un incident fournisseur transforme une analyse en rafale
+  // d'appels payants, meme sous le plafond journalier.
+  let _secoursCetteAnalyse = 0;
+  const SECOURS_MAX_PAR_ANALYSE = 5;
   if (!GROQ_API_KEY) {
     return getMockAnalysis(match);
   }
@@ -4949,17 +4954,29 @@ Réponds en JSON pur (pas de markdown):
       // Le disjoncteur au-dessus retire deja les comptes morts : si le garde-fou
       // refuse ici, c'est que le budget est atteint, et un agent silencieux est
       // alors le comportement voulu, pas une panne.
-      if (!providers.length && OPENROUTER_API_KEY) {
-        const _cleSecours = (MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large").split("/")[0];
-        if (analysisEngine.allowOfficialOpenRouterFallback(db, {
-              agentLabel: `${agCfg.name}_secours`, matchKey: _fallbackMatchKey,
-              competition: _fallbackCompetition, modelKey: _cleSecours })) {
-          providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions",
-                           key: OPENROUTER_API_KEY, model: resolveModel(MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large") });
-          console.log(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s), repli OpenRouter sous garde-fou`);
+      // Repli de secours : uniquement quand des fournisseurs directs ont ete
+      // ECARTES par provider_health (401/402/403/429), pas quand l'agent n'en
+      // avait simplement aucun. Il franchit le seul coupe-circuit "spike" —
+      // budget quotidien, anti-doublon et duplicate_burst restent opposables —
+      // et il est plafonne a 5 par analyse et 60 par jour.
+      if (!providers.length && OPENROUTER_API_KEY && _avantFiltre > 0) {
+        if (_secoursCetteAnalyse >= SECOURS_MAX_PAR_ANALYSE) {
+          console.warn(`[concile] ${agCfg.name} : plafond de ${SECOURS_MAX_PAR_ANALYSE} replis atteint pour cette analyse — agent silencieux`);
         } else {
-          console.warn(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s) et repli refuse par le garde-fou — agent silencieux`);
+          const _cleSecours = (MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large").split("/")[0];
+          if (analysisEngine.allowFallbackAfterProviderDown(db, {
+                agentLabel: agCfg.name, matchKey: _fallbackMatchKey,
+                competition: _fallbackCompetition, modelKey: _cleSecours })) {
+            _secoursCetteAnalyse++;
+            providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions",
+                             key: OPENROUTER_API_KEY, model: resolveModel(MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large") });
+            console.log(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s), repli OpenRouter autorise (${_secoursCetteAnalyse}/${SECOURS_MAX_PAR_ANALYSE} pour cette analyse)`);
+          } else {
+            console.warn(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s), repli refuse — agent silencieux`);
+          }
         }
+      } else if (!providers.length && OPENROUTER_API_KEY) {
+        console.warn(`[concile] ${agCfg.name} : aucun fournisseur configure et aucun ecarte — pas de repli de secours`);
       }
 
       let raw = "{}";
