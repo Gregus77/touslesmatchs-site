@@ -5580,6 +5580,10 @@ Réponds en JSON pur (pas de markdown):
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
+      // Ligne EXACTE de cette analyse. Sans elle, le marquage retombait sur
+      // "toutes les lignes du match aujourd'hui" et contaminait les analyses
+      // bloquees du meme match (bug Club Brugge du 07/08/2026).
+      const _ligneAnalysee = getPredictionSnapshotKey(match);
 
       // 🟢 STANDARD — cap 3/j
       // markSignalSent() APRES confirmation d'envoi, jamais avant : marquer en
@@ -5593,9 +5597,9 @@ Réponds en JSON pur (pas de markdown):
       if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP) {
         _standardSignalDaily.count++;
         sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_standard");
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_standard", _ligneAnalysee);
           else _standardSignalDaily.count--;
-          console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+          console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
         });
       }
 
@@ -5603,9 +5607,9 @@ Réponds en JSON pur (pas de markdown):
       if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
         sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_premium");
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_premium", _ligneAnalysee);
           else _premiumSignalDaily.count--;
-          console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+          console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
         });
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
@@ -5616,9 +5620,9 @@ Réponds en JSON pur (pas de markdown):
         _eliteSignalDaily.count++;
         const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
         sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_elite");
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_elite", _ligneAnalysee);
           else _eliteSignalDaily.count--;
-          console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+          console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
         });
       }
 
@@ -5634,9 +5638,9 @@ Réponds en JSON pur (pas de markdown):
       if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
         sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_free");
+          if (ok) markSignalSent(match.home, match.away, "sig_sent_free", _ligneAnalysee);
           else _freeSignalDailyDate.count--;
-          console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque, quota rendu"}`);
+          console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
         });
       }
     }
@@ -5645,11 +5649,18 @@ Réponds en JSON pur (pas de markdown):
   // Trace du motif de non-diffusion (null si le signal est bien parti).
   try {
     const motif = _blockReason || _tierBlock || null;
-    db.prepare(
-      `UPDATE concile_analyses SET diffusion_block = ?
-       WHERE lower(trim(home)) = lower(trim(?)) AND lower(trim(away)) = lower(trim(?))
-         AND date(analysed_at) = date('now')`
-    ).run(motif, match.home, match.away);
+    // Meme correction que markSignalSent : cibler la ligne exacte. Ecrire le
+    // motif sur toutes les lignes du jour ecrasait celui des analyses
+    // precedentes du meme match, y compris celles qui avaient ete diffusees.
+    const _ligne = getPredictionSnapshotKey(match);
+    const maj = db.prepare("UPDATE concile_analyses SET diffusion_block = ? WHERE match_key = ?").run(motif, _ligne);
+    if (!maj.changes) {
+      db.prepare(
+        `UPDATE concile_analyses SET diffusion_block = ?
+         WHERE lower(trim(home)) = lower(trim(?)) AND lower(trim(away)) = lower(trim(?))
+           AND date(analysed_at) = date('now')`
+      ).run(motif, match.home, match.away);
+    }
   } catch (e) { console.error("[funnel] trace:", e.message); }
 
   // ── Tests à blanc : uniquement sur les matchs RÉELLEMENT diffusables ────────
@@ -8836,14 +8847,36 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
 
 // Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
 const SIGNAL_SENT_COLUMNS = ["sig_sent_free", "sig_sent_standard", "sig_sent_premium", "sig_sent_elite"];
-function markSignalSent(home, away, col) {
+// Cause reelle du marquage errone trouve le 07/08/2026 sur Club Brugge KV vs
+// Kortrijk : sig_sent_elite=1 sur une analyse a 55% de confiance, avec un
+// diffusion_block et une cote estimee, sans aucun "Telegram elite OK" en face.
+//
+// L'ordre des appels etait pourtant correct — markSignalSent() n'est appele
+// qu'apres confirmation d'envoi. Le defaut etait dans la REQUETE : elle marquait
+// TOUTES les lignes du match pour la journee. Or match_key contient la tranche
+// de minute et le score (getPredictionSnapshotKey), donc un match analyse toutes
+// les 6 minutes produit une dizaine de lignes par jour. Un envoi reussi a la 25e
+// minute marquait aussi la ligne de la 40e, bloquee a 55%.
+//
+// On cible desormais la ligne exacte par match_key, et on refuse de marquer une
+// ligne bloquee ou dont la cote n'est qu'une estimation — deux garde-fous
+// demandes en relecture, qui rendent le marquage errone impossible meme si un
+// autre chemin d'appel apparaissait un jour.
+function markSignalSent(home, away, col, matchKey) {
   if (!SIGNAL_SENT_COLUMNS.includes(col)) return;
   try {
-    db.prepare(
-      `UPDATE concile_analyses SET ${col}=1
-       WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
-         AND date(analysed_at)=date('now')`
-    ).run(home, away);
+    const garde = `AND (diffusion_block IS NULL OR trim(diffusion_block) = '')
+                   AND (real_odd_source IS NULL OR lower(real_odd_source) NOT LIKE '%estimation%')`;
+    const r = matchKey
+      ? db.prepare(`UPDATE concile_analyses SET ${col}=1 WHERE match_key = ? ${garde}`).run(matchKey)
+      : db.prepare(
+          `UPDATE concile_analyses SET ${col}=1
+           WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
+             AND date(analysed_at)=date('now') ${garde}`
+        ).run(home, away);
+    if (!r.changes) {
+      console.warn(`[signal-sent] ${col} NON marque pour ${home} vs ${away} : ligne bloquee, cote estimee, ou introuvable`);
+    }
   } catch (e) { console.error("[signal-sent]", e.message); }
 }
 
