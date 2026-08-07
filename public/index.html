@@ -1041,7 +1041,27 @@ function toggleMenu(){document.getElementById('mmenu').classList.toggle('open');
 (function(){
   var target=document.getElementById('brain-fan');
   if(!target) return;
+  // Composition par defaut, remplacee par la composition REELLE des qu'elle
+  // arrive de l'API (/concile-roster). Les noms etaient figes ici : apres une
+  // promotion ou la substitution d'un modele retire par son fournisseur, la
+  // page annoncait des IA qui n'analysaient plus rien.
   var names=['Perplexity','DeepSeek','Mistral','Cohere','Qwen'];
+  fetch('/api/concile-roster').then(function(r){return r.json()}).then(function(d){
+    if(!d||!d.names||d.names.length!==names.length) return;
+    var chgt=false;
+    d.names.forEach(function(n,i){ if(n && n!==names[i]){ names[i]=n; chgt=true; } });
+    if(!chgt) return;
+    // Etiquettes du schema anime
+    // Le schema est deja rendu quand la reponse arrive (fetch asynchrone,
+    // rendu synchrone juste apres) : on corrige les etiquettes en place plutot
+    // que de tout reconstruire, ce qui relancerait les animations.
+    document.querySelectorAll('#brain-fan .brain-node .lbl').forEach(function(el,i){
+      if(names[i]) el.textContent=names[i];
+    });
+    // Phrase de la section methode
+    var m=document.querySelector('[data-i18n="method_2d"]');
+    if(m) m.textContent=names.join(', ')+' votent.';
+  }).catch(function(){});
   var colors=['#28e0dc','#4d79ff','#ff8a3d','#ff5fad','#8d66ff'];
   var positions=[[14,74],[24,27],[52,9],[81,27],[90,74]];
   var paths=[

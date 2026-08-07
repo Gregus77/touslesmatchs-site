@@ -1966,6 +1966,26 @@ setTimeout(() => checkApiSportsRealQuota(), 5000);
 // Verif manuelle a tout moment : curl /api/admin/api-quota-status?email=...&code=...
 // Declenchement manuel de l'audit matinal : sert a le verifier sans attendre
 // 6h du matin, et a le relancer apres un correctif pour confirmer la reparation.
+// Composition reelle du Concile, exposee au site public. Les noms des IA
+// etaient ecrits en dur dans public/index.html : a chaque promotion ou
+// substitution de modele, la page annoncait des IA qui n'analysaient plus rien.
+// Le nom affiche est deduit de l'identifiant reellement appele, substitutions
+// comprises — la page dit donc toujours la verite, sans intervention.
+app.get("/concile-roster", (_req, res) => {
+  const jolinom = (id) => {
+    const fam = String(id).split("/")[0];
+    return ({ perplexity: "Perplexity", deepseek: "DeepSeek", mistralai: "Mistral",
+              cohere: "Cohere", qwen: "Qwen", moonshotai: "Kimi", "meta-llama": "Llama",
+              google: "Gemini", "x-ai": "Grok", anthropic: "Claude", openai: "GPT" })[fam]
+           || fam.charAt(0).toUpperCase() + fam.slice(1);
+  };
+  const sieges = ["perplexity/sonar-pro", "deepseek/deepseek-chat", "mistralai/mistral-large",
+                  "cohere/command-r-plus", "qwen/qwen3.7-max"];
+  const noms = sieges.map(sg => jolinom(resolveModel(sg)));
+  res.set("Cache-Control", "public, max-age=300");
+  res.json({ ok: true, names: noms, count: noms.length });
+});
+
 app.get("/admin/audit-matinal", async (req, res) => {
   const { email, code } = req.query || {};
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
@@ -13507,6 +13527,23 @@ async function auditAndRepairModels() {
 // Le banc d'essai (shadow_evals) tourne deja : les challengers analysent les
 // memes matchs que les titulaires, en parallele, sans influencer aucun signal
 // diffuse. Il manquait uniquement la decision.
+// Correspondance agent -> identifiant logique de son modele. Sert a appliquer
+// une promotion : on fait pointer le siege du titulaire sortant vers le modele
+// du challenger, via la meme table model_overrides que les substitutions.
+// Les challengers hors OpenRouter (Groq, Cerebras, Mistral direct) ne sont pas
+// listes : leur promotion demanderait de changer de fournisseur au milieu du
+// Concile, ce qui n'est pas une bascule d'identifiant mais un autre chantier.
+const MODELE_DES_AGENTS = {
+  "Perplexity-Web": "perplexity/sonar-pro",
+  "DeepSeek-V3": "deepseek/deepseek-chat",
+  "Mistral-Large": "mistralai/mistral-large",
+  "Cohere-Command": "cohere/command-r-plus",
+  "OpenRouter-Qwen": "qwen/qwen3.7-max",
+  "OR-Qwen37Max": "qwen/qwen3.7-max",
+  "OR-KimiK3": "moonshotai/kimi-k3",
+  "OR-Mistral7B": "mistralai/mistral-7b-instruct:free",
+};
+
 const PROMO_MIN_RESOLUS = Math.max(20, Number(process.env.PROMO_MIN_RESOLUS || 50));
 const PROMO_MARGE_MINI = Math.max(1, Number(process.env.PROMO_MARGE_MINI || 5));
 
@@ -13544,13 +13581,32 @@ function auditAgentsEtPromotion() {
       return { lignes, promotions };
     }
 
-    // La promotion n'est PAS appliquee automatiquement au vote : elle est
-    // proposee, avec les chiffres. Remplacer un votant change la nature des
-    // signaux envoyes a des abonnes payants — c'est une decision du fondateur,
-    // pas d'un seuil. Les substitutions de modeles MORTS, elles, restent
-    // automatiques : la, il n'y a pas de choix a faire, l'agent ne repond plus.
-    promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart });
-    lignes.push(`🏅 <b>Promotion proposee</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) bat ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}) de ${ecart} points`);
+    // Promotion APPLIQUEE automatiquement (decision du fondateur, 07/08/2026 :
+    // "tu dois toujours garder les meilleurs, et si tu fais un changement tu me
+    // le dis"). Le siege du titulaire sortant est pointe vers le modele du
+    // challenger, via la meme table model_overrides que les substitutions de
+    // modeles morts. Le changement est annonce dans le rapport du matin.
+    const cibleSortant = MODELE_DES_AGENTS[plusFaibleTitulaire.nom];
+    const modeleEntrant = MODELE_DES_AGENTS[meilleurChallenger.nom];
+    if (cibleSortant && modeleEntrant) {
+      const vraiModeleEntrant = resolveModel(modeleEntrant);
+      db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
+                  VALUES (?,?,datetime('now'),?)
+                  ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
+                    replaced_at=excluded.replaced_at, reason=excluded.reason`)
+        .run(cibleSortant, vraiModeleEntrant,
+             `promotion : ${meilleurChallenger.nom} ${meilleurChallenger.winrate}% remplace ${plusFaibleTitulaire.nom} ${plusFaibleTitulaire.winrate}%`);
+      _modelOverrideCache.at = 0;
+      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart, modele: vraiModeleEntrant });
+      lignes.push(`🏅 <b>CHANGEMENT AU CONCILE</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) remplace ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}), ecart ${ecart} points`);
+      lignes.push(`   → siege ${plusFaibleTitulaire.nom} pointe desormais sur <b>${vraiModeleEntrant}</b>`);
+      console.log(`[promotion] ${meilleurChallenger.nom} remplace ${plusFaibleTitulaire.nom} (${cibleSortant} -> ${vraiModeleEntrant})`);
+    } else {
+      // Challenger hors OpenRouter : on ne peut pas basculer par simple
+      // changement d'identifiant, on signale sans rien casser.
+      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart, modele: null });
+      lignes.push(`🏅 <b>Promotion a faire a la main</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}%) bat ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}%) de ${ecart} points, mais il change de fournisseur : bascule manuelle requise`);
+    }
 
     // Meilleur agent PAR MARCHE : une IA peut etre moyenne au general et
     // excellente sur un marche precis. C'est la que se gagne le winrate.
