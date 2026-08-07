@@ -13651,15 +13651,46 @@ async function runMorningAudit() {
     }
   };
 
-  // 1. Le compte OpenRouter : cle valide et credit disponible.
-  await test("Compte OpenRouter", async () => {
+  // 1. Le compte OpenRouter : solde restant et autonomie estimee.
+  //    Demande du fondateur (07/08/2026) : "dis-moi chaque jour combien il reste
+  //    sur OpenRouter pour qu'on ne soit pas sans analyse". /api/v1/key ne donne
+  //    que la consommation ; le solde reellement recharge est dans
+  //    /api/v1/credits. On croise les deux pour sortir une autonomie en JOURS,
+  //    seul chiffre qui permette de recharger avant la panne plutot qu'apres.
+  await test("Solde OpenRouter", async () => {
     if (!OPENROUTER_API_KEY) return { ok: false, info: "aucune cle configuree" };
-    const info = await httpGet("https://openrouter.ai/api/v1/key", { Authorization: `Bearer ${OPENROUTER_API_KEY}` });
-    const d = info?.data;
+    const entete = { Authorization: `Bearer ${OPENROUTER_API_KEY}` };
+    const cle = await httpGet("https://openrouter.ai/api/v1/key", entete);
+    const d = cle?.data;
     if (!d) return { ok: false, info: "cle refusee par OpenRouter" };
-    const restant = d.limit === null || d.limit === undefined ? null : Number(d.limit) - Number(d.usage || 0);
-    if (restant !== null && restant <= 0) return { ok: false, info: `credits epuises (limite ${d.limit})` };
-    return { ok: true, info: restant === null ? `sans plafond, ${Number(d.usage || 0).toFixed(2)}$ consommes` : `${restant.toFixed(2)}$ restants` };
+
+    const parJour = Number(d.usage_daily || 0);
+    const credits = await httpGet("https://openrouter.ai/api/v1/credits", entete);
+    const achetes = Number(credits?.data?.total_credits ?? NaN);
+    const consommes = Number(credits?.data?.total_usage ?? d.usage ?? 0);
+    // Un plafond de cle, s'il existe, prime : il coupe avant le solde reel.
+    const plafond = d.limit === null || d.limit === undefined ? null : Number(d.limit) - Number(d.usage || 0);
+    const solde = Number.isFinite(achetes) ? achetes - consommes : plafond;
+
+    if (solde === null || !Number.isFinite(solde)) {
+      return { ok: true, info: `${consommes.toFixed(2)}$ consommes au total · ${parJour.toFixed(2)}$ aujourd'hui · solde non communique par OpenRouter` };
+    }
+    // Autonomie sur la moyenne des 7 derniers jours de production, plus fiable
+    // que la consommation du jour meme (nulle a 6h du matin).
+    let moyenne = parJour;
+    try {
+      const r = db.prepare("SELECT COUNT(*) n FROM concile_analyses WHERE analysed_at >= ?")
+        .get(new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 19).replace("T", " "));
+      // 5 appels IA par analyse, cout observe ~0.0012$ l'appel.
+      const estime = ((r?.n || 0) / 7) * 5 * 0.0012;
+      moyenne = Math.max(parJour, estime);
+    } catch (e) { /* on garde parJour */ }
+    const jours = moyenne > 0.005 ? Math.floor(solde / moyenne) : null;
+    const detail = `<b>${solde.toFixed(2)}$ restants</b> · ${parJour.toFixed(2)}$ consommes aujourd'hui` +
+      (jours !== null ? ` · autonomie ~${jours} jour${jours > 1 ? "s" : ""}` : "");
+    if (solde <= 1) return { ok: false, info: `${detail} — RECHARGE MAINTENANT, les analyses vont s'arreter` };
+    if (jours !== null && jours <= 7) return { ok: false, info: `${detail} — a recharger cette semaine` };
+    return { ok: true, info: detail };
   });
 
   // 1bis. Chaque modele du Concile, teste sur les six marches reellement
