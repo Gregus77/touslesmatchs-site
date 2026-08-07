@@ -4935,13 +4935,31 @@ Réponds en JSON pur (pas de markdown):
       // alors qu'OpenRouter etait disponible juste a cote.
       const _avantFiltre = providers.length;
       providers = providers.filter(pv => !providerEcarte(hoteDuProvider(pv)));
-      // Filet : si tout a ete ecarte, on force le repli OpenRouter meme sans
-      // passer par le garde-fou budgetaire. Mieux vaut une analyse qui coute
-      // quelques centimes qu'un agent muet qui casse le quorum de trois.
+      // Filet quand tous les fournisseurs de l'agent ont ete ecartes. Il passe
+      // par le MEME garde-fou que les autres replis (budget journalier,
+      // anti-doublon par match/agent, coupe-circuit) — jamais en le contournant.
+      //
+      // Premiere version ecrite le 07/08/2026 : elle poussait le repli sans
+      // garde-fou, "parce que quelques centimes valent mieux qu'un agent muet".
+      // C'etait faux sur deux points, releves en relecture. D'une part les
+      // appels echappaient a la comptabilite du budget, donc le plafond
+      // journalier devenait contournable en silence. D'autre part l'anti-doublon
+      // par match et par agent sautait avec lui.
+      //
+      // Le disjoncteur au-dessus retire deja les comptes morts : si le garde-fou
+      // refuse ici, c'est que le budget est atteint, et un agent silencieux est
+      // alors le comportement voulu, pas une panne.
       if (!providers.length && OPENROUTER_API_KEY) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions",
-                         key: OPENROUTER_API_KEY, model: resolveModel(MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large") });
-        console.log(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s), repli OpenRouter force`);
+        const _cleSecours = (MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large").split("/")[0];
+        if (analysisEngine.allowOfficialOpenRouterFallback(db, {
+              agentLabel: `${agCfg.name}_secours`, matchKey: _fallbackMatchKey,
+              competition: _fallbackCompetition, modelKey: _cleSecours })) {
+          providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions",
+                           key: OPENROUTER_API_KEY, model: resolveModel(MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large") });
+          console.log(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s), repli OpenRouter sous garde-fou`);
+        } else {
+          console.warn(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s) et repli refuse par le garde-fou — agent silencieux`);
+        }
       }
 
       let raw = "{}";
