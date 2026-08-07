@@ -4987,7 +4987,24 @@ Réponds en JSON pur (pas de markdown):
     // precis — et notamment sur celui ou les meilleures d'entre elles sont
     // specialistes. C'est exactement le cas que le vote a poids egal jetait.
     const routage = meilleurMarcheParSpecialistes(agentMarketList);
-    if (routage) {
+    // Mode shadow : on ENREGISTRE ce que le routage aurait choisi, sans jamais
+    // toucher au verdict. L'analyse reste a 55%, aucun signal n'est envoye,
+    // aucun abonne n'est impacte. Le rapport du matin compare ensuite ces
+    // choix aux resultats reels. Tant que le mode est "shadow", ce bloc est le
+    // SEUL effet du routage sur le systeme.
+    if (routage && ROUTAGE_MODE === "shadow") {
+      try {
+        db.prepare(`INSERT OR IGNORE INTO routage_shadow
+          (match_key, home, away, competition, market_line, bet, accord, experts, confiance_reelle)
+          VALUES (?,?,?,?,?,?,?,?,?)`)
+          .run(getPredictionSnapshotKey(match), match.home || "", match.away || "",
+               match.competition || match.league || "", routage.ligne, routage.bet,
+               routage.accord, routage.experts.join(", "),
+               Math.min(55, Number(chief.confidence || 55)));
+      } catch (e) { console.error("[routage-shadow]", e.message); }
+      console.log(`[routage-shadow] ${match.home} vs ${match.away} : aurait propose ${routage.bet} (accord ${routage.accord}%) — non applique`);
+    }
+    if (routage && ROUTAGE_MODE === "actif") {
       consensusBet = routage.bet;
       consensusVotes = 3; // accord pondere equivalent au quorum
       chief.bet = routage.bet;
@@ -6521,10 +6538,41 @@ function saveAgentMarketPredictions(match, agentMarketList) {
 // retient le marche ou l'accord PONDERE est le plus fort. Les avis multi-marches
 // sont deja collectes et resolus (agent_market_predictions) : aucun appel IA
 // supplementaire, donc aucun cout ajoute.
-const ROUTAGE_SPECIALISTE = process.env.ROUTAGE_SPECIALISTE !== "0";
-// Sous ce volume, un winrate par agent ET par marche n'est pas une mesure. Le
-// poids reste neutre : le systeme se comporte alors exactement comme avant.
-const SPECIALISTE_MIN_RESOLUS = Math.max(10, Number(process.env.SPECIALISTE_MIN_RESOLUS || 25));
+// Trois modes (relecture GPT/Codex du 07/08/2026, decision du fondateur) :
+//   "shadow" (defaut) — le routage est CALCULE et enregistre, jamais applique.
+//                       Aucun abonne n'est impacte. Sert a mesurer sur deux
+//                       semaines ce qu'il aurait change avant de l'activer.
+//   "actif"           — le routage decide reellement.
+//   "off"             — desactive.
+// Le mode shadow est le defaut volontairement : une idee saine sur le papier
+// doit faire ses preuves sur les vrais resultats avant de toucher des signaux
+// envoyes a des abonnes payants.
+const ROUTAGE_MODE = ["shadow", "actif", "off"].includes(process.env.ROUTAGE_MODE)
+  ? process.env.ROUTAGE_MODE : "shadow";
+// Releve de 25 a 75 apres relecture : a 25 pronostics, un ecart de winrate est
+// indiscernable du bruit, et ponderer sur du bruit degrade au lieu d'ameliorer.
+const SPECIALISTE_MIN_RESOLUS = Math.max(25, Number(process.env.SPECIALISTE_MIN_RESOLUS || 75));
+
+// Journal du mode shadow : ce que le routage AURAIT choisi, resolu plus tard
+// comme n'importe quelle prediction, pour comparer sans rien risquer.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS routage_shadow (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    market_line TEXT NOT NULL,
+    bet TEXT NOT NULL,
+    accord INTEGER DEFAULT 0,
+    experts TEXT DEFAULT '',
+    confiance_reelle INTEGER DEFAULT 55,
+    outcome TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    resolved_at TEXT DEFAULT NULL,
+    UNIQUE(match_key)
+  );
+`);
 const _specialistesCache = { at: 0, map: {} };
 
 function poidsSpecialistes() {
@@ -6557,7 +6605,7 @@ function poidsSpecialistes() {
 // Renvoie le marche ou l'accord pondere est le plus fort, ou null si aucun ne
 // se detache. N'invente jamais d'avis : ne travaille que sur ceux deja emis.
 function meilleurMarcheParSpecialistes(agentMarketList) {
-  if (!ROUTAGE_SPECIALISTE || !agentMarketList || agentMarketList.length < 3) return null;
+  if (ROUTAGE_MODE === "off" || !agentMarketList || agentMarketList.length < 3) return null;
   const poids = poidsSpecialistes();
   const parLigne = {};
   agentMarketList.forEach(am => {
@@ -6606,6 +6654,20 @@ function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
     pending.forEach(p => { const o = resolveMarketBet(p.bet, h, a, htHome, htAway); if (o) { upd.run(o, p.id); n++; } });
     if (n) console.log(`[agent-market] résolu ${n}/${pending.length} avis marché: ${home} vs ${away}`);
   } catch (e) { console.error("[agent-market] resolve:", e.message); }
+  // Meme resolution pour le journal du mode shadow : sans issue tranchee, la
+  // comparaison "ce que le routage aurait donne" n'aurait aucune valeur.
+  try {
+    const hw = String(home || "").split(" ")[0];
+    const aw = String(away || "").split(" ")[0];
+    if (!hw || !aw) return;
+    const sh = db.prepare("SELECT id, bet FROM routage_shadow WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL")
+      .all(`%${hw}%`, `%${aw}%`);
+    if (!sh.length) return;
+    const up = db.prepare("UPDATE routage_shadow SET outcome = ?, resolved_at = datetime('now') WHERE id = ?");
+    let m = 0;
+    sh.forEach(r => { const o = resolveMarketBet(r.bet, h, a, htHome, htAway); if (o) { up.run(o, r.id); m++; } });
+    if (m) console.log(`[routage-shadow] résolu ${m}/${sh.length}: ${home} vs ${away}`);
+  } catch (e) { console.error("[routage-shadow] resolve:", e.message); }
 }
 
 function saveAgentPredictions(match, agentResults) {
@@ -13954,6 +14016,38 @@ async function runMorningAudit() {
     });
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
+
+  // 8bis. Mode shadow du routage par specialiste : ce qu'il AURAIT change.
+  //       Aucune de ces analyses n'a ete diffusee — le rapport sert uniquement
+  //       a decider, sur deux semaines de donnees reelles, s'il vaut la peine
+  //       d'etre active.
+  try {
+    const r = db.prepare(`
+      SELECT COUNT(*) total,
+             SUM(CASE WHEN outcome='win'  THEN 1 ELSE 0 END) gagnes,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) perdus
+      FROM routage_shadow`).get() || {};
+    const tranches = (r.gagnes || 0) + (r.perdus || 0);
+    if (r.total) {
+      const wr = tranches ? Math.round(r.gagnes / tranches * 100) : null;
+      // Mise a 10€ par signal, comme partout ailleurs dans le projet, et cote
+      // moyenne prudente de 1.75 : ces analyses n'ont pas de cote reelle
+      // puisqu'elles n'ont jamais ete diffusees.
+      const profit = tranches ? Math.round((r.gagnes * 7.5) - (r.perdus * 10)) : null;
+      lignes.push("", `🧪 <b>Routage par specialiste — mode shadow (non applique)</b>`);
+      lignes.push(`   ${r.total} analyses recuperees qui finissaient a 55% sans signal`);
+      lignes.push(tranches
+        ? `   ${tranches} tranchees : ${r.gagnes} gagnees / ${r.perdus} perdues — <b>${wr}%</b>${profit !== null ? ` · ${profit >= 0 ? "+" : ""}${profit}€ simules (mise 10€, cote 1.75)` : ""}`
+        : `   aucune encore tranchee — verdict impossible pour l'instant`);
+      if (tranches >= 30) {
+        lignes.push(wr >= 60
+          ? `   → au-dessus de 60% sur ${tranches} resultats : activation defendable (ROUTAGE_MODE=actif)`
+          : `   → sous 60% sur ${tranches} resultats : ne pas activer`);
+      } else {
+        lignes.push(`   → 30 resultats tranches minimum avant toute decision (${tranches} pour l'instant)`);
+      }
+    }
+  } catch (e) { lignes.push(`🔴 Routage shadow — ${String(e.message).slice(0, 60)}`); }
 
   // 9. Classement des IA sur les resultats reels + proposition de promotion.
   try {
