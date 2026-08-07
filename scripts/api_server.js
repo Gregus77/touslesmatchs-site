@@ -13636,14 +13636,27 @@ function auditAgentsEtPromotion() {
   return { lignes, promotions };
 }
 
+// Paliers de solde OpenRouter, en dollars — l'API facture en $, pas en €.
+// Valeurs fixees par le fondateur : orange a 3, rouge a 1.
+const SOLDE_ORANGE = Number(process.env.SOLDE_ORANGE || 3);
+const SOLDE_ROUGE  = Number(process.env.SOLDE_ROUGE  || 1);
+
 async function runMorningAudit() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   const lignes = [];
   const pannes = [];
+  const avertissements = [];
   const test = async (nom, fn) => {
     try {
       const r = await fn();
       if (r && r.ok) { lignes.push(`✅ ${nom} — ${r.info}`); }
+      else if (r && r.niveau === "orange") {
+        // Un avertissement n'est pas une panne : le service fonctionne encore.
+        // Le compter comme panne banaliserait l'entete rouge, qui doit rester
+        // reservee a ce qui est reellement casse.
+        lignes.push(`🟠 ${nom} — ${r.info}`);
+        avertissements.push(nom);
+      }
       else { lignes.push(`🔴 ${nom} — ${r?.info || "echec"}`); pannes.push(nom); }
     } catch (e) {
       lignes.push(`🔴 ${nom} — ${String(e.message).slice(0, 70)}`);
@@ -13688,8 +13701,14 @@ async function runMorningAudit() {
     const jours = moyenne > 0.005 ? Math.floor(solde / moyenne) : null;
     const detail = `<b>${solde.toFixed(2)}$ restants</b> · ${parJour.toFixed(2)}$ consommes aujourd'hui` +
       (jours !== null ? ` · autonomie ~${jours} jour${jours > 1 ? "s" : ""}` : "");
-    if (solde <= 1) return { ok: false, info: `${detail} — RECHARGE MAINTENANT, les analyses vont s'arreter` };
-    if (jours !== null && jours <= 7) return { ok: false, info: `${detail} — a recharger cette semaine` };
+    // Paliers fixes par le fondateur (07/08/2026) : orange a 3, rouge a 1.
+    // Un palier sur le SOLDE en plus de l'autonomie : l'autonomie depend du
+    // volume de matchs, qui s'effondre en treve puis explose a la reprise. Un
+    // solde de 2$ parait confortable le 14 aout et ne tient pas trois jours
+    // le 16.
+    if (solde <= SOLDE_ROUGE) return { ok: false, info: `${detail} — <b>RECHARGE MAINTENANT</b>, les analyses vont s'arreter` };
+    if (solde <= SOLDE_ORANGE) return { ok: false, niveau: "orange", info: `${detail} — pense a recharger` };
+    if (jours !== null && jours <= 7) return { ok: false, niveau: "orange", info: `${detail} — moins d'une semaine d'autonomie` };
     return { ok: true, info: detail };
   });
 
@@ -13785,7 +13804,9 @@ async function runMorningAudit() {
   if (repares.length) lignes.push("", `🔧 <b>${repares.length} modele(s) remplace(s) automatiquement</b> : ${repares.join(" · ")}`);
   const entete = pannes.length
     ? `🚨 <b>AUDIT MATINAL — ${pannes.length} PANNE${pannes.length > 1 ? "S" : ""}</b>\n\n<b>${pannes.join(", ")}</b>`
-    : "✅ <b>AUDIT MATINAL — tout fonctionne</b>";
+    : avertissements.length
+      ? `🟠 <b>AUDIT MATINAL — ${avertissements.length} point${avertissements.length > 1 ? "s" : ""} a surveiller</b>\n\n<b>${avertissements.join(", ")}</b>`
+      : "✅ <b>AUDIT MATINAL — tout fonctionne</b>";
   const msg = [entete, "", ...lignes, "", "━━━━━━━━━━━━━━━━━━", "👑 Hermès — audit automatique du matin"].join("\n");
   const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
   console.log(`[audit-matinal] ${pannes.length} panne(s) : ${pannes.join(", ") || "aucune"} — envoi ${ok ? "OK" : "ECHEC"}`);
