@@ -359,6 +359,36 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(match_key, agent_name)
   );
+  -- Telemetrie des appels agents (07/08/2026). Demande du fondateur apres que
+  -- 93% des analyses sont sorties sans aucun vote : "ne pars pas du principe
+  -- que le timeout est la cause tant qu'on n'a pas de preuve. Si les logs ont
+  -- disparu, il faut reconstruire une preuve." Les logs Docker disparaissent a
+  -- chaque reconstruction du conteneur — la preuve doit donc vivre en base.
+  -- Une ligne par tentative d'appel, meme echouee, avec sa duree reelle.
+  CREATE TABLE IF NOT EXISTS agent_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    model TEXT DEFAULT '',
+    host TEXT DEFAULT '',
+    sport TEXT DEFAULT '',
+    competition TEXT DEFAULT '',
+    minute INTEGER DEFAULT NULL,
+    tentative INTEGER DEFAULT 1,
+    debut_at TEXT DEFAULT '',
+    duree_ms INTEGER DEFAULT 0,
+    http_status INTEGER DEFAULT NULL,
+    issue TEXT NOT NULL,
+    detail TEXT DEFAULT '',
+    repli INTEGER DEFAULT 0,
+    -- Renseigne apres le parsing : une reponse HTTP 200 exploitable ne produit
+    -- pas forcement un vote (JSON valide mais champ "bet" vide). Sans cette
+    -- colonne on confondrait "le modele a repondu" et "l'IA a vote".
+    vote_produit INTEGER DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_agent_calls_date ON agent_calls(created_at);
+
   CREATE TABLE IF NOT EXISTS agent_market_predictions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     match_key TEXT NOT NULL,
@@ -2359,7 +2389,7 @@ const CATEGORY_BAN_KEYWORDS = [
 
 const LOW_TRUST_COMPETITION_KEYWORDS = [
   // Ligues exclues manuellement (performances négatives — rapports Hermes)
-  "bulgaria", "serbia", "usl league two",
+  "serbia", "usl league two",
   "fa cup · south-korea", "fa cup · south korea", "korean fa cup",
   "· china", "china", "chinese",
   "australia cup",
@@ -2416,6 +2446,10 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   // computeUpcomingPicks, qui ne transmettait meme pas le pays. On les inscrit
   // donc EN DUR : LOW_TRUST est verifie en premier et gagne toujours, quel que
   // soit le chemin.
+  // Finlande et Bulgarie RETIREES de cette liste le 07/08/2026 : elles passent
+  // en trusted_secondary / watchlist_shadow (voir LEAGUE_TIERS). Les divisions
+  // inferieures finlandaises restent bannies plus bas (kakkonen, ykkonen,
+  // lohko, kolmonen) — seule la premiere division est concernee.
   "poland", "pologne", "ekstraklasa", "i liga · poland",
   "czech", "tchequie", "fortuna liga", "chance liga",
   // Pas de "liga i" / "liga ii" ici : la correspondance se fait en sous-chaine,
@@ -2424,9 +2458,8 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "romania", "roumanie", "superliga · romania",
   "russia", "russie", "russian premier", "fnl",
   "ukraine", "ukrainian premier",
-  "finland", "finlande", "veikkausliiga",
-  // Europe — divisions inférieures/ligues exotiques
-  "estonia", "latvia", "lithuania", "faroe", "gibraltar",
+    // Europe — divisions inférieures/ligues exotiques
+  "estonia", "latvia", "faroe", "gibraltar",
   "andorra", "malta", "san marino", "kosovo", "north macedonia",
   "albania", "moldova", "belarus", "armenia",
   "georgia · erovnuli", "georgian erovnuli",
@@ -2444,6 +2477,48 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "npsl", "nisa", "mls next", "mls next pro",
   "us open cup", "usl w league",
 ];
+
+// ── Classification des ligues (07/08/2026, decision du fondateur) ────────────
+// Objectif : augmenter le volume analysable avant la reprise des grands
+// championnats, sans degrader la qualite ni envoyer des signaux faibles.
+//
+//   trusted_major      — TRUSTED_COMPETITIONS, regime normal
+//   trusted_secondary  — analyse ET diffusion autorisees, mais sous conditions
+//                        strictes : cote REELLE obligatoire (jamais estimee),
+//                        confiance rehaussee, resultat tracable
+//   watchlist_shadow   — analyse SEULEMENT. Jamais de diffusion abonne, jamais
+//                        de canal payant. On accumule des resultats resolus
+//                        avant de decider si on les ouvre.
+//
+// Finlande et Bulgarie ont ete retirees de la liste noire pour rendre ceci
+// possible ; leurs divisions inferieures y restent.
+const LEAGUE_TIER_SECONDARY = [
+  "superliga · denmark", "danish superliga", "superligaen", "denmark · superliga",
+  "veikkausliiga", "finland · veikkausliiga",
+  "nb i", "nb1", "otp bank liga", "hungary · nb", "hungarian nb",
+];
+const LEAGUE_TIER_WATCHLIST = [
+  "prvaliga", "slovenia · prva", "slovenian prvaliga",
+  "parva liga", "first league · bulgaria", "bulgaria · first", "efbet liga",
+  "a lyga", "lithuania · a lyga", "lithuanian a lyga",
+];
+// Points de confiance exiges EN PLUS du seuil normal pour une ligue secondaire.
+const SECONDARY_CONF_BONUS = Math.max(0, Number(process.env.SECONDARY_CONF_BONUS || 2));
+
+function leagueHaystack(match) {
+  if (typeof match === "string") return match.toLowerCase();
+  return [match?.competition, match?.league, match?.country]
+    .filter(Boolean).join(" · ").toLowerCase();
+}
+// trusted_major | trusted_secondary | watchlist_shadow | null (non classee)
+function leagueTier(match) {
+  const h = leagueHaystack(match);
+  if (!h) return null;
+  if (LEAGUE_TIER_WATCHLIST.some(k => h.includes(k))) return "watchlist_shadow";
+  if (LEAGUE_TIER_SECONDARY.some(k => h.includes(k))) return "trusted_secondary";
+  if (TRUSTED_COMPETITIONS.some(k => h.includes(k))) return "trusted_major";
+  return null;
+}
 
 const TRUSTED_COMPETITIONS = [
   "ligue 1", "ligue 2", "coupe de france",
@@ -2511,6 +2586,13 @@ function isLowTrustCompetition(matchOrCompetition = "") {
   const value = String(raw || "").toLowerCase();
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
+  // Ligues classees secondaire ou en observation (07/08/2026) : elles ne sont
+  // pas "de confiance" au sens du regime normal, mais elles doivent pouvoir
+  // etre ANALYSEES. Ce sont les barrieres de DIFFUSION, plus bas, qui decident
+  // ce qui sort — cote reelle obligatoire, confiance rehaussee, et aucune
+  // diffusion du tout pour l'observation.
+  if (LEAGUE_TIER_SECONDARY.some(k => value.includes(k))) return false;
+  if (LEAGUE_TIER_WATCHLIST.some(k => value.includes(k))) return false;
   return true;
 }
 
@@ -4716,7 +4798,33 @@ Réponds en JSON pur (pas de markdown):
 
       let raw = "{}";
       let lastDiag = "aucun fournisseur configure";
-      for (const pv of providers) {
+      // Telemetrie : une ligne par tentative, avec sa duree reelle. C'est la
+      // seule facon de trancher entre "timeout trop court" et "autre cause"
+      // sans dependre des logs Docker, qui disparaissent a chaque rebuild.
+      let _dernierAppelId = null;
+      const tracerAppel = (pv, i, t0, issue, status, detail) => {
+        try {
+          const r = db.prepare(`INSERT INTO agent_calls
+            (match_key, agent_name, model, host, sport, competition, minute,
+             tentative, debut_at, duree_ms, http_status, issue, detail, repli)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+              _fallbackMatchKey, agCfg.name, String(pv?.model || ""),
+              pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || ""),
+              String(match.sport || "Football"), String(match.competition || match.league || ""),
+              parseLiveMinuteValue(match.minute) ?? null,
+              i + 1, new Date(t0).toISOString(), Date.now() - t0,
+              status ?? null, issue, String(detail || "").slice(0, 180), i > 0 ? 1 : 0);
+          _dernierAppelId = r.lastInsertRowid;
+        } catch (e) { /* la telemetrie ne doit jamais casser une analyse */ }
+      };
+      // Trace si l'appel a reellement produit un vote — distinct de "a repondu".
+      const tracerVote = (aVote) => {
+        if (!_dernierAppelId) return;
+        try { db.prepare("UPDATE agent_calls SET vote_produit = ? WHERE id = ?").run(aVote ? 1 : 0, _dernierAppelId); }
+        catch (e) { /* jamais bloquant */ }
+      };
+      for (const [pvIndex, pv] of providers.entries()) {
+        const _t0 = Date.now();
         try {
           let resp;
           if (pv.kind === "cohere") {
@@ -4731,7 +4839,11 @@ Réponds en JSON pur (pas de markdown):
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          if (probe && probe !== "{}" && probe.length > 8) { lastDiag = null; break; }
+          if (probe && probe !== "{}" && probe.length > 8) {
+            lastDiag = null;
+            tracerAppel(pv, pvIndex, _t0, "ok", resp?._httpStatus ?? 200, `${probe.length} caracteres`);
+            break;
+          }
           // Reponse HTTP recue sans exception, mais sans contenu exploitable —
           // diagnostic precis a partir des marqueurs poses par httpPost() plutot
           // que de deviner "timeout" par defaut (constate le 04/08/2026 : la
@@ -4742,9 +4854,15 @@ Réponds en JSON pur (pas de markdown):
             : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost}) — ${JSON.stringify(resp).slice(0, 200)}`
             : resp?._httpParseError ? `reponse illisible (${pvHost}): ${resp._raw}`
             : `reponse sans contenu exploitable (${pvHost})`;
+          tracerAppel(pv, pvIndex, _t0,
+            resp?._httpTimedOut ? "timeout"
+              : resp?._httpStatus && resp._httpStatus >= 400 ? "http_erreur"
+              : resp?._httpParseError ? "illisible" : "vide",
+            resp?._httpStatus, lastDiag);
         } catch (e) {
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
           lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
+          tracerAppel(pv, pvIndex, _t0, "reseau", null, e.message);
           console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
       }
@@ -4752,6 +4870,7 @@ Réponds en JSON pur (pas de markdown):
       const parsed = JSON.parse(cleaned);
 
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
+      tracerVote(modelGaveBet);
       if (!modelGaveBet) {
         console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable — ${lastDiag || "raison inconnue"}`);
         return {
@@ -5126,7 +5245,35 @@ Réponds en JSON pur (pas de markdown):
   // répondre factuellement à "pourquoi 0 signal aujourd'hui ?" au lieu de
   // supposer. Écrit en base plus bas, agrégé par /admin/funnel-report.
   let _tierBlock = null; // motif de non-diffusion detecte dans le bloc palier
+  // ── Regime par classe de ligue (07/08/2026, decision du fondateur) ─────────
+  // "Le but n'est pas d'avoir plus de signaux a tout prix. Le but est de
+  // reperer les ligues qui peuvent devenir rentables sans salir l'historique."
+  // On evalue ces barrieres AVANT les autres : une ligue en observation ne doit
+  // jamais sortir, quel que soit son score par ailleurs.
+  const _tier = leagueTier(match);
+  const _coteReelle = Number(analysisResult.cote) > 1
+    && !!analysisResult.cote_source
+    && !/estimation/i.test(String(analysisResult.cote_source));
+  const _blockTier = (() => {
+    if (_tier === "watchlist_shadow") {
+      // Deux motifs distincts, parce qu'ils ne mènent pas à la même décision
+      // dans trois mois : une analyse sans cote reelle ne pourra JAMAIS compter
+      // dans le bilan d'ouverture de la ligue, celle avec cote si.
+      return _coteReelle
+        ? "watchlist_shadow_only"
+        : "missing_real_odd_watchlist (signal sportif fort, mais disponibilite bookmaker a verifier)";
+    }
+    if (_tier !== "trusted_secondary") return null;
+    // Ligue secondaire : cote REELLE obligatoire, jamais une estimation.
+    if (!_coteReelle) return "missing_real_odd_secondary (signal sportif fort, mais disponibilite bookmaker a verifier)";
+    if (analysisResult.confidence < signalThreshold + SECONDARY_CONF_BONUS) {
+      return `secondary_league_threshold (confiance ${analysisResult.confidence} < ${signalThreshold + SECONDARY_CONF_BONUS})`;
+    }
+    return null;
+  })();
+
   const _blockReason = (() => {
+    if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
     if (voteCountForSignal < 3) return `votes ${voteCountForSignal} < 3`;
@@ -14016,6 +14163,45 @@ async function runMorningAudit() {
     });
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
+
+  // 8ter. Preuve chiffree sur les appels agents. C'est ce bloc qui doit
+  //       trancher entre "timeout trop court" et "autre cause" — sans lui, on
+  //       ne ferait que deplacer une hypothese. Les percentiles comptent plus
+  //       que la moyenne : si le p90 colle au plafond du timeout, c'est lui.
+  try {
+    const depuis = new Date(Date.now() - 24 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
+    const appels = db.prepare("SELECT agent_name, duree_ms, issue, vote_produit FROM agent_calls WHERE created_at >= ?").all(depuis);
+    if (appels.length) {
+      const parIssue = {};
+      appels.forEach(a => { parIssue[a.issue] = (parIssue[a.issue] || 0) + 1; });
+      const durees = appels.map(a => a.duree_ms).sort((x, y) => x - y);
+      const pc = (q) => durees[Math.min(durees.length - 1, Math.floor(durees.length * q))];
+      const plafond = Math.max(2000, Number(process.env.AGENT_TIMEOUT_MS) || 10000);
+      const votes = appels.filter(a => a.vote_produit === 1).length;
+      lignes.push("", `🔬 <b>Appels agents (24h)</b> — ${appels.length} tentatives, ${votes} votes produits`);
+      lignes.push(`   issues : ${Object.entries(parIssue).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(" · ")}`);
+      lignes.push(`   durees : mediane ${pc(0.5)}ms · p90 ${pc(0.9)}ms · max ${durees[durees.length - 1]}ms (plafond ${plafond}ms)`);
+      const timeouts = parIssue.timeout || 0;
+      const partTimeout = Math.round(timeouts / appels.length * 100);
+      lignes.push(pc(0.9) >= plafond * 0.9 || partTimeout >= 20
+        ? `   → <b>le plafond est bien le facteur limitant</b> (${partTimeout}% de timeouts, p90 a ${pc(0.9)}ms)`
+        : `   → le plafond n'est PAS le facteur limitant (${partTimeout}% de timeouts) : chercher ailleurs`);
+      // Par agent : identifie un fournisseur precis plutot qu'un probleme global.
+      const parAgent = {};
+      appels.forEach(a => {
+        parAgent[a.agent_name] = parAgent[a.agent_name] || { n: 0, ko: 0, v: 0, somme: 0 };
+        const e = parAgent[a.agent_name];
+        e.n++; e.somme += a.duree_ms;
+        if (a.issue !== "ok") e.ko++;
+        if (a.vote_produit === 1) e.v++;
+      });
+      Object.entries(parAgent).sort((a, b) => b[1].ko - a[1].ko).slice(0, 6).forEach(([nom, e]) => {
+        lignes.push(`   ${nom} : ${e.v}/${e.n} votes · ${Math.round(e.somme / e.n)}ms moyen · ${e.ko} echecs`);
+      });
+    } else {
+      lignes.push("", `🔬 Appels agents — aucune trace sur 24h (telemetrie posee ce soir, elle se remplira au prochain match)`);
+    }
+  } catch (e) { lignes.push(`🔴 Telemetrie agents — ${String(e.message).slice(0, 60)}`); }
 
   // 8bis. Mode shadow du routage par specialiste : ce qu'il AURAIT change.
   //       Aucune de ces analyses n'a ete diffusee — le rapport sert uniquement

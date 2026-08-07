@@ -57,6 +57,18 @@ services:
       - AUTO_CONCILE_MAX_MATCHES=${AUTO_CONCILE_MAX_MATCHES}
       # Delai accorde a chaque agent du Concile (defaut 10000 ms)
       - AGENT_TIMEOUT_MS=${AGENT_TIMEOUT_MS}
+      # Reglages ajoutes le 07/08/2026. Sans ces lignes, les variables du .env
+      # n'atteignent jamais le conteneur : le code lisait ses valeurs par
+      # defaut et le fondateur croyait piloter des reglages qui ne bougeaient
+      # pas. Toutes ont une valeur par defaut dans api_server.js, une variable
+      # vide ne casse donc rien.
+      - ROUTAGE_MODE=${ROUTAGE_MODE}
+      - SPECIALISTE_MIN_RESOLUS=${SPECIALISTE_MIN_RESOLUS}
+      - PROMO_MIN_RESOLUS=${PROMO_MIN_RESOLUS}
+      - PROMO_MARGE_MINI=${PROMO_MARGE_MINI}
+      - SOLDE_ORANGE=${SOLDE_ORANGE}
+      - SOLDE_ROUGE=${SOLDE_ROUGE}
+      - AUTO_CONCILE_ARJEL_ONLY=${AUTO_CONCILE_ARJEL_ONLY}
       # Fenetre de temps (desactivee le 28/07/2026, remettre a 1 pour reactiver)
       - AUTO_CONCILE_TIME_WINDOW=${AUTO_CONCILE_TIME_WINDOW}
       - AUTO_CONCILE_WINDOW_MIN=${AUTO_CONCILE_WINDOW_MIN}
