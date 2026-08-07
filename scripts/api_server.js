@@ -359,6 +359,36 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now')),
     UNIQUE(match_key, agent_name)
   );
+  -- Telemetrie des appels agents (07/08/2026). Demande du fondateur apres que
+  -- 93% des analyses sont sorties sans aucun vote : "ne pars pas du principe
+  -- que le timeout est la cause tant qu'on n'a pas de preuve. Si les logs ont
+  -- disparu, il faut reconstruire une preuve." Les logs Docker disparaissent a
+  -- chaque reconstruction du conteneur — la preuve doit donc vivre en base.
+  -- Une ligne par tentative d'appel, meme echouee, avec sa duree reelle.
+  CREATE TABLE IF NOT EXISTS agent_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    model TEXT DEFAULT '',
+    host TEXT DEFAULT '',
+    sport TEXT DEFAULT '',
+    competition TEXT DEFAULT '',
+    minute INTEGER DEFAULT NULL,
+    tentative INTEGER DEFAULT 1,
+    debut_at TEXT DEFAULT '',
+    duree_ms INTEGER DEFAULT 0,
+    http_status INTEGER DEFAULT NULL,
+    issue TEXT NOT NULL,
+    detail TEXT DEFAULT '',
+    repli INTEGER DEFAULT 0,
+    -- Renseigne apres le parsing : une reponse HTTP 200 exploitable ne produit
+    -- pas forcement un vote (JSON valide mais champ "bet" vide). Sans cette
+    -- colonne on confondrait "le modele a repondu" et "l'IA a vote".
+    vote_produit INTEGER DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_agent_calls_date ON agent_calls(created_at);
+
   CREATE TABLE IF NOT EXISTS agent_market_predictions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     match_key TEXT NOT NULL,
@@ -4716,7 +4746,33 @@ Réponds en JSON pur (pas de markdown):
 
       let raw = "{}";
       let lastDiag = "aucun fournisseur configure";
-      for (const pv of providers) {
+      // Telemetrie : une ligne par tentative, avec sa duree reelle. C'est la
+      // seule facon de trancher entre "timeout trop court" et "autre cause"
+      // sans dependre des logs Docker, qui disparaissent a chaque rebuild.
+      let _dernierAppelId = null;
+      const tracerAppel = (pv, i, t0, issue, status, detail) => {
+        try {
+          const r = db.prepare(`INSERT INTO agent_calls
+            (match_key, agent_name, model, host, sport, competition, minute,
+             tentative, debut_at, duree_ms, http_status, issue, detail, repli)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+              _fallbackMatchKey, agCfg.name, String(pv?.model || ""),
+              pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || ""),
+              String(match.sport || "Football"), String(match.competition || match.league || ""),
+              parseLiveMinuteValue(match.minute) ?? null,
+              i + 1, new Date(t0).toISOString(), Date.now() - t0,
+              status ?? null, issue, String(detail || "").slice(0, 180), i > 0 ? 1 : 0);
+          _dernierAppelId = r.lastInsertRowid;
+        } catch (e) { /* la telemetrie ne doit jamais casser une analyse */ }
+      };
+      // Trace si l'appel a reellement produit un vote — distinct de "a repondu".
+      const tracerVote = (aVote) => {
+        if (!_dernierAppelId) return;
+        try { db.prepare("UPDATE agent_calls SET vote_produit = ? WHERE id = ?").run(aVote ? 1 : 0, _dernierAppelId); }
+        catch (e) { /* jamais bloquant */ }
+      };
+      for (const [pvIndex, pv] of providers.entries()) {
+        const _t0 = Date.now();
         try {
           let resp;
           if (pv.kind === "cohere") {
@@ -4731,7 +4787,11 @@ Réponds en JSON pur (pas de markdown):
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          if (probe && probe !== "{}" && probe.length > 8) { lastDiag = null; break; }
+          if (probe && probe !== "{}" && probe.length > 8) {
+            lastDiag = null;
+            tracerAppel(pv, pvIndex, _t0, "ok", resp?._httpStatus ?? 200, `${probe.length} caracteres`);
+            break;
+          }
           // Reponse HTTP recue sans exception, mais sans contenu exploitable —
           // diagnostic precis a partir des marqueurs poses par httpPost() plutot
           // que de deviner "timeout" par defaut (constate le 04/08/2026 : la
@@ -4742,9 +4802,15 @@ Réponds en JSON pur (pas de markdown):
             : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost}) — ${JSON.stringify(resp).slice(0, 200)}`
             : resp?._httpParseError ? `reponse illisible (${pvHost}): ${resp._raw}`
             : `reponse sans contenu exploitable (${pvHost})`;
+          tracerAppel(pv, pvIndex, _t0,
+            resp?._httpTimedOut ? "timeout"
+              : resp?._httpStatus && resp._httpStatus >= 400 ? "http_erreur"
+              : resp?._httpParseError ? "illisible" : "vide",
+            resp?._httpStatus, lastDiag);
         } catch (e) {
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
           lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
+          tracerAppel(pv, pvIndex, _t0, "reseau", null, e.message);
           console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
       }
@@ -4752,6 +4818,7 @@ Réponds en JSON pur (pas de markdown):
       const parsed = JSON.parse(cleaned);
 
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
+      tracerVote(modelGaveBet);
       if (!modelGaveBet) {
         console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable — ${lastDiag || "raison inconnue"}`);
         return {
@@ -14016,6 +14083,45 @@ async function runMorningAudit() {
     });
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
+
+  // 8ter. Preuve chiffree sur les appels agents. C'est ce bloc qui doit
+  //       trancher entre "timeout trop court" et "autre cause" — sans lui, on
+  //       ne ferait que deplacer une hypothese. Les percentiles comptent plus
+  //       que la moyenne : si le p90 colle au plafond du timeout, c'est lui.
+  try {
+    const depuis = new Date(Date.now() - 24 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
+    const appels = db.prepare("SELECT agent_name, duree_ms, issue, vote_produit FROM agent_calls WHERE created_at >= ?").all(depuis);
+    if (appels.length) {
+      const parIssue = {};
+      appels.forEach(a => { parIssue[a.issue] = (parIssue[a.issue] || 0) + 1; });
+      const durees = appels.map(a => a.duree_ms).sort((x, y) => x - y);
+      const pc = (q) => durees[Math.min(durees.length - 1, Math.floor(durees.length * q))];
+      const plafond = Math.max(2000, Number(process.env.AGENT_TIMEOUT_MS) || 10000);
+      const votes = appels.filter(a => a.vote_produit === 1).length;
+      lignes.push("", `🔬 <b>Appels agents (24h)</b> — ${appels.length} tentatives, ${votes} votes produits`);
+      lignes.push(`   issues : ${Object.entries(parIssue).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n}`).join(" · ")}`);
+      lignes.push(`   durees : mediane ${pc(0.5)}ms · p90 ${pc(0.9)}ms · max ${durees[durees.length - 1]}ms (plafond ${plafond}ms)`);
+      const timeouts = parIssue.timeout || 0;
+      const partTimeout = Math.round(timeouts / appels.length * 100);
+      lignes.push(pc(0.9) >= plafond * 0.9 || partTimeout >= 20
+        ? `   → <b>le plafond est bien le facteur limitant</b> (${partTimeout}% de timeouts, p90 a ${pc(0.9)}ms)`
+        : `   → le plafond n'est PAS le facteur limitant (${partTimeout}% de timeouts) : chercher ailleurs`);
+      // Par agent : identifie un fournisseur precis plutot qu'un probleme global.
+      const parAgent = {};
+      appels.forEach(a => {
+        parAgent[a.agent_name] = parAgent[a.agent_name] || { n: 0, ko: 0, v: 0, somme: 0 };
+        const e = parAgent[a.agent_name];
+        e.n++; e.somme += a.duree_ms;
+        if (a.issue !== "ok") e.ko++;
+        if (a.vote_produit === 1) e.v++;
+      });
+      Object.entries(parAgent).sort((a, b) => b[1].ko - a[1].ko).slice(0, 6).forEach(([nom, e]) => {
+        lignes.push(`   ${nom} : ${e.v}/${e.n} votes · ${Math.round(e.somme / e.n)}ms moyen · ${e.ko} echecs`);
+      });
+    } else {
+      lignes.push("", `🔬 Appels agents — aucune trace sur 24h (telemetrie posee ce soir, elle se remplira au prochain match)`);
+    }
+  } catch (e) { lignes.push(`🔴 Telemetrie agents — ${String(e.message).slice(0, 60)}`); }
 
   // 8bis. Mode shadow du routage par specialiste : ce qu'il AURAIT change.
   //       Aucune de ces analyses n'a ete diffusee — le rapport sert uniquement
