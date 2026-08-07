@@ -4981,8 +4981,45 @@ Réponds en JSON pur (pas de markdown):
     consensusBet = topBet;
     consensusVotes = topVotes;
   } else {
-    chief.confidence = Math.min(55, Number(chief.confidence || 55));
-    chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
+    // Aucune majorite sur le marche principal. Avant d'abandonner a 55%, on
+    // regarde les avis multi-marches deja emis : les IA peuvent diverger sur
+    // "quel est le meilleur pari" tout en etant tres d'accord sur un marche
+    // precis — et notamment sur celui ou les meilleures d'entre elles sont
+    // specialistes. C'est exactement le cas que le vote a poids egal jetait.
+    const routage = meilleurMarcheParSpecialistes(agentMarketList);
+    // Mode shadow : on ENREGISTRE ce que le routage aurait choisi, sans jamais
+    // toucher au verdict. L'analyse reste a 55%, aucun signal n'est envoye,
+    // aucun abonne n'est impacte. Le rapport du matin compare ensuite ces
+    // choix aux resultats reels. Tant que le mode est "shadow", ce bloc est le
+    // SEUL effet du routage sur le systeme.
+    if (routage && ROUTAGE_MODE === "shadow") {
+      try {
+        db.prepare(`INSERT OR IGNORE INTO routage_shadow
+          (match_key, home, away, competition, market_line, bet, accord, experts, confiance_reelle)
+          VALUES (?,?,?,?,?,?,?,?,?)`)
+          .run(getPredictionSnapshotKey(match), match.home || "", match.away || "",
+               match.competition || match.league || "", routage.ligne, routage.bet,
+               routage.accord, routage.experts.join(", "),
+               Math.min(55, Number(chief.confidence || 55)));
+      } catch (e) { console.error("[routage-shadow]", e.message); }
+      console.log(`[routage-shadow] ${match.home} vs ${match.away} : aurait propose ${routage.bet} (accord ${routage.accord}%) — non applique`);
+    }
+    if (routage && ROUTAGE_MODE === "actif") {
+      consensusBet = routage.bet;
+      consensusVotes = 3; // accord pondere equivalent au quorum
+      chief.bet = routage.bet;
+      // Plafond volontairement bas (78) : un accord obtenu par ponderation vaut
+      // moins qu'une convergence franche de 4 ou 5 IA sur le marche principal.
+      // Il reste au-dessus du plancher de diffusion, donc exploitable.
+      chief.confidence = Math.max(58, Math.min(78, routage.accord));
+      chief.raison = `Accord pondéré ${routage.accord}% sur ${routage.bet}`
+        + (routage.experts.length ? `, porté par ${routage.experts.join(", ")} sur ce marché` : "")
+        + `. ${chief.raison || ""}`.trimEnd();
+      console.log(`[specialiste] ${match.home} vs ${match.away} : ${routage.bet} (accord pondere ${routage.accord}%, ${routage.experts.length} specialiste(s))`);
+    } else {
+      chief.confidence = Math.min(55, Number(chief.confidence || 55));
+      chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
+    }
   }
 
   // Sauvegarder les prédictions pour le tracking de performance
@@ -6487,6 +6524,122 @@ function saveAgentMarketPredictions(match, agentMarketList) {
   } catch (e) { console.error("[agent-market] save:", e.message); }
 }
 
+// ── Routage par specialiste (07/08/2026) ─────────────────────────────────────
+// Demande du fondateur : "proposer les matchs avec les meilleurs resultats par
+// IA de facon a avoir un excellent ratio".
+//
+// Jusqu'ici les cinq IA votaient a poids EGAL sur un marche unique. Or les
+// donnees montrent qu'une IA moyenne au general peut etre excellente sur un
+// marche precis, et inversement. Traiter le vote d'une IA a 45% sur "les deux
+// marquent" comme celui d'une IA a 78% sur ce meme marche, c'est diluer le
+// signal exploitable dans du bruit.
+//
+// Chaque marche est donc tranche par les IA qui y sont reellement bonnes, et on
+// retient le marche ou l'accord PONDERE est le plus fort. Les avis multi-marches
+// sont deja collectes et resolus (agent_market_predictions) : aucun appel IA
+// supplementaire, donc aucun cout ajoute.
+// Trois modes (relecture GPT/Codex du 07/08/2026, decision du fondateur) :
+//   "shadow" (defaut) — le routage est CALCULE et enregistre, jamais applique.
+//                       Aucun abonne n'est impacte. Sert a mesurer sur deux
+//                       semaines ce qu'il aurait change avant de l'activer.
+//   "actif"           — le routage decide reellement.
+//   "off"             — desactive.
+// Le mode shadow est le defaut volontairement : une idee saine sur le papier
+// doit faire ses preuves sur les vrais resultats avant de toucher des signaux
+// envoyes a des abonnes payants.
+const ROUTAGE_MODE = ["shadow", "actif", "off"].includes(process.env.ROUTAGE_MODE)
+  ? process.env.ROUTAGE_MODE : "shadow";
+// Releve de 25 a 75 apres relecture : a 25 pronostics, un ecart de winrate est
+// indiscernable du bruit, et ponderer sur du bruit degrade au lieu d'ameliorer.
+const SPECIALISTE_MIN_RESOLUS = Math.max(25, Number(process.env.SPECIALISTE_MIN_RESOLUS || 75));
+
+// Journal du mode shadow : ce que le routage AURAIT choisi, resolu plus tard
+// comme n'importe quelle prediction, pour comparer sans rien risquer.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS routage_shadow (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    home TEXT NOT NULL,
+    away TEXT NOT NULL,
+    competition TEXT DEFAULT '',
+    market_line TEXT NOT NULL,
+    bet TEXT NOT NULL,
+    accord INTEGER DEFAULT 0,
+    experts TEXT DEFAULT '',
+    confiance_reelle INTEGER DEFAULT 55,
+    outcome TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    resolved_at TEXT DEFAULT NULL,
+    UNIQUE(match_key)
+  );
+`);
+const _specialistesCache = { at: 0, map: {} };
+
+function poidsSpecialistes() {
+  if (Date.now() - _specialistesCache.at < 30 * 60000) return _specialistesCache.map;
+  const map = {};
+  try {
+    db.prepare(`
+      SELECT agent_name, market_line,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions WHERE outcome IN ('win','loss')
+      GROUP BY agent_name, market_line
+    `).all().forEach(r => {
+      const resolus = (r.wins || 0) + (r.losses || 0);
+      if (resolus < SPECIALISTE_MIN_RESOLUS) return;
+      const wr = r.wins / resolus;
+      // Poids centre sur 1 : une IA a 50% pese 1, a 75% pese 1.5, a 40% pese
+      // 0.8. Borne a [0.5, 1.6] pour qu'aucune IA ne puisse decider seule ni
+      // etre reduite au silence sur une bonne serie ou une mauvaise passe.
+      map[`${r.agent_name}|${r.market_line}`] = {
+        poids: Math.max(0.5, Math.min(1.6, wr * 2)), winrate: Math.round(wr * 100), resolus,
+      };
+    });
+  } catch (e) { console.error("[specialiste]", e.message); }
+  _specialistesCache.map = map;
+  _specialistesCache.at = Date.now();
+  return map;
+}
+
+// Renvoie le marche ou l'accord pondere est le plus fort, ou null si aucun ne
+// se detache. N'invente jamais d'avis : ne travaille que sur ceux deja emis.
+function meilleurMarcheParSpecialistes(agentMarketList) {
+  if (ROUTAGE_MODE === "off" || !agentMarketList || agentMarketList.length < 3) return null;
+  const poids = poidsSpecialistes();
+  const parLigne = {};
+  agentMarketList.forEach(am => {
+    const m = am.marches || {};
+    Object.entries(m).forEach(([ligne, val]) => {
+      if (!val) return;
+      const code = typeof val === "object" ? val.p : val;
+      const bet = canonicalMarketBet(ligne, code);
+      if (!bet) return;
+      const sp = poids[`${am.name}|${ligne}`];
+      const w = sp ? sp.poids : 1;
+      parLigne[ligne] = parLigne[ligne] || { total: 0, choix: {}, experts: [] };
+      parLigne[ligne].total += w;
+      parLigne[ligne].choix[bet] = (parLigne[ligne].choix[bet] || 0) + w;
+      if (sp && sp.winrate >= 60) parLigne[ligne].experts.push(`${am.name} ${sp.winrate}%`);
+    });
+  });
+
+  let meilleur = null;
+  Object.entries(parLigne).forEach(([ligne, d]) => {
+    const [bet, score] = Object.entries(d.choix).sort((a, b) => b[1] - a[1])[0] || [];
+    if (!bet || !d.total) return;
+    const accord = score / d.total;
+    // Exige une vraie majorite ponderee, pas une pluralite de justesse.
+    if (accord < 0.6) return;
+    // A accord egal, on prefere le marche ou des specialistes se sont exprimes.
+    const rang = accord + (d.experts.length * 0.02);
+    if (!meilleur || rang > meilleur.rang) {
+      meilleur = { ligne, bet, accord: Math.round(accord * 100), rang, experts: d.experts };
+    }
+  });
+  return meilleur;
+}
+
 function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
   try {
     const hw = String(home || "").split(" ")[0];
@@ -6501,6 +6654,20 @@ function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
     pending.forEach(p => { const o = resolveMarketBet(p.bet, h, a, htHome, htAway); if (o) { upd.run(o, p.id); n++; } });
     if (n) console.log(`[agent-market] résolu ${n}/${pending.length} avis marché: ${home} vs ${away}`);
   } catch (e) { console.error("[agent-market] resolve:", e.message); }
+  // Meme resolution pour le journal du mode shadow : sans issue tranchee, la
+  // comparaison "ce que le routage aurait donne" n'aurait aucune valeur.
+  try {
+    const hw = String(home || "").split(" ")[0];
+    const aw = String(away || "").split(" ")[0];
+    if (!hw || !aw) return;
+    const sh = db.prepare("SELECT id, bet FROM routage_shadow WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL")
+      .all(`%${hw}%`, `%${aw}%`);
+    if (!sh.length) return;
+    const up = db.prepare("UPDATE routage_shadow SET outcome = ?, resolved_at = datetime('now') WHERE id = ?");
+    let m = 0;
+    sh.forEach(r => { const o = resolveMarketBet(r.bet, h, a, htHome, htAway); if (o) { up.run(o, r.id); m++; } });
+    if (m) console.log(`[routage-shadow] résolu ${m}/${sh.length}: ${home} vs ${away}`);
+  } catch (e) { console.error("[routage-shadow] resolve:", e.message); }
 }
 
 function saveAgentPredictions(match, agentResults) {
@@ -13360,22 +13527,37 @@ Codes : buts=o2.5 ou u2.5 | btts=oui ou non | resultat=dom, ext ou nul | mt1=oui
 // Familles ecartees d'office comme remplacantes : gratuites (quota nul et
 // retirees sans preavis — c'est exactement ce qui vient d'arriver), lots
 // asynchrones, alias instables prefixes "~", et modeles specialises hors sujet.
-const REMPLACANT_INTERDIT = /(:free|:batch|^~|guard|-code|embed|rerank|vision|image|tts|whisper)/i;
+// Ajouts du 07/08/2026 apres une substitution ratee en production : le filtre
+// a retenu "mistralai/voxtral-small-24b-2507" — un modele AUDIO — parce qu'il
+// arrivait en tete d'un tri alphabetique inverse. Les modalites non textuelles
+// et les modeles specialises n'ont rien a faire dans un concile d'analyse.
+const REMPLACANT_INTERDIT = /(:free|:batch|^~|guard|-code|embed|rerank|vision|image|tts|whisper|voxtral|audio|speech|ocr|moderation|codestral|devstral|math|translate)/i;
 
-async function sondeModele(modelId) {
-  try {
-    const r = await httpPost("https://openrouter.ai/api/v1/chat/completions",
-      { model: modelId, messages: [{ role: "user", content: SONDE_MARCHES }], max_tokens: 80, temperature: 0.2 },
-      { Authorization: `Bearer ${OPENROUTER_API_KEY}` }, 20000);
-    const txt = r?.choices?.[0]?.message?.content || "";
-    if (!txt) return { ok: false, why: String(r?.error?.message || "aucune reponse").slice(0, 55) };
-    // Exige les quatre familles de marches, sinon le modele est inexploitable.
-    const manquants = ["buts", "btts", "resultat", "mt1"].filter(k => !new RegExp(k + "\\s*=", "i").test(txt));
-    if (manquants.length) return { ok: false, why: `format incomplet (manque ${manquants.join(", ")})` };
-    return { ok: true, why: "repond sur les 6 marches" };
-  } catch (e) {
-    return { ok: false, why: String(e.message).slice(0, 55) };
+// Sonde volontairement TOLERANTE. Version du 07/08/2026 corrigee le jour meme :
+// avec max_tokens=80 et une exigence de format stricte, un modele bavard ou qui
+// ajoute une phrase d'introduction etait declare mort alors qu'il repondait tres
+// bien. Constate en production — qwen3.7-max et kimi-k3, tous deux valides par
+// un appel direct, ont ete remplaces a tort. Un faux positif coute cher : il
+// evince un bon modele. Un faux negatif ne coute rien : on garde l'existant.
+async function sondeModele(modelId, essais = 2) {
+  let dernier = "aucune reponse";
+  for (let n = 0; n < essais; n++) {
+    try {
+      const r = await httpPost("https://openrouter.ai/api/v1/chat/completions",
+        { model: modelId, messages: [{ role: "user", content: SONDE_MARCHES }], max_tokens: 250, temperature: 0.1 },
+        { Authorization: `Bearer ${OPENROUTER_API_KEY}` }, 25000);
+      const txt = r?.choices?.[0]?.message?.content || "";
+      if (!txt) { dernier = String(r?.error?.message || "aucune reponse").slice(0, 55); continue; }
+      // On CHERCHE les marches dans la reponse au lieu d'exiger une ligne exacte :
+      // un preambule ou un retour a la ligne ne sont pas des defauts de fond.
+      const manquants = ["buts", "btts", "resultat", "mt1"].filter(k => !new RegExp(k + "\\s*[=:]", "i").test(txt));
+      if (!manquants.length) return { ok: true, why: "repond sur les 6 marches" };
+      dernier = `format incomplet (manque ${manquants.join(", ")})`;
+    } catch (e) {
+      dernier = String(e.message).slice(0, 55);
+    }
   }
+  return { ok: false, why: dernier };
 }
 
 // Modeles reellement appeles par le Concile. Cle = identifiant historique
@@ -13426,10 +13608,37 @@ async function auditAndRepairModels() {
   const lignes = [];
   const pannes = [];
   const repares = [];
+  // Familles deja occupees : le Concile ne vaut que par la DIVERSITE de ses
+  // ecoles de modeles. Constate en production le 07/08/2026 : deux sieges se
+  // sont retrouves sur du Kimi (kimi-k2-thinking et kimi-k2.5). Deux variantes
+  // du meme modele se trompent ensemble — le vote a cinq perd tout son sens.
+  const famillesPrises = new Set();
   for (const [logique, role] of Object.entries(MODELES_CONCILE)) {
-    const actuel = resolveModel(logique);
-    const sonde = await sondeModele(actuel);
+    let actuel = resolveModel(logique);
+    // Auto-guerison : si le modele d'origine refonctionne, on revient dessus et
+    // on efface la substitution. Sans ca, un remplacement decide un jour de
+    // panne passagere deviendrait definitif.
+    if (actuel !== logique) {
+      const retour = await sondeModele(logique);
+      if (retour.ok) {
+        db.prepare("DELETE FROM model_overrides WHERE logical_id = ?").run(logique);
+        _modelOverrideCache.at = 0;
+        actuel = logique;
+        lignes.push(`↩️ ${role} — retour au modele d'origine ${logique} (il refonctionne)`);
+        console.log(`[modeles] ${logique} : substitution annulee, le modele d'origine repond a nouveau`);
+      }
+    }
+    // Une substitution passee peut pointer vers un modele que le filtre rejette
+    // aujourd'hui (voxtral, un modele AUDIO, a ete retenu le 07/08/2026 avant
+    // que le filtre soit elargi). Il "repond" donc la sonde le declare valide et
+    // il resterait en place indefiniment. On le traite comme mort pour forcer un
+    // nouveau choix.
+    const interdit = actuel !== logique && REMPLACANT_INTERDIT.test(actuel);
+    const sonde = interdit
+      ? { ok: false, why: "modele non conforme au filtre (modalite ou specialite hors sujet)" }
+      : await sondeModele(actuel);
     if (sonde.ok) {
+      famillesPrises.add(actuel.split("/")[0]);
       // Le modele repond. On regarde quand meme si le fournisseur a publie une
       // version plus recente de CE modele precis (demande du fondateur :
       // "si elle a une nouvelle version sur OpenRouter, upgrade-la
@@ -13466,10 +13675,21 @@ async function auditAndRepairModels() {
     // recent au plus ancien. Meme famille = meme ecole de modele, ce qui
     // preserve la diversite d'architectures qui fait la valeur du Concile.
     const famille = logique.split("/")[0];
-    const candidats = dispo
-      .filter(id => id.startsWith(famille + "/") && id !== actuel && !REMPLACANT_INTERDIT.test(id))
-      .sort()
-      .reverse();
+    // Ordre de preference : d'abord les modeles de MEME FORME que l'actuel
+    // (meme nom, numero different — donc meme gamme), ensuite le reste de la
+    // famille. Le tri alphabetique inverse seul avait retenu "voxtral" et
+    // "command-r7b" plutot que les modeles de la bonne gamme.
+    const memeForme = [], memeFamille = [];
+    dispo.filter(id => id.startsWith(famille + "/") && id !== actuel && !REMPLACANT_INTERDIT.test(id))
+      .forEach(id => { (formeModele(id) === formeModele(actuel) ? memeForme : memeFamille).push(id); });
+    const parNumero = (a, b) => {
+      const x = numerosModele(a), y = numerosModele(b);
+      for (let i = 0; i < Math.max(x.length, y.length); i++) {
+        if ((x[i] ?? -1) !== (y[i] ?? -1)) return (y[i] ?? -1) - (x[i] ?? -1);
+      }
+      return 0;
+    };
+    const candidats = [...memeForme.sort(parNumero), ...memeFamille.sort(parNumero)];
     let remplace = null;
     for (const c of candidats.slice(0, 4)) {
       const t = await sondeModele(c);
@@ -13482,6 +13702,7 @@ async function auditAndRepairModels() {
                     replaced_at=excluded.replaced_at, reason=excluded.reason`)
         .run(logique, remplace, `${actuel} : ${sonde.why}`);
       _modelOverrideCache.at = 0; // force la relecture au prochain appel
+      famillesPrises.add(remplace.split("/")[0]);
       repares.push(`${role} → ${remplace}`);
       lignes.push(`🔧 ${role} — ${actuel} mort (${sonde.why}), remplace par ${remplace}`);
       console.log(`[modeles] ${logique} remplace par ${remplace} — ${sonde.why}`);
@@ -13494,6 +13715,9 @@ async function auditAndRepairModels() {
       for (const cand of AGENTS_DE_SECOURS) {
         const vrai = resolveModel(cand);
         if (vrai === actuel) continue;
+        // Jamais deux sieges sur la meme ecole de modele : ils voteraient
+        // ensemble et le quorum de trois ne prouverait plus rien.
+        if (famillesPrises.has(vrai.split("/")[0])) continue;
         const t = await sondeModele(vrai);
         if (t.ok) { secours = vrai; break; }
       }
@@ -13504,6 +13728,7 @@ async function auditAndRepairModels() {
                       replaced_at=excluded.replaced_at, reason=excluded.reason`)
           .run(logique, secours, `famille ${famille} indisponible : ${sonde.why}`);
         _modelOverrideCache.at = 0;
+        famillesPrises.add(secours.split("/")[0]);
         repares.push(`${role} → ${secours} (secours)`);
         lignes.push(`🪑 ${role} — famille ${famille} indisponible, siege occupe par ${secours}`);
         console.log(`[modeles] ${logique} : siege de secours ${secours}`);
@@ -13791,6 +14016,38 @@ async function runMorningAudit() {
     });
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
+
+  // 8bis. Mode shadow du routage par specialiste : ce qu'il AURAIT change.
+  //       Aucune de ces analyses n'a ete diffusee — le rapport sert uniquement
+  //       a decider, sur deux semaines de donnees reelles, s'il vaut la peine
+  //       d'etre active.
+  try {
+    const r = db.prepare(`
+      SELECT COUNT(*) total,
+             SUM(CASE WHEN outcome='win'  THEN 1 ELSE 0 END) gagnes,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) perdus
+      FROM routage_shadow`).get() || {};
+    const tranches = (r.gagnes || 0) + (r.perdus || 0);
+    if (r.total) {
+      const wr = tranches ? Math.round(r.gagnes / tranches * 100) : null;
+      // Mise a 10€ par signal, comme partout ailleurs dans le projet, et cote
+      // moyenne prudente de 1.75 : ces analyses n'ont pas de cote reelle
+      // puisqu'elles n'ont jamais ete diffusees.
+      const profit = tranches ? Math.round((r.gagnes * 7.5) - (r.perdus * 10)) : null;
+      lignes.push("", `🧪 <b>Routage par specialiste — mode shadow (non applique)</b>`);
+      lignes.push(`   ${r.total} analyses recuperees qui finissaient a 55% sans signal`);
+      lignes.push(tranches
+        ? `   ${tranches} tranchees : ${r.gagnes} gagnees / ${r.perdus} perdues — <b>${wr}%</b>${profit !== null ? ` · ${profit >= 0 ? "+" : ""}${profit}€ simules (mise 10€, cote 1.75)` : ""}`
+        : `   aucune encore tranchee — verdict impossible pour l'instant`);
+      if (tranches >= 30) {
+        lignes.push(wr >= 60
+          ? `   → au-dessus de 60% sur ${tranches} resultats : activation defendable (ROUTAGE_MODE=actif)`
+          : `   → sous 60% sur ${tranches} resultats : ne pas activer`);
+      } else {
+        lignes.push(`   → 30 resultats tranches minimum avant toute decision (${tranches} pour l'instant)`);
+      }
+    }
+  } catch (e) { lignes.push(`🔴 Routage shadow — ${String(e.message).slice(0, 60)}`); }
 
   // 9. Classement des IA sur les resultats reels + proposition de promotion.
   try {
