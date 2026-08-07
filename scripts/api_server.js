@@ -1930,6 +1930,15 @@ setInterval(() => checkApiSportsRealQuota(), 1800000);
 setTimeout(() => checkApiSportsRealQuota(), 5000);
 
 // Verif manuelle a tout moment : curl /api/admin/api-quota-status?email=...&code=...
+// Declenchement manuel de l'audit matinal : sert a le verifier sans attendre
+// 6h du matin, et a le relancer apres un correctif pour confirmer la reparation.
+app.get("/admin/audit-matinal", async (req, res) => {
+  const { email, code } = req.query || {};
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
+  const envoye = await runMorningAudit();
+  res.json({ ok: true, telegram: envoye });
+});
+
 app.get("/admin/api-quota-status", async (req, res) => {
   const { email, code } = req.query || {};
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Non autorisé" });
@@ -13242,6 +13251,7 @@ app.get("/admin/learning-report", async (req, res) => {
 
 let _lastPerfReportDate = "";
 let _lastHealthCheckDate = "";
+let _lastMorningAuditDate = "";
 // Anti-spam des alertes « palier à sec » : une seule alerte par palier, réarmée
 // automatiquement dès qu'un signal repart sur ce palier.
 // Persistee en base, pas en memoire : un `_dryTierAlerted` en RAM repartait a
@@ -13270,6 +13280,123 @@ function clearDryTierAlert(tier) {
 // Sert à détecter en 24h ce qui, sinon, passe inaperçu : un canal injoignable, un
 // palier qui ne diffuse plus, un agent muet. C'est exactement ce qui a manqué le
 // 24/07 quand le bot avait été exclu du canal Premium.
+// ── Audit matinal complet (07/08/2026) ────────────────────────────────────────
+// Demande du fondateur apres une panne totale du Concile passee inapercue :
+// 93% des analyses sans aucun vote, 100% sans consensus, zero signal diffuse
+// pendant 48h. Le bilan de sante de 7h existait deja mais il ne TESTAIT rien —
+// il comptait des sorties. Un systeme mort produit des sorties vides, donc un
+// compteur a zero ressemble a une journee calme, pas a une panne.
+//
+// Cet audit appelle reellement chaque dependance et rapporte OK / PANNE.
+// Il tourne avant le bilan quotidien pour que la panne soit lue en premier.
+async function runMorningAudit() {
+  if (!TELEGRAM_ADMIN_CHAT_ID) return false;
+  const lignes = [];
+  const pannes = [];
+  const test = async (nom, fn) => {
+    try {
+      const r = await fn();
+      if (r && r.ok) { lignes.push(`✅ ${nom} — ${r.info}`); }
+      else { lignes.push(`🔴 ${nom} — ${r?.info || "echec"}`); pannes.push(nom); }
+    } catch (e) {
+      lignes.push(`🔴 ${nom} — ${String(e.message).slice(0, 70)}`);
+      pannes.push(nom);
+    }
+  };
+
+  // 1. Le moteur IA. Un vrai appel facture quelques centimes de centime, mais
+  //    c'est le seul moyen de distinguer "cle valide" de "cle valide sans credit".
+  await test("Moteur IA (OpenRouter)", async () => {
+    if (!OPENROUTER_API_KEY) return { ok: false, info: "aucune cle configuree" };
+    const info = await httpGet("https://openrouter.ai/api/v1/key", { Authorization: `Bearer ${OPENROUTER_API_KEY}` });
+    const d = info?.data || {};
+    const restant = d.limit === null || d.limit === undefined ? null : Number(d.limit) - Number(d.usage || 0);
+    if (restant !== null && restant <= 0) return { ok: false, info: `credits epuises (limite ${d.limit})` };
+    const essai = await httpPost("https://openrouter.ai/api/v1/chat/completions",
+      { model: "mistralai/mistral-7b-instruct:free", messages: [{ role: "user", content: "OK" }], max_tokens: 5 },
+      { Authorization: `Bearer ${OPENROUTER_API_KEY}` }, 12000);
+    const txt = essai?.choices?.[0]?.message?.content;
+    if (!txt) return { ok: false, info: `aucune reponse du modele — ${JSON.stringify(essai?.error || essai).slice(0, 60)}` };
+    return { ok: true, info: restant === null ? "modele repond, credit illimite" : `modele repond, ${restant.toFixed(2)}$ restants` };
+  });
+
+  // 2. Le Concile lui-meme : est-ce qu'il DELIBERE, pas seulement qu'il tourne.
+  await test("Concile (vote des IA)", async () => {
+    const depuis = new Date(Date.now() - 24 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
+    const rows = db.prepare("SELECT confidence, consensus_votes FROM concile_analyses WHERE analysed_at >= ?").all(depuis);
+    if (!rows.length) return { ok: true, info: "aucune analyse en 24h (treve ou nuit)" };
+    const sansVote = Math.round(rows.filter(r => !r.consensus_votes).length / rows.length * 100);
+    const sansCons = Math.round(rows.filter(r => Number(r.confidence) <= 55).length / rows.length * 100);
+    if (sansVote >= 25) return { ok: false, info: `${sansVote}% sans aucun vote sur ${rows.length} analyses` };
+    if (sansCons >= 50) return { ok: false, info: `${sansCons}% sans consensus sur ${rows.length} analyses` };
+    return { ok: true, info: `${rows.length} analyses, ${sansVote}% sans vote, ${sansCons}% sans consensus` };
+  });
+
+  // 3. Diffusion : le budget peut bruler sans qu'un seul abonne recoive rien.
+  await test("Diffusion Telegram", async () => {
+    const depuis = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
+    const rows = db.prepare("SELECT sig_sent_standard s, sig_sent_premium p, sig_sent_elite e FROM concile_analyses WHERE analysed_at >= ?").all(depuis);
+    const envoyes = rows.filter(r => r.s === 1 || r.p === 1 || r.e === 1).length;
+    if (rows.length >= 30 && envoyes === 0) return { ok: false, info: `0 signal sur ${rows.length} analyses en 48h` };
+    return { ok: true, info: `${envoyes} signaux diffuses en 48h` };
+  });
+
+  // 4. Les canaux existent-ils toujours et le bot y a-t-il acces.
+  await test("Canaux Telegram", async () => {
+    if (!TELEGRAM_BOT_TOKEN) return { ok: false, info: "aucun token" };
+    const canaux = [["Gratuit", TELEGRAM_CHANNEL_ID], ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
+                    ["Premium", TELEGRAM_PREMIUM_CHANNEL_ID], ["Elite", TELEGRAM_ELITE_CHANNEL_ID]];
+    const morts = [];
+    for (const [nom, id] of canaux) {
+      if (!id) { morts.push(`${nom} non configure`); continue; }
+      const r = await httpGet(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`);
+      if (!r?.ok) morts.push(nom);
+    }
+    return morts.length ? { ok: false, info: `injoignables : ${morts.join(", ")}` } : { ok: true, info: "4 canaux joignables" };
+  });
+
+  // 5. Paiements. Sans Stripe, aucun abonnement ne peut etre pris.
+  await test("Stripe", async () => {
+    if (!STRIPE_SECRET_KEY) return { ok: false, info: "aucune cle" };
+    const r = await httpGet("https://api.stripe.com/v1/balance", { Authorization: `Bearer ${STRIPE_SECRET_KEY}` });
+    return r && !r.error ? { ok: true, info: "API joignable" } : { ok: false, info: String(r?.error?.message || "refus").slice(0, 60) };
+  });
+
+  // 6. Emails.
+  await test("Brevo", async () => {
+    if (!BREVO_API_KEY) return { ok: false, info: "aucune cle" };
+    const r = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY });
+    return r && !r.code ? { ok: true, info: "API joignable" } : { ok: false, info: String(r?.message || "refus").slice(0, 60) };
+  });
+
+  // 7. Quota de donnees sportives : a sec, plus aucun match n'entre. On
+  //    interroge le compteur REEL du fournisseur, pas notre comptage local.
+  await test("Quota API-Sports", async () => {
+    const q = await checkApiSportsRealQuota();
+    if (q?.error) return { ok: false, info: String(q.error).slice(0, 70) };
+    return q.pct >= 90
+      ? { ok: false, info: `${q.pct}% consomme (${q.used}/${q.limit})` }
+      : { ok: true, info: `${q.pct}% consomme (${q.used}/${q.limit})` };
+  });
+
+  // 8. Le site repond-il aux visiteurs.
+  await test("Site public", async () => {
+    const r = await new Promise((res) => {
+      const q = require("https").get(SITE_BASE_URL, (x) => { x.resume(); res(x.statusCode); });
+      q.on("error", () => res(0)); q.setTimeout(8000, () => { q.destroy(); res(0); });
+    });
+    return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
+  });
+
+  const entete = pannes.length
+    ? `🚨 <b>AUDIT MATINAL — ${pannes.length} PANNE${pannes.length > 1 ? "S" : ""}</b>\n\n<b>${pannes.join(", ")}</b>`
+    : "✅ <b>AUDIT MATINAL — tout fonctionne</b>";
+  const msg = [entete, "", ...lignes, "", "━━━━━━━━━━━━━━━━━━", "👑 Hermès — audit automatique du matin"].join("\n");
+  const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, msg);
+  console.log(`[audit-matinal] ${pannes.length} panne(s) : ${pannes.join(", ") || "aucune"} — envoi ${ok ? "OK" : "ECHEC"}`);
+  return ok;
+}
+
 async function sendDailyHealthCheck() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   try {
@@ -13465,6 +13592,15 @@ function checkAnalyticsSchedule() {
     _lastPerfReportDate = todayKey;
     console.log("[analytics] Envoi rapport performance hebdo (lundi 9h)...");
     sendPerformanceReportTelegram(7).then(ok => console.log(`[perf-report] ${ok ? "OK" : "ECHEC"}`));
+  }
+
+  // AUTO 0 — audit matinal complet (6h Paris), AVANT le bilan de 7h : une panne
+  // doit se lire en premier. ">=" comme les autres taches, pour rattraper si le
+  // conteneur redemarre pile sur le creneau.
+  if (hour >= 6 && _lastMorningAuditDate !== todayKey) {
+    _lastMorningAuditDate = todayKey;
+    console.log("[audit-matinal] Lancement de l'audit complet...");
+    runMorningAudit().catch(e => console.error("[audit-matinal]", e.message));
   }
 
   // AUTO 1 — bilan de santé quotidien (7h Paris)
