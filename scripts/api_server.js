@@ -4981,8 +4981,28 @@ Réponds en JSON pur (pas de markdown):
     consensusBet = topBet;
     consensusVotes = topVotes;
   } else {
-    chief.confidence = Math.min(55, Number(chief.confidence || 55));
-    chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
+    // Aucune majorite sur le marche principal. Avant d'abandonner a 55%, on
+    // regarde les avis multi-marches deja emis : les IA peuvent diverger sur
+    // "quel est le meilleur pari" tout en etant tres d'accord sur un marche
+    // precis — et notamment sur celui ou les meilleures d'entre elles sont
+    // specialistes. C'est exactement le cas que le vote a poids egal jetait.
+    const routage = meilleurMarcheParSpecialistes(agentMarketList);
+    if (routage) {
+      consensusBet = routage.bet;
+      consensusVotes = 3; // accord pondere equivalent au quorum
+      chief.bet = routage.bet;
+      // Plafond volontairement bas (78) : un accord obtenu par ponderation vaut
+      // moins qu'une convergence franche de 4 ou 5 IA sur le marche principal.
+      // Il reste au-dessus du plancher de diffusion, donc exploitable.
+      chief.confidence = Math.max(58, Math.min(78, routage.accord));
+      chief.raison = `Accord pondéré ${routage.accord}% sur ${routage.bet}`
+        + (routage.experts.length ? `, porté par ${routage.experts.join(", ")} sur ce marché` : "")
+        + `. ${chief.raison || ""}`.trimEnd();
+      console.log(`[specialiste] ${match.home} vs ${match.away} : ${routage.bet} (accord pondere ${routage.accord}%, ${routage.experts.length} specialiste(s))`);
+    } else {
+      chief.confidence = Math.min(55, Number(chief.confidence || 55));
+      chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
+    }
   }
 
   // Sauvegarder les prédictions pour le tracking de performance
@@ -6485,6 +6505,91 @@ function saveAgentMarketPredictions(match, agentMarketList) {
       });
     });
   } catch (e) { console.error("[agent-market] save:", e.message); }
+}
+
+// ── Routage par specialiste (07/08/2026) ─────────────────────────────────────
+// Demande du fondateur : "proposer les matchs avec les meilleurs resultats par
+// IA de facon a avoir un excellent ratio".
+//
+// Jusqu'ici les cinq IA votaient a poids EGAL sur un marche unique. Or les
+// donnees montrent qu'une IA moyenne au general peut etre excellente sur un
+// marche precis, et inversement. Traiter le vote d'une IA a 45% sur "les deux
+// marquent" comme celui d'une IA a 78% sur ce meme marche, c'est diluer le
+// signal exploitable dans du bruit.
+//
+// Chaque marche est donc tranche par les IA qui y sont reellement bonnes, et on
+// retient le marche ou l'accord PONDERE est le plus fort. Les avis multi-marches
+// sont deja collectes et resolus (agent_market_predictions) : aucun appel IA
+// supplementaire, donc aucun cout ajoute.
+const ROUTAGE_SPECIALISTE = process.env.ROUTAGE_SPECIALISTE !== "0";
+// Sous ce volume, un winrate par agent ET par marche n'est pas une mesure. Le
+// poids reste neutre : le systeme se comporte alors exactement comme avant.
+const SPECIALISTE_MIN_RESOLUS = Math.max(10, Number(process.env.SPECIALISTE_MIN_RESOLUS || 25));
+const _specialistesCache = { at: 0, map: {} };
+
+function poidsSpecialistes() {
+  if (Date.now() - _specialistesCache.at < 30 * 60000) return _specialistesCache.map;
+  const map = {};
+  try {
+    db.prepare(`
+      SELECT agent_name, market_line,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions WHERE outcome IN ('win','loss')
+      GROUP BY agent_name, market_line
+    `).all().forEach(r => {
+      const resolus = (r.wins || 0) + (r.losses || 0);
+      if (resolus < SPECIALISTE_MIN_RESOLUS) return;
+      const wr = r.wins / resolus;
+      // Poids centre sur 1 : une IA a 50% pese 1, a 75% pese 1.5, a 40% pese
+      // 0.8. Borne a [0.5, 1.6] pour qu'aucune IA ne puisse decider seule ni
+      // etre reduite au silence sur une bonne serie ou une mauvaise passe.
+      map[`${r.agent_name}|${r.market_line}`] = {
+        poids: Math.max(0.5, Math.min(1.6, wr * 2)), winrate: Math.round(wr * 100), resolus,
+      };
+    });
+  } catch (e) { console.error("[specialiste]", e.message); }
+  _specialistesCache.map = map;
+  _specialistesCache.at = Date.now();
+  return map;
+}
+
+// Renvoie le marche ou l'accord pondere est le plus fort, ou null si aucun ne
+// se detache. N'invente jamais d'avis : ne travaille que sur ceux deja emis.
+function meilleurMarcheParSpecialistes(agentMarketList) {
+  if (!ROUTAGE_SPECIALISTE || !agentMarketList || agentMarketList.length < 3) return null;
+  const poids = poidsSpecialistes();
+  const parLigne = {};
+  agentMarketList.forEach(am => {
+    const m = am.marches || {};
+    Object.entries(m).forEach(([ligne, val]) => {
+      if (!val) return;
+      const code = typeof val === "object" ? val.p : val;
+      const bet = canonicalMarketBet(ligne, code);
+      if (!bet) return;
+      const sp = poids[`${am.name}|${ligne}`];
+      const w = sp ? sp.poids : 1;
+      parLigne[ligne] = parLigne[ligne] || { total: 0, choix: {}, experts: [] };
+      parLigne[ligne].total += w;
+      parLigne[ligne].choix[bet] = (parLigne[ligne].choix[bet] || 0) + w;
+      if (sp && sp.winrate >= 60) parLigne[ligne].experts.push(`${am.name} ${sp.winrate}%`);
+    });
+  });
+
+  let meilleur = null;
+  Object.entries(parLigne).forEach(([ligne, d]) => {
+    const [bet, score] = Object.entries(d.choix).sort((a, b) => b[1] - a[1])[0] || [];
+    if (!bet || !d.total) return;
+    const accord = score / d.total;
+    // Exige une vraie majorite ponderee, pas une pluralite de justesse.
+    if (accord < 0.6) return;
+    // A accord egal, on prefere le marche ou des specialistes se sont exprimes.
+    const rang = accord + (d.experts.length * 0.02);
+    if (!meilleur || rang > meilleur.rang) {
+      meilleur = { ligne, bet, accord: Math.round(accord * 100), rang, experts: d.experts };
+    }
+  });
+  return meilleur;
 }
 
 function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
