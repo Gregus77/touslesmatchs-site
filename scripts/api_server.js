@@ -977,7 +977,13 @@ const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85;
 // avoir du volume). Fonction (pas une const figee au demarrage) : le serveur
 // peut tourner plusieurs jours sans redeploiement, la bascule doit avoir lieu
 // meme sans redemarrer le conteneur.
-const ELITE_TIER_RAMP_UP_DATE = new Date("2026-08-15T00:00:00Z").getTime();
+// Report du 15/08 au 01/09/2026 (decision fondateur du 07/08/2026) : la reprise
+// des championnats le 15 aout est justement le moment ou il faut OBSERVER, pas
+// durcir. Remonter le plancher a 82% le jour meme de la reprise aurait coupe le
+// volume au moment ou on a enfin des matchs a analyser, sans aucune donnee
+// reelle sur la nouvelle saison. On garde 75% pendant les deux premieres
+// semaines de championnat, puis 82% le 1er septembre avec des stats de saison.
+const ELITE_TIER_RAMP_UP_DATE = new Date("2026-09-01T00:00:00Z").getTime();
 // Plancher general redescendu 80->75 le 05/08/2026 : analyse sur 30 jours
 // (874 signaux) montrant un winrate reel IDENTIQUE entre 75-79% (75.9%) et
 // 80-84% (75.7%) — le seuil 80% coupait des matchs sans aucun gain de
@@ -1187,13 +1193,16 @@ function getAdaptiveSignalThreshold() {
       const aboveTotal = cumTotal - runTotal;
       const aboveWins = cumWins - runWins;
       const aboveWinrate = aboveTotal > 0 ? Math.round(aboveWins / aboveTotal * 100) : 0;
-      // Barre relevee 65->82 le 05/08/2026 : avec 65%, ce seuil convergeait quasiment
-      // vers le plancher general lui-meme (deja ~76-79% de winrate reel au-dessus du
-      // plancher), donc "Signal Fort" ne signifiait presque rien de plus que "publie".
-      // A 82%, seule la tranche reellement superieure (85%+, 85.3% de winrate reel sur
-      // 30j) passe la barre — Signal Fort redevient un marqueur de qualite distinct,
-      // qui se recalibre tout seul (cache 30 min) si la distribution reelle change.
-      if (aboveWinrate >= 82 && aboveTotal >= 5) {
+      // ⚠️ Barre remise a 65 le 06/08/2026 apres un aller-retour.
+      // Je l'avais relevee a 82 la veille pour que "Signal Fort" designe une
+      // tranche vraiment superieure. Effet reel mesure le lendemain : le seuil
+      // de diffusion a converge a 85, et PLUS AUCUN signal n'est parti pendant
+      // deux jours (motifs "confiance X < seuil 85" sur toutes les analyses).
+      // Le raisonnement de depart n'etait pas faux, mais il portait sur le
+      // libelle d'un badge ; le cout etait l'arret complet de la diffusion.
+      // Ne pas relever cette valeur sans verifier, sur plusieurs jours, combien
+      // de signaux passent encore reellement.
+      if (aboveWinrate >= 65 && aboveTotal >= 5) {
         threshold = b.min;
         break;
       }
@@ -4551,7 +4560,25 @@ Réponds en JSON pur (pas de markdown):
       // au garde-fou, pas seulement avant les replis du bas de liste : c'est
       // l'absence de cette garde sur les deux appels ci-dessous (Perplexity et
       // Qwen "titulaires") qui a vide le budget OpenRouter le 29-30/07/2026.
-      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}`;
+      // La cle anti-doublon du garde-fou budgetaire doit inclure l'ETAT du match,
+      // pas seulement les equipes. Sans cela, la 2e analyse d'un match en direct
+      // (l'auto-concile repasse toutes les 6 minutes, le score ayant evolue)
+      // etait refusee comme "deja traite aujourd'hui" : OpenRouter etait bloque
+      // et le systeme se rabattait sur les comptes directs — Cohere (quota
+      // d'essai epuise), Perplexity (cle invalide), DeepSeek (solde nul). Plus
+      // aucun agent ne votait, la confiance tombait a 55% (absence de consensus)
+      // et AUCUN signal ne partait. Diagnostique le 06/08/2026 apres deux jours
+      // sans diffusion, alors que le budget n'etait qu'a 1,03 EUR sur 3.
+      //
+      // On garde la protection anti-boucle : le score et une tranche de 15
+      // minutes suffisent a distinguer deux etats reellement differents, tout en
+      // bloquant un worker qui rappellerait le meme instant en rafale.
+      const _stateTag = [
+        match.score_home ?? "x",
+        match.score_away ?? "x",
+        Math.floor(Number(match.minute || 0) / 15),
+      ].join("-");
+      const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}_${_stateTag}`;
       const _fallbackCompetition = match.competition || match.league || "";
       // Consolidation OpenRouter du 04/08/2026 (decision du fondateur) :
       // Perplexity, DeepSeek, Mistral et Cohere avaient chacun leur propre
@@ -6398,9 +6425,20 @@ function saveAgentPredictions(match, agentResults) {
     const stmt = db.prepare(
       "INSERT OR IGNORE INTO agent_predictions (match_key, home, away, agent_name, bet, confidence) VALUES (?,?,?,?,?,?)"
     );
+    // Un agent qui n'a rien renvoye produisait une ligne avec bet="—". Ces
+    // lignes ne peuvent JAMAIS etre resolues (il n'y a pas de pronostic a
+    // confronter au score) : elles restaient donc eternellement "en attente"
+    // et representaient 66% des predictions non resolues (10 689 sur 16 241,
+    // mesure le 06/08/2026). Elles faussaient le taux de resolution affiche
+    // et noyaient les vraies predictions en attente dans les journaux.
+    // On ne les enregistre plus — une non-reponse n'est pas une prediction.
+    let ignorees = 0;
     agentResults.forEach(a => {
-      stmt.run(matchKey, match.home, match.away, a.name, a.bet, a.confidence ?? 55);
+      const bet = String(a.bet || "").trim();
+      if (!bet || bet === "—" || bet === "-" || bet === "N/A") { ignorees++; return; }
+      stmt.run(matchKey, match.home, match.away, a.name, bet, a.confidence ?? 55);
     });
+    if (ignorees) console.log(`[agent-perf] ${ignorees} agent(s) sans pronostic exploitable — non enregistres`);
     console.log(`[agent-perf] ${agentResults.length} prédictions sauvegardées: ${match.home} vs ${match.away}`);
   } catch(e) { console.error("[agent-perf] save:", e.message); }
 }
@@ -11534,6 +11572,8 @@ app.get("/analysis-history", (req, res) => {
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free,
+             diffusion_block,
              agents_json
       FROM (
         SELECT *, ROW_NUMBER() OVER (
@@ -11599,6 +11639,21 @@ app.get("/analysis-history", (req, res) => {
         bet_category: r.bet_category,
         arjel: rowIsArjel(r),
         tier: tierLabel(r),
+        // Diffusion REELLE sur Telegram, a ne pas confondre avec `tier` :
+        // tier dit a quel palier l'analyse CORRESPONDAIT (criteres de qualite),
+        // ces champs disent sur quels canaux elle est REELLEMENT partie. Une
+        // analyse peut satisfaire les criteres Elite sans avoir ete envoyee
+        // (plafond journalier atteint, cote hors fenetre ARJEL au moment de
+        // l'envoi...). Afficher `tier` en pretendant montrer la diffusion
+        // induisait le visiteur en erreur — signale par Greg le 05/08/2026.
+        sent: {
+          standard: r.sig_sent_standard === 1 || r.sig_sent_standard === true,
+          premium: r.sig_sent_premium === 1 || r.sig_sent_premium === true,
+          elite: r.sig_sent_elite === 1 || r.sig_sent_elite === true,
+          free: r.sig_sent_free === 1 || r.sig_sent_free === true,
+        },
+        // Motif lisible du non-envoi (null si le signal est bien parti).
+        diffusion_block: r.diffusion_block || null,
         agents_count: agents.length,
       };
     });
