@@ -391,6 +391,10 @@ db.exec(`
     pick_bet TEXT DEFAULT NULL,
     outcome TEXT DEFAULT NULL
   );
+  -- Ajoute le 07/08/2026 : presque toutes les lectures de cette table filtrent
+  -- sur analysed_at (accueil, /analysis-history, seuil adaptatif, surveillance
+  -- du Concile). Sans index, chacune balayait la table entiere.
+  CREATE INDEX IF NOT EXISTS idx_concile_analysed_at ON concile_analyses(analysed_at);
 `);
 
 // Historique du "pick du jour" affiché en vitrine sur l'accueil — permet de
@@ -13476,8 +13480,15 @@ function checkAnalyticsSchedule() {
   // Watchdog anti-perte : détecte une chute brutale du nombre d'analyses
   dataIntegrityWatchdog();
 
-  // AUTO 3 — surveillance du Concile, contrôlée toutes les heures
-  concileHealthWatchdog();
+  // AUTO 3 — surveillance du Concile. checkAnalyticsSchedule() tourne toutes
+  // les 60 SECONDES (setInterval plus bas) : sans cette garde horaire, le
+  // watchdog rejouait deux balayages de concile_analyses chaque minute, soit
+  // 2880 par jour pour trois controles qui n'ont de sens qu'a l'heure.
+  // Defaut trouve en relecture le 07/08/2026, corrige avant mise en service.
+  if (_lastConcileWatchdogHour !== hour) {
+    _lastConcileWatchdogHour = hour;
+    concileHealthWatchdog();
+  }
 }
 
 // ── Surveillance du Concile (07/08/2026) ──────────────────────────────────────
@@ -13491,9 +13502,13 @@ function checkAnalyticsSchedule() {
 // signaux d'alerte, chacun limite a un envoi par 12h pour ne pas harceler.
 const CONCILE_ALERT_COOLDOWN_MS = 12 * 3600 * 1000;
 const _concileAlerts = { agents: 0, consensus: 0, diffusion: 0 };
+let _lastConcileWatchdogHour = -1;
 
 function concileHealthWatchdog() {
-  if (!TELEGRAM_ADMIN_CHAT_ID) return;
+  if (!TELEGRAM_ADMIN_CHAT_ID) {
+    console.log("[concile-watchdog] inactif : TELEGRAM_ADMIN_CHAT_ID absent");
+    return;
+  }
   try {
     const depuis24h = new Date(Date.now() - 24 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
     const depuis48h = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
@@ -13503,9 +13518,22 @@ function concileHealthWatchdog() {
     ).all(depuis24h);
     // Sous 20 analyses, les pourcentages ne veulent rien dire (treve, nuit,
     // redemarrage). On ne declenche rien plutot que d'alerter sur du bruit.
-    if (rows24.length < 20) return;
+    // ⚠️ Consequence assumee : pendant une treve, un Concile reellement casse
+    // reste silencieux. La surveillance couvre le fonctionnement nominal, pas
+    // l'intersaison — c'est un choix, pas un oubli.
+    if (rows24.length < 20) {
+      console.log(`[concile-watchdog] actif — ${rows24.length} analyses/24h, sous le seuil de 20, aucun controle`);
+      return;
+    }
 
     const maintenant = Date.now();
+    // Trace de vie : sans elle, impossible de distinguer "surveillance active
+    // et tout va bien" de "surveillance jamais appelee".
+    const _sv = rows24.filter(r => !r.consensus_votes).length;
+    const _sc = rows24.filter(r => Number(r.confidence) <= 55).length;
+    console.log(`[concile-watchdog] actif — ${rows24.length} analyses/24h, ` +
+      `sans vote ${Math.round(_sv / rows24.length * 100)}% (alerte a 25), ` +
+      `sans consensus ${Math.round(_sc / rows24.length * 100)}% (alerte a 50)`);
     const alerte = (cle, msg) => {
       if (maintenant - _concileAlerts[cle] < CONCILE_ALERT_COOLDOWN_MS) return;
       _concileAlerts[cle] = maintenant;
