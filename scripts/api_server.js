@@ -12251,7 +12251,23 @@ app.get("/analysis-history", (req, res) => {
       FROM (
         SELECT *, ROW_NUMBER() OVER (
           PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
+          -- Priorite a la ligne REELLEMENT DIFFUSEE (07/08/2026). Un match est
+          -- analyse toutes les 6 minutes, donc une dizaine de lignes par jour,
+          -- toutes resolues en win/loss par la meme mise a jour. Le premier
+          -- critere devenait une egalite et c'est analysed_at DESC qui
+          -- tranchait : la ligne retenue etait la plus RECENTE, pas celle
+          -- envoyee aux abonnes. Un signal Elite parti a la 25e minute et gagne
+          -- s'affichait donc sans badge, avec la mention "non envoyee sur
+          -- Telegram" — l'inverse de la verite.
+          -- Palier le plus haut d'abord : un signal Elite est la preuve la plus
+          -- forte, il prime sur un envoi Gratuit du meme match.
+          ORDER BY (CASE WHEN sig_sent_elite = 1    THEN 1 ELSE 0 END) DESC,
+                   (CASE WHEN sig_sent_premium = 1  THEN 1 ELSE 0 END) DESC,
+                   (CASE WHEN sig_sent_standard = 1 THEN 1 ELSE 0 END) DESC,
+                   (CASE WHEN sig_sent_free = 1     THEN 1 ELSE 0 END) DESC,
+                   (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC,
+                   confidence DESC,
+                   analysed_at DESC
         ) AS _rn
         FROM concile_analyses
         WHERE date(analysed_at) >= '2026-07-03'
