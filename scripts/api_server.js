@@ -7165,6 +7165,48 @@ function hasPredictionSnapshot(match) {
   }
 }
 
+// ── Filtre ARJEL AVANT analyse (grave le 07/08/2026, decision du fondateur) ──
+// « arrete de bruler les tokens pour le hors ARJEL et garde que le ARJEL
+// jusqu'a nouvel ordre ».
+//
+// Constat qui l'a motive : 311 analyses en 7 jours, 5 signaux diffuses. Chaque
+// analyse coute 5 appels IA, et la fenetre de cote ARJEL n'etait verifiee
+// qu'APRES coup, au moment de la diffusion (voir oddOk plus haut). On payait
+// donc l'integralite du Concile sur des matchs qu'aucun operateur francais ne
+// proposait, ou dont la cote ne pouvait de toute facon jamais etre diffusee.
+//
+// Le filtre s'appuie sur UN appel de cotes (quota API-Sports, deja mis en
+// cache par fetchRealOdds) pour eviter CINQ appels IA (budget en euros). Le
+// troc est favorable dans tous les cas.
+//
+// Reactivable sans redeploiement : AUTO_CONCILE_ARJEL_ONLY=0 dans le .env.
+// Ne pas remettre l'analyse hors ARJEL sans accord explicite du fondateur.
+const AUTO_CONCILE_ARJEL_ONLY = process.env.AUTO_CONCILE_ARJEL_ONLY !== "0";
+// Marches sur lesquels une analyse peut reellement devenir un signal
+// (miroir de DAILY_PICK_ALLOWED_BETS). Inutile de sonder autre chose.
+const ARJEL_PREFILTER_MARKETS = ["Under 2.5 buts", "BTTS Oui", "Victoire domicile", "Victoire extérieur"];
+
+async function isArjelPlayableBeforeAnalysis(match) {
+  if (!AUTO_CONCILE_ARJEL_ONLY) return { ok: true, why: "filtre desactive" };
+  // Hors football, l'API de cotes ne couvre rien : on ne peut pas verifier, et
+  // refuser reviendrait a supprimer le multisport. On laisse passer, la barriere
+  // de diffusion reste en place en aval.
+  if (String(match.sport || "Football") !== "Football") return { ok: true, why: "hors football, non verifiable" };
+  let oddsData;
+  try { oddsData = await fetchRealOdds(match); }
+  catch (e) { return { ok: true, why: "cotes injoignables (" + e.message + ")" }; }
+  // Aucun operateur ARJEL ne propose ce match : par definition hors perimetre.
+  if (!oddsData?.arjelBookmakers?.length) return { ok: false, why: "aucun bookmaker ARJEL" };
+  for (const marche of ARJEL_PREFILTER_MARKETS) {
+    const moyenne = computeArjelAverageOdd(oddsData, marche, match);
+    const cote = moyenne?.avg || pickRealOdd(oddsData, marche, match);
+    if (cote && cote >= TIER_MIN_REAL_ODD && cote <= TIER_MAX_REAL_ODD) {
+      return { ok: true, why: `${marche} a ${cote}` };
+    }
+  }
+  return { ok: false, why: `aucune cote ARJEL dans ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}` };
+}
+
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
   autoConcileObserverRunning = true;
@@ -7182,10 +7224,22 @@ async function runAutoConcileObserver() {
       const bFoot = String(b.sport || "Football") === "Football" ? 0 : 1;
       return aFoot - bFoot;
     });
-    const candidates = prioritized.slice(0, AUTO_CONCILE_MAX_MATCHES);
+    // Portail ARJEL : on sonde les cotes match par match et on s'arrete des que
+    // le quota d'analyses du cycle est rempli. Plafond de sondages pour ne pas
+    // vider le quota API-Sports un jour ou aucun match ne serait eligible.
+    const candidates = [];
+    let refusesArjel = 0;
+    const maxSondages = AUTO_CONCILE_MAX_MATCHES * 4;
+    for (const m of prioritized.slice(0, maxSondages)) {
+      if (candidates.length >= AUTO_CONCILE_MAX_MATCHES) break;
+      const verdict = await isArjelPlayableBeforeAnalysis(m);
+      if (verdict.ok) { candidates.push(m); continue; }
+      refusesArjel++;
+      console.log(`[auto-concile] hors ARJEL, aucun jeton depense: ${m.home} vs ${m.away} — ${verdict.why}`);
+    }
     console.log(
       `[auto-concile] live=${matches.length} eligible=${observed.length} analysed_this_cycle=${candidates.length} ` +
-      `skipped_low_trust=${matches.filter(isLowTrustCompetition).length}`
+      `skipped_low_trust=${matches.filter(isLowTrustCompetition).length} skipped_hors_arjel=${refusesArjel}`
     );
 
     for (const match of candidates) {

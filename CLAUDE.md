@@ -35,6 +35,24 @@ sans validation utilisateur explicite.
   fenetre de temps sans accord explicite du fondateur
   (reactivable ponctuellement par .env : AUTO_CONCILE_TIME_WINDOW=1).
 - R2 : Aucun prono sur un match à finalité connue (écart ≥ 3 buts)
+- **R3 (GRAVEE le 07/08/2026, decision du fondateur)** : **ARJEL UNIQUEMENT.**
+  Aucun jeton IA n'est depense sur un match hors perimetre ARJEL. Le filtre
+  s'applique **AVANT** l'analyse, jamais apres.
+  Verbatim : « arrete de bruler les tokens pour le hors ARJEL et garde que le
+  ARJEL jusqu'a nouvel ordre ».
+  Motif : 311 analyses en 7 jours pour 5 signaux diffuses. La fenetre de cote
+  ARJEL n'etait verifiee qu'au moment de la diffusion — on payait donc les 5
+  appels IA du Concile sur des matchs qu'aucun operateur francais ne proposait,
+  ou dont la cote ne pouvait de toute facon jamais etre diffusee.
+  Mise en oeuvre : `isArjelPlayableBeforeAnalysis()`, appelee dans
+  `runAutoConcileObserver()` avant `runConcileAnalysis()`. Un match est retenu
+  s'il est cote par au moins un bookmaker ARJEL **et** qu'au moins un marche
+  diffusable tombe dans la fenetre 1.30-2.50. Cout : un appel de cotes (quota
+  API-Sports, deja mis en cache) contre cinq appels IA (budget en euros).
+  Exception : les sports non-Football ne sont pas couverts par l'API de cotes,
+  ils passent le filtre — la barriere de diffusion reste en place en aval.
+  Reactivable sans redeploiement par `.env` : `AUTO_CONCILE_ARJEL_ONLY=0`.
+  **Ne pas reactiver l'analyse hors ARJEL sans accord explicite du fondateur.**
 
 ## Handoff urgent Codex - 2026-07-25
 
