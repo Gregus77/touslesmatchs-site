@@ -977,7 +977,13 @@ const STANDARD_MIN_CONF = 88, PREMIUM_MIN_CONF = 85;
 // avoir du volume). Fonction (pas une const figee au demarrage) : le serveur
 // peut tourner plusieurs jours sans redeploiement, la bascule doit avoir lieu
 // meme sans redemarrer le conteneur.
-const ELITE_TIER_RAMP_UP_DATE = new Date("2026-08-15T00:00:00Z").getTime();
+// Report du 15/08 au 01/09/2026 (decision fondateur du 07/08/2026) : la reprise
+// des championnats le 15 aout est justement le moment ou il faut OBSERVER, pas
+// durcir. Remonter le plancher a 82% le jour meme de la reprise aurait coupe le
+// volume au moment ou on a enfin des matchs a analyser, sans aucune donnee
+// reelle sur la nouvelle saison. On garde 75% pendant les deux premieres
+// semaines de championnat, puis 82% le 1er septembre avec des stats de saison.
+const ELITE_TIER_RAMP_UP_DATE = new Date("2026-09-01T00:00:00Z").getTime();
 // Plancher general redescendu 80->75 le 05/08/2026 : analyse sur 30 jours
 // (874 signaux) montrant un winrate reel IDENTIQUE entre 75-79% (75.9%) et
 // 80-84% (75.7%) — le seuil 80% coupait des matchs sans aucun gain de
