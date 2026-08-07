@@ -13497,6 +13497,89 @@ async function auditAndRepairModels() {
   return { lignes, pannes, repares };
 }
 
+// ── Promotion d'un challenger au Concile (07/08/2026) ────────────────────────
+// Demande du fondateur : "si tu trouves une IA meilleure que celle du Concile,
+// tu la remplaces". Source de verite choisie par lui : SA propre base, pas un
+// classement public. Un modele qui domine un classement generaliste n'est pas
+// forcement bon pour predire un Under 2.5 sur un match de Conference League —
+// seul le winrate sur ses vrais matchs le dit.
+//
+// Le banc d'essai (shadow_evals) tourne deja : les challengers analysent les
+// memes matchs que les titulaires, en parallele, sans influencer aucun signal
+// diffuse. Il manquait uniquement la decision.
+const PROMO_MIN_RESOLUS = Math.max(20, Number(process.env.PROMO_MIN_RESOLUS || 50));
+const PROMO_MARGE_MINI = Math.max(1, Number(process.env.PROMO_MARGE_MINI || 5));
+
+function auditAgentsEtPromotion() {
+  const lignes = [];
+  const promotions = [];
+  try {
+    const stats = (table) => db.prepare(`
+      SELECT agent_name,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM ${table} WHERE outcome IN ('win','loss') GROUP BY agent_name
+    `).all().map(r => {
+      const resolus = (r.wins || 0) + (r.losses || 0);
+      return { nom: r.agent_name, resolus, winrate: resolus ? Math.round(r.wins / resolus * 100) : null };
+    }).filter(r => r.resolus >= PROMO_MIN_RESOLUS)
+      .sort((a, b) => b.winrate - a.winrate);
+
+    const titulaires = stats("agent_predictions");
+    const challengers = stats("shadow_evals");
+    if (!titulaires.length || !challengers.length) {
+      lignes.push(`ℹ️ Classement IA — echantillon insuffisant (${PROMO_MIN_RESOLUS} pronostics resolus requis par IA)`);
+      return { lignes, promotions };
+    }
+
+    const meilleurChallenger = challengers[0];
+    const plusFaibleTitulaire = titulaires[titulaires.length - 1];
+    lignes.push(`📊 Meilleur titulaire ${titulaires[0].nom} ${titulaires[0].winrate}% · plus faible ${plusFaibleTitulaire.nom} ${plusFaibleTitulaire.winrate}% · meilleur challenger ${meilleurChallenger.nom} ${meilleurChallenger.winrate}%`);
+
+    // Marge exigee : un ecart de 1 ou 2 points sur quelques dizaines de matchs
+    // n'est que du bruit. On ne remplace un titulaire que sur un ecart net.
+    const ecart = meilleurChallenger.winrate - plusFaibleTitulaire.winrate;
+    if (ecart < PROMO_MARGE_MINI) {
+      lignes.push(`✅ Concile — aucun challenger ne depasse un titulaire de ${PROMO_MARGE_MINI} points (ecart actuel ${ecart})`);
+      return { lignes, promotions };
+    }
+
+    // La promotion n'est PAS appliquee automatiquement au vote : elle est
+    // proposee, avec les chiffres. Remplacer un votant change la nature des
+    // signaux envoyes a des abonnes payants — c'est une decision du fondateur,
+    // pas d'un seuil. Les substitutions de modeles MORTS, elles, restent
+    // automatiques : la, il n'y a pas de choix a faire, l'agent ne repond plus.
+    promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart });
+    lignes.push(`🏅 <b>Promotion proposee</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) bat ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}) de ${ecart} points`);
+
+    // Meilleur agent PAR MARCHE : une IA peut etre moyenne au general et
+    // excellente sur un marche precis. C'est la que se gagne le winrate.
+    const marches = db.prepare(`
+      SELECT agent_name, market_line,
+             SUM(CASE WHEN outcome='win' THEN 1 ELSE 0 END) wins,
+             SUM(CASE WHEN outcome='loss' THEN 1 ELSE 0 END) losses
+      FROM agent_market_predictions WHERE outcome IN ('win','loss')
+      GROUP BY agent_name, market_line
+    `).all();
+    const libelles = { buts: "Plus/moins de 2.5", btts: "Les deux marquent", resultat: "Victoire dom/ext", mt1: "But 1re mi-temps" };
+    const meilleurs = {};
+    marches.forEach(r => {
+      const resolus = (r.wins || 0) + (r.losses || 0);
+      if (resolus < 15) return;
+      const wr = Math.round(r.wins / resolus * 100);
+      if (!meilleurs[r.market_line] || wr > meilleurs[r.market_line].wr) {
+        meilleurs[r.market_line] = { nom: r.agent_name, wr, resolus };
+      }
+    });
+    const parMarche = Object.entries(meilleurs)
+      .map(([k, v]) => `${libelles[k] || k} → ${v.nom} ${v.wr}% (${v.resolus})`);
+    if (parMarche.length) lignes.push(`🎯 Meilleure IA par marche : ${parMarche.join(" · ")}`);
+  } catch (e) {
+    lignes.push(`🔴 Classement IA — ${String(e.message).slice(0, 60)}`);
+  }
+  return { lignes, promotions };
+}
+
 async function runMorningAudit() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   const lignes = [];
@@ -13602,6 +13685,14 @@ async function runMorningAudit() {
     });
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
+
+  // 9. Classement des IA sur les resultats reels + proposition de promotion.
+  try {
+    const cl = auditAgentsEtPromotion();
+    lignes.push("", ...cl.lignes);
+  } catch (e) {
+    lignes.push(`🔴 Classement IA — ${String(e.message).slice(0, 60)}`);
+  }
 
   const repares = reparation.repares || [];
   if (repares.length) lignes.push("", `🔧 <b>${repares.length} modele(s) remplace(s) automatiquement</b> : ${repares.join(" · ")}`);
