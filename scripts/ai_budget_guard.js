@@ -164,7 +164,14 @@ function isBreakerTripped(db, type) {
  * consommation — seul recordCall() écrit un appel effectivement tenté.
  * Retourne { allowed, reason, requestKey }.
  */
-function canProceed(db, { modelKey, matchKey, competition, market, promptVersion, estimatedTokensIn, estimatedTokensOut }) {
+// allowDespiteSpike (07/08/2026) : autorise UNIQUEMENT a franchir le
+// coupe-circuit "spike", jamais les autres. Motif : le spike detecte une boucle
+// anormale, mais un agent dont le compte direct vient d'etre ecarte (401/402/
+// 429) n'est pas une boucle — c'est un repli legitime, et le refuser laissait
+// le Concile sans quorum. Le budget quotidien, l'anti-doublon et le
+// duplicate_burst restent opposables : eux protegent l'argent et l'integrite,
+// pas la cadence.
+function canProceed(db, { modelKey, matchKey, competition, market, promptVersion, estimatedTokensIn, estimatedTokensOut, allowDespiteSpike }) {
   ensureSchema(db);
 
   if (!matchKey || !modelKey) {
@@ -192,9 +199,12 @@ function canProceed(db, { modelKey, matchKey, competition, market, promptVersion
 
   // 4) Coupe-circuit actif ?
   for (const type of ["daily_budget", "daily_requests", "spike", "duplicate_burst"]) {
-    if (isBreakerTripped(db, type)) {
-      return { allowed: false, reason: `[LIMIT] coupe-circuit "${type}" actif aujourd'hui`, requestKey };
+    if (!isBreakerTripped(db, type)) continue;
+    if (type === "spike" && allowDespiteSpike) {
+      console.warn(`[ai-guard] coupe-circuit "spike" franchi pour "${modelKey}" — repli autorise car fournisseur direct ecarte`);
+      continue;
     }
+    return { allowed: false, reason: `[LIMIT] coupe-circuit "${type}" actif aujourd'hui`, requestKey };
   }
 
   // 5) Budget quotidien en euros (estimation)
