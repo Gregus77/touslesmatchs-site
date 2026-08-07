@@ -2496,6 +2496,16 @@ const LEAGUE_TIER_SECONDARY = [
   "superliga · denmark", "danish superliga", "superligaen", "denmark · superliga",
   "veikkausliiga", "finland · veikkausliiga",
   "nb i", "nb1", "otp bank liga", "hungary · nb", "hungarian nb",
+  // Autriche ajoutee le 07/08/2026. Elle avait ete retiree de la liste blanche
+  // le 03/08 avec la Pologne et la Russie, mais elle y rentrait quand meme par
+  // la porte de derriere : la comparaison se fait en sous-chaine, et
+  // "Austrian Bundesliga" contient "bundesliga", present pour l'Allemagne.
+  // Elle etait donc traitee au meme rang que la Bundesliga allemande, par
+  // accident. Meme mecanisme que le bug ouzbek du matin.
+  // leagueTier() teste SECONDARY avant TRUSTED : ces motifs plus specifiques
+  // gagnent donc sur le "bundesliga" generique, et l'Allemagne reste majeure.
+  "austrian bundesliga", "bundesliga · austria", "austria · bundesliga",
+  "admiral bundesliga", "osterreichische bundesliga", "österreichische bundesliga",
 ];
 const LEAGUE_TIER_WATCHLIST = [
   "prvaliga", "slovenia · prva", "slovenian prvaliga",
@@ -4524,6 +4534,130 @@ function computeLiveConstraints(match) {
   return lines.join("\n");
 }
 
+// ── Lecture tolerante de la reponse d'un agent (07/08/2026) ──────────────────
+// Deuxieme cause des votes perdus, apres les comptes morts : les logs montrent
+// des erreurs JSON sur Mistral, Cohere et Perplexity. JSON.parse() exigeait un
+// objet parfait ; un modele qui ecrit une phrase avant, ferme mal une accolade
+// ou s'arrete a max_tokens voyait tout son travail jete.
+//
+// On recupere le vote dans cet ordre, du plus fiable au plus permissif :
+//   1. JSON strict
+//   2. premier objet {...} equilibre trouve dans le texte
+//   3. objet tronque, referme artificiellement
+//   4. extraction des champs a la regex, en dernier recours
+// Un vote imparfaitement formate reste un vote ; le jeter cassait le quorum.
+function lireReponseAgent(brut) {
+  const t = String(brut || "").replace(/```json\n?/gi, "").replace(/```\n?/g, "").trim();
+  if (!t) return null;
+  const valide = (o) => (o && typeof o === "object" && typeof o.bet === "string" && o.bet.trim()) ? o : null;
+
+  try { const o = valide(JSON.parse(t)); if (o) return o; } catch (e) { /* on continue */ }
+
+  // Premier objet equilibre : ignore un preambule et un epilogue en texte.
+  // Le repli regex plus bas doit rester atteignable meme sans aucune accolade —
+  // un modele peut repondre "bet: ..." en texte libre, et ce vote est valide.
+  const debut = t.indexOf("{");
+  let profondeur = 0, dansTexte = false, echappe = false;
+  if (debut !== -1) {
+  for (let i = debut; i < t.length; i++) {
+      const c = t[i];
+      if (echappe) { echappe = false; continue; }
+      if (c === "\\") { echappe = true; continue; }
+      if (c === '"') { dansTexte = !dansTexte; continue; }
+      if (dansTexte) continue;
+      if (c === "{") profondeur++;
+      else if (c === "}") {
+        profondeur--;
+        if (profondeur === 0) {
+          try { const o = valide(JSON.parse(t.slice(debut, i + 1))); if (o) return o; } catch (e) { /* on continue */ }
+          break;
+        }
+      }
+    }
+  }
+
+  // Objet tronque (max_tokens atteint) : on referme ce qui est ouvert.
+  if (debut !== -1 && profondeur > 0) {
+    let essai = t.slice(debut).replace(/,\s*$/, "");
+    if (dansTexte) essai += '"';
+    essai += "}".repeat(profondeur);
+    try { const o = valide(JSON.parse(essai)); if (o) return o; } catch (e) { /* on continue */ }
+  }
+
+  // Dernier recours : les champs a la regex. On ne fabrique rien — si "bet"
+  // est absent du texte, on renvoie null et l'agent est compte comme muet.
+  const mBet = t.match(/"?bet"?\s*[:=]\s*"([^"\n]{2,60})"/i);
+  if (!mBet) return null;
+  const mConf = t.match(/"?confidence"?\s*[:=]\s*"?(\d{1,3})/i);
+  const mRaison = t.match(/"?raison"?\s*[:=]\s*"([^"]{0,300})"/i);
+  const mMarches = t.match(/"?marches"?\s*[:=]\s*(\{[^}]*\})/i);
+  let marches = null;
+  if (mMarches) { try { marches = JSON.parse(mMarches[1]); } catch (e) { marches = null; } }
+  return {
+    bet: mBet[1].trim(),
+    confidence: mConf ? Number(mConf[1]) : null,
+    raison: mRaison ? mRaison[1] : "",
+    ...(marches ? { marches } : {}),
+    _recupere: true,
+  };
+}
+
+// ── Disjoncteur des fournisseurs directs (07/08/2026) ────────────────────────
+// Preuve apportee par la telemetrie : 169 appels IA en 48h pour seulement 37
+// votes. Les logs montrent Perplexity 401 (cle invalide), Cohere 429 (quota),
+// DeepSeek 402 (solde insuffisant). Ces comptes directs sont morts depuis la
+// consolidation OpenRouter du 04/08, mais ils restaient dans la liste des
+// fournisseurs : quand le garde-fou budgetaire refusait OpenRouter, l'agent
+// tombait sur un compte mort et ne votait pas.
+//
+// On memorise l'echec en base : un fournisseur qui renvoie 401, 402 ou 403
+// (probleme de compte, pas de charge) est ecarte 24h. Un 429 (quota) est
+// ecarte 6h, le temps que la fenetre glisse. Aucune cle n'est supprimee : le
+// jour ou Greg recharge un compte, il redevient utilisable tout seul.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS provider_health (
+    host TEXT PRIMARY KEY,
+    last_status INTEGER,
+    last_error TEXT DEFAULT '',
+    disabled_until TEXT DEFAULT NULL,
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
+const _providerHealthCache = { at: 0, hs: {} };
+function providerEcarte(host) {
+  if (!host) return false;
+  if (Date.now() - _providerHealthCache.at > 60000) {
+    try {
+      const rows = db.prepare("SELECT host, disabled_until FROM provider_health WHERE disabled_until IS NOT NULL").all();
+      _providerHealthCache.hs = Object.fromEntries(rows.map(r => [r.host, r.disabled_until]));
+      _providerHealthCache.at = Date.now();
+    } catch (e) { return false; }
+  }
+  const jusqua = _providerHealthCache.hs[host];
+  return !!jusqua && new Date(jusqua.replace(" ", "T") + "Z").getTime() > Date.now();
+}
+function marquerProvider(host, status, detail) {
+  if (!host) return;
+  // 401/402/403 = le compte est en cause, ca ne se repare pas tout seul → 24h.
+  // 429 = charge ou quota glissant → 6h suffisent.
+  const heures = [401, 402, 403].includes(status) ? 24 : status === 429 ? 6 : 0;
+  if (!heures) return;
+  try {
+    db.prepare(`INSERT INTO provider_health (host, last_status, last_error, disabled_until, updated_at)
+                VALUES (?,?,?, datetime('now', ?), datetime('now'))
+                ON CONFLICT(host) DO UPDATE SET last_status=excluded.last_status,
+                  last_error=excluded.last_error, disabled_until=excluded.disabled_until,
+                  updated_at=excluded.updated_at`)
+      .run(host, status, String(detail || "").slice(0, 140), `+${heures} hours`);
+    _providerHealthCache.at = 0;
+    console.error(`[provider-health] ${host} ecarte ${heures}h — HTTP ${status}`);
+  } catch (e) { /* jamais bloquant */ }
+}
+function hoteDuProvider(pv) {
+  return pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || "");
+}
+
 async function runConcileAnalysis(match) {
   if (!GROQ_API_KEY) {
     return getMockAnalysis(match);
@@ -4720,7 +4854,7 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
     try {
-      const providers = [];
+      let providers = [];
       // Cle anti-doublon/budget partagee par TOUS les repli OpenRouter de cet
       // agent (voir analysis_engine.js) — doit exister avant le premier appel
       // au garde-fou, pas seulement avant les replis du bas de liste : c'est
@@ -4796,6 +4930,38 @@ Réponds en JSON pur (pas de markdown):
       }
       if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
+      // Ecarte les fournisseurs dont le compte est en panne (401/402/403/429).
+      // Sans ce filtre, un agent tombait sur un compte mort et ne votait pas,
+      // alors qu'OpenRouter etait disponible juste a cote.
+      const _avantFiltre = providers.length;
+      providers = providers.filter(pv => !providerEcarte(hoteDuProvider(pv)));
+      // Filet quand tous les fournisseurs de l'agent ont ete ecartes. Il passe
+      // par le MEME garde-fou que les autres replis (budget journalier,
+      // anti-doublon par match/agent, coupe-circuit) — jamais en le contournant.
+      //
+      // Premiere version ecrite le 07/08/2026 : elle poussait le repli sans
+      // garde-fou, "parce que quelques centimes valent mieux qu'un agent muet".
+      // C'etait faux sur deux points, releves en relecture. D'une part les
+      // appels echappaient a la comptabilite du budget, donc le plafond
+      // journalier devenait contournable en silence. D'autre part l'anti-doublon
+      // par match et par agent sautait avec lui.
+      //
+      // Le disjoncteur au-dessus retire deja les comptes morts : si le garde-fou
+      // refuse ici, c'est que le budget est atteint, et un agent silencieux est
+      // alors le comportement voulu, pas une panne.
+      if (!providers.length && OPENROUTER_API_KEY) {
+        const _cleSecours = (MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large").split("/")[0];
+        if (analysisEngine.allowOfficialOpenRouterFallback(db, {
+              agentLabel: `${agCfg.name}_secours`, matchKey: _fallbackMatchKey,
+              competition: _fallbackCompetition, modelKey: _cleSecours })) {
+          providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions",
+                           key: OPENROUTER_API_KEY, model: resolveModel(MODELE_DES_AGENTS[agCfg.name] || "mistralai/mistral-large") });
+          console.log(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s), repli OpenRouter sous garde-fou`);
+        } else {
+          console.warn(`[concile] ${agCfg.name} : ${_avantFiltre} fournisseur(s) ecarte(s) et repli refuse par le garde-fou — agent silencieux`);
+        }
+      }
+
       let raw = "{}";
       let lastDiag = "aucun fournisseur configure";
       // Telemetrie : une ligne par tentative, avec sa duree reelle. C'est la
@@ -4859,6 +5025,7 @@ Réponds en JSON pur (pas de markdown):
               : resp?._httpStatus && resp._httpStatus >= 400 ? "http_erreur"
               : resp?._httpParseError ? "illisible" : "vide",
             resp?._httpStatus, lastDiag);
+          if (resp?._httpStatus) marquerProvider(pvHost, resp._httpStatus, lastDiag);
         } catch (e) {
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
           lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
@@ -4866,8 +5033,12 @@ Réponds en JSON pur (pas de markdown):
           console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
       }
-      const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const parsed = JSON.parse(cleaned);
+      // Lecture tolerante : voir lireReponseAgent(). JSON.parse() strict jetait
+      // des votes valides pour un simple defaut de format.
+      const parsed = lireReponseAgent(raw);
+      if (parsed && parsed._recupere) {
+        console.log(`[concile] ${agCfg.name} : vote recupere sur une reponse mal formatee`);
+      }
 
       const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
       tracerVote(modelGaveBet);
