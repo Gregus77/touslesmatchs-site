@@ -13370,6 +13370,33 @@ const MODELES_CONCILE = {
   "mistralai/mistral-7b-instruct:free": "Mistral-7B (banc d'essai)",
 };
 
+// Deux identifiants ont la meme FORME quand ils ne different que par leurs
+// chiffres : "qwen3.7-max" et "qwen3.8-max" oui, "qwen3.7-max" et
+// "qwen3.7-flash" non. Sans ce garde-fou, une "mise a jour" ferait glisser un
+// modele haut de gamme vers une variante rapide et moins fine, ou l'inverse.
+function formeModele(id) {
+  return String(id).split("/")[1].replace(/[0-9]+/g, "#");
+}
+function numerosModele(id) {
+  return (String(id).split("/")[1].match(/[0-9]+/g) || []).map(Number);
+}
+function estPlusRecent(candidat, actuel) {
+  if (formeModele(candidat) !== formeModele(actuel)) return false;
+  const a = numerosModele(candidat), b = numerosModele(actuel);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const x = a[i] ?? -1, y = b[i] ?? -1;
+    if (x !== y) return x > y;
+  }
+  return false;
+}
+
+// Sieges de secours quand une famille entiere disparait du catalogue. Le Concile
+// vaut par ses CINQ votes : s'il en manque un, le quorum de 3 devient beaucoup
+// plus dur a atteindre et la confiance retombe a 55%. Mieux vaut un agent d'une
+// autre famille qu'un siege vide. Ordre choisi par le fondateur (07/08/2026) :
+// Kimi d'abord, puis Qwen.
+const AGENTS_DE_SECOURS = ["moonshotai/kimi-k3", "qwen/qwen3.7-max"];
+
 async function auditAndRepairModels() {
   if (!OPENROUTER_API_KEY) return { lignes: ["🔴 Modeles — aucune cle OpenRouter"], pannes: ["Modeles"] };
   const catalogue = await httpGet("https://openrouter.ai/api/v1/models", { Authorization: `Bearer ${OPENROUTER_API_KEY}` });
@@ -13382,7 +13409,38 @@ async function auditAndRepairModels() {
   for (const [logique, role] of Object.entries(MODELES_CONCILE)) {
     const actuel = resolveModel(logique);
     const sonde = await sondeModele(actuel);
-    if (sonde.ok) { lignes.push(`✅ ${role} — ${actuel}`); continue; }
+    if (sonde.ok) {
+      // Le modele repond. On regarde quand meme si le fournisseur a publie une
+      // version plus recente de CE modele precis (demande du fondateur :
+      // "si elle a une nouvelle version sur OpenRouter, upgrade-la
+      // automatiquement"). La nouvelle version est sondee sur les six marches
+      // avant d'etre adoptee — on ne bascule jamais a l'aveugle.
+      const plusRecents = dispo
+        .filter(id => !REMPLACANT_INTERDIT.test(id) && estPlusRecent(id, actuel))
+        .sort((a, b) => {
+          const x = numerosModele(a), y = numerosModele(b);
+          for (let i = 0; i < Math.max(x.length, y.length); i++) {
+            if ((x[i] ?? -1) !== (y[i] ?? -1)) return (y[i] ?? -1) - (x[i] ?? -1);
+          }
+          return 0;
+        });
+      for (const neuf of plusRecents.slice(0, 2)) {
+        const t = await sondeModele(neuf);
+        if (!t.ok) continue;
+        db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
+                    VALUES (?,?,datetime('now'),?)
+                    ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
+                      replaced_at=excluded.replaced_at, reason=excluded.reason`)
+          .run(logique, neuf, `mise a jour depuis ${actuel}`);
+        _modelOverrideCache.at = 0;
+        repares.push(`${role} ⬆ ${neuf}`);
+        lignes.push(`⬆️ ${role} — ${actuel} → <b>${neuf}</b> (version plus recente)`);
+        console.log(`[modeles] ${logique} mis a jour : ${actuel} -> ${neuf}`);
+        break;
+      }
+      if (!repares.some(r => r.startsWith(`${role} ⬆`))) lignes.push(`✅ ${role} — ${actuel}`);
+      continue;
+    }
 
     // Mort : on cherche un remplacant dans la MEME famille, en testant du plus
     // recent au plus ancien. Meme famille = meme ecole de modele, ce qui
@@ -13408,9 +13466,32 @@ async function auditAndRepairModels() {
       lignes.push(`🔧 ${role} — ${actuel} mort (${sonde.why}), remplace par ${remplace}`);
       console.log(`[modeles] ${logique} remplace par ${remplace} — ${sonde.why}`);
     } else {
-      pannes.push(role);
-      lignes.push(`🔴 ${role} — ${actuel} mort (${sonde.why}), AUCUN remplacant dans la famille ${famille}`);
-      console.error(`[modeles] ${logique} mort sans remplacant — ${sonde.why}`);
+      // Famille entiere indisponible : plutot qu'un siege vide au Concile, on
+      // occupe la place avec un agent de secours qui repond, meme d'une autre
+      // ecole. Cinq votants valent mieux que quatre : le quorum de 3 devient
+      // sinon tres difficile a atteindre et tout retombe a 55%.
+      let secours = null;
+      for (const cand of AGENTS_DE_SECOURS) {
+        const vrai = resolveModel(cand);
+        if (vrai === actuel) continue;
+        const t = await sondeModele(vrai);
+        if (t.ok) { secours = vrai; break; }
+      }
+      if (secours) {
+        db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
+                    VALUES (?,?,datetime('now'),?)
+                    ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
+                      replaced_at=excluded.replaced_at, reason=excluded.reason`)
+          .run(logique, secours, `famille ${famille} indisponible : ${sonde.why}`);
+        _modelOverrideCache.at = 0;
+        repares.push(`${role} → ${secours} (secours)`);
+        lignes.push(`🪑 ${role} — famille ${famille} indisponible, siege occupe par ${secours}`);
+        console.log(`[modeles] ${logique} : siege de secours ${secours}`);
+      } else {
+        pannes.push(role);
+        lignes.push(`🔴 ${role} — ${actuel} mort (${sonde.why}), aucun remplacant NI secours`);
+        console.error(`[modeles] ${logique} mort sans remplacant ni secours — ${sonde.why}`);
+      }
     }
   }
   return { lignes, pannes, repares };
