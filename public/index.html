@@ -663,6 +663,22 @@ body :where(
 .tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;
   font-size:10.5px;color:var(--muted);font-weight:600}
 .tier-none{font-style:italic;opacity:.75}
+
+/* Bandeau saisonnier + journees sans selection retenue */
+.saison-note{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:11px 13px;
+  border:1px solid rgba(234,178,74,.32);border-radius:12px;
+  background:linear-gradient(180deg,rgba(234,178,74,.09),rgba(234,178,74,.03))}
+.saison-dot{flex:0 0 auto;width:8px;height:8px;margin-top:5px;border-radius:50%;
+  background:var(--elite);animation:saisonPulse 2.4s ease-in-out infinite}
+@keyframes saisonPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(234,178,74,.45)}
+  50%{opacity:.55;box-shadow:0 0 0 6px rgba(234,178,74,0)}}
+@media(prefers-reduced-motion:reduce){.saison-dot{animation:none}}
+.saison-t{font-size:12.5px;font-weight:800;color:var(--elite);margin-bottom:2px}
+.saison-x{font-size:11.5px;line-height:1.5;color:var(--muted)}
+.saison-x a{color:var(--text);text-decoration:underline;text-underline-offset:2px}
+.day-acc-item.vide .day-acc-head{opacity:.62}
+.day-acc-item.vide .day-acc-caret{opacity:.35}
+.day-vide-note{padding:10px 13px;font-size:11.5px;line-height:1.55;color:var(--muted)}
 </style>
 
 </head>
@@ -1440,23 +1456,57 @@ async function loadDailyAccordion(){
     var r=await fetch('/api/analysis-history?limit=200&t='+Date.now());
     var d=await r.json();
     var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
-    if(!rows.length){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
     var byDay={};
-    var order=[];
     rows.forEach(function(a){
       var day=String(a.analysed_at||'').slice(0,10);
-      if(!byDay[day]){ byDay[day]=[]; order.push(day); }
+      if(!byDay[day]) byDay[day]=[];
       byDay[day].push(a);
     });
-    order.sort(function(a,b){ return new Date(b)-new Date(a); });
+    // Calendrier CONTINU sur 14 jours plutot que la seule liste des jours ayant
+    // produit un verdict : un jour absent laissait croire a un trou dans le
+    // suivi, alors qu'il signifie « aucune selection n'a passe les filtres ».
+    // Un jour vide est une information, pas une donnee manquante.
+    var order=[];
+    for(var k=0;k<14;k++){
+      var dt=new Date(); dt.setDate(dt.getDate()-k);
+      order.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'));
+    }
+    // Bandeau saisonnier : affiche jusqu'a la reprise des championnats, il
+    // explique le faible volume au lieu de laisser le visiteur conclure que le
+    // service ne tourne pas. Se retire tout seul le 15 aout, sans intervention.
+    var REPRISE=new Date('2026-08-15T00:00:00Z');
+    var banniere='';
+    if(Date.now()<REPRISE.getTime()){
+      var joursRestants=Math.max(0,Math.ceil((REPRISE.getTime()-Date.now())/864e5));
+      banniere='<div class="saison-note">'
+        + '<span class="saison-dot"></span>'
+        + '<div><div class="saison-t">Trêve estivale — reprise des championnats le 15 août'
+        +   (joursRestants>0?' (J-'+joursRestants+')':'')+'</div>'
+        +   '<div class="saison-x">Les grands championnats sont à l\'arrêt : peu de rencontres se '
+        +   'qualifient en ce moment, et le Concile ne baisse pas ses critères pour en afficher davantage. '
+        +   '<a href="#pick">Crée ton compte gratuit</a> dès maintenant pour recevoir la sélection du jour '
+        +   'dès la reprise.</div></div></div>';
+    }
+    if(!rows.length && !banniere){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
     var TIER_META={
       standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
       premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
       elite   :{ico:'🥉',nom:'Telegram Elite-VIP',court:'Elite',    c:'var(--elite)'}
     };
     var TIER_ORDRE=['standard','premium','elite'];
-    box.innerHTML=order.slice(0,10).map(function(day,idx){
-      var list=byDay[day];
+    box.innerHTML=banniere+order.map(function(day,idx){
+      var list=byDay[day]||[];
+      if(!list.length){
+        return '<div class="day-acc-item vide" data-day-idx="'+idx+'">'
+          + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
+          +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
+          +   '<div class="day-acc-summary" style="color:var(--muted)">0 sélection retenue</div>'
+          + '</div>'
+          + '<div class="day-acc-body"><div class="day-vide-note">Aucune rencontre n\'a satisfait '
+          + 'les critères du Concile ce jour-là : championnat non fiable, accord des IA insuffisant '
+          + 'ou cote hors de la fenêtre retenue. Une journée sans sélection est un choix, pas une absence de suivi.</div></div>'
+          + '</div>';
+      }
       var wins=list.filter(function(a){ return a.outcome==='win'; }).length;
       var profit=0;
       list.forEach(function(a){
