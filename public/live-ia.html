@@ -904,11 +904,29 @@ function buildAnalysisHtml(d) {
   // confiance du Concile, pas un pourcentage historique H2H.
   var scoresHtml = "";
   if (Array.isArray(d.market_scores) && d.market_scores.length) {
+    // Un score eleve porte par 2 IA n'est PAS un consensus : le tableau laissait
+    // croire le contraire, un "82/100" s'affichant juste sous "Aucun signal
+    // fiable". Le nombre d'IA d'accord (agents_agreeing, deja fourni par l'API)
+    // est desormais montre, et le mot "Concile" reserve aux lignes a 3 IA ou
+    // plus — c'est la promesse commerciale, un score isole ne doit pas
+    // l'emprunter. Aucune modification serveur.
     var scoreRow = function(item) {
       var cm2 = confMeta(item.confidence);
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--b1)">'
-        + '<span style="color:var(--muted2);font-size:12.5px">' + escHtml(item.market) + '</span>'
-        + '<span class="conf-badge ' + cm2.cls + '" style="margin:0;padding:2px 9px;font-size:12px">' + item.confidence + '/100</span></div>';
+      var nb = Number(item.agents_agreeing) || 0;
+      var consensus = nb >= 3;
+      var compte = nb ? ' · ' + nb + ' IA sur 5' : '';
+      var etiquette = consensus
+        ? '<span class="conf-badge green" style="margin:0;padding:1px 8px;font-size:10.5px;font-weight:800">✓ Consensus Concile</span>'
+        : '<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:8px;font-size:10.5px;font-weight:800;'
+          + 'background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.22);color:#e0b341">Signal fort isolé</span>';
+      return '<div style="padding:7px 0;border-top:1px solid var(--b1)">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+        +   '<span style="color:var(--muted2);font-size:12.5px">' + escHtml(item.market) + compte + '</span>'
+        +   '<span class="conf-badge ' + cm2.cls + '" style="margin:0;padding:2px 9px;font-size:12px">' + item.confidence + '/100</span>'
+        + '</div>'
+        + '<div style="margin-top:3px">' + etiquette
+        +   (consensus ? '' : '<span style="font-size:10.5px;color:var(--muted);margin-left:6px">pas de consensus</span>')
+        + '</div></div>';
     };
     scoresHtml = '<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px">'
       + '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Score du Concile par marché</div>'
