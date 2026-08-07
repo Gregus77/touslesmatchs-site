@@ -1230,6 +1230,40 @@ const COHERE_API_KEY     = process.env.COHERE_API_KEY     || "";
 const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || "";
 const TOGETHER_API_KEY   = process.env.TOGETHER_API_KEY   || "";
 
+// ── Substitution automatique des modeles morts (07/08/2026) ──────────────────
+// Panne trouvee ce jour-la : 93% des analyses sans aucun vote, Concile a l'arret
+// depuis des jours. Cause reelle — ni les credits (compte OpenRouter sain, sans
+// plafond), ni les cles : trois identifiants de modeles avaient simplement
+// disparu du catalogue OpenRouter. mistralai/mistral-7b-instruct:free et
+// cohere/command-r-plus renvoyaient 404, perplexity/sonar-pro un 400.
+//
+// Un fournisseur fait tourner son catalogue en permanence. Coder un identifiant
+// en dur, c'est accepter que le Concile meure en silence le jour ou il est
+// retire. La table ci-dessous permet de le remplacer sans redeploiement, et
+// auditAndRepairModels() la remplit toute seule chaque matin.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS model_overrides (
+    logical_id  TEXT PRIMARY KEY,
+    model_id    TEXT NOT NULL,
+    replaced_at TEXT DEFAULT (datetime('now')),
+    reason      TEXT DEFAULT ''
+  );
+`);
+
+const _modelOverrideCache = { at: 0, map: {} };
+// Resolution a CHAQUE appel, avec un cache de 60s : une substitution decidee a
+// 6h du matin doit s'appliquer sans attendre un redemarrage du conteneur.
+function resolveModel(logicalId) {
+  if (Date.now() - _modelOverrideCache.at > 60000) {
+    try {
+      const rows = db.prepare("SELECT logical_id, model_id FROM model_overrides").all();
+      _modelOverrideCache.map = Object.fromEntries(rows.map(r => [r.logical_id, r.model_id]));
+      _modelOverrideCache.at = Date.now();
+    } catch (e) { /* table pas encore creee au tout premier boot */ }
+  }
+  return _modelOverrideCache.map[logicalId] || logicalId;
+}
+
 const SHADOW_AGENTS = [
   // ── IA gratuites immédiates (clé Groq déjà configurée, aucun ajout requis) ──
   {
@@ -1272,7 +1306,7 @@ const SHADOW_AGENTS = [
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
-      model: "mistralai/mistral-7b-instruct:free",
+      model: resolveModel("mistralai/mistral-7b-instruct:free"),
     }),
   },
   {
@@ -1292,7 +1326,7 @@ const SHADOW_AGENTS = [
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
-      model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
+      model: resolveModel(process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"),
     }),
   },
   {
@@ -1302,7 +1336,7 @@ const SHADOW_AGENTS = [
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
-      model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3",
+      model: resolveModel(process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3"),
     }),
   },
 ];
@@ -4498,7 +4532,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
     },
     {
       name: "OpenRouter-Qwen",
-      model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
+      model: resolveModel(process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"),
       icon: "🌟",
       useOpenRouter,
     },
@@ -4620,19 +4654,19 @@ Réponds en JSON pur (pas de markdown):
       // surveiller et recharger au lieu de cinq.
       if (agCfg.name === "Perplexity-Web" && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "perplexity" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "perplexity/sonar-pro" });
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel("perplexity/sonar-pro") });
       }
       if (agCfg.name === "DeepSeek-V3" && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "deepseek" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "deepseek/deepseek-chat" });
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel("deepseek/deepseek-chat") });
       }
       if (agCfg.name === "Mistral-Large" && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "mistral" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "mistralai/mistral-large" });
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel("mistralai/mistral-large") });
       }
       if (agCfg.name === "Cohere-Command" && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "cohere" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: "cohere/command-r-plus" });
+        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel("cohere/command-r-plus") });
       }
       // Agent titulaire "OpenRouter-Qwen" : meme garde-fou que les 4 ci-dessus.
       if (agCfg.useOpenRouter && OPENROUTER_API_KEY
@@ -13289,6 +13323,99 @@ function clearDryTierAlert(tier) {
 //
 // Cet audit appelle reellement chaque dependance et rapporte OK / PANNE.
 // Il tourne avant le bilan quotidien pour que la panne soit lue en premier.
+// ── Reparation automatique des modeles (07/08/2026) ──────────────────────────
+// Demande du fondateur : "lorsque tu vas auditer chaque matin, verifier, et si
+// un lien est mort, tu le remplaces par une autre IA".
+//
+// Le test n'est pas un simple ping : le modele doit produire un avis exploitable
+// sur les SIX marches reellement diffuses (demande explicite du fondateur) —
+// plus/moins de 2.5 buts, les deux equipes marquent, victoire domicile,
+// victoire exterieur, but en premiere mi-temps. Un modele qui repond "OK" a un
+// ping mais ne sait pas remplir ce format ne sert a rien au Concile.
+const MARCHES_TESTES = "buts=o2.5:70,btts=oui:60,resultat=dom:65,mt1=oui:55";
+const SONDE_MARCHES = `Tu analyses un match de football. Reponds UNIQUEMENT par cette ligne, en remplacant les valeurs :
+MARCHES : ${MARCHES_TESTES}
+Codes : buts=o2.5 ou u2.5 | btts=oui ou non | resultat=dom, ext ou nul | mt1=oui ou non`;
+
+// Familles ecartees d'office comme remplacantes : gratuites (quota nul et
+// retirees sans preavis — c'est exactement ce qui vient d'arriver), lots
+// asynchrones, alias instables prefixes "~", et modeles specialises hors sujet.
+const REMPLACANT_INTERDIT = /(:free|:batch|^~|guard|-code|embed|rerank|vision|image|tts|whisper)/i;
+
+async function sondeModele(modelId) {
+  try {
+    const r = await httpPost("https://openrouter.ai/api/v1/chat/completions",
+      { model: modelId, messages: [{ role: "user", content: SONDE_MARCHES }], max_tokens: 80, temperature: 0.2 },
+      { Authorization: `Bearer ${OPENROUTER_API_KEY}` }, 20000);
+    const txt = r?.choices?.[0]?.message?.content || "";
+    if (!txt) return { ok: false, why: String(r?.error?.message || "aucune reponse").slice(0, 55) };
+    // Exige les quatre familles de marches, sinon le modele est inexploitable.
+    const manquants = ["buts", "btts", "resultat", "mt1"].filter(k => !new RegExp(k + "\\s*=", "i").test(txt));
+    if (manquants.length) return { ok: false, why: `format incomplet (manque ${manquants.join(", ")})` };
+    return { ok: true, why: "repond sur les 6 marches" };
+  } catch (e) {
+    return { ok: false, why: String(e.message).slice(0, 55) };
+  }
+}
+
+// Modeles reellement appeles par le Concile. Cle = identifiant historique
+// (celui qui figure dans le code), valeur = role, pour un message lisible.
+const MODELES_CONCILE = {
+  "perplexity/sonar-pro": "Perplexity-Web",
+  "deepseek/deepseek-chat": "DeepSeek",
+  "mistralai/mistral-large": "Mistral-Large",
+  "cohere/command-r-plus": "Cohere-Command",
+  "qwen/qwen3.7-max": "Qwen",
+  "moonshotai/kimi-k3": "Kimi",
+  "mistralai/mistral-7b-instruct:free": "Mistral-7B (banc d'essai)",
+};
+
+async function auditAndRepairModels() {
+  if (!OPENROUTER_API_KEY) return { lignes: ["🔴 Modeles — aucune cle OpenRouter"], pannes: ["Modeles"] };
+  const catalogue = await httpGet("https://openrouter.ai/api/v1/models", { Authorization: `Bearer ${OPENROUTER_API_KEY}` });
+  const dispo = (catalogue?.data || []).map(m => m.id);
+  if (!dispo.length) return { lignes: ["🔴 Modeles — catalogue OpenRouter injoignable"], pannes: ["Modeles"] };
+
+  const lignes = [];
+  const pannes = [];
+  const repares = [];
+  for (const [logique, role] of Object.entries(MODELES_CONCILE)) {
+    const actuel = resolveModel(logique);
+    const sonde = await sondeModele(actuel);
+    if (sonde.ok) { lignes.push(`✅ ${role} — ${actuel}`); continue; }
+
+    // Mort : on cherche un remplacant dans la MEME famille, en testant du plus
+    // recent au plus ancien. Meme famille = meme ecole de modele, ce qui
+    // preserve la diversite d'architectures qui fait la valeur du Concile.
+    const famille = logique.split("/")[0];
+    const candidats = dispo
+      .filter(id => id.startsWith(famille + "/") && id !== actuel && !REMPLACANT_INTERDIT.test(id))
+      .sort()
+      .reverse();
+    let remplace = null;
+    for (const c of candidats.slice(0, 4)) {
+      const t = await sondeModele(c);
+      if (t.ok) { remplace = c; break; }
+    }
+    if (remplace) {
+      db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
+                  VALUES (?,?,datetime('now'),?)
+                  ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
+                    replaced_at=excluded.replaced_at, reason=excluded.reason`)
+        .run(logique, remplace, `${actuel} : ${sonde.why}`);
+      _modelOverrideCache.at = 0; // force la relecture au prochain appel
+      repares.push(`${role} → ${remplace}`);
+      lignes.push(`🔧 ${role} — ${actuel} mort (${sonde.why}), remplace par ${remplace}`);
+      console.log(`[modeles] ${logique} remplace par ${remplace} — ${sonde.why}`);
+    } else {
+      pannes.push(role);
+      lignes.push(`🔴 ${role} — ${actuel} mort (${sonde.why}), AUCUN remplacant dans la famille ${famille}`);
+      console.error(`[modeles] ${logique} mort sans remplacant — ${sonde.why}`);
+    }
+  }
+  return { lignes, pannes, repares };
+}
+
 async function runMorningAudit() {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   const lignes = [];
@@ -13304,21 +13431,28 @@ async function runMorningAudit() {
     }
   };
 
-  // 1. Le moteur IA. Un vrai appel facture quelques centimes de centime, mais
-  //    c'est le seul moyen de distinguer "cle valide" de "cle valide sans credit".
-  await test("Moteur IA (OpenRouter)", async () => {
+  // 1. Le compte OpenRouter : cle valide et credit disponible.
+  await test("Compte OpenRouter", async () => {
     if (!OPENROUTER_API_KEY) return { ok: false, info: "aucune cle configuree" };
     const info = await httpGet("https://openrouter.ai/api/v1/key", { Authorization: `Bearer ${OPENROUTER_API_KEY}` });
-    const d = info?.data || {};
+    const d = info?.data;
+    if (!d) return { ok: false, info: "cle refusee par OpenRouter" };
     const restant = d.limit === null || d.limit === undefined ? null : Number(d.limit) - Number(d.usage || 0);
     if (restant !== null && restant <= 0) return { ok: false, info: `credits epuises (limite ${d.limit})` };
-    const essai = await httpPost("https://openrouter.ai/api/v1/chat/completions",
-      { model: "mistralai/mistral-7b-instruct:free", messages: [{ role: "user", content: "OK" }], max_tokens: 5 },
-      { Authorization: `Bearer ${OPENROUTER_API_KEY}` }, 12000);
-    const txt = essai?.choices?.[0]?.message?.content;
-    if (!txt) return { ok: false, info: `aucune reponse du modele — ${JSON.stringify(essai?.error || essai).slice(0, 60)}` };
-    return { ok: true, info: restant === null ? "modele repond, credit illimite" : `modele repond, ${restant.toFixed(2)}$ restants` };
+    return { ok: true, info: restant === null ? `sans plafond, ${Number(d.usage || 0).toFixed(2)}$ consommes` : `${restant.toFixed(2)}$ restants` };
   });
+
+  // 1bis. Chaque modele du Concile, teste sur les six marches reellement
+  //       diffuses, et remplace automatiquement s'il a disparu du catalogue.
+  let reparation = { lignes: [], pannes: [], repares: [] };
+  try {
+    reparation = await auditAndRepairModels();
+    lignes.push(...reparation.lignes);
+    pannes.push(...reparation.pannes);
+  } catch (e) {
+    lignes.push(`🔴 Modeles — audit impossible : ${String(e.message).slice(0, 60)}`);
+    pannes.push("Modeles");
+  }
 
   // 2. Le Concile lui-meme : est-ce qu'il DELIBERE, pas seulement qu'il tourne.
   await test("Concile (vote des IA)", async () => {
@@ -13388,6 +13522,8 @@ async function runMorningAudit() {
     return r === 200 ? { ok: true, info: "HTTP 200" } : { ok: false, info: `HTTP ${r || "injoignable"}` };
   });
 
+  const repares = reparation.repares || [];
+  if (repares.length) lignes.push("", `🔧 <b>${repares.length} modele(s) remplace(s) automatiquement</b> : ${repares.join(" · ")}`);
   const entete = pannes.length
     ? `🚨 <b>AUDIT MATINAL — ${pannes.length} PANNE${pannes.length > 1 ? "S" : ""}</b>\n\n<b>${pannes.join(", ")}</b>`
     : "✅ <b>AUDIT MATINAL — tout fonctionne</b>";
