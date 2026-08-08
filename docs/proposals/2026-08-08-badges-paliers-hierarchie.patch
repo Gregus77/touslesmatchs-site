@@ -1,0 +1,139 @@
+diff --git a/public/app.html b/public/app.html
+index aa000ea..28f0059 100644
+--- a/public/app.html
++++ b/public/app.html
+@@ -156,9 +156,9 @@
+     <p class="sub">Résultats réels, gagnés comme perdus. Mise simulée de 10 €.</p>
+     <div class="tabs" id="perf-tabs">
+       <button class="tab on" data-t="all">Tous</button>
+-      <button class="tab" data-t="standard">🟢 Standard</button>
+-      <button class="tab" data-t="premium">🟣 Premium</button>
+-      <button class="tab" data-t="elite">🟠 Elite</button>
++      <button class="tab" data-t="standard">🥉 Standard</button>
++      <button class="tab" data-t="premium">🥈 Premium</button>
++      <button class="tab" data-t="elite">🥇 Elite</button>
+     </div>
+     <div class="kpis" id="perf-kpis"></div>
+     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
+@@ -216,7 +216,9 @@
+ 
+   function renderChip() {
+     var c = $("chip"), p = plan();
+-    var label = { standard: "🟢 Standard", premium: "🟣 Premium", vip: "🟠 Elite", elite: "🟠 Elite", admin: "👑 Admin" }[p];
++    // Le rond vert servait de badge Standard : le vert ne designe plus qu'un
++    // resultat gagne (regle fondateur, 08/08/2026). Bronze / argent / or.
++    var label = { free: "🔵 Gratuit", standard: "🥉 Standard", premium: "🥈 Premium", vip: "🥇 Elite", elite: "🥇 Elite", admin: "👑 Admin" }[p];
+     c.textContent = label || "Invité";
+     c.className = "plan-chip" + (isPaid() ? " paid" : "");
+   }
+diff --git a/public/dashboard.html b/public/dashboard.html
+index 33314d1..f2e85f6 100644
+--- a/public/dashboard.html
++++ b/public/dashboard.html
+@@ -483,10 +483,12 @@ function tiersForPlan(plan) {
+ // Affiche les 3 paliers : débloqués selon le plan, verrouillés (floutés + CTA) sinon.
+ function renderTierStats(status) {
+   var allowed = tiersForPlan(status);
++  // Bronze / argent / or : le badge dit le niveau d'acces. Le vert reste
++  // reserve au resultat gagne (regle fondateur, 08/08/2026).
+   var META = {
+-    standard: { label: '🟢 Standard' },
+-    premium:  { label: '🟣 Premium' },
+-    elite:    { label: '🟠 Elite' }
++    standard: { label: '🥉 Standard' },
++    premium:  { label: '🥈 Premium' },
++    elite:    { label: '🥇 Elite' }
+   };
+   var UPSELL = { premium: 'Réservé aux membres Pro et Elite', elite: 'Réservé aux membres Elite' };
+   var container = document.getElementById('tier-cards');
+diff --git a/public/index.html b/public/index.html
+index a51b8e6..fe916b3 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -658,8 +658,17 @@ body :where(
+ 
+ 
+ /* Paliers ayant reellement recu le signal (source : sig_sent_* cote API) */
+-.tier-chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;
++/* Hierarchie d'ACCES, pas de probabilite (regle fondateur, 08/08/2026) :
++   canal gratuit = bleu, Standard = bronze, Premium = argent, Elite = or.
++   Le VERT est reserve au resultat GAGNE, le ROUGE au resultat PERDU ou refuse,
++   le gris/bleu neutre a l'attente. Aucun palier ne doit reprendre ces couleurs,
++   sinon le visiteur lit un badge d'acces comme une promesse de resultat.
++   Ces variables sont propres aux pastilles : elles ne touchent pas --standard /
++   --premium / --elite, qui habillent les cartes d'abonnement. */
++.tier-chip{--canal-free:#5b9bff;--medal-bronze:#c9884f;--medal-silver:#b7c1cf;--medal-gold:#e8c14a;
++  display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;
+   padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.06);white-space:nowrap}
++.tier-plus{opacity:.45;font-weight:700;padding:0 1px}
+ .tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;
+   font-size:10.5px;color:var(--muted);font-weight:600}
+ .tier-none{font-style:italic;opacity:.75}
+@@ -1508,12 +1517,16 @@ async function loadDailyAccordion(){
+         +   'dès la reprise.</div></div></div>';
+     }
+     if(!rows.length && !banniere){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
++    // Medailles remises a l'endroit le 08/08/2026 : Standard portait l'or et
++    // Elite le bronze, l'inverse de la hierarchie reelle. Le badge indique le
++    // NIVEAU D'ACCES (quel canal a recu le signal), jamais une probabilite.
+     var TIER_META={
+-      standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
+-      premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
+-      elite   :{ico:'🥉',nom:'Telegram Elite-VIP',court:'Elite',    c:'var(--elite)'}
++      free    :{ico:'🔵',nom:'Canal gratuit',      court:'Gratuit',  c:'var(--canal-free)'},
++      standard:{ico:'🥉',nom:'Telegram Standard',  court:'Standard', c:'var(--medal-bronze)'},
++      premium :{ico:'🥈',nom:'Telegram Premium',   court:'Premium',  c:'var(--medal-silver)'},
++      elite   :{ico:'🥇',nom:'Telegram Elite-VIP', court:'Elite',    c:'var(--medal-gold)'}
+     };
+-    var TIER_ORDRE=['standard','premium','elite'];
++    var TIER_ORDRE=['free','standard','premium','elite'];
+     box.innerHTML=banniere+order.map(function(day,idx){
+       var list=byDay[day]||[];
+       if(!list.length){
+@@ -1547,11 +1560,14 @@ async function loadDailyAccordion(){
+         var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
+         var tierBadge='';
+         if(canaux.length){
++          // Pile compacte quand plusieurs canaux ont recu le meme signal :
++          // "🥉 Standard + 🥈 Premium + 🥇 Elite". Libelle court, sinon la ligne
++          // deborde sur mobile des qu'il y a trois paliers.
+           tierBadge='<span class="tier-recu">Envoyé sur '
+             + canaux.map(function(t){
+                 var m=TIER_META[t];
+-                return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
+-              }).join('')
++                return '<span class="tier-chip" style="color:'+m.c+'" title="'+esc(m.nom)+'">'+m.ico+' '+m.court+'</span>';
++              }).join('<span class="tier-plus">+</span>')
+             + '</span>';
+         } else {
+           // Non envoye : on donne le MOTIF plutot qu'un constat sec. Le visiteur
+diff --git a/public/performances.html b/public/performances.html
+index 1c0af74..aa09491 100644
+--- a/public/performances.html
++++ b/public/performances.html
+@@ -282,9 +282,9 @@ async function doLogin(){
+   <div class="tier-tabs" id="tier-tabs">
+     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
+     <div class="tier-tab" data-tier="dailypick" onclick="selectTier('dailypick')">🎯 Pick du jour</div>
+-    <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥇 Standard</div>
++    <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥉 Standard</div>
+     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
+-    <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
++    <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥇 Elite</div>
+   </div>
+   <div class="tier-note" id="tier-note">Les paliers sont cumulatifs, score de confiance minimum 82/100 pour Standard et Premium, 75/100 pour Elite-VIP : Standard = la sélection la plus stricte du jour (cote réelle ANJ), Premium l'élargit, Elite regroupe tout le vivier diffusable.</div>
+ 
+@@ -425,10 +425,11 @@ function renderKpis() {
+   }
+ }
+ 
++// Bronze / argent / or dans l'ordre reel des paliers (corrige le 08/08/2026).
+ function tierBadgeLabel(t) {
+-  if (t === 'standard') return '🥇 Standard';
++  if (t === 'standard') return '🥉 Standard';
+   if (t === 'premium') return '🥈 Premium';
+-  if (t === 'elite') return '🥉 Elite';
++  if (t === 'elite') return '🥇 Elite';
+   return '';
+ }
+ 
