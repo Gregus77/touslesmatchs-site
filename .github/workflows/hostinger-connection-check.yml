@@ -1,0 +1,36 @@
+name: Hostinger connection check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-vps:
+    name: Check VPS access and production health
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger_tlm
+          chmod 600 ~/.ssh/hostinger_tlm
+          ssh-keyscan -H "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Read-only VPS health check
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hostinger_tlm \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}" \
+            'cd /opt/touslesmatchs &&
+             echo "=== VPS OK ===" &&
+             git branch --show-current &&
+             git log --oneline -1 &&
+             docker compose ps --format "  {{.Name}}  {{.Status}}" &&
+             curl -so /dev/null -w "site=%{http_code}\n" https://www.touslesmatchs.com/ &&
+             curl -s https://www.touslesmatchs.com/api/health &&
+             echo'
