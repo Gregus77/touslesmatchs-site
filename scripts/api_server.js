@@ -12334,9 +12334,14 @@ app.get("/analysis-history", (req, res) => {
     // Stats globales dédoublonnées (même logique que /premium-teaser) —
     // source unique pour que la page Live IA et la page d'accueil affichent
     // exactement le même winrate / nombre de picks.
+    // sig_sent_* ajoutes le 08/08/2026 : sans eux, le benefice en euros et le
+    // ROI affiches sur l'accueil et sur /performances etaient calcules sur
+    // TOUTES les analyses publiees, diffusees ou non. Un visiteur lisait donc
+    // comme gain d'abonne un resultat que personne n'avait recu.
     const allResolved = db.prepare(`
       SELECT home, away, competition, sport, outcome, analysed_at, confidence,
-             best_bet, real_odd, real_odd_source, final_score_home, final_score_away
+             best_bet, real_odd, real_odd_source, final_score_home, final_score_away,
+             sig_sent_free, sig_sent_standard, sig_sent_premium, sig_sent_elite
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
         AND date(analysed_at) >= '2026-07-03'
@@ -12372,11 +12377,41 @@ app.get("/analysis-history", (req, res) => {
       };
     };
 
-    const global = statBlock(dedupResolved);
+    // ── Separation exigee par le fondateur le 08/08/2026 ────────────────────
+    // DIFFUSEES : au moins un sig_sent_* a 1, donc un abonne (ou le canal
+    //   gratuit) a reellement recu ce signal. Seules celles-ci peuvent porter
+    //   un montant en euros.
+    // OBSERVEES : le Concile avait vu juste, mais rien n'est parti. Elles
+    //   restent comptees en volume et en winrate — les masquer serait
+    //   malhonnete — mais sans aucun euro.
+    const estDiffusee = (r) =>
+      r.sig_sent_free === 1 || r.sig_sent_standard === 1 ||
+      r.sig_sent_premium === 1 || r.sig_sent_elite === 1;
+    const lignesDiffusees = dedupResolved.filter(estDiffusee);
+    const lignesObservees = dedupResolved.filter(r => !estDiffusee(r));
+
+    // Bloc sans argent : profit10, roi_pct et avg_odds sont volontairement
+    // ABSENTS (et non pas a zero), pour qu'un front qui les lirait par erreur
+    // affiche "—" au lieu d'un "0 €" ressemblant a un resultat.
+    const statBlockObserve = (set) => {
+      const wins = set.filter(r => r.outcome === "win").length;
+      const t = set.length;
+      return { total: t, wins, losses: t - wins, winrate: t ? Math.round(wins / t * 100) : 0 };
+    };
+
+    const abonnes = statBlock(lignesDiffusees);
+    const observees = statBlockObserve(lignesObservees);
+    // `global` passe par statBlockObserve : ainsi statBlock, seul endroit du
+    // fichier qui produit profit10 et roi_pct, n'est plus jamais appele sur un
+    // ensemble contenant une ligne non diffusee. Garantie structurelle.
+    const global = statBlockObserve(dedupResolved);
     const tiers = {
-      standard: statBlock(dedupResolved.filter(r => tierEligible(r, "standard"))),
-      premium:  statBlock(dedupResolved.filter(r => tierEligible(r, "premium"))),
-      elite:    statBlock(dedupResolved.filter(r => tierEligible(r, "elite"))),
+      // Un palier ne peut plus se prevaloir d'un resultat que ses abonnes n'ont
+      // jamais recu : on filtre sur l'envoi reel, pas sur l'eligibilite.
+      standard: statBlock(lignesDiffusees.filter(r => r.sig_sent_standard === 1)),
+      premium:  statBlock(lignesDiffusees.filter(r => r.sig_sent_premium === 1)),
+      elite:    statBlock(lignesDiffusees.filter(r => r.sig_sent_elite === 1)),
+      gratuit:  statBlock(lignesDiffusees.filter(r => r.sig_sent_free === 1)),
     };
 
     // Analyses publiées non encore résolues (dédoublonnées, hors bruit) = "en attente".
@@ -12399,7 +12434,12 @@ app.get("/analysis-history", (req, res) => {
 
     res.json({
       ok: true, analyses, total,
-      stats: { ...global, pending, tiers },
+      // `stats` porte desormais les chiffres ABONNES : ce sont eux que lisent
+      // les compteurs existants (accueil, /performances), donc les euros
+      // affiches deviennent ceux des signaux reellement envoyes, sans qu'aucun
+      // fichier de public/ ait a etre modifie. `observees` et `global` restent
+      // disponibles a cote pour le futur bloc "analyses non diffusees".
+      stats: { ...abonnes, pending, tiers, abonnes, observees, global },
       // Périmètre appliqué, pour que le front puisse l'annoncer clairement
       // ("Statistiques de ton palier Standard") au lieu de laisser croire à
       // l'abonné qu'il consulte l'historique complet.
