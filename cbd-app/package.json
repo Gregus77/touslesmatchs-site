@@ -7,7 +7,8 @@
     "start": "node server.js",
     "reset": "rm -f data/db.json && node -e \"require('./lib/store').load()\" && echo 'Base regeneree.'",
     "photos": "node scripts/photos.js",
-    "demo": "node build-demo.js"
+    "demo": "node build-demo.js",
+    "photos:liens": "node scripts/photos.js --liens content/photos-pexels.txt"
   },
   "engines": {
     "node": ">=18"

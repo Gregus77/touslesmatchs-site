@@ -110,7 +110,7 @@ Trois facons d'installer de vraies photos, depuis une machine ayant acces au res
 
 ```bash
 node scripts/photos.js --pexels VOTRE_CLE      # telechargement automatique (cle gratuite)
-node scripts/photos.js --liens mes-photos.txt  # liste d'URL choisies a la main (type=url)
+npm run photos:liens                           # liens Pexels pre-reperes (content/photos-pexels.txt)
 node scripts/photos.js --dossier ~/mes-photos  # copie depuis un dossier local
 ```
 

@@ -1,0 +1,50 @@
+# Photos de rubrique — sources Pexels (licence gratuite, usage commercial autorise,
+# attribution non obligatoire).
+#
+#   node scripts/photos.js --liens content/photos-pexels.txt
+#
+# Une ligne par rubrique, au format  type=url
+# Le script verifie que chaque fichier est bien une image et affiche une ligne
+# d'erreur pour tout lien qui ne repond pas. Verifiez le rendu avant publication :
+# ces liens ont ete identifies par recherche, sans que les pages aient pu etre
+# ouvertes depuis l'environnement de developpement (acces reseau restreint).
+#
+# Les URL suivent le format public de Pexels :
+#   https://images.pexels.com/photos/<identifiant>/pexels-photo-<identifiant>.jpeg
+# L'identifiant est le nombre en fin d'adresse de la page photo.
+
+# Fleur de CBD — « Close-Up Photo of a Hemp Plant Bud »
+# https://www.pexels.com/photo/close-up-photo-of-a-hemp-plant-bud-13091409/
+fleur=https://images.pexels.com/photos/13091409/pexels-photo-13091409.jpeg?auto=compress&cs=tinysrgb&w=900
+
+# Huile de CBD — « A Dropper Bottle of CBD Oil Beside a Bamboo Lid »
+# https://www.pexels.com/photo/a-dropper-bottle-of-cbd-oli-beside-a-bamboo-lid-7852732/
+huile=https://images.pexels.com/photos/7852732/pexels-photo-7852732.jpeg?auto=compress&cs=tinysrgb&w=900
+
+# Cosmetique — « Luxury Skincare Beauty Products on White Background »
+# https://www.pexels.com/photo/luxury-skincare-beauty-products-on-white-background-4841273/
+cosmetique=https://images.pexels.com/photos/4841273/pexels-photo-4841273.jpeg?auto=compress&cs=tinysrgb&w=900
+
+# ---------------------------------------------------------------------------
+# ALTERNATIVES POUR LA FLEUR, si le rendu du premier lien ne convient pas :
+#   https://www.pexels.com/photo/close-up-photo-of-cannabis-bud-7667737/
+#   https://www.pexels.com/photo/close-up-of-a-cannabis-bud-6462279/
+#   https://www.pexels.com/photo/industrial-hemp-in-close-up-photography-11980597/
+#
+# ALTERNATIVES POUR L'HUILE :
+#   https://www.pexels.com/photo/cbd-assorted-products-3465383/
+#   https://www.pexels.com/photo/medicine-dropper-with-droplet-of-liquid-and-a-glass-bottle-6914585/
+#
+# RUBRIQUES RESTANTES (resine, eliquide, pommade, infusion, comestible, cristaux)
+# Le plus simple est de laisser Pexels choisir, avec une cle gratuite :
+#
+#   node scripts/photos.js --pexels VOTRE_CLE
+#
+# Le script interroge l'API rubrique par rubrique, telecharge le meilleur
+# resultat carre et n'ecrase pas les photos deja installees.
+# Pages a parcourir pour choisir a la main :
+#   https://www.pexels.com/search/hashish/
+#   https://www.pexels.com/search/cannabis%20resin/
+#   https://www.pexels.com/search/cbd/
+#   https://www.pexels.com/search/face%20cream/
+#   https://www.pexels.com/search/skincare/
