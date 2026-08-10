@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cadre legal du CBD en France | CBD Atlas</title>
+<meta name="description" content="Seuil de 0,3 % de THC, varietes autorisees, vente des fleurs, Novel Food, allegations interdites, molecules classees stupefiants. Le cadre juridique du CBD en France.">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="icon" href="/img/produit/fleur.svg">
+</head>
+<body>
+<div class="wrap">
+  <div class="hero" style="padding:38px 0 18px;text-align:left">
+    <h1 style="font-size:2rem">Le cadre legal du CBD en France</h1>
+    <p style="margin:0">Synthese informative des regles applicables a la production, a la vente et a la consommation. Elle ne constitue pas un conseil juridique : pour un dossier precis, consultez un avocat.</p>
+  </div>
+
+  <section style="padding-top:6px">
+    <div class="grid g2" id="regles"></div>
+  </section>
+
+  <section>
+    <h2 class="titre">Verifier une fiche produit</h2>
+    <p class="sous">Le meme filtre que celui applique automatiquement a toutes les annonces publiees sur la plateforme. Testez un intitule et une composition avant de les mettre en ligne.</p>
+    <div class="carte">
+      <div class="grid g2">
+        <div class="champ"><label for="v-nom">Nom du produit</label><input id="v-nom" style="width:100%" value="Fleur Amnesia Haze"></div>
+        <div class="champ"><label for="v-lot">Numero de lot</label><input id="v-lot" style="width:100%" value="L2601"></div>
+        <div class="champ"><label for="v-cbd">Taux de CBD (%)</label><input id="v-cbd" type="number" step="0.1" style="width:100%" value="18"></div>
+        <div class="champ"><label for="v-thc">Taux de THC (%)</label><input id="v-thc" type="number" step="0.01" style="width:100%" value="0.25"></div>
+        <div class="champ"><label for="v-prix">Prix (EUR)</label><input id="v-prix" type="number" step="0.1" style="width:100%" value="9.9"></div>
+        <div class="champ"><label><input type="checkbox" id="v-coa" checked> Certificat d'analyse disponible</label></div>
+      </div>
+      <div class="champ"><label for="v-desc">Description commerciale</label>
+        <textarea id="v-desc" rows="3" style="width:100%">Fleur indoor full spectrum au profil terpenique intense.</textarea></div>
+      <button class="btn" id="verifier">Verifier la conformite</button>
+      <div id="resultat" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="titre">Ce qui est refuse automatiquement</h2>
+    <div class="grid g2">
+      <div class="carte"><h3>Molecules classees stupefiants</h3><p id="mols"></p></div>
+      <div class="carte"><h3>Allegations therapeutiques</h3><p id="alleg"></p></div>
+    </div>
+  </section>
+
+  <div class="legal">Sources principales : arrete du 30 decembre 2021, decision du Conseil d'Etat du 29 decembre 2022, arrete du 12 juin 2023 (HHC), reglement UE 2015/2283 (Novel Food), reglement UE 1223/2009 (cosmetiques), reglement UE 1924/2006 (allegations). Etat des connaissances au 10 aout 2026.</div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+(async function () {
+  const { api, esc } = window.CBD;
+  const ency = await api('/api/encyclopedie');
+  document.getElementById('regles').innerHTML = ency.legalite.map((r) =>
+    `<article class="carte"><h3>${esc(r.titre)}</h3><p>${esc(r.texte)}</p></article>`).join('');
+
+  document.getElementById('mols').innerHTML =
+    'HHC, HHC-O, HHCP, THCP, THC-O et tout cannabinoide de synthese : toute annonce les mentionnant est rejetee a la publication.';
+  document.getElementById('alleg').innerHTML =
+    'Aucune mention de pathologie, de guerison, de traitement ou d\'effet de sante. Le filtre bloque une trentaine de termes (soigne, guerit, anxiete, douleur, insomnie, medicament...).';
+
+  document.getElementById('verifier').onclick = async () => {
+    const p = {
+      nom: document.getElementById('v-nom').value,
+      description: document.getElementById('v-desc').value,
+      lot: document.getElementById('v-lot').value,
+      taux_cbd: Number(document.getElementById('v-cbd').value),
+      taux_thc: Number(document.getElementById('v-thc').value),
+      prix: Number(document.getElementById('v-prix').value),
+      coa: document.getElementById('v-coa').checked
+    };
+    const r = await api('/api/conformite/verifier', { method: 'POST', body: p });
+    document.getElementById('resultat').innerHTML = r.ok
+      ? '<div class="carte" style="border-color:var(--ok)"><strong style="color:var(--ok)">Conforme.</strong> Cette fiche peut etre publiee sur la plateforme.</div>'
+      : '<div class="carte" style="border-color:var(--danger)"><strong style="color:var(--danger)">Non conforme (' + r.erreurs.length + ')</strong><ul>' +
+        r.erreurs.map((e) => '<li>' + esc(e) + '</li>').join('') + '</ul></div>';
+  };
+})();
+</script>
+</body>
+</html>

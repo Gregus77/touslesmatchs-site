@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Encyclopedie du CBD - types, molecules, taux, prix | CBD Atlas</title>
+<meta name="description" content="Fiches completes : fleur, resine, huile, e-liquide, pommade, infusion, comestibles, cristaux. Molecules (CBD, CBG, CBN, CBC, THC), formules chimiques, prix indicatifs et statut legal.">
+<link rel="stylesheet" href="/css/app.css">
+<link rel="icon" href="/img/produit/fleur.svg">
+</head>
+<body>
+<div class="wrap">
+  <div class="hero" style="padding:38px 0 18px;text-align:left">
+    <h1 style="font-size:2rem">Encyclopedie du CBD</h1>
+    <p style="margin:0">Documentation neutre et sourcee : formes de produits, molecules, taux, methodes d'extraction, prix constates et statut juridique. Aucune allegation de sante.</p>
+  </div>
+
+  <div class="filtres">
+    <input id="recherche" placeholder="Rechercher un produit, une molecule..." style="flex:1;min-width:220px">
+    <select id="filtre-type"><option value="">Toutes les formes</option></select>
+  </div>
+
+  <section style="padding-top:10px">
+    <h2 class="titre">Les formes de produits</h2>
+    <p class="sous" id="compte-types"></p>
+    <div class="grid g2" id="types"></div>
+  </section>
+
+  <section>
+    <h2 class="titre">Les molecules</h2>
+    <p class="sous">Cannabinoides et terpenes : formule, masse molaire, point de vaporisation, statut en France.</p>
+    <div class="scrollx"><table id="molecules"></table></div>
+  </section>
+
+  <section>
+    <h2 class="titre">Reperes de prix</h2>
+    <p class="sous">Fourchettes constatees sur le marche francais, hors promotions et achats en gros.</p>
+    <div class="scrollx"><table id="prix"></table></div>
+  </section>
+
+  <div class="legal" id="disclaimer"></div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+(async function () {
+  const { api, esc } = window.CBD;
+  const ency = await api('/api/encyclopedie');
+  document.getElementById('disclaimer').innerHTML = '<strong>Avertissement.</strong> ' + esc(ency.disclaimer);
+
+  const sel = document.getElementById('filtre-type');
+  ency.types.forEach((t) => sel.insertAdjacentHTML('beforeend', `<option value="${esc(t.id)}">${esc(t.nom)}</option>`));
+
+  const nomMolecule = (id) => (ency.molecules.find((m) => m.id === id) || {}).nom || id;
+
+  function ficheType(t) {
+    return `<article class="carte" id="${esc(t.id)}">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <img src="/img/produit/${esc(t.id)}.svg" alt="" style="width:64px;height:64px;border-radius:12px;flex:none">
+        <div>
+          <h3 style="font-size:1.15rem">${t.emoji} ${esc(t.nom)}</h3>
+          <p>${esc(t.description)}</p>
+        </div>
+      </div>
+      <div class="grid g2" style="margin-top:14px;gap:8px">
+        <div><label>Prix indicatif</label><strong>${esc(t.prix_indicatif)}</strong></div>
+        <div><label>Taux de CBD courant</label><strong>${esc(t.taux_cbd)}</strong></div>
+        <div><label>Molecules presentes</label>${t.molecules.map((m) => `<span class="tag" style="margin:2px 2px 0 0">${esc(nomMolecule(m))}</span>`).join('')}</div>
+        <div><label>Production / extraction</label>${t.culture.map((c) => `<span class="tag gris" style="margin:2px 2px 0 0">${esc(c)}</span>`).join('')}</div>
+      </div>
+      <div style="margin-top:12px">
+        <label>Statut legal</label><p style="font-size:.87rem">${esc(t.legalite)}</p>
+        <label style="margin-top:8px">Conservation</label><p style="font-size:.87rem">${esc(t.conservation)}</p>
+      </div>
+      <p style="margin-top:12px"><a class="btn mini ghost" href="/marketplace?type=${esc(t.id)}">Voir les offres ${esc(t.nom.toLowerCase())}</a></p>
+    </article>`;
+  }
+
+  function rendre() {
+    const q = document.getElementById('recherche').value.toLowerCase().trim();
+    const f = sel.value;
+    const liste = ency.types.filter((t) =>
+      (!f || t.id === f) &&
+      (!q || (t.nom + ' ' + t.description + ' ' + t.legalite).toLowerCase().includes(q)));
+    document.getElementById('types').innerHTML = liste.length ? liste.map(ficheType).join('')
+      : '<div class="vide">Aucune fiche ne correspond a cette recherche.</div>';
+    document.getElementById('compte-types').textContent = liste.length + ' forme(s) documentee(s).';
+
+    const mols = ency.molecules.filter((m) => !q || (m.nom + ' ' + m.resume + ' ' + m.statut_fr).toLowerCase().includes(q));
+    document.getElementById('molecules').innerHTML =
+      `<thead><tr><th>Molecule</th><th>Formule</th><th>Masse</th><th>Psychotrope</th><th>Vaporisation</th><th>Statut en France</th></tr></thead><tbody>` +
+      mols.map((m) => `<tr>
+        <td><strong>${esc(m.nom)}</strong><div style="color:var(--texte-doux);font-size:.8rem">${esc(m.resume)}</div></td>
+        <td><code>${esc(m.formule)}</code></td>
+        <td>${esc(m.masse)}</td>
+        <td>${m.psychotrope ? '<span class="tag rouge">Oui</span>' : '<span class="tag ok">Non</span>'}</td>
+        <td>${esc(m.ebullition)}</td>
+        <td style="max-width:340px">${esc(m.statut_fr)}</td></tr>`).join('') + '</tbody>';
+  }
+
+  document.getElementById('prix').innerHTML =
+    '<thead><tr><th>Forme</th><th>Prix indicatif</th><th>Taux de CBD</th><th>Unite de vente</th></tr></thead><tbody>' +
+    ency.types.map((t) => `<tr><td>${t.emoji} <strong>${esc(t.nom)}</strong></td><td>${esc(t.prix_indicatif)}</td><td>${esc(t.taux_cbd)}</td><td>${esc(t.culture.join(', '))}</td></tr>`).join('') +
+    '</tbody>';
+
+  document.getElementById('recherche').oninput = rendre;
+  sel.onchange = rendre;
+  rendre();
+  if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ behavior: 'smooth' });
+})();
+</script>
+</body>
+</html>

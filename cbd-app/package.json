@@ -1,0 +1,13 @@
+{
+  "name": "cbd-atlas",
+  "version": "1.0.0",
+  "description": "Encyclopedie, annuaire geolocalise et marketplace du CBD legal en France",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "reset": "rm -f data/db.json && node -e \"require('./lib/store').load()\" && echo 'Base regeneree.'"
+  },
+  "engines": { "node": ">=18" },
+  "private": true,
+  "license": "UNLICENSED"
+}
