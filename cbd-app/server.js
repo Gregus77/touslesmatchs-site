@@ -11,6 +11,8 @@ const url = require('url');
 
 const store = require('./lib/store');
 const { verifierProduit, THC_MAX } = require('./lib/compliance');
+const visuels = require('./lib/visuels');
+const { svgProduit, visuelProduit, estPhoto, validerPhoto } = visuels;
 
 const PORT = Number(process.env.PORT || 3010);
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -137,39 +139,10 @@ function publicProduit(db, p) {
     enseigne: dist ? dist.nom : '',
     achetable: plan.marketplace,
     mise_en_avant: plan.mise_en_avant,
-    image: '/img/produit/' + p.type + '.svg'
+    image: visuelProduit(p),
+    photos: Array.isArray(p.photos) ? p.photos : [],
+    photo_reelle: estPhoto(p)
   });
-}
-
-// ------------------------------------------------------------------- visuels
-
-const COULEURS = {
-  fleur: ['#2f7d4f', '#8fd6a4'], resine: ['#6b4423', '#c99a63'],
-  huile: ['#8a6b1f', '#f2d675'], eliquide: ['#1f5f8a', '#7fc7f2'],
-  pommade: ['#7a4a6b', '#e2b7d6'], infusion: ['#4a7a3c', '#c6e2a4'],
-  comestible: ['#a33b4e', '#f2a3b1'], cristaux: ['#3d5a80', '#dbe9f4'],
-  cosmetique: ['#8a5a2b', '#f0cfa8']
-};
-
-const FORMES = {
-  fleur: '<path d="M100 42c16 10 24 28 24 48 0 22-11 38-24 48-13-10-24-26-24-48 0-20 8-38 24-48z" fill="rgba(255,255,255,.85)"/><path d="M100 60v78" stroke="rgba(0,0,0,.25)" stroke-width="3"/>',
-  resine: '<rect x="58" y="70" width="84" height="60" rx="10" fill="rgba(255,255,255,.85)"/><circle cx="82" cy="100" r="7" fill="rgba(0,0,0,.2)"/><circle cx="118" cy="92" r="5" fill="rgba(0,0,0,.2)"/>',
-  huile: '<path d="M100 46c18 26 30 44 30 58a30 30 0 11-60 0c0-14 12-32 30-58z" fill="rgba(255,255,255,.9)"/>',
-  eliquide: '<rect x="86" y="46" width="28" height="90" rx="12" fill="rgba(255,255,255,.9)"/><rect x="92" y="136" width="16" height="22" rx="6" fill="rgba(255,255,255,.6)"/>',
-  pommade: '<rect x="60" y="80" width="80" height="56" rx="12" fill="rgba(255,255,255,.9)"/><rect x="72" y="62" width="56" height="20" rx="8" fill="rgba(255,255,255,.6)"/>',
-  infusion: '<path d="M64 78h60v34a30 30 0 01-60 0z" fill="rgba(255,255,255,.9)"/><path d="M124 86h14a14 14 0 010 28h-14" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="8"/>',
-  comestible: '<circle cx="82" cy="96" r="20" fill="rgba(255,255,255,.9)"/><circle cx="120" cy="112" r="16" fill="rgba(255,255,255,.75)"/><circle cx="112" cy="76" r="12" fill="rgba(255,255,255,.6)"/>',
-  cristaux: '<path d="M100 52l30 30-30 30-30-30z" fill="rgba(255,255,255,.9)"/><path d="M100 116l22 22-22 22-22-22z" fill="rgba(255,255,255,.7)"/>',
-  cosmetique: '<rect x="80" y="64" width="40" height="76" rx="10" fill="rgba(255,255,255,.9)"/><rect x="90" y="48" width="20" height="18" rx="5" fill="rgba(255,255,255,.6)"/>'
-};
-
-function svgProduit(type) {
-  const [c1, c2] = COULEURS[type] || ['#3a5a40', '#a3c9a8'];
-  const forme = FORMES[type] || FORMES.fleur;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="${type}">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
-<rect width="200" height="200" rx="18" fill="url(#g)"/>${forme}
-<text x="100" y="182" text-anchor="middle" font-family="system-ui,sans-serif" font-size="15" fill="rgba(255,255,255,.95)">${type}</text></svg>`;
 }
 
 // -------------------------------------------------------------------- statique
@@ -372,6 +345,7 @@ async function api(req, res, pathname, q) {
       culture: String(b.culture || '').slice(0, 40), spectre: String(b.spectre || '').slice(0, 40),
       terpenes: String(b.terpenes || '').slice(0, 90),
       lot: String(b.lot || '').slice(0, 30), coa: b.coa === true,
+      photos: (Array.isArray(b.photos) ? b.photos : []).map(validerPhoto).filter(Boolean).slice(0, 6),
       description: String(b.description || '').slice(0, 600),
       actif: true, cree_le: new Date().toISOString()
     };
@@ -515,4 +489,4 @@ if (require.main === module) {
   process.on('SIGTERM', () => { store.flush(); process.exit(0); });
 }
 
-module.exports = { server, PLANS, svgProduit };
+module.exports = { server, PLANS, svgProduit, visuels };

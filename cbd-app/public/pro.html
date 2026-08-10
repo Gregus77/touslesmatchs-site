@@ -87,6 +87,8 @@
           <div class="champ"><label>Culture / extraction</label><input id="p-culture" style="width:100%" value="Indoor"></div>
         </div>
         <div class="champ"><label>Description (sans allegation de sante)</label><textarea id="p-desc" rows="2" style="width:100%"></textarea></div>
+        <div class="champ"><label>Photos du produit (une URL https par ligne, ou /media/produits/mon-fichier.jpg)</label>
+          <textarea id="p-photos" rows="2" style="width:100%" placeholder="https://cdn.ma-boutique.fr/amnesia.jpg"></textarea></div>
         <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="p-coa" checked> Certificat d'analyse disponible</label>
         <button class="btn" id="add-produit">Publier le produit</button>
         <div id="msg-p" style="margin-top:10px"></div>
@@ -218,6 +220,7 @@
         taux_cbd: Number(val('p-cbd')), taux_thc: Number(val('p-thc')), prix: Number(val('p-prix')),
         unite: val('p-unite'), stock: Number(val('p-stock')), lot: val('p-lot'),
         spectre: val('p-spectre'), culture: val('p-culture'), description: val('p-desc'),
+        photos: val('p-photos').split('\n').map((x) => x.trim()).filter(Boolean),
         coa: document.getElementById('p-coa').checked
       } });
       info('msg-p', 'Produit publie apres controle de conformite.', true);

@@ -98,6 +98,19 @@ cbd-app/
 
 Les visuels produits sont generes a la volee (`/img/produit/<type>.svg`) : aucun asset binaire, aucune requete externe, la carte de France est un trace SVG local (pas de tuiles tierces).
 
+## Photos produits
+
+Les visuels affiches suivent trois niveaux, dans cet ordre :
+
+1. photo envoyee par le distributeur pour ce produit precis (champ `photos` de l'API) ;
+2. photo de rubrique deposee dans `public/media/produits/<type>.jpg` ;
+3. rendu studio genere par `lib/visuels.js` tant qu'aucune photo n'existe.
+
+Deposer un fichier dans `public/media/produits/` suffit, sans toucher au code :
+redemarrer le serveur, puis relancer `node build-demo.js` pour que la version
+un-fichier les embarque aussi. Voir `public/media/produits/LISEZ-MOI.txt` pour
+les formats, les sources d'images libres de droits et ce qu'il ne faut pas faire.
+
 ## Pistes de suite
 
 - Paiement reel : Stripe Checkout pour les commandes et Stripe Billing pour les abonnements (le code isole deja `commission_plateforme` et le montant mensuel).

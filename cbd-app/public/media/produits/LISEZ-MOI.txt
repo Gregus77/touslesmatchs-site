@@ -1,0 +1,37 @@
+PHOTOS PRODUITS
+===============
+
+Deposez ici une photo par rubrique, nommee exactement comme l'identifiant du type :
+
+  fleur.jpg      resine.jpg     huile.jpg
+  eliquide.jpg   pommade.jpg    infusion.jpg
+  comestible.jpg cristaux.jpg   cosmetique.jpg
+
+Formats acceptes : .jpg .jpeg .png .webp .avif
+Format conseille : carre, 800 x 800 px minimum, moins de 300 Ko.
+
+Des qu'un fichier est present, le catalogue l'utilise a la place du visuel
+genere. Aucun code a modifier : il suffit de redemarrer le serveur
+(les photos sont scannees au demarrage), puis de relancer
+`node build-demo.js` pour que la version un-fichier les embarque aussi.
+
+Ordre de priorite d'affichage :
+  1. photo envoyee par le distributeur pour ce produit precis (champ "photos")
+  2. photo de rubrique deposee dans ce dossier
+  3. rendu studio genere par lib/visuels.js
+
+OU TROUVER DES PHOTOS UTILISABLES
+---------------------------------
+- Pexels et Unsplash : licence gratuite, usage commercial autorise, sans
+  attribution obligatoire. Chercher "cbd oil", "hemp flower", "cbd cream".
+- Wikimedia Commons : verifier la licence image par image (CC BY impose de
+  crediter l'auteur).
+- Le mieux pour une vraie marketplace : les photos des distributeurs
+  eux-memes, prises sur fond neutre. Elles sont exactes, elles engagent leur
+  responsabilite, et elles evitent tout litige de droit d'auteur.
+
+A NE PAS FAIRE
+--------------
+Ne pas reprendre les photos d'un concurrent ni celles d'un fabricant sans
+autorisation ecrite : c'est une contrefacon, et les plateformes de paiement
+resilient sur ce motif.

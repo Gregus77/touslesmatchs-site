@@ -8,16 +8,32 @@ const fs = require('fs');
 const path = require('path');
 
 const ency = JSON.parse(fs.readFileSync(path.join(__dirname, 'content', 'encyclopedia.json'), 'utf8'));
-const { PLANS, svgProduit } = require('./server');
+const { PLANS, visuels } = require('./server');
 
 const db = { distributeurs: [], boutiques: [], produits: [], commandes: [], abonnements: [], seq: 1 };
 require('./lib/seed').seed(db);
 
 const planDe = (id) => PLANS.find((p) => p.id === id) || PLANS[0];
-const dataUri = (t) => 'data:image/svg+xml;base64,' + Buffer.from(svgProduit(t)).toString('base64');
-
+// Une photo deposee dans public/media/produits/ est embarquee telle quelle ;
+// sinon on retombe sur le rendu studio genere.
+const MIME = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+  '.webp': 'image/webp', '.avif': 'image/avif' };
+const photos = visuels.rafraichir();
 const IMAGES = {};
-ency.types.forEach((t) => { IMAGES[t.id] = dataUri(t.id); });
+let nbPhotos = 0;
+ency.types.forEach((t) => {
+  const rel = photos[t.id];
+  if (rel) {
+    const f = path.join(__dirname, 'public', rel.replace(/^\//, ''));
+    const mime = MIME[path.extname(f).toLowerCase()];
+    if (mime && fs.existsSync(f)) {
+      IMAGES[t.id] = 'data:' + mime + ';base64,' + fs.readFileSync(f).toString('base64');
+      nbPhotos++;
+      return;
+    }
+  }
+  IMAGES[t.id] = 'data:image/svg+xml;base64,' + Buffer.from(visuels.svgProduit(t.id)).toString('base64');
+});
 
 const boutiques = db.boutiques.map((s) => {
   const d = db.distributeurs.find((x) => x.id === s.distributeur_id);
@@ -542,4 +558,5 @@ document.body.addEventListener('click',(e)=>{
 </script>`;
 
 fs.writeFileSync(path.join(__dirname, 'demo.html'), html);
-console.log('demo.html genere : ' + (html.length / 1024).toFixed(0) + ' Ko');
+console.log('demo.html genere : ' + (html.length / 1024).toFixed(0) + ' Ko, '
+  + nbPhotos + ' photo(s) reelle(s) sur ' + ency.types.length + ' rubriques.');
