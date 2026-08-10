@@ -106,7 +106,18 @@ Les visuels affiches suivent trois niveaux, dans cet ordre :
 2. photo de rubrique deposee dans `public/media/produits/<type>.jpg` ;
 3. rendu studio genere par `lib/visuels.js` tant qu'aucune photo n'existe.
 
-Deposer un fichier dans `public/media/produits/` suffit, sans toucher au code :
+Trois facons d'installer de vraies photos, depuis une machine ayant acces au reseau :
+
+```bash
+node scripts/photos.js --pexels VOTRE_CLE      # telechargement automatique (cle gratuite)
+node scripts/photos.js --liens mes-photos.txt  # liste d'URL choisies a la main (type=url)
+node scripts/photos.js --dossier ~/mes-photos  # copie depuis un dossier local
+```
+
+Le script installe une photo par rubrique, refuse les fichiers qui ne sont pas des
+images, ecrit les credits dans CREDITS.txt et n'ecrase rien sans `--force`.
+
+Deposer un fichier a la main dans `public/media/produits/` marche aussi, sans toucher au code :
 redemarrer le serveur, puis relancer `node build-demo.js` pour que la version
 un-fichier les embarque aussi. Voir `public/media/produits/LISEZ-MOI.txt` pour
 les formats, les sources d'images libres de droits et ce qu'il ne faut pas faire.

@@ -5,9 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "reset": "rm -f data/db.json && node -e \"require('./lib/store').load()\" && echo 'Base regeneree.'"
+    "reset": "rm -f data/db.json && node -e \"require('./lib/store').load()\" && echo 'Base regeneree.'",
+    "photos": "node scripts/photos.js",
+    "demo": "node build-demo.js"
   },
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "private": true,
   "license": "UNLICENSED"
 }

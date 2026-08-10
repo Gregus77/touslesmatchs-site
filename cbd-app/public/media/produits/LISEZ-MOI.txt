@@ -20,6 +20,14 @@ Ordre de priorite d'affichage :
   2. photo de rubrique deposee dans ce dossier
   3. rendu studio genere par lib/visuels.js
 
+INSTALLATION AUTOMATIQUE
+------------------------
+Depuis une machine ayant acces au reseau :
+
+  node scripts/photos.js --pexels VOTRE_CLE      (cle gratuite : pexels.com/api)
+  node scripts/photos.js --liens mes-photos.txt  (une ligne  type=url  par rubrique)
+  node scripts/photos.js --dossier ~/mes-photos  (copie depuis votre disque)
+
 OU TROUVER DES PHOTOS UTILISABLES
 ---------------------------------
 - Pexels et Unsplash : licence gratuite, usage commercial autorise, sans
