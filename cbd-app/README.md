@@ -22,6 +22,10 @@ La base est un fichier JSON (`data/db.json`), cree automatiquement au premier la
 
 Docker : `docker build -t cbd-atlas . && docker run -p 3010:3010 cbd-atlas`
 
+## Voir sans rien installer
+
+Ouvrir `cbd-app/demo.html` directement dans un navigateur : meme contenu et memes ecrans (encyclopedie, carte, marketplace, formules), en un seul fichier, sans serveur ni installation. Regeneree par `node build-demo.js`.
+
 ## Pages
 
 | URL | Role |
@@ -87,7 +91,8 @@ cbd-app/
   lib/store.js           persistance JSON (ecriture atomique + differee)
   lib/seed.js            jeu de donnees de demonstration
   lib/compliance.js      filtre legal
-  data/encyclopedia.json contenu encyclopedique (molecules, formes, legalite)
+  content/encyclopedia.json  contenu encyclopedique (molecules, formes, legalite)
+  build-demo.js          genere demo.html : version autonome en un seul fichier
   public/                pages, css, js/app.js (socle), js/carte.js (carte SVG)
 ```
 

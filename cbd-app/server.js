@@ -14,7 +14,7 @@ const { verifierProduit, THC_MAX } = require('./lib/compliance');
 
 const PORT = Number(process.env.PORT || 3010);
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const ENCYCLOPEDIE = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'encyclopedia.json'), 'utf8'));
+const ENCYCLOPEDIE = JSON.parse(fs.readFileSync(path.join(__dirname, 'content', 'encyclopedia.json'), 'utf8'));
 
 const PLANS = [
   {
@@ -515,4 +515,4 @@ if (require.main === module) {
   process.on('SIGTERM', () => { store.flush(); process.exit(0); });
 }
 
-module.exports = { server, PLANS };
+module.exports = { server, PLANS, svgProduit };

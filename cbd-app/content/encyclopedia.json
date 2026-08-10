@@ -1,0 +1,250 @@
+{
+  "updated": "2026-08-10",
+  "disclaimer": "Contenu informatif et documentaire. Aucune allégation thérapeutique. Le CBD n'est pas un médicament. Vente interdite aux mineurs. En cas de question de santé, consultez un professionnel.",
+  "molecules": [
+    {
+      "id": "cbd",
+      "nom": "CBD (cannabidiol)",
+      "formule": "C21H30O2",
+      "masse": "314,46 g/mol",
+      "famille": "Cannabinoïde (phytocannabinoïde)",
+      "psychotrope": false,
+      "resume": "Cannabinoïde majoritaire du chanvre industriel. Non inscrit comme stupéfiant en France ni dans l'Union européenne. Ne provoque pas d'effet d'ivresse.",
+      "statut_fr": "Légal. Commercialisation autorisée (arrêté du 30 décembre 2021, décision du Conseil d'État du 29 décembre 2022) si la plante utilisée est une variété de Cannabis sativa L. autorisée et si le produit fini contient au maximum 0,3 % de THC.",
+      "ebullition": "160 à 180 °C (vaporisation)",
+      "solubilite": "Liposoluble (huiles, corps gras, alcool). Très peu soluble dans l'eau."
+    },
+    {
+      "id": "thc",
+      "nom": "THC (delta-9-tétrahydrocannabinol)",
+      "formule": "C21H30O2",
+      "masse": "314,46 g/mol",
+      "famille": "Cannabinoïde",
+      "psychotrope": true,
+      "resume": "Molécule psychoactive du cannabis. Classée comme stupéfiant en France.",
+      "statut_fr": "Illégal au-delà de 0,3 % dans le produit fini. Un produit CBD conforme doit rester sous ce seuil, contrôlé par analyse en laboratoire (HPLC ou GC-MS).",
+      "ebullition": "157 °C",
+      "solubilite": "Liposoluble"
+    },
+    {
+      "id": "cbg",
+      "nom": "CBG (cannabigérol)",
+      "formule": "C21H32O2",
+      "masse": "316,48 g/mol",
+      "famille": "Cannabinoïde",
+      "psychotrope": false,
+      "resume": "Appelé cannabinoïde « mère » : le CBGA est le précurseur biosynthétique du CBDA et du THCA. Présent en faible quantité dans la plante mature.",
+      "statut_fr": "Non classé stupéfiant. Même cadre que le CBD : 0,3 % de THC maximum dans le produit fini.",
+      "ebullition": "Fusion à 52 °C, vaporisation vers 200 °C",
+      "solubilite": "Liposoluble"
+    },
+    {
+      "id": "cbn",
+      "nom": "CBN (cannabinol)",
+      "formule": "C21H26O2",
+      "masse": "310,44 g/mol",
+      "famille": "Cannabinoïde de dégradation",
+      "psychotrope": false,
+      "resume": "Produit d'oxydation du THC. Apparaît naturellement dans les fleurs vieillies ou mal conservées.",
+      "statut_fr": "Zone grise selon les États membres. En France, toléré s'il n'est pas obtenu par conversion chimique du THC et si le produit reste sous 0,3 % de THC.",
+      "ebullition": "185 °C",
+      "solubilite": "Liposoluble"
+    },
+    {
+      "id": "cbc",
+      "nom": "CBC (cannabichromène)",
+      "formule": "C21H30O2",
+      "masse": "314,46 g/mol",
+      "famille": "Cannabinoïde",
+      "psychotrope": false,
+      "resume": "Cannabinoïde mineur, présent en traces dans les extraits full spectrum.",
+      "statut_fr": "Non classé stupéfiant.",
+      "ebullition": "220 °C",
+      "solubilite": "Liposoluble"
+    },
+    {
+      "id": "cbda",
+      "nom": "CBDA (acide cannabidiolique)",
+      "formule": "C22H30O4",
+      "masse": "358,47 g/mol",
+      "famille": "Cannabinoïde acide (forme brute)",
+      "psychotrope": false,
+      "resume": "Forme acide naturelle du CBD dans la plante fraîche. Se transforme en CBD par décarboxylation, sous l'effet de la chaleur ou du temps.",
+      "statut_fr": "Non classé stupéfiant.",
+      "ebullition": "Décarboxylation entre 120 et 140 °C",
+      "solubilite": "Partiellement hydrosoluble"
+    },
+    {
+      "id": "hhc",
+      "nom": "HHC (hexahydrocannabinol)",
+      "formule": "C21H32O2",
+      "masse": "316,48 g/mol",
+      "famille": "Cannabinoïde semi-synthétique",
+      "psychotrope": true,
+      "resume": "Cannabinoïde hydrogéné obtenu chimiquement, aux effets proches du THC.",
+      "statut_fr": "Interdit. Classé comme stupéfiant en France depuis l'arrêté du 12 juin 2023, avec le HHCO et le HHCP. Ne peut être ni vendu ni référencé sur cette plateforme.",
+      "ebullition": "Non documenté",
+      "solubilite": "Liposoluble"
+    },
+    {
+      "id": "terpenes",
+      "nom": "Terpènes (myrcène, limonène, pinène, linalol, caryophyllène)",
+      "formule": "C10H16 (monoterpènes), C15H24 (sesquiterpènes)",
+      "masse": "136 à 204 g/mol",
+      "famille": "Composés aromatiques volatils",
+      "psychotrope": false,
+      "resume": "Responsables de l'odeur et du profil aromatique. Présents dans le chanvre comme dans le houblon, le citron ou le pin.",
+      "statut_fr": "Légaux. Usage alimentaire ou cosmétique selon le terpène et la dose.",
+      "ebullition": "155 à 220 °C selon le terpène",
+      "solubilite": "Liposolubles et volatils"
+    }
+  ],
+  "types": [
+    {
+      "id": "fleur",
+      "nom": "Fleur de CBD",
+      "emoji": "🌿",
+      "prix_indicatif": "5 à 15 € le gramme, dégressif : 25 à 60 € les 10 g",
+      "molecules": ["cbd", "cbda", "cbg", "terpenes"],
+      "taux_cbd": "5 % à 20 %",
+      "culture": ["Indoor", "Greenhouse", "Outdoor"],
+      "description": "Sommité florale de chanvre séchée et manucurée, vendue par variété : Amnesia, Gorilla Glue, Orange Bud, Purple Haze. Le prix dépend du mode de culture, du taux de CBD et du profil terpénique.",
+      "legalite": "Vente et détention légales en France depuis la décision du Conseil d'État du 29 décembre 2022, sous réserve de 0,3 % de THC maximum. La combustion ne doit pas être promue par le vendeur.",
+      "conservation": "À l'abri de la lumière, en bocal hermétique, entre 15 et 20 °C, hygrométrie de 55 à 62 %."
+    },
+    {
+      "id": "resine",
+      "nom": "Résine et pollen de CBD",
+      "emoji": "🟤",
+      "prix_indicatif": "8 à 20 € le gramme",
+      "molecules": ["cbd", "cbg", "terpenes"],
+      "taux_cbd": "10 % à 40 %",
+      "culture": ["Extraction mécanique à sec", "Ice-o-lator"],
+      "description": "Trichomes compactés issus de la fleur. Texture ferme ou friable selon la méthode d'extraction.",
+      "legalite": "Même cadre que la fleur : 0,3 % de THC maximum dans le produit fini, analyse de lot obligatoire.",
+      "conservation": "Sous vide ou dans du papier sulfurisé, au frais."
+    },
+    {
+      "id": "huile",
+      "nom": "Huile de CBD sublinguale",
+      "emoji": "💧",
+      "prix_indicatif": "20 à 90 € le flacon de 10 ml",
+      "molecules": ["cbd", "cbg", "cbc", "terpenes"],
+      "taux_cbd": "5 %, 10 %, 20 %, 30 %, 40 %",
+      "culture": ["Extraction CO2 supercritique", "Extraction à l'éthanol"],
+      "description": "Extrait dilué dans une huile support : MCT de coco, chanvre ou olive. Trois spectres possibles : full spectrum avec des traces de THC sous 0,3 %, broad spectrum sans THC, isolat de CBD pur au-delà de 99 %.",
+      "legalite": "Légale. Ne peut porter aucune allégation thérapeutique (règlement UE 1924/2006). L'ingestion relève du statut Novel Food (règlement UE 2015/2283), dont l'autorisation est en cours d'instruction au niveau européen.",
+      "conservation": "Flacon ambré, à l'abri de la lumière, de 6 à 24 mois."
+    },
+    {
+      "id": "eliquide",
+      "nom": "E-liquide au CBD",
+      "emoji": "🔋",
+      "prix_indicatif": "10 à 35 € le flacon de 10 ml",
+      "molecules": ["cbd", "terpenes"],
+      "taux_cbd": "100 à 1000 mg par flacon",
+      "culture": ["Isolat", "Broad spectrum"],
+      "description": "Base propylène glycol et glycérine végétale additionnée de CBD, pour cigarette électronique. Ne jamais vaporiser une huile sublinguale : le MCT n'est pas inhalable.",
+      "legalite": "Légal. Soumis à la réglementation du vapotage : interdit aux mineurs, déclaration à l'ANSES, avertissement sanitaire, publicité interdite.",
+      "conservation": "12 à 24 mois à température ambiante."
+    },
+    {
+      "id": "pommade",
+      "nom": "Pommade, baume et crème au CBD",
+      "emoji": "🧴",
+      "prix_indicatif": "15 à 50 € le pot de 50 ml",
+      "molecules": ["cbd", "cbg", "terpenes"],
+      "taux_cbd": "200 à 1500 mg par pot",
+      "culture": ["Isolat", "Broad spectrum"],
+      "description": "Application cutanée locale, sur une base de beurre de karité, de cire d'abeille et d'huiles végétales.",
+      "legalite": "Produit cosmétique soumis au règlement UE 1223/2009 : dossier information produit, notification au CPNP, responsable de la mise sur le marché établi dans l'Union. Aucune allégation thérapeutique autorisée.",
+      "conservation": "Période après ouverture de 6 à 12 mois."
+    },
+    {
+      "id": "infusion",
+      "nom": "Infusion et tisane au CBD",
+      "emoji": "🍵",
+      "prix_indicatif": "8 à 25 € le sachet de 20 à 50 g",
+      "molecules": ["cbd", "cbda", "terpenes"],
+      "taux_cbd": "2 % à 8 %",
+      "culture": ["Outdoor", "Greenhouse"],
+      "description": "Mélange de fleurs ou de feuilles de chanvre et de plantes aromatiques. Ajouter un corps gras, lait ou huile de coco, pour l'extraction : le CBD est liposoluble.",
+      "legalite": "Statut Novel Food pour l'ingestion. Étiquetage de denrée alimentaire obligatoire.",
+      "conservation": "Sachet kraft hermétique, de 12 à 18 mois."
+    },
+    {
+      "id": "comestible",
+      "nom": "Comestibles : gommes, chocolat, miel",
+      "emoji": "🍬",
+      "prix_indicatif": "10 à 40 € la boîte",
+      "molecules": ["cbd"],
+      "taux_cbd": "5 à 25 mg par unité",
+      "culture": ["Isolat", "Broad spectrum"],
+      "description": "Produits alimentaires dosés en CBD. Biodisponibilité plus faible que la voie sublinguale, effet plus tardif.",
+      "legalite": "Novel Food : mise sur le marché alimentaire en attente d'autorisation européenne. Étiquetage nutritionnel, allergènes et dose par unité obligatoires.",
+      "conservation": "Selon la date de durabilité minimale du produit alimentaire."
+    },
+    {
+      "id": "cristaux",
+      "nom": "Cristaux et isolat de CBD",
+      "emoji": "❄️",
+      "prix_indicatif": "20 à 60 € le gramme",
+      "molecules": ["cbd"],
+      "taux_cbd": "98 % à 99,9 %",
+      "culture": ["Chromatographie", "Cristallisation"],
+      "description": "CBD purifié, sans THC ni terpènes. Matière première pour fabriquer huiles, e-liquides et cosmétiques.",
+      "legalite": "Légaux. Certificat d'analyse exigible pour chaque lot.",
+      "conservation": "Contenant hermétique, à l'abri de l'humidité, 24 mois."
+    },
+    {
+      "id": "cosmetique",
+      "nom": "Cosmétiques au chanvre : sérum, savon, shampooing",
+      "emoji": "🌸",
+      "prix_indicatif": "8 à 45 €",
+      "molecules": ["cbd", "terpenes"],
+      "taux_cbd": "50 à 500 mg",
+      "culture": ["Isolat", "Huile de graines de chanvre"],
+      "description": "Soins formulés au CBD ou à l'huile de graines de chanvre, cette dernière ne contenant pas de cannabinoïdes.",
+      "legalite": "Règlement cosmétique UE 1223/2009. L'extrait de fleur ou de feuille est autorisé, l'extrait de résine est interdit en cosmétique selon la base CosIng.",
+      "conservation": "Période après ouverture indiquée sur l'emballage."
+    }
+  ],
+  "legalite": [
+    {
+      "titre": "Le seuil de 0,3 % de THC",
+      "texte": "En France, un produit CBD est conforme si le produit fini contient au maximum 0,3 % de THC. Le seuil s'applique au produit tel qu'il est vendu, pas seulement à la plante dont il est issu."
+    },
+    {
+      "titre": "Variétés autorisées",
+      "texte": "Seules les variétés de Cannabis sativa L. inscrites au catalogue européen des espèces et variétés de plantes agricoles peuvent être cultivées."
+    },
+    {
+      "titre": "Vente des fleurs",
+      "texte": "L'interdiction de vendre des fleurs et feuilles brutes prévue par l'arrêté du 30 décembre 2021 a été annulée par le Conseil d'État le 29 décembre 2022. La vente aux consommateurs est donc licite, sous réserve du seuil de THC."
+    },
+    {
+      "titre": "Interdiction aux mineurs",
+      "texte": "La vente de produits CBD à des mineurs est proscrite par la profession et exigée par cette plateforme. Un contrôle d'âge est obligatoire à l'entrée du site et au moment de la commande."
+    },
+    {
+      "titre": "Allégations interdites",
+      "texte": "Aucune allégation thérapeutique, curative ou préventive n'est autorisée (règlement UE 1924/2006 et code de la santé publique). Il est interdit d'affirmer qu'un produit soigne, guérit, soulage une pathologie ou remplace un traitement."
+    },
+    {
+      "titre": "Novel Food",
+      "texte": "Les produits CBD destinés à l'ingestion — huiles sublinguales, comestibles, boissons — relèvent du règlement UE 2015/2283 sur les nouveaux aliments. Les dossiers d'autorisation sont en cours d'instruction par l'EFSA."
+    },
+    {
+      "titre": "Conduite",
+      "texte": "Même conforme, un produit CBD peut contenir des traces de THC susceptibles de rendre positif un dépistage salivaire. La conduite après consommation est déconseillée et peut être sanctionnée."
+    },
+    {
+      "titre": "Substances interdites",
+      "texte": "Le HHC, le HHCO, le HHCP et le THCP sont classés comme stupéfiants en France. Aucune annonce mentionnant ces molécules n'est acceptée : les fiches produits sont filtrées automatiquement."
+    },
+    {
+      "titre": "Traçabilité",
+      "texte": "Chaque produit référencé doit disposer d'un certificat d'analyse établi par un laboratoire indépendant, mentionnant le numéro de lot, le taux de CBD et le taux de THC."
+    }
+  ]
+}

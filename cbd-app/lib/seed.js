@@ -4,53 +4,53 @@ const crypto = require('crypto');
 
 const HORAIRES_STD = {
   lun: '10:00-19:00', mar: '10:00-19:00', mer: '10:00-19:00',
-  jeu: '10:00-19:00', ven: '10:00-20:00', sam: '10:00-20:00', dim: 'Ferme'
+  jeu: '10:00-19:00', ven: '10:00-20:00', sam: '10:00-20:00', dim: 'Fermé'
 };
 
 const DISTRIBUTEURS = [
   ['Chanvre & Co', 'contact@chanvre-co.fr', 'pro', [
-    ['Chanvre & Co Paris Marais', '18 rue des Rosiers', 'Paris', '75004', 48.8571, 2.3600, true, 4.9, 'Livraison France 4,90 EUR - offerte des 60 EUR', 24],
-    ['Chanvre & Co Lyon Bellecour', '5 place Bellecour', 'Lyon', '69002', 45.7578, 4.8320, true, 6.5, 'Retrait en boutique ou coursier Lyon intra-muros', 2]
+    ['Chanvre & Co Paris Marais', '18 rue des Rosiers', 'Paris', '75004', 48.8571, 2.3600, true, 4.9, 'Livraison France 4,90 € - offerte dès 60 €', 24],
+    ['Chanvre & Co Lyon Bellecour', '5 place Bellecour', 'Lyon', '69002', 45.7578, 4.8320, true, 6.5, 'Retrait en boutique ou coursier dans Lyon intra-muros', 2]
   ]],
   ['Green Valley', 'hello@greenvalley.fr', 'premium', [
-    ['Green Valley Bordeaux', '32 rue Sainte-Catherine', 'Bordeaux', '33000', 44.8404, -0.5741, true, 4.5, 'Colissimo 48h - offerte des 50 EUR', 48],
+    ['Green Valley Bordeaux', '32 rue Sainte-Catherine', 'Bordeaux', '33000', 44.8404, -0.5741, true, 4.5, 'Colissimo 48 h - offerte dès 50 €', 48],
     ['Green Valley Toulouse', '11 rue du Taur', 'Toulouse', '31000', 43.6045, 1.4430, false, 0, 'Retrait en boutique uniquement', 0]
   ]],
   ['Herbe Fine', 'pro@herbefine.fr', 'basic', [
-    ['Herbe Fine Marseille', '7 cours Julien', 'Marseille', '13006', 43.2946, 5.3830, true, 5.9, 'Mondial Relay 3-5 jours', 72]
+    ['Herbe Fine Marseille', '7 cours Julien', 'Marseille', '13006', 43.2946, 5.3830, true, 5.9, 'Mondial Relay en 3 à 5 jours', 72]
   ]],
   ['Terpene Lab', 'contact@terpenelab.fr', 'premium', [
-    ['Terpene Lab Lille', '24 rue Esquermoise', 'Lille', '59000', 50.6390, 3.0603, true, 3.9, 'Livraison 24h Hauts-de-France', 24],
-    ['Terpene Lab Nantes', '9 rue Crebillon', 'Nantes', '44000', 47.2140, -1.5600, true, 4.9, 'Chronopost 24h', 24]
+    ['Terpene Lab Lille', '24 rue Esquermoise', 'Lille', '59000', 50.6390, 3.0603, true, 3.9, 'Livraison en 24 h dans les Hauts-de-France', 24],
+    ['Terpene Lab Nantes', '9 rue Crebillon', 'Nantes', '44000', 47.2140, -1.5600, true, 4.9, 'Chronopost 24 h', 24]
   ]],
   ['Alpine CBD', 'shop@alpinecbd.fr', 'basic', [
-    ['Alpine CBD Grenoble', '3 place Grenette', 'Grenoble', '38000', 45.1920, 5.7260, true, 5.5, 'Colissimo 48h', 48]
+    ['Alpine CBD Grenoble', '3 place Grenette', 'Grenoble', '38000', 45.1920, 5.7260, true, 5.5, 'Colissimo 48 h', 48]
   ]],
   ['Riviera Hemp', 'contact@rivierahemp.fr', 'pro', [
-    ['Riviera Hemp Nice', '15 rue Massena', 'Nice', '06000', 43.6980, 7.2680, true, 4.9, 'Livraison Alpes-Maritimes en 24h', 24]
+    ['Riviera Hemp Nice', '15 rue Massena', 'Nice', '06000', 43.6980, 7.2680, true, 4.9, 'Livraison dans les Alpes-Maritimes en 24 h', 24]
   ]]
 ];
 
 // [type, nom, variete, taux_cbd, thc, prix, unite, stock, culture, spectre, terpenes]
 const CATALOGUE = [
-  ['fleur', 'Amnesia Haze', 'Amnesia Haze', 18, 0.25, 9.90, 'g', 400, 'Indoor', 'Full spectrum', 'Limonene, Myrcene'],
-  ['fleur', 'Gorilla Glue', 'Gorilla Glue #4', 16, 0.20, 8.90, 'g', 350, 'Indoor', 'Full spectrum', 'Caryophyllene, Pinene'],
-  ['fleur', 'Orange Bud', 'Orange Bud', 12, 0.18, 6.50, 'g', 600, 'Greenhouse', 'Full spectrum', 'Limonene, Linalol'],
-  ['fleur', 'Purple Haze Outdoor', 'Purple Haze', 9, 0.15, 4.90, 'g', 900, 'Outdoor', 'Full spectrum', 'Myrcene'],
-  ['resine', 'Pollen Marocain 22%', 'Ketama', 22, 0.28, 12.00, 'g', 180, 'Extraction a sec', 'Full spectrum', 'Caryophyllene'],
-  ['resine', 'Ice-o-lator 35%', 'Static Melt', 35, 0.29, 19.00, 'g', 60, 'Ice-o-lator', 'Full spectrum', 'Myrcene, Pinene'],
+  ['fleur', 'Amnesia Haze', 'Amnesia Haze', 18, 0.25, 9.90, 'g', 400, 'Indoor', 'Full spectrum', 'Limonène, Myrcène'],
+  ['fleur', 'Gorilla Glue', 'Gorilla Glue #4', 16, 0.20, 8.90, 'g', 350, 'Indoor', 'Full spectrum', 'Caryophyllène, Pinène'],
+  ['fleur', 'Orange Bud', 'Orange Bud', 12, 0.18, 6.50, 'g', 600, 'Greenhouse', 'Full spectrum', 'Limonène, Linalol'],
+  ['fleur', 'Purple Haze Outdoor', 'Purple Haze', 9, 0.15, 4.90, 'g', 900, 'Outdoor', 'Full spectrum', 'Myrcène'],
+  ['resine', 'Pollen marocain 22%', 'Ketama', 22, 0.28, 12.00, 'g', 180, 'Extraction à sec', 'Full spectrum', 'Caryophyllène'],
+  ['resine', 'Ice-o-lator 35%', 'Static Melt', 35, 0.29, 19.00, 'g', 60, 'Ice-o-lator', 'Full spectrum', 'Myrcène, Pinène'],
   ['huile', 'Huile Full Spectrum 10%', null, 10, 0.20, 39.90, 'flacon 10 ml', 120, 'CO2 supercritique', 'Full spectrum', 'Profil complet'],
   ['huile', 'Huile Broad Spectrum 20%', null, 20, 0.0, 69.90, 'flacon 10 ml', 80, 'CO2 supercritique', 'Broad spectrum', 'Sans THC'],
   ['huile', 'Huile Isolat 5% neutre', null, 5, 0.0, 24.90, 'flacon 10 ml', 150, 'Isolat', 'Isolat', 'Neutre'],
   ['eliquide', 'E-liquide Mangue 300 mg', null, 3, 0.0, 16.90, 'flacon 10 ml', 200, 'Isolat', 'Isolat', 'Mangue'],
   ['eliquide', 'E-liquide Amnesia 600 mg', null, 6, 0.0, 24.90, 'flacon 10 ml', 140, 'Broad spectrum', 'Broad spectrum', 'Amnesia'],
   ['pommade', 'Baume musculaire 1000 mg', null, 2, 0.0, 34.90, 'pot 50 ml', 90, 'Isolat', 'Isolat', 'Menthol, Arnica'],
-  ['pommade', 'Creme apaisante 500 mg', null, 1, 0.0, 22.90, 'pot 50 ml', 110, 'Broad spectrum', 'Broad spectrum', 'Calendula'],
-  ['infusion', 'Infusion Nuit Camomille', null, 5, 0.20, 12.90, 'sachet 30 g', 220, 'Outdoor', 'Full spectrum', 'Camomille, Tilleul'],
-  ['comestible', 'Gummies 25 mg x20', null, 0, 0.0, 29.90, 'boite de 20', 130, 'Isolat', 'Isolat', 'Fruits rouges'],
+  ['pommade', 'Crème apaisante 500 mg', null, 1, 0.0, 22.90, 'pot 50 ml', 110, 'Broad spectrum', 'Broad spectrum', 'Calendula'],
+  ['infusion', 'Infusion nuit camomille', null, 5, 0.20, 12.90, 'sachet 30 g', 220, 'Outdoor', 'Full spectrum', 'Camomille, Tilleul'],
+  ['comestible', 'Gommes 25 mg x 20', null, 0, 0.0, 29.90, 'boîte de 20', 130, 'Isolat', 'Isolat', 'Fruits rouges'],
   ['cristaux', 'Cristaux 99,5%', null, 99.5, 0.0, 39.00, 'g', 70, 'Cristallisation', 'Isolat', 'Aucun'],
-  ['cosmetique', 'Serum visage chanvre', null, 1, 0.0, 28.00, 'flacon 30 ml', 95, 'Isolat', 'Isolat', 'Neroli'],
-  ['cosmetique', 'Savon surgras chanvre', null, 0.5, 0.0, 9.50, 'pain 100 g', 300, 'Huile de graines', 'Sans CBD actif', 'Lavande']
+  ['cosmetique', 'Sérum visage au chanvre', null, 1, 0.0, 28.00, 'flacon 30 ml', 95, 'Isolat', 'Isolat', 'Néroli'],
+  ['cosmetique', 'Savon surgras au chanvre', null, 0.5, 0.0, 9.50, 'pain 100 g', 300, 'Huile de graines', 'Sans CBD actif', 'Lavande']
 ];
 
 function seed(db) {
@@ -102,7 +102,7 @@ function seed(db) {
           culture, spectre, terpenes,
           lot: 'L' + (2600 + seq * 3 + k),
           coa: true,
-          description: pnom + ' - ' + spectre + ', ' + cbd + ' % de CBD, ' + thc + ' % de THC. Analyse de lot disponible.',
+          description: pnom + ' — ' + spectre + ', ' + cbd + ' % de CBD, ' + thc + ' % de THC. Analyse de lot disponible.',
           actif: true,
           cree_le: shop.cree_le
         });
