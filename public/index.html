@@ -679,7 +679,8 @@ body :where(
 .day-acc-item.vide .day-acc-head{opacity:.62}
 .day-acc-item.vide .day-acc-caret{opacity:.35}
 .day-vide-note{padding:10px 13px;font-size:11.5px;line-height:1.55;color:var(--muted)}
-</style>
+/* Acces fondateur +0,5 : invitation affichee une seule fois par session. */
+.beta-cycle01-launcher{position:fixed;right:18px;bottom:18px;z-index:180;padding:11px 14px;border:1px solid rgba(166,136,255,.45);border-radius:999px;background:#1e2340;color:#f6f7ff;box-shadow:0 14px 32px rgba(0,0,0,.3);font:800 12px Inter,system-ui;cursor:pointer}.beta-cycle01-launcher b{color:#4fd6f2}.beta-cycle01{max-width:440px}.beta-cycle01 .beta-kicker{color:#4fd6f2;font-size:10px;font-weight:900;letter-spacing:.13em}.beta-cycle01 .beta-meta{margin:13px 0;color:#c4c9e6;font-size:12px}.beta-cycle01 .beta-form{display:grid;gap:10px;margin-top:16px}.beta-cycle01 .beta-check{display:flex;gap:8px;color:#c4c9e6;font-size:11px;line-height:1.45}.beta-cycle01 .beta-check input{margin-top:2px;accent-color:#8a68ff}.beta-cycle01 .beta-status{margin-top:10px;font-size:12px;line-height:1.45}@media(max-width:700px){.beta-cycle01-launcher{right:12px;bottom:12px}}</style>
 
 </head>
 <body class="tlm-wow tlm-page-home">
@@ -975,7 +976,8 @@ body :where(
   </div>
 </footer>
 
-<!-- LOGIN MODAL -->
+<button type="button" class="beta-cycle01-launcher" id="beta-cycle01-launcher" onclick="openBetaCycle01()"><b>Cycle 01</b> · demander une invitation</button>
+<div class="modal-bg" id="beta-cycle01-modal" aria-hidden="true"><div class="modal-box beta-cycle01"><button class="modal-close" onclick="closeBetaCycle01()">×</button><div class="beta-kicker">ACCES FONDATEUR · CYCLE 01</div><div class="modal-title" style="margin-top:12px">Une premiere table de test.</div><div class="modal-sub">20 invitations pour suivre le protocole +0,5 but : signaux, refus et resultats visibles sans filtre.</div><div class="beta-meta" id="beta-cycle01-count">Verification des invitations disponibles…</div><div class="beta-form"><input class="modal-input" id="beta-cycle01-email" type="email" autocomplete="email" placeholder="toi@exemple.com"><label class="beta-check"><input id="beta-cycle01-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter les <a href="/mentions-legales" target="_blank">mentions legales</a> et la <a href="/confidentialite" target="_blank">politique de confidentialite</a>.</label><button class="modal-btn" type="button" id="beta-cycle01-submit" onclick="applyBetaCycle01()">Demander une invitation</button></div><div class="beta-status" id="beta-cycle01-status" aria-live="polite"></div><div style="font-size:10px;color:var(--muted);margin-top:14px">Acces offert pendant la beta · Aucun gain n est garanti · Jouez avec moderation</div></div></div><!-- LOGIN MODAL -->
 <div class="modal-bg" id="modal-login">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
@@ -1280,6 +1282,12 @@ async function loadProof(){
 loadProof();
 
 /* ══ CAPTURE EMAIL (active la sequence nurturing J0/J+1/J+3 deja codee cote API) ══ */
+function openBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.add("open");m.setAttribute("aria-hidden","false");loadBetaCycle01Status();}
+function closeBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.remove("open");m.setAttribute("aria-hidden","true");}
+function loadBetaCycle01Status(){fetch("/beta-plus05/status").then(function(r){return r.json()}).then(function(d){document.getElementById("beta-cycle01-count").textContent=d.remaining>0?(d.remaining+" invitation"+(d.remaining>1?"s":"")+" disponible"+(d.remaining>1?"s":"")):"Beta complete : inscription en liste d attente."}).catch(function(){document.getElementById("beta-cycle01-count").textContent="Les invitations seront confirmees apres verification."})}
+function applyBetaCycle01(){var email=document.getElementById("beta-cycle01-email").value.trim(),adult=document.getElementById("beta-cycle01-adult").checked,status=document.getElementById("beta-cycle01-status"),btn=document.getElementById("beta-cycle01-submit");if(!email||!adult){status.style.color="var(--red)";status.textContent="Email valide et confirmation +18 requis.";return}btn.disabled=true;fetch("/beta-plus05/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,adultConfirmed:adult,legalAccepted:adult})}).then(function(r){return r.json()}).then(function(d){status.style.color=d.ok?"var(--green)":"var(--red)";status.textContent=d.ok?(d.status==="accepted"?"Invitation reservee. Nous confirmerons la phase de test avant tout acces.":"Beta complete : ta demande est en liste d attente."):(d.error||"Demande non valide.");if(d.ok)loadBetaCycle01Status()}).catch(function(){status.style.color="var(--red)";status.textContent="Erreur de connexion. Reessaie plus tard."}).finally(function(){btn.disabled=false})}
+document.getElementById("beta-cycle01-modal").addEventListener("click",function(e){if(e.target===this)closeBetaCycle01()});
+setTimeout(function(){if(!sessionStorage.getItem("tlm_beta_cycle01_seen")){openBetaCycle01();sessionStorage.setItem("tlm_beta_cycle01_seen","1")}},7000);
 function submitEmailCapture(ev) {
   ev.preventDefault();
   var input = document.getElementById('email-capture-input');

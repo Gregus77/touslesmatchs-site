@@ -21,6 +21,7 @@ const crypto = require("crypto");
 // Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
+const { BETA_PLUS05_CAPACITY, decideBetaApplication, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
@@ -443,6 +444,15 @@ db.exec(`
   );
 `);
 
+// Beta privee +0,5 : capacite reelle, liste d attente et aucune diffusion automatique.
+db.exec(`CREATE TABLE IF NOT EXISTS beta_plus05_applications (
+  email TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK(status IN ('accepted','waitlist')),
+  adult_confirmed INTEGER NOT NULL DEFAULT 0,
+  legal_accepted INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);`);
 // Connexion biométrique (Face ID / empreinte) — un credential WebAuthn par
 // appareil, rattaché au couple email/code deja valide cote codes.db. Permet
 // de re-injecter email+code dans le localStorage apres verif biometrique,
@@ -8316,6 +8326,27 @@ function normalizeContactLang(lang = "", country = "") {
 }
 
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
+app.get("/beta-plus05/status", (req, res) => {
+  const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+});
+app.post("/beta-plus05/apply", (req, res) => {
+  const email = normalizeBetaEmail(req.body?.email);
+  const adultConfirmed = req.body?.adultConfirmed === true;
+  const legalAccepted = req.body?.legalAccepted === true;
+  if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok:false, error:"Email invalide" });
+  const decision = db.transaction(() => {
+    const existing = db.prepare("SELECT status FROM beta_plus05_applications WHERE email=?").get(email);
+    const acceptedCount = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+    const next = decideBetaApplication({ existingStatus:existing?.status, acceptedCount, adultConfirmed, legalAccepted });
+    if (next.status === "rejected" || existing) return next;
+    db.prepare("INSERT INTO beta_plus05_applications (email,status,adult_confirmed,legal_accepted) VALUES (?,?,?,?)").run(email,next.status,adultConfirmed?1:0,legalAccepted?1:0);
+    return next;
+  })();
+  if (decision.status === "rejected") return res.status(400).json({ ok:false, error:"Confirmation +18 et mentions legales requise" });
+  const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+  res.json({ ok:true, status:decision.status, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+});
 app.post("/subscribe-email", async (req, res) => {
   const { email, lang, ageRange, source, referrer, landingPage, utm } = req.body || {};
   if (!email || !email.includes("@")) {

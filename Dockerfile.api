@@ -35,6 +35,7 @@ COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/analysis_engine.js ./analysis_engine.js
 COPY scripts/ai_budget_guard.js ./ai_budget_guard.js
 COPY scripts/ai_models.config.js ./ai_models.config.js
+COPY scripts/beta_waitlist.js ./beta_waitlist.js
 COPY scripts/hermes_mail_bot.js ./hermes_mail_bot.js
 
 EXPOSE 3001
