@@ -21,7 +21,7 @@ const crypto = require("crypto");
 // Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
-const { BETA_PLUS05_CAPACITY, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
+const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
@@ -982,6 +982,7 @@ const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "
 // que le canal dédié soit créé. Le CODE applique les conditions par palier (voir plus bas).
 const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _standardSignalDaily = { date: "", count: 0 };
@@ -8344,8 +8345,16 @@ app.post("/beta-plus05/apply", (req, res) => {
     return next;
   })();
   if (decision.status === "rejected") return res.status(400).json({ ok:false, error:"Confirmation +18 et mentions legales requise" });
+  let inviteEmailQueued = false;
+  if (decision.status === "accepted" && decision.reason === "slot_reserved" && TELEGRAM_GOAL05_INVITE_URL) {
+    const invite = buildBetaPlus05InvitationEmail(TELEGRAM_GOAL05_INVITE_URL);
+    inviteEmailQueued = true;
+    brevoSendEmail(email, invite.subject, invite.html, { critical:true })
+      .then(() => console.log(`[beta-plus05] invitation Telegram envoyee a ${email}`))
+      .catch((e) => console.error(`[beta-plus05] email invitation KO ${email}:`, e.message));
+  }
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
-  res.json({ ok:true, status:decision.status, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+  res.json({ ok:true, status:decision.status, inviteEmailQueued, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
 });
 app.get("/admin/beta-plus05/applications", (req, res) => {
   const { email, code, secret, format } = req.query || {};
