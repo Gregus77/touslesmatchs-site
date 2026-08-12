@@ -28,5 +28,8 @@ assert(home.includes('goal05Pulse'), "scarcity pulse animation missing");
 assert(home.includes('updateGoal05Remaining'), "remaining count updater missing");
 assert(home.includes("Analyse historique 4 saisons"), "four-season proof copy missing");
 assert(home.includes("La selection n'est pas liee au domicile"), "homepage must not imply home team only");
+assert(!home.includes("non envoyée sur Telegram"), "homepage should not discourage subscriptions with non-sent Telegram wording");
+assert(home.includes("Observation publique du moteur"), "public observation wording missing");
+assert(home.includes("Reçu par"), "subscriber received wording missing");
 
 console.log("Goal 0.5 site/rules checks passed");

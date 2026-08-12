@@ -1573,7 +1573,7 @@ async function loadDailyAccordion(){
         var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
         var tierBadge='';
         if(canaux.length){
-          tierBadge='<span class="tier-recu">Envoyé sur '
+          tierBadge='<span class="tier-recu">Reçu par '
             + canaux.map(function(t){
                 var m=TIER_META[t];
                 return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
@@ -1594,7 +1594,7 @@ async function loadDailyAccordion(){
              : /ligue/i.test(motif)           ? 'ligue non fiable'
              : 'critères de diffusion non atteints')
             : 'critères de diffusion non atteints';
-          tierBadge='<span class="tier-recu tier-none">Analyse publique, non envoyée sur Telegram — '+esc(lisible)+'</span>';
+          tierBadge='<span class="tier-recu tier-none">Observation publique du moteur — '+esc(lisible)+'</span>';
         }
         return '<div class="day-acc-row">'
           + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+'</div>'
