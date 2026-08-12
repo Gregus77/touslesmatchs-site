@@ -1,0 +1,100 @@
+{
+  "product": "GOAL 0.5 IA",
+  "mode": "shadow_api_coverage_audit",
+  "startedAt": "2026-08-12T16:00:33.528Z",
+  "keyPresent": false,
+  "targetLeagues": [
+    {
+      "id": 61,
+      "country": "France",
+      "league": "Ligue 1"
+    },
+    {
+      "id": 62,
+      "country": "France",
+      "league": "Ligue 2"
+    },
+    {
+      "id": 39,
+      "country": "England",
+      "league": "Premier League"
+    },
+    {
+      "id": 40,
+      "country": "England",
+      "league": "Championship"
+    },
+    {
+      "id": 140,
+      "country": "Spain",
+      "league": "La Liga"
+    },
+    {
+      "id": 141,
+      "country": "Spain",
+      "league": "Segunda Division"
+    },
+    {
+      "id": 78,
+      "country": "Germany",
+      "league": "Bundesliga"
+    },
+    {
+      "id": 79,
+      "country": "Germany",
+      "league": "2. Bundesliga"
+    },
+    {
+      "id": 135,
+      "country": "Italy",
+      "league": "Serie A"
+    },
+    {
+      "id": 136,
+      "country": "Italy",
+      "league": "Serie B"
+    },
+    {
+      "id": 88,
+      "country": "Netherlands",
+      "league": "Eredivisie"
+    },
+    {
+      "id": 89,
+      "country": "Netherlands",
+      "league": "Eerste Divisie"
+    },
+    {
+      "id": 144,
+      "country": "Belgium",
+      "league": "Jupiler Pro League"
+    },
+    {
+      "id": 94,
+      "country": "Portugal",
+      "league": "Primeira Liga"
+    },
+    {
+      "id": 128,
+      "country": "Argentina",
+      "league": "Liga Profesional Argentina"
+    },
+    {
+      "id": 71,
+      "country": "Brazil",
+      "league": "Serie A"
+    },
+    {
+      "id": 72,
+      "country": "Brazil",
+      "league": "Serie B"
+    }
+  ],
+  "liveBets": [],
+  "leagueChecks": [],
+  "findings": [],
+  "errors": [
+    "API_SPORTS_KEY/API_FOOTBALL_KEY absent from process environment."
+  ],
+  "finishedAt": "2026-08-12T16:00:33.529Z"
+}
