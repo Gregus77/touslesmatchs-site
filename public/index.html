@@ -679,7 +679,22 @@ body :where(
 .day-acc-item.vide .day-acc-head{opacity:.62}
 .day-acc-item.vide .day-acc-caret{opacity:.35}
 .day-vide-note{padding:10px 13px;font-size:11.5px;line-height:1.55;color:var(--muted)}
-/* Acces fondateur +0,5 : invitation affichee une seule fois par session. */
+/* Carte locale Goal 0.5 IA : offre fondatrice sans paiement actif. */
+.goal05-founder-card{position:relative;overflow:hidden;border-color:rgba(79,214,242,.25);background:linear-gradient(135deg,rgba(18,21,42,.98),rgba(30,35,64,.96));box-shadow:0 22px 46px -24px rgba(79,214,242,.42)}
+.goal05-founder-card:before{content:"";position:absolute;inset:0;border-top:1px solid rgba(138,104,255,.45);background:linear-gradient(120deg,rgba(79,214,242,.08),transparent 46%,rgba(138,104,255,.12));pointer-events:none}
+.goal05-founder-inner{position:relative;display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center;padding:24px}
+.goal05-kicker{font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.goal05-title{font-size:26px;line-height:1.1;font-weight:900;margin:8px 0 10px;color:var(--tx)}
+.goal05-text{font-size:13px;line-height:1.65;color:var(--tx2);max-width:690px}
+.goal05-proof-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:15px}
+.goal05-proof{border:1px solid rgba(166,136,255,.24);background:rgba(12,17,40,.58);border-radius:10px;padding:10px 11px;font-size:11.5px;color:var(--tx2)}
+.goal05-proof b{display:block;color:var(--tx);font-size:12px;margin-bottom:2px}
+.goal05-offer{border:1px solid rgba(79,214,242,.28);background:rgba(79,214,242,.08);border-radius:14px;padding:16px}
+.goal05-offer-label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--violet2);margin-bottom:8px}
+.goal05-offer-price{font-size:28px;font-weight:950;color:var(--tx);line-height:1}.goal05-offer-price span{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-top:6px}
+.goal05-offer .btn{width:100%;justify-content:center;margin-top:14px}
+.goal05-small{font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:10px}
+@media(max-width:760px){.goal05-founder-inner{grid-template-columns:1fr;padding:20px}.goal05-proof-grid{grid-template-columns:1fr}.goal05-title{font-size:23px}}/* Acces fondateur +0,5 : invitation affichee une seule fois par session. */
 .beta-cycle01-launcher{position:fixed;right:18px;bottom:18px;z-index:180;padding:11px 14px;border:1px solid rgba(166,136,255,.45);border-radius:999px;background:#1e2340;color:#f6f7ff;box-shadow:0 14px 32px rgba(0,0,0,.3);font:800 12px Inter,system-ui;cursor:pointer}.beta-cycle01-launcher b{color:#4fd6f2}.beta-cycle01{max-width:440px}.beta-cycle01 .beta-kicker{color:#4fd6f2;font-size:10px;font-weight:900;letter-spacing:.13em}.beta-cycle01 .beta-meta{margin:13px 0;color:#c4c9e6;font-size:12px}.beta-cycle01 .beta-form{display:grid;gap:10px;margin-top:16px}.beta-cycle01 .beta-check{display:flex;gap:8px;color:#c4c9e6;font-size:11px;line-height:1.45}.beta-cycle01 .beta-check input{margin-top:2px;accent-color:#8a68ff}.beta-cycle01 .beta-status{margin-top:10px;font-size:12px;line-height:1.45}@media(max-width:700px){.beta-cycle01-launcher{right:12px;bottom:12px}}</style>
 
 </head>
@@ -850,6 +865,29 @@ body :where(
     </div>
   </div>
 
+  <div class="row" style="grid-template-columns:1fr;padding-top:0">
+    <section class="card goal05-founder-card" id="goal05-founder-card" aria-labelledby="goal05-title">
+      <div class="goal05-founder-inner">
+        <div>
+          <div class="goal05-kicker">GOAL 0.5 IA · Acces fondateur</div>
+          <h2 class="goal05-title" id="goal05-title">Equipe +0,5 but</h2>
+          <p class="goal05-text">La selection n'est pas liee au domicile : elle vise l'equipe historiquement plus forte sur 4 saisons, encore bien classee cette annee, face a une equipe faible au classement et vulnerable.</p>
+          <div class="goal05-proof-grid" aria-label="Criteres principaux Goal 0.5">
+            <div class="goal05-proof"><b>Analyse historique 4 saisons</b>Moyenne ponderee 40 / 30 / 20 / 10 par championnat.</div>
+            <div class="goal05-proof"><b>Ecart de niveau</b>Top 25% historique contre bottom 25% historique.</div>
+            <div class="goal05-proof"><b>Score minimum</b>80/100 avant toute surveillance live.</div>
+            <div class="goal05-proof"><b>Declenchement prudent</b>Cote live 1.60, marche frais, aucun signal apres 85e.</div>
+          </div>
+        </div>
+        <aside class="goal05-offer" aria-label="Offre beta Goal 0.5">
+          <div class="goal05-offer-label">Beta privee · Cycle 01</div>
+          <div class="goal05-offer-price">20 places offertes pendant la beta<span>Acces reserve aux testeurs majeurs, sans promesse de resultat.</span></div>
+          <button class="btn btn-prim" type="button" onclick="openBetaCycle01()">Demander une invitation</button>
+          <div class="goal05-small">La version payante viendra apres preuve des donnees live, historique complet et bilan transparent des signaux vraiment delivres.</div>
+        </aside>
+      </div>
+    </section>
+  </div>
   <!-- RANGEE 4 : FORMULES (parcours principal : hero -> preuve -> pick gratuit -> formules) -->
   <div class="row row-4" id="plans">
     <div class="card plan">
