@@ -1,0 +1,79 @@
+name: Deploy Goal 0.5 to Hostinger
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-goal05:
+    name: Backup, deploy and verify Goal 0.5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/hostinger_tlm
+          chmod 600 ~/.ssh/hostinger_tlm
+          ssh-keyscan -H "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Backup, deploy and verify on VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/hostinger_tlm \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "${{ secrets.HOSTINGER_USER }}@${{ secrets.HOSTINGER_HOST }}" \
+            'set -euo pipefail
+             cd /opt/touslesmatchs
+
+             echo "=== Avant deploiement ==="
+             git branch --show-current
+             git log --oneline -1
+
+             if ! git diff --quiet || ! git diff --cached --quiet; then
+               echo "ERREUR: le serveur contient des modifications locales suivies. Deploiement arrete."
+               git status --short
+               exit 1
+             fi
+
+             UNTRACKED="$(git ls-files --others --exclude-standard)"
+             if [ -n "$UNTRACKED" ]; then
+               echo "ERREUR: le serveur contient des fichiers non suivis. Deploiement arrete."
+               printf "%s\n" "$UNTRACKED"
+               exit 1
+             fi
+
+             echo "=== Sauvegarde complete ==="
+             test -x ./backup.sh || chmod +x ./backup.sh
+             ./backup.sh
+
+             echo "=== Sauvegarde base de donnees ==="
+             test -x ./backup-db.sh || chmod +x ./backup-db.sh
+             ./backup-db.sh avant-goal05-card
+
+             echo "=== Mise a jour code ==="
+             git fetch origin design-wow-complet
+             if git show-ref --verify --quiet refs/heads/design-wow-complet; then
+               git switch design-wow-complet
+             else
+               git switch -c design-wow-complet --track origin/design-wow-complet
+             fi
+             git merge --ff-only origin/design-wow-complet
+
+             echo "=== Verification locale ==="
+             test -f public/index.html
+             grep -q "goal05-founder-card" public/index.html
+             grep -q "Equipe +0,5 but" public/index.html
+             docker compose ps --format "  {{.Name}}  {{.Status}}"
+
+             echo "=== Verification publique ==="
+             curl -fsS https://www.touslesmatchs.com/ -o /tmp/tlm-home.html
+             grep -q "goal05-founder-card" /tmp/tlm-home.html
+             grep -q "Equipe +0,5 but" /tmp/tlm-home.html
+             curl -fsS https://www.touslesmatchs.com/api/health
+
+             echo "=== Deploiement Goal 0.5 OK ==="
+             git log --oneline -1'
