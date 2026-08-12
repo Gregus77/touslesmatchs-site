@@ -22,6 +22,10 @@ assert(rules.includes("1.60"), "minimum live odd missing");
 assert(home.includes("goal05-founder-card"), "Goal 0.5 founder card missing from homepage");
 assert(home.includes("Equipe +0,5 but"), "Goal 0.5 card title missing");
 assert(home.includes("20 places offertes pendant la beta"), "founder beta offer missing");
+assert(home.includes('id="goal05-remaining-count"'), "dynamic remaining count missing");
+assert(home.includes('goal05-live-places'), "live scarcity badge missing");
+assert(home.includes('goal05Pulse'), "scarcity pulse animation missing");
+assert(home.includes('updateGoal05Remaining'), "remaining count updater missing");
 assert(home.includes("Analyse historique 4 saisons"), "four-season proof copy missing");
 assert(home.includes("La selection n'est pas liee au domicile"), "homepage must not imply home team only");
 
