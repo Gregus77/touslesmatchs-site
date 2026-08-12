@@ -21,7 +21,7 @@ const crypto = require("crypto");
 // Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
-const { BETA_PLUS05_CAPACITY, decideBetaApplication, normalizeBetaEmail } = require("./beta_waitlist");
+const { BETA_PLUS05_CAPACITY, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
@@ -8346,6 +8346,19 @@ app.post("/beta-plus05/apply", (req, res) => {
   if (decision.status === "rejected") return res.status(400).json({ ok:false, error:"Confirmation +18 et mentions legales requise" });
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
   res.json({ ok:true, status:decision.status, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+});
+app.get("/admin/beta-plus05/applications", (req, res) => {
+  const { email, code, secret, format } = req.query || {};
+  const ok = isAdminAccess(email, code) || (secret && secret === process.env.HERMES_ADMIN_TLM_BOT);
+  if (!ok) return res.status(403).json({ ok:false, error:"Acces admin requis" });
+  const rows = db.prepare("SELECT email,status,adult_confirmed,legal_accepted,created_at FROM beta_plus05_applications ORDER BY created_at DESC").all();
+  if (String(format || "").toLowerCase() === "csv") {
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=beta-plus05-inscrits.csv");
+    return res.send(formatBetaApplicationsCsv(rows));
+  }
+  const accepted = rows.filter((row) => row.status === "accepted").length;
+  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted), applications:rows });
 });
 app.post("/subscribe-email", async (req, res) => {
   const { email, lang, ageRange, source, referrer, landingPage, utm } = req.body || {};
