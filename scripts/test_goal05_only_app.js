@@ -4,6 +4,8 @@ const android = fs.readFileSync('mobile/android/app/src/main/java/com/touslesmat
 function assert(c,m){ if(!c){ console.error('goal05_only_app: FAIL'); console.error(m); process.exit(1); } }
 for (const txt of [
   'L’équipe forte doit marquer',
+  'Football IA',
+  'goal05-palmeiras-card-20260814',
   'goal05-verdict-card',
   'SIGNAL EN ATTENTE',
   '@—',

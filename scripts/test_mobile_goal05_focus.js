@@ -9,6 +9,8 @@ function mustNotHave(text, label) {
 }
 
 mustHave("L’équipe forte doit marquer", "Goal +0,5 hero thesis");
+mustHave("Football IA", "top product badge");
+mustHave("goal05-palmeiras-card-20260814", "Palmeiras card visual version");
 mustHave("Le moteur +0,5 filtre uniquement", "specialized +0.5 positioning");
 mustHave("SIGNAL EN ATTENTE", "compact waiting verdict state");
 mustHave("Aucun match validé +0,5", "no fake pick state");
