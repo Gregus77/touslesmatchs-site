@@ -61,6 +61,76 @@ function writeJson(file, value) {
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function postTelegram({ token, chatId, text }) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true });
+    const req = require("https").request({
+      hostname: "api.telegram.org",
+      path: `/bot${token}/sendMessage`,
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) },
+    }, (res) => {
+      let body = "";
+      res.on("data", (chunk) => { body += chunk; });
+      res.on("end", () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve({ ok: true, statusCode: res.statusCode, body });
+        else reject(new Error(`Telegram HTTP ${res.statusCode}: ${body}`));
+      });
+    });
+    req.on("error", reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+function compact(value, max = 900) {
+  const text = String(value || "").replace(/[^\x20-\x7EÀ-ÿ]/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function adminWatchlistItems(report, limit = 5) {
+  return (report.results || [])
+    .filter((item) => item.status !== "ELIGIBLE_SHADOW")
+    .filter((item) => item.bestOdd && Number(item.bestOdd.odd) >= 1.30)
+    .slice(0, limit);
+}
+
+function formatAdminWatchlistMessage({ date, report }) {
+  const items = adminWatchlistItems(report, Number(process.env.GOAL05_ADMIN_WATCHLIST_LIMIT || 5));
+  const lines = [
+    `🧪 WATCHLIST ADMIN Goal +0,5 — ${date}`,
+    "",
+    `Analyse: ${report.summary.total} candidat(s), ${report.summary.eligible} éligible(s), ${report.summary.noBet} refusé(s), ${report.summary.sent} envoyé(s).`,
+    "",
+  ];
+
+  if (!items.length) {
+    lines.push("Aucun refus intéressant à surveiller sur ce scan.");
+  } else {
+    for (const item of items) {
+      lines.push(`⚽ ${compact(item.match, 80)}`);
+      lines.push(`Équipe visée: ${compact(item.team, 40)} +0,5 | cote @${item.bestOdd.odd}`);
+      const reasons = (item.reasons || item.rejections || []).slice(0, 4);
+      for (const reason of reasons) lines.push(`- ${compact(reason, 160)}`);
+      for (const warning of (item.warnings || []).slice(0, 2)) lines.push(`⚠ ${compact(warning, 160)}`);
+      lines.push("");
+    }
+  }
+
+  lines.push("Note: message admin uniquement. Aucun envoi client tant que le moteur ne valide pas tous les critères.");
+  return lines.join("\n");
+}
+
+async function sendAdminWatchlist({ date, report }) {
+  if (process.env.GOAL05_SEND_ADMIN_WATCHLIST !== "1") return { sent: false, reason: "disabled" };
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_GOAL05_ADMIN_CHAT_ID || process.env.TELEGRAM_ADMIN_CHAT_ID;
+  if (!token || !chatId) return { sent: false, reason: "missing_admin_telegram_config" };
+  const text = formatAdminWatchlistMessage({ date, report });
+  await postTelegram({ token, chatId, text });
+  return { sent: true, chatId };
+}
+
 async function api(pathname) {
   const key = process.env.API_FOOTBALL_KEY;
   if (!key) throw new Error("API_FOOTBALL_KEY absent");
@@ -353,8 +423,9 @@ async function main() {
   writeJson(auditFile, generated);
 
   const report = await runScan({ candidates: generated.candidates, sourceFile: candidateFile });
+  const adminWatchlist = await sendAdminWatchlist({ date: generated.date, report });
   const reportFile = path.join(ANALYSES_DIR, `${generated.date}-goal05-api-scan-summary.json`);
-  writeJson(reportFile, report);
+  writeJson(reportFile, { ...report, adminWatchlist });
 
   console.log(JSON.stringify({
     date: generated.date,
@@ -367,6 +438,7 @@ async function main() {
     noBet: report.summary.noBet,
     watchlist: report.summary.watchlist,
     sent: report.summary.sent,
+    adminWatchlist,
     sendTelegram: report.summary.sendTelegram,
     telegramConfigured: report.summary.telegramConfigured,
     candidateFile,
@@ -382,4 +454,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { buildApiCandidates, findTeamGoalOver05Offers, loadHistoricalCaches };
+module.exports = { buildApiCandidates, findTeamGoalOver05Offers, formatAdminWatchlistMessage, loadHistoricalCaches };

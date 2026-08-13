@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("assert/strict");
-const { findTeamGoalOver05Offers, loadHistoricalCaches } = require("./goal05_api_scan");
+const { findTeamGoalOver05Offers, formatAdminWatchlistMessage, loadHistoricalCaches } = require("./goal05_api_scan");
 
 const offersHome = findTeamGoalOver05Offers([
   {
@@ -43,5 +43,25 @@ assert.equal(offersAway[0].odd, 1.62);
 const caches = loadHistoricalCaches();
 assert.ok(caches.length >= 10);
 assert.ok(caches.some((cache) => cache.country === "Brazil" && cache.league.includes("Brasileiro")));
+
+const adminMessage = formatAdminWatchlistMessage({
+  date: "2026-08-16",
+  report: {
+    summary: { total: 1, eligible: 0, noBet: 1, sent: 0 },
+    results: [
+      {
+        match: "Vitoria — Botafogo",
+        team: "Botafogo",
+        status: "NO_BET",
+        bestOdd: { odd: 2.31 },
+        reasons: ["enjeu de classement non démontré", "équipe non buteuse sur les cinq derniers matchs"],
+        warnings: ["historique 3 saisons accepté : prudence renforcée"],
+      },
+    ],
+  },
+});
+assert.ok(adminMessage.includes("WATCHLIST ADMIN Goal +0,5"));
+assert.ok(adminMessage.includes("admin uniquement"));
+assert.ok(adminMessage.includes("Botafogo"));
 
 console.log("goal05_api_scan: OK");
