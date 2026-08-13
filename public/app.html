@@ -70,6 +70,17 @@
   .goal05-checks{display:grid;gap:7px;margin-top:12px}
   .goal05-checks div{font-size:12px;color:#e9eeff}
   .goal05-checks b{color:var(--green);margin-right:5px}
+  .goal05-verdict-card{margin-top:14px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.035));padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+  .goal05-verdict-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .goal05-verdict-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:1000;letter-spacing:.12em;text-transform:uppercase;border:1px solid rgba(245,158,11,.38);background:rgba(245,158,11,.12);color:#fde68a}
+  .goal05-verdict-badge.ok{border-color:rgba(16,185,129,.42);background:rgba(16,185,129,.14);color:#7dffcf}
+  .goal05-verdict-odd{font-size:28px;font-weight:1000;letter-spacing:-.06em;color:#fff;text-shadow:0 12px 30px rgba(34,211,238,.22)}
+  .goal05-verdict-team{font-size:18px;font-weight:1000;letter-spacing:-.035em;margin:2px 0 4px}
+  .goal05-verdict-meta{font-size:11px;color:#cbd5ff;line-height:1.45}
+  .goal05-verdict-list{display:grid;gap:7px;margin-top:13px}
+  .goal05-verdict-list div{display:flex;align-items:center;gap:8px;font-size:12px;color:#f3f6ff}
+  .goal05-verdict-list b{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:4px;background:#22c55e;color:#03140b;font-size:10px;font-weight:1000}
+  .goal05-verdict-list b.wait{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.28)}
   .offer-stack{display:grid;gap:8px;margin-bottom:14px}
   .offer-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--b2);border-radius:15px;padding:12px;background:rgba(255,255,255,.045)}
   .offer-row.hot{border-color:rgba(34,211,238,.34);background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(124,58,237,.08))}
@@ -406,19 +417,37 @@
 
   window.enableSignalAlerts = enableSignalAlerts;
 
+  function goal05VerdictCard(signal) {
+    var hasSignal = !!signal;
+    var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL EN ATTENTE';
+    var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
+    var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
+    var team = hasSignal ? esc(signal.team || 'Équipe sélectionnée +0,5') : 'Aucun match validé +0,5';
+    var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Analyse football uniquement · le moteur refuse si un critère dur manque';
+    var checks = hasSignal && signal.checks ? signal.checks : [
+      { ok:false, text:'Force 3-5 saisons' },
+      { ok:false, text:'Top vs bas tableau' },
+      { ok:false, text:'Buteur 5/5' },
+      { ok:false, text:'Cote ANJ validée' }
+    ];
+    return '<div class="goal05-verdict-card">'
+      + '<div class="goal05-verdict-head"><span class="' + badgeClass + '">' + badge + '</span><span class="goal05-verdict-odd">' + odd + '</span></div>'
+      + '<div class="goal05-verdict-team">' + team + '</div>'
+      + '<div class="goal05-verdict-meta">' + meta + '</div>'
+      + '<div class="goal05-verdict-list">'
+      + checks.map(function(c){ return '<div><b' + (c.ok ? '' : ' class="wait"') + '>' + (c.ok ? '✓' : '•') + '</b>' + esc(c.text) + '</div>'; }).join('')
+      + '</div>'
+      + '<div class="goal05-verdict-meta" style="margin-top:10px">Critères lus comme la carte validée : seules les coches passent au vert quand le moteur a la preuve.</div>'
+      + '</div>';
+  }
+
   function loadPick() {
     var box = $("pick-box");
     var locked = !token();
-    box.innerHTML = '<div class="card">'
+    box.innerHTML = goal05VerdictCard(null)
+      + '<div class="card" style="margin-top:12px">'
       + '<div class="lbl">Moteur +0,5 uniquement</div>'
-      + '<div class="val">Aucun signal +0,5 validé maintenant</div>'
-      + '<div class="comp" style="margin-top:9px">L’app ne montre pas les paris victoire, BTTS ou over/under général. Elle attend un vrai feu vert +0,5 : force historique, classement, forme buteur, adversaire qui encaisse et cote disponible.</div>'
-      + '<div class="goal05-checks">'
-      + '<div><b>✓</b> Analyse historique 3 à 5 saisons</div>'
-      + '<div><b>✓</b> Équipe forte contre équipe faible</div>'
-      + '<div><b>✓</b> Buteur 5/5 et buts construits</div>'
-      + '<div><b>✓</b> Aucun envoi si un critère dur manque</div>'
-      + '</div>'
+      + '<div class="comp" style="margin-top:7px">L’app ne montre pas les paris victoire, BTTS ou over/under général. Elle attend un vrai feu vert +0,5.</div>'
       + (locked
           ? '<a class="btn btn-g" href="#" data-tab-link="me">Recevoir mon accès +0,5</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()">Activer les alertes popup + son</button>' + bookmakerButtons())
