@@ -63,14 +63,7 @@
   .goal05-mini{position:relative;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
   .goal05-mini div{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:rgba(5,8,20,.38);font-size:11px;color:#e9eeff}
   .goal05-mini b{color:var(--green)}
-  .goal05-status-card{margin:14px 0 0;border:1px solid rgba(34,211,238,.30);border-radius:18px;background:linear-gradient(150deg,rgba(34,211,238,.14),rgba(255,255,255,.04));padding:14px;position:relative;overflow:hidden}
-  .goal05-status-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(245,158,11,.40);background:rgba(245,158,11,.12);color:#fde68a;border-radius:999px;padding:6px 9px;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
-  .goal05-status-title{font-size:18px;font-weight:1000;letter-spacing:-.04em;margin:10px 0 4px}
-  .goal05-status-text{font-size:12px;color:var(--muted);line-height:1.55;margin:0}
-  .goal05-checks{display:grid;gap:7px;margin-top:12px}
-  .goal05-checks div{font-size:12px;color:#e9eeff}
-  .goal05-checks b{color:var(--green);margin-right:5px}
-  .goal05-verdict-card{margin-top:14px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.035));padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+    .goal05-verdict-card{margin:14px 0;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.035));padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 45px rgba(0,0,0,.22)}
   .goal05-verdict-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
   .goal05-verdict-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:1000;letter-spacing:.12em;text-transform:uppercase;border:1px solid rgba(245,158,11,.38);background:rgba(245,158,11,.12);color:#fde68a}
   .goal05-verdict-badge.ok{border-color:rgba(16,185,129,.42);background:rgba(16,185,129,.14);color:#7dffcf}
@@ -171,6 +164,18 @@
   nav button.on{color:var(--indigo2)}
 
   footer{padding:20px 16px 8px;font-size:10.5px;color:var(--muted2);line-height:1.65;text-align:center;border-top:1px solid var(--b1);margin-top:18px}
+  body.tlm-page-app .tlm-floating-widgets,
+  body.tlm-page-app .floating-widgets,
+  body.tlm-page-app .floating-widget,
+  body.tlm-page-app .telegram-float,
+  body.tlm-page-app .tiktok-float,
+  body.tlm-page-app .chatbot-float,
+  body.tlm-page-app .chatbot-widget,
+  body.tlm-page-app #tlm-floating-widgets,
+  body.tlm-page-app #floating-widgets,
+  body.tlm-page-app #telegram-float,
+  body.tlm-page-app #tiktok-float,
+  body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <!-- Google Analytics (GA4) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
@@ -182,7 +187,7 @@
 </script>
 
   <meta name="theme-color" content="#070a20">
-  <meta name="app-card-version" content="goal05-card-only-20260813215802">
+  <meta name="app-card-version" content="goal05-palmeiras-ui-20260814">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
 </head>
 <body class="tlm-wow tlm-page-app">
@@ -201,29 +206,16 @@
     <div class="goal05-kicker">Goal +0,5 · accès fondateur</div>
     <div class="goal05-title">L’équipe forte doit marquer.</div>
     <p class="goal05-copy">Le moteur +0,5 filtre uniquement les matchs de football où l’équipe historiquement supérieure réunit les conditions pour inscrire au moins un but.</p>
-    <button class="signal-alert-cta" id="signal-alert-toggle" type="button">🔔 Activer popup + son quand un signal +0,5 est prêt</button>
     <div class="goal05-mini">
-      <div><b>✓</b> Force historique</div>
-      <div><b>✓</b> Top vs bas tableau</div>
-      <div><b>✓</b> Buteur 5/5</div>
-      <div><b>✓</b> Cote ANJ validée</div>
-    </div>
-    <div class="goal05-status-card">
-      <span class="goal05-status-badge">Surveillance active</span>
-      <div class="goal05-status-title">Aucun signal +0,5 validé maintenant</div>
-      <p class="goal05-status-text">Aucun autre pari n’est affiché ici. L’app attend un vrai feu vert +0,5 : historique, enjeu, forme buteur, adversaire qui encaisse et cote disponible.</p>
+      <div><b>&#10003;</b> Force 3-5 saisons</div>
+      <div><b>&#10003;</b> Top vs bas tableau</div>
+      <div><b>&#10003;</b> Buteur 5/5</div>
+      <div><b>&#10003;</b> Cote ANJ validée</div>
     </div>
   </section>
 
-  <div class="offer-stack" aria-label="Accès Goal plus 0,5">
-    <a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a>
-  </div>
-
-  <!-- â•â• ANALYSE DU JOUR â•â• -->
   <section id="s-pick" class="on">
-    <h2>Analyse du jour</h2>
-    <p class="sub">Le verdict du Concile — 5 IA délibèrent, la convergence tranche.</p>
-    <div id="pick-box"><div class="state">Chargement…</div></div>
+    <div id="pick-box"><div class="state">Chargement...</div></div>
   </section>
 
   <!-- â•â• EN DIRECT â•â• -->
@@ -264,14 +256,14 @@
 </main>
 
 <nav>
-  <button data-tab="pick" class="on"><span class="ic">⚽</span>+0,5</button>
-  <button data-tab="live"><span class="ic">ðŸ”´</span>Direct</button>
-  <button data-tab="perf"><span class="ic">📊</span>Résultats</button>
-  <button data-tab="me"><span class="ic">👤</span>Compte</button>
+  <button data-tab="pick" class="on"><span class="ic">&#9917;</span>+0,5</button>
+  <button data-tab="live"><span class="ic">&#128308;</span>Direct</button>
+  <button data-tab="perf"><span class="ic">&#128202;</span>Résultats</button>
+  <button data-tab="me"><span class="ic">&#128100;</span>Compte</button>
 </nav>
 
 <footer>
-  LES JEUX D'ARGENT ET DE HASARD PEUVENT ÃŠTRE DANGEREUX : pertes d'argent, conflits
+  LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits
   familiaux, addiction. Conseils sur <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a> — 09 74 75 13 13, appel non surtaxé.<br>
   18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives.
 </footer>
@@ -424,35 +416,38 @@
     var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
     var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
     var team = hasSignal ? esc(signal.team || 'Équipe sélectionnée +0,5') : 'Aucun match validé +0,5';
-    var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Analyse football uniquement · le moteur refuse si un critère dur manque';
+    var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Football uniquement · moteur en surveillance';
     var checks = hasSignal && signal.checks ? signal.checks : [
-      { ok:false, text:'Force 3-5 saisons' },
-      { ok:false, text:'Top vs bas tableau' },
-      { ok:false, text:'Buteur 5/5' },
-      { ok:false, text:'Cote ANJ validée' }
+      { ok:false, text:'Écart historique favorable' },
+      { ok:false, text:'Enjeu réel au classement' },
+      { ok:false, text:'Adversaire encaisse régulièrement' },
+      { ok:false, text:'Aucun signal envoyé si un critère dur manque' }
     ];
     return '<div class="goal05-verdict-card">'
       + '<div class="goal05-verdict-head"><span class="' + badgeClass + '">' + badge + '</span><span class="goal05-verdict-odd">' + odd + '</span></div>'
       + '<div class="goal05-verdict-team">' + team + '</div>'
       + '<div class="goal05-verdict-meta">' + meta + '</div>'
       + '<div class="goal05-verdict-list">'
-      + checks.map(function(c){ return '<div><b' + (c.ok ? '' : ' class="wait"') + '>' + (c.ok ? '✓' : '•') + '</b>' + esc(c.text) + '</div>'; }).join('')
+      + checks.map(function(c){ return '<div><b' + (c.ok ? '' : ' class="wait"') + '>' + (c.ok ? '&#10003;' : '—') + '</b>' + esc(c.text) + '</div>'; }).join('')
       + '</div>'
-      + '<div class="goal05-verdict-meta" style="margin-top:10px">Critères lus comme la carte validée : seules les coches passent au vert quand le moteur a la preuve.</div>'
       + '</div>';
+  }
+
+  function goal05BetaRow() {
+    return '<div class="offer-stack" aria-label="Accès Goal plus 0,5"><a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a></div>';
   }
 
   function loadPick() {
     var box = $("pick-box");
     var locked = !token();
     box.innerHTML = goal05VerdictCard(null)
+      + goal05BetaRow()
       + (locked
           ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accès +0,5</a>'
-          : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer les alertes popup + son</button>');
+          : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button>');
     var link = box.querySelector('[data-tab-link="me"]');
     if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });
   }
-
   // â”€â”€ En direct â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function loadLive() {
     get("/live-matches").then(flagOffline).then(function (d) {
@@ -471,62 +466,59 @@
           + '<div class="m">' + esc(m.competition || m.sport || "") + (m.minute ? ' · ' + esc(m.minute) + "'" : '') + '</div>'
           + '</div><span class="badge b-live">' + esc(sh) + '-' + esc(sa) + '</span></div>';
       });
-      html += '</div>';
+      html += '</div>';
       box.innerHTML = html;
     });
   }
 
   // â”€â”€ Performances â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  var perf = { rows: [], stats: null, tier: "all" };
-  Array.prototype.forEach.call(document.querySelectorAll("#perf-tabs .tab"), function (t) {
-    t.addEventListener("click", function () {
-      Array.prototype.forEach.call(document.querySelectorAll("#perf-tabs .tab"), function (x) { x.classList.remove("on"); });
-      t.classList.add("on");
-      perf.tier = t.getAttribute("data-t");
-      renderPerf();
-    });
-  });
+  var perf = { rows: [], stats: null };
 
-  function loadPerf() {
-    get("/analysis-history?limit=60").then(flagOffline).then(function (d) {
-      perf.rows = (d && d.analyses) || [];
-      perf.stats = (d && d.stats) || null;
-      renderPerf();
-    });
+  function isGoal05Row(a) {
+    var txt = [a.bet, a.best_bet, a.market, a.signal, a.explication_resultat, a.reason, a.notes].join(' ').toLowerCase();
+    return txt.indexOf('+0,5') >= 0 || txt.indexOf('0,5') >= 0 || txt.indexOf('0.5') >= 0;
   }
 
-  // Le champ `tier` est calculé par l'API (palier le plus bas qui reçoit l'analyse).
-  // On ne redéfinit AUCUN seuil ici : une seule source de vérité, comme sur le site.
-  function inTier(a) {
-    if (perf.tier === "all") return true;
-    if (perf.tier === "standard") return a.tier === "standard";
-    if (perf.tier === "premium") return a.tier === "standard" || a.tier === "premium";
-    return a.tier === "standard" || a.tier === "premium" || a.tier === "elite";
+  function loadPerf() {
+    get("/analysis-history?limit=160").then(flagOffline).then(function (d) {
+      perf.rows = ((d && d.analyses) || []).filter(isGoal05Row);
+      renderPerf();
+    });
   }
 
   function renderPerf() {
-    var s = (perf.stats && perf.tier !== "all" && perf.stats.tiers && perf.stats.tiers[perf.tier]) || perf.stats || {};
-    var tot = num(s.total), wr = num(s.winrate), roi = num(s.roi_pct), prof = num(s.profit10);
+    var rows = perf.rows || [];
+    var done = rows.filter(function(a){ return a.outcome === 'win' || a.outcome === 'loss'; });
+    var wins = done.filter(function(a){ return a.outcome === 'win'; }).length;
+    var losses = done.filter(function(a){ return a.outcome === 'loss'; }).length;
+    var total = done.length;
+    var wr = total ? Math.round((wins / total) * 100) : 0;
+    var profit = done.reduce(function(sum, a){
+      var odd = num(a.real_odd || a.odd || a.cote || 0);
+      if (a.outcome === 'win') return sum + ((odd > 1 ? odd : 1.3) - 1) * 10;
+      if (a.outcome === 'loss') return sum - 10;
+      return sum;
+    }, 0);
+    var roi = total ? Math.round((profit / (total * 10)) * 100) : 0;
     $("perf-kpis").innerHTML =
-        kpi(tot || "—", "Analyses", "")
-      + kpi(tot ? wr + "%" : "—", "Réussite", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
-      + kpi(tot ? eur(prof) : "—", "Profit (10€/pick)", prof >= 0 ? "c-green" : "c-red")
-      + kpi(tot ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
+        kpi(String(total), "Signaux terminés", "")
+      + kpi(total ? wr + "%" : "—", "Réussite +0,5", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
+      + kpi(total ? eur(profit) : "0€", "Profit simulé 10€", profit >= 0 ? "c-green" : "c-red")
+      + kpi(total ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
 
-    var rows = perf.rows.filter(inTier);
     if (!rows.length) {
-      $("perf-list").innerHTML = '<div class="state">Aucune analyse pour ce palier.</div>';
+      $("perf-list").innerHTML = '<div class="state"><strong>Bilan +0,5 en cours</strong><br>Aucun signal +0,5 terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
       return;
     }
     var html = "";
     rows.slice(0, 40).forEach(function (a) {
-      var b = a.outcome === "win" ? '<span class="badge b-win">✅ Gagné</span>'
-            : a.outcome === "loss" ? '<span class="badge b-loss">âŒ Perdu</span>'
-            : '<span class="badge b-wait">â³ En attente</span>';
-      var odd = num(a.real_odd) > 1 ? " · @" + num(a.real_odd).toFixed(2) : "";
+      var b = a.outcome === "win" ? '<span class="badge b-win">Gagné</span>'
+            : a.outcome === "loss" ? '<span class="badge b-loss">Perdu</span>'
+            : '<span class="badge b-wait">En attente</span>';
+      var odd = num(a.real_odd || a.odd || a.cote) > 1 ? " · @" + num(a.real_odd || a.odd || a.cote).toFixed(2) : "";
       html += '<div class="item"><div class="mid">'
-        + '<div class="t">' + esc(a.home) + ' — ' + esc(a.away) + '</div>'
-        + '<div class="m">' + esc((a.analysed_at || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + '</div>'
+        + '<div class="t">' + esc(a.home || a.match || 'Signal +0,5') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
+        + '<div class="m">' + esc((a.analysed_at || a.date || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + '</div>'
         + '</div>' + b + '</div>';
     });
     $("perf-list").innerHTML = html;
@@ -534,7 +526,6 @@
   function kpi(v, l, c) {
     return '<div class="kpi"><div class="v ' + (c || "") + '">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
   }
-
   // â”€â”€ Compte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function renderMe() {
     var box = $("me-box");
@@ -629,14 +620,18 @@
   show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : (token() ? "pick" : "me"));
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("/sw.js").catch(function () {});
-    });
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      regs.forEach(function(reg){ reg.unregister(); });
+    }).catch(function(){});
+  }
+  if (window.caches && caches.keys) {
+    caches.keys().then(function(keys){
+      keys.forEach(function(key){ caches.delete(key); });
+    }).catch(function(){});
   }
   window.addEventListener("online", function () { $("offline-note").style.display = "none"; });
 })();
 </script>
-<script src="/js/widgets.js?v=2" defer></script>
-  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+
 </body>
 </html>

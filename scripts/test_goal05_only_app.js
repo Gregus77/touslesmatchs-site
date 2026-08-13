@@ -1,15 +1,21 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const app = fs.readFileSync('public/app.html', 'utf8');
 const android = fs.readFileSync('mobile/android/app/src/main/java/com/touslesmatchs/app/MainActivity.java', 'utf8');
 function assert(c,m){ if(!c){ console.error('goal05_only_app: FAIL'); console.error(m); process.exit(1); } }
 for (const txt of [
   'L’équipe forte doit marquer',
-  'Aucun signal +0,5 validé maintenant',
-  'Aucun autre pari',
+  'goal05-verdict-card',
+  'SIGNAL EN ATTENTE',
+  '@—',
+  'Aucun match validé +0,5',
+  'Bilan +0,5 en cours',
   'Résultats +0,5',
-  'Surveillance live'
-]) assert(app.includes(txt), 'Texte +0,5 manquant: '+txt);
-for (const forbidden of ['Standard','Premium','Elite-VIP','Télécharger l\'APK Android','/current-pick','/#plans','Voir les offres','Voir les abonnements']) {
+  'Surveillance live',
+  'body.tlm-page-app .tlm-floating-widgets',
+  'reg.unregister()',
+  'caches.delete(key)'
+]) assert(app.includes(txt), 'Texte/comportement +0,5 manquant: '+txt);
+for (const forbidden of ['Aucun autre pari','Aucun signal +0,5 validé maintenant','Standard','Premium','Elite-VIP','Télécharger l\'APK Android','/current-pick','/#plans','Voir les offres','Voir les abonnements','widgets.js','tlm-wow-theme.js','serviceWorker.register']) {
   assert(!app.includes(forbidden), 'Texte/comportement interdit dans l’app: '+forbidden);
 }
 assert(android.includes('app=goal05'), 'APK ne charge pas le mode goal05');
