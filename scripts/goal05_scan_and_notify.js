@@ -12,6 +12,8 @@ const ROOT = path.resolve(__dirname, '..');
 const ANALYSES_DIR = path.join(ROOT, 'docs', 'goal-05', 'analyses');
 const DEFAULT_CANDIDATES_FILE = path.join(ANALYSES_DIR, 'goal05-watchlist-candidates.json');
 const SENT_LOG_FILE = path.join(ANALYSES_DIR, 'goal05-sent-log.json');
+const LIVE_SIGNAL_FILE = process.env.GOAL05_LIVE_SIGNAL_FILE
+  || path.join(ROOT, 'data', 'goal05-latest-signal.json');
 
 function isoDay(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -115,6 +117,39 @@ function matchLabel(home, away) {
   return `${home || '?'} - ${away || '?'}`;
 }
 
+function buildLatestSignal(candidate, result, now = new Date()) {
+  const best = result.bestOffer || result.bestOdd || {};
+  return {
+    ok: true,
+    type: 'goal05_team_over_0_5',
+    status: 'active',
+    sentAt: now.toISOString(),
+    id: result.id || candidate.id || candidate.matchId || null,
+    match: result.match || matchLabel(candidate.home, candidate.away),
+    home: candidate.home || null,
+    away: candidate.away || null,
+    team: candidate.team || result.team || null,
+    opponent: candidate.opponent || null,
+    country: candidate.country || null,
+    league: candidate.league || null,
+    competition: [candidate.country, candidate.league].filter(Boolean).join(' - '),
+    meta: [candidate.country, candidate.league, 'Analyse football uniquement'].filter(Boolean).join(' - '),
+    odd: best.odd || result.evidence?.market?.bestOdd || null,
+    bookmaker: best.bookmaker || best.name || null,
+    bet: `${candidate.team || result.team || 'Equipe selectionnee'} +0,5 but`,
+    checks: [
+      { ok: true, text: 'Ecart historique favorable' },
+      { ok: true, text: 'Enjeu reel au classement' },
+      { ok: true, text: 'Adversaire encaisse regulierement' },
+      { ok: true, text: 'Tous les criteres durs sont valides' },
+    ],
+    reasons: result.reasons || [],
+    warnings: result.warnings || [],
+    homeLogo: result.homeLogo || candidate.homeLogo || null,
+    awayLogo: result.awayLogo || candidate.awayLogo || null,
+    leagueLogo: result.leagueLogo || candidate.leagueLogo || null,
+  };
+}
 function countryEmoji(country) {
   const flags = {
     Argentina: "🇦🇷", Austria: "🇦🇹", Belgium: "🇧🇪", Brazil: "🇧🇷", Croatia: "🇭🇷",
@@ -290,6 +325,7 @@ async function runScan(options = {}) {
         match: result.match,
         telegramStatusCode: sent.statusCode || null,
       };
+      writeJson(options.liveSignalFile || LIVE_SIGNAL_FILE, buildLatestSignal(candidate, result, now));
       result.telegram = { ok: true, statusCode: sent.statusCode || null };
       sentCount += 1;
     } else if (evaluation.status === 'ELIGIBLE_SHADOW' && sendTelegram && (!token || !chatId)) {
@@ -371,6 +407,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  buildLatestSignal,
   formatTelegramMessage,
   loadCandidates,
   missingForEngine,

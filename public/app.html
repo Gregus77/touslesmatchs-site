@@ -187,7 +187,7 @@
 </script>
 
   <meta name="theme-color" content="#070a20">
-  <meta name="app-card-version" content="goal05-palmeiras-card-20260814b">
+  <meta name="app-card-version" content="goal05-palmeiras-card-20260814c">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
 </head>
 <body class="tlm-wow tlm-page-app">
@@ -437,16 +437,24 @@
     return '<div class="offer-stack" aria-label="Accès Goal plus 0,5"><a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a></div>';
   }
 
-  function loadPick() {
+  function renderGoal05Pick(signal) {
     var box = $("pick-box");
     var locked = !token();
-    box.innerHTML = goal05VerdictCard(null)
+    box.innerHTML = goal05VerdictCard(signal)
       + goal05BetaRow()
       + (locked
-          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accès +0,5</a>'
+          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accÃ¨s +0,5</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button>');
     var link = box.querySelector('[data-tab-link="me"]');
     if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });
+    if (signal && token()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
+  }
+
+  function loadPick() {
+    renderGoal05Pick(null);
+    get("/api/goal05/latest").then(flagOffline).then(function (d) {
+      renderGoal05Pick(d && d.signal ? d.signal : null);
+    }).catch(function(){ renderGoal05Pick(null); });
   }
   // â”€â”€ En direct â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function loadLive() {

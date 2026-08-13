@@ -283,6 +283,23 @@ app.use((req, res, next) => {
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
+const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
+
+function readGoal05LatestSignal() {
+  try {
+    if (!fs.existsSync(GOAL05_LATEST_SIGNAL_FILE)) return { ok: true, signal: null, reason: "no_signal" };
+    const signal = JSON.parse(fs.readFileSync(GOAL05_LATEST_SIGNAL_FILE, "utf8"));
+    const sentAt = signal && signal.sentAt ? Date.parse(signal.sentAt) : 0;
+    if (!sentAt || Date.now() - sentAt > GOAL05_LATEST_MAX_AGE_MS) {
+      return { ok: true, signal: null, reason: "expired", lastSignal: signal || null };
+    }
+    return { ok: true, signal };
+  } catch (e) {
+    console.error("[goal05-latest]", e.message);
+    return { ok: false, signal: null, error: "lecture_signal_goal05_impossible" };
+  }
+}
 
 // ── Anti-perte de données : snapshot automatique au démarrage ─────────────────
 // À CHAQUE boot, avant toute migration/DELETE, on copie la base dans /data/snapshots.
@@ -8327,6 +8344,12 @@ function normalizeContactLang(lang = "", country = "") {
 }
 
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
+app.get("/goal05/latest", (req, res) => {
+  res.json(readGoal05LatestSignal());
+});
+app.get("/api/goal05/latest", (req, res) => {
+  res.json(readGoal05LatestSignal());
+});
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
   res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
