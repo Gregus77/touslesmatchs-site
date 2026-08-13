@@ -84,7 +84,7 @@ function postTelegram({ token, chatId, text }) {
 }
 
 function compact(value, max = 900) {
-  const text = String(value || "").replace(/[^\x20-\x7EÀ-ÿ]/g, " ").replace(/\s+/g, " ").trim();
+  const text = String(value || "").replace(/[\u0000-\u001F\u007F]+/g, " ").replace(/\s+/g, " ").trim();
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
@@ -98,7 +98,7 @@ function adminWatchlistItems(report, limit = 5) {
 function formatAdminWatchlistMessage({ date, report }) {
   const items = adminWatchlistItems(report, Number(process.env.GOAL05_ADMIN_WATCHLIST_LIMIT || 5));
   const lines = [
-    `🧪 WATCHLIST ADMIN Goal +0,5 — ${date}`,
+    `🧪 WATCHLIST ADMIN Goal +0,5 - ${date}`,
     "",
     `Analyse: ${report.summary.total} candidat(s), ${report.summary.eligible} éligible(s), ${report.summary.noBet} refusé(s), ${report.summary.sent} envoyé(s).`,
     "",
@@ -120,7 +120,6 @@ function formatAdminWatchlistMessage({ date, report }) {
   lines.push("Note: message admin uniquement. Aucun envoi client tant que le moteur ne valide pas tous les critères.");
   return lines.join("\n");
 }
-
 async function sendAdminWatchlist({ date, report }) {
   if (process.env.GOAL05_SEND_ADMIN_WATCHLIST !== "1") return { sent: false, reason: "disabled" };
   const token = process.env.TELEGRAM_BOT_TOKEN;

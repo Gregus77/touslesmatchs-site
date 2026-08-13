@@ -111,18 +111,22 @@ function signalKey(candidate, evaluation) {
   ].join('|').toLowerCase();
 }
 
+function matchLabel(home, away) {
+  return `${home || '?'} - ${away || '?'}`;
+}
+
 function formatTelegramMessage(candidate, evaluation) {
   const offer = evaluation.bestOffer || evaluation.evidence?.market?.offers?.[0] || {};
-  const reasons = evaluation.reasons.slice(0, 6).map((reason) => `ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${reason}`).join('\n');
+  const reasons = evaluation.reasons.slice(0, 6).map((reason) => `- ${reason}`).join('\n');
   const warnings = evaluation.warnings.length
-    ? `\n\nVigilance:\n${evaluation.warnings.slice(0, 4).map((warning) => `ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ ${warning}`).join('\n')}`
+    ? `\n\nVigilance:\n${evaluation.warnings.slice(0, 4).map((warning) => `- ${warning}`).join('\n')}`
     : '';
 
   return [
-    'ÃƒÂ¢Ã…Â¡Ã‚Â½ GOAL 0.5 IA ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â signal bÃƒÆ’Ã‚Âªta',
+    'GOAL 0.5 IA - signal bêta',
     '',
     `${candidate.team} +0,5 but`,
-    `Match: ${candidate.home || candidate.team} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${candidate.away || candidate.opponent}`,
+    `Match: ${matchLabel(candidate.home || candidate.team, candidate.away || candidate.opponent)}`,
     `Championnat: ${candidate.league} (${candidate.country})`,
     `Cote ANJ: @${offer.odd || evaluation.evidence?.market?.bestOdd} ${offer.bookmaker ? `(${offer.bookmaker})` : ''}`,
     '',
@@ -130,10 +134,9 @@ function formatTelegramMessage(candidate, evaluation) {
     reasons,
     warnings,
     '',
-    'Jeu responsable: rÃƒÆ’Ã‚Â©servÃƒÆ’Ã‚Â© aux +18 ans. Les performances passÃƒÆ’Ã‚Â©es ne garantissent pas les rÃƒÆ’Ã‚Â©sultats futurs.',
+    'Jeu responsable: réservé aux +18 ans. Les performances passées ne garantissent pas les résultats futurs.',
   ].filter(Boolean).join('\n');
 }
-
 function postTelegram({ token, chatId, text }) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
@@ -189,7 +192,7 @@ async function runScan(options = {}) {
     if (missing.length) {
       results.push({
         id: candidate.id || candidate.matchId,
-        match: `${candidate.home || '?'} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${candidate.away || '?'}`,
+        match: matchLabel(candidate.home, candidate.away),
         team: candidate.team,
         status: 'NEEDS_DATA',
         sendDecision: 'blocked',
@@ -210,7 +213,7 @@ async function runScan(options = {}) {
 
     const result = {
       id: candidate.id || candidate.matchId,
-      match: `${candidate.home || candidate.team} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${candidate.away || candidate.opponent}`,
+      match: matchLabel(candidate.home || candidate.team, candidate.away || candidate.opponent),
       team: candidate.team,
       status: evaluation.status,
       sendDecision: shouldSend ? 'send' : 'not_sent',
@@ -268,27 +271,27 @@ function renderMarkdown(report) {
   const lines = [
     '# Scan Goal 0.5 IA',
     '',
-    `- GÃƒÆ’Ã‚Â©nÃƒÆ’Ã‚Â©rÃƒÆ’Ã‚Â© le : ${report.summary.generatedAt}`,
+    `- Généré le : ${report.summary.generatedAt}`,
     `- Fichier source : ${report.summary.sourceFile}`,
-    `- Seuil cote bÃƒÆ’Ã‚Âªta : ${report.summary.minOdd}`,
+    `- Seuil cote bêta : ${report.summary.minOdd}`,
     `- Saisons historiques minimales : ${report.summary.minHistoricalSeasons}`,
-    `- Envoi Telegram demandÃƒÆ’Ã‚Â© : ${report.summary.sendTelegram ? 'oui' : 'non'}`,
-    `- Telegram configurÃƒÆ’Ã‚Â© : ${report.summary.telegramConfigured ? 'oui' : 'non'}`,
+    `- Envoi Telegram demandé : ${report.summary.sendTelegram ? 'oui' : 'non'}`,
+    `- Telegram configuré : ${report.summary.telegramConfigured ? 'oui' : 'non'}`,
     '',
-    `RÃƒÆ’Ã‚Â©sumÃƒÆ’Ã‚Â© : ${report.summary.eligible} ÃƒÆ’Ã‚Â©ligible(s), ${report.summary.watchlist} watchlist, ${report.summary.needsData} incomplet(s), ${report.summary.noBet} refusÃƒÆ’Ã‚Â©(s), ${report.summary.sent} envoyÃƒÆ’Ã‚Â©(s).`,
+    `Résumé : ${report.summary.eligible} éligible(s), ${report.summary.watchlist} watchlist, ${report.summary.needsData} incomplet(s), ${report.summary.noBet} refusé(s), ${report.summary.sent} envoyé(s).`,
     '',
-    '## DÃƒÆ’Ã‚Â©tail',
+    '## Détail',
     '',
   ];
 
   for (const item of report.results) {
     lines.push(`### ${item.match}`);
     lines.push('');
-    lines.push(`- ÃƒÆ’Ã¢â‚¬Â°quipe visÃƒÆ’Ã‚Â©e : ${item.team || 'ÃƒÆ’Ã‚Â  complÃƒÆ’Ã‚Â©ter'}`);
+    lines.push(`- Équipe visée : ${item.team || 'à compléter'}`);
     lines.push(`- Statut : ${item.status}`);
     lines.push(`- Envoi : ${item.sendDecision}`);
     if (item.bestOdd) lines.push(`- Meilleure cote : @${item.bestOdd.odd} ${item.bestOdd.bookmaker || ''}`);
-    if (item.missing?.length) lines.push(`- DonnÃƒÆ’Ã‚Â©es manquantes : ${item.missing.join(', ')}`);
+    if (item.missing?.length) lines.push(`- Données manquantes : ${item.missing.join(', ')}`);
     if (item.rejections?.length) lines.push(`- Refus : ${item.rejections.join(' | ')}`);
     if (item.warnings?.length) lines.push(`- Vigilance : ${item.warnings.join(' | ')}`);
     lines.push('');
@@ -296,7 +299,6 @@ function renderMarkdown(report) {
 
   return `${lines.join('\n')}\n`;
 }
-
 async function main() {
   const report = await runScan();
   fs.mkdirSync(ANALYSES_DIR, { recursive: true });
@@ -322,6 +324,7 @@ module.exports = {
   missingForEngine,
   runScan,
 };
+
 
 
 
