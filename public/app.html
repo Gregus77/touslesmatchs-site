@@ -63,6 +63,13 @@
   .goal05-mini{position:relative;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
   .goal05-mini div{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:rgba(5,8,20,.38);font-size:11px;color:#e9eeff}
   .goal05-mini b{color:var(--green)}
+  .goal05-status-card{margin:14px 0 0;border:1px solid rgba(34,211,238,.30);border-radius:18px;background:linear-gradient(150deg,rgba(34,211,238,.14),rgba(255,255,255,.04));padding:14px;position:relative;overflow:hidden}
+  .goal05-status-badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(245,158,11,.40);background:rgba(245,158,11,.12);color:#fde68a;border-radius:999px;padding:6px 9px;font-size:10px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+  .goal05-status-title{font-size:18px;font-weight:1000;letter-spacing:-.04em;margin:10px 0 4px}
+  .goal05-status-text{font-size:12px;color:var(--muted);line-height:1.55;margin:0}
+  .goal05-checks{display:grid;gap:7px;margin-top:12px}
+  .goal05-checks div{font-size:12px;color:#e9eeff}
+  .goal05-checks b{color:var(--green);margin-right:5px}
   .offer-stack{display:grid;gap:8px;margin-bottom:14px}
   .offer-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--b2);border-radius:15px;padding:12px;background:rgba(255,255,255,.045)}
   .offer-row.hot{border-color:rgba(34,211,238,.34);background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(124,58,237,.08))}
@@ -179,47 +186,42 @@
   </div>
 
   <section class="goal05-home" aria-label="Goal plus 0,5 but">
-    <div class="goal05-kicker">Goal +0,5 · Football uniquement</div>
-    <div class="goal05-title">L'équipe forte doit marquer.</div>
-    <p class="goal05-copy">Analyse historique, enjeu réel, forme récente et cote ANJ. Aucun signal client si un critère dur manque.</p>
-    <button class="signal-alert-cta" id="signal-alert-toggle" type="button">🔔 Activer popup + son quand un pari est prêt</button>
+    <div class="goal05-kicker">Goal +0,5 · accès fondateur</div>
+    <div class="goal05-title">L’équipe forte doit marquer.</div>
+    <p class="goal05-copy">Le moteur +0,5 filtre uniquement les matchs de football où l’équipe historiquement supérieure réunit les conditions pour inscrire au moins un but.</p>
+    <button class="signal-alert-cta" id="signal-alert-toggle" type="button">🔔 Activer popup + son quand un signal +0,5 est prêt</button>
     <div class="goal05-mini">
-      <div><b>✓</b> Force 3-5 saisons</div>
+      <div><b>✓</b> Force historique</div>
       <div><b>✓</b> Top vs bas tableau</div>
       <div><b>✓</b> Buteur 5/5</div>
-      <div><b>✓</b> Adversaire encaisse</div>
+      <div><b>✓</b> Cote ANJ validée</div>
+    </div>
+    <div class="goal05-status-card">
+      <span class="goal05-status-badge">Surveillance active</span>
+      <div class="goal05-status-title">Aucun signal +0,5 validé maintenant</div>
+      <p class="goal05-status-text">Aucun autre pari n’est affiché ici. L’app attend un vrai feu vert +0,5 : historique, enjeu, forme buteur, adversaire qui encaisse et cote disponible.</p>
     </div>
   </section>
 
-  <div class="offer-stack" aria-label="Offres TousLesMatchs">
-    <a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, moteur spécialisé football</div></div><div class="offer-price">0€</div></a>
-    <a class="offer-row" href="/#plans"><div><div class="offer-name">Standard</div><div class="offer-desc">Sélection la plus stricte du jour</div></div><div class="offer-price">4,90€</div></a>
-    <a class="offer-row" href="/#plans"><div><div class="offer-name">Premium</div><div class="offer-desc">Plus de volume football, sans forcer</div></div><div class="offer-price">14,90€</div></a>
-    <a class="offer-row" href="/#plans"><div><div class="offer-name">Elite-VIP</div><div class="offer-desc">Radar football élargi + alertes prioritaires</div></div><div class="offer-price">29,90€</div></a>
+  <div class="offer-stack" aria-label="Accès Goal plus 0,5">
+    <a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a>
   </div>
 
-  <div class="card apk-download-card" aria-label="Télécharger l'application Android">
-    <div class="lbl">Application Android bêta</div>
-    <div class="val">Alertes +0,5, popup et accès rapide bookmakers</div>
-    <a class="btn btn-g" href="/downloads/TousLesMatchs-Goal05-beta.apk" download>📲 Télécharger l'APK Android</a>
-    <div class="apk-download-note">Installation hors Play Store réservée aux testeurs. Football uniquement · 18+ · Jeu responsable.</div>
-  </div>
-
-  <!-- ══ ANALYSE DU JOUR ══ -->
+  <!-- â•â• ANALYSE DU JOUR â•â• -->
   <section id="s-pick" class="on">
     <h2>Analyse du jour</h2>
     <p class="sub">Le verdict du Concile — 5 IA délibèrent, la convergence tranche.</p>
     <div id="pick-box"><div class="state">Chargement…</div></div>
   </section>
 
-  <!-- ══ EN DIRECT ══ -->
+  <!-- â•â• EN DIRECT â•â• -->
   <section id="s-live">
     <h2>En direct</h2>
     <p class="sub">Matchs en cours suivis par le Conseil.</p>
     <div id="live-box"><div class="state">Chargement…</div></div>
   </section>
 
-  <!-- ══ PERFORMANCES ══ -->
+  <!-- â•â• PERFORMANCES â•â• -->
   <section id="s-perf">
     <h2>Performances</h2>
     <p class="sub">Résultats réels, gagnés comme perdus. Mise simulée de 10 €.</p>
@@ -233,7 +235,7 @@
     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
   </section>
 
-  <!-- ══ COMPTE ══ -->
+  <!-- â•â• COMPTE â•â• -->
   <section id="s-me">
     <h2>Mon compte</h2>
     <p class="sub">Connecte-toi avec l'email et le code reçus après paiement.</p>
@@ -257,13 +259,13 @@
 
 <nav>
   <button data-tab="pick" class="on"><span class="ic">⚽</span>+0,5</button>
-  <button data-tab="live"><span class="ic">🔴</span>Direct</button>
+  <button data-tab="live"><span class="ic">ðŸ”´</span>Direct</button>
   <button data-tab="perf"><span class="ic">📊</span>Résultats</button>
   <button data-tab="me"><span class="ic">👤</span>Compte</button>
 </nav>
 
 <footer>
-  LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits
+  LES JEUX D'ARGENT ET DE HASARD PEUVENT ÃŠTRE DANGEREUX : pertes d'argent, conflits
   familiaux, addiction. Conseils sur <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a> — 09 74 75 13 13, appel non surtaxé.<br>
   18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives.
 </footer>
@@ -272,7 +274,7 @@
 (function () {
   "use strict";
 
-  // ── Utilitaires ────────────────────────────────────────────────────────────
+  // â”€â”€ Utilitaires â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var $ = function (id) { return document.getElementById(id); };
   var esc = function (s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -292,19 +294,19 @@
     return d;
   }
 
-  // ── Session (mêmes clés que le site : une seule connexion pour les deux) ───
+  // â”€â”€ Session (mêmes clés que le site : une seule connexion pour les deux) â”€â”€â”€
   function plan() { try { return localStorage.getItem("tlm_plan") || "free"; } catch (e) { return "free"; } }
   function token() { try { return localStorage.getItem("tlm_token") || ""; } catch (e) { return ""; } }
   function isPaid() { var p = plan(); return !!p && p !== "free"; }
 
   function renderChip() {
     var c = $("chip"), p = plan();
-    var label = { standard: "🟢 Standard", premium: "🟣 Premium", vip: "🟠 Elite", elite: "🟠 Elite", admin: "👑 Admin" }[p];
+    var label = { standard: "🟢 Standard", premium: "🟣 Premium", vip: "🟠 Elite", elite: "🟠 Elite", admin: "ðŸ‘‘ Admin" }[p];
     c.textContent = label || "Invité";
     c.className = "plan-chip" + (isPaid() ? " paid" : "");
   }
 
-  // ── Onglets ───────────────────────────────────────────────────────────────
+  // â”€â”€ Onglets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var loaded = {};
   function show(tab) {
     ["pick", "live", "perf", "me"].forEach(function (t) {
@@ -327,7 +329,7 @@
     if (tab === "me") renderMe();
   }
 
-  // ── Analyse du jour ───────────────────────────────────────────────────────
+  // â”€â”€ Analyse du jour â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
   var BOOKMAKERS = [
@@ -411,40 +413,27 @@
   window.enableSignalAlerts = enableSignalAlerts;
 
   function loadPick() {
-    get("/current-pick").then(flagOffline).then(function (d) {
-      var box = $("pick-box");
-      var p = d && d.pick;
-      if (!d || !d.ok || !p) {
-        box.innerHTML = '<div class="card"><div class="state">🕐 Prochaine analyse bientôt disponible.</div>'
-          + '<a class="btn btn-o" href="/#plans">Voir les offres</a></div>';
-        return;
-      }
-      var conf = num(p.confidence || p.consensus);
-      var a = (p.teamA && p.teamA.name) || p.home || "—";
-      var b = (p.teamB && p.teamB.name) || p.away || "—";
-      // Le contenu exact de l'analyse reste réservé aux membres : le verrou du site
-      // est reproduit ici à l'identique.
-      var locked = !isPaid();
-      box.innerHTML =
-        '<div class="card">'
-        + '<div class="row"><div><div class="teams">' + esc(a) + ' — ' + esc(b) + '</div>'
-        + '<div class="comp">' + esc(p.competition || "") + (p.time ? ' · ' + esc(p.time) : '') + '</div></div></div>'
-        + (conf ? '<div class="conf-bar"><div class="conf-fill" style="width:' + Math.min(100, conf) + '%"></div></div>'
-                + '<div class="lbl" style="margin-top:6px">Score de confiance ' + conf + '/100</div>' : '')
-        + '<div class="verdict">'
-        + (locked
-            ? '<div class="lbl">Sélection du Concile</div><div class="val">🔒 Réservée aux membres</div>'
-              + '<a class="btn btn-g" href="/#plans">Recevoir les signaux dès 4,90€</a>'
-              + '<a class="btn btn-o" href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener">Rejoindre le canal gratuit</a>'
-            : '<div class="lbl">Sélection du Concile</div><div class="val">' + esc(p.bet || p.best_bet || "—") + '</div>'
-              + (p.cote ? '<div class="lbl" style="margin-top:9px">Cote</div><div class="val c-cyan">@' + esc(p.cote) + '</div>' : '')
-              + (p.raison ? '<div class="comp" style="margin-top:9px">' + esc(p.raison) + '</div>' : '') + bookmakerButtons())
-        + '</div></div>';
-      if (!locked) showSignalPopup(p);
-    });
+    var box = $("pick-box");
+    var locked = !token();
+    box.innerHTML = '<div class="card">'
+      + '<div class="lbl">Moteur +0,5 uniquement</div>'
+      + '<div class="val">Aucun signal +0,5 validé maintenant</div>'
+      + '<div class="comp" style="margin-top:9px">L’app ne montre pas les paris victoire, BTTS ou over/under général. Elle attend un vrai feu vert +0,5 : force historique, classement, forme buteur, adversaire qui encaisse et cote disponible.</div>'
+      + '<div class="goal05-checks">'
+      + '<div><b>✓</b> Analyse historique 3 à 5 saisons</div>'
+      + '<div><b>✓</b> Équipe forte contre équipe faible</div>'
+      + '<div><b>✓</b> Buteur 5/5 et buts construits</div>'
+      + '<div><b>✓</b> Aucun envoi si un critère dur manque</div>'
+      + '</div>'
+      + (locked
+          ? '<a class="btn btn-g" href="#" data-tab-link="me">Recevoir mon accès +0,5</a>'
+          : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()">Activer les alertes popup + son</button>' + bookmakerButtons())
+      + '</div>';
+    var link = box.querySelector('[data-tab-link="me"]');
+    if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });
   }
 
-  // ── En direct ─────────────────────────────────────────────────────────────
+  // â”€â”€ En direct â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function loadLive() {
     get("/live-matches").then(flagOffline).then(function (d) {
       var box = $("live-box");
@@ -458,7 +447,7 @@
       list.slice(0, 25).forEach(function (m) {
         var sh = (m.score_home == null ? "?" : m.score_home), sa = (m.score_away == null ? "?" : m.score_away);
         html += '<div class="item"><span class="dot"></span><div class="mid">'
-          + '<div class="t">' + (icons[m.sport] || "🎯") + ' ' + esc(m.home) + ' — ' + esc(m.away) + '</div>'
+          + '<div class="t">' + (icons[m.sport] || "ðŸŽ¯") + ' ' + esc(m.home) + ' — ' + esc(m.away) + '</div>'
           + '<div class="m">' + esc(m.competition || m.sport || "") + (m.minute ? ' · ' + esc(m.minute) + "'" : '') + '</div>'
           + '</div><span class="badge b-live">' + esc(sh) + '-' + esc(sa) + '</span></div>';
       });
@@ -472,7 +461,7 @@
     });
   }
 
-  // ── Performances ──────────────────────────────────────────────────────────
+  // â”€â”€ Performances â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var perf = { rows: [], stats: null, tier: "all" };
   Array.prototype.forEach.call(document.querySelectorAll("#perf-tabs .tab"), function (t) {
     t.addEventListener("click", function () {
@@ -517,8 +506,8 @@
     var html = "";
     rows.slice(0, 40).forEach(function (a) {
       var b = a.outcome === "win" ? '<span class="badge b-win">✅ Gagné</span>'
-            : a.outcome === "loss" ? '<span class="badge b-loss">❌ Perdu</span>'
-            : '<span class="badge b-wait">⏳ En attente</span>';
+            : a.outcome === "loss" ? '<span class="badge b-loss">âŒ Perdu</span>'
+            : '<span class="badge b-wait">â³ En attente</span>';
       var odd = num(a.real_odd) > 1 ? " · @" + num(a.real_odd).toFixed(2) : "";
       html += '<div class="item"><div class="mid">'
         + '<div class="t">' + esc(a.home) + ' — ' + esc(a.away) + '</div>'
@@ -531,7 +520,7 @@
     return '<div class="kpi"><div class="v ' + (c || "") + '">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
   }
 
-  // ── Compte ────────────────────────────────────────────────────────────────
+  // â”€â”€ Compte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function renderMe() {
     var box = $("me-box");
     if (token()) {
@@ -611,7 +600,7 @@
     });
   }
 
-  // ── Démarrage ─────────────────────────────────────────────────────────────
+  // â”€â”€ Démarrage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var alertToggle = $('signal-alert-toggle');
   if (alertToggle) alertToggle.addEventListener('click', enableSignalAlerts);
   var popupClose = $('signal-popup-close');
