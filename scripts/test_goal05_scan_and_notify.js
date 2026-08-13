@@ -12,6 +12,9 @@ const eligibleCandidate = {
   team: 'Equipe Forte',
   opponent: 'Equipe Faible',
   teamSide: 'home',
+  homeLogo: 'https://media.api-sports.io/football/teams/1.png',
+  awayLogo: 'https://media.api-sports.io/football/teams/2.png',
+  leagueLogo: 'https://media.api-sports.io/football/leagues/61.png',
   fiveYearStrength: {
     levelTableLoaded: true,
     seasonsAvailable: 3,
@@ -78,7 +81,11 @@ async function main() {
     telegramChatId: '-100123',
     telegramPoster: async ({ text }) => {
       posterCalled = true;
-      assert.ok(text.includes('GOAL 0.5 IA'));
+      assert.ok(text.includes('GO'));
+      assert.ok(text.includes('France - Ligue 1'));
+      assert.ok(text.includes('Crit'));
+      assert.ok(text.includes('Championnat uniquement'));
+      assert.ok(text.includes('Cote ANJ valide'));
       assert.ok(text.includes('Equipe Forte +0,5 but'));
       return { ok: true, statusCode: 200 };
     },

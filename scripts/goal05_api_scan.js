@@ -112,6 +112,41 @@ function adminVerdict(item) {
   return { icon: "🟡", label: "À SURVEILLER", detail: "proche, mais pas assez propre" };
 }
 
+function adminCountryEmoji(country) {
+  const flags = {
+    Argentina: "🇦🇷", Austria: "🇦🇹", Belgium: "🇧🇪", Brazil: "🇧🇷", Croatia: "🇭🇷",
+    Denmark: "🇩🇰", England: "🏴", France: "🇫🇷", Germany: "🇩🇪", Greece: "🇬🇷",
+    Italy: "🇮🇹", Japan: "🇯🇵", Netherlands: "🇳🇱", Norway: "🇳🇴", Poland: "🇵🇱",
+    Portugal: "🇵🇹", Scotland: "🏴", "South Korea": "🇰🇷", Spain: "🇪🇸", Sweden: "🇸🇪",
+    Switzerland: "🇨🇭", Turkey: "🇹🇷",
+  };
+  return flags[country] || "🌍";
+}
+
+function adminCheckLine(ok, label, detail = "") {
+  return `${ok ? "✅" : "❌"} ${label}${detail ? ` - ${detail}` : ""}`;
+}
+
+function adminCriteriaLines(item) {
+  const ev = item.evidence || {};
+  const strength = ev.fiveYearStrength || {};
+  const recent = ev.recent || {};
+  const stake = ev.stake || {};
+  const bestOdd = item.bestOdd?.odd || ev.market?.bestOdd || null;
+  const teamPct = Number(strength.teamPercentile);
+  const opponentPct = Number(strength.opponentPercentile);
+  const gap = Number.isFinite(teamPct) && Number.isFinite(opponentPct) ? Math.round(teamPct - opponentPct) : null;
+
+  return [
+    adminCheckLine(ev.competitionType === "league", "Championnat uniquement", item.league || ev.league || ""),
+    adminCheckLine(strength.levelTableLoaded === true && Number(strength.seasonsAvailable || 0) >= 3 && gap !== null && gap >= 40, "Force historique", gap !== null ? `écart ${gap} pts` : "non prouvée"),
+    adminCheckLine(stake.teamHasMeaningfulObjective === true && stake.sameZoneAfterResult !== true, "Enjeu réel"),
+    adminCheckLine(Number(recent.scoredInLastFive) >= 5, "Buteuse 5/5", `${Number(recent.scoredInLastFive || 0)}/5`),
+    adminCheckLine(Number(recent.opponentConcededInLastFive) >= 5, "Adversaire encaisse 5/5", `${Number(recent.opponentConcededInLastFive || 0)}/5`),
+    adminCheckLine(Number(recent.weightedConstructedGoals) >= 3, "Buts assistés/construits", `${Number(recent.weightedConstructedGoals || 0)} preuve(s)`),
+    adminCheckLine(Boolean(bestOdd && Number(bestOdd) >= 1.30), "Cote ANJ", bestOdd ? `@${bestOdd}` : "absente"),
+  ];
+}
 function formatAdminWatchlistMessage({ date, report }) {
   const items = adminWatchlistItems(report, Number(process.env.GOAL05_ADMIN_WATCHLIST_LIMIT || 5));
   const lines = [
@@ -126,10 +161,19 @@ function formatAdminWatchlistMessage({ date, report }) {
   } else {
     for (const item of items) {
       const verdict = adminVerdict(item);
+      const ev = item.evidence || {};
+      const country = item.country || ev.country || "Pays inconnu";
+      const league = item.league || ev.league || "Championnat inconnu";
       lines.push(`${verdict.icon} ${verdict.label} - ${compact(item.match, 80)}`);
+      lines.push(`${adminCountryEmoji(country)} ${country} - ${league}`);
       lines.push(`Équipe visée: ${compact(item.team, 40)} +0,5 | cote @${item.bestOdd.odd}`);
+      if (item.homeLogo || item.awayLogo) lines.push(`Fanions: ${item.homeLogo || "n/d"} | ${item.awayLogo || "n/d"}`);
+      if (item.leagueLogo) lines.push(`Logo ligue: ${item.leagueLogo}`);
       lines.push(`Lecture rapide: ${verdict.detail}`);
+      lines.push("Critères:");
+      for (const line of adminCriteriaLines(item)) lines.push(line);
       const reasons = (item.reasons || item.rejections || []).slice(0, 4);
+      if (reasons.length) lines.push("Pourquoi refus / vigilance:");
       for (const reason of reasons) lines.push(`- ${compact(reason, 160)}`);
       for (const warning of (item.warnings || []).slice(0, 2)) lines.push(`⚠ ${compact(warning, 160)}`);
       lines.push("");
@@ -390,11 +434,16 @@ async function buildApiCandidates() {
       date,
       country,
       league: league.name,
+      leagueLogo: league.logo || null,
       competitionType: "league",
       home: home.name,
       away: away.name,
+      homeLogo: home.logo || null,
+      awayLogo: away.logo || null,
       team: team.name,
       opponent: opponent.name,
+      teamLogo: team.logo || null,
+      opponentLogo: opponent.logo || null,
       teamSide,
       source: "api-football",
       fiveYearStrength: {

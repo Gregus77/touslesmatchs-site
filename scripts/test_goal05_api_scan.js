@@ -50,12 +50,25 @@ const adminMessage = formatAdminWatchlistMessage({
     summary: { total: 1, eligible: 0, noBet: 1, sent: 0 },
     results: [
       {
-        match: "Vitoria — Botafogo",
+        match: "Vitoria - Botafogo",
         team: "Botafogo",
+        country: "Brazil",
+        league: "Brasileiro Serie A",
+        homeLogo: "https://media.api-sports.io/football/teams/1.png",
+        awayLogo: "https://media.api-sports.io/football/teams/2.png",
         status: "NO_BET",
         bestOdd: { odd: 2.31 },
-        reasons: ["enjeu de classement non démontré", "équipe non buteuse sur les cinq derniers matchs"],
-        warnings: ["historique 3 saisons accepté : prudence renforcée"],
+        reasons: ["enjeu de classement non dÃ©montrÃ©", "Ã©quipe non buteuse sur les cinq derniers matchs"],
+        warnings: ["historique 3 saisons acceptÃ© : prudence renforcÃ©e"],
+        evidence: {
+          country: "Brazil",
+          league: "Brasileiro Serie A",
+          competitionType: "league",
+          fiveYearStrength: { levelTableLoaded: true, seasonsAvailable: 3, teamPercentile: 70, opponentPercentile: 20 },
+          recent: { scoredInLastFive: 2, opponentConcededInLastFive: 5, weightedConstructedGoals: 1 },
+          stake: { teamHasMeaningfulObjective: false, sameZoneAfterResult: true },
+          market: { bestOdd: 2.31 },
+        },
       },
     ],
   },
@@ -65,6 +78,10 @@ assert.ok(adminMessage.includes("admin uniquement"));
 assert.ok(adminMessage.includes("Botafogo"));
 assert.ok(adminMessage.includes("NO BET"));
 assert.ok(adminMessage.includes("Lecture rapide"));
-assert.equal(adminVerdict({ status: "NO_BET", reasons: ["enjeu de classement non démontré", "équipe non buteuse sur les cinq derniers matchs", "preuves insuffisantes"] }).label, "NO BET");
+assert.ok(adminMessage.includes("Brazil - Brasileiro Serie A"));
+assert.ok(adminMessage.includes("Fanions:"));
+assert.ok(adminMessage.includes("Crit"));
+assert.ok(adminMessage.includes("Buteuse 5/5"));
+assert.equal(adminVerdict({ status: "NO_BET", reasons: ["enjeu de classement non dÃ©montrÃ©", "Ã©quipe non buteuse sur les cinq derniers matchs", "preuves insuffisantes"] }).label, "NO BET");
 
 console.log("goal05_api_scan: OK");

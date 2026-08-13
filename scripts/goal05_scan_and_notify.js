@@ -115,23 +115,68 @@ function matchLabel(home, away) {
   return `${home || '?'} - ${away || '?'}`;
 }
 
+function countryEmoji(country) {
+  const flags = {
+    Argentina: "🇦🇷", Austria: "🇦🇹", Belgium: "🇧🇪", Brazil: "🇧🇷", Croatia: "🇭🇷",
+    Denmark: "🇩🇰", England: "🏴", France: "🇫🇷", Germany: "🇩🇪", Greece: "🇬🇷",
+    Italy: "🇮🇹", Japan: "🇯🇵", Netherlands: "🇳🇱", Norway: "🇳🇴", Poland: "🇵🇱",
+    Portugal: "🇵🇹", Scotland: "🏴", "South Korea": "🇰🇷", Spain: "🇪🇸", Sweden: "🇸🇪",
+    Switzerland: "🇨🇭", Turkey: "🇹🇷",
+  };
+  return flags[country] || "🌍";
+}
+
+function yesNoLine(ok, label, detail = "") {
+  return `${ok ? "✅" : "❌"} ${label}${detail ? ` - ${detail}` : ""}`;
+}
+
+function visibleCriteria(candidate, evaluation) {
+  const ev = evaluation.evidence || {};
+  const strength = ev.fiveYearStrength || candidate.fiveYearStrength || {};
+  const recent = ev.recent || candidate.recent || {};
+  const stake = ev.stake || candidate.stake || {};
+  const bestOdd = evaluation.bestOffer?.odd || ev.market?.bestOdd || null;
+  const teamPct = Number(strength.teamPercentile);
+  const opponentPct = Number(strength.opponentPercentile);
+  const gap = Number.isFinite(teamPct) && Number.isFinite(opponentPct) ? Math.round(teamPct - opponentPct) : null;
+
+  return [
+    yesNoLine(candidate.competitionType === "league", "Championnat uniquement", candidate.league || ""),
+    yesNoLine(strength.levelTableLoaded === true && Number(strength.seasonsAvailable || 0) >= 3 && gap !== null && gap >= 40, "Force historique supérieure", gap !== null ? `écart ${gap} pts` : ""),
+    yesNoLine(stake.teamHasMeaningfulObjective === true && stake.sameZoneAfterResult !== true, "Enjeu réel au classement"),
+    yesNoLine(Number(recent.scoredInLastFive) >= 5, "Équipe buteuse 5/5", `${Number(recent.scoredInLastFive || 0)}/5`),
+    yesNoLine(Number(recent.opponentConcededInLastFive) >= 5, "Adversaire encaisse 5/5", `${Number(recent.opponentConcededInLastFive || 0)}/5`),
+    yesNoLine(Number(recent.weightedConstructedGoals) >= 3, "Buts construits / assistés", `${Number(recent.weightedConstructedGoals || 0)} preuve(s)`),
+    yesNoLine(Boolean(bestOdd && Number(bestOdd) >= 1.30), "Cote ANJ valide", bestOdd ? `@${bestOdd}` : "absente"),
+  ];
+}
+
+function logoLines(candidate) {
+  const lines = [];
+  if (candidate.homeLogo || candidate.awayLogo) {
+    lines.push(`Fanions: ${candidate.homeLogo || "n/d"} | ${candidate.awayLogo || "n/d"}`);
+  }
+  if (candidate.leagueLogo) lines.push(`Logo ligue: ${candidate.leagueLogo}`);
+  return lines;
+}
 function formatTelegramMessage(candidate, evaluation) {
   const offer = evaluation.bestOffer || evaluation.evidence?.market?.offers?.[0] || {};
-  const reasons = evaluation.reasons.slice(0, 6).map((reason) => `- ${reason}`).join('\n');
+  const flag = countryEmoji(candidate.country);
+  const criteria = visibleCriteria(candidate, evaluation).join('\n');
+  const logos = logoLines(candidate);
   const warnings = evaluation.warnings.length
-    ? `\n\nVigilance:\n${evaluation.warnings.slice(0, 4).map((warning) => `- ${warning}`).join('\n')}`
+    ? `\n\n🟡 Vigilance:\n${evaluation.warnings.slice(0, 4).map((warning) => `- ${warning}`).join('\n')}`
     : '';
 
   return [
-    'GOAL 0.5 IA - signal bêta',
-    '',
-    `${candidate.team} +0,5 but`,
+    `🟢 GO - ${candidate.team} +0,5 but`,
+    `${flag} ${candidate.country} - ${candidate.league}`,
     `Match: ${matchLabel(candidate.home || candidate.team, candidate.away || candidate.opponent)}`,
-    `Championnat: ${candidate.league} (${candidate.country})`,
+    ...logos,
     `Cote ANJ: @${offer.odd || evaluation.evidence?.market?.bestOdd} ${offer.bookmaker ? `(${offer.bookmaker})` : ''}`,
     '',
-    'Pourquoi le moteur valide:',
-    reasons,
+    'Critères visibles:',
+    criteria,
     warnings,
     '',
     'Jeu responsable: réservé aux +18 ans. Les performances passées ne garantissent pas les résultats futurs.',
@@ -215,6 +260,13 @@ async function runScan(options = {}) {
       id: candidate.id || candidate.matchId,
       match: matchLabel(candidate.home || candidate.team, candidate.away || candidate.opponent),
       team: candidate.team,
+      country: candidate.country,
+      league: candidate.league,
+      home: candidate.home,
+      away: candidate.away,
+      homeLogo: candidate.homeLogo || null,
+      awayLogo: candidate.awayLogo || null,
+      leagueLogo: candidate.leagueLogo || null,
       status: evaluation.status,
       sendDecision: shouldSend ? 'send' : 'not_sent',
       reasons: evaluation.reasons,
