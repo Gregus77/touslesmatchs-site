@@ -287,6 +287,7 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .partner-btn.pb-unibet{padding:13px 30px;border-radius:8px;background:#0a7a3d;color:#fff;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;border:2px solid #0fae5a}
 .partner-btn.pb-pmu{padding:13px 30px;border-radius:6px;background:#00287a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.08em}
 .partner-btn.pb-betclic{padding:13px 30px 10px;border-radius:4px;background:#e2001a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.02em;border-bottom:4px solid #16110f}
+.nav-apk-cta{border-color:rgba(79,214,242,.45)!important;color:#eaf7ff!important;background:rgba(79,214,242,.10)!important}.site-apk-download{margin:0 auto 18px;max-width:720px;padding:14px;border:1px solid rgba(79,214,242,.28);border-radius:14px;background:linear-gradient(135deg,rgba(79,214,242,.10),rgba(138,104,255,.08))}.site-apk-download .btn{justify-content:center}.site-apk-download-note{font-size:11px;color:var(--muted);line-height:1.55;margin-top:9px}
 @media(max-width:600px){.partner-btn{min-width:0;flex:1 1 auto;font-size:13px;padding:12px 16px}}
 
 .side-card{padding:26px 22px}
@@ -723,6 +724,7 @@ body :where(
       </div>
     </div>
     <div id="nav-auth"><button class="btn btn-ghost" onclick="openModal()" data-i18n="nav_login">Se connecter</button></div>
+    <a href="/downloads/TousLesMatchs-Goal05-beta.apk" class="btn btn-ghost nav-apk-cta" download>📲 APK bêta</a>
     <a href="/dashboard" class="btn btn-prim" data-i18n="nav_signup">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
@@ -734,6 +736,7 @@ body :where(
   <a href="/bankroll" data-i18n="nav_bankroll">Bankroll</a>
   <a href="#methode" onclick="toggleMenu()" data-i18n="nav_method">Méthode</a>
   <a href="#plans" onclick="toggleMenu()" data-i18n="nav_plans">Tarifs</a>
+  <a href="/downloads/TousLesMatchs-Goal05-beta.apk" download>📲 Télécharger l’app Android bêta</a>
   <a href="/dashboard" data-i18n="nav_signup">Créer mon compte gratuit</a>
   <div class="mm-lang">
     <div class="mm-lang-h"><span data-i18n="lang_label">Langue</span></div>
@@ -795,7 +798,7 @@ body :where(
         <div class="hero-badge" data-i18n="hero_badge">Le Concile IA sportif</div>
         <h1 data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
         <div class="hero-sub" data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
-        <div class="hero-cta"><a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a><a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a></div>
+        <div class="hero-cta"><a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a><a href="/downloads/TousLesMatchs-Goal05-beta.apk" class="btn btn-ghost" download>📲 Télécharger l’app Android</a><a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a></div>
         <div class="hero-reassure"><span data-i18n="hero_r1">✓ Résultats publics</span><span data-i18n="hero_r2">✓ Données vérifiées</span><span data-i18n="hero_r3">✓ Sans engagement</span><span>18+</span></div>
       </div>
     </section>
@@ -976,11 +979,11 @@ body :where(
     <div class="card" style="text-align:center">
       <div style="font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:4px" data-i18n="partners_title">Nos partenaires bookmakers agréés ANJ</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:18px" data-i18n="partners_sub">En passant par nos liens, tu soutiens le site — sans surcoût pour toi.</div>
+      <div class="site-apk-download"><a class="btn btn-prim" href="/downloads/TousLesMatchs-Goal05-beta.apk" download>📲 Télécharger l’app Android bêta</a><div class="site-apk-download-note">Gmail bloque les fichiers APK en pièce jointe : partage plutôt ce lien officiel du site. Installation hors Play Store réservée aux testeurs · Football uniquement · 18+.</div></div>
       <div class="partner-row">
         <a href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener sponsored" class="partner-btn pb-winamax">Winamax</a>
         <a href="https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" target="_blank" rel="noopener sponsored" class="partner-btn pb-unibet">Unibet</a>
         <a href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener sponsored" class="partner-btn pb-pmu">PMU</a>
-        <a href="https://go.onelink.me/2887093520/6c3132b8?af_sub5=GREGA3GZ" target="_blank" rel="noopener sponsored" class="partner-btn pb-betclic">Betclic</a>
       </div>
       <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:1.6" data-i18n="partners_legal">18+ · Jeu responsable · Ouvrir un compte chez un partenaire ne garantit aucun gain.</div>
     </div>
@@ -1309,7 +1312,13 @@ async function loadProof(){
     document.getElementById('pf-profit').textContent=fmtEur(s.profit10||0);
 
     var tbody=document.getElementById('res-body');
-    var resolved=(d.analyses||[]).filter(function(a){return a.outcome==='win'||a.outcome==='loss'}).slice(0,5);
+    var seenProof={};
+    var resolved=(d.analyses||[]).filter(function(a){return a.outcome==='win'||a.outcome==='loss'}).filter(function(a){
+      var key=[a.home||'',a.away||''].join('|').toLowerCase();
+      if(seenProof[key]) return false;
+      seenProof[key]=true;
+      return true;
+    }).slice(0,5);
     if(!resolved.length){ tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucun résultat.</td></tr>'; return; }
     tbody.innerHTML=resolved.map(function(a){
       var win=a.outcome==='win';
