@@ -1,4 +1,7 @@
 const assert = require('assert/strict');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 const { formatTelegramMessage, missingForEngine, runScan } = require('./goal05_scan_and_notify');
 
@@ -55,6 +58,8 @@ const eligibleCandidate = {
 };
 
 async function main() {
+  const liveSignalFile = path.join(os.tmpdir(), 'goal05-test-latest-' + process.pid + '.json');
+  try { fs.unlinkSync(liveSignalFile); } catch (_) {}
   assert.deepEqual(missingForEngine({ readyForEngine: false, missingData: ['odds.arjelBookmakers'] }), ['odds.arjelBookmakers']);
   assert.equal(missingForEngine(eligibleCandidate).length, 0);
 
@@ -92,10 +97,13 @@ async function main() {
     now: new Date('2026-08-13T10:00:00.000Z'),
     sentLog: {},
     writeSentLog: false,
+    liveSignalFile,
   });
 
   assert.equal(posterCalled, true);
   assert.equal(sendReport.summary.sent, 1);
+  assert.equal(JSON.parse(fs.readFileSync(liveSignalFile, 'utf8')).team, 'Equipe Forte');
+  try { fs.unlinkSync(liveSignalFile); } catch (_) {}
   assert.ok(formatTelegramMessage(eligibleCandidate, sendReport.results[0]));
   console.log('goal05_scan_and_notify: OK');
 }
