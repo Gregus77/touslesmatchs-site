@@ -8,6 +8,11 @@ const ROOT = path.resolve(__dirname, "..");
 const CACHE_ROOT = path.join(ROOT, "docs", "goal-05", "strategie-memory", "championnats", "cache");
 const ANALYSES_DIR = path.join(ROOT, "docs", "goal-05", "analyses");
 const API_BASE = "https://v3.football.api-sports.io";
+let lastApiCallAt = 0;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const ALLOWED_COUNTRIES = new Set([
   "Argentina", "Austria", "Belgium", "Brazil", "Croatia", "Denmark", "England",
@@ -59,12 +64,34 @@ function writeJson(file, value) {
 async function api(pathname) {
   const key = process.env.API_FOOTBALL_KEY;
   if (!key) throw new Error("API_FOOTBALL_KEY absent");
-  const response = await fetch(`${API_BASE}${pathname}`, { headers: { "x-apisports-key": key } });
-  const json = await response.json();
-  if (!response.ok || (json.errors && Object.keys(json.errors).length)) {
-    throw new Error(`API-Football ${pathname}: ${response.status} ${JSON.stringify(json.errors || {})}`);
+
+  const delayMs = Number(process.env.GOAL05_API_DELAY_MS || 1400);
+  const retryWaitMs = Number(process.env.GOAL05_RATE_LIMIT_WAIT_MS || 65000);
+  const maxRetries = Number(process.env.GOAL05_API_RETRIES || 2);
+
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    const elapsed = Date.now() - lastApiCallAt;
+    if (elapsed < delayMs) await sleep(delayMs - elapsed);
+    lastApiCallAt = Date.now();
+
+    const response = await fetch(`${API_BASE}${pathname}`, { headers: { "x-apisports-key": key } });
+    const json = await response.json();
+    const errors = json.errors && Object.keys(json.errors).length ? json.errors : {};
+    const rateLimited = Boolean(errors.rateLimit) || response.status === 429;
+
+    if (rateLimited && attempt < maxRetries) {
+      console.log(`[goal05-api] rate limit, pause ${Math.round(retryWaitMs / 1000)}s avant retry ${attempt + 1}/${maxRetries}: ${pathname}`);
+      await sleep(retryWaitMs);
+      continue;
+    }
+
+    if (!response.ok || Object.keys(errors).length) {
+      throw new Error(`API-Football ${pathname}: ${response.status} ${JSON.stringify(errors)}`);
+    }
+    return json;
   }
-  return json;
+
+  throw new Error(`API-Football ${pathname}: retries epuises`);
 }
 
 function listCacheFiles(dir = CACHE_ROOT) {
