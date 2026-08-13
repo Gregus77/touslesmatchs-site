@@ -17,7 +17,7 @@ for (const rel of files) {
 }
 
 const main = fs.readFileSync(path.join(root, "mobile/android/app/src/main/java/com/touslesmatchs/app/MainActivity.java"), "utf8");
-assert(main.includes("https://www.touslesmatchs.com/dashboard.html?source=android"), "URL dashboard manquante");
+assert(main.includes("https://www.touslesmatchs.com/app.html?source=android"), "URL dashboard manquante");
 assert(main.includes("touslesmatchs.com"), "domaine TousLesMatchs manquant");
 assert(main.includes("settings.setJavaScriptEnabled(true)"), "JavaScript requis pour le dashboard");
 assert(main.includes("settings.setDomStorageEnabled(true)"), "stockage local requis pour la session");

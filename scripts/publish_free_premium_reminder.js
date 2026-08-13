@@ -79,7 +79,7 @@ async function main() {
 
 Le canal Free reste volontairement très sélectif.
 
-En Premium, Hermès surveille plus de matchs, plus de sports et plus de marchés pour détecter jusqu’à 3 opportunités prioritaires quand elles existent.
+En Premium, Hermès surveille davantage de matchs de football et plus de marchés foot pour détecter jusqu’à 3 sélections prioritaires quand les critères sont réunis.
 
 🥇 Priorité 1 : opportunité la plus solide
 🥈 Priorité 2 : alternative premium

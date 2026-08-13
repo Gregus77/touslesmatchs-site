@@ -88,7 +88,7 @@ Aujourd’hui, aucun pick gratuit ne passe les critères Hermès.
 
 Hermès préfère ne rien publier plutôt que forcer un pari moyen.
 
-💎 <b>En Premium</b>, Hermès surveille plus de marchés et peut proposer jusqu’à 3 opportunités prioritaires quand elles existent.
+💎 <b>En Premium</b>, Hermès surveille plus de marchés football et peut proposer jusqu’à 3 sélections prioritaires quand les critères sont réunis.
 
 Offre de lancement : <b>4,90€/mois</b>
 

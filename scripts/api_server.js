@@ -132,7 +132,7 @@ ${bodyHtml}
   }
   function renderIndex(items) {
     const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
-    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket et hockey. Verdict de 5 intelligences artificielles, confiance et historique public.";
+    const description = "Tous les pronostics du Conseil IA : analyses de matchs de football. Verdict de 5 intelligences artificielles, confiance et historique public.";
     const canonical = `${SITE}/pronostics`;
     const schema = { "@context": "https://schema.org", "@type": "CollectionPage", name: title, description, url: canonical };
     const rows = (items || []).map(it => {
@@ -991,7 +991,7 @@ const _eliteSignalDaily = { date: "", count: 0 };
 // Plafonds journaliers par palier (conditions données par le fondateur)
 const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL 1.30-2.50
 const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote 1.30-2.50 (inclut Standard)
-const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseball/basket ≥ 82 (inclut Premium)
+const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar football élargi : conf ≥ 82 (inclut Premium)
 // Seuils volontairement décroissants : un palier supérieur est PLUS LARGE, donc reçoit
 // davantage. L'inverse (Standard ≥ 88 et Premium ≥ 90) rendait les deux paliers
 // identiques, puisque « ≥ 88 » contient déjà tout « ≥ 90 ».
@@ -5551,7 +5551,7 @@ Réponds en JSON pur (pas de markdown):
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
       //   🟢 Standard (4.90€)  : conf ≥ 88, foot, cote réelle ARJEL 1.30-2.50 — max 3/j
       //   🟣 Premium  (14.90€) : conf ≥ 85, foot, cote réelle ARJEL 1.30-2.50 — max 10/j (inclut Standard)
-      //   🟠 Elite    (29.90€) : conf ≥ 82, foot/hockey/baseball/basket, cote réelle ARJEL 1.30-2.50 — max 30/j (inclut Premium)
+      //   🟠 Elite    (29.90€) : conf ≥ 82, football uniquement, cote réelle ANJ 1.30-2.50 — max 30/j (inclut Premium)
       //   Modèle imbriqué : un palier supérieur reçoit toujours au moins ce que reçoit l'inférieur.
       //   « Cote réelle » = vraie cote bookmaker (jamais l'estimation). Repli auto sur Premium
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
@@ -8478,9 +8478,9 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Radar football Elite", "Alertes prioritaires"] },
     { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey", "Confiance ≥ 75%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Football uniquement", "Confiance ≥ 75%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -11300,7 +11300,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const upsellBlock = status === "premium"
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour multisport</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
+                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour football</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
                 <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite / VIP — 29.90€/mois</a>
               </div>`
             : "";

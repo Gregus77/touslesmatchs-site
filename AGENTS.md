@@ -260,7 +260,7 @@ Si aucun objectif n'est rempli : NE PAS developper.
 Idee "signaux par palier" (comme le trading). Definition HYBRIDE (rang par confiance, contenu par ARJEL) :
 - **Standard** = ARJEL & confiance >= 88 (fleurons, faible volume)
 - **Premium** = ARJEL & confiance >= 90 (inclut Standard, jusqu'a 10/jour)
-- **Elite** = ARJEL & confiance >= 90 (football/basketball/hockey/baseball, jusqu'a 30/jour)
+- **Elite** = ANJ & confiance >= 90 (football uniquement, jusqu'a 30/jour)
 
 Etape 1 FAITE : endpoint `/tier-stats` + section site "#paliers" (3 onglets).
 Etape 2 EN COURS : moteur `/tier-signals` + routes internes Hermes pour Standard/Premium/Elite/VIP.
@@ -269,7 +269,7 @@ Etape 3 (a faire, ZONE HERMES) : scheduler Telegram par palier + recap quotidien
 Regles moteur signaux (2026-07-24) :
 - Standard = 3 signaux max/jour, confiance >= 88, cote reelle ARJEL entre 1.30 et 2.50.
 - Premium = 10 signaux max/jour, confiance >= 90, avant-match ou live, cote reelle ARJEL entre 1.30 et 2.50.
-- Elite = 30 signaux max/jour, confiance >= 90, football/basketball/hockey/baseball, cote reelle ARJEL entre 1.30 et 2.50.
+- Elite = 30 signaux max/jour, confiance >= 90, football uniquement, cote reelle ANJ entre 1.30 et 2.50.
 - Ne jamais forcer le volume : si la journee ne produit que 7 bons signaux Premium, envoyer 7.
 - Envoi automatique des paliers desactive par defaut ; activer seulement avec `TIER_SIGNALS_AUTO_SEND=1` apres verification des canaux `TELEGRAM_STANDARD_CHANNEL_ID`, `TELEGRAM_PREMIUM_CHANNEL_ID`, `TELEGRAM_ELITE_CHANNEL_ID`.
 

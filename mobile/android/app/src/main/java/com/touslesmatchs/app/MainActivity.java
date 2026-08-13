@@ -12,7 +12,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
-    private static final String HOME_URL = "https://www.touslesmatchs.com/dashboard.html?source=android";
+    private static final String HOME_URL = "https://www.touslesmatchs.com/app.html?source=android";
     private WebView webView;
 
     @Override

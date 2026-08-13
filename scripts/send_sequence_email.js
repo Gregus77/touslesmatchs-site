@@ -65,7 +65,7 @@ const sequence = [
     title: "Pourquoi passer Premium maintenant",
     body: `
       <p>Le Free reçoit uniquement le pick gratuit quand les critères sont remplis.</p>
-      <p>Premium surveille plus de matchs, plus de sports et peut envoyer jusqu’à 3 opportunités prioritaires quand elles existent.</p>
+      <p>Premium surveille davantage de matchs de football et peut envoyer jusqu’à 3 sélections prioritaires quand les critères sont réunis.</p>
       <p>L’offre de lancement est actuellement à 4,90€/mois.</p>
     `
   },

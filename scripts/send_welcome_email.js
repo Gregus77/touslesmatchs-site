@@ -87,7 +87,7 @@ function buildEmail(email) {
 
       <h2>Premium lancement à 4,90€/mois</h2>
       <p>
-        En Premium, Hermès surveille plus de matchs, plus de sports et peut envoyer jusqu’à 3 picks prioritaires
+        En Premium, Hermès surveille davantage de matchs de football et peut envoyer jusqu’à 3 sélections prioritaires
         quand les critères sont réunis.
       </p>
 

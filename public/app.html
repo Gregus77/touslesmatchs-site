@@ -54,6 +54,20 @@
   h2{font-size:19px;font-weight:900;letter-spacing:-.02em;margin:0 0 4px}
   .sub{font-size:12.5px;color:var(--muted2);margin:0 0 14px}
 
+
+  .goal05-home{position:relative;overflow:hidden;border:1px solid rgba(34,211,238,.28);border-radius:22px;padding:18px;margin:0 0 14px;background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(124,58,237,.18));box-shadow:0 18px 46px rgba(34,211,238,.12)}
+  .goal05-home:after{content:"+0,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
+  .goal05-kicker{position:relative;font-size:10px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+  .goal05-title{position:relative;margin:7px 0 8px;font-size:28px;line-height:1;letter-spacing:-.06em;font-weight:950}
+  .goal05-copy{position:relative;margin:0;color:#dbe4ff;font-size:13px;line-height:1.55}
+  .goal05-mini{position:relative;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+  .goal05-mini div{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:rgba(5,8,20,.38);font-size:11px;color:#e9eeff}
+  .goal05-mini b{color:var(--green)}
+  .offer-stack{display:grid;gap:8px;margin-bottom:14px}
+  .offer-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--b2);border-radius:15px;padding:12px;background:rgba(255,255,255,.045)}
+  .offer-row.hot{border-color:rgba(34,211,238,.34);background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(124,58,237,.08))}
+  .offer-name{font-size:13px;font-weight:950}.offer-desc{font-size:11px;color:var(--muted2);margin-top:2px}.offer-price{font-size:14px;font-weight:950;color:#fff}
+
   .card{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid var(--b2);border-radius:16px;padding:16px;margin-bottom:12px}
   .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
   .teams{font-weight:800;font-size:16px;letter-spacing:-.01em}
@@ -136,6 +150,25 @@
     ⚠️ Hors ligne — données de la dernière consultation.
   </div>
 
+  <section class="goal05-home" aria-label="Goal plus 0,5 but">
+    <div class="goal05-kicker">Goal +0,5 · Football uniquement</div>
+    <div class="goal05-title">L'équipe forte doit marquer.</div>
+    <p class="goal05-copy">Analyse historique, enjeu réel, forme récente et cote ANJ. Aucun signal client si un critère dur manque.</p>
+    <div class="goal05-mini">
+      <div><b>✓</b> Force 3-5 saisons</div>
+      <div><b>✓</b> Top vs bas tableau</div>
+      <div><b>✓</b> Buteur 5/5</div>
+      <div><b>✓</b> Adversaire encaisse</div>
+    </div>
+  </section>
+
+  <div class="offer-stack" aria-label="Offres TousLesMatchs">
+    <a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, moteur spécialisé football</div></div><div class="offer-price">0€</div></a>
+    <a class="offer-row" href="/#plans"><div><div class="offer-name">Standard</div><div class="offer-desc">Sélection la plus stricte du jour</div></div><div class="offer-price">4,90€</div></a>
+    <a class="offer-row" href="/#plans"><div><div class="offer-name">Premium</div><div class="offer-desc">Plus de volume football, sans forcer</div></div><div class="offer-price">14,90€</div></a>
+    <a class="offer-row" href="/#plans"><div><div class="offer-name">Elite-VIP</div><div class="offer-desc">Radar football élargi + alertes prioritaires</div></div><div class="offer-price">29,90€</div></a>
+  </div>
+
   <!-- ══ ANALYSE DU JOUR ══ -->
   <section id="s-pick" class="on">
     <h2>Analyse du jour</h2>
@@ -173,7 +206,7 @@
 </main>
 
 <nav>
-  <button data-tab="pick" class="on"><span class="ic">🎯</span>Analyse</button>
+  <button data-tab="pick" class="on"><span class="ic">⚽</span>+0,5</button>
   <button data-tab="live"><span class="ic">🔴</span>Direct</button>
   <button data-tab="perf"><span class="ic">📊</span>Résultats</button>
   <button data-tab="me"><span class="ic">👤</span>Compte</button>

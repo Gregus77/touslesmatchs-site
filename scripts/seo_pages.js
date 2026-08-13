@@ -178,7 +178,7 @@ function renderDetail(item, related) {
 // ── Page index : /pronostics ─────────────────────────────────────────────────
 function renderIndex(items) {
   const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
-  const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket, tennis et plus. Verdict de 5 intelligences artificielles, confiance et historique public.";
+  const description = "Tous les pronostics du Conseil IA : analyses de matchs de football. Verdict de 5 intelligences artificielles, confiance et historique public.";
   const canonical = `${SITE}/pronostics`;
   const schema = {
     "@context": "https://schema.org",
