@@ -94,6 +94,23 @@ function adminWatchlistItems(report, limit = 5) {
     .filter((item) => item.bestOdd && Number(item.bestOdd.odd) >= 1.30)
     .slice(0, limit);
 }
+function adminVerdict(item) {
+  if (item.status === "ELIGIBLE_SHADOW") {
+    return { icon: "🟢", label: "GO", detail: "tous les critères sont validés" };
+  }
+
+  const reasons = item.reasons || item.rejections || [];
+  const warnings = item.warnings || [];
+  const hardBlocks = reasons.filter((reason) => /non buteuse|non encaissant|preuves? .*insuffisantes?|force historique insuffisant|enjeu .*non d[eé]montr[eé]|faux enjeu/i.test(reason)).length;
+
+  if (hardBlocks >= 3 || item.status === "NO_BET") {
+    return { icon: "🔴", label: "NO BET", detail: "refus clair du moteur" };
+  }
+  if (hardBlocks >= 2 || warnings.length >= 2) {
+    return { icon: "🟠", label: "RISQUÉ", detail: "trop de voyants faibles" };
+  }
+  return { icon: "🟡", label: "À SURVEILLER", detail: "proche, mais pas assez propre" };
+}
 
 function formatAdminWatchlistMessage({ date, report }) {
   const items = adminWatchlistItems(report, Number(process.env.GOAL05_ADMIN_WATCHLIST_LIMIT || 5));
@@ -108,8 +125,10 @@ function formatAdminWatchlistMessage({ date, report }) {
     lines.push("Aucun refus intéressant à surveiller sur ce scan.");
   } else {
     for (const item of items) {
-      lines.push(`⚽ ${compact(item.match, 80)}`);
+      const verdict = adminVerdict(item);
+      lines.push(`${verdict.icon} ${verdict.label} - ${compact(item.match, 80)}`);
       lines.push(`Équipe visée: ${compact(item.team, 40)} +0,5 | cote @${item.bestOdd.odd}`);
+      lines.push(`Lecture rapide: ${verdict.detail}`);
       const reasons = (item.reasons || item.rejections || []).slice(0, 4);
       for (const reason of reasons) lines.push(`- ${compact(reason, 160)}`);
       for (const warning of (item.warnings || []).slice(0, 2)) lines.push(`⚠ ${compact(warning, 160)}`);
@@ -453,4 +472,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { buildApiCandidates, findTeamGoalOver05Offers, formatAdminWatchlistMessage, loadHistoricalCaches };
+module.exports = { adminVerdict, buildApiCandidates, findTeamGoalOver05Offers, formatAdminWatchlistMessage, loadHistoricalCaches };

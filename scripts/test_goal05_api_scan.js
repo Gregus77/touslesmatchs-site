@@ -1,7 +1,7 @@
 "use strict";
 
 const assert = require("assert/strict");
-const { findTeamGoalOver05Offers, formatAdminWatchlistMessage, loadHistoricalCaches } = require("./goal05_api_scan");
+const { adminVerdict, findTeamGoalOver05Offers, formatAdminWatchlistMessage, loadHistoricalCaches } = require("./goal05_api_scan");
 
 const offersHome = findTeamGoalOver05Offers([
   {
@@ -63,5 +63,8 @@ const adminMessage = formatAdminWatchlistMessage({
 assert.ok(adminMessage.includes("WATCHLIST ADMIN Goal +0,5"));
 assert.ok(adminMessage.includes("admin uniquement"));
 assert.ok(adminMessage.includes("Botafogo"));
+assert.ok(adminMessage.includes("NO BET"));
+assert.ok(adminMessage.includes("Lecture rapide"));
+assert.equal(adminVerdict({ status: "NO_BET", reasons: ["enjeu de classement non démontré", "équipe non buteuse sur les cinq derniers matchs", "preuves insuffisantes"] }).label, "NO BET");
 
 console.log("goal05_api_scan: OK");
