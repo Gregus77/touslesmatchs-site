@@ -11934,6 +11934,7 @@ app.get("/admin/daily-audit", (req, res) => {
 
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
+const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
 
 // ── Bot email Hermes (hermes@touslesmatchs.com) — brouillons validés à un clic
 // depuis Telegram admin, jamais d'envoi automatique (voir hermes_mail_bot.js).
@@ -11982,7 +11983,7 @@ if (HERMES_MAIL_USER && HERMES_MAIL_APP_PASSWORD) {
       user: HERMES_MAIL_USER, password: HERMES_MAIL_APP_PASSWORD,
       imapHost: HERMES_MAIL_IMAP_HOST, imapPort: HERMES_MAIL_IMAP_PORT,
       stripe: stripeClient, brevoApiKey: BREVO_API_KEY, mistralApiKey: MISTRAL_API_KEY,
-      analysisEngine, sendTelegramMessage, telegramAdminChatId: TELEGRAM_ADMIN_CHAT_ID,
+      analysisEngine, sendTelegramMessage, telegramAdminChatId: TELEGRAM_SUPPORT_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID,
       siteBaseUrl: SITE_BASE_URL, adminToken: MAIL_BOT_ADMIN_TOKEN,
     }).catch(e => console.error("[hermes-mail] interval:", e.message));
   };
