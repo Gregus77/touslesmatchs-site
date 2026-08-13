@@ -13,5 +13,5 @@ for (const txt of [
   'Buteur 5/5',
   'Cote ANJ validée'
 ]) assert(app.includes(txt), 'élément carte verdict manquant: '+txt);
-assert(!app.includes('Aucun signal +0,5 validé maintenant</div>\'\n      + \'<div class="comp"'), 'ancien pavé explicatif encore présent');
+assert(!app.includes('victoire, BTTS'), 'ancien pavé explicatif encore présent');
 console.log('goal05_verdict_card: OK');
