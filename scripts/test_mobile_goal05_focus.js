@@ -10,12 +10,13 @@ function mustNotHave(text, label) {
 
 mustHave("L’équipe forte doit marquer", "Goal +0,5 hero thesis");
 mustHave("Football IA", "top product badge");
-mustHave("goal05-palmeiras-card-20260814", "Palmeiras card visual version");
+mustHave("goal05-palmeiras-card-20260814b", "Palmeiras card visual version");
 mustHave("Le moteur +0,5 filtre uniquement", "specialized +0.5 positioning");
 mustHave("SIGNAL EN ATTENTE", "compact waiting verdict state");
 mustHave("Aucun match validé +0,5", "no fake pick state");
 mustHave("Écart historique favorable", "signal card criteria");
 mustHave("Bilan +0,5 en cours", "honest empty stats");
+mustHave("/api/analysis-history?limit=160", "results JSON API route");
 mustHave("body.tlm-page-app .tlm-floating-widgets", "floating widgets blocked in app");
 mustHave("reg.unregister()", "service worker disabled for APK freshness");
 mustHave("caches.delete(key)", "browser cache cleared for APK freshness");

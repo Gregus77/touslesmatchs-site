@@ -187,7 +187,7 @@
 </script>
 
   <meta name="theme-color" content="#070a20">
-  <meta name="app-card-version" content="goal05-palmeiras-card-20260814">
+  <meta name="app-card-version" content="goal05-palmeiras-card-20260814b">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
 </head>
 <body class="tlm-wow tlm-page-app">
@@ -480,7 +480,7 @@
   }
 
   function loadPerf() {
-    get("/analysis-history?limit=160").then(flagOffline).then(function (d) {
+    get("/api/analysis-history?limit=160").then(flagOffline).then(function (d) {
       perf.rows = ((d && d.analyses) || []).filter(isGoal05Row);
       renderPerf();
     });
