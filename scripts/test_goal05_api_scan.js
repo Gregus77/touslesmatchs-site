@@ -81,7 +81,7 @@ assert.ok(adminMessage.includes("Lecture rapide"));
 assert.ok(adminMessage.includes("Brazil - Brasileiro Serie A"));
 assert.ok(adminMessage.includes("Fanions:"));
 assert.ok(adminMessage.includes("Crit"));
-assert.ok(adminMessage.includes("Buteuse 5/5"));
+assert.ok(adminMessage.includes("Buteur 5/5"));
 assert.equal(adminVerdict({ status: "NO_BET", reasons: ["enjeu de classement non dÃ©montrÃ©", "Ã©quipe non buteuse sur les cinq derniers matchs", "preuves insuffisantes"] }).label, "NO BET");
 
 console.log("goal05_api_scan: OK");

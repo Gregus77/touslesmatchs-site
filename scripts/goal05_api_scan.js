@@ -141,7 +141,7 @@ function adminCriteriaLines(item) {
     adminCheckLine(ev.competitionType === "league", "Championnat uniquement", item.league || ev.league || ""),
     adminCheckLine(strength.levelTableLoaded === true && Number(strength.seasonsAvailable || 0) >= 3 && gap !== null && gap >= 40, "Force historique", gap !== null ? `écart ${gap} pts` : "non prouvée"),
     adminCheckLine(stake.teamHasMeaningfulObjective === true && stake.sameZoneAfterResult !== true, "Enjeu réel"),
-    adminCheckLine(Number(recent.scoredInLastFive) >= 5, "Buteuse 5/5", `${Number(recent.scoredInLastFive || 0)}/5`),
+    adminCheckLine(Number(recent.scoredInLastFive) >= 5, "Buteur 5/5", `${Number(recent.scoredInLastFive || 0)}/5`),
     adminCheckLine(Number(recent.opponentConcededInLastFive) >= 5, "Adversaire encaisse 5/5", `${Number(recent.opponentConcededInLastFive || 0)}/5`),
     adminCheckLine(Number(recent.weightedConstructedGoals) >= 3, "Buts assistés/construits", `${Number(recent.weightedConstructedGoals || 0)} preuve(s)`),
     adminCheckLine(Boolean(bestOdd && Number(bestOdd) >= 1.30), "Cote ANJ", bestOdd ? `@${bestOdd}` : "absente"),

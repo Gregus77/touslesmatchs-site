@@ -144,7 +144,7 @@ function visibleCriteria(candidate, evaluation) {
     yesNoLine(candidate.competitionType === "league", "Championnat uniquement", candidate.league || ""),
     yesNoLine(strength.levelTableLoaded === true && Number(strength.seasonsAvailable || 0) >= 3 && gap !== null && gap >= 40, "Force historique supérieure", gap !== null ? `écart ${gap} pts` : ""),
     yesNoLine(stake.teamHasMeaningfulObjective === true && stake.sameZoneAfterResult !== true, "Enjeu réel au classement"),
-    yesNoLine(Number(recent.scoredInLastFive) >= 5, "Équipe buteuse 5/5", `${Number(recent.scoredInLastFive || 0)}/5`),
+    yesNoLine(Number(recent.scoredInLastFive) >= 5, "Buteur 5/5", `${Number(recent.scoredInLastFive || 0)}/5`),
     yesNoLine(Number(recent.opponentConcededInLastFive) >= 5, "Adversaire encaisse 5/5", `${Number(recent.opponentConcededInLastFive || 0)}/5`),
     yesNoLine(Number(recent.weightedConstructedGoals) >= 3, "Buts construits / assistés", `${Number(recent.weightedConstructedGoals || 0)} preuve(s)`),
     yesNoLine(Boolean(bestOdd && Number(bestOdd) >= 1.30), "Cote ANJ valide", bestOdd ? `@${bestOdd}` : "absente"),
