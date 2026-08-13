@@ -148,7 +148,7 @@ Aucun signal reel sans validation live.
 Conditions obligatoires:
 
 - score actuel: l'equipe cible n'a pas encore marque;
-- cote live du marche exact au moins `1.60`;
+- cote live du marche exact au moins `1.30` pendant la beta technique;
 - cote fraiche, horodatee et non suspendue;
 - equipe cible encore a 11 ou sans rouge bloquant;
 - attaquants/creatifs importants encore sur le terrain;
@@ -188,8 +188,8 @@ Statuts possibles:
 - `REFUS`: criteres insuffisants;
 - `PRESLECTION`: dossier pre-match fort, attente du live;
 - `SURVEILLANCE_LIVE`: cote ou conditions live en attente;
-- `SIGNAL_VALIDABLE`: score >= 80, cote >= 1.60, conditions live OK;
-- `NON_DECLENCHE`: equipe a marque avant 1.60 ou cote jamais atteinte;
+- `SIGNAL_VALIDABLE`: score >= 80, cote >= 1.30 pendant la beta technique, conditions live OK;
+- `NON_DECLENCHE`: equipe a marque avant 1.30 ou cote jamais atteinte;
 - `ERREUR_DONNEE`: source absente, incoherente ou perimee.
 
 Un jour sans signal est normal. Le moteur doit proteger la qualite avant le volume.
