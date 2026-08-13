@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id "com.android.application"
 }
@@ -10,7 +12,30 @@ android {
         applicationId "com.touslesmatchs.app"
         minSdk 24
         targetSdk 35
-        versionCode 1
-        versionName "0.1.0-beta"
+        versionCode 2
+        versionName "0.1.1-beta"
+    }
+
+    def signingPropertiesFile = rootProject.file("signing.properties")
+    def signingProperties = new Properties()
+    if (signingPropertiesFile.exists()) {
+        signingPropertiesFile.withInputStream { signingProperties.load(it) }
+    }
+
+    signingConfigs {
+        release {
+            if (signingPropertiesFile.exists()) {
+                storeFile rootProject.file(signingProperties["storeFile"])
+                storePassword signingProperties["storePassword"]
+                keyAlias signingProperties["keyAlias"]
+                keyPassword signingProperties["keyPassword"]
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingPropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
     }
 }

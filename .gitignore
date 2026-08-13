@@ -24,3 +24,6 @@ site/index.html
 *.backup
 *.backup-*
 public/data/*.backup*
+# Signature Android locale - ne jamais publier
+mobile/android/*.jks
+mobile/android/signing.properties
