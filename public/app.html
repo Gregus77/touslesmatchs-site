@@ -546,7 +546,7 @@
       var msg = $("log-msg");
       if (!email || !code) { msg.textContent = "Renseigne ton email et ton code."; return; }
       msg.textContent = "Vérification…";
-      fetch("/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, code: code, login: true }) })
+      fetch("/api/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, code: code, login: true }) })
         .then(function (r) { return r.json(); }).then(function (d) {
           if (d && (d.valid || d.ok)) {
             try {
@@ -569,7 +569,7 @@
       var msg = $("log-msg");
       if (!email) { msg.textContent = "Entre ton email d’abonnement."; return; }
       msg.textContent = "Envoi du code…";
-      fetch("/forgot-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email }) })
+      fetch("/api/forgot-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email }) })
         .then(function(){ msg.textContent = "Si un compte existe, le code vient d’être envoyé par email."; })
         .catch(function(){ msg.textContent = "Envoi impossible. Réessaie."; });
     });

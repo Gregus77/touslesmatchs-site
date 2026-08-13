@@ -13,6 +13,8 @@ assertIncludes(appHtml, "app-auth-split", "two-column account onboarding");
 assertIncludes(appHtml, "Déjà abonné ?", "existing subscriber entry");
 assertIncludes(appHtml, "Recevoir mon accès gratuit", "new user free access CTA");
 assertIncludes(appHtml, "login: true", "session login flag");
+assertIncludes(appHtml, "/api/verify-code", "public verify-code API route");
+assertIncludes(appHtml, "/api/forgot-code", "public forgot-code API route");
 assertIncludes(appHtml, "d.valid || d.ok", "verify-code valid response handling");
 assertIncludes(appHtml, 'token() ? "pick" : "me"', "first launch opens account screen");
 assertIncludes(appHtml, "/api/app-access/start", "app access public endpoint");
