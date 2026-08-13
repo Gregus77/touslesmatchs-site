@@ -134,6 +134,12 @@
 
   input{width:100%;padding:13px;border-radius:11px;border:1px solid var(--b2);background:var(--bg2);color:var(--text);font-size:15px;margin-bottom:9px}
   input::placeholder{color:var(--muted2)}
+  .app-auth-split{display:grid;gap:12px}
+  .app-auth-card{border-color:rgba(34,211,238,.25)}
+  .app-auth-title{font-size:20px;font-weight:1000;letter-spacing:-.04em;margin-bottom:5px}
+  .app-auth-note{font-size:12px;color:var(--muted2);line-height:1.55;margin:8px 0 12px}
+  .app-check{display:flex;gap:8px;align-items:flex-start;color:var(--muted2);font-size:11px;line-height:1.45;margin:6px 0 8px}
+  .app-check input{width:auto;margin:2px 0 0;accent-color:var(--green)}
 
   nav{
     position:fixed;bottom:0;left:0;right:0;z-index:30;
@@ -528,48 +534,80 @@
   // ── Compte ────────────────────────────────────────────────────────────────
   function renderMe() {
     var box = $("me-box");
-    if (isPaid() || token()) {
-      box.innerHTML = '<div class="card"><div class="lbl">Formule active</div>'
+    if (token()) {
+      box.innerHTML = '<div class="card"><div class="lbl">Compte connecté</div>'
         + '<div class="val">' + esc($("chip").textContent) + '</div>'
-        + '<div class="comp" style="margin-top:9px">Tes signaux arrivent sur ton canal Telegram. Les résultats sont vérifiables dans l\'onglet Résultats.</div>'
+        + '<div class="comp" style="margin-top:9px">Tes préférences et ton accès sont enregistrés sur cette application. Les signaux payants restent liés à ta formule.</div>'
         + '<a class="btn btn-o" href="/live-ia.html">Ouvrir le Live IA</a>'
         + '<button class="btn btn-o" id="btn-out">Se déconnecter</button></div>';
       $("btn-out").addEventListener("click", function () {
-        try { localStorage.removeItem("tlm_token"); localStorage.removeItem("tlm_plan"); } catch (e) {}
-        renderChip(); renderMe();
-
+        try { ["tlm_token","tlm_session","tlm_plan","tlm_email","tlm_code"].forEach(function(k){ localStorage.removeItem(k); }); } catch (e) {}
+        renderChip(); loaded.pick = false; renderMe();
       });
       return;
     }
-    box.innerHTML = '<div class="card">'
-      + '<input id="in-mail" type="email" inputmode="email" autocomplete="email" placeholder="Ton email">'
-      + '<input id="in-code" type="text" autocomplete="one-time-code" placeholder="Ton code d\'accès">'
-      + '<button class="btn btn-p" id="btn-in">Accéder</button>'
+
+    box.innerHTML = '<div class="app-auth-split">'
+      + '<div class="card app-auth-card"><div class="lbl">Déjà abonné ?</div><div class="app-auth-title">Retrouve ton accès</div>'
+      + '<div class="app-auth-note">Entre l’email de ton abonnement et le code reçu après paiement. L’app gardera ensuite ta session et tes préférences.</div>'
+      + '<input id="in-mail" type="email" inputmode="email" autocomplete="email" placeholder="Email de ton abonnement">'
+      + '<input id="in-code" type="text" autocomplete="one-time-code" placeholder="Code d’accès">'
+      + '<button class="btn btn-p" id="btn-in">Me connecter</button>'
+      + '<button class="btn btn-o" id="btn-forgot">Recevoir mon code par email</button>'
       + '<div class="state" id="log-msg" style="padding:9px 0 0"></div></div>'
-      + '<div class="card"><div class="lbl">Pas encore membre ?</div>'
-      + '<div class="comp" style="margin-top:5px">L\'analyse du jour est gratuite. Son résultat est vérifiable le lendemain dans l\'onglet Résultats.</div>'
-      + '<a class="btn btn-g" href="/#plans">Voir les offres dès 4,90€</a></div>';
+      + '<div class="card app-auth-card"><div class="lbl">Nouveau sur TousLesMatchs ?</div><div class="app-auth-title">Entre dans la bêta</div>'
+      + '<div class="app-auth-note">Laisse ton email : tu entres dans le tunnel TousLesMatchs/Brevo et tu reçois un code d’accès gratuit pour tester l’app.</div>'
+      + '<input id="lead-mail" type="email" inputmode="email" autocomplete="email" placeholder="Ton email">'
+      + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
+      + '<button class="btn btn-g" id="btn-lead">Recevoir mon accès gratuit</button>'
+      + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
+      + '<a class="btn btn-o" href="/#plans">Voir les abonnements</a></div></div>';
 
     $("btn-in").addEventListener("click", function () {
-      var email = $("in-mail").value.trim(), code = $("in-code").value.trim();
+      var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
       var msg = $("log-msg");
       if (!email || !code) { msg.textContent = "Renseigne ton email et ton code."; return; }
       msg.textContent = "Vérification…";
-      fetch("/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email, code: code })
-      }).then(function (r) { return r.json(); }).then(function (d) {
-        if (d && d.ok) {
-          try {
-            if (d.token) localStorage.setItem("tlm_token", d.token);
-            localStorage.setItem("tlm_plan", d.plan || d.status || "premium");
-          } catch (e) {}
-          renderChip(); loaded.pick = false; renderMe(); show("pick");
-        } else {
-          msg.textContent = (d && d.error) || "Code invalide ou expiré.";
-        }
-      }).catch(function () { msg.textContent = "Connexion impossible. Réessaie."; });
+      fetch("/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, code: code, login: true }) })
+        .then(function (r) { return r.json(); }).then(function (d) {
+          if (d && (d.valid || d.ok)) {
+            try {
+              localStorage.setItem("tlm_email", email);
+              localStorage.setItem("tlm_code", code.toUpperCase());
+              if (d.session_token) localStorage.setItem("tlm_session", d.session_token);
+              if (d.session_token) localStorage.setItem("tlm_token", d.session_token);
+              else if (d.token) localStorage.setItem("tlm_token", d.token);
+              else localStorage.setItem("tlm_token", "code:" + code.toUpperCase());
+              localStorage.setItem("tlm_plan", d.plan || d.status || "free");
+            } catch (e) {}
+            msg.textContent = "Connexion réussie.";
+            renderChip(); loaded.pick = false; renderMe(); show("pick");
+          } else msg.textContent = (d && d.error) || "Code invalide ou expiré.";
+        }).catch(function () { msg.textContent = "Connexion impossible. Réessaie."; });
+    });
+
+    $("btn-forgot").addEventListener("click", function () {
+      var email = $("in-mail").value.trim().toLowerCase();
+      var msg = $("log-msg");
+      if (!email) { msg.textContent = "Entre ton email d’abonnement."; return; }
+      msg.textContent = "Envoi du code…";
+      fetch("/forgot-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email }) })
+        .then(function(){ msg.textContent = "Si un compte existe, le code vient d’être envoyé par email."; })
+        .catch(function(){ msg.textContent = "Envoi impossible. Réessaie."; });
+    });
+
+    $("btn-lead").addEventListener("click", function () {
+      var email = $("lead-mail").value.trim().toLowerCase();
+      var adult = $("lead-adult").checked;
+      var msg = $("lead-msg");
+      if (!email || email.indexOf("@") < 0) { msg.textContent = "Entre une adresse email valide."; return; }
+      if (!adult) { msg.textContent = "Confirmation +18 requise."; return; }
+      msg.textContent = "Création de ton accès…";
+      fetch("/api/app-access/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, adultConfirmed: true, marketingConsent: true, source: "android_app" }) })
+        .then(function(r){ return r.json(); }).then(function(d){
+          if (d && d.ok) msg.textContent = "Email envoyé. Ouvre ta boîte mail : ton code d’accès arrive.";
+          else msg.textContent = (d && d.error) || "Impossible de créer l’accès maintenant.";
+        }).catch(function(){ msg.textContent = "Connexion impossible. Réessaie."; });
     });
   }
 
@@ -584,7 +622,7 @@
 
   renderChip();
   var t = new URLSearchParams(location.search).get("tab");
-  show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : "pick");
+  show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : (token() ? "pick" : "me"));
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", function () {

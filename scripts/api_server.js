@@ -8462,6 +8462,49 @@ app.post("/subscribe-email", async (req, res) => {
   }
 });
 
+async function handleAppAccessStart(req, res) {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ ok: false, error: "Email invalide" });
+  if (req.body?.adultConfirmed !== true) return res.json({ ok: false, error: "Confirmation +18 requise" });
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const makeCode = () => Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  let accessCode = null, plan = "free", created = false;
+  try {
+    const leadsData = loadLeads();
+    const nowIso = new Date().toISOString();
+    const existingLead = leadsData.leads.find(l => String(l.email).toLowerCase() === email);
+    const lead = { email, created_at: nowIso, updated_at: nowIso, lang: "fr", contact_lang: "FR", country: "unknown", age_range: "+18", source: String(req.body?.source || "android_app").slice(0, 64), landing_page: "/app.html", utm: { source: "android_app", medium: "apk", campaign: "app_onboarding" } };
+    if (existingLead) Object.assign(existingLead, lead, { created_at: existingLead.created_at || lead.created_at });
+    else leadsData.leads.push(lead);
+    saveLeads(leadsData);
+    const cdbw = new Database(CODES_DB_PATH);
+    const existing = cdbw.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1").get(email);
+    if (existing) { accessCode = existing.code; plan = existing.plan || "free"; }
+    else {
+      accessCode = makeCode(); created = true;
+      cdbw.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))")
+        .run(accessCode, email, plan, expiresAt, defaultCreditsMaxForPlan(plan), getTodayStr());
+    }
+    cdbw.close();
+    brevoAddContact(email, "APP_ANDROID_LEAD", "FR", true, { PLAN: plan.toUpperCase(), SOURCE: "android_app", APP_ACCESS_CREATED: created ? "YES" : "NO", APP_ACCESS_DATE: new Date().toISOString().slice(0, 10) }).catch(() => {});
+    scheduleNurturingEmails(email);
+    if (BREVO_API_KEY) {
+      const html = "<div style=\"font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden\">" +
+        "<div style=\"background:linear-gradient(135deg,#4f46e5,#06b6d4);padding:30px;text-align:center\"><div style=\"font-size:24px;font-weight:900;color:#fff\">Ton accès TousLesMatchs</div><div style=\"font-size:13px;color:rgba(255,255,255,.75);margin-top:5px\">Application Android bêta · Football uniquement</div></div>" +
+        "<div style=\"padding:28px\"><p style=\"color:#a8aec8;line-height:1.7\">Voici ton code d’accès pour l’application :</p><div style=\"font-family:monospace;font-size:28px;font-weight:900;letter-spacing:.12em;text-align:center;background:#0d1020;border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:18px;color:#22d3ee\">" + accessCode + "</div><p style=\"font-size:13px;color:#a8aec8;line-height:1.7;margin-top:18px\">Ouvre l’app TousLesMatchs, entre ton email et ce code. Ce code est personnel.</p><p style=\"font-size:12px;color:#7b82a0\">18+ · Jeu responsable · Aucun gain garanti.</p></div></div>";
+      brevoSendEmail(email, "Ton code d’accès application TousLesMatchs", html, { critical: true }).catch(e => console.error("[app-access] email:", e.message));
+    }
+    console.log("[app-access] " + (created ? "code cree" : "code existant") + " pour " + email + " plan=" + plan);
+    return res.json({ ok: true, status: created ? "created" : "existing", plan });
+  } catch (e) {
+    console.error("[app-access]", e.message);
+    return res.json({ ok: false, error: "Erreur serveur" });
+  }
+}
+
+app.post("/api/app-access/start", handleAppAccessStart);
+app.post("/app-access/start", handleAppAccessStart);
 function scheduleNurturingEmails(email) {
   const now = new Date();
   const j1 = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
@@ -15675,3 +15718,4 @@ module.exports.__liveContractTest = {
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
 };
+
