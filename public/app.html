@@ -89,6 +89,25 @@
   .tab{flex:0 0 auto;padding:7px 14px;border-radius:999px;border:1px solid var(--b2);background:transparent;color:var(--muted);font-size:12.5px;font-weight:700}
   .tab.on{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-color:transparent}
 
+  .signal-alert-cta{position:relative;margin-top:13px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(34,211,238,.38);background:rgba(34,211,238,.10);color:#eaf7ff;border-radius:13px;padding:11px 12px;font-weight:950;font-size:12px;box-shadow:0 10px 30px rgba(34,211,238,.10)}
+  .signal-alert-cta.on{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.13);color:#dfffee}
+  .bookmakers{margin-top:13px;padding-top:12px;border-top:1px solid var(--b1)}
+  .bookmakers-title{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted2);font-weight:850;margin-bottom:8px}
+  .bookmaker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .bookmaker-btn{display:flex;align-items:center;justify-content:center;min-height:38px;border-radius:12px;font-size:12px;font-weight:950;border:1px solid rgba(255,255,255,.14);color:#fff;text-decoration:none;box-shadow:0 10px 22px rgba(0,0,0,.22)}
+  .bookmaker-btn.winamax{background:linear-gradient(135deg,#de1f2f,#8f1019)}
+  .bookmaker-btn.unibet{background:linear-gradient(135deg,#15a34a,#067a33)}
+  .bookmaker-btn.pmu{background:linear-gradient(135deg,#0f766e,#064e3b)}
+  .bookmaker-note{margin-top:8px;color:var(--muted2);font-size:10.5px;line-height:1.35}
+  .signal-popup{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(2,6,23,.72);backdrop-filter:blur(10px)}
+  .signal-popup.on{display:flex;animation:fade .18s ease}
+  .signal-popup-card{width:min(360px,100%);border:1px solid rgba(34,211,238,.35);border-radius:24px;background:linear-gradient(160deg,rgba(16,22,45,.98),rgba(9,12,26,.98));box-shadow:0 25px 80px rgba(34,211,238,.22);padding:18px}
+  .signal-popup-badge{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(52,211,153,.42);background:rgba(52,211,153,.12);color:#dfffee;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+  .signal-popup-title{font-size:24px;font-weight:1000;letter-spacing:-.05em;margin:12px 0 4px}
+  .signal-popup-text{color:#dbe4ff;font-size:13px;line-height:1.5;margin:0 0 8px}
+  .signal-popup-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .signal-popup-actions .btn{margin-top:0;padding:12px;font-size:13px}
+
   .item{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--b1)}
   .item:last-child{border-bottom:none}
   .item .mid{flex:1;min-width:0}
@@ -154,6 +173,7 @@
     <div class="goal05-kicker">Goal +0,5 · Football uniquement</div>
     <div class="goal05-title">L'équipe forte doit marquer.</div>
     <p class="goal05-copy">Analyse historique, enjeu réel, forme récente et cote ANJ. Aucun signal client si un critère dur manque.</p>
+    <button class="signal-alert-cta" id="signal-alert-toggle" type="button">🔔 Activer popup + son quand un pari est prêt</button>
     <div class="goal05-mini">
       <div><b>✓</b> Force 3-5 saisons</div>
       <div><b>✓</b> Top vs bas tableau</div>
@@ -203,6 +223,20 @@
     <p class="sub">Connecte-toi avec l'email et le code reçus après paiement.</p>
     <div id="me-box"></div>
   </section>
+
+
+  <div id="tlm-signal-popup" class="signal-popup" aria-hidden="true">
+    <div class="signal-popup-card" role="dialog" aria-modal="true" aria-label="Signal disponible">
+      <div class="signal-popup-badge">🟢 Signal prêt</div>
+      <div class="signal-popup-title" id="signal-popup-title">Pari à jouer</div>
+      <p class="signal-popup-text" id="signal-popup-text">Une sélection validée vient d’être détectée.</p>
+      <div id="signal-popup-bookmakers"></div>
+      <div class="signal-popup-actions">
+        <button class="btn btn-p" type="button" id="signal-popup-open">Voir</button>
+        <button class="btn btn-o" type="button" id="signal-popup-close">Fermer</button>
+      </div>
+    </div>
+  </div>
 </main>
 
 <nav>
@@ -278,6 +312,88 @@
   }
 
   // ── Analyse du jour ───────────────────────────────────────────────────────
+
+
+  var BOOKMAKERS = [
+    { name: "Winamax", cls: "winamax", url: "https://www.winamax.fr/parrain?code=77953728" },
+    { name: "Unibet", cls: "unibet", url: "https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" },
+    { name: "PMU", cls: "pmu", url: "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" }
+  ];
+
+  function bookmakerButtons() {
+    return '<div class="bookmakers"><div class="bookmakers-title">Ouvrir un bookmaker partenaire</div><div class="bookmaker-grid">'
+      + BOOKMAKERS.map(function (b) { return '<a class="bookmaker-btn ' + b.cls + '" href="' + b.url + '" target="_blank" rel="noopener sponsored">' + esc(b.name) + '</a>'; }).join('')
+      + '</div><div class="bookmaker-note">18+ · Jouer comporte des risques. Liens partenaires/affiliation TousLesMatchs.</div></div>';
+  }
+
+  function signalKey(p) {
+    return [p.id || p.fixture_id || '', p.home || (p.teamA && p.teamA.name) || '', p.away || (p.teamB && p.teamB.name) || '', p.bet || p.best_bet || '', p.time || ''].join('|');
+  }
+
+  function updateAlertToggle() {
+    var btn = $('signal-alert-toggle');
+    if (!btn) return;
+    var on = false;
+    try { on = localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
+    btn.classList.toggle('on', on);
+    btn.textContent = on ? '🔔 Alertes popup + son activées' : '🔔 Activer popup + son quand un pari est prêt';
+  }
+
+  function enableSignalAlerts() {
+    try { localStorage.setItem('tlm_signal_alerts', '1'); } catch (e) {}
+    updateAlertToggle();
+    playSignalTone(true);
+  }
+
+  function playSignalTone(force) {
+    var enabled = force;
+    try { enabled = enabled || localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
+    if (!enabled) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var gain = ctx.createGain();
+      var osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    } catch (e) {}
+  }
+
+  function showSignalPopup(p) {
+    var key = signalKey(p);
+    try {
+      if (localStorage.getItem('tlm_last_signal_popup') === key) return;
+      localStorage.setItem('tlm_last_signal_popup', key);
+    } catch (e) {}
+    var pop = $('tlm-signal-popup');
+    if (!pop) return;
+    var a = (p.teamA && p.teamA.name) || p.home || 'Match';
+    var b = (p.teamB && p.teamB.name) || p.away || '';
+    $('signal-popup-title').textContent = 'Pari prêt : ' + a + (b ? ' — ' + b : '');
+    $('signal-popup-text').textContent = (p.bet || p.best_bet || 'Sélection validée') + (p.cote ? ' · cote @' + p.cote : '') + (p.competition ? ' · ' + p.competition : '');
+    $('signal-popup-bookmakers').innerHTML = bookmakerButtons();
+    pop.classList.add('on');
+    pop.setAttribute('aria-hidden', 'false');
+    playSignalTone(false);
+  }
+
+  function closeSignalPopup() {
+    var pop = $('tlm-signal-popup');
+    if (!pop) return;
+    pop.classList.remove('on');
+    pop.setAttribute('aria-hidden', 'true');
+  }
+
+  window.enableSignalAlerts = enableSignalAlerts;
+
   function loadPick() {
     get("/current-pick").then(flagOffline).then(function (d) {
       var box = $("pick-box");
@@ -306,8 +422,9 @@
               + '<a class="btn btn-o" href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener">Rejoindre le canal gratuit</a>'
             : '<div class="lbl">Sélection du Concile</div><div class="val">' + esc(p.bet || p.best_bet || "—") + '</div>'
               + (p.cote ? '<div class="lbl" style="margin-top:9px">Cote</div><div class="val c-cyan">@' + esc(p.cote) + '</div>' : '')
-              + (p.raison ? '<div class="comp" style="margin-top:9px">' + esc(p.raison) + '</div>' : ''))
+              + (p.raison ? '<div class="comp" style="margin-top:9px">' + esc(p.raison) + '</div>' : '') + bookmakerButtons())
         + '</div></div>';
+      if (!locked) showSignalPopup(p);
     });
   }
 
@@ -410,6 +527,7 @@
       $("btn-out").addEventListener("click", function () {
         try { localStorage.removeItem("tlm_token"); localStorage.removeItem("tlm_plan"); } catch (e) {}
         renderChip(); renderMe();
+
       });
       return;
     }
@@ -446,6 +564,14 @@
   }
 
   // ── Démarrage ─────────────────────────────────────────────────────────────
+  var alertToggle = $('signal-alert-toggle');
+  if (alertToggle) alertToggle.addEventListener('click', enableSignalAlerts);
+  var popupClose = $('signal-popup-close');
+  if (popupClose) popupClose.addEventListener('click', closeSignalPopup);
+  var popupOpen = $('signal-popup-open');
+  if (popupOpen) popupOpen.addEventListener('click', function () { closeSignalPopup(); show('pick'); });
+  updateAlertToggle();
+
   renderChip();
   var t = new URLSearchParams(location.search).get("tab");
   show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : "pick");
