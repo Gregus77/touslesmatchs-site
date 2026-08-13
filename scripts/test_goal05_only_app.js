@@ -19,7 +19,7 @@ for (const forbidden of ['Aucun autre pari','Aucun signal +0,5 validé maintenan
   assert(!app.includes(forbidden), 'Texte/comportement interdit dans l’app: '+forbidden);
 }
 assert(android.includes('app=goal05'), 'APK ne charge pas le mode goal05');
-assert(android.includes('20260813_goal05_only'), 'APK sans version anti-cache');
+assert(android.includes('20260814_goal05_palmeiras_ui'), 'APK sans version anti-cache');
 assert(android.includes('LOAD_NO_CACHE'), 'WebView cache non désactivé');
 assert(android.includes('clearCache(true)'), 'WebView ne vide pas le cache');
 console.log('goal05_only_app: OK');
