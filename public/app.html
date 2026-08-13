@@ -216,21 +216,15 @@
 
   <!-- â•â• EN DIRECT â•â• -->
   <section id="s-live">
-    <h2>En direct</h2>
-    <p class="sub">Matchs en cours suivis par le Conseil.</p>
+    <h2>Surveillance live</h2>
+    <p class="sub">Matchs de football surveillés pour un éventuel signal +0,5.</p>
     <div id="live-box"><div class="state">Chargement…</div></div>
   </section>
 
   <!-- â•â• PERFORMANCES â•â• -->
   <section id="s-perf">
-    <h2>Performances</h2>
-    <p class="sub">Résultats réels, gagnés comme perdus. Mise simulée de 10 €.</p>
-    <div class="tabs" id="perf-tabs">
-      <button class="tab on" data-t="all">Tous</button>
-      <button class="tab" data-t="standard">🟢 Standard</button>
-      <button class="tab" data-t="premium">🟣 Premium</button>
-      <button class="tab" data-t="elite">🟠 Elite</button>
-    </div>
+    <h2>Résultats +0,5</h2>
+    <p class="sub">Historique réservé aux signaux +0,5 réellement envoyés. Les gagnés comme les perdus resteront visibles.</p>
     <div class="kpis" id="perf-kpis"></div>
     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
   </section>
@@ -301,9 +295,9 @@
 
   function renderChip() {
     var c = $("chip"), p = plan();
-    var label = { standard: "🟢 Standard", premium: "🟣 Premium", vip: "🟠 Elite", elite: "🟠 Elite", admin: "ðŸ‘‘ Admin" }[p];
-    c.textContent = label || "Invité";
-    c.className = "plan-chip" + (isPaid() ? " paid" : "");
+    var connected = !!token();
+    c.textContent = connected ? "+0,5" : "Invité";
+    c.className = "plan-chip" + (connected ? " paid" : "");
   }
 
   // â”€â”€ Onglets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -451,12 +445,7 @@
           + '<div class="m">' + esc(m.competition || m.sport || "") + (m.minute ? ' · ' + esc(m.minute) + "'" : '') + '</div>'
           + '</div><span class="badge b-live">' + esc(sh) + '-' + esc(sa) + '</span></div>';
       });
-      html += '</div>';
-      if (!isPaid()) {
-        html += '<div class="card"><div class="lbl">Analyses en direct</div>'
-          + '<div class="comp" style="margin-top:5px">Les membres reçoivent la sélection du Concile sur ces matchs, en temps réel.</div>'
-          + '<a class="btn btn-g" href="/#plans">Voir les offres</a></div>';
-      }
+      html += '</div>';
       box.innerHTML = html;
     });
   }
@@ -550,7 +539,7 @@
       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
       + '<button class="btn btn-g" id="btn-lead">Recevoir mon accès gratuit</button>'
       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
-      + '<a class="btn btn-o" href="/#plans">Voir les abonnements</a></div></div>';
+      + '<div class="app-auth-note">Tu recevras ton code par email, puis les signaux +0,5 arriveront dans l’app et sur Telegram.</div></div></div>';
 
     $("btn-in").addEventListener("click", function () {
       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
