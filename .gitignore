@@ -24,3 +24,6 @@ site/index.html
 *.backup
 *.backup-*
 public/data/*.backup*
+secrets/
+android-native/app/google-services.json
+.tlm-apk-release.keystore

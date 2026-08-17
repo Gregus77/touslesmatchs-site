@@ -118,11 +118,14 @@ services:
       - TESTER_GRANT_EMAIL=${TESTER_GRANT_EMAIL}
       - TESTER_GRANT_EXPIRES=${TESTER_GRANT_EXPIRES}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_GOAL05_INVITE_URL=${TELEGRAM_GOAL05_INVITE_URL}
+      - TELEGRAM_GOAL05_CHANNEL_ID=${TELEGRAM_GOAL05_CHANNEL_ID}
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
       - TELEGRAM_STANDARD_CHANNEL_ID=${TELEGRAM_STANDARD_CHANNEL_ID}
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
       - TELEGRAM_ELITE_CHANNEL_ID=${TELEGRAM_ELITE_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
       - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID}
       - SHOW_TELEGRAM_MEMBER_COUNT=${SHOW_TELEGRAM_MEMBER_COUNT}
       # Bot email Hermes (hermes@touslesmatchs.com) — voir scripts/hermes_mail_bot.js.
@@ -135,6 +138,8 @@ services:
       - HERMES_MAIL_SMTP_PORT=${HERMES_MAIL_SMTP_PORT}
       - MAIL_BOT_ADMIN_TOKEN=${MAIL_BOT_ADMIN_TOKEN}
       - SITE_BASE_URL=${SITE_BASE_URL}
+      - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/tlm-firebase-admin.json
+      - GOAL05_PUSH_INTERVAL_MIN=${GOAL05_PUSH_INTERVAL_MIN:-5}
     volumes:
       # Bind-mount sur le disque hôte : la base survit à `docker compose down -v`,
       # `docker volume rm` et `docker system prune --volumes`. NE JAMAIS remettre
@@ -143,6 +148,7 @@ services:
       - /opt/touslesmatchs/data/picks:/picks
       - /opt/touslesmatchs/data/var:/var/touslesmatchs
       - /opt/touslesmatchs/shared:/shared:ro
+      - /opt/touslesmatchs/secrets/firebase-admin.json:/run/secrets/tlm-firebase-admin.json:ro
     networks:
       - web
     ports:
@@ -167,9 +173,12 @@ services:
       # ID exact du modèle GPT-5 exposé par ton compte OpenAI (défaut "gpt-5")
       - OPENAI_MODEL_GPT5=${OPENAI_MODEL_GPT5:-gpt-5}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_GOAL05_INVITE_URL=${TELEGRAM_GOAL05_INVITE_URL}
+      - TELEGRAM_GOAL05_CHANNEL_ID=${TELEGRAM_GOAL05_CHANNEL_ID}
       - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
       - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
       # Accès en lecture aux vraies stats agents (populées par l'API JS).
       # Sans ce mount, get_agent_accuracy() renvoie 0 → filtre inopérant.
       - API_STATS_DB=/shared_api/tlm.db
@@ -197,6 +206,7 @@ services:
     environment:
       - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT}
       - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - API_FOOTBALL_KEY=${API_FOOTBALL_KEY}

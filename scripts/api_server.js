@@ -21,6 +21,7 @@ const crypto = require("crypto");
 // Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
+const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons } = require("./bookmakers.config");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
@@ -131,7 +132,7 @@ ${bodyHtml}
   }
   function renderIndex(items) {
     const title = "Pronostics football & sports — Analyses IA | TousLesMatchs";
-    const description = "Tous les pronostics du Conseil IA : analyses de matchs football, basket et hockey. Verdict de 5 intelligences artificielles, confiance et historique public.";
+    const description = "Tous les pronostics du Conseil IA : analyses de matchs de football. Verdict de 5 intelligences artificielles, confiance et historique public.";
     const canonical = `${SITE}/pronostics`;
     const schema = { "@context": "https://schema.org", "@type": "CollectionPage", name: title, description, url: canonical };
     const rows = (items || []).map(it => {
@@ -156,7 +157,18 @@ ${urls.map(u => `  <url><loc>${u}</loc></url>`).join("\n")}
   return { slugify, matchSlug, renderDetail, renderIndex, renderSitemap };
 })();
 
+const firebaseAdmin = require("firebase-admin");
+
 const app = express();
+/* TLM support fallback - registered before application routes */
+app.all(['/chatbot','/api/chatbot','/api/tlm-assistant-fallback'], (req,res)=>{
+  res.json({
+    ok:true,
+    mode:'local_fallback',
+    reply:"Support TousLesMatchs disponible. Le moteur IA complet est temporairement limite. Pour une question d'acces, abonnement ou Telegram, indique ton email."
+  });
+});
+
 // IMPORTANT : le webhook Stripe a besoin du corps BRUT (Buffer) pour vérifier
 // la signature. On exclut donc /stripe/webhook du parser JSON global, sinon
 // constructEvent échoue → le client paie mais ne reçoit jamais son code/email.
@@ -282,6 +294,23 @@ app.use((req, res, next) => {
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
+const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
+
+function readGoal05LatestSignal() {
+  try {
+    if (!fs.existsSync(GOAL05_LATEST_SIGNAL_FILE)) return { ok: true, signal: null, reason: "no_signal" };
+    const signal = JSON.parse(fs.readFileSync(GOAL05_LATEST_SIGNAL_FILE, "utf8"));
+    const sentAt = signal && signal.sentAt ? Date.parse(signal.sentAt) : 0;
+    if (!sentAt || Date.now() - sentAt > GOAL05_LATEST_MAX_AGE_MS) {
+      return { ok: true, signal: null, reason: "expired", lastSignal: signal || null };
+    }
+    return { ok: true, signal };
+  } catch (e) {
+    console.error("[goal05-latest]", e.message);
+    return { ok: false, signal: null, error: "lecture_signal_goal05_impossible" };
+  }
+}
 
 // ── Anti-perte de données : snapshot automatique au démarrage ─────────────────
 // À CHAQUE boot, avant toute migration/DELETE, on copie la base dans /data/snapshots.
@@ -443,6 +472,15 @@ db.exec(`
   );
 `);
 
+// Beta privee +0,5 : capacite reelle, liste d attente et aucune diffusion automatique.
+db.exec(`CREATE TABLE IF NOT EXISTS beta_plus05_applications (
+  email TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK(status IN ('accepted','waitlist')),
+  adult_confirmed INTEGER NOT NULL DEFAULT 0,
+  legal_accepted INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);`);
 // Connexion biométrique (Face ID / empreinte) — un credential WebAuthn par
 // appareil, rattaché au couple email/code deja valide cote codes.db. Permet
 // de re-injecter email+code dans le localStorage apres verif biometrique,
@@ -972,6 +1010,7 @@ const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "
 // que le canal dédié soit créé. Le CODE applique les conditions par palier (voir plus bas).
 const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _standardSignalDaily = { date: "", count: 0 };
@@ -980,7 +1019,7 @@ const _eliteSignalDaily = { date: "", count: 0 };
 // Plafonds journaliers par palier (conditions données par le fondateur)
 const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL 1.30-2.50
 const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote 1.30-2.50 (inclut Standard)
-const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar multisport : + hockey/baseball/basket ≥ 82 (inclut Premium)
+const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar football élargi : conf ≥ 82 (inclut Premium)
 // Seuils volontairement décroissants : un palier supérieur est PLUS LARGE, donc reçoit
 // davantage. L'inverse (Standard ≥ 88 et Premium ≥ 90) rendait les deux paliers
 // identiques, puisque « ≥ 88 » contient déjà tout « ≥ 90 ».
@@ -2314,6 +2353,324 @@ function httpPostStrict(url, body, headers = {}) {
     req.write(payload);
     req.end();
   });
+}
+
+
+/* TLM Goal05 strict server engine */
+const goal05LineupCache = new Map();
+const goal05EventCache = new Map();
+
+function goal05Number(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(String(v).replace("%","").replace(",","."));
+  return Number.isFinite(n) ? n : null;
+}
+
+function goal05Metric(stats, side, names) {
+  for (const name of names) {
+    const values = [
+      stats?.[name]?.[side],
+      stats?.[name + "_" + side],
+      stats?.[side]?.[name],
+      stats?.statistics?.[side]?.[name]
+    ];
+    for (const value of values) {
+      const n=goal05Number(value);
+      if (n !== null) return n;
+    }
+  }
+  return null;
+}
+
+async function fetchGoal05Lineups(match) {
+  const id=match?.fixtureId;
+  if (!API_SPORTS_KEY || !id) return null;
+  const cached=goal05LineupCache.get(String(id));
+  if (cached && Date.now()-cached.ts<5*60*1000) return cached.data;
+  try {
+    const raw=await httpGet(
+      "https://v3.football.api-sports.io/fixtures/lineups?fixture="+id,
+      {"x-apisports-key":API_SPORTS_KEY}
+    );
+    const data=Array.isArray(raw?.response) ? raw.response : null;
+    goal05LineupCache.set(String(id),{data,ts:Date.now()});
+    return data;
+  } catch(e) {
+    console.error("[goal05-lineups]",e.message);
+    return null;
+  }
+}
+
+async function fetchGoal05Discipline(match) {
+  const id=match?.fixtureId;
+  if (!API_SPORTS_KEY || !id) return null;
+  const cached=goal05EventCache.get(String(id));
+  if (cached && Date.now()-cached.ts<60000) return cached.data;
+  try {
+    const raw=await httpGet(
+      "https://v3.football.api-sports.io/fixtures/events?fixture="+id,
+      {"x-apisports-key":API_SPORTS_KEY}
+    );
+    const events=Array.isArray(raw?.response) ? raw.response : null;
+    const redCards=events ? events.filter(e =>
+      String(e?.type||"").toLowerCase()==="card" &&
+      /red/i.test(String(e?.detail||""))
+    ).length : null;
+    const data=redCards===null ? null : {redCards};
+    goal05EventCache.set(String(id),{data,ts:Date.now()});
+    return data;
+  } catch(e) {
+    console.error("[goal05-events]",e.message);
+    return null;
+  }
+}
+
+function goal05TeamOdd(oddsData, side, teamName) {
+  const books=Array.isArray(oddsData?.arjelBookmakers)
+    ? oddsData.arjelBookmakers : [];
+  const norm=v=>String(v||"").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"").toLowerCase();
+
+  const target=norm(teamName);
+  const odds=[];
+
+  for (const book of books) {
+    for (const bet of book.bets||[]) {
+      const name=norm(bet.name);
+      const correctSide =
+        name.includes(target) ||
+        (side==="home" && (/home.*team|team.*home/.test(name))) ||
+        (side==="away" && (/away.*team|team.*away/.test(name)));
+
+      if (!correctSide || !/total|goal/.test(name)) continue;
+
+      for (const value of bet.values||[]) {
+        const label=norm(value.value);
+        if (!/over\s*0[.,]5|0[.,]5.*over|\+0[.,]5/.test(label)) continue;
+        const odd=goal05Number(value.odd);
+        if (odd && odd>1) odds.push(odd);
+      }
+    }
+  }
+
+  if (!odds.length) return null;
+  odds.sort((a,b)=>a-b);
+  return Math.round(odds[Math.floor(odds.length/2)]*100)/100;
+}
+
+async function goal05History(match,targetId,opponentId) {
+  const season=Number(match.season);
+  if (!season) return {verified:false,seasons:0};
+
+  const tables=await Promise.all(
+    [1,2,3,4].map(offset=>fetchStandings(match.leagueId,season-offset))
+  );
+
+  const pairs=[];
+  for (const table of tables) {
+    const target=table?.rows?.find(r=>Number(r.teamId)===Number(targetId));
+    const opponent=table?.rows?.find(r=>Number(r.teamId)===Number(opponentId));
+    if (target && opponent) pairs.push({
+      targetRank:Number(target.rank),
+      opponentRank:Number(opponent.rank)
+    });
+  }
+
+  if (pairs.length<3) return {verified:false,seasons:pairs.length};
+
+  const targetAverage=pairs.reduce((n,r)=>n+r.targetRank,0)/pairs.length;
+  const opponentAverage=pairs.reduce((n,r)=>n+r.opponentRank,0)/pairs.length;
+
+  return {
+    verified:targetAverage+3<=opponentAverage,
+    seasons:pairs.length,
+    targetAverage:Math.round(targetAverage*10)/10,
+    opponentAverage:Math.round(opponentAverage*10)/10
+  };
+}
+
+async function buildStrictGoal05Criteria(match) {
+  const minute=Number(match.minute||0);
+  const homeScore=Number(match.score_home||0);
+  const awayScore=Number(match.score_away||0);
+
+  const rejected=reason=>({
+    eligible:false,play:false,reason,
+    historicalVerified:false,formVerified:false,
+    opponentConcedes:false,attackersAvailable:false,
+    liveStatsVerified:false,motivationVerified:false,
+    rankGap:null,liveOdd:null
+  });
+
+  if (match.sport!=="Football" || match.source!=="api-sports")
+    return rejected("source_non_eligible");
+  if (!match.homeId || !match.awayId || !match.leagueId || !match.season)
+    return rejected("identifiants_manquants");
+  if (minute<25 || minute>80)
+    return rejected("minute_hors_fenetre");
+  if (homeScore>0 && awayScore>0)
+    return rejected("les_deux_equipes_ont_deja_marque");
+
+  try {
+    const standings=await fetchStandings(match.leagueId,match.season);
+    const homeRank=standings?.rows?.find(r=>Number(r.teamId)===Number(match.homeId));
+    const awayRank=standings?.rows?.find(r=>Number(r.teamId)===Number(match.awayId));
+
+    if (!homeRank || !awayRank) return rejected("classement_non_verifie");
+
+    let side,targetId,opponentId,targetName,opponentName,targetRank,opponentRank;
+
+    if (homeScore===0 && awayScore>0) {
+      side="home"; targetId=match.homeId; opponentId=match.awayId;
+      targetName=match.home; opponentName=match.away;
+      targetRank=Number(homeRank.rank); opponentRank=Number(awayRank.rank);
+    } else if (awayScore===0 && homeScore>0) {
+      side="away"; targetId=match.awayId; opponentId=match.homeId;
+      targetName=match.away; opponentName=match.home;
+      targetRank=Number(awayRank.rank); opponentRank=Number(homeRank.rank);
+    } else {
+      const homeBetter=Number(homeRank.rank)<Number(awayRank.rank);
+      side=homeBetter?"home":"away";
+      targetId=homeBetter?match.homeId:match.awayId;
+      opponentId=homeBetter?match.awayId:match.homeId;
+      targetName=homeBetter?match.home:match.away;
+      opponentName=homeBetter?match.away:match.home;
+      targetRank=homeBetter?Number(homeRank.rank):Number(awayRank.rank);
+      opponentRank=homeBetter?Number(awayRank.rank):Number(homeRank.rank);
+    }
+
+    const rankGap=opponentRank-targetRank;
+    const minuteVerified=(minute<=65)||(minute<=80 && rankGap>=10);
+
+    const [
+      targetStats,opponentStats,injuries,liveStats,odds,
+      lineups,discipline,history
+    ]=await Promise.all([
+      fetchTeamStatistics(match.leagueId,match.season,targetId),
+      fetchTeamStatistics(match.leagueId,match.season,opponentId),
+      fetchInjuries(match),
+      fetchMatchStats(match.fixtureId),
+      fetchRealOdds(match),
+      fetchGoal05Lineups(match),
+      fetchGoal05Discipline(match),
+      goal05History(match,targetId,opponentId)
+    ]);
+
+    const targetForm=String(targetStats?.form||"").toUpperCase();
+    const wins=(targetForm.match(/W/g)||[]).length;
+    const draws=(targetForm.match(/D/g)||[]).length;
+    const formPoints=wins*3+draws;
+
+    const targetInjuries=side==="home" ? injuries?.home : injuries?.away;
+    const targetLineup=(lineups||[]).find(
+      l=>Number(l?.team?.id)===Number(targetId)
+    );
+    const forwards=(targetLineup?.startXI||[]).filter(
+      p=>String(p?.player?.pos||"").toUpperCase()==="F"
+    );
+
+    const shotsOnTarget=goal05Metric(
+      liveStats,side,["shots_on_goal","shotsOnGoal"]
+    );
+    const totalShots=goal05Metric(
+      liveStats,side,["shots","total_shots","shotsTotal"]
+    );
+    const possession=goal05Metric(
+      liveStats,side,["possession","ball_possession"]
+    );
+
+    const liveOdd=goal05TeamOdd(odds,side,targetName);
+    const historicalVerified=history.verified===true;
+    const formVerified=targetForm.length>=4 && wins>=2 && formPoints>=8 &&
+      Number(targetStats?.gfAvg||0)>=1;
+    const opponentConcedes=Number(opponentStats?.gaAvg||0)>=1.1;
+    const attackersAvailable=Array.isArray(targetInjuries) &&
+      targetInjuries.length===0 && forwards.length>=1;
+    const disciplineVerified=discipline?.redCards===0;
+    const liveStatsVerified=shotsOnTarget!==null && totalShots!==null &&
+      possession!==null && shotsOnTarget>=3 && totalShots>=8 &&
+      possession>=52 && disciplineVerified;
+    const motivationVerified=targetRank<=5 ||
+      opponentRank>=Math.max(1,Number(standings.total||0)-4);
+
+    const checks={
+      minuteVerified,
+      rankVerified:rankGap>=5,
+      historicalVerified,
+      formVerified,
+      opponentConcedes,
+      attackersAvailable,
+      liveStatsVerified,
+      motivationVerified,
+      oddVerified:liveOdd!==null && liveOdd>=1.60
+    };
+
+    const missing=Object.entries(checks)
+      .filter(([,ok])=>!ok).map(([name])=>name);
+
+    const eligible=missing.length===0;
+
+    return {
+      eligible,play:eligible,
+      team:targetName,opponent:opponentName,side,
+      reason:eligible ? "tous_les_criteres_stricts_valides" : missing.join(","),
+      rankGap,targetRank,opponentRank,
+      historicalVerified,history,
+      formVerified,targetForm,formPoints,
+      opponentConcedes,opponentGaAvg:opponentStats?.gaAvg??null,
+      attackersAvailable,forwards:forwards.map(p=>p?.player?.name).filter(Boolean),
+      liveStatsVerified,disciplineVerified,
+      shotsOnTarget,totalShots,possession,
+      motivationVerified,liveOdd,
+      checkedAt:new Date().toISOString()
+    };
+  } catch(e) {
+    console.error("[goal05-strict]",match.home,match.away,e.message);
+    return rejected("erreur_verification_stricte");
+  }
+}
+
+async function enrichStrictGoal05(matches) {
+  const candidates=matches.filter(m=>{
+    const minute=Number(m.minute||0);
+    const hs=Number(m.score_home||0),as=Number(m.score_away||0);
+    return m.sport==="Football" && m.source==="api-sports" &&
+      minute>=25 && minute<=80 && !(hs>0 && as>0);
+  });
+
+  const max=Math.max(1,Number(process.env.GOAL05_MAX_DEEP_CANDIDATES||3));
+  const selected=new Set(candidates.slice(0,max).map(m=>String(m.fixtureId||m.id)));
+
+  const enriched=await Promise.all(matches.map(async m=>{
+    const id=String(m.fixtureId||m.id);
+    if (!selected.has(id)) {
+      return {...m,goal05Criteria:{
+        eligible:false,play:false,reason:"hors_selection_profonde"
+      }};
+    }
+    return {...m,goal05Criteria:await buildStrictGoal05Criteria(m)};
+  }));
+
+  await publishStrictGoal05Signals(enriched);
+  return enriched;
+}
+
+
+
+let goal05PushObserverRunning = false;
+
+async function runGoal05PushObserver() {
+  if (goal05PushObserverRunning) return;
+  goal05PushObserverRunning = true;
+
+  try {
+    const matches = await fetchLiveMatches();
+    await enrichStrictGoal05(Array.isArray(matches) ? matches : []);
+  } catch (error) {
+    console.error("[fcm] observateur goal05:", error.message);
+  } finally {
+    goal05PushObserverRunning = false;
+  }
 }
 
 // ── Live matches — football-data.org (gratuit, couvre Coupe du Monde) ─────────
@@ -5540,7 +5897,7 @@ Réponds en JSON pur (pas de markdown):
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
       //   🟢 Standard (4.90€)  : conf ≥ 88, foot, cote réelle ARJEL 1.30-2.50 — max 3/j
       //   🟣 Premium  (14.90€) : conf ≥ 85, foot, cote réelle ARJEL 1.30-2.50 — max 10/j (inclut Standard)
-      //   🟠 Elite    (29.90€) : conf ≥ 82, foot/hockey/baseball/basket, cote réelle ARJEL 1.30-2.50 — max 30/j (inclut Premium)
+      //   🟠 Elite    (29.90€) : conf ≥ 82, football uniquement, cote réelle ANJ 1.30-2.50 — max 30/j (inclut Premium)
       //   Modèle imbriqué : un palier supérieur reçoit toujours au moins ce que reçoit l'inférieur.
       //   « Cote réelle » = vraie cote bookmaker (jamais l'estimation). Repli auto sur Premium
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
@@ -8316,6 +8673,54 @@ function normalizeContactLang(lang = "", country = "") {
 }
 
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
+app.get("/goal05/latest", (req, res) => {
+  res.json(readGoal05LatestSignal());
+});
+app.get("/api/goal05/latest", (req, res) => {
+  res.json(readGoal05LatestSignal());
+});
+app.get("/beta-plus05/status", (req, res) => {
+  const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+});
+app.post("/beta-plus05/apply", (req, res) => {
+  const email = normalizeBetaEmail(req.body?.email);
+  const adultConfirmed = req.body?.adultConfirmed === true;
+  const legalAccepted = req.body?.legalAccepted === true;
+  if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok:false, error:"Email invalide" });
+  const decision = db.transaction(() => {
+    const existing = db.prepare("SELECT status FROM beta_plus05_applications WHERE email=?").get(email);
+    const acceptedCount = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+    const next = decideBetaApplication({ existingStatus:existing?.status, acceptedCount, adultConfirmed, legalAccepted });
+    if (next.status === "rejected" || existing) return next;
+    db.prepare("INSERT INTO beta_plus05_applications (email,status,adult_confirmed,legal_accepted) VALUES (?,?,?,?)").run(email,next.status,adultConfirmed?1:0,legalAccepted?1:0);
+    return next;
+  })();
+  if (decision.status === "rejected") return res.status(400).json({ ok:false, error:"Confirmation +18 et mentions legales requise" });
+  let inviteEmailQueued = false;
+  if (decision.status === "accepted" && decision.reason === "slot_reserved" && TELEGRAM_GOAL05_INVITE_URL) {
+    const invite = buildBetaPlus05InvitationEmail(TELEGRAM_GOAL05_INVITE_URL);
+    inviteEmailQueued = true;
+    brevoSendEmail(email, invite.subject, invite.html, { critical:true })
+      .then(() => console.log(`[beta-plus05] invitation Telegram envoyee a ${email}`))
+      .catch((e) => console.error(`[beta-plus05] email invitation KO ${email}:`, e.message));
+  }
+  const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+  res.json({ ok:true, status:decision.status, inviteEmailQueued, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+});
+app.get("/admin/beta-plus05/applications", (req, res) => {
+  const { email, code, secret, format } = req.query || {};
+  const ok = isAdminAccess(email, code) || (secret && secret === process.env.HERMES_ADMIN_TLM_BOT);
+  if (!ok) return res.status(403).json({ ok:false, error:"Acces admin requis" });
+  const rows = db.prepare("SELECT email,status,adult_confirmed,legal_accepted,created_at FROM beta_plus05_applications ORDER BY created_at DESC").all();
+  if (String(format || "").toLowerCase() === "csv") {
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=beta-plus05-inscrits.csv");
+    return res.send(formatBetaApplicationsCsv(rows));
+  }
+  const accepted = rows.filter((row) => row.status === "accepted").length;
+  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted), applications:rows });
+});
 app.post("/subscribe-email", async (req, res) => {
   const { email, lang, ageRange, source, referrer, landingPage, utm } = req.body || {};
   if (!email || !email.includes("@")) {
@@ -8409,6 +8814,49 @@ app.post("/subscribe-email", async (req, res) => {
   }
 });
 
+async function handleAppAccessStart(req, res) {
+  const email = String(req.body?.email || "").trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ ok: false, error: "Email invalide" });
+  if (req.body?.adultConfirmed !== true) return res.json({ ok: false, error: "Confirmation +18 requise" });
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const makeCode = () => Array.from({ length: 8 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  let accessCode = null, plan = "free", created = false;
+  try {
+    const leadsData = loadLeads();
+    const nowIso = new Date().toISOString();
+    const existingLead = leadsData.leads.find(l => String(l.email).toLowerCase() === email);
+    const lead = { email, created_at: nowIso, updated_at: nowIso, lang: "fr", contact_lang: "FR", country: "unknown", age_range: "+18", source: String(req.body?.source || "android_app").slice(0, 64), landing_page: "/app.html", utm: { source: "android_app", medium: "apk", campaign: "app_onboarding" } };
+    if (existingLead) Object.assign(existingLead, lead, { created_at: existingLead.created_at || lead.created_at });
+    else leadsData.leads.push(lead);
+    saveLeads(leadsData);
+    const cdbw = new Database(CODES_DB_PATH);
+    const existing = cdbw.prepare("SELECT code, plan FROM codes WHERE email = ? AND active = 1 ORDER BY rowid DESC LIMIT 1").get(email);
+    if (existing) { accessCode = existing.code; plan = existing.plan || "free"; }
+    else {
+      accessCode = makeCode(); created = true;
+      cdbw.prepare("INSERT INTO codes (code, email, plan, active, expires_at, credits_max, credits_used, credits_date, created_at) VALUES (?,?,?,1,?,?,0,?,datetime('now'))")
+        .run(accessCode, email, plan, expiresAt, defaultCreditsMaxForPlan(plan), getTodayStr());
+    }
+    cdbw.close();
+    brevoAddContact(email, "APP_ANDROID_LEAD", "FR", true, { PLAN: plan.toUpperCase(), SOURCE: "android_app", APP_ACCESS_CREATED: created ? "YES" : "NO", APP_ACCESS_DATE: new Date().toISOString().slice(0, 10) }).catch(() => {});
+    scheduleNurturingEmails(email);
+    if (BREVO_API_KEY) {
+      const html = "<div style=\"font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden\">" +
+        "<div style=\"background:linear-gradient(135deg,#4f46e5,#06b6d4);padding:30px;text-align:center\"><div style=\"font-size:24px;font-weight:900;color:#fff\">Ton accès TousLesMatchs</div><div style=\"font-size:13px;color:rgba(255,255,255,.75);margin-top:5px\">Application Android bêta · Football uniquement</div></div>" +
+        "<div style=\"padding:28px\"><p style=\"color:#a8aec8;line-height:1.7\">Voici ton code d’accès pour l’application :</p><div style=\"font-family:monospace;font-size:28px;font-weight:900;letter-spacing:.12em;text-align:center;background:#0d1020;border:1px solid rgba(34,211,238,.25);border-radius:12px;padding:18px;color:#22d3ee\">" + accessCode + "</div><p style=\"font-size:13px;color:#a8aec8;line-height:1.7;margin-top:18px\">Ouvre l’app TousLesMatchs, entre ton email et ce code. Ce code est personnel.</p><p style=\"font-size:12px;color:#7b82a0\">18+ · Jeu responsable · Aucun gain garanti.</p></div></div>";
+      brevoSendEmail(email, "Ton code d’accès application TousLesMatchs", html, { critical: true }).catch(e => console.error("[app-access] email:", e.message));
+    }
+    console.log("[app-access] " + (created ? "code cree" : "code existant") + " pour " + email + " plan=" + plan);
+    return res.json({ ok: true, status: created ? "created" : "existing", plan });
+  } catch (e) {
+    console.error("[app-access]", e.message);
+    return res.json({ ok: false, error: "Erreur serveur" });
+  }
+}
+
+app.post("/api/app-access/start", handleAppAccessStart);
+app.post("/app-access/start", handleAppAccessStart);
 function scheduleNurturingEmails(email) {
   const now = new Date();
   const j1 = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
@@ -8425,9 +8873,9 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Multisport", "Alertes prioritaires"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Radar football Elite", "Alertes prioritaires"] },
     { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Foot, basket, hockey", "Confiance ≥ 75%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Football uniquement", "Confiance ≥ 75%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -9086,6 +9534,255 @@ app.post("/forgot-code", async (req, res) => {
 
 // ── Verify code (reads codes.db directly) ────────────────────────────────────
 const CODES_DB_PATH = process.env.CODES_DB_PATH || "/data/codes.db";
+
+/* TLM FIREBASE FCM SERVER */
+let tlmFirebaseMessaging = null;
+
+try {
+  if (!firebaseAdmin.apps.length) {
+    firebaseAdmin.initializeApp({
+      credential: firebaseAdmin.credential.applicationDefault()
+    });
+  }
+  tlmFirebaseMessaging = firebaseAdmin.messaging();
+  console.log("[fcm] Firebase Admin initialise");
+} catch (error) {
+  console.error("[fcm] initialisation:", error.message);
+}
+
+db.exec(
+  "CREATE TABLE IF NOT EXISTS fcm_devices (" +
+  "token TEXT PRIMARY KEY," +
+  "email TEXT NOT NULL," +
+  "session_token TEXT NOT NULL," +
+  "platform TEXT DEFAULT 'android'," +
+  "enabled INTEGER DEFAULT 1," +
+  "updated_at TEXT DEFAULT CURRENT_TIMESTAMP" +
+  ");" +
+  "CREATE INDEX IF NOT EXISTS idx_fcm_devices_email ON fcm_devices(email);" +
+  "CREATE TABLE IF NOT EXISTS fcm_notifications (" +
+  "signal_key TEXT PRIMARY KEY," +
+  "fixture_id TEXT," +
+  "team TEXT," +
+  "sent_at TEXT DEFAULT CURRENT_TIMESTAMP," +
+  "success_count INTEGER DEFAULT 0," +
+  "failure_count INTEGER DEFAULT 0" +
+  ");"
+);
+
+function verifyFcmSubscriber(email, sessionToken) {
+  if (!email || !sessionToken) return null;
+
+  let codesDb;
+  try {
+    codesDb = new Database(CODES_DB_PATH, { readonly: true });
+
+    const row = codesDb.prepare(
+      "SELECT email, plan, active, expires_at, session_token " +
+      "FROM codes WHERE lower(email) = ? AND session_token = ? " +
+      "AND active = 1 ORDER BY datetime(created_at) DESC LIMIT 1"
+    ).get(
+      String(email).toLowerCase().trim(),
+      String(sessionToken).trim()
+    );
+
+    if (!row) return null;
+    if (row.expires_at && Date.parse(row.expires_at) < Date.now()) return null;
+    if (String(row.plan || "").toLowerCase() === "free") return null;
+
+    return row;
+  } catch (error) {
+    console.error("[fcm] verification abonne:", error.message);
+    return null;
+  } finally {
+    try { if (codesDb) codesDb.close(); } catch (_) {}
+  }
+}
+
+app.post("/fcm/register", (req, res) => {
+  const email = String(req.body?.email || "").toLowerCase().trim();
+  const sessionToken = String(req.body?.session || "").trim();
+  const token = String(req.body?.token || "").trim();
+
+  if (!email || !sessionToken || token.length < 40) {
+    return res.status(400).json({
+      ok: false,
+      error: "donnees_fcm_invalides"
+    });
+  }
+
+  const subscriber = verifyFcmSubscriber(email, sessionToken);
+  if (!subscriber) {
+    return res.status(401).json({
+      ok: false,
+      error: "session_ou_abonnement_invalide"
+    });
+  }
+
+  db.prepare(
+    "INSERT INTO fcm_devices " +
+    "(token,email,session_token,platform,enabled,updated_at) " +
+    "VALUES (?,?,?,'android',1,datetime('now')) " +
+    "ON CONFLICT(token) DO UPDATE SET " +
+    "email=excluded.email," +
+    "session_token=excluded.session_token," +
+    "platform='android'," +
+    "enabled=1," +
+    "updated_at=datetime('now')"
+  ).run(token, email, sessionToken);
+
+  return res.json({
+    ok: true,
+    registered: true,
+    plan: subscriber.plan
+  });
+});
+
+app.post("/fcm/unregister", (req, res) => {
+  const token = String(req.body?.token || "").trim();
+  if (token) {
+    db.prepare(
+      "UPDATE fcm_devices SET enabled=0,updated_at=datetime('now') WHERE token=?"
+    ).run(token);
+  }
+  res.json({ ok: true });
+});
+
+async function publishStrictGoal05Signals(matches) {
+  const eligible = (matches || []).filter(function (match) {
+    return match?.goal05Criteria?.eligible === true &&
+      match?.goal05Criteria?.play === true;
+  });
+
+  for (const match of eligible) {
+    const criteria = match.goal05Criteria;
+    const fixtureId = String(match.fixtureId || match.id || "");
+    const team = String(criteria.team || "");
+    const signalKey = fixtureId + "_" +
+      team.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase().replace(/[^a-z0-9]/g, "") +
+      "_goal05";
+
+    const alreadySent = db.prepare(
+      "SELECT signal_key FROM fcm_notifications WHERE signal_key=?"
+    ).get(signalKey);
+
+    if (alreadySent) continue;
+
+    const signal = {
+      ok: true,
+      id: signalKey,
+      type: "goal05_team_over_0_5",
+      status: "active",
+      sentAt: new Date().toISOString(),
+      fixtureId: fixtureId,
+      match: String(match.home || "") + " - " + String(match.away || ""),
+      home: match.home,
+      away: match.away,
+      team: team,
+      opponent: criteria.opponent,
+      competition: match.competition || "",
+      minute: Number(match.minute || 0),
+      score_home: Number(match.score_home || 0),
+      score_away: Number(match.score_away || 0),
+      odd: Number(criteria.liveOdd || 0),
+      bet: team + " +0,5 but",
+      reason: "Tous les critères stricts sont validés",
+      checks: criteria
+    };
+
+    fs.mkdirSync(require("path").dirname(GOAL05_LATEST_SIGNAL_FILE), {
+      recursive: true
+    });
+    fs.writeFileSync(
+      GOAL05_LATEST_SIGNAL_FILE,
+      JSON.stringify(signal, null, 2)
+    );
+
+    const devices = db.prepare(
+      "SELECT token,email,session_token FROM fcm_devices WHERE enabled=1"
+    ).all();
+
+    const validDevices = devices.filter(function (device) {
+      const valid = verifyFcmSubscriber(device.email, device.session_token);
+      if (!valid) {
+        db.prepare(
+          "UPDATE fcm_devices SET enabled=0 WHERE token=?"
+        ).run(device.token);
+      }
+      return Boolean(valid);
+    });
+
+    let successCount = 0;
+    let failureCount = 0;
+
+    if (tlmFirebaseMessaging && validDevices.length) {
+      for (let index = 0; index < validDevices.length; index += 500) {
+        const batch = validDevices.slice(index, index + 500);
+
+        const response = await tlmFirebaseMessaging.sendEachForMulticast({
+          tokens: batch.map(function (device) { return device.token; }),
+          notification: {
+            title: "Signal +0,5 but validé",
+            body: team + " peut marquer · " +
+              String(match.home || "") + " - " +
+              String(match.away || "") + " · " +
+              Number(match.minute || 0) + "'"
+          },
+          data: {
+            signalKey: signalKey,
+            fixtureId: fixtureId,
+            team: team,
+            route: "https://www.touslesmatchs.com/app.html?tab=pick"
+          },
+          android: {
+            priority: "high",
+            notification: {
+              channelId: "goal05_signals",
+              sound: "default"
+            }
+          }
+        });
+
+        successCount += response.successCount;
+        failureCount += response.failureCount;
+
+        response.responses.forEach(function (item, position) {
+          if (item.success) return;
+
+          const code = String(item.error?.code || "");
+          if (
+            code.includes("registration-token-not-registered") ||
+            code.includes("invalid-registration-token")
+          ) {
+            db.prepare(
+              "UPDATE fcm_devices SET enabled=0 WHERE token=?"
+            ).run(batch[position].token);
+          }
+        });
+      }
+    }
+
+    db.prepare(
+      "INSERT INTO fcm_notifications " +
+      "(signal_key,fixture_id,team,success_count,failure_count) " +
+      "VALUES (?,?,?,?,?)"
+    ).run(
+      signalKey,
+      fixtureId,
+      team,
+      successCount,
+      failureCount
+    );
+
+    console.log(
+      "[fcm] signal " + signalKey +
+      " publie: " + successCount +
+      " succes, " + failureCount + " echec"
+    );
+  }
+}
+
 
 // Auto-create codes table if it doesn't exist
 try {
@@ -10752,7 +11449,8 @@ app.get("/live-matches", async (req, res) => {
       }
     }));
 
-    res.json({ ok: true, matches: withH2H });
+    const strictMatches = await enrichStrictGoal05(withH2H);
+    res.json({ ok: true, matches: strictMatches });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
@@ -11247,7 +11945,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           const upsellBlock = status === "premium"
             ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
                 <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour multisport</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
+                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour football</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
                 <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite / VIP — 29.90€/mois</a>
               </div>`
             : "";
@@ -11881,6 +12579,7 @@ app.get("/admin/daily-audit", (req, res) => {
 
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
+const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
 
 // ── Bot email Hermes (hermes@touslesmatchs.com) — brouillons validés à un clic
 // depuis Telegram admin, jamais d'envoi automatique (voir hermes_mail_bot.js).
@@ -11929,7 +12628,7 @@ if (HERMES_MAIL_USER && HERMES_MAIL_APP_PASSWORD) {
       user: HERMES_MAIL_USER, password: HERMES_MAIL_APP_PASSWORD,
       imapHost: HERMES_MAIL_IMAP_HOST, imapPort: HERMES_MAIL_IMAP_PORT,
       stripe: stripeClient, brevoApiKey: BREVO_API_KEY, mistralApiKey: MISTRAL_API_KEY,
-      analysisEngine, sendTelegramMessage, telegramAdminChatId: TELEGRAM_ADMIN_CHAT_ID,
+      analysisEngine, sendTelegramMessage, telegramAdminChatId: TELEGRAM_SUPPORT_CHAT_ID || TELEGRAM_ADMIN_CHAT_ID,
       siteBaseUrl: SITE_BASE_URL, adminToken: MAIL_BOT_ADMIN_TOKEN,
     }).catch(e => console.error("[hermes-mail] interval:", e.message));
   };
@@ -15554,6 +16253,21 @@ app.post("/chatbot/ask", express.json({ limit: "16kb" }), async (req, res) => {
   }
 });
 
+
+/* TLM assistant local fallback: keeps support online when AI budget/guard is closed. */
+app.all(["/api/chat","/chat","/api/chatbot","/api/assistant","/api/support-chat","/api/mistral-chat"], (req, res) => {
+  try {
+    const msg = String((req.body && (req.body.message || req.body.text || req.body.question)) || (req.query && (req.query.message || req.query.q)) || "").trim();
+    return res.json({
+      ok: true,
+      mode: "local_fallback",
+      reply: "Je suis en mode support rapide TousLesMatchs. Le moteur IA complet est temporairement limite pour proteger le budget. Pour une question abonnement, code, acces ou Telegram, laisse ton email et le support te repondra. Question recue: " + (msg || "message vide")
+    });
+  } catch (e) {
+    return res.json({ ok: true, mode: "local_fallback", reply: "Support TousLesMatchs disponible. Reessaie dans un instant." });
+  }
+});
+
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     verifyTelegramChannels();
@@ -15591,6 +16305,18 @@ app.listen(PORT, () => {
       setTimeout(runAutoConcileObserver, 30000);
       setInterval(runAutoConcileObserver, AUTO_CONCILE_INTERVAL_MS);
     }
+    const goal05PushIntervalMs = Math.max(
+      2,
+      Number(process.env.GOAL05_PUSH_INTERVAL_MIN || 5)
+    ) * 60 * 1000;
+    setTimeout(runGoal05PushObserver, 60000);
+    setInterval(runGoal05PushObserver, goal05PushIntervalMs);
+    console.log(
+      "[fcm] Observateur autonome actif: " +
+      Math.round(goal05PushIntervalMs / 60000) +
+      " min"
+    );
+
     setInterval(checkAnalyticsSchedule, 60000);
     console.log("[analytics] Scheduler actif: rapport quotidien 23h + hebdo lundi 8h");
 

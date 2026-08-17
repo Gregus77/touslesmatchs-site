@@ -1,4 +1,7 @@
-/* Service worker de l'application TousLesMatchs.
+// pwa-icon-refresh-1786907646164\n// safe-navbar-refresh-1786907124471
+// safe-navbar-refresh-1786906901220
+// force-navbar-premium-1786906357470\n// navbar-clean-refresh-1786906067147\n// navbar-uniform-refresh-1786905766620\n// navbar-pro-refresh-1786905508066
+// brand-cache-bust-1786905169898\n// force cache refresh 1786902620210\n/* Service worker de l'application TousLesMatchs.
  *
  * Deux stratégies distinctes, volontairement :
  *  - la coquille de l'app (HTML, icônes) est servie depuis le cache en priorité :
