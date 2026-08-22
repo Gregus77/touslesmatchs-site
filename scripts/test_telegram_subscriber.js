@@ -94,7 +94,10 @@ const mockHttpCall = async (method, params) => {
     linkCounter++;
     return {
       ok: true,
-      result: { invite_link: `https://t.me/+invite_${linkCounter}_${params.chat_id}` },
+      result: {
+        invite_link: `https://t.me/+invite_${linkCounter}_${params.chat_id}`,
+        expire_date: params.expire_date,
+      },
     };
   }
   if (method === "banChatMember") {
@@ -132,11 +135,20 @@ function makeEnvelope(eventType, payload, meta = {}) {
 
 const client = new TelegramBotClient({ token: "test-bot-token", httpCall: mockHttpCall });
 const store = new TelegramEventStore(db);
-const inviteManager = new InviteLinkManager({
-  client,
-  expireSeconds: 3600,
-  memberLimit: 1,
-});
+
+function makeInviteManager(defaultExpireSeconds = 3600) {
+  const mgr = new InviteLinkManager({ botToken: "test-bot-token", defaultExpireSeconds });
+  mgr._callTelegram = async (method, params) => {
+    try {
+      return await mockHttpCall(method, params);
+    } catch (e) {
+      return { ok: false, description: e.message };
+    }
+  };
+  return mgr;
+}
+
+const inviteManager = makeInviteManager();
 
 const subscriber = new TelegramSubscriber({
   client,
@@ -176,26 +188,40 @@ const bus = new EventBus({ store: busStore });
     assert(result.skipped === true, "Marked as skipped");
   });
 
-  await scenario("U3. InviteLinkManager caching", async () => {
+  await scenario("U3a. InviteLinkManager memberLimit:1 never caches (N1)", async () => {
     resetMocks();
-    const mgr = new InviteLinkManager({ client, expireSeconds: 3600, memberLimit: 1 });
+    const mgr = makeInviteManager();
 
-    const r1 = await mgr.getOrCreate("-100test");
+    const r1 = await mgr.createInviteLink("-100test", { memberLimit: 1 });
     assert(r1.ok === true, "First link created");
-    assert(r1.link.includes("invite_"), "Link contains invite");
-    assert(!r1.cached, "First call not cached");
+    assert(r1.inviteLink.includes("invite_"), "Link contains invite");
+    assert(!r1.fromCache, "First call not cached");
+
+    const r2 = await mgr.createInviteLink("-100test", { memberLimit: 1 });
+    assert(r2.ok === true, "Second link created");
+    assert(!r2.fromCache, "memberLimit:1 never served from cache");
+    assert(r2.inviteLink !== r1.inviteLink, "Different single-use link each time");
+  });
+
+  await scenario("U3b. InviteLinkManager memberLimit>1 caches and invalidates", async () => {
+    resetMocks();
+    const mgr = makeInviteManager();
+
+    const r1 = await mgr.createInviteLink("-100group", { memberLimit: 10 });
+    assert(r1.ok === true, "First link created");
+    assert(!r1.fromCache, "First call not cached");
 
     const callsBefore = apiCalls.length;
-    const r2 = await mgr.getOrCreate("-100test");
+    const r2 = await mgr.createInviteLink("-100group", { memberLimit: 10 });
     assert(r2.ok === true, "Cached link returned");
-    assert(r2.cached === true, "Marked as cached");
+    assert(r2.fromCache === true, "Marked as fromCache");
     assert(apiCalls.length === callsBefore, "No API call for cached link");
-    assert(r2.link === r1.link, "Same link returned");
+    assert(r2.inviteLink === r1.inviteLink, "Same link returned");
 
-    mgr.invalidate("-100test");
-    const r3 = await mgr.getOrCreate("-100test");
-    assert(!r3.cached, "After invalidation, new link created");
-    assert(r3.link !== r1.link, "Different link after invalidation");
+    mgr.clearCache("-100group");
+    const r3 = await mgr.createInviteLink("-100group", { memberLimit: 10 });
+    assert(!r3.fromCache, "After clearCache, new link created");
+    assert(r3.inviteLink !== r1.inviteLink, "Different link after invalidation");
   });
 
   await scenario("U4. TelegramEventStore CRUD", async () => {
@@ -242,7 +268,7 @@ const bus = new EventBus({ store: busStore });
 
   await scenario("2. Move: SUBSCRIPTION_UPDATED → remove old + invite new", async () => {
     resetMocks();
-    inviteManager.invalidateAll();
+    inviteManager.clearCache();
     const envelope = makeEnvelope("SUBSCRIPTION_UPDATED", {
       email: "bob@test.com", userId: 2, plan: "ELITE", oldPlan: "ESSENTIAL",
       telegramUserId: "tg_bob",
@@ -317,9 +343,9 @@ const bus = new EventBus({ store: busStore });
 
   // ── EDGE CASE: DUPLICATE ──────────────────────────────────────────────────
 
-  await scenario("6. Duplicate: same subscription event → idempotent", async () => {
+  await scenario("6. Duplicate: same subscription event → distinct single-use links (N1)", async () => {
     resetMocks();
-    inviteManager.invalidateAll();
+    inviteManager.clearCache();
     const envelope = makeEnvelope("SUBSCRIPTION_CREATED", {
       email: "frank@test.com", userId: 6, plan: "ESSENTIAL",
       telegramUserId: "tg_frank",
@@ -327,11 +353,10 @@ const bus = new EventBus({ store: busStore });
 
     const r1 = await subscriber.handleSubscriptionCreated(envelope);
     assert(r1.result === "success", "First invite succeeds");
-    const callsAfterFirst = apiCalls.length;
 
     const r2 = await subscriber.handleSubscriptionCreated(envelope);
-    assert(r2.result === "success", "Second invite succeeds (cached link)");
-    assert(apiCalls.length === callsAfterFirst, "No extra API call (link cached)");
+    assert(r2.result === "success", "Second invite succeeds");
+    assert(r2.inviteLink !== r1.inviteLink, "memberLimit:1 → distinct link per invite, never cached");
 
     const { events } = store.getHistory(100, 0);
     const frankEvents = events.filter((e) => e.email === "frank@test.com" && e.action === "invite");
@@ -342,7 +367,7 @@ const bus = new EventBus({ store: busStore });
 
   await scenario("7. Timeout: Telegram API slow → error logged, no crash", async () => {
     resetMocks();
-    inviteManager.invalidateAll();
+    inviteManager.clearCache();
     apiShouldFail = true;
     apiFailError = "Telegram API timeout";
 
@@ -367,7 +392,7 @@ const bus = new EventBus({ store: busStore });
 
   await scenario("8. Telegram error: API returns error → logged, no crash", async () => {
     resetMocks();
-    inviteManager.invalidateAll();
+    inviteManager.clearCache();
     apiShouldFail = true;
     apiFailError = "ETELEGRAM_429: Too Many Requests: retry after 30";
 
@@ -438,29 +463,25 @@ const bus = new EventBus({ store: busStore });
   await scenario("12. Link expired: cache invalidated → new link created", async () => {
     resetMocks();
 
-    const shortMgr = new InviteLinkManager({
-      client,
-      expireSeconds: 1,
-      memberLimit: 1,
-    });
+    const shortMgr = makeInviteManager(1);
 
-    const r1 = await shortMgr.getOrCreate("-100expire_test");
+    const r1 = await shortMgr.createInviteLink("-100expire_test", { memberLimit: 10 });
     assert(r1.ok === true, "First link created");
-    const firstLink = r1.link;
+    const firstLink = r1.inviteLink;
 
     await new Promise((r) => setTimeout(r, 1100));
 
-    const r2 = await shortMgr.getOrCreate("-100expire_test");
+    const r2 = await shortMgr.createInviteLink("-100expire_test", { memberLimit: 10 });
     assert(r2.ok === true, "New link after expiry");
-    assert(!r2.cached, "Not from cache");
-    assert(r2.link !== firstLink, "Different link generated");
+    assert(!r2.fromCache, "Not from cache");
+    assert(r2.inviteLink !== firstLink, "Different link generated");
   });
 
   // ── BUS WIRING ────────────────────────────────────────────────────────────
 
   await scenario("13. Bus wiring: events flow through subscriber", async () => {
     resetMocks();
-    inviteManager.invalidateAll();
+    inviteManager.clearCache();
 
     const wireSub = new TelegramSubscriber({
       client, store, inviteManager, env: ENV,
@@ -520,9 +541,9 @@ const bus = new EventBus({ store: busStore });
 
   // ── LOAD TEST ─────────────────────────────────────────────────────────────
 
-  await scenario("16. Load: 100 users → 100 invitations → 100 logged", async () => {
+  await scenario("16. Load: 100 users → 100 invitations → 100 distinct single-use links (N1)", async () => {
     resetMocks();
-    inviteManager.invalidateAll();
+    inviteManager.clearCache();
     const t0 = Date.now();
 
     const promises = [];
@@ -548,7 +569,10 @@ const bus = new EventBus({ store: busStore });
     assert(loadEvents.length === 100, `100 events logged, got ${loadEvents.length}`);
 
     const inviteCalls = apiCalls.filter((c) => c.method === "createChatInviteLink").length;
-    assert(inviteCalls === 3, `Only 3 API calls (1 per group, rest cached), got ${inviteCalls}`);
+    assert(inviteCalls === 100, `100 API calls (memberLimit:1 never cached), got ${inviteCalls}`);
+
+    const uniqueLinks = new Set(results.map((r) => r.inviteLink));
+    assert(uniqueLinks.size === 100, `100 distinct single-use links, got ${uniqueLinks.size}`);
 
     console.log(`    Load: ${elapsed}ms for 100 invitations (${(100 / (elapsed / 1000)).toFixed(0)} inv/sec)`);
   });
