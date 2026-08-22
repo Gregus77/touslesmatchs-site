@@ -3,6 +3,7 @@
 // Never called directly — only through bus.subscribe().
 
 const { EVENT_TYPES } = require("./event-bus");
+const InviteLinkManager = require("./invite_link_manager");
 
 // ── Plan → Group mapping ────────────────────────────────────────────────────
 
@@ -185,63 +186,6 @@ class TelegramEventStore {
   }
 }
 
-// ── Invite Link Manager ─────────────────────────────────────────────────────
-
-class InviteLinkManager {
-  constructor(opts = {}) {
-    this.client = opts.client;
-    this.expireSeconds = opts.expireSeconds || 3600;
-    this.memberLimit = opts.memberLimit || 1;
-    this._cache = new Map();
-    this._pending = new Map();
-  }
-
-  async getOrCreate(chatId) {
-    const cached = this._cache.get(chatId);
-    if (cached && cached.expireAt > Date.now()) {
-      return { ok: true, link: cached.link, cached: true };
-    }
-
-    const pending = this._pending.get(chatId);
-    if (pending) return pending;
-
-    const promise = this._createLink(chatId);
-    this._pending.set(chatId, promise);
-    try {
-      return await promise;
-    } finally {
-      this._pending.delete(chatId);
-    }
-  }
-
-  async _createLink(chatId) {
-    const result = await this.client.createInviteLink(chatId, {
-      expireSeconds: this.expireSeconds,
-      memberLimit: this.memberLimit,
-    });
-
-    if (!result.ok) return result;
-
-    const link = result.result && result.result.invite_link;
-    if (link) {
-      this._cache.set(chatId, {
-        link,
-        expireAt: Date.now() + (this.expireSeconds - 60) * 1000,
-      });
-    }
-
-    return { ok: true, link };
-  }
-
-  invalidate(chatId) {
-    this._cache.delete(chatId);
-  }
-
-  invalidateAll() {
-    this._cache.clear();
-  }
-}
-
 // ── Telegram Subscriber ─────────────────────────────────────────────────────
 
 class TelegramSubscriber {
@@ -279,7 +223,7 @@ class TelegramSubscriber {
       });
     }
 
-    const linkResult = await this.inviteManager.getOrCreate(chatId);
+    const linkResult = await this.inviteManager.createInviteLink(chatId, { memberLimit: 1 });
     if (!linkResult.ok) {
       return this._logAndReturn({
         busEventId: envelope.id,
@@ -297,7 +241,7 @@ class TelegramSubscriber {
       groupPlan: plan, chatId,
       action: "invite",
       result: "success",
-      inviteLink: linkResult.link,
+      inviteLink: linkResult.inviteLink,
     });
   }
 
