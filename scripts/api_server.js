@@ -2504,6 +2504,18 @@ const LOW_TRUST_COMPETITION_KEYWORDS = [
   "usl league two", "usl2", "usl league one",
   "npsl", "nisa", "mls next", "mls next pro",
   "us open cup", "usl w league",
+  // ── Coppa Italia Serie C (rapport hebdo du 24/08/2026) ────────────────────
+  // Fuite constatee : TRUSTED_COMPETITIONS contient "coppa italia" pour la
+  // vraie Coupe d'Italie, et ce mot-cle attrapait aussi la Coupe d'Italie de
+  // Serie C — la coupe de la TROISIEME division. Resultat : 22 analyses
+  // resolues a 41% de reussite, dont 35% sur le seul marche Victoire
+  // Domicile. La porte qualite (passesHistoricalQualityGate) les bloquait
+  // deja a la DIFFUSION, donc aucun abonne n'a recu ces signaux — mais on
+  // payait quand meme les cinq appels IA du Concile pour les jeter ensuite.
+  // Meme logique que R3 : le filtre doit s'appliquer AVANT l'analyse.
+  // LOW_TRUST etant evalue en premier, il l'emporte sur "coppa italia".
+  // "serie a" et "serie b" restent intactes, elles ne contiennent pas ce mot.
+  "coppa italia serie c", "serie c", "coppa italia serie d", "serie d ",
 ];
 
 // ── Classification des ligues (07/08/2026, decision du fondateur) ────────────
