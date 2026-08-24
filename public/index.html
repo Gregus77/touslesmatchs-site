@@ -1503,10 +1503,10 @@ footer{
   <div class="roi-card">
     <div class="roi-header">
       <div class="roi-kpis">
-        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">—</div><div class="lbl">Profit net</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">—</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
-        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">—</div><div class="lbl">10€ → X€</div></div>
-        <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">—</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--green)" id="kpi-roi">Vérification…</div><div class="lbl">Profit net</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--cyan)" id="kpi-winrate">Vérification…</div><div class="lbl" data-i18n="lbl_winrate">Winrate</div></div>
+        <div class="roi-kpi"><div class="val" style="color:var(--indigo2)" id="kpi-bankroll">Vérification…</div><div class="lbl">10€ → X€</div></div>
+        <div class="roi-kpi"><div class="val" style="color:#a78bfa" id="kpi-picks">Vérification…</div><div class="lbl" data-i18n="lbl_picks_month">Picks joués</div></div>
       </div>
     </div>
     <div style="position:relative;height:180px;width:100%">
@@ -1718,14 +1718,14 @@ function copyRefLink(){
 </div>
 
 <!-- FAQ (hidden — focus conversion) -->
-<section class="section-wrap" id="faq" style="display:none;border-top:1px solid var(--b1)">
+<section class="section-wrap" id="faq" style="border-top:1px solid var(--b1)">
   <div class="s-eyebrow">Questions fréquentes</div>
   <div class="s-title">Tout ce que tu dois savoir</div>
   <div id="faq-list" style="margin-top:32px;display:flex;flex-direction:column;gap:8px"></div>
 </section>
 
 <!-- HOW IT WORKS (hidden — focus conversion) -->
-<section class="how-section" style="display:none">
+<section class="how-section">
   <div class="s-eyebrow" data-i18n="sec_how_eye">Méthode</div>
   <div class="s-title" data-i18n="sec_how_title">Le Concile ne devine pas.</div>
   <div class="steps">
@@ -1736,8 +1736,8 @@ function copyRefLink(){
   </div>
 </section>
 
-<!-- TELEGRAM SECTION FOOTER (hidden — page cleanup) -->
-<section class="section-wrap" style="display:none;border-top:1px solid var(--b1);padding-top:60px;padding-bottom:60px">
+<!-- TELEGRAM SECTION -->
+<section class="section-wrap" style="border-top:1px solid var(--b1);padding-top:60px;padding-bottom:60px">
   <div style="background:linear-gradient(135deg,rgba(0,136,204,.08),rgba(0,85,170,.06));border:1px solid rgba(0,136,204,.2);border-radius:20px;padding:32px;text-align:center">
     <div style="font-size:32px;margin-bottom:12px">📱</div>
     <div style="font-size:20px;font-weight:800;margin-bottom:8px">Rejoins le canal Telegram gratuit</div>
@@ -1762,21 +1762,17 @@ function copyRefLink(){
   </div>
 </section>
 
-<!-- CTA FINAL — derniere chance de convertir -->
+<!-- CTA FINAL — accès gratuit d'abord -->
 <section style="position:relative;z-index:1;padding:60px 32px;text-align:center;border-top:1px solid var(--b1)">
-  <div style="max-width:500px;margin:0 auto">
-    <div style="font-size:clamp(22px,3.5vw,34px);font-weight:900;letter-spacing:-.03em;margin-bottom:12px">
-      Pret a tester Hermes ?
+  <div style="max-width:560px;margin:0 auto">
+    <div style="font-size:clamp(22px,3.5vw,34px);font-weight:900;letter-spacing:-.03em;margin-bottom:12px">Commence gratuitement.</div>
+    <p style="font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:24px">Rejoins le canal Telegram gratuit, découvre le pronostic quotidien et consulte les résultats publiés. Tu décides ensuite si une formule payante te convient.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer"
+         style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#0088cc,#006ba6);color:#fff;font-size:16px;font-weight:800;padding:15px 28px;border-radius:12px;text-decoration:none">📱 Rejoindre Telegram gratuit</a>
+      <a href="#plans" style="display:inline-flex;align-items:center;gap:10px;background:rgba(99,102,241,.12);border:1px solid rgba(129,140,248,.35);color:#c7d2fe;font-size:15px;font-weight:800;padding:15px 28px;border-radius:12px;text-decoration:none">Voir les formules</a>
     </div>
-    <p style="font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:24px">
-      1 euro. 1 match. 30 secondes. Tu vois ce que 4 IA pensent vraiment — et tu decides.
-    </p>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
-       style="display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-size:18px;font-weight:900;padding:18px 44px;border-radius:14px;text-decoration:none;box-shadow:0 8px 32px rgba(16,185,129,.4);transition:all .25s"
-       onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 14px 48px rgba(16,185,129,.55)'" onmouseout="this.style.transform='';this.style.boxShadow='0 8px 32px rgba(16,185,129,.4)'">
-      Tester Hermes — 1€
-    </a>
-    <div style="margin-top:14px;font-size:12px;color:var(--muted)">Paiement securise Stripe · 0 abonnement · Resultat immediat</div>
+    <div style="margin-top:14px;font-size:12px;color:var(--muted)">18+ · Aucun gain n'est garanti · Jouez uniquement ce que vous pouvez perdre.</div>
   </div>
 </section>
 
@@ -1789,7 +1785,7 @@ function copyRefLink(){
     <span style="display:block;margin-top:10px">
       <a href="/mentions-legales.html" style="color:var(--muted);font-size:11px;text-decoration:none;opacity:.6">Mentions légales & CGV</a>
       <span style="margin:0 6px;opacity:.3">·</span>
-      <a href="mailto:hermes@touslesmatchs.com" style="color:var(--muted);font-size:11px;text-decoration:none;opacity:.6">Contact</a>
+      <a href="mailto:contact@touslesmatchs.com" style="color:var(--muted);font-size:11px;text-decoration:none;opacity:.6">Contact</a>
     </span>
   </div>
 </footer>
@@ -1797,10 +1793,10 @@ function copyRefLink(){
 <!-- STICKY CTA BAR — Tester Hermes -->
 <div id="sticky-email-bar" style="display:none">
   <div class="seb-inner" style="justify-content:center;gap:16px">
-    <div style="font-size:14px;font-weight:800;color:var(--text)">Teste Hermes sur un vrai match</div>
-    <a href="https://buy.stripe.com/8x2dR9grWdbSakc6T43VC03" target="_blank"
-       style="background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(16,185,129,.3)">
-      1€ — Tester maintenant
+    <div style="font-size:14px;font-weight:800;color:var(--text)">Découvre le pronostic du jour gratuitement</div>
+    <a href="https://t.me/+qFnIuKg2ZhdlMmY8" target="_blank" rel="noopener noreferrer"
+       style="background:linear-gradient(135deg,#0088cc,#006ba6);color:#fff;padding:10px 24px;border-radius:10px;font-size:14px;font-weight:800;text-decoration:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,136,204,.3)">
+      Rejoindre Telegram
     </a>
     <button class="seb-close" onclick="closeStickyBar()">×</button>
   </div>
@@ -2231,6 +2227,17 @@ function buildChart(){
   // Applique les KPIs + ticker + hero à partir d'une source unique
   function applyStats(wr, tot, gain, bankrollFinal){
     const set = (id, v) => { const e = document.getElementById(id); if(e) e.textContent = v; };
+    if(!tot){
+      set('kpi-roi', 'En attente');
+      set('kpi-winrate', 'À venir');
+      set('kpi-bankroll', 'Historique');
+      set('kpi-picks', 'En cours');
+      set('hs-winrate', 'À venir');
+      set('hs-gain', 'En attente');
+      const fr = document.getElementById('fomo-record');
+      if(fr) fr.textContent = 'Historique en cours de vérification : seuls les résultats officiellement terminés sont publiés.';
+      return;
+    }
     set('kpi-roi', (gain >= 0 ? '+' : '') + gain + '€');
     set('kpi-winrate', wr + '%');
     set('kpi-bankroll', '100€ → ' + bankrollFinal + '€');
@@ -2332,40 +2339,8 @@ function buildChart(){
 // ══ PICKS FEED DATA — Admin: modifier ce tableau pour mettre à jour la homepage
 // status: "finished" | "upcoming"
 // Pour ajouter un prochain pick, ajouter un objet avec status:"upcoming" à la fin
-const PICKS_FEED = [
-  { id:"lazio-inter", date:"2026-05-13", time:"20:00", competition:"Serie A · J37", home:"Lazio", away:"Inter Milan", pick:"Victoire Inter (1X2)", cote:1.60, status:"finished", result:"win", score:"0-2" },
-  { id:"villarreal-seville", date:"2026-05-17", time:"18:00", competition:"La Liga · Journée finale", home:"Villarreal", away:"FC Séville", pick:"Victoire Villarreal (1X2)", cote:1.88, status:"finished", result:"win", score:"3-2" },
-  { id:"knicks-cavaliers", date:"2026-05-19", time:"02:00", competition:"NBA Playoffs · Conf. Est", home:"NY Knicks", away:"Cleveland Cavaliers", pick:"Plus de 216.5 pts", cote:1.72, status:"finished", result:"win", score:"115-104" },
-  { id:"fribourg-astonvilla", date:"2026-05-20", time:"21:00", competition:"UEFA Conference League · Finale", home:"Fribourg", away:"Aston Villa", pick:"Victoire Aston Villa (1X2)", cote:1.58, status:"finished", result:"win", score:"0-3" },
-  { id:"knicks-spurs", date:"2026-06-10", time:"02:00", competition:"NBA · Finales NBA", home:"NY Knicks", away:"San Antonio Spurs", pick:"Victoire San Antonio (1X2)", cote:2.10, status:"finished", result:"win", score:"107-106" },
-  { id:"shamrock-derry", date:"2026-06-22", time:"21:00", competition:"Ireland Premier", home:"Shamrock Rovers", away:"Derry City", pick:"Moins de 2.5 buts", cote:1.72, status:"finished", result:"win", score:"1-1" },
-  { id:"inter-miami-nashville", date:"2026-06-25", time:"01:30", competition:"MLS · Journée 18", home:"Inter Miami", away:"Nashville SC", pick:"Moins de 2.5 buts", cote:1.78, status:"finished", result:"win", score:"1-0" },
-  { id:"kawasaki-urawa", date:"2026-06-27", time:"11:00", competition:"J1 League · Journée 19", home:"Kawasaki Frontale", away:"Urawa Reds", pick:"Moins de 2.5 buts", cote:1.68, status:"finished", result:"win", score:"0-1" },
-  { id:"ulsan-jeonbuk", date:"2026-06-28", time:"12:00", competition:"K League 1 · Journée 20", home:"Ulsan HD", away:"Jeonbuk Motors", pick:"Moins de 2.5 buts", cote:1.75, status:"finished", result:"win", score:"1-0" },
-  { id:"boca-river-libertadores", date:"2026-06-30", time:"02:00", competition:"Copa Libertadores · 8es", home:"Boca Juniors", away:"River Plate", pick:"Moins de 2.5 buts", cote:1.82, status:"finished", result:"win", score:"0-0" },
-  { id:"lafc-galaxy", date:"2026-07-01", time:"04:30", competition:"MLS · Journée 19", home:"LAFC", away:"LA Galaxy", pick:"Moins de 2.5 buts", cote:1.85, status:"finished", result:"loss", score:"2-1" },
-  { id:"ponte-preta-criciuma", date:"2026-07-09", time:"00:40", competition:"Serie B · Brésil", home:"Ponte Preta", away:"Criciuma", pick:"Over 2.5 buts", cote:1.70, status:"finished", result:"win", score:"1-2" },
-  { id:"real-potosi-abb", date:"2026-07-09", time:"00:31", competition:"Primera División · Bolivie", home:"Real Potosí", away:"ABB", pick:"Victoire domicile", cote:1.70, status:"finished", result:"win", score:"3-1" },
-  { id:"hartford-orangecounty", date:"2026-07-09", time:"00:31", competition:"USL Championship · USA", home:"Hartford Athletic", away:"Orange County SC", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-2" },
-  { id:"greenville-sarasota", date:"2026-07-09", time:"00:31", competition:"USL League One · USA", home:"Greenville Triumph", away:"Sarasota Paradise", pick:"Under 2.5 buts", cote:1.70, status:"finished", result:"win", score:"0-0" },
-  { id:"blackrock-bostonbolts", date:"2026-07-09", time:"00:40", competition:"USL League Two · USA", home:"Black Rock", away:"Boston Bolts", pick:"Under 2.5 buts", cote:1.65, status:"finished", result:"win", score:"0-0" },
-  { id:"boca-paranaense", date:"2026-07-09", time:"00:31", competition:"Friendlies Clubs", home:"Boca Juniors", away:"Atletico Paranaense", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"loss", score:"1-0" },
-  { id:"ingolstadt-lask", date:"2026-07-09", time:"13:30", competition:"Friendlies Clubs", home:"FC Ingolstadt 04", away:"Lask Linz", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"win", score:"2-0" },
-  { id:"cracovia-pardubice", date:"2026-07-09", time:"13:30", competition:"Friendlies Clubs", home:"Cracovia Krakow", away:"Pardubice", pick:"Victoire domicile", cote:1.75, status:"finished", result:"win", score:"2-0" },
-  { id:"rennes-caen", date:"2026-07-09", time:"13:30", competition:"Friendlies Clubs", home:"Rennes", away:"Caen", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"loss", score:"1-2" },
-  { id:"dynamo-kyiv-ucluj", date:"2026-07-09", time:"18:40", competition:"UEFA Europa League", home:"Dynamo Kyiv", away:"Universitatea Cluj", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-0" },
-  { id:"sheriff-aluminij", date:"2026-07-09", time:"18:40", competition:"UEFA Europa League", home:"Sheriff Tiraspol", away:"Aluminij", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-0" },
-  { id:"vojvodina-ferencvaros", date:"2026-07-09", time:"18:31", competition:"UEFA Europa League", home:"Vojvodina", away:"Ferencvarosi TC", pick:"Over 2.5 buts", cote:1.80, status:"finished", result:"win", score:"1-2" },
-  { id:"hajduk-zilina", date:"2026-07-09", time:"18:31", competition:"UEFA Europa League", home:"HNK Hajduk Split", away:"Žilina", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"loss", score:"2-0" },
-  { id:"vllaznia-malisheva", date:"2026-07-09", time:"18:30", competition:"UEFA Europa Conference League", home:"Vllaznia Shkodër", away:"Malisheva", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-1" },
-  { id:"velez-milsami", date:"2026-07-09", time:"18:40", competition:"UEFA Europa Conference League", home:"Velež", away:"Milsami Orhei", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"1-1" },
-  { id:"dinamo-minsk-sileks", date:"2026-07-09", time:"18:31", competition:"UEFA Europa Conference League", home:"Dinamo Minsk", away:"Sileks", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-1" },
-  { id:"bohemians-stjoseph", date:"2026-07-09", time:"18:31", competition:"UEFA Europa Conference League", home:"Bohemians", away:"St Joseph S Fc", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-0" },
-  { id:"korona-omonia", date:"2026-07-09", time:"18:40", competition:"Friendlies Clubs", home:"Korona Kielce", away:"Omonia Nicosia", pick:"Under 2.5 buts", cote:1.75, status:"finished", result:"win", score:"0-0" },
-  { id:"europa-shkendija", date:"2026-07-09", time:"18:40", competition:"UEFA Europa Conference League", home:"Europa", away:"Shkendija", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"loss", score:"0-5" },
-  { id:"nublense-ohiggins", date:"2026-07-10", time:"00:30", competition:"Copa De La Liga · Chili", home:"Nublense", away:"O'Higgins", pick:"Over 2.5 buts", cote:1.75, status:"finished", result:"win", score:"2-1" },
-  { id:"nacional-potosi-aurora", date:"2026-07-10", time:"00:30", competition:"Primera División · Bolivie", home:"Nacional Potosí", away:"Aurora", pick:"Under 2.5 buts", cote:1.80, status:"finished", result:"win", score:"2-0" },
-];
+const PICKS_FEED = []; // Rempli uniquement par les endpoints API : aucune donnée historique fictive.
+
 
 function renderPicksFeed() {
   const root = document.getElementById('pf-root');
@@ -2866,14 +2841,14 @@ initPick();
 
 // ══ FAQ
 const FAQ_DATA = [
-  {q:"Qui est le Concile Hermès ?", a:"Le Concile combine 4 agents IA spécialisés et 1 Chief. Les agents produisent des signaux indépendants; le Chief arbitre les désaccords, rejette les signaux fragiles et publie seulement une synthèse exploitable."},
-  {q:"Comment est choisie l'analyse du jour ?", a:"Le Concile IA compare consensus, value, objections, données manquantes et risque par sport. Deux agents peuvent être en désaccord : leurs raisons servent justement à tester la solidité du verdict. Si le doute reste trop fort, c'est NO BET."},
-  {q:"Est-ce que je peux recevoir les analyses sur Telegram ?", a:"Oui. Le canal Telegram gratuit reçoit l'analyse du jour. Pro débloque les analyses Live IA et le groupe Pro. Elite ajoute les alertes de signal fort quand le Concile détecte une opportunité notée au-dessus de 8/10."},
-  {q:"Comment utiliser les liens bookmakers ?", a:"Cliquez directement sur les boutons Winamax, Betclic, Unibet ou PMU sous l'analyse du jour. Ces liens contiennent nos codes de parrainage — vous bénéficiez des mêmes offres de bienvenue qu'en allant directement sur leur site."},
-  {q:"Les résultats affichés sont-ils réels ?", a:"Oui, tous les résultats sont publics sur la page Historique. Nous ne cachons aucun pick perdu. Les statistiques (winrate, ROI) sont calculées automatiquement depuis notre base de données."},
-  {q:"Qu'est-ce que le Live IA ?", a:"Le Live IA analyse les matchs disponibles en direct selon le sport : football, basket, hockey ou baseball quand les données sont fiables. Le client voit le verdict, le consensus et les objections principales, pas les prompts internes."},
-  {q:"À quelle heure le pick est-il publié ?", a:"Le Concile tourne à 11h59 heure de Paris chaque jour. Le pick est publié simultanément sur le site, par email aux abonnés, et sur les groupes Telegram."},
-  {q:"Comment fonctionnent les abonnements ?", a:"À la carte (1€) = 1 analyse Live IA. Pro (9.90€/mois) = 10 analyses/jour + Telegram Pro. Elite (19.90€/mois) = 30 analyses/jour + Telegram Elite + alertes signal fort. Reset automatique à minuit."},
+  {q:"Qu'est-ce que TousLesMatchs ?", a:"TousLesMatchs analyse les matchs de football en direct pour identifier des opportunités Over/Under 2,5 buts sur le résultat final. Un signal n'est publié que lorsque le Concile obtient un accord suffisant entre ses 5 IA indépendantes."},
+  {q:"Comment fonctionne l'accès gratuit et les abonnements ?", a:"Le canal Telegram gratuit diffuse un pronostic quotidien. Les formules payantes donnent accès à davantage d'analyses et de signaux : leurs tarifs et avantages sont affichés clairement dans la section Offres ci-dessus. Sans engagement, résiliable à tout moment depuis l'espace membre."},
+  {q:"Comment reçois-je les signaux ?", a:"Le canal Telegram gratuit diffuse un pronostic quotidien. Selon votre formule, les analyses et signaux sont également accessibles dans l'espace Live IA et par email."},
+  {q:"Les résultats sont-ils garantis ?", a:"Non. Aucun outil, humain ou IA, ne peut garantir un résultat sportif. Les analyses terminées, gagnées comme perdues, sont affichées publiquement. Le score de confiance exprime la convergence des IA, jamais une certitude."},
+  {q:"Comment interpréter le score de confiance ?", a:"Le score mesure l'accord entre les 5 IA du Concile : plus elles convergent, plus le signal est solide. Il ne s'agit pas d'une promesse de résultat ; en dessous du seuil requis, aucun signal n'est publié."},
+  {q:"Comment résilier ?", a:"Depuis Mon espace, ouvrez Gérer ou résilier mon abonnement. Aucune demande par email ou téléphone n'est nécessaire."},
+  {q:"Sur quels sports portent les analyses ?", a:"Uniquement le football pour le moment. Nous préférons être exigeants sur un sport plutôt que dispersés sur dix."},
+  {q:"Puis-je parrainer un ami ?", a:"Le programme de parrainage et ses conditions sont indiqués dans Mon espace lorsqu'il est disponible pour votre formule."}
 ];
 function toggleFaq(i){
   const item = document.getElementById('faq-'+i);
