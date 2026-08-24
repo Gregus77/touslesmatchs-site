@@ -163,3 +163,38 @@ rester silencieux (toujours au moins un `echo` de secours), et si une
 sortie vide revient deux fois de suite sur une commande qui doit forcement
 produire un resultat, ne pas insister avec une 3e variante de commande —
 changer de methode (capture d'ecran, confirmation orale) tout de suite.
+
+
+---
+
+## REGLES IMPERATIVES pour toute IA qui reprend (GPT, Codex, ou nouveau Claude)
+
+Avant toute action, lire `CLAUDE.md` a la racine du depot — ces regles ne
+sont pas optionnelles et s'appliquent a toi aussi, pas seulement a Claude :
+
+1. **Ne jamais pousser ni deployer sans validation explicite de Greg dans
+   le message en cours.** Une validation passee sur un autre sujet ne vaut
+   pas pour un nouveau.
+2. **Ne jamais toucher `public/index.html` sans validation Greg + GPT +
+   Codex** (les trois, pas un accord bilateral).
+3. **Toute modification de `scripts/api_server.js`, `public/`,
+   `docker-compose.yml` se prepare en commit/branche ISOLEE**, un seul sujet
+   par branche — ne jamais empiler plusieurs correctifs independants sur
+   une meme branche (ca a deja fait echouer une revue le 08/08/2026).
+4. **Partir de `origin/design-wow-complet`** (production) pour toute
+   nouvelle branche isolee — jamais d'une branche de travail anterieure,
+   qui peut avoir derive.
+5. **Jamais d'ecriture sur la base de production** hors du pipeline normal
+   de l'application — tout diagnostic se fait avec `{readonly:true}`.
+6. **Ne pas nettoyer l'historique** (donnees, sig_sent_*, etc.) sans accord
+   explicite de Greg, meme si une anomalie est visible.
+7. **Mettre a jour `docs/business/NOTE-SITE.md`** (meme depot, branche
+   `docs/note-site-20-criteres`) a chaque fois qu'un item change de statut —
+   Greg s'en sert comme tableau de bord unique, ne pas creer un doublon
+   ailleurs.
+8. **En cas de doute sur l'intention de Greg** (messages parfois dictes,
+   fautes de frappe frequentes) : demander plutot que de deviner et agir.
+
+Objectif de ces regles : que Greg puisse alterner entre plusieurs IA sans
+jamais avoir a verifier apres coup qu'aucune n'a ecrase le travail d'une
+autre.
