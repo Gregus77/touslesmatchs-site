@@ -47,11 +47,32 @@ fournisseur primaire est en panne échoue **en silence, sans aucune trace**
 dans `agent_calls` (le traçage est à l'intérieur de la boucle d'appel,
 jamais exécutée si aucun fournisseur n'est tenté).
 
-**Solution donnée à Greg** (commande VPS, pas de commit) : vérifier le solde
-OpenRouter, puis passer `OPENROUTER_FALLBACK_DAILY_CAP` de 60 à 120 dans
-`.env`, puis `docker compose up -d api`. Variable déjà câblée dans
-`docker-compose.yml`. **Statut au moment de l'écriture : commande donnée à
-Greg, pas encore confirmé qu'il l'a exécutée.**
+**Solution proposée puis PARTIELLEMENT ANNULÉE — erreur constatée le
+24/08/2026.** Claude a proposé de passer `OPENROUTER_FALLBACK_DAILY_CAP` de
+60 à 120, avec un contrôle de solde OpenRouter avant application. Deux
+erreurs se sont cumulées :
+1. Le contrôle de solde n'était qu'un message affiché, pas un blocage réel
+   du script — il s'est exécuté même avec un solde critique.
+2. La valeur de départ réelle dans `.env` était **20**, pas 60 (le défaut
+   du code) : quelqu'un l'avait déjà resserrée sous le défaut, probablement
+   à cause d'un solde déjà tendu. Le changement a donc multiplié par 6 un
+   garde-fou volontairement restrictif.
+3. Solde constaté au moment du changement : **2,91 $** (en baisse depuis le
+   5,13 $ du 08/08/2026).
+
+**Correctif appliqué dans la foulée** : plafond remis à 20. **Statut à
+vérifier par la prochaine IA qui reprend** : confirmer avec Greg que le
+plafond est bien revenu à 20 (`grep OPENROUTER_FALLBACK_DAILY_CAP .env` sur
+le VPS) et que le solde OpenRouter a été rechargé avant toute nouvelle
+tentative d'augmenter ce plafond. Vérifier aussi si le rechargement
+automatique est actif sur le compte OpenRouter (risque de charge surprise
+si le solde tombe à zéro, sinon les appels échouent proprement).
+
+**Leçon pour toute IA future** : ne jamais faire dépendre une action risquée
+d'un contrôle qui ne fait qu'imprimer un avertissement — le script doit
+`exit` réellement si la condition de sécurité n'est pas remplie. Et
+toujours lire la valeur RÉELLE dans `.env` avant de la comparer à un
+défaut supposé du code : les deux peuvent diverger, et pas par hasard.
 
 **Non résolu** : la cause racine de pourquoi les fournisseurs primaires
 tombent aussi souvent (comptes, clés, quotas) n'a pas été creusée. Doubler
