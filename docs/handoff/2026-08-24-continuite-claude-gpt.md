@@ -101,3 +101,65 @@ le plafond de repli est un palliatif, pas une réparation.
 - Toute mesure sur la base de production se fait en lecture seule
   (`docker exec -i touslesmatchs-api node -` avec `{readonly:true}`), jamais
   en écriture directe.
+
+
+---
+
+## MISE A JOUR — fin de session Claude, 24/08/2026 (blocage imminent de tokens)
+
+**Etat exact au moment de la coupure**, pour reprise immediate sans reposer
+les memes questions a Greg.
+
+### Ce qui a ete fait et ce qui reste a confirmer
+
+1. Erreur du plafond OpenRouter (voir section precedente) : cap remonte a
+   tort de 20 a 120 avec un solde de 2,91 $, puis correction demandee
+   (retour a 20) via `.env` + `docker compose up -d api`.
+2. **NON CONFIRME** : Greg a colle plusieurs fois des sorties de terminal
+   completement vides en reponse a des commandes de verification pourtant
+   triviales (y compris un simple `date`, qui affiche TOUJOURS quelque
+   chose sur un shell fonctionnel). Cinq tentatives de verification
+   consecutives, toutes vides. Cause probable : Greg copie le contenu du
+   terminal AVANT que le resultat ne s'affiche a l'ecran (copier-coller
+   trop rapide), pas un vrai probleme technique cote VPS — mais **ce n'est
+   pas prouve**, seulement la meilleure hypothese.
+3. Consequence pratique : **l'IA qui reprend ne doit PAS supposer que le
+   plafond est revenu a 20.** Il faut re-verifier avant toute autre
+   decision touchant OpenRouter.
+
+### Recommandation pour la prochaine IA (GPT ou autre)
+
+Ne pas redemander a Greg de coller une sortie de terminal — ca a echoue 5
+fois de suite ce soir. Deux alternatives proposees a Greg, sans reponse au
+moment de la coupure :
+- lui demander une **capture d'ecran** du terminal plutot qu'un copier-coller
+  de texte (une image peut etre lue directement) ;
+- lui demander de **dire le resultat avec ses mots**, sans rien copier.
+
+Commande a utiliser des que la verification aboutit (une seule ligne,
+volontairement sans `&&` pour ne jamais rester silencieuse) :
+```bash
+docker exec touslesmatchs-api printenv OPENROUTER_FALLBACK_DAILY_CAP
+```
+
+### Problème n°2 — jamais formulé
+
+Greg a annonce avoir "plusieurs problèmes" et a voulu passer au n°2 apres
+le n°1 (repli OpenRouter), mais la conversation a devie sur la boucle de
+verification ci-dessus avant qu'il ne dise en quoi consiste le problème
+n°2. **Il faut le lui redemander explicitement** — ne pas supposer lequel
+des sujets en attente (voir "Prochaines étapes possibles" ci-dessus) il
+avait en tete.
+
+### Note de méthode sur les échanges avec Greg (VPS)
+
+Greg colle souvent de larges blocs de scrollback de terminal, parfois
+tronques avant que le resultat d'une commande ne s'affiche, et a deja copie
+par erreur du texte de reponse de Claude (pas seulement des commandes) dans
+son terminal — ce qui a produit des erreurs `command not found` sans
+consequence sur les donnees, mais qui a fait perdre du temps. Pour toute
+commande de verification critique, prevoir un format qui ne peut jamais
+rester silencieux (toujours au moins un `echo` de secours), et si une
+sortie vide revient deux fois de suite sur une commande qui doit forcement
+produire un resultat, ne pas insister avec une 3e variante de commande —
+changer de methode (capture d'ecran, confirmation orale) tout de suite.
