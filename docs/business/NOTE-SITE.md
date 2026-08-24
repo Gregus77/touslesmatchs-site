@@ -5,9 +5,8 @@ sache en un coup d'œil où ça bloque pour que le site gagne de l'argent, et
 ce qu'il doit faire lui-même (payer, vérifier, décider).
 
 **Dernière mise à jour : 25/08/2026. Solde OpenRouter confirmé sain
-(12,91 $). Reste à confirmer : la valeur réelle du plafond de repli
-(`OPENROUTER_FALLBACK_DAILY_CAP`) dans le conteneur — vérification bloquée
-par un problème de copier-coller terminal, voir le handoff dédié.**
+(12,91 $) et plafond de repli confirmé à 20 dans le conteneur. La
+configuration OpenRouter est désormais vérifiée.**
 
 Légende : ✅ acquis · ⚠️ fragile / en cours · ❌ cassé · ❓ jamais mesuré
 
@@ -17,7 +16,7 @@ Légende : ✅ acquis · ⚠️ fragile / en cours · ❌ cassé · ❓ jamais m
 
 | # | Critère | Statut | Détail |
 |---|---|---|---|
-| 1 | Le Concile IA vote correctement (≥3 agents/5) | ❌ | 37% des matchs récents décidés avec <3 votes, winrate 45% sur ces cas. Cause identifiée : plafond de repli OpenRouter trop bas. Correctif proposé, **vérification de son application bloquée ce soir** (voir handoff). |
+| 1 | Le Concile IA vote correctement (≥3 agents/5) | ❌ | Plafond de repli confirmé à **20** dans le conteneur le 25/08. Le problème historique reste ouvert : 37% des matchs récents décidés avec <3 votes, winrate 45% sur ces cas. Les pannes des fournisseurs primaires doivent être diagnostiquées, puis l'effet remesuré. |
 | 2 | Le budget OpenRouter tient sans interruption | ✅ | Solde à 12,91 $ le 25/08 (Greg vient de recharger 10 $). Historique sur 10 semaines : rechargements réguliers, ~108 $ au total (juin-août), rythme récent plus rapproché (tous les 5-7 jours en août contre 2-3 semaines en juin) — la consommation a augmenté, à surveiller mais pas alarmant. Auto top-up **désactivé** : pas de risque de charge surprise, mais aucun filet si Greg oublie de recharger. |
 | 3 | Pas de fuite de ligue non fiable analysée à tort | ⚠️ | Coppa Italia Serie C trouvée (22 analyses, 41%), correctif prêt (`7c80c78`), **pas encore déployé** — en attente validation Codex. |
 | 4 | Les chiffres publics (winrate, gains €) sont exacts | ✅ | Séparation "résultats abonnés" / "analyses non diffusées" déployée en production — plus d'euros affichés sur des signaux jamais envoyés. |
@@ -72,15 +71,16 @@ Légende : ✅ acquis · ⚠️ fragile / en cours · ❌ cassé · ❓ jamais m
 
 ## Priorité absolue, là maintenant
 
-**Item 1 et 2 bloquent tout le reste.** Un moteur qui décide à 45% de
-réussite sur plus d'un tiers de ses analyses ne peut pas construire de
-confiance (III), ne justifie pas d'acquisition (IV), et dégrade la
-rétention (VI). Tant que ce n'est pas réglé, les autres chantiers attendent.
+**L'item 1 reste le blocage principal.** L'item 2 est désormais acquis :
+solde sain et plafond vérifié. Un moteur qui décide à 45% de réussite sur
+plus d'un tiers de ses analyses ne peut pas construire de confiance (III),
+ne justifie pas d'acquisition (IV), et dégrade la rétention (VI). Tant que
+l'item 1 n'est pas réglé, les autres chantiers attendent.
 
-**Action Greg immédiate** : ~~confirmer le solde OpenRouter~~ **FAIT — 12,91 $
-confirmé le 25/08 directement sur openrouter.ai.** Reste : confirmer que le
-plafond de repli dans le conteneur est bien réglé (20 ou une valeur
-délibérée), pas laissé au hasard après l'incident du 24/08.
+**Action Greg immédiate : TERMINÉE.** Solde OpenRouter confirmé à **12,91 $**
+et plafond de repli confirmé à **20** dans le conteneur le 25/08. Prochaine
+action technique : diagnostiquer les pannes des fournisseurs primaires,
+puis remesurer le taux de matchs disposant d'au moins 3 votes.
 
 ## Prochaine remesure complète recommandée
 
