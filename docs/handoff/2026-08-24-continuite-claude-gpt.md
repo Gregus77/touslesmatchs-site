@@ -198,3 +198,26 @@ sont pas optionnelles et s'appliquent a toi aussi, pas seulement a Claude :
 Objectif de ces regles : que Greg puisse alterner entre plusieurs IA sans
 jamais avoir a verifier apres coup qu'aucune n'a ecrase le travail d'une
 autre.
+
+
+---
+
+## MISE A JOUR — 25/08/2026, solde OpenRouter reconstitue
+
+**Ce fichier a ete lu par GPT le 25/08 avec le solde du 24/08 (2,91 $), qui
+est PERIME.** Etat reel au 25/08 :
+
+- Solde OpenRouter : **12,91 $** (rechargement de 10 $ confirme par Greg
+  directement sur openrouter.ai). Item 2 de `docs/business/NOTE-SITE.md`
+  (branche `docs/note-site-20-criteres`) passe au vert.
+- Auto top-up : **deja desactive**, aucune action a faire dessus (ni a
+  activer, ni a "redesactiver" — il ne l'a jamais ete).
+- Le plafond de repli (`OPENROUTER_FALLBACK_DAILY_CAP`) reste vise a **20**,
+  mais **toujours pas confirme techniquement** dans le conteneur — c'est le
+  seul point encore ouvert sur ce sujet. La verification par photo demandee
+  a Greg est la bonne methode, aucun changement a y apporter.
+- **Reflexe pour toute IA a partir de maintenant** : `docs/business/NOTE-SITE.md`
+  (branche `docs/note-site-20-criteres`) est la source de verite pour l'etat
+  courant (solde, statuts). Ce fichier de handoff reste la source pour le
+  RECIT de ce qui s'est passe et pourquoi — mais pas pour les chiffres
+  vivants, qui bougent plus vite que ce document n'est relu.
