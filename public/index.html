@@ -28,7 +28,7 @@
         { "@type": "Question", "name": "Comment fonctionne le Concile IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Cinq intelligences artificielles indépendantes (Perplexity, DeepSeek, Mistral, Cohere, Qwen) analysent chaque match séparément à partir des statistiques, de l'historique et du contexte. Un vote de convergence établit un score de confiance. Le signal n'est publié que si ce score dépasse le seuil du palier." } },
         { "@type": "Question", "name": "Que représente le score de confiance ?", "acceptedAnswer": { "@type": "Answer", "text": "C'est l'indicateur interne utilisé par le Concile pour classer ses analyses selon le niveau de convergence entre les IA. Il n'est pas une garantie de résultat : l'issue d'un événement sportif reste incertaine." } },
         { "@type": "Question", "name": "Combien de sélections vais-je recevoir ?", "acceptedAnswer": { "@type": "Answer", "text": "Les volumes affichés (3, 10 ou 30 par jour) sont des maximums, pas des garanties. Le nombre réel dépend des matchs qui atteignent le seuil de confiance du palier ce jour-là." } },
-        { "@type": "Question", "name": "Quelle différence entre Standard, Premium et Elite-VIP ?", "acceptedAnswer": { "@type": "Answer", "text": "Score de confiance minimum 82/100 pour Standard et Premium, 75/100 pour Elite-VIP. Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour, inclut Standard. Elite-VIP (29,90€/mois) couvre tout le vivier diffusable, jusqu'à 30 signaux/jour, inclut Premium." } },
+        { "@type": "Question", "name": "Quelle différence entre Standard et Premium ?", "acceptedAnswer": { "@type": "Answer", "text": "Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour. Les volumes annoncés restent des maximums dépendant des rencontres qui satisfont les critères." } },
         { "@type": "Question", "name": "Comment fonctionne le compte gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Le compte gratuit donne accès au pick gratuit du jour, aux résultats publics, à un aperçu des sélections Standard de la veille, et à la liste des matchs en direct — sans carte bancaire." } },
         { "@type": "Question", "name": "Puis-je résilier mon abonnement ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les abonnements sont sans engagement et résiliables à tout moment depuis le portail Stripe." } },
         { "@type": "Question", "name": "Comment les résultats sont-ils calculés ?", "acceptedAnswer": { "@type": "Answer", "text": "Chaque sélection est enregistrée avec sa cote réelle au moment de l'envoi. Le résultat (gagné, perdu) est vérifié après la fin officielle du match. Le winrate et le profit simulé sont calculés uniquement sur les sélections terminées, gagnées comme perdues." } }
@@ -449,9 +449,13 @@ body :where(
 
 #plans.row-4 {
   display:grid !important;
-  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
   gap:16px !important;
   align-items:stretch !important;
+  width:100% !important;
+  max-width:1080px !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
 }
 
 
@@ -1009,16 +1013,16 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   <!-- RANGEE 2 : PREUVES -->
   <div class="row" style="grid-template-columns:1fr">
     <div class="card proof-card">
-      <div class="proof-head"><div><div class="proof-eyebrow">Résultats vérifiables</div><div class="proof-title">Les chiffres passés, sans cacher les défaites</div><div class="proof-copy">Uniquement les sélections officiellement terminées. L’historique complet reste consultable pour vérifier chaque résultat.</div></div><a class="proof-link" href="/performances">Voir l’historique complet →</a></div>
+      <div class="proof-head"><div><div class="proof-eyebrow">Historique vérifiable</div><div class="proof-title">Toutes les analyses résolues, sans cacher les défaites</div><div class="proof-copy">Les analyses diffusées et celles seulement observées sont comptées séparément. Chaque résultat reste consultable.</div></div><a class="proof-link" href="/performances">Voir l’historique complet →</a></div>
       <div class="proof-bar" id="proof-bar">
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl" data-i18n="proof_total">Sélections terminées</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl" data-i18n="proof_wl">Gagnées / Perdues</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl" data-i18n="proof_winrate">Taux de réussite</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl" data-i18n="proof_profit">Profit simulé (mise 10€)</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl">Analyses résolues</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl">Gagnées / Perdues observées</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl">Taux observé</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl">Simulation historique (10€)</div></div></div>
         <div class="proof-cell"><div><div class="proof-num" id="pf-sent">—</div><div class="proof-lbl">Signaux réellement diffusés</div></div></div>
         <div class="proof-cell"><div><div class="proof-num" id="pf-days">—</div><div class="proof-lbl">Jours avec résultat mesuré</div></div></div>
       </div>
-      <div class="proof-note" data-i18n="proof_note">Performances calculées sur les sélections officiellement terminées. Les performances passées ne garantissent pas les résultats futurs.</div>
+      <div class="proof-note">Les observations non diffusées ne sont pas présentées comme des signaux reçus. Les performances passées ne garantissent pas les résultats futurs.</div>
     </div>
   </div>
 
@@ -1026,7 +1030,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
        jours d'affilee) -->
   <div class="row" style="grid-template-columns:1fr">
     <div class="card">
-      <div class="pcard-title" style="margin-bottom:10px" data-i18n="verdicts_title">Derniers verdicts du Concile</div>
+      <div class="pcard-title" style="margin-bottom:10px">Historique des 30 derniers jours</div>
       <div id="daily-accordion"><div class="empty-note">Chargement…</div></div>
     </div>
   </div>
@@ -1116,19 +1120,6 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <a href="https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06" target="_blank" class="btn btn-prim btn-block" data-i18n="plan_btn_prem">Choisir Premium</a>
     </div>
 
-    <div class="card plan">
-      <div class="plan-badge" style="background:linear-gradient(135deg,#d4af37,#f5c842);color:#1a1a1a">🎁 1er mois offert</div>
-      <div class="plan-ico" style="background:rgba(224,166,60,.16);color:var(--elite)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
-      <div class="plan-name" style="color:var(--elite)" data-i18n="plan_elite">ELITE-VIP</div>
-      <div class="plan-price">29.90€ <span>/mois</span></div>
-      <ul class="plan-feats">
-        <li><span class="plan-check">✓</span><span data-i18n="plan_elite_1">Jusqu'à 30 sélections/jour</span></li>
-        <li><span class="plan-check">✓</span><span data-i18n="plan_elite_2">Score de confiance minimum 75/100, tout le vivier football diffusable</span></li>
-        <li><span class="plan-check">✓</span>Sans engagement</li>
-      </ul>
-      <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin:-4px 0 12px">🎁 1 mois offert pour ton 1er abonnement Elite-VIP. Parraine un ami (n'importe quelle formule) : vous recevez chacun 1 mois offert en plus.</div>
-      <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" class="btn btn-ghost btn-block" data-i18n="plan_btn_elite">Rejoindre Elite-VIP</a>
-    </div>
   </div>
   <div class="row" style="grid-template-columns:1fr;padding-top:0">
     <div class="plans-note" data-i18n-html="plans_note">Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.</div>
@@ -1490,15 +1481,18 @@ async function loadProof(){
     var d=await r.json();
     if(!d.ok) return;
     var s=d.stats||{};
-    document.getElementById('pf-total').textContent=s.total||0;
-    document.getElementById('pf-wins').textContent=s.wins||0;
-    document.getElementById('pf-losses').textContent=s.losses||0;
-    document.getElementById('pf-winrate').textContent=(s.winrate||0)+'%';
-    document.getElementById('pf-profit').textContent=fmtEur(s.profit10||0);
-
     var allRows=d.analyses||[];
     var resolvedRows=allRows.filter(function(a){return a.outcome==='win'||a.outcome==='loss';});
     var sentRows=resolvedRows.filter(function(a){var sent=a.sent||{};return !!(a.diffused||a.signal_delivered||sent.standard||sent.premium||sent.elite);});
+    var historyWins=resolvedRows.filter(function(a){return a.outcome==='win';}).length;
+    var historyLosses=resolvedRows.length-historyWins;
+    var historyProfit=0;
+    resolvedRows.forEach(function(a){var odd=Number(a.cote)>1?Number(a.cote):0;historyProfit+=a.outcome==='win'?(odd?odd*10-10:0):-10;});
+    document.getElementById('pf-total').textContent=resolvedRows.length||0;
+    document.getElementById('pf-wins').textContent=historyWins;
+    document.getElementById('pf-losses').textContent=historyLosses;
+    document.getElementById('pf-winrate').textContent=(resolvedRows.length?Math.round(historyWins/resolvedRows.length*100):0)+'%';
+    document.getElementById('pf-profit').textContent=fmtEur(Math.round(historyProfit));
     var measuredDays={};resolvedRows.forEach(function(a){var day=String(a.analysed_at||a.date||'').slice(0,10);if(day)measuredDays[day]=1;});
     document.getElementById('pf-sent').textContent=sentRows.length?sentRows.length:'—';
     document.getElementById('pf-days').textContent=Object.keys(measuredDays).length||'—';
@@ -1574,6 +1568,10 @@ function initials(n){return String(n||'?').split(/\s+/).filter(Boolean).slice(0,
 var COUNTRY_FLAGS={"Argentina":"🇦🇷","Australia":"🇦🇺","Austria":"🇦🇹","Belgium":"🇧🇪","Brazil":"🇧🇷","Canada":"🇨🇦","Chile":"🇨🇱","China":"🇨🇳","Colombia":"🇨🇴","Croatia":"🇭🇷","Denmark":"🇩🇰","England":"🏴","Finland":"🇫🇮","France":"🇫🇷","Germany":"🇩🇪","Greece":"🇬🇷","Italy":"🇮🇹","Japan":"🇯🇵","Mexico":"🇲🇽","Netherlands":"🇳🇱","Norway":"🇳🇴","Poland":"🇵🇱","Portugal":"🇵🇹","Scotland":"🏴","Spain":"🇪🇸","Sweden":"🇸🇪","Switzerland":"🇨🇭","Turkey":"🇹🇷","USA":"🇺🇸","United States":"🇺🇸","World":"🌍"};
 function splitComp(raw){var parts=String(raw||'').split(/\s*[·•]\s*/);return {league:parts[0]||'',country:parts.length>1?parts[parts.length-1]:''};}
 function logo(src,name){return src?'<img src="'+esc(src)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display=\'none\'">':esc(initials(name));}
+function liveHomeLogo(m){return m&&(m.home_logo||m.homeLogo||m.home_badge||m.strHomeTeamBadge||(m.teamA&&m.teamA.logo))||'';}
+function liveAwayLogo(m){return m&&(m.away_logo||m.awayLogo||m.away_badge||m.strAwayTeamBadge||(m.teamB&&m.teamB.logo))||'';}
+function liveHomeScore(m){var v=m&&(m.score_home!=null?m.score_home:m.home_score!=null?m.home_score:m.intHomeScore!=null?m.intHomeScore:m.goals&&(m.goals.home!=null?m.goals.home:null));return v==null?'':v;}
+function liveAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
 async function loadLive(){
   var grid=document.getElementById('live-rows');
   try{
@@ -1583,14 +1581,14 @@ async function loadLive(){
     if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.<br>Consulte les prochaines rencontres disponibles.</div>'; return; }
     grid.innerHTML=matches.map(function(m){
       var icon=SPORT_ICO[m.sport]||'🏟️';
-      var sh=m.score_home==null?'-':m.score_home, sa=m.score_away==null?'-':m.score_away;
+      var rawHomeScore=liveHomeScore(m),rawAwayScore=liveAwayScore(m),sh=rawHomeScore===''?'-':rawHomeScore,sa=rawAwayScore===''?'-':rawAwayScore;
       var minLabel=esc(minLabelOf(m));
       var fid=encodeURIComponent(m.id||(m.home+'_'+m.away));
       return '<div class="live-row">'+
         '<div class="live-comp"><div class="live-comp-name">'+icon+' '+esc((m.competition||m.sport||'').split(/\s*[·•]\s*/)[0]).slice(0,12)+'</div><div class="live-comp-min">'+minLabel+'</div></div>'+
-        '<div class="live-logo">'+logo(m.home_logo,m.home)+'</div><div class="live-team-name">'+esc(m.home)+'</div>'+
+        '<div class="live-logo">'+logo(liveHomeLogo(m),m.home)+'</div><div class="live-team-name">'+esc(m.home)+'</div>'+
         '<div class="live-score">'+esc(sh)+'-'+esc(sa)+'</div>'+
-        '<div class="live-logo">'+logo(m.away_logo,m.away)+'</div><div class="live-team-name">'+esc(m.away)+'</div>'+
+        '<div class="live-logo">'+logo(liveAwayLogo(m),m.away)+'</div><div class="live-team-name">'+esc(m.away)+'</div>'+
         '<a class="btn btn-prim btn-sm" href="/live-ia?fixture='+fid+'">Voir</a>'+
         '</div>';
     }).join('');
@@ -1633,9 +1631,9 @@ function renderHeroLive(m){
   setHeroText('hero-live-minute',minLabelOf(m));
   setHeroText('hero-home-name',m.home||'Équipe à domicile');setHeroText('hero-away-name',m.away||"Équipe à l'extérieur");
   setHeroText('hero-home-country',country||'');setHeroText('hero-away-country',country||'');
-  setHeroLogo('hero-home-logo',m.home_logo,m.home||'équipe à domicile');setHeroLogo('hero-away-logo',m.away_logo,m.away||"équipe à l'extérieur");
+  setHeroLogo('hero-home-logo',liveHomeLogo(m),m.home||'équipe à domicile');setHeroLogo('hero-away-logo',liveAwayLogo(m),m.away||"équipe à l'extérieur");
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
-  setHeroText('hero-live-score',(m.score_home==null?'—':m.score_home)+' - '+(m.score_away==null?'—':m.score_away));
+  var hs=liveHomeScore(m),as=liveAwayScore(m);setHeroText('hero-live-score',(hs===''?'—':hs)+' - '+(as===''?'—':as));
   setHeroText('hero-live-period',String(m.status||m.elapsed||m.period||'1ère période'));
   setHeroText('hero-consensus-current',votes+' / 5');
   setHeroText('hero-ai-title',votes>=4?'Accord IA atteint':'Analyse IA en cours');
@@ -1647,7 +1645,10 @@ async function loadHeroLive(){
   try{
     var r=await fetch('/api/live-matches?t='+Date.now(),{cache:'no-store'}),d=await r.json();
     var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed);
-    matches.sort(function(a,b){return Number(b.minute||0)-Number(a.minute||0);});
+    matches.sort(function(a,b){
+      function quality(m){return (liveHomeLogo(m)?2:0)+(liveAwayLogo(m)?2:0)+(liveHomeScore(m)!==''?2:0)+(liveAwayScore(m)!==''?2:0)+Math.min(1,Number(m.minute||0)/100);}
+      return quality(b)-quality(a);
+    });
     renderHeroLive(matches[0]||null);
   }catch(e){renderHeroLive(null);}
 }
@@ -1756,7 +1757,7 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var r=await fetch('/api/analysis-history?limit=200&t='+Date.now());
+    var r=await fetch('/api/analysis-history?limit=500&t='+Date.now(),{cache:'no-store'});
     var d=await r.json();
     var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
     var byDay={};
@@ -1765,12 +1766,12 @@ async function loadDailyAccordion(){
       if(!byDay[day]) byDay[day]=[];
       byDay[day].push(a);
     });
-    // Calendrier CONTINU sur 14 jours plutot que la seule liste des jours ayant
+    // Calendrier CONTINU sur 30 jours plutot que la seule liste des jours ayant
     // produit un verdict : un jour absent laissait croire a un trou dans le
     // suivi, alors qu'il signifie « aucune selection n'a passe les filtres ».
     // Un jour vide est une information, pas une donnee manquante.
     var order=[];
-    for(var k=0;k<14;k++){
+    for(var k=0;k<30;k++){
       var dt=new Date(); dt.setDate(dt.getDate()-k);
       order.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'));
     }

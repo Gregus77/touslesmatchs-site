@@ -796,6 +796,10 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     return sport==='football'&&!excludedCountry&&!womensMatch;
   }
   function appFlagUrl(country){var code=APP_COUNTRY_CODES[country];return code?'https://flagcdn.com/w40/'+code+'.png':'';}
+  function appHomeLogo(m){return m&&(m.home_logo||m.homeLogo||m.home_badge||m.strHomeTeamBadge||(m.teamA&&m.teamA.logo))||'';}
+  function appAwayLogo(m){return m&&(m.away_logo||m.awayLogo||m.away_badge||m.strAwayTeamBadge||(m.teamB&&m.teamB.logo))||'';}
+  function appHomeScore(m){var v=m&&(m.score_home!=null?m.score_home:m.home_score!=null?m.home_score:m.intHomeScore!=null?m.intHomeScore:m.goals&&(m.goals.home!=null?m.goals.home:null));return v==null?'':v;}
+  function appAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
   function appVotes(m){var values=[m&&m.consensus_votes,m&&m.vote_count,m&&m.votes,m&&m.analysis&&m.analysis.consensus_votes];for(var i=0;i<values.length;i++){var n=Number(values[i]);if(isFinite(n)&&n>=0)return Math.max(0,Math.min(5,Math.round(n)));}return 0;}
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
@@ -806,9 +810,9 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     }
     status.textContent='En direct';$("app-live-minute").textContent=m.minute?esc(m.minute)+"'":'Live';
     $("app-home-name").textContent=m.home||'Équipe à domicile';$("app-away-name").textContent=m.away||"Équipe à l'extérieur";$("app-home-country").textContent=country;$("app-away-country").textContent=country;
-    appLogo($("app-home-logo"),m.home_logo,m.home||'équipe à domicile');appLogo($("app-away-logo"),m.away_logo,m.away||"équipe à l'extérieur");
+    appLogo($("app-home-logo"),appHomeLogo(m),m.home||'équipe à domicile');appLogo($("app-away-logo"),appAwayLogo(m),m.away||"équipe à l'extérieur");
     [$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(!img)return;if(!flag){img.hidden=true;return;}img.hidden=false;img.src=flag;img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};});
-    $("app-live-score").textContent=(m.score_home==null?'—':m.score_home)+' - '+(m.score_away==null?'—':m.score_away);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
+    var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
     $("app-ai-total").textContent=votes+' / 5';$("app-ai-label").textContent=votes>=4?'Accord IA atteint':'Analyse IA en cours';$("app-ai-result").textContent=votes>=4?'Signal disponible':'En attente d’accord';
     Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var active=i<votes;el.classList.toggle('on',active);el.textContent=active?'✓':String(i+1);});
   }
@@ -816,11 +820,12 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     get("/api/live-matches?t="+Date.now()).then(flagOffline).then(function (d) {
       var box = $("live-box");
       var list = ((d && (d.matches || d.live)) || []).filter(appMatchAllowed);
+      list.sort(function(a,b){function q(m){return (appHomeLogo(m)?2:0)+(appAwayLogo(m)?2:0)+(appHomeScore(m)!==''?2:0)+(appAwayScore(m)!==''?2:0)+Math.min(1,Number(m.minute||0)/100);}return q(b)-q(a);});
       renderAppHero(list[0]||null);
       if (!list.length) {box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';return;}
       box.innerHTML='<div class="tlm-app-live-list">'+list.slice(0,25).map(function(m){
-        var sh=m.score_home==null?'—':m.score_home,sa=m.score_away==null?'—':m.score_away,country=appCountry(m),flag=appFlagUrl(country);
-        return '<a class="tlm-app-live-row" href="/live-ia?fixture='+encodeURIComponent(m.fixtureId||m.id||m.sourceId||'')+'"><span class="tlm-app-live-logos"><img src="'+esc(m.home_logo||'/logo192.png')+'" alt="Logo '+esc(m.home||'équipe')+'"><img src="'+esc(m.away_logo||'/logo192.png')+'" alt="Logo '+esc(m.away||'équipe')+'"></span><span><strong>'+esc(m.home)+' — '+esc(m.away)+'</strong><span class="tlm-app-live-meta">'+(flag?'<img src="'+flag+'" alt="Drapeau '+esc(country)+'">':'')+esc(country||m.competition||'Football')+'</span></span><span class="tlm-app-live-result"><b>'+esc(sh)+'-'+esc(sa)+'</b><span>'+(m.minute?esc(m.minute)+"'":'Live')+'</span></span></a>';
+        var rhs=appHomeScore(m),ras=appAwayScore(m),sh=rhs===''?'—':rhs,sa=ras===''?'—':ras,country=appCountry(m),flag=appFlagUrl(country);
+        return '<a class="tlm-app-live-row" href="/live-ia?fixture='+encodeURIComponent(m.fixtureId||m.id||m.sourceId||'')+'"><span class="tlm-app-live-logos"><img src="'+esc(appHomeLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.home||'équipe')+'"><img src="'+esc(appAwayLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.away||'équipe')+'"></span><span><strong>'+esc(m.home)+' — '+esc(m.away)+'</strong><span class="tlm-app-live-meta">'+(flag?'<img src="'+flag+'" alt="Drapeau '+esc(country)+'">':'')+esc(country||m.competition||'Football')+'</span></span><span class="tlm-app-live-result"><b>'+esc(sh)+'-'+esc(sa)+'</b><span>'+(m.minute?esc(m.minute)+"'":'Live')+'</span></span></a>';
       }).join('')+'</div>';
     }).catch(function(){renderAppHero(null);$("live-box").innerHTML='<div class="card"><div class="state">Direct momentanément indisponible.</div></div>';});
   }
