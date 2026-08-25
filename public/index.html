@@ -1030,7 +1030,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
        jours d'affilee) -->
   <div class="row" style="grid-template-columns:1fr">
     <div class="card">
-      <div class="pcard-title" style="margin-bottom:10px">Historique des 30 derniers jours</div>
+      <div class="pcard-title" style="margin-bottom:10px">Historique complet depuis le 1er août</div>
       <div id="daily-accordion"><div class="empty-note">Chargement…</div></div>
     </div>
   </div>
@@ -1477,7 +1477,7 @@ renderNavAuth();
 function fmtEur(n){return (n<0?'':'+')+n+'€';}
 async function loadProof(){
   try{
-    var r=await fetch('/api/analysis-history?limit=500&t='+Date.now(),{cache:'no-store'});
+    var r=await fetch('/api/analysis-history?limit=2000&t='+Date.now(),{cache:'no-store'});
     var d=await r.json();
     if(!d.ok) return;
     var s=d.stats||{};
@@ -1654,6 +1654,9 @@ async function loadHeroLive(){
 }
 loadHeroLive();setInterval(loadHeroLive,30000);
 
+/* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v2-20260825').catch(function(){});});}
+
 /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
 function renderUpcomingItem(p){
       var comp=splitComp(p.competition||'');
@@ -1757,7 +1760,7 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var r=await fetch('/api/analysis-history?limit=500&t='+Date.now(),{cache:'no-store'});
+    var r=await fetch('/api/analysis-history?limit=2000&t='+Date.now(),{cache:'no-store'});
     var d=await r.json();
     var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
     var byDay={};
@@ -1766,13 +1769,11 @@ async function loadDailyAccordion(){
       if(!byDay[day]) byDay[day]=[];
       byDay[day].push(a);
     });
-    // Calendrier CONTINU sur 30 jours plutot que la seule liste des jours ayant
-    // produit un verdict : un jour absent laissait croire a un trou dans le
-    // suivi, alors qu'il signifie « aucune selection n'a passe les filtres ».
-    // Un jour vide est une information, pas une donnee manquante.
+    // Calendrier CONTINU depuis le 1er aout : aucun jour d'aout ne disparait
+    // lorsque de nouvelles analyses sont ajoutees.
     var order=[];
-    for(var k=0;k<30;k++){
-      var dt=new Date(); dt.setDate(dt.getDate()-k);
+    var firstHistoryDay=new Date('2026-08-01T12:00:00');
+    for(var dt=new Date();dt>=firstHistoryDay;dt.setDate(dt.getDate()-1)){
       order.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'));
     }
     // Bandeau saisonnier : affiche jusqu'a la reprise des championnats, il
@@ -2147,7 +2148,7 @@ document.addEventListener('click', function(e){
       return text.includes('touslesmatchs') && box.width>40 && box.height>8 && box.top>=0 && box.top<160;
     });
     if(brand){
-      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/assets/brand/logo192.png?v=1786907124471" alt="TousLesMatchs">');
+      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/logo192.png?v=tlm-brand-20260825" alt="TousLesMatchs">');
     }
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addLogo); else addLogo();
@@ -2219,12 +2220,13 @@ document.addEventListener('click', function(e){
     return days[d.getDay()]+' '+Number(iso.slice(8,10))+' '+months[iso.slice(5,7)];
   }
   function root(){
-    var h=[].slice.call(document.querySelectorAll('h1,h2,h3,div,strong')).find(function(x){return /Derniers verdicts du Concile/i.test(x.textContent||'');});
+    var h=[].slice.call(document.querySelectorAll('h1,h2,h3,div,strong')).find(function(x){return /Derniers verdicts du Concile|Historique complet depuis le 1er août/i.test(x.textContent||'');});
     return h ? (h.parentElement || h) : null;
   }
   function apply(){
     fetch('/api/public-analysis-stats?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-      var rows=(d.daily_concile||[]).filter(function(r){return r.jour>='2026-07-25'&&r.jour<='2026-08-08';});
+      var today=new Date().toISOString().slice(0,10);
+      var rows=(d.daily_concile||[]).filter(function(r){return r.jour>='2026-08-01'&&r.jour<=today;});
       var map={}; rows.forEach(function(r){map[r.jour]=r;});
       document.querySelectorAll('details,div').forEach(function(el){
         var txt=(el.textContent||'').toLowerCase();
