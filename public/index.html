@@ -1475,10 +1475,23 @@ renderNavAuth();
 
 /* ══ PREUVES ══ */
 function fmtEur(n){return (n<0?'':'+')+n+'€';}
+async function fetchAllAnalysisHistory(maxRows){
+  var all=[],offset=0,pageSize=100,first=null,maximum=Math.max(pageSize,Number(maxRows)||2000);
+  while(all.length<maximum){
+    var r=await fetch('/api/analysis-history?limit='+pageSize+'&offset='+offset+'&t='+Date.now(),{cache:'no-store'});
+    var d=await r.json();
+    if(!d||!d.ok) throw new Error((d&&d.error)||'Historique indisponible');
+    if(!first) first=d;
+    var page=d.analyses||[];
+    all=all.concat(page);
+    if(page.length<pageSize) break;
+    offset+=pageSize;
+  }
+  first=first||{ok:true};first.analyses=all.slice(0,maximum);first.total=first.total||all.length;return first;
+}
 async function loadProof(){
   try{
-    var r=await fetch('/api/analysis-history?limit=2000&t='+Date.now(),{cache:'no-store'});
-    var d=await r.json();
+    var d=await fetchAllAnalysisHistory(2000);
     if(!d.ok) return;
     var s=d.stats||{};
     var allRows=d.analyses||[];
@@ -1760,8 +1773,7 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var r=await fetch('/api/analysis-history?limit=2000&t='+Date.now(),{cache:'no-store'});
-    var d=await r.json();
+    var d=await fetchAllAnalysisHistory(2000);
     var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
     var byDay={};
     rows.forEach(function(a){
