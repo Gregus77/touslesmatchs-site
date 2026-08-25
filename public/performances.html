@@ -469,8 +469,11 @@ function renderRow(a) {
     ? '<span class="h-badge diffused">📡 Diffusé</span>'
     : '<span class="h-badge observed">👁 Observé, non envoyé</span>';
 
+  // Un montant en euros sur une ligne jamais diffusee ferait croire a un gain/perte
+  // reel alors que personne n'a recu ce pick — meme regle que le compteur du haut
+  // (statBlockObserve, cote API) qui omet volontairement profit10/roi_pct.
   var gainHtml = '';
-  if (resolved && a.cote != null && a.cote > 1) {
+  if (resolved && a.cote != null && a.cote > 1 && wasDiffused) {
     var g = a.outcome === 'win' ? (a.cote * 10 - 10) : -10;
     gainHtml = '<div class="h-gain" style="color:' + (g >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtSigned(g) + '</div>';
   } else {
