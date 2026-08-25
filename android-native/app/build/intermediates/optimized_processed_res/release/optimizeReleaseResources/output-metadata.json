@@ -1,0 +1,20 @@
+{
+  "version": 3,
+  "artifactType": {
+    "type": "OPTIMIZED_PROCESSED_RES",
+    "kind": "Directory"
+  },
+  "applicationId": "com.touslesmatchs.app",
+  "variantName": "release",
+  "elements": [
+    {
+      "type": "SINGLE",
+      "filters": [],
+      "attributes": [],
+      "versionCode": 1786983370,
+      "versionName": "1.0.7-goal05-20260817-161610",
+      "outputFile": "resources-release-optimize.ap_"
+    }
+  ],
+  "elementType": "File"
+}

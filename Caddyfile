@@ -1,4 +1,9 @@
 www.touslesmatchs.com {
+
+    # TLM_BLOCK_SENSITIVE_PATHS
+    @tlm_sensitive path /.env /.env.* /.git /.git/* /.svn /.svn/* /.hg /.hg/*
+    respond @tlm_sensitive 404
+
     # ── Headers de sécurité (appliqués à toutes les réponses) ────────────────
     # HSTS : force HTTPS pendant 1 an, tous sous-domaines inclus
     # X-Content-Type-Options : empêche le MIME-sniffing (protection XSS)

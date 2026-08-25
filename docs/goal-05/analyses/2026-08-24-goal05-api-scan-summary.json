@@ -1,0 +1,187 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-24T22:12:16.487Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-24-goal05-api-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 1,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 1,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "api-football-1494253-home",
+      "match": "Malmo FF - Djurgardens IF",
+      "team": "Malmo FF",
+      "country": "Sweden",
+      "league": "Allsvenskan",
+      "home": "Malmo FF",
+      "away": "Djurgardens IF",
+      "homeLogo": "https://media.api-sports.io/football/teams/375.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/364.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/113.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "écart de force historique insuffisant ou non prouvé",
+        "enjeu de classement non démontré",
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "preuves de buts construits/assistés insuffisantes",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "preuve spécifique +0,5 trop faible",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Sweden",
+        "league": "Allsvenskan",
+        "team": "Malmo FF",
+        "opponent": "Djurgardens IF",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-24T22:12:16.483Z",
+        "market": {
+          "bestOdd": 1.95,
+          "offers": [
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.95
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.92
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.9
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.9
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.85
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.85
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.83
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.82
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.82
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.81
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.8
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.8
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.78
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.73
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 4,
+          "teamPercentile": 100,
+          "opponentPercentile": 93.33,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 4,
+          "opponentConcededInLastFive": 2,
+          "weightedConstructedGoals": 0,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "no",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": false,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 7,
+          "opponentRank": 4,
+          "leagueSize": 16
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Betano",
+        "market": "Home Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 1.95
+      },
+      "bestOffer": {
+        "bookmaker": "Betano",
+        "market": "Home Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 1.95
+      },
+      "alreadySent": false
+    }
+  ],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

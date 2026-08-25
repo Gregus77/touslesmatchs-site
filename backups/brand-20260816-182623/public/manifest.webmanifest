@@ -1,0 +1,24 @@
+{
+  "name": "TousLesMatchs — Concile IA",
+  "short_name": "TousLesMatchs",
+  "description": "Le verdict du Concile IA : analyse du jour, signaux en direct et résultats vérifiables. 18+ — Jeu responsable.",
+  "lang": "fr",
+  "dir": "ltr",
+  "start_url": "/app?src=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0a14",
+  "theme_color": "#0b0a14",
+  "categories": ["sports", "news"],
+  "icons": [
+    { "src": "/logo192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/logo512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Analyse du jour", "url": "/app?tab=pick" },
+    { "name": "En direct", "url": "/app?tab=live" },
+    { "name": "Performances", "url": "/app?tab=perf" }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "country": "France",
+    "league": "Ligue 1",
+    "teams": 18,
+    "complete_3plus": 15,
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\france-ligue-1.json",
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\france-ligue-1.csv"
+  },
+  {
+    "country": "Angleterre",
+    "league": "Premier League",
+    "teams": 25,
+    "complete_3plus": 17,
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\angleterre-premier-league.json",
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\angleterre-premier-league.csv"
+  },
+  {
+    "country": "Espagne",
+    "league": "La Liga",
+    "teams": 26,
+    "complete_3plus": 17,
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\espagne-la-liga.json",
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\espagne-la-liga.csv"
+  },
+  {
+    "country": "Italie",
+    "league": "Serie A",
+    "teams": 27,
+    "complete_3plus": 17,
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\italie-serie-a.json",
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\italie-serie-a.csv"
+  },
+  {
+    "country": "Suede",
+    "league": "Allsvenskan",
+    "teams": 16,
+    "complete_3plus": 11,
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\suede-allsvenskan.json",
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\suede-allsvenskan.csv"
+  },
+  {
+    "country": "Norvege",
+    "league": "Eliteserien",
+    "teams": 16,
+    "complete_3plus": 13,
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\norvege-eliteserien.json",
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\europe-known-local-rank-tables\\norvege-eliteserien.csv"
+  }
+]

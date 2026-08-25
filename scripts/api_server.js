@@ -9,6 +9,8 @@ process.on("unhandledRejection", (reason) => {
 });
 
 const express = require("express");
+
+function tlmIsPublicTestSignal(x){const t=[x&&x.id,x&&x.match,x&&x.home,x&&x.away,x&&x.team,x&&x.opponent,x&&x.competition].join(' ').toLowerCase();return t.includes('[test]')||t.includes('test-manual')||t.includes('paris fc')||t.includes('toulouse');}
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -299,16 +301,16 @@ const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 
 
 function readGoal05LatestSignal() {
   try {
-    if (!fs.existsSync(GOAL05_LATEST_SIGNAL_FILE)) return { ok: true, signal: null, reason: "no_signal" };
+    if (!fs.existsSync(GOAL05_LATEST_SIGNAL_FILE)) return { ok: true, signal: (tlmIsPublicTestSignal(null) ? null : null), reason: "no_signal" };
     const signal = JSON.parse(fs.readFileSync(GOAL05_LATEST_SIGNAL_FILE, "utf8"));
     const sentAt = signal && signal.sentAt ? Date.parse(signal.sentAt) : 0;
     if (!sentAt || Date.now() - sentAt > GOAL05_LATEST_MAX_AGE_MS) {
-      return { ok: true, signal: null, reason: "expired", lastSignal: signal || null };
+      return { ok: true, signal: (tlmIsPublicTestSignal(null) ? null : null), reason: "expired", lastSignal: (tlmIsPublicTestSignal(signal || null ) ? null : signal || null )};
     }
     return { ok: true, signal };
   } catch (e) {
     console.error("[goal05-latest]", e.message);
-    return { ok: false, signal: null, error: "lecture_signal_goal05_impossible" };
+    return { ok: false, signal: (tlmIsPublicTestSignal(null) ? null : null), error: "lecture_signal_goal05_impossible" };
   }
 }
 
@@ -580,7 +582,7 @@ ensureColumn("concile_analyses", "sig_sent_elite",    "INTEGER DEFAULT 0");
 // savoir si le probleme vient de la confiance, de la cote, du sport ou du
 // filtre qualite. Renseigne a chaque analyse, lu par /admin/funnel-report.
 ensureColumn("concile_analyses", "diffusion_block",   "TEXT DEFAULT NULL");
-// Palier attribué au signal : "standard", "premium", "elite" ou null (non qualifié).
+// Palier attribué au signal: (tlmIsPublicTestSignal("standard") ? null : "standard"), "premium", "elite" ou null (non qualifié).
 ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 // Distingue les analyses live (auto-concile, en cours de match) des
 // analyses pre-match (H2H, "Matchs a venir"). Demande de Greg le
@@ -800,7 +802,7 @@ db.exec(`
 // Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
 // agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
 // alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
-const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Qwen"];
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Kimi"];
 
 // ── Initialise agent weights if empty ──
 try {
@@ -1008,8 +1010,8 @@ const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "
 // Canaux Standard (4.90€) et Elite (29.90€). Tant que l'ID n'est pas configuré dans le
 // .env, on retombe automatiquement sur le canal Premium pour ne rien casser en attendant
 // que le canal dédié soit créé. Le CODE applique les conditions par palier (voir plus bas).
-const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
-const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
+const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || "";
+const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || "";
 const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
@@ -1019,7 +1021,7 @@ const _eliteSignalDaily = { date: "", count: 0 };
 // Plafonds journaliers par palier (conditions données par le fondateur)
 const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL 1.30-2.50
 const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote 1.30-2.50 (inclut Standard)
-const ELITE_SIGNAL_DAILY_CAP = 30;    // 🟠 radar football élargi : conf ≥ 82 (inclut Premium)
+const ELITE_SIGNAL_DAILY_CAP = 10;    // 🟠 radar football élargi : conf ≥ 82 (inclut Premium)
 // Seuils volontairement décroissants : un palier supérieur est PLUS LARGE, donc reçoit
 // davantage. L'inverse (Standard ≥ 88 et Premium ≥ 90) rendait les deux paliers
 // identiques, puisque « ≥ 88 » contient déjà tout « ≥ 90 ».
@@ -1065,12 +1067,12 @@ function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 
 // Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
 // fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
 // c'est un longshot que le book juge improbable.
-const TIER_MIN_REAL_ODD = Number(process.env.TIER_MIN_REAL_ODD || 1.30);
+const TIER_MIN_REAL_ODD = 1.40; // Live Totaux IA : cote réelle minimale
 const TIER_MAX_REAL_ODD = Number(process.env.TIER_MAX_REAL_ODD || 2.50);
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
 // signal football à 84 %, et un mardi sans football vidait le palier.
-const DIFFUSABLE_SPORTS = ["football", "hockey", "ice hockey", "baseball", "basketball", "basket"];
+const DIFFUSABLE_SPORTS = ["football"];
 const ELITE_SPORTS = DIFFUSABLE_SPORTS; // conservé : encore référencé par tierEligible()
 
 // ── Seuils dynamiques par palier — garantissent le VOLUME vendu ───────────────
@@ -1178,8 +1180,8 @@ function sendToPaidChannels(text, opts = {}) {
   const targets = [];
   const push = (id, label) => { if (id && !targets.some(t => t.id === id)) targets.push({ id, label }); };
   if (opts.includeStandard !== false) push(TELEGRAM_STANDARD_CHANNEL_ID, "standard");
-  push(TELEGRAM_PREMIUM_CHANNEL_ID, "premium");
   push(TELEGRAM_ELITE_CHANNEL_ID, "elite");
+  // Elite/VIP désactivé : aucun envoi client.
   return Promise.all(targets.map(t =>
     sendTelegramMessage(t.id, text)
       .then(ok => console.log(`[${opts.tag || "telegram"}] ${t.label}: ${ok ? "OK" : "FAIL"}`))
@@ -1211,10 +1213,7 @@ function getPublishedMinConfidence() { return getSignalFloor(); }
 // "But 1ère MT" est notre point fort : 82% de winrate sur 931 pronos historiques
 // (Cohere-Command, juillet 2026). On peut donc émettre à 75% de confiance sans
 // dégrader la qualité perçue.
-const MARKET_SIGNAL_FLOORS = {
-  "But en 1ère mi-temps":       75,
-  "Aucun but en 1ère mi-temps": 75,
-};
+const MARKET_SIGNAL_FLOORS = {}; // Live Totaux IA : aucun marché première mi-temps
 
 function getSignalThresholdForBet(bet) {
   const overrideForBet = MARKET_SIGNAL_FLOORS[bet];
@@ -1464,9 +1463,10 @@ function sendTelegramMessage(chatId, text) {
 // Standard recevait une invitation vers le canal Premium (mauvais canal, mauvais
 // contenu). Un palier sans canal dédié configuré retombe sur Premium.
 function channelForStatus(status) {
-  if (status === "standard") return TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
-  if (status === "elite" || status === "vip") return TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID;
-  return TELEGRAM_PREMIUM_CHANNEL_ID;
+  const plan = String(status || "").toLowerCase();
+  if (plan === "standard") return TELEGRAM_STANDARD_CHANNEL_ID;
+  if (["premium", "intensif", "elite", "vip"].includes(plan)) return TELEGRAM_ELITE_CHANNEL_ID;
+  return null;
 }
 
 function createPremiumInviteLink(labelEmail, status) {
@@ -2602,7 +2602,7 @@ async function buildStrictGoal05Criteria(match) {
       attackersAvailable,
       liveStatsVerified,
       motivationVerified,
-      oddVerified:liveOdd!==null && liveOdd>=1.60
+      oddVerified:false // ancien produit Goal +0,5 désactivé
     };
 
     const missing=Object.entries(checks)
@@ -3138,7 +3138,7 @@ function bestBetGrade(match, bet, confidence, cote) {
   return { ev, segWr, elite };
 }
 
-// ── Palier du signal : Standard / Premium / Elite ──
+// ── Palier du signal: (tlmIsPublicTestSignal(Standard / Premium / Elite ──) ? null : Standard / Premium / Elite ──)
 // Filtrage APRÈS analyse : le concile recommande librement, on classe ensuite.
 // Standard = crème (Under 2.5, ≥90%, envoyé 45-60') → peu de volume, très fiable
 // Premium  = solide (Under/Over 2.5, ≥86%, envoyé 40-65')
@@ -3156,7 +3156,7 @@ function computeSignalTier(bet, confidence, minute) {
 }
 
 // ── Contrôle de VALEUR : ne pas proposer un pari déjà joué ou à cote ridicule ──
-const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1.30));
+const MIN_PLAYABLE_ODD = TIER_MIN_REAL_ODD; // même règle partout : 1,40 minimum
 // Plafond de cote : au-delà, le book estime l'événement peu probable = longshot
 // perdant (ex: "Under 2.5 @ 3.65" du 15/07/2026 = -10€).
 // Fenêtre réglée par le fondateur le 28/07/2026 : cote jouable entre 1.30 et 2.50.
@@ -4635,7 +4635,7 @@ function buildStatsBlock(stats, home, away) {
 }
 
 // ── Groq Concile analysis ─────────────────────────────────────────────────────
-const BET_TYPES = ["Victoire domicile", "Victoire extérieur", "Match nul", "Over 2.5 buts", "Under 2.5 buts", "BTTS Oui", "BTTS Non", "Double chance 1X", "Double chance X2"];
+const BET_TYPES = ["Over 2.5 buts", "Under 2.5 buts"];
 
 // Estime la minute depuis l'heure de début quand l'API ne la fournit pas
 function estimateMinute(match) {
@@ -4660,76 +4660,16 @@ function readKnownScore(match) {
   return { home, away, total: home + away };
 }
 
-function computeAvailableBets(match) {
-  const sport = String(match.sport || "Football");
-  // Basketball/Hockey/Baseball n'ont pas de match nul (prolongation/tirs au
-  // but obligatoires, ou pas de nul possible au baseball) et les marches buts
-  // (Over/Under 2.5, BTTS) sont calibres pour le football, pas pour un score
-  // de basket/baseball. Sans ce filtre, la correction post-IA
-  // (validateAndCorrectBet, R2) pouvait retomber sur "Match nul" comme repli
-  // pour un match de basket plie a 53-93 — resultat impossible pour ce sport.
-  // Constate le 01/08/2026, etendu au baseball a la reactivation du sport.
-  if (sport === "Basketball" || sport === "Hockey" || sport === "Baseball") {
-    return ["Victoire domicile", "Victoire extérieur"];
+  function computeAvailableBets(match) {
+    const sport = String(match.sport || "Football");
+    const minute = estimateMinute(match);
+    const score = readKnownScore(match);
+    if (sport !== "Football") return [];
+    if (minute < 15 || minute > 40) return [];
+    if (!score || score.total > 2.5) return [];
+    return ["Over 2.5 buts", "Under 2.5 buts"];
   }
 
-  const score = readKnownScore(match);
-  if (!score) return [...BET_TYPES];
-  const h = score.home;
-  const a = score.away;
-  const total = score.total;
-  const minute = estimateMinute(match);
-  const remaining = Math.max(0, 93 - minute);
-  const isLive = minute >= 30 && match.status !== "SCHEDULED";
-  const isNeutral = isNeutralComp(match.competition || "");
-
-  let bets = [...BET_TYPES];
-
-  // Terrain neutre (Coupe du Monde, Euro, etc.) → remplacer domicile/extérieur par noms réels
-  // Les termes "Victoire domicile/extérieur" n'ont pas de sens sans avantage terrain
-  if (isNeutral) {
-    bets = bets.map(b => {
-      if (b === "Victoire domicile") return `Victoire ${match.home}`;
-      if (b === "Victoire extérieur") return `Victoire ${match.away}`;
-      if (b === "Double chance 1X") return `Double chance ${match.home} ou Nul`;
-      if (b === "Double chance X2") return `Double chance ${match.away} ou Nul`;
-      return b;
-    });
-  }
-
-  if (!isLive) return bets;
-
-  // Marchés déjà PERDUS → supprimer
-  if (total > 2.5) bets = bets.filter(b => b !== "Under 2.5 buts");
-  if (total > 1.5) bets = bets.filter(b => b !== "Under 1.5 buts" && b !== "Under 2.5 buts");
-  if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Non");
-  // Marchés déjà gagnés : ne jamais proposer un pari dont l'issue est déjà acquise.
-  if (total > 2.5) bets = bets.filter(b => b !== "Over 2.5 buts");
-  if (h > 0 && a > 0) bets = bets.filter(b => b !== "BTTS Oui");
-
-  // Over 2.5 : projection mathématique basée sur le rythme actuel
-  const need25 = Math.max(0, 3 - total);
-  const projectedGoals = minute > 0 ? (total / minute) * 90 : 0;
-  if (need25 >= 3 && remaining <= 30) bets = bets.filter(b => b !== "Over 2.5 buts");
-  if (need25 >= 2 && remaining <= 15) bets = bets.filter(b => b !== "Over 2.5 buts");
-  // Nouveau : si projection < 2.0 après 45 min → Over 2.5 statistiquement improbable
-  if (minute >= 45 && need25 >= 2 && projectedGoals < 2.0) bets = bets.filter(b => b !== "Over 2.5 buts");
-
-  // BTTS quasi-impossible si une équipe vierge et peu de temps
-  if (h === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
-  if (a === 0 && remaining <= 15) bets = bets.filter(b => b !== "BTTS Oui");
-
-  // Victoire impossible si mène +2 et <10 min
-  if (isNeutral) {
-    if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== `Victoire ${match.away}`);
-    if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== `Victoire ${match.home}`);
-  } else {
-    if (h - a >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire extérieur");
-    if (a - h >= 2 && remaining <= 10) bets = bets.filter(b => b !== "Victoire domicile");
-  }
-
-  return bets.length > 0 ? bets : BET_TYPES;
-}
 
 // Correction post-IA : si l'IA recommande quand même un pari impossible, on corrige
 function validateAndCorrectBet(bet, match, availableBets) {
@@ -5015,20 +4955,28 @@ function hoteDuProvider(pv) {
   return pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || "");
 }
 
+// TLM_OU25_CRITICAL_LOCK
+function isTlmOu25Bet(value) {
+  return /\b(?:over|under|plus de|moins de)\s*2[.,]5\b/i.test(String(value || ""));
+}
+
 async function runConcileAnalysis(match) {
   // Plafond de replis de secours pour CETTE analyse (5 agents = 5 maximum).
   // Empeche qu'un incident fournisseur transforme une analyse en rafale
   // d'appels payants, meme sous le plafond journalier.
   let _secoursCetteAnalyse = 0;
   const SECOURS_MAX_PAR_ANALYSE = 5;
-  if (!GROQ_API_KEY) {
-    return getMockAnalysis(match);
+  if (!GROQ_API_KEY && !OPENROUTER_API_KEY) {
+    throw new Error("Aucun fournisseur IA configuré — analyse fictive interdite");
   }
 
   const neutralNote = isNeutralComp(match.competition)
     ? "\n⚠️ TERRAIN NEUTRE — ne PAS mentionner l'avantage domicile, il n'existe pas dans cette compétition."
     : "";
   const sport = String(match.sport || "Football");
+  if (sport !== "Football") {
+    throw new Error("Produit Live IA réservé au football");
+  }
   const sportNote = sport !== "Football"
     ? `\nSport: ${sport}` : "";
   const sportRules = sport === "Basketball"
@@ -5037,7 +4985,7 @@ async function runConcileAnalysis(match) {
       ? "\nRègle sport: hockey — privilégier vainqueur/double chance; over/under seulement si rythme et tirs sont très solides."
       : sport === "Baseball"
         ? "\nRègle sport: baseball — privilégier moneyline/vainqueur; éviter les marchés joueurs ou exotiques au début."
-        : "\nRègle sport: football — marchés autorisés: vainqueur, double chance, draw no bet, BTTS, over/under prudents, but équipe.";
+        : "\nRègle sport: football — PRODUIT UNIQUE: analyse exclusivement Over 2.5 buts ou Under 2.5 buts sur le score final. Tout autre marché est interdit.";
   const liveConstraints = computeLiveConstraints(match);
 
   // Récupérer les statistiques live si disponibles (football uniquement)
@@ -5070,7 +5018,10 @@ async function runConcileAnalysis(match) {
   }
 
   // Pré-filtrer les paris impossibles du prompt
-  const availableBets = computeAvailableBets(match);
+  const availableBets = computeAvailableBets(match).filter(isTlmOu25Bet);
+  if (!availableBets.length) {
+    throw new Error("Aucun marché Over/Under 2,5 disponible");
+  }
   const estimatedMin = estimateMinute(match);
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
@@ -5129,9 +5080,9 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       useCohere,
     },
     {
-      name: "OpenRouter-Qwen",
-      model: resolveModel(process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"),
-      icon: "🌟",
+      name: "OpenRouter-Kimi",
+      model: resolveModel(process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3"),
+      icon: "🌙",
       useOpenRouter,
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
@@ -5152,11 +5103,11 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
 
-    `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
+    `Tu es OpenRouter-Kimi, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
 
     `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.
 
-RÈGLE CHAMPION : le marché "But en 1ère mi-temps" a un winrate historique prouvé de 82% (931 pronos vérifiés). À qualité égale (écart de confiance ≤ 5 points), tu DOIS privilégier ce marché sur les autres. Si un agent le vote avec confiance ≥ 75% et que ton propre pick est un autre marché avec confiance équivalente, aligne-toi sur "But en 1ère mi-temps" — c'est notre marché champion prouvé.`,
+RÈGLE PRODUIT : le seul marché client autorisé est "Over 2.5 buts" ou "Under 2.5 buts" sur le score final. Ne privilégie jamais un autre marché, même si son historique semble meilleur. Si aucun des deux choix O/U 2.5 n'est suffisamment robuste, réponds NOPICK.`,
   ];
 
   // Charger les performances historiques pour pondérer le verdict du Chief
@@ -5196,23 +5147,13 @@ DIRECTIVE MARCHÉ :
 
 Donne AUSSI ton avis rapide sur chaque marché (objet "marches", codes courts + confiance 40-90) :
 - buts: "o2.5" (plus de 2.5) ou "u2.5" (moins de 2.5)
-- ou05: "o0.5" (plus de 0.5, au moins 1 but) ou "u0.5" (0 but, 0-0)
-- ou15: "o1.5" (plus de 1.5) ou "u1.5" (moins de 1.5)
-- btts: "oui" ou "non" (les deux équipes marquent)
-- resultat: "dom", "ext" ou "nul"
-- mt1: "oui" ou "non" (au moins un but en 1ère mi-temps, les deux équipes confondues)
-- mt1_dom: "oui" ou "non" (${match.home} marque en 1ère mi-temps)
-- mt1_ext: "oui" ou "non" (${match.away} marque en 1ère mi-temps)
-- mt2: "oui" ou "non" (au moins un but en 2ème mi-temps, les deux équipes confondues)
-- mt2_dom: "oui" ou "non" (${match.home} marque en 2ème mi-temps)
-- mt2_ext: "oui" ou "non" (${match.away} marque en 2ème mi-temps)
 
 Réponds en JSON pur (pas de markdown):
 {
   "bet": "un parmi: ${availableBets.join(", ")}",
   "confidence": <nombre 50-90 argumenté, PAS 70 par défaut>,
   "raison": "<2 phrases avec au moins 2 données chiffrées concrètes (forme, H2H, blessés, enjeu, stats)>",
-  "marches": {"buts":{"p":"o2.5","c":70},"ou05":{"p":"o0.5","c":80},"ou15":{"p":"o1.5","c":75},"btts":{"p":"oui","c":60},"resultat":{"p":"dom","c":65},"mt1":{"p":"oui","c":55},"mt1_dom":{"p":"oui","c":58},"mt1_ext":{"p":"non","c":52},"mt2":{"p":"oui","c":65},"mt2_dom":{"p":"oui","c":60},"mt2_ext":{"p":"non","c":50}}
+  "marches": {"buts":{"p":"o2.5","c":70}}
 }`;
 
     try {
@@ -5268,29 +5209,25 @@ Réponds en JSON pur (pas de markdown):
       }
       // Agent titulaire "OpenRouter-Qwen" : meme garde-fou que les 4 ci-dessus.
       if (agCfg.useOpenRouter && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
       }
       // Comptes directs gardes en repli SEULEMENT si OpenRouter a refuse
       // (budget/quota du jour atteint) ou echoue — utiles si un jour
       // re-alimentes, mais plus le chemin principal.
-      if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: agCfg.model });
-      if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
-      if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
-      if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
-      if (!providers.length && GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
+      if (!OPENROUTER_API_KEY && agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: agCfg.model });
+      if (!OPENROUTER_API_KEY && agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
+      if (!OPENROUTER_API_KEY && agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
+      if (!OPENROUTER_API_KEY && agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
+      if (!providers.length && !OPENROUTER_API_KEY && GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
       // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
       // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
       // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
       if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
-      }
-      if (!providers.length && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" });
       }
-      if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
+      if (!providers.length && !OPENROUTER_API_KEY && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       // Ecarte les fournisseurs dont le compte est en panne (401/402/403/429).
       // Sans ce filtre, un agent tombait sur un compte mort et ne votait pas,
@@ -5528,7 +5465,7 @@ Synthétise ces votes en tenant compte de :
 2. Les contraintes mathématiques du score live
 3. Tes connaissances sur ${match.home} et ${match.away}
 4. Les objections des agents minoritaires: explique pourquoi tu les acceptes ou les rejettes
-5. Le contrôle GPT-Codex Challenger: teste au moins 3 marchés alternatifs (BTTS, double chance, over/under, vainqueur ou nul selon disponibilité), puis rejette ceux dont le signal est moins robuste
+5. Le contrôle GPT-Codex Challenger: compare uniquement Over 2.5 et Under 2.5 sur le score final. Cherche activement les objections contre le choix majoritaire. Si aucun des deux n'est robuste, impose NOPICK
 6. Le contexte business/risque: enjeu du match, domicile/extérieur, match amical ou officiel, blessures/absences connues seulement si tu en es sûr; si une donnée manque, ne l'invente pas
 7. Les règles propres au sport: ${sport}
 8. Tu DOIS choisir parmi : ${availableBets.join(", ")}
@@ -5548,13 +5485,17 @@ Réponds en JSON pur (pas de markdown):
     // répondait vide/lentement (timeout 3.5s), Qwen était rappelé en plus, à
     // chaque analyse où le Chief tranche. C'est la principale source identifiée
     // de la surconsommation OpenRouter (audit du 28/07/2026).
+    // Chief : OpenRouter uniquement. Les accès directs ne sont plus sollicités
+    // quand OpenRouter est configuré et restent hors du chemin de production.
     const chiefProviders = [];
-    if (DEEPSEEK_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: "deepseek-chat" });
-    if (!chiefProviders.length && GROQ_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
-    if (!chiefProviders.length && CEREBRAS_API_KEY) chiefProviders.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
-    if (!chiefProviders.length && OPENROUTER_API_KEY
-        && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: "Chief", matchKey: `${match.home || "?"}_${match.away || "?"}`, competition: match.competition || match.league || "", modelKey: "qwen" })) {
-      chiefProviders.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
+    if (OPENROUTER_API_KEY
+        && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: "Chief", matchKey: `${match.home || "?"}_${match.away || "?"}`, competition: match.competition || match.league || "", modelKey: "chief" })) {
+      chiefProviders.push({
+        kind: "openai",
+        url: "https://openrouter.ai/api/v1/chat/completions",
+        key: OPENROUTER_API_KEY,
+        model: process.env.OPENROUTER_CHIEF_MODEL || process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3"
+      });
     }
 
     let raw = "{}";
@@ -5684,6 +5625,14 @@ Réponds en JSON pur (pas de markdown):
       chief.confidence = Math.min(55, Number(chief.confidence || 55));
       chief.raison = `Aucun signal validé : les IA ne convergent pas assez fortement. ${chief.raison || ""}`.trim();
     }
+  }
+
+  // Verrou final : aucun marché hors Over/Under 2,5.
+  if (!isTlmOu25Bet(chief.bet)) {
+    chief.bet = "NOPICK";
+    chief.confidence = Math.min(55, Number(chief.confidence || 55));
+    chief.raison = "Aucune opportunité Over/Under 2,5 suffisamment fiable.";
+    consensusVotes = 0;
   }
 
   // Sauvegarder les prédictions pour le tracking de performance
@@ -5818,10 +5767,11 @@ Réponds en JSON pur (pas de markdown):
   })();
 
   const _blockReason = (() => {
+    if (!isTlmOu25Bet(analysisResult.best_bet)) return "market_not_allowed";
     if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
-    if (voteCountForSignal < 3) return `votes ${voteCountForSignal} < 3`;
+    if (voteCountForSignal < 4) return `votes ${voteCountForSignal} < 4`;
     if (!hasRealData) return "donnees stats/H2H indisponibles";
     if (!qualityGate.ok) return `filtre qualite: ${qualityGate.reason}`;
     if (!playable.ok) return `cote: ${playable.reason}`;
@@ -5873,16 +5823,15 @@ Réponds en JSON pur (pas de markdown):
       const awayEsc = escTgHtml(match.away);
       const compEsc = escTgHtml(match.competition || match.league || match.sport || "");
       const betEsc = escTgHtml(analysisResult.best_bet);
-      const tgPremium = `🚨 <b>SIGNAL CONCILE IA — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>${coteSig}${arjelAvgLine}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL CONCILE IA DÉTECTÉ — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Premium · Elite</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgPremium = `🚨 <b>SIGNAL IA VALIDÉ — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>${coteSig}${arjelAvgLine}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
+      const tgFree = `🚨 <b>SIGNAL IA DÉTECTÉ — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres.</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n💎 Recevoir les signaux en direct dès <b>4,90€/mois</b> → <a href="https://www.touslesmatchs.com/#plans">Standard · Intensif</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
       const sigTier = computeSignalTier(analysisResult.best_bet, analysisResult.confidence, minute);
       const tierBadge = sigTier === "standard" ? "🥇 STANDARD" : sigTier === "premium" ? "🥈 PREMIUM" : "🥉 ELITE";
       console.log(`[signal-fort] Palier: ${tierBadge} (${sigTier}) — ${analysisResult.best_bet} ${analysisResult.confidence}% min=${minute}`);
-      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a))
-        || isArjelMajorCompetition(match);
+      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a));
       if (!arjelPlayable) {
         console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
       }
@@ -5908,14 +5857,17 @@ Réponds en JSON pur (pas de markdown):
       // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
       // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
       // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
-      const sportDiffusable = DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
-      const diffusable = arjelPlayable && oddOk && sportDiffusable;
+      const sportDiffusable = sportLc.includes("football");
+      const market25 = /\b(?:over|under|plus|moins)\b.*\b2[.,]5\b/i.test(String(analysisResult.best_bet || ""));
+      const diffusable = arjelPlayable && oddOk && sportDiffusable && market25;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
       if (!diffusable) {
         _tierBlock = !sportDiffusable
-          ? `sport non diffusable: ${match.sport || "?"}`
+          ? `football uniquement: ${match.sport || "?"}`
+          : !market25
+            ? `marche non autorise: ${analysisResult.best_bet || "?"}`
           : !arjelPlayable
             ? `hors ARJEL (source cote: ${analysisResult.cote_source || "estimation"})`
             : realOdd === 0
@@ -5929,13 +5881,17 @@ Réponds en JSON pur (pas de markdown):
       // palier restait vide la plupart des jours (0/3 le 28/07/2026). Une majorite
       // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
       // eleve que les autres paliers, qui porte l'exigence Standard.
-      const gradeStandard = diffusable && voteCountForSignal >= 4 && conf >= TH.standard;
-      const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
-      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
+      const minuteOk = minute >= 15 && minute <= 40;
+      const gradeStandard = diffusable && minuteOk && voteCountForSignal >= 4 && conf >= TH.standard;
+      const gradeElite = gradeStandard || (diffusable && minuteOk && voteCountForSignal >= 4 && conf >= TH.premium);
       shadowWorthy = gradeElite;
 
-      const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
-      const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
+      const stdDistinct = !!TELEGRAM_STANDARD_CHANNEL_ID
+        && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_CHANNEL_ID
+        && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_ELITE_CHANNEL_ID;
+      const eliteDistinct = !!TELEGRAM_ELITE_CHANNEL_ID
+        && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_CHANNEL_ID
+        && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_STANDARD_CHANNEL_ID;
       const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
       // Ligne EXACTE de cette analyse. Sans elle, le marquage retombait sur
       // "toutes les lignes du match aujourd'hui" et contaminait les analyses
@@ -5960,17 +5916,8 @@ Réponds en JSON pur (pas de markdown):
         });
       }
 
-      // 🟣 PREMIUM — cap 10/j (canal socle, toujours présent)
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
-        _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_premium", _ligneAnalysee);
-          else _premiumSignalDaily.count--;
-          console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
-        });
-      } else if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium) {
-        console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
-      }
+      // 🟣 INTENSIF — cap 10/j
+      // Ancien palier Premium/Intensif gelé : aucune nouvelle diffusion.
 
       // 🟠 ELITE/VIP — cap 30/j, multisport, alertes prioritaires
       if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
@@ -5992,12 +5939,12 @@ Réponds en JSON pur (pas de markdown):
       }
 
       // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
-      if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
+      if (gradeStandard && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => {
+        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgPremium + tierTag("🆓 GRATUIT — SIGNAL DU JOUR")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_free", _ligneAnalysee);
           else _freeSignalDailyDate.count--;
-          console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
+          console.log(`[signal-fort] Telegram gratuit signal complet (${_freeSignalDailyDate.count}/1): ${ok ? "OK" : "FAIL — quota rendu"}`);
         });
       }
     }
@@ -6072,7 +6019,7 @@ function getMockAnalysis(match) {
     { name: "DeepSeek-V3", icon: "🔮", model: "deepseek-chat" },
     { name: "Mistral-Large", icon: "🌊", model: "mistral-large-latest" },
     { name: "Cohere-Command", icon: "🧬", model: "command-r-plus" },
-    { name: "OpenRouter-Qwen", icon: "🌟", model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" },
+    { name: "OpenRouter-Kimi", icon: "🌙", model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" },
   ];
   const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
   const voteSummary = buildVoteSummary(agentResults, agentResults[0]?.bet);
@@ -7621,7 +7568,7 @@ async function resolveStalePredictions() {
         UNION ALL
         SELECT home, away, 'Football' AS sport, '' AS competition, created_at FROM shadow_evals WHERE outcome IS NULL
       ) WHERE created_at <= datetime('now','-90 minutes')
-        AND created_at >= datetime('now','-30 days')
+        AND created_at >= datetime('now','-3 days')
     `).all();
     if (!staleRows.length) return;
 
@@ -7629,6 +7576,7 @@ async function resolveStalePredictions() {
     const stale = [];
     const seenPair = new Set();
     for (const r of staleRows) {
+      if (process.env.AUTO_CONCILE_MULTISPORT !== "1" && String(r.sport || "Football") !== "Football") continue;
       const k = `${r.home}|${r.away}`;
       if (seenPair.has(k)) continue;
       seenPair.add(k); stale.push(r);
@@ -7642,9 +7590,10 @@ async function resolveStalePredictions() {
     const neededSports = new Set();
     for (const r of staleRows) {
       if (r.day) neededDates.add(r.day);
-      neededSports.add(String(r.sport || "Football"));
+      neededSports.add("Football");
     }
-    const dates = [...neededDates].sort().slice(-30);
+    // Réconciliation utile : aujourd’hui et hier seulement.
+    const dates = [...neededDates].sort().slice(-2);
 
     const finished = [];
 
@@ -7848,8 +7797,9 @@ async function resolveStalePredictions() {
     staleResolveRunning = false;
   }
 }
-// Toutes les 20 min + un premier passage 30s après le démarrage
-setInterval(resolveStalePredictions, 20 * 60 * 1000);
+// Une fois par heure : les résultats n’ont pas besoin de 3 appels/minute.
+const RESULTS_RESOLVE_INTERVAL_MS = Math.max(30, Number(process.env.RESULTS_RESOLVE_INTERVAL_MIN || 60)) * 60 * 1000;
+setInterval(resolveStalePredictions, RESULTS_RESOLVE_INTERVAL_MS);
 setTimeout(resolveStalePredictions, 30 * 1000);
 
 let signalFortResolveRunning = false;
@@ -8013,14 +7963,14 @@ function isNoiseForDisplay(match) {
 // À réactiver via AUTO_CONCILE_MULTISPORT=1 dès qu'il existe des marchés par sport
 // (totaux de points au basket, lignes de runs au baseball, etc.).
 const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
-const AUTO_CONCILE_WINDOW_MIN = Math.max(1, Number(process.env.AUTO_CONCILE_WINDOW_MIN || 30));
-const AUTO_CONCILE_WINDOW_MAX = Math.max(AUTO_CONCILE_WINDOW_MIN + 1, Number(process.env.AUTO_CONCILE_WINDOW_MAX || 75));
+const AUTO_CONCILE_WINDOW_MIN = 15;
+const AUTO_CONCILE_WINDOW_MAX = 40;
 // Décision fondateur du 28/07/2026 : la sélection ne se fait plus sur la minute
 // mais sur la cote réelle ARJEL (fenêtre 1.30–2.50). La fenêtre de temps
 // produisait trop peu de signaux, et créait une incohérence visible : un match à
 // la 80e restait affiché en direct mais refusait l'analyse. Mettre
 // AUTO_CONCILE_TIME_WINDOW=1 dans .env pour la réactiver sans redéployer.
-const AUTO_CONCILE_TIME_WINDOW = process.env.AUTO_CONCILE_TIME_WINDOW === "1";
+const AUTO_CONCILE_TIME_WINDOW = true;
 
 // ── Règles métier gravées dans la pierre (ne pas assouplir) ───────────────────
 // R1 : aucun prono live avant la 35e minute ni après la 75e (données suffisantes
@@ -8121,14 +8071,14 @@ function hasPredictionSnapshot(match) {
 const AUTO_CONCILE_ARJEL_ONLY = process.env.AUTO_CONCILE_ARJEL_ONLY !== "0";
 // Marches sur lesquels une analyse peut reellement devenir un signal
 // (miroir de DAILY_PICK_ALLOWED_BETS). Inutile de sonder autre chose.
-const ARJEL_PREFILTER_MARKETS = ["Under 2.5 buts", "BTTS Oui", "Victoire domicile", "Victoire extérieur"];
+const ARJEL_PREFILTER_MARKETS = ["Over 2.5 buts", "Under 2.5 buts"];
 
 async function isArjelPlayableBeforeAnalysis(match) {
   if (!AUTO_CONCILE_ARJEL_ONLY) return { ok: true, why: "filtre desactive" };
   // Hors football, l'API de cotes ne couvre rien : on ne peut pas verifier, et
   // refuser reviendrait a supprimer le multisport. On laisse passer, la barriere
   // de diffusion reste en place en aval.
-  if (String(match.sport || "Football") !== "Football") return { ok: true, why: "hors football, non verifiable" };
+  if (String(match.sport || "Football") !== "Football") return { ok: false, why: "hors football" };
   let oddsData;
   try { oddsData = await fetchRealOdds(match); }
   catch (e) { return { ok: true, why: "cotes injoignables (" + e.message + ")" }; }
@@ -9279,18 +9229,16 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
   const flag = (v) => v === 1 || v === true;
   const sentStandard = flag(analysis.sig_sent_standard);
-  const sentPremium  = flag(analysis.sig_sent_premium);
   const sentElite    = flag(analysis.sig_sent_elite);
   const sentFree     = flag(analysis.sig_sent_free);
-  if (!sentStandard && !sentPremium && !sentElite && !sentFree) {
+  if (!sentStandard && !sentElite && !sentFree) {
     console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
     return;
   }
   if (TELEGRAM_STANDARD_CHANNEL_ID && sentStandard) sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium)   sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
   if (TELEGRAM_ELITE_CHANNEL_ID && sentElite)       sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, premiumMsg);
   if (TELEGRAM_CHANNEL_ID && sentFree)              sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentStandard ? " standard" : ""}${sentPremium ? " premium" : ""}${sentElite ? " elite" : ""})`);
+  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentStandard ? " standard" : ""}${sentElite ? " elite" : ""})`);
 }
 
 // Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
@@ -9313,17 +9261,69 @@ const SIGNAL_SENT_COLUMNS = ["sig_sent_free", "sig_sent_standard", "sig_sent_pre
 function markSignalSent(home, away, col, matchKey) {
   if (!SIGNAL_SENT_COLUMNS.includes(col)) return;
   try {
-    const garde = `AND (diffusion_block IS NULL OR trim(diffusion_block) = '')
-                   AND (real_odd_source IS NULL OR lower(real_odd_source) NOT LIKE '%estimation%')`;
-    const r = matchKey
-      ? db.prepare(`UPDATE concile_analyses SET ${col}=1 WHERE match_key = ? ${garde}`).run(matchKey)
-      : db.prepare(
-          `UPDATE concile_analyses SET ${col}=1
-           WHERE lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
-             AND date(analysed_at)=date('now') ${garde}`
-        ).run(home, away);
+    const realOddOnly = "AND (real_odd_source IS NULL OR lower(real_odd_source) NOT LIKE '%estimation%')";
+    let r;
+
+    // Un envoi Telegram confirmé rend le signal diffusé : un blocage ancien
+    // ne doit pas cacher son résultat dans l’application.
+    if (matchKey) {
+      r = db.prepare(`UPDATE concile_analyses
+        SET ${col}=1, diffusion_block=NULL
+        WHERE match_key = ? ${realOddOnly}`).run(matchKey);
+    } else {
+      r = db.prepare(`UPDATE concile_analyses SET ${col}=1
+        WHERE lower(trim(home))=lower(trim(?))
+          AND lower(trim(away))=lower(trim(?))
+          AND date(analysed_at)=date('now')
+          AND (diffusion_block IS NULL OR trim(diffusion_block) = '')
+          ${realOddOnly}`).run(home, away);
+    }
+
     if (!r.changes) {
-      console.warn(`[signal-sent] ${col} NON marque pour ${home} vs ${away} : ligne bloquee, cote estimee, ou introuvable`);
+      // TLM_SIG_SENT_FALLBACK_V2
+      // L'analyse peut avoir ete recrite entre la decision et l'envoi Telegram.
+      // Si l'UPDATE strict ne trouve plus la ligne, on marque la derniere
+      // analyse recente du meme match par son ID exact.
+      const allowedSigCols = new Set([
+        "sig_sent_free",
+        "sig_sent_standard",
+        "sig_sent_premium",
+        "sig_sent_elite"
+      ]);
+
+      let fallbackChanges = 0;
+      let fallbackId = null;
+
+      if (allowedSigCols.has(col)) {
+        const fallbackRow = db.prepare(`
+          SELECT id
+          FROM concile_analyses
+          WHERE home = ?
+            AND away = ?
+            AND analysed_at >= datetime('now', '-12 hours')
+          ORDER BY id DESC
+          LIMIT 1
+        `).get(home, away);
+
+        if (fallbackRow && fallbackRow.id) {
+          fallbackId = fallbackRow.id;
+          fallbackChanges = db.prepare(
+            `UPDATE concile_analyses
+             SET ${col} = 1
+             WHERE id = ?`
+          ).run(fallbackId).changes;
+        }
+      }
+
+      if (fallbackChanges > 0) {
+        console.log(
+          `[signal-sent] ${col} marque via fallback id=${fallbackId} pour ${home} vs ${away}`
+        );
+      } else {
+        console.warn(
+          `[signal-sent] ${col} NON marque pour ${home} vs ${away}`
+        );
+      }
     }
   } catch (e) { console.error("[signal-sent]", e.message); }
 }
@@ -11124,6 +11124,10 @@ function sendTelegramPhoto(chatId, imageBuffer, caption) {
 }
 
 async function generateGainImage(tier, stats, dateLabel) {
+  if (process.env.DAILY_GAIN_IMAGE_ENABLED !== "true") {
+    console.log(`[gain-image] ${tier}: désactivé (DAILY_GAIN_IMAGE_ENABLED != true)`);
+    return null;
+  }
   if (!OPENAI_API_KEY) return null;
   const fmtEur = (n) => (n >= 0 ? "+" : "") + Math.round(n) + "€";
   const prompt = `Cree une image verticale format story (1024x1536), fond degrade bleu nuit tres sombre et violet neon, ambiance application premium type fintech moderne. INTERDIT : logo ou mascotte d'un bookmaker existant (Winamax, Betclic, PMU, Unibet...), jetons de casino, des, symboles de jeu d'argent, humain photorealiste.
@@ -11364,8 +11368,7 @@ app.get("/live-matches", async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
     if (req.query.force === "1") {
-      liveMatchesCache = { data: null, ts: 0 };
-      console.log("[live-matches] Cache forcé vidé par l'utilisateur");
+      console.warn("[live-matches] Paramètre force ignoré : cache protégé");
     }
     const allMatches = await fetchLiveMatches();
     // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
@@ -11606,28 +11609,51 @@ function isAdminAccess(email, code) {
 }
 
 function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
-  const clean = { ...analysis };
+  const source = analysis || {};
+  const clean = typeof structuredClone === "function"
+    ? structuredClone(source)
+    : JSON.parse(JSON.stringify(source));
+
   if (!allowAdminFields) delete clean.agent_performance;
+
+  // Produit client unique TLM : aucun score/avis secondaire n'est exposé.
+  delete clean.market_scores;
+  delete clean.h2h_markets;
+
+  if (clean.marches && typeof clean.marches === "object") {
+    clean.marches = clean.marches.buts
+      ? { buts: clean.marches.buts }
+      : {};
+  }
+
   if (Array.isArray(clean.agents)) {
     clean.agents = clean.agents
       .filter((agent) => {
         const bet = String(agent?.bet || "").trim();
         const reason = String(agent?.raison || "");
         return !agent.failed
-          && bet
-          && bet !== "—"
-          && bet !== "-"
+          && isTlmOu25Bet(bet)
           && agent.confidence !== null
           && agent.confidence !== undefined
           && !reason.includes("IA non joignable");
       })
       .map((agent, index, list) => ({
         ...agent,
-        name: index === list.length - 1 && agent.isChief ? "Synthèse du Concile" : `Agent IA ${index + 1}`,
+        name: index === list.length - 1 && agent.isChief
+          ? "Synthèse du Concile"
+          : `Agent IA ${index + 1}`,
         model: "",
         raison: agent.isChief ? agent.raison : "",
       }));
   }
+
+  // Dernière défense client, indépendante du cache brut.
+  if (clean.best_bet && clean.best_bet !== "NOPICK" && !isTlmOu25Bet(clean.best_bet)) {
+    clean.best_bet = "NOPICK";
+    clean.confidence = Math.min(Number(clean.confidence) || 0, 55);
+    clean.consensus_votes = 0;
+  }
+
   return clean;
 }
 
@@ -11643,6 +11669,11 @@ app.post("/concile-analysis", async (req, res) => {
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
   const allowAdminFields = isAdminAccess(email, code);
 
+  const forceRequested = req.body.force === true || req.body.force === 1 || req.body.force === "1";
+  if (forceRequested && !allowAdminFields) {
+    return res.status(403).json({ ok: false, error: "FORCE_ADMIN_REQUIRED" });
+  }
+
   // Check credits (credits_max=0 means unlimited)
   const today = new Date().toISOString().slice(0, 10);
   if (auth.credits_left !== null && auth.credits_left !== undefined && auth.credits_left <= 0) {
@@ -11652,17 +11683,19 @@ app.post("/concile-analysis", async (req, res) => {
   const verifiedMatch = await requireVerifiedLiveMatch(match);
   if (!verifiedMatch) return res.json({ ok: false, error: "Match live non verifie" });
   if (rejectScoreConflict(verifiedMatch, res)) return;
+  if (isExcludedFromPicks(verifiedMatch)) {
+    return res.json({ ok: false, error: "MATCH_EXCLUDED_FROM_PICKS" });
+  }
   const blockReason = livePickBlockReason(verifiedMatch);
   if (blockReason) return res.json({ ok: false, error: blockReason });
 
-  const forceRefresh = req.body.force === true || req.body.force === 1 || req.body.force === "1";
   // Cache partagé par match+état (pas par user) pour économiser les tokens Groq
   const scoreState = verifiedMatch.score_home !== null ? `${verifiedMatch.score_home}-${verifiedMatch.score_away}_${Math.floor((verifiedMatch.minute || 0) / 15)}` : "prematch";
-  const cacheKey = `${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}_${scoreState}`;
-  if (!forceRefresh && analysisCache.has(cacheKey)) {
+  const cacheKey = `ou25-v1_${verifiedMatch.id || `${verifiedMatch.home}_${verifiedMatch.away}`}_${today}_${scoreState}`;
+  if (!forceRequested && analysisCache.has(cacheKey)) {
     return res.json({ ok: true, ...sanitizeAnalysisForClient(analysisCache.get(cacheKey), allowAdminFields), cached: true });
   }
-  if (forceRefresh) analysisCache.delete(cacheKey);
+  if (forceRequested) analysisCache.delete(cacheKey);
 
   try {
     const analysis = await runConcileAnalysis(verifiedMatch);
@@ -13691,6 +13724,8 @@ app.get("/premium-teaser", (req, res) => {
 
 // ── Internal signal notify — strong signal email to premium subscribers ───────
 app.post("/internal/signal-notify", async (req, res) => {
+  console.warn("[signal-notify] Route legacy neutralisée — aucune diffusion client");
+  return res.status(410).json({ ok: false, error: "Route legacy désactivée : utiliser le pipeline Signal Fort validé." });
   const { signal, secret } = req.body || {};
   const HERMES_TOKEN = process.env.HERMES_ADMIN_TLM_BOT;
   if (!HERMES_TOKEN || secret !== HERMES_TOKEN) return res.status(403).json({ ok: false, error: "Forbidden" });
@@ -13711,7 +13746,7 @@ app.post("/internal/signal-notify", async (req, res) => {
   try {
     const codesDb = new Database(CODES_DB_PATH, { readonly: true });
     const rows = codesDb.prepare(
-      "SELECT email FROM codes WHERE active = 1 AND plan IN ('premium','elite','vip') AND email IS NOT NULL AND email != ''"
+      "SELECT email FROM codes WHERE active = 1 AND plan IN ('standard','premium') AND email IS NOT NULL AND email != ''"
     ).all();
     codesDb.close();
 
@@ -13823,9 +13858,9 @@ app.post("/internal/signal-notify", async (req, res) => {
     // qu'un non-francophone ne peut pas deviner : le type d'analyse et la
     // mention legale. Message ~6 lignes plus long, pas deux fois plus long.
     const enPremium = `\n\n🇬🇧 AI analysis: <b>${betLabelEn(signal.bet)}</b>\n📊 Confidence: <b>${conf}/100</b>\n⚠️ 18+ — Responsible gaming`;
-    const enFree = `\n\n🇬🇧 The exact selection and full analysis are reserved for Premium/Elite subscribers.\n⚠️ 18+ — Responsible gaming`;
+    const enFree = `\n\n🇬🇧 The exact selection and full analysis are reserved for Standard/Intensif subscribers.\n⚠️ 18+ — Responsible gaming`;
     const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Score de confiance : <b>${conf}/100</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enPremium}`;
-    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium/Elite.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enFree}`;
+    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Standard/Intensif.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans">S'abonner pour accéder aux analyses</a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enFree}`;
     // Signal de niveau Premium : Premium et Elite le reçoivent toujours (modèle
     // imbriqué), Standard uniquement s'il atteint son seuil plus exigeant.
     await sendToPaidChannels(tgPremiumText, { tag: "signal-notify", includeStandard: (Number(conf) || 0) >= STANDARD_MIN_CONF });
@@ -14704,7 +14739,7 @@ function estPlusRecent(candidat, actuel) {
 // plus dur a atteindre et la confiance retombe a 55%. Mieux vaut un agent d'une
 // autre famille qu'un siege vide. Ordre choisi par le fondateur (07/08/2026) :
 // Kimi d'abord, puis Qwen.
-const AGENTS_DE_SECOURS = ["moonshotai/kimi-k3", "qwen/qwen3.7-max"];
+const AGENTS_DE_SECOURS = ["moonshotai/kimi-k3"];
 
 async function auditAndRepairModels() {
   if (!OPENROUTER_API_KEY) return { lignes: ["🔴 Modeles — aucune cle OpenRouter"], pannes: ["Modeles"] };
@@ -14870,7 +14905,7 @@ const MODELE_DES_AGENTS = {
   "DeepSeek-V3": "deepseek/deepseek-chat",
   "Mistral-Large": "mistralai/mistral-large",
   "Cohere-Command": "cohere/command-r-plus",
-  "OpenRouter-Qwen": "qwen/qwen3.7-max",
+  "OpenRouter-Kimi": "moonshotai/kimi-k3",
   "OR-Qwen37Max": "qwen/qwen3.7-max",
   "OR-KimiK3": "moonshotai/kimi-k3",
   "OR-Mistral7B": "mistralai/mistral-7b-instruct:free",
@@ -16347,3 +16382,30 @@ module.exports.__liveContractTest = {
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
 };
+
+// Historique public Live Totaux IA : uniquement le produit actuel.
+app.get("/live-totaux-history", (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 40, 1), 100);
+    const startedAt = "2026-08-21 00:00:00";
+    const cols = new Set(db.prepare("PRAGMA table_info(concile_analyses)").all().map(x => x.name));
+    const homeLogo = cols.has("home_logo") ? "home_logo" : "NULL";
+    const awayLogo = cols.has("away_logo") ? "away_logo" : "NULL";
+    const analyses = db.prepare(`
+      SELECT home, away, competition, best_bet, outcome, real_odd, consensus_votes, analysed_at,
+             ${homeLogo} AS home_logo, ${awayLogo} AS away_logo
+      FROM concile_analyses
+      WHERE analysed_at >= ?
+        AND outcome IN ('win','loss')
+        AND best_bet IN ('Over 2.5 buts','Under 2.5 buts')
+        AND (sig_sent_standard=1 OR sig_sent_premium=1)
+      ORDER BY analysed_at DESC
+      LIMIT ?
+    `).all(startedAt, limit);
+    res.json({ ok:true, total:analyses.length, analyses });
+  } catch (e) {
+    console.error("[live-totaux-history]", e.message);
+    res.status(500).json({ ok:false, analyses:[] });
+  }
+});
+

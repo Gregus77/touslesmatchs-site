@@ -1,0 +1,27 @@
+﻿country,league,team,rank_a1,rank_a2,rank_a3,rank_a4,seasons_available,historique_incomplet,weighted_average_rank,simple_average_rank,historical_rank,historical_percentile,historical_tier,usable_as_top_candidate,usable_as_bottom_target,data_status,source_file
+Espagne,La Liga,Real Madrid,2.0,1.0,2.0,1.0,4,False,1.6,1.5,1,100.0,TOP_25_HISTORIQUE,True,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Barcelone,1.0,2.0,3.0,2.0,4,False,1.8,2.0,2,96.0,TOP_25_HISTORIQUE,True,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Atl Madrid,3.0,3.0,1.0,3.0,4,False,2.6,2.5,3,92.0,TOP_25_HISTORIQUE,True,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Real Sociedad,4.0,6.0,5.0,6.0,4,False,5.0,5.25,4,88.0,TOP_25_HISTORIQUE,True,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Villareal,5.0,7.0,7.0,5.0,4,False,6.0,6.0,5,84.0,TOP_25_HISTORIQUE,True,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,betis,6.0,5.0,6.0,15.0,4,False,6.6,8.0,6,80.0,TOP_25_HISTORIQUE,True,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Granada,9999.0,9999.0,9.0,7.0,2,True,8.33,8.0,7,76.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Sevilla,12.0,9999.0,4.0,4.0,3,False,8.57,6.67,8,72.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Athletic Club,8.0,8.0,10.0,11.0,4,False,8.7,9.25,9,68.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Osasuna,7.0,10.0,11.0,10.0,4,False,9.0,9.5,10,64.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Girona,10.0,9999.0,9999.0,9999.0,1,True,10.0,10.0,11,60.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Rayo Vallecano,11.0,12.0,9999.0,9999.0,2,True,11.43,11.5,12,56.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Celta,13.0,11.0,8.0,17.0,4,False,11.8,12.25,13,52.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Valencia,16.0,9.0,13.0,9.0,4,False,12.6,11.75,14,48.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Mallorca,9.0,16.0,9999.0,19.0,3,False,12.88,14.67,15,44.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Levante,9999.0,9999.0,14.0,12.0,2,True,13.33,13.0,16,40.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Getafe,15.0,15.0,15.0,8.0,4,False,14.3,13.25,17,36.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Cadiz,14.0,17.0,12.0,9999.0,3,False,14.56,14.33,18,32.0,MIDDLE_HISTORIQUE,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Alvaes,9999.0,9999.0,16.0,16.0,2,True,16.0,16.0,19,28.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Almeria,17.0,9999.0,9999.0,9999.0,1,True,17.0,17.0,20,24.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Elche,20.0,13.0,17.0,9999.0,3,False,17.0,16.67,21,20.0,BOTTOM_25_HISTORIQUE,False,True,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Espanyol,19.0,14.0,9999.0,20.0,3,False,17.25,17.67,22,16.0,BOTTOM_25_HISTORIQUE,False,True,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Real Valladolid,18.0,9999.0,19.0,13.0,3,False,17.57,16.67,23,12.0,BOTTOM_25_HISTORIQUE,False,True,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Eibar,9999.0,9999.0,20.0,14.0,2,True,18.0,17.0,24,8.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Huesca,9999.0,9999.0,18.0,9999.0,1,True,18.0,18.0,25,4.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx
+Espagne,La Liga,Leganés,9999.0,9999.0,9999.0,20.0,1,True,20.0,20.0,26,0.0,HISTORIQUE_INCOMPLET_SHADOW,False,False,LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK,C:\Users\Greg\Downloads\La Ligua (Espagne).xlsx

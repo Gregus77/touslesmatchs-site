@@ -1,0 +1,50 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-16T17:03:04.543Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/goal05-watchlist-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": false,
+    "telegramConfigured": true,
+    "total": 2,
+    "eligible": 0,
+    "needsData": 2,
+    "noBet": 0,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "2026-08-15-bra-serie-a-mirassol-flamengo",
+      "match": "Mirassol - Flamengo",
+      "team": "Flamengo",
+      "status": "NEEDS_DATA",
+      "sendDecision": "blocked",
+      "missing": [
+        "fiveYearStrength.opponentPercentile",
+        "recent.scoredInLastFive",
+        "recent.opponentConcededInLastFive",
+        "recent.weightedConstructedGoals",
+        "recent.candidateCanReproduceConcessionPattern",
+        "stake.teamHasMeaningfulObjective",
+        "odds.arjelBookmakers"
+      ]
+    },
+    {
+      "id": "2026-08-16-bra-serie-a-internacional-remo",
+      "match": "Internacional - Remo",
+      "team": "Internacional",
+      "status": "NEEDS_DATA",
+      "sendDecision": "blocked",
+      "missing": [
+        "fiveYearStrength.opponentPercentile",
+        "recent.scoredInLastFive",
+        "recent.opponentConcededInLastFive",
+        "recent.weightedConstructedGoals",
+        "recent.candidateCanReproduceConcessionPattern",
+        "stake.teamHasMeaningfulObjective",
+        "odds.arjelBookmakers"
+      ]
+    }
+  ]
+}

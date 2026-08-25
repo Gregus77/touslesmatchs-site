@@ -1,0 +1,207 @@
+{
+  "date": "2026-08-19",
+  "timezone": "Europe/Paris",
+  "oddsRows": 30,
+  "fixtureIds": 20,
+  "candidates": [],
+  "rejected": [
+    {
+      "fixture": 1498654,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera Nacional",
+      "home": "Chacarita Juniors",
+      "away": "Club Atlético Güemes"
+    },
+    {
+      "fixture": 1513295,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "MLS Next Pro",
+      "home": "New York City II",
+      "away": "FC Cincinnati II"
+    },
+    {
+      "fixture": 1516107,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516109,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1520825,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie B",
+      "home": "Goias",
+      "away": "Juventude"
+    },
+    {
+      "fixture": 1520826,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie B",
+      "home": "Londrina",
+      "away": "Atletico Goianiense"
+    },
+    {
+      "fixture": 1520827,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie B",
+      "home": "Nautico Recife",
+      "away": "Ceara"
+    },
+    {
+      "fixture": 1521664,
+      "reason": "country_not_allowed",
+      "country": "Estonia",
+      "league": "Esiliiga B"
+    },
+    {
+      "fixture": 1522031,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Australia",
+      "league": "Victoria NPL",
+      "home": "Preston Lions",
+      "away": "Melbourne City II"
+    },
+    {
+      "fixture": 1523202,
+      "reason": "country_not_allowed",
+      "country": "China",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1532866,
+      "reason": "country_not_allowed",
+      "country": "China",
+      "league": "League Two"
+    },
+    {
+      "fixture": 1543457,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "2. Deild"
+    },
+    {
+      "fixture": 1543458,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "2. Deild"
+    },
+    {
+      "fixture": 1543460,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "2. Deild"
+    },
+    {
+      "fixture": 1543461,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "2. Deild"
+    },
+    {
+      "fixture": 1543462,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "2. Deild"
+    },
+    {
+      "fixture": 1545180,
+      "reason": "country_not_allowed",
+      "country": "Kazakhstan",
+      "league": "Cup"
+    },
+    {
+      "fixture": 1546938,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Scotland",
+      "league": "Football League - Highland League",
+      "home": "Banks O' Dee",
+      "away": "Turriff United"
+    },
+    {
+      "fixture": 1546941,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Scotland",
+      "league": "Football League - Highland League",
+      "home": "Inverurie Loco Works",
+      "away": "Fraserburgh"
+    },
+    {
+      "fixture": 1546945,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Scotland",
+      "league": "Football League - Highland League",
+      "home": "Strathspey Thistle",
+      "away": "Brora Rangers"
+    },
+    {
+      "fixture": 1547758,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONMEBOL Libertadores"
+    },
+    {
+      "fixture": 1547770,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONMEBOL Libertadores"
+    },
+    {
+      "fixture": 1547772,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONMEBOL Libertadores"
+    },
+    {
+      "fixture": 1548361,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONCACAF Central American Cup"
+    },
+    {
+      "fixture": 1548362,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONCACAF Central American Cup"
+    },
+    {
+      "fixture": 1549138,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1549139,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1549140,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1549144,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1549146,
+      "reason": "fixture_teams_missing",
+      "country": "Argentina",
+      "league": "Copa Argentina"
+    }
+  ]
+}

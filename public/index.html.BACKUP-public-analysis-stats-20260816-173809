@@ -1,0 +1,1770 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TousLesMatchs — Le Concile IA sportif</title>
+<meta name="description" content="Perplexity, DeepSeek, Mistral, Cohere et Qwen analysent chaque match sans émotion. Signaux validés par convergence, résultats vérifiables le lendemain.">
+<link rel="canonical" href="https://www.touslesmatchs.com/">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:title" content="TousLesMatchs — Le Concile IA sportif">
+<meta property="og:description" content="5 IA indépendantes votent. La convergence valide. Résultats publics, gagnés comme perdus.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.touslesmatchs.com/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", "name": "TousLesMatchs", "url": "https://www.touslesmatchs.com/", "logo": "https://www.touslesmatchs.com/logo512.png",
+      "description": "Analyse sportive assistée par IA : Perplexity, DeepSeek, Mistral, Cohere et Qwen votent, convergence validée, picks vérifiés et historique transparent.",
+      "sameAs": ["https://www.tiktok.com/@touslesmatchs.com"] },
+    { "@type": "WebSite", "name": "TousLesMatchs", "url": "https://www.touslesmatchs.com/" },
+    { "@type": "FAQPage", "@id": "https://www.touslesmatchs.com/#faq", "mainEntity": [
+        { "@type": "Question", "name": "Comment fonctionne le Concile IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Cinq intelligences artificielles indépendantes (Perplexity, DeepSeek, Mistral, Cohere, Qwen) analysent chaque match séparément à partir des statistiques, de l'historique et du contexte. Un vote de convergence établit un score de confiance. Le signal n'est publié que si ce score dépasse le seuil du palier." } },
+        { "@type": "Question", "name": "Que représente le score de confiance ?", "acceptedAnswer": { "@type": "Answer", "text": "C'est l'indicateur interne utilisé par le Concile pour classer ses analyses selon le niveau de convergence entre les IA. Il n'est pas une garantie de résultat : l'issue d'un événement sportif reste incertaine." } },
+        { "@type": "Question", "name": "Combien de sélections vais-je recevoir ?", "acceptedAnswer": { "@type": "Answer", "text": "Les volumes affichés (3, 10 ou 30 par jour) sont des maximums, pas des garanties. Le nombre réel dépend des matchs qui atteignent le seuil de confiance du palier ce jour-là." } },
+        { "@type": "Question", "name": "Quelle différence entre Standard, Premium et Elite-VIP ?", "acceptedAnswer": { "@type": "Answer", "text": "Score de confiance minimum 82/100 pour Standard et Premium, 75/100 pour Elite-VIP. Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour, inclut Standard. Elite-VIP (29,90€/mois) couvre tout le vivier diffusable, jusqu'à 30 signaux/jour, inclut Premium." } },
+        { "@type": "Question", "name": "Comment fonctionne le compte gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Le compte gratuit donne accès au pick gratuit du jour, aux résultats publics, à un aperçu des sélections Standard de la veille, et à la liste des matchs en direct — sans carte bancaire." } },
+        { "@type": "Question", "name": "Puis-je résilier mon abonnement ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les abonnements sont sans engagement et résiliables à tout moment depuis le portail Stripe." } },
+        { "@type": "Question", "name": "Comment les résultats sont-ils calculés ?", "acceptedAnswer": { "@type": "Answer", "text": "Chaque sélection est enregistrée avec sa cote réelle au moment de l'envoi. Le résultat (gagné, perdu) est vérifié après la fin officielle du match. Le winrate et le profit simulé sont calculés uniquement sur les sélections terminées, gagnées comme perdues." } }
+    ] }
+  ]
+}
+</script>
+<style>
+:root{
+  --bg:#12152a; --panel:#171b34; --panel2:#1e2340;
+  --b1:rgba(255,255,255,.11); --b2:rgba(255,255,255,.18);
+  --tx:#f6f7ff; --tx2:#c4c9e6; --muted:#949bc4;
+  --violet:#8a68ff; --violet2:#a688ff; --blue:#4b7bff; --cyan:#4fd6f2;
+  --standard:#6a9bff; --premium:#a688ff; --elite:#eab24a;
+  --green:#3ddb96; --red:#f16e80;
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.45;font-size:16px;overflow-x:hidden}
+img{max-width:100%;display:block}
+a{color:inherit}
+.wrap{max-width:1360px;margin:0 auto;padding:0 24px}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.02em}
+.card{background:var(--panel);border:1px solid var(--b1);border-radius:var(--r-md);transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 14px 32px -12px rgba(124,92,255,.35);border-color:rgba(155,123,255,.3)}
+.acc-green{border-top:3px solid var(--green)}
+.acc-blue{border-top:3px solid var(--standard)}
+.acc-violet{border-top:3px solid var(--violet)}
+.acc-cyan{border-top:3px solid var(--cyan)}
+.live-panel{border-top:3px solid var(--red)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:9px;font-weight:700;font-size:15px;text-decoration:none;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.btn-prim{background-color:var(--violet);background-image:linear-gradient(135deg,var(--violet),var(--blue));border-color:var(--violet);color:#fff}
+.btn-prim:hover{opacity:.92}
+.btn-ghost{background:transparent;border-color:var(--b2);color:var(--tx)}
+.btn-ghost:hover{border-color:var(--violet2)}
+.btn-block{width:100%;white-space:normal;line-height:1.3;padding:10px 12px;text-align:center}
+.btn-sm{padding:7px 13px;font-size:14px}
+
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-content:space-between;gap:20px;padding:14px 24px;background:rgba(18,21,42,.9);backdrop-filter:blur(14px);border-bottom:1px solid var(--b1)}
+.nav-brand{font-weight:900;font-size:18.5px;flex:0 0 auto}
+.nav-brand b{color:var(--violet2)}
+.nav-center{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;flex:1}
+.nav-center a{font-size:13px;font-weight:500;color:#a8aec8;text-decoration:none;padding:6px 16px;border-radius:8px;transition:all .15s;display:inline-flex;align-items:center}
+.nav-center a:hover{color:#eceaf4;background:rgba(255,255,255,.06)}
+.nav-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f43f5e;margin-right:6px;animation:navPulseDot 1.5s infinite}
+.nav-live-link{color:#22d3ee !important}
+@keyframes navPulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(244,63,94,0)}}
+.nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.nav-hamburger{display:none;background:none;border:1px solid var(--b2);border-radius:8px;color:var(--tx);width:36px;height:36px;font-size:17px;cursor:pointer}
+.nav-plan-badge{font-size:12.5px;font-weight:800;padding:5px 10px;border-radius:999px;background:rgba(124,92,255,.15);color:var(--violet2);border:1px solid rgba(124,92,255,.3)}
+.nav-plan-badge.elite{background:rgba(224,166,60,.14);color:var(--elite);border-color:rgba(224,166,60,.32)}
+.nav-user{display:flex;align-items:center;gap:8px}
+.nav-logout{background:none;border:1px solid var(--b2);color:var(--tx2);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px}
+@media(max-width:900px){ .nav-center{display:none} .nav-hamburger{display:block} }
+/* Sous ~480px, badge Elite + bouton deconnexion + CTA "Creer mon compte
+   gratuit" + hamburger ne tenaient plus sur une ligne : nav-right refusait
+   de retrecir (flex:0 0 auto), la barre debordait horizontalement et le
+   mobile zoomait toute la page pour compenser (tout apparaissait
+   retreci a gauche avec du vide a droite — constate le 30/07/2026 sur
+   Android). Le CTA est redondant une fois connecte : on le masque alors,
+   et on retrecit le reste en dernier recours. */
+#nav-auth:has(.nav-user) ~ .btn-prim{ display:none }
+@media(max-width:480px){
+  nav{padding:12px 14px;gap:10px}
+  .nav-right{gap:6px}
+  .nav-right > a.btn-prim{padding:8px 12px;font-size:12.5px}
+}
+/* Sous ~560px (ex: Galaxy Z Fold — écran de couverture ~344px CSS), le trio
+   marque + "Se connecter" + "Créer mon compte gratuit" + hamburger ne tient
+   plus sur une ligne malgré le retrecissement ci-dessus : la barre debordait
+   horizontalement et il fallait faire glisser la nav pour atteindre "Se
+   connecter" (constate le 31/07/2026). Le CTA est deja disponible dans le
+   menu hamburger (.mmenu) donc on le retire sans rien perdre. */
+@media(max-width:560px){
+  .nav-right > a.btn-prim{display:none}
+  .nav-brand{font-size:16px}
+}
+@media(max-width:360px){
+  .nav-brand{font-size:14px}
+  .nav-right #nav-auth .btn{padding:8px 12px;font-size:13px}
+}
+.mmenu{display:none;position:fixed;inset:0;z-index:199;background:rgba(18,21,42,.98);padding:90px 24px 24px;flex-direction:column;gap:18px}
+.mmenu.open{display:flex}
+.mmenu a{font-size:18.5px;font-weight:700;color:var(--tx);text-decoration:none;padding:10px 0;border-bottom:1px solid var(--b1)}
+
+.dash{padding:24px 0 60px}
+.row{display:grid;gap:16px;margin-bottom:16px}
+
+/* ── HERO WOW — capture validée + animation des ondes ── */
+.row-hero{grid-template-columns:1fr}
+.hero-exact-card{
+  position:relative;overflow:hidden;padding:0!important;min-height:0;
+  border-radius:18px;border:1px solid rgba(117,91,255,.46);
+  background:#080b20;
+  box-shadow:0 22px 60px rgba(0,0,0,.34),0 0 28px rgba(101,70,255,.14)
+}
+.hero-exact-wrap{position:relative;width:100%;aspect-ratio:815/611;overflow:hidden;border-radius:17px}
+.hero-exact-img{display:block;width:100%;height:100%;object-fit:cover}
+.hero-wave-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.hero-wave-overlay .energy-path{fill:none;stroke-width:5;stroke-linecap:round;stroke-dasharray:14 24;opacity:.38;animation:waveTravel 1.35s linear infinite}
+.hero-wave-overlay .energy-path.deep{stroke:#5da6ff;filter:url(#glowBlue)}
+.hero-wave-overlay .energy-path.mistral{stroke:#ff9d3e;filter:url(#glowOrange)}
+.hero-wave-overlay .energy-path.cohere{stroke:#ff65bd;filter:url(#glowPink)}
+.hero-wave-overlay .energy-path.perplexity{stroke:#38e8ee;filter:url(#glowCyan)}
+.hero-wave-overlay .energy-path.qwen{stroke:#a878ff;filter:url(#glowPurple)}
+@keyframes waveTravel{to{stroke-dashoffset:-76}}
+.hero-wave-overlay .core-pulse{fill:none;stroke:#d6c6ff;stroke-width:2;opacity:0;filter:url(#glowCore);transform-origin:584px 312px;animation:corePulse 2.6s ease-out infinite}
+.hero-wave-overlay .core-pulse.p2{animation-delay:1.25s}
+@keyframes corePulse{0%{transform:scale(.72);opacity:0}20%{opacity:.68}100%{transform:scale(1.32);opacity:0}}
+.hero-wave-dot{filter:url(#glowCore)}
+.hero-exact-hotspot{position:absolute;z-index:4;display:block;text-indent:-9999px;overflow:hidden;background:transparent;border-radius:12px}
+.hero-exact-hotspot.live{left:4.3%;top:65.4%;width:36.7%;height:8.8%}
+.hero-exact-hotspot.account{left:4.3%;top:75.3%;width:36.7%;height:7.5%}
+.hero-exact-hotspot:focus-visible{outline:2px solid #8be7ff;box-shadow:0 0 0 4px rgba(67,205,255,.24)}
+.hero-seo-copy{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+.hero-mobile-fallback{display:none;padding:28px 20px;background:linear-gradient(135deg,#090d24,#0c1230)}
+.hero-mobile-fallback .hero-badge{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--violet2);background:rgba(124,92,255,.1);border:1px solid rgba(124,92,255,.25);padding:5px 12px;border-radius:999px;margin-bottom:16px}
+.hero-mobile-fallback h1{font-size:34px;line-height:1.12}.hero-mobile-fallback h1 .grad{background:linear-gradient(105deg,#56c8ff,#a46cff,#f06cf7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-mobile-fallback .hero-sub{font-size:15px;color:var(--tx2);margin-top:14px;line-height:1.6}
+.hero-mobile-fallback .hero-cta{display:grid;gap:10px;margin-top:20px}.hero-mobile-fallback .hero-reassure{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--muted)}
+@media(max-width:760px){.hero-exact-wrap{display:none}.hero-mobile-fallback{display:block}}
+@media(prefers-reduced-motion:reduce){.hero-wave-overlay .energy-path,.hero-wave-overlay .core-pulse{animation:none!important}.hero-wave-dot{display:none}}
+
+/* ── LIVE PANEL ── */
+.live-panel{padding:20px;display:flex;flex-direction:column;gap:10px}
+.live-panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
+.live-panel-title{font-size:15px;font-weight:800}
+.live-panel-title .dot{width:7px;height:7px;border-radius:50%;background:var(--red);display:inline-block;margin-right:7px;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-panel-link{font-size:12.5px;font-weight:700;color:var(--violet2);text-decoration:none}
+.upcoming-sep{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:800;color:#fff;margin:16px 0 12px;padding:11px 15px;border-radius:11px;background:linear-gradient(135deg,rgba(62,201,232,.22),rgba(99,102,241,.22));border:1px solid rgba(62,201,232,.4)}
+.upcoming-sep .dot.up{width:9px;height:9px;border-radius:50%;background:#3ec9e8;display:inline-block;box-shadow:0 0 8px #3ec9e8;animation:pulse 1.6s infinite}
+.upcoming-conf-100{animation:blink100 1s infinite;box-shadow:0 0 0 rgba(255,214,10,.6)}
+@keyframes blink100{0%,100%{background:rgba(255,214,10,.22);color:#ffd60a;box-shadow:0 0 10px rgba(255,214,10,.5)}50%{background:rgba(255,214,10,.55);color:#fff;box-shadow:0 0 18px rgba(255,214,10,.9)}}
+.upcoming-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--b1);border-radius:14px;margin-bottom:10px;background:linear-gradient(135deg,rgba(99,102,241,.07),rgba(124,58,237,.03));transition:transform .15s ease,box-shadow .15s ease,border-color .15s ease}
+.upcoming-item:last-child{margin-bottom:0}
+.upcoming-item[onclick]:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(99,102,241,.2);border-color:var(--violet)}
+.upcoming-info{flex:1;min-width:0}
+.upcoming-teams{font-size:14px;font-weight:800}
+.upcoming-comp{font-size:11.5px;color:var(--muted);margin-top:3px}
+.upcoming-conf{font-size:12.5px;font-weight:800;color:#3ec9e8;white-space:nowrap;background:rgba(62,201,232,.12);padding:6px 11px;border-radius:9px;display:inline-block}
+.upcoming-odd{background:rgba(124,58,237,.16);padding:2px 8px;border-radius:7px}
+.upcoming-lock-btn{font-size:11.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:6px 12px;border-radius:8px;border:none;cursor:pointer;white-space:nowrap}
+
+/* ── PANNEAU MATCHS A VENIR (encart distinct, separe de "en cours") ── */
+.upcoming-panel{border-top:3px solid #3ec9e8;padding:20px;display:flex;flex-direction:column;gap:10px}
+.live-panel-title .dot.up{background:#3ec9e8;box-shadow:0 0 8px #3ec9e8}
+.upcoming-highlight{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;margin-bottom:4px;background:linear-gradient(135deg,rgba(62,201,232,.18),rgba(99,102,241,.14));border:1.5px solid rgba(62,201,232,.45)}
+.upcoming-highlight-badge{font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#3ec9e8;background:rgba(62,201,232,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
+.upcoming-highlight-teams{font-size:17px;font-weight:900}
+.upcoming-highlight-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.upcoming-highlight-bet{font-size:13.5px;font-weight:800;color:#3ec9e8;white-space:nowrap;margin-left:auto}
+@media(max-width:700px){
+  .upcoming-highlight{flex-direction:column;align-items:flex-start;gap:8px}
+  .upcoming-highlight-bet{margin-left:0}
+}
+.day-acc-item{border:1px solid var(--b1);border-radius:12px;margin-bottom:8px;overflow:hidden}
+.day-acc-item:last-child{margin-bottom:0}
+.day-acc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 15px;cursor:pointer;background:rgba(255,255,255,.02);transition:background .15s}
+.day-acc-head:hover{background:rgba(124,92,255,.06)}
+.day-acc-date{font-size:13.5px;font-weight:800;display:flex;align-items:center;gap:8px}
+.day-acc-caret{transition:transform .2s;color:var(--muted);font-size:12px}
+.day-acc-item.open .day-acc-caret{transform:rotate(90deg)}
+.day-acc-summary{font-size:12.5px;font-weight:700;white-space:nowrap}
+.day-acc-body{max-height:0;overflow:hidden;transition:max-height .25s ease}
+.day-acc-item.open .day-acc-body{max-height:600px}
+.day-acc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 15px;border-top:1px solid var(--b1);font-size:12.5px}
+.day-acc-row-teams{font-weight:700;flex:1;min-width:0}
+.day-acc-row-bet{color:var(--tx2);font-size:11.5px;margin-top:2px}
+.day-acc-row-badge{font-weight:800;white-space:nowrap;padding:4px 9px;border-radius:7px;font-size:11.5px}
+.live-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--b1)}
+.live-row:first-of-type{border-top:none}
+.live-comp{width:46px;flex:0 0 auto}
+.live-comp-name{font-size:11.5px;font-weight:700;color:var(--tx2)}
+.live-comp-min{font-size:11.5px;font-weight:800;color:var(--cyan)}
+.live-logo{width:22px;height:22px;border-radius:6px;background:var(--panel2);flex:0 0 auto;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:800;overflow:hidden}
+.live-team-name{font-size:14px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-score{font-size:15px;font-weight:900;padding:3px 8px;border-radius:6px;background:linear-gradient(135deg,rgba(124,92,255,.22),rgba(59,109,255,.22));box-shadow:inset 0 0 0 1px rgba(155,123,255,.3);flex:0 0 auto}
+.empty-note{text-align:center;color:var(--muted);font-size:14px;padding:24px 8px}
+
+/* ── PREUVES (rangee 2) ── */
+.proof-bar{display:grid;grid-template-columns:repeat(6,1fr)}
+.proof-cell{padding:18px 14px;display:flex;align-items:center;gap:12px;border-right:1px solid var(--b1)}
+.proof-cell:last-child{border-right:none}
+.proof-ico{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.proof-num{font-size:22px;font-weight:900;line-height:1.1}
+.proof-lbl{font-size:12px;color:var(--muted);font-weight:600;margin-top:1px}
+.proof-note{text-align:center;font-size:12px;color:var(--muted);padding:10px 16px}
+@media(max-width:900px){.proof-bar{grid-template-columns:repeat(3,1fr)}.proof-cell{border-bottom:1px solid var(--b1)}}
+@media(max-width:520px){.proof-bar{grid-template-columns:repeat(2,1fr)}}
+
+/* ── RANGEE 3 : pick / standard-hier / methode / resultats (4 colonnes) ── */
+.row-4{grid-template-columns:repeat(4,1fr)}
+.pcard{padding:16px;display:flex;flex-direction:column;min-height:0}
+.pcard-title{font-size:13px;font-weight:800;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+.pcard-title .badge{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;background:rgba(51,196,129,.14);color:var(--green);border:1px solid rgba(51,196,129,.3);padding:3px 8px;border-radius:999px}
+.pick-comp{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.pick-time{margin-left:auto;color:var(--tx2);font-weight:800}
+.pick-comp .flag{font-size:14px}
+.pick-match{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 10px}
+.pick-team{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:0}
+.pick-team-logo{width:48px;height:48px;border-radius:12px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.pick-team-logo img{width:100%;height:100%;object-fit:contain}
+.pick-team-name{font-size:13px;font-weight:800;text-align:center;line-height:1.25;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.pick-vs{font-size:12px;font-weight:800;color:var(--muted);flex:0 0 auto}
+.pick-bet{font-size:13px;color:var(--tx2);text-align:center}
+.pick-conf{font-size:23px;font-weight:900;color:var(--violet2);margin-top:10px;text-align:center}
+.pick-score-badge{text-align:center;font-size:15px;font-weight:800;margin-top:8px;padding:6px 12px;border-radius:8px;display:inline-block;width:100%;box-sizing:border-box}
+.pick-score-badge.win{color:#33c481;background:rgba(51,196,129,.1);border:1px solid rgba(51,196,129,.3)}
+.pick-score-badge.loss{color:#ef5a6f;background:rgba(239,90,111,.1);border:1px solid rgba(239,90,111,.3)}
+.pick-email-btn{display:block;width:100%;margin-top:12px;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;font-size:13px;font-weight:800;cursor:pointer;text-align:center}
+.pick-email-btn:hover{opacity:.92}
+.pick-lock{margin-top:14px;padding:14px;border-radius:12px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);text-align:center}
+.pick-lock-title{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:4px}
+.pick-lock-sub{font-size:11.5px;color:var(--muted);line-height:1.5;margin-bottom:10px}
+.pick-lock-btn{display:inline-block;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--indigo),var(--violet));padding:8px 18px;border-radius:8px;text-decoration:none}
+.mini-table{width:100%;border-collapse:collapse;font-size:12px}
+.mini-table th{text-align:left;color:var(--muted);font-weight:700;padding:5px 4px;border-bottom:1px solid var(--b1);font-size:11px}
+.mini-table td{padding:6px 4px;border-bottom:1px solid var(--b1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.mini-table tr:last-child td{border-bottom:none}
+.tag-win{color:var(--green);font-weight:800} .tag-loss{color:var(--red);font-weight:800}
+.method-step{display:flex;gap:9px;margin-bottom:12px}
+.method-n{width:20px;height:20px;border-radius:6px;background:rgba(124,92,255,.14);color:var(--violet2);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex:0 0 auto}
+.method-t{font-size:13px;font-weight:700}
+.method-d{font-size:12px;color:var(--muted);margin-top:2px}
+@media(max-width:1100px){.row-4{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.row-4{grid-template-columns:1fr}}
+
+/* ── RANGEE 4 : formules + confiance + faq (6 colonnes) ── */
+.row-6{grid-template-columns:repeat(6,minmax(0,1fr));align-items:stretch}
+.plan{padding:24px 18px;position:relative;display:flex;flex-direction:column;height:100%;min-width:0;overflow:visible}
+.side-card{height:100%}
+@media(max-width:600px){.plan{height:auto}}
+.plan.hl{border-color:rgba(155,123,255,.4);background:linear-gradient(180deg,rgba(124,92,255,.08),var(--panel));box-shadow:0 0 40px -12px rgba(124,92,255,.4)}
+.plan.hl:hover{box-shadow:0 18px 44px -14px rgba(124,92,255,.55)}
+.plan-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:var(--violet);color:#fff;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.plan-ico{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:16px;font-size:25.5px}
+.plan-name{font-size:16px;font-weight:800;letter-spacing:.04em}
+.plan-price{font-size:34px;font-weight:900;margin:8px 0 18px;white-space:nowrap}
+.plan-price span{font-size:15px;font-weight:600;color:var(--muted)}
+.plan-feats{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:10px;flex:1;min-width:0}
+.plan-feats li{font-size:13.5px;color:var(--tx2);display:flex;gap:7px;line-height:1.42;align-items:flex-start;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+.plan-check{color:var(--green);flex:0 0 auto}
+.plan-feats li span:last-child{min-width:0;overflow-wrap:anywhere}.plan .btn-block{font-size:13.5px}.plan > div[style*="font-size:10.5px"]{overflow-wrap:anywhere;word-break:normal}
+@media(max-width:1300px){.row-6{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.row-6{grid-template-columns:1fr}}
+.plans-note{grid-column:1/-1;text-align:center;font-size:11.5px;color:var(--muted);max-width:640px;margin:2px auto 0;line-height:1.6}
+.partner-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center}
+.partner-btn{display:inline-flex;align-items:center;justify-content:center;min-width:140px;text-decoration:none;box-shadow:0 4px 16px rgba(0,0,0,.35);transition:transform .15s,box-shadow .15s}
+.partner-btn:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,0,0,.45)}
+/* Chaque bouton reprend l'esprit visuel de la marque (couleurs, forme,
+   typo) sans copier le logo reel — inspire de, pas une reproduction. */
+.partner-btn.pb-winamax{padding:14px 32px;border-radius:999px;background:linear-gradient(135deg,#ff7a00,#e2001a);color:#fff;font-weight:900;font-style:italic;font-size:16px;letter-spacing:-.02em}
+.partner-btn.pb-unibet{padding:13px 30px;border-radius:8px;background:#0a7a3d;color:#fff;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;border:2px solid #0fae5a}
+.partner-btn.pb-pmu{padding:13px 30px;border-radius:6px;background:#00287a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.08em}
+.partner-btn.pb-betclic{padding:13px 30px 10px;border-radius:4px;background:#e2001a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.02em;border-bottom:4px solid #16110f}
+.nav-apk-cta{border-color:rgba(79,214,242,.45)!important;color:#eaf7ff!important;background:rgba(79,214,242,.10)!important}.site-apk-download{margin:0 auto 18px;max-width:720px;padding:14px;border:1px solid rgba(79,214,242,.28);border-radius:14px;background:linear-gradient(135deg,rgba(79,214,242,.10),rgba(138,104,255,.08))}.site-apk-download .btn{justify-content:center}.site-apk-download-note{font-size:11px;color:var(--muted);line-height:1.55;margin-top:9px}
+@media(max-width:600px){.partner-btn{min-width:0;flex:1 1 auto;font-size:13px;padding:12px 16px}}
+
+.side-card{padding:26px 22px}
+.side-title{font-size:16px;font-weight:800;margin-bottom:12px;display:flex;justify-content:space-between}
+.trust-item{display:flex;gap:8px;align-items:flex-start;font-size:15px;color:var(--tx2);margin-bottom:12px}
+.trust-ico{color:var(--green);flex:0 0 auto}
+.faq-item{border-bottom:1px solid var(--b1)}
+.faq-item:last-child{border-bottom:none}
+.faq-q{padding:9px 0;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-weight:700;font-size:12.5px;gap:8px}
+.faq-arrow{color:var(--muted);transition:transform .2s;flex:0 0 auto;font-size:15px}
+.faq-item.open .faq-arrow{transform:rotate(45deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .25s ease;font-size:12px;color:var(--tx2);line-height:1.5}
+.faq-item.open .faq-a{max-height:300px;padding-bottom:10px}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel)}
+.foot-grid{display:grid;grid-template-columns:1.4fr repeat(4,1fr);gap:24px}
+.foot-brand{font-weight:900;font-size:16px}
+.foot-tag{font-size:12.5px;color:var(--muted);margin-top:6px;max-width:220px}
+.foot-h{font-size:11.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.foot-col a{display:block;font-size:14px;color:var(--tx2);text-decoration:none;margin-bottom:8px}
+.foot-col a:hover{color:var(--tx)}
+.foot-legal{margin-top:24px;padding-top:16px;border-top:1px solid var(--b1);font-size:12px;color:var(--muted);line-height:1.6}
+@media(max-width:820px){.foot-grid{grid-template-columns:1fr 1fr}}
+
+/* ── LOGIN MODAL ── */
+.modal-bg{position:fixed;inset:0;z-index:300;background:rgba(18,21,42,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--panel);border:1px solid var(--b2);border-radius:var(--r-lg);padding:26px;max-width:380px;width:100%;position:relative}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:23px;cursor:pointer}
+.modal-title{font-size:19.5px;font-weight:800}
+.modal-sub{font-size:14px;color:var(--tx2);margin:8px 0 16px}
+.modal-label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px}
+.modal-input{width:100%;background:var(--panel2);border:1px solid var(--b2);border-radius:9px;padding:11px 12px;color:var(--tx);font-size:15px;margin-bottom:12px;font-family:inherit}
+.modal-btn{width:100%;background:linear-gradient(135deg,var(--violet),var(--blue));color:#fff;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px}
+.modal-err{display:none;color:var(--red);font-size:12.5px;margin-bottom:8px}
+.modal-ok{display:none;color:var(--green);font-size:12.5px;margin-bottom:8px}
+
+/* ── Selecteur de langue (menu burger) ── */
+.mm-lang{margin-top:12px;padding-top:12px;border-top:1px solid var(--b1)}
+.mm-lang-h{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.mm-lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.mm-lang-grid button{background:var(--panel2);border:1px solid var(--b1);color:var(--tx2);border-radius:8px;padding:8px 6px;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:border-color .15s,color .15s}
+.mm-lang-grid button:hover{border-color:var(--violet2);color:var(--tx)}
+
+/* ── Selecteur de langue (barre du haut, desktop) ── */
+.nav-lang{position:relative}
+.nav-lang-btn{background:transparent;border:1px solid var(--b2);color:var(--tx2);border-radius:8px;padding:7px 11px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
+.nav-lang-btn:hover{border-color:var(--violet2);color:var(--tx)}
+.nav-lang-menu{display:none;position:absolute;top:calc(100% + 6px);right:0;z-index:210;background:var(--panel);border:1px solid var(--b2);border-radius:10px;padding:6px;min-width:150px;box-shadow:0 16px 34px -12px rgba(0,0,0,.6)}
+.nav-lang-menu.open{display:block}
+.nav-lang-menu button{display:block;width:100%;text-align:left;background:none;border:none;color:var(--tx2);padding:9px 12px;border-radius:7px;font-size:13.5px;font-family:inherit;cursor:pointer}
+.nav-lang-menu button:hover{background:var(--panel2);color:var(--tx)}
+/* Sur mobile le selecteur du menu burger suffit : on masque celui de la nav
+   pour ne pas surcharger une barre deja serree (cf. media queries 480/560px). */
+@media(max-width:900px){ .nav-lang{display:none} }
+
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+  <meta name="theme-color" content="#070a20">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+
+
+
+
+<style id="tlm-premium-guardian-v4">
+
+/* ============================================================
+   TLM PREMIUM GUARDIAN V4
+   Typographie, netteté et abonnements
+   Le visuel Concile / IA / éclairs n'est PAS modifié.
+   ============================================================ */
+
+
+/* ---------- TYPOGRAPHIE GLOBALE ---------- */
+
+html {
+  -webkit-text-size-adjust:100%;
+  text-rendering:optimizeLegibility;
+}
+
+body {
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif !important;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  font-synthesis:none;
+}
+
+body :where(
+  h1,h2,h3,h4,h5,h6,
+  p,a,li,label,small,strong,b,
+  button,input,select,textarea,
+  th,td
+) {
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif !important;
+  font-synthesis:none;
+}
+
+
+/* ---------- TEXTE DU HERO : NET / HAUTE DEFINITION ---------- */
+
+/*
+   Le texte du hero est du HTML.
+   On supprime donc les effets qui peuvent le rendre flou,
+   sans toucher au Concile, aux IA ni aux éclairs.
+*/
+
+.hero-exact-card :where(
+  h1,h2,h3,
+  p,
+  a,
+  button,
+  .badge,
+  .chip,
+  .tag
+) {
+  text-rendering:geometricPrecision !important;
+  -webkit-font-smoothing:antialiased !important;
+  -moz-osx-font-smoothing:grayscale !important;
+
+  filter:none !important;
+  backdrop-filter:none !important;
+
+  font-synthesis:none !important;
+
+  backface-visibility:hidden;
+  will-change:auto !important;
+}
+
+.hero-exact-card h1 {
+  font-weight:800 !important;
+  letter-spacing:-0.035em !important;
+  line-height:1.06 !important;
+}
+
+.hero-exact-card p {
+  font-weight:450 !important;
+  line-height:1.55 !important;
+  letter-spacing:-0.01em !important;
+}
+
+.hero-exact-card a,
+.hero-exact-card button {
+  font-weight:700 !important;
+  letter-spacing:-0.012em !important;
+}
+
+
+/* ---------- GRILLE ABONNEMENTS ---------- */
+
+#plans.row-4 {
+  display:grid !important;
+  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
+  gap:16px !important;
+  align-items:stretch !important;
+}
+
+
+/* ---------- CARTES ---------- */
+
+#plans .plan {
+  min-width:0 !important;
+  width:100% !important;
+  height:100% !important;
+
+  padding:26px 20px 24px !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+
+  text-align:center !important;
+
+  box-sizing:border-box !important;
+  overflow:visible !important;
+}
+
+
+/* ---------- ICONE / NOM / PRIX ---------- */
+
+#plans .plan-ico {
+  margin:0 auto 16px !important;
+}
+
+#plans .plan-name {
+  width:100% !important;
+  text-align:center !important;
+
+  font-size:16px !important;
+  font-weight:800 !important;
+  line-height:1.3 !important;
+  letter-spacing:-0.02em !important;
+}
+
+#plans .plan-price {
+  width:100% !important;
+
+  margin:8px auto 20px !important;
+
+  text-align:center !important;
+
+  font-size:34px !important;
+  font-weight:900 !important;
+  line-height:1.1 !important;
+  letter-spacing:-0.035em !important;
+
+  white-space:normal !important;
+}
+
+
+/* ---------- AVANTAGES ---------- */
+
+#plans .plan-feats {
+  width:100% !important;
+  max-width:250px !important;
+
+  margin:0 auto 22px !important;
+  padding:0 !important;
+
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:stretch !important;
+
+  gap:11px !important;
+
+  flex:1 1 auto !important;
+
+  box-sizing:border-box !important;
+}
+
+#plans .plan-feats li {
+  width:100% !important;
+  max-width:100% !important;
+  min-width:0 !important;
+
+  display:flex !important;
+  justify-content:center !important;
+  align-items:flex-start !important;
+
+  gap:7px !important;
+
+  padding:0 !important;
+  margin:0 !important;
+
+  text-align:center !important;
+
+  font-size:13px !important;
+  font-weight:450 !important;
+  line-height:1.48 !important;
+
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+
+  box-sizing:border-box !important;
+}
+
+#plans .plan-feats li span:last-child {
+  min-width:0 !important;
+  max-width:220px !important;
+
+  text-align:center !important;
+
+  white-space:normal !important;
+  overflow-wrap:anywhere !important;
+  word-break:normal !important;
+}
+
+
+/* ---------- PROMO ELITE ---------- */
+
+/*
+   La promo Elite surchargeait la carte.
+   On la masque visuellement au lieu de risquer un débordement.
+   Les prix, abonnements et liens Stripe restent inchangés.
+*/
+
+#plans .plan > div[style*="font-size:10.5px"] {
+  display:none !important;
+}
+
+/* Badge doré "1er mois offert" */
+#plans .plan-badge[style*="#d4af37"],
+#plans .plan-badge[style*="#f5c842"],
+#plans .plan-badge[style*="d4af37"],
+#plans .plan-badge[style*="f5c842"] {
+  display:none !important;
+}
+
+
+/* ---------- BADGE PREMIUM ---------- */
+
+#plans .plan-badge:not([style*="#d4af37"]):not([style*="#f5c842"]) {
+  left:50% !important;
+  transform:translateX(-50%) !important;
+
+  max-width:calc(100% - 24px) !important;
+
+  text-align:center !important;
+
+  white-space:nowrap !important;
+}
+
+
+/* ---------- BOUTONS ---------- */
+
+#plans .btn-block {
+  width:100% !important;
+  max-width:100% !important;
+
+  min-height:40px !important;
+  margin-top:auto !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  text-align:center !important;
+
+  font-size:13.5px !important;
+  font-weight:700 !important;
+
+  white-space:normal !important;
+
+  box-sizing:border-box !important;
+}
+
+
+/* ---------- TABLETTE ---------- */
+
+@media(max-width:1100px) {
+
+  #plans.row-4 {
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+
+}
+
+
+/* ---------- MOBILE ---------- */
+
+@media(max-width:620px) {
+
+  #plans.row-4 {
+    grid-template-columns:1fr !important;
+  }
+
+  #plans .plan {
+    padding:24px 20px !important;
+  }
+
+  #plans .plan-feats {
+    max-width:300px !important;
+  }
+
+  #plans .plan-feats li span:last-child {
+    max-width:265px !important;
+  }
+
+}
+
+
+/* Paliers ayant reellement recu le signal (source : sig_sent_* cote API) */
+.tier-chip{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:800;
+  padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.06);white-space:nowrap}
+.tier-recu{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;
+  font-size:10.5px;color:var(--muted);font-weight:600}
+.tier-none{font-style:italic;opacity:.75}
+
+/* Bandeau saisonnier + journees sans selection retenue */
+.saison-note{display:flex;gap:10px;align-items:flex-start;margin:0 0 12px;padding:11px 13px;
+  border:1px solid rgba(234,178,74,.32);border-radius:12px;
+  background:linear-gradient(180deg,rgba(234,178,74,.09),rgba(234,178,74,.03))}
+.saison-dot{flex:0 0 auto;width:8px;height:8px;margin-top:5px;border-radius:50%;
+  background:var(--elite);animation:saisonPulse 2.4s ease-in-out infinite}
+@keyframes saisonPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(234,178,74,.45)}
+  50%{opacity:.55;box-shadow:0 0 0 6px rgba(234,178,74,0)}}
+@media(prefers-reduced-motion:reduce){.saison-dot{animation:none}}
+.saison-t{font-size:12.5px;font-weight:800;color:var(--elite);margin-bottom:2px}
+.saison-x{font-size:11.5px;line-height:1.5;color:var(--muted)}
+.saison-x a{color:var(--text);text-decoration:underline;text-underline-offset:2px}
+.day-acc-item.vide .day-acc-head{opacity:.62}
+.day-acc-item.vide .day-acc-caret{opacity:.35}
+.day-vide-note{padding:10px 13px;font-size:11.5px;line-height:1.55;color:var(--muted)}
+/* Carte locale Goal 0.5 IA : offre fondatrice sans paiement actif. */
+.goal05-founder-card{position:relative;overflow:hidden;border-color:rgba(79,214,242,.25);background:linear-gradient(135deg,rgba(18,21,42,.98),rgba(30,35,64,.96));box-shadow:0 22px 46px -24px rgba(79,214,242,.42)}
+.goal05-founder-card:before{content:"";position:absolute;inset:0;border-top:1px solid rgba(138,104,255,.45);background:linear-gradient(120deg,rgba(79,214,242,.08),transparent 46%,rgba(138,104,255,.12));pointer-events:none}
+.goal05-founder-inner{position:relative;display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center;padding:24px}
+.goal05-kicker{font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+.goal05-title{font-size:26px;line-height:1.1;font-weight:900;margin:8px 0 10px;color:var(--tx)}
+.goal05-text{font-size:13px;line-height:1.65;color:var(--tx2);max-width:690px}
+.goal05-proof-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:15px}
+.goal05-proof{border:1px solid rgba(166,136,255,.24);background:rgba(12,17,40,.58);border-radius:10px;padding:10px 11px;font-size:11.5px;color:var(--tx2)}
+.goal05-proof b{display:block;color:var(--tx);font-size:12px;margin-bottom:2px}
+.goal05-offer{border:1px solid rgba(79,214,242,.28);background:rgba(79,214,242,.08);border-radius:14px;padding:16px}
+.goal05-offer-label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--violet2);margin-bottom:8px}
+.goal05-offer-price{font-size:28px;font-weight:950;color:var(--tx);line-height:1}.goal05-offer-price span{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-top:6px}.goal05-live-places{position:relative;margin:13px 0 3px;padding:13px 14px;border-radius:14px;border:1px solid rgba(79,214,242,.42);background:linear-gradient(135deg,rgba(79,214,242,.16),rgba(138,104,255,.13));box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 14px 34px rgba(79,214,242,.12);animation:goal05Pulse 1.8s ease-in-out infinite}.goal05-live-places:before{content:"";position:absolute;inset:-1px;border-radius:inherit;background:linear-gradient(120deg,transparent,rgba(255,255,255,.22),transparent);opacity:.38;transform:translateX(-70%);animation:goal05Sweep 2.6s ease-in-out infinite;pointer-events:none}.goal05-live-label{display:block;font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--cyan)}.goal05-live-number{display:flex;align-items:flex-end;gap:8px;margin-top:5px;font-weight:950;color:#fff}.goal05-live-number strong{font-size:38px;line-height:.88;text-shadow:0 0 18px rgba(79,214,242,.55)}.goal05-live-number span{font-size:12px;color:var(--tx2);font-weight:800;padding-bottom:2px}.goal05-live-hint{font-size:10.5px;color:var(--muted);margin-top:6px}@keyframes goal05Pulse{0%,100%{box-shadow:0 0 0 1px rgba(79,214,242,.22) inset,0 10px 26px rgba(79,214,242,.12)}50%{box-shadow:0 0 0 1px rgba(79,214,242,.58) inset,0 18px 38px rgba(138,104,255,.26)}}@keyframes goal05Sweep{0%,55%{transform:translateX(-80%)}100%{transform:translateX(80%)}}@media(prefers-reduced-motion:reduce){.goal05-live-places,.goal05-live-places:before{animation:none!important}}
+.goal05-offer .btn{width:100%;justify-content:center;margin-top:14px}
+.goal05-small{font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:10px}.goal05-apk-download{margin-top:11px;padding:12px;border:1px solid rgba(52,211,153,.28);border-radius:13px;background:rgba(52,211,153,.08)}.goal05-apk-download .btn{width:100%;justify-content:center;margin-top:0}.goal05-apk-download small{display:block;margin-top:8px;color:var(--muted);font-size:10.5px;line-height:1.45}
+@media(max-width:760px){.goal05-founder-inner{grid-template-columns:1fr;padding:20px}.goal05-proof-grid{grid-template-columns:1fr}.goal05-title{font-size:23px}}/* Acces fondateur +0,5 : invitation affichee une seule fois par session. */
+.beta-cycle01-launcher{position:fixed;right:18px;bottom:18px;z-index:180;padding:11px 14px;border:1px solid rgba(166,136,255,.45);border-radius:999px;background:#1e2340;color:#f6f7ff;box-shadow:0 14px 32px rgba(0,0,0,.3);font:800 12px Inter,system-ui;cursor:pointer}.beta-cycle01-launcher b{color:#4fd6f2}.beta-cycle01{max-width:440px}.beta-cycle01 .beta-kicker{color:#4fd6f2;font-size:10px;font-weight:900;letter-spacing:.13em}.beta-cycle01 .beta-meta{margin:13px 0;color:#c4c9e6;font-size:12px}.beta-cycle01 .beta-form{display:grid;gap:10px;margin-top:16px}.beta-cycle01 .beta-check{display:flex;gap:8px;color:#c4c9e6;font-size:11px;line-height:1.45}.beta-cycle01 .beta-check input{margin-top:2px;accent-color:#8a68ff}.beta-cycle01 .beta-status{margin-top:10px;font-size:12px;line-height:1.45}@media(max-width:700px){.beta-cycle01-launcher{right:12px;bottom:12px}}</style>
+
+</head>
+<body class="tlm-wow tlm-page-home">
+
+<nav>
+  <div class="nav-brand">TOUSLES<b>MATCHS</b></div>
+  <div class="nav-center">
+    <a href="#pick" data-i18n="nav_analyses">Analyses</a>
+    <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
+    <a href="/performances" data-i18n="nav_results">Résultats</a>
+    <a href="/bankroll" data-i18n="nav_bankroll">Bankroll</a>
+    <a href="#methode" data-i18n="nav_method">Méthode</a>
+    <a href="#plans" data-i18n="nav_plans">Tarifs</a>
+  </div>
+  <div class="nav-right">
+    <div class="nav-lang">
+      <button type="button" class="nav-lang-btn" onclick="toggleLangMenu()" aria-haspopup="true">🌐 <span id="lang-current">Français</span> ▾</button>
+      <div class="nav-lang-menu" id="nav-lang-menu">
+        <button type="button" onclick="pickLang('fr')">Français</button>
+        <button type="button" onclick="pickLang('en')">English</button>
+        <button type="button" onclick="pickLang('es')">Español</button>
+        <button type="button" onclick="pickLang('pt')">Português</button>
+        <button type="button" onclick="pickLang('ru')">Русский</button>
+        <button type="button" onclick="pickLang('zh')">中文</button>
+      </div>
+    </div>
+    <div id="nav-auth"><button class="btn btn-ghost" onclick="openModal()" data-i18n="nav_login">Se connecter</button></div>
+    <a href="/downloads/TousLesMatchs-Goal05-beta.apk" class="btn btn-ghost nav-apk-cta" download>📲 APK bêta</a>
+    <a href="/dashboard" class="btn btn-prim" data-i18n="nav_signup">Créer mon compte gratuit</a>
+    <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+<div class="mmenu" id="mmenu">
+  <a href="#pick" onclick="toggleMenu()" data-i18n="nav_analyses">Analyses</a>
+  <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
+  <a href="/performances" data-i18n="nav_results">Résultats</a>
+  <a href="/bankroll" data-i18n="nav_bankroll">Bankroll</a>
+  <a href="#methode" onclick="toggleMenu()" data-i18n="nav_method">Méthode</a>
+  <a href="#plans" onclick="toggleMenu()" data-i18n="nav_plans">Tarifs</a>
+  <a href="/downloads/TousLesMatchs-Goal05-beta.apk" download>📲 Télécharger l’app Android bêta</a>
+  <a href="/dashboard" data-i18n="nav_signup">Créer mon compte gratuit</a>
+  <div class="mm-lang">
+    <div class="mm-lang-h"><span data-i18n="lang_label">Langue</span></div>
+    <div class="mm-lang-grid">
+      <button type="button" onclick="i18n.setLang('fr')">Français</button>
+      <button type="button" onclick="i18n.setLang('en')">English</button>
+      <button type="button" onclick="i18n.setLang('es')">Español</button>
+      <button type="button" onclick="i18n.setLang('pt')">Português</button>
+      <button type="button" onclick="i18n.setLang('ru')">Русский</button>
+      <button type="button" onclick="i18n.setLang('zh')">中文</button>
+    </div>
+  </div>
+</div>
+
+<div class="dash wrap">
+
+  <!-- RANGEE 1 : HERO + MATCHS EN DIRECT -->
+  <div class="row row-hero">
+    <section class="card hero-exact-card hero" aria-labelledby="hero-title">
+      <div class="hero-exact-wrap" aria-hidden="true">
+        <picture><source srcset="/img/hero-concile-wow.webp" type="image/webp"><img class="hero-exact-img" src="/img/hero-concile-wow.jpg" width="1448" height="1086" loading="eager" decoding="async" alt="Les cinq IA du Concile deliberant sur une analyse"></picture>
+        <svg class="hero-wave-overlay" viewBox="0 0 815 611" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <filter id="glowBlue" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowOrange" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowPink" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowCyan" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowPurple" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <filter id="glowCore" x="-120%" y="-120%" width="340%" height="340%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <path id="waveDeep" d="M 426 155 C 462 190, 516 240, 557 286"/>
+            <path id="waveMistral" d="M 585 96 C 585 155, 584 226, 584 278"/>
+            <path id="waveCohere" d="M 738 155 C 695 190, 650 240, 612 287"/>
+            <path id="wavePerplexity" d="M 409 408 C 458 378, 515 342, 557 322"/>
+            <path id="waveQwen" d="M 748 409 C 702 378, 651 345, 612 324"/>
+          </defs>
+          <path class="energy-path deep" d="M 426 155 C 462 190, 516 240, 557 286"/>
+          <path class="energy-path mistral" d="M 585 96 C 585 155, 584 226, 584 278"/>
+          <path class="energy-path cohere" d="M 738 155 C 695 190, 650 240, 612 287"/>
+          <path class="energy-path perplexity" d="M 409 408 C 458 378, 515 342, 557 322"/>
+          <path class="energy-path qwen" d="M 748 409 C 702 378, 651 345, 612 324"/>
+          <g class="hero-wave-dot">
+            <circle r="5" fill="#ffffff"><animateMotion dur="1.65s" repeatCount="indefinite"><mpath href="#waveDeep"/></animateMotion></circle>
+            <circle r="5" fill="#fff7de"><animateMotion dur="1.55s" begin="-.4s" repeatCount="indefinite"><mpath href="#waveMistral"/></animateMotion></circle>
+            <circle r="5" fill="#fff0fb"><animateMotion dur="1.7s" begin="-.8s" repeatCount="indefinite"><mpath href="#waveCohere"/></animateMotion></circle>
+            <circle r="5" fill="#e8ffff"><animateMotion dur="1.6s" begin="-.2s" repeatCount="indefinite"><mpath href="#wavePerplexity"/></animateMotion></circle>
+            <circle r="5" fill="#f1e8ff"><animateMotion dur="1.75s" begin="-.65s" repeatCount="indefinite"><mpath href="#waveQwen"/></animateMotion></circle>
+          </g>
+          <circle class="core-pulse" cx="584" cy="312" r="77"/><circle class="core-pulse p2" cx="584" cy="312" r="77"/>
+        </svg>
+        <a class="hero-exact-hotspot live" href="/live-ia">Voir les matchs en direct</a>
+        <a class="hero-exact-hotspot account" href="/dashboard">Créer mon compte gratuit</a>
+        <div class="hero-seo-copy">
+          <div data-i18n="hero_badge">Le Concile IA sportif</div>
+          <h1 id="hero-title" data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent. Le Concile sélectionne les meilleures convergences.</h1>
+          <p data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</p>
+        </div>
+      </div>
+      <div class="hero-mobile-fallback">
+        <div class="hero-badge" data-i18n="hero_badge">Le Concile IA sportif</div>
+        <h1 data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
+        <div class="hero-sub" data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
+        <div class="hero-cta"><a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a><a href="/downloads/TousLesMatchs-Goal05-beta.apk" class="btn btn-ghost" download>📲 Télécharger l’app Android</a><a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a></div>
+        <div class="hero-reassure"><span data-i18n="hero_r1">✓ Résultats publics</span><span data-i18n="hero_r2">✓ Données vérifiées</span><span data-i18n="hero_r3">✓ Sans engagement</span><span>18+</span></div>
+      </div>
+    </section>
+
+    <div class="card live-panel" id="live">
+      <div class="live-panel-head">
+        <div class="live-panel-title"><span class="dot"></span><span data-i18n="live_now">Matchs en cours</span></div>
+        <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
+      </div>
+      <div id="live-rows"><div class="empty-note">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- RANGEE 1bis : MATCHS A VENIR — encart distinct -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card upcoming-panel" id="upcoming-panel">
+      <div class="live-panel-head">
+        <div class="live-panel-title"><span class="dot up"></span><span data-i18n="live_upcoming">Matchs à venir — prochaines 24h</span></div>
+        <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
+      </div>
+      <div id="upcoming-highlight"></div>
+      <div id="upcoming-rows"><div class="empty-note">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- RANGEE 2 : PREUVES -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card">
+      <div class="proof-bar" id="proof-bar">
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl" data-i18n="proof_total">Sélections terminées</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl" data-i18n="proof_wl">Gagnées / Perdues</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl" data-i18n="proof_winrate">Taux de réussite</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl" data-i18n="proof_profit">Profit simulé (mise 10€)</div></div></div>
+      </div>
+      <div class="proof-note" data-i18n="proof_note">Performances calculées sur les sélections officiellement terminées. Les performances passées ne garantissent pas les résultats futurs.</div>
+    </div>
+  </div>
+
+  <!-- RANGEE 2.5 : DERNIERS VERDICTS DU CONCILE (accordeon par jour, plusieurs
+       jours d'affilee) -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card">
+      <div class="pcard-title" style="margin-bottom:10px" data-i18n="verdicts_title">Derniers verdicts du Concile</div>
+      <div id="daily-accordion"><div class="empty-note">Chargement…</div></div>
+    </div>
+  </div>
+
+  <!-- RANGEE 3 : PICK GRATUIT DU JOUR (seul, immediatement visible) -->
+  <div class="row" style="grid-template-columns:1fr" id="pick">
+    <div class="card pcard acc-green" id="pick-card">
+      <div class="pcard-title"><span data-i18n="pick_title">Le pick gratuit du jour</span> <span class="badge" data-i18n="badge_free">Gratuit</span></div>
+      <div id="pick-body" class="empty-note">Chargement…</div>
+    </div>
+  </div>
+
+  <!-- RANGEE 3.5 : CAPTURE EMAIL (active la sequence de nurturing J0/J+1/J+3 deja codee cote API,
+       jusque-la jamais branchee a aucun formulaire du site) -->
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card" id="email-capture-card">
+      <div class="pcard-title" style="margin-bottom:6px" data-i18n="capture_title">Reçois le pick gratuit chaque matin par email</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:14px" data-i18n="capture_sub">Aucun spam, aucune carte bancaire — juste le pick du jour et les résultats vérifiés dans ta boîte mail.</div>
+      <form id="email-capture-form" style="display:flex;gap:10px;flex-wrap:wrap" onsubmit="return submitEmailCapture(event)">
+        <input class="modal-input" id="email-capture-input" type="email" placeholder="toi@exemple.com" data-i18n-ph="capture_ph" autocomplete="email" required style="flex:1;min-width:200px">
+        <button type="submit" class="btn btn-prim" id="email-capture-btn" style="flex:0 0 auto" data-i18n="capture_btn">S'inscrire</button>
+      </form>
+      <div id="email-capture-msg" style="font-size:13px;margin-top:10px;display:none"></div>
+    </div>
+  </div>
+
+  <div class="row" style="grid-template-columns:1fr;padding-top:0">
+    <section class="card goal05-founder-card" id="goal05-founder-card" aria-labelledby="goal05-title">
+      <div class="goal05-founder-inner">
+        <div>
+          <div class="goal05-kicker">GOAL 0.5 IA · Acces fondateur</div>
+          <h2 class="goal05-title" id="goal05-title">Equipe +0,5 but</h2>
+          <p class="goal05-text">La selection n'est pas liee au domicile : elle vise l'equipe historiquement plus forte sur 4 saisons, encore bien classee cette annee, face a une equipe faible au classement et vulnerable.</p>
+          <div class="goal05-proof-grid" aria-label="Criteres principaux Goal 0.5">
+            <div class="goal05-proof"><b>Analyse historique 4 saisons</b>Moyenne ponderee 40 / 30 / 20 / 10 par championnat.</div>
+            <div class="goal05-proof"><b>Ecart de niveau</b>Top 25% historique contre bottom 25% historique.</div>
+            <div class="goal05-proof"><b>Score minimum</b>80/100 avant toute surveillance live.</div>
+            <div class="goal05-proof"><b>Declenchement prudent</b>Cote live 1.60, marche frais, aucun signal apres 85e.</div>
+          </div>
+        </div>
+        <aside class="goal05-offer" aria-label="Offre beta Goal 0.5">
+          <div class="goal05-offer-label">Beta privee · Cycle 01</div>
+          <div class="goal05-offer-price">20 places offertes pendant la beta<span>Acces reserve aux testeurs majeurs, sans promesse de resultat.</span></div><div class="goal05-live-places" aria-live="polite"><span class="goal05-live-label">Places fondatrices restantes</span><div class="goal05-live-number"><strong id="goal05-remaining-count">20</strong><span>sur 20</span></div><div class="goal05-live-hint" id="goal05-remaining-hint">Le compteur descend automatiquement a chaque invitation reservee.</div></div>
+          <button class="btn btn-prim" type="button" onclick="openBetaCycle01()">Demander une invitation</button>
+          <div class="goal05-apk-download"><a class="btn btn-ghost" href="/downloads/TousLesMatchs-Goal05-beta.apk" download>Télécharger l'APK Android bêta</a><small>Installation hors Play Store pour les testeurs. Version bêta privée, football uniquement, 18+.</small></div>
+          <div class="goal05-small">La version payante viendra apres preuve des donnees live, historique complet et bilan transparent des signaux vraiment delivres.</div>
+        </aside>
+      </div>
+    </section>
+  </div>
+  <!-- RANGEE 4 : FORMULES (parcours principal : hero -> preuve -> pick gratuit -> formules) -->
+  <div class="row row-4" id="plans">
+    <div class="card plan">
+      <div class="plan-ico" style="background:rgba(167,173,208,.12);color:var(--tx2)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
+      <div class="plan-name" data-i18n="plan_free">GRATUIT</div>
+      <div class="plan-price">0€ <span>/mois</span></div>
+      <ul class="plan-feats">
+        <li><span class="plan-check">✓</span><span data-i18n="plan_free_1">Pick gratuit du jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_free_2">Résultats publics</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_free_3">Aucune carte bancaire</span></li>
+      </ul>
+      <a href="/dashboard" class="btn btn-ghost btn-block" data-i18n="nav_signup">Créer mon compte gratuit</a>
+    </div>
+
+    <div class="card plan">
+      <div class="plan-ico" style="background:rgba(91,141,239,.14);color:var(--standard)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
+      <div class="plan-name" style="color:var(--standard)" data-i18n="plan_std">STANDARD</div>
+      <div class="plan-price">4.90€ <span>/mois</span></div>
+      <ul class="plan-feats">
+        <li><span class="plan-check">✓</span><span data-i18n="plan_std_1">Jusqu'à 3 sélections/jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_std_2">Score de confiance minimum 82/100, sélection la plus stricte du jour</span></li>
+        <li><span class="plan-check">✓</span>Sans engagement</li>
+      </ul>
+      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block" data-i18n="plan_btn_std">Choisir Standard</a>
+    </div>
+
+    <div class="card plan hl">
+      <div class="plan-badge" data-i18n="plan_popular">Le plus choisi</div>
+      <div class="plan-ico" style="background:rgba(155,123,255,.16);color:var(--premium)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
+      <div class="plan-name" style="color:var(--premium)" data-i18n="plan_prem">PREMIUM</div>
+      <div class="plan-price">14.90€ <span>/mois</span></div>
+      <ul class="plan-feats">
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_1">Jusqu'à 10 sélections/jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Score de confiance minimum 82/100, sélection élargie</span></li>
+        <li><span class="plan-check">✓</span>Sans engagement</li>
+      </ul>
+      <a href="https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06" target="_blank" class="btn btn-prim btn-block" data-i18n="plan_btn_prem">Choisir Premium</a>
+    </div>
+
+    <div class="card plan">
+      <div class="plan-badge" style="background:linear-gradient(135deg,#d4af37,#f5c842);color:#1a1a1a">🎁 1er mois offert</div>
+      <div class="plan-ico" style="background:rgba(224,166,60,.16);color:var(--elite)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
+      <div class="plan-name" style="color:var(--elite)" data-i18n="plan_elite">ELITE-VIP</div>
+      <div class="plan-price">29.90€ <span>/mois</span></div>
+      <ul class="plan-feats">
+        <li><span class="plan-check">✓</span><span data-i18n="plan_elite_1">Jusqu'à 30 sélections/jour</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_elite_2">Score de confiance minimum 75/100, tout le vivier football diffusable</span></li>
+        <li><span class="plan-check">✓</span>Sans engagement</li>
+      </ul>
+      <div style="font-size:10.5px;color:var(--muted);line-height:1.5;margin:-4px 0 12px">🎁 1 mois offert pour ton 1er abonnement Elite-VIP. Parraine un ami (n'importe quelle formule) : vous recevez chacun 1 mois offert en plus.</div>
+      <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" class="btn btn-ghost btn-block" data-i18n="plan_btn_elite">Rejoindre Elite-VIP</a>
+    </div>
+  </div>
+  <div class="row" style="grid-template-columns:1fr;padding-top:0">
+    <div class="plans-note" data-i18n-html="plans_note">Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.</div>
+  </div>
+
+  <!-- RANGEE 5 : CONTENU SECONDAIRE (methode, preuves detaillees) — sous le
+       parcours principal, pas avant : un client presse va direct au pick
+       gratuit puis aux formules sans avoir a traverser tout ca. -->
+  <div class="row row-4">
+    <div class="card pcard acc-blue">
+      <div class="pcard-title" data-i18n="std_yesterday">Ce que Standard a reçu hier</div>
+      <table class="mini-table"><thead><tr><th>Match</th><th>Sél.</th><th>Rés.</th></tr></thead>
+        <tbody id="std-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="card pcard acc-violet" id="methode">
+      <div class="pcard-title">Comment ça fonctionne ? <a href="#methode" class="live-panel-link" style="font-size:10px">Voir la méthode</a></div>
+      <div class="method-step"><div class="method-n">1</div><div><div class="method-t" data-i18n="method_1t">Les données sont collectées</div><div class="method-d" data-i18n="method_1d">Hermès vérifie chaque donnée sur plusieurs sources.</div></div></div>
+      <div class="method-step"><div class="method-n">2</div><div><div class="method-t" data-i18n="method_2t">Les IA analysent séparément</div><div class="method-d" data-i18n="method_2d">Perplexity, DeepSeek, Mistral, Cohere, Qwen votent.</div></div></div>
+      <div class="method-step" style="margin-bottom:0"><div class="method-n">3</div><div><div class="method-t" data-i18n="method_3t">Le Concile calcule le score</div><div class="method-d" data-i18n="method_3d">Publié seulement si la convergence dépasse le seuil.</div></div></div>
+    </div>
+
+    <div class="card pcard acc-cyan">
+      <div class="pcard-title">Résultats récents <a href="/performances" class="live-panel-link" style="font-size:10px">Voir tout →</a></div>
+      <table class="mini-table"><thead><tr><th>Match</th><th>Cote</th><th>Rés.</th></tr></thead>
+        <tbody id="res-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="row" style="grid-template-columns:1fr">
+    <div class="card" style="text-align:center">
+      <div style="font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:4px" data-i18n="partners_title">Nos partenaires bookmakers agréés ANJ</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:18px" data-i18n="partners_sub">En passant par nos liens, tu soutiens le site — sans surcoût pour toi.</div>
+      <div class="site-apk-download"><a class="btn btn-prim" href="/downloads/TousLesMatchs-Goal05-beta.apk" download>📲 Télécharger l’app Android bêta</a><div class="site-apk-download-note">Gmail bloque les fichiers APK en pièce jointe : partage plutôt ce lien officiel du site. Installation hors Play Store réservée aux testeurs · Football uniquement · 18+.</div></div>
+      <div class="partner-row">
+        <a href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener sponsored" class="partner-btn pb-winamax">Winamax</a>
+        <a href="https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" target="_blank" rel="noopener sponsored" class="partner-btn pb-unibet">Unibet</a>
+        <a href="https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" target="_blank" rel="noopener sponsored" class="partner-btn pb-pmu">PMU</a>
+      </div>
+      <div style="font-size:10.5px;color:var(--muted);margin-top:14px;line-height:1.6" data-i18n="partners_legal">18+ · Jeu responsable · Ouvrir un compte chez un partenaire ne garantit aucun gain.</div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-brand">TOUSLES<span style="color:var(--violet2)">MATCHS</span></div>
+        <div class="foot-tag" data-i18n="foot_tag">Le Concile IA sportif au service de tes analyses.</div>
+      </div>
+      <div class="foot-col"><div class="foot-h" data-i18n="foot_nav">Navigation</div>
+        <a href="/live-ia">Live IA</a><a href="/performances">Résultats</a><a href="/bankroll">Bankroll</a><a href="#methode">Méthode</a><a href="#plans">Tarifs</a>
+      </div>
+      <div class="foot-col"><div class="foot-h" data-i18n="foot_legal">Légal</div>
+        <a href="/mentions-legales">Mentions légales</a><a href="/cgu">CGU</a><a href="/cgv">CGV</a><a href="/confidentialite">Confidentialité</a>
+      </div>
+      <div class="foot-col"><div class="foot-h">Mon compte</div>
+        <a href="/dashboard">Créer un compte gratuit</a><a href="#" onclick="openModal();return false">Se connecter</a><a href="/dashboard">Gérer mon abonnement</a>
+      </div>
+      <div class="foot-col"><div class="foot-h">Support</div>
+        <a href="/faq">FAQ</a><a href="/pronostic-ia">Pronostic IA, comment ça marche</a><a href="mailto:contact@touslesmatchs.com">Contact</a>
+      </div>
+    </div>
+    <div class="foot-legal">
+      Les jeux d'argent et de hasard comportent des risques : isolement, endettement… Appelez le 09 74 75 13 13 (appel non surtaxé).<br>
+      18+ · Interdit aux mineurs. TousLesMatchs fournit des analyses statistiques à titre informatif et ne garantit aucun gain.
+    </div>
+  </div>
+</footer>
+
+<button type="button" class="beta-cycle01-launcher" id="beta-cycle01-launcher" onclick="openBetaCycle01()"><b>Cycle 01</b> · demander une invitation</button>
+<div class="modal-bg" id="beta-cycle01-modal" aria-hidden="true"><div class="modal-box beta-cycle01"><button class="modal-close" onclick="closeBetaCycle01()">×</button><div class="beta-kicker">ACCES FONDATEUR · CYCLE 01</div><div class="modal-title" style="margin-top:12px">Une premiere table de test.</div><div class="modal-sub">20 invitations pour suivre le protocole +0,5 but : signaux, refus et resultats visibles sans filtre.</div><div class="beta-meta" id="beta-cycle01-count">Verification des invitations disponibles…</div><div class="beta-form"><input class="modal-input" id="beta-cycle01-email" type="email" autocomplete="email" placeholder="toi@exemple.com"><label class="beta-check"><input id="beta-cycle01-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter les <a href="/mentions-legales" target="_blank">mentions legales</a> et la <a href="/confidentialite" target="_blank">politique de confidentialite</a>.</label><button class="modal-btn" type="button" id="beta-cycle01-submit" onclick="applyBetaCycle01()">Demander une invitation</button></div><div class="beta-status" id="beta-cycle01-status" aria-live="polite"></div><div style="font-size:10px;color:var(--muted);margin-top:14px">Acces offert pendant la beta · Aucun gain n est garanti · Jouez avec moderation</div></div></div><!-- LOGIN MODAL -->
+<div class="modal-bg" id="modal-login">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div id="modal-view-login">
+      <div class="modal-title">Accès membre</div>
+      <div class="modal-sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
+      <div id="modal-saved-banner" style="display:none;background:rgba(51,196,129,.08);border:1px solid rgba(51,196,129,.2);border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:12px;color:var(--green);align-items:center;gap:8px">
+        <span>✓</span><span>Identifiants mémorisés — clique sur Accéder.</span>
+      </div>
+      <button id="biometric-login-btn" onclick="doBiometricLogin()" style="display:none;width:100%;margin-bottom:14px;padding:12px;border-radius:10px;border:1px solid rgba(124,58,237,.3);background:rgba(124,58,237,.08);color:var(--tx1);font-size:14px;font-weight:700;cursor:pointer;align-items:center;justify-content:center;gap:8px">👆 Se connecter avec Face ID / empreinte</button>
+      <div id="biometric-err" class="modal-err"></div>
+      <label class="modal-label">Email</label>
+      <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
+      <label class="modal-label">Code d'accès</label>
+      <input class="modal-input" id="login-code" type="text" placeholder="STANDARD-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <input type="checkbox" id="login-remember" style="width:14px;height:14px;accent-color:var(--violet);cursor:pointer" checked>
+        <label for="login-remember" style="font-size:12px;color:var(--tx2);cursor:pointer">Se souvenir de moi</label>
+        <span style="flex:1"></span>
+        <button onclick="showForgotView()" style="background:none;border:none;color:var(--violet2);font-size:12px;cursor:pointer;text-decoration:underline;padding:0">Code oublié ?</button>
+      </div>
+      <div class="modal-err" id="login-err"></div>
+      <div class="modal-ok" id="login-ok"></div>
+      <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+      <div style="font-size:11px;color:var(--muted);text-align:center">Pas encore de code ? <a href="#plans" onclick="closeModal()" style="color:var(--violet2);text-decoration:none">Voir les abonnements</a></div>
+    </div>
+    <div id="modal-view-forgot" style="display:none">
+      <div class="modal-title">Code oublié ?</div>
+      <div class="modal-sub">Entre l'email utilisé lors de ton abonnement. On te renvoie ton code d'accès.</div>
+      <label class="modal-label">Email de ton compte</label>
+      <input class="modal-input" id="forgot-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
+      <div class="modal-err" id="forgot-err"></div>
+      <div class="modal-ok" id="forgot-ok"></div>
+      <button class="modal-btn" id="forgot-btn" onclick="doForgotCode()">Recevoir mon code →</button>
+      <div style="text-align:center"><button onclick="showLoginView()" style="background:none;border:none;color:var(--tx2);font-size:12px;cursor:pointer;text-decoration:underline">← Retour à la connexion</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-bookmakers">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeBookmakerModal()">×</button>
+    <div class="modal-title">Comparer la cote</div>
+    <div class="modal-sub" id="bm-modal-match">Où miser ce pronostic — bookmakers agréés ANJ.</div>
+    <div id="bm-modal-links" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0"></div>
+    <div style="font-size:11px;color:var(--muted);line-height:1.6">18+ · Jeu responsable · joueurs-info-service.fr · La cote finale se vérifie toujours chez le bookmaker.</div>
+  </div>
+</div>
+
+<script>
+function esc(v){var d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
+var STATUS_CODE_LABELS={HT:"Mi-temps","1H":"1ère MT","2H":"2nde MT",ET:"Prolongation",AET:"Fin prolongation",BT:"Pause (avant TAB)",P:"Tirs au but",PEN:"Tirs au but",INT:"Interrompu",SUSP:"Suspendu"};
+function minLabelOf(m){
+  if(typeof m.minute==='number') return m.minute+"'";
+  var raw=String(m.minute||'').trim();
+  if(!raw) return 'Live';
+  if(/^\d+\+?\d*$/.test(raw)) return raw+"'";
+  return STATUS_CODE_LABELS[raw.toUpperCase()]||'Live';
+}
+function toggleMenu(){document.getElementById('mmenu').classList.toggle('open');}
+
+/* ══ HERO WOW — réseau holographique, purement visuel ══ */
+(function(){
+  var target=document.getElementById('brain-fan');
+  if(!target) return;
+  var names=['Perplexity','DeepSeek','Mistral','Cohere','Qwen'];
+  var colors=['#28e0dc','#4d79ff','#ff8a3d','#ff5fad','#8d66ff'];
+  var positions=[[14,74],[24,27],[52,9],[81,27],[90,74]];
+  var paths=[
+    'M14 74 C28 74 39 63 55 60',
+    'M24 27 C35 35 43 49 55 60',
+    'M52 9 C52 29 54 45 55 60',
+    'M81 27 C72 35 65 49 55 60',
+    'M90 74 C77 73 68 64 55 60'
+  ];
+  var brainSvg='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3a3 3 0 0 0-3 2.8A3 3 0 0 0 4 8.5v1A3 3 0 0 0 4 15v1a3 3 0 0 0 2 2.7A3 3 0 0 0 9 21a2.2 2.2 0 0 0 2.2-2.2V5.2A2.2 2.2 0 0 0 9 3Z"/><path d="M15 3a3 3 0 0 1 3 2.8 3 3 0 0 1 2 2.7v1a3 3 0 0 1 0 5.5v1a3 3 0 0 1-2 2.7 3 3 0 0 1-3 2.3 2.2 2.2 0 0 1-2.2-2.2V5.2A2.2 2.2 0 0 1 15 3Z"/><path d="M12 6.5v11"/><circle cx="7.2" cy="8.4" r=".55" fill="currentColor"/><circle cx="7.2" cy="15.6" r=".55" fill="currentColor"/><circle cx="16.8" cy="8.4" r=".55" fill="currentColor"/><circle cx="16.8" cy="15.6" r=".55" fill="currentColor"/></svg>';
+  var defs='<defs><filter id="brainGlow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="1.3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
+  var svg='<svg class="brain-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">'+defs;
+  for(var i=0;i<paths.length;i++){
+    svg+='<path class="brain-link-soft" d="'+paths[i]+'"/>'+
+      '<path id="brain-path-'+i+'" class="brain-link" d="'+paths[i]+'" stroke="'+colors[i]+'"/>'+
+      '<circle class="brain-particle" r=".8" fill="'+colors[i]+'" filter="url(#brainGlow)"><animateMotion dur="'+(2.55+i*.18)+'s" begin="-'+(i*.41)+'s" repeatCount="indefinite"><mpath href="#brain-path-'+i+'"/></animateMotion></circle>';
+  }
+  svg+='</svg>';
+  var html=svg+'<div class="brain-core-beam" aria-hidden="true"></div>';
+  for(var j=0;j<names.length;j++){
+    html+='<div class="brain-node" style="left:'+positions[j][0]+'%;top:'+positions[j][1]+'%;--node-color:'+colors[j]+'"><div class="ico">'+brainSvg+'</div><div class="lbl">'+names[j]+'</div></div>';
+  }
+  html+='<div class="brain-core"><b>CONCILE</b><span>Claude</span></div>';
+  target.innerHTML=html;
+})();
+
+/* ══ AUTH (systeme code d'acces existant, conserve a l'identique) ══ */
+function renderNavAuth(){
+  var el=document.getElementById('nav-auth');
+  var email=localStorage.getItem('tlm_email');
+  var plan=localStorage.getItem('tlm_plan');
+  if(email&&plan){
+    var isElite=plan==='elite'||plan==='vip';
+    el.innerHTML='<div class="nav-user"><span class="nav-plan-badge'+(isElite?' elite':'')+'">'+(isElite?'Elite':plan.charAt(0).toUpperCase()+plan.slice(1))+'</span><button class="nav-logout" onclick="doLogout()" title="Se déconnecter">✕</button></div>';
+  } else {
+    el.innerHTML='<button class="btn btn-ghost" onclick="openModal()">Se connecter</button>';
+  }
+}
+function openModal(){
+  document.getElementById('modal-login').classList.add('open');
+  var savedEmail=localStorage.getItem('tlm_email')||'';
+  var savedCode=localStorage.getItem('tlm_code')||'';
+  document.getElementById('login-email').value=savedEmail;
+  document.getElementById('login-code').value=savedCode;
+  var banner=document.getElementById('modal-saved-banner');
+  if(savedEmail&&savedCode){ banner.style.display='flex'; } else { banner.style.display='none'; }
+  showLoginView();
+  var bioBtn=document.getElementById('biometric-login-btn');
+  document.getElementById('biometric-err').style.display='none';
+  var webauthnEmail=localStorage.getItem('tlm_webauthn_email');
+  if(webauthnEmail){
+    biometricSupported().then(function(ok){
+      bioBtn.style.display=ok?'flex':'none';
+      // Un appareil deja enregistre : on propose Face ID/empreinte tout de
+      // suite au lieu d'attendre un second clic sur le bouton — c'est le
+      // clic sur "Se connecter" qui sert de geste utilisateur requis par
+      // le navigateur pour declencher l'invite biometrique.
+      if(ok) doBiometricLogin();
+    });
+  } else { bioBtn.style.display='none'; }
+}
+
+/* ══ CONNEXION BIOMETRIQUE (Face ID / empreinte, mobile) ══ */
+function isMobileDevice(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); }
+async function biometricSupported(){
+  try{
+    return isMobileDevice() && window.PublicKeyCredential && typeof SimpleWebAuthnBrowser!=='undefined' && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  }catch(e){ return false; }
+}
+async function maybeOfferBiometric(email,code){
+  if(!(await biometricSupported())) return;
+  if(localStorage.getItem('tlm_webauthn_email')===email) return;
+  if(localStorage.getItem('tlm_webauthn_declined_'+email)==='1') return;
+  if(!confirm('Activer la connexion par Face ID / empreinte sur ce téléphone pour la prochaine fois ?')){
+    localStorage.setItem('tlm_webauthn_declined_'+email,'1');
+    return;
+  }
+  try{
+    var r1=await fetch('/api/webauthn/register-options',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code})});
+    var d1=await r1.json();
+    if(!d1.ok) throw new Error(d1.error||'options');
+    var attResp=await SimpleWebAuthnBrowser.startRegistration({optionsJSON:d1.options});
+    var r2=await fetch('/api/webauthn/register-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code,credential:attResp,deviceLabel:navigator.userAgent.slice(0,80)})});
+    var d2=await r2.json();
+    if(d2.ok){
+      localStorage.setItem('tlm_webauthn_email',email);
+      alert('✓ Empreinte / Face ID activée sur cet appareil. La prochaine connexion se fera automatiquement.');
+    } else {
+      alert('Échec de l\'activation biométrique : '+(d2.error||'erreur inconnue')+'. Réessaie depuis "Se connecter" après ta prochaine connexion par code.');
+    }
+  }catch(e){
+    console.error('[webauthn register]',e);
+    // L'utilisateur a accepte la popup mais l'enregistrement (create()) a
+    // echoue ou a ete annule au niveau OS — sans ce message, tlm_webauthn_email
+    // ne se pose jamais et rien ne se represente jamais a la prochaine
+    // connexion, sans qu'on comprenne pourquoi (signalé par le fondateur le 01/08/2026).
+    alert('Échec de l\'activation biométrique ('+(e&&e.message?e.message:'annulée')+'). Tu peux réessayer à ta prochaine connexion.');
+  }
+}
+async function doBiometricLogin(){
+  var email=localStorage.getItem('tlm_webauthn_email');
+  var errEl=document.getElementById('biometric-err'), btn=document.getElementById('biometric-login-btn');
+  if(!email) return;
+  errEl.style.display='none';
+  btn.disabled=true;
+  try{
+    var r1=await fetch('/api/webauthn/login-options',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+    var d1=await r1.json();
+    if(!d1.ok) throw new Error(d1.error||'Aucun appareil enregistré');
+    var asseResp=await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:d1.options});
+    var r2=await fetch('/api/webauthn/login-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,credential:asseResp})});
+    var d2=await r2.json();
+    if(!d2.ok) throw new Error(d2.error||'Vérification échouée');
+    localStorage.setItem('tlm_email',d2.email);
+    localStorage.setItem('tlm_code',d2.code);
+    localStorage.setItem('tlm_plan',d2.plan);
+    closeModal();renderNavAuth();loadPick();
+  }catch(e){
+    errEl.textContent=(e&&e.message)||'Connexion biométrique impossible.';
+    errEl.style.display='block';
+  }
+  btn.disabled=false;
+}
+function closeModal(){document.getElementById('modal-login').classList.remove('open')}
+var _bmLinksCache=null;
+function openBookmakerModal(matchLabel){
+  document.getElementById('bm-modal-match').textContent=matchLabel?('Pour "'+matchLabel+'" — bookmakers agréés ANJ.'):'Où miser ce pronostic — bookmakers agréés ANJ.';
+  document.getElementById('modal-bookmakers').classList.add('open');
+  var box=document.getElementById('bm-modal-links');
+  var render=function(links){
+    // Couleurs de marque reelles (pas des couleurs generiques) : chaque bouton
+    // ressemble au bookmaker qu'il represente, plus reconnaissable au clic.
+    var brand={Winamax:{bg:'#E2001A',fg:'#fff'},Unibet:{bg:'#0C7A3D',fg:'#fff'},PMU:{bg:'#003DA5',fg:'#fff'},Betclic:{bg:'#FFD100',fg:'#111'}};
+    box.innerHTML=links.map(function(b){
+      var c=brand[b.text]||{bg:'#334155',fg:'#fff'};
+      return '<a href="'+b.url+'" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:'+c.bg+';color:'+c.fg+';padding:12px 8px;border-radius:10px;text-decoration:none;font-weight:900;font-size:14px;letter-spacing:-.01em">'+esc(b.text)+'</a>';
+    }).join('');
+  };
+  if(_bmLinksCache){ render(_bmLinksCache); return; }
+  box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px">Chargement...</div>';
+  fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok||!d.links){ box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px">Indisponible pour le moment.</div>'; return; }
+    _bmLinksCache=d.links;
+    render(d.links);
+  }).catch(function(){ box.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:13px">Indisponible pour le moment.</div>'; });
+}
+function closeBookmakerModal(){document.getElementById('modal-bookmakers').classList.remove('open')}
+function showLoginView(){
+  document.getElementById('modal-view-login').style.display='';
+  document.getElementById('modal-view-forgot').style.display='none';
+  document.getElementById('login-err').style.display='none';
+  document.getElementById('login-ok').style.display='none';
+}
+function showForgotView(){
+  document.getElementById('modal-view-login').style.display='none';
+  document.getElementById('modal-view-forgot').style.display='';
+  document.getElementById('forgot-err').style.display='none';
+  document.getElementById('forgot-ok').style.display='none';
+  var savedEmail=localStorage.getItem('tlm_email')||'';
+  if(savedEmail) document.getElementById('forgot-email').value=savedEmail;
+}
+document.getElementById('modal-login').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.getElementById('login-code').addEventListener('input',function(){this.value=this.value.toUpperCase()});
+document.getElementById('login-code').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin()});
+
+async function doLogin(){
+  var email=document.getElementById('login-email').value.trim().toLowerCase();
+  var code=document.getElementById('login-code').value.trim().toUpperCase();
+  var remember=document.getElementById('login-remember').checked;
+  var errEl=document.getElementById('login-err'), okEl=document.getElementById('login-ok'), btn=document.getElementById('login-btn');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!email||!code){errEl.textContent='Email et code requis.';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Vérification…';
+  try{
+    var r=await fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code,login:true})});
+    var d=await r.json();
+    if(d.valid){
+      if(remember){localStorage.setItem('tlm_email',email);localStorage.setItem('tlm_code',code);localStorage.setItem('tlm_session',d.session_token||'');}
+      else{localStorage.removeItem('tlm_email');localStorage.removeItem('tlm_code');localStorage.removeItem('tlm_session');}
+      localStorage.setItem('tlm_plan',d.plan);
+      okEl.textContent='✓ Connecté — Plan '+d.plan;
+      okEl.style.display='block';
+      setTimeout(function(){closeModal();renderNavAuth();loadPick();if(remember)maybeOfferBiometric(email,code);},1000);
+    } else {
+      errEl.textContent=d.error||'Code invalide.';errEl.style.display='block';
+      btn.disabled=false;btn.textContent='Accéder →';
+    }
+  } catch(e){
+    errEl.textContent='Erreur réseau.';errEl.style.display='block';
+    btn.disabled=false;btn.textContent='Accéder →';
+  }
+}
+async function doForgotCode(){
+  var email=document.getElementById('forgot-email').value.trim().toLowerCase();
+  var errEl=document.getElementById('forgot-err'), okEl=document.getElementById('forgot-ok'), btn=document.getElementById('forgot-btn');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!email||!email.includes('@')){errEl.textContent='Entre une adresse email valide.';errEl.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Envoi en cours…';
+  try{
+    await fetch('/api/forgot-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})});
+  } catch(e){}
+  okEl.textContent='✓ Si un compte existe, tu recevras ton code par email.';
+  okEl.style.display='block';
+  btn.disabled=true;btn.textContent='Email envoyé';
+}
+function doLogout(){
+  localStorage.removeItem('tlm_email');localStorage.removeItem('tlm_code');localStorage.removeItem('tlm_plan');
+  renderNavAuth();loadPick();
+}
+renderNavAuth();
+
+/* ══ PREUVES ══ */
+function fmtEur(n){return (n<0?'':'+')+n+'€';}
+async function loadProof(){
+  try{
+    var r=await fetch('/api/analysis-history?limit=5');
+    var d=await r.json();
+    if(!d.ok) return;
+    var s=d.stats||{};
+    document.getElementById('pf-total').textContent=s.total||0;
+    document.getElementById('pf-wins').textContent=s.wins||0;
+    document.getElementById('pf-losses').textContent=s.losses||0;
+    document.getElementById('pf-winrate').textContent=(s.winrate||0)+'%';
+    document.getElementById('pf-profit').textContent=fmtEur(s.profit10||0);
+
+    var tbody=document.getElementById('res-body');
+    var seenProof={};
+    var resolved=(d.analyses||[]).filter(function(a){return a.outcome==='win'||a.outcome==='loss'}).filter(function(a){
+      var key=[a.home||'',a.away||''].join('|').toLowerCase();
+      if(seenProof[key]) return false;
+      seenProof[key]=true;
+      return true;
+    }).slice(0,5);
+    if(!resolved.length){ tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucun résultat.</td></tr>'; return; }
+    tbody.innerHTML=resolved.map(function(a){
+      var win=a.outcome==='win';
+      return '<tr><td>'+esc(a.home)+' - '+esc(a.away)+'</td><td>'+(a.cote?a.cote.toFixed(2):'—')+'</td>'+
+        '<td class="'+(win?'tag-win':'tag-loss')+'">'+(win?'✓':'✗')+'</td></tr>';
+    }).join('');
+  } catch(e){ console.error('[proof]',e); }
+}
+loadProof();
+
+/* ══ CAPTURE EMAIL (active la sequence nurturing J0/J+1/J+3 deja codee cote API) ══ */
+function openBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.add("open");m.setAttribute("aria-hidden","false");loadBetaCycle01Status();}
+function closeBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.remove("open");m.setAttribute("aria-hidden","true");}
+function updateGoal05Remaining(d){var n=document.getElementById("goal05-remaining-count"),h=document.getElementById("goal05-remaining-hint");if(!n||!d||typeof d.remaining==="undefined")return;n.textContent=Math.max(0,d.remaining);if(h)h.textContent=d.remaining>0?"Le compteur descend automatiquement a chaque invitation reservee.":"Les 20 places sont prises : les nouvelles demandes passent en liste d attente."}function loadBetaCycle01Status(){fetch("/api/beta-plus05/status").then(function(r){return r.json()}).then(function(d){updateGoal05Remaining(d);document.getElementById("beta-cycle01-count").textContent=d.remaining>0?(d.remaining+" invitation"+(d.remaining>1?"s":"")+" disponible"+(d.remaining>1?"s":"")):"Beta complete : inscription en liste d attente."}).catch(function(){document.getElementById("beta-cycle01-count").textContent="Les invitations seront confirmees apres verification."})}
+function applyBetaCycle01(){var email=document.getElementById("beta-cycle01-email").value.trim(),adult=document.getElementById("beta-cycle01-adult").checked,status=document.getElementById("beta-cycle01-status"),btn=document.getElementById("beta-cycle01-submit");if(!email||!adult){status.style.color="var(--red)";status.textContent="Email valide et confirmation +18 requis.";return}btn.disabled=true;fetch("/api/beta-plus05/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,adultConfirmed:adult,legalAccepted:adult})}).then(function(r){return r.json()}).then(function(d){status.style.color=d.ok?"var(--green)":"var(--red)";status.textContent=d.ok?(d.status==="accepted"?"Invitation reservee. Nous confirmerons la phase de test avant tout acces.":"Beta complete : ta demande est en liste d attente."):(d.error||"Demande non valide.");if(d.ok)loadBetaCycle01Status()}).catch(function(){status.style.color="var(--red)";status.textContent="Erreur de connexion. Reessaie plus tard."}).finally(function(){btn.disabled=false})}
+document.getElementById("beta-cycle01-modal").addEventListener("click",function(e){if(e.target===this)closeBetaCycle01()});
+setTimeout(function(){if(!sessionStorage.getItem("tlm_beta_cycle01_seen")){openBetaCycle01();sessionStorage.setItem("tlm_beta_cycle01_seen","1")}},7000);loadBetaCycle01Status();
+function submitEmailCapture(ev) {
+  ev.preventDefault();
+  var input = document.getElementById('email-capture-input');
+  var btn = document.getElementById('email-capture-btn');
+  var msg = document.getElementById('email-capture-msg');
+  var email = (input.value || '').trim();
+  if (!email || email.indexOf('@') === -1) return false;
+  btn.disabled = true;
+  btn.textContent = 'Envoi…';
+  var q = new URLSearchParams(location.search);
+  var utm = { source: q.get('utm_source') || '', medium: q.get('utm_medium') || '', campaign: q.get('utm_campaign') || '' };
+  fetch('/subscribe-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, source: utm.source || 'homepage_capture', landingPage: location.pathname, utm: utm })
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      msg.style.display = 'block';
+      if (d && d.ok) {
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✓ Inscrit ! Vérifie ta boîte mail (et les spams).';
+        input.value = '';
+      } else {
+        msg.style.color = 'var(--red)';
+        msg.textContent = (d && d.error) || "Une erreur est survenue, réessaie.";
+      }
+    })
+    .catch(function() {
+      msg.style.display = 'block';
+      msg.style.color = 'var(--red)';
+      msg.textContent = "Erreur de connexion, réessaie.";
+    })
+    .finally(function() {
+      btn.disabled = false;
+      btn.textContent = "S'inscrire";
+    });
+  return false;
+}
+
+/* ══ MATCHS EN DIRECT ══ */
+var SPORT_ICO={Football:'⚽'};
+function initials(n){return String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(function(p){return p.charAt(0)}).join('').toUpperCase()||'?';}
+var COUNTRY_FLAGS={"Argentina":"🇦🇷","Australia":"🇦🇺","Austria":"🇦🇹","Belgium":"🇧🇪","Brazil":"🇧🇷","Canada":"🇨🇦","Chile":"🇨🇱","China":"🇨🇳","Colombia":"🇨🇴","Croatia":"🇭🇷","Denmark":"🇩🇰","England":"🏴","Finland":"🇫🇮","France":"🇫🇷","Germany":"🇩🇪","Greece":"🇬🇷","Italy":"🇮🇹","Japan":"🇯🇵","Mexico":"🇲🇽","Netherlands":"🇳🇱","Norway":"🇳🇴","Poland":"🇵🇱","Portugal":"🇵🇹","Scotland":"🏴","Spain":"🇪🇸","Sweden":"🇸🇪","Switzerland":"🇨🇭","Turkey":"🇹🇷","USA":"🇺🇸","United States":"🇺🇸","World":"🌍"};
+function splitComp(raw){var parts=String(raw||'').split(/\s*[·•]\s*/);return {league:parts[0]||'',country:parts.length>1?parts[parts.length-1]:''};}
+function logo(src,name){return src?'<img src="'+esc(src)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display=\'none\'">':esc(initials(name));}
+async function loadLive(){
+  var grid=document.getElementById('live-rows');
+  try{
+    var r=await fetch('/api/live-matches');
+    var d=await r.json();
+    var matches=(d.matches||[]).slice(0,3);
+    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.<br>Consulte les prochaines rencontres disponibles.</div>'; return; }
+    grid.innerHTML=matches.map(function(m){
+      var icon=SPORT_ICO[m.sport]||'🏟️';
+      var sh=m.score_home==null?'-':m.score_home, sa=m.score_away==null?'-':m.score_away;
+      var minLabel=esc(minLabelOf(m));
+      var fid=encodeURIComponent(m.id||(m.home+'_'+m.away));
+      return '<div class="live-row">'+
+        '<div class="live-comp"><div class="live-comp-name">'+icon+' '+esc((m.competition||m.sport||'').split(/\s*[·•]\s*/)[0]).slice(0,12)+'</div><div class="live-comp-min">'+minLabel+'</div></div>'+
+        '<div class="live-logo">'+logo(m.home_logo,m.home)+'</div><div class="live-team-name">'+esc(m.home)+'</div>'+
+        '<div class="live-score">'+esc(sh)+'-'+esc(sa)+'</div>'+
+        '<div class="live-logo">'+logo(m.away_logo,m.away)+'</div><div class="live-team-name">'+esc(m.away)+'</div>'+
+        '<a class="btn btn-prim btn-sm" href="/live-ia?fixture='+fid+'">Voir</a>'+
+        '</div>';
+    }).join('');
+  } catch(e){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.</div>'; }
+}
+loadLive();
+
+/* ══ MATCHS A VENIR (pre-match, H2H) ══ */
+function renderUpcomingItem(p){
+      var comp=splitComp(p.competition||'');
+      var flag=COUNTRY_FLAGS[comp.country]||'';
+      var icon=SPORT_ICO[p.sport]||'🏟️';
+      var kt='';
+      try{ var kd=new Date(p.kickoff); if(!isNaN(kd.getTime())) kt=kd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+      var matchLabel=esc(p.home)+' — '+esc(p.away);
+      var oddAge='';
+      if(p.real_odd_fetched_at){
+        try{
+          var fetchedMs=new Date(p.real_odd_fetched_at).getTime();
+          var minsAgo=Math.max(0,Math.round((Date.now()-fetchedMs)/60000));
+          oddAge=' <span title="Cote recuperee chez '+esc(p.real_odd_bookmaker||'un bookmaker ARJEL')+' a '+esc(new Date(p.real_odd_fetched_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}))+'" style="color:var(--muted);font-weight:600;font-size:10.5px">(il y a '+(minsAgo<1?'&lt;1':minsAgo)+' min)</span>';
+        }catch(e){}
+      }
+      var oddHtml=p.real_odd?(' · <span class="upcoming-odd" style="color:var(--violet);font-weight:700">Cote '+esc(p.real_odd)+'</span>'+oddAge):'';
+      var confClass='upcoming-conf'+(p.confidence>=100?' upcoming-conf-100':'');
+      var right=p.locked
+        ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter</button>'
+        : '<div class="'+confClass+'">'+(p.confidence>=100?'🔥 ':'')+esc(p.bet)+' · '+esc(p.confidence)+'/100'+oddHtml+'</div>';
+      var jsSafeLabel=matchLabel.replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,'&quot;');
+      var clickAttr=p.locked ? '' : ' onclick="openBookmakerModal(\''+jsSafeLabel+'\')" style="cursor:pointer"';
+      return '<div class="upcoming-item"'+clickAttr+'>'+
+        '<div class="upcoming-info">'+
+          '<div class="upcoming-teams">'+icon+' '+(flag?flag+' ':'')+esc(p.home)+' — '+esc(p.away)+'</div>'+
+          '<div class="upcoming-comp">'+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+(kt?' · '+kt:'')+'</div>'+
+        '</div>'+right+
+      '</div>';
+}
+async function loadUpcoming(){
+  var box=document.getElementById('upcoming-rows');
+  var hl=document.getElementById('upcoming-highlight');
+  var email=localStorage.getItem('tlm_email'), code=localStorage.getItem('tlm_code');
+  // Identifiants en EN-TETES, plus en query string : une URL finit dans
+  // l'historique du navigateur, les journaux du proxy et l'en-tete Referer.
+  var authHdr=(email&&code)?{'X-TLM-Email':email,'X-TLM-Code':code}:{};
+  try{
+    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{headers:authHdr});
+    var d=await r.json();
+    var allPicks=(d.picks||[]);
+    // Encart "prochaines 24h" : demande explicite du fondateur le 04/08/2026 —
+    // distinct du panneau "matchs en cours", fenetre resserree a 24h pour
+    // rester pertinent (le reste de la liste, au-dela, s'affiche quand meme
+    // en dessous si dispo, juste pas dans le grand encart mis en avant).
+    var in24h=allPicks.filter(function(p){
+      var kd=new Date(p.kickoff);
+      if(isNaN(kd.getTime())) return true;
+      return (kd.getTime()-Date.now()) <= 24*3600*1000;
+    });
+    var picks=in24h.length?in24h:allPicks;
+    if(!picks.length){
+      hl.innerHTML='';
+      var s=d.stats;
+      var detail=(s&&s.totalFixtures)
+        ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
+        : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
+      box.innerHTML='<div class="empty-note">'+detail+'<br>'+
+        'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
+        '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
+      return;
+    }
+    // Le meilleur pick (confiance la plus haute, verrouille ou non) mis en
+    // valeur seul dans un encart distinct — le reste de la liste suit en dessous.
+    var sorted=picks.slice().sort(function(a,b){ return (b.confidence||0)-(a.confidence||0); });
+    var top=sorted[0];
+    var rest=picks.filter(function(p){ return p!==top; });
+    var comp0=splitComp(top.competition||'');
+    var flag0=COUNTRY_FLAGS[comp0.country]||'';
+    var icon0=SPORT_ICO[top.sport]||'🏟️';
+    var kt0='';
+    try{ var kd0=new Date(top.kickoff); if(!isNaN(kd0.getTime())) kt0=kd0.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}); }catch(e){}
+    var bet0=top.locked
+      ? '<button type="button" class="upcoming-lock-btn" onclick="openModal()">🔒 Se connecter pour voir</button>'
+      : '<div class="upcoming-highlight-bet">'+(top.confidence>=100?'🔥 ':'')+esc(top.bet)+' · '+esc(top.confidence)+'/100</div>';
+    hl.innerHTML='<div class="upcoming-highlight">'+
+      '<div class="upcoming-highlight-badge">⭐ Notre sélection</div>'+
+      '<div>'+
+        '<div class="upcoming-highlight-teams">'+icon0+' '+(flag0?flag0+' ':'')+esc(top.home)+' — '+esc(top.away)+'</div>'+
+        '<div class="upcoming-highlight-sub">'+esc(comp0.league)+(comp0.country?' · '+esc(comp0.country):'')+(kt0?' · '+kt0:'')+'</div>'+
+      '</div>'+bet0+
+    '</div>';
+    box.innerHTML=rest.map(renderUpcomingItem).join('');
+  } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
+}
+loadUpcoming();
+
+/* ══ DERNIERS VERDICTS DU CONCILE — accordéon par jour ══ */
+function fmtSignedEur(n){var v=Math.round(Number(n)||0);return (v>0?'+':'')+v+'€';}
+function fmtDayLabel(d){
+  try{
+    var dt=new Date(String(d)+'T12:00:00');
+    if(isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  }catch(e){ return String(d); }
+}
+function toggleDayAcc(idx){
+  var el=document.querySelector('[data-day-idx="'+idx+'"]');
+  if(el) el.classList.toggle('open');
+}
+async function loadDailyAccordion(){
+  var box=document.getElementById('daily-accordion');
+  try{
+    var r=await fetch('/api/analysis-history?limit=200&t='+Date.now());
+    var d=await r.json();
+    var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
+    var byDay={};
+    rows.forEach(function(a){
+      var day=String(a.analysed_at||'').slice(0,10);
+      if(!byDay[day]) byDay[day]=[];
+      byDay[day].push(a);
+    });
+    // Calendrier CONTINU sur 14 jours plutot que la seule liste des jours ayant
+    // produit un verdict : un jour absent laissait croire a un trou dans le
+    // suivi, alors qu'il signifie « aucune selection n'a passe les filtres ».
+    // Un jour vide est une information, pas une donnee manquante.
+    var order=[];
+    for(var k=0;k<14;k++){
+      var dt=new Date(); dt.setDate(dt.getDate()-k);
+      order.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'));
+    }
+    // Bandeau saisonnier : affiche jusqu'a la reprise des championnats, il
+    // explique le faible volume au lieu de laisser le visiteur conclure que le
+    // service ne tourne pas. Se retire tout seul le 15 aout, sans intervention.
+    var REPRISE=new Date('2026-08-15T00:00:00Z');
+    var banniere='';
+    if(Date.now()<REPRISE.getTime()){
+      var joursRestants=Math.max(0,Math.ceil((REPRISE.getTime()-Date.now())/864e5));
+      banniere='<div class="saison-note">'
+        + '<span class="saison-dot"></span>'
+        + '<div><div class="saison-t">Trêve estivale — reprise des championnats le 15 août'
+        +   (joursRestants>0?' (J-'+joursRestants+')':'')+'</div>'
+        +   '<div class="saison-x">Les grands championnats sont à l\'arrêt : peu de rencontres se '
+        +   'qualifient en ce moment, et le Concile ne baisse pas ses critères pour en afficher davantage. '
+        +   '<a href="#pick">Crée ton compte gratuit</a> dès maintenant pour recevoir la sélection du jour '
+        +   'dès la reprise.</div></div></div>';
+    }
+    if(!rows.length && !banniere){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
+    var TIER_META={
+      standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
+      premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
+      elite   :{ico:'🥉',nom:'Telegram Elite-VIP',court:'Elite',    c:'var(--elite)'}
+    };
+    var TIER_ORDRE=['standard','premium','elite'];
+    box.innerHTML=banniere+order.map(function(day,idx){
+      var list=byDay[day]||[];
+      if(!list.length){
+        return '<div class="day-acc-item vide" data-day-idx="'+idx+'">'
+          + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
+          +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
+          +   '<div class="day-acc-summary" style="color:var(--muted)">0 sélection retenue</div>'
+          + '</div>'
+          + '<div class="day-acc-body"><div class="day-vide-note">Aucune rencontre n\'a satisfait '
+          + 'les critères du Concile ce jour-là : championnat non fiable, accord des IA insuffisant '
+          + 'ou cote hors de la fenêtre retenue. Une journée sans sélection est un choix, pas une absence de suivi.</div></div>'
+          + '</div>';
+      }
+      var wins=list.filter(function(a){ return a.outcome==='win'; }).length;
+      var profit=0;
+      list.forEach(function(a){
+        var cote=Number(a.cote)>1?Number(a.cote):0;
+        profit += a.outcome==='win' ? (cote?cote*10-10:0) : -10;
+      });
+      var rowsHtml=list.map(function(a){
+        var win=a.outcome==='win';
+        var badgeStyle=win?'background:rgba(51,196,129,.14);color:var(--green)':'background:rgba(239,90,111,.14);color:var(--red)';
+        var cote=(a.cote!=null && a.cote>1)?'@'+Number(a.cote).toFixed(2):'';
+        // On lit la diffusion REELLE (champ sent, alimente par sig_sent_*) et non
+        // le palier theorique : une analyse peut remplir les criteres d'un palier
+        // sans avoir ete envoyee (plafond journalier, cote sortie de la fenetre
+        // ARJEL au moment de l'envoi...). Afficher le palier theorique en
+        // pretendant montrer la diffusion trompait le visiteur.
+        // Cumulatif : un signal parti sur Standard part aussi sur Premium et Elite.
+        var envoye=a.sent||{};
+        var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
+        var tierBadge='';
+        if(canaux.length){
+          tierBadge='<span class="tier-recu">Reçu par '
+            + canaux.map(function(t){
+                var m=TIER_META[t];
+                return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
+              }).join('')
+            + '</span>';
+        } else {
+          // Non envoye : on donne le MOTIF plutot qu'un constat sec. Le visiteur
+          // comprend que la selection est filtree, pas que le systeme a rate
+          // quelque chose — c'est meme un argument de serieux.
+          var motif=a.diffusion_block||'';
+          var lisible=motif
+            ? (/confiance/i.test(motif)      ? 'confiance sous le seuil de diffusion'
+             : /ARJEL|cote/i.test(motif)      ? 'cote hors fenêtre ARJEL'
+             : /votes/i.test(motif)           ? 'accord des IA insuffisant'
+             : /qualite|qualité/i.test(motif) ? 'écartée par le filtre qualité'
+             : /deja|déjà/i.test(motif)       ? 'signal déjà envoyé ce jour-là'
+             : /feminin|féminin/i.test(motif) ? 'match féminin (exclu)'
+             : /ligue/i.test(motif)           ? 'ligue non fiable'
+             : 'critères de diffusion non atteints')
+            : 'critères de diffusion non atteints';
+          tierBadge='<span class="tier-recu tier-none">Observation publique du moteur — '+esc(lisible)+'</span>';
+        }
+        return '<div class="day-acc-row">'
+          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+'</div>'
+          + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
+          + '</div>';
+      }).join('');
+      return '<div class="day-acc-item" data-day-idx="'+idx+'">'
+        + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
+        +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
+        +   '<div class="day-acc-summary" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+wins+'/'+list.length+' gagnés · '+fmtSignedEur(profit)+'</div>'
+        + '</div>'
+        + '<div class="day-acc-body">'+rowsHtml+'</div>'
+        + '</div>';
+    }).join('');
+  }catch(e){ box.innerHTML='<div class="empty-note">Impossible de charger les verdicts pour le moment.</div>'; }
+}
+loadDailyAccordion();
+
+/* ══ PICK GRATUIT DU JOUR ══ */
+async function loadPick(){
+  var box=document.getElementById('pick-body');
+  var loggedIn=!!(localStorage.getItem('tlm_email')&&localStorage.getItem('tlm_plan'));
+  try{
+    var r=await fetch('/api/current-pick?t='+Date.now());
+    var d=await r.json();
+    var p=d.pick&&d.pick.currentPick?d.pick.currentPick:d.pick;
+    // /current-pick passe toujours par normalizeCurrentPick() cote serveur,
+    // qui renvoie teamA/teamB/marketLabel (partage avec d'autres consommateurs,
+    // ex. generateur d'image Telegram) — jamais home/away/best_bet. Ce code
+    // lisait les mauvais champs : un pick valide avec confiance s'affichait
+    // comme "aucun pick disponible" (constate le 30/07/2026).
+    var homeName=p&&(p.teamA&&p.teamA.name||p.home);
+    var awayName=p&&(p.teamB&&p.teamB.name||p.away);
+    if(!p||!homeName){
+      box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.<br>Le Concile n\'a identifié aucune sélection correspondant aux critères du compte gratuit.</div>';
+      return;
+    }
+    // Le pick affiché peut retomber sur le meilleur résultat des 7 derniers
+    // jours quand rien n'est encore résolu aujourd'hui (voir refreshDailyPickFromDB
+    // côté serveur). Affichait avant un match vieux de plusieurs jours comme
+    // s'il était du jour même (constaté par le fondateur le 04/08/2026 : Instituto
+    // Cordoba-Platense du 30/07). Un premier correctif a ajouté la date, mais
+    // Le fondateur préfère un état vide plutôt qu'un match ancien même daté — donc on
+    // n'affiche plus DU TOUT un pick qui n'est pas d'aujourd'hui.
+    var isOldPick=false;
+    if(p.matchTime){
+      try{
+        var _d=new Date(p.matchTime);
+        if(!isNaN(_d.getTime())) isOldPick=(_d.toDateString()!==new Date().toDateString());
+      }catch(e){}
+    }
+    if(isOldPick){
+      box.innerHTML='<div class="empty-note">Aucun pick gratuit disponible pour l\'instant aujourd\'hui.<br>Le Concile n\'a pas encore identifié de sélection correspondant à nos critères — reviens plus tard dans la journée.</div>';
+      return;
+    }
+    var betLabel=p.marketLabel||p.marketType||p.best_bet||'';
+    var homeLogo=p.home_logo||(p.teamA&&p.teamA.logo)||null;
+    var awayLogo=p.away_logo||(p.teamB&&p.teamB.logo)||null;
+    var comp=splitComp(p.competition||p.sport||'');
+    var flag=COUNTRY_FLAGS[comp.country]||'';
+    var sportIco=SPORT_ICO[p.sport]||'🏟️';
+    // Heure locale du visiteur : le navigateur convertit automatiquement
+    // matchTime (UTC) dans SON fuseau, quel que soit le pays de connexion —
+    // pas besoin de geolocaliser l'IP. Demande du fondateur le 31/07/2026.
+    var timeHtml='';
+    if(p.matchTime){
+      try{
+        var _d=new Date(p.matchTime);
+        if(!isNaN(_d.getTime())){
+          timeHtml='<span class="pick-time">🕐 '+_d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})+'</span>';
+        }
+      }catch(e){}
+    }
+    // Match termine (win/loss) : le score final et le pari conseille
+    // deviennent une preuve historique, plus une info a proteger — on les
+    // affiche a tout le monde, meme sans compte. Demande du fondateur le
+    // 31/07/2026 : mettre a jour le pick avec le score des que le match
+    // est fini, montrer le nouveau pick + pari conseille le lendemain.
+    var resolved=(p.status==='win'||p.status==='loss');
+    var showBet=loggedIn||resolved;
+    var scoreHtml=(resolved&&p.scoreA!=null&&p.scoreB!=null)
+      ? '<div class="pick-score-badge '+(p.status==='win'?'win':'loss')+'">'+esc(p.scoreA)+' - '+esc(p.scoreB)+' · '+(p.status==='win'?'✓ Gagné':'✗ Perdu')+'</div>'
+      : '';
+    var lockHtml=showBet?'':(
+      '<div class="pick-lock">'+
+        '<div class="pick-lock-title">🔒 Sélection et raisonnement masqués</div>'+
+        '<div class="pick-lock-sub">Pour voir la sélection recommandée du Concile, entre juste ton email (+ un mot de passe) — c\'est gratuit, sans carte bancaire, ça prend 20 secondes.</div>'+
+        '<a href="/dashboard" class="pick-lock-btn">Débloquer avec mon email →</a>'+
+      '</div>'
+    );
+    box.innerHTML='<div class="pick-comp">'+sportIco+' '+(flag?'<span class="flag">'+flag+'</span>':'')+esc(comp.league)+(comp.country?' · '+esc(comp.country):'')+timeHtml+'</div>'+
+      '<div class="pick-match">'+
+        '<div class="pick-team"><div class="pick-team-logo">'+logo(homeLogo,homeName)+'</div><div class="pick-team-name">'+esc(homeName)+'</div></div>'+
+        '<div class="pick-vs">VS</div>'+
+        '<div class="pick-team"><div class="pick-team-logo">'+logo(awayLogo,awayName)+'</div><div class="pick-team-name">'+esc(awayName)+'</div></div>'+
+      '</div>'+
+      scoreHtml+
+      '<div class="pick-bet">'+(showBet?esc(betLabel):'Sélection réservée aux membres')+'</div>'+
+      '<div class="pick-conf">'+esc(p.confidence)+'/100</div>'+
+      lockHtml+
+      '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le pick du jour par email</button>';
+  } catch(e){
+    box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.</div>';
+  }
+}
+loadPick();
+
+/* ══ STANDARD DE LA VEILLE ══ */
+async function loadStandardYesterday(){
+  var tbody=document.getElementById('std-body');
+  try{
+    var r=await fetch('/api/standard-yesterday');
+    var d=await r.json();
+    if(!d.ok||!d.selections||!d.selections.length){
+      tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Standard hier.<br>Aucun match n\'a atteint le niveau de confiance requis.</td></tr>';
+      return;
+    }
+    tbody.innerHTML=d.selections.map(function(s){
+      var win=s.outcome==='win';
+      return '<tr><td>'+esc(s.home)+' - '+esc(s.away)+'</td><td>'+esc(s.bet)+'</td>'+
+        '<td class="'+(win?'tag-win':'tag-loss')+'">'+(win?'✓':'✗')+'</td></tr>';
+    }).join('');
+  } catch(e){
+    tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Standard hier.</td></tr>';
+  }
+}
+loadStandardYesterday();
+
+/* ══ FAQ ══ */
+</script>
+<script>
+(function(){
+  // Pixel de tracking visiteurs (page_views) -- manquait sur l'accueil, la
+  // seule page qui recoit reellement le trafic TikTok/bio-link. Sans ca,
+  // aucune visibilite sur combien de visiteurs viennent de TikTok ni si
+  // ils convertissent (repere le 03/08/2026 en travaillant l'acquisition).
+  var q=new URLSearchParams(location.search);
+  var r=document.referrer||'';
+  new Image().src='/api/t?p='+encodeURIComponent(location.pathname)
+    +'&r='+encodeURIComponent(r)
+    +'&s='+encodeURIComponent(q.get('utm_source')||'')
+    +'&m='+encodeURIComponent(q.get('utm_medium')||'')
+    +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
+    +'&_='+Date.now();
+})();
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+<script src="/js/i18n.js" defer></script>
+<script>
+function toggleLangMenu(){ document.getElementById('nav-lang-menu').classList.toggle('open'); }
+function pickLang(l){ i18n.setLang(l); document.getElementById('nav-lang-menu').classList.remove('open'); }
+// Clic en dehors : on referme, sinon le menu reste ouvert sur la page.
+document.addEventListener('click', function(e){
+  var box = document.querySelector('.nav-lang');
+  var menu = document.getElementById('nav-lang-menu');
+  if (box && menu && !box.contains(e.target)) menu.classList.remove('open');
+});
+</script>
+<script src="/js/cookie-consent.js" defer></script>
+<script src="/js/simplewebauthn-browser.js"></script>
+  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+</body>
+</html>

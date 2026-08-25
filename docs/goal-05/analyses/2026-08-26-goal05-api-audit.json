@@ -1,0 +1,221 @@
+{
+  "date": "2026-08-26",
+  "timezone": "Europe/Paris",
+  "oddsRows": 30,
+  "fixtureIds": 20,
+  "candidates": [],
+  "rejected": [
+    {
+      "fixture": 1495919,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "Asane",
+      "away": "Lyn"
+    },
+    {
+      "fixture": 1495920,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "Haugesund",
+      "away": "Egersund"
+    },
+    {
+      "fixture": 1495921,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "Moss",
+      "away": "Sogndal"
+    },
+    {
+      "fixture": 1495922,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "ODD Ballklubb",
+      "away": "Kongsvinger"
+    },
+    {
+      "fixture": 1495924,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "Stabaek",
+      "away": "Ranheim"
+    },
+    {
+      "fixture": 1495925,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "Strommen",
+      "away": "Raufoss"
+    },
+    {
+      "fixture": 1495926,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "1. Division",
+      "home": "Stromsgodset",
+      "away": "hodd"
+    },
+    {
+      "fixture": 1498649,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera Nacional",
+      "home": "Acassuso",
+      "away": "San Telmo"
+    },
+    {
+      "fixture": 1498659,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera Nacional",
+      "home": "Deportivo Madryn",
+      "away": "Godoy Cruz"
+    },
+    {
+      "fixture": 1498663,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera Nacional",
+      "home": "Patronato",
+      "away": "Atlanta"
+    },
+    {
+      "fixture": 1499597,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Deportivo Camioneros",
+      "away": "Comunicaciones"
+    },
+    {
+      "fixture": 1499598,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Excursionistas",
+      "away": "Argentino de Merlo"
+    },
+    {
+      "fixture": 1499599,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Liniers",
+      "away": "Deportivo Armenio"
+    },
+    {
+      "fixture": 1500019,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera C",
+      "home": "Central Ballester",
+      "away": "Sportivo Barracas"
+    },
+    {
+      "fixture": 1507043,
+      "reason": "country_not_allowed",
+      "country": "South-Korea",
+      "league": "K League 1"
+    },
+    {
+      "fixture": 1507044,
+      "reason": "country_not_allowed",
+      "country": "South-Korea",
+      "league": "K League 1"
+    },
+    {
+      "fixture": 1507045,
+      "reason": "country_not_allowed",
+      "country": "South-Korea",
+      "league": "K League 1"
+    },
+    {
+      "fixture": 1513554,
+      "reason": "country_not_allowed",
+      "country": "Estonia",
+      "league": "Meistriliiga"
+    },
+    {
+      "fixture": 1520831,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie B",
+      "home": "Atletico Goianiense",
+      "away": "Botafogo SP"
+    },
+    {
+      "fixture": 1520835,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie B",
+      "home": "Juventude",
+      "away": "CRB"
+    },
+    {
+      "fixture": 1547769,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONMEBOL Libertadores"
+    },
+    {
+      "fixture": 1549745,
+      "reason": "country_not_allowed",
+      "country": "Colombia",
+      "league": "Primera A"
+    },
+    {
+      "fixture": 1549747,
+      "reason": "country_not_allowed",
+      "country": "Colombia",
+      "league": "Primera A"
+    },
+    {
+      "fixture": 1549752,
+      "reason": "country_not_allowed",
+      "country": "Colombia",
+      "league": "Primera A"
+    },
+    {
+      "fixture": 1570340,
+      "reason": "fixture_teams_missing",
+      "country": "Spain",
+      "league": "La Liga"
+    },
+    {
+      "fixture": 1574303,
+      "reason": "fixture_teams_missing",
+      "country": "Switzerland",
+      "league": "1. Liga Promotion"
+    },
+    {
+      "fixture": 1579791,
+      "reason": "fixture_teams_missing",
+      "country": "Belgium",
+      "league": "First Amateur Division"
+    },
+    {
+      "fixture": 1596407,
+      "reason": "fixture_teams_missing",
+      "country": "England",
+      "league": "Non League Premier - Northern"
+    },
+    {
+      "fixture": 1600325,
+      "reason": "country_not_allowed",
+      "country": "South-Africa",
+      "league": "Premier Soccer League"
+    },
+    {
+      "fixture": 1600326,
+      "reason": "country_not_allowed",
+      "country": "South-Africa",
+      "league": "Premier Soccer League"
+    }
+  ]
+}

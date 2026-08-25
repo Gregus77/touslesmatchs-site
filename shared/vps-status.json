@@ -1,0 +1,19 @@
+{
+  "timestamp": "2026-08-25T00:49:01Z",
+  "cpu": 4,
+  "ram": {"totalMB":7940,"usedMB":1259,"pct":15},
+  "disk": {"totalGB":95,"usedGB":40,"pct":42},
+  "load": {"m1":"0.02","m5":"0.02","m15":"0.00"},
+  "uptime": 2306768,
+  "docker": [{"name":"touslesmatchs-api","image":"touslesmatchs-api","state":"running","status":"Up 37 minutes"}
+,{"name":"touslesmatchs-site","image":"touslesmatchs-site","state":"running","status":"Up 46 hours"}
+,{"name":"touslesmatchs-hermes-admin","image":"touslesmatchs-hermes-admin","state":"running","status":"Up 3 days"}
+,{"name":"touslesmatchs-council","image":"touslesmatchs-council","state":"running","status":"Up 3 days"}
+,{"name":"hermes-webui-0qtu-hermes-webui-1","image":"ghcr.io/nesquena/hermes-webui:latest","state":"running","status":"Up 3 days (healthy)"}
+,{"name":"hermes-webui-0qtu-hermes-agent-src-init-1","image":"nousresearch/hermes-agent:latest","state":"exited","status":"Exited (0) 3 days ago"}
+,{"name":"propfirms-bot","image":"node:20-alpine","state":"running","status":"Up 12 days"}
+,{"name":"propfirms-site","image":"caddy:2-alpine","state":"running","status":"Up 17 hours"}
+,{"name":"propfirms-api","image":"node:20-alpine","state":"running","status":"Up 12 days"}
+],
+  "backups": []
+}

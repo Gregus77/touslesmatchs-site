@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TousLesMatchs — Concile IA</title>
+<meta name="description" content="Le verdict du Concile IA : analyse du jour, signaux en direct et résultats vérifiables.">
+
+<meta name="theme-color" content="#12152a">
+
+
+<!-- iOS : autorise le plein écran une fois l'app ajoutée à l'écran d'accueil -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TousLesMatchs">
+<meta name="robots" content="noindex">
+<style>
+  :root{
+    --bg:#12152a; --bg2:#171b34; --b1:rgba(255,255,255,.11); --b2:rgba(129,140,248,.18);
+    --text:#f6f7ff; --muted:#c4c9e6; --muted2:#949bc4;
+    --indigo:#4f46e5; --indigo2:#818cf8; --violet:#7c3aed; --cyan:#22d3ee;
+    --green:#10b981; --amber:#f59e0b; --red:#ef4444;
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:15px; line-height:1.5;
+    padding-bottom:calc(70px + var(--safe-b));
+    overscroll-behavior-y:contain;
+  }
+  a{color:var(--indigo2);text-decoration:none}
+
+  header{
+    position:sticky;top:0;z-index:20;
+    background:rgba(11,10,20,.92);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--b1);
+    padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+  }
+  .brand{font-weight:900;letter-spacing:-.02em;font-size:16px}
+  .brand span{background:linear-gradient(135deg,var(--indigo2),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .plan-chip{font-size:11px;font-weight:950;padding:6px 12px;border-radius:999px;border:1px solid rgba(34,211,238,.35);color:#dff8ff;background:rgba(34,211,238,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+  .plan-chip.paid{color:#dff8ff;border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.12)}
+
+  main{padding:16px}
+  section{display:none}
+  section.on{display:block;animation:fade .18s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  h2{font-size:19px;font-weight:900;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{font-size:12.5px;color:var(--muted2);margin:0 0 14px}
+
+
+  .goal05-home{position:relative;overflow:hidden;border:1px solid rgba(34,211,238,.30);border-radius:23px;padding:18px;margin:0 0 14px;background:linear-gradient(145deg,rgba(34,211,238,.13),rgba(124,58,237,.17) 62%,rgba(11,16,37,.82));box-shadow:0 18px 46px rgba(34,211,238,.12),inset 0 1px 0 rgba(255,255,255,.06)}
+  .goal05-home:after{content:"+0,5";position:absolute;right:-8px;top:2px;font-size:58px;font-weight:1000;letter-spacing:-.08em;color:rgba(255,255,255,.06);pointer-events:none}
+  .goal05-kicker{position:relative;font-size:10px;font-weight:950;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
+  .goal05-title{position:relative;margin:7px 0 8px;font-size:30px;line-height:.98;letter-spacing:-.065em;font-weight:1000;text-shadow:0 10px 26px rgba(0,0,0,.22)}
+  .goal05-copy{position:relative;margin:0;color:#dbe4ff;font-size:13px;line-height:1.55}
+  .goal05-mini{position:relative;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+  .goal05-mini div{border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:9px;background:rgba(5,8,20,.38);font-size:11px;color:#e9eeff}
+  .goal05-mini b{color:var(--green)}
+    .goal05-verdict-card{margin:14px 0;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:linear-gradient(160deg,rgba(255,255,255,.075),rgba(255,255,255,.035));padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 45px rgba(0,0,0,.22)}
+  .goal05-verdict-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .goal05-verdict-badge{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:7px 11px;font-size:10px;font-weight:1000;letter-spacing:.14em;text-transform:uppercase;border:1px solid rgba(245,158,11,.38);background:rgba(245,158,11,.12);color:#fde68a}
+  .goal05-verdict-badge.ok{border-color:rgba(16,185,129,.46);background:rgba(16,185,129,.16);color:#7dffcf}
+  .goal05-verdict-odd{font-size:31px;font-weight:1000;letter-spacing:-.075em;color:#fff;text-shadow:0 12px 30px rgba(34,211,238,.25)}
+  .goal05-verdict-team{font-size:18px;font-weight:1000;letter-spacing:-.035em;margin:4px 0 2px}
+  .goal05-verdict-meta{font-size:11px;color:#cbd5ff;line-height:1.45}
+  .goal05-verdict-list{display:grid;gap:7px;margin-top:15px}
+  .goal05-verdict-list div{display:flex;align-items:center;gap:8px;font-size:12px;color:#f3f6ff}
+  .goal05-verdict-list b{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:4px;background:#22c55e;color:#03140b;font-size:10px;font-weight:1000}
+  .goal05-verdict-list b.wait{background:rgba(245,158,11,.18);color:#fbbf24;border:1px solid rgba(245,158,11,.28)}
+  .offer-stack{display:grid;gap:8px;margin-bottom:14px}
+  .offer-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;border:1px solid var(--b2);border-radius:15px;padding:12px;background:rgba(255,255,255,.045)}
+  .offer-row.hot{border-color:rgba(34,211,238,.34);background:linear-gradient(135deg,rgba(34,211,238,.1),rgba(124,58,237,.08))}
+  .offer-name{font-size:13px;font-weight:950}.offer-desc{font-size:11px;color:var(--muted2);margin-top:2px}.offer-price{font-size:14px;font-weight:950;color:#fff}
+
+  .card{background:linear-gradient(160deg,rgba(30,27,58,.5),rgba(15,14,30,.6));border:1px solid var(--b2);border-radius:16px;padding:16px;margin-bottom:12px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .teams{font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .comp{font-size:12px;color:var(--muted2);margin-top:2px}
+  .verdict{margin-top:12px;padding-top:12px;border-top:1px solid var(--b1)}
+  .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted2);font-weight:700}
+  .val{font-weight:900;font-size:17px;margin-top:2px}
+  .conf-bar{height:6px;border-radius:99px;background:rgba(255,255,255,.11);overflow:hidden;margin-top:8px}
+  .conf-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--indigo),var(--cyan))}
+
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+  .kpi{background:var(--bg2);border:1px solid var(--b1);border-radius:13px;padding:13px}
+  .kpi .v{font-size:21px;font-weight:900;letter-spacing:-.02em}
+  .kpi .l{font-size:11px;color:var(--muted2);margin-top:2px}
+  .c-green{color:var(--green)} .c-cyan{color:var(--cyan)} .c-amber{color:var(--amber)} .c-red{color:var(--red)}
+
+  .tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:7px 14px;border-radius:999px;border:1px solid var(--b2);background:transparent;color:var(--muted);font-size:12.5px;font-weight:700}
+  .tab.on{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-color:transparent}
+
+  .signal-alert-cta{position:relative;margin-top:13px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid rgba(34,211,238,.38);background:rgba(34,211,238,.10);color:#eaf7ff;border-radius:13px;padding:11px 12px;font-weight:950;font-size:12px;box-shadow:0 10px 30px rgba(34,211,238,.10)}
+  .signal-alert-cta.on{border-color:rgba(52,211,153,.5);background:rgba(52,211,153,.13);color:#dfffee}
+  .bookmakers{margin-top:13px;padding-top:12px;border-top:1px solid var(--b1)}
+  .bookmakers-title{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted2);font-weight:850;margin-bottom:8px}
+  .bookmaker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .bookmaker-btn{display:flex;align-items:center;justify-content:center;min-height:38px;border-radius:12px;font-size:12px;font-weight:950;border:1px solid rgba(255,255,255,.14);color:#fff;text-decoration:none;box-shadow:0 10px 22px rgba(0,0,0,.22)}
+  .bookmaker-btn.winamax{background:linear-gradient(135deg,#de1f2f,#8f1019)}
+  .bookmaker-btn.unibet{background:linear-gradient(135deg,#15a34a,#067a33)}
+  .bookmaker-btn.pmu{background:linear-gradient(135deg,#0f766e,#064e3b)}
+  .bookmaker-note{margin-top:8px;color:var(--muted2);font-size:10.5px;line-height:1.35}
+  .signal-popup{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(2,6,23,.72);backdrop-filter:blur(10px)}
+  .signal-popup.on{display:flex;animation:fade .18s ease}
+  .signal-popup-card{width:min(360px,100%);border:1px solid rgba(34,211,238,.35);border-radius:24px;background:linear-gradient(160deg,rgba(16,22,45,.98),rgba(9,12,26,.98));box-shadow:0 25px 80px rgba(34,211,238,.22);padding:18px}
+  .signal-popup-badge{display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(52,211,153,.42);background:rgba(52,211,153,.12);color:#dfffee;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+  .signal-popup-title{font-size:24px;font-weight:1000;letter-spacing:-.05em;margin:12px 0 4px}
+  .signal-popup-text{color:#dbe4ff;font-size:13px;line-height:1.5;margin:0 0 8px}
+  .signal-popup-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .signal-popup-actions .btn{margin-top:0;padding:12px;font-size:13px}
+  .apk-download-card{border-color:rgba(52,211,153,.28);background:linear-gradient(160deg,rgba(52,211,153,.10),rgba(34,211,238,.06))}
+  .apk-download-card .btn{margin-top:10px}
+  .apk-download-note{font-size:10.5px;color:var(--muted2);line-height:1.45;margin-top:8px}
+
+  .item{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--b1)}
+  .item:last-child{border-bottom:none}
+  .item .mid{flex:1;min-width:0}
+  .item .t{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .item .m{font-size:11.5px;color:var(--muted2);margin-top:2px}
+  .badge{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:7px;white-space:nowrap}
+  .b-win{background:rgba(16,185,129,.14);color:#34d399}
+  .b-loss{background:rgba(239,68,68,.14);color:#f87171}
+  .b-wait{background:rgba(245,158,11,.14);color:var(--amber)}
+  .b-live{background:rgba(239,68,68,.16);color:#f87171}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  .btn{display:block;width:100%;text-align:center;padding:14px;border-radius:12px;font-weight:800;font-size:15px;border:none;margin-top:10px}
+  .btn-p{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff}
+  .btn-g{background:linear-gradient(135deg,#059669,var(--green));color:#fff}
+  .btn-o{background:transparent;color:var(--indigo2);border:1px solid var(--b2)}
+
+  .state{text-align:center;padding:26px 14px;color:var(--muted2);font-size:13.5px}
+  .offline{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);color:var(--amber);border-radius:11px;padding:10px 13px;font-size:12.5px;margin-bottom:12px}
+
+  input{width:100%;padding:13px;border-radius:11px;border:1px solid var(--b2);background:var(--bg2);color:var(--text);font-size:15px;margin-bottom:9px}
+  input::placeholder{color:var(--muted2)}
+  .app-auth-split{display:grid;gap:12px}
+  .app-auth-card{border-color:rgba(34,211,238,.25)}
+  .app-auth-title{font-size:20px;font-weight:1000;letter-spacing:-.04em;margin-bottom:5px}
+  .app-auth-note{font-size:12px;color:var(--muted2);line-height:1.55;margin:8px 0 12px}
+  .app-check{display:flex;gap:8px;align-items:flex-start;color:var(--muted2);font-size:11px;line-height:1.45;margin:6px 0 8px}
+  .app-check input{width:auto;margin:2px 0 0;accent-color:var(--green)}
+
+  nav{
+    position:fixed;bottom:0;left:0;right:0;z-index:30;
+    background:rgba(11,10,20,.96);backdrop-filter:blur(14px);
+    border-top:1px solid var(--b1);
+    display:grid;grid-template-columns:repeat(4,1fr);
+    padding-bottom:var(--safe-b);
+  }
+  nav button{background:none;border:none;color:var(--muted2);padding:9px 4px 8px;font-size:10.5px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:3px}
+  nav button .ic{font-size:19px;line-height:1}
+  nav button.on{color:var(--indigo2)}
+
+  footer{padding:20px 16px 8px;font-size:10.5px;color:var(--muted2);line-height:1.65;text-align:center;border-top:1px solid var(--b1);margin-top:18px}
+  body.tlm-page-app .tlm-floating-widgets,
+  body.tlm-page-app .floating-widgets,
+  body.tlm-page-app .floating-widget,
+  body.tlm-page-app .telegram-float,
+  body.tlm-page-app .tiktok-float,
+  body.tlm-page-app .chatbot-float,
+  body.tlm-page-app .chatbot-widget,
+  body.tlm-page-app #tlm-floating-widgets,
+  body.tlm-page-app #floating-widgets,
+  body.tlm-page-app #telegram-float,
+  body.tlm-page-app #tiktok-float,
+  body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+  <meta name="theme-color" content="#070a20">
+  <meta name="app-card-version" content="goal05-palmeiras-card-20260814c">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+
+<!-- TLM OFFICIAL BRAND / SEO / TELEGRAM -->
+<link rel="canonical" href="https://www.touslesmatchs.com/">
+
+
+<meta name="theme-color" content="#050816">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TousLesMatchs">
+<meta property="og:title" content="TousLesMatchs.com - Analyses sportives par IA">
+<meta property="og:description" content="Aide à la décision sportive par statistiques, IA et historique de performance.">
+<meta property="og:url" content="https://www.touslesmatchs.com/">
+<meta property="og:image" content="https://www.touslesmatchs.com/assets/brand/touslesmatchs-og.jpg">
+<meta property="og:image:secure_url" content="https://www.touslesmatchs.com/assets/brand/touslesmatchs-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TousLesMatchs.com - Analyses sportives par IA">
+<meta name="twitter:description" content="Aide à la décision sportive par statistiques, IA et historique de performance.">
+<meta name="twitter:image" content="https://www.touslesmatchs.com/assets/brand/touslesmatchs-og.jpg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"TousLesMatchs","url":"https://www.touslesmatchs.com/","image":"https://www.touslesmatchs.com/assets/brand/touslesmatchs-official.jpg"}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style id="tlm-navbar-safe-css">
+header,nav,.navbar,.nav,.topbar,header *,nav *,.navbar *,.nav *,.topbar *{
+  font-family:"Segoe UI",Arial,Helvetica,sans-serif!important;
+  -webkit-font-smoothing:antialiased!important;
+  -moz-osx-font-smoothing:grayscale!important;
+  text-rendering:optimizeLegibility!important;
+  text-shadow:none!important;
+  filter:none!important;
+  letter-spacing:0!important;
+}
+
+a[href="#pick"],a[href="/#pick"],a[href*="live-ia"],a[href*="performances"],a[href*="bankroll"],a[href="#methode"],a[href="/#methode"],a[href="#plans"],a[href="/#plans"]{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  color:#eaf0ff!important;
+  font-size:15px!important;
+  font-weight:700!important;
+  padding:8px 10px!important;
+  text-decoration:none!important;
+}
+
+a[href*="live-ia"]{color:#35e8ff!important}
+
+.tlm-brand-nav-logo{
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  object-fit:cover!important;
+  border-radius:10px!important;
+  margin-right:10px!important;
+  display:inline-block!important;
+  vertical-align:-14px!important;
+  box-shadow:0 0 14px rgba(0,174,255,.55)!important;
+}
+</style>
+
+<link rel="manifest" href="/manifest.webmanifest?v=1786907646164">
+<link rel="icon" href="/favicon.ico?v=1786907646164">
+<link rel="apple-touch-icon" href="/logo192.png?v=1786907646164">
+
+<style id="tlm-goal05-live-pro-css">
+.goal05-live-country{margin:14px 0 8px;font-size:14px;font-weight:1000;color:#fff}
+.goal05-live-league{margin:8px 0 6px;color:#8eeeff;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.goal05-live-match{border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(7,11,32,.72);margin:8px 0;overflow:hidden}
+.goal05-live-match summary{list-style:none;cursor:pointer;padding:12px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.goal05-live-match summary::-webkit-details-marker{display:none}
+.goal05-live-logos{display:flex;align-items:center}
+.goal05-live-logos img{width:30px;height:30px;border-radius:50%;object-fit:contain;background:#050816;border:1px solid rgba(255,255,255,.16);margin-right:-7px}
+.goal05-live-title{font-size:13px;font-weight:950;color:#f8fbff;line-height:1.25}
+.goal05-live-meta{font-size:11px;color:#aeb8df;margin-top:3px}
+.goal05-live-score{font-size:13px;font-weight:1000;color:#fff;border:1px solid rgba(34,211,238,.24);border-radius:999px;padding:7px 9px;background:rgba(34,211,238,.08)}
+.goal05-live-detail{border-top:1px solid rgba(255,255,255,.10);padding:12px;background:rgba(0,0,0,.16)}
+.goal05-decision{display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:15px;padding:12px;border:1px solid rgba(255,255,255,.14)}
+.goal05-decision.play{background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.55);animation:goal05BlinkGreen 1s infinite}
+.goal05-decision.no{background:rgba(239,68,68,.13);border-color:rgba(239,68,68,.48);animation:goal05BlinkRed 1.2s infinite}
+.goal05-decision strong{font-size:17px;letter-spacing:-.03em}
+.goal05-decision small{display:block;margin-top:3px;color:#dbe4ff;font-size:11px;line-height:1.35}
+.goal05-pct{font-size:24px;font-weight:1000;color:#fff}
+@keyframes goal05BlinkGreen{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+@keyframes goal05BlinkRed{0%,100%{filter:brightness(1)}50%{filter:brightness(1.2)}}
+</style>
+
+<style id="tlm-goal05-main-live-css">
+.goal05-main-live-card{
+  margin:0 0 12px;
+  border:1px solid rgba(34,211,238,.42);
+  border-radius:18px;
+  padding:13px;
+  background:linear-gradient(145deg,rgba(16,185,129,.16),rgba(34,211,238,.10),rgba(124,58,237,.12));
+  box-shadow:0 16px 44px rgba(34,211,238,.14);
+}
+.goal05-main-live-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.goal05-main-live-badge{border:1px solid rgba(16,185,129,.52);background:rgba(16,185,129,.18);color:#9dffd6;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:1000;letter-spacing:.10em;text-transform:uppercase;animation:goal05BlinkGreen 1s infinite}
+.goal05-main-live-pct{font-size:30px;font-weight:1000;color:#fff;letter-spacing:-.06em}
+.goal05-main-live-team{margin-top:9px;font-size:18px;font-weight:1000;color:#fff;letter-spacing:-.035em}
+.goal05-main-live-meta{margin-top:4px;color:#cbd5ff;font-size:12px;line-height:1.45}
+.goal05-main-live-teams{display:flex;align-items:center;gap:8px;margin-top:10px}
+.goal05-main-live-teams img{width:28px;height:28px;border-radius:50%;object-fit:contain;background:#050816;border:1px solid rgba(255,255,255,.16)}
+</style>
+<style id="tlm-paid-analysis-gate-css">
+#tlm-paid-gate-modal{position:fixed;inset:0;z-index:999999;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(2,6,23,.78);backdrop-filter:blur(10px)}
+#tlm-paid-gate-modal.on{display:flex}
+.tlm-paid-gate-card{width:min(390px,100%);border:1px solid rgba(79,214,242,.38);border-radius:22px;background:linear-gradient(155deg,rgba(13,18,43,.98),rgba(8,10,24,.98));box-shadow:0 25px 90px rgba(34,211,238,.22);padding:18px;color:#fff}
+.tlm-paid-gate-badge{display:inline-flex;border:1px solid rgba(34,211,238,.38);background:rgba(34,211,238,.12);border-radius:999px;padding:7px 10px;color:#8eeeff;font-size:11px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+.tlm-paid-gate-title{margin:12px 0 6px;font-size:24px;font-weight:1000}
+.tlm-paid-gate-text{margin:0;color:#dbe4ff;font-size:13px;line-height:1.5}
+.tlm-paid-gate-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:15px}
+.tlm-paid-gate-actions button,.tlm-paid-gate-actions a{border-radius:13px;padding:12px 10px;border:1px solid rgba(255,255,255,.14);font-weight:950;font-size:13px;text-align:center;text-decoration:none}
+.tlm-paid-gate-login{background:rgba(34,211,238,.14);color:#eaffff}
+.tlm-paid-gate-pay{background:linear-gradient(135deg,#22d3ee,#a855f7);color:#fff}
+</style>
+<style id="tlm-goal05-home-live-css">
+.goal05-home-live-card{margin:0 0 13px;border:1px solid rgba(16,185,129,.58);border-radius:20px;padding:14px;background:linear-gradient(145deg,rgba(16,185,129,.20),rgba(34,211,238,.12),rgba(124,58,237,.14));box-shadow:0 18px 50px rgba(16,185,129,.16)}
+.goal05-home-live-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.goal05-home-live-badge{border:1px solid rgba(16,185,129,.55);background:rgba(16,185,129,.20);color:#b7ffdf;border-radius:999px;padding:7px 10px;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.10em;animation:goal05BlinkGreen 1s infinite}
+.goal05-home-live-pct{font-size:34px;font-weight:1000;color:#fff;letter-spacing:-.06em}
+.goal05-home-live-team{margin-top:10px;font-size:20px;font-weight:1000;color:#fff;letter-spacing:-.04em}
+.goal05-home-live-meta{margin-top:5px;color:#dbe4ff;font-size:12px;line-height:1.45}
+.goal05-home-live-logos{display:flex;align-items:center;gap:8px;margin-top:11px;color:#dbe4ff;font-size:12px}
+.goal05-home-live-logos img{width:31px;height:31px;border-radius:50%;object-fit:contain;background:#050816;border:1px solid rgba(255,255,255,.18)}
+.goal05-home-live-locked{border-color:rgba(245,158,11,.50);background:linear-gradient(145deg,rgba(245,158,11,.14),rgba(124,58,237,.12))}
+.goal05-app-alert{position:fixed;left:14px;right:14px;top:18px;z-index:999998;border:1px solid rgba(16,185,129,.60);border-radius:18px;background:linear-gradient(145deg,rgba(8,16,34,.98),rgba(17,24,55,.98));box-shadow:0 24px 80px rgba(16,185,129,.25);padding:14px;color:#fff;display:none}
+.goal05-app-alert.on{display:block;animation:goal05BlinkGreen 1s infinite}
+.goal05-app-alert b{display:block;font-size:15px;margin-bottom:3px}
+.goal05-app-alert span{font-size:12px;color:#dbe4ff}
+</style>
+<style id="tlm-nav-flat-final-css">
+header nav a,
+header a[href="#pick"], header a[href="/#pick"],
+header a[href*="live-ia"], header a[href*="performances"], header a[href*="bankroll"],
+header a[href="#methode"], header a[href="/#methode"],
+header a[href="#plans"], header a[href="/#plans"],
+nav a[href="#pick"], nav a[href="/#pick"],
+nav a[href*="live-ia"], nav a[href*="performances"], nav a[href*="bankroll"],
+nav a[href="#methode"], nav a[href="/#methode"],
+nav a[href="#plans"], nav a[href="/#plans"]{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  border-radius:0!important;
+  color:#f7f8ff!important;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+  line-height:1!important;
+  padding:0 10px!important;
+  height:auto!important;
+  min-height:0!important;
+  text-shadow:none!important;
+  filter:none!important;
+}
+header nav a:hover,
+nav a:hover{
+  color:#35e8ff!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+header a[href*="live-ia"],
+nav a[href*="live-ia"]{
+  color:#35e8ff!important;
+}
+header a[href*="live-ia"]::before,
+nav a[href*="live-ia"]::before{
+  content:"";
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#ef3b6d;
+  margin-right:7px;
+  vertical-align:1px;
+}
+.tlm-brand-nav-logo{
+  width:42px!important;
+  height:42px!important;
+  border-radius:10px!important;
+  object-fit:cover!important;
+  margin-right:10px!important;
+  box-shadow:0 0 14px rgba(0,174,255,.45)!important;
+}
+@media(max-width:900px){
+  header nav a, nav a{font-size:13px!important;padding:0 7px!important}
+}
+</style>
+<style id="tlm-nav-no-box-hard-css">
+header nav a, header nav button, nav a, nav button{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  border-radius:0!important;
+  text-shadow:none!important;
+  filter:none!important;
+}
+header nav a[href], nav a[href]{
+  color:#f8fbff!important;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+}
+header nav a[href]:hover, nav a[href]:hover{color:#35e8ff!important}
+header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
+</style>
+<style id="tlm-history-backfill-css">
+.tlm-history-backfill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(12,18,45,.58);color:#f8fbff;font-weight:850;margin:7px 0}
+.tlm-history-backfill-row span:last-child{color:#35ffc0;font-size:13px}
+</style>
+</head>
+<body class="tlm-wow tlm-page-app">
+
+<header>
+  <div class="brand">Tous<span>LesMatchs</span></div>
+  <div class="plan-chip" id="chip">Invité</div>
+</header>
+
+<main>
+  <div id="offline-note" class="offline" style="display:none">
+    ⚠️ Hors ligne — données de la dernière consultation.
+  </div>
+
+  <section class="goal05-home" aria-label="Goal plus 0,5 but">
+    <div class="goal05-kicker">Goal +0,5 · accès fondateur</div>
+    <div class="goal05-title">L’équipe forte doit marquer.</div>
+    <p class="goal05-copy">Le moteur +0,5 filtre uniquement les matchs de football où l’équipe historiquement supérieure réunit les conditions pour inscrire au moins un but.</p>
+    <div class="goal05-mini">
+      <div><b>&#10003;</b> Force 3-5 saisons</div>
+      <div><b>&#10003;</b> Top vs bas tableau</div>
+      <div><b>&#10003;</b> Buteur 5/5</div>
+      <div><b>&#10003;</b> Cote ANJ validée</div>
+    </div>
+  </section>
+
+  <section id="s-pick" class="on">
+    <div id="pick-box"><div class="state">Chargement...</div></div>
+  </section>
+
+  <!-- â•â• EN DIRECT â•â• -->
+  <section id="s-live">
+    <h2>Surveillance live</h2>
+    <p class="sub">Matchs de football surveillés pour un éventuel signal +0,5.</p>
+    <div id="live-box"><div class="state">Chargement…</div></div>
+  </section>
+
+  <!-- â•â• PERFORMANCES â•â• -->
+  <section id="s-perf">
+    <h2>Résultats +0,5</h2>
+    <p class="sub">Historique réservé aux signaux +0,5 réellement envoyés. Les gagnés comme les perdus resteront visibles.</p>
+    <div class="kpis" id="perf-kpis"></div>
+    <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
+  </section>
+
+  <!-- â•â• COMPTE â•â• -->
+  <section id="s-me">
+    <h2>Mon compte</h2>
+    <p class="sub">Connecte-toi avec l'email et le code reçus après paiement.</p>
+    <div id="me-box"></div>
+  </section>
+
+
+  <div id="tlm-signal-popup" class="signal-popup" aria-hidden="true">
+    <div class="signal-popup-card" role="dialog" aria-modal="true" aria-label="Signal disponible">
+      <div class="signal-popup-badge">🟢 Signal prêt</div>
+      <div class="signal-popup-title" id="signal-popup-title">Pari à jouer</div>
+      <p class="signal-popup-text" id="signal-popup-text">Une sélection validée vient d’être détectée.</p>
+      <div id="signal-popup-bookmakers"></div>
+      <div class="signal-popup-actions">
+        <button class="btn btn-p" type="button" id="signal-popup-open">Voir</button>
+        <button class="btn btn-o" type="button" id="signal-popup-close">Fermer</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<nav>
+  <button data-tab="pick" class="on"><span class="ic">&#9917;</span>+0,5</button>
+  <button data-tab="live"><span class="ic">&#128308;</span>Direct</button>
+  <button data-tab="perf"><span class="ic">&#128202;</span>Résultats</button>
+  <button data-tab="me"><span class="ic">&#128100;</span>Compte</button>
+</nav>
+
+<footer>
+  LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits
+  familiaux, addiction. Conseils sur <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a> — 09 74 75 13 13, appel non surtaxé.<br>
+  18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives.
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // â”€â”€ Utilitaires â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var $ = function (id) { return document.getElementById(id); };
+  var esc = function (s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  };
+  var num = function (v) { var n = Number(v); return isFinite(n) ? n : 0; };
+  var eur = function (v) { return (v >= 0 ? "+" : "") + Math.round(v) + "€"; };
+
+  function get(path) {
+    return fetch(path, { headers: { "Accept": "application/json" } })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, offline: true }; });
+  }
+  function flagOffline(d) {
+    if (d && d.offline) $("offline-note").style.display = "block";
+    return d;
+  }
+
+  // â”€â”€ Session (mêmes clés que le site : une seule connexion pour les deux) â”€â”€â”€
+  function plan() { try { return localStorage.getItem("tlm_plan") || "free"; } catch (e) { return "free"; } }
+  function token() { try { return localStorage.getItem("tlm_token") || ""; } catch (e) { return ""; } }
+  function isPaid() { var p = plan(); return !!p && p !== "free"; }
+
+  function renderChip() {
+    var c = $("chip"), p = plan();
+    var connected = !!token();
+    c.textContent = "Football IA";
+    c.className = "plan-chip" + (connected ? " paid" : "");
+  }
+
+  // â”€â”€ Onglets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var loaded = {};
+  function show(tab) {
+    ["pick", "live", "perf", "me"].forEach(function (t) {
+      $("s-" + t).classList.toggle("on", t === tab);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
+      b.classList.toggle("on", b.getAttribute("data-tab") === tab);
+    });
+    try { history.replaceState(null, "", "?tab=" + tab); } catch (e) {}
+    if (!loaded[tab]) { loaded[tab] = true; load(tab); }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
+    b.addEventListener("click", function () { show(b.getAttribute("data-tab")); });
+  });
+
+  function load(tab) {
+    if (tab === "pick") loadPick();
+    if (tab === "live") loadLive();
+    if (tab === "perf") loadPerf();
+    if (tab === "me") renderMe();
+  }
+
+  // â”€â”€ Analyse du jour â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+
+  var BOOKMAKERS = [
+    { name: "Winamax", cls: "winamax", url: "https://www.winamax.fr/parrain?code=77953728" },
+    { name: "Unibet", cls: "unibet", url: "https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" },
+    { name: "PMU", cls: "pmu", url: "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=779753728" }
+  ];
+
+  function bookmakerButtons() {
+    return '<div class="bookmakers"><div class="bookmakers-title">Ouvrir un bookmaker partenaire</div><div class="bookmaker-grid">'
+      + BOOKMAKERS.map(function (b) { return '<a class="bookmaker-btn ' + b.cls + '" href="' + b.url + '" target="_blank" rel="noopener sponsored">' + esc(b.name) + '</a>'; }).join('')
+      + '</div><div class="bookmaker-note">18+ · Jouer comporte des risques. Liens partenaires/affiliation TousLesMatchs.</div></div>';
+  }
+
+  function signalKey(p) {
+    return [p.id || p.fixture_id || '', p.home || (p.teamA && p.teamA.name) || '', p.away || (p.teamB && p.teamB.name) || '', p.bet || p.best_bet || '', p.time || ''].join('|');
+  }
+
+  function updateAlertToggle() {
+    var btn = $('signal-alert-toggle');
+    if (!btn) return;
+    var on = false;
+    try { on = localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
+    btn.classList.toggle('on', on);
+    btn.textContent = on ? '🔔 Alertes popup + son activées' : '🔔 Activer popup + son quand un pari est prêt';
+  }
+
+  function enableSignalAlerts() {
+    try { localStorage.setItem('tlm_signal_alerts', '1'); } catch (e) {}
+    updateAlertToggle();
+    playSignalTone(true);
+    try { loadPick(); } catch (e) {}
+  }
+
+  function playSignalTone(force) {
+    var enabled = force;
+    try { enabled = enabled || localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
+    if (!enabled) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      var gain = ctx.createGain();
+      var osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    } catch (e) {}
+  }
+
+  function showSignalPopup(p) {
+    var key = signalKey(p);
+    try {
+      if (localStorage.getItem('tlm_last_signal_popup') === key) return;
+      localStorage.setItem('tlm_last_signal_popup', key);
+    } catch (e) {}
+    var pop = $('tlm-signal-popup');
+    if (!pop) return;
+    var a = (p.teamA && p.teamA.name) || p.home || 'Match';
+    var b = (p.teamB && p.teamB.name) || p.away || '';
+    $('signal-popup-title').textContent = 'Pari prêt : ' + a + (b ? ' — ' + b : '');
+    $('signal-popup-text').textContent = (p.bet || p.best_bet || 'Sélection validée') + (p.cote ? ' · cote @' + p.cote : '') + (p.competition ? ' · ' + p.competition : '');
+    $('signal-popup-bookmakers').innerHTML = bookmakerButtons();
+    pop.classList.add('on');
+    pop.setAttribute('aria-hidden', 'false');
+    playSignalTone(false);
+  }
+
+  function closeSignalPopup() {
+    var pop = $('tlm-signal-popup');
+    if (!pop) return;
+    pop.classList.remove('on');
+    pop.setAttribute('aria-hidden', 'true');
+  }
+
+  window.enableSignalAlerts = enableSignalAlerts;
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  function pushFeedback(msg, ok) {
+    var box = document.getElementById('pick-box');
+    if (!box) return;
+    var el = document.getElementById('push-feedback-msg');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'push-feedback-msg';
+      el.style.marginTop = '8px';
+      el.style.fontSize = '12px';
+      el.style.padding = '8px 10px';
+      el.style.borderRadius = '8px';
+      box.appendChild(el);
+    }
+    el.style.background = ok ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.12)';
+    el.style.color = ok ? '#22c55e' : '#ef4444';
+    el.style.border = '1px solid ' + (ok ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.3)');
+    el.textContent = msg;
+  }
+  function enablePushNotifications() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      pushFeedback('Notifications non supportées sur ce navigateur/app (iOS Safari : ajoute le site à l\'écran d\'accueil d\'abord).', false);
+      return;
+    }
+    pushFeedback('Activation en cours...', true);
+    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+      return Notification.requestPermission().then(function (perm) {
+        if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
+        return get('/api/push/vapid-public-key').then(function (d) {
+          if (!d || !d.key) { pushFeedback('Erreur config serveur : clé VAPID manquante.', false); throw new Error('no vapid key'); }
+          return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(d.key) });
+        }).then(function (sub) {
+          return fetch('/api/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) });
+        }).then(function () { try { localStorage.setItem('tlm_push_enabled', '1'); } catch (e) {} pushFeedback('Notifications activées, même app fermée.', true); try { loadPick(); } catch (e) {} });
+      });
+    }).catch(function (e) { console.error(e); pushFeedback('Erreur : ' + e.message, false); });
+  }
+  window.enablePushNotifications = enablePushNotifications;
+
+
+  function goal05VerdictCard(signal) {
+    var hasSignal = !!signal;
+    var badge = hasSignal ? 'SIGNAL VALIDÉ' : 'SIGNAL EN ATTENTE';
+    var badgeClass = hasSignal ? 'goal05-verdict-badge ok' : 'goal05-verdict-badge';
+    var odd = hasSignal && signal.odd ? '@' + esc(signal.odd) : '@—';
+    var team = hasSignal ? esc(signal.team || 'Équipe sélectionnée +0,5') : 'Aucun match validé +0,5';
+    var meta = hasSignal ? esc(signal.meta || 'Analyse football uniquement') : 'Football uniquement · moteur en surveillance';
+    var checks = hasSignal && signal.checks ? signal.checks : [
+      { ok:false, text:'Écart historique favorable' },
+      { ok:false, text:'Enjeu réel au classement' },
+      { ok:false, text:'Adversaire encaisse régulièrement' },
+      { ok:false, text:'Aucun signal envoyé si un critère dur manque' }
+    ];
+    return '<div class="goal05-verdict-card">'
+      + '<div class="goal05-verdict-head"><span class="' + badgeClass + '">' + badge + '</span><span class="goal05-verdict-odd">' + odd + '</span></div>'
+      + '<div class="goal05-verdict-team">' + team + '</div>'
+      + '<div class="goal05-verdict-meta">' + meta + '</div>'
+      + '<div class="goal05-verdict-list">'
+      + checks.map(function(c){ return '<div><b' + (c.ok ? '' : ' class="wait"') + '>' + (c.ok ? '&#10003;' : '—') + '</b>' + esc(c.text) + '</div>'; }).join('')
+      + '</div>'
+      + '</div>';
+  }
+
+  function goal05BetaRow() {
+    return '<div class="offer-stack" aria-label="Accès Goal plus 0,5"><a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a></div>';
+  }
+
+  function renderGoal05Pick(signal) {
+    var box = $("pick-box");
+    var locked = !token();
+    var _alertsOn = false; try { _alertsOn = localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
+    var _pushOn = false; try { _pushOn = localStorage.getItem('tlm_push_enabled') === '1' && typeof Notification !== 'undefined' && Notification.permission === 'granted'; } catch (e) {}
+    var _statusHtml = locked ? '' : (
+      '<div style="margin-top:10px;font-size:12px;display:flex;flex-direction:column;gap:5px">'
+      + '<div><span style="color:' + (_alertsOn ? '#22c55e' : '#ef4444') + ';font-weight:900">' + (_alertsOn ? '\u2713' : '\u2717') + '</span> Popup + son : ' + (_alertsOn ? 'activé' : 'non activé') + '</div>'
+      + '<div><span style="color:' + (_pushOn ? '#22c55e' : '#ef4444') + ';font-weight:900">' + (_pushOn ? '\u2713' : '\u2717') + '</span> Notifications même app fermée : ' + (_pushOn ? 'activées' : 'non activées') + '</div>'
+      + '</div>'
+    );
+    box.innerHTML = goal05VerdictCard(signal)
+      + goal05BetaRow()
+      + (locked
+          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accès +0,5</a>'
+          : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button><button class="btn btn-o" type="button" onclick="enablePushNotifications()" style="margin-top:8px">Activer notifications meme app fermee</button>')
+      + _statusHtml;
+    var link = box.querySelector('[data-tab-link="me"]');
+    if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });
+    if (signal && token()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
+  }
+
+  function loadPick() {
+    renderGoal05Pick(null);
+    get("/api/goal05/latest").then(flagOffline).then(function (d) {
+      renderGoal05Pick(d && d.signal ? d.signal : null);
+    }).catch(function(){ renderGoal05Pick(null); });
+  }
+  // â”€â”€ En direct â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function loadLive() {
+    get("/live-matches").then(flagOffline).then(function (d) {
+      var box = $("live-box");
+      var list = (d && (d.matches || d.live)) || [];
+      if (!list.length) {
+        box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';
+        return;
+      }
+      var icons = { Football: "⚽" };
+      var html = '<div class="card">';
+      list.slice(0, 25).forEach(function (m) {
+        var sh = (m.score_home == null ? "?" : m.score_home), sa = (m.score_away == null ? "?" : m.score_away);
+        html += '<div class="item"><span class="dot"></span><div class="mid">'
+          + '<div class="t">' + (icons[m.sport] || "ðŸŽ¯") + ' ' + esc(m.home) + ' — ' + esc(m.away) + '</div>'
+          + '<div class="m">' + esc(m.competition || m.sport || "") + (m.minute ? ' · ' + esc(m.minute) + "'" : '') + '</div>'
+          + '</div><span class="badge b-live">' + esc(sh) + '-' + esc(sa) + '</span></div>';
+      });
+      html += '</div>';
+      box.innerHTML = html;
+    });
+  }
+
+  // â”€â”€ Performances â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var perf = { rows: [], stats: null };
+
+  function isGoal05Row(a) {
+    var txt = [a.bet, a.best_bet, a.market, a.signal, a.explication_resultat, a.reason, a.notes].join(' ').toLowerCase();
+    return txt.indexOf('+0,5') >= 0 || txt.indexOf('0,5') >= 0 || txt.indexOf('0.5') >= 0;
+  }
+
+  function loadPerf() {
+    get("/api/analysis-history?limit=160").then(flagOffline).then(function (d) {
+      perf.rows = ((d && d.analyses) || []).filter(isGoal05Row);
+      renderPerf();
+    });
+  }
+
+  function renderPerf() {
+    var rows = perf.rows || [];
+    var done = rows.filter(function(a){ return a.outcome === 'win' || a.outcome === 'loss'; });
+    var wins = done.filter(function(a){ return a.outcome === 'win'; }).length;
+    var losses = done.filter(function(a){ return a.outcome === 'loss'; }).length;
+    var total = done.length;
+    var wr = total ? Math.round((wins / total) * 100) : 0;
+    var profit = done.reduce(function(sum, a){
+      var odd = num(a.real_odd || a.odd || a.cote || 0);
+      if (a.outcome === 'win') return sum + ((odd > 1 ? odd : 1.3) - 1) * 10;
+      if (a.outcome === 'loss') return sum - 10;
+      return sum;
+    }, 0);
+    var roi = total ? Math.round((profit / (total * 10)) * 100) : 0;
+    $("perf-kpis").innerHTML =
+        kpi(String(total), "Signaux terminés", "")
+      + kpi(total ? wr + "%" : "—", "Réussite +0,5", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
+      + kpi(total ? eur(profit) : "0€", "Profit simulé 10€", profit >= 0 ? "c-green" : "c-red")
+      + kpi(total ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
+
+    if (!rows.length) {
+      $("perf-list").innerHTML = '<div class="state"><strong>Bilan +0,5 en cours</strong><br>Aucun signal +0,5 terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
+      return;
+    }
+    var html = "";
+    rows.slice(0, 40).forEach(function (a) {
+      var b = a.outcome === "win" ? '<span class="badge b-win">Gagné</span>'
+            : a.outcome === "loss" ? '<span class="badge b-loss">Perdu</span>'
+            : '<span class="badge b-wait">En attente</span>';
+      var odd = num(a.real_odd || a.odd || a.cote) > 1 ? " · @" + num(a.real_odd || a.odd || a.cote).toFixed(2) : "";
+      html += '<div class="item"><div class="mid">'
+        + '<div class="t">' + esc(a.home || a.match || 'Signal +0,5') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
+        + '<div class="m">' + esc((a.analysed_at || a.date || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + '</div>'
+        + '</div>' + b + '</div>';
+    });
+    $("perf-list").innerHTML = html;
+  }
+  function kpi(v, l, c) {
+    return '<div class="kpi"><div class="v ' + (c || "") + '">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
+  }
+  // â”€â”€ Compte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function renderMe() {
+    var box = $("me-box");
+    if (token()) {
+      box.innerHTML = '<div class="card"><div class="lbl">Compte connecté</div>'
+        + '<div class="val">' + esc($("chip").textContent) + '</div>'
+        + '<div class="comp" style="margin-top:9px">Tes préférences et ton accès sont enregistrés sur cette application. Les signaux payants restent liés à ta formule.</div>'
+        + '<a class="btn btn-o" href="/live-ia.html">Ouvrir le Live IA</a>'
+        + '<button class="btn btn-o" id="btn-out">Se déconnecter</button></div>';
+      $("btn-out").addEventListener("click", function () {
+        try { ["tlm_token","tlm_session","tlm_plan","tlm_email","tlm_code"].forEach(function(k){ localStorage.removeItem(k); }); } catch (e) {}
+        renderChip(); loaded.pick = false; renderMe();
+      });
+      return;
+    }
+
+    box.innerHTML = '<div class="app-auth-split">'
+      + '<div class="card app-auth-card"><div class="lbl">Déjà abonné ?</div><div class="app-auth-title">Retrouve ton accès</div>'
+      + '<div class="app-auth-note">Entre l’email de ton abonnement et le code reçu après paiement. L’app gardera ensuite ta session et tes préférences.</div>'
+      + '<input id="in-mail" type="email" inputmode="email" autocomplete="email" placeholder="Email de ton abonnement">'
+      + '<input id="in-code" type="text" autocomplete="one-time-code" placeholder="Code d’accès">'
+      + '<button class="btn btn-p" id="btn-in">Me connecter</button>'
+      + '<button class="btn btn-o" id="btn-forgot">Recevoir mon code par email</button>'
+      + '<div class="state" id="log-msg" style="padding:9px 0 0"></div></div>'
+      + '<div class="card app-auth-card"><div class="lbl">Nouveau sur TousLesMatchs ?</div><div class="app-auth-title">Entre dans la bêta</div>'
+      + '<div class="app-auth-note">Laisse ton email : tu entres dans le tunnel TousLesMatchs/Brevo et tu reçois un code d’accès gratuit pour tester l’app.</div>'
+      + '<input id="lead-mail" type="email" inputmode="email" autocomplete="email" placeholder="Ton email">'
+      + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
+      + '<button class="btn btn-g" id="btn-lead">Recevoir mon accès gratuit</button>'
+      + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
+      + '<div class="app-auth-note">Tu recevras ton code par email, puis les signaux +0,5 arriveront dans l’app et sur Telegram.</div></div></div>';
+
+    $("btn-in").addEventListener("click", function () {
+      var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
+      var msg = $("log-msg");
+      if (!email || !code) { msg.textContent = "Renseigne ton email et ton code."; return; }
+      msg.textContent = "Vérification…";
+      fetch("/api/verify-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, code: code, login: true }) })
+        .then(function (r) { return r.json(); }).then(function (d) {
+          if (d && (d.valid || d.ok)) {
+            try {
+              localStorage.setItem("tlm_email", email);
+              localStorage.setItem("tlm_code", code.toUpperCase());
+              if (d.session_token) localStorage.setItem("tlm_session", d.session_token);
+              if (d.session_token) localStorage.setItem("tlm_token", d.session_token);
+              else if (d.token) localStorage.setItem("tlm_token", d.token);
+              else localStorage.setItem("tlm_token", "code:" + code.toUpperCase());
+              localStorage.setItem("tlm_plan", d.plan || d.status || "free");
+            } catch (e) {}
+            msg.textContent = "Connexion réussie.";
+            renderChip(); loaded.pick = false; renderMe(); show("pick");
+          } else msg.textContent = (d && d.error) || "Code invalide ou expiré.";
+        }).catch(function () { msg.textContent = "Connexion impossible. Réessaie."; });
+    });
+
+    $("btn-forgot").addEventListener("click", function () {
+      var email = $("in-mail").value.trim().toLowerCase();
+      var msg = $("log-msg");
+      if (!email) { msg.textContent = "Entre ton email d’abonnement."; return; }
+      msg.textContent = "Envoi du code…";
+      fetch("/api/forgot-code", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email }) })
+        .then(function(){ msg.textContent = "Si un compte existe, le code vient d’être envoyé par email."; })
+        .catch(function(){ msg.textContent = "Envoi impossible. Réessaie."; });
+    });
+
+    $("btn-lead").addEventListener("click", function () {
+      var email = $("lead-mail").value.trim().toLowerCase();
+      var adult = $("lead-adult").checked;
+      var msg = $("lead-msg");
+      if (!email || email.indexOf("@") < 0) { msg.textContent = "Entre une adresse email valide."; return; }
+      if (!adult) { msg.textContent = "Confirmation +18 requise."; return; }
+      msg.textContent = "Création de ton accès…";
+      fetch("/api/app-access/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, adultConfirmed: true, marketingConsent: true, source: "android_app" }) })
+        .then(function(r){ return r.json(); }).then(function(d){
+          if (d && d.ok) msg.textContent = "Email envoyé. Ouvre ta boîte mail : ton code d’accès arrive.";
+          else msg.textContent = (d && d.error) || "Impossible de créer l’accès maintenant.";
+        }).catch(function(){ msg.textContent = "Connexion impossible. Réessaie."; });
+    });
+  }
+
+  // â”€â”€ Démarrage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var alertToggle = $('signal-alert-toggle');
+  if (alertToggle) alertToggle.addEventListener('click', enableSignalAlerts);
+  var popupClose = $('signal-popup-close');
+  if (popupClose) popupClose.addEventListener('click', closeSignalPopup);
+  var popupOpen = $('signal-popup-open');
+  if (popupOpen) popupOpen.addEventListener('click', function () { closeSignalPopup(); show('pick'); });
+  updateAlertToggle();
+
+  renderChip();
+  var t = new URLSearchParams(location.search).get("tab");
+  show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : (token() ? "pick" : "me"));
+
+  );
+    }).catch(function(){});
+  }
+  window.addEventListener("online", function () { $("offline-note").style.display = "none"; });
+})();
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script id="tlm-navbar-safe-logo-js">
+(function(){
+  function addLogo(){
+    if(document.querySelector('.tlm-brand-nav-logo')) return;
+    var items=[].slice.call(document.querySelectorAll('a,div,span,strong,h1,h2'));
+    var brand=items.find(function(el){
+      if(!el || !el.textContent) return false;
+      if(el.closest('script,style,head,title,meta')) return false;
+      var text=el.textContent.replace(/\s+/g,'').toLowerCase();
+      var box=el.getBoundingClientRect();
+      return text.includes('touslesmatchs') && box.width>40 && box.height>8 && box.top>=0 && box.top<160;
+    });
+    if(brand){
+      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/assets/brand/logo192.png?v=1786907124471" alt="TousLesMatchs">');
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addLogo); else addLogo();
+  setTimeout(addLogo,500);
+})();
+</script>
+
+<script id="tlm-goal05-live-pro-js">
+(function(){
+  function esc(v){return String(v == null ? "" : v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
+  function get(u){return fetch(u,{cache:"no-store"}).then(function(r){return r.json();});}
+  function country(comp){comp=String(comp||"");return comp.indexOf("·")>=0?comp.split("·").pop().trim():"Autres";}
+  function league(comp){comp=String(comp||"");return comp.indexOf("·")>=0?comp.split("·")[0].trim():comp;}
+  function flag(c){return ({France:"🇫🇷",England:"🏴",Spain:"🇪🇸",Germany:"🇩🇪",Italy:"🇮🇹",Portugal:"🇵🇹",Brazil:"🇧🇷",Argentina:"🇦🇷",USA:"🇺🇸",Australia:"🇦🇺",Japan:"🇯🇵",Korea:"🇰🇷","South Korea":"🇰🇷",Netherlands:"🇳🇱",Belgium:"🇧🇪",Scotland:"🏴",Turkey:"🇹🇷"})[c]||"🌍";}
+  function allowed(m){
+    var comp=String(m.competition||"").toLowerCase();
+    var c=country(m.competition);
+    var ok=["France","England","Spain","Germany","Italy","Portugal","Brazil","Argentina","USA","Australia","Japan","Korea","South Korea","Netherlands","Belgium","Scotland","Turkey"].indexOf(c)>=0;
+    if((m.sport||"Football")!=="Football") return false;
+    if(/cup|copa|coppa|coupe|serie c|u19|u20|u21|women|femmes|friendly|amical/i.test(comp)) return false;
+    return ok;
+  }
+  function time(m){try{return new Date(m.utcDate).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});}catch(e){return "";}}
+  function decision(m){
+    var sh=Number(m.score_home||0), sa=Number(m.score_away||0), min=Number(m.minute||0);
+    var team=sh===0&&sa>0?m.home:sa===0&&sh>0?m.away:sh===0&&sa===0?m.home:null;
+    var pct=52;
+    if(m.analysable)pct+=8;
+    if(m.h2h_markets&&m.h2h_markets.first_half_goal_pct)pct+=Math.round((Number(m.h2h_markets.first_half_goal_pct)-50)/4);
+    if(min>=25&&min<=65)pct+=10;
+    if(min>65&&min<=85)pct+=5;
+    if(team&&((team===m.home&&sh<sa)||(team===m.away&&sa<sh)))pct+=8;
+    pct=Math.max(35,Math.min(92,pct));
+    var reasons=[];
+    if(!allowed(m))reasons.push("Championnat non retenu pour le moteur +0,5.");
+    if(!team)reasons.push("Le +0,5 équipe est déjà validé ou non pertinent.");
+    if(min<25)reasons.push("Trop tôt, on attend une vraie lecture live.");
+    if(min>85)reasons.push("Trop tard hors exception top contre bas de tableau.");
+    if(!reasons.length)reasons.push("Fenêtre live correcte, équipe ciblée sans but, match surveillable.");
+    var play=allowed(m)&&team&&min>=25&&min<=85&&pct>=85;
+    return {play:play,pct:pct,team:team||"Aucune équipe",text:reasons.join(" ")};
+  }
+  function renderLivePick(best){
+    var pick=document.getElementById("pick-box"); if(!pick)return;
+    var old=document.getElementById("goal05-live-main-card"); if(old)old.remove();
+    if(!best||!best.m||!best.d||!best.d.play)return;
+    var m=best.m,d=best.d;
+    var sh=m.score_home==null?"?":m.score_home, sa=m.score_away==null?"?":m.score_away;
+    var html='<div id="goal05-live-main-card" class="goal05-main-live-card">'
+      + '<div class="goal05-main-live-head"><span class="goal05-main-live-badge">LIVE +0,5 · JOUER</span><span class="goal05-main-live-pct">'+esc(d.pct)+'%</span></div>'
+      + '<div class="goal05-main-live-team">'+esc(d.team)+' +0,5 but</div>'
+      + '<div class="goal05-main-live-meta">'+esc(m.home)+' — '+esc(m.away)+' · '+esc(sh)+'-'+esc(sa)+' · '+esc(m.minute||0)+"'"+' · '+esc(m.competition||'')+'</div>'
+      + '<div class="goal05-main-live-teams"><img src="'+esc(m.home_logo||"/logo192.png")+'" alt=""><img src="'+esc(m.away_logo||"/logo192.png")+'" alt=""><span>'+esc(d.text)+'</span></div>'
+      + '</div>';
+    pick.insertAdjacentHTML("afterbegin",html);
+  }
+  function renderLive(){
+    var box=document.getElementById("live-box"); if(!box)return;
+    get("/api/live-matches").then(function(d){
+      var list=((d&&(d.matches||d.live))||[]).filter(allowed);
+      if(!list.length){box.innerHTML='<div class="card"><div class="state">Aucun match +0,5 éligible en direct pour le moment.</div></div>';return;}
+      list.sort(function(a,b){return (country(a.competition)+league(a.competition)+(a.utcDate||"")).localeCompare(country(b.competition)+league(b.competition)+(b.utcDate||""));});
+      var html='<div class="card">', cc='', ll='';
+      list.slice(0,60).forEach(function(m){
+        var c=country(m.competition), l=league(m.competition), d=decision(m), sh=m.score_home==null?"?":m.score_home, sa=m.score_away==null?"?":m.score_away;
+        if(c!==cc){cc=c;ll='';html+='<div class="goal05-live-country">'+flag(c)+' '+esc(c)+'</div>';}
+        if(l!==ll){ll=l;html+='<div class="goal05-live-league">'+esc(l)+'</div>';}
+        html+='<details class="goal05-live-match" data-fixture="'+esc(m.fixtureId||m.id||m.sourceId||((m.home||"")+"_"+(m.away||"")))+'"><summary><div class="goal05-live-logos"><img src="'+esc(m.home_logo||"/logo192.png")+'" alt=""><img src="'+esc(m.away_logo||"/logo192.png")+'" alt=""></div><div><div class="goal05-live-title">'+esc(m.home)+' — '+esc(m.away)+'</div><div class="goal05-live-meta">'+esc(time(m))+' · '+esc(m.minute||0)+"' · "+esc(l)+'</div></div><div class="goal05-live-score">'+esc(sh)+'-'+esc(sa)+'</div></summary><div class="goal05-live-detail"><div class="goal05-decision '+(d.play?'play':'no')+'"><div><strong>'+(d.play?'JOUER':'NE PAS JOUER')+'</strong><small>'+esc(d.team)+' +0,5 but · '+esc(d.text)+'</small></div><div class="goal05-pct">'+esc(d.pct)+'%</div></div></div></details>';
+      });
+      var openIds=[].map.call(box.querySelectorAll("details.goal05-live-match[open]"),function(el){return el.getAttribute("data-fixture");});
+      var best=list.map(function(x){return {m:x,d:decision(x)};}).filter(function(x){return x.d.play;}).sort(function(a,b){return b.d.pct-a.d.pct;})[0];
+      renderLivePick(best);
+      box.innerHTML=html+'</div>';
+      [].forEach.call(box.querySelectorAll("details.goal05-live-match"),function(el){if(openIds.indexOf(el.getAttribute("data-fixture"))>=0)el.open=true;});
+    }).catch(function(){box.innerHTML='<div class="card"><div class="state">Direct +0,5 indisponible.</div></div>';});
+  }
+  function is05(a){var t=[a.bet,a.best_bet,a.market,a.selection,a.signal,a.reason,a.raison,a.notes,a.type].join(" ").toLowerCase();return t.indexOf("+0,5")>=0||t.indexOf("0,5")>=0||t.indexOf("0.5")>=0||t.indexOf("goal05")>=0;}
+  function norm(s){if(!s)return null;return {home:s.home||s.team||"Signal +0,5",away:s.away||s.opponent||"",competition:s.competition||s.meta||"",bet:s.bet||"+0,5 but",outcome:s.outcome||s.result||null,real_odd:s.odd||s.cote||null,analysed_at:s.sentAt||s.created_at||s.date||""};}
+  function kpi(v,l,c){return '<div class="kpi"><div class="v '+(c||"")+'">'+esc(v)+'</div><div class="l">'+esc(l)+'</div></div>';}
+  function renderPerf(){
+    var kp=document.getElementById("perf-kpis"), list=document.getElementById("perf-list"); if(!kp||!list)return;
+    Promise.all([get("/api/analysis-history?limit=300").catch(function(){return {analyses:[]};}),get("/api/goal05/latest").catch(function(){return {};})]).then(function(all){
+      var rows=((all[0].analyses)||[]).filter(is05);
+      [all[1].signal,all[1].lastSignal].forEach(function(s){var r=norm(s);if(r)rows.unshift(r);});
+      var done=rows.filter(function(a){return a.outcome==="win"||a.outcome==="loss";});
+      var wins=done.filter(function(a){return a.outcome==="win";}).length;
+      var wr=done.length?Math.round(wins/done.length*100):0;
+      kp.innerHTML=kpi(String(rows.length),"Signaux envoyés","c-cyan")+kpi(String(done.length),"Signaux terminés","")+kpi(done.length?wr+"%":"—","Réussite +0,5",wr>=60?"c-green":"");
+      if(!rows.length){list.innerHTML='<div class="state"><strong>Bilan +0,5 en attente</strong><br>Aucun signal +0,5 envoyé trouvé.</div>';return;}
+      list.innerHTML=rows.slice(0,50).map(function(a){var b=a.outcome==="win"?'<span class="badge b-win">Gagné</span>':a.outcome==="loss"?'<span class="badge b-loss">Perdu</span>':'<span class="badge b-wait">Envoyé / en attente</span>';return '<div class="item"><div class="mid"><div class="t">'+esc(a.home||"Signal +0,5")+(a.away?' — '+esc(a.away):'')+'</div><div class="m">'+esc((a.analysed_at||a.date||a.created_at||"").slice(0,10))+' · '+esc(a.competition||"")+'</div></div>'+b+'</div>';}).join("");
+    });
+  }
+  function run(){renderLive();renderPerf();}
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",run);else run();
+  setInterval(run,60000);
+})();
+</script>
+<script id="tlm-paid-analysis-gate-js">
+(function(){
+  if(window.__tlmPaidAnalysisGate)return; window.__tlmPaidAnalysisGate=1;
+  function plan(){try{return String(localStorage.getItem("tlm_plan")||"").toLowerCase();}catch(e){return "";}}
+  function token(){try{return localStorage.getItem("tlm_token")||localStorage.getItem("tlm_session")||"";}catch(e){return "";}}
+  function hasAccess(){var p=plan();return !!token() && /(standard|premium|elite|vip|founder|fondateur|beta|goal05|admin)/i.test(p);}
+  function ensureModal(){
+    if(document.getElementById("tlm-paid-gate-modal"))return;
+    var div=document.createElement("div");
+    div.id="tlm-paid-gate-modal";
+    div.innerHTML='<div class="tlm-paid-gate-card"><div class="tlm-paid-gate-badge">Analyse réservée</div><div class="tlm-paid-gate-title">Connexion requise</div><p class="tlm-paid-gate-text">Tu peux voir les matchs en direct. Pour ouvrir l’analyse, le pourcentage et la décision, il faut un accès actif TousLesMatchs.</p><div class="tlm-paid-gate-actions"><button class="tlm-paid-gate-login" type="button" id="tlm-gate-login">Se connecter</button><a class="tlm-paid-gate-pay" href="/#plans">Voir les abonnements</a></div><button type="button" id="tlm-gate-close" style="margin-top:10px;width:100%;background:transparent;border:none;color:#9ca3cf;font-weight:800">Fermer</button></div>';
+    document.body.appendChild(div);
+    document.getElementById("tlm-gate-close").onclick=function(){div.classList.remove("on");};
+    document.getElementById("tlm-gate-login").onclick=function(){div.classList.remove("on");location.href="/app.html?tab=me";};
+  }
+  function showGate(){ensureModal();document.getElementById("tlm-paid-gate-modal").classList.add("on");}
+  function target(el){return el&&el.closest&&el.closest("details.goal05-live-match,details[data-fixture],#live-box .item,#live-box details,.live-match,.match-card,.analysis-card,.prediction-card,[data-analysis],[data-signal],[data-match-id]");}
+  document.addEventListener("click",function(e){
+    var t=target(e.target);
+    if(!t||hasAccess()||t.closest("#tlm-paid-gate-modal"))return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    if(t.tagName==="DETAILS")t.open=false;
+    showGate();
+  },true);
+  document.addEventListener("toggle",function(e){
+    var d=e.target;
+    if(d&&d.matches&&d.matches("details.goal05-live-match,details[data-fixture]")&&d.open&&!hasAccess()){
+      d.open=false;showGate();
+    }
+  },true);
+})();
+</script>
+<script id="tlm-goal05-home-live-js">
+(function(){
+  if(window.__tlmGoal05HomeLive)return; window.__tlmGoal05HomeLive=1;
+
+  function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
+  function token(){try{return localStorage.getItem("tlm_token")||localStorage.getItem("tlm_session")||"";}catch(e){return "";}}
+  function plan(){try{return String(localStorage.getItem("tlm_plan")||"").toLowerCase();}catch(e){return "";}}
+  function hasAccess(){return !!token() && /(standard|premium|elite|vip|founder|fondateur|beta|goal05|admin)/i.test(plan());}
+  function country(comp){comp=String(comp||"");return comp.indexOf("·")>=0?comp.split("·").pop().trim():"Autres";}
+  function allowed(m){
+    var comp=String(m.competition||"").toLowerCase();
+    var c=country(m.competition);
+    var ok=["France","England","Spain","Germany","Italy","Portugal","Brazil","Argentina","USA","Australia","Japan","Korea","South Korea","Netherlands","Belgium","Scotland","Turkey"].indexOf(c)>=0;
+    if((m.sport||"Football")!=="Football")return false;
+    if(/cup|copa|coppa|coupe|serie c|u19|u20|u21|women|femmes|friendly|amical/i.test(comp))return false;
+    return ok;
+  }
+  function decision(m){
+    var sh=Number(m.score_home||0), sa=Number(m.score_away||0), min=Number(m.minute||0);
+    var team=sh===0&&sa>0?m.home:sa===0&&sh>0?m.away:sh===0&&sa===0?m.home:null;
+    var pct=52;
+    if(m.analysable)pct+=8;
+    if(m.h2h_markets&&m.h2h_markets.first_half_goal_pct)pct+=Math.round((Number(m.h2h_markets.first_half_goal_pct)-50)/4);
+    if(min>=25&&min<=65)pct+=10;
+    if(min>65&&min<=85)pct+=5;
+    if(team&&((team===m.home&&sh<sa)||(team===m.away&&sa<sh)))pct+=8;
+    pct=Math.max(35,Math.min(92,pct));
+    return {play:allowed(m)&&team&&min>=25&&min<=85&&pct>=85,pct:pct,team:team};
+  }
+  function beep(){
+    try{
+      var ctx=new (window.AudioContext||window.webkitAudioContext)();
+      var osc=ctx.createOscillator(), gain=ctx.createGain();
+      osc.frequency.value=880; gain.gain.value=.08; osc.connect(gain); gain.connect(ctx.destination); osc.start();
+      setTimeout(function(){osc.stop();ctx.close();},220);
+    }catch(e){}
+    try{ if(navigator.vibrate) navigator.vibrate([220,90,220]); }catch(e){}
+  }
+  function showAlert(best){
+    try{
+      var enabled=localStorage.getItem("tlm_signal_alerts")==="1";
+      if(!enabled || !hasAccess())return;
+      var m=best.m,d=best.d;
+      var key="tlm_goal05_alert_"+(m.fixtureId||m.id||m.sourceId)+"_"+(m.score_home||0)+"_"+(m.score_away||0)+"_"+Math.floor(Number(m.minute||0)/5);
+      if(localStorage.getItem(key)==="1")return;
+      localStorage.setItem(key,"1");
+      var box=document.getElementById("goal05-app-alert");
+      if(!box){
+        box=document.createElement("div");
+        box.id="goal05-app-alert";
+        box.className="goal05-app-alert";
+        document.body.appendChild(box);
+      }
+      box.innerHTML="<b>Signal +0,5 détecté · "+esc(d.pct)+"%</b><span>"+esc(d.team)+" +0,5 but · "+esc(m.home)+" - "+esc(m.away)+" · "+esc(m.score_home)+"-"+esc(m.score_away)+" · "+esc(m.minute)+"'</span>";
+      box.classList.add("on");
+      beep();
+      setTimeout(function(){box.classList.remove("on");},9000);
+      if("Notification" in window && Notification.permission==="granted"){
+        new Notification("Signal +0,5 détecté", { body:d.team+" +0,5 but · "+d.pct+"%", icon:"/logo192.png" });
+      }
+    }catch(e){}
+  }
+  function render(){
+    var pick=document.getElementById("pick-box"); if(!pick)return;
+    fetch("/api/live-matches?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json();}).then(function(data){
+      var rows=((data&&(data.matches||data.live))||[]).filter(allowed).map(function(m){return {m:m,d:decision(m)};}).filter(function(x){return x.d.play;}).sort(function(a,b){return b.d.pct-a.d.pct;});
+      var old=document.getElementById("goal05-live-main-card"); if(old)old.remove();
+      if(!rows.length)return;
+      var best=rows[0],m=best.m,d=best.d;
+      var sh=m.score_home==null?"?":m.score_home,sa=m.score_away==null?"?":m.score_away;
+      var locked=!hasAccess();
+      var html='<div id="goal05-live-main-card" class="goal05-home-live-card '+(locked?'goal05-home-live-locked':'')+'">'
+        + '<div class="goal05-home-live-head"><span class="goal05-home-live-badge">'+(locked?'SIGNAL LIVE DETECTE':'LIVE +0,5 · JOUER')+'</span><span class="goal05-home-live-pct">'+esc(d.pct)+'%</span></div>'
+        + '<div class="goal05-home-live-team">'+(locked?'Connecte-toi pour voir le match':esc(d.team)+' +0,5 but')+'</div>'
+        + '<div class="goal05-home-live-meta">'+(locked?'Un signal supérieur à 85% est disponible maintenant.':' '+esc(m.home)+' — '+esc(m.away)+' · '+esc(sh)+'-'+esc(sa)+' · '+esc(m.minute||0)+"'"+' · '+esc(m.competition||''))+'</div>'
+        + '<div class="goal05-home-live-logos"><img src="'+esc(m.home_logo||"/logo192.png")+'" alt=""><img src="'+esc(m.away_logo||"/logo192.png")+'" alt=""><span>'+(locked?'Accès actif requis':'Aide à la décision +0,5 en direct')+'</span></div>'
+        + '</div>';
+      pick.insertAdjacentHTML("afterbegin",html);
+      showAlert(best);
+    }).catch(function(){});
+  }
+  window.tlmGoal05HomeLiveRefresh=render;
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",render);else render();
+  document.addEventListener("visibilitychange",function(){if(!document.hidden)render();});
+  setInterval(render,15000);
+})();
+</script>
+<script id="tlm-nav-no-box-hard-js">
+(function(){
+  function clean(){
+    var labels=/^(Analyses|Live IA|Résultats|Resultats|Bankroll|Méthode|Methode|Tarifs)$/i;
+    document.querySelectorAll('header a,header button,nav a,nav button').forEach(function(el){
+      var t=(el.textContent||'').trim();
+      if(!labels.test(t))return;
+      el.style.setProperty('background','transparent','important');
+      el.style.setProperty('background-image','none','important');
+      el.style.setProperty('border','0','important');
+      el.style.setProperty('box-shadow','none','important');
+      el.style.setProperty('outline','0','important');
+      el.style.setProperty('border-radius','0','important');
+      el.style.setProperty('font-family','Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif','important');
+      el.style.setProperty('font-size','14px','important');
+      el.style.setProperty('font-weight','850','important');
+      el.style.setProperty('letter-spacing','-.01em','important');
+      el.style.setProperty('color',/Live IA/i.test(t)?'#35e8ff':'#f8fbff','important');
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean);else clean();
+  setInterval(clean,1200);
+})();
+</script>
+<script id="tlm-history-backfill-js">
+(function(){
+  var months={'01':'janvier','02':'février','03':'mars','04':'avril','05':'mai','06':'juin','07':'juillet','08':'août','09':'septembre','10':'octobre','11':'novembre','12':'décembre'};
+  var days=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  function label(iso){
+    var d=new Date(iso+'T12:00:00');
+    return days[d.getDay()]+' '+Number(iso.slice(8,10))+' '+months[iso.slice(5,7)];
+  }
+  function root(){
+    var h=[].slice.call(document.querySelectorAll('h1,h2,h3,div,strong')).find(function(x){return /Derniers verdicts du Concile/i.test(x.textContent||'');});
+    return h ? (h.parentElement || h) : null;
+  }
+  function apply(){
+    fetch('/api/public-analysis-stats?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      var rows=(d.daily_concile||[]).filter(function(r){return r.jour>='2026-07-25'&&r.jour<='2026-08-08';});
+      var map={}; rows.forEach(function(r){map[r.jour]=r;});
+      document.querySelectorAll('details,div').forEach(function(el){
+        var txt=(el.textContent||'').toLowerCase();
+        Object.keys(map).forEach(function(iso){
+          var lab=label(iso).toLowerCase();
+          if(txt.indexOf(lab)>=0 && /0\s+s[ée]lection retenue/i.test(el.innerHTML||'')){
+            el.innerHTML=el.innerHTML.replace(/0\s+s[ée]lection retenue/gi, map[iso].analyses+' analyses · '+map[iso].resolved+' résolues');
+          }
+        });
+      });
+      var box=root(); if(!box)return;
+      rows.forEach(function(r){
+        var lab=label(r.jour);
+        if((document.body.textContent||'').toLowerCase().indexOf(lab.toLowerCase())>=0)return;
+        var row=document.createElement('div');
+        row.className='tlm-history-backfill-row';
+        row.setAttribute('data-tlm-history-day',r.jour);
+        row.innerHTML='<span>▶ '+lab+'</span><span>'+r.analyses+' analyses · '+r.resolved+' résolues</span>';
+        box.appendChild(row);
+      });
+    }).catch(function(){});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
+  setTimeout(apply,1200);
+  setInterval(apply,30000);
+})();
+</script>
+</body>
+</html>

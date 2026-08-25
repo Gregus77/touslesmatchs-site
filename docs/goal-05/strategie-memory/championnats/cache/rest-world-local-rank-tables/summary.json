@@ -1,0 +1,66 @@
+[
+  {
+    "country": "Argentine",
+    "league": "Liga Profesional / Primera Division",
+    "teams": 30,
+    "complete_3plus": 26,
+    "quality_flags": 1,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\argentine-liga-profesional-primera-division.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\argentine-liga-profesional-primera-division.json",
+    "top5": [
+      "Rivers Plate",
+      "Boca Junior",
+      "Talleres CordobaSan Lorenzo",
+      "Defensa YJusticia",
+      "Racing Club"
+    ]
+  },
+  {
+    "country": "Bresil",
+    "league": "Brasileiro Serie A",
+    "teams": 20,
+    "complete_3plus": 15,
+    "quality_flags": 0,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\bresil-brasileiro-serie-a.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\bresil-brasileiro-serie-a.json",
+    "top5": [
+      "Palmeiras",
+      "Flamengo",
+      "Atletico-MG",
+      "Fluminense",
+      "Internacional"
+    ]
+  },
+  {
+    "country": "Japon",
+    "league": "J1 League",
+    "teams": 25,
+    "complete_3plus": 16,
+    "quality_flags": 0,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\japon-j1-league.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\japon-j1-league.json",
+    "top5": [
+      "Yokohama FM",
+      "Kawasaki",
+      "Hiroshima",
+      "Nagoya",
+      "Vissel Kobe"
+    ]
+  },
+  {
+    "country": "Coree du Sud",
+    "league": "K League 1",
+    "teams": 15,
+    "complete_3plus": 12,
+    "quality_flags": 0,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\coree-du-sud-k-league-1.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\rest-world-local-rank-tables\\coree-du-sud-k-league-1.json",
+    "top5": [
+      "Ulsan HD",
+      "Jeonbuk",
+      "Pohang",
+      "Daegu",
+      "Gwangju"
+    ]
+  }
+]

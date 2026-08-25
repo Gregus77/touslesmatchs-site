@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paiement reçu — TousLesMatchs</title>
+<meta name="robots" content="noindex">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #12152a; color: #f6f7ff; line-height: 1.6; padding: 0 16px 60px; min-height: 100vh; }
+  a { color: #6366f1; text-decoration: none; }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  header { text-align: center; padding: 24px 0 10px; }
+  .logo { font-size: 20px; font-weight: 900;
+    background: linear-gradient(135deg, #6366f1, #7c3aed);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .check { font-size: 56px; text-align: center; margin: 10px 0 4px; }
+  h1 { font-size: 24px; font-weight: 900; text-align: center; margin-bottom: 8px; }
+  .sub { font-size: 14px; color: #949bc4; text-align: center; margin-bottom: 24px; }
+  .card { background: #171b34; border: 1px solid rgba(16,185,129,.25); border-radius: 16px; padding: 24px; margin-bottom: 18px; }
+  .code-label { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #949bc4; text-align: center; margin-bottom: 10px; }
+  .code { font-family: monospace; font-size: 34px; font-weight: 900; letter-spacing: .12em; text-align: center; color: #10b981; }
+  .plan { text-align: center; font-size: 12px; color: #949bc4; margin-top: 8px; }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,.11); font-size: 14px; }
+  .steps li:last-child { border-bottom: none; }
+  .num { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: rgba(99,102,241,.15);
+    color: #818cf8; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+  .btn { display: block; text-align: center; background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #fff; font-weight: 800; font-size: 16px; padding: 15px; border-radius: 12px; margin-bottom: 14px; }
+  .loading { text-align: center; color: #949bc4; padding: 24px 0; }
+  .note { font-size: 12px; color: #8a90b0; text-align: center; margin-top: 8px; }
+  .disclaimer { font-size: 11px; color: #8a90b0; line-height: 1.7; margin-top: 20px; padding: 14px;
+    background: rgba(255,255,255,.02); border-radius: 12px; border: 1px solid rgba(255,255,255,.11); text-align: center; }
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo">TousLesMatchs</div></header>
+  <div class="check">✅</div>
+  <h1>Paiement reçu, merci !</h1>
+  <p class="sub">Ton accès est activé. Voici comment en profiter tout de suite.</p>
+
+  <div id="content">
+    <div class="card"><div class="loading">Activation de ton accès…</div></div>
+  </div>
+
+  <div class="disclaimer">
+    ⚠️ 18+ · Jeu responsable. Une analyse IA n'est pas une garantie de gain. Appelez le 09 74 75 13 13 — <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a>.
+  </div>
+</div>
+
+<script>
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  var params = new URLSearchParams(location.search);
+  var sessionId = params.get('session_id') || params.get('session') || '';
+  var content = document.getElementById('content');
+
+  function showCode(code, plan, email) {
+    var isPremium = ['premium','elite','vip'].indexOf(plan) >= 0;
+    content.innerHTML =
+      '<div class="card">' +
+        '<div class="code-label">Ton code d\'accès</div>' +
+        '<div class="code">' + esc(code) + '</div>' +
+        '<div class="plan">Formule : <b>' + esc((plan||'').toUpperCase()) + '</b>' + (email ? ' · ' + esc(email) : '') + '</div>' +
+      '</div>' +
+      '<div class="card"><ol class="steps">' +
+        '<li><span class="num">1</span><div>Va sur la page <b><a href="/live-ia">Live IA</a></b> et connecte-toi avec <b>ton email</b> + <b>ce code</b>.</div></li>' +
+        (isPremium
+          ? '<li><span class="num">2</span><div>Ton <b>invitation au canal Telegram premium</b> t\'a été envoyée par email. Clique dessus pour rejoindre.</div></li>'
+          : '<li><span class="num">2</span><div>Ton analyse Live IA est débloquée : choisis un match et lance le Concile.</div></li>') +
+        '<li><span class="num">3</span><div>Un email de confirmation t\'a aussi été envoyé (pense à vérifier tes <b>spams</b>).</div></li>' +
+      '</ol></div>' +
+      '<a class="btn" href="/live-ia">Accéder à mon espace →</a>' +
+      '<p class="note">Garde ce code précieusement.</p>';
+  }
+
+  function showEmailFallback() {
+    content.innerHTML =
+      '<div class="card">' +
+        '<p style="text-align:center;font-size:15px">Ton paiement est bien enregistré. 🎉</p>' +
+        '<ol class="steps" style="margin-top:14px">' +
+          '<li><span class="num">1</span><div>Ouvre l\'<b>email de confirmation</b> que nous venons de t\'envoyer (vérifie tes <b>spams</b>). Il contient ton <b>code d\'accès</b>.</div></li>' +
+          '<li><span class="num">2</span><div>Va sur <b><a href="/live-ia">Live IA</a></b> et connecte-toi avec ton email + ton code.</div></li>' +
+          '<li><span class="num">3</span><div>Pour les formules Pro/Elite, l\'email contient aussi ton <b>invitation Telegram premium</b>.</div></li>' +
+        '</ol>' +
+      '</div>' +
+      '<a class="btn" href="/live-ia">Aller à mon espace →</a>' +
+      '<p class="note">L\'email arrive en général en moins d\'une minute.</p>';
+  }
+
+  if (!sessionId) {
+    showEmailFallback();
+  } else {
+    fetch('/api/payment-success', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: sessionId })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d && d.ok && d.code) showCode(d.code, d.plan, d.email);
+      else showEmailFallback();
+    }).catch(showEmailFallback);
+  }
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+</body>
+</html>

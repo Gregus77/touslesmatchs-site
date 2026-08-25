@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pronostic IA sportif : comment fonctionne un Concile de 5 IA — TousLesMatchs</title>
+<meta name="description" content="Qu'est-ce qu'un pronostic IA sportif fiable ? Comment fonctionne le Concile de 5 intelligences artificielles indépendantes de TousLesMatchs. Résultats vérifiés, rien de caché.">
+<link rel="canonical" href="https://www.touslesmatchs.com/pronostic-ia">
+<link rel="icon" href="/favicon.ico">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#12152a">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Pronostic IA sportif : comment fonctionne un Concile de 5 IA">
+<meta property="og:description" content="Le fonctionnement du Concile de 5 IA indépendantes de TousLesMatchs, et ce qui distingue un vrai pronostic IA d'un simple algorithme marketing.">
+<meta property="og:url" content="https://www.touslesmatchs.com/pronostic-ia">
+<meta property="og:site_name" content="TousLesMatchs">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Qu'est-ce qu'un pronostic IA sportif ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Un pronostic IA sportif est une analyse produite par un ou plusieurs modèles d'intelligence artificielle qui évaluent les statistiques d'un match (forme des équipes, confrontations directes, contexte) pour estimer l'issue la plus probable. Sur TousLesMatchs, cette analyse est produite par un Concile de 5 intelligences artificielles indépendantes qui votent chacune de leur côté avant qu'une décision finale ne soit publiée." }
+    },
+    {
+      "@type": "Question",
+      "name": "Comment fonctionne le Concile de 5 IA de TousLesMatchs ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "5 intelligences artificielles indépendantes analysent chaque match séparément à partir des mêmes données réelles (statistiques, cotes des bookmakers agréés ANJ, historique des confrontations). Chacune vote pour une issue. Le consensus entre les IA détermine le niveau de confiance publié, exprimé sur un score de confiance /100 plutôt qu'en pourcentage brut." }
+    },
+    {
+      "@type": "Question",
+      "name": "Les pronostics IA sont-ils fiables ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Aucune IA ne garantit un résultat futur, mais la fiabilité peut se mesurer a posteriori sur des résultats vérifiés et publiés intégralement, gagnés comme perdus, sans exception. TousLesMatchs publie l'historique complet de ses analyses sur sa page Performances." }
+    },
+    {
+      "@type": "Question",
+      "name": "TousLesMatchs est-il gratuit ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Oui, un canal Telegram gratuit existe avec un pronostic quotidien. Des paliers payants (Standard, Premium, Elite) donnent accès à davantage de signaux, en football." }
+    },
+    {
+      "@type": "Question",
+      "name": "Quelle différence entre un pronostiqueur classique et un Concile IA ?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Un pronostiqueur classique donne un avis unique, souvent invérifiable. Un Concile IA fait voter plusieurs modèles indépendants sur les mêmes données et ne publie un signal que lorsque le consensus et le score de confiance dépassent un seuil strict — la majorité des matchs analysés n'atteignent jamais ce seuil et ne sont donc jamais publiés." }
+    }
+  ]
+}
+</script>
+<style>
+:root{
+  --bg:#12152a;--bg2:#171b34;--bg3:#1e2340;
+  --b1:rgba(255,255,255,.11);--b2:rgba(255,255,255,.18);--b3:rgba(255,255,255,.24);
+  --text:#f6f7ff;--muted:#949bc4;--muted2:#c4c9e6;
+  --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;--cyan:#22d3ee;--green:#10b981;--red:#f43f5e;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.75);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%)}
+.nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--text);text-decoration:none}
+.nav-brand span{color:var(--indigo2)}
+.nav-cta{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;padding:9px 18px;border-radius:9px;font-size:13px;font-weight:700;text-decoration:none}
+.page{max-width:760px;margin:0 auto;padding:100px 24px 60px}
+.bc{font-size:12px;color:var(--muted);margin-bottom:20px}
+.bc a{color:var(--muted)}
+h1{font-size:clamp(28px,4.5vw,40px);font-weight:900;letter-spacing:-.03em;line-height:1.15;margin-bottom:16px}
+.lead{font-size:16px;color:var(--muted2);line-height:1.7;margin-bottom:32px}
+h2{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:36px 0 14px}
+p{font-size:15px;color:var(--muted2);line-height:1.75;margin-bottom:14px}
+.stats-bar{display:flex;flex-wrap:wrap;gap:14px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:22px;margin:28px 0}
+.stat{flex:1;min-width:120px;text-align:center}
+.stat b{display:block;font-size:26px;font-weight:900;color:#fff}
+.stat span{font-size:12px;color:var(--muted)}
+.faq-item{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.faq-item h3{font-size:15px;font-weight:700;margin-bottom:8px;color:var(--text)}
+.faq-item p{margin:0;font-size:14px}
+.cta-block{text-align:center;background:linear-gradient(135deg,rgba(79,70,229,.12),rgba(124,58,237,.08));border:1px solid rgba(129,140,248,.25);border-radius:16px;padding:32px;margin-top:36px}
+.cta-block a{display:inline-block;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;padding:13px 30px;border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;margin-top:14px}
+footer{margin-top:48px;font-size:11px;color:var(--muted);line-height:1.8;text-align:center}
+footer a{color:var(--muted)}
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+  <meta name="theme-color" content="#070a20">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+</head>
+<body class="tlm-wow tlm-page-editorial">
+
+<nav>
+  <a href="/" class="nav-brand">TousLes<span>Matchs</span></a>
+  <a href="/#plans" class="nav-cta">Voir les abonnements</a>
+</nav>
+
+<div class="page">
+  <div class="bc"><a href="/">Accueil</a> · Pronostic IA</div>
+  <h1>Pronostic IA sportif : comment fonctionne un Concile de 5 IA</h1>
+  <p class="lead">Un pronostic IA n'est fiable que s'il peut être vérifié après coup. Voici comment TousLesMatchs fait analyser chaque match par 5 intelligences artificielles indépendantes, et pourquoi la majorité des matchs n'aboutissent jamais à un signal publié.</p>
+
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat"><b id="s-total">—</b><span>analyses vérifiées</span></div>
+    <div class="stat"><b id="s-winrate">—</b><span>taux de réussite</span></div>
+    <div class="stat"><b id="s-wins">—</b><span>gagnées</span></div>
+    <div class="stat"><b id="s-losses">—</b><span>perdues</span></div>
+  </div>
+
+  <h2>Qu'est-ce qu'un pronostic IA sportif ?</h2>
+  <p>Un pronostic IA sportif est une estimation de l'issue d'un match produite par un modèle d'intelligence artificielle à partir de données réelles : forme des deux équipes, confrontations directes (H2H), contexte de la rencontre, cotes proposées par les bookmakers agréés ANJ. Contrairement à un avis de pronostiqueur classique, une analyse IA peut en théorie être reproduite et vérifiée dans le temps.</p>
+
+  <h2>Comment fonctionne le Concile de 5 IA de TousLesMatchs ?</h2>
+  <p>Chaque match observé est analysé séparément par 5 intelligences artificielles indépendantes, qui votent chacune pour une issue à partir des mêmes données. Le niveau de consensus entre elles détermine le score de confiance publié — exprimé sur 100, jamais en pourcentage de "certitude" qui prêterait à confusion. Un signal n'est diffusé que lorsque ce score dépasse un seuil strict : la grande majorité des matchs analysés chaque jour n'atteint jamais ce seuil et reste donc invisible pour les abonnés, par choix — la sélectivité prime sur le volume.</p>
+
+  <h2>Les pronostics IA sont-ils fiables ?</h2>
+  <p>Aucune intelligence artificielle ne peut garantir un résultat sportif futur, et personne de sérieux ne devrait l'affirmer. La seule mesure honnête de fiabilité est un historique vérifiable : chaque analyse diffusée par TousLesMatchs, gagnée comme perdue, reste publiée sans exception sur la page <a href="/performances">Performances</a>.</p>
+
+  <h2>Questions fréquentes</h2>
+  <div class="faq-item">
+    <h3>TousLesMatchs est-il gratuit ?</h3>
+    <p>Un canal Telegram gratuit diffuse un pronostic quotidien. Des paliers payants (Standard, Premium, Elite) élargissent l'accès à davantage de signaux, en football.</p>
+  </div>
+  <div class="faq-item">
+    <h3>Quelle différence avec un pronostiqueur classique ?</h3>
+    <p>Un pronostiqueur classique donne un avis unique et rarement vérifiable. Le Concile IA fait voter 5 modèles indépendants sur les mêmes données et ne publie un signal qu'en cas de consensus fort, avec un historique intégralement public.</p>
+  </div>
+  <div class="faq-item">
+    <h3>Où voir les résultats vérifiés ?</h3>
+    <p>Sur la page <a href="/performances">Performances</a> : chaque analyse diffusée y figure avec son résultat réel, sans filtrage.</p>
+  </div>
+
+  <div class="cta-block">
+    <div style="font-weight:800;font-size:17px">Voir les analyses en direct</div>
+    <div style="color:var(--muted2);font-size:13px;margin-top:6px">Le Concile de 5 IA analyse les matchs en cours, en temps réel.</div>
+    <a href="/live-ia">Voir le Live IA →</a>
+  </div>
+
+  <footer>
+    LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction.<br>
+    Conseils sur joueurs-info-service.fr — 09 74 75 13 13 (appel non surtaxé).<br>
+    18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives basées sur des données réelles, qui ne préjugent pas des résultats futurs.<br>
+    <a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Confidentialité</a>
+  </footer>
+</div>
+
+<script>
+fetch('/api/signal-fort-stats').then(function(r){return r.json();}).then(function(d){
+  if (!d.ok) return;
+  document.getElementById('s-total').textContent = d.total || '0';
+  document.getElementById('s-winrate').textContent = (d.winrate != null ? d.winrate : '0') + '%';
+  document.getElementById('s-wins').textContent = d.wins || '0';
+  document.getElementById('s-losses').textContent = d.losses || '0';
+}).catch(function(){});
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+<script src="/js/cookie-consent.js" defer></script>
+  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+</body>
+</html>

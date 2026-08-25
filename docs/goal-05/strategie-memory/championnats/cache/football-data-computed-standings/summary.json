@@ -1,0 +1,77 @@
+[
+  {
+    "country": "Allemagne",
+    "league": "Bundesliga",
+    "teams": 24,
+    "complete_3plus": 16,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\allemagne-bundesliga.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\allemagne-bundesliga.json",
+    "top5": [
+      "Bayern Munich",
+      "Leverkusen",
+      "Dortmund",
+      "RB Leipzig",
+      "Ein Frankfurt"
+    ]
+  },
+  {
+    "country": "Portugal",
+    "league": "Primeira Liga",
+    "teams": 25,
+    "complete_3plus": 16,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\portugal-primeira-liga.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\portugal-primeira-liga.json",
+    "top5": [
+      "Sp Lisbon",
+      "Benfica",
+      "Porto",
+      "Sp Braga",
+      "Guimaraes"
+    ]
+  },
+  {
+    "country": "Pays-Bas",
+    "league": "Eredivisie",
+    "teams": 23,
+    "complete_3plus": 16,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\pays-bas-eredivisie.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\pays-bas-eredivisie.json",
+    "top5": [
+      "PSV Eindhoven",
+      "Feyenoord",
+      "Ajax",
+      "AZ Alkmaar",
+      "Twente"
+    ]
+  },
+  {
+    "country": "Belgique",
+    "league": "Pro League",
+    "teams": 21,
+    "complete_3plus": 15,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\belgique-pro-league.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\belgique-pro-league.json",
+    "top5": [
+      "St. Gilloise",
+      "Club Brugge",
+      "Genk",
+      "Anderlecht",
+      "Antwerp"
+    ]
+  },
+  {
+    "country": "Ecosse",
+    "league": "Premiership",
+    "teams": 13,
+    "complete_3plus": 13,
+    "csv": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\ecosse-premiership.csv",
+    "json": "C:\\Users\\Greg\\Desktop\\touslesmatchs sauvegarde\\touslesmatchs-site\\docs\\goal-05\\strategie-memory\\championnats\\cache\\football-data-computed-standings\\ecosse-premiership.json",
+    "top5": [
+      "Celtic",
+      "Rangers",
+      "Hearts",
+      "Hibernian",
+      "Aberdeen"
+    ]
+  }
+]

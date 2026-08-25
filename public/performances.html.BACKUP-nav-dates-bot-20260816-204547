@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performances du Concile IA — TousLesMatchs</title>
+<meta name="description" content="Statistiques vérifiées du Concile Hermès : winrate, ROI, bénéfice simulé, cote moyenne et historique daté complet. Filtrable par palier. Aucun résultat caché.">
+<link rel="canonical" href="https://www.touslesmatchs.com/performances">
+<link rel="icon" href="/favicon.ico">
+<meta property="og:title" content="Performances — TousLesMatchs">
+<meta property="og:description" content="Winrate, ROI, bénéfice simulé et historique complet du Concile IA. Transparence totale.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.touslesmatchs.com/performances">
+<meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Performances — TousLesMatchs">
+<meta name="twitter:description" content="Résultats vérifiés du Concile IA. Aucun pick caché.">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#12152a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Performances du Concile IA",
+  "description": "Statistiques vérifiées : winrate, ROI, bénéfice simulé, cote moyenne et historique complet des analyses sportives IA.",
+  "url": "https://www.touslesmatchs.com/performances",
+  "isPartOf": { "@id": "https://www.touslesmatchs.com/#website" }
+}
+</script>
+<style>
+:root{
+  --bg:#12152a;--bg2:#171b34;--bg3:#1e2340;--bg4:#262c4d;
+  --b1:rgba(255,255,255,.11);--b2:rgba(255,255,255,.18);--b3:rgba(255,255,255,.24);
+  --text:#f6f7ff;--muted:#949bc4;--muted2:#c4c9e6;
+  --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;
+  --cyan:#22d3ee;--green:#10b981;--red:#f43f5e;--amber:#f59e0b;--gold:#d4af37;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 40px;height:60px;
+  background:rgba(6,8,15,.75);border-bottom:1px solid var(--b1);
+  backdrop-filter:blur(20px) saturate(180%);
+}
+.nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--text);text-decoration:none;flex:0 0 auto}
+.nav-links{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;flex:1}
+.nav-links a{font-size:13px;color:#c4c9e6;text-decoration:none;padding:6px 16px;border-radius:8px;font-weight:500;transition:all .15s;display:inline-flex;align-items:center}
+.nav-live-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#f43f5e;margin-right:6px;animation:navPulseDot 1.5s infinite}
+.nav-live-link{color:#22d3ee !important}
+@keyframes navPulseDot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(244,63,94,0)}}
+.nav-links a:hover{color:#f6f7ff;background:rgba(255,255,255,.11)}
+.nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.nav-cta{font-size:13px;font-weight:700;padding:8px 20px;border-radius:9px;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.3);transition:all .2s;white-space:nowrap}
+.nav-cta:hover{box-shadow:0 6px 28px rgba(79,70,229,.5);transform:translateY(-1px)}
+.nav-login-btn{background:transparent;border:1px solid var(--b3);color:var(--text);padding:7px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nav-login-btn:hover{border-color:var(--violet)}
+.nav-hamburger{display:none;background:none;border:1px solid var(--b2);border-radius:8px;color:var(--text);width:34px;height:34px;font-size:16px;cursor:pointer}
+@media(max-width:900px){ .nav-links{display:none} .nav-hamburger{display:block} }
+@media(max-width:560px){ .nav-cta{display:none} }
+.modal-bg{position:fixed;inset:0;z-index:300;background:rgba(5,6,13,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--b3);border-radius:16px;padding:26px;max-width:380px;width:100%;position:relative}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:18px}
+.modal-label{font-size:12px;font-weight:700;color:var(--muted2);margin-bottom:6px;display:block}
+.modal-input{width:100%;background:var(--bg);border:1px solid var(--b2);border-radius:9px;padding:11px 12px;color:var(--text);font-size:15px;margin-bottom:12px;font-family:inherit}
+.modal-btn{width:100%;background:linear-gradient(135deg,var(--violet),var(--indigo2));color:#fff;border:none;border-radius:9px;padding:12px;font-weight:700;font-size:15px;cursor:pointer;margin-bottom:10px}
+.modal-err{color:#ef4444;font-size:13px;margin-bottom:10px;display:none}
+.modal-ok{color:var(--green);font-size:13px;margin-bottom:10px;display:none}
+.mmenu{display:none;position:fixed;inset:0;z-index:199;background:rgba(6,8,15,.98);padding:90px 24px 24px;flex-direction:column;gap:18px}
+.mmenu.open{display:flex}
+.mmenu a{font-size:18px;font-weight:700;color:var(--text);text-decoration:none;padding:10px 0;border-bottom:1px solid var(--b1)}
+
+.page{max-width:960px;margin:0 auto;padding:100px 24px 60px}
+
+.page-title{font-size:clamp(28px,4vw,44px);font-weight:900;letter-spacing:-.035em;margin-bottom:8px}
+.page-sub{font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:28px;max-width:640px}
+
+/* Onglets paliers */
+.tier-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.tier-tab{
+  font-size:13px;font-weight:700;padding:9px 18px;border-radius:10px;cursor:pointer;
+  background:var(--bg2);border:1px solid var(--b2);color:var(--muted2);transition:all .15s;
+}
+.tier-tab:hover{border-color:var(--b3);color:var(--text)}
+.tier-tab.active{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border-color:transparent;box-shadow:0 4px 18px rgba(79,70,229,.3)}
+.tier-note{font-size:12px;color:var(--muted);margin:-14px 0 24px;line-height:1.5}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:20px 16px;text-align:center;transition:border-color .2s}
+.kpi:hover{border-color:var(--b3)}
+.kpi-val{font-size:30px;font-weight:900;letter-spacing:-.03em;line-height:1;margin-bottom:6px}
+.kpi-lbl{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.c-green{color:var(--green)}.c-cyan{color:var(--cyan)}.c-indigo{color:var(--indigo2)}.c-amber{color:var(--amber)}.c-red{color:var(--red)}.c-gold{color:var(--gold)}
+
+.roi-caption{font-size:12px;color:var(--muted);margin-bottom:40px;line-height:1.6}
+
+.section-title{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.section-hint{font-size:12px;color:var(--muted);margin-bottom:20px}
+
+.history-list{display:flex;flex-direction:column;gap:6px;margin-bottom:24px}
+.h-item{
+  display:grid;grid-template-columns:70px 1fr auto auto auto;align-items:center;gap:12px;
+  background:var(--bg2);border:1px solid var(--b2);border-radius:12px;padding:12px 16px;
+  transition:border-color .2s;
+}
+.h-item:hover{border-color:var(--b3)}
+.h-date{font-size:11px;color:var(--muted);white-space:nowrap;line-height:1.3}
+.h-match{display:flex;flex-direction:column;gap:2px;min-width:0}
+.h-teams{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-comp{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-bet{font-size:12px;font-weight:600;color:var(--muted2);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.h-tier{font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.h-odds{font-size:13px;font-weight:800;color:var(--cyan);white-space:nowrap}
+.h-gain{font-size:12px;font-weight:800;white-space:nowrap;min-width:52px;text-align:right}
+.h-badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:7px;white-space:nowrap}
+.h-badge.win{color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25)}
+.h-badge.loss{color:var(--red);background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2)}
+.h-badge.pending{color:var(--amber);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)}
+
+.conf-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap}
+.conf-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
+.conf-pill.green{color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25)}
+.conf-pill.green .conf-dot{background:var(--green)}
+.conf-pill.yellow{color:#facc15;background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3)}
+.conf-pill.yellow .conf-dot{background:#facc15}
+.conf-pill.orange{color:#f97316;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3)}
+.conf-pill.orange .conf-dot{background:#f97316}
+.conf-pill.red{color:var(--red);background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25)}
+.conf-pill.red .conf-dot{background:var(--red)}
+
+.freshness-banner{display:flex;align-items:center;gap:10px;background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.2);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--muted2);line-height:1.5}
+.freshness-banner .fb-icon{font-size:18px;flex-shrink:0}
+
+.conf-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.conf-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--bg2);border:1px solid var(--b2)}
+.conf-legend-item .conf-dot{width:10px;height:10px;border-radius:50%}
+.conf-legend-item .conf-dot.green{background:var(--green)}
+.conf-legend-item .conf-dot.yellow{background:#facc15}
+.conf-legend-item .conf-dot.orange{background:#f97316}
+.conf-legend-item .conf-dot.red{background:var(--red)}
+
+.load-more{display:block;margin:0 auto;padding:12px 32px;border-radius:10px;font-size:14px;font-weight:700;background:rgba(255,255,255,.11);border:1px solid var(--b2);color:var(--text);cursor:pointer;transition:all .2s}
+.load-more:hover{background:rgba(255,255,255,.18);border-color:var(--b3)}
+
+.state-box{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
+.retry-btn{margin-top:14px;padding:10px 24px;border-radius:9px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;cursor:pointer}
+
+.disclaimer{margin-top:48px;padding:20px;background:rgba(244,63,94,.04);border:1px solid rgba(244,63,94,.15);border-radius:14px;font-size:12px;color:var(--muted);line-height:1.7;text-align:center}
+
+footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin-top:60px}
+.foot-text{font-size:12px;color:var(--muted);line-height:1.9;max-width:500px;margin:0 auto}
+
+.spinner-wrap{text-align:center;padding:60px}
+.spinner{width:32px;height:32px;border:3px solid var(--b2);border-top-color:var(--indigo2);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:768px){
+  nav{padding:0 16px}
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .h-item{grid-template-columns:52px 1fr auto;gap:10px}
+  .h-bet,.h-odds{display:none}
+}
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+  <meta name="theme-color" content="#070a20">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+
+<!-- TLM OFFICIAL BRAND / SEO / TELEGRAM -->
+<link rel="canonical" href="https://www.touslesmatchs.com/">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/brand/logo180.png">
+<meta name="theme-color" content="#050816">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TousLesMatchs">
+<meta property="og:title" content="TousLesMatchs.com - Analyses sportives par IA">
+<meta property="og:description" content="Aide à la décision sportive par statistiques, IA et historique de performance.">
+<meta property="og:url" content="https://www.touslesmatchs.com/">
+<meta property="og:image" content="https://www.touslesmatchs.com/assets/brand/touslesmatchs-og.jpg">
+<meta property="og:image:secure_url" content="https://www.touslesmatchs.com/assets/brand/touslesmatchs-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TousLesMatchs.com - Analyses sportives par IA">
+<meta name="twitter:description" content="Aide à la décision sportive par statistiques, IA et historique de performance.">
+<meta name="twitter:image" content="https://www.touslesmatchs.com/assets/brand/touslesmatchs-og.jpg">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"TousLesMatchs","url":"https://www.touslesmatchs.com/","image":"https://www.touslesmatchs.com/assets/brand/touslesmatchs-official.jpg"}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style id="tlm-navbar-safe-css">
+header,nav,.navbar,.nav,.topbar,header *,nav *,.navbar *,.nav *,.topbar *{
+  font-family:"Segoe UI",Arial,Helvetica,sans-serif!important;
+  -webkit-font-smoothing:antialiased!important;
+  -moz-osx-font-smoothing:grayscale!important;
+  text-rendering:optimizeLegibility!important;
+  text-shadow:none!important;
+  filter:none!important;
+  letter-spacing:0!important;
+}
+
+a[href="#pick"],a[href="/#pick"],a[href*="live-ia"],a[href*="performances"],a[href*="bankroll"],a[href="#methode"],a[href="/#methode"],a[href="#plans"],a[href="/#plans"]{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  color:#eaf0ff!important;
+  font-size:15px!important;
+  font-weight:700!important;
+  padding:8px 10px!important;
+  text-decoration:none!important;
+}
+
+a[href*="live-ia"]{color:#35e8ff!important}
+
+.tlm-brand-nav-logo{
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  object-fit:cover!important;
+  border-radius:10px!important;
+  margin-right:10px!important;
+  display:inline-block!important;
+  vertical-align:-14px!important;
+  box-shadow:0 0 14px rgba(0,174,255,.55)!important;
+}
+</style>
+<style id="tlm-nav-flat-final-css">
+header nav a,
+header a[href="#pick"], header a[href="/#pick"],
+header a[href*="live-ia"], header a[href*="performances"], header a[href*="bankroll"],
+header a[href="#methode"], header a[href="/#methode"],
+header a[href="#plans"], header a[href="/#plans"],
+nav a[href="#pick"], nav a[href="/#pick"],
+nav a[href*="live-ia"], nav a[href*="performances"], nav a[href*="bankroll"],
+nav a[href="#methode"], nav a[href="/#methode"],
+nav a[href="#plans"], nav a[href="/#plans"]{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  border-radius:0!important;
+  color:#f7f8ff!important;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+  line-height:1!important;
+  padding:0 10px!important;
+  height:auto!important;
+  min-height:0!important;
+  text-shadow:none!important;
+  filter:none!important;
+}
+header nav a:hover,
+nav a:hover{
+  color:#35e8ff!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+header a[href*="live-ia"],
+nav a[href*="live-ia"]{
+  color:#35e8ff!important;
+}
+header a[href*="live-ia"]::before,
+nav a[href*="live-ia"]::before{
+  content:"";
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#ef3b6d;
+  margin-right:7px;
+  vertical-align:1px;
+}
+.tlm-brand-nav-logo{
+  width:42px!important;
+  height:42px!important;
+  border-radius:10px!important;
+  object-fit:cover!important;
+  margin-right:10px!important;
+  box-shadow:0 0 14px rgba(0,174,255,.45)!important;
+}
+@media(max-width:900px){
+  header nav a, nav a{font-size:13px!important;padding:0 7px!important}
+}
+</style>
+</head>
+<body class="tlm-wow tlm-page-performances">
+
+<nav>
+  <a href="/" class="nav-brand">TousLesMatchs</a>
+  <div class="nav-links">
+    <a href="/#pick">Analyses</a>
+    <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span>Live IA</a>
+    <a href="/performances" style="color:var(--text)">Résultats</a>
+    <a href="/bankroll">Bankroll</a>
+    <a href="/#methode">Méthode</a>
+    <a href="/#plans">Tarifs</a>
+  </div>
+  <div class="nav-right">
+    <button class="nav-login-btn" id="nav-se-connecter" onclick="openModal()">Se connecter</button>
+    <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
+    <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+<div class="modal-bg" id="modal-login">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">Accès membre</div>
+    <div class="modal-sub">Entre ton email et ton code d'accès reçu par email après paiement.</div>
+    <label class="modal-label">Email</label>
+    <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
+    <label class="modal-label">Code d'accès</label>
+    <input class="modal-input" id="login-code" type="text" placeholder="STANDARD-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
+    <div class="modal-err" id="login-err"></div>
+    <div class="modal-ok" id="login-ok"></div>
+    <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <div style="font-size:11px;color:var(--muted);text-align:center">Pas encore de code ? <a href="/#plans" onclick="closeModal()" style="color:var(--indigo2);text-decoration:none">Voir les abonnements</a></div>
+  </div>
+</div>
+<script>
+// tlm_plan (localStorage) est partage avec les autres pages : si deja
+// abonne, inutile de proposer le CTA gratuit ou le bouton de connexion.
+if (localStorage.getItem('tlm_plan')) {
+  var _navCta = document.getElementById('nav-cta-top');
+  if (_navCta) _navCta.style.display = 'none';
+  var _navLogin = document.getElementById('nav-se-connecter');
+  if (_navLogin) _navLogin.style.display = 'none';
+}
+function openModal(){
+  document.getElementById('modal-login').classList.add('open');
+  document.getElementById('login-email').value = localStorage.getItem('tlm_email') || '';
+  document.getElementById('login-code').value = localStorage.getItem('tlm_code') || '';
+}
+function closeModal(){ document.getElementById('modal-login').classList.remove('open'); }
+document.getElementById('modal-login').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
+document.getElementById('login-code').addEventListener('keydown', function(e){ if (e.key === 'Enter') doLogin(); });
+async function doLogin(){
+  var email = document.getElementById('login-email').value.trim().toLowerCase();
+  var code = document.getElementById('login-code').value.trim().toUpperCase();
+  var errEl = document.getElementById('login-err'), okEl = document.getElementById('login-ok'), btn = document.getElementById('login-btn');
+  errEl.style.display = 'none'; okEl.style.display = 'none';
+  if (!email || !code) { errEl.textContent = 'Email et code requis.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Vérification…';
+  try {
+    var r = await fetch('/api/verify-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, code: code, login: true }) });
+    var d = await r.json();
+    if (d.valid) {
+      localStorage.setItem('tlm_email', email);
+      localStorage.setItem('tlm_code', code);
+      localStorage.setItem('tlm_session', d.session_token || '');
+      localStorage.setItem('tlm_plan', d.plan);
+      okEl.textContent = '✓ Connecté — Plan ' + d.plan;
+      okEl.style.display = 'block';
+      setTimeout(function(){
+        closeModal();
+        var _navCta = document.getElementById('nav-cta-top'); if (_navCta) _navCta.style.display = 'none';
+        var _navLogin = document.getElementById('nav-se-connecter'); if (_navLogin) _navLogin.style.display = 'none';
+        if (typeof fetchData === 'function') { currentOffset = 0; fetchData(true); }
+      }, 800);
+    } else {
+      errEl.textContent = d.error || 'Code invalide.'; errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Accéder →';
+    }
+  } catch (e) {
+    errEl.textContent = 'Erreur réseau.'; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Accéder →';
+  }
+}
+</script>
+<div class="mmenu" id="mmenu">
+  <a href="/#pick" onclick="toggleMenu()">Analyses</a>
+  <a href="/live-ia" onclick="toggleMenu()" class="nav-live-link"><span class="nav-live-dot"></span>Live IA</a>
+  <a href="/performances" onclick="toggleMenu()">Résultats</a>
+  <a href="/bankroll" onclick="toggleMenu()">Bankroll</a>
+  <a href="/#methode" onclick="toggleMenu()">Méthode</a>
+  <a href="/#plans" onclick="toggleMenu()">Tarifs</a>
+  <a href="/dashboard" onclick="toggleMenu()">Créer mon compte gratuit</a>
+</div>
+
+<div class="page">
+  <div class="page-title">Performances du Concile</div>
+  <div class="page-sub">Tous les résultats depuis le lancement. Aucun pick caché, aucune statistique modifiée. Winrate, ROI et bénéfice sont calculés automatiquement depuis notre base, sur une mise fixe de 10&nbsp;€ par analyse.</div>
+
+  <div class="tier-tabs" id="tier-tabs">
+    <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
+    <div class="tier-tab" data-tier="dailypick" onclick="selectTier('dailypick')">🎯 Pick du jour</div>
+    <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥇 Standard</div>
+    <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
+    <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
+  </div>
+  <div class="tier-note" id="tier-note">Les paliers sont cumulatifs, score de confiance minimum 82/100 pour Standard et Premium, 75/100 pour Elite-VIP : Standard = la sélection la plus stricte du jour (cote réelle ANJ), Premium l'élargit, Elite regroupe tout le vivier diffusable.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Analyses</div></div>
+    <div class="kpi"><div class="kpi-val c-green" id="k-winrate">—</div><div class="kpi-lbl">Winrate</div></div>
+    <div class="kpi"><div class="kpi-val c-green" id="k-wins">—</div><div class="kpi-lbl">Gagnées</div></div>
+    <div class="kpi"><div class="kpi-val c-red" id="k-losses">—</div><div class="kpi-lbl">Perdues</div></div>
+    <div class="kpi"><div class="kpi-val c-amber" id="k-pending">—</div><div class="kpi-lbl">En attente</div></div>
+    <div class="kpi"><div class="kpi-val c-cyan" id="k-odds">—</div><div class="kpi-lbl">Cote moyenne</div></div>
+    <div class="kpi"><div class="kpi-val c-indigo" id="k-roi">—</div><div class="kpi-lbl">ROI</div></div>
+    <div class="kpi"><div class="kpi-val c-gold" id="k-profit">—</div><div class="kpi-lbl">Bénéfice (10€/mise)</div></div>
+  </div>
+  <div class="roi-caption" id="roi-caption"></div>
+
+  <div class="section-title">Historique daté</div>
+  <div class="conf-legend">
+    <span class="conf-legend-item"><span class="conf-dot green"></span>≥85/100 Fiable</span>
+    <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84/100 Bon</span>
+    <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74/100 Risqué</span>
+    <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
+  </div>
+  <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
+  <div class="section-hint" id="history-hint">Chaque ligne = une analyse. Cote réelle ANJ quand disponible, sinon estimation marché.</div>
+  <div id="history-list" class="history-list">
+    <div class="spinner-wrap"><div class="spinner"></div></div>
+  </div>
+  <button class="load-more" id="load-more" style="display:none" onclick="loadMore()">Charger plus</button>
+
+  <div class="disclaimer">
+    LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction.<br>
+    Conseils sur joueurs-info-service.fr — 09 74 75 13 13 (appel non surtaxé).<br>
+    18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives · Jouez uniquement ce que vous pouvez perdre.
+  </div>
+</div>
+
+<footer>
+  <div class="foot-text">
+    <a href="/" style="color:var(--muted);text-decoration:none">TousLesMatchs</a> · Analyse sportive assistée par IA<br>
+    <span style="margin-top:8px;display:inline-block">
+      <a href="/mentions-legales.html" style="color:var(--muted);text-decoration:none;opacity:.6">Mentions légales</a>
+      <span style="margin:0 6px;opacity:.3">·</span>
+      <a href="/cgu.html" style="color:var(--muted);text-decoration:none;opacity:.6">CGU</a>
+      <span style="margin:0 6px;opacity:.3">·</span>
+      <a href="/confidentialite.html" style="color:var(--muted);text-decoration:none;opacity:.6">Confidentialité</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+var allAnalyses = [];        // toutes les lignes chargées (toutes confondues)
+var currentOffset = 0;
+var pageSize = 50;
+var totalCount = 0;
+var globalStats = null;      // stats globales renvoyées par l'API
+var currentTier = 'all';
+
+function toggleMenu() { document.getElementById('mmenu').classList.toggle('open'); }
+
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  try {
+    var dt = new Date(String(d).replace(' ', 'T'));
+    if (isNaN(dt)) return String(d).slice(0, 10);
+    return dt.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+  } catch(e) { return String(d).slice(0, 10); }
+}
+
+// Appartenance d'une ligne à un palier (mêmes règles que l'API).
+// On s'appuie sur le champ `tier` calculé par l'API (palier le plus bas qui reçoit
+// l'analyse), au lieu de redupliquer les seuils ici : une seule source de vérité,
+// donc plus de risque que la page contredise les canaux Telegram.
+// Modèle imbriqué : Elite ⊇ Premium ⊇ Standard.
+function rowInTier(a, tier) {
+  if (tier === 'all') return true;
+  if (tier === 'standard') return a.tier === 'standard';
+  if (tier === 'premium') return a.tier === 'standard' || a.tier === 'premium';
+  if (tier === 'elite') return a.tier === 'standard' || a.tier === 'premium' || a.tier === 'elite';
+  return true;
+}
+
+function statsForTier(tier) {
+  if (tier === 'all' || !globalStats) return globalStats || {};
+  if (globalStats.tiers && globalStats.tiers[tier]) return globalStats.tiers[tier];
+  return {};
+}
+
+function fmtSigned(n) {
+  var v = Math.round(Number(n) || 0);
+  return (v > 0 ? '+' : '') + v + '€';
+}
+
+function renderKpis() {
+  var s = statsForTier(currentTier);
+  var total = Number(s.total) || 0;
+  var wins = Number(s.wins) || 0;
+  var losses = Number(s.losses) || 0;
+
+  document.getElementById('k-total').textContent = total;
+  document.getElementById('k-winrate').textContent = total > 0 ? (s.winrate || 0) + '%' : '—';
+  document.getElementById('k-wins').textContent = total > 0 ? wins : '—';
+  document.getElementById('k-losses').textContent = total > 0 ? losses : '—';
+
+  // "En attente" n'existe qu'au niveau global (les paliers ne comptent que le résolu).
+  var pendingEl = document.getElementById('k-pending');
+  if (currentTier === 'all') pendingEl.textContent = (globalStats && globalStats.pending != null) ? globalStats.pending : '—';
+  else pendingEl.textContent = '—';
+
+  document.getElementById('k-odds').textContent = total > 0 ? '@' + Number(s.avg_odds || 0).toFixed(2) : '—';
+
+  var roiEl = document.getElementById('k-roi');
+  if (total > 0) {
+    var roi = Number(s.roi_pct) || 0;
+    roiEl.textContent = (roi > 0 ? '+' : '') + roi + '%';
+    roiEl.style.color = roi >= 0 ? 'var(--green)' : 'var(--red)';
+  } else { roiEl.textContent = '—'; roiEl.style.color = ''; }
+
+  var profitEl = document.getElementById('k-profit');
+  if (total > 0) {
+    var p = Number(s.profit10) || 0;
+    profitEl.textContent = fmtSigned(p);
+    profitEl.style.color = p >= 0 ? 'var(--gold)' : 'var(--red)';
+  } else { profitEl.textContent = '—'; profitEl.style.color = ''; }
+
+  var cap = document.getElementById('roi-caption');
+  if (total > 0) {
+    cap.textContent = 'Sur ' + total + ' analyse' + (total > 1 ? 's' : '') + ' résolue' + (total > 1 ? 's' : '')
+      + ' — ' + wins + ' gagnée' + (wins > 1 ? 's' : '') + ', ' + losses + ' perdue' + (losses > 1 ? 's' : '')
+      + '. Bénéfice simulé à 10 € la mise : ' + fmtSigned(s.profit10) + ' (ROI ' + (Number(s.roi_pct) >= 0 ? '+' : '') + (Number(s.roi_pct) || 0) + ' %).';
+  } else {
+    cap.textContent = 'Aucune analyse résolue pour ce palier pour l\'instant.';
+  }
+}
+
+function tierBadgeLabel(t) {
+  if (t === 'standard') return '🥇 Standard';
+  if (t === 'premium') return '🥈 Premium';
+  if (t === 'elite') return '🥉 Elite';
+  return '';
+}
+
+// Pastille de couleur selon le % de confiance au moment de l'analyse — montre
+// ce que le client aurait vu s'il avait suivi ce pick, même sur un match déjà
+// terminé (même échelle que la page Live IA et les messages Telegram).
+function confMeta(conf) {
+  var c = Number(conf) || 0;
+  if (c >= 85) return { cls: 'green',  label: 'Fiable' };
+  if (c >= 75) return { cls: 'yellow', label: 'Bon' };
+  if (c >= 65) return { cls: 'orange', label: 'Risqué' };
+  return { cls: 'red', label: 'Prudence' };
+}
+
+function renderRow(a) {
+  var badge;
+  if (a.outcome === 'win') badge = '<span class="h-badge win">Gagné</span>';
+  else if (a.outcome === 'loss') badge = '<span class="h-badge loss">Perdu</span>';
+  else badge = '<span class="h-badge pending">En attente</span>';
+
+  var resolved = a.outcome === 'win' || a.outcome === 'loss';
+  var betText = a.bet || (a.locked ? '🔒 Réservé' : '—');
+  var score = a.final_score || a.score || '';
+  var cote = (a.cote != null && a.cote > 1) ? '@' + Number(a.cote).toFixed(2) : '';
+  var cm = confMeta(a.confidence);
+  var confPillHtml = a.confidence != null
+    ? '<span class="conf-pill ' + cm.cls + '"><span class="conf-dot"></span>' + Math.round(a.confidence) + '/100 · ' + cm.label + '</span>'
+    : '';
+
+  var gainHtml = '';
+  if (resolved && a.cote != null && a.cote > 1) {
+    var g = a.outcome === 'win' ? (a.cote * 10 - 10) : -10;
+    gainHtml = '<div class="h-gain" style="color:' + (g >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtSigned(g) + '</div>';
+  } else {
+    gainHtml = '<div class="h-gain" style="color:var(--muted)">—</div>';
+  }
+
+  return '<div class="h-item">' +
+    '<div class="h-date">' + esc(fmtDate(a.analysed_at)) + '</div>' +
+    '<div class="h-match">' +
+      '<div class="h-teams">' + esc(a.home) + ' — ' + esc(a.away) + (score ? ' <span style="color:var(--muted);font-weight:500">(' + esc(score) + ')</span>' : '') + '</div>' +
+      '<div class="h-comp">' + esc(a.competition || a.sport || '') + '</div>' +
+      '<div class="h-tier">' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + '</div>' +
+    '</div>' +
+    '<div class="h-bet">' + esc(betText) + '</div>' +
+    '<div class="h-odds">' + cote + '</div>' +
+    gainHtml +
+    badge +
+  '</div>';
+}
+
+function visibleRows() {
+  return allAnalyses.filter(function(a){ return rowInTier(a, currentTier); });
+}
+
+function renderList() {
+  var el = document.getElementById('history-list');
+  var rows = visibleRows();
+  if (rows.length === 0) {
+    el.innerHTML = '<div class="state-box">Aucune analyse à afficher pour ce palier.</div>';
+    document.getElementById('load-more').style.display = allAnalyses.length < totalCount ? 'block' : 'none';
+    return;
+  }
+  el.innerHTML = rows.map(renderRow).join('');
+  document.getElementById('load-more').style.display = allAnalyses.length < totalCount ? 'block' : 'none';
+}
+
+// Historique du pick du jour (onglet dédié) — source distincte de
+// /api/analysis-history : une ligne par jour calendaire, pas par palier.
+var dailyPickRows = null;
+function renderDailyPickRow(p) {
+  var win = p.outcome === 'win', loss = p.outcome === 'loss';
+  var score = (p.final_score_home != null && p.final_score_away != null) ? (p.final_score_home + '-' + p.final_score_away) : '';
+  return renderRow({
+    analysed_at: p.date, home: p.home, away: p.away, competition: p.competition, sport: p.sport,
+    bet: p.bet, confidence: p.confidence, cote: p.cote, outcome: p.outcome, final_score: score, tier: null, locked: false
+  });
+}
+function loadDailyPickHistory() {
+  var el = document.getElementById('history-list');
+  document.getElementById('load-more').style.display = 'none';
+  if (dailyPickRows) { el.innerHTML = dailyPickRows.length ? dailyPickRows.map(renderDailyPickRow).join('') : '<div class="state-box">Aucun historique de pick du jour pour l\'instant.</div>'; return; }
+  el.innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  fetch('/api/daily-pick-history?limit=60')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      dailyPickRows = (d && d.ok && Array.isArray(d.picks)) ? d.picks : [];
+      el.innerHTML = dailyPickRows.length ? dailyPickRows.map(renderDailyPickRow).join('') : '<div class="state-box">Aucun historique de pick du jour pour l\'instant.</div>';
+    })
+    .catch(function(){ el.innerHTML = '<div class="state-box">Impossible de charger l\'historique du pick du jour.</div>'; });
+}
+
+function selectTier(tier) {
+  currentTier = tier;
+  var tabs = document.querySelectorAll('.tier-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tier') === tier);
+  }
+  if (tier === 'dailypick') { loadDailyPickHistory(); return; }
+  renderKpis();
+  ensureTierData(tier, 0);
+}
+
+// Les jours à faible confiance (peu de signaux ≥88/85), la première page de 50
+// lignes peut ne contenir aucune analyse d'un palier donné alors qu'il en
+// existe plus loin dans l'historique (les KPI, eux, portent sur tout
+// l'historique). On charge automatiquement des pages supplémentaires tant que
+// l'onglet sélectionné est vide, pour éviter un faux "Aucune analyse".
+function ensureTierData(tier, tries) {
+  if (currentTier !== tier) return; // l'utilisateur a changé d'onglet entre-temps
+  var rows = visibleRows();
+  if (rows.length > 0 || allAnalyses.length >= totalCount || tries >= 6) {
+    renderList();
+    return;
+  }
+  document.getElementById('history-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  currentOffset += pageSize;
+  fetchData(false).then(function () { ensureTierData(tier, tries + 1); });
+}
+
+function loadMore() {
+  currentOffset += pageSize;
+  fetchData(false);
+}
+
+function showError() {
+  document.getElementById('history-list').innerHTML =
+    '<div class="state-box">Impossible de charger les résultats pour le moment.' +
+    '<br><button class="retry-btn" onclick="currentOffset=0;fetchData(true)">Réessayer</button></div>';
+}
+
+function fetchData(initial) {
+  if (initial) {
+    document.getElementById('history-list').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+  }
+  // Sans email+code, /api/analysis-history ne peut pas savoir que le
+  // visiteur est un abonne (ou l'admin) et cadenasse TOUS les picks en
+  // cours, meme pour un compte Elite/admin connecte via localStorage.
+  var _email = localStorage.getItem('tlm_email');
+  var _code = localStorage.getItem('tlm_code');
+  // Identifiants en en-tetes, plus en query string (audit securite 05/08/2026)
+  var _authHdr = (_email && _code) ? { 'X-TLM-Email': _email, 'X-TLM-Code': _code } : {};
+  return fetch('/api/analysis-history?limit=' + pageSize + '&offset=' + currentOffset, { headers: _authHdr })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(d) {
+      if (!d || !d.ok) throw new Error('bad payload');
+      var list = Array.isArray(d.analyses) ? d.analyses : [];
+      if (initial) allAnalyses = list;
+      else allAnalyses = allAnalyses.concat(list);
+      totalCount = Number(d.total) || allAnalyses.length;
+      if (d.stats) globalStats = d.stats;
+      renderKpis();
+      renderList();
+    })
+    .catch(function() { if (initial) showError(); });
+}
+
+// Le pick du jour (vitrine gratuite, /api/daily-pick-history) vivait dans son
+// propre onglet, invisible des onglets Tous/Standard/Premium/Elite — Greg
+// voulait qu'il apparaisse partout (03/08/2026). tier:'standard' le fait
+// remonter dans tous les onglets grace au modele imbrique de rowInTier
+// (Standard ⊆ Premium ⊆ Elite ⊆ Tous). Dédoublonné contre /analysis-history
+// au cas où le même match y figurerait déjà (même home/away/jour).
+function normalizeDailyPick(p) {
+  var score = (p.final_score_home != null && p.final_score_away != null) ? (p.final_score_home + '-' + p.final_score_away) : '';
+  return {
+    analysed_at: p.date, home: p.home, away: p.away, competition: p.competition, sport: p.sport,
+    bet: p.bet, confidence: p.confidence, cote: p.cote, outcome: p.outcome, final_score: score,
+    tier: 'standard', locked: false
+  };
+}
+function mergeDailyPicksIntoList(picks) {
+  var existingKeys = {};
+  allAnalyses.forEach(function (a) {
+    var k = (a.home || '').toLowerCase().trim() + '_' + (a.away || '').toLowerCase().trim() + '_' + String(a.analysed_at || '').slice(0, 10);
+    existingKeys[k] = true;
+  });
+  var added = [];
+  picks.forEach(function (p) {
+    var norm = normalizeDailyPick(p);
+    var k = (norm.home || '').toLowerCase().trim() + '_' + (norm.away || '').toLowerCase().trim() + '_' + String(norm.analysed_at || '').slice(0, 10);
+    if (existingKeys[k]) return;
+    existingKeys[k] = true;
+    added.push(norm);
+  });
+  if (added.length) {
+    allAnalyses = allAnalyses.concat(added).sort(function (a, b) { return new Date(b.analysed_at) - new Date(a.analysed_at); });
+    totalCount += added.length;
+    if (currentTier !== 'dailypick') renderList();
+  }
+}
+
+fetchData(true).then(function () {
+  return fetch('/api/daily-pick-history?limit=60').then(function (r) { return r.json(); });
+}).then(function (d) {
+  if (d && d.ok && Array.isArray(d.picks)) mergeDailyPicksIntoList(d.picks);
+}).catch(function () {});
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+<script src="/js/cookie-consent.js" defer></script>
+
+  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+
+<script>
+(function(){
+  function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
+  function fmt(n){return Number(n||0).toLocaleString('fr-FR');}
+  var mois={janvier:'01',fevrier:'02',mars:'03',avril:'04',mai:'05',juin:'06',juillet:'07',aout:'08',septembre:'09',octobre:'10',novembre:'11',decembre:'12'};
+  function isoFromText(t){
+    var x=norm(t);
+    var m=x.match(/(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+([a-z]+)/);
+    if(!m||!mois[m[3]]) return null;
+    return '2026-'+mois[m[3]]+'-'+String(m[2]).padStart(2,'0');
+  }
+  function applyDailyStats(d){
+    if(!d||!d.ok) return;
+    var concile={}, agent={};
+    (d.daily_concile||[]).forEach(function(r){concile[r.jour]=r;});
+    (d.daily_agent||[]).forEach(function(r){agent[r.jour]=r;});
+
+    document.querySelectorAll('summary, .day-row, .history-day, details, div').forEach(function(el){
+      var txt=el.textContent||'';
+      if(!/selection retenue|sélection retenue/i.test(txt)) return;
+      var iso=isoFromText(txt);
+      if(!iso) return;
+      var c=concile[iso]||{};
+      var a=agent[iso]||{};
+      if(!c.analyses && !a.matches) return;
+      var msg=fmt(c.analyses||0)+' analyses Concile · '+fmt(a.matches||0)+' matchs IA · '+fmt(a.predictions||0)+' prédictions';
+      el.querySelectorAll('*').forEach(function(child){
+        if(/selection retenue|sélection retenue/i.test(child.textContent||'')) child.textContent=msg;
+      });
+      if(/selection retenue|sélection retenue/i.test(el.textContent||'') && el.children.length===0) el.textContent=el.textContent.replace(/0\s+s[ée]lection retenue/i,msg);
+    });
+  }
+  fetch('/api/public-analysis-stats?t='+Date.now()).then(function(r){return r.json();}).then(applyDailyStats).catch(function(){});
+})();
+</script>
+\n
+
+
+
+
+
+
+
+
+
+
+
+
+<script id="tlm-navbar-safe-logo-js">
+(function(){
+  function addLogo(){
+    if(document.querySelector('.tlm-brand-nav-logo')) return;
+    var items=[].slice.call(document.querySelectorAll('a,div,span,strong,h1,h2'));
+    var brand=items.find(function(el){
+      if(!el || !el.textContent) return false;
+      if(el.closest('script,style,head,title,meta')) return false;
+      var text=el.textContent.replace(/\s+/g,'').toLowerCase();
+      var box=el.getBoundingClientRect();
+      return text.includes('touslesmatchs') && box.width>40 && box.height>8 && box.top>=0 && box.top<160;
+    });
+    if(brand){
+      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/assets/brand/logo192.png?v=1786907124471" alt="TousLesMatchs">');
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addLogo); else addLogo();
+  setTimeout(addLogo,500);
+})();
+</script>
+</body>
+</html>

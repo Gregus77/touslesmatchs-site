@@ -1,0 +1,191 @@
+{
+  "date": "2026-08-13",
+  "timezone": "Europe/Paris",
+  "oddsRows": 30,
+  "fixtureIds": 20,
+  "candidates": [],
+  "rejected": [
+    {
+      "fixture": 1493940,
+      "reason": "country_not_allowed",
+      "country": "USA",
+      "league": "USL League One"
+    },
+    {
+      "fixture": 1507405,
+      "reason": "country_not_allowed",
+      "country": "Georgia",
+      "league": "Liga 3"
+    },
+    {
+      "fixture": 1511187,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Sweden",
+      "league": "Division 2 - Södra Svealand",
+      "home": "Sleipner",
+      "away": "Lindo FF"
+    },
+    {
+      "fixture": 1511641,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1511646,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1511648,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1513167,
+      "reason": "country_not_allowed",
+      "country": "USA",
+      "league": "MLS Next Pro"
+    },
+    {
+      "fixture": 1514255,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1514256,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1514257,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1514258,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1514259,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1514260,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1516097,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516098,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516104,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1526596,
+      "reason": "country_not_allowed",
+      "country": "Ecuador",
+      "league": "Liga Pro Serie B"
+    },
+    {
+      "fixture": 1526597,
+      "reason": "country_not_allowed",
+      "country": "Ecuador",
+      "league": "Liga Pro Serie B"
+    },
+    {
+      "fixture": 1526600,
+      "reason": "country_not_allowed",
+      "country": "Ecuador",
+      "league": "Liga Pro Serie B"
+    },
+    {
+      "fixture": 1530148,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1530149,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1530150,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1530151,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1530152,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1530153,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1530154,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "Leagues Cup"
+    },
+    {
+      "fixture": 1534821,
+      "reason": "country_not_allowed",
+      "country": "Kazakhstan",
+      "league": "1. Division"
+    },
+    {
+      "fixture": 1541660,
+      "reason": "country_not_allowed",
+      "country": "Finland",
+      "league": "Kakkonen - Lohko A"
+    },
+    {
+      "fixture": 1547757,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONMEBOL Libertadores"
+    },
+    {
+      "fixture": 1547762,
+      "reason": "country_not_allowed",
+      "country": "World",
+      "league": "CONMEBOL Libertadores"
+    }
+  ]
+}

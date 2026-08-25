@@ -1,0 +1,229 @@
+services:
+  site:
+    build: .
+    container_name: touslesmatchs-site
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      # Racine web = public/ (source unique, alignée sur `COPY public /srv` du Dockerfile).
+      # NE JAMAIS remettre `site/` ici : site/ contient la page générée par le Concile
+      # (template.html + index.html auto-généré), qui était servie par erreur comme
+      # page d'accueil (vieille version 42 Ko sans widgets) — bug de fragmentation, juillet 2026.
+      - /opt/touslesmatchs/public:/srv
+      - /opt/touslesmatchs/Caddyfile:/etc/caddy/Caddyfile
+    networks:
+      - web
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: touslesmatchs-api
+    restart: unless-stopped
+    environment:
+      - API_FOOTBALL_KEY=${API_FOOTBALL_KEY}
+      - FOOTBALL_DATA_KEY=${FOOTBALL_DATA_KEY}
+      - THESPORTSDB_API_KEY=${THESPORTSDB_API_KEY}
+      - AUTO_CONCILE_MULTISPORT=${AUTO_CONCILE_MULTISPORT}
+      - SHADOW_DAILY_CAP=${SHADOW_DAILY_CAP}
+      # Rationnement horaire API-Sports (scripts/api_server.js, apiSportsBudgetOk) —
+      # absente d'ici, cette variable ne passait jamais du .env au conteneur et le
+      # budget par defaut (90/j, ~4/h) s'appliquait meme si .env disait autre chose.
+      - API_SPORTS_DAILY_BUDGET=${API_SPORTS_DAILY_BUDGET}
+      # ── Reglages lus par le code mais qui n'etaient PAS transmis au conteneur ──
+      # Sans ces lignes, les modifier dans .env n'avait AUCUN effet : le code
+      # retombait silencieusement sur ses valeurs par defaut. Constate le
+      # 28/07/2026 (budget passe a 3 dans .env, conteneur toujours a 2).
+      # Une variable absente du .env vaut "" -> le code garde son defaut, donc
+      # ajouter ces lignes ne change rien tant qu'on ne les renseigne pas.
+      # Budget / garde-fou IA (scripts/ai_budget_guard.js)
+      - OPENROUTER_DAILY_BUDGET_EUR=${OPENROUTER_DAILY_BUDGET_EUR}
+      - OPENROUTER_MAX_REQUESTS_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_DAY}
+      - OPENROUTER_MAX_MATCHES_PER_DAY=${OPENROUTER_MAX_MATCHES_PER_DAY}
+      - OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY}
+      - OPENROUTER_HARD_STOP=${OPENROUTER_HARD_STOP}
+      - OPENROUTER_TEST_MODE_ENABLED=${OPENROUTER_TEST_MODE_ENABLED}
+      - AI_GUARD_SPIKE_THRESHOLD=${AI_GUARD_SPIKE_THRESHOLD}
+      - AI_GUARD_DUPLICATE_BURST_THRESHOLD=${AI_GUARD_DUPLICATE_BURST_THRESHOLD}
+      # Debit d'analyse
+      - AUTO_CONCILE_MAX_MATCHES=${AUTO_CONCILE_MAX_MATCHES}
+      # Delai accorde a chaque agent du Concile (defaut 10000 ms)
+      - AGENT_TIMEOUT_MS=${AGENT_TIMEOUT_MS}
+      # Reglages ajoutes le 07/08/2026. Sans ces lignes, les variables du .env
+      # n'atteignent jamais le conteneur : le code lisait ses valeurs par
+      # defaut et le fondateur croyait piloter des reglages qui ne bougeaient
+      # pas. Toutes ont une valeur par defaut dans api_server.js, une variable
+      # vide ne casse donc rien.
+      - ROUTAGE_MODE=${ROUTAGE_MODE}
+      - SPECIALISTE_MIN_RESOLUS=${SPECIALISTE_MIN_RESOLUS}
+      - PROMO_MIN_RESOLUS=${PROMO_MIN_RESOLUS}
+      - PROMO_MARGE_MINI=${PROMO_MARGE_MINI}
+      - SOLDE_ORANGE=${SOLDE_ORANGE}
+      - SOLDE_ROUGE=${SOLDE_ROUGE}
+      - AUTO_CONCILE_ARJEL_ONLY=${AUTO_CONCILE_ARJEL_ONLY}
+      - OPENROUTER_FALLBACK_DAILY_CAP=${OPENROUTER_FALLBACK_DAILY_CAP}
+      - SECONDARY_CONF_BONUS=${SECONDARY_CONF_BONUS}
+      # Fenetre de temps (desactivee le 28/07/2026, remettre a 1 pour reactiver)
+      - AUTO_CONCILE_TIME_WINDOW=${AUTO_CONCILE_TIME_WINDOW}
+      - AUTO_CONCILE_WINDOW_MIN=${AUTO_CONCILE_WINDOW_MIN}
+      - AUTO_CONCILE_WINDOW_MAX=${AUTO_CONCILE_WINDOW_MAX}
+      # Fenetre de cote reelle ARJEL (1.30-2.50 par defaut)
+      - TIER_MIN_REAL_ODD=${TIER_MIN_REAL_ODD}
+      - TIER_MAX_REAL_ODD=${TIER_MAX_REAL_ODD}
+      - MIN_PLAYABLE_ODD=${MIN_PLAYABLE_ODD}
+      - MAX_PLAYABLE_ODD=${MAX_PLAYABLE_ODD}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      # Generation des miniatures quotidiennes "combien on aurait gagne"
+      # (01/08/2026) — facturation deja active sur ce compte (deja utilise
+      # par le Concile pour GPT-5), contrairement a Google dont le quota
+      # image etait a 0.
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Clés lues par api_server.js mais qui n'étaient PAS transmises : sans elles,
+      # Perplexity-Web et Cohere-Command retombent silencieusement sur llama-3.3-70b
+      # (Groq) — soit le même modèle que Claude Chief, ce qui annule la diversité du
+      # Concile. Une variable absente du .env vaut "" : comportement identique à avant.
+      - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
+      - TOGETHER_API_KEY=${TOGETHER_API_KEY}
+      # Identifiants de modèles surchargeables (corriger un ID sans redéployer)
+      - OR_QWEN_MODEL=${OR_QWEN_MODEL}
+      - OR_KIMI_MODEL=${OR_KIMI_MODEL}
+      # Emails Brevo (nurturing, codes d'accès) — inopérants sans ces variables
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME}
+      # Secret de signature des sessions : sans lui, un secret aléatoire est régénéré
+      # à chaque redémarrage et TOUS les membres connectés sont déconnectés.
+      - JWT_SECRET=${JWT_SECRET}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PRICE_ID_PREMIUM=${STRIPE_PRICE_ID_PREMIUM}
+      - STRIPE_PRICE_ID_VIP=${STRIPE_PRICE_ID_VIP}
+      - STRIPE_PRICE_ID_ELITE=${STRIPE_PRICE_ID_ELITE}
+      - STRIPE_PRICE_ID_CARTE=${STRIPE_PRICE_ID_CARTE}
+      - STRIPE_PRICE_ID_STANDARD=${STRIPE_PRICE_ID_STANDARD}
+      - TESTER_GRANT_EMAIL=${TESTER_GRANT_EMAIL}
+      - TESTER_GRANT_EXPIRES=${TESTER_GRANT_EXPIRES}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_GOAL05_INVITE_URL=${TELEGRAM_GOAL05_INVITE_URL}
+      - TELEGRAM_GOAL05_CHANNEL_ID=${TELEGRAM_GOAL05_CHANNEL_ID}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
+      - TELEGRAM_STANDARD_CHANNEL_ID=${TELEGRAM_STANDARD_CHANNEL_ID}
+      - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
+      - TELEGRAM_ELITE_CHANNEL_ID=${TELEGRAM_ELITE_CHANNEL_ID}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
+      - TELEGRAM_FREE_CHANNEL_ID=${TELEGRAM_FREE_CHANNEL_ID}
+      - SHOW_TELEGRAM_MEMBER_COUNT=${SHOW_TELEGRAM_MEMBER_COUNT}
+      # Bot email Hermes (hermes@touslesmatchs.com) — voir scripts/hermes_mail_bot.js.
+      # Absent = bot inactif (no-op), rien ne casse si ces variables manquent.
+      - HERMES_MAIL_USER=${HERMES_MAIL_USER}
+      - HERMES_MAIL_APP_PASSWORD=${HERMES_MAIL_APP_PASSWORD}
+      - HERMES_MAIL_IMAP_HOST=${HERMES_MAIL_IMAP_HOST}
+      - HERMES_MAIL_IMAP_PORT=${HERMES_MAIL_IMAP_PORT}
+      - HERMES_MAIL_SMTP_HOST=${HERMES_MAIL_SMTP_HOST}
+      - HERMES_MAIL_SMTP_PORT=${HERMES_MAIL_SMTP_PORT}
+      - MAIL_BOT_ADMIN_TOKEN=${MAIL_BOT_ADMIN_TOKEN}
+      - SITE_BASE_URL=${SITE_BASE_URL}
+      - GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/tlm-firebase-admin.json
+      - GOAL05_PUSH_INTERVAL_MIN=${GOAL05_PUSH_INTERVAL_MIN:-5}
+    volumes:
+      # Bind-mount sur le disque hôte : la base survit à `docker compose down -v`,
+      # `docker volume rm` et `docker system prune --volumes`. NE JAMAIS remettre
+      # un volume nommé ici — c'est ce qui a effacé les stats en juillet 2026.
+      - /opt/touslesmatchs/data:/data
+      - /opt/touslesmatchs/data/picks:/picks
+      - /opt/touslesmatchs/data/var:/var/touslesmatchs
+      - /opt/touslesmatchs/shared:/shared:ro
+      - /opt/touslesmatchs/secrets/firebase-admin.json:/run/secrets/tlm-firebase-admin.json:ro
+    networks:
+      - web
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  council:
+    build:
+      context: .
+      dockerfile: council/Dockerfile
+    container_name: touslesmatchs-council
+    restart: unless-stopped
+    environment:
+      - API_FOOTBALL_KEY=${API_FOOTBALL_KEY}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_CHIEF_MODEL=${OPENROUTER_CHIEF_MODEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # ID exact du modèle GPT-5 exposé par ton compte OpenAI (défaut "gpt-5")
+      - OPENAI_MODEL_GPT5=${OPENAI_MODEL_GPT5:-gpt-5}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_GOAL05_INVITE_URL=${TELEGRAM_GOAL05_INVITE_URL}
+      - TELEGRAM_GOAL05_CHANNEL_ID=${TELEGRAM_GOAL05_CHANNEL_ID}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
+      - TELEGRAM_PREMIUM_CHANNEL_ID=${TELEGRAM_PREMIUM_CHANNEL_ID}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
+      # Accès en lecture aux vraies stats agents (populées par l'API JS).
+      # Sans ce mount, get_agent_accuracy() renvoie 0 → filtre inopérant.
+      - API_STATS_DB=/shared_api/tlm.db
+    volumes:
+      - council_data:/app/data
+      # Read-only : Concile lit les perfs des agents pour son filtre,
+      # ne doit JAMAIS écrire dans la DB de l'API.
+      - /opt/touslesmatchs/data:/shared_api:ro
+    networks:
+      - web
+
+  hermes-admin:
+    build:
+      context: .
+      dockerfile: council/Dockerfile
+    container_name: touslesmatchs-hermes-admin
+    restart: unless-stopped
+    working_dir: /app
+    # time.sleep(float('inf')) plante avec "OverflowError: timestamp out of range
+    # for platform time_t" sur cette plateforme — boucle de redemarrage en continu
+    # depuis 4 jours (trouve lors de l'audit budget du 28/07/2026, invisible
+    # jusque-la : `docker ps` affichait juste "Restarting"). Une boucle infinie
+    # avec un sommeil long et fini ne plante jamais et consomme un temps CPU nul.
+    command: ["python", "-c", "import time; print('[hermes-admin] Idle — admin via api_server.js — aucun appel IA depuis ce service'); [time.sleep(3600) for _ in iter(int, 1)]"]
+    environment:
+      - HERMES_ADMIN_TLM_BOT=${HERMES_ADMIN_TLM_BOT}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID}
+      - TELEGRAM_SUPPORT_CHAT_ID=${TELEGRAM_SUPPORT_CHAT_ID}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - API_FOOTBALL_KEY=${API_FOOTBALL_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+    volumes:
+      - council_data:/app/data
+    networks:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:
+  council_data:
+  # api_data supprimé : la base API est désormais bind-montée sur /opt/touslesmatchs/data
+  # (voir service api) pour survivre à toute opération Docker destructive.
+
+networks:
+  web:
+    driver: bridge

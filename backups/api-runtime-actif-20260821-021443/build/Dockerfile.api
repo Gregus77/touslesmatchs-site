@@ -1,0 +1,43 @@
+FROM node:20-alpine
+WORKDIR /app
+
+RUN apk add --no-cache python3 make g++
+
+# ⚠️ NE PAS EPINGLER LES VERSIONS ICI SANS TEST PREALABLE.
+# Tentative du 05/08/2026 (audit securite point #9) : epingler les dix paquets
+# en ~x.y.z a fait planter l'API en boucle avec le code de sortie 139
+# (segmentation fault) — signature d'un module natif casse, ici better-sqlite3,
+# dont le binding compile ne survivait pas a la reinstallation forcee.
+# L'API est restee indisponible jusqu'au retour a cette version.
+#
+# Le besoin de securite reste valide (un `npm install` sans version rejoue les
+# dernieres versions publiees a chaque reconstruction, donc une dependance
+# compromise en amont entre en production sans qu'aucun commit ne change ici).
+# La bonne facon de le traiter est un package-lock.json genere et teste hors
+# production, puis `npm ci` — pas un epinglage ecrit a la main et deploye
+# directement. A refaire posement, avec le site sous surveillance.
+RUN npm install --save \
+  express \
+  cors \
+  bcryptjs \
+  jsonwebtoken \
+  better-sqlite3 \
+  stripe \
+  @simplewebauthn/server@13 \
+  imapflow \
+  mailparser \
+  nodemailer \
+  firebase-admin
+
+RUN mkdir -p /data
+
+COPY scripts/api_server.js ./server.js
+COPY scripts/bookmakers.config.js ./bookmakers.config.js
+COPY scripts/analysis_engine.js ./analysis_engine.js
+COPY scripts/ai_budget_guard.js ./ai_budget_guard.js
+COPY scripts/ai_models.config.js ./ai_models.config.js
+COPY scripts/beta_waitlist.js ./beta_waitlist.js
+COPY scripts/hermes_mail_bot.js ./hermes_mail_bot.js
+
+EXPOSE 3001
+CMD ["node", "server.js"]

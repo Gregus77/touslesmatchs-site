@@ -220,6 +220,138 @@ body.tlm-page-bankroll .hidden{display:none!important}
 }
 </style>
 
+
+
+
+
+
+
+
+<style id="tlm-navbar-safe-css">
+header,nav,.navbar,.nav,.topbar,header *,nav *,.navbar *,.nav *,.topbar *{
+  font-family:"Segoe UI",Arial,Helvetica,sans-serif!important;
+  -webkit-font-smoothing:antialiased!important;
+  -moz-osx-font-smoothing:grayscale!important;
+  text-rendering:optimizeLegibility!important;
+  text-shadow:none!important;
+  filter:none!important;
+  letter-spacing:0!important;
+}
+
+a[href="#pick"],a[href="/#pick"],a[href*="live-ia"],a[href*="performances"],a[href*="bankroll"],a[href="#methode"],a[href="/#methode"],a[href="#plans"],a[href="/#plans"]{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  border-radius:0!important;
+  color:#eaf0ff!important;
+  font-size:15px!important;
+  font-weight:700!important;
+  padding:8px 10px!important;
+  text-decoration:none!important;
+}
+
+a[href*="live-ia"]{color:#35e8ff!important}
+
+.tlm-brand-nav-logo{
+  width:46px!important;
+  height:46px!important;
+  min-width:46px!important;
+  object-fit:cover!important;
+  border-radius:10px!important;
+  margin-right:10px!important;
+  display:inline-block!important;
+  vertical-align:-14px!important;
+  box-shadow:0 0 14px rgba(0,174,255,.55)!important;
+}
+</style>
+<style id="tlm-nav-flat-final-css">
+header nav a,
+header a[href="#pick"], header a[href="/#pick"],
+header a[href*="live-ia"], header a[href*="performances"], header a[href*="bankroll"],
+header a[href="#methode"], header a[href="/#methode"],
+header a[href="#plans"], header a[href="/#plans"],
+nav a[href="#pick"], nav a[href="/#pick"],
+nav a[href*="live-ia"], nav a[href*="performances"], nav a[href*="bankroll"],
+nav a[href="#methode"], nav a[href="/#methode"],
+nav a[href="#plans"], nav a[href="/#plans"]{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  border-radius:0!important;
+  color:#f7f8ff!important;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+  line-height:1!important;
+  padding:0 10px!important;
+  height:auto!important;
+  min-height:0!important;
+  text-shadow:none!important;
+  filter:none!important;
+}
+header nav a:hover,
+nav a:hover{
+  color:#35e8ff!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+header a[href*="live-ia"],
+nav a[href*="live-ia"]{
+  color:#35e8ff!important;
+}
+header a[href*="live-ia"]::before,
+nav a[href*="live-ia"]::before{
+  content:"";
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#ef3b6d;
+  margin-right:7px;
+  vertical-align:1px;
+}
+.tlm-brand-nav-logo{
+  width:42px!important;
+  height:42px!important;
+  border-radius:10px!important;
+  object-fit:cover!important;
+  margin-right:10px!important;
+  box-shadow:0 0 14px rgba(0,174,255,.45)!important;
+}
+@media(max-width:900px){
+  header nav a, nav a{font-size:13px!important;padding:0 7px!important}
+}
+</style>
+<style id="tlm-nav-no-box-hard-css">
+header nav a, header nav button, nav a, nav button{
+  background:transparent!important;
+  background-image:none!important;
+  border:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  border-radius:0!important;
+  text-shadow:none!important;
+  filter:none!important;
+}
+header nav a[href], nav a[href]{
+  color:#f8fbff!important;
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif!important;
+  font-size:14px!important;
+  font-weight:850!important;
+  letter-spacing:-.01em!important;
+}
+header nav a[href]:hover, nav a[href]:hover{color:#35e8ff!important}
+header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
+</style>
+<style id="tlm-history-backfill-css">
+.tlm-history-backfill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(12,18,45,.58);color:#f8fbff;font-weight:850;margin:7px 0}
+.tlm-history-backfill-row span:last-child{color:#35ffc0;font-size:13px}
+</style>
 </head>
 <body class="tlm-wow tlm-page-bankroll">
 <nav>
@@ -645,5 +777,98 @@ function openLoginModal(){
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
   <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+
+
+
+
+
+
+
+<script id="tlm-navbar-safe-logo-js">
+(function(){
+  function addLogo(){
+    if(document.querySelector('.tlm-brand-nav-logo')) return;
+    var items=[].slice.call(document.querySelectorAll('a,div,span,strong,h1,h2'));
+    var brand=items.find(function(el){
+      if(!el || !el.textContent) return false;
+      if(el.closest('script,style,head,title,meta')) return false;
+      var text=el.textContent.replace(/\s+/g,'').toLowerCase();
+      var box=el.getBoundingClientRect();
+      return text.includes('touslesmatchs') && box.width>40 && box.height>8 && box.top>=0 && box.top<160;
+    });
+    if(brand){
+      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/assets/brand/logo192.png?v=1786907124471" alt="TousLesMatchs">');
+    }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addLogo); else addLogo();
+  setTimeout(addLogo,500);
+})();
+</script>
+<script id="tlm-nav-no-box-hard-js">
+(function(){
+  function clean(){
+    var labels=/^(Analyses|Live IA|Résultats|Resultats|Bankroll|Méthode|Methode|Tarifs)$/i;
+    document.querySelectorAll('header a,header button,nav a,nav button').forEach(function(el){
+      var t=(el.textContent||'').trim();
+      if(!labels.test(t))return;
+      el.style.setProperty('background','transparent','important');
+      el.style.setProperty('background-image','none','important');
+      el.style.setProperty('border','0','important');
+      el.style.setProperty('box-shadow','none','important');
+      el.style.setProperty('outline','0','important');
+      el.style.setProperty('border-radius','0','important');
+      el.style.setProperty('font-family','Inter, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Arial, sans-serif','important');
+      el.style.setProperty('font-size','14px','important');
+      el.style.setProperty('font-weight','850','important');
+      el.style.setProperty('letter-spacing','-.01em','important');
+      el.style.setProperty('color',/Live IA/i.test(t)?'#35e8ff':'#f8fbff','important');
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean);else clean();
+  setInterval(clean,1200);
+})();
+</script>
+<script id="tlm-history-backfill-js">
+(function(){
+  var months={'01':'janvier','02':'février','03':'mars','04':'avril','05':'mai','06':'juin','07':'juillet','08':'août','09':'septembre','10':'octobre','11':'novembre','12':'décembre'};
+  var days=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  function label(iso){
+    var d=new Date(iso+'T12:00:00');
+    return days[d.getDay()]+' '+Number(iso.slice(8,10))+' '+months[iso.slice(5,7)];
+  }
+  function root(){
+    var h=[].slice.call(document.querySelectorAll('h1,h2,h3,div,strong')).find(function(x){return /Derniers verdicts du Concile/i.test(x.textContent||'');});
+    return h ? (h.parentElement || h) : null;
+  }
+  function apply(){
+    fetch('/api/public-analysis-stats?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+      var rows=(d.daily_concile||[]).filter(function(r){return r.jour>='2026-07-25'&&r.jour<='2026-08-08';});
+      var map={}; rows.forEach(function(r){map[r.jour]=r;});
+      document.querySelectorAll('details,div').forEach(function(el){
+        var txt=(el.textContent||'').toLowerCase();
+        Object.keys(map).forEach(function(iso){
+          var lab=label(iso).toLowerCase();
+          if(txt.indexOf(lab)>=0 && /0\s+s[ée]lection retenue/i.test(el.innerHTML||'')){
+            el.innerHTML=el.innerHTML.replace(/0\s+s[ée]lection retenue/gi, map[iso].analyses+' analyses · '+map[iso].resolved+' résolues');
+          }
+        });
+      });
+      var box=root(); if(!box)return;
+      rows.forEach(function(r){
+        var lab=label(r.jour);
+        if((document.body.textContent||'').toLowerCase().indexOf(lab.toLowerCase())>=0)return;
+        var row=document.createElement('div');
+        row.className='tlm-history-backfill-row';
+        row.setAttribute('data-tlm-history-day',r.jour);
+        row.innerHTML='<span>▶ '+lab+'</span><span>'+r.analyses+' analyses · '+r.resolved+' résolues</span>';
+        box.appendChild(row);
+      });
+    }).catch(function(){});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
+  setTimeout(apply,1200);
+  setInterval(apply,30000);
+})();
+</script>
 </body>
 </html>

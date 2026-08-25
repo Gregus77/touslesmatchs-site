@@ -1,0 +1,60 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.touslesmatchs.app-mergeReleaseResources-3:/values-uz/values-uz.xml",
+            "map": [
+                {
+                    "source": "/root/.gradle/caches/8.13/transforms/9d07eb540e39d6b46be69b7f5c9e4138/transformed/play-services-basement-18.9.0/res/values-uz/values.xml",
+                    "from": {
+                        "startLines": "4",
+                        "startColumns": "0",
+                        "startOffsets": "218",
+                        "endColumns": "145",
+                        "endOffsets": "363"
+                    },
+                    "to": {
+                        "startLines": "10",
+                        "startColumns": "4",
+                        "startOffsets": "1052",
+                        "endColumns": "149",
+                        "endOffsets": "1197"
+                    }
+                },
+                {
+                    "source": "/root/.gradle/caches/8.13/transforms/54e8306d6125e6974e8adc5df3a6c3c5/transformed/play-services-base-18.9.0/res/values-uz/values.xml",
+                    "from": {
+                        "startLines": "4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20",
+                        "startColumns": "0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+                        "startOffsets": "216,317,463,588,693,834,963,1079,1181,1349,1453,1608,1736,1886,2044,2106,2163",
+                        "endColumns": "100,145,124,104,140,128,115,101,167,103,154,127,149,157,61,56,75",
+                        "endOffsets": "316,462,587,692,833,962,1078,1180,1348,1452,1607,1735,1885,2043,2105,2162,2238"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,160,310,439,548,693,826,946,1202,1374,1482,1641,1773,1927,2089,2155,2216",
+                        "endColumns": "104,149,128,108,144,132,119,105,171,107,158,131,153,161,65,60,79",
+                        "endOffsets": "155,305,434,543,688,821,941,1047,1369,1477,1636,1768,1922,2084,2150,2211,2291"
+                    }
+                },
+                {
+                    "source": "/root/.gradle/caches/8.13/transforms/9a48dc704fdbf0efcde6c7ef13eeebc8/transformed/core-1.9.0/res/values-uz/values-uz.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "20",
+                        "startColumns": "4",
+                        "startOffsets": "2296",
+                        "endColumns": "100",
+                        "endOffsets": "2392"
+                    }
+                }
+            ]
+        }
+    ]
+}

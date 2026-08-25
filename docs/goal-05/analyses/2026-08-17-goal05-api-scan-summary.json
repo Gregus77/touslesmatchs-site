@@ -1,0 +1,313 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-17T22:12:24.490Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-17-goal05-api-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 2,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 2,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "api-football-1492333-home",
+      "match": "Corinthians - Cruzeiro",
+      "team": "Corinthians",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Corinthians",
+      "away": "Cruzeiro",
+      "homeLogo": "https://media.api-sports.io/football/teams/131.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/135.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "moins de 3 saisons historiques exploitables",
+        "écart de force historique insuffisant ou non prouvé",
+        "enjeu de classement non démontré",
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "preuves de buts construits/assistés insuffisantes",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "preuve spécifique +0,5 trop faible",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Brazil",
+        "league": "Serie A",
+        "team": "Corinthians",
+        "opponent": "Cruzeiro",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-17T22:12:16.981Z",
+        "market": {
+          "bestOdd": 2.84,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.84
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.68
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.67
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.6
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.6
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.55
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.27
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.27
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.22
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.17
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.17
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.15
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Cards",
+              "selection": "Over 0.5",
+              "odd": 1.05
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 1,
+          "teamPercentile": 68.42,
+          "opponentPercentile": 36.84,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 3,
+          "opponentConcededInLastFive": 3,
+          "weightedConstructedGoals": 0,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "no",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": false,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 9,
+          "opponentRank": 5,
+          "leagueSize": 20
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.84
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.84
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1494246-home",
+      "match": "BK Hacken - Halmstad",
+      "team": "BK Hacken",
+      "country": "Sweden",
+      "league": "Allsvenskan",
+      "home": "BK Hacken",
+      "away": "Halmstad",
+      "homeLogo": "https://media.api-sports.io/football/teams/367.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/766.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/113.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "moins de 3 saisons historiques exploitables",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "preuves de buts construits/assistés insuffisantes",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "preuve spécifique +0,5 trop faible"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Sweden",
+        "league": "Allsvenskan",
+        "team": "BK Hacken",
+        "opponent": "Halmstad",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-17T22:12:24.482Z",
+        "market": {
+          "bestOdd": 2.82,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.82
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.65
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.62
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.6
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.49
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.47
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.42
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.37
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.36
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 2,
+          "teamPercentile": 80,
+          "opponentPercentile": 20,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 3,
+          "opponentConcededInLastFive": 5,
+          "weightedConstructedGoals": 1,
+          "scoringState": "no",
+          "opponentConcedesState": "yes",
+          "goal05SpecificEvidence": "no",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": false,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 3,
+          "opponentRank": 16,
+          "leagueSize": 16
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.82
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.82
+      },
+      "alreadySent": false
+    }
+  ],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

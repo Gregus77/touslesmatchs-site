@@ -1,0 +1,213 @@
+{
+  "date": "2026-08-18",
+  "timezone": "Europe/Paris",
+  "oddsRows": 30,
+  "fixtureIds": 20,
+  "candidates": [],
+  "rejected": [
+    {
+      "fixture": 1492335,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Internacional",
+      "away": "Remo"
+    },
+    {
+      "fixture": 1493068,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Liga Profesional Argentina",
+      "home": "Gimnasia M.",
+      "away": "Talleres Cordoba"
+    },
+    {
+      "fixture": 1493076,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Liga Profesional Argentina",
+      "home": "Velez Sarsfield",
+      "away": "Defensa Y Justicia"
+    },
+    {
+      "fixture": 1500049,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera C",
+      "home": "Claypole",
+      "away": "Mercedes"
+    },
+    {
+      "fixture": 1500052,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera C",
+      "home": "Deportivo Muñiz",
+      "away": "Juventud Unida"
+    },
+    {
+      "fixture": 1505497,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera División"
+    },
+    {
+      "fixture": 1510966,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Sweden",
+      "league": "Division 2 - Södra Götaland",
+      "home": "Nosaby",
+      "away": "IFK Trelleborg"
+    },
+    {
+      "fixture": 1511649,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1511650,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1511652,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1513294,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "MLS Next Pro",
+      "home": "Atlanta United II",
+      "away": "Chicago Fire II"
+    },
+    {
+      "fixture": 1516106,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516111,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1519452,
+      "reason": "country_not_allowed",
+      "country": "Ecuador",
+      "league": "Liga Pro"
+    },
+    {
+      "fixture": 1523198,
+      "reason": "country_not_allowed",
+      "country": "China",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1526919,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie C",
+      "home": "Ferroviária",
+      "away": "Paysandu"
+    },
+    {
+      "fixture": 1526921,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie C",
+      "home": "Guarani Campinas",
+      "away": "Ypiranga-RS"
+    },
+    {
+      "fixture": 1547436,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Paulista - U20",
+      "home": "Gremio Prudente U20",
+      "away": "RB Bragantino U20"
+    },
+    {
+      "fixture": 1548376,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Sweden",
+      "league": "Svenska Cupen",
+      "home": "Böljan",
+      "away": "Varbergs BoIS FC"
+    },
+    {
+      "fixture": 1549142,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Sweden",
+      "league": "Svenska Cupen",
+      "home": "Sollentuna",
+      "away": "Orebro SK"
+    },
+    {
+      "fixture": 1549596,
+      "reason": "country_not_allowed",
+      "country": "Colombia",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1549730,
+      "reason": "country_not_allowed",
+      "country": "Colombia",
+      "league": "Primera A"
+    },
+    {
+      "fixture": 1550928,
+      "reason": "country_not_allowed",
+      "country": "Mexico",
+      "league": "Liga MX"
+    },
+    {
+      "fixture": 1550929,
+      "reason": "country_not_allowed",
+      "country": "Mexico",
+      "league": "Liga MX"
+    },
+    {
+      "fixture": 1553082,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1553089,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1553778,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Svenska Cupen"
+    },
+    {
+      "fixture": 1555107,
+      "reason": "country_not_allowed",
+      "country": "Israel",
+      "league": "Liga Leumit"
+    },
+    {
+      "fixture": 1555108,
+      "reason": "country_not_allowed",
+      "country": "Israel",
+      "league": "Liga Leumit"
+    },
+    {
+      "fixture": 1555109,
+      "reason": "country_not_allowed",
+      "country": "Israel",
+      "league": "Liga Leumit"
+    }
+  ]
+}

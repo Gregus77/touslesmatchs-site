@@ -1,0 +1,223 @@
+{
+  "date": "2026-08-25",
+  "timezone": "Europe/Paris",
+  "oddsRows": 30,
+  "fixtureIds": 20,
+  "candidates": [],
+  "rejected": [
+    {
+      "fixture": 1492340,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Botafogo",
+      "away": "Atletico Paranaense"
+    },
+    {
+      "fixture": 1493085,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Liga Profesional Argentina",
+      "home": "Lanus",
+      "away": "Argentinos JRS"
+    },
+    {
+      "fixture": 1493090,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Liga Profesional Argentina",
+      "home": "Talleres Cordoba",
+      "away": "Rosario Central"
+    },
+    {
+      "fixture": 1493091,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Liga Profesional Argentina",
+      "home": "Tigre",
+      "away": "Central Cordoba de Santiago"
+    },
+    {
+      "fixture": 1493642,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "USL Championship",
+      "home": "Charleston Battery",
+      "away": "Miami FC"
+    },
+    {
+      "fixture": 1497669,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Sweden",
+      "league": "Superettan",
+      "home": "Orebro SK",
+      "away": "Varbergs BoIS FC"
+    },
+    {
+      "fixture": 1497670,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Sweden",
+      "league": "Superettan",
+      "home": "Osters IF",
+      "away": "GIF Sundsvall"
+    },
+    {
+      "fixture": 1498749,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera Nacional",
+      "home": "Ferro Carril Oeste",
+      "away": "All Boys"
+    },
+    {
+      "fixture": 1499595,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Arsenal Sarandi",
+      "away": "Ituzaingó"
+    },
+    {
+      "fixture": 1499600,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Real Pilar",
+      "away": "Brown DE Adrogue"
+    },
+    {
+      "fixture": 1499601,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "San Martín Burzaco",
+      "away": "Argentino Quilmes"
+    },
+    {
+      "fixture": 1499602,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Sportivo Italiano",
+      "away": "Defensores Unidos"
+    },
+    {
+      "fixture": 1499603,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "UAI Urquiza",
+      "away": "Deportivo Laferrere"
+    },
+    {
+      "fixture": 1499604,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Villa Dalmine",
+      "away": "Talleres Remedios"
+    },
+    {
+      "fixture": 1499605,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera B Metropolitana",
+      "home": "Villa San Carlos",
+      "away": "Flandria"
+    },
+    {
+      "fixture": 1500028,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera C",
+      "home": "Leandro N. Alem",
+      "away": "Juventud Unida"
+    },
+    {
+      "fixture": 1500184,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Argentina",
+      "league": "Primera C",
+      "home": "Leones de Rosario",
+      "away": "Deportivo Muñiz"
+    },
+    {
+      "fixture": 1505501,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera División"
+    },
+    {
+      "fixture": 1507040,
+      "reason": "country_not_allowed",
+      "country": "South-Korea",
+      "league": "K League 1"
+    },
+    {
+      "fixture": 1507041,
+      "reason": "country_not_allowed",
+      "country": "South-Korea",
+      "league": "K League 1"
+    },
+    {
+      "fixture": 1507042,
+      "reason": "country_not_allowed",
+      "country": "South-Korea",
+      "league": "K League 1"
+    },
+    {
+      "fixture": 1510974,
+      "reason": "fixture_teams_missing",
+      "country": "Sweden",
+      "league": "Division 2 - Södra Götaland"
+    },
+    {
+      "fixture": 1511663,
+      "reason": "country_not_allowed",
+      "country": "Chile",
+      "league": "Primera B"
+    },
+    {
+      "fixture": 1513315,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "MLS Next Pro"
+    },
+    {
+      "fixture": 1514238,
+      "reason": "country_not_allowed",
+      "country": "Iceland",
+      "league": "1. Deild"
+    },
+    {
+      "fixture": 1515887,
+      "reason": "country_not_allowed",
+      "country": "Latvia",
+      "league": "Virsliga"
+    },
+    {
+      "fixture": 1516113,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516114,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516120,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1519461,
+      "reason": "country_not_allowed",
+      "country": "Ecuador",
+      "league": "Liga Pro"
+    }
+  ]
+}

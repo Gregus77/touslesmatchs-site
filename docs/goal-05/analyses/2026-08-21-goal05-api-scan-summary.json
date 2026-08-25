@@ -1,0 +1,261 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-21T22:12:23.923Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-21-goal05-api-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 2,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 2,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "api-football-1494255-away",
+      "match": "Sirius - BK Hacken",
+      "team": "BK Hacken",
+      "country": "Sweden",
+      "league": "Allsvenskan",
+      "home": "Sirius",
+      "away": "BK Hacken",
+      "homeLogo": "https://media.api-sports.io/football/teams/370.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/367.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/113.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Sweden",
+        "league": "Allsvenskan",
+        "team": "BK Hacken",
+        "opponent": "Sirius",
+        "teamSide": "away",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-21T22:12:16.418Z",
+        "market": {
+          "bestOdd": 2.2,
+          "offers": [
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.2
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.15
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.05
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.03
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.98
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.85
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.67
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.59
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.57
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.54
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.53
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.48
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 4,
+          "teamPercentile": 80,
+          "opponentPercentile": 33.33,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 3,
+          "opponentConcededInLastFive": 4,
+          "weightedConstructedGoals": 3,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 3,
+          "opponentRank": 1,
+          "leagueSize": 16
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Betano",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.2
+      },
+      "bestOffer": {
+        "bookmaker": "Betano",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.2
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1495534-home",
+      "match": "Malmö FF W - Hammarby W",
+      "team": "Malmö FF W",
+      "country": "Sweden",
+      "league": "Damallsvenskan",
+      "home": "Malmö FF W",
+      "away": "Hammarby W",
+      "homeLogo": "https://media.api-sports.io/football/teams/21698.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/15630.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/549.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "écart de force historique insuffisant ou non prouvé",
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Sweden",
+        "league": "Damallsvenskan",
+        "team": "Malmö FF W",
+        "opponent": "Hammarby W",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-21T22:12:23.920Z",
+        "market": {
+          "bestOdd": 2.17,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.17
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.88
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 4,
+          "teamPercentile": 100,
+          "opponentPercentile": 73.33,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 3,
+          "opponentConcededInLastFive": 1,
+          "weightedConstructedGoals": 4,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 3,
+          "opponentRank": 2,
+          "leagueSize": 14
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Home Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.17
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Home Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.17
+      },
+      "alreadySent": false
+    }
+  ],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

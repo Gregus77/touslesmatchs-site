@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TLM — Dashboard Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#e0e0e0;--muted:#888;--accent:#6c5ce7;--green:#00b894;--red:#e17055;--orange:#fdcb6e;--blue:#74b9ff}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:40px;max-width:400px;width:100%}
+.login-box h1{font-size:1.4rem;margin-bottom:8px;color:var(--accent)}
+.login-box p{color:var(--muted);font-size:.85rem;margin-bottom:24px}
+.login-box input{width:100%;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.9rem;margin-bottom:12px;outline:none}
+.login-box input:focus{border-color:var(--accent)}
+.login-box button{width:100%;padding:12px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:.95rem;cursor:pointer;font-weight:600}
+.login-box button:hover{opacity:.9}
+.login-error{color:var(--red);font-size:.8rem;margin-top:8px;display:none}
+
+.dashboard{display:none;padding:16px;max-width:1400px;margin:0 auto}
+.dash-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px}
+.dash-header h1{font-size:1.3rem;color:var(--accent)}
+.dash-header .meta{font-size:.75rem;color:var(--muted)}
+.dash-header button{background:var(--card);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:.8rem}
+.dash-header button:hover{border-color:var(--accent);color:var(--text)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px}
+.card h2{font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card h2 .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot-green{background:var(--green)}
+.dot-red{background:var(--red)}
+.dot-orange{background:var(--orange)}
+
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.stat-row:last-child{border-bottom:none}
+.stat-label{font-size:.85rem;color:var(--muted)}
+.stat-value{font-size:.95rem;font-weight:600}
+.stat-value.green{color:var(--green)}
+.stat-value.red{color:var(--red)}
+.stat-value.orange{color:var(--orange)}
+.stat-value.blue{color:var(--blue)}
+
+.big-number{font-size:2rem;font-weight:700;line-height:1}
+.big-label{font-size:.75rem;color:var(--muted);margin-top:4px}
+.big-row{display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px}
+.big-item{text-align:center;flex:1;min-width:80px}
+
+.alerts-list{max-height:200px;overflow-y:auto}
+.alert-item{padding:8px 12px;border-radius:6px;margin-bottom:6px;font-size:.83rem;display:flex;align-items:center;gap:8px}
+.alert-danger{background:rgba(225,112,85,.12);border:1px solid rgba(225,112,85,.3);color:var(--red)}
+.alert-warning{background:rgba(253,203,110,.1);border:1px solid rgba(253,203,110,.25);color:var(--orange)}
+.alert-ok{background:rgba(0,184,148,.1);border:1px solid rgba(0,184,148,.25);color:var(--green)}
+
+.activity-log{max-height:300px;overflow-y:auto}
+.log-item{padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem;display:flex;gap:8px;align-items:flex-start}
+.log-item:last-child{border-bottom:none}
+.log-date{color:var(--muted);white-space:nowrap;font-size:.75rem;min-width:120px}
+.log-text{flex:1}
+
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.svc-item{padding:10px;border-radius:8px;text-align:center;font-size:.8rem;font-weight:500}
+.svc-on{background:rgba(0,184,148,.1);border:1px solid rgba(0,184,148,.2);color:var(--green)}
+.svc-off{background:rgba(225,112,85,.1);border:1px solid rgba(225,112,85,.2);color:var(--red)}
+
+.progress-bar{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:4px}
+.progress-fill{height:100%;border-radius:4px;transition:width .3s}
+.pf-green{background:var(--green)}
+.pf-orange{background:var(--orange)}
+.pf-red{background:var(--red)}
+
+.docker-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.docker-item{padding:12px;border-radius:8px;border:1px solid var(--border);background:var(--bg)}
+.docker-name{font-weight:600;font-size:.85rem;margin-bottom:4px}
+.docker-status{font-size:.75rem}
+.docker-running{border-color:rgba(0,184,148,.3)}
+.docker-stopped{border-color:rgba(225,112,85,.3)}
+
+.backup-item{padding:8px 0;border-bottom:1px solid var(--border);font-size:.82rem;display:flex;justify-content:space-between;align-items:center}
+.backup-item:last-child{border-bottom:none}
+.backup-name{font-weight:500}
+.backup-meta{color:var(--muted);font-size:.75rem}
+
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:100px;margin-top:10px}
+.chart-bar{flex:1;background:var(--accent);border-radius:4px 4px 0 0;min-width:20px;position:relative;cursor:default}
+.chart-bar:hover{opacity:.85}
+.chart-bar .tip{display:none;position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:3px 8px;border-radius:4px;font-size:.7rem;white-space:nowrap;z-index:10}
+.chart-bar:hover .tip{display:block}
+.chart-labels{display:flex;gap:4px;margin-top:4px}
+.chart-labels span{flex:1;text-align:center;font-size:.65rem;color:var(--muted)}
+
+.agent-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.agent-table th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500}
+.agent-table td{padding:6px 8px;border-bottom:1px solid var(--border)}
+
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.recent-table{width:100%;overflow-x:auto;display:block}
+.recent-table table{width:100%;border-collapse:collapse;font-size:.8rem}
+.recent-table th{text-align:left;padding:6px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500}
+.recent-table td{padding:6px;border-bottom:1px solid var(--border)}
+.badge-win{background:rgba(0,184,148,.15);color:var(--green);padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-loss{background:rgba(225,112,85,.15);color:var(--red);padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-pending{background:rgba(116,185,255,.1);color:var(--blue);padding:2px 8px;border-radius:4px;font-size:.75rem}
+
+@media(max-width:600px){
+  .grid{grid-template-columns:1fr}
+  .big-row{gap:12px}
+  .dashboard{padding:10px}
+  .dash-header h1{font-size:1.1rem}
+  .svc-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+  <meta name="theme-color" content="#070a20">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+</head>
+<body class="tlm-wow tlm-page-admin">
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h1>Dashboard Admin</h1>
+    <p>TousLesMatchs — Espace d'administration</p>
+    <input type="email" id="loginEmail" placeholder="Email admin" autocomplete="email">
+    <input type="password" id="loginCode" placeholder="Code admin (ELITE-ADMIN-...)" autocomplete="current-password">
+    <button onclick="doLogin()">Connexion</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="dash-header">
+    <div>
+      <h1>Dashboard Admin</h1>
+      <div class="meta" id="lastUpdate"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="refreshDashboard()">Rafraichir</button>
+      <button onclick="doLogout()">Deconnexion</button>
+    </div>
+  </div>
+
+  <!-- ROW 1: VPS + Docker + Alerts -->
+  <div class="grid">
+    <div class="card">
+      <h2><span class="dot dot-green" id="vpsDot"></span> Sante VPS</h2>
+      <div id="vpsContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2><span class="dot dot-green" id="dockerDot"></span> Docker</h2>
+      <div id="dockerContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card" id="alertsCard">
+      <h2>Alertes</h2>
+      <div class="alerts-list" id="alertsContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: API Health + Services + Backups -->
+  <div class="grid">
+    <div class="card" id="healthCard">
+      <h2><span class="dot dot-green" id="healthDot"></span> Sante API</h2>
+      <div id="healthContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card" id="servicesCard">
+      <h2>Services Connectes</h2>
+      <div id="servicesContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Sauvegardes</h2>
+      <div id="backupsContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Business + Analytics -->
+  <div class="grid">
+    <div class="card">
+      <h2>Business — Abonnements</h2>
+      <div id="businessContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Analytics — Visiteurs</h2>
+      <div id="analyticsContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 3: Pronostics -->
+  <div class="grid">
+    <div class="card">
+      <h2>Pronostics — Signal Fort</h2>
+      <div id="pronoContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Pick du Jour</h2>
+      <div id="pickContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Agents + Visitor chart -->
+  <div class="grid">
+    <div class="card">
+      <h2>Performance Agents IA</h2>
+      <div id="agentsContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Visiteurs — 7 derniers jours</h2>
+      <div id="chartContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- ROW 5: Recent analyses + Activity log -->
+  <div class="grid">
+    <div class="card">
+      <h2>Dernieres Analyses</h2>
+      <div class="recent-table" id="recentContent"><div class="spinner"></div></div>
+    </div>
+    <div class="card">
+      <h2>Journal d'Activite</h2>
+      <div class="activity-log" id="activityContent"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "/api";
+let credentials = null;
+
+function doLogin() {
+  const email = document.getElementById("loginEmail").value.trim();
+  const code = document.getElementById("loginCode").value.trim();
+  if (!email || !code) return showLoginError("Email et code requis");
+  credentials = { email, code };
+  fetchDashboard().then(ok => {
+    if (ok) {
+      sessionStorage.setItem("tlm_admin", JSON.stringify(credentials));
+      document.getElementById("loginScreen").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+    } else {
+      credentials = null;
+      showLoginError("Identifiants invalides");
+    }
+  });
+}
+
+function doLogout() {
+  credentials = null;
+  sessionStorage.removeItem("tlm_admin");
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("loginScreen").style.display = "flex";
+  document.getElementById("loginCode").value = "";
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById("loginError");
+  el.textContent = msg;
+  el.style.display = "block";
+  setTimeout(() => el.style.display = "none", 4000);
+}
+
+function refreshDashboard() { fetchDashboard(); }
+
+async function fetchDashboard() {
+  if (!credentials) return false;
+  try {
+    const params = new URLSearchParams({ email: credentials.email, code: credentials.code });
+    const r = await fetch(`${API_BASE}/admin/dashboard-data?${params}`);
+    const data = await r.json();
+    if (!data.ok) return false;
+    renderDashboard(data);
+    return true;
+  } catch (e) {
+    console.error("Dashboard fetch error:", e);
+    return false;
+  }
+}
+
+function renderDashboard(d) {
+  document.getElementById("lastUpdate").textContent = "Derniere mise a jour : " + new Date(d.timestamp).toLocaleString("fr-FR");
+
+  // VPS
+  const vps = d.vps || {};
+  if (vps.error && !vps.ram) {
+    document.getElementById("vpsContent").innerHTML = '<div style="color:var(--muted);font-size:.85rem">Donnees VPS indisponibles (volumes non montes)</div>';
+    document.getElementById("vpsDot").className = "dot dot-orange";
+  } else if (vps.ram) {
+    const ramColor = vps.ram.pct > 90 ? 'red' : vps.ram.pct > 75 ? 'orange' : 'green';
+    const diskColor = vps.disk ? (vps.disk.pct > 90 ? 'red' : vps.disk.pct > 75 ? 'orange' : 'green') : 'green';
+    const cpuColor = vps.cpu !== null ? (vps.cpu > 90 ? 'red' : vps.cpu > 70 ? 'orange' : 'green') : 'green';
+    const uptimeD = Math.floor(vps.uptime / 86400);
+    const uptimeH = Math.floor((vps.uptime % 86400) / 3600);
+    document.getElementById("vpsDot").className = "dot dot-" + (ramColor === 'red' || diskColor === 'red' || cpuColor === 'red' ? 'red' : ramColor === 'orange' || diskColor === 'orange' ? 'orange' : 'green');
+    document.getElementById("vpsContent").innerHTML = `
+      ${vps.cpu !== null ? `<div class="stat-row"><span class="stat-label">CPU</span><span class="stat-value ${cpuColor}">${vps.cpu}%</span></div><div class="progress-bar"><div class="progress-fill pf-${cpuColor}" style="width:${vps.cpu}%"></div></div>` : ''}
+      <div class="stat-row" style="margin-top:6px"><span class="stat-label">RAM</span><span class="stat-value ${ramColor}">${vps.ram.usedMB} / ${vps.ram.totalMB} MB (${vps.ram.pct}%)</span></div>
+      <div class="progress-bar"><div class="progress-fill pf-${ramColor}" style="width:${vps.ram.pct}%"></div></div>
+      ${vps.disk ? `<div class="stat-row" style="margin-top:6px"><span class="stat-label">Disque</span><span class="stat-value ${diskColor}">${vps.disk.usedGB} / ${vps.disk.totalGB} GB (${vps.disk.pct}%)</span></div><div class="progress-bar"><div class="progress-fill pf-${diskColor}" style="width:${vps.disk.pct}%"></div></div>` : ''}
+      <div class="stat-row" style="margin-top:6px"><span class="stat-label">Load Average</span><span class="stat-value">${vps.load.m1} / ${vps.load.m5} / ${vps.load.m15}</span></div>
+      <div class="stat-row"><span class="stat-label">Uptime VPS</span><span class="stat-value">${uptimeD}j ${uptimeH}h</span></div>
+    `;
+  }
+
+  // Docker
+  const dk = d.docker || {};
+  if (dk.error) {
+    document.getElementById("dockerContent").innerHTML = '<div style="color:var(--muted);font-size:.85rem">Docker indisponible (socket non monte)</div>';
+    document.getElementById("dockerDot").className = "dot dot-orange";
+  } else if (dk.containers && dk.containers.length > 0) {
+    document.getElementById("dockerDot").className = "dot dot-" + (dk.stopped > 0 ? "orange" : "green");
+    document.getElementById("dockerContent").innerHTML = `
+      <div class="big-row" style="margin-bottom:12px">
+        <div class="big-item"><div class="big-number green">${dk.running}</div><div class="big-label">Running</div></div>
+        <div class="big-item"><div class="big-number ${dk.stopped > 0 ? 'red' : ''}">${dk.stopped}</div><div class="big-label">Stopped</div></div>
+        <div class="big-item"><div class="big-number">${dk.total}</div><div class="big-label">Total</div></div>
+      </div>
+      <div class="docker-grid">
+        ${dk.containers.map(c => `<div class="docker-item docker-${c.state === 'running' ? 'running' : 'stopped'}">
+          <div class="docker-name">${esc(c.name)}</div>
+          <div class="docker-status" style="color:var(--${c.state === 'running' ? 'green' : 'red'})">${esc(c.status)}</div>
+        </div>`).join("")}
+      </div>
+    `;
+  } else {
+    document.getElementById("dockerContent").innerHTML = '<div style="color:var(--muted)">Aucun conteneur trouve</div>';
+  }
+
+  // Backups
+  const bk = d.backups || {};
+  if (bk.error) {
+    document.getElementById("backupsContent").innerHTML = `<div style="color:var(--muted);font-size:.85rem">${esc(bk.error)}</div>`;
+  } else if (bk.latest) {
+    const latestDate = new Date(bk.latest.date);
+    const hoursSince = Math.round((Date.now() - latestDate.getTime()) / 3600000);
+    const freshColor = hoursSince <= 24 ? 'green' : hoursSince <= 48 ? 'orange' : 'red';
+    document.getElementById("backupsContent").innerHTML = `
+      <div class="stat-row"><span class="stat-label">Derniere sauvegarde</span><span class="stat-value ${freshColor}">${hoursSince < 1 ? 'Il y a moins d\\'1h' : 'Il y a ' + hoursSince + 'h'}</span></div>
+      <div class="stat-row"><span class="stat-label">Fichier</span><span class="stat-value" style="font-size:.8rem">${esc(bk.latest.name)}</span></div>
+      <div class="stat-row"><span class="stat-label">Taille</span><span class="stat-value">${bk.latest.sizeMB} MB</span></div>
+      <div class="stat-row"><span class="stat-label">Total sauvegardes</span><span class="stat-value">${bk.total || 0}</span></div>
+      ${bk.files && bk.files.length > 1 ? '<div style="margin-top:10px;font-size:.78rem;color:var(--muted)">Historique :</div>' + bk.files.slice(0, 5).map(f => `<div class="backup-item"><span class="backup-name">${esc(f.name)}</span><span class="backup-meta">${f.sizeMB} MB — ${f.date.slice(0,16).replace("T"," ")}</span></div>`).join("") : ''}
+    `;
+  } else {
+    document.getElementById("backupsContent").innerHTML = '<div class="alert-item alert-danger">Aucune sauvegarde trouvee</div>';
+  }
+
+  // Health
+  const h = d.health;
+  const uptimeH = Math.floor(h.api.uptime / 3600);
+  const uptimeM = Math.floor((h.api.uptime % 3600) / 60);
+  const memPct = Math.round(h.memory.heapUsed / h.memory.heapTotal * 100);
+  document.getElementById("healthDot").className = "dot " + (memPct > 80 ? "dot-red" : memPct > 60 ? "dot-orange" : "dot-green");
+  document.getElementById("healthContent").innerHTML = `
+    <div class="stat-row"><span class="stat-label">API</span><span class="stat-value green">En ligne</span></div>
+    <div class="stat-row"><span class="stat-label">Uptime</span><span class="stat-value">${uptimeH}h ${uptimeM}m</span></div>
+    <div class="stat-row"><span class="stat-label">Memoire</span><span class="stat-value ${memPct>80?'red':memPct>60?'orange':'green'}">${h.memory.heapUsed} / ${h.memory.heapTotal} MB (${memPct}%)</span></div>
+    <div class="stat-row"><span class="stat-label">RSS</span><span class="stat-value">${h.memory.rss} MB</span></div>
+    <div class="stat-row"><span class="stat-label">Node.js</span><span class="stat-value">${h.node}</span></div>
+    ${h.dbSize !== null ? `<div class="stat-row"><span class="stat-label">Base de donnees</span><span class="stat-value">${h.dbSize} MB</span></div>` : ""}
+  `;
+
+  // Services
+  const svc = d.services;
+  document.getElementById("servicesContent").innerHTML = `<div class="svc-grid">
+    ${Object.entries(svc).map(([k, v]) => `<div class="svc-item ${v ? 'svc-on' : 'svc-off'}">${formatSvcName(k)}<br>${v ? 'Actif' : 'Absent'}</div>`).join("")}
+  </div>`;
+
+  // Alerts
+  const alerts = d.alerts || [];
+  if (alerts.length === 0) {
+    document.getElementById("alertsContent").innerHTML = '<div class="alert-item alert-ok">Aucune alerte — tout fonctionne</div>';
+  } else {
+    document.getElementById("alertsContent").innerHTML = alerts.map(a =>
+      `<div class="alert-item alert-${a.level}">${a.level === 'danger' ? '&#9888;' : '&#9888;'} ${esc(a.msg)}</div>`
+    ).join("");
+  }
+
+  // Business
+  const b = d.business;
+  document.getElementById("businessContent").innerHTML = `
+    <div class="big-row">
+      <div class="big-item"><div class="big-number blue">${b.users.total}</div><div class="big-label">Abonnes actifs</div></div>
+      <div class="big-item"><div class="big-number">${b.users.premium || 0}</div><div class="big-label">Premium</div></div>
+      <div class="big-item"><div class="big-number">${b.users.elite || 0}</div><div class="big-label">Elite</div></div>
+      <div class="big-item"><div class="big-number">${b.users.vip || 0}</div><div class="big-label">VIP</div></div>
+    </div>
+    <div class="stat-row"><span class="stat-label">Free</span><span class="stat-value">${b.users.free || 0}</span></div>
+    <div class="stat-row"><span class="stat-label">Nouveaux aujourd'hui</span><span class="stat-value green">${b.new_today || 0}</span></div>
+    <div class="stat-row"><span class="stat-label">Expirent sous 3 jours</span><span class="stat-value ${b.expiring_soon > 0 ? 'orange' : ''}">${b.expiring_soon}</span></div>
+    <div class="stat-row"><span class="stat-label">Expires total</span><span class="stat-value">${b.expired_total}</span></div>
+  `;
+
+  // Analytics
+  const a = d.analytics;
+  document.getElementById("analyticsContent").innerHTML = `
+    <div class="big-row">
+      <div class="big-item"><div class="big-number green">${a.today?.visitors || 0}</div><div class="big-label">Visiteurs aujourd'hui</div></div>
+      <div class="big-item"><div class="big-number">${a.today?.views || 0}</div><div class="big-label">Pages vues</div></div>
+      <div class="big-item"><div class="big-number">${a.yesterday?.visitors || 0}</div><div class="big-label">Hier</div></div>
+    </div>
+    ${a.topSources?.length ? `<div style="margin-top:10px;font-size:.8rem;color:var(--muted)">Top sources :</div>
+    ${a.topSources.slice(0, 5).map(([s, c]) => `<div class="stat-row"><span class="stat-label">${esc(s)}</span><span class="stat-value">${c}</span></div>`).join("")}` : ""}
+  `;
+
+  // Pronostics — Signal Fort
+  const sf = d.pronostics.signalFort;
+  document.getElementById("pronoContent").innerHTML = `
+    <div class="big-row">
+      <div class="big-item"><div class="big-number ${sf.winrate >= 60 ? 'green' : sf.winrate >= 50 ? 'orange' : 'red'}">${sf.winrate}%</div><div class="big-label">Winrate</div></div>
+      <div class="big-item"><div class="big-number green">${sf.wins}</div><div class="big-label">Gagnes</div></div>
+      <div class="big-item"><div class="big-number red">${sf.losses}</div><div class="big-label">Perdus</div></div>
+      <div class="big-item"><div class="big-number">${sf.total}</div><div class="big-label">Total</div></div>
+    </div>
+    <div class="stat-row"><span class="stat-label">Seuil adaptatif</span><span class="stat-value blue">${sf.threshold}%</span></div>
+  `;
+
+  // Pick du jour
+  const pick = d.pronostics.currentPick;
+  if (pick && pick.home && pick.home !== "Analyse en cours") {
+    document.getElementById("pickContent").innerHTML = `
+      <div style="text-align:center;padding:10px 0">
+        <div style="font-size:1.1rem;font-weight:600">${esc(pick.home || pick.teamA || "")} vs ${esc(pick.away || pick.teamB || "")}</div>
+        <div style="color:var(--muted);font-size:.85rem;margin:6px 0">${esc(pick.competition || "")}</div>
+        <div style="font-size:1rem;color:var(--accent);font-weight:600">${esc(pick.bet || pick.bestBet || "")}</div>
+        <div style="font-size:.85rem;margin-top:4px">Confiance : <strong>${pick.confidence || "?"}%</strong></div>
+      </div>
+    `;
+  } else {
+    document.getElementById("pickContent").innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px">Aucun pick en cours</div>';
+  }
+
+  // Agents performance
+  const agents = d.pronostics.byAgent || [];
+  if (agents.length > 0) {
+    document.getElementById("agentsContent").innerHTML = `<table class="agent-table">
+      <tr><th>Agent</th><th>Total</th><th>Wins</th><th>Losses</th><th>Winrate</th></tr>
+      ${agents.map(ag => `<tr>
+        <td>${esc(ag.agent)}</td>
+        <td>${ag.total}</td>
+        <td style="color:var(--green)">${ag.wins}</td>
+        <td style="color:var(--red)">${ag.losses}</td>
+        <td><strong>${ag.winrate !== null ? ag.winrate + '%' : '—'}</strong></td>
+      </tr>`).join("")}
+    </table>`;
+  } else {
+    document.getElementById("agentsContent").innerHTML = '<div style="color:var(--muted)">Pas de donnees agents</div>';
+  }
+
+  // Visitor chart (7 days)
+  const days = a.last7days || [];
+  if (days.length > 0) {
+    const maxV = Math.max(...days.map(d => d.visitors), 1);
+    document.getElementById("chartContent").innerHTML = `
+      <div class="chart-bars">
+        ${days.map(day => {
+          const h = Math.max(4, Math.round((day.visitors / maxV) * 90));
+          return `<div class="chart-bar" style="height:${h}px"><span class="tip">${day.d}: ${day.visitors} visiteurs, ${day.views} vues</span></div>`;
+        }).join("")}
+      </div>
+      <div class="chart-labels">${days.map(day => `<span>${day.d.slice(5)}</span>`).join("")}</div>
+    `;
+  } else {
+    document.getElementById("chartContent").innerHTML = '<div style="color:var(--muted)">Pas de donnees</div>';
+  }
+
+  // Recent analyses
+  const recent = d.pronostics.recent || [];
+  if (recent.length > 0) {
+    document.getElementById("recentContent").innerHTML = `<table>
+      <tr><th>Match</th><th>Analyse</th><th>Conf.</th><th>Resultat</th><th>Date</th></tr>
+      ${recent.map(r => `<tr>
+        <td>${esc(r.home)} vs ${esc(r.away)}</td>
+        <td>${esc(r.best_bet)}</td>
+        <td>${r.confidence}%</td>
+        <td>${r.outcome ? `<span class="badge-${r.outcome}">${r.outcome}</span>` : '<span class="badge-pending">en cours</span>'}</td>
+        <td style="font-size:.75rem;color:var(--muted)">${(r.analysed_at||"").slice(0,16).replace("T"," ")}</td>
+      </tr>`).join("")}
+    </table>`;
+  } else {
+    document.getElementById("recentContent").innerHTML = '<div style="color:var(--muted)">Aucune analyse recente</div>';
+  }
+
+  // Activity log
+  const log = d.activityLog || [];
+  if (log.length > 0) {
+    document.getElementById("activityContent").innerHTML = log.map(l => `
+      <div class="log-item">
+        <span class="log-date">${(l.date||"").slice(0,16).replace("T"," ")}</span>
+        <span class="log-text">${esc(l.text)}</span>
+      </div>
+    `).join("");
+  } else {
+    document.getElementById("activityContent").innerHTML = '<div style="color:var(--muted)">Aucune activite recente</div>';
+  }
+}
+
+function formatSvcName(key) {
+  const names = { api_sports: "API-Sports", football_data: "Football-Data", stripe: "Stripe", telegram: "Telegram", brevo: "Brevo", groq: "Groq", deepseek: "DeepSeek" };
+  return names[key] || key;
+}
+
+function esc(s) {
+  if (!s) return "";
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// Auto-login from session
+(function() {
+  const saved = sessionStorage.getItem("tlm_admin");
+  if (saved) {
+    try {
+      credentials = JSON.parse(saved);
+      fetchDashboard().then(ok => {
+        if (ok) {
+          document.getElementById("loginScreen").style.display = "none";
+          document.getElementById("dashboard").style.display = "block";
+        } else {
+          credentials = null;
+          sessionStorage.removeItem("tlm_admin");
+        }
+      });
+    } catch { sessionStorage.removeItem("tlm_admin"); }
+  }
+  // Enter key on login
+  document.getElementById("loginCode").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
+  document.getElementById("loginEmail").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("loginCode").focus(); });
+  // Auto-refresh every 60 seconds
+  setInterval(() => { if (credentials) fetchDashboard(); }, 60000);
+})();
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+</body>
+</html>

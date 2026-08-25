@@ -4,6 +4,11 @@ require('dotenv').config();
 const RAPIDAPI_KEY = process.env.RAPIDAPI_KEY;
 const FOOTBALL_KEY = process.env.FOOTBALL_DATA_KEY;
 const API_FOOTBALL_KEY = process.env.API_FOOTBALL_KEY;
+// Ajouts Concile Operateur - ligues asiatiques actives.
+const CONCILE_EXTRA_ACTIVE_LEAGUES = [
+  { country: "South Korea", country_fr: "Coree du Sud", league: "K League 1", id: 292 },
+  { country: "China", country_fr: "Chine", league: "Super League", id: 169 },
+];
 const PRIMARY_LEAGUES = {
   'FR': ['Ligue 1', 'France - Ligue 1'],
   'ES': ['La Liga', 'Spain - La Liga'],
@@ -109,6 +114,7 @@ async function detectActiveLeagues() {
   }
   return {
     active: activeLeagues,
+    extra_active_leagues: CONCILE_EXTRA_ACTIVE_LEAGUES,
     fallback: fallbackRecommendations,
     totalMatches: allMatches.length,
     timestamp: new Date().toISOString()

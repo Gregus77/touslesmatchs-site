@@ -1,0 +1,346 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-14T22:12:24.283Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-14-goal05-api-candidates.json",
+    "minOdd": 1.3,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 2,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 2,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "api-football-1494244-home",
+      "match": "IF Elfsborg - Vasteras SK FK",
+      "team": "IF Elfsborg",
+      "country": "Sweden",
+      "league": "Allsvenskan",
+      "home": "IF Elfsborg",
+      "away": "Vasteras SK FK",
+      "homeLogo": "https://media.api-sports.io/football/teams/372.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/2241.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/113.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Sweden",
+        "league": "Allsvenskan",
+        "team": "IF Elfsborg",
+        "opponent": "Vasteras SK FK",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-14T22:12:16.771Z",
+        "market": {
+          "bestOdd": 2.59,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.59
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.55
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.43
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.4
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.4
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.4
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.3
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.71
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.7
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.66
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.65
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.64
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.62
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.58
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 4,
+          "teamPercentile": 86.67,
+          "opponentPercentile": 0,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 4,
+          "opponentConcededInLastFive": 2,
+          "weightedConstructedGoals": 4,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 3,
+          "opponentRank": 7,
+          "leagueSize": 16
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.59
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.59
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1494738-home",
+      "match": "Rosenborg - Viking",
+      "team": "Rosenborg",
+      "country": "Norway",
+      "league": "Eliteserien",
+      "home": "Rosenborg",
+      "away": "Viking",
+      "homeLogo": "https://media.api-sports.io/football/teams/331.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/759.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/103.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "écart de force historique insuffisant ou non prouvé",
+        "enjeu de classement non démontré",
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Norway",
+        "league": "Eliteserien",
+        "team": "Rosenborg",
+        "opponent": "Viking",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-14T22:12:24.278Z",
+        "market": {
+          "bestOdd": 1.83,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.83
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.82
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.8
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.78
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.78
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.77
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.75
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.75
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.74
+            },
+            {
+              "bookmaker": "10Bet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.73
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.73
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.73
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.72
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.71
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 4,
+          "teamPercentile": 80,
+          "opponentPercentile": 73.33,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/norvege-eliteserien.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 4,
+          "opponentConcededInLastFive": 4,
+          "weightedConstructedGoals": 4,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": false,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 6,
+          "opponentRank": 2,
+          "leagueSize": 16
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 1.83
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 1.83
+      },
+      "alreadySent": false
+    }
+  ],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

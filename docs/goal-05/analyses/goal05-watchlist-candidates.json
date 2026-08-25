@@ -1,0 +1,51 @@
+[
+  {
+    "id": "2026-08-15-bra-serie-a-mirassol-flamengo",
+    "date": "2026-08-15",
+    "country": "Brazil",
+    "league": "Brasileiro Serie A",
+    "competitionType": "league",
+    "home": "Mirassol",
+    "away": "Flamengo",
+    "team": "Flamengo",
+    "opponent": "Mirassol",
+    "teamSide": "away",
+    "prescanStatus": "WATCHLIST_SHADOW",
+    "readyForEngine": false,
+    "missingData": [
+      "fiveYearStrength.opponentPercentile",
+      "recent.scoredInLastFive",
+      "recent.opponentConcededInLastFive",
+      "recent.weightedConstructedGoals",
+      "recent.candidateCanReproduceConcessionPattern",
+      "stake.teamHasMeaningfulObjective",
+      "odds.arjelBookmakers"
+    ],
+    "note": "Candidat de surveillance seulement. Aucun envoi tant que forme 5 matchs, enjeu de classement et cote ANJ +0,5 equipe ne sont pas verifies."
+  },
+  {
+    "id": "2026-08-16-bra-serie-a-internacional-remo",
+    "date": "2026-08-16",
+    "country": "Brazil",
+    "league": "Brasileiro Serie A",
+    "competitionType": "league",
+    "home": "Internacional",
+    "away": "Remo",
+    "team": "Internacional",
+    "opponent": "Remo",
+    "teamSide": "home",
+    "prescanStatus": "WATCHLIST_SHADOW",
+    "readyForEngine": false,
+    "missingData": [
+      "fiveYearStrength.opponentPercentile",
+      "recent.scoredInLastFive",
+      "recent.opponentConcededInLastFive",
+      "recent.weightedConstructedGoals",
+      "recent.candidateCanReproduceConcessionPattern",
+      "stake.teamHasMeaningfulObjective",
+      "odds.arjelBookmakers"
+    ],
+    "note": "Candidat de surveillance seulement. Aucun envoi tant que forme 5 matchs, enjeu de classement et cote ANJ +0,5 equipe ne sont pas verifies."
+  }
+]
+

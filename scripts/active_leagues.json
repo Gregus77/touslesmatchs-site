@@ -1,4 +1,44 @@
 {
   "active": [],
+  "extra_active_leagues": [
+    {
+      "country": "South Korea",
+      "country_fr": "Coree du Sud",
+      "league": "K League 1",
+      "name": "Coree du Sud - K League 1",
+      "api_football_league_id": 292,
+      "sport": "Football",
+      "enabled": true,
+      "active": true,
+      "arjel": false,
+      "priority": "medium",
+      "aliases": [
+        "k league 1",
+        "k-league 1",
+        "south korea k league 1",
+        "korea k league 1",
+        "coree du sud k league 1",
+        "coree du sud"
+      ]
+    },
+    {
+      "country": "China",
+      "country_fr": "Chine",
+      "league": "Super League",
+      "name": "Chine - Super League",
+      "api_football_league_id": 169,
+      "sport": "Football",
+      "enabled": true,
+      "active": true,
+      "arjel": false,
+      "priority": "medium",
+      "aliases": [
+        "china super league",
+        "super league china",
+        "chinese super league",
+        "chine super league"
+      ]
+    }
+  ],
   "fallback": []
 }

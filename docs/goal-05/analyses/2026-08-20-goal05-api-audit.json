@@ -1,0 +1,229 @@
+{
+  "date": "2026-08-20",
+  "timezone": "Europe/Paris",
+  "oddsRows": 30,
+  "fixtureIds": 20,
+  "candidates": [],
+  "rejected": [
+    {
+      "fixture": 1490391,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Philadelphia Union",
+      "away": "Inter Miami"
+    },
+    {
+      "fixture": 1490392,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "FC Cincinnati",
+      "away": "New York City FC"
+    },
+    {
+      "fixture": 1490393,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Columbus Crew",
+      "away": "CF Montreal"
+    },
+    {
+      "fixture": 1490394,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "New York Red Bulls",
+      "away": "Nashville SC"
+    },
+    {
+      "fixture": 1490395,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Orlando City SC",
+      "away": "Chicago Fire"
+    },
+    {
+      "fixture": 1490396,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Toronto FC",
+      "away": "Charlotte"
+    },
+    {
+      "fixture": 1490397,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "DC United",
+      "away": "New England Revolution"
+    },
+    {
+      "fixture": 1490398,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Sporting Kansas City",
+      "away": "St. Louis City"
+    },
+    {
+      "fixture": 1490399,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Minnesota United FC",
+      "away": "Atlanta United FC"
+    },
+    {
+      "fixture": 1490400,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Colorado Rapids",
+      "away": "Los Angeles FC"
+    },
+    {
+      "fixture": 1490401,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Seattle Sounders",
+      "away": "Austin"
+    },
+    {
+      "fixture": 1490402,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Real Salt Lake",
+      "away": "FC Dallas"
+    },
+    {
+      "fixture": 1490403,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Los Angeles Galaxy",
+      "away": "San Jose Earthquakes"
+    },
+    {
+      "fixture": 1490404,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Vancouver Whitecaps",
+      "away": "Houston Dynamo"
+    },
+    {
+      "fixture": 1490405,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "Major League Soccer",
+      "home": "Portland Timbers",
+      "away": "San Diego"
+    },
+    {
+      "fixture": 1493639,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "USL Championship",
+      "home": "Phoenix Rising",
+      "away": "Colorado Springs"
+    },
+    {
+      "fixture": 1493950,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "USL League One",
+      "home": "Corpus Christi",
+      "away": "NY Cosmos"
+    },
+    {
+      "fixture": 1493951,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "USL League One",
+      "home": "One Knoxville",
+      "away": "Portland Hearts of Pine"
+    },
+    {
+      "fixture": 1493952,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "USA",
+      "league": "USL League One",
+      "home": "Sarasota Paradise",
+      "away": "Chattanooga Red Wolves"
+    },
+    {
+      "fixture": 1495375,
+      "reason": "historical_cache_missing_or_team_unmatched",
+      "country": "Norway",
+      "league": "Toppserien",
+      "home": "Rosenborg W",
+      "away": "Lyn W"
+    },
+    {
+      "fixture": 1504287,
+      "reason": "country_not_allowed",
+      "country": "Finland",
+      "league": "Ykkösliiga"
+    },
+    {
+      "fixture": 1507416,
+      "reason": "country_not_allowed",
+      "country": "Georgia",
+      "league": "Liga 3"
+    },
+    {
+      "fixture": 1508511,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "NWSL Women"
+    },
+    {
+      "fixture": 1508512,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "NWSL Women"
+    },
+    {
+      "fixture": 1513296,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "MLS Next Pro"
+    },
+    {
+      "fixture": 1513297,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "MLS Next Pro"
+    },
+    {
+      "fixture": 1513298,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "MLS Next Pro"
+    },
+    {
+      "fixture": 1513300,
+      "reason": "fixture_teams_missing",
+      "country": "USA",
+      "league": "MLS Next Pro"
+    },
+    {
+      "fixture": 1516105,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    },
+    {
+      "fixture": 1516112,
+      "reason": "country_not_allowed",
+      "country": "Uzbekistan",
+      "league": "Super League"
+    }
+  ]
+}

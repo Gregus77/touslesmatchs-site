@@ -96,6 +96,7 @@ services:
       - PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY}
       - COHERE_API_KEY=${COHERE_API_KEY}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_CHIEF_MODEL=${OPENROUTER_CHIEF_MODEL}
       - CEREBRAS_API_KEY=${CEREBRAS_API_KEY}
       - TOGETHER_API_KEY=${TOGETHER_API_KEY}
       # Identifiants de modèles surchargeables (corriger un ID sans redéployer)

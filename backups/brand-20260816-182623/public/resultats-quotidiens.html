@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reçois les résultats du Concile IA chaque jour — TousLesMatchs</title>
+<meta name="description" content="Laisse ton email pour recevoir régulièrement ce que les sélections du Concile IA auraient rapporté la veille — sans engagement, sans carte bancaire.">
+<link rel="canonical" href="https://www.touslesmatchs.com/resultats-quotidiens">
+<link rel="icon" href="/favicon.ico">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#12152a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#12152a;--bg2:#171b34;--bg3:#1e2340;
+  --b1:rgba(255,255,255,.11);--b2:rgba(255,255,255,.18);--b3:rgba(255,255,255,.24);
+  --text:#f6f7ff;--muted:#949bc4;--muted2:#c4c9e6;
+  --indigo:#4f46e5;--indigo2:#6366f1;--violet:#7c3aed;--cyan:#22d3ee;--green:#10b981;--red:#f43f5e;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:60px;background:rgba(6,8,15,.75);border-bottom:1px solid var(--b1);backdrop-filter:blur(20px) saturate(180%)}
+.nav-brand{font-size:16px;font-weight:800;letter-spacing:-.02em;color:var(--text);text-decoration:none}
+
+.page{max-width:520px;margin:0 auto;padding:120px 24px 60px;text-align:center}
+.badge{display:inline-block;font-size:12px;font-weight:700;color:var(--indigo2);background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);padding:6px 16px;border-radius:999px;margin-bottom:20px}
+h1{font-size:clamp(26px,4vw,36px);font-weight:900;letter-spacing:-.03em;margin-bottom:14px;line-height:1.2}
+.sub{font-size:15px;color:var(--muted2);line-height:1.6;margin-bottom:32px}
+
+.card{background:var(--bg2);border:1px solid var(--b2);border-radius:18px;padding:28px}
+.form-row{display:flex;gap:10px;flex-wrap:wrap}
+input[type=email]{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--b2);color:var(--text);padding:13px 16px;border-radius:10px;font-size:15px}
+input[type=email]:focus{outline:none;border-color:var(--indigo2)}
+.btn{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:13px 24px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.msg{margin-top:14px;font-size:13px;display:none}
+.msg.ok{color:var(--green);display:block}
+.msg.err{color:var(--red);display:block}
+.fineprint{margin-top:18px;font-size:11px;color:var(--muted);line-height:1.6}
+
+.perks{margin-top:32px;text-align:left;display:flex;flex-direction:column;gap:12px}
+.perk{display:flex;align-items:flex-start;gap:10px;font-size:14px;color:var(--muted2)}
+.perk b{color:var(--text)}
+
+footer{margin-top:48px;font-size:11px;color:var(--muted);line-height:1.8;text-align:center}
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+  <meta name="theme-color" content="#070a20">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+</head>
+<body class="tlm-wow tlm-page-resultats">
+
+<nav>
+  <a href="/" class="nav-brand">TousLes<span style="color:var(--indigo2)">Matchs</span></a>
+</nav>
+
+<div class="page">
+  <div class="badge">Le Concile IA sportif</div>
+  <h1>Reçois ce que le Concile aurait fait gagner, sans rien payer</h1>
+  <div class="sub">Laisse ton email : tu recevras régulièrement un récap de ce qu'auraient rapporté les sélections publiées la veille — pour te faire une idée avant de t'abonner.</div>
+
+  <div class="card">
+    <form id="lead-form">
+      <div class="form-row">
+        <input type="email" id="lead-email" placeholder="ton@email.com" autocomplete="email" required>
+        <button type="submit" class="btn" id="lead-btn">Je veux recevoir ça</button>
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-top:12px;font-size:12.5px;color:var(--muted);cursor:pointer;text-align:left">
+        <input type="checkbox" id="lead-consent" required style="margin-top:2px;flex-shrink:0">
+        <span>J'accepte de recevoir les résultats, actualités et offres de TousLesMatchs par email.</span>
+      </label>
+      <div class="msg" id="lead-msg"></div>
+    </form>
+    <div class="fineprint">Aucune carte bancaire. Désabonnement en un clic sur chaque email. Tes données ne sont jamais revendues.</div>
+  </div>
+
+  <div class="perks">
+    <div class="perk">✅ <span><b>Simulation transparente</b> — mise fixe de 10€, résultats gagnés et perdus, rien de caché.</span></div>
+    <div class="perk">📊 <span><b>Pas de spam</b> — un email de temps en temps, pas tous les jours.</span></div>
+    <div class="perk">🔓 <span><b>Aucun engagement</b> — tu peux te désabonner à tout moment.</span></div>
+  </div>
+
+  <footer>
+    LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction.<br>
+    Conseils sur joueurs-info-service.fr — 09 74 75 13 13 (appel non surtaxé).<br>
+    18+ · TousLesMatchs ne garantit aucun gain · Simulations informatives basées sur les résultats passés, qui ne préjugent pas des résultats futurs.<br>
+    <a href="/mentions-legales" style="color:var(--muted)">Mentions légales</a> · <a href="/confidentialite" style="color:var(--muted)">Confidentialité</a>
+  </footer>
+</div>
+
+<script>
+document.getElementById('lead-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  var email = document.getElementById('lead-email').value.trim();
+  var consent = document.getElementById('lead-consent').checked;
+  var btn = document.getElementById('lead-btn');
+  var msg = document.getElementById('lead-msg');
+  msg.className = 'msg';
+  if (!consent) {
+    msg.textContent = '⚠️ Coche la case pour accepter de recevoir les emails.';
+    msg.className = 'msg err';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Envoi...';
+  fetch('/api/lead-capture', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email, consent: consent })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if (d.ok) {
+      msg.textContent = '✅ Merci ! Tu recevras bientôt ton premier récap.';
+      msg.className = 'msg ok';
+      document.getElementById('lead-email').value = '';
+    } else {
+      msg.textContent = '⚠️ ' + (d.error || 'Erreur, réessaie.');
+      msg.className = 'msg err';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Je veux recevoir ça';
+  }).catch(function(){
+    msg.textContent = '⚠️ Erreur de connexion, réessaie.';
+    msg.className = 'msg err';
+    btn.disabled = false;
+    btn.textContent = 'Je veux recevoir ça';
+  });
+});
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+<script src="/js/cookie-consent.js" defer></script>
+  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+</body>
+</html>

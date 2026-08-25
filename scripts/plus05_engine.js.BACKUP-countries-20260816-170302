@@ -1,0 +1,154 @@
+"use strict";
+
+/**
+ * Moteur isolé « équipe marque +0,5 ».
+ *
+ * Il ne contacte aucune API et n'envoie aucun message : l'appelant lui donne un
+ * dossier déjà collecté. Cette séparation empêche qu'un nouveau produit modifie
+ * les règles du Concile historique avant la phase d'observation.
+ */
+// Seuil abaissé temporairement pour la beta technique: verifier que les signaux sortent.
+// Le seuil commercial cible reste plus sélectif et doit être remonté après validation du tuyau.
+const PLUS05_MIN_ODD = Number(process.env.GOAL05_MIN_ODD || 1.60);
+const MIN_STRENGTH_GAP = 40;
+const MIN_HISTORICAL_SEASONS = 3;
+
+const ALLOWED_COUNTRIES = new Set([
+  "Argentina", "Austria", "Belgium", "Brazil", "Croatia", "Denmark", "England",
+  "France", "Germany", "Greece", "Italy", "Japan", "Netherlands", "Norway", "Poland",
+  "Portugal", "Scotland", "South Korea", "Spain", "Sweden", "Switzerland", "Turkey"
+]);
+
+function text(value) { return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim(); }
+function numericOdd(value) {
+  const odd = Number(String(value || "").replace(",", "."));
+  return Number.isFinite(odd) && odd > 1 ? Math.round(odd * 100) / 100 : null;
+}
+function yes(value) { return value === true || value === "yes" || value === "strong"; }
+function no(value) { return value === false || value === "no" || value === "weak"; }
+function isKnown(value) { return value !== undefined && value !== null && value !== ""; }
+
+function isTeamScoreBet(name) {
+  const n = text(name);
+  return (n.includes("team to score") || n.includes("team score") || n.includes("equipe marque") || n.includes("team total"))
+    && !n.includes("first half") && !n.includes("2nd half") && !n.includes("second half");
+}
+
+function isSelectionForSide(value, side) {
+  const v = text(value);
+  const hasOver05 = /over 0 5|plus 0 5|more than 0 5/.test(v);
+  if (!hasOver05) return false;
+  const home = /home|domicile/.test(v);
+  const away = /away|exterieur|exterieur/.test(v);
+  return side === "home" ? !away : !home;
+}
+
+/** Return auditable real odds only from the ARJEL/ANJ bookmaker subset. */
+function findTeamToScoreOver05Odds(odds, side) {
+  const values = [];
+  for (const bookmaker of odds?.arjelBookmakers || []) {
+    for (const bet of bookmaker?.bets || []) {
+      if (!isTeamScoreBet(bet.name)) continue;
+      for (const option of bet.values || []) {
+        if (!isSelectionForSide(option.value, side)) continue;
+        const odd = numericOdd(option.odd);
+        if (odd) values.push({ bookmaker: bookmaker.name || "ANJ", market: bet.name, selection: option.value, odd });
+      }
+    }
+  }
+  values.sort((a, b) => b.odd - a.odd);
+  return { bestOdd: values[0]?.odd || null, offers: values };
+}
+
+function noBet(reasons, evidence, warnings = []) { return { status: "NO_BET", reasons, warnings, evidence }; }
+function watchlist(reasons, evidence, warnings = []) { return { status: "WATCHLIST_SHADOW", reasons, warnings, evidence }; }
+
+function evaluateHistoricalStrength(c, hardReasons, softReasons, warnings) {
+  const strength = c.fiveYearStrength || {};
+  const teamPct = Number(strength.teamPercentile);
+  const opponentPct = Number(strength.opponentPercentile);
+  if (strength.levelTableLoaded === false) hardReasons.push("table historique du championnat non chargée");
+  const seasonsAvailable = Number(strength.seasonsAvailable ?? strength.teamSeasonsAvailable ?? strength.minSeasonsAvailable);
+  if (Number.isFinite(seasonsAvailable) && seasonsAvailable < MIN_HISTORICAL_SEASONS) hardReasons.push("moins de 3 saisons historiques exploitables");
+  else if (seasonsAvailable === 3) warnings.push("historique 3 saisons accepté : prudence renforcée");
+  if (strength.historicalCacheStatus && !["OK", "CROSSED", "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK"].includes(strength.historicalCacheStatus)) {
+    hardReasons.push("cache historique championnat non exploitable");
+  }
+  if (!Number.isFinite(teamPct) || !Number.isFinite(opponentPct) || teamPct - opponentPct < MIN_STRENGTH_GAP) {
+    hardReasons.push("écart de force historique insuffisant ou non prouvé");
+  }
+}
+
+function evaluateStake(c, hardReasons, softReasons) {
+  const stake = c.stake || {};
+  if (stake.teamHasMeaningfulObjective !== true) hardReasons.push("enjeu de classement non démontré");
+  if (stake.sameZoneAfterResult === true) hardReasons.push("faux enjeu : victoire/défaite sans changement de zone sportive");
+  if (stake.stakeTeamIsStrongerSide === false) hardReasons.push("l'équipe avec l'enjeu n'est pas le côté fort du match");
+  if (stake.unusualPositionButRealProject === true) softReasons.push("place inhabituelle mais projet réel : contrôle renforcé requis");
+}
+
+function evaluateRecentAttack(c, hardReasons, softReasons) {
+  const recent = c.recent || {};
+  if (recent.recentMatchesOrder && recent.recentMatchesOrder !== "oldest_to_newest") hardReasons.push("les cinq derniers matchs ne sont pas analysés du plus ancien au plus récent");
+  if (Number(recent.scoredInLastFive) < 5) hardReasons.push("équipe non buteuse sur les cinq derniers matchs");
+  if (Number(recent.weightedConstructedGoals) < 3) hardReasons.push("preuves de buts construits/assistés insuffisantes");
+  if (no(recent.scoringState)) hardReasons.push("l'équipe ne rentre pas dans un état où elle marque");
+  if (no(recent.goal05SpecificEvidence)) hardReasons.push("preuve spécifique +0,5 trop faible");
+  if (recent.scoringStateWithCharacter === "no") softReasons.push("équipe buteuse mais caractère offensif faible");
+  if (recent.lateReactionPattern === true) softReasons.push("réaction offensive tardive répétée");
+  if (recent.positiveIntensityWithoutGoal === true) softReasons.push("intensité positive sans but : watchlist plutôt que signal direct");
+  if (recent.expectedToLeadMatch === true && recent.imposedTempo === false) softReasons.push("équipe attendue leader mais tempo non imposé");
+  if (recent.lateGoalWeight === "reduced" || recent.penaltyGoalWeight === "reduced") softReasons.push("buts récents tardifs ou penalties : preuve offensive réduite");
+}
+
+function evaluateOpponentConcedes(c, hardReasons, softReasons) {
+  const recent = c.recent || {};
+  if (Number(recent.opponentConcededInLastFive) < 5) hardReasons.push("adversaire non encaissant sur les cinq derniers matchs");
+  if (no(recent.opponentConcedesState)) hardReasons.push("l'adversaire ne rentre pas clairement dans un état où il encaisse");
+  if (recent.candidateCanReproduceConcessionPattern === false) hardReasons.push("la candidate ne peut pas reproduire les patterns qui ont fait encaisser l'adversaire");
+  if (recent.candidateLevelMatchesPriorScorers === false) hardReasons.push("l'adversaire encaisse surtout contre plus fort que la candidate");
+  if (recent.concededAgainstWeakerOrSickTeam === true) softReasons.push("adversaire a encaissé contre équipe faible/malade : vulnérabilité renforcée");
+  if (Number(recent.psychologicalGoalPainScore) >= 2) softReasons.push("douleur psychologique récente des buts encaissés");
+  if (recent.lateCollapsePattern === true || recent.rapidDoubleConcession === true) softReasons.push("pattern de craquage défensif tardif ou rapide");
+}
+
+function evaluateCandidate(candidate) {
+  const c = candidate || {};
+  const hardReasons = [];
+  const softReasons = [];
+  const warnings = [];
+
+  if (!ALLOWED_COUNTRIES.has(c.country)) hardReasons.push("pays ou compétition hors périmètre validé");
+  if (!["home", "away"].includes(c.teamSide)) hardReasons.push("côté de l'équipe inconnu");
+  if (c.competitionType && c.competitionType !== "league") hardReasons.push("match non championnat : coupe/barrage exclu");
+
+  evaluateHistoricalStrength(c, hardReasons, softReasons, warnings);
+  evaluateStake(c, hardReasons, softReasons);
+  evaluateRecentAttack(c, hardReasons, softReasons);
+  evaluateOpponentConcedes(c, hardReasons, softReasons);
+
+  const market = findTeamToScoreOver05Odds(c.odds, c.teamSide);
+  if (!market.bestOdd) hardReasons.push("marché exact équipe +0,5 absent chez les bookmakers ANJ");
+  else if (market.bestOdd < PLUS05_MIN_ODD) hardReasons.push(`cote réelle ANJ ${market.bestOdd.toFixed(2)} inférieure à ${PLUS05_MIN_ODD.toFixed(2)}`);
+  if (market.bestOdd && market.bestOdd < 1.60) warnings.push("seuil commercial 1.60 requis pour diffusion");
+
+  const evidence = {
+    country: c.country || null,
+    league: c.league || null,
+    team: c.team || null,
+    opponent: c.opponent || null,
+    teamSide: c.teamSide || null,
+    competitionType: c.competitionType || null,
+    oddsFetchedAt: c.odds?.fetchedAt || null,
+    market,
+    fiveYearStrength: c.fiveYearStrength || {},
+    recent: c.recent || {},
+    stake: c.stake || null,
+  };
+
+  if (hardReasons.length) return noBet(hardReasons, evidence, warnings);
+  if (softReasons.length) return watchlist(softReasons, evidence, warnings);
+  return { status: "ELIGIBLE_SHADOW", reasons: ["dossier complet : à journaliser et contrôler avant toute diffusion"], warnings, evidence };
+}
+
+module.exports = { ALLOWED_COUNTRIES, PLUS05_MIN_ODD, MIN_STRENGTH_GAP, MIN_HISTORICAL_SEASONS, findTeamToScoreOver05Odds, evaluateCandidate };

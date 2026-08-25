@@ -1,0 +1,21 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-24T22:12:32.356Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-26-goal05-api-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 0,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 0,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

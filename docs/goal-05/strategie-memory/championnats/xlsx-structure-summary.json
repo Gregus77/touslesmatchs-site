@@ -1,0 +1,1065 @@
+[
+  {
+    "name": "A League (Australie).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\A League (Australie).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Melbourne City",
+            "1.0",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.25"
+          ],
+          [
+            "Melbourne City",
+            "1.0",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.25",
+            "Sydney FC",
+            "5.0",
+            "8.0",
+            "2.0",
+            "1.0",
+            "4.0"
+          ],
+          [
+            "Central Coast Mariners",
+            "2.0",
+            "5.0",
+            "3.0",
+            "11.0",
+            "5.25",
+            "Adelaide United",
+            "3.0",
+            "4.0",
+            "5.0",
+            "7.0",
+            "4.75"
+          ],
+          [
+            "Adelaide United",
+            "3.0",
+            "4.0",
+            "5.0",
+            "7.0",
+            "4.75",
+            "Central Coast Mariners",
+            "2.0",
+            "5.0",
+            "3.0",
+            "11.0",
+            "5.25"
+          ],
+          [
+            "WS Wanderers",
+            "4.0",
+            "10.0",
+            "8.0",
+            "9.0",
+            "7.75",
+            "Wellington Phoenix",
+            "6.0",
+            "6.0",
+            "7.0",
+            "3.0",
+            "5.5"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Allsvenskan (Suède).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Allsvenskan (Suède).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Malmo",
+            "1.0",
+            "7.0",
+            "1.0",
+            "1.0",
+            "2.5"
+          ],
+          [
+            "AIK",
+            "11.0",
+            "5.0",
+            "2.0",
+            "9.0",
+            "6.75",
+            "Djurgarden",
+            "4.0",
+            "2.0",
+            "3.0",
+            "4.0",
+            "3.25"
+          ],
+          [
+            "Djurgarden",
+            "4.0",
+            "2.0",
+            "3.0",
+            "4.0",
+            "3.25",
+            "Elfsborg",
+            "2.0",
+            "6.0",
+            "4.0",
+            "2.0",
+            "3.5"
+          ],
+          [
+            "GAIS",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "9999",
+            "Hacken",
+            "3.0",
+            "1.0",
+            "12.0",
+            "3.0",
+            "4.75"
+          ],
+          [
+            "Hacken",
+            "3.0",
+            "1.0",
+            "12.0",
+            "3.0",
+            "4.75",
+            "Hammarby",
+            "7.0",
+            "3.0",
+            "5.0",
+            "8.0",
+            "5.75"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Brasileiro Serie A (Brésil).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Brasileiro Serie A (Brésil).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Flamengo",
+            "4.0",
+            "5.0",
+            "2.0",
+            "1.0",
+            "3.0"
+          ],
+          [
+            "RB Bragantino",
+            "6.0",
+            "14.0",
+            "6.0",
+            "10.0",
+            "9",
+            "Palmeiras",
+            "1.0",
+            "1.0",
+            "3.0",
+            "7.0",
+            "3.0"
+          ],
+          [
+            "Flamengo",
+            "4.0",
+            "5.0",
+            "2.0",
+            "1.0",
+            "3",
+            "Atletico-MG",
+            "3.0",
+            "7.0",
+            "1.0",
+            "3.0",
+            "3.5"
+          ],
+          [
+            "Botafogo",
+            "5.0",
+            "11.0",
+            "9999.0",
+            "20.0",
+            "2508.75",
+            "Fluminense",
+            "7.0",
+            "3.0",
+            "7.0",
+            "5.0",
+            "5.5"
+          ],
+          [
+            "Athletico",
+            "8.0",
+            "6.0",
+            "14.0",
+            "9.0",
+            "9.25",
+            "Internacional",
+            "9.0",
+            "2.0",
+            "12.0",
+            "2.0",
+            "6.25"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Eliteserien (Norvege).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Eliteserien (Norvege).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Bodo/Glimt",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.0",
+            "1.25"
+          ],
+          [
+            "Bodo/Glimt",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.0",
+            "1.25",
+            "Molde",
+            "5.0",
+            "1.0",
+            "2.0",
+            "2.0",
+            "2.5"
+          ],
+          [
+            "Haugesund",
+            "12.0",
+            "10.0",
+            "11.0",
+            "9.0",
+            "10.5",
+            "Rosenborg",
+            "9.0",
+            "3.0",
+            "5.0",
+            "4.0",
+            "5.25"
+          ],
+          [
+            "Fredrikstad",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "9999",
+            "Viking",
+            "4.0",
+            "11.0",
+            "3.0",
+            "6.0",
+            "6.0"
+          ],
+          [
+            "HamKam",
+            "11.0",
+            "13.0",
+            "9999.0",
+            "9999.0",
+            "5005.5",
+            "Odd",
+            "10.0",
+            "5.0",
+            "13.0",
+            "7.0",
+            "8.75"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "J1 League (Japon).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\J1 League (Japon).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Kawasaki",
+            "8.0",
+            "2.0",
+            "1.0",
+            "1.0",
+            "3.0"
+          ],
+          [
+            "Machida Z",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "9999",
+            "Yokohama FM",
+            "2.0",
+            "1.0",
+            "2.0",
+            "9.0",
+            "3.5"
+          ],
+          [
+            "Kashima",
+            "17.0",
+            "4.0",
+            "4.0",
+            "5.0",
+            "7.5",
+            "Nagoya",
+            "6.0",
+            "8.0",
+            "5.0",
+            "3.0",
+            "5.5"
+          ],
+          [
+            "Gamba Osaka",
+            "16.0",
+            "15.0",
+            "13.0",
+            "2.0",
+            "11.5",
+            "Hiroshima",
+            "3.0",
+            "3.0",
+            "11.0",
+            "8.0",
+            "6.25"
+          ],
+          [
+            "Vissel Kobe",
+            "1.0",
+            "13.0",
+            "3.0",
+            "14.0",
+            "7.75",
+            "Urawa Reds",
+            "4.0",
+            "9.0",
+            "6.0",
+            "10.0",
+            "7.25"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "K League 1 (Corée du Sud ).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\K League 1 (Corée du Sud ).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Ulsan HD",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.25"
+          ],
+          [
+            "Ulsan HD",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.25",
+            "Jeonbuk",
+            "4.0",
+            "2.0",
+            "1.0",
+            "2.0",
+            "2.25"
+          ],
+          [
+            "Pohang",
+            "2.0",
+            "3.0",
+            "7.0",
+            "3.0",
+            "3.75",
+            "Pohang",
+            "2.0",
+            "3.0",
+            "7.0",
+            "3.0",
+            "3.75"
+          ],
+          [
+            "Gwangju",
+            "3.0",
+            "9999.0",
+            "12.0",
+            "6.0",
+            "2505",
+            "Daegu",
+            "5.0",
+            "9.0",
+            "3.0",
+            "5.0",
+            "5.5"
+          ],
+          [
+            "Jeonbuk",
+            "4.0",
+            "2.0",
+            "1.0",
+            "2.0",
+            "2.25",
+            "Incheon",
+            "6.0",
+            "4.0",
+            "8.0",
+            "12.0",
+            "7.5"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "La Ligua (Espagne).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\La Ligua (Espagne).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Real Madrid",
+            "2.0",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.5"
+          ],
+          [
+            "Barcelone",
+            "1.0",
+            "2.0",
+            "3.0",
+            "2.0",
+            "2",
+            "Barcelone",
+            "1.0",
+            "2.0",
+            "3.0",
+            "2.0",
+            "2.0"
+          ],
+          [
+            "Real Madrid",
+            "2.0",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.5",
+            "Atl Madrid",
+            "3.0",
+            "3.0",
+            "1.0",
+            "3.0",
+            "2.5"
+          ],
+          [
+            "Atl Madrid",
+            "3.0",
+            "3.0",
+            "1.0",
+            "3.0",
+            "2.5",
+            "Real Sociedad",
+            "4.0",
+            "6.0",
+            "5.0",
+            "6.0",
+            "5.25"
+          ],
+          [
+            "Real Sociedad",
+            "4.0",
+            "6.0",
+            "5.0",
+            "6.0",
+            "5.25",
+            "Villareal",
+            "5.0",
+            "7.0",
+            "7.0",
+            "5.0",
+            "6.0"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Liga profesional (Argentine).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Liga profesional (Argentine).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Rivers Plate",
+            "1.0",
+            "3.0",
+            "1.0",
+            "2.0",
+            "1.75"
+          ],
+          [
+            "Rivers Plate",
+            "1.0",
+            "3.0",
+            "1.0",
+            "2.0",
+            "1.75",
+            "Boca Junior",
+            "6.0",
+            "1.0",
+            "4.0",
+            "1.0",
+            "3.0"
+          ],
+          [
+            "Talleres CordobaSan Lorenzo",
+            "2.0",
+            "13.0",
+            "3.0",
+            "12.0",
+            "7.5",
+            "Defensa YJusticia",
+            "5.0",
+            "12.0",
+            "2.0",
+            "6.0",
+            "6.25"
+          ],
+          [
+            "Lanus",
+            "3.0",
+            "27.0",
+            "10.0",
+            "7.0",
+            "11.75",
+            "Talleres CordobaSan Lorenzo",
+            "2.0",
+            "13.0",
+            "3.0",
+            "12.0",
+            "7.5"
+          ],
+          [
+            "Estudiantes",
+            "4.0",
+            "18.0",
+            "6.0",
+            "13.0",
+            "10.25",
+            "Racing Club",
+            "11.0",
+            "2.0",
+            "15.0",
+            "4.0",
+            "8.0"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Ligue 1 et 2  (France).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Ligue 1 et 2  (France).xlsx",
+    "sheets": [
+      {
+        "sheet": "Ligue 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "PSG",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.25"
+          ],
+          [
+            "PSG",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.0",
+            "1.25",
+            "Marseille",
+            "3.0",
+            "2.0",
+            "5.0",
+            "2.0",
+            "3.0"
+          ],
+          [
+            "Brest",
+            "14.0",
+            "11.0",
+            "17.0",
+            "14.0",
+            "14",
+            "Rennes",
+            "4.0",
+            "4.0",
+            "6.0",
+            "3.0",
+            "4.25"
+          ],
+          [
+            "Monaco",
+            "6.0",
+            "3.0",
+            "3.0",
+            "9.0",
+            "5.25",
+            "Lille",
+            "5.0",
+            "10.0",
+            "1.0",
+            "4.0",
+            "5.0"
+          ],
+          [
+            "Lille",
+            "5.0",
+            "10.0",
+            "1.0",
+            "4.0",
+            "5",
+            "Monaco",
+            "6.0",
+            "3.0",
+            "3.0",
+            "9.0",
+            "5.25"
+          ]
+        ]
+      },
+      {
+        "sheet": "Ligue 2",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Le Havre",
+            "1.0",
+            "8.0",
+            "12.0",
+            "6.0",
+            "6.75"
+          ],
+          [
+            "Le Havre",
+            "1.0",
+            "8.0",
+            "12.0",
+            "6.0",
+            "6.75",
+            "Guingamp",
+            "6.0",
+            "6.0",
+            "9.0",
+            "8.0",
+            "7.25"
+          ],
+          [
+            "Metz",
+            "2.0",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "7499.75",
+            "Paris FC",
+            "7.0",
+            "4.0",
+            "5.0",
+            "17.0",
+            "8.25"
+          ],
+          [
+            "Bordeaux",
+            "3.0",
+            "9999.0",
+            "9999.0",
+            "9999.0",
+            "7500",
+            "Sochaux",
+            "9.0",
+            "5.0",
+            "7.0",
+            "14.0",
+            "8.75"
+          ],
+          [
+            "Bastia",
+            "4.0",
+            "12.0",
+            "9999.0",
+            "9999.0",
+            "5003.5",
+            "Gregnoble",
+            "10.0",
+            "15.0",
+            "4.0",
+            "9.0",
+            "9.5"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "MLS  (USA).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\MLS  (USA).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Philadelphia",
+            "5.0",
+            "2.0",
+            "6.0",
+            "3.25"
+          ],
+          [
+            "Inter Miami",
+            "27.0",
+            "12.0",
+            "20.0",
+            "14.75",
+            "Orlando",
+            "2.0",
+            "13.0",
+            "10.0",
+            "6.25"
+          ],
+          [
+            "Cincinnati",
+            "1.0",
+            "10.0",
+            "27.0",
+            "9.5",
+            "New England",
+            "6.0",
+            "20.0",
+            "1.0",
+            "6.75"
+          ],
+          [
+            "Salt Lake",
+            "11.0",
+            "14.0",
+            "13.0",
+            "9.5",
+            "Los Angeles",
+            "8.0",
+            "1.0",
+            "19.0",
+            "7.0"
+          ],
+          [
+            "Los Angeles",
+            "8.0",
+            "1.0",
+            "19.0",
+            "7",
+            "Nashville",
+            "12.0",
+            "9.0",
+            "7.0",
+            "7.0"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Premier Ligue  (Angleterre ).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Premier Ligue  (Angleterre ).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Manchester City",
+            "1.0",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.25"
+          ],
+          [
+            "Manchester City",
+            "1.0",
+            "1.0",
+            "1.0",
+            "2.0",
+            "1.25",
+            "Liverpool",
+            "5.0",
+            "2.0",
+            "3.0",
+            "1.0",
+            "2.75"
+          ],
+          [
+            "Arsenal",
+            "2.0",
+            "5.0",
+            "8.0",
+            "8.0",
+            "5.75",
+            "Manchester united",
+            "3.0",
+            "6.0",
+            "2.0",
+            "3.0",
+            "3.5"
+          ],
+          [
+            "Manchester united",
+            "3.0",
+            "6.0",
+            "2.0",
+            "3.0",
+            "3.5",
+            "Arsenal",
+            "2.0",
+            "5.0",
+            "8.0",
+            "8.0",
+            "5.75"
+          ],
+          [
+            "Newcastle",
+            "4.0",
+            "11.0",
+            "12.0",
+            "13.0",
+            "Chelsea",
+            "12.0",
+            "3.0",
+            "4.0",
+            "4.0",
+            "5.75"
+          ]
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Serie A (Italie).xlsx",
+    "path": "C:\\Users\\Greg\\Downloads\\Serie A (Italie).xlsx",
+    "sheets": [
+      {
+        "sheet": "Feuille 1",
+        "rows": 0,
+        "cols": 0,
+        "preview": [
+          [
+            "Nom de l'équipe",
+            "Class A-1",
+            "Class A-2",
+            "Class A-3",
+            "Class A-4",
+            "Résultat Class",
+            "Inter",
+            "3.0",
+            "2.0",
+            "2.0",
+            "4.0",
+            "2.75"
+          ],
+          [
+            "Napoli",
+            "1.0",
+            "3.0",
+            "7.0",
+            "2.0",
+            "3.25",
+            "Napoli",
+            "1.0",
+            "3.0",
+            "7.0",
+            "2.0",
+            "3.25"
+          ],
+          [
+            "Lazio",
+            "2.0",
+            "5.0",
+            "4.0",
+            "8.0",
+            "4.75",
+            "Juventus",
+            "7.0",
+            "4.0",
+            "1.0",
+            "1.0",
+            "3.25"
+          ],
+          [
+            "Inter",
+            "3.0",
+            "2.0",
+            "2.0",
+            "4.0",
+            "2.75",
+            "Milan",
+            "4.0",
+            "1.0",
+            "6.0",
+            "5.0",
+            "4.0"
+          ],
+          [
+            "Milan",
+            "4.0",
+            "1.0",
+            "6.0",
+            "5.0",
+            "4",
+            "Lazio",
+            "2.0",
+            "5.0",
+            "4.0",
+            "8.0",
+            "4.75"
+          ]
+        ]
+      }
+    ]
+  }
+]

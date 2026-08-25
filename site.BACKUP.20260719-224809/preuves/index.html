@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Résultats vérifiés — TousLesMatchs</title>
+<meta name="description" content="Track record en temps réel du Concile IA : winrate, gagnés/perdus et derniers résultats vérifiés. Aucune statistique inventée.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #06080f; color: #eceaf4; line-height: 1.55; padding: 0 16px 60px;
+  }
+  a { color: #6366f1; text-decoration: none; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+  .logo { font-size: 20px; font-weight: 900;
+    background: linear-gradient(135deg, #6366f1, #7c3aed);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back { font-size: 13px; color: #7b82a0; }
+  h1 { font-size: 26px; font-weight: 900; margin-bottom: 6px; text-align: center; }
+  .subtitle { font-size: 13px; color: #7b82a0; margin-bottom: 24px; text-align: center; }
+
+  .hero {
+    background: linear-gradient(160deg, #0d1020, #0a0d18);
+    border: 1px solid rgba(52,211,153,.22); border-radius: 18px;
+    padding: 26px 20px; margin-bottom: 20px; text-align: center;
+  }
+  .wr { font-size: 56px; font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, #34d399, #22d3ee);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .wr-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #7b82a0; margin-top: 8px; }
+  .kpis { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .kpi { background: #06080f; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 12px 18px; min-width: 92px; }
+  .kpi .v { font-size: 22px; font-weight: 900; }
+  .kpi .l { font-size: 10px; color: #7b82a0; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+  .c-win { color: #10b981; } .c-loss { color: #ef4444; }
+
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: #7b82a0; margin: 8px 4px 12px; }
+  .card { background: #0d1020; border: 1px solid rgba(99,102,241,.18); border-radius: 16px; padding: 8px 18px; margin-bottom: 20px; }
+  .res { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .res:last-child { border-bottom: none; }
+  .res-ico { font-size: 20px; width: 26px; text-align: center; }
+  .res-main { flex: 1; min-width: 0; }
+  .res-match { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .res-meta { font-size: 11px; color: #7b82a0; margin-top: 2px; }
+  .res-right { text-align: right; white-space: nowrap; }
+  .res-score { font-size: 14px; font-weight: 800; }
+  .res-cote { font-size: 11px; color: #7b82a0; }
+  .loading, .empty { text-align: center; color: #7b82a0; font-size: 14px; padding: 30px 0; }
+
+  .cta { display: block; text-align: center; background: linear-gradient(135deg, #059669, #10b981);
+    color: #fff; font-weight: 800; font-size: 16px; padding: 16px; border-radius: 12px; margin-bottom: 14px; }
+  .cta-sub { display: block; text-align: center; color: #6366f1; font-size: 13px; margin-bottom: 24px; }
+  .disclaimer { font-size: 11px; color: #6b7186; line-height: 1.7; padding: 16px;
+    background: rgba(255,255,255,.02); border-radius: 12px; border: 1px solid rgba(255,255,255,.05); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">TousLesMatchs</div>
+    <a class="back" href="/">← Accueil</a>
+  </header>
+
+  <h1>🏆 Résultats vérifiés</h1>
+  <p class="subtitle">Le track record réel du Concile IA, mis à jour automatiquement. Aucune statistique inventée — chaque résultat vient de la base.</p>
+
+  <div class="hero">
+    <div class="wr" id="winrate">—</div>
+    <div class="wr-label">Winrate — Signal Fort (≥ <span id="threshold">85</span>%)</div>
+    <div class="kpis">
+      <div class="kpi"><div class="v c-win" id="wins">—</div><div class="l">Gagnés</div></div>
+      <div class="kpi"><div class="v c-loss" id="losses">—</div><div class="l">Perdus</div></div>
+      <div class="kpi"><div class="v" id="total">—</div><div class="l">Total résolus</div></div>
+    </div>
+  </div>
+
+  <div class="section-label">Derniers résultats</div>
+  <div class="card">
+    <div id="feed"><div class="loading">Chargement des résultats…</div></div>
+  </div>
+
+  <a class="cta" href="/#plan-carte">⚡ Tester une analyse — 1 €</a>
+  <a class="cta-sub" href="/#plans">Voir les abonnements Pro / Elite →</a>
+
+  <div class="disclaimer">
+    ⚠️ 18+ · Ces résultats reflètent l'historique réel des analyses du Concile IA, sans aucune garantie de performance future. Une analyse IA n'est pas une certitude et les résultats passés ne préjugent pas des résultats à venir. Jouer comporte des risques : endettement, isolement, dépendance. Appelez le 09 74 75 13 13 (appel non surtaxé) — <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a>.
+  </div>
+</div>
+
+<script>
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  fetch('/signal-fort-stats')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d || !d.ok) throw new Error('no data');
+      document.getElementById('winrate').textContent = (d.winrate != null ? d.winrate : 0) + '%';
+      document.getElementById('wins').textContent = d.wins || 0;
+      document.getElementById('losses').textContent = d.losses || 0;
+      document.getElementById('total').textContent = d.total || 0;
+      if (d.threshold) document.getElementById('threshold').textContent = d.threshold;
+
+      var feed = document.getElementById('feed');
+      var items = (d.picks_feed || []).filter(function(p){ return p.result === 'win' || p.result === 'loss'; });
+      if (!items.length) {
+        feed.innerHTML = '<div class="empty">Les premiers résultats vérifiés apparaîtront ici très bientôt.</div>';
+        return;
+      }
+      feed.innerHTML = items.map(function(p) {
+        var win = p.result === 'win';
+        return '<div class="res">' +
+          '<div class="res-ico">' + (win ? '✅' : '❌') + '</div>' +
+          '<div class="res-main">' +
+            '<div class="res-match">' + esc(p.home) + ' vs ' + esc(p.away) + '</div>' +
+            '<div class="res-meta">' + esc(p.competition) + ' · ' + esc(p.date) + ' · <b>' + esc(p.pick) + '</b></div>' +
+          '</div>' +
+          '<div class="res-right">' +
+            '<div class="res-score ' + (win ? 'c-win' : 'c-loss') + '">' + esc(p.score) + '</div>' +
+            '<div class="res-cote">@ ' + esc(p.cote) + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      document.getElementById('feed').innerHTML = '<div class="empty">Résultats momentanément indisponibles. Réessayez dans un instant.</div>';
+    });
+</script>
+<script src="/js/widgets.js" defer></script>
+</body>
+</html>

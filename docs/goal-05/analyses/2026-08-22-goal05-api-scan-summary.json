@@ -1,0 +1,278 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-22T16:12:24.587Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-22-goal05-api-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 2,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 2,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "api-football-1492346-away",
+      "match": "Internacional - Atletico-MG",
+      "team": "Atletico-MG",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Internacional",
+      "away": "Atletico-MG",
+      "homeLogo": "https://media.api-sports.io/football/teams/119.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/1062.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "écart de force historique insuffisant ou non prouvé",
+        "preuves de buts construits/assistés insuffisantes",
+        "preuve spécifique +0,5 trop faible",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Brazil",
+        "league": "Serie A",
+        "team": "Atletico-MG",
+        "opponent": "Internacional",
+        "teamSide": "away",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-22T16:12:17.070Z",
+        "market": {
+          "bestOdd": 2.67,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.67
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.51
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.51
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.5
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.48
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.42
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.95
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.95
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.92
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.92
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.9
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.9
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Cards",
+              "selection": "Over 0.5",
+              "odd": 1.15
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Cards",
+              "selection": "Over 0.5",
+              "odd": 1.1
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Cards",
+              "selection": "Over 0.5",
+              "odd": 1.08
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 4,
+          "teamPercentile": 89.47,
+          "opponentPercentile": 78.95,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 5,
+          "opponentConcededInLastFive": 3,
+          "weightedConstructedGoals": 2,
+          "scoringState": "yes",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "no",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": false,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 8,
+          "opponentRank": 16,
+          "leagueSize": 20
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.67
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.67
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1495530-home",
+      "match": "Djurgården W - Brommapojkarna W",
+      "team": "Djurgården W",
+      "country": "Sweden",
+      "league": "Damallsvenskan",
+      "home": "Djurgården W",
+      "away": "Brommapojkarna W",
+      "homeLogo": "https://media.api-sports.io/football/teams/11076.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/16004.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/549.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "moins de 3 saisons historiques exploitables",
+        "enjeu de classement non démontré",
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "preuves de buts construits/assistés insuffisantes",
+        "preuve spécifique +0,5 trop faible"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Sweden",
+        "league": "Damallsvenskan",
+        "team": "Djurgården W",
+        "opponent": "Brommapojkarna W",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-22T16:12:24.583Z",
+        "market": {
+          "bestOdd": 2.23,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.23
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.64
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 1,
+          "teamPercentile": 93.33,
+          "opponentPercentile": 13.33,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 5,
+          "opponentConcededInLastFive": 5,
+          "weightedConstructedGoals": 2,
+          "scoringState": "yes",
+          "opponentConcedesState": "yes",
+          "goal05SpecificEvidence": "no",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": false,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 10,
+          "opponentRank": 9,
+          "leagueSize": 14
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.23
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.23
+      },
+      "alreadySent": false
+    }
+  ],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

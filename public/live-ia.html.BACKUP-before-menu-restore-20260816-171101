@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live IA — TousLesMatchs</title>
+<meta name="description" content="Matchs de football en direct analysés par le Concile IA — scores en temps réel.">
+<link rel="canonical" href="https://www.touslesmatchs.com/live-ia">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Live IA — TousLesMatchs">
+<meta property="og:description" content="Matchs de football en direct analysés par le Concile IA — scores en temps réel.">
+<meta property="og:url" content="https://www.touslesmatchs.com/live-ia">
+<meta property="og:site_name" content="TousLesMatchs">
+<meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+:root{
+  --bg:#12152a;--bg2:#171b34;--bg3:#1e2340;--bg4:#262c4d;
+  --text:#f7f8ff;--muted:#949bc4;--muted2:#c4c9e6;
+  --green:#1cc98f;--red:#f6546b;--cyan:#33dcf5;--indigo:#7275ff;--indigo2:#8f92ff;
+  --violet:#8b4bf0;--amber:#f7a91e;--pink:#f050a0;
+  --b1:rgba(255,255,255,.11);--b2:rgba(255,255,255,.18);
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;min-height:100vh}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:200;background:rgba(18,21,42,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--b1);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.nav-logo{font-size:18px;font-weight:800;color:var(--text);text-decoration:none;letter-spacing:-.02em;flex:0 0 auto}
+.nav-logo span{color:var(--indigo2)}
+.nav-center{display:flex;gap:20px;align-items:center;flex-wrap:wrap;justify-content:center;flex:1}
+.nav-center a{color:var(--muted2);text-decoration:none;font-size:13px;font-weight:600;transition:color .2s;display:flex;align-items:center}
+.nav-center a:hover{color:var(--text)}
+.nav-center a.active{color:var(--cyan)}
+.nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.nav-cta{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;text-decoration:none;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;white-space:nowrap;transition:all .2s}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.3)}
+.nav-login-btn{background:transparent;border:1px solid rgba(255,255,255,.16);color:var(--text);padding:7px 15px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.nav-login-btn:hover{border-color:var(--violet)}
+@media(max-width:560px){ .nav-cta{display:none} }
+.nav-hamburger{display:none;background:none;border:1px solid var(--b2);border-radius:8px;color:var(--text);width:34px;height:34px;font-size:16px;cursor:pointer}
+@media(max-width:900px){ .nav-center{display:none} .nav-hamburger{display:block} }
+.mmenu{display:none;position:fixed;inset:0;z-index:199;background:rgba(18,21,42,.98);padding:90px 24px 24px;flex-direction:column;gap:18px}
+.mmenu.open{display:flex}
+.mmenu a{font-size:18px;font-weight:700;color:var(--text);text-decoration:none;padding:10px 0;border-bottom:1px solid var(--b1)}
+
+/* HEADER */
+.page-header{text-align:center;padding:40px 24px 20px}
+.page-title{font-size:clamp(28px,4vw,44px);font-weight:900;letter-spacing:-.035em;margin-bottom:8px}
+.page-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:600px;margin:0 auto}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);margin-right:8px;animation:pulse-dot 1.5s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(244,63,94,.6)}50%{opacity:.7;box-shadow:0 0 0 6px rgba(244,63,94,0)}}
+@keyframes popupPulse{0%,100%{box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 0 rgba(255,214,10,.4)}50%{box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 24px rgba(255,214,10,.7)}}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:12px 24px 24px}
+.filter-btn{background:var(--bg3);border:1px solid var(--b1);color:var(--muted2);padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.filter-btn:hover,.filter-btn.active{background:rgba(99,102,241,.12);border-color:rgba(99,102,241,.3);color:var(--indigo2)}
+
+/* ADVANCED FILTERS (curseurs multi-criteres) */
+.adv-filters-toggle{max-width:900px;margin:0 auto;padding:0 16px}
+.adv-filters-panel{max-width:900px;margin:10px auto 0;padding:18px 20px;background:var(--bg3);border:1px solid var(--b1);border-radius:14px}
+.adv-filters-panel .af-title{font-weight:800;font-size:14px;margin-bottom:12px;color:var(--indigo2, #7c5cff)}
+.af-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.af-row label{flex:0 0 220px;font-size:12px;color:var(--muted2);font-weight:600}
+.af-row input[type=range]{flex:1;accent-color:#7c5cff}
+.af-row .af-val{flex:0 0 48px;text-align:right;font-size:12px;font-weight:700;color:#fff}
+.af-actions{display:flex;gap:10px;margin-top:6px}
+.af-actions button{border:none;border-radius:9px;padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer}
+.af-apply{background:linear-gradient(135deg,#7c5cff,#5b3ff5);color:#fff}
+.af-reset{background:var(--bg2, #1e2340);color:var(--muted2);border:1px solid var(--b1)!important}
+.af-count{font-size:11px;color:var(--muted2);margin-left:auto;align-self:center}
+.af-highlight-btn{background:linear-gradient(135deg,#ff3b5c,#7c5cff);color:#fff;border:none;padding:12px 22px;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 0 0 rgba(255,59,92,.5);animation:afPulse 1.8s infinite}
+.af-highlight-btn.active{animation:none;box-shadow:none}
+@keyframes afPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,59,92,.55)}50%{box-shadow:0 0 0 10px rgba(255,59,92,0)}}
+
+/* MATCH GRID */
+.matches-wrap{max-width:900px;margin:0 auto;padding:0 16px 60px}
+.match-card{background:var(--bg3);border:1px solid var(--b1);border-radius:16px;padding:20px;margin-bottom:12px;transition:all .25s;cursor:default}
+.match-card:hover{border-color:rgba(99,102,241,.25);transform:translateY(-1px)}
+.match-card.finished{opacity:.7}
+.match-card.finished:hover{opacity:.9}
+
+/* Match header */
+.mc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mc-sport{display:flex;align-items:center;gap:6px}
+.mc-sport-icon{width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);font-size:16px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.mc-comp{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.mc-country{display:inline-flex;align-items:center;gap:5px;margin-left:8px;color:var(--muted2);letter-spacing:0;text-transform:none}
+.mc-status{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:8px;padding:4px 10px}
+.mc-status.live{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+.mc-status.finished{background:rgba(123,130,160,.08);color:var(--muted);border:1px solid var(--b1)}
+.mc-status.scheduled{background:rgba(34,211,238,.08);color:var(--cyan);border:1px solid rgba(34,211,238,.2)}
+.mc-status .st-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:pulse-dot 1.5s infinite}
+
+/* Match body — teams + score */
+.mc-body{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mc-team{flex:1;display:flex;align-items:center;gap:10px}
+.mc-team.away{flex-direction:row-reverse;text-align:right}
+.mc-logo{width:38px;height:38px;border-radius:9px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--text);flex-shrink:0;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.mc-logo img{width:100%;height:100%;object-fit:contain}
+.mc-name{font-size:15px;font-weight:700;line-height:1.3}
+.mc-score-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:70px}
+.mc-score{font-size:28px;font-weight:900;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.mc-minute{font-size:11px;font-weight:700;color:var(--red);background:rgba(244,63,94,.08);padding:2px 8px;border-radius:6px}
+.mc-minute.done{color:var(--muted);background:rgba(123,130,160,.08)}
+
+/* CTA analyse */
+.mc-cta{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.mc-analyse-btn{flex:1;background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(124,58,237,.12));border:1px solid rgba(99,102,241,.25);color:var(--indigo2);padding:10px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center}
+.mc-analyse-btn:hover{background:linear-gradient(135deg,rgba(99,102,241,.25),rgba(124,58,237,.2));transform:translateY(-1px)}
+.mc-analyse-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.mc-not-playable{flex:1;background:rgba(255,255,255,.03);border:1px solid var(--b1);color:var(--muted2);padding:10px 16px;border-radius:10px;font-size:12.5px;text-align:center}
+
+/* Analysis result */
+.mc-analysis{margin-top:14px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:12px;padding:16px;display:none}
+.mc-analysis.visible{display:block}
+.mc-analysis-title{font-size:13px;font-weight:700;color:var(--indigo2);margin-bottom:8px}
+.mc-analysis-text{font-size:13px;color:var(--muted2);line-height:1.7}
+.mc-analysis-bet{display:inline-block;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.2);color:var(--green);padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-top:8px}
+.conf-dot{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:8px;vertical-align:middle;border:2px solid rgba(255,255,255,.35);flex-shrink:0}
+.conf-dot.green{background:var(--green);box-shadow:0 0 10px rgba(16,185,129,.9)}
+.conf-dot.yellow{background:#facc15;box-shadow:0 0 10px rgba(250,204,21,.9)}
+.conf-dot.orange{background:#f97316;box-shadow:0 0 10px rgba(249,115,22,.9)}
+.conf-dot.red{background:var(--red);box-shadow:0 0 10px rgba(244,63,94,.9)}
+.conf-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-top:8px;margin-right:6px}
+.conf-badge.green{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);color:var(--green)}
+.conf-badge.yellow{background:rgba(250,204,21,.1);border:1px solid rgba(250,204,21,.3);color:#facc15}
+.conf-badge.orange{background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#f97316}
+.conf-badge.red{background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.25);color:var(--red)}
+@keyframes blinkNoPlay{0%,100%{opacity:1}50%{opacity:.35}}
+.blink-badge{animation:blinkNoPlay 1s ease-in-out infinite}
+
+/* Empty state */
+.empty-state{text-align:center;padding:80px 24px}
+.empty-icon{font-size:48px;margin-bottom:16px}
+.empty-title{font-size:20px;font-weight:800;margin-bottom:8px}
+.empty-sub{font-size:14px;color:var(--muted2);line-height:1.6;max-width:400px;margin:0 auto}
+
+/* Loading */
+.loading{text-align:center;padding:60px 24px}
+.spinner{width:32px;height:32px;border:3px solid var(--b2);border-top-color:var(--indigo2);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Auth bar */
+.auth-bar{max-width:900px;margin:0 auto;padding:0 16px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.auth-info{font-size:12px;color:var(--muted2)}
+.auth-info strong{color:var(--green)}
+.auth-login-btn{background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:8px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s}
+.auth-login-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.3)}
+
+/* Login modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:32px;width:90%;max-width:400px}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted2);margin-bottom:20px;line-height:1.6}
+.modal-label{font-size:12px;font-weight:700;color:var(--muted2);display:block;margin-bottom:4px}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--b2);color:var(--text);padding:10px 14px;border-radius:10px;font-size:14px;margin-bottom:12px}
+.modal-input:focus{outline:none;border-color:var(--indigo2)}
+.modal-btn{width:100%;background:linear-gradient(135deg,var(--indigo),var(--violet));color:#fff;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer}
+.modal-close{position:absolute;top:12px;right:16px;font-size:20px;color:var(--muted);cursor:pointer;background:none;border:none}
+.modal-error{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* Refresh bar */
+.refresh-bar{text-align:center;padding:8px;font-size:11px;color:var(--muted)}
+.refresh-bar button{background:none;border:none;color:var(--cyan);cursor:pointer;font-size:11px;font-weight:700;margin-left:6px}
+
+/* Search */
+.search-bar{max-width:900px;margin:0 auto;padding:0 16px 12px}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--b2);color:var(--text);padding:11px 16px;border-radius:12px;font-size:14px}
+.search-input:focus{outline:none;border-color:var(--indigo2)}
+.search-input::placeholder{color:var(--muted)}
+
+/* Legende confiance — pense-bete toujours visible */
+.conf-legend{max-width:900px;margin:0 auto;padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.conf-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--bg3);border:1px solid var(--b1)}
+.conf-legend-item .conf-dot{width:11px;height:11px;margin-right:0}
+
+/* Sport popup */
+
+/* History section */
+.history-section{max-width:900px;margin:0 auto;padding:0 16px 40px}
+.history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-top:48px;border-top:1px solid var(--b1)}
+.history-title{font-size:clamp(20px,3vw,28px);font-weight:800;letter-spacing:-.02em}
+.history-stats{display:flex;gap:16px;flex-wrap:wrap}
+.h-stat{background:var(--bg3);border:1px solid var(--b1);border-radius:12px;padding:10px 16px;text-align:center;min-width:80px}
+.h-stat-val{font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+.h-stat-val.green{color:var(--green)}.h-stat-val.red{color:var(--red)}.h-stat-val.cyan{color:var(--cyan)}
+.h-stat-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.h-card{background:var(--bg3);border:1px solid var(--b1);border-radius:14px;padding:16px 20px;margin-bottom:10px;transition:border-color .2s}
+.h-card:hover{border-color:rgba(99,102,241,.2)}
+.h-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px}
+.h-comp{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.h-time{font-size:11px;color:var(--muted)}
+.h-teams{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.h-logo{width:28px;height:28px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.h-logo img{width:100%;height:100%;object-fit:contain}
+.h-vs{font-size:12px;color:var(--muted);font-weight:700}
+.h-team-name{font-size:14px;font-weight:700}
+.h-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.h-bet{font-size:12px;font-weight:700;padding:4px 12px;border-radius:8px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.2);color:var(--indigo2)}
+.h-conf{font-size:12px;font-weight:700;color:var(--amber)}
+.h-outcome{font-size:12px;font-weight:800;padding:3px 10px;border-radius:6px}
+.h-outcome.win{background:rgba(16,185,129,.12);color:var(--green);border:1px solid rgba(16,185,129,.25)}
+.h-outcome.loss{background:rgba(244,63,94,.1);color:var(--red);border:1px solid rgba(244,63,94,.2)}
+.h-outcome.pending{background:rgba(245,158,11,.08);color:var(--amber);border:1px solid rgba(245,158,11,.2)}
+.h-score{font-size:13px;font-weight:800;color:var(--text)}
+.h-reasoning{font-size:12px;color:var(--muted2);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)}
+.h-load-more{display:block;width:100%;background:var(--bg3);border:1px solid var(--b2);color:var(--indigo2);padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;margin-top:16px;transition:all .2s}
+.h-load-more:hover{background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.3)}
+.h-empty{text-align:center;padding:48px 24px;color:var(--muted2)}
+.h-empty-icon{font-size:40px;margin-bottom:12px}
+.h-empty-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:6px}
+
+/* Tab bar */
+.tab-bar{display:flex;gap:0;max-width:900px;margin:0 auto 20px;padding:0 16px}
+.tab-btn{flex:1;background:var(--bg3);border:1px solid var(--b1);color:var(--muted2);padding:14px 16px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center;border-bottom:3px solid transparent}
+.tab-btn:first-child{border-radius:12px 0 0 12px}
+.tab-btn:last-child{border-radius:0 12px 12px 0}
+.tab-btn.active{background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.2);border-bottom-color:var(--indigo2);color:var(--indigo2)}
+.tab-btn:hover:not(.active){background:var(--bg4)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Footer */
+.footer{text-align:center;padding:32px 16px;border-top:1px solid var(--b1);font-size:11px;color:var(--muted);line-height:1.8}
+.footer a{color:var(--muted);text-decoration:none}
+
+/* Responsive */
+@media(max-width:600px){
+  .mc-body{flex-direction:column;gap:8px}
+  .mc-team,.mc-team.away{flex-direction:row;text-align:left;justify-content:flex-start}
+  .mc-score{font-size:22px}
+  .mc-name{font-size:14px}
+  .filters{padding:8px 12px 16px}
+  .filter-btn{padding:6px 12px;font-size:11px}
+  .tab-btn{font-size:13px;padding:12px 10px}
+}
+</style>
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-ME2T7G7PSK');
+</script>
+
+  <meta name="theme-color" content="#070a20">
+  <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+</head>
+<body class="tlm-wow tlm-page-live">
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="/" class="nav-logo">TousLes<span>Matchs</span></a>
+  <div class="nav-center">
+    <a href="/#pick">Analyses</a>
+    <a href="/live-ia" class="active"><span class="live-dot"></span>Live IA</a>
+    <a href="/performances">Résultats</a>
+    <a href="/bankroll">Bankroll</a>
+    <a href="/#methode">Méthode</a>
+    <a href="/#plans">Tarifs</a>
+  </div>
+  <div class="nav-right">
+    <button class="nav-login-btn" id="nav-se-connecter" onclick="openLoginModal()">Se connecter</button>
+    <a href="/dashboard" class="nav-cta" id="nav-cta-top">Créer mon compte gratuit</a>
+    <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
+  </div>
+</nav>
+<div class="mmenu" id="mmenu">
+  <a href="/#pick" onclick="toggleMenu()">Analyses</a>
+  <a href="/live-ia" onclick="toggleMenu()">Live IA</a>
+  <a href="/performances" onclick="toggleMenu()">Résultats</a>
+  <a href="/bankroll" onclick="toggleMenu()">Bankroll</a>
+  <a href="/#methode" onclick="toggleMenu()">Méthode</a>
+  <a href="/#plans" onclick="toggleMenu()">Tarifs</a>
+  <a href="/dashboard" onclick="toggleMenu()">Créer mon compte gratuit</a>
+</div>
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="page-title"><span class="live-dot"></span> Live IA</div>
+  <div class="page-sub">Matchs en direct analysés par le Concile IA. Analyses automatiques et statistiques en temps réel.</div>
+</div>
+
+<!-- BOOKMAKERS — comparer la cote chez un bookmaker agréé ANJ -->
+<div id="bookmaker-bar" style="max-width:720px;margin:0 auto 20px;padding:14px 16px;display:none">
+  <div style="font-size:11px;color:#7b82a0;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px;text-align:center">Comparer la cote chez un bookmaker agréé ANJ</div>
+  <div id="bookmaker-links" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px"></div>
+</div>
+<script>
+fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(d){
+  if (!d.ok || !d.links || !d.links.length) return;
+  var brand = {Winamax:{bg:'#E2001A',fg:'#fff'},Unibet:{bg:'#0C7A3D',fg:'#fff'},PMU:{bg:'#003DA5',fg:'#fff'},Betclic:{bg:'#FFD100',fg:'#111'}};
+  var el = document.getElementById('bookmaker-links');
+  el.innerHTML = d.links.map(function(b){
+    var c = brand[b.text] || {bg:'#334155', fg:'#fff'};
+    return '<a href="' + b.url + '" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:' + c.bg + ';color:' + c.fg + ';padding:10px 8px;border-radius:10px;text-decoration:none;font-weight:900;font-size:13px;letter-spacing:-.01em">' + b.text + '</a>';
+  }).join('');
+  document.getElementById('bookmaker-bar').style.display = 'block';
+}).catch(function(){});
+</script>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('live')">🔴 En direct</button>
+  <button class="tab-btn" onclick="switchTab('stats')">📊 Statistiques</button>
+</div>
+
+<!-- TAB: EN DIRECT -->
+<div class="tab-content active" id="tab-live">
+
+<!-- AUTH BAR -->
+<div class="auth-bar" id="auth-bar">
+  <div class="auth-info" id="auth-info">Connecte-toi pour analyser les matchs</div>
+  <button class="auth-login-btn" id="auth-btn" onclick="openLoginModal()">Connexion</button>
+</div>
+
+<!-- CLASSEMENT AGENTS IA — Elite only (en haut) -->
+<div id="agent-ranking" style="display:none;max-width:720px;margin:32px auto;padding:0 16px">
+  <div style="background:rgba(13,16,32,.8);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px;backdrop-filter:blur(20px)">
+    <div style="font-size:16px;font-weight:800;margin-bottom:4px">📊 Classement des agents IA</div>
+    <div id="agent-meta" style="font-size:12px;color:#7b82a0;margin-bottom:18px"></div>
+    <div id="agent-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-bar">
+  <input type="text" class="search-input" id="match-search" placeholder="🔍 Rechercher une équipe ou un match..." oninput="onSearchInput(this.value)">
+</div>
+
+<!-- LEGENDE CONFIANCE -->
+<div class="conf-legend">
+  <span class="conf-legend-item"><span class="conf-dot green"></span>≥85/100 Fiable</span>
+  <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84/100 Bon</span>
+  <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74/100 Risqué</span>
+  <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
+</div>
+
+<!-- FILTERS -->
+<div class="filters" id="filters">
+  <button class="filter-btn active" data-filter="Football">&#9917; Football</button>
+</div>
+
+<!-- ADVANCED FILTERS — desactives temporairement le 04/08/2026 (demande du
+     fondateur) : un curseur restait bloque au maximum et ne revenait jamais a
+     zero, ni via "Reinitialiser" ni au rechargement de la page, malgre deux
+     correctifs successifs (bypass des matchs deja payes, reflow force des
+     sliders). Cache cote client en attendant d'isoler la cause reelle plutot
+     que de laisser un filtre casse actif sur le site. Le JS (toggleAdvFilters,
+     applyAdvFilters, resetAdvFilters, matchPassesAdvFilters) reste en place,
+     inoffensif tant que rien ne l'appelle — reactivable en remettant ce bloc. -->
+
+<!-- REFRESH -->
+<div class="refresh-bar" id="refresh-bar">
+  Dernière mise à jour : <span id="last-update">—</span>
+  <button onclick="loadMatches(true)">Actualiser</button>
+</div>
+
+<!-- MATCHES -->
+<div class="matches-wrap" id="matches-wrap">
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div style="font-size:14px;color:var(--muted2)">Chargement des matchs en direct...</div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" onclick="closeLoginModal()">&#10005;</button>
+    <div class="modal-title">Connexion Live IA</div>
+    <div class="modal-sub">Entre ton email et ton code d'accès reçu après paiement.</div>
+    <label class="modal-label">Email</label>
+    <input class="modal-input" type="email" id="login-email" placeholder="ton@email.com">
+    <label class="modal-label">Code d'accès</label>
+    <input class="modal-input" type="text" id="login-code" placeholder="STANDARD-XXXXXX">
+    <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <div class="modal-error" id="login-error"></div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);text-align:center">
+      <div class="modal-sub" style="margin-bottom:10px">Pas encore de code d'accès ?</div>
+      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" style="display:block;text-decoration:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-weight:800;padding:13px;border-radius:10px">⚡ Choisir Standard — dès 4,90&nbsp;€/mois</a>
+    </div>
+  </div>
+</div>
+
+</div><!-- /tab-live -->
+
+<!-- TAB: STATISTIQUES -->
+<div class="tab-content" id="tab-stats">
+<div class="history-section" id="historique">
+  <div class="history-header">
+    <div class="history-title">📋 Historique des analyses</div>
+    <div class="history-stats" id="history-stats"></div>
+  </div>
+  <div id="history-list"></div>
+  <button class="h-load-more" id="history-load-more" style="display:none" onclick="loadMoreHistory()">Charger plus d'analyses</button>
+</div>
+</div><!-- /tab-stats -->
+
+<!-- FOOTER -->
+<div class="footer">
+  Analyse sportive assistée par IA · Données vérifiées · 0 match inventé<br>
+  LES JEUX D'ARGENT ET DE HASARD PEUVENT ETRE DANGEREUX : pertes d'argent, conflits familiaux, addiction.<br>
+  Conseils sur joueurs-info-service.fr - 09 74 75 13 13, appel non surtaxé.<br>
+  18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives<br>
+  <a href="/mentions-legales.html">Mentions légales</a> · <a href="mailto:hermes@touslesmatchs.com">Contact</a>
+</div>
+
+<script>
+// ── Tab switching ──
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b,i){ b.classList.toggle('active', i === (tab === 'live' ? 0 : 1)); });
+  document.getElementById('tab-live').classList.toggle('active', tab === 'live');
+  document.getElementById('tab-stats').classList.toggle('active', tab !== 'live');
+  if (tab === 'stats') loadHistory();
+}
+if (location.hash === '#historique' || location.hash === '#stats') { setTimeout(function(){ switchTab('stats'); }, 100); }
+
+// ── Sport config ──
+const SPORT_ICONS = {
+  Football: "⚽", Basketball: "🏀", Hockey: "🏒",
+  Rugby: "🏉"
+};
+
+const COUNTRY_FLAGS = {
+  "Argentina":"🇦🇷","Australia":"🇦🇺","Austria":"🇦🇹","Belgium":"🇧🇪","Brazil":"🇧🇷","Canada":"🇨🇦",
+  "Chile":"🇨🇱","China":"🇨🇳","Colombia":"🇨🇴","Croatia":"🇭🇷","Czech Republic":"🇨🇿","Denmark":"🇩🇰",
+  "England":"🏴","Finland":"🇫🇮","France":"🇫🇷","Germany":"🇩🇪","Greece":"🇬🇷","Italy":"🇮🇹",
+  "Japan":"🇯🇵","Mexico":"🇲🇽","Netherlands":"🇳🇱","Norway":"🇳🇴","Poland":"🇵🇱","Portugal":"🇵🇹",
+  "Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Spain":"🇪🇸","Sweden":"🇸🇪","Switzerland":"🇨🇭","Turkey":"🇹🇷",
+  "USA":"🇺🇸","United States":"🇺🇸","World":"🌍"
+};
+
+// ── State ──
+let allMatches = [];
+let currentFilter = "Football"; // le foot est affiché par défaut ; les autres sports se choisissent via les filtres
+let searchTerm = "";
+// Filtres avances (curseurs) : 100% gratuit et cote client, aucun jeton
+// depense tant que l'utilisateur ne clique pas sur "Analyser" un match.
+// maxGoalDiff=5 et minMinute=0 = valeurs neutres (pas de filtre applique).
+let advFilters = { btts: 0, ht: 0, under25: 0, maxGoalDiff: 5, minMinute: 0, active: false };
+
+function toggleAdvFilters() {
+  var p = document.getElementById("adv-filters-panel");
+  p.style.display = (p.style.display === "none") ? "block" : "none";
+}
+function syncAdvLabel(id, suffix) {
+  document.getElementById(id + "-val").textContent = document.getElementById(id).value + (suffix || "");
+}
+function applyAdvFilters() {
+  advFilters.btts = Number(document.getElementById("af-btts").value) || 0;
+  advFilters.ht = Number(document.getElementById("af-ht").value) || 0;
+  advFilters.under25 = Number(document.getElementById("af-under25").value) || 0;
+  advFilters.maxGoalDiff = Number(document.getElementById("af-goaldiff").value);
+  advFilters.minMinute = Number(document.getElementById("af-minute").value) || 0;
+  advFilters.active = advFilters.btts > 0 || advFilters.ht > 0 || advFilters.under25 > 0 || advFilters.maxGoalDiff < 5 || advFilters.minMinute > 0;
+  document.getElementById("adv-filters-btn").classList.toggle("active", advFilters.active);
+  renderMatches();
+}
+// Certains navigateurs mobiles (Safari iOS, webview TikTok/Instagram) ne
+// repositionnent pas visuellement le curseur quand on change .value en JS
+// sans forcer un reflow — le curseur reste affiche a son ancienne position
+// meme si applyAdvFilters() utilise deja la bonne valeur. Constate le
+// 04/08/2026 : le rond restait a droite apres "Reinitialiser" malgre un
+// filtre reellement remis a 0. Le forcage de reflow (lecture offsetHeight
+// apres un display:none/'') corrige l'affichage sur tous les navigateurs testes.
+function setRangeValue(id, val) {
+  var el = document.getElementById(id);
+  el.value = val;
+  el.style.display = "none";
+  void el.offsetHeight;
+  el.style.display = "";
+  el.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function resetAdvFilters() {
+  ["af-btts", "af-ht", "af-under25"].forEach(function(id) { setRangeValue(id, 0); syncAdvLabel(id, "%"); });
+  setRangeValue("af-goaldiff", 5); syncAdvLabel("af-goaldiff", "");
+  setRangeValue("af-minute", 0); syncAdvLabel("af-minute", "'");
+  applyAdvFilters();
+}
+function matchPassesAdvFilters(m) {
+  if (!advFilters.active) return true;
+  // Un match deja analyse (jeton depense) ne doit jamais disparaitre a cause
+  // d'un curseur de filtre — sinon le client perd de vue une analyse qu'il a
+  // payee des qu'il ajuste un critere. Constate le 04/08/2026.
+  var matchId = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
+  if (analysisCache[matchId] || loadWatched()[matchId]) return true;
+  var h2h = m.h2h_markets;
+  if (advFilters.btts > 0 && (!h2h || h2h.btts_pct == null || h2h.btts_pct < advFilters.btts)) return false;
+  if (advFilters.ht > 0 && (!h2h || h2h.first_half_goal_pct == null || h2h.first_half_goal_pct < advFilters.ht)) return false;
+  if (advFilters.under25 > 0 && (!h2h || h2h.under25_pct == null || h2h.under25_pct < advFilters.under25)) return false;
+  if (advFilters.maxGoalDiff < 5) {
+    var gd = (m.score_home != null && m.score_away != null) ? Math.abs(m.score_home - m.score_away) : null;
+    if (gd == null || gd > advFilters.maxGoalDiff) return false;
+  }
+  if (advFilters.minMinute > 0) {
+    var min = parseInt(m.minute, 10);
+    if (isNaN(min) || min < advFilters.minMinute) return false;
+  }
+  return true;
+}
+let userAuth = null;
+// Analyses déjà obtenues, gardées en mémoire le temps de la session. loadMatches()
+// tourne toutes les 60s et reconstruit tout le HTML des cartes (scores en direct) —
+// sans ce cache, une analyse tout juste ouverte se refermait et redevenait un
+// simple bouton "Analyser" à chaque rafraîchissement.
+// Persisté en localStorage (pas juste en mémoire) : un jeton payé doit rester
+// visible même après un rechargement de page ou une revisite plus tard dans
+// le match, pas seulement pendant la session en cours. Demande du fondateur le
+// 03/08/2026. Purge les entrées de plus de 12h (matchs forcément terminés).
+var ANALYSIS_CACHE_KEY = "tlm_analysis_cache";
+function loadAnalysisCache() {
+  try {
+    var raw = JSON.parse(localStorage.getItem(ANALYSIS_CACHE_KEY) || "{}");
+    var now = Date.now(), fresh = {};
+    Object.keys(raw).forEach(function (k) {
+      var entry = raw[k];
+      if (entry && entry.ts && (now - entry.ts) < 12 * 3600 * 1000) fresh[k] = entry.html;
+    });
+    return fresh;
+  } catch (e) { return {}; }
+}
+function saveAnalysisCache() {
+  try {
+    var out = {};
+    Object.keys(analysisCache).forEach(function (k) { out[k] = { html: analysisCache[k], ts: Date.now() }; });
+    localStorage.setItem(ANALYSIS_CACHE_KEY, JSON.stringify(out));
+  } catch (e) {}
+}
+let analysisCache = loadAnalysisCache();
+
+// ── Minute affichée : traduit les codes bruts de l'API en français clair.
+// "0" est un chiffre valide (coup d'envoi) mais falsy en JS — sans check
+// explicite typeof === "number", la minute disparaissait a la 0e minute.
+// Les autres codes (P, BT, HT, ET...) viennent tels quels des sources
+// sportives (API-Sports/football-data) : les afficher bruts ("P", "BT")
+// est incomprehensible pour un client, d'ou la table de traduction.
+var STATUS_CODE_LABELS = {
+  HT: "Mi-temps", "1H": "1ère mi-temps", "2H": "2nde mi-temps",
+  ET: "Prolongation", AET: "Fin des prolongations",
+  BT: "Pause (avant tirs au but)", P: "Tirs au but", PEN: "Tirs au but",
+  INT: "Interrompu", SUSP: "Suspendu", ABD: "Match arrêté",
+  TBD: "Horaire à confirmer", NS: "Pas encore commencé",
+};
+// Quart-temps (basket) / periodes (hockey) — codes bruts renvoyes par
+// API-Sports (status.short). Sans traduction, le client voit juste un
+// chrono ("9'") sans savoir a quel quart-temps il correspond (signale
+// par le fondateur le 01/08/2026).
+var PERIOD_LABELS = {
+  Q1: "1er quart-temps", Q2: "2e quart-temps", Q3: "3e quart-temps", Q4: "4e quart-temps",
+  OT: "Prolongation", BT: "Pause",
+  P1: "1ère période", P2: "2e période", P3: "3e période", SO: "Tirs au but",
+};
+function minuteLabel(m) {
+  if (m.status === "HT") return "Mi-temps";
+  var periodLbl = m.period ? (PERIOD_LABELS[String(m.period).toUpperCase()] || "") : "";
+  var clock = "";
+  if (typeof m.minute === "number") clock = m.minute + "'";
+  else {
+    var raw = String(m.minute || "").trim();
+    if (raw && /^\d+\+?\d*$/.test(raw)) clock = raw + "'"; // "45+2" etc.
+  }
+  if (periodLbl) return clock ? periodLbl + " · " + clock : periodLbl;
+  if (clock) return clock;
+  var raw2 = String(m.minute || "").trim();
+  if (!raw2) return "En direct";
+  return STATUS_CODE_LABELS[raw2.toUpperCase()] || "En direct";
+}
+
+// ── Confiance : couleur/label selon le pourcentage (même échelle que Telegram) ──
+function confMeta(conf) {
+  var c = Number(conf) || 0;
+  if (c >= 85) return { cls: "green",  emoji: "🟢", label: "Fiable" };
+  if (c >= 75) return { cls: "yellow", emoji: "🟡", label: "Bon" };
+  if (c >= 65) return { cls: "orange", emoji: "🟠", label: "Risqué" };
+  return { cls: "red", emoji: "🔴", label: "Prudence" };
+}
+
+// ── Init ──
+(function init() {
+  const email = localStorage.getItem("tlm_email");
+  const code = localStorage.getItem("tlm_code");
+  const plan = localStorage.getItem("tlm_plan");
+  if (email && code && plan) {
+    userAuth = { email, code, plan };
+    updateAuthBar();
+    refreshCredits();   // récupère le compteur de jetons à jour au chargement
+  }
+  loadMatches();
+  setInterval(function(){ loadMatches(); refreshCredits(); }, 60000);
+  setTimeout(checkWatchedForUpdates, 8000);
+
+  document.getElementById("filters").addEventListener("click", function(e) {
+    var btn = e.target.closest(".filter-btn");
+    if (!btn) return;
+    document.querySelectorAll(".filter-btn").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    currentFilter = btn.dataset.filter;
+    renderMatches();
+  });
+
+})();
+
+function onSearchInput(v) {
+  searchTerm = String(v || "").trim().toLowerCase();
+  renderMatches();
+}
+
+// Récupère le compteur de jetons à jour depuis le serveur (au chargement).
+function refreshCredits() {
+  if (!userAuth || !userAuth.email || !userAuth.code) return;
+  fetch("/api/verify-code", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: userAuth.email, code: userAuth.code })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.valid) {
+      userAuth.credits_left = d.credits_left;
+      userAuth.credits_max = d.credits_max;
+      userAuth.plan = d.plan;
+      updateAuthBar();
+    }
+  }).catch(function(){});
+}
+
+function updateAuthBar() {
+  var info = document.getElementById("auth-info");
+  var btn = document.getElementById("auth-btn");
+  var navCta = document.getElementById("nav-cta-top");
+  var navLogin = document.getElementById("nav-se-connecter");
+  // Inutile de proposer "Creer un compte" ou "Se connecter" a quelqu'un deja abonne.
+  if (navCta) navCta.style.display = userAuth ? "none" : "";
+  if (navLogin) navLogin.style.display = userAuth ? "none" : "";
+  if (userAuth) {
+    var isElite = userAuth.plan === "elite";
+    var planName = userAuth.plan.charAt(0).toUpperCase() + userAuth.plan.slice(1);
+    var tokens = "";
+    if ((userAuth.plan === "premium" || userAuth.plan === "elite")
+        && userAuth.credits_max != null && userAuth.credits_left != null) {
+      var left = userAuth.credits_left, max = userAuth.credits_max;
+      var col = left === 0 ? "#f43f5e" : (left <= 2 ? "#f59e0b" : "#34d399");
+      tokens = '<div id="token-counter" style="display:inline-flex;align-items:center;gap:8px;margin-top:8px;padding:8px 18px;border-radius:14px;'
+        + 'background:rgba(124,58,237,.14);border:1.5px solid rgba(124,58,237,.4);">'
+        + '<span style="font-size:22px">🎟️</span>'
+        + '<span style="font-size:26px;font-weight:900;line-height:1;color:' + col + '">' + left + '<span style="font-size:16px;color:var(--muted2);font-weight:700">/' + max + '</span></span>'
+        + '<span style="font-size:13px;color:var(--muted2);font-weight:600">analyses<br>aujourd\'hui</span>'
+        + '</div>';
+    }
+    info.innerHTML = (isElite ? "👑" : "⚡") + " <strong>" + planName + "</strong> — " + userAuth.email + tokens;
+    btn.textContent = "Déconnexion";
+    btn.onclick = doLogout;
+  } else {
+    info.textContent = "Connecte-toi pour analyser les matchs";
+    btn.textContent = "Connexion";
+    btn.onclick = openLoginModal;
+  }
+}
+
+// ── Load matches ──
+function loadMatches(force) {
+  var url = "/api/live-matches" + (force ? "?force=1" : "");
+  fetch(url).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.ok && d.matches) {
+      allMatches = d.matches;
+      renderMatches();
+      document.getElementById("last-update").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      preselectFromFixtureParam();
+    } else {
+      showEmpty();
+    }
+    document.getElementById("loading").style.display = "none";
+  }).catch(function() {
+    document.getElementById("loading").style.display = "none";
+    showEmpty();
+  });
+}
+
+// Présélection depuis /live-ia?fixture=ID (lien "Ouvrir dans Live IA" de la
+// page d'accueil) : fait défiler jusqu'à la carte du match réel identifié par
+// l'API et la met en surbrillance. N'ouvre PAS automatiquement l'analyse —
+// ça reste un geste explicite de l'utilisateur, pas une dépense de crédit
+// déclenchée par un simple clic depuis l'accueil.
+var _fixturePreselectDone = false;
+function preselectFromFixtureParam() {
+  if (_fixturePreselectDone) return;
+  var fixture = new URLSearchParams(location.search).get("fixture");
+  if (!fixture) return;
+  var target = allMatches.find(function(m) {
+    var id = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
+    return id === fixture || String(m.id) === fixture;
+  });
+  if (!target) return;
+  _fixturePreselectDone = true;
+  // Le filtre par defaut est "Football" — un match d'un autre sport ouvert
+  // depuis "Voir" sur l'accueil ne se rendait jamais dans le DOM, donc le
+  // scrollIntoView ne trouvait rien (signalé par le fondateur le 01/08/2026). On
+  // bascule sur "Tous les sports" pour garantir que le match cible est visible
+  // quel que soit son sport.
+  if (currentFilter !== "all" && target.sport && target.sport !== currentFilter) {
+    currentFilter = "all";
+    document.querySelectorAll(".filter-btn").forEach(function(b){ b.classList.toggle("active", b.dataset.filter === "all"); });
+    renderMatches();
+  }
+  var matchId = target.id || (target.home + "_" + target.away).replace(/\s+/g, "_");
+  setTimeout(function() {
+    var card = document.querySelector('[data-id="' + CSS.escape(matchId) + '"]');
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.style.outline = "2px solid var(--violet, #7c5cff)";
+    card.style.outlineOffset = "3px";
+    setTimeout(function() { card.style.outline = ""; }, 3000);
+  }, 150);
+}
+
+function showEmpty() {
+  var wrap = document.getElementById("matches-wrap");
+  wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🏟️</div><div class="empty-title">Aucun match en direct</div><div class="empty-sub">Il n\'y a pas de match en cours pour le moment. Reviens plus tard ou consulte l\'historique des analyses.</div></div>';
+}
+
+// ── Render ──
+function renderMatches() {
+  var wrap = document.getElementById("matches-wrap");
+  // Tous les matchs live restent affichés, jouables ou non (voir /live-matches) —
+  // ça montre que le site suit vraiment l'activité en direct, même quand rien
+  // n'est encore assez fort pour être analysé (demande du fondateur le 01/08/2026).
+  var filtered = currentFilter === "all" ? allMatches : allMatches.filter(function(m){ return m.sport === currentFilter; });
+  if (searchTerm) {
+    filtered = filtered.filter(function(m) {
+      return (m.home || "").toLowerCase().indexOf(searchTerm) !== -1
+        || (m.away || "").toLowerCase().indexOf(searchTerm) !== -1
+        || (m.competition || "").toLowerCase().indexOf(searchTerm) !== -1;
+    });
+  }
+  if (advFilters.active) {
+    filtered = filtered.filter(matchPassesAdvFilters);
+  }
+  var afCountEl = document.getElementById("af-count");
+  if (afCountEl) afCountEl.textContent = advFilters.active ? (filtered.length + " match" + (filtered.length !== 1 ? "s" : "") + " trouvé" + (filtered.length !== 1 ? "s" : "")) : "";
+
+  if (!filtered.length) {
+    if (advFilters.active) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🎚️</div><div class="empty-title">Aucun match ne correspond à tes critères</div><div class="empty-sub">Essaie d\'assouplir un curseur, ou reviens dans quelques minutes — de nouveaux matchs évoluent en permanence.</div></div>';
+    } else if (searchTerm) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">Aucun résultat pour "' + escHtml(searchTerm) + '"</div><div class="empty-sub">Vérifie l\'orthographe ou essaie un autre sport dans les filtres.</div></div>';
+    } else if (currentFilter !== "all") {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">' + (SPORT_ICONS[currentFilter] || "🏟️") + '</div><div class="empty-title">Aucun match ' + currentFilter + ' en direct</div><div class="empty-sub">Aucun match de ' + currentFilter + ' en cours. Essaie un autre sport ou reviens plus tard.</div></div>';
+    } else {
+      showEmpty();
+    }
+    return;
+  }
+
+  // Tri : en direct d'abord (des matchs les plus avancés vers les débuts de
+  // match), puis à venir, puis terminés — pour remonter en haut les matchs
+  // les plus proches de leur fin, où l'analyse a le plus de valeur immédiate.
+  var order = { IN_PLAY: 0, PINNED_SIGNAL: 0, HT: 1, SCHEDULED: 2, TIMED: 2, FINISHED: 3 };
+  function minuteOf(m) {
+    var n = parseInt(m.minute, 10);
+    return isNaN(n) ? -1 : n;
+  }
+  filtered.sort(function(a, b) {
+    var oa = order[a.status] || 1, ob = order[b.status] || 1;
+    if (oa !== ob) return oa - ob;
+    if (oa === 0) return minuteOf(b) - minuteOf(a); // tri secondaire : minute décroissante pour les matchs en direct
+    return 0;
+  });
+
+  var html = "";
+  filtered.forEach(function(m) {
+    var isLive = m.status === "IN_PLAY" || m.status === "HT" || m.status === "PINNED_SIGNAL";
+    var isDone = m.status === "FINISHED";
+    var sportIcon = SPORT_ICONS[m.sport] || "⚽";
+    var scoreH = m.score_home !== null && m.score_home !== undefined ? m.score_home : "-";
+    var scoreA = m.score_away !== null && m.score_away !== undefined ? m.score_away : "-";
+    var comp = splitCompetition(m.competition || m.sport);
+    var flag = countryFlag(comp.country);
+    var countryHtml = comp.country ? '<span class="mc-country">' + (flag ? '<span>' + flag + '</span>' : '') + escHtml(comp.country) + '</span>' : '';
+
+    var statusClass = isLive ? "live" : (isDone ? "finished" : "scheduled");
+    var statusLabel = isLive ? (m.status === "HT" ? "Mi-temps" : "En direct") : (isDone ? "Terminé" : "À venir");
+    var dotHtml = isLive ? '<span class="st-dot"></span>' : "";
+
+    var minuteHtml = "";
+    if (isLive) {
+      minuteHtml = '<div class="mc-minute">' + escHtml(minuteLabel(m)) + '</div>';
+    } else if (isDone) {
+      minuteHtml = '<div class="mc-minute done">FT</div>';
+    }
+
+    var homeLogo = m.home_logo ? '<img src="' + safeImgUrl(m.home_logo) + '" alt="" loading="lazy">' : escHtml(initials(m.home));
+    var awayLogo = m.away_logo ? '<img src="' + safeImgUrl(m.away_logo) + '" alt="" loading="lazy">' : escHtml(initials(m.away));
+
+    var matchId = m.id || (m.home + "_" + m.away).replace(/\s+/g, "_");
+
+    html += '<div class="match-card' + (isDone ? " finished" : "") + '" data-id="' + matchId + '">';
+    html += '<div class="mc-header">';
+    html += '  <div class="mc-sport"><span class="mc-sport-icon">' + sportIcon + '</span><span class="mc-comp">' + escHtml(comp.league || m.sport) + countryHtml + '</span></div>';
+    html += '  <div class="mc-status ' + statusClass + '">' + dotHtml + statusLabel + '</div>';
+    html += '</div>';
+    html += '<div class="mc-body">';
+    html += '  <div class="mc-team home"><div class="mc-logo">' + homeLogo + '</div><div class="mc-name">' + escHtml(m.home) + '</div></div>';
+    html += '  <div class="mc-score-col"><div class="mc-score">' + scoreH + ' — ' + scoreA + '</div>' + minuteHtml + '</div>';
+    html += '  <div class="mc-team away"><div class="mc-name">' + escHtml(m.away) + '</div><div class="mc-logo">' + awayLogo + '</div></div>';
+    html += '</div>';
+
+    if (m.pinnedSignal) {
+      html += '<div class="mc-analysis visible">';
+      html += '  <div class="mc-analysis-title">📡 Signal Fort — Analyse épinglée</div>';
+      html += '  <div class="mc-analysis-text">' + escHtml(m.pinnedReason || "") + '</div>';
+      if (m.pinnedBet) {
+        var pcm = confMeta(m.pinnedConfidence);
+        html += '<div class="conf-badge ' + pcm.cls + '"><span class="conf-dot ' + pcm.cls + '"></span>🎯 ' + escHtml(m.pinnedBet) + (m.pinnedConfidence ? " · " + m.pinnedConfidence + "/100 · " + pcm.label : "") + '</div>';
+      }
+      html += '</div>';
+    }
+
+    // Bouton d'analyse si le match est jouable maintenant ; sinon, étiquette
+    // expliquant pourquoi (au lieu de faire disparaître le match — demande
+    // du fondateur le 01/08/2026, ça montre que le site suit le match).
+    // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
+    if (isLive && !isDone && !m.pinnedSignal) {
+      if (m.analysable === false) {
+        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
+      } else {
+        var cached = analysisCache[matchId];
+        html += '<div class="mc-cta">';
+        html += '  <button class="mc-analyse-btn" onclick="requestAnalysis(this,\'' + escAttr(matchId) + '\',\'' + escAttr(m.home) + '\',\'' + escAttr(m.away) + '\')"' + (!userAuth ? " title=\"Connecte-toi ou abonne-toi pour analyser\"" : "") + (cached ? " disabled" : "") + '>';
+        html += (cached ? '✅ Analyse terminée' : (userAuth ? '🧠 Analyser ce match' : '🔓 Débloquer l\'analyse'));
+        html += '  </button>';
+        html += '</div>';
+        html += '<div class="mc-analysis' + (cached ? ' visible' : '') + '" id="analysis-' + escAttr(matchId) + '">' + (cached ? cached : '') + '</div>';
+      }
+    }
+
+    html += '</div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+// ── Analysis ──
+// Construction du HTML du verdict — partagee entre le clic manuel
+// (requestAnalysis) et la revérification silencieuse en arrière-plan
+// (checkWatchedForUpdates), pour que les deux affichent exactement la même
+// chose et que le panneau déjà ouvert se mette à jour tout seul.
+function buildAnalysisHtml(d) {
+  var synthese = d.agents ? d.agents[d.agents.length - 1] : null;
+  var resumeText = d.resume || (synthese ? synthese.raison : "Analyse terminée");
+  var betText = d.value_bet ? d.value_bet.marche : (synthese ? synthese.bet : "");
+  var confText = d.value_bet ? d.value_bet.prob : (synthese ? synthese.confidence : "");
+  var vote = d.vote_summary || {};
+  var voteLabel = vote.vote_label || (d.consensus_votes && d.total_agents ? (d.consensus_votes + "/" + d.total_agents) : "");
+  var voteStatus = vote.vote_status === "elite" ? "Signal Elite"
+    : vote.vote_status === "strong" ? "Signal Fort"
+    : vote.vote_status === "trend" ? "Tendance IA"
+    : "Aucun signal validé";
+  if (vote.vote_status === "none") betText = "";
+
+  var agentsHtml = '<div style="font-size:12px;color:var(--muted2);margin-top:10px;padding:10px 12px;border-top:1px solid var(--b1);background:rgba(255,255,255,.03);border-radius:10px">'
+    + '5 IA indépendantes votent sans émotion — Perplexity, DeepSeek, Mistral, Cohere et Qwen — à partir des statistiques live, de l\'historique, de la dynamique et des probabilités.'
+    + '</div>';
+
+  var cm = confMeta(confText);
+  var noSignalHtml = !betText
+    ? '<div class="conf-badge red blink-badge"><span class="conf-dot red"></span>🚫 Aucun signal fiable · Ne pas jouer ce match</div>' : "";
+  var coteHtml = (betText && d.cote && Number(d.cote) > 1)
+    ? '<div class="conf-badge" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.25);color:var(--green)">💰 Cote : ' + Number(d.cote).toFixed(2) + (d.cote_source && !/estimation/i.test(String(d.cote_source)) ? ' (' + escHtml(d.cote_source) + ')' : ' (estimation marché)') + '</div>' : "";
+  // Depuis le 04/08/2026, "Cote" EST deja la moyenne ARJEL quand elle est
+  // disponible (voir computeBestOdd cote serveur) — cet encart ne doit
+  // s'afficher que si la cote principale vient d'un bookmaker isole (cote_source
+  // ne commence pas par "moyenne ARJEL"), sinon on duplique le meme chiffre.
+  var arjelHtml = (betText && d.arjel_avg_odd && d.arjel_bookmakers_count >= 2 && !/^moyenne ARJEL/i.test(String(d.cote_source || "")))
+    ? '<div class="conf-badge" style="background:rgba(34,211,238,.08);border-color:rgba(34,211,238,.2);color:var(--cyan)">💰 Cote moyenne ANJ : ' + Number(d.arjel_avg_odd).toFixed(2) + ' (' + d.arjel_bookmakers_count + ' bookmakers)</div>' : "";
+  // Marches secondaires (H2H reel) — demande du fondateur le 03/08/2026 : montrer
+  // plusieurs marches sous l'analyse (BTTS%, 1ere mi-temps%, vainqueur%...),
+  // pas juste le pick principal. Base sur le meme H2H que l'analyse IA, jamais
+  // un chiffre invente. n<3 confrontations = trop peu fiable, on n'affiche pas.
+  var marketsHtml = "";
+  if (d.h2h_markets) {
+    var hm = d.h2h_markets;
+    var mkRow = function(label, pct) {
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--b1)">'
+        + '<span style="color:var(--muted2);font-size:12.5px">' + label + '</span>'
+        + '<span style="font-weight:800;font-size:13px">' + pct + '%</span></div>';
+    };
+    marketsHtml = '<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px">'
+      + '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Autres marches — ' + hm.n + ' confrontations directes</div>'
+      + mkRow('BTTS (les 2 marquent)', hm.btts_pct)
+      + mkRow('But en 1ère mi-temps', hm.first_half_goal_pct)
+      + mkRow('Victoire domicile', hm.home_win_pct)
+      + mkRow('Victoire extérieur', hm.away_win_pct)
+      + mkRow('Under 2.5 buts', hm.under25_pct)
+      + '</div>';
+  }
+  // Score de confiance du Concile par marche (pas juste le pick principal) —
+  // demande du fondateur le 04/08/2026 : "victoire domicile 86/100, en dessous
+  // BTTS 80/100, en dessous under 2.5 60/100...". Vient de market_scores
+  // (deja calcule cote serveur a partir des votes reels des agents, zero appel
+  // IA supplementaire). Different de marketsHtml ci-dessus : ici c'est la
+  // confiance du Concile, pas un pourcentage historique H2H.
+  var scoresHtml = "";
+  if (Array.isArray(d.market_scores) && d.market_scores.length) {
+    var scoreRow = function(item) {
+      var cm2 = confMeta(item.confidence);
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--b1)">'
+        + '<span style="color:var(--muted2);font-size:12.5px">' + escHtml(item.market) + '</span>'
+        + '<span class="conf-badge ' + cm2.cls + '" style="margin:0;padding:2px 9px;font-size:12px">' + item.confidence + '/100</span></div>';
+    };
+    scoresHtml = '<div style="margin-top:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:10px">'
+      + '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700">Score du Concile par marché</div>'
+      + d.market_scores.map(scoreRow).join("")
+      + '</div>';
+  }
+  var voteReportHtml = voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "";
+  var html = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
+    + noSignalHtml
+    + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
+    + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
+    + coteHtml
+    + arjelHtml
+    + marketsHtml
+    + scoresHtml
+    + agentsHtml
+    + voteReportHtml
+    + (d.credits_left !== undefined ? '<div style="font-size:11px;color:var(--muted);margin-top:8px">🎟️ Jetons restants aujourd\'hui : ' + d.credits_left + (d.credits_max ? '/' + d.credits_max : '') + '</div>' : "");
+  return { html: html, voteLabel: voteLabel, betText: betText, confText: confText, resumeText: resumeText };
+}
+
+function buyCarteToken() {
+  fetch('/create-checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plan: 'carte', email: userAuth && userAuth.email }) })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.ok && d.url) { location.href = d.url; }
+      else { alert('Erreur : ' + (d.error || 'impossible de lancer le paiement')); }
+    })
+    .catch(function(){ alert('Erreur réseau, réessaie.'); });
+}
+
+function requestAnalysis(btn, matchId, home, away) {
+  if (!userAuth) {
+    openLoginModal();
+    return;
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:6px"></div> Analyse en cours...';
+
+  var match = allMatches.find(function(m) { return (m.id || m.home + "_" + m.away) === matchId; });
+  var analysisTimer = null;
+  var controller = window.AbortController ? new AbortController() : null;
+  if (controller) {
+    analysisTimer = setTimeout(function(){ controller.abort(); }, 45000);
+  }
+
+  fetch("/api/concile-analysis", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    signal: controller ? controller.signal : undefined,
+    body: JSON.stringify({
+      email: userAuth.email,
+      code: userAuth.code,
+      match: {
+        id: match ? match.id : matchId,
+        home: home,
+        away: away,
+        score_home: match ? match.score_home : null,
+        score_away: match ? match.score_away : null,
+        minute: match ? match.minute : null,
+        competition: match ? match.competition : ""
+      }
+    })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (analysisTimer) clearTimeout(analysisTimer);
+    var el = document.getElementById("analysis-" + matchId);
+    if (d.ok) {
+      var built = buildAnalysisHtml(d);
+      el.innerHTML = built.html;
+      el.classList.add("visible");
+      btn.innerHTML = "✅ Analyse terminée";
+      // Persistée en localStorage (pas juste en mémoire JS) : le panneau doit
+      // rester ouvert tant que le match n'est pas fini, MEME apres un
+      // rechargement de page ou une revisite plus tard — demande du fondateur le
+      // 03/08/2026 ("l'analyse doit rester ouverte en permanence a partir du
+      // moment ou j'ai paye mon jeton et pendant tout le match").
+      analysisCache[matchId] = el.innerHTML;
+      saveAnalysisCache();
+      // Un jeton vient d'être dépensé sur ce match : on le surveille désormais
+      // en arrière-plan (voir watchMatch/checkWatchedForUpdates) pour prévenir
+      // si le vote du Concile évolue, même si le client a 30 onglets ouverts et
+      // ne regarde plus cette carte. Demande du fondateur le 03/08/2026.
+      watchMatch(matchId, home, away, built.voteLabel, built.betText, built.confText, built.resumeText);
+      // Met à jour le compteur de la barre du haut
+      if (userAuth && d.credits_left !== undefined) {
+        userAuth.credits_left = d.credits_left;
+        if (d.credits_max !== undefined) userAuth.credits_max = d.credits_max;
+        updateAuthBar();
+      }
+    } else if (d.error === "CREDITS_EXHAUSTED") {
+      if (userAuth) { userAuth.credits_left = 0; updateAuthBar(); }
+      el.innerHTML = '<div style="background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.3);border-radius:10px;padding:14px;font-size:13px;color:#eee">'
+        + '<div style="font-weight:700;margin-bottom:6px">⏳ Quota de jetons atteint pour aujourd\'hui</div>'
+        + '<div style="color:#ccc;margin-bottom:10px">Reprise à minuit (00h00), ou débloque une analyse tout de suite :</div>'
+        + '<button onclick="buyCarteToken()" style="background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;border:none;padding:10px 18px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Débloquer 1 analyse — 1€</button>'
+        + '</div>';
+      el.classList.add("visible");
+      btn.disabled = false;
+      btn.innerHTML = "🧠 Réessayer";
+    } else {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">⚠️ ' + escHtml(d.error || "Erreur d'analyse") + '</div>';
+      el.classList.add("visible");
+      btn.disabled = false;
+      btn.innerHTML = "🧠 Réessayer";
+    }
+  }).catch(function() {
+    if (analysisTimer) clearTimeout(analysisTimer);
+    var el = document.getElementById("analysis-" + matchId);
+    if (el) {
+      el.innerHTML = '<div style="color:var(--red);font-size:13px;padding:8px">⚠️ Analyse trop longue. Réessaie dans quelques secondes.</div>';
+      el.classList.add("visible");
+    }
+    btn.disabled = false;
+    btn.innerHTML = "🧠 Réessayer";
+  });
+}
+
+// ── Surveillance des matchs déjà analysés (jeton dépensé) ──────────────────
+// Objectif : un client qui a payé un jeton sur un match ne doit pas rater une
+// évolution du vote Concile juste parce qu'il regarde un autre match parmi les
+// 30 ouverts. On revérifie périodiquement (voir checkWatchedForUpdates) et un
+// popup alerte en cas de changement — demande du fondateur le 03/08/2026.
+var WATCH_KEY = "tlm_watched_matches";
+function loadWatched() {
+  try { return JSON.parse(localStorage.getItem(WATCH_KEY) || "{}"); } catch (e) { return {}; }
+}
+function saveWatched(obj) {
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+function watchMatch(matchId, home, away, voteLabel, betText, confText, resumeText) {
+  var w = loadWatched();
+  w[matchId] = { home: home, away: away, voteLabel: voteLabel || "", betText: betText || "", confText: confText || "", resumeText: resumeText || "", ts: Date.now() };
+  saveWatched(w);
+}
+function unwatchMatch(matchId) {
+  var w = loadWatched();
+  delete w[matchId];
+  saveWatched(w);
+}
+
+function checkWatchedForUpdates() {
+  if (!userAuth) return;
+  var w = loadWatched();
+  var ids = Object.keys(w);
+  if (!ids.length) return;
+  ids.forEach(function (matchId) {
+    var entry = w[matchId];
+    var match = allMatches.find(function (m) { return (m.id || m.home + "_" + m.away) === matchId; });
+    if (!match) {
+      // Plus en direct (match termine/disparu de l'API) : on arrete de le
+      // surveiller, mais on garde le panneau visible s'il l'etait deja —
+      // c'est la preuve/derniere analyse, utile meme apres la fin du match.
+      unwatchMatch(matchId);
+      return;
+    }
+    fetch("/api/concile-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: userAuth.email, code: userAuth.code,
+        match: { id: match.id, home: match.home, away: match.away, score_home: match.score_home, score_away: match.score_away, minute: match.minute, competition: match.competition }
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d.ok) return;
+      var built = buildAnalysisHtml(d);
+      if (built.voteLabel && built.voteLabel !== entry.voteLabel) {
+        showUpdatePopup(match.home, match.away, built.voteLabel, built.betText, built.confText, built.resumeText);
+      }
+      watchMatch(matchId, match.home, match.away, built.voteLabel, built.betText, built.confText, built.resumeText);
+      // Le panneau deja ouvert (ou retrouve au chargement via le cache
+      // persistant) doit refleter le dernier avis du Concile, meme si le
+      // client ne l'a pas rouvert manuellement — sinon le popup annonce un
+      // changement que la carte elle-meme ne montre pas encore.
+      analysisCache[matchId] = built.html;
+      saveAnalysisCache();
+      var domEl = document.getElementById("analysis-" + matchId);
+      if (domEl) { domEl.innerHTML = built.html; domEl.classList.add("visible"); }
+      if (userAuth && d.credits_left !== undefined) { userAuth.credits_left = d.credits_left; updateAuthBar(); }
+    }).catch(function () {});
+  });
+}
+setInterval(checkWatchedForUpdates, 45000);
+
+function showUpdatePopup(home, away, voteLabel, betText, confText, resumeText) {
+  var old = document.getElementById("update-popup");
+  if (old) old.remove();
+  var pop = document.createElement("div");
+  pop.id = "update-popup";
+  pop.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:999;max-width:420px;width:calc(100% - 32px);background:linear-gradient(135deg,#1e2340,#262c4d);border:2px solid #ffd60a;border-radius:16px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5);animation:popupPulse 1.2s infinite";
+  var betHtml = betText ? '<div style="margin-top:8px;font-size:13px;color:#c4c9e6"><b style="color:#f6f7ff">🎯 ' + escHtml(betText) + '</b>' + (confText ? " · " + confText + "/100" : "") + '</div>' : "";
+  var resumeHtml = resumeText ? '<div style="margin-top:6px;font-size:12px;color:#949bc4;line-height:1.4">' + escHtml(resumeText).slice(0, 160) + '</div>' : "";
+  pop.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">' +
+      '<div style="font-weight:900;font-size:14px;color:#ffd60a">🔥 Mise à jour Concile</div>' +
+      '<span onclick="document.getElementById(\'update-popup\').remove()" style="cursor:pointer;color:#949bc4;font-size:18px;line-height:1;padding:0 4px">×</span>' +
+    '</div>' +
+    '<div style="margin-top:4px;font-size:13.5px;font-weight:700;color:#f6f7ff">' + escHtml(home) + ' — ' + escHtml(away) + '</div>' +
+    '<div style="margin-top:6px;display:inline-block;background:rgba(255,214,10,.16);color:#ffd60a;font-weight:900;font-size:13px;padding:5px 10px;border-radius:8px">Vote IA : ' + escHtml(voteLabel) + '</div>' +
+    betHtml + resumeHtml +
+    '<div id="update-popup-bm" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:6px;margin-top:12px"></div>';
+  document.body.appendChild(pop);
+  fetch('/api/bookmaker-links').then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.ok || !d.links || !d.links.length) return;
+    var brand = { Winamax: { bg: '#E2001A', fg: '#fff' }, Unibet: { bg: '#0C7A3D', fg: '#fff' }, PMU: { bg: '#003DA5', fg: '#fff' }, Betclic: { bg: '#FFD100', fg: '#111' } };
+    var el = document.getElementById('update-popup-bm');
+    if (!el) return;
+    el.innerHTML = d.links.map(function (b) {
+      var c = brand[b.text] || { bg: '#334155', fg: '#fff' };
+      return '<a href="' + b.url + '" target="_blank" rel="noopener sponsored" style="display:block;text-align:center;background:' + c.bg + ';color:' + c.fg + ';padding:8px 6px;border-radius:8px;text-decoration:none;font-weight:900;font-size:11.5px">' + b.text + '</a>';
+    }).join('');
+  }).catch(function () {});
+  setTimeout(function () { var p = document.getElementById("update-popup"); if (p) p.remove(); }, 45000);
+}
+
+// ── Auth ──
+function toggleMenu() { document.getElementById("mmenu").classList.toggle("open"); }
+function openLoginModal() { document.getElementById("login-modal").classList.add("open"); }
+function closeLoginModal() { document.getElementById("login-modal").classList.remove("open"); }
+
+function doLogin() {
+  var email = document.getElementById("login-email").value.trim();
+  var code = document.getElementById("login-code").value.trim();
+  var errEl = document.getElementById("login-error");
+  var btn = document.getElementById("login-btn");
+  if (!email || !code) { errEl.textContent = "Email et code requis."; errEl.style.display = "block"; return; }
+
+  btn.disabled = true;
+  btn.textContent = "Vérification...";
+
+  fetch("/api/verify-code", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: email, code: code, login: true })
+  }).then(function(r){ return r.json(); }).then(function(d) {
+    if (d.valid) {
+      userAuth = { email: email, code: code, plan: d.plan, credits_left: d.credits_left, credits_max: d.credits_max };
+      localStorage.setItem("tlm_email", email);
+      localStorage.setItem("tlm_code", code);
+      localStorage.setItem("tlm_session", d.session_token || "");
+      localStorage.setItem("tlm_plan", d.plan);
+      closeLoginModal();
+      updateAuthBar();
+      loadAgentRanking();
+      renderMatches();
+    } else {
+      errEl.textContent = d.error || "Code invalide ou expiré.";
+      errEl.style.display = "block";
+    }
+    btn.disabled = false;
+    btn.textContent = "Accéder →";
+  }).catch(function() {
+    errEl.textContent = "Erreur de connexion.";
+    errEl.style.display = "block";
+    btn.disabled = false;
+    btn.textContent = "Accéder →";
+  });
+}
+
+function doLogout() {
+  userAuth = null;
+  localStorage.removeItem("tlm_email");
+  localStorage.removeItem("tlm_code");
+  localStorage.removeItem("tlm_session");
+  localStorage.removeItem("tlm_plan");
+  updateAuthBar();
+  document.getElementById("agent-ranking").style.display = "none";
+  renderMatches();
+}
+
+// ── Utils ──
+function escHtml(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+// Les URLs de logos viennent d'API externes (api-sports, TheSportsDB) et
+// etaient injectees brutes dans src="..." : une valeur piegee du type
+// " onerror="... sortait de l'attribut et executait du script (audit du
+// 05/08/2026). On n'autorise que http(s) et on neutralise les guillemets ;
+// toute autre valeur (javascript:, data:, relative douteuse) rend une chaine
+// vide, ce qui affiche simplement l'image cassee au lieu d'executer du code.
+function safeImgUrl(u) {
+  var raw = String(u || "").trim();
+  if (!/^https?:\/\//i.test(raw)) return "";
+  return raw.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escAttr(s) { return String(s || "").replace(/'/g, "\\'").replace(/"/g, "&quot;"); }
+function initials(name) {
+  return String(name || "?").split(/\s+/).filter(Boolean).slice(0,2).map(function(p){ return p.charAt(0); }).join("").toUpperCase() || "?";
+}
+function splitCompetition(raw) {
+  var parts = String(raw || "").split(/\s+[·•]\s+/);
+  var league = parts[0] || "";
+  var country = parts.length > 1 ? parts[parts.length - 1] : "";
+  return { league: league, country: country };
+}
+function countryFlag(country) {
+  return COUNTRY_FLAGS[country] || "";
+}
+
+// Close modal on backdrop click
+document.getElementById("login-modal").addEventListener("click", function(e) {
+  if (e.target === this) closeLoginModal();
+});
+
+// ── Agent Ranking (Elite only) ──
+var AGENT_ICONS = {
+  "Mistral-7B": "🇫🇷", "Synthèse Concile": "🧠", "GPT Analysis": "🤖",
+  "GROQ-Llama": "🦙", "GeminiFlash": "💎", "Mistral-Large": "🌊",
+  "DeepSeek-V3": "🧬", "Cohere-Command": "🧬", "Perplexity-Web": "🌐"
+};
+
+function loadAgentRanking() {
+  var isEliteOrAdmin = userAuth && (userAuth.plan === "elite" || (userAuth.code && userAuth.code.toUpperCase().startsWith("ELITE-ADMIN")));
+  if (!isEliteOrAdmin) {
+    document.getElementById("agent-ranking").style.display = "none";
+    return;
+  }
+  // Identifiants en en-tetes (jamais dans l'URL, cf. audit securite 05/08/2026)
+  fetch("/api/agent-performance", { headers: { "X-TLM-Email": userAuth.email, "X-TLM-Code": userAuth.code } })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok || !d.performance) return;
+      var el = document.getElementById("agent-ranking");
+      el.style.display = "block";
+
+      var meta = d.meta || {};
+      document.getElementById("agent-meta").textContent =
+        (meta.matches_tracked || 0) + " matchs · " +
+        (meta.snapshots_tracked || 0) + " snapshots · " +
+        (meta.predictions_tracked || 0) + " predictions · " +
+        (meta.predictions_resolved || 0) + " résolues";
+
+      var agents = Object.keys(d.performance).map(function(name) {
+        var p = d.performance[name];
+        return { name: name, wins: p.wins || 0, total: (p.wins||0)+(p.losses||0), pending: p.pending || 0, winrate: p.winrate || 0 };
+      });
+      agents.sort(function(a,b){ return b.winrate - a.winrate; });
+
+      var grid = document.getElementById("agent-grid");
+      var html = "";
+      agents.forEach(function(ag, i) {
+        var rank = i + 1;
+        var icon = AGENT_ICONS[ag.name] || "🤖";
+        var medalIcon = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
+        var barColor = ag.winrate >= 60 ? "#10b981" : ag.winrate >= 40 ? "#f59e0b" : "#f43f5e";
+        var statText = ag.total > 0
+          ? ag.winrate + "% — " + ag.wins + "/" + ag.total + " corrects"
+          : ag.pending + " en attente";
+        html += '<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px">';
+        html += '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">';
+        html += '    <span style="font-size:18px">' + icon + '</span>';
+        html += '    <span style="font-size:12px;color:#7b82a0">' + medalIcon + " " + rank + '</span>';
+        html += '  </div>';
+        html += '  <div style="font-size:14px;font-weight:800;margin-bottom:2px">' + escHtml(ag.name) + '</div>';
+        html += '  <div style="font-size:12px;color:#a8aec8;margin-bottom:8px">' + statText + '</div>';
+        if (ag.total > 0) {
+          html += '  <div style="height:4px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden">';
+          html += '    <div style="height:100%;width:' + Math.min(100, ag.winrate) + '%;background:' + barColor + ';border-radius:3px"></div>';
+          html += '  </div>';
+        } else {
+          html += '  <div style="height:4px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden">';
+          html += '    <div style="height:100%;width:100%;background:#f59e0b;border-radius:3px"></div>';
+          html += '  </div>';
+        }
+        html += '</div>';
+      });
+      grid.innerHTML = html;
+    }).catch(function(){});
+}
+
+// ── History ──
+var historyOffset = 0;
+var historyTotal = 0;
+
+function loadHistory(append) {
+  if (!append) historyOffset = 0;
+  fetch("/api/analysis-history?limit=20&offset=" + historyOffset)
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (!d.ok) return;
+      historyTotal = d.total || 0;
+      renderHistoryStats(d.stats);
+      renderHistoryList(d.analyses, append);
+      historyOffset += d.analyses.length;
+      var btn = document.getElementById("history-load-more");
+      btn.style.display = historyOffset < historyTotal ? "block" : "none";
+    }).catch(function(){});
+}
+
+function loadMoreHistory() { loadHistory(true); }
+
+function renderHistoryStats(s) {
+  if (!s) return;
+  var el = document.getElementById("history-stats");
+  el.innerHTML =
+    '<div class="h-stat"><div class="h-stat-val cyan">' + (s.total || 0) + '</div><div class="h-stat-label">Analyses</div></div>' +
+    '<div class="h-stat"><div class="h-stat-val green">' + (s.wins || 0) + '</div><div class="h-stat-label">Gagnées</div></div>' +
+    '<div class="h-stat"><div class="h-stat-val red">' + (s.losses || 0) + '</div><div class="h-stat-label">Perdues</div></div>' +
+    '<div class="h-stat"><div class="h-stat-val">' + (s.winrate || 0) + '%</div><div class="h-stat-label">Winrate</div></div>';
+}
+
+function renderHistoryList(analyses, append) {
+  var el = document.getElementById("history-list");
+  if (!analyses || !analyses.length) {
+    if (!append) {
+      el.innerHTML = '<div class="h-empty"><div class="h-empty-icon">📊</div><div class="h-empty-title">Les analyses arrivent bientôt</div><div>Le Concile IA analyse les matchs en direct automatiquement. L\'historique se remplira dès les prochaines analyses.</div></div>';
+    }
+    return;
+  }
+
+  var html = append ? el.innerHTML : "";
+  analyses.forEach(function(a) {
+    var sportIcon = SPORT_ICONS[a.sport] || "⚽";
+    var homeLogo = a.home_logo ? '<img src="' + safeImgUrl(a.home_logo) + '" alt="" loading="lazy">' : sportIcon;
+    var awayLogo = a.away_logo ? '<img src="' + safeImgUrl(a.away_logo) + '" alt="" loading="lazy">' : sportIcon;
+
+    var outcomeHtml = '';
+    if (a.outcome === 'win') outcomeHtml = '<span class="h-outcome win">✅ Gagné</span>';
+    else if (a.outcome === 'loss') outcomeHtml = '<span class="h-outcome loss">❌ Perdu</span>';
+    else outcomeHtml = '<span class="h-outcome pending">⏳ En attente</span>';
+
+    var scoreHtml = '';
+    if (a.final_score) scoreHtml = '<span class="h-score">Score final : ' + escHtml(a.final_score) + '</span>';
+    else if (a.score) scoreHtml = '<span class="h-score">Score live : ' + escHtml(a.score) + ' (' + (a.minute || '?') + '\')</span>';
+
+    var timeStr = '';
+    if (a.analysed_at) {
+      try {
+        var d = new Date(a.analysed_at + 'Z');
+        timeStr = d.toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit'}) + ' à ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+      } catch(e) { timeStr = a.analysed_at; }
+    }
+
+    html += '<div class="h-card">';
+    html += '  <div class="h-top">';
+    html += '    <span class="h-comp">' + sportIcon + ' ' + escHtml(a.competition || a.sport) + '</span>';
+    html += '    <span class="h-time">' + escHtml(timeStr) + '</span>';
+    html += '  </div>';
+    html += '  <div class="h-teams">';
+    html += '    <div class="h-logo">' + homeLogo + '</div>';
+    html += '    <span class="h-team-name">' + escHtml(a.home) + '</span>';
+    html += '    <span class="h-vs">vs</span>';
+    html += '    <span class="h-team-name">' + escHtml(a.away) + '</span>';
+    html += '    <div class="h-logo">' + awayLogo + '</div>';
+    html += '  </div>';
+    html += '  <div class="h-bottom">';
+    html += '    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+    html += '      <span class="h-bet">🎯 ' + escHtml(a.bet || 'Analyse') + '</span>';
+    html += '      <span class="h-conf">⚡ ' + (a.confidence || '?') + '/100</span>';
+    if (scoreHtml) html += '      ' + scoreHtml;
+    html += '    </div>';
+    html += '    ' + outcomeHtml;
+    html += '  </div>';
+    if (a.reasoning) {
+      html += '  <div class="h-reasoning">' + escHtml(a.reasoning).slice(0, 200) + (a.reasoning.length > 200 ? '...' : '') + '</div>';
+    }
+    html += '</div>';
+  });
+
+  el.innerHTML = html;
+}
+
+// Load ranking on page load if already logged in
+if (userAuth) loadAgentRanking();
+loadHistory();
+setInterval(function(){ if (document.getElementById('tab-stats').classList.contains('active')) loadHistory(); }, 120000);
+
+// ══ UPSELL AFTER SUCCESSFUL PAYMENT ══
+(function(){
+  var sp = new URLSearchParams(location.search);
+  if (sp.get('success') !== '1') return;
+  // "carte" (offre 1€) retiree du parcours actif le 29/07/2026 : plus aucun
+  // bouton n'y mene, le repli par defaut passe donc a "standard".
+  var plan = sp.get('plan') || 'standard';
+  var upsellDiv = document.createElement('div');
+  upsellDiv.id = 'upsell-banner';
+  upsellDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-top:2px solid #d4af37;box-shadow:0 -4px 24px rgba(0,0,0,.5);text-align:center;';
+  var closeBtn = '<button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:12px;background:none;border:none;color:#888;font-size:18px;cursor:pointer">✕</button>';
+
+  if (plan === 'premium' || plan === 'standard') {
+    upsellDiv.innerHTML = closeBtn +
+      '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue — ton acces est actif !</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite / VIP</b>, tu passes a <b style="color:#d4af37">30 signaux/jour</b> + <b>alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — sans engagement, annulable a tout moment.</div>' +
+      '<a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Elite / VIP — 29.90€/mois sans engagement</a>';
+  } else if (plan === 'elite' || plan === 'vip') {
+    upsellDiv.innerHTML = closeBtn +
+      '<div style="color:#d4af37;font-weight:800;font-size:16px;margin-bottom:8px">👑 Bienvenue dans Elite — tu as acces a tout !</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6">30 analyses/jour + alertes Signal Fort + picks en avant-premiere.<br>Rejoins le groupe Telegram Elite pour recevoir tes alertes.</div>';
+  } else if (plan === 'carte') {
+    upsellDiv.innerHTML = closeBtn +
+      '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Jeton crédité !</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6">Tu peux relancer ton analyse — ton compteur est déjà à jour.</div>';
+    if (userAuth) { userAuth.credits_left = (userAuth.credits_left || 0) + 1; updateAuthBar(); }
+  }
+
+  document.body.appendChild(upsellDiv);
+  history.replaceState(null, '', location.pathname);
+})();
+</script>
+<script>
+(function(){
+  var q=new URLSearchParams(location.search);
+  var r=document.referrer||'';
+  new Image().src='/api/t?p='+encodeURIComponent(location.pathname)
+    +'&r='+encodeURIComponent(r)
+    +'&s='+encodeURIComponent(q.get('utm_source')||'')
+    +'&m='+encodeURIComponent(q.get('utm_medium')||'')
+    +'&c='+encodeURIComponent(q.get('utm_campaign')||'')
+    +'&_='+Date.now();
+})();
+</script>
+<script src="/js/widgets.js?v=2" defer></script>
+<script src="/js/cookie-consent.js" defer></script>
+  <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+</body>
+</html>

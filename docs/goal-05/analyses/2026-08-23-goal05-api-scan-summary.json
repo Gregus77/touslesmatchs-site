@@ -1,0 +1,635 @@
+{
+  "summary": {
+    "generatedAt": "2026-08-23T22:12:39.750Z",
+    "sourceFile": "/opt/touslesmatchs/docs/goal-05/analyses/2026-08-23-goal05-api-candidates.json",
+    "minOdd": 1.6,
+    "minHistoricalSeasons": 3,
+    "sendTelegram": true,
+    "telegramConfigured": true,
+    "total": 4,
+    "eligible": 0,
+    "needsData": 0,
+    "noBet": 4,
+    "watchlist": 0,
+    "sent": 0
+  },
+  "results": [
+    {
+      "id": "api-football-1492341-away",
+      "match": "RB Bragantino - Gremio",
+      "team": "Gremio",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "RB Bragantino",
+      "away": "Gremio",
+      "homeLogo": "https://media.api-sports.io/football/teams/794.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/130.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "écart de force historique insuffisant ou non prouvé",
+        "enjeu de classement non démontré",
+        "faux enjeu : victoire/défaite sans changement de zone sportive",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "preuves de buts construits/assistés insuffisantes",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "preuve spécifique +0,5 trop faible",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [
+        "historique 3 saisons accepté : prudence renforcée"
+      ],
+      "evidence": {
+        "country": "Brazil",
+        "league": "Serie A",
+        "team": "Gremio",
+        "opponent": "RB Bragantino",
+        "teamSide": "away",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-23T22:12:17.222Z",
+        "market": {
+          "bestOdd": 3.04,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 3.04
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.87
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.82
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.8
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.76
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.76
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.72
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.69
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.66
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.65
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.64
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.62
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 3,
+          "teamPercentile": 73.68,
+          "opponentPercentile": 52.63,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 3,
+          "opponentConcededInLastFive": 4,
+          "weightedConstructedGoals": 0,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "no",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": false,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 15,
+          "opponentRank": 8,
+          "leagueSize": 20
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 3.04
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 3.04
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1492344-away",
+      "match": "Cruzeiro - Flamengo",
+      "team": "Flamengo",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Cruzeiro",
+      "away": "Flamengo",
+      "homeLogo": "https://media.api-sports.io/football/teams/135.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/127.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "moins de 3 saisons historiques exploitables",
+        "faux enjeu : victoire/défaite sans changement de zone sportive"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Brazil",
+        "league": "Serie A",
+        "team": "Flamengo",
+        "opponent": "Cruzeiro",
+        "teamSide": "away",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-23T22:12:24.728Z",
+        "market": {
+          "bestOdd": 2.39,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.39
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.26
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.26
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.25
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.25
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.2
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.03
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.02
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.97
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.97
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.95
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.95
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Cards",
+              "selection": "Over 0.5",
+              "odd": 1.07
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 1,
+          "teamPercentile": 94.74,
+          "opponentPercentile": 36.84,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 5,
+          "opponentConcededInLastFive": 5,
+          "weightedConstructedGoals": 3,
+          "scoringState": "yes",
+          "opponentConcedesState": "yes",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": true,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 2,
+          "opponentRank": 5,
+          "leagueSize": 20
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Home Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.39
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Home Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.39
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1492347-home",
+      "match": "Palmeiras - Vasco DA Gama",
+      "team": "Palmeiras",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Palmeiras",
+      "away": "Vasco DA Gama",
+      "homeLogo": "https://media.api-sports.io/football/teams/121.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/133.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "moins de 3 saisons historiques exploitables",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [],
+      "evidence": {
+        "country": "Brazil",
+        "league": "Serie A",
+        "team": "Palmeiras",
+        "opponent": "Vasco DA Gama",
+        "teamSide": "home",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-23T22:12:32.239Z",
+        "market": {
+          "bestOdd": 3.12,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 3.12
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.95
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.92
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.9
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.84
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.7
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.78
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.72
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.69
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.68
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.68
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 1.65
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Cards",
+              "selection": "Over 0.5",
+              "odd": 1.13
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 2,
+          "teamPercentile": 100,
+          "opponentPercentile": 21.05,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 4,
+          "opponentConcededInLastFive": 3,
+          "weightedConstructedGoals": 4,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": false,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 1,
+          "opponentRank": 19,
+          "leagueSize": 20
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 3.12
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 3.12
+      },
+      "alreadySent": false
+    },
+    {
+      "id": "api-football-1492349-away",
+      "match": "Vitoria - Bahia",
+      "team": "Bahia",
+      "country": "Brazil",
+      "league": "Serie A",
+      "home": "Vitoria",
+      "away": "Bahia",
+      "homeLogo": "https://media.api-sports.io/football/teams/136.png",
+      "awayLogo": "https://media.api-sports.io/football/teams/118.png",
+      "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+      "status": "NO_BET",
+      "sendDecision": "not_sent",
+      "reasons": [
+        "écart de force historique insuffisant ou non prouvé",
+        "équipe non buteuse sur les cinq derniers matchs",
+        "l'équipe ne rentre pas dans un état où elle marque",
+        "adversaire non encaissant sur les cinq derniers matchs",
+        "l'adversaire ne rentre pas clairement dans un état où il encaisse"
+      ],
+      "warnings": [
+        "historique 3 saisons accepté : prudence renforcée"
+      ],
+      "evidence": {
+        "country": "Brazil",
+        "league": "Serie A",
+        "team": "Bahia",
+        "opponent": "Vitoria",
+        "teamSide": "away",
+        "competitionType": "league",
+        "oddsFetchedAt": "2026-08-23T22:12:39.744Z",
+        "market": {
+          "bestOdd": 2.35,
+          "offers": [
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.35
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.3
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.26
+            },
+            {
+              "bookmaker": "Pinnacle",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.26
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.26
+            },
+            {
+              "bookmaker": "Betano",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.25
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.22
+            },
+            {
+              "bookmaker": "Marathonbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.2
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Away Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.2
+            },
+            {
+              "bookmaker": "1xBet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.18
+            },
+            {
+              "bookmaker": "Superbet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.17
+            },
+            {
+              "bookmaker": "Unibet",
+              "market": "Home Team Total Goals(1st Half)",
+              "selection": "Over 0.5",
+              "odd": 2.12
+            }
+          ]
+        },
+        "fiveYearStrength": {
+          "levelTableLoaded": true,
+          "seasonsAvailable": 3,
+          "teamPercentile": 15.79,
+          "opponentPercentile": 0,
+          "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+          "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+        },
+        "recent": {
+          "recentMatchesOrder": "oldest_to_newest",
+          "scoredInLastFive": 3,
+          "opponentConcededInLastFive": 3,
+          "weightedConstructedGoals": 3,
+          "scoringState": "no",
+          "opponentConcedesState": "no",
+          "goal05SpecificEvidence": "yes",
+          "candidateCanReproduceConcessionPattern": true,
+          "candidateLevelMatchesPriorScorers": true,
+          "assistedGoalsCheckedFixtures": 2
+        },
+        "stake": {
+          "teamHasMeaningfulObjective": true,
+          "sameZoneAfterResult": false,
+          "stakeTeamIsStrongerSide": true,
+          "currentRank": 6,
+          "opponentRank": 12,
+          "leagueSize": 20
+        }
+      },
+      "bestOdd": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.35
+      },
+      "bestOffer": {
+        "bookmaker": "Pinnacle",
+        "market": "Away Team Total Goals(1st Half)",
+        "selection": "Over 0.5",
+        "odd": 2.35
+      },
+      "alreadySent": false
+    }
+  ],
+  "adminWatchlist": {
+    "sent": true,
+    "chatId": "-1003818884997"
+  }
+}

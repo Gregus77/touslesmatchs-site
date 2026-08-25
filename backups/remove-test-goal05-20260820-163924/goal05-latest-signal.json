@@ -1,0 +1,46 @@
+{
+  "ok": true,
+  "type": "goal05_team_over_0_5",
+  "status": "active",
+  "sentAt": "2026-08-14T13:30:52.396Z",
+  "id": "test-manual-1786714252396",
+  "match": "[TEST] Paris FC - [TEST] Toulouse",
+  "home": "[TEST] Paris FC",
+  "away": "[TEST] Toulouse",
+  "team": "[TEST] Paris FC",
+  "opponent": "[TEST] Toulouse",
+  "country": "France",
+  "league": "Ligue 1",
+  "competition": "France - Ligue 1",
+  "meta": "France - Ligue 1 - Analyse football uniquement",
+  "odd": 1.35,
+  "bookmaker": "Bookmaker TEST",
+  "bet": "[TEST] Paris FC +0,5 but",
+  "checks": [
+    {
+      "ok": true,
+      "text": "Ecart historique favorable"
+    },
+    {
+      "ok": true,
+      "text": "Enjeu reel au classement"
+    },
+    {
+      "ok": true,
+      "text": "Adversaire encaisse regulierement"
+    },
+    {
+      "ok": true,
+      "text": "Tous les criteres durs sont valides"
+    }
+  ],
+  "reasons": [
+    "dossier complet : à journaliser et contrôler avant toute diffusion"
+  ],
+  "warnings": [
+    "seuil bêta 1.30 actif : signal de test, pas seuil commercial final"
+  ],
+  "homeLogo": null,
+  "awayLogo": null,
+  "leagueLogo": null
+}

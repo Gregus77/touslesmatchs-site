@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestion de capital — TousLesMatchs</title>
+<meta name="description" content="Simulateur de gestion de capital : selon votre capital et la cote, visualisez une mise adaptée à votre niveau de prudence.">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #06080f; color: #eceaf4; line-height: 1.55;
+    min-height: 100vh; padding: 0 16px 60px;
+  }
+  a { color: #6366f1; text-decoration: none; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0; margin-bottom: 8px;
+  }
+  .logo { font-size: 20px; font-weight: 900;
+    background: linear-gradient(135deg, #6366f1, #7c3aed);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .back { font-size: 13px; color: #7b82a0; }
+  h1 { font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+  .subtitle { font-size: 13px; color: #7b82a0; margin-bottom: 24px; }
+  .card {
+    background: #0d1020; border: 1px solid rgba(99,102,241,.22);
+    border-radius: 16px; padding: 22px; margin-bottom: 18px;
+  }
+  .label { font-size: 11px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; color: #7b82a0; margin-bottom: 10px; }
+  input[type="text"], input[type="email"], input[type="number"] {
+    width: 100%; background: #06080f; border: 1px solid rgba(255,255,255,.12);
+    border-radius: 10px; padding: 13px 14px; color: #eceaf4; font-size: 15px;
+  }
+  input:focus { outline: none; border-color: #6366f1; }
+  .btn {
+    display: inline-block; width: 100%; text-align: center; cursor: pointer;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
+    padding: 13px 20px; border: none; border-radius: 10px; font-weight: 700; font-size: 15px;
+  }
+  .btn:disabled { opacity: .6; }
+  .btn.secondary { background: transparent; border: 1px solid rgba(255,255,255,.15); color: #a8aec8; }
+  .row { display: flex; gap: 10px; }
+  .err { color: #ef4444; font-size: 13px; margin-top: 10px; display: none; }
+  .hidden { display: none; }
+
+  /* Bankroll display */
+  .bankroll-view { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .bankroll-amount { font-size: 34px; font-weight: 900; color: #10b981; }
+  .edit-link { font-size: 12px; color: #6366f1; cursor: pointer; }
+
+  /* Slider */
+  .odds-value { font-size: 30px; font-weight: 900; color: #22d3ee; text-align: center; margin: 4px 0 14px; }
+  input[type="range"] { width: 100%; accent-color: #6366f1; height: 6px; }
+  .presets { display: flex; gap: 8px; margin-top: 14px; justify-content: center; flex-wrap: wrap; }
+  .chip {
+    background: #06080f; border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+    padding: 7px 15px; font-size: 13px; color: #a8aec8; cursor: pointer;
+  }
+  .chip.active { border-color: #6366f1; color: #eceaf4; background: rgba(99,102,241,.12); }
+
+  /* Stake results */
+  .stake { display: flex; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+  .stake:last-child { border-bottom: none; }
+  .stake-ico { font-size: 26px; width: 34px; text-align: center; }
+  .stake-info { flex: 1; }
+  .stake-name { font-size: 15px; font-weight: 800; }
+  .stake-desc { font-size: 12px; color: #7b82a0; }
+  .stake-amount { font-size: 20px; font-weight: 900; }
+  .stake-gain { font-size: 11px; color: #7b82a0; }
+  .c-prudent { color: #10b981; } .c-normal { color: #f59e0b; } .c-risque { color: #ef4444; }
+
+  /* Suivi gains/pertes */
+  .totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+  .ttile { background: #06080f; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 11px 4px; text-align: center; }
+  .tval { font-size: 16px; font-weight: 900; }
+  .tlbl { font-size: 10px; color: #7b82a0; text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
+  .bet-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13px; }
+  .bet-item:last-child { border-bottom: none; }
+  .bet-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bet-profit { font-weight: 800; white-space: nowrap; }
+  .bet-del { color: #6b7186; cursor: pointer; font-size: 15px; }
+  .empty { color: #7b82a0; font-size: 13px; text-align: center; padding: 16px 0; }
+
+  .disclaimer {
+    font-size: 11px; color: #6b7186; line-height: 1.7; margin-top: 24px;
+    padding: 16px; background: rgba(255,255,255,.02); border-radius: 12px; border: 1px solid rgba(255,255,255,.05);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">TousLesMatchs</div>
+    <a class="back" href="/">← Accueil</a>
+  </header>
+
+  <h1>💼 Gestion de capital</h1>
+  <p class="subtitle">Outil pédagogique de gestion de votre capital. Selon votre capital et la cote, visualisez une mise adaptée à votre niveau de prudence. Aucune incitation, aucune garantie de gain.</p>
+
+  <!-- LOGIN -->
+  <div id="login-card" class="card hidden">
+    <div class="label">Connexion</div>
+    <div style="margin-bottom:12px"><input type="email" id="login-email" placeholder="Votre email" autocomplete="email"></div>
+    <div style="margin-bottom:14px"><input type="text" id="login-code" placeholder="Votre code d'accès" autocomplete="off"></div>
+    <button class="btn" id="login-btn" onclick="doLogin()">Accéder →</button>
+    <div class="err" id="login-error"></div>
+    <p style="font-size:12px;color:#7b82a0;margin-top:14px">Pas encore de code ? <a href="/#plans">Voir les offres</a></p>
+  </div>
+
+  <!-- APP -->
+  <div id="app" class="hidden">
+    <!-- Bankroll -->
+    <div class="card">
+      <div class="label">Votre capital</div>
+      <div id="bankroll-display">
+        <div class="bankroll-view">
+          <span class="bankroll-amount" id="bankroll-amount">—</span>
+          <span class="edit-link" onclick="showBankrollEdit()">modifier</span>
+        </div>
+      </div>
+      <div id="bankroll-edit" class="hidden">
+        <div style="margin-bottom:12px"><input type="number" id="bankroll-input" placeholder="Ex : 200" min="0" step="10" inputmode="decimal"></div>
+        <div class="row">
+          <button class="btn" id="bankroll-save" onclick="saveBankroll()">Enregistrer</button>
+          <button class="btn secondary" onclick="cancelBankrollEdit()">Annuler</button>
+        </div>
+        <div class="err" id="bankroll-error"></div>
+      </div>
+    </div>
+
+    <!-- Cote -->
+    <div class="card">
+      <div class="label">Cote du bookmaker</div>
+      <div class="odds-value" id="odds-value">2.00</div>
+      <input type="range" id="odds-slider" min="1.2" max="10" step="0.1" value="2">
+      <div class="presets" id="presets"></div>
+    </div>
+
+    <!-- Résultats -->
+    <div class="card">
+      <div class="label">Mise conseillée selon votre prudence</div>
+      <div class="stake">
+        <div class="stake-ico">🛡️</div>
+        <div class="stake-info">
+          <div class="stake-name c-prudent">Prudent</div>
+          <div class="stake-desc">Bon père de famille · préserve le capital</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stake-amount c-prudent" id="s-prudent">—</div>
+          <div class="stake-gain" id="g-prudent"></div>
+        </div>
+      </div>
+      <div class="stake">
+        <div class="stake-ico">⚖️</div>
+        <div class="stake-info">
+          <div class="stake-name c-normal">Équilibré</div>
+          <div class="stake-desc">Mise mesurée · bon compromis</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stake-amount c-normal" id="s-normal">—</div>
+          <div class="stake-gain" id="g-normal"></div>
+        </div>
+      </div>
+      <div class="stake">
+        <div class="stake-ico">🔥</div>
+        <div class="stake-info">
+          <div class="stake-name c-risque">Offensif</div>
+          <div class="stake-desc">Preneur de risque · variance élevée</div>
+        </div>
+        <div style="text-align:right">
+          <div class="stake-amount c-risque" id="s-risque">—</div>
+          <div class="stake-gain" id="g-risque"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Note visiteur gratuit -->
+    <div id="guest-note" class="card hidden" style="text-align:center">
+      <div style="font-size:14px;color:#a8aec8;line-height:1.6">💡 Les stratégies de mise ci-dessus sont <b>gratuites pour tous</b>.<br>Pour <b>enregistrer et suivre tes paris</b> (gains/pertes sauvegardés), connecte-toi.</div>
+      <div style="margin-top:14px"><a href="/#plans" class="btn" style="display:inline-block;text-decoration:none">Voir les offres →</a></div>
+    </div>
+
+    <!-- Mon suivi gains / pertes -->
+    <div class="card" id="suivi-card">
+      <div class="label">Mon suivi — gains &amp; pertes</div>
+      <div class="totals">
+        <div class="ttile"><div class="tval" id="t-solde">0 €</div><div class="tlbl">Solde net</div></div>
+        <div class="ttile"><div class="tval c-prudent" id="t-gagne">0 €</div><div class="tlbl">Gagné</div></div>
+        <div class="ttile"><div class="tval c-risque" id="t-perdu">0 €</div><div class="tlbl">Perdu</div></div>
+        <div class="ttile"><div class="tval c-normal" id="t-winrate">0%</div><div class="tlbl">Réussite</div></div>
+      </div>
+      <div style="margin-bottom:8px"><input type="text" id="bet-label" placeholder="Match (ex : PSG - OM)" maxlength="80"></div>
+      <div class="row" style="margin-bottom:8px">
+        <input type="number" id="bet-stake" placeholder="Mise €" min="0" step="1" inputmode="decimal">
+        <input type="number" id="bet-odds" placeholder="Cote" min="1" step="0.05" inputmode="decimal">
+      </div>
+      <div class="row">
+        <button class="btn" style="background:linear-gradient(135deg,#059669,#10b981)" onclick="addBet('win')">✅ Gagné</button>
+        <button class="btn" style="background:linear-gradient(135deg,#b91c1c,#ef4444)" onclick="addBet('loss')">❌ Perdu</button>
+      </div>
+      <div class="err" id="bet-error"></div>
+      <div id="bets-list" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <div class="disclaimer">
+    ⚠️ 18+ · Cet outil est un <b>simulateur pédagogique de gestion de capital</b>. Il ne constitue ni un conseil, ni une incitation, ni une garantie de gain. Les montants affichés sont de simples repères de gestion du risque calculés sur le capital que vous saisissez. Jouer comporte des risques : endettement, isolement, dépendance. Appelez le 09 74 75 13 13 (appel non surtaxé) — <a href="https://www.joueurs-info-service.fr" target="_blank" rel="noopener">joueurs-info-service.fr</a>.
+  </div>
+</div>
+
+<script>
+  var userAuth = null;
+
+  function euro(n) {
+    return n.toLocaleString('fr-FR', { minimumFractionDigits: n < 10 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+  }
+
+  // ── Auth ───────────────────────────────────────────────────────────────────
+  function initAuth() {
+    var email = localStorage.getItem('tlm_email');
+    var code = localStorage.getItem('tlm_code');
+    if (email && code) {
+      userAuth = { email: email, code: code };
+      showApp();
+      loadBankroll();
+    } else {
+      // Visiteur gratuit : stratégies de mise accessibles à tous.
+      // Le suivi personnel (paris sauvegardés) reste réservé aux connectés.
+      document.getElementById('app').classList.remove('hidden');
+      var suivi = document.getElementById('suivi-card');
+      if (suivi) suivi.classList.add('hidden');
+      var note = document.getElementById('guest-note');
+      if (note) note.classList.remove('hidden');
+      currentBankroll = Number(localStorage.getItem('tlm_guest_bankroll')) || 100;
+      document.getElementById('bankroll-amount').textContent = euro(currentBankroll);
+      recompute();
+    }
+  }
+
+  function doLogin() {
+    var email = document.getElementById('login-email').value.trim();
+    var code = document.getElementById('login-code').value.trim();
+    var errEl = document.getElementById('login-error');
+    var btn = document.getElementById('login-btn');
+    if (!email || !code) { errEl.textContent = 'Email et code requis.'; errEl.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = 'Vérification...';
+    fetch('/api/verify-code', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, code: code })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.valid) {
+        userAuth = { email: email, code: code };
+        localStorage.setItem('tlm_email', email);
+        localStorage.setItem('tlm_code', code);
+        localStorage.setItem('tlm_plan', d.plan);
+        document.getElementById('login-card').classList.add('hidden');
+        showApp();
+        loadBankroll();
+      } else {
+        errEl.textContent = d.error || 'Code invalide ou expiré.'; errEl.style.display = 'block';
+      }
+      btn.disabled = false; btn.textContent = 'Accéder →';
+    }).catch(function() {
+      errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Accéder →';
+    });
+  }
+
+  function showApp() {
+    document.getElementById('app').classList.remove('hidden');
+    if (userAuth) loadBets();
+  }
+
+  // ── Suivi gains / pertes ─────────────────────────────────────────────────────
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+    });
+  }
+
+  function loadBets() {
+    fetch('/api/bankroll/bets/list', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) renderBets(d);
+    }).catch(function(){});
+  }
+
+  function renderBets(d) {
+    var t = d.totals;
+    var solde = document.getElementById('t-solde');
+    solde.textContent = (t.solde >= 0 ? '+' : '') + euro(t.solde);
+    solde.className = 'tval ' + (t.solde >= 0 ? 'c-prudent' : 'c-risque');
+    document.getElementById('t-gagne').textContent = euro(t.gagne);
+    document.getElementById('t-perdu').textContent = euro(t.perdu);
+    document.getElementById('t-winrate').textContent = t.winrate + '%';
+    var list = document.getElementById('bets-list');
+    if (!d.bets.length) {
+      list.innerHTML = '<div class="empty">Aucune mise enregistrée. Ajoute ta première ci-dessus.</div>';
+      return;
+    }
+    list.innerHTML = d.bets.map(function(b) {
+      var pos = b.profit >= 0;
+      return '<div class="bet-item">' +
+        '<div class="bet-label">' + escapeHtml(b.label) +
+        ' <span style="color:#7b82a0">· ' + b.stake + '€ @ ' + b.odds + '</span></div>' +
+        '<div class="bet-profit ' + (pos ? 'c-prudent' : 'c-risque') + '">' + (pos ? '+' : '') + euro(b.profit) + '</div>' +
+        '<span class="bet-del" onclick="delBet(' + b.id + ')">🗑</span></div>';
+    }).join('');
+  }
+
+  function addBet(result) {
+    var label = document.getElementById('bet-label').value.trim();
+    var stake = Number(document.getElementById('bet-stake').value);
+    var odds = Number(document.getElementById('bet-odds').value);
+    var err = document.getElementById('bet-error');
+    if (!label) { err.textContent = 'Indique le match.'; err.style.display = 'block'; return; }
+    if (!(stake > 0)) { err.textContent = 'Mise invalide.'; err.style.display = 'block'; return; }
+    if (!(odds >= 1)) { err.textContent = 'Cote invalide.'; err.style.display = 'block'; return; }
+    err.style.display = 'none';
+    fetch('/api/bankroll/bets/add', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code, label: label, stake: stake, odds: odds, result: result })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) {
+        document.getElementById('bet-label').value = '';
+        document.getElementById('bet-stake').value = '';
+        document.getElementById('bet-odds').value = '';
+        renderBets(d);
+      } else {
+        err.textContent = d.error || 'Erreur.'; err.style.display = 'block';
+      }
+    }).catch(function() {
+      err.textContent = 'Erreur de connexion.'; err.style.display = 'block';
+    });
+  }
+
+  function delBet(id) {
+    fetch('/api/bankroll/bets/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code, id: id })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok) renderBets(d);
+    }).catch(function(){});
+  }
+
+  // ── Bankroll ───────────────────────────────────────────────────────────────
+  var currentBankroll = null;
+
+  function loadBankroll() {
+    fetch('/api/bankroll/get', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (d.ok && d.bankroll != null) {
+        currentBankroll = d.bankroll;
+        document.getElementById('bankroll-amount').textContent = euro(d.bankroll);
+        recompute();
+      } else {
+        // Pas encore de bankroll → invite à la saisir
+        showBankrollEdit();
+      }
+    }).catch(function(){ showBankrollEdit(); });
+  }
+
+  function showBankrollEdit() {
+    document.getElementById('bankroll-display').classList.add('hidden');
+    document.getElementById('bankroll-edit').classList.remove('hidden');
+    if (currentBankroll != null) document.getElementById('bankroll-input').value = currentBankroll;
+    document.getElementById('bankroll-input').focus();
+  }
+  function cancelBankrollEdit() {
+    if (currentBankroll == null) return; // rien à annuler si pas encore défini
+    document.getElementById('bankroll-edit').classList.add('hidden');
+    document.getElementById('bankroll-display').classList.remove('hidden');
+  }
+
+  function saveBankroll() {
+    var raw = Number(document.getElementById('bankroll-input').value);
+    var errEl = document.getElementById('bankroll-error');
+    var btn = document.getElementById('bankroll-save');
+    if (!isFinite(raw) || raw < 0 || raw > 1000000) {
+      errEl.textContent = 'Montant invalide.'; errEl.style.display = 'block'; return;
+    }
+    errEl.style.display = 'none';
+    // Visiteur gratuit : capital sauvegardé localement (pas de compte requis)
+    if (!userAuth) {
+      currentBankroll = raw;
+      try { localStorage.setItem('tlm_guest_bankroll', String(raw)); } catch(e) {}
+      document.getElementById('bankroll-amount').textContent = euro(raw);
+      document.getElementById('bankroll-edit').classList.add('hidden');
+      document.getElementById('bankroll-display').classList.remove('hidden');
+      recompute();
+      return;
+    }
+    btn.disabled = true; btn.textContent = '...';
+    fetch('/api/bankroll/set', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: userAuth.email, code: userAuth.code, bankroll: raw })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      btn.disabled = false; btn.textContent = 'Enregistrer';
+      if (d.ok) {
+        currentBankroll = d.bankroll;
+        document.getElementById('bankroll-amount').textContent = euro(d.bankroll);
+        document.getElementById('bankroll-edit').classList.add('hidden');
+        document.getElementById('bankroll-display').classList.remove('hidden');
+        recompute();
+      } else {
+        errEl.textContent = d.error || 'Erreur.'; errEl.style.display = 'block';
+      }
+    }).catch(function() {
+      btn.disabled = false; btn.textContent = 'Enregistrer';
+      errEl.textContent = 'Erreur de connexion.'; errEl.style.display = 'block';
+    });
+  }
+
+  // ── Cote + calcul des mises ────────────────────────────────────────────────
+  var slider = document.getElementById('odds-slider');
+  var oddsValueEl = document.getElementById('odds-value');
+
+  function currentOdds() { return parseFloat(slider.value); }
+
+  // % fixe par niveau, ajusté par la cote (plus la cote est haute, plus on réduit la mise).
+  function computeStakes(bankroll, odds) {
+    var factor = Math.max(0.2, Math.min(1.5, 2 / odds));
+    var prudent = bankroll * 0.01 * factor;
+    var normal  = bankroll * 0.03 * factor;
+    var risque  = Math.min(bankroll * 0.07 * factor, bankroll * 0.10);
+    return { prudent: prudent, normal: normal, risque: risque };
+  }
+
+  function recompute() {
+    var odds = currentOdds();
+    oddsValueEl.textContent = odds.toFixed(2);
+    document.querySelectorAll('.chip').forEach(function(c) {
+      c.classList.toggle('active', parseFloat(c.dataset.odds) === odds);
+    });
+    if (currentBankroll == null) return;
+    var s = computeStakes(currentBankroll, odds);
+    setStake('prudent', s.prudent, odds);
+    setStake('normal', s.normal, odds);
+    setStake('risque', s.risque, odds);
+  }
+
+  function setStake(key, amount, odds) {
+    document.getElementById('s-' + key).textContent = euro(amount);
+    var gain = amount * (odds - 1);
+    document.getElementById('g-' + key).textContent = 'gain net : +' + euro(gain);
+  }
+
+  slider.addEventListener('input', recompute);
+
+  // Presets de cote
+  (function() {
+    var presetEl = document.getElementById('presets');
+    [1.5, 2, 3, 4, 5].forEach(function(o) {
+      var chip = document.createElement('div');
+      chip.className = 'chip'; chip.textContent = o.toFixed(1); chip.dataset.odds = o;
+      chip.onclick = function() { slider.value = o; recompute(); };
+      presetEl.appendChild(chip);
+    });
+  })();
+
+  initAuth();
+  recompute();
+</script>
+<script src="/js/widgets.js" defer></script>
+</body>
+</html>

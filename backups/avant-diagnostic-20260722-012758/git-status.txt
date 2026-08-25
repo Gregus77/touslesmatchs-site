@@ -1,0 +1,38 @@
+ M docker-compose.yml
+A  public/cgu.html
+A  public/cgv.html
+A  public/confidentialite.html
+M  public/index.html
+A  public/mentions-legales.html
+ M site/index.html
+ M site/template.html
+?? Caddyfile.BACKUP.20260719-224809
+?? Caddyfile.bak-0033
+?? backups-codes-surs/
+?? backups/
+?? guardian.sh
+?? i18n-multilangue-12langs.js
+?? public/index.html.backup-20260719_155943
+?? public/resultats.html
+?? scripts/api_server.js.BACKUP.20260719-224809
+?? scripts/api_server.js.backup-20260721-1924
+?? shared/
+?? site.BACKUP.20260719-224809/
+?? site/admin-dashboard.html
+?? site/assets/
+?? site/bankroll.html
+?? site/cgu.html
+?? site/cgv.html
+?? site/confidentialite.html
+?? site/favicon.ico
+?? site/index.html.backup-20260719_155943
+?? site/js/
+?? site/live-ia.html
+?? site/logo192.png
+?? site/logo512.png
+?? site/manifest.json
+?? site/mentions-legales.html
+?? site/merci.html
+?? site/preuves/
+?? site/resultats.html
+?? site/robots.txt

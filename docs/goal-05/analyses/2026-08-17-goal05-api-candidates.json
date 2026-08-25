@@ -1,0 +1,596 @@
+[
+  {
+    "id": "api-football-1492333-home",
+    "matchId": 1492333,
+    "date": "2026-08-17",
+    "country": "Brazil",
+    "league": "Serie A",
+    "leagueLogo": "https://media.api-sports.io/football/leagues/71.png",
+    "competitionType": "league",
+    "home": "Corinthians",
+    "away": "Cruzeiro",
+    "homeLogo": "https://media.api-sports.io/football/teams/131.png",
+    "awayLogo": "https://media.api-sports.io/football/teams/135.png",
+    "team": "Corinthians",
+    "opponent": "Cruzeiro",
+    "teamLogo": "https://media.api-sports.io/football/teams/131.png",
+    "opponentLogo": "https://media.api-sports.io/football/teams/135.png",
+    "teamSide": "home",
+    "source": "api-football",
+    "fiveYearStrength": {
+      "levelTableLoaded": true,
+      "seasonsAvailable": 1,
+      "teamPercentile": 68.42,
+      "opponentPercentile": 36.84,
+      "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+      "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/rest-world-local-rank-tables/bresil-brasileiro-serie-a.json"
+    },
+    "recent": {
+      "recentMatchesOrder": "oldest_to_newest",
+      "scoredInLastFive": 3,
+      "opponentConcededInLastFive": 3,
+      "weightedConstructedGoals": 0,
+      "scoringState": "no",
+      "opponentConcedesState": "no",
+      "goal05SpecificEvidence": "no",
+      "candidateCanReproduceConcessionPattern": true,
+      "candidateLevelMatchesPriorScorers": true,
+      "assistedGoalsCheckedFixtures": 2
+    },
+    "stake": {
+      "teamHasMeaningfulObjective": false,
+      "sameZoneAfterResult": true,
+      "stakeTeamIsStrongerSide": true,
+      "currentRank": 9,
+      "opponentRank": 5,
+      "leagueSize": 20
+    },
+    "odds": {
+      "fetchedAt": "2026-08-17T22:12:16.981Z",
+      "arjelBookmakers": [
+        {
+          "name": "Pinnacle",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.84
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marathonbet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.68
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.67
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Unibet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "10Bet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.55
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Pinnacle",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.27
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.27
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marathonbet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.22
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marathonbet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.22
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.22
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Unibet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.17
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.17
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "10Bet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.15
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marathonbet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.86
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.86
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.83
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Home Team Total Cards",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.05
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "api-football-1494246-home",
+    "matchId": 1494246,
+    "date": "2026-08-17",
+    "country": "Sweden",
+    "league": "Allsvenskan",
+    "leagueLogo": "https://media.api-sports.io/football/leagues/113.png",
+    "competitionType": "league",
+    "home": "BK Hacken",
+    "away": "Halmstad",
+    "homeLogo": "https://media.api-sports.io/football/teams/367.png",
+    "awayLogo": "https://media.api-sports.io/football/teams/766.png",
+    "team": "BK Hacken",
+    "opponent": "Halmstad",
+    "teamLogo": "https://media.api-sports.io/football/teams/367.png",
+    "opponentLogo": "https://media.api-sports.io/football/teams/766.png",
+    "teamSide": "home",
+    "source": "api-football",
+    "fiveYearStrength": {
+      "levelTableLoaded": true,
+      "seasonsAvailable": 2,
+      "teamPercentile": 80,
+      "opponentPercentile": 20,
+      "historicalCacheStatus": "LOCAL_RANK_ONLY_NEEDS_CROSS_CHECK",
+      "cacheFile": "/opt/touslesmatchs/docs/goal-05/strategie-memory/championnats/cache/europe-known-local-rank-tables/suede-allsvenskan.json"
+    },
+    "recent": {
+      "recentMatchesOrder": "oldest_to_newest",
+      "scoredInLastFive": 3,
+      "opponentConcededInLastFive": 5,
+      "weightedConstructedGoals": 1,
+      "scoringState": "no",
+      "opponentConcedesState": "yes",
+      "goal05SpecificEvidence": "no",
+      "candidateCanReproduceConcessionPattern": true,
+      "candidateLevelMatchesPriorScorers": true,
+      "assistedGoalsCheckedFixtures": 2
+    },
+    "stake": {
+      "teamHasMeaningfulObjective": true,
+      "sameZoneAfterResult": false,
+      "stakeTeamIsStrongerSide": true,
+      "currentRank": 3,
+      "opponentRank": 16,
+      "leagueSize": 16
+    },
+    "odds": {
+      "fetchedAt": "2026-08-17T22:12:24.482Z",
+      "arjelBookmakers": [
+        {
+          "name": "Pinnacle",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.82
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "10Bet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.65
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.62
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Unibet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.6
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marathonbet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.49
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.47
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.15
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Marathonbet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.11
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "10Bet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Away Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 2.1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.42
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.37
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "10Bet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(1st Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.36
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "10Bet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Betano",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.25
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "1xBet",
+          "bets": [
+            {
+              "name": "Home Team Total Goals(2nd Half)",
+              "values": [
+                {
+                  "value": "Over 0.5",
+                  "odd": 1.24
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]
