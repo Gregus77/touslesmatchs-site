@@ -22,8 +22,8 @@ const i18n = (function () {
       lang_label: "Langue",
 
       hero_badge: "Le Concile IA sportif",
-      hero_title: "Plusieurs intelligences artificielles analysent.<br><span class=\"grad\">Le Concile sélectionne les meilleures convergences.</span>",
-      hero_sub: "TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.",
+      hero_title: "5 IA analysent chaque match.<br><span class=\"grad\">On ne vous montre que leurs points d'accord.</span>",
+      hero_sub: "Plus une analyse fait consensus entre nos intelligences artificielles indépendantes, plus elle est fiable.",
       hero_cta1: "Voir les matchs en direct", hero_cta2: "Créer mon compte gratuit",
       hero_r1: "✓ Résultats publics", hero_r2: "✓ Données vérifiées",
       hero_r3: "✓ Sans engagement",

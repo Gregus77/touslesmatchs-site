@@ -972,14 +972,14 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <a class="hero-exact-hotspot account" href="/dashboard">Créer mon compte gratuit</a>
         <div class="hero-seo-copy">
           <div data-i18n="hero_badge">Le Concile IA sportif</div>
-          <h1 id="hero-title" data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent. Le Concile sélectionne les meilleures convergences.</h1>
-          <p data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</p>
+          <h1 id="hero-title" data-i18n-html="hero_title">5 IA analysent chaque match. On ne vous montre que leurs points d'accord.</h1>
+          <p data-i18n="hero_sub">Plus une analyse fait consensus entre nos intelligences artificielles indépendantes, plus elle est fiable.</p>
         </div>
       </div>
       <div class="hero-mobile-fallback">
         <div class="hero-badge" data-i18n="hero_badge">Le Concile IA sportif</div>
-        <h1 data-i18n-html="hero_title">Plusieurs intelligences artificielles analysent.<br><span class="grad">Le Concile sélectionne les meilleures convergences.</span></h1>
-        <div class="hero-sub" data-i18n="hero_sub">TousLesMatchs croise les données sportives et le vote de plusieurs IA indépendantes afin de classer les analyses selon leur score de confiance.</div>
+        <h1 data-i18n-html="hero_title">5 IA analysent chaque match.<br><span class="grad">On ne vous montre que leurs points d'accord.</span></h1>
+        <div class="hero-sub" data-i18n="hero_sub">Plus une analyse fait consensus entre nos intelligences artificielles indépendantes, plus elle est fiable.</div>
         <div class="hero-cta"><a href="/live-ia" class="btn btn-prim" data-i18n="hero_cta1">Voir les matchs en direct</a><a href="/downloads/TousLesMatchs-Goal05-v107-20260817-161610.apk" class="btn btn-ghost" download>📲 Télécharger l’app Android</a><a href="/dashboard" class="btn btn-ghost" data-i18n="hero_cta2">Créer mon compte gratuit</a></div>
         <div class="hero-reassure"><span data-i18n="hero_r1">✓ Résultats publics</span><span data-i18n="hero_r2">✓ Données vérifiées</span><span data-i18n="hero_r3">✓ Sans engagement</span><span>18+</span></div>
       </div>
@@ -1516,7 +1516,7 @@ function openBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m
 function closeBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.remove("open");m.setAttribute("aria-hidden","true");}
 function updateGoal05Remaining(d){var n=document.getElementById("goal05-remaining-count"),h=document.getElementById("goal05-remaining-hint");if(!n||!d||typeof d.remaining==="undefined")return;n.textContent=Math.max(0,d.remaining);if(h)h.textContent=d.remaining>0?"Le compteur descend automatiquement a chaque invitation reservee.":"Les 20 places sont prises : les nouvelles demandes passent en liste d attente."}function loadBetaCycle01Status(){fetch("/api/beta-plus05/status").then(function(r){return r.json()}).then(function(d){updateGoal05Remaining(d);document.getElementById("beta-cycle01-count").textContent=d.remaining>0?(d.remaining+" invitation"+(d.remaining>1?"s":"")+" disponible"+(d.remaining>1?"s":"")):"Beta complete : inscription en liste d attente."}).catch(function(){document.getElementById("beta-cycle01-count").textContent="Les invitations seront confirmees apres verification."})}
 function applyBetaCycle01(){var email=document.getElementById("beta-cycle01-email").value.trim(),adult=document.getElementById("beta-cycle01-adult").checked,status=document.getElementById("beta-cycle01-status"),btn=document.getElementById("beta-cycle01-submit");if(!email||!adult){status.style.color="var(--red)";status.textContent="Email valide et confirmation +18 requis.";return}btn.disabled=true;fetch("/api/beta-plus05/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,adultConfirmed:adult,legalAccepted:adult})}).then(function(r){return r.json()}).then(function(d){status.style.color=d.ok?"var(--green)":"var(--red)";status.textContent=d.ok?(d.status==="accepted"?"Invitation reservee. Nous confirmerons la phase de test avant tout acces.":"Beta complete : ta demande est en liste d attente."):(d.error||"Demande non valide.");if(d.ok)loadBetaCycle01Status()}).catch(function(){status.style.color="var(--red)";status.textContent="Erreur de connexion. Reessaie plus tard."}).finally(function(){btn.disabled=false})}
-document.getElementById("beta-cycle01-modal").addEventListener("click",function(e){if(e.target===this)closeBetaCycle01()});
+(function(){var betaModal=document.getElementById("beta-cycle01-modal");if(betaModal){betaModal.addEventListener("click",function(e){if(e.target===this)closeBetaCycle01()});}})();
 setTimeout(function(){if(!sessionStorage.getItem("tlm_beta_cycle01_seen")){openBetaCycle01();sessionStorage.setItem("tlm_beta_cycle01_seen","1")}},7000);loadBetaCycle01Status();
 function submitEmailCapture(ev) {
   ev.preventDefault();
