@@ -423,11 +423,23 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 .tlm-history-backfill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 18px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(12,18,45,.58);color:#f8fbff;font-weight:850;margin:7px 0}
 .tlm-history-backfill-row span:last-child{color:#35ffc0;font-size:13px}
 </style>
+<style id="tlm-stadium-app-css">
+body.tlm-page-app>header,body.tlm-page-app>main,body.tlm-page-app>footer{width:min(100%,720px);margin-left:auto;margin-right:auto}body.tlm-page-app>nav{left:50%;right:auto;width:min(100%,720px);transform:translateX(-50%)}
+header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32px;height:32px;border-radius:8px;object-fit:cover;box-shadow:0 0 14px rgba(34,211,238,.3)}
+.tlm-app-stadium-hero{display:block!important;position:relative;overflow:hidden;margin:0 0 14px;padding:18px 14px 14px;border:1px solid rgba(99,118,255,.42);border-radius:22px;background-image:linear-gradient(180deg,rgba(3,8,24,.5),rgba(3,8,24,.94) 58%),url('/img/stadium-night-hero.webp');background-size:auto 100%;background-position:center;box-shadow:0 18px 50px rgba(0,0,0,.3)}
+.tlm-app-stadium-hero h1{margin:7px 0 6px;font-size:30px;line-height:1.02;letter-spacing:-.055em}.tlm-app-stadium-hero h1 span{display:block;background:linear-gradient(100deg,#34c9ff,#8c70ff 55%,#d14aff);-webkit-background-clip:text;background-clip:text;color:transparent}.tlm-app-kicker{display:inline-flex;align-items:center;gap:6px;color:#6de6ff;font-size:9px;font-weight:950;letter-spacing:.11em;text-transform:uppercase}.tlm-app-kicker:before{content:"";width:6px;height:6px;border-radius:50%;background:#22d3ee;box-shadow:0 0 9px #22d3ee}.tlm-app-copy{margin:0 0 13px;color:#cbd4ef;font-size:11px;line-height:1.5}
+.tlm-app-match{padding:13px;border:1px solid rgba(255,255,255,.14);border-radius:17px;background:rgba(4,10,29,.84);backdrop-filter:blur(12px)}.tlm-app-match-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}.tlm-app-live-label{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid rgba(244,63,94,.45);border-radius:7px;background:rgba(244,63,94,.1);color:#ff6483;font-size:9px;font-weight:950;text-transform:uppercase}.tlm-app-live-label:before{content:"";width:6px;height:6px;border-radius:50%;background:#ff3f6d;animation:tlmAppLive 1.5s infinite}.tlm-app-minute{color:#42dafb;font-size:17px;font-weight:950}
+.tlm-app-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center}.tlm-app-team{text-align:center;min-width:0}.tlm-app-team-logo{display:block;width:54px;height:54px;object-fit:contain;margin:0 auto 6px}.tlm-app-team strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px}.tlm-app-country{display:flex;align-items:center;justify-content:center;gap:4px;margin-top:4px;color:#8f99bd;font-size:8.5px}.tlm-app-country img{width:16px;height:11px;border-radius:2px;object-fit:cover}.tlm-app-score{font-size:29px;font-weight:950;white-space:nowrap}.tlm-app-score small{display:block;margin-top:4px;color:#8f99bd;font-size:8px;font-weight:750}
+.tlm-app-ai{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.09)}.tlm-app-ai-label{color:#55dcff;font-size:9px;font-weight:950;letter-spacing:.1em;text-transform:uppercase}.tlm-app-votes{display:flex;gap:5px;margin-top:7px}.tlm-app-vote{width:24px;height:24px;display:grid;place-items:center;border:1px solid rgba(116,130,177,.5);border-radius:50%;color:#7984aa;font-size:8px;font-weight:900}.tlm-app-vote.on{border-color:#22d3ee;background:rgba(34,211,238,.13);color:#fff;box-shadow:0 0 11px rgba(34,211,238,.32)}.tlm-app-total{text-align:right}.tlm-app-total strong{display:block;background:linear-gradient(105deg,#38d2ff,#ae5fff);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:28px;line-height:1;font-weight:950}.tlm-app-total span{display:block;margin-top:3px;color:#929dbe;font-size:8px}.tlm-app-cta{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin-top:12px;border:0;border-radius:11px;background:linear-gradient(115deg,#19bdf3,#7357ff 57%,#d53cf1);color:#fff;font-weight:950;font-size:12px;text-decoration:none;box-shadow:0 10px 25px rgba(102,75,255,.3)}
+.tlm-app-live-list{display:grid;gap:9px}.tlm-app-live-row{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(255,255,255,.04)}.tlm-app-live-logos{position:relative;width:42px;height:34px}.tlm-app-live-logos img{position:absolute;width:30px;height:30px;object-fit:contain;border-radius:50%;background:#071027;border:1px solid rgba(255,255,255,.14)}.tlm-app-live-logos img:last-child{left:15px;top:4px}.tlm-app-live-row strong{display:block;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tlm-app-live-meta{display:flex;align-items:center;gap:5px;margin-top:4px;color:#8e99bd;font-size:9px}.tlm-app-live-meta img{width:15px;height:10px;border-radius:2px;object-fit:cover}.tlm-app-live-result{text-align:right}.tlm-app-live-result b{display:block;font-size:15px}.tlm-app-live-result span{color:#42dafb;font-size:9px;font-weight:850}
+.tlm-app-pick-card{padding:16px;border:1px solid rgba(34,211,238,.24);border-radius:18px;background:linear-gradient(145deg,rgba(34,211,238,.1),rgba(124,58,237,.12));box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}.tlm-app-pick-badge{display:inline-flex;padding:6px 9px;border:1px solid rgba(34,211,238,.34);border-radius:999px;color:#73e6ff;font-size:9px;font-weight:950;letter-spacing:.1em;text-transform:uppercase}.tlm-app-pick-teams{margin-top:11px;font-size:19px;font-weight:950;letter-spacing:-.03em}.tlm-app-pick-meta{margin-top:5px;color:#9ba6c8;font-size:10.5px}.tlm-app-pick-signal{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:14px;padding-top:13px;border-top:1px solid rgba(255,255,255,.1)}.tlm-app-pick-signal strong{display:block;font-size:17px}.tlm-app-pick-signal span{color:#a5afd0;font-size:9.5px}.tlm-app-pick-stat{text-align:right;color:#fff!important;font-size:20px!important;font-weight:950}.tlm-app-empty-signal{padding:22px 15px;text-align:center;color:#a6b0d0}.tlm-app-empty-signal strong{display:block;margin-bottom:5px;color:#fff;font-size:15px}
+@keyframes tlmAppLive{50%{opacity:.4;box-shadow:0 0 0 5px rgba(255,63,109,0)}}@media(prefers-reduced-motion:reduce){.tlm-app-live-label:before{animation:none}}
+</style>
 </head>
 <body class="tlm-wow tlm-page-app">
 
 <header>
-  <div class="brand">Tous<span>LesMatchs</span></div>
+  <div class="brand"><img src="/logo192.png" alt=""><span>Tous<span>LesMatchs</span></span></div>
   <div class="plan-chip" id="chip">Invité</div>
 </header>
 
@@ -436,15 +448,15 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     ⚠️ Hors ligne — données de la dernière consultation.
   </div>
 
-  <section class="goal05-home" aria-label="Goal plus 0,5 but">
-    <div class="goal05-kicker">Goal +0,5 · accès fondateur</div>
-    <div class="goal05-title">L’équipe forte doit marquer.</div>
-    <p class="goal05-copy">Le moteur +0,5 filtre uniquement les matchs de football où l’équipe historiquement supérieure réunit les conditions pour inscrire au moins un but.</p>
-    <div class="goal05-mini">
-      <div><b>&#10003;</b> Force 3-5 saisons</div>
-      <div><b>&#10003;</b> Top vs bas tableau</div>
-      <div><b>&#10003;</b> Buteur 5/5</div>
-      <div><b>&#10003;</b> Cote ANJ validée</div>
+  <section class="tlm-app-stadium-hero" aria-labelledby="app-hero-title">
+    <div class="tlm-app-kicker">Football · Analyse live</div>
+    <h1 id="app-hero-title">Votre signal Over ou Under 2,5.<span>Décidé avant la mi-temps.</span></h1>
+    <p class="tlm-app-copy">Les équipes, les logos, le score et les drapeaux ci-dessous viennent du match réellement en cours.</p>
+    <div class="tlm-app-match" id="app-live-stage" aria-live="polite">
+      <div class="tlm-app-match-head"><span class="tlm-app-live-label" id="app-live-status">Recherche du direct</span><strong class="tlm-app-minute" id="app-live-minute">—</strong></div>
+      <div class="tlm-app-teams"><div class="tlm-app-team"><img class="tlm-app-team-logo" id="app-home-logo" src="/logo192.png" alt=""><strong id="app-home-name">Équipe à domicile</strong><span class="tlm-app-country"><img id="app-home-flag" alt="" hidden><span id="app-home-country">—</span></span></div><div class="tlm-app-score"><span id="app-live-score">— - —</span><small id="app-live-period">En attente</small></div><div class="tlm-app-team"><img class="tlm-app-team-logo" id="app-away-logo" src="/logo192.png" alt=""><strong id="app-away-name">Équipe à l'extérieur</strong><span class="tlm-app-country"><img id="app-away-flag" alt="" hidden><span id="app-away-country">—</span></span></div></div>
+      <div class="tlm-app-ai"><div><div class="tlm-app-ai-label" id="app-ai-label">Analyse IA en cours</div><div class="tlm-app-votes" id="app-ai-votes"><span class="tlm-app-vote">1</span><span class="tlm-app-vote">2</span><span class="tlm-app-vote">3</span><span class="tlm-app-vote">4</span><span class="tlm-app-vote">5</span></div></div><div class="tlm-app-total"><strong id="app-ai-total">0 / 5</strong><span id="app-ai-result">En attente d'accord</span></div></div>
+      <a class="tlm-app-cta" href="#" data-tab-link="pick">Voir le signal gratuit</a>
     </div>
   </section>
 
@@ -455,14 +467,14 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   <!-- â•â• EN DIRECT â•â• -->
   <section id="s-live">
     <h2>Surveillance live</h2>
-    <p class="sub">Matchs de football surveillés pour un éventuel signal +0,5.</p>
+    <p class="sub">Matchs de football réellement en cours, avec logos, score, minute et drapeau du championnat.</p>
     <div id="live-box"><div class="state">Chargement…</div></div>
   </section>
 
   <!-- â•â• PERFORMANCES â•â• -->
   <section id="s-perf">
-    <h2>Résultats +0,5</h2>
-    <p class="sub">Historique réservé aux signaux +0,5 réellement envoyés. Les gagnés comme les perdus resteront visibles.</p>
+    <h2>Résultats Over / Under 2,5</h2>
+    <p class="sub">Historique réservé aux signaux réellement envoyés. Les gagnés comme les perdus restent visibles.</p>
     <div class="kpis" id="perf-kpis"></div>
     <div class="card" id="perf-list"><div class="state">Chargement…</div></div>
   </section>
@@ -478,7 +490,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   <div id="tlm-signal-popup" class="signal-popup" aria-hidden="true">
     <div class="signal-popup-card" role="dialog" aria-modal="true" aria-label="Signal disponible">
       <div class="signal-popup-badge">🟢 Signal prêt</div>
-      <div class="signal-popup-title" id="signal-popup-title">Pari à jouer</div>
+      <div class="signal-popup-title" id="signal-popup-title">Signal disponible</div>
       <p class="signal-popup-text" id="signal-popup-text">Une sélection validée vient d’être détectée.</p>
       <div id="signal-popup-bookmakers"></div>
       <div class="signal-popup-actions">
@@ -490,7 +502,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 </main>
 
 <nav>
-  <button data-tab="pick" class="on"><span class="ic">&#9917;</span>+0,5</button>
+  <button data-tab="pick" class="on"><span class="ic">&#9917;</span>Signal</button>
   <button data-tab="live"><span class="ic">&#128308;</span>Direct</button>
   <button data-tab="perf"><span class="ic">&#128202;</span>Résultats</button>
   <button data-tab="me"><span class="ic">&#128100;</span>Compte</button>
@@ -553,6 +565,9 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   Array.prototype.forEach.call(document.querySelectorAll("nav button"), function (b) {
     b.addEventListener("click", function () { show(b.getAttribute("data-tab")); });
   });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tab-link]"), function (a) {
+    a.addEventListener("click", function (e) { e.preventDefault(); show(a.getAttribute("data-tab-link")); });
+  });
 
   function load(tab) {
     if (tab === "pick") loadPick();
@@ -586,7 +601,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     var on = false;
     try { on = localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
     btn.classList.toggle('on', on);
-    btn.textContent = on ? '🔔 Alertes popup + son activées' : '🔔 Activer popup + son quand un pari est prêt';
+    btn.textContent = on ? '🔔 Alertes popup + son activées' : '🔔 Activer popup + son quand un signal est prêt';
   }
 
   function enableSignalAlerts() {
@@ -628,7 +643,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     if (!pop) return;
     var a = (p.teamA && p.teamA.name) || p.home || 'Match';
     var b = (p.teamB && p.teamB.name) || p.away || '';
-    $('signal-popup-title').textContent = 'Pari prêt : ' + a + (b ? ' — ' + b : '');
+    $('signal-popup-title').textContent = 'Signal prêt : ' + a + (b ? ' — ' + b : '');
     $('signal-popup-text').textContent = (p.bet || p.best_bet || 'Sélection validée') + (p.cote ? ' · cote @' + p.cote : '') + (p.competition ? ' · ' + p.competition : '');
     $('signal-popup-bookmakers').innerHTML = bookmakerButtons();
     pop.classList.add('on');
@@ -742,46 +757,85 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     if (signal && token()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
   }
 
+  function renderCurrentPick(data) {
+    var box = $("pick-box");
+    var p = data && (data.pick || data.signal || data.currentPick);
+    if(p&&p.currentPick)p=p.currentPick;
+    if(p&&!appMatchAllowed(p))p=null;
+    if (!p) {
+      box.innerHTML = '<div class="tlm-app-pick-card tlm-app-empty-signal"><strong>Aucun signal gratuit validé pour le moment</strong>La carte apparaîtra uniquement lorsqu’un vrai signal Over ou Under 2,5 sera disponible.</div>';
+      return;
+    }
+    var home = (p.teamA && p.teamA.name) || p.home || 'Équipe à domicile';
+    var away = (p.teamB && p.teamB.name) || p.away || "Équipe à l'extérieur";
+    var signal = p.bet || p.best_bet || p.selection || 'Over / Under 2,5';
+    var confidence = Number(p.confidence || p.score || 0);
+    var odd = Number(p.real_odd || p.cote || p.odd || 0);
+    box.innerHTML = '<div class="tlm-app-pick-card">'
+      + '<span class="tlm-app-pick-badge">Signal gratuit</span>'
+      + '<div class="tlm-app-pick-teams">'+esc(home)+' — '+esc(away)+'</div>'
+      + '<div class="tlm-app-pick-meta">'+esc(p.competition||'Football')+'</div>'
+      + '<div class="tlm-app-pick-signal"><div><span>Décision des IA</span><strong>'+esc(signal)+'</strong></div><span class="tlm-app-pick-stat">'+(confidence?esc(confidence)+'%':odd?'@'+esc(odd.toFixed(2)):'Validé')+'</span></div>'
+      + '</div>';
+    if (token()) showSignalPopup(p);
+  }
+
   function loadPick() {
-    renderGoal05Pick(null);
-    get("/api/goal05/latest").then(flagOffline).then(function (d) {
-      renderGoal05Pick(d && d.signal ? d.signal : null);
-    }).catch(function(){ renderGoal05Pick(null); });
+    renderCurrentPick(null);
+    get("/api/current-pick?t="+Date.now()).then(flagOffline).then(renderCurrentPick).catch(function(){ renderCurrentPick(null); });
   }
   // â”€â”€ En direct â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var APP_COUNTRY_CODES={"Argentina":"ar","Australia":"au","Austria":"at","Belgium":"be","Brazil":"br","Chile":"cl","China":"cn","Colombia":"co","Croatia":"hr","Denmark":"dk","England":"gb-eng","Finland":"fi","France":"fr","Germany":"de","Greece":"gr","Italy":"it","Japan":"jp","Mexico":"mx","Netherlands":"nl","Norway":"no","Poland":"pl","Portugal":"pt","Scotland":"gb-sct","South Korea":"kr","Korea":"kr","Spain":"es","Sweden":"se","Switzerland":"ch","Turkey":"tr","Wales":"gb-wls"};
+  function appCountry(m){var comp=String((m&&m.competition)||'').split(/\s*[·•]\s*/);return String((m&&m.country)||(comp.length>1?comp[comp.length-1]:'')).trim();}
+  function appMatchAllowed(m){
+    var sport=String((m&&m.sport)||'Football').toLowerCase();
+    var country=appCountry(m).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    var text=[m&&m.competition,m&&m.league,m&&m.category,m&&m.gender,m&&m.home,m&&m.away,m&&m.teamA&&m.teamA.name,m&&m.teamB&&m.teamB.name].join(' ').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+    var excludedCountry=/(^|[^a-z])(usa|united states(?: of america)?|canada)([^a-z]|$)/.test(country);
+    var womensMatch=/\b(women|woman|female|femme|femmes|feminin|feminine|ladies|feminina|femenina|feminino|femenino)\b|\(w\)|\bw\s*league\b/.test(text);
+    return sport==='football'&&!excludedCountry&&!womensMatch;
+  }
+  function appFlagUrl(country){var code=APP_COUNTRY_CODES[country];return code?'https://flagcdn.com/w40/'+code+'.png':'';}
+  function appVotes(m){var values=[m&&m.consensus_votes,m&&m.vote_count,m&&m.votes,m&&m.analysis&&m.analysis.consensus_votes];for(var i=0;i<values.length;i++){var n=Number(values[i]);if(isFinite(n)&&n>=0)return Math.max(0,Math.min(5,Math.round(n)));}return 0;}
+  function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
+  function renderAppHero(m){
+    var country=appCountry(m), flag=appFlagUrl(country), votes=appVotes(m), status=$("app-live-status");
+    if(!m){
+      status.textContent='Aucun match en direct';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='Équipe à domicile';$("app-away-name").textContent="Équipe à l'extérieur";$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0 / 5';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
+      appLogo($("app-home-logo"),'/logo192.png','TousLesMatchs');appLogo($("app-away-logo"),'/logo192.png','TousLesMatchs');[$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(img)img.hidden=true;});Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){el.classList.remove('on');el.textContent=String(i+1);});return;
+    }
+    status.textContent='En direct';$("app-live-minute").textContent=m.minute?esc(m.minute)+"'":'Live';
+    $("app-home-name").textContent=m.home||'Équipe à domicile';$("app-away-name").textContent=m.away||"Équipe à l'extérieur";$("app-home-country").textContent=country;$("app-away-country").textContent=country;
+    appLogo($("app-home-logo"),m.home_logo,m.home||'équipe à domicile');appLogo($("app-away-logo"),m.away_logo,m.away||"équipe à l'extérieur");
+    [$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(!img)return;if(!flag){img.hidden=true;return;}img.hidden=false;img.src=flag;img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};});
+    $("app-live-score").textContent=(m.score_home==null?'—':m.score_home)+' - '+(m.score_away==null?'—':m.score_away);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
+    $("app-ai-total").textContent=votes+' / 5';$("app-ai-label").textContent=votes>=4?'Accord IA atteint':'Analyse IA en cours';$("app-ai-result").textContent=votes>=4?'Signal disponible':'En attente d’accord';
+    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var active=i<votes;el.classList.toggle('on',active);el.textContent=active?'✓':String(i+1);});
+  }
   function loadLive() {
-    get("/live-matches").then(flagOffline).then(function (d) {
+    get("/api/live-matches?t="+Date.now()).then(flagOffline).then(function (d) {
       var box = $("live-box");
-      var list = (d && (d.matches || d.live)) || [];
-      if (!list.length) {
-        box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';
-        return;
-      }
-      var icons = { Football: "⚽" };
-      var html = '<div class="card">';
-      list.slice(0, 25).forEach(function (m) {
-        var sh = (m.score_home == null ? "?" : m.score_home), sa = (m.score_away == null ? "?" : m.score_away);
-        html += '<div class="item"><span class="dot"></span><div class="mid">'
-          + '<div class="t">' + (icons[m.sport] || "ðŸŽ¯") + ' ' + esc(m.home) + ' — ' + esc(m.away) + '</div>'
-          + '<div class="m">' + esc(m.competition || m.sport || "") + (m.minute ? ' · ' + esc(m.minute) + "'" : '') + '</div>'
-          + '</div><span class="badge b-live">' + esc(sh) + '-' + esc(sa) + '</span></div>';
-      });
-      html += '</div>';
-      box.innerHTML = html;
-    });
+      var list = ((d && (d.matches || d.live)) || []).filter(appMatchAllowed);
+      renderAppHero(list[0]||null);
+      if (!list.length) {box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';return;}
+      box.innerHTML='<div class="tlm-app-live-list">'+list.slice(0,25).map(function(m){
+        var sh=m.score_home==null?'—':m.score_home,sa=m.score_away==null?'—':m.score_away,country=appCountry(m),flag=appFlagUrl(country);
+        return '<a class="tlm-app-live-row" href="/live-ia?fixture='+encodeURIComponent(m.fixtureId||m.id||m.sourceId||'')+'"><span class="tlm-app-live-logos"><img src="'+esc(m.home_logo||'/logo192.png')+'" alt="Logo '+esc(m.home||'équipe')+'"><img src="'+esc(m.away_logo||'/logo192.png')+'" alt="Logo '+esc(m.away||'équipe')+'"></span><span><strong>'+esc(m.home)+' — '+esc(m.away)+'</strong><span class="tlm-app-live-meta">'+(flag?'<img src="'+flag+'" alt="Drapeau '+esc(country)+'">':'')+esc(country||m.competition||'Football')+'</span></span><span class="tlm-app-live-result"><b>'+esc(sh)+'-'+esc(sa)+'</b><span>'+(m.minute?esc(m.minute)+"'":'Live')+'</span></span></a>';
+      }).join('')+'</div>';
+    }).catch(function(){renderAppHero(null);$("live-box").innerHTML='<div class="card"><div class="state">Direct momentanément indisponible.</div></div>';});
   }
 
   // â”€â”€ Performances â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   var perf = { rows: [], stats: null };
 
-  function isGoal05Row(a) {
+  function isTotal25Row(a) {
     var txt = [a.bet, a.best_bet, a.market, a.signal, a.explication_resultat, a.reason, a.notes].join(' ').toLowerCase();
-    return txt.indexOf('+0,5') >= 0 || txt.indexOf('0,5') >= 0 || txt.indexOf('0.5') >= 0;
+    return /\b(over|under)\s*2[,.]5\b/.test(txt) || /\b2[,.]5\s*(buts?)?\b/.test(txt);
   }
 
   function loadPerf() {
     get("/api/analysis-history?limit=160").then(flagOffline).then(function (d) {
-      perf.rows = ((d && d.analyses) || []).filter(isGoal05Row);
+      perf.rows = ((d && d.analyses) || []).filter(function(a){return isTotal25Row(a)&&appMatchAllowed(a);});
       renderPerf();
     });
   }
@@ -802,12 +856,12 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     var roi = total ? Math.round((profit / (total * 10)) * 100) : 0;
     $("perf-kpis").innerHTML =
         kpi(String(total), "Signaux terminés", "")
-      + kpi(total ? wr + "%" : "—", "Réussite +0,5", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
+      + kpi(total ? wr + "%" : "—", "Réussite O/U 2,5", wr >= 60 ? "c-green" : wr > 0 ? "c-amber" : "")
       + kpi(total ? eur(profit) : "0€", "Profit simulé 10€", profit >= 0 ? "c-green" : "c-red")
       + kpi(total ? (roi >= 0 ? "+" : "") + roi + "%" : "—", "ROI", roi >= 0 ? "c-cyan" : "c-red");
 
     if (!rows.length) {
-      $("perf-list").innerHTML = '<div class="state"><strong>Bilan +0,5 en cours</strong><br>Aucun signal +0,5 terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
+      $("perf-list").innerHTML = '<div class="state"><strong>Bilan Over / Under 2,5 en cours</strong><br>Aucun signal terminé pour l’instant. Les statistiques apparaîtront ici uniquement après les premiers signaux réellement envoyés puis résolus.</div>';
       return;
     }
     var html = "";
@@ -817,7 +871,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
             : '<span class="badge b-wait">En attente</span>';
       var odd = num(a.real_odd || a.odd || a.cote) > 1 ? " · @" + num(a.real_odd || a.odd || a.cote).toFixed(2) : "";
       html += '<div class="item"><div class="mid">'
-        + '<div class="t">' + esc(a.home || a.match || 'Signal +0,5') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
+        + '<div class="t">' + esc(a.home || a.match || 'Signal Over / Under 2,5') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
         + '<div class="m">' + esc((a.analysed_at || a.date || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + '</div>'
         + '</div>' + b + '</div>';
     });
@@ -918,6 +972,8 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   renderChip();
   var t = new URLSearchParams(location.search).get("tab");
   show(["pick", "live", "perf", "me"].indexOf(t) >= 0 ? t : (token() ? "pick" : "me"));
+  loadLive();
+  setInterval(loadLive, 30000);
 
   window.addEventListener("online", function () { $("offline-note").style.display = "none"; });
 })();
@@ -939,7 +995,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 <script id="tlm-navbar-safe-logo-js">
 (function(){
   function addLogo(){
-    if(document.querySelector('.tlm-brand-nav-logo')) return;
+    if(document.querySelector('.tlm-brand-nav-logo') || document.querySelector('header .brand img')) return;
     var items=[].slice.call(document.querySelectorAll('a,div,span,strong,h1,h2'));
     var brand=items.find(function(el){
       if(!el || !el.textContent) return false;
@@ -957,7 +1013,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 })();
 </script>
 
-<script id="tlm-goal05-live-pro-js">
+<script id="tlm-goal05-live-pro-js" type="application/x-disabled">
 (function(){
   function esc(v){return String(v == null ? "" : v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
   function get(u){return fetch(u,{cache:"no-store"}).then(function(r){return r.json();});}
@@ -1103,7 +1159,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   },true);
 })();
 </script>
-<script id="tlm-goal05-home-live-js">
+<script id="tlm-goal05-home-live-js" type="application/x-disabled">
 (function(){
   if(window.__tlmGoal05HomeLive)return; window.__tlmGoal05HomeLive=1;
 
