@@ -2075,6 +2075,33 @@ const ARJEL_BOOKMAKERS = [
   "pmu", "zebet", "vbet", "genybet", "bwin", "betsson", "netbet", "france pari",
 ];
 
+// Liens d'affiliation bookmaker affichés en icône sous les analyses "Jouer" du site
+// public. Uniquement affichés quand real_odd_source de l'analyse correspond (cote
+// réelle confirmée), jamais devinés. TODO: coller les liens d'affiliation ici.
+const BOOKMAKER_AFFILIATE_LINKS = {
+  winamax: "",
+  betclic: "",
+  unibet: "",
+};
+
+// Masque les noms d'IA/fournisseurs dans un texte destiné à être affiché publiquement
+// (raisonnement du Concile). Utilisé pour les messages Telegram et l'API publique.
+function maskAiNames(text) {
+  if (!text) return "";
+  const map = [
+    [/Perplexity[- ]?Web/gi, "IA 1"], [/DeepSeek[- ]?V3/gi, "IA 2"],
+    [/Mistral[- ]?Large/gi, "IA 3"], [/Cohere[- ]?Command/gi, "IA 4"],
+    [/Groq[- ]?Llama\d*/gi, "IA 5"], [/Claude[- ]?Chief/gi, "Concile"],
+    [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
+    [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
+    [/Mistral[- ]?7B/gi, "IA"], [/Cerebras[- ]?Llama/gi, "IA"],
+    [/OR[- ]?Mistral7B/gi, "IA"], [/Llama[- ]?\d+[bB]?/gi, "IA"],
+  ];
+  let r = text;
+  for (const [re, rep] of map) r = r.replace(re, rep);
+  return r;
+}
+
 // Compétitions non-foot MAJEURES disponibles sur les bookmakers ARJEL français.
 // Elles n'ont pas de cote récupérée automatiquement (l'API odds ne couvre que le
 // foot), mais on sait qu'elles sont jouables en France → autorisées pour les clients.
@@ -2787,23 +2814,6 @@ Réponds en JSON pur (pas de markdown):
   const pick = loadPick();
   const pickBet = pick?.currentPick?.bet || pick?.marketType || null;
   saveConcileAnalysis(match, analysisResult, pickBet);
-
-  // Masquer les noms d'IA dans le raisonnement public
-  function maskAiNames(text) {
-    if (!text) return "";
-    const map = [
-      [/Perplexity[- ]?Web/gi, "IA 1"], [/DeepSeek[- ]?V3/gi, "IA 2"],
-      [/Mistral[- ]?Large/gi, "IA 3"], [/Cohere[- ]?Command/gi, "IA 4"],
-      [/Groq[- ]?Llama\d*/gi, "IA 5"], [/Claude[- ]?Chief/gi, "Concile"],
-      [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
-      [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
-      [/Mistral[- ]?7B/gi, "IA"], [/Cerebras[- ]?Llama/gi, "IA"],
-      [/OR[- ]?Mistral7B/gi, "IA"], [/Llama[- ]?\d+[bB]?/gi, "IA"],
-    ];
-    let r = text;
-    for (const [re, rep] of map) r = r.replace(re, rep);
-    return r;
-  }
 
   // Signal fort Telegram automatique si confidence >= seuil adaptatif
   // ET vraies données présentes ET segment (ligue/marché) prouvé gagnant historiquement.
@@ -6481,7 +6491,7 @@ app.get("/analysis-history", (req, res) => {
   try {
     const rows = db.prepare(`
       SELECT id, home, away, competition, sport, best_bet, confidence, raison,
-             consensus_votes, outcome, analysed_at, real_odd,
+             consensus_votes, outcome, analysed_at, real_odd, real_odd_source,
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
              home_logo, away_logo, bet_category,
@@ -6497,13 +6507,34 @@ app.get("/analysis-history", (req, res) => {
     const analyses = rows.map(r => {
       let agents = [];
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+
+      // Verdict transparent : on réutilise la même barrière qualité que celle qui
+      // décide d'envoyer (ou non) un signal Telegram, pour que "Jouer"/"Ne pas jouer"
+      // affiché publiquement corresponde exactement à la logique interne.
+      const gate = passesHistoricalQualityGate({ competition: r.competition }, r.best_bet);
+      const verdict = gate.ok ? "jouer" : "ne_pas_jouer";
+      const verdictReason = gate.ok
+        ? `Confiance IA ${r.confidence}/100, ${r.consensus_votes || 0} agent(s) d'accord.`
+        : `Ne pas jouer : ${gate.reason}.`;
+
+      const bookmaker = (() => {
+        const src = String(r.real_odd_source || "").toLowerCase();
+        if (src.includes("winamax")) return "winamax";
+        if (src.includes("betclic")) return "betclic";
+        if (src.includes("unibet")) return "unibet";
+        return null;
+      })();
+      const bookmakerUrl = (verdict === "jouer" && bookmaker && BOOKMAKER_AFFILIATE_LINKS[bookmaker])
+        ? BOOKMAKER_AFFILIATE_LINKS[bookmaker]
+        : null;
+
       return {
         id: r.id,
         home: r.home, away: r.away,
         competition: r.competition, sport: r.sport || "Football",
         bet: r.best_bet, confidence: r.confidence,
         cote: rowOdd(r),
-        reasoning: r.raison, consensus: r.consensus_votes,
+        reasoning: maskAiNames(r.raison), consensus: r.consensus_votes,
         outcome: r.outcome,
         analysed_at: r.analysed_at,
         score: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
@@ -6513,6 +6544,8 @@ app.get("/analysis-history", (req, res) => {
         home_logo: r.home_logo, away_logo: r.away_logo,
         bet_category: r.bet_category,
         agents_count: agents.length,
+        verdict, verdict_reason: verdictReason,
+        bookmaker, bookmaker_url: bookmakerUrl,
       };
     });
 
