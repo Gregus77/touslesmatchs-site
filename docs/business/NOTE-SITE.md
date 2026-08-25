@@ -4,9 +4,10 @@ Tenue à jour par Claude (et modifiable par GPT/Codex). Objectif : que Greg
 sache en un coup d'œil où ça bloque pour que le site gagne de l'argent, et
 ce qu'il doit faire lui-même (payer, vérifier, décider).
 
-**Dernière mise à jour : 25/08/2026. Solde OpenRouter confirmé sain
-(12,91 $) et plafond de repli confirmé à 20 dans le conteneur. La
-configuration OpenRouter est désormais vérifiée.**
+**Dernière mise à jour : 25/08/2026 (soir). Panne reelle du jour trouvee
+et corrigee : plafond de matchs/jour trop bas (12 -> 30), qui bloquait TOUT
+le vote du Concile depuis l'apres-midi. Premiers signaux Telegram et
+premiers resultats gagne/perdu confirmes par Greg apres correction.**
 
 Légende : ✅ acquis · ⚠️ fragile / en cours · ❌ cassé · ❓ jamais mesuré
 
@@ -16,7 +17,7 @@ Légende : ✅ acquis · ⚠️ fragile / en cours · ❌ cassé · ❓ jamais m
 
 | # | Critère | Statut | Détail |
 |---|---|---|---|
-| 1 | Le Concile IA vote correctement (≥3 agents/5) | ❌ | Plafond de repli confirmé à **20** dans le conteneur le 25/08. Le problème historique reste ouvert : 37% des matchs récents décidés avec <3 votes, winrate 45% sur ces cas. Les pannes des fournisseurs primaires doivent être diagnostiquées, puis l'effet remesuré. |
+| 1 | Le Concile IA vote correctement (≥3 agents/5) | ⚠️ | **Panne réelle trouvée et corrigée le 25/08 au soir : `OPENROUTER_MAX_MATCHES_PER_DAY` était à 12, alors que 16+ matchs distincts étaient déjà analysés dans la journée — plus aucun agent officiel ne pouvait voter (log `[ai-guard]`, raison `[LIMIT] plafond de matchs analysés/jour atteint`). Passé à 30. Confirmé en cours de test : Telegram recommence à envoyer les signaux ET à revenir avec gagné/perdu en fin de match.** Reste en ⚠️ (pas ✅) tant qu'un cycle complet n'a pas été observé sur plusieurs jours — ne pas déclarer l'item réglé après une seule bonne soirée. Point secondaire non urgent : le modèle de secours "chief" est désactivé dans `ai_models.config.js`, sans lien apparent avec cette panne (Chief a un chemin par défaut séparé). |
 | 2 | Le budget OpenRouter tient sans interruption | ✅ | Solde à 12,91 $ le 25/08 (Greg vient de recharger 10 $). Historique sur 10 semaines : rechargements réguliers, ~108 $ au total (juin-août), rythme récent plus rapproché (tous les 5-7 jours en août contre 2-3 semaines en juin) — la consommation a augmenté, à surveiller mais pas alarmant. Auto top-up **désactivé** : pas de risque de charge surprise, mais aucun filet si Greg oublie de recharger. |
 | 3 | Pas de fuite de ligue non fiable analysée à tort | ⚠️ | Coppa Italia Serie C trouvée (22 analyses, 41%), correctif prêt (`7c80c78`), **pas encore déployé** — en attente validation Codex. |
 | 4 | Les chiffres publics (winrate, gains €) sont exacts | ✅ | Séparation "résultats abonnés" / "analyses non diffusées" déployée en production — plus d'euros affichés sur des signaux jamais envoyés. |
@@ -71,16 +72,17 @@ Légende : ✅ acquis · ⚠️ fragile / en cours · ❌ cassé · ❓ jamais m
 
 ## Priorité absolue, là maintenant
 
-**L'item 1 reste le blocage principal.** L'item 2 est désormais acquis :
-solde sain et plafond vérifié. Un moteur qui décide à 45% de réussite sur
-plus d'un tiers de ses analyses ne peut pas construire de confiance (III),
-ne justifie pas d'acquisition (IV), et dégrade la rétention (VI). Tant que
-l'item 1 n'est pas réglé, les autres chantiers attendent.
+**Panne majeure corrigee le 25/08 au soir.** Le site n'analysait plus AUCUN
+match correctement depuis l'apres-midi (plafond de 12 matchs/jour atteint,
+tous les agents refuses). Corrige (plafond a 30), premiers signaux et
+premiers resultats confirmes par Greg.
 
-**Action Greg immédiate : TERMINÉE.** Solde OpenRouter confirmé à **12,91 $**
-et plafond de repli confirmé à **20** dans le conteneur le 25/08. Prochaine
-action technique : diagnostiquer les pannes des fournisseurs primaires,
-puis remesurer le taux de matchs disposant d'au moins 3 votes.
+**A faire dans les prochains jours, pas ce soir** : laisser tourner
+plusieurs jours avant de repasser l'item 1 en vert. Une seule bonne soiree
+ne prouve pas la stabilite — c'est exactement le genre d'erreur qu'on a
+deja faite cette nuit (declarer un point regle trop vite). Remesurer le
+taux de matchs a >=3 votes dans une semaine, comme prevu par la routine
+hebdomadaire deja en place.
 
 ## Prochaine remesure complète recommandée
 
