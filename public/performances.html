@@ -125,6 +125,8 @@ nav{
 .h-badge.win{color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25)}
 .h-badge.loss{color:var(--red);background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2)}
 .h-badge.pending{color:var(--amber);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)}
+.h-badge.diffused{color:var(--cyan);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.22)}
+.h-badge.observed{color:var(--muted);background:rgba(148,163,184,.08);border:1px solid rgba(148,163,184,.2)}
 
 .conf-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap}
 .conf-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
@@ -417,9 +419,9 @@ function renderKpis() {
 
   var cap = document.getElementById('roi-caption');
   if (total > 0) {
-    cap.textContent = 'Sur ' + total + ' analyse' + (total > 1 ? 's' : '') + ' résolue' + (total > 1 ? 's' : '')
+    cap.textContent = 'Sur ' + total + ' analyse' + (total > 1 ? 's' : '') + ' résolue' + (total > 1 ? 's' : '') + ' et diffusée' + (total > 1 ? 's' : '') + ' à nos abonnés'
       + ' — ' + wins + ' gagnée' + (wins > 1 ? 's' : '') + ', ' + losses + ' perdue' + (losses > 1 ? 's' : '')
-      + '. Bénéfice simulé à 10 € la mise : ' + fmtSigned(s.profit10) + ' (ROI ' + (Number(s.roi_pct) >= 0 ? '+' : '') + (Number(s.roi_pct) || 0) + ' %).';
+      + '. Bénéfice simulé à 10 € la mise : ' + fmtSigned(s.profit10) + ' (ROI ' + (Number(s.roi_pct) >= 0 ? '+' : '') + (Number(s.roi_pct) || 0) + ' %). La liste ci-dessous montre aussi les analyses observées mais non envoyées (badge Observé).';
   } else {
     cap.textContent = 'Aucune analyse résolue pour ce palier pour l\'instant.';
   }
@@ -457,6 +459,15 @@ function renderRow(a) {
   var confPillHtml = a.confidence != null
     ? '<span class="conf-pill ' + cm.cls + '"><span class="conf-dot"></span>' + Math.round(a.confidence) + '/100 · ' + cm.label + '</span>'
     : '';
+  // Distingue les analyses reellement envoyees a un canal (comptees dans le
+  // compteur en tete de page) de celles seulement observees par le Concile
+  // mais jamais diffusees — sans ca, le compteur d'en haut ("22 analysees,
+  // 2 perdues") et cette liste (toutes les analyses qualifiees) racontent
+  // deux histoires differentes et ca ressemble a des stats triees.
+  var wasDiffused = !!(a.sent && (a.sent.standard || a.sent.premium || a.sent.elite || a.sent.free));
+  var diffusionHtml = wasDiffused
+    ? '<span class="h-badge diffused">📡 Diffusé</span>'
+    : '<span class="h-badge observed">👁 Observé, non envoyé</span>';
 
   var gainHtml = '';
   if (resolved && a.cote != null && a.cote > 1) {
@@ -471,7 +482,7 @@ function renderRow(a) {
     '<div class="h-match">' +
       '<div class="h-teams">' + esc(a.home) + ' — ' + esc(a.away) + (score ? ' <span style="color:var(--muted);font-weight:500">(' + esc(score) + ')</span>' : '') + '</div>' +
       '<div class="h-comp">' + esc(a.competition || a.sport || '') + '</div>' +
-      '<div class="h-tier">' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + '</div>' +
+      '<div class="h-tier">' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + ' ' + diffusionHtml + '</div>' +
     '</div>' +
     '<div class="h-bet">' + esc(betText) + '</div>' +
     '<div class="h-odds">' + cote + '</div>' +
