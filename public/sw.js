@@ -3,7 +3,7 @@
  * Le cache reste uniquement un secours hors ligne.
  */
 
-const VERSION = "tlm-app-v2-20260825";
+const VERSION = "tlm-app-v3-20260826";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
@@ -40,16 +40,42 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-function networkFirst(request, cacheName, fallback) {
+function dataCacheKey(request) {
+  const url = new URL(request.url);
+  // Retirer uniquement les paramètres anti-cache. Les paramètres métier
+  // (limit, offset, email, etc.) restent dans la clé pour ne jamais mélanger
+  // deux réponses différentes.
+  url.searchParams.delete("t");
+  url.searchParams.delete("v");
+  return new Request(url.toString(), { method: "GET", headers: { Accept: "application/json" } });
+}
+
+function cachedDataResponse(request) {
+  const cacheKey = dataCacheKey(request);
+  return caches.match(cacheKey).then(async (hit) => {
+    if (!hit) return null;
+    try {
+      const data = await hit.json();
+      return Response.json(
+        { ...data, offline: true, cached: true },
+        { status: 200, headers: { "X-From-Cache": "hit", "Cache-Control": "no-store" } }
+      );
+    } catch (_) {
+      return null;
+    }
+  });
+}
+
+function networkFirst(request, cacheName, fallback, cacheKey) {
   return fetch(request)
     .then((response) => {
       if (response && response.ok) {
         const copy = response.clone();
-        caches.open(cacheName).then((cache) => cache.put(request, copy));
+        caches.open(cacheName).then((cache) => cache.put(cacheKey || request, copy));
       }
       return response;
     })
-    .catch(() => caches.match(request).then((hit) => hit || fallback()));
+    .catch(() => caches.match(cacheKey || request).then((hit) => hit || fallback()));
 }
 
 self.addEventListener("fetch", (event) => {
@@ -63,10 +89,19 @@ self.addEventListener("fetch", (event) => {
   const isData = DATA_PATHS.some((path) => dataPath === path);
 
   if (isData) {
-    event.respondWith(networkFirst(request, DATA_CACHE, () => Response.json(
-      { ok: false, offline: true, error: "Hors ligne — aucune donnée en cache." },
-      { status: 503, headers: { "X-From-Cache": "miss" } }
-    )));
+    const cacheKey = dataCacheKey(request);
+    event.respondWith(fetch(request)
+      .then((response) => {
+        if (response && response.ok) {
+          const copy = response.clone();
+          caches.open(DATA_CACHE).then((cache) => cache.put(cacheKey, copy));
+        }
+        return response;
+      })
+      .catch(() => cachedDataResponse(request).then((hit) => hit || Response.json(
+        { ok: false, offline: true, error: "Hors ligne — aucune donnée en cache." },
+        { status: 503, headers: { "X-From-Cache": "miss", "Cache-Control": "no-store" } }
+      ))));
     return;
   }
 
