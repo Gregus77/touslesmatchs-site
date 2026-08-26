@@ -1,5 +1,15 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-26 — Réparation site, Brevo et Telegram
+
+- L'accueil et l'application récupèrent maintenant les cinq votes réels du Concile
+  pour le match en direct et affichent distinctement Under/Over dans les cinq cercles.
+- `/council-vote` est ramené de six à cinq IA, conformément au produit affiché.
+- Les erreurs Brevo ne sont plus transformées en fausses réussites : upsert contact
+  strict, attributs complets, liste facultative et contrôle de la clé au démarrage.
+- Les anciens noms de variable du canal Telegram gratuit restent acceptés et chaque
+  canal est contrôlé au démarrage. `/health` expose uniquement l'état, jamais les clés.
+
 ## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
 
 **Dernière IA active :** Claude · **Branche :** `claude/tiktok-arjel-automation-hgp1tv`
