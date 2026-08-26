@@ -3,7 +3,7 @@
  * Le cache reste uniquement un secours hors ligne.
  */
 
-const VERSION = "tlm-app-v3-20260826";
+const VERSION = "tlm-app-v4-brand-20260826";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
@@ -11,6 +11,9 @@ const SHELL_ASSETS = [
   "/app",
   "/app.html",
   "/manifest.webmanifest",
+  "/favicon.ico",
+  "/favicon-48.png",
+  "/apple-touch-icon.png",
   "/logo192.png",
   "/logo512.png",
 ];
