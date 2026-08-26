@@ -8,6 +8,7 @@ const DB_PATH = process.env.SOCIAL_DB_PATH || "/data/tlm.db";
 const POLL_MS = Math.max(30000, Number(process.env.SOCIAL_POLL_MS || 60000));
 const LOOKBACK_HOURS = Math.max(6, Number(process.env.SOCIAL_LOOKBACK_HOURS || 72));
 const SIGNAL_SOURCE = String(process.env.SOCIAL_SIGNAL_SOURCE || "free").toLowerCase();
+const TELEGRAM_IMAGES = String(process.env.SOCIAL_TELEGRAM_IMAGE_ENABLED || "true").toLowerCase() === "true";
 
 function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 function bool(v) { return Number(v || 0) === 1 || v === true; }
@@ -114,15 +115,15 @@ async function scanOnce() {
   for (const row of rows) {
     const event = eventFromRow(row);
     try {
-      const signal = await dispatchSocialEvent(event, { stage: "signal", telegram: false });
+      const signal = await dispatchSocialEvent(event, { stage: "signal", telegram: TELEGRAM_IMAGES });
       if (!signal.duplicate && signal.ok) {
         signals++;
-        console.log(`[social-worker] signal ${event.home} — ${event.away}: Instagram=${signal.instagram?.ok ? "OK" : signal.instagram?.skipped ? "SKIP" : "KO"} TikTok=${signal.tiktok?.queued ? "QUEUE" : "KO"}`);
+        console.log(`[social-worker] signal ${event.home} — ${event.away}: Telegram=${signal.telegram?.ok ? "OK" : signal.telegram?.skipped ? "SKIP" : "KO"} Instagram=${signal.instagram?.ok ? "OK" : signal.instagram?.skipped ? "SKIP" : "KO"} TikTok=${signal.tiktok?.queued ? "QUEUE" : "KO"}`);
       }
 
       const resolved = event.outcome === "win" || event.outcome === "loss";
       if (resolved && event.finalScore) {
-        const result = await dispatchSocialEvent(event, { stage: "result", telegram: false });
+        const result = await dispatchSocialEvent(event, { stage: "result", telegram: TELEGRAM_IMAGES });
         if (!result.duplicate && result.ok) {
           results++;
           console.log(`[social-worker] result ${event.home} — ${event.away}: ${event.outcome} ${event.finalScore}`);
@@ -136,7 +137,7 @@ async function scanOnce() {
 }
 
 async function main() {
-  console.log(`[social-worker] start · DB=${DB_PATH} · source=${SIGNAL_SOURCE} · poll=${POLL_MS}ms`);
+  console.log(`[social-worker] start · DB=${DB_PATH} · source=${SIGNAL_SOURCE} · telegramImages=${TELEGRAM_IMAGES} · poll=${POLL_MS}ms`);
   for (;;) {
     try {
       const r = await scanOnce();
