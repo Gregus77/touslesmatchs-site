@@ -1864,6 +1864,13 @@ function normalizeCurrentPick(p, defaultSource) {
     liveAvailabilityReason: p.liveAvailabilityReason || null,
     marketType: p.marketType || p.bet || "",
     marketLabel: p.marketLabel || p.prono || "",
+    // Alias pour le front (public/app.html lit p.bet / p.best_bet, jamais
+    // marketType/marketLabel) — sans ça le vrai pari calcule par le Concile
+    // n'atteignait jamais l'app, qui retombait sur son texte générique
+    // "Over / Under 2,5" pour CHAQUE signal, quel que soit le vrai pari.
+    // Constaté par Greg le 26/08/2026 sur Gangwon FC — Gwangju FC.
+    bet: p.marketType || p.bet || p.marketLabel || p.prono || "",
+    best_bet: p.marketType || p.bet || p.marketLabel || p.prono || "",
     cote: p.cote === "" || p.cote === null || p.cote === undefined ? null : (parseFloat(p.cote) || null),
     status: normalizedStatus.status,
     result: normalizedStatus.result,
