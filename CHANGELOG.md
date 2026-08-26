@@ -6,6 +6,7 @@
 - L'application affiche chaque direction (`O` ou `U`) et le décompte Over/Under entre la 15e et la 40e minute, sans déduire ces votes d'un consensus global.
 - Le Chief reste un arbitre interne et n'est plus sauvegardé ni exposé comme une sixième IA.
 - Un agent officiel ne bascule plus silencieusement vers le modèle Groq générique sous un faux libellé.
+- Aucun signal Telegram client n'est désormais diffusé sous quatre votes concordants sur cinq ; un accord 3/5 reste une tendance interne.
 
 ### Brevo et Telegram
 
