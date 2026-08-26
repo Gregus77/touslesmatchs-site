@@ -5342,7 +5342,9 @@ Réponds en JSON pur (pas de markdown):
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: agCfg.model });
       if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
-      if (!providers.length && GROQ_API_KEY) providers.push({ kind: "openai", url: "https://api.groq.com/openai/v1/chat/completions", key: GROQ_API_KEY, model: "llama-3.3-70b-versatile" });
+      // Ne jamais faire voter un agent officiel sous un autre modèle générique :
+      // cinq libellés utilisant le même Llama ne sont pas cinq avis indépendants.
+      // Les replis OpenRouter ci-dessous conservent un modèle identifié par agent.
       // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
       // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
       // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
@@ -5751,7 +5753,8 @@ Réponds en JSON pur (pas de markdown):
   }
 
   // Sauvegarder les prédictions pour le tracking de performance
-  saveAgentPredictions(match, agentResults);
+  // Le Chief arbitre mais ne constitue jamais un sixième votant public.
+  saveAgentPredictions(match, agentResults.filter((a) => !a.isChief));
   saveAgentMarketPredictions(match, agentMarketList);
 
   // Vraie cote ARJEL (sinon estimation marché variée par type de pari)
@@ -5772,7 +5775,7 @@ Réponds en JSON pur (pas de markdown):
     active_agents: voteSummary.vote_active,
     vote_summary: buildVoteSummary(activedAgentResults, chief.bet),
     market_scores: aggregateMarketScores(agentMarketList),
-    agents: agentResults,
+    agents: agentResults.filter((a) => !a.isChief),
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
     agent_performance: agentPerf,
     // Marches secondaires (BTTS%, but 1ere mi-temps%, victoire dom/ext%, Under
@@ -11278,7 +11281,7 @@ app.get("/tier-stats", (req, res) => {
 // Renvoie les votes individuels des agents (anonymisés Alpha→Sigma) + le verdict
 // du Conseil, pour le panneau "effet WOW" du Hero. Données réelles depuis
 // concile_analyses.agents_json. Aucun nom d'IA réel n'est exposé.
-const COUNCIL_LABELS = ["Alpha", "Beta", "Gamma", "Delta", "Sigma", "Omega"];
+const COUNCIL_LABELS = ["Alpha", "Beta", "Gamma", "Delta", "Sigma"];
 app.get("/council-vote", (req, res) => {
   try {
     // 1. Match du pick du jour
@@ -11313,7 +11316,7 @@ app.get("/council-vote", (req, res) => {
     try { agents = JSON.parse(row.agents_json || "[]"); } catch {}
     // On garde les votants (hors doublon exact du verdict), anonymisés.
     const verdictBet = row.best_bet || "";
-    const votes = agents.slice(0, 6).map((a, i) => {
+    const votes = agents.filter((a) => !a?.isChief && a?.name !== "Claude Chief").slice(0, 5).map((a, i) => {
       const bet = maskAiNamesGlobal(String(a.bet || verdictBet || "Analyse"));
       const conf = Math.max(50, Math.min(99, parseInt(a.confidence, 10) || row.confidence || 80));
       const aligned = bet.toLowerCase().trim() === verdictBet.toLowerCase().trim();
@@ -11423,6 +11426,82 @@ app.delete("/admin/set-score", (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Votes réels Over/Under 2,5 pour les cinq cases live ──────────────────────
+// Source unique : agent_market_predictions, déjà alimentée par les réponses
+// multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
+function getLiveOu25VoteState(match) {
+  const minute = parseLiveMinuteValue(match?.minute);
+  const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= 40 ? "open" : "closed";
+  const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
+    agent,
+    direction: null,
+    label: null,
+    confidence: null,
+    status: "pending",
+    updated_at: null,
+  }));
+  const empty = {
+    market: "over_under_2_5",
+    from_minute: 15,
+    to_minute: 40,
+    window_status: windowStatus,
+    vote_count: 0,
+    over_count: 0,
+    under_count: 0,
+    votes: emptyVotes,
+  };
+  if (minute === null || minute < 15) return empty;
+
+  try {
+    const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
+    const rows = db.prepare(`
+      SELECT agent_name, bet, confidence, created_at
+      FROM agent_market_predictions
+      WHERE market_line = 'buts'
+        AND date(created_at) = date('now')
+        AND lower(trim(home)) = lower(trim(?))
+        AND lower(trim(away)) = lower(trim(?))
+        AND agent_name IN (${placeholders})
+      ORDER BY datetime(created_at) DESC, id DESC
+    `).all(match?.home || "", match?.away || "", ...CONCILE_AGENT_NAMES);
+
+    const latestByAgent = new Map();
+    for (const row of rows) {
+      if (!latestByAgent.has(row.agent_name)) latestByAgent.set(row.agent_name, row);
+    }
+    const votes = CONCILE_AGENT_NAMES.map((agent) => {
+      const row = latestByAgent.get(agent);
+      const bet = String(row?.bet || "");
+      const direction = /^Over 2[.,]5 buts$/i.test(bet)
+        ? "over"
+        : /^Under 2[.,]5 buts$/i.test(bet)
+          ? "under"
+          : null;
+      if (!direction) return emptyVotes.find((vote) => vote.agent === agent);
+      return {
+        agent,
+        direction,
+        label: direction === "over" ? "Over 2,5" : "Under 2,5",
+        confidence: Number.isFinite(Number(row.confidence)) ? Number(row.confidence) : null,
+        status: "voted",
+        updated_at: row.created_at || null,
+      };
+    });
+    const overCount = votes.filter((vote) => vote.direction === "over").length;
+    const underCount = votes.filter((vote) => vote.direction === "under").length;
+    return {
+      ...empty,
+      vote_count: overCount + underCount,
+      over_count: overCount,
+      under_count: underCount,
+      votes,
+    };
+  } catch (e) {
+    console.error("[live-ou25-votes]", e.message);
+    return empty;
+  }
+}
+
 // ── Live matches ──────────────────────────────────────────────────────────────
 app.get("/live-matches", async (req, res) => {
   try {
@@ -11478,9 +11557,10 @@ app.get("/live-matches", async (req, res) => {
     // le baseball, le basket et le hockey étaient bloqués en permanence avec un
     // message parlant de minutes de football. Une seule source de vérité ici.
     const withVerdict = matches.map((m) => {
-      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null };
+      const ou25 = getLiveOu25VoteState(m);
+      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25 };
       const reason = livePickBlockReason(m);
-      return { ...m, analysable: !reason, block_reason: reason };
+      return { ...m, analysable: !reason, block_reason: reason, ou25 };
     });
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le

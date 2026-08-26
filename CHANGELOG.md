@@ -1,5 +1,12 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-26 — Réparation des cinq votes live Over/Under 2,5
+
+- L'API `/live-matches` joint désormais les cinq avis individuels réels du marché Over/Under 2,5 enregistrés dans `agent_market_predictions`.
+- L'application affiche chaque direction (`O` ou `U`) et le décompte Over/Under entre la 15e et la 40e minute, sans déduire ces votes d'un consensus global.
+- Le Chief reste un arbitre interne et n'est plus sauvegardé ni exposé comme une sixième IA.
+- Un agent officiel ne bascule plus silencieusement vers le modèle Groq générique sous un faux libellé.
+
 ## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
 
 **Dernière IA active :** Claude · **Branche :** `claude/tiktok-arjel-automation-hgp1tv`
