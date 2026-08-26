@@ -72,7 +72,7 @@ const MODELS = {
     costPer1kTokensEur: 0.003,
   },
 
-  // ── Test à blanc uniquement : ne décident jamais, ne publient jamais ───
+  // ── Qwen au banc ; Kimi promu titulaire le 26/08/2026 ──────────────────
   qwen: {
     id: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
     provider: "openrouter",
@@ -86,11 +86,11 @@ const MODELS = {
   kimi: {
     id: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3",
     provider: "openrouter",
-    role: "shadow_test",
-    mode: "test",
+    role: "official",
+    mode: "official",
     enabled: bool(process.env.OPENROUTER_KIMI_TEST_ENABLED, true),
     dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
-    maxTokensOut: Number(process.env.AI_MODEL_KIMI_MAX_TOKENS || 120),
+    maxTokensOut: Number(process.env.AI_MODEL_KIMI_MAX_TOKENS || 400),
     costPer1kTokensEur: 0.003,
   },
 

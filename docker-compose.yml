@@ -101,6 +101,9 @@ services:
       # Identifiants de modèles surchargeables (corriger un ID sans redéployer)
       - OR_QWEN_MODEL=${OR_QWEN_MODEL}
       - OR_KIMI_MODEL=${OR_KIMI_MODEL}
+      # Qwen a produit 0 vote sur 26 appels le 26/08/2026. Il reste disponible
+      # uniquement pour un futur retest explicite, desactive par defaut.
+      - OPENROUTER_QWEN_TEST_ENABLED=${OPENROUTER_QWEN_TEST_ENABLED:-0}
       # Emails Brevo (nurturing, codes d'accès) — inopérants sans ces variables
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}

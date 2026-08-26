@@ -800,7 +800,7 @@ db.exec(`
 // Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
 // agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
 // alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
-const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Qwen"];
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Kimi"];
 
 // ── Initialise agent weights if empty ──
 try {
@@ -1391,7 +1391,11 @@ const SHADOW_AGENTS = [
   {
     name: "OR-Qwen37Max",
     icon: "🌟",
-    enabled: () => !!OPENROUTER_API_KEY,
+    // Retire du banc automatique le 26/08/2026 : 0 vote produit sur 26 appels.
+    // Il reste disponible pour un nouveau test explicite, sans consommer le
+    // budget tant que l'identifiant n'a pas ete diagnostique.
+    enabled: () => !!OPENROUTER_API_KEY
+      && ["1", "true"].includes(String(process.env.OPENROUTER_QWEN_TEST_ENABLED || "").toLowerCase()),
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
@@ -1401,7 +1405,9 @@ const SHADOW_AGENTS = [
   {
     name: "OR-KimiK3",
     icon: "🌙",
-    enabled: () => !!OPENROUTER_API_KEY,
+    // Promu titulaire le 26/08/2026 : ne pas l'appeler une seconde fois en
+    // shadow sur le meme match (double cout et statistiques dupliquees).
+    enabled: () => false,
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
@@ -2049,7 +2055,7 @@ app.get("/concile-roster", (_req, res) => {
            || fam.charAt(0).toUpperCase() + fam.slice(1);
   };
   const sieges = ["perplexity/sonar-pro", "deepseek/deepseek-chat", "mistralai/mistral-large",
-                  "cohere/command-r-plus", "qwen/qwen3.7-max"];
+                  "cohere/command-r-plus", "moonshotai/kimi-k3"];
   const noms = sieges.map(sg => jolinom(resolveModel(sg)));
   res.set("Cache-Control", "public, max-age=300");
   res.json({ ok: true, names: noms, count: noms.length });
@@ -5154,7 +5160,8 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
   // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
   // Agent 3 : Cohere-Command  → spécialiste RAG/données structurées (architecture ≠ tout le reste)
-  // Agent 4 : Chief           → arbitre Llama-70b (Groq, rapide)
+  // Agent 4 : Kimi            → synthese quantitative (remplace Qwen, 0/26 votes)
+  // Agent 5 : Chief           → arbitre Llama-70b (Groq, rapide)
   const usePerplexity = !!PERPLEXITY_API_KEY;
   const useMistral    = !!MISTRAL_API_KEY;
   const useCohere     = !!COHERE_API_KEY;
@@ -5184,10 +5191,11 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       useCohere,
     },
     {
-      name: "OpenRouter-Qwen",
-      model: resolveModel(process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"),
-      icon: "🌟",
+      name: "OpenRouter-Kimi",
+      model: resolveModel(process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3"),
+      icon: "🌙",
       useOpenRouter,
+      openRouterModelKey: "kimi",
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
@@ -5207,7 +5215,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
 
-    `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
+    `Tu es OpenRouter-Kimi, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
 
     `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.
 
@@ -5321,9 +5329,10 @@ Réponds en JSON pur (pas de markdown):
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "cohere" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel("cohere/command-r-plus") });
       }
-      // Agent titulaire "OpenRouter-Qwen" : meme garde-fou que les 4 ci-dessus.
+      // Agent titulaire OpenRouter (Kimi depuis le 26/08/2026) : meme
+      // garde-fou budgetaire que les 4 agents ci-dessus.
       if (agCfg.useOpenRouter && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
+          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: agCfg.openRouterModelKey || "qwen" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
       }
       // Comptes directs gardes en repli SEULEMENT si OpenRouter a refuse
@@ -5798,7 +5807,7 @@ Réponds en JSON pur (pas de markdown):
     const map = [
       [/Perplexity[- ]?Web/gi, "Perplexity"], [/DeepSeek[- ]?V3/gi, "DeepSeek"],
       [/Mistral[- ]?Large/gi, "Mistral"], [/Cohere[- ]?Command/gi, "Cohere"],
-      [/OpenRouter[- ]?Qwen/gi, "Qwen"],
+      [/OpenRouter[- ]?Qwen/gi, "Qwen"], [/OpenRouter[- ]?Kimi/gi, "Kimi"],
       [/Claude[- ]?Chief/gi, "Concile"],
       [/GPT[- ]?4o?[- ]?mini/gi, "IA"], [/GPT[- ]?Analysis/gi, "IA"],
       [/GeminiFlash/gi, "IA"], [/Mistral[- ]?Small/gi, "IA"],
@@ -6127,7 +6136,7 @@ function getMockAnalysis(match) {
     { name: "DeepSeek-V3", icon: "🔮", model: "deepseek-chat" },
     { name: "Mistral-Large", icon: "🌊", model: "mistral-large-latest" },
     { name: "Cohere-Command", icon: "🧬", model: "command-r-plus" },
-    { name: "OpenRouter-Qwen", icon: "🌟", model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" },
+    { name: "OpenRouter-Kimi", icon: "🌙", model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3" },
   ];
   const agentResults = agents.map((a, i) => getMockAgentAnalysis(a, match, i));
   const voteSummary = buildVoteSummary(agentResults, agentResults[0]?.bet);
@@ -14729,7 +14738,6 @@ const MODELES_CONCILE = {
   "deepseek/deepseek-chat": "DeepSeek",
   "mistralai/mistral-large": "Mistral-Large",
   "cohere/command-r-plus": "Cohere-Command",
-  "qwen/qwen3.7-max": "Qwen",
   "moonshotai/kimi-k3": "Kimi",
   "mistralai/mistral-7b-instruct:free": "Mistral-7B (banc d'essai)",
 };
@@ -14926,6 +14934,7 @@ const MODELE_DES_AGENTS = {
   "Mistral-Large": "mistralai/mistral-large",
   "Cohere-Command": "cohere/command-r-plus",
   "OpenRouter-Qwen": "qwen/qwen3.7-max",
+  "OpenRouter-Kimi": "moonshotai/kimi-k3",
   "OR-Qwen37Max": "qwen/qwen3.7-max",
   "OR-KimiK3": "moonshotai/kimi-k3",
   "OR-Mistral7B": "mistralai/mistral-7b-instruct:free",
@@ -14949,8 +14958,20 @@ function auditAgentsEtPromotion() {
     }).filter(r => r.resolus >= PROMO_MIN_RESOLUS)
       .sort((a, b) => b.winrate - a.winrate);
 
-    const titulaires = stats("agent_predictions");
-    const challengers = stats("shadow_evals");
+    // Ne comparer que les CINQ titulaires actuels. L'ancienne version incluait
+    // GROQ-Llama et d'autres agents retires, puis demandait de remplacer un
+    // siege qui n'existait plus : faux diagnostic vu dans l'audit du 26/08.
+    const titulaires = stats("agent_predictions")
+      .filter(r => CONCILE_AGENT_NAMES.includes(r.nom));
+    const modelesActifs = new Set(CONCILE_AGENT_NAMES
+      .map(nom => MODELE_DES_AGENTS[nom])
+      .filter(Boolean)
+      .map(resolveModel));
+    const challengers = stats("shadow_evals")
+      .filter(r => {
+        const logique = MODELE_DES_AGENTS[r.nom];
+        return !logique || !modelesActifs.has(resolveModel(logique));
+      });
     if (!titulaires.length || !challengers.length) {
       lignes.push(`ℹ️ Classement IA — echantillon insuffisant (${PROMO_MIN_RESOLUS} pronostics resolus requis par IA)`);
       return { lignes, promotions };
