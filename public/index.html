@@ -947,7 +947,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 
 
 <nav>
-  <div class="nav-brand">TOUSLES<b>MATCHS</b></div>
+  <div class="nav-brand"><img class="tlm-brand-nav-logo" src="/logo192.png" alt="TousLesMatchs">TOUSLES<b>MATCHS</b></div>
   <div class="nav-center">
     <a href="#pick" data-i18n="nav_analyses">Analyses</a>
     <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
@@ -2185,26 +2185,10 @@ document.addEventListener('click', function(e){
 
 
 
-<script id="tlm-navbar-safe-logo-js">
-(function(){
-  function addLogo(){
-    if(document.querySelector('.tlm-brand-nav-logo')) return;
-    var items=[].slice.call(document.querySelectorAll('a,div,span,strong,h1,h2'));
-    var brand=items.find(function(el){
-      if(!el || !el.textContent) return false;
-      if(el.closest('script,style,head,title,meta')) return false;
-      var text=el.textContent.replace(/\s+/g,'').toLowerCase();
-      var box=el.getBoundingClientRect();
-      return text.includes('touslesmatchs') && box.width>40 && box.height>8 && box.top>=0 && box.top<160;
-    });
-    if(brand){
-      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/logo192.png?v=tlm-brand-20260825" alt="TousLesMatchs">');
-    }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addLogo); else addLogo();
-  setTimeout(addLogo,500);
-})();
-</script>
+<!-- Logo place directement dans .nav-brand ci-dessus (26/08/2026, revue GPT).
+     Le script d'insertion dynamique tlm-navbar-safe-logo-js a ete retire :
+     insertion fragile via recherche heuristique de texte + getBoundingClientRect,
+     sans garantie de timing ni d'unicite. -->
 <script id="tlm-paid-analysis-gate-js">
 (function(){
   if(window.__tlmPaidAnalysisGate)return; window.__tlmPaidAnalysisGate=1;
