@@ -4051,6 +4051,7 @@ async function computeUpcomingPicks() {
   if (!API_SPORTS_KEY) return _upcomingPicksCache;
   const picks = [];
   const featuredCandidates = [];
+  const trustedFixtures = [];
   // Compteurs exposes au client pour expliquer honnetement un tab vide —
   // demande de Greg le 01/08/2026 : montrer le travail reel (X matchs
   // regardes, Y avec assez d'historique, Z retenus) plutot qu'un message
@@ -4090,7 +4091,11 @@ async function computeUpcomingPicks() {
     // equipes/horaire, ex. rediffusion sous deux fixtureId distincts).
     const seenFixtureIds = new Set();
     const seenPairs = new Set();
-    for (const f of fixtures.slice(0, 60)) {
+    // Parcourir toute la fenetre avant de limiter les appels H2H. Couper les
+    // 60 premieres rencontres brutes favorisait les reserves/coupes mineures
+    // jouees plus tot et pouvait laisser trustedChecked a zero alors que des
+    // affiches UEFA ou Liga etaient bien presentes plus tard dans la journee.
+    for (const f of fixtures) {
       if (seenFixtureIds.has(f.fixture.id)) continue;
       seenFixtureIds.add(f.fixture.id);
       const pairKey = `${f.teams.home?.name || ""}_${f.teams.away?.name || ""}_${String(f.fixture.date || "").slice(0, 13)}`.toLowerCase();
@@ -4116,7 +4121,20 @@ async function computeUpcomingPicks() {
       // (shouldAutoObserveMatch) l'appliquait. Une Liga MX Femenil a ete analysee
       // et diffusee via ce chemin, constate le 02/08/2026 (Cruz Azul W - Atlas W).
       if (isWomenMatch(compObj)) continue;
+      // Le plafond porte sur les appels H2H couteux, pas sur le balayage local
+      // des rencontres. Une fois 60 ligues fiables trouvees, aucun appel
+      // supplementaire n'est effectue.
+      if (stats.trustedChecked >= 60) continue;
       stats.trustedChecked++;
+      const observedBase = {
+        home: f.teams.home.name, away: f.teams.away.name,
+        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
+        country: f.league.country || "", sport: "Football", kickoff: f.fixture.date,
+        confidence: null, status: "watchlist",
+        reason: "Analyse statistique en préparation — aucun signal validé pour l'instant.",
+        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+      };
+      trustedFixtures.push(observedBase);
       const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
       // n>=5 confrontations directes exactes entre les deux memes equipes est
       // trop rare (beaucoup de paires ne se sont jamais croisees 5 fois),
@@ -4132,13 +4150,9 @@ async function computeUpcomingPicks() {
       ].sort((a, b) => b.confidence - a.confidence);
       const bestObservedConfidence = Number(allCandidates[0]?.confidence || 0);
       featuredCandidates.push({
-        home: f.teams.home.name, away: f.teams.away.name,
-        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
-        country: f.league.country || "", sport: "Football", kickoff: f.fixture.date,
+        ...observedBase,
         confidence: bestObservedConfidence,
-        status: "watchlist",
         reason: `Score provisoire ${bestObservedConfidence}/100, sous le seuil public de ${getPublishedMinConfidence()}/100.`,
-        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
       });
       const candidates = allCandidates.filter(c => c.confidence >= getPublishedMinConfidence());
       if (!candidates.length) continue;
@@ -4176,9 +4190,10 @@ async function computeUpcomingPicks() {
     } catch (e) { console.error("[upcoming-picks] odds:", e.message); }
     delete p._fixtureId;
   }
-  const featuredMatch = top.length ? null : (featuredCandidates
+  const observationPool = featuredCandidates.length ? featuredCandidates : trustedFixtures;
+  const featuredMatch = top.length ? null : (observationPool
     .filter(p => new Date(p.kickoff).getTime() > Date.now())
-    .sort((a, b) => (b.confidence - a.confidence) || (new Date(a.kickoff) - new Date(b.kickoff)))[0] || null);
+    .sort((a, b) => (Number(b.confidence || 0) - Number(a.confidence || 0)) || (new Date(a.kickoff) - new Date(b.kickoff)))[0] || null);
   _upcomingPicksCache = { ts: Date.now(), data: top, featuredMatch, stats };
   return _upcomingPicksCache;
 }
