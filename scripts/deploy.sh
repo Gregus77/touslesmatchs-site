@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO="/opt/touslesmatchs"
-BRANCH="claude/tiktok-arjel-automation-hgp1tv"
+BRANCH="agent/android-fcm-v107"
 DOMAIN="https://www.touslesmatchs.com"
 MIN_BYTES=40000              # nouvelle page d'accueil ~49 Ko (design "dash wrap", sans widgets.js)
 cd "$REPO"
