@@ -60,7 +60,6 @@ setTimeout(() => {
   mod.__liveContractTest._httpServer?.close();
   process.exit(process.exitCode ?? 0);
 }, 10000);
-const guardReal = require("../scripts/ai_budget_guard.js");
 const {
   attachAutoConcileVotes,
   isUsaOrCanadaMatch,
@@ -194,24 +193,60 @@ test("T3 — deux rafraichissements ne declenchent qu'une seule analyse", async 
   assert.equal(analyzeCalls, 1, "analyze() ne doit etre declenche qu'une seule fois pour le meme match/jour");
 });
 
-test("T4 — un redemarrage ne remet pas le budget a zero (persistance reelle via ai_budget_guard + SQLite)", () => {
-  const db = freshDb();
-  guardReal.ensureSchema(db);
-  const params = { modelKey: "concile_auto_observer", matchKey: "m42_2026-08-26", competition: "Ligue 1", market: "auto-live-observe", promptVersion: "v1" };
+test("T4 — un redemarrage ne remet pas le budget a zero (deux vrais process Node successifs, fichier SQLite temporaire reel)", () => {
+  // Corrige suite a la revue GPT du 26/08/2026 : la version precedente
+  // utilisait DB_PATH=":memory:" et un simple re-require dans le MEME
+  // process, ce qui vide aussi la base en memoire au passage — ca prouvait
+  // seulement que ai_budget_guard relit ce qu'on vient d'ecrire dans la
+  // MEME connexion, pas qu'un vrai redemarrage (nouveau process, nouvelle
+  // connexion, fichier sur disque) preserve le budget. Ici : deux process
+  // "node -e" totalement separes, un vrai fichier .sqlite temporaire.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const os = require("node:os");
+  const { execFileSync } = require("node:child_process");
 
-  // Simule un premier "process" qui a deja traite ce match avec succes.
-  const first = guardReal.canProceed(db, params);
-  assert.equal(first.allowed, true, "premier passage : autorise");
-  guardReal.recordCall(db, { requestKey: first.requestKey, ...params, tokensIn: 15000, tokensOut: 2000, status: "ok" });
+  const tmpDb = path.join(os.tmpdir(), `tlm-budget-test-${process.pid}-${Date.now()}.sqlite`);
+  const guardPath = path.resolve(__dirname, "../scripts/ai_budget_guard.js");
+  const params = JSON.stringify({ modelKey: "concile_auto_observer", matchKey: "m42_2026-08-26", competition: "Ligue 1", market: "auto-live-observe", promptVersion: "v1" });
 
-  // "Redemarrage" simule : re-require du module guard (vide tout etat JS en
-  // memoire qu'il pourrait avoir), MAIS la meme base SQLite persiste.
-  delete require.cache[require.resolve("../scripts/ai_budget_guard.js")];
-  const guardAfterRestart = require("../scripts/ai_budget_guard.js");
+  const runInFreshProcess = (code) =>
+    execFileSync(process.execPath, ["-e", code], { encoding: "utf8" });
 
-  const second = guardAfterRestart.canProceed(db, params);
-  assert.equal(second.allowed, false, "apres 'redemarrage', le meme match ne doit pas repartir a zero (anti-doublon persistant)");
-  assert.match(second.reason, /anti-doublon/i);
+  try {
+    // Process n°1 : ecrit un appel "reussi" dans le fichier SQLite reel.
+    const out1 = runInFreshProcess(`
+      const Database = require(${JSON.stringify(require.resolve("better-sqlite3"))});
+      const guard = require(${JSON.stringify(guardPath)});
+      const db = new Database(${JSON.stringify(tmpDb)});
+      const params = ${params};
+      const first = guard.canProceed(db, params);
+      if (!first.allowed) { console.log(JSON.stringify({ error: "premier passage refuse: " + first.reason })); process.exit(0); }
+      guard.recordCall(db, { requestKey: first.requestKey, ...params, tokensIn: 15000, tokensOut: 2000, status: "ok" });
+      db.close();
+      console.log(JSON.stringify({ allowed: first.allowed }));
+    `);
+    const result1 = JSON.parse(out1.trim().split("\n").pop());
+    assert.equal(result1.allowed, true, "process n°1, premier passage : autorise");
+
+    // Process n°2 : PROCESS NODE COMPLETEMENT DIFFERENT (nouveau PID, nouveau
+    // require, aucun etat JS partage avec le n°1) — seul le fichier .sqlite
+    // sur disque relie les deux. C'est ca, un vrai redemarrage.
+    const out2 = runInFreshProcess(`
+      const Database = require(${JSON.stringify(require.resolve("better-sqlite3"))});
+      const guard = require(${JSON.stringify(guardPath)});
+      const db = new Database(${JSON.stringify(tmpDb)});
+      const params = ${params};
+      const second = guard.canProceed(db, params);
+      db.close();
+      console.log(JSON.stringify({ allowed: second.allowed, reason: second.reason }));
+    `);
+    const result2 = JSON.parse(out2.trim().split("\n").pop());
+    assert.equal(result2.allowed, false, "process n°2 (redemarrage reel) : le meme match ne doit pas repartir a zero");
+    assert.match(result2.reason, /anti-doublon/i);
+  } finally {
+    try { fs.unlinkSync(tmpDb); } catch (_) {}
+  }
 });
 
 test("T5 — un echec IA repete ne cree pas de boucle d'appels (plafond de tentatives respecte)", async () => {
@@ -238,15 +273,74 @@ test("T5 — un echec IA repete ne cree pas de boucle d'appels (plafond de tenta
   assert.equal(analyzeCalls, 2, "ne doit jamais depasser maxRetries tentatives pour le meme match/jour");
 });
 
-test("T6 — le vrai runConcileAnalysis (sans cle IA -> mock) et le vrai saveConcileAnalysis ne font AUCUN appel reseau (donc aucun Telegram)", async () => {
-  // On instrumente les modules reseau natifs de Node : si le code reel
-  // testé ici tentait un appel HTTP/HTTPS (Telegram ou autre), ce test le
-  // detecterait et echouerait.
+test("T6 — le vrai runConcileAnalysis (sans cle IA -> mock) et le vrai saveConcileAnalysis ne font AUCUN appel reseau ni aucun appel Telegram (par n'importe quel transport)", async () => {
+  // Suite a la revue GPT du 26/08/2026 : l'interception http.request/
+  // https.request ne suffit pas — un futur chemin utilisant fetch()/undici
+  // (natif depuis Node 18, deja utilisable dans ce repo) la contournerait
+  // silencieusement.
+  //
+  // DECOUVERTE IMPORTANTE en ecrivant ce test : runConcileAnalysis ne fait pas
+  // QUE analyser — elle diffuse aussi REELLEMENT vers les canaux Telegram
+  // payants (Standard/Premium/Elite/gratuit) et vers l'admin des qu'un seuil
+  // de confiance est atteint. Sans intervention, l'auto-observation live
+  // (declenchee uniquement pour l'affichage public d'un compteur de votes)
+  // aurait pu diffuser un vrai signal payant pour un match jamais destine a
+  // la vente. Corrige par un parametre options.skipDistribution, cable dans
+  // attachAutoConcileVotes (analyze(m, { skipDistribution: true })).
+  //
+  // Trois verifications complementaires :
+  // (a) statique, saveConcileAnalysis : aucune reference a Telegram, sous
+  //     aucune forme — cette fonction ne doit JAMAIS avoir de raison d'y
+  //     toucher (uniquement des ecritures SQLite) ;
+  // (b) statique, runConcileAnalysis : la porte de diffusion (`diffusable`)
+  //     et le bloc admin verifient tous les deux explicitement
+  //     `options.skipDistribution` — preuve que le garde-fou est present
+  //     exactement aux deux endroits qui declenchent un envoi Telegram
+  //     independamment l'un de l'autre (voir commentaire ci-dessus) ;
+  // (c) dynamique : http.request/https.request/global.fetch instrumentes
+  //     pendant un vrai appel via attachAutoConcileVotes (chemin de
+  //     production, deps par defaut) — preuve que RIEN ne part reseau dans
+  //     les conditions reelles de ce process de test (sans GROQ_API_KEY,
+  //     donc chemin mock ; le chemin complet a 5 agents + diffusion reelle
+  //     n'est pas exerce ici, ce qui rend (b) necessaire en complement).
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const serverSource = fs.readFileSync(path.resolve(__dirname, "../scripts/api_server.js"), "utf8");
+
+  function extractFunctionSource(src, name) {
+    const startMatch = src.match(new RegExp(`(async\\s+)?function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`));
+    if (!startMatch) throw new Error(`fonction ${name} introuvable dans le fichier source`);
+    let i = startMatch.index + startMatch[0].length;
+    let depth = 1;
+    const start = i;
+    while (depth > 0 && i < src.length) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}") depth--;
+      i++;
+    }
+    return src.slice(start, i - 1);
+  }
+
+  const saveBody = extractFunctionSource(serverSource, "saveConcileAnalysis");
+  assert.equal(/telegram/i.test(saveBody), false, "saveConcileAnalysis ne doit jamais referencer Telegram, sous aucune forme (ecritures SQLite uniquement)");
+
+  const analysisBody = extractFunctionSource(serverSource, "runConcileAnalysis");
+  const diffusableLine = analysisBody.match(/const diffusable\s*=.*/)?.[0] || "";
+  assert.match(diffusableLine, /options\.skipDistribution/, "la porte 'diffusable' (Standard/Premium/Elite/gratuit) doit verifier options.skipDistribution");
+  const adminIfLine = analysisBody.match(/if\s*\(TELEGRAM_ADMIN_CHAT_ID[^)]*\)\s*\{/)?.[0] || "";
+  assert.match(adminIfLine, /options\.skipDistribution/, "le bloc de notification admin (independant de 'diffusable') doit lui aussi verifier options.skipDistribution");
+
+  // Verification dynamique complementaire : instrumente aussi global.fetch
+  // (Node 18+, natif, base sur undici) en plus de http.request/https.request.
   let networkCalls = 0;
   const origHttpRequest = http.request;
   const origHttpsRequest = https.request;
+  const origFetch = global.fetch;
   http.request = (...args) => { networkCalls++; return origHttpRequest(...args); };
   https.request = (...args) => { networkCalls++; return origHttpsRequest(...args); };
+  if (typeof origFetch === "function") {
+    global.fetch = (...args) => { networkCalls++; return origFetch(...args); };
+  }
 
   try {
     // On passe par le VRAI attachAutoConcileVotes, avec les VRAIES
@@ -254,7 +348,7 @@ test("T6 — le vrai runConcileAnalysis (sans cle IA -> mock) et le vrai saveCon
     // c'est bien le chemin de production qui est teste ici, pas une simulation.
     const db = freshDb();
     const out = await mod.__liveContractTest.attachAutoConcileVotes(
-      [baseMatch({ minute: 32 })],
+      [baseMatch({ id: "t6-match", minute: 32 })],
       { dbRef: db, guard: permissiveGuard(), shouldObserve: () => true, isBanned: () => false, enabled: true }
     );
     // Laisse la promesse de fond (analyze().then(save)) se terminer.
@@ -263,9 +357,30 @@ test("T6 — le vrai runConcileAnalysis (sans cle IA -> mock) et le vrai saveCon
   } finally {
     http.request = origHttpRequest;
     https.request = origHttpsRequest;
+    if (typeof origFetch === "function") global.fetch = origFetch;
   }
 
-  assert.equal(networkCalls, 0, "aucun appel HTTP/HTTPS ne doit partir depuis runConcileAnalysis/saveConcileAnalysis sans cle IA (donc jamais de Telegram depuis ce chemin)");
+  assert.equal(networkCalls, 0, "aucun appel HTTP/HTTPS/fetch ne doit partir depuis runConcileAnalysis/saveConcileAnalysis sans cle IA (donc jamais de Telegram depuis ce chemin, quel que soit le transport)");
+});
+
+test("T6b — attachAutoConcileVotes appelle bien analyze() avec { skipDistribution: true }", async () => {
+  // Preuve directe du cablage (complementaire a T6b/statique) : capture les
+  // arguments exacts recus par la fonction analyze injectee.
+  const db = freshDb();
+  let receivedArgs = null;
+  await attachAutoConcileVotes([baseMatch({ id: "t6b-match" })], {
+    dbRef: db,
+    guard: permissiveGuard(),
+    shouldObserve: () => true,
+    isBanned: () => false,
+    analyze: async (...args) => { receivedArgs = args; return { consensus_votes: 3, agents: [] }; },
+    save: () => {},
+    enabled: true,
+  });
+  await new Promise((r) => setImmediate(r));
+  assert.ok(receivedArgs, "analyze() aurait du etre appelee");
+  assert.equal(receivedArgs.length, 2, "analyze() doit recevoir le match ET les options");
+  assert.deepEqual(receivedArgs[1], { skipDistribution: true }, "analyze() doit toujours etre appelee avec skipDistribution:true depuis l'auto-observation");
 });
 
 test("T7 — match_key strictement identique a celui utilise par saveConcileAnalysis (meme construction id/home_away + date)", () => {

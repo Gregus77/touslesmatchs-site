@@ -2011,7 +2011,12 @@ async function attachAutoConcileVotes(matches, deps = {}) {
     }
 
     liveAutoAnalysisInFlight.add(matchKey);
-    analyze(m)
+    // { skipDistribution: true } (26/08/2026, revue GPT) : runConcileAnalysis
+    // ne fait pas QUE analyser, elle diffuse aussi reellement vers les
+    // canaux Telegram payants (et admin) au-dessus d'un seuil de confiance.
+    // Sans ce flag, une observation auto-declenchee uniquement pour l'affichage
+    // public des votes aurait pu diffuser un vrai signal a l'insu du fondateur.
+    analyze(m, { skipDistribution: true })
       .then((result) => {
         try { save(m, result, null); }
         catch (e) { console.error("[auto-concile] sauvegarde:", e.message); }
@@ -5199,7 +5204,7 @@ function hoteDuProvider(pv) {
   return pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || "");
 }
 
-async function runConcileAnalysis(match) {
+async function runConcileAnalysis(match, options = {}) {
   // Plafond de replis de secours pour CETTE analyse (5 agents = 5 maximum).
   // Empeche qu'un incident fournisseur transforme une analyse en rafale
   // d'appels payants, meme sous le plafond journalier.
@@ -6093,7 +6098,14 @@ Réponds en JSON pur (pas de markdown):
       // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
       // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
       const sportDiffusable = DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
-      const diffusable = arjelPlayable && oddOk && sportDiffusable;
+      // options.skipDistribution (26/08/2026, revue GPT) : decouvert que cette
+      // fonction, censee "juste analyser", diffuse aussi reellement vers les
+      // canaux Telegram payants (Standard/Premium/Elite/gratuit) des qu'un
+      // seuil est atteint. Sans ce garde-fou, l'auto-observation en direct
+      // (declenchee uniquement pour afficher un compteur de votes public,
+      // voir attachAutoConcileVotes) aurait pu diffuser un vrai signal payant
+      // par accident, pour un match jamais destine a la vente.
+      const diffusable = !options.skipDistribution && arjelPlayable && oddOk && sportDiffusable;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
@@ -6168,7 +6180,10 @@ Réponds en JSON pur (pas de markdown):
       }
 
       // 👑 ADMIN (Hermès) — supervision, reçoit tout y compris hors-ARJEL
-      if (TELEGRAM_ADMIN_CHAT_ID) {
+      // Independant de `diffusable` (fonctionne meme hors-ARJEL) : le garde
+      // options.skipDistribution est donc verifie separement ici, sinon
+      // l'auto-observation live spammerait ce canal a chaque match observe.
+      if (TELEGRAM_ADMIN_CHAT_ID && !options.skipDistribution) {
         const adminHeader = arjelPlayable
           ? `👑 <b>[ADMIN · conf ${conf}% · cote ${realOdd || "est."}]</b>\n🏦 ${analysisResult.cote_source || "estimation"}`
           : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ ${analysisResult.cote_source || "estimation"} (pas de bookmaker FR agréé)`;
