@@ -534,7 +534,15 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       .catch(function () { return { ok: false, offline: true }; });
   }
   function flagOffline(d) {
-    if (d && d.offline) $("offline-note").style.display = "block";
+    // Avant ce correctif : le bandeau ne se cachait que sur l'evenement
+    // navigateur "online", qui ne se declenche presque jamais dans ce cas
+    // (l'utilisateur n'a pas vraiment perdu la connexion, un seul appel a
+    // echoue une fois). Resultat constate par Greg le 26/08/2026 : le
+    // bandeau "Hors ligne" restait affiche indefiniment meme quand un match
+    // en direct s'affichait correctement juste en dessous, avec de vraies
+    // donnees a jour. Desormais il se cache des qu'un appel reussit.
+    var el = $("offline-note");
+    if (el) el.style.display = (d && d.offline) ? "block" : "none";
     return d;
   }
 
