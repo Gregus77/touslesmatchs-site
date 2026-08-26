@@ -1904,6 +1904,139 @@ const CACHE_TTL = 60 * 1000; // 60 s : cache global partage, evite de bruler le 
 const API_SPORTS_QUOTA_BLOCK_MS = 12 * 60 * 60 * 1000;
 const apiSportsBlockedUntil = { football: 0, basketball: 0, hockey: 0, baseball: 0 };
 
+// ── Auto-analyse Concile pour les votes IA affichés en live (26/08/2026) ──────
+// La fonction shouldAutoObserveMatch() existait deja dans ce fichier mais
+// n'etait appelee nulle part : consequence, le compteur de votes IA affiche
+// sur le site/l'appli restait bloque a 0/5 en permanence, meme sur un match
+// arrive en fin de fenetre d'analyse, car aucune analyse n'etait jamais
+// declenchee tant qu'un visiteur ne cliquait pas lui-meme sur le bouton.
+//
+// Revue GPT du 26/08/2026 — repris en compte ici :
+//   - desactive par defaut (AUTO_CONCILE_LIVE_VOTES=false tant que non decide)
+//   - branche sur le VRAI garde-fou ai_budget_guard.js (persistant en SQLite,
+//     survit a un redemarrage), au lieu d'un compteur en memoire maison
+//   - le match_key utilise ici est EXACTEMENT celui ecrit par
+//     saveConcileAnalysis (meme construction : id || fixtureId || sourceMatchId
+//     || home_away, suffixe _AAAA-MM-JJ)
+//   - une seule ligne de budget par match/jour (modele virtuel
+//     "concile_auto_observer" dans ai_models.config.js) : distingue le nombre
+//     d'OBSERVATIONS auto-declenchees du nombre reel d'appels IA (chaque
+//     observation appelle en interne les 5 agents de runConcileAnalysis,
+//     inchange, non touche ici — donc aucun risque pour le parcours payant
+//     ou le clic manuel "Voir le signal gratuit", qui restent hors de ce
+//     plafond)
+//   - exclusion EXPLICITE USA/Canada : verifie que ni isLowTrustCompetition
+//     ni shouldAutoObserveMatch ne bannissent effectivement la MLS ou la
+//     Canadian Premier League (ils ne le font pas — seules des ligues USA
+//     mineures type USL2/NPSL sont deja filtrees). Rajoute donc un filtre
+//     pays dedie, independant, pour honorer la regle explicite du fondateur
+//     ("pas de matchs USA, pas de Canada") quelle que soit la ligue.
+//   - limite de tentatives par match/jour pour qu'un echec IA repete
+//     n'entraine jamais une boucle d'appels
+const AUTO_CONCILE_LIVE_VOTES = String(process.env.AUTO_CONCILE_LIVE_VOTES ?? "false").toLowerCase() === "true";
+const AUTO_CONCILE_MAX_RETRIES = Number(process.env.AUTO_CONCILE_MAX_RETRIES || 2);
+const liveAutoAnalysisInFlight = new Set();
+const autoConcileFailCount = new Map(); // matchKey -> nb d'echecs aujourd'hui (memoire, remis a zero au redemarrage : sans risque, ne protege qu'un pic transitoire d'echecs)
+
+// Filtre pays dedie, INDEPENDANT de isLowTrustCompetition (qui ne bannit pas
+// la MLS ni la Canadian Premier League). Reutilise le meme style de detection
+// par mot entier que extractCountry(), mais en exclusion stricte.
+const AUTO_CONCILE_BANNED_COUNTRY_RE = /(^|[^a-z])(usa|united states|american|canada|canadian|mls|major league soccer|usl\b|canadian premier league|\bcpl\b)([^a-z]|$)/i;
+function isUsaOrCanadaMatch(match) {
+  if (!match) return false;
+  const raw = [match.competition, match.league, match.country, match.home, match.away]
+    .filter(Boolean).join(" ");
+  return AUTO_CONCILE_BANNED_COUNTRY_RE.test(String(raw));
+}
+
+function autoConcileMatchKey(m) {
+  const id = m.id || m.fixtureId || m.sourceMatchId || `${m.home}_${m.away}`;
+  return `${id}_${getTodayStr()}`;
+}
+
+// Attache consensus_votes a chaque match live analysable, sans jamais bloquer
+// la reponse /live-matches : si l'analyse n'existe pas encore en base, elle
+// est declenchee en tache de fond (non attendue) et sera visible au prochain
+// appel (le front rappelle cette route regulierement).
+//
+// `deps` permet l'injection pour les tests (voir tests/auto_concile_votes.test.js)
+// sans jamais toucher aux vraies IA / la vraie base en environnement de test.
+async function attachAutoConcileVotes(matches, deps = {}) {
+  const {
+    dbRef = db,
+    guard = require("./ai_budget_guard"),
+    shouldObserve = shouldAutoObserveMatch,
+    isBanned = isUsaOrCanadaMatch,
+    analyze = runConcileAnalysis,
+    save = saveConcileAnalysis,
+    enabled = AUTO_CONCILE_LIVE_VOTES,
+    maxRetries = AUTO_CONCILE_MAX_RETRIES,
+  } = deps;
+
+  const out = [];
+  for (const m of matches) {
+    if (!m || m.pinnedSignal || String(m.sport || "Football") !== "Football") { out.push(m); continue; }
+    const matchKey = autoConcileMatchKey(m);
+    try {
+      const existing = dbRef.prepare("SELECT consensus_votes FROM concile_analyses WHERE match_key = ?").get(matchKey);
+      if (existing) { out.push({ ...m, consensus_votes: existing.consensus_votes || 0 }); continue; }
+    } catch (e) {
+      console.error("[auto-concile] lecture:", e.message);
+    }
+    out.push(m); // pas encore analyse : le front affiche "en cours", 0/5 pour l'instant
+
+    if (!enabled) continue;
+    if (isBanned(m)) continue; // regle explicite : jamais USA ni Canada, quelle que soit la ligue
+    if (!shouldObserve(m)) continue; // couvre deja : feminin, categorie bannie, fenetre 15-40e minute, match decide
+    if (liveAutoAnalysisInFlight.has(matchKey)) continue; // deja en cours dans CE process (anti-rafale intra-process)
+    if ((autoConcileFailCount.get(matchKey) || 0) >= maxRetries) continue; // anti-boucle sur echec repete
+
+    const check = guard.canProceed(dbRef, {
+      modelKey: "concile_auto_observer",
+      matchKey,
+      competition: m.competition || m.league || "",
+      market: "auto-live-observe",
+      promptVersion: "v1",
+    });
+    if (!check.allowed) {
+      console.warn(`[auto-concile] bloque (${matchKey}): ${check.reason}`);
+      continue;
+    }
+
+    liveAutoAnalysisInFlight.add(matchKey);
+    analyze(m)
+      .then((result) => {
+        try { save(m, result, null); }
+        catch (e) { console.error("[auto-concile] sauvegarde:", e.message); }
+        try {
+          guard.recordCall(dbRef, {
+            requestKey: check.requestKey,
+            modelKey: "concile_auto_observer",
+            matchKey,
+            competition: m.competition || m.league || "",
+            market: "auto-live-observe",
+            purpose: "live_votes_display",
+            // Estimation grossiere representant le PASSAGE COMPLET du Concile
+            // (5 agents reels appeles a l'interieur de runConcileAnalysis,
+            // inchange) — voir commentaire d'entete : une ligne de budget ici
+            // = une observation auto, pas un appel IA unique.
+            tokensIn: 15000, tokensOut: 2000,
+            status: "ok",
+          });
+        } catch (e) {
+          console.error("[auto-concile] enregistrement budget:", e.message);
+        }
+      })
+      .catch((e) => {
+        autoConcileFailCount.set(matchKey, (autoConcileFailCount.get(matchKey) || 0) + 1);
+        console.error("[auto-concile] analyse:", e.message);
+      })
+      .finally(() => liveAutoAnalysisInFlight.delete(matchKey));
+  }
+  return out;
+}
+
+
 const TOKEN_LIMITS = { free: 0, carte: 1, essentiel: 10, elite: 30 };
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
@@ -11450,7 +11583,8 @@ app.get("/live-matches", async (req, res) => {
     }));
 
     const strictMatches = await enrichStrictGoal05(withH2H);
-    res.json({ ok: true, matches: strictMatches });
+    const matchesWithVotes = await attachAutoConcileVotes(strictMatches);
+    res.json({ ok: true, matches: matchesWithVotes });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
@@ -15751,6 +15885,7 @@ app.get("/admin/dashboard-data", (req, res) => {
   }
 });
 
+let _httpServer = null;
 if (require.main === module) {
   // ===== ENDPOINTS SCORING V2 =====
 app.get("/scoring/league-ratings", (req, res) => {
@@ -16268,7 +16403,7 @@ app.all(["/api/chat","/chat","/api/chatbot","/api/assistant","/api/support-chat"
   }
 });
 
-app.listen(PORT, () => {
+_httpServer = app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     verifyTelegramChannels();
 
@@ -16346,4 +16481,11 @@ module.exports.__liveContractTest = {
   TOKEN_LIMITS,
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
+  attachAutoConcileVotes,
+  isUsaOrCanadaMatch,
+  autoConcileMatchKey,
+  shouldAutoObserveMatch,
+  liveAutoAnalysisInFlight,
+  autoConcileFailCount,
+  _httpServer,
 };

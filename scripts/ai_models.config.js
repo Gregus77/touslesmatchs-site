@@ -132,6 +132,31 @@ const MODELS = {
     maxTokensOut: Number(process.env.AI_MODEL_CLAUDE_MAX_TOKENS || 120),
     costPer1kTokensEur: 0.015,
   },
+
+  // ── Auto-observation Concile pour l'affichage des votes IA en live
+  // (26/08/2026, revue GPT). NE FAIT AUCUN appel IA propre : c'est le
+  // marqueur budgetaire d'UN PASSAGE COMPLET du Concile (les 5 agents
+  // reels de runConcileAnalysis, geres et factures separement chacun sous
+  // leur propre cle dans ce fichier). Une ligne "concile_auto_observer"
+  // dans ai_call_budget_log = une observation automatique declenchee, pas
+  // un appel IA individuel — c'est la distinction demandee par GPT entre
+  // "nombre d'analyses" et "nombre reel d'appels IA".
+  // Desactive par defaut (AUTO_CONCILE_LIVE_VOTES=false) tant que le
+  // fondateur n'a pas valide le declenchement automatique en production.
+  concile_auto_observer: {
+    id: "internal/concile-auto-observer",
+    provider: "internal",
+    role: "auto_observer",
+    mode: "official",
+    enabled: bool(process.env.AUTO_CONCILE_LIVE_VOTES, false),
+    dailyLimit: Number(process.env.AUTO_CONCILE_MAX_PER_DAY || 20),
+    maxTokensOut: 2000,
+    // Estimation grossiere du cout d'un passage complet a 5 agents (voir
+    // avertissement en tete de fichier : ordre de grandeur, pas facturation
+    // exacte). Base sur une moyenne ponderee des 5 modeles deja configures
+    // ci-dessus pour un pick standard.
+    costPer1kTokensEur: 0.003,
+  },
 };
 
 function getModel(key) {
