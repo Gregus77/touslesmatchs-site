@@ -4170,7 +4170,7 @@ function savePrematchPickIfNew(pick) {
 // cotes, mais aucune donnée live. On s'appuie donc uniquement sur le H2H réel
 // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
 // appel IA payant, juste des statistiques de confrontations directes.
-let _upcomingPicksCache = { ts: 0, data: [], stats: null };
+let _upcomingPicksCache = { ts: 0, data: [], stats: null, featuredMatch: null };
 async function computeUpcomingPicks() {
   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
   if (!API_SPORTS_KEY) return _upcomingPicksCache;
@@ -4180,6 +4180,21 @@ async function computeUpcomingPicks() {
   // regardes, Y avec assez d'historique, Z retenus) plutot qu'un message
   // generique "aucun match".
   const stats = { totalFixtures: 0, trustedChecked: 0, h2hEligible: 0, qualified: 0 };
+  // "Match sous observation" (26/08/2026, revue GPT) : quand AUCUN match ne
+  // qualifie (qualified=0), la page n'affichait rien de concret — mauvais
+  // signal commercial alors que le moteur a bel et bien regarde des dizaines
+  // de matchs reels. On garde ici le MEILLEUR candidat reel (confiance la
+  // plus haute obtenue, meme sous le seuil), jamais invente, jamais presente
+  // comme un signal valide — uniquement equipes/logos/competition/heure
+  // reels + confiance provisoire + raison exacte du rejet. Ne contient
+  // jamais le marche/pari recommande : ce serait deja une recommandation
+  // implicite, contraire a la regle ANJ et a la consigne du fondateur.
+  let bestUnqualified = null;
+  function considerUnqualified(cand) {
+    const a = bestUnqualified ? (bestUnqualified.confidence ?? -1) : -2;
+    const b = cand.confidence ?? -1;
+    if (b > a) bestUnqualified = cand;
+  }
   try {
     // Sur une seule journee, la plupart des matchs "NS" tombent hors d'une
     // fenetre de 12h selon l'heure a laquelle on regarde (constate le
@@ -4242,19 +4257,38 @@ async function computeUpcomingPicks() {
       if (isWomenMatch(compObj)) continue;
       stats.trustedChecked++;
       const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
+      const candidateBase = {
+        home: f.teams.home.name, away: f.teams.away.name,
+        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
+        sport: "Football", kickoff: f.fixture.date,
+        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+      };
       // n>=5 confrontations directes exactes entre les deux memes equipes est
       // trop rare (beaucoup de paires ne se sont jamais croisees 5 fois),
       // d'ou une section quasi-toujours vide (signale par Greg le 01/08/2026).
       // n>=3 reste un echantillon reel, juste moins exigeant sur la rarete.
-      if (!h2h || h2h.n < 3) continue;
+      if (!h2h || h2h.n < 3) {
+        considerUnqualified({
+          ...candidateBase, confidence: null,
+          reason: `Historique direct insuffisant (${h2h ? h2h.n : 0} confrontation${h2h && h2h.n === 1 ? "" : "s"} trouvée${h2h && h2h.n === 1 ? "" : "s"}, 3 minimum requises)`,
+        });
+        continue;
+      }
       stats.h2hEligible++;
-      const candidates = [
+      const allCandidates = [
         { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
         { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
         { bet: "BTTS Oui", confidence: h2h.bttsPct },
         { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
-      ].filter(c => c.confidence >= getPublishedMinConfidence()).sort((a, b) => b.confidence - a.confidence);
-      if (!candidates.length) continue;
+      ].sort((a, b) => b.confidence - a.confidence);
+      const candidates = allCandidates.filter(c => c.confidence >= getPublishedMinConfidence());
+      if (!candidates.length) {
+        considerUnqualified({
+          ...candidateBase, confidence: allCandidates[0]?.confidence ?? null,
+          reason: `Confiance maximale obtenue ${allCandidates[0]?.confidence ?? "?"}% — sous le seuil de publication (${getPublishedMinConfidence()}%)`,
+        });
+        continue;
+      }
       stats.qualified++;
       const pick = {
         home: f.teams.home.name, away: f.teams.away.name,
@@ -4289,7 +4323,7 @@ async function computeUpcomingPicks() {
     } catch (e) { console.error("[upcoming-picks] odds:", e.message); }
     delete p._fixtureId;
   }
-  _upcomingPicksCache = { ts: Date.now(), data: top, stats };
+  _upcomingPicksCache = { ts: Date.now(), data: top, stats, featuredMatch: bestUnqualified ? { ...bestUnqualified, status: "watchlist" } : null };
   return _upcomingPicksCache;
 }
 
@@ -4310,6 +4344,15 @@ app.get("/upcoming-picks", async (req, res) => {
     // requete (pas au calcul), donc jamais plus de quelques secondes de retard
     // meme entre deux recalculs. Signale par Greg le 03/08/2026.
     const stillUpcoming = result.data.filter(p => new Date(p.kickoff).getTime() > Date.now());
+    // Le featuredMatch (match sous observation) suit la meme regle de
+    // fraicheur que les picks qualifies : un match dont le coup d'envoi est
+    // deja passe au moment de la requete (cache de 30 min) ne doit plus
+    // etre presente comme "a venir". status reste TOUJOURS "watchlist" ici
+    // — jamais "validated" : ce champ ne peut venir que de ce chemin de
+    // code, qui ne construit jamais un pick qualifie.
+    const featuredMatch = (result.featuredMatch && new Date(result.featuredMatch.kickoff).getTime() > Date.now())
+      ? result.featuredMatch
+      : null;
     res.json({
       ok: true,
       picks: stillUpcoming.map(p => ({
@@ -4320,6 +4363,7 @@ app.get("/upcoming-picks", async (req, res) => {
         real_odd_fetched_at: unlocked ? (p.real_odd_fetched_at || null) : null,
         home_logo: p.home_logo, away_logo: p.away_logo,
       })),
+      featuredMatch,
       stats: result.stats,
     });
   } catch (e) {
