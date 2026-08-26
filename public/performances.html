@@ -125,6 +125,8 @@ nav{
 .h-badge.win{color:var(--green);background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25)}
 .h-badge.loss{color:var(--red);background:rgba(244,63,94,.08);border:1px solid rgba(244,63,94,.2)}
 .h-badge.pending{color:var(--amber);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.2)}
+.h-badge.diffused{color:var(--cyan);background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.22)}
+.h-badge.concile{color:#c4b5fd;background:rgba(139,92,246,.10);border:1px solid rgba(139,92,246,.24)}
 
 .conf-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap}
 .conf-dot{display:inline-block;width:8px;height:8px;border-radius:50%}
@@ -458,8 +460,13 @@ function renderRow(a) {
     ? '<span class="conf-pill ' + cm.cls + '"><span class="conf-dot"></span>' + Math.round(a.confidence) + '/100 · ' + cm.label + '</span>'
     : '';
 
+  var wasDiffused = !!(a.sent && (a.sent.standard || a.sent.premium || a.sent.elite || a.sent.free));
+  var diffusionHtml = wasDiffused
+    ? '<span class="h-badge diffused">📡 Signal diffusé</span>'
+    : '<span class="h-badge concile">🧠 Analyse du Concile</span>';
+
   var gainHtml = '';
-  if (resolved && a.cote != null && a.cote > 1) {
+  if (resolved && a.cote != null && a.cote > 1 && wasDiffused) {
     var g = a.outcome === 'win' ? (a.cote * 10 - 10) : -10;
     gainHtml = '<div class="h-gain" style="color:' + (g >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtSigned(g) + '</div>';
   } else {
@@ -471,7 +478,7 @@ function renderRow(a) {
     '<div class="h-match">' +
       '<div class="h-teams">' + esc(a.home) + ' — ' + esc(a.away) + (score ? ' <span style="color:var(--muted);font-weight:500">(' + esc(score) + ')</span>' : '') + '</div>' +
       '<div class="h-comp">' + esc(a.competition || a.sport || '') + '</div>' +
-      '<div class="h-tier">' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + '</div>' +
+      '<div class="h-tier">' + tierBadgeLabel(a.tier) + (confPillHtml ? ' ' + confPillHtml : '') + ' ' + diffusionHtml + '</div>' +
     '</div>' +
     '<div class="h-bet">' + esc(betText) + '</div>' +
     '<div class="h-odds">' + cote + '</div>' +

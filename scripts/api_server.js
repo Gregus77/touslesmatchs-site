@@ -8937,9 +8937,8 @@ function scheduleNurturingEmails(email) {
 
 function buildPlanComparisonHtml() {
   const plans = [
-    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium", "Radar football Elite", "Alertes prioritaires"] },
-    { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: ["Multisport", "Alertes prioritaires"] },
-    { name: "🟠 Elite/VIP", price: "29.90€/mois", color: "#a855f7", features: ["30 signaux/jour max", "Football uniquement", "Confiance ≥ 75%", "Alertes prioritaires", "Telegram Elite + tout le Premium"] },
+    { name: "🟢 Standard", price: "4.90€/mois", color: "#34d399", features: ["3 signaux/jour max", "Confiance ≥ 88% — le seuil le plus haut", "Cote réelle ARJEL entre 1.30 et 2.50", "Telegram Standard"], locked: ["Volume Premium"] },
+    { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "POPULAIRE", features: ["10 signaux/jour max", "Confiance ≥ 85%", "Avant-match ou live", "Telegram Premium", "Tout le Standard inclus"], locked: [] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -12079,13 +12078,7 @@ app.post("/stripe/webhook", express.raw({ type: "application/json" }), async (re
           // d'upsell dediee est supprimee, seul un webhook historique pourrait encore
           // porter ce statut et tombe alors sur le cas par defaut ci-dessous (aucun
           // upsell affiche plutot qu'une offre qui n'existe plus).
-          const upsellBlock = status === "premium"
-            ? `<div style="background:linear-gradient(135deg,rgba(212,175,55,.1),rgba(245,200,66,.06));border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:20px;margin-top:24px;text-align:center">
-                <div style="font-size:14px;font-weight:700;color:#d4af37;margin-bottom:8px">Passe au niveau superieur</div>
-                <div style="font-size:12px;color:#7b82a0;margin-bottom:12px">Elite / VIP : <b style="color:#eceaf4">30 signaux/jour football</b> + <b style="color:#d4af37">alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — <b style="color:#10b981">sans engagement</b>.</div>
-                <a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none">Passer Elite / VIP — 29.90€/mois</a>
-              </div>`
-            : "";
+          const upsellBlock = "";
 
           const html = `<div style="font-family:Inter,system-ui,sans-serif;max-width:540px;margin:0 auto;background:#06080f;color:#eceaf4;border-radius:14px;overflow:hidden">
             <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:36px;text-align:center">
