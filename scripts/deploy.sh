@@ -13,7 +13,14 @@
 set -euo pipefail
 
 REPO="/opt/touslesmatchs"
-BRANCH="claude/tiktok-arjel-automation-hgp1tv"
+# Corrige le 26/08/2026 (revue GPT) : ce script pointait encore vers
+# claude/tiktok-arjel-automation-hgp1tv, une branche du 08/08/2026 qui ne
+# contient meme pas le code du hero live (votes IA, etc.) deploye depuis le
+# 25/08/2026 sur agent/android-fcm-v107. Un lancement de ce script tel quel
+# aurait redeploye une version obsolete du site, effacant tout le travail
+# fait depuis le 8 aout — decouvert en verifiant independamment le contenu
+# reel des deux branches (pas seulement leur date).
+BRANCH="agent/android-fcm-v107"
 DOMAIN="https://www.touslesmatchs.com"
 MIN_BYTES=40000              # nouvelle page d'accueil ~49 Ko (design "dash wrap", sans widgets.js)
 cd "$REPO"
