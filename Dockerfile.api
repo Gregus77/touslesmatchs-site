@@ -26,7 +26,8 @@ RUN npm install --save \
   @simplewebauthn/server@13 \
   imapflow \
   mailparser \
-  nodemailer
+  nodemailer \
+  firebase-admin
 
 RUN mkdir -p /data
 
