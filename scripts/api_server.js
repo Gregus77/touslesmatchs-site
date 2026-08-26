@@ -5753,7 +5753,10 @@ Réponds en JSON pur (pas de markdown):
     if (votes > topVotes) { topBet = bet; topVotes = votes; }
   }
   const voteSummary = buildVoteSummary(activedAgentResults, topBet || chief.bet);
-  if (topBet && topVotes >= 3) {
+  // Un signal client exige une vraie majorite forte : 4 votes concordants
+  // sur les 5 agents officiels. Un accord 3/5 reste visible comme tendance
+  // interne, mais ne devient jamais un verdict diffusable sur Telegram.
+  if (topBet && topVotes >= 4) {
     const topAgents = activedAgentResults.filter(a => a.bet === topBet);
     const avgConfidence = Math.round(topAgents.reduce((sum, a) => sum + Number(a.confidence || 0), 0) / topAgents.length);
     chief.bet = topBet;
@@ -5953,7 +5956,7 @@ Réponds en JSON pur (pas de markdown):
     if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
-    if (voteCountForSignal < 3) return `votes ${voteCountForSignal} < 3`;
+    if (voteCountForSignal < 4) return `votes ${voteCountForSignal} < 4`;
     if (!hasRealData) return "donnees stats/H2H indisponibles";
     if (!qualityGate.ok) return `filtre qualite: ${qualityGate.reason}`;
     if (!playable.ok) return `cote: ${playable.reason}`;
@@ -6063,7 +6066,7 @@ Réponds en JSON pur (pas de markdown):
       // eleve que les autres paliers, qui porte l'exigence Standard.
       const gradeStandard = diffusable && voteCountForSignal >= 4 && conf >= TH.standard;
       const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
-      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 3 && conf >= TH.elite);
+      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 4 && conf >= TH.elite);
       shadowWorthy = gradeElite;
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
