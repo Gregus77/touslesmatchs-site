@@ -7,6 +7,13 @@
 - Le Chief reste un arbitre interne et n'est plus sauvegardé ni exposé comme une sixième IA.
 - Un agent officiel ne bascule plus silencieusement vers le modèle Groq générique sous un faux libellé.
 
+### Brevo et Telegram
+
+- Les erreurs Brevo ne sont plus transformées en fausses réussites : upsert contact
+  strict, attributs complets, liste facultative et contrôle de la clé au démarrage.
+- Les anciens noms de variable du canal Telegram gratuit restent acceptés et chaque
+  canal est contrôlé au démarrage. `/health` expose uniquement l'état, jamais les clés.
+
 ## 🔄 EN COURS — À REPRENDRE (toujours maintenir à jour)
 
 **Dernière IA active :** Claude · **Branche :** `claude/tiktok-arjel-automation-hgp1tv`

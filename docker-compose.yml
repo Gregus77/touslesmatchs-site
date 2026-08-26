@@ -108,6 +108,7 @@ services:
       - BREVO_API_KEY=${BREVO_API_KEY}
       - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL}
       - BREVO_SENDER_NAME=${BREVO_SENDER_NAME}
+      - BREVO_LIST_ID=${BREVO_LIST_ID:-0}
       # Secret de signature des sessions : sans lui, un secret aléatoire est régénéré
       # à chaque redémarrage et TOUS les membres connectés sont déconnectés.
       - JWT_SECRET=${JWT_SECRET}

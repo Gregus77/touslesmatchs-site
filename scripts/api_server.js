@@ -1002,8 +1002,14 @@ const ELITE_LAUNCH_BONUS_DAYS = Number(process.env.ELITE_LAUNCH_BONUS_DAYS || 30
 const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || "noreply@touslesmatchs.com";
 const BREVO_SENDER_NAME = process.env.BREVO_SENDER_NAME || "TousLesMatchs";
+const BREVO_LIST_ID = Number(process.env.BREVO_LIST_ID || 0);
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID || "";        // Gratuit (vitrine)
+// Trois anciens noms existent encore dans certains .env du VPS. Accepter les
+// trois évite qu'un simple renommage coupe entièrement le canal gratuit.
+const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID
+  || process.env.TELEGRAM_FREE_CHANNEL_ID
+  || process.env.TELEGRAM_CHAT_ID
+  || ""; // Gratuit (vitrine)
 const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || ""; // Premium 14.90€
 // Canaux Standard (4.90€) et Elite (29.90€). Tant que l'ID n'est pas configuré dans le
 // .env, on retombe automatiquement sur le canal Premium pour ne rien casser en attendant
@@ -1011,6 +1017,12 @@ const TELEGRAM_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_PREMIUM_CHANNEL_ID || "
 const TELEGRAM_STANDARD_CHANNEL_ID = process.env.TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const TELEGRAM_ELITE_CHANNEL_ID = process.env.TELEGRAM_ELITE_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || "";
 const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
+const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
+const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
+const _integrationHealth = {
+  brevo: { configured: !!BREVO_API_KEY, ok: null, checked_at: null },
+  telegram: { configured: !!TELEGRAM_BOT_TOKEN, ok: null, checked_at: null, channels: {} },
+};
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 const _standardSignalDaily = { date: "", count: 0 };
@@ -1140,7 +1152,11 @@ function getTierThresholds() {
 // change) faisait échouer les envois EN SILENCE : sendTelegramMessage renvoie
 // simplement false. Ce contrôle rend le problème visible immédiatement.
 function verifyTelegramChannels() {
-  if (!TELEGRAM_BOT_TOKEN) return;
+  if (!TELEGRAM_BOT_TOKEN) {
+    _integrationHealth.telegram.ok = false;
+    _integrationHealth.telegram.checked_at = new Date().toISOString();
+    return;
+  }
   const channels = [
     ["Gratuit",  TELEGRAM_CHANNEL_ID],
     ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
@@ -1148,8 +1164,19 @@ function verifyTelegramChannels() {
     ["Elite",    TELEGRAM_ELITE_CHANNEL_ID],
     ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
   ];
+  // Tous les canaux commencent a "non verifies". Sans cette initialisation,
+  // le premier getChat reussi pouvait faire passer l'etat global a true alors
+  // que les quatre autres controles etaient encore en vol.
+  for (const [label] of channels) {
+    _integrationHealth.telegram.channels[label.toLowerCase()] = false;
+  }
+  _integrationHealth.telegram.ok = false;
+  _integrationHealth.telegram.checked_at = new Date().toISOString();
   for (const [label, id] of channels) {
-    if (!id) { console.warn(`[telegram-check] ${label} : NON CONFIGURÉ`); continue; }
+    if (!id) {
+      console.warn(`[telegram-check] ${label} : NON CONFIGURÉ`);
+      continue;
+    }
     https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`, (res) => {
       let data = "";
       res.on("data", d => data += d);
@@ -1157,15 +1184,53 @@ function verifyTelegramChannels() {
         try {
           const j = JSON.parse(data);
           if (!j.ok) {
+            _integrationHealth.telegram.channels[label.toLowerCase()] = false;
             console.error(`[telegram-check] ❌ ${label} (${id}) INJOIGNABLE — ${j.description || "erreur"} — les messages de ce palier ne partiront PAS`);
           } else {
+            _integrationHealth.telegram.channels[label.toLowerCase()] = true;
             const t = j.result.type;
             const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
             console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
           }
-        } catch { console.error(`[telegram-check] ${label} : réponse illisible`); }
+          const states = Object.values(_integrationHealth.telegram.channels);
+          _integrationHealth.telegram.ok = states.length > 0 && states.every(Boolean);
+          _integrationHealth.telegram.checked_at = new Date().toISOString();
+        } catch {
+          _integrationHealth.telegram.channels[label.toLowerCase()] = false;
+          _integrationHealth.telegram.ok = false;
+          _integrationHealth.telegram.checked_at = new Date().toISOString();
+          console.error(`[telegram-check] ${label} : réponse illisible`);
+        }
       });
-    }).on("error", (e) => console.error(`[telegram-check] ${label} : ${e.message}`));
+    }).on("error", (e) => {
+      _integrationHealth.telegram.channels[label.toLowerCase()] = false;
+      _integrationHealth.telegram.ok = false;
+      _integrationHealth.telegram.checked_at = new Date().toISOString();
+      console.error(`[telegram-check] ${label} : ${e.message}`);
+    });
+  }
+}
+
+async function verifyBrevoConfiguration() {
+  _integrationHealth.brevo.checked_at = new Date().toISOString();
+  if (!BREVO_API_KEY) {
+    _integrationHealth.brevo.ok = false;
+    console.error("[brevo-check] BREVO_API_KEY NON CONFIGURÉE — aucun email ne partira");
+    return false;
+  }
+  try {
+    const account = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY });
+    const ok = !!account && !account.code && !account.error;
+    _integrationHealth.brevo.ok = ok;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    if (ok) console.log("[brevo-check] ✅ API Brevo joignable");
+    else console.error(`[brevo-check] ❌ clé refusée — ${String(account?.message || "erreur API").slice(0, 120)}`);
+    return ok;
+  } catch (e) {
+    _integrationHealth.brevo.ok = false;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    console.error(`[brevo-check] ❌ ${e.message}`);
+    return false;
   }
 }
 
@@ -8275,30 +8340,25 @@ async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null,
   if (!BREVO_API_KEY) return;
   const contactLang = normalizeContactLang(lang, "");
   try {
-    await httpPost(
-      "https://api.brevo.com/v3/contacts",
-      { email, attributes: { LANG: contactLang }, listIds: [], updateEnabled: true },
-      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
-    );
-    await httpPost(
-      `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}/addToList`,
-      {},
-      { "api-key": BREVO_API_KEY }
-    );
-    // Apply tag via attribute — MARKETING_CONSENT n'est pose que quand
-    // l'appelant le precise explicitement (consentement reellement recueilli
-    // cote client), jamais par defaut sur les contacts transactionnels
-    // (paiement, verification de code...).
+    // Un seul upsert strict. Les anciens appels POST vers /contacts/:email et
+    // /addToList utilisaient de mauvais corps/méthodes ; Brevo les refusait,
+    // mais httpPost() transformait le 4xx en fausse réussite silencieuse.
     const attrs = { PLAN: tag, LANG: contactLang };
     if (marketingConsent !== null) attrs.MARKETING_CONSENT = marketingConsent ? "YES" : "NO";
     if (extraAttrs) Object.assign(attrs, extraAttrs);
-    await httpPost(
-      `https://api.brevo.com/v3/contacts/${encodeURIComponent(email)}`,
-      { attributes: attrs },
+    const payload = { email, attributes: attrs, updateEnabled: true };
+    if (Number.isInteger(BREVO_LIST_ID) && BREVO_LIST_ID > 0) payload.listIds = [BREVO_LIST_ID];
+    await httpPostStrict(
+      "https://api.brevo.com/v3/contacts",
+      payload,
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
+    _integrationHealth.brevo.ok = true;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
     console.log(`[brevo] contact upserted: ${email} tag=${tag} lang=${contactLang}`);
   } catch (e) {
+    _integrationHealth.brevo.ok = false;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
     console.error("[brevo] error:", e.message);
   }
 }
@@ -8361,16 +8421,25 @@ async function brevoSendEmail(to, subject, htmlContent, opts = {}) {
     }
     _emailDailyCap.set(key, sent + 1);
   }
-  return httpPostStrict(
-    "https://api.brevo.com/v3/smtp/email",
-    {
-      sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
-      to: [{ email: to }],
-      subject,
-      htmlContent,
-    },
-    { "api-key": BREVO_API_KEY, "content-type": "application/json" }
-  );
+  try {
+    const result = await httpPostStrict(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: { name: BREVO_SENDER_NAME, email: BREVO_SENDER_EMAIL },
+        to: [{ email: to }],
+        subject,
+        htmlContent,
+      },
+      { "api-key": BREVO_API_KEY, "content-type": "application/json" }
+    );
+    _integrationHealth.brevo.ok = true;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    return result;
+  } catch (e) {
+    _integrationHealth.brevo.ok = false;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    throw e;
+  }
 }
 
 function leadLang(email, leadMap) {
@@ -8725,7 +8794,22 @@ function isMarketAvailableInFrance(marketType, competition) {
 
 // ===== FIN MOTEUR DE SCORING V2 =====
 
-app.get("/health", (_, res) => res.json({ ok: true }));
+app.get("/health", (_, res) => res.json({
+  ok: true,
+  integrations: {
+    brevo: {
+      configured: _integrationHealth.brevo.configured,
+      ok: _integrationHealth.brevo.ok,
+      checked_at: _integrationHealth.brevo.checked_at,
+    },
+    telegram: {
+      configured: _integrationHealth.telegram.configured,
+      ok: _integrationHealth.telegram.ok,
+      checked_at: _integrationHealth.telegram.checked_at,
+      channels: _integrationHealth.telegram.channels,
+    },
+  },
+}));
 
 function normalizeContactLang(lang = "", country = "") {
   const raw = String(lang || "").toLowerCase();
@@ -8835,11 +8919,15 @@ app.post("/subscribe-email", async (req, res) => {
       COUNTRY: lead.country || "",
       SIGNUP_DATE: lead.created_at.slice(0, 10),
     };
-    await httpPost(
+    const brevoPayload = { email: emailClean, attributes: brevoAttributes, updateEnabled: true };
+    if (Number.isInteger(BREVO_LIST_ID) && BREVO_LIST_ID > 0) brevoPayload.listIds = [BREVO_LIST_ID];
+    await httpPostStrict(
       "https://api.brevo.com/v3/contacts",
-      { email: emailClean, attributes: { PLAN: "FREE_SUBSCRIBER", LANG: contactLang }, updateEnabled: true },
+      brevoPayload,
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
+    _integrationHealth.brevo.ok = true;
+    _integrationHealth.brevo.checked_at = new Date().toISOString();
     console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} utm=${JSON.stringify(lead.utm)} lang=${lead.lang} country=${lead.country}`);
 
     // Email de bienvenue uniquement pour les nouveaux inscrits
@@ -8876,6 +8964,10 @@ app.post("/subscribe-email", async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
+    if (BREVO_API_KEY && /HTTP (401|403|4\d\d|5\d\d)/.test(String(e.message || ""))) {
+      _integrationHealth.brevo.ok = false;
+      _integrationHealth.brevo.checked_at = new Date().toISOString();
+    }
     console.error("[subscribe-email] error:", e.message);
     res.json({ ok: true });
   }
@@ -12722,9 +12814,6 @@ app.get("/admin/daily-audit", (req, res) => {
 });
 
 // ── Admin — envoyer rapport de statut sur Telegram Hermes Admin ──────────────
-const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
-const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
-
 // ── Bot email Hermes (hermes@touslesmatchs.com) — brouillons validés à un clic
 // depuis Telegram admin, jamais d'envoi automatique (voir hermes_mail_bot.js).
 const hermesMailBot = require("./hermes_mail_bot");
@@ -16427,6 +16516,7 @@ app.all(["/api/chat","/chat","/api/chatbot","/api/assistant","/api/support-chat"
 app.listen(PORT, () => {
     console.log(`TousLesMatchs API running on :${PORT}`);
     verifyTelegramChannels();
+    verifyBrevoConfiguration().catch((e) => console.error("[brevo-check]", e.message));
 
     // ── Accès offert au testeur (Elite, 30 analyses/jour) ──────────────────────
     // Date d'expiration FIXE : la version précédente calculait "aujourd'hui + 60 jours"
