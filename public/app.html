@@ -534,7 +534,8 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       .catch(function () { return { ok: false, offline: true }; });
   }
   function flagOffline(d) {
-    if (d && d.offline) $("offline-note").style.display = "block";
+    var el = $("offline-note");
+    if (el) el.style.display = (d && d.offline) ? "block" : "none";
     return d;
   }
 
