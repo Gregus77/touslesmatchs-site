@@ -1,0 +1,34 @@
+services:
+  social-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.social
+    container_name: touslesmatchs-social-worker
+    restart: unless-stopped
+    environment:
+      - SOCIAL_DB_PATH=/data/tlm.db
+      - SOCIAL_POLL_MS=${SOCIAL_POLL_MS:-60000}
+      - SOCIAL_LOOKBACK_HOURS=${SOCIAL_LOOKBACK_HOURS:-72}
+      - SOCIAL_SIGNAL_SOURCE=${SOCIAL_SIGNAL_SOURCE:-free}
+      - SOCIAL_TELEGRAM_IMAGE_ENABLED=${SOCIAL_TELEGRAM_IMAGE_ENABLED:-true}
+      - SOCIAL_MEDIA_DIR=/public-social-media
+      - SOCIAL_OUTBOX_DIR=/data/social-outbox
+      - SOCIAL_DISPATCH_STATE=/data/social-dispatch-state.json
+      - SOCIAL_PUBLIC_BASE_URL=${SITE_BASE_URL:-https://www.touslesmatchs.com}
+      - SOCIAL_PUBLIC_MEDIA_URL=${SITE_BASE_URL:-https://www.touslesmatchs.com}/social-media
+      - SOCIAL_TIMEZONE=${SOCIAL_TIMEZONE:-Europe/Paris}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
+      - SOCIAL_INSTAGRAM_ENABLED=${SOCIAL_INSTAGRAM_ENABLED:-false}
+      - META_GAMBLING_WRITTEN_PERMISSION=${META_GAMBLING_WRITTEN_PERMISSION:-false}
+      - INSTAGRAM_BUSINESS_ACCOUNT_ID=${INSTAGRAM_BUSINESS_ACCOUNT_ID}
+      - INSTAGRAM_ACCESS_TOKEN=${INSTAGRAM_ACCESS_TOKEN}
+    volumes:
+      - /opt/touslesmatchs/data:/data
+      - /opt/touslesmatchs/public/social-media:/public-social-media
+    networks:
+      - web
+
+networks:
+  web:
+    external: false
