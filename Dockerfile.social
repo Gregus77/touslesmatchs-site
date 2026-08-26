@@ -1,0 +1,11 @@
+FROM node:20-alpine
+WORKDIR /app
+
+RUN apk add --no-cache python3 make g++ vips-dev
+RUN npm install --save better-sqlite3 sharp
+
+COPY scripts/social_card_renderer.js ./social_card_renderer.js
+COPY scripts/social_dispatcher.js ./social_dispatcher.js
+COPY scripts/social_worker.js ./social_worker.js
+
+CMD ["node", "social_worker.js"]
