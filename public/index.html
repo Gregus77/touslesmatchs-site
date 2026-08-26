@@ -179,6 +179,9 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .upcoming-panel{border-top:3px solid #3ec9e8;padding:20px;display:flex;flex-direction:column;gap:10px}
 .live-panel-title .dot.up{background:#3ec9e8;box-shadow:0 0 8px #3ec9e8}
 .upcoming-highlight{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:14px;margin-bottom:4px;background:linear-gradient(135deg,rgba(62,201,232,.18),rgba(99,102,241,.14));border:1.5px solid rgba(62,201,232,.45)}
+.upcoming-highlight-logo{width:42px;height:42px;min-width:42px;display:inline-grid;place-items:center;overflow:hidden;border-radius:11px;padding:4px;background:rgba(255,255,255,.08);color:#dfe7ff;font-size:11px;font-weight:900}
+.upcoming-highlight-logo img{width:100%;height:100%;object-fit:contain}
+.upcoming-watchlist-state{font-size:12px;font-weight:850;color:#7de8ff;margin-top:5px}
 .upcoming-highlight-badge{font-size:10.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#3ec9e8;background:rgba(62,201,232,.14);padding:4px 9px;border-radius:7px;white-space:nowrap}
 .upcoming-highlight-teams{font-size:17px;font-weight:900}
 .upcoming-highlight-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
@@ -947,7 +950,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 
 
 <nav>
-  <div class="nav-brand">TOUSLES<b>MATCHS</b></div>
+  <div class="nav-brand"><img class="tlm-brand-nav-logo" src="/logo192.png?v=tlm-brand-20260826" alt="TousLesMatchs">TOUSLES<b>MATCHS</b></div>
   <div class="nav-center">
     <a href="#pick" data-i18n="nav_analyses">Analyses</a>
     <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span><span data-i18n="nav_live">Live IA</span></a>
@@ -1648,6 +1651,8 @@ async function loadLive(){
 loadLive();
 
 /* ══ HERO STADE — match réellement en cours ══ */
+var tlmFeaturedMatch=null;
+var tlmHasLiveMatch=false;
 var TLM_COUNTRY_CODES={"Argentina":"ar","Australia":"au","Austria":"at","Belgium":"be","Brazil":"br","Chile":"cl","China":"cn","Colombia":"co","Croatia":"hr","Denmark":"dk","England":"gb-eng","Finland":"fi","France":"fr","Germany":"de","Greece":"gr","Italy":"it","Japan":"jp","Mexico":"mx","Netherlands":"nl","Norway":"no","Poland":"pl","Portugal":"pt","Scotland":"gb-sct","South Korea":"kr","Korea":"kr","Spain":"es","Sweden":"se","Switzerland":"ch","Turkey":"tr","Wales":"gb-wls"};
 function heroCountry(m){return String((m&&m.country)||splitComp((m&&m.competition)||'').country||'').trim();}
 function tlmMatchAllowed(m){
@@ -1692,6 +1697,23 @@ function renderHeroLive(m){
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var i=0;i<voteEls.length;i++){var active=i<votes;voteEls[i].classList.toggle('on',active);var mark=voteEls[i].querySelector('i');if(mark)mark.textContent=active?'✓':String(i+1);}
   var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/25*100)):12;progress.style.width=pct+'%';}
 }
+function renderHeroWatchlist(p){
+  if(!p){renderHeroLive(null);return;}
+  var status=document.getElementById('hero-live-status');
+  var kickoff=new Date(p.kickoff),country=String(p.country||splitComp(p.competition||'').country||'').trim();
+  var hour=!isNaN(kickoff.getTime())?kickoff.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'À venir';
+  if(status)status.textContent='Match sous observation';
+  setHeroText('hero-live-date',!isNaN(kickoff.getTime())?kickoff.toLocaleDateString('fr-FR',{weekday:'long',day:'2-digit',month:'long'}):'Prochaine rencontre');
+  setHeroText('hero-live-minute','À VENIR');setHeroText('hero-live-period','Aucun signal validé pour l\'instant');
+  setHeroText('hero-home-name',p.home||'Équipe à domicile');setHeroText('hero-away-name',p.away||"Équipe à l'extérieur");
+  setHeroText('hero-home-country',country);setHeroText('hero-away-country',country);setHeroText('hero-live-score',hour);
+  setHeroLogo('hero-home-logo',p.home_logo,p.home||'équipe à domicile');setHeroLogo('hero-away-logo',p.away_logo,p.away||"équipe à l'extérieur");
+  heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
+  setHeroText('hero-consensus-current','0 / 5');setHeroText('hero-ai-title','Les 5 IA surveillent cette rencontre');
+  setHeroText('hero-consensus-label','Observation uniquement · aucun signal validé');
+  var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var i=0;i<voteEls.length;i++){voteEls[i].classList.remove('on');var mark=voteEls[i].querySelector('i');if(mark)mark.textContent=String(i+1);}
+  var progress=document.getElementById('hero-analysis-progress');if(progress)progress.style.width='0%';
+}
 async function loadHeroLive(){
   try{
     var r=await fetch('/api/live-matches?t='+Date.now(),{cache:'no-store'}),d=await r.json();
@@ -1700,8 +1722,9 @@ async function loadHeroLive(){
       function quality(m){return (liveHomeLogo(m)?2:0)+(liveAwayLogo(m)?2:0)+(liveHomeScore(m)!==''?2:0)+(liveAwayScore(m)!==''?2:0)+Math.min(1,Number(m.minute||0)/100);}
       return quality(b)-quality(a);
     });
-    renderHeroLive(matches[0]||null);
-  }catch(e){renderHeroLive(null);}
+    tlmHasLiveMatch=!!matches[0];
+    if(tlmHasLiveMatch)renderHeroLive(matches[0]);else renderHeroWatchlist(tlmFeaturedMatch);
+  }catch(e){tlmHasLiveMatch=false;renderHeroWatchlist(tlmFeaturedMatch);}
 }
 loadHeroLive();setInterval(loadHeroLive,30000);
 
@@ -1738,6 +1761,7 @@ function renderUpcomingItem(p){
         '</div>'+right+
       '</div>';
 }
+function upcomingTeamLogo(src,name){return '<span class="upcoming-highlight-logo">'+logo(src,name)+'</span>';}
 async function loadUpcoming(){
   var box=document.getElementById('upcoming-rows');
   var hl=document.getElementById('upcoming-highlight');
@@ -1748,6 +1772,7 @@ async function loadUpcoming(){
   try{
     var r=await fetch('/api/upcoming-picks?t='+Date.now(),{headers:authHdr});
     var d=await r.json();
+    tlmFeaturedMatch=(d.featuredMatch&&tlmMatchAllowed(d.featuredMatch))?d.featuredMatch:null;
     var allPicks=(d.picks||[]).filter(tlmMatchAllowed);
     // Encart "prochaines 24h" : demande explicite du fondateur le 04/08/2026 —
     // distinct du panneau "matchs en cours", fenetre resserree a 24h pour
@@ -1760,7 +1785,16 @@ async function loadUpcoming(){
     });
     var picks=in24h.length?in24h:allPicks;
     if(!picks.length){
-      hl.innerHTML='';
+      if(tlmFeaturedMatch){
+        var wf=tlmFeaturedMatch,wc=splitComp(wf.competition||''),wkt='';
+        try{var wkd=new Date(wf.kickoff);if(!isNaN(wkd.getTime()))wkt=wkd.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' · '+wkd.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}catch(e){}
+        hl.innerHTML='<div class="upcoming-highlight">'+
+          '<div class="upcoming-highlight-badge">👁 Match sous observation</div>'+upcomingTeamLogo(wf.home_logo,wf.home)+
+          '<div><div class="upcoming-highlight-teams">'+esc(wf.home)+' — '+esc(wf.away)+'</div>'+
+          '<div class="upcoming-highlight-sub">'+esc(wc.league)+(wc.country?' · '+esc(wc.country):'')+(wkt?' · '+esc(wkt):'')+'</div>'+
+          '<div class="upcoming-watchlist-state">Aucun signal validé pour l\'instant</div></div>'+upcomingTeamLogo(wf.away_logo,wf.away)+'</div>';
+        if(!tlmHasLiveMatch)renderHeroWatchlist(wf);
+      }else hl.innerHTML='';
       var s=d.stats;
       var detail=(s&&s.totalFixtures)
         ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
@@ -1785,10 +1819,11 @@ async function loadUpcoming(){
       : '<div class="upcoming-highlight-bet">'+(top.confidence>=100?'🔥 ':'')+esc(top.bet)+' · '+esc(top.confidence)+'/100</div>';
     hl.innerHTML='<div class="upcoming-highlight">'+
       '<div class="upcoming-highlight-badge">⭐ Notre sélection</div>'+
+      upcomingTeamLogo(top.home_logo,top.home)+
       '<div>'+
         '<div class="upcoming-highlight-teams">'+icon0+' '+(flag0?flag0+' ':'')+esc(top.home)+' — '+esc(top.away)+'</div>'+
         '<div class="upcoming-highlight-sub">'+esc(comp0.league)+(comp0.country?' · '+esc(comp0.country):'')+(kt0?' · '+kt0:'')+'</div>'+
-      '</div>'+bet0+
+      '</div>'+upcomingTeamLogo(top.away_logo,top.away)+bet0+
     '</div>';
     box.innerHTML=rest.map(renderUpcomingItem).join('');
   } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
@@ -2185,26 +2220,6 @@ document.addEventListener('click', function(e){
 
 
 
-<script id="tlm-navbar-safe-logo-js">
-(function(){
-  function addLogo(){
-    if(document.querySelector('.tlm-brand-nav-logo')) return;
-    var items=[].slice.call(document.querySelectorAll('a,div,span,strong,h1,h2'));
-    var brand=items.find(function(el){
-      if(!el || !el.textContent) return false;
-      if(el.closest('script,style,head,title,meta')) return false;
-      var text=el.textContent.replace(/\s+/g,'').toLowerCase();
-      var box=el.getBoundingClientRect();
-      return text.includes('touslesmatchs') && box.width>40 && box.height>8 && box.top>=0 && box.top<160;
-    });
-    if(brand){
-      brand.insertAdjacentHTML('afterbegin','<img class="tlm-brand-nav-logo" src="/logo192.png?v=tlm-brand-20260825" alt="TousLesMatchs">');
-    }
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',addLogo); else addLogo();
-  setTimeout(addLogo,500);
-})();
-</script>
 <script id="tlm-paid-analysis-gate-js">
 (function(){
   if(window.__tlmPaidAnalysisGate)return; window.__tlmPaidAnalysisGate=1;

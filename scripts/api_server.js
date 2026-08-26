@@ -2899,13 +2899,12 @@ const TRUSTED_COMPETITIONS = [
   "super lig", "süper lig",
   "champions league", "europa league", "conference league",
   "euro 20", "uefa euro", "nations league",
-  "mls", "liga mx", "copa libertadores", "copa sudamericana",
+  "liga mx", "copa libertadores", "copa sudamericana",
   "brasileirao", "serie a · brazil",
   "liga profesional", "copa argentina",
   "j1 league", "j-league", "meiji yasuda",
   "k league", "k-league",
   "chinese super league",
-  "canadian premier",
   // MLB retire le 30/07/2026 : aucune resolution automatique des issues
   // n'existe pour le baseball (resolveStalePredictions ne couvre que
   // Football/Basketball/Hockey) -> les analyses restaient "en attente"
@@ -2929,7 +2928,6 @@ const TRUSTED_COMPETITIONS = [
   "saudi pro league", "roshn",
   "uae pro league",
   "qsl", "qatar stars",
-  "usl championship",
   "ahl",
   "nbl", "nbl · australia",
   // "australia cup" retiree le 04/08/2026 : deja bannie dans
@@ -2939,6 +2937,7 @@ const TRUSTED_COMPETITIONS = [
 ];
 
 function isLowTrustCompetition(matchOrCompetition = "") {
+  if (typeof matchOrCompetition === "object" && isUsaOrCanadaMatch(matchOrCompetition)) return true;
   // On lit AUSSI league et country : selon la source (api-sports construit
   // "Ligue · Pays" dans competition, TheSportsDB laisse le pays a part), le nom
   // du pays peut n'exister que dans country — et la blacklist, qui raisonne
@@ -3005,6 +3004,22 @@ function isWomenMatch(match) {
   const compHit = /\bwomen\b|f[ée]minin|femenin|femenil|femminile|frauen|\bnwsl\b|\bwsl\b|wk-league|w-league|w league|kobiet|damallsvenskan|\bfeminine\b|\bwomens?\b/.test(comp);
   const teamHit = /(\s|\()w\)?$/i.test(home) || /(\s|\()w\)?$/i.test(away) || /\bwomen\b/i.test(home) || /\bwomen\b/i.test(away);
   return compHit || teamHit;
+}
+
+// R5 — aucun match des Etats-Unis ni du Canada. On s'appuie d'abord sur le
+// pays structure fourni par l'API, puis sur des noms de competitions precis.
+// Les noms d'equipes ne sont volontairement pas testes avec les fragments
+// "usa"/"canada" afin d'eviter les faux positifs sur Kusadasi, Yusa, etc.
+function isUsaOrCanadaMatch(match) {
+  if (!match) return false;
+  const norm = (v) => String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const country = norm(match.country || match.league?.country);
+  if (["usa", "us", "united states", "united states of america", "canada"].includes(country)) return true;
+  const competition = norm([
+    typeof match.competition === "string" ? match.competition : "",
+    typeof match.league === "string" ? match.league : match.league?.name,
+  ].filter(Boolean).join(" · "));
+  return /\bmajor league soccer\b|\bmls\b|\busl(?: championship| super league)?\b|\bnwsl\b|\bcanadian premier\b|\bcanadian championship\b/.test(competition);
 }
 
 // Auto-blacklist dynamique : compétitions où le taux de réussite est trop faible.
@@ -4030,11 +4045,12 @@ function savePrematchPickIfNew(pick) {
 // cotes, mais aucune donnée live. On s'appuie donc uniquement sur le H2H réel
 // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
 // appel IA payant, juste des statistiques de confrontations directes.
-let _upcomingPicksCache = { ts: 0, data: [], stats: null };
+let _upcomingPicksCache = { ts: 0, data: [], featuredMatch: null, stats: null };
 async function computeUpcomingPicks() {
   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
   if (!API_SPORTS_KEY) return _upcomingPicksCache;
   const picks = [];
+  const featuredCandidates = [];
   // Compteurs exposes au client pour expliquer honnetement un tab vide —
   // demande de Greg le 01/08/2026 : montrer le travail reel (X matchs
   // regardes, Y avec assez d'historique, Z retenus) plutot qu'un message
@@ -4108,12 +4124,23 @@ async function computeUpcomingPicks() {
       // n>=3 reste un echantillon reel, juste moins exigeant sur la rarete.
       if (!h2h || h2h.n < 3) continue;
       stats.h2hEligible++;
-      const candidates = [
+      const allCandidates = [
         { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
         { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
         { bet: "BTTS Oui", confidence: h2h.bttsPct },
         { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
-      ].filter(c => c.confidence >= getPublishedMinConfidence()).sort((a, b) => b.confidence - a.confidence);
+      ].sort((a, b) => b.confidence - a.confidence);
+      const bestObservedConfidence = Number(allCandidates[0]?.confidence || 0);
+      featuredCandidates.push({
+        home: f.teams.home.name, away: f.teams.away.name,
+        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
+        country: f.league.country || "", sport: "Football", kickoff: f.fixture.date,
+        confidence: bestObservedConfidence,
+        status: "watchlist",
+        reason: `Score provisoire ${bestObservedConfidence}/100, sous le seuil public de ${getPublishedMinConfidence()}/100.`,
+        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+      });
+      const candidates = allCandidates.filter(c => c.confidence >= getPublishedMinConfidence());
       if (!candidates.length) continue;
       stats.qualified++;
       const pick = {
@@ -4149,7 +4176,10 @@ async function computeUpcomingPicks() {
     } catch (e) { console.error("[upcoming-picks] odds:", e.message); }
     delete p._fixtureId;
   }
-  _upcomingPicksCache = { ts: Date.now(), data: top, stats };
+  const featuredMatch = top.length ? null : (featuredCandidates
+    .filter(p => new Date(p.kickoff).getTime() > Date.now())
+    .sort((a, b) => (b.confidence - a.confidence) || (new Date(a.kickoff) - new Date(b.kickoff)))[0] || null);
+  _upcomingPicksCache = { ts: Date.now(), data: top, featuredMatch, stats };
   return _upcomingPicksCache;
 }
 
@@ -4170,6 +4200,8 @@ app.get("/upcoming-picks", async (req, res) => {
     // requete (pas au calcul), donc jamais plus de quelques secondes de retard
     // meme entre deux recalculs. Signale par Greg le 03/08/2026.
     const stillUpcoming = result.data.filter(p => new Date(p.kickoff).getTime() > Date.now());
+    const featured = result.featuredMatch && new Date(result.featuredMatch.kickoff).getTime() > Date.now()
+      ? result.featuredMatch : null;
     res.json({
       ok: true,
       picks: stillUpcoming.map(p => ({
@@ -4180,6 +4212,14 @@ app.get("/upcoming-picks", async (req, res) => {
         real_odd_fetched_at: unlocked ? (p.real_odd_fetched_at || null) : null,
         home_logo: p.home_logo, away_logo: p.away_logo,
       })),
+      featuredMatch: featured ? {
+        home: featured.home, away: featured.away,
+        competition: featured.competition, country: featured.country,
+        sport: "Football", kickoff: featured.kickoff,
+        confidence: featured.confidence, status: "watchlist",
+        reason: featured.reason,
+        home_logo: featured.home_logo, away_logo: featured.away_logo,
+      } : null,
       stats: result.stats,
     });
   } catch (e) {
