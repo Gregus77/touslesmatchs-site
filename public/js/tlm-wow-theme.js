@@ -41,6 +41,133 @@
   }
 
   /*
+   * Marque officielle TousLesMatchs.
+   * Le fichier est issu du paquet de marque officiel conservé dans Git.
+   * Aucun emoji / étoile générique n'est utilisé comme identité de marque.
+   */
+  function restoreOfficialBrand(){
+    if(item[0]==='app') return; /* app.html possède son propre header, patché séparément */
+
+    var style=document.getElementById('tlm-official-brand-css');
+    if(!style){
+      style=document.createElement('style');
+      style.id='tlm-official-brand-css';
+      style.textContent='\
+        .tlm-official-brand-mark{width:38px;height:38px;display:inline-block;flex:0 0 38px;object-fit:cover;border-radius:9px;box-shadow:0 0 15px rgba(79,214,242,.35)}\
+        .nav-brand.tlm-brand-restored,.nav-logo.tlm-brand-restored{display:inline-flex!important;align-items:center!important;gap:9px!important;text-decoration:none!important}\
+        @media(max-width:560px){.tlm-official-brand-mark{width:32px;height:32px;flex-basis:32px}.nav-brand.tlm-brand-restored,.nav-logo.tlm-brand-restored{gap:7px!important}}';
+      document.head.appendChild(style);
+    }
+
+    var candidates=document.querySelectorAll('.nav-brand,.nav-logo,header .brand');
+    for(var n=0;n<candidates.length;n++){
+      var brand=candidates[n];
+      if(brand.querySelector('img')) continue;
+      var txt=(brand.textContent||'').replace(/\s+/g,'').toLowerCase();
+      if(txt.indexOf('touslesmatchs')<0) continue;
+      var img=document.createElement('img');
+      img.className='tlm-official-brand-mark';
+      img.src='/assets/brand/logo192.png?v=official-20260826';
+      img.alt='Logo TousLesMatchs';
+      img.width=38;
+      img.height=38;
+      brand.insertBefore(img,brand.firstChild);
+      brand.classList.add('tlm-brand-restored');
+    }
+  }
+
+  /*
+   * Explication pédagogique de la fenêtre live 15'–40'.
+   * Information d'interface uniquement : ne change ni le scoring, ni les votes,
+   * ni la décision du moteur. Un signal déjà validé reste affiché après 40'.
+   */
+  function liveWindowCopy(minute,hasValidatedSignal){
+    if(hasValidatedSignal){
+      return {
+        state:'validated',
+        title:'✅ Signal déjà validé',
+        text:"Le signal a été validé pendant la fenêtre d’analyse. Il reste disponible même si le match dépasse maintenant la 40e minute."
+      };
+    }
+    if(isFinite(minute) && minute<15){
+      return {
+        state:'observe',
+        title:'⏳ Observation du match',
+        text:"Le Concile attend la 15e minute pour observer le rythme, les occasions et le comportement des deux équipes avant d’analyser."
+      };
+    }
+    if(isFinite(minute) && minute>40){
+      return {
+        state:'closed',
+        title:'🔒 Analyse indisponible après la 40e minute',
+        text:"Après la 40e minute, les bookmakers disposent de beaucoup plus d’informations sur le déroulement du match et ajustent fortement leurs cotes. Elles deviennent généralement moins intéressantes. TousLesMatchs concentre donc ses analyses entre la 15e et la 40e minute."
+      };
+    }
+    return {
+      state:'active',
+      title:'🧠 Analyse du Concile en cours',
+      text:"C’est notre fenêtre d’analyse : les IA étudient le match en direct et cherchent une opportunité avec une cote encore intéressante."
+    };
+  }
+
+  function decorateLiveCards(){
+    if(item[0]!=='live') return;
+
+    if(!document.getElementById('tlm-live-window-css')){
+      var style=document.createElement('style');
+      style.id='tlm-live-window-css';
+      style.textContent='\
+        .tlm-live-window-note{margin-top:12px;padding:11px 12px;border-radius:11px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.035);font-size:12px;line-height:1.5;color:#c4c9e6}\
+        .tlm-live-window-note strong{display:block;margin-bottom:3px;color:#f7f8ff;font-size:12.5px}\
+        .tlm-live-window-note.observe{border-color:rgba(247,169,30,.28);background:rgba(247,169,30,.07)}\
+        .tlm-live-window-note.active{border-color:rgba(51,220,245,.3);background:rgba(51,220,245,.07)}\
+        .tlm-live-window-note.closed{border-color:rgba(148,155,196,.22);background:rgba(148,155,196,.055)}\
+        .tlm-live-window-note.validated{border-color:rgba(28,201,143,.36);background:rgba(28,201,143,.08)}';
+      document.head.appendChild(style);
+    }
+
+    var cards=document.querySelectorAll('.match-card');
+    for(var c=0;c<cards.length;c++){
+      var card=cards[c];
+      var minEl=card.querySelector('.mc-minute');
+      if(!minEl) continue;
+      var raw=String(minEl.textContent||'');
+      var match=raw.match(/(\d{1,3})/);
+      if(!match) continue;
+      var minute=Number(match[1]);
+      if(!isFinite(minute)) continue;
+
+      var cardText=String(card.textContent||'').toLowerCase();
+      var hasValidatedSignal=!!card.querySelector('.mc-analysis.visible .mc-analysis-bet,.conf-badge.green,[data-pinned-signal]') || /signal\s+valid[ée]|analyse\s+termin[ée]e|gagn[ée]|perdu/.test(cardText);
+      var copy=liveWindowCopy(minute,hasValidatedSignal);
+      var note=card.querySelector('.tlm-live-window-note');
+      if(!note){
+        note=document.createElement('div');
+        note.className='tlm-live-window-note';
+        var cta=card.querySelector('.mc-cta');
+        if(cta) cta.insertAdjacentElement('beforebegin',note);
+        else card.appendChild(note);
+      }
+      note.className='tlm-live-window-note '+copy.state;
+      note.innerHTML='<strong>'+copy.title+'</strong><span>'+copy.text+'</span>';
+    }
+  }
+
+  var liveObserver=null;
+  function mountLiveWindowObserver(){
+    if(item[0]!=='live') return;
+    decorateLiveCards();
+    if(!window.MutationObserver || liveObserver) return;
+    var root=document.querySelector('.matches-wrap')||document.body;
+    var timer=0;
+    liveObserver=new MutationObserver(function(){
+      clearTimeout(timer);
+      timer=setTimeout(decorateLiveCards,80);
+    });
+    liveObserver.observe(root,{childList:true,subtree:true,characterData:true});
+  }
+
+  /*
    * Couche conversion accueil — ajout ciblé, sans remplacer le Hero WOW,
    * sans modifier Stripe/API/Telegram et sans supprimer les sections existantes.
    */
@@ -119,6 +246,12 @@
     }
   }
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',enhanceHomeConversion);
-  else enhanceHomeConversion();
+  function bootTlmUi(){
+    restoreOfficialBrand();
+    enhanceHomeConversion();
+    mountLiveWindowObserver();
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bootTlmUi);
+  else bootTlmUi();
 })();
