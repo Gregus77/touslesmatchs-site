@@ -11426,10 +11426,10 @@ app.delete("/admin/set-score", (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Votes réels Over/Under 0,5 pour les cinq cases live ──────────────────────
+// ── Votes réels Over/Under 2,5 pour les cinq cases live ──────────────────────
 // Source unique : agent_market_predictions, déjà alimentée par les réponses
 // multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
-function getLiveOu05VoteState(match) {
+function getLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
   const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= 40 ? "open" : "closed";
   const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
@@ -11441,7 +11441,7 @@ function getLiveOu05VoteState(match) {
     updated_at: null,
   }));
   const empty = {
-    market: "over_under_0_5",
+    market: "over_under_2_5",
     from_minute: 15,
     to_minute: 40,
     window_status: windowStatus,
@@ -11457,7 +11457,7 @@ function getLiveOu05VoteState(match) {
     const rows = db.prepare(`
       SELECT agent_name, bet, confidence, created_at
       FROM agent_market_predictions
-      WHERE market_line = 'ou05'
+      WHERE market_line = 'buts'
         AND date(created_at) = date('now')
         AND lower(trim(home)) = lower(trim(?))
         AND lower(trim(away)) = lower(trim(?))
@@ -11472,16 +11472,16 @@ function getLiveOu05VoteState(match) {
     const votes = CONCILE_AGENT_NAMES.map((agent) => {
       const row = latestByAgent.get(agent);
       const bet = String(row?.bet || "");
-      const direction = /^Over 0[.,]5 buts$/i.test(bet)
+      const direction = /^Over 2[.,]5 buts$/i.test(bet)
         ? "over"
-        : /^Under 0[.,]5 buts$/i.test(bet)
+        : /^Under 2[.,]5 buts$/i.test(bet)
           ? "under"
           : null;
       if (!direction) return emptyVotes.find((vote) => vote.agent === agent);
       return {
         agent,
         direction,
-        label: direction === "over" ? "Over 0,5" : "Under 0,5",
+        label: direction === "over" ? "Over 2,5" : "Under 2,5",
         confidence: Number.isFinite(Number(row.confidence)) ? Number(row.confidence) : null,
         status: "voted",
         updated_at: row.created_at || null,
@@ -11497,7 +11497,7 @@ function getLiveOu05VoteState(match) {
       votes,
     };
   } catch (e) {
-    console.error("[live-ou05-votes]", e.message);
+    console.error("[live-ou25-votes]", e.message);
     return empty;
   }
 }
@@ -11557,10 +11557,10 @@ app.get("/live-matches", async (req, res) => {
     // le baseball, le basket et le hockey étaient bloqués en permanence avec un
     // message parlant de minutes de football. Une seule source de vérité ici.
     const withVerdict = matches.map((m) => {
-      const ou05 = getLiveOu05VoteState(m);
-      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou05 };
+      const ou25 = getLiveOu25VoteState(m);
+      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25 };
       const reason = livePickBlockReason(m);
-      return { ...m, analysable: !reason, block_reason: reason, ou05 };
+      return { ...m, analysable: !reason, block_reason: reason, ou25 };
     });
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
