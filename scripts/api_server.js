@@ -4175,6 +4175,64 @@ function savePrematchPickIfNew(pick) {
 // cotes, mais aucune donnée live. On s'appuie donc uniquement sur le H2H réel
 // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
 // appel IA payant, juste des statistiques de confrontations directes.
+// Fonctions pures extraites (26/08/2026, revue GPT) pour etre testables sans
+// aucun appel reseau — utilisees par computeUpcomingPicks ci-dessous.
+function isFixtureExcludedFromFeatured(compObj) {
+  if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) return true;
+  // isWomenMatch() manquait sur ce pipeline pre-match (H2H) — seul le direct
+  // (shouldAutoObserveMatch) l'appliquait. Une Liga MX Femenil a ete analysee
+  // et diffusee via ce chemin, constate le 02/08/2026 (Cruz Azul W - Atlas W).
+  if (isWomenMatch(compObj)) return true;
+  // isUsaOrCanadaMatch() : decouvert en travaillant sur le live que
+  // isLowTrustCompetition ne bannit ni la MLS ni la Canadian Premier League.
+  // Meme risque ici, corrige en meme temps que l'ajout du featuredMatch.
+  if (isUsaOrCanadaMatch(compObj)) return true;
+  return false;
+}
+
+// hoursMax=36 : sur une seule journee, la plupart des matchs "NS" tombent
+// hors d'une fenetre de 12h selon l'heure de consultation (constate le
+// 01/08/2026) — 36h couvre aujourd'hui ET demain quelle que soit l'heure.
+function isWithinPickWindow(kickoffIso, nowMs = Date.now(), hoursMax = 36) {
+  const kickoff = new Date(kickoffIso).getTime();
+  if (!isFinite(kickoff)) return false;
+  const hoursAway = (kickoff - nowMs) / 3600000;
+  return hoursAway > 0 && hoursAway <= hoursMax;
+}
+
+// Decide si un match (deja filtre par isFixtureExcludedFromFeatured) qualifie
+// pour publication, ou construit le candidat "sous observation" sinon.
+// Ne renvoie JAMAIS un marche/pari dans le candidat non qualifie : ce serait
+// deja une recommandation implicite (regle ANJ + consigne du fondateur).
+function evaluateFeaturedCandidate(candidateBase, h2h, minConfidence) {
+  if (!h2h || h2h.n < 3) {
+    return {
+      qualifies: false, hasEnoughH2H: false,
+      candidate: {
+        ...candidateBase, confidence: null,
+        reason: `Historique direct insuffisant (${h2h ? h2h.n : 0} confrontation${h2h && h2h.n === 1 ? "" : "s"} trouvée${h2h && h2h.n === 1 ? "" : "s"}, 3 minimum requises)`,
+      },
+    };
+  }
+  const allCandidates = [
+    { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
+    { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
+    { bet: "BTTS Oui", confidence: h2h.bttsPct },
+    { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
+  ].sort((a, b) => b.confidence - a.confidence);
+  const candidates = allCandidates.filter(c => c.confidence >= minConfidence);
+  if (!candidates.length) {
+    return {
+      qualifies: false, hasEnoughH2H: true,
+      candidate: {
+        ...candidateBase, confidence: allCandidates[0]?.confidence ?? null,
+        reason: `Confiance maximale obtenue ${allCandidates[0]?.confidence ?? "?"}% — sous le seuil de publication (${minConfidence}%)`,
+      },
+    };
+  }
+  return { qualifies: true, hasEnoughH2H: true, candidates };
+}
+
 let _upcomingPicksCache = { ts: 0, data: [], stats: null, featuredMatch: null };
 async function computeUpcomingPicks() {
   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
@@ -4214,11 +4272,7 @@ async function computeUpcomingPicks() {
       httpGet(`https://v3.football.api-sports.io/fixtures?date=${tomorrow}&status=NS`, { "x-apisports-key": API_SPORTS_KEY }),
     ]);
     const allFixtures = [...(dataToday.response || []), ...(dataTomorrow.response || [])];
-    const fixtures = allFixtures.filter(f => {
-      const kickoff = new Date(f.fixture.date).getTime();
-      const hoursAway = (kickoff - Date.now()) / 3600000;
-      return hoursAway > 0 && hoursAway <= 36;
-    });
+    const fixtures = allFixtures.filter(f => isWithinPickWindow(f.fixture.date));
     // Tri par coup d'envoi le plus proche AVANT de couper a 60 : sans ca, un
     // match a 19h pouvait ne jamais etre examine simplement parce qu'il
     // arrivait en position 57+ dans l'ordre brut renvoye par l'API (aucun
@@ -4255,52 +4309,26 @@ async function computeUpcomingPicks() {
         home: f.teams.home?.name || "",
         away: f.teams.away?.name || "",
       };
-      if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
-      // isWomenMatch() manquait sur ce pipeline pre-match (H2H) — seul le direct
-      // (shouldAutoObserveMatch) l'appliquait. Une Liga MX Femenil a ete analysee
-      // et diffusee via ce chemin, constate le 02/08/2026 (Cruz Azul W - Atlas W).
-      if (isWomenMatch(compObj)) continue;
+      if (isFixtureExcludedFromFeatured(compObj)) continue;
       stats.trustedChecked++;
       const h2h = await fetchH2H({ source: "api-sports", sport: "Football", homeId: f.teams.home.id, awayId: f.teams.away.id });
       const candidateBase = {
         home: f.teams.home.name, away: f.teams.away.name,
         competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
         sport: "Football", kickoff: f.fixture.date,
-        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+        // Repli propre (26/08/2026, revue GPT) : le logo officiel du site sert
+        // de placeholder plutot que null, pour ne jamais laisser une icone
+        // d'image cassee sur la carte "match sous observation".
+        home_logo: f.teams.home.logo || "/logo192.png",
+        away_logo: f.teams.away.logo || "/logo192.png",
       };
-      // n>=5 confrontations directes exactes entre les deux memes equipes est
-      // trop rare (beaucoup de paires ne se sont jamais croisees 5 fois),
-      // d'ou une section quasi-toujours vide (signale par Greg le 01/08/2026).
-      // n>=3 reste un echantillon reel, juste moins exigeant sur la rarete.
-      if (!h2h || h2h.n < 3) {
-        considerUnqualified({
-          ...candidateBase, confidence: null,
-          reason: `Historique direct insuffisant (${h2h ? h2h.n : 0} confrontation${h2h && h2h.n === 1 ? "" : "s"} trouvée${h2h && h2h.n === 1 ? "" : "s"}, 3 minimum requises)`,
-        });
-        continue;
-      }
-      stats.h2hEligible++;
-      const allCandidates = [
-        { bet: "Victoire domicile", confidence: Math.round((h2h.homeWins / h2h.n) * 100) },
-        { bet: "Victoire extérieur", confidence: Math.round((h2h.awayWins / h2h.n) * 100) },
-        { bet: "BTTS Oui", confidence: h2h.bttsPct },
-        { bet: "But en 1ère mi-temps", confidence: h2h.htGoalPct },
-      ].sort((a, b) => b.confidence - a.confidence);
-      const candidates = allCandidates.filter(c => c.confidence >= getPublishedMinConfidence());
-      if (!candidates.length) {
-        considerUnqualified({
-          ...candidateBase, confidence: allCandidates[0]?.confidence ?? null,
-          reason: `Confiance maximale obtenue ${allCandidates[0]?.confidence ?? "?"}% — sous le seuil de publication (${getPublishedMinConfidence()}%)`,
-        });
-        continue;
-      }
+      const evalResult = evaluateFeaturedCandidate(candidateBase, h2h, getPublishedMinConfidence());
+      if (evalResult.hasEnoughH2H) stats.h2hEligible++;
+      if (!evalResult.qualifies) { considerUnqualified(evalResult.candidate); continue; }
       stats.qualified++;
       const pick = {
-        home: f.teams.home.name, away: f.teams.away.name,
-        competition: f.league.name + (f.league.country && f.league.country !== "World" ? " · " + f.league.country : ""),
-        sport: "Football", kickoff: f.fixture.date,
-        bet: candidates[0].bet, confidence: candidates[0].confidence,
-        home_logo: f.teams.home.logo || null, away_logo: f.teams.away.logo || null,
+        ...candidateBase,
+        bet: evalResult.candidates[0].bet, confidence: evalResult.candidates[0].confidence,
         _fixtureId: f.fixture.id,
       };
       picks.push(pick);
@@ -16554,4 +16582,7 @@ module.exports.__liveContractTest = {
   liveAutoAnalysisInFlight,
   autoConcileFailCount,
   _httpServer,
+  isFixtureExcludedFromFeatured,
+  isWithinPickWindow,
+  evaluateFeaturedCandidate,
 };
