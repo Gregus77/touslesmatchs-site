@@ -2,6 +2,8 @@
 
 ## 2026-08-27 — Fiabilisation client Over/Under 2,5
 
+- Le chatbot journalise désormais les erreurs fournisseur et bascule automatiquement
+  de Perplexity vers Mistral en cas de refus HTTP, timeout ou réponse vide.
 - La page Résultats applique désormais le même historique vérifié au fondateur
   connecté qu'aux visiteurs ; les analyses brutes restent consultables uniquement
   dans l'audit quotidien d'administration.
