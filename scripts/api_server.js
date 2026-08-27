@@ -13418,8 +13418,10 @@ app.get("/analysis-history", (req, res) => {
     `).all();
     // Cote client : une analyse n'entre dans l'historique que si elle a ete
     // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 4/5.
-    // L'admin conserve l'integralite des lignes pour diagnostiquer les rejets.
-    const clientRows = viewerIsAdmin ? rawRows : rawRows.filter(isVerifiedClientOu25Row);
+    // Cette route alimente la page Resultats, y compris quand le fondateur est
+    // connecte : elle doit donc rester identique pour tous les lecteurs. La vue
+    // exhaustive de diagnostic reste disponible via /admin/daily-audit.
+    const clientRows = rawRows.filter(isVerifiedClientOu25Row);
     const planChannel = tierFilter === "vip" ? "premium" : tierFilter === "carte" ? "free" : tierFilter;
     const planRows = planChannel
       ? clientRows.filter(r => displayDeliveryChannels(r).has(planChannel))
