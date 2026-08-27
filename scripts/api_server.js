@@ -13459,6 +13459,7 @@ app.get("/analysis-history", (req, res) => {
       const deliveryProof = storedTelegramDelivery(r);
       const displayChannels = displayDeliveryChannels(r);
       const analysisDay = String(r.analysed_at || "").slice(0, 10);
+      const historyMode = analysisDay >= CLIENT_TELEGRAM_PROOF_SINCE ? "telegram_proven" : "legacy";
       const resolved = r.outcome === "win" || r.outcome === "loss";
       const reveal = resolved || isPaidViewer; // pick visible si terminé OU abonné
       return {
@@ -13467,7 +13468,8 @@ app.get("/analysis-history", (req, res) => {
         competition: r.competition, sport: r.sport || "Football",
         bet: reveal ? r.best_bet : null, confidence: r.confidence,
         cote: reveal ? rowOdd(r) : null,
-        reasoning: reveal ? r.raison : null, consensus: ou25Proof.voteCount,
+        reasoning: reveal ? r.raison : null,
+        consensus: historyMode === "legacy" ? Number(r.consensus_votes || 0) : ou25Proof.voteCount,
         locked: !reveal,
         outcome: r.outcome,
         analysed_at: r.analysed_at,
@@ -13493,7 +13495,7 @@ app.get("/analysis-history", (req, res) => {
           free: displayChannels.has("free"),
         },
         delivery_proven: deliveryProof.paid,
-        history_mode: analysisDay >= CLIENT_TELEGRAM_PROOF_SINCE ? "telegram_proven" : "legacy",
+        history_mode: historyMode,
         // Motif lisible du non-envoi (null si le signal est bien parti).
         diffusion_block: r.diffusion_block || null,
         agents_count: agents.length,
