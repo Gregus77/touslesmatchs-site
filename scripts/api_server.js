@@ -10979,7 +10979,10 @@ app.post("/chat", async (req, res) => {
   const auth = (email && code) ? bankrollAuth(email, code) : null;
   const memKey = auth ? auth.email : null;
 
-  if (!PERPLEXITY_API_KEY && !MISTRAL_API_KEY) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+  if (!PERPLEXITY_API_KEY && !MISTRAL_API_KEY) {
+    console.error("[chat] aucune cle fournisseur configuree");
+    return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+  }
 
   // Historique de CET utilisateur uniquement (jamais celui d'un autre).
   let history = [];
@@ -10999,37 +11002,61 @@ app.post("/chat", async (req, res) => {
   // finale du prompt maître du 28/07/2026). L'anti-doublon ne s'applique pas à
   // une conversation libre : voir allowChatbotCall (clé unique par requête).
   const _chatGate = analysisEngine.allowChatbotCall(db, { sessionId: memKey });
-  if (!_chatGate.allowed) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+  if (!_chatGate.allowed) {
+    console.warn(`[chat] garde budget: ${_chatGate.reason || "appel refuse"}`);
+    return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
+  }
 
   // Perplexity (modele "sonar", pas "sonar-pro" — recherche web reelle pour
   // un cout par appel bien plus bas, largement suffisant pour un chat grand
   // public) prioritaire : contrairement a Mistral, il consulte le web avant
   // de repondre, donc il connait les evenements recents (ex: un resultat
   // sportif de cette annee) au lieu de rester bloque a sa date d'entrainement.
-  // Repli sur Mistral si la cle Perplexity n'est pas configuree.
+  // Repli sur Mistral si Perplexity n'est pas configure OU si son appel echoue
+  // (401/429/timeout/reponse vide). Avant ce correctif, httpPost renvoyait un
+  // objet marque _httpStatus au lieu de lever une exception : le chatbot
+  // affichait donc son erreur generique sans journal ni tentative Mistral.
   let reply = "";
-  try {
-    if (PERPLEXITY_API_KEY) {
+  let chatTokensIn = 0, chatTokensOut = 0;
+  const providers = [];
+  if (PERPLEXITY_API_KEY) providers.push({
+    label: "Perplexity", url: "https://api.perplexity.ai/chat/completions",
+    model: "sonar", key: PERPLEXITY_API_KEY,
+  });
+  if (MISTRAL_API_KEY) providers.push({
+    label: "Mistral", url: "https://api.mistral.ai/v1/chat/completions",
+    model: "mistral-small-latest", key: MISTRAL_API_KEY,
+  });
+
+  for (const provider of providers) {
+    try {
       const rp = await httpPost(
-        "https://api.perplexity.ai/chat/completions",
-        { model: "sonar", messages, temperature: 0.4, max_tokens: 500 },
-        { Authorization: `Bearer ${PERPLEXITY_API_KEY}` }
+        provider.url,
+        { model: provider.model, messages, temperature: 0.4, max_tokens: 500 },
+        { Authorization: `Bearer ${provider.key}` },
+        10000
       );
-      reply = rp?.choices?.[0]?.message?.content?.trim() || "";
-      _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
-    } else {
-      const rp = await httpPost(
-        "https://api.mistral.ai/v1/chat/completions",
-        { model: "mistral-small-latest", messages, temperature: 0.4, max_tokens: 500 },
-        { Authorization: `Bearer ${MISTRAL_API_KEY}` }
-      );
-      reply = rp?.choices?.[0]?.message?.content?.trim() || "";
-      _chatGate.record(rp?.usage?.prompt_tokens, rp?.usage?.completion_tokens, reply ? "ok" : "error");
+      if (rp?._httpTimedOut) throw new Error("timeout");
+      if (Number(rp?._httpStatus || 0) >= 400) {
+        const detail = rp?.error?.message || rp?.message || `HTTP ${rp._httpStatus}`;
+        throw new Error(`HTTP ${rp._httpStatus}: ${String(detail).slice(0, 160)}`);
+      }
+      if (rp?._httpParseError) throw new Error("reponse illisible");
+      const candidate = rp?.choices?.[0]?.message?.content?.trim() || "";
+      if (!candidate) throw new Error("reponse vide");
+      reply = candidate;
+      chatTokensIn = Number(rp?.usage?.prompt_tokens || 0);
+      chatTokensOut = Number(rp?.usage?.completion_tokens || 0);
+      console.log(`[chat] ${provider.label}: OK`);
+      break;
+    } catch (e) {
+      const safeError = String(e.message || e)
+        .replace(/(xkeysib-|sk-proj-|pplx-)[A-Za-z0-9_-]+/gi, "$1***MASQUE***")
+        .slice(0, 220);
+      console.error(`[chat] ${provider.label}: ${safeError}`);
     }
-  } catch (e) {
-    console.error("[chat] IA:", e.message);
-    _chatGate.record(0, 0, "error");
   }
+  _chatGate.record(chatTokensIn, chatTokensOut, reply ? "ok" : "error");
 
   if (!reply) return res.json({ ok: true, reply: CHAT_UNAVAILABLE, fallback: true });
 
