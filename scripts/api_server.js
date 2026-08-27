@@ -1541,6 +1541,7 @@ function sendTelegramMessage(chatId, text, deliveryMeta = null) {
                   parsed.ok === true ? 1 : 0,
                   parsed.ok === true ? null : String(parsed.description || "raison inconnue").slice(0, 300)
                 );
+              storedTelegramDeliveryCache.delete(deliveryMeta.matchKey);
             } catch (e) { console.error(`[telegram-audit] ${e.message}`); }
           }
           resolve(parsed.ok === true);
@@ -3149,12 +3150,6 @@ function isClientOu25MatchEligible(match, requireMinute = true) {
   return true;
 }
 
-function wasClientSignalSent(row) {
-  return row?.sig_sent_standard === 1 || row?.sig_sent_standard === true
-    || row?.sig_sent_premium === 1 || row?.sig_sent_premium === true
-    || row?.sig_sent_elite === 1 || row?.sig_sent_elite === true;
-}
-
 const storedOu25ConsensusCache = new Map();
 function storedOu25Consensus(row) {
   const key = String(row?.match_key || "");
@@ -3180,12 +3175,57 @@ function storedOu25Consensus(row) {
   return state;
 }
 
+const storedTelegramDeliveryCache = new Map();
+function storedTelegramDelivery(row) {
+  const key = String(row?.match_key || "");
+  if (!key) return { paid: false, channels: new Set() };
+  if (storedTelegramDeliveryCache.has(key)) return storedTelegramDeliveryCache.get(key);
+  let proof = { paid: false, channels: new Set() };
+  try {
+    const rows = db.prepare(`
+      SELECT DISTINCT channel
+      FROM telegram_signal_deliveries
+      WHERE match_key = ? AND ok = 1 AND telegram_message_id IS NOT NULL
+    `).all(key);
+    const channels = new Set(rows.map(item => String(item.channel || "")));
+    proof = {
+      paid: ["standard", "premium", "elite"].some(channel => channels.has(channel)),
+      channels,
+    };
+  } catch (e) { console.error("[telegram-history]", e.message); }
+  if (storedTelegramDeliveryCache.size > 5000) storedTelegramDeliveryCache.clear();
+  storedTelegramDeliveryCache.set(key, proof);
+  return proof;
+}
+
+function legacySentChannels(row) {
+  const channels = new Set();
+  if (row?.sig_sent_standard === 1 || row?.sig_sent_standard === true) channels.add("standard");
+  if (row?.sig_sent_premium === 1 || row?.sig_sent_premium === true) channels.add("premium");
+  if (row?.sig_sent_elite === 1 || row?.sig_sent_elite === true) channels.add("elite");
+  if (row?.sig_sent_free === 1 || row?.sig_sent_free === true) channels.add("free");
+  return channels;
+}
+
+const CLIENT_HISTORY_REPAIR_DATE = "2026-08-26";
+const CLIENT_TELEGRAM_PROOF_SINCE = "2026-08-27";
 function isVerifiedClientOu25Row(row) {
+  const day = String(row?.analysed_at || "").slice(0, 10);
+  // L'historique anterieur a l'incident du 26 aout reste intact, a la demande
+  // du fondateur. Seule la journee defectueuse est retraitee retroactivement.
+  if (day && day < CLIENT_HISTORY_REPAIR_DATE) return true;
   const realOdd = Number(row?.real_odd);
   const realSource = String(row?.real_odd_source || "");
+  const diffusionBlock = String(row?.diffusion_block || "").trim();
   const ou25 = storedOu25Consensus(row);
-  return wasClientSignalSent(row)
+  const delivery = storedTelegramDelivery(row);
+  const deliveryAccepted = day >= CLIENT_TELEGRAM_PROOF_SINCE
+    ? delivery.paid
+    : ["standard", "premium", "elite"].some(channel => legacySentChannels(row).has(channel));
+  return deliveryAccepted
+    && diffusionBlock.length === 0
     && isOu25Bet(row?.best_bet)
+    && Number(row?.consensus_votes || 0) >= CLIENT_OU25_MIN_VOTES
     && ou25.complete
     && ou25.voteCount >= CLIENT_OU25_MIN_VOTES
     && ou25.bet === String(row?.best_bet || "").trim()
@@ -3193,6 +3233,13 @@ function isVerifiedClientOu25Row(row) {
     && realOdd > 1
     && realSource.length > 0
     && !/estimation/i.test(realSource);
+}
+
+function displayDeliveryChannels(row) {
+  const day = String(row?.analysed_at || "").slice(0, 10);
+  return day >= CLIENT_TELEGRAM_PROOF_SINCE
+    ? storedTelegramDelivery(row).channels
+    : legacySentChannels(row);
 }
 
 // Filtre allégé pour l'AFFICHAGE de la page Live IA (menu de matchs à analyser).
@@ -9407,9 +9454,11 @@ function getSignalFortStats() {
   try {
     const threshold = getAdaptiveSignalThreshold();
     const raw = db.prepare(`
-      SELECT home, away, competition, sport, best_bet, confidence, outcome,
+      SELECT match_key, home, away, competition, country, sport, best_bet, confidence, consensus_votes, outcome,
              score_home_at_analysis, score_away_at_analysis,
-             final_score_home, final_score_away, analysed_at, real_odd, minute_at_analysis
+             final_score_home, final_score_away, analysed_at, real_odd, real_odd_source,
+             minute_at_analysis, diffusion_block,
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
       FROM concile_analyses
       WHERE confidence >= ? AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
@@ -9417,6 +9466,7 @@ function getSignalFortStats() {
     const seen = new Set();
     const all = [];
     for (const r of raw) {
+      if (!isVerifiedClientOu25Row(r)) continue;
       const key = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -9618,11 +9668,11 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   // Cohérence : on ne poste le résultat QUE sur les canaux qui ont réellement reçu
   // le pick. Un signal jamais diffusé (bloqué/hors ARJEL/plafond) ne génère aucun
   // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
-  const flag = (v) => v === 1 || v === true;
-  const sentStandard = flag(analysis.sig_sent_standard);
-  const sentPremium  = flag(analysis.sig_sent_premium);
-  const sentElite    = flag(analysis.sig_sent_elite);
-  const sentFree     = flag(analysis.sig_sent_free);
+  const deliveryProof = storedTelegramDelivery(analysis);
+  const sentStandard = deliveryProof.channels.has("standard");
+  const sentPremium  = deliveryProof.channels.has("premium");
+  const sentElite    = deliveryProof.channels.has("elite");
+  const sentFree     = deliveryProof.channels.has("free");
   if (!sentStandard && !sentPremium && !sentElite && !sentFree) {
     console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
     return;
@@ -9678,10 +9728,12 @@ function markSignalSent(home, away, col, matchKey) {
 function signalsSentToday(col) {
   if (!SIGNAL_SENT_COLUMNS.includes(col)) return 0;
   try {
+    const channel = col.replace(/^sig_sent_/, "");
     const row = db.prepare(
-      `SELECT COUNT(*) AS n FROM concile_analyses
-       WHERE ${col} = 1 AND date(analysed_at) = date('now')`
-    ).get();
+      `SELECT COUNT(DISTINCT match_key) AS n FROM telegram_signal_deliveries
+       WHERE channel = ? AND ok = 1 AND telegram_message_id IS NOT NULL
+         AND date(created_at) = date('now')`
+    ).get(channel);
     return Number(row?.n) || 0;
   } catch (e) {
     console.error("[signal-sent] comptage:", e.message);
@@ -11035,7 +11087,7 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT match_key, home, away, competition, country, sport, best_bet, confidence, consensus_votes, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg, final_score_home, final_score_away, sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free " +
+      "SELECT match_key, home, away, competition, country, sport, best_bet, confidence, consensus_votes, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg, final_score_home, final_score_away, sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free, diffusion_block " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
@@ -11234,21 +11286,14 @@ function seoPublishedRows(limit) {
     const rows = db.prepare(`
       SELECT match_key, home, away, competition, country, sport, best_bet, confidence, raison, real_odd,
              real_odd_source, outcome, analysed_at, minute_at_analysis, consensus_votes,
-             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
-      FROM (
-        SELECT *, ROW_NUMBER() OVER (
-          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
-        ) AS _rn
-        FROM concile_analyses
-        WHERE date(analysed_at) >= '2026-07-03'
-          AND confidence >= ${getPublishedMinConfidence()}
-          AND outcome IN ('win','loss')
-      ) WHERE _rn = 1
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free, diffusion_block
+      FROM concile_analyses
+      WHERE date(analysed_at) >= '2026-07-03'
+        AND confidence >= ${getPublishedMinConfidence()}
+        AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
-      LIMIT ?
-    `).all(limit);
-    return rows.filter(r => !isNoiseForDisplay(r) && isVerifiedClientOu25Row(r)).map(r => ({
+    `).all();
+    return dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r) && isVerifiedClientOu25Row(r))).slice(0, limit).map(r => ({
       home: r.home, away: r.away, competition: r.competition, sport: r.sport || "Football",
       date: r.analysed_at, bet: maskAiNamesGlobal(r.best_bet || "Analyse IA"),
       confidence: r.confidence, cote: rowOdd(r), outcome: r.outcome,
@@ -11357,7 +11402,7 @@ function fetchResolvedRowsForDate(dateStr) {
     SELECT match_key, home, away, competition, country, sport, best_bet, confidence, outcome,
            real_odd, real_odd_source, final_score_home, final_score_away, analysed_at,
            minute_at_analysis, consensus_votes,
-           sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
+           sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free, diffusion_block
     FROM concile_analyses
     WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
       AND date(analysed_at) = ?
@@ -11535,17 +11580,11 @@ app.get("/tier-stats", (req, res) => {
       SELECT match_key, home, away, competition, country, sport, confidence, best_bet, outcome, real_odd,
              real_odd_source, final_score_home, final_score_away, analysed_at,
              minute_at_analysis, consensus_votes,
-             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
-      FROM (
-        SELECT *, ROW_NUMBER() OVER (
-          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
-        ) AS _rn
-        FROM concile_analyses
-        WHERE outcome IN ('win','loss')
-          AND confidence >= ${getPublishedMinConfidence()}
-          AND date(analysed_at) >= '2026-07-03'
-      ) WHERE _rn = 1
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free, diffusion_block
+      FROM concile_analyses
+      WHERE outcome IN ('win','loss')
+        AND confidence >= ${getPublishedMinConfidence()}
+        AND date(analysed_at) >= '2026-07-03'
       ORDER BY analysed_at DESC
     `).all();
     const clean = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r) && isVerifiedClientOu25Row(r)));
@@ -13359,12 +13398,9 @@ app.get("/analysis-history", (req, res) => {
     // tourne depuis des semaines). tierEligible est déjà la source du bloc
     // stats.tiers plus bas : on aligne la liste détaillée dessus pour cohérence.
     const tierFilter = (viewerPlan && !viewerIsAdmin) ? viewerPlan : null;
-    // Dédoublonnage en SQL : un match est analysé plusieurs fois par jour
-    // (snapshots à différentes minutes). ROW_NUMBER garde UNE ligne par
-    // match/jour — la version résolue (win/loss) d'abord, sinon la plus récente.
-    // Pas de LIMIT/OFFSET ici quand un filtre de palier s'applique : tierEligible
-    // ne s'exprime pas en SQL (dépend de seuils dynamiques + regex JS), donc on
-    // filtre après coup et on pagine sur le résultat filtré.
+    // On charge les snapshots avant de dedoublonner : il faut d'abord identifier
+    // l'instant exact reellement diffuse. Dedoublonner en SQL avant ce controle
+    // selectionnait parfois un snapshot observe/non envoye du meme match.
     const rawRows = db.prepare(`
       SELECT id, match_key, home, away, competition, country, sport, best_bet, confidence, raison,
              consensus_votes, outcome, analysed_at, real_odd, real_odd_source,
@@ -13374,26 +13410,19 @@ app.get("/analysis-history", (req, res) => {
              sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free,
              diffusion_block,
              agents_json
-      FROM (
-        SELECT *, ROW_NUMBER() OVER (
-          PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-          ORDER BY (CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) DESC, analysed_at DESC
-        ) AS _rn
-        FROM concile_analyses
-        WHERE date(analysed_at) >= '2026-07-03'
-          AND confidence >= ${getPublishedMinConfidence()}
-          AND (outcome IS NULL OR outcome != 'pending')
-      )
-      WHERE _rn = 1
+      FROM concile_analyses
+      WHERE date(analysed_at) >= '2026-07-03'
+        AND confidence >= ${getPublishedMinConfidence()}
+        AND (outcome IS NULL OR outcome != 'pending')
       ORDER BY analysed_at DESC
     `).all();
     // Cote client : une analyse n'entre dans l'historique que si elle a ete
     // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 4/5.
     // L'admin conserve l'integralite des lignes pour diagnostiquer les rejets.
     const clientRows = viewerIsAdmin ? rawRows : rawRows.filter(isVerifiedClientOu25Row);
-    const planColumn = tierFilter ? SIG_COLUMN_BY_PLAN[tierFilter] : null;
-    const planRows = planColumn
-      ? clientRows.filter(r => r[planColumn] === 1 || r[planColumn] === true)
+    const planChannel = tierFilter === "vip" ? "premium" : tierFilter === "carte" ? "free" : tierFilter;
+    const planRows = planChannel
+      ? clientRows.filter(r => displayDeliveryChannels(r).has(planChannel))
       : clientRows;
     const cleanedRows = dedupeAnalysesByMatch(planRows.filter(r => !isNoiseForDisplay(r)));
     const total = cleanedRows.length;
@@ -13427,6 +13456,9 @@ app.get("/analysis-history", (req, res) => {
       let agents = [];
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
       const ou25Proof = storedOu25Consensus(r);
+      const deliveryProof = storedTelegramDelivery(r);
+      const displayChannels = displayDeliveryChannels(r);
+      const analysisDay = String(r.analysed_at || "").slice(0, 10);
       const resolved = r.outcome === "win" || r.outcome === "loss";
       const reveal = resolved || isPaidViewer; // pick visible si terminé OU abonné
       return {
@@ -13455,11 +13487,13 @@ app.get("/analysis-history", (req, res) => {
         // l'envoi...). Afficher `tier` en pretendant montrer la diffusion
         // induisait le visiteur en erreur — signale par Greg le 05/08/2026.
         sent: {
-          standard: r.sig_sent_standard === 1 || r.sig_sent_standard === true,
-          premium: r.sig_sent_premium === 1 || r.sig_sent_premium === true,
-          elite: r.sig_sent_elite === 1 || r.sig_sent_elite === true,
-          free: r.sig_sent_free === 1 || r.sig_sent_free === true,
+          standard: displayChannels.has("standard"),
+          premium: displayChannels.has("premium"),
+          elite: displayChannels.has("elite"),
+          free: displayChannels.has("free"),
         },
+        delivery_proven: deliveryProof.paid,
+        history_mode: analysisDay >= CLIENT_TELEGRAM_PROOF_SINCE ? "telegram_proven" : "legacy",
         // Motif lisible du non-envoi (null si le signal est bien parti).
         diffusion_block: r.diffusion_block || null,
         agents_count: agents.length,
@@ -13477,7 +13511,7 @@ app.get("/analysis-history", (req, res) => {
       SELECT match_key, home, away, competition, country, sport, outcome, analysed_at, confidence,
              best_bet, real_odd, real_odd_source, final_score_home, final_score_away,
              minute_at_analysis, consensus_votes,
-             sig_sent_free, sig_sent_standard, sig_sent_premium, sig_sent_elite
+             sig_sent_free, sig_sent_standard, sig_sent_premium, sig_sent_elite, diffusion_block
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
         AND date(analysed_at) >= '2026-07-03'
@@ -13519,9 +13553,7 @@ app.get("/analysis-history", (req, res) => {
     //   un montant en euros.
     // OBSERVEES : conserve pour compatibilite API, mais les analyses non
     // diffusees ne font plus partie de la vue client et restent donc a zero.
-    const estDiffusee = (r) =>
-      r.sig_sent_free === 1 || r.sig_sent_standard === 1 ||
-      r.sig_sent_premium === 1 || r.sig_sent_elite === 1;
+    const estDiffusee = (r) => ["standard", "premium", "elite", "free"].some(channel => displayDeliveryChannels(r).has(channel));
     const lignesDiffusees = dedupResolved.filter(estDiffusee);
     const lignesObservees = dedupResolved.filter(r => !estDiffusee(r));
 
@@ -13543,17 +13575,17 @@ app.get("/analysis-history", (req, res) => {
     const tiers = {
       // Un palier ne peut plus se prevaloir d'un resultat que ses abonnes n'ont
       // jamais recu : on filtre sur l'envoi reel, pas sur l'eligibilite.
-      standard: statBlock(lignesDiffusees.filter(r => r.sig_sent_standard === 1)),
-      premium:  statBlock(lignesDiffusees.filter(r => r.sig_sent_premium === 1)),
-      elite:    statBlock(lignesDiffusees.filter(r => r.sig_sent_elite === 1)),
-      gratuit:  statBlock(lignesDiffusees.filter(r => r.sig_sent_free === 1)),
+      standard: statBlock(lignesDiffusees.filter(r => displayDeliveryChannels(r).has("standard"))),
+      premium:  statBlock(lignesDiffusees.filter(r => displayDeliveryChannels(r).has("premium"))),
+      elite:    statBlock(lignesDiffusees.filter(r => displayDeliveryChannels(r).has("elite"))),
+      gratuit:  statBlock(lignesDiffusees.filter(r => displayDeliveryChannels(r).has("free"))),
     };
 
     // Analyses publiées non encore résolues (dédoublonnées, hors bruit) = "en attente".
     const pendingRows = db.prepare(`
       SELECT match_key, home, away, competition, country, sport, analysed_at, best_bet,
              minute_at_analysis, consensus_votes, real_odd, real_odd_source,
-             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free, diffusion_block
       FROM concile_analyses
       WHERE (outcome IS NULL OR outcome NOT IN ('win','loss'))
         AND confidence >= ${getPublishedMinConfidence()}
@@ -13582,6 +13614,11 @@ app.get("/analysis-history", (req, res) => {
       // ("Statistiques de ton palier Standard") au lieu de laisser croire à
       // l'abonné qu'il consulte l'historique complet.
       scope: tierFilter ? { filtered: true, plan: viewerPlan } : { filtered: false, plan: viewerPlan || null },
+      verification: {
+        repaired_date: CLIENT_HISTORY_REPAIR_DATE,
+        telegram_proof_since: CLIENT_TELEGRAM_PROOF_SINCE,
+        rule: "football_ou25_5_seats_min_4_votes_minute_15_40",
+      },
     });
   } catch (e) {
     console.error("[analysis-history]", e.message);
