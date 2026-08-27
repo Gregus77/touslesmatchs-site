@@ -1,5 +1,21 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-27 — Fiabilisation client Over/Under 2,5
+
+- Le verdict client est désormais construit uniquement à partir des cinq bulletins
+  réels `buts` du Concile, et non du pari principal libre de chaque IA.
+- Aucun signal ne part si les cinq sièges O/U 2,5 ne sont pas renseignés, si la
+  majorité est inférieure à 4/5, si la confiance est sous 80, ou sans cote bookmaker.
+- La diffusion est limitée au football de championnat entre la 15e et la 40e minute ;
+  les autres sports, marchés, coupes, barrages, amicaux et ligues non fiables restent
+  disponibles uniquement pour l'audit interne.
+- L'historique, les statistiques, les pages pronostics et le pick du jour ne montrent
+  plus les analyses non envoyées, les autres marchés ni les consensus sous 4/5.
+- Le quorum historique est recalculé depuis les cinq bulletins O/U 2,5 stockés par
+  instant de match ; l'ancienne colonne de consensus principal n'est plus crue seule.
+- Chaque futur envoi de signal conserve le `message_id` retourné par Telegram afin
+  d'apporter une preuve durable de livraison et de distinguer analyse et diffusion.
+
 ## 2026-08-26 — Réparation des cinq votes live Over/Under 2,5
 
 - L'API `/live-matches` joint désormais les cinq avis individuels réels du marché Over/Under 2,5 enregistrés dans `agent_market_predictions`.
