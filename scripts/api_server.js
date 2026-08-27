@@ -470,6 +470,20 @@ db.exec(`
     home_logo TEXT, away_logo TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
+  -- Preuve durable des prochains envois : Telegram renvoie un message_id
+  -- uniquement quand le message a reellement ete accepte par son API.
+  CREATE TABLE IF NOT EXISTS telegram_signal_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_key TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    telegram_message_id INTEGER DEFAULT NULL,
+    market TEXT DEFAULT '',
+    vote_count INTEGER DEFAULT 0,
+    ok INTEGER NOT NULL DEFAULT 0,
+    error TEXT DEFAULT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_tg_delivery_match ON telegram_signal_deliveries(match_key, channel, ok);
 `);
 
 // Beta privee +0,5 : capacite reelle, liste d attente et aucune diffusion automatique.
@@ -1491,7 +1505,7 @@ function escTgHtml(text) {
   return String(text ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function sendTelegramMessage(chatId, text) {
+function sendTelegramMessage(chatId, text, deliveryMeta = null) {
   if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(false);
   const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true });
   return new Promise((resolve) => {
@@ -1514,6 +1528,20 @@ function sendTelegramMessage(chatId, text) {
           const parsed = JSON.parse(data);
           if (parsed.ok !== true) {
             console.error(`[telegram] echec envoi chat_id=${chatId}: ${parsed.description || "raison inconnue"} (code ${parsed.error_code || "?"})`);
+          }
+          if (deliveryMeta?.matchKey && deliveryMeta?.channel) {
+            try {
+              db.prepare(`INSERT INTO telegram_signal_deliveries
+                (match_key, channel, telegram_message_id, market, vote_count, ok, error)
+                VALUES (?,?,?,?,?,?,?)`).run(
+                  deliveryMeta.matchKey, deliveryMeta.channel,
+                  parsed?.result?.message_id ?? null,
+                  String(deliveryMeta.market || ""),
+                  Number(deliveryMeta.voteCount || 0),
+                  parsed.ok === true ? 1 : 0,
+                  parsed.ok === true ? null : String(parsed.description || "raison inconnue").slice(0, 300)
+                );
+            } catch (e) { console.error(`[telegram-audit] ${e.message}`); }
           }
           resolve(parsed.ok === true);
         } catch (e) {
@@ -2356,6 +2384,66 @@ function buildVoteSummary(activeAgents, selectedBet) {
   };
 }
 
+// Produit client unique : les cinq sieges votent tous sur Over/Under 2,5.
+// Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
+// mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
+const CLIENT_OU25_MIN_VOTES = 4;
+const CLIENT_OU25_MIN_CONFIDENCE = Math.max(80, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 80));
+function isOu25Bet(bet) {
+  return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
+}
+
+function buildOu25VoteSummary(agentMarketList) {
+  const byAgent = new Map();
+  for (const am of agentMarketList || []) {
+    if (!CONCILE_AGENT_NAMES.includes(am?.name) || byAgent.has(am.name)) continue;
+    const raw = am?.marches?.buts;
+    const side = String(raw?.p || "").toLowerCase();
+    if (side !== "o2.5" && side !== "u2.5") continue;
+    const confidence = Number(raw?.c);
+    if (!Number.isFinite(confidence)) continue;
+    byAgent.set(am.name, {
+      direction: side === "o2.5" ? "over" : "under",
+      confidence: Math.min(95, Math.max(40, confidence)),
+    });
+  }
+  const votes = CONCILE_AGENT_NAMES.map((agent) => ({ agent, ...(byAgent.get(agent) || { direction: null, confidence: null }) }));
+  const over = votes.filter(v => v.direction === "over");
+  const under = votes.filter(v => v.direction === "under");
+  const winners = over.length >= under.length ? over : under;
+  const voteCount = Math.max(over.length, under.length);
+  const voteTop = voteCount ? (over.length >= under.length ? "Over 2.5 buts" : "Under 2.5 buts") : null;
+  const avgConfidence = winners.length
+    ? Math.round(winners.reduce((sum, vote) => sum + vote.confidence, 0) / winners.length)
+    : 0;
+  const unanimous = voteCount === 5;
+  const complete = byAgent.size === 5;
+  const voteStatus = complete && unanimous ? "elite" : complete && voteCount >= 4 ? "strong" : "none";
+  const voteLabel = !complete
+    ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
+    : unanimous
+      ? "5/5 unanime O/U 2,5"
+      : voteCount >= 4
+        ? "4/5 signal fort O/U 2,5"
+        : `${voteCount}/5 aucun signal O/U 2,5`;
+  return {
+    market: "over_under_2_5",
+    vote_total: 5,
+    vote_active: byAgent.size,
+    vote_count: voteCount,
+    vote_top: voteTop,
+    vote_label: voteLabel,
+    vote_status: voteStatus,
+    unanimous,
+    complete,
+    recommended: complete && voteCount >= CLIENT_OU25_MIN_VOTES,
+    average_confidence: avgConfidence,
+    over_count: over.length,
+    under_count: under.length,
+    votes,
+  };
+}
+
 // Un timeout ou une erreur HTTP (401/429/5xx) resolvait silencieusement en
 // `{}` — indiscernable d'une reponse IA simplement vide. Consequence reelle
 // constatee le 04/08/2026 : impossible de savoir si les agents du Concile
@@ -3042,6 +3130,69 @@ function isCategoryBanned(matchOrCompetition = "") {
     : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
   return CATEGORY_BAN_KEYWORDS.some((keyword) => value.includes(keyword));
+}
+
+// Perimetre volontairement etroit du produit client O/U 2,5. Les analyses
+// hors de ce cadre restent en base pour apprendre, mais ne sont ni diffusees
+// ni presentees comme des signaux recus par les abonnes.
+function isClientOu25MatchEligible(match, requireMinute = true) {
+  const sport = String(match?.sport || "Football").toLowerCase();
+  if (!sport.includes("foot")) return false;
+  const minute = parseLiveMinuteValue(match?.minute_at_analysis ?? match?.minute);
+  if (requireMinute && (minute === null || minute < 15 || minute > 40)) return false;
+  if (isWomenMatch(match) || isCategoryBanned(match) || isLowTrustCompetition(match)) return false;
+  if (leagueTier(match) !== "trusted_major") return false;
+  const h = leagueHaystack(match);
+  // Coupes, qualifications, barrages et amicaux ont un contexte trop variable
+  // pour le track-record championnat utilise par le Concile.
+  if (/\bcup\b|coupe|copa|pokal|coppa|taça|champions league|europa league|conference league|qualif|play[ -]?off|barrage|friendly|amical/.test(h)) return false;
+  return true;
+}
+
+function wasClientSignalSent(row) {
+  return row?.sig_sent_standard === 1 || row?.sig_sent_standard === true
+    || row?.sig_sent_premium === 1 || row?.sig_sent_premium === true
+    || row?.sig_sent_elite === 1 || row?.sig_sent_elite === true;
+}
+
+const storedOu25ConsensusCache = new Map();
+function storedOu25Consensus(row) {
+  const key = String(row?.match_key || "");
+  if (!key) return { complete: false, voteCount: 0, bet: null };
+  if (storedOu25ConsensusCache.has(key)) return storedOu25ConsensusCache.get(key);
+  let state = { complete: false, voteCount: 0, bet: null };
+  try {
+    const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
+    const rows = db.prepare(`
+      SELECT bet, COUNT(DISTINCT agent_name) AS n
+      FROM agent_market_predictions
+      WHERE match_key = ? AND market_line = 'buts'
+        AND agent_name IN (${placeholders})
+        AND bet IN ('Over 2.5 buts','Under 2.5 buts')
+      GROUP BY bet
+    `).all(key, ...CONCILE_AGENT_NAMES);
+    const active = rows.reduce((sum, item) => sum + Number(item.n || 0), 0);
+    const top = rows.slice().sort((a, b) => Number(b.n || 0) - Number(a.n || 0))[0];
+    state = { complete: active === 5, voteCount: Number(top?.n || 0), bet: top?.bet || null };
+  } catch (e) { console.error("[ou25-history]", e.message); }
+  if (storedOu25ConsensusCache.size > 5000) storedOu25ConsensusCache.clear();
+  storedOu25ConsensusCache.set(key, state);
+  return state;
+}
+
+function isVerifiedClientOu25Row(row) {
+  const realOdd = Number(row?.real_odd);
+  const realSource = String(row?.real_odd_source || "");
+  const ou25 = storedOu25Consensus(row);
+  return wasClientSignalSent(row)
+    && isOu25Bet(row?.best_bet)
+    && ou25.complete
+    && ou25.voteCount >= CLIENT_OU25_MIN_VOTES
+    && ou25.bet === String(row?.best_bet || "").trim()
+    && isClientOu25MatchEligible(row, true)
+    && realOdd > 1
+    && realSource.length > 0
+    && !/estimation/i.test(realSource);
 }
 
 // Filtre allégé pour l'AFFICHAGE de la page Live IA (menu de matchs à analyser).
@@ -5820,6 +5971,17 @@ Réponds en JSON pur (pas de markdown):
     }
   }
 
+  // Verdict client fonde exclusivement sur les cinq bulletins O/U 2,5 reels.
+  // Une majorite sur le "meilleur pari" libre ne vaut pas une majorite O/U.
+  const ou25VoteSummary = buildOu25VoteSummary(agentMarketList);
+  if (ou25VoteSummary.recommended) {
+    chief.bet = ou25VoteSummary.vote_top;
+    chief.confidence = ou25VoteSummary.average_confidence;
+    chief.raison = `${ou25VoteSummary.vote_label} : ${ou25VoteSummary.vote_count} des 5 sieges votent ${ou25VoteSummary.vote_top}.`;
+    consensusBet = ou25VoteSummary.vote_top;
+    consensusVotes = ou25VoteSummary.vote_count;
+  }
+
   // Sauvegarder les prédictions pour le tracking de performance
   // Le Chief arbitre mais ne constitue jamais un sixième votant public.
   saveAgentPredictions(match, agentResults.filter((a) => !a.isChief));
@@ -5839,9 +6001,9 @@ Réponds en JSON pur (pas de markdown):
     arjel_bookmakers_count: oddInfo.arjelCount,
     raison: chief.raison,
     consensus_votes: consensusVotes,
-    total_agents: voteSummary.vote_total,
-    active_agents: voteSummary.vote_active,
-    vote_summary: buildVoteSummary(activedAgentResults, chief.bet),
+    total_agents: ou25VoteSummary.vote_total,
+    active_agents: ou25VoteSummary.vote_active,
+    vote_summary: ou25VoteSummary,
     market_scores: aggregateMarketScores(agentMarketList),
     agents: agentResults.filter((a) => !a.isChief),
     statsStatus: typeof statsStatus !== "undefined" ? statsStatus : buildStatsStatus(match, null, "mock_or_unavailable"),
@@ -5916,6 +6078,9 @@ Réponds en JSON pur (pas de markdown):
   }
   const voteInfo = analysisResult.vote_summary || {};
   const voteCountForSignal = Number(voteInfo.vote_count || analysisResult.consensus_votes || 0);
+  const fiveOu25SeatsPresent = Number(voteInfo.vote_active || 0) === 5;
+  const ou25Only = isOu25Bet(analysisResult.best_bet) && voteInfo.market === "over_under_2_5";
+  const clientOu25MatchEligible = isClientOu25MatchEligible(match, true);
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
@@ -5955,8 +6120,13 @@ Réponds en JSON pur (pas de markdown):
   const _blockReason = (() => {
     if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
+    if (!clientOu25MatchEligible) return "hors perimetre client O/U 2,5 (football championnat, minute 15-40)";
+    if (!ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
+    if (!fiveOu25SeatsPresent) return `sieges O/U 2,5 incomplets: ${Number(voteInfo.vote_active || 0)}/5`;
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
+    if (analysisResult.confidence < CLIENT_OU25_MIN_CONFIDENCE) return `confiance ${analysisResult.confidence} < plancher O/U 2,5 ${CLIENT_OU25_MIN_CONFIDENCE}`;
     if (voteCountForSignal < 4) return `votes ${voteCountForSignal} < 4`;
+    if (!_coteReelle) return "pas de vraie cote bookmaker";
     if (!hasRealData) return "donnees stats/H2H indisponibles";
     if (!qualityGate.ok) return `filtre qualite: ${qualityGate.reason}`;
     if (!playable.ok) return `cote: ${playable.reason}`;
@@ -6040,11 +6210,13 @@ Réponds en JSON pur (pas de markdown):
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
       const oddOk = realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD;
       const sportLc = String(match.sport || "Football").toLowerCase();
-      // Vivier commun : tous les sports diffusables, cote réelle chez un opérateur
-      // agréé. Le palier ne dépend plus du sport — un signal hockey à 90 % vaut mieux
-      // qu'un signal football à 84 %, et un jour sans football ne vide plus le palier.
-      const sportDiffusable = DIFFUSABLE_SPORTS.some(s => sportLc.includes(s));
-      const diffusable = arjelPlayable && oddOk && sportDiffusable;
+      // Produit client recentre : football O/U 2,5 uniquement, cinq sieges
+      // presents et majorite forte. Les autres sports/marches restent internes.
+      const sportDiffusable = sportLc.includes("foot");
+      const diffusable = arjelPlayable && oddOk && sportDiffusable
+        && clientOu25MatchEligible && ou25Only && fiveOu25SeatsPresent
+        && voteCountForSignal >= CLIENT_OU25_MIN_VOTES
+        && conf >= CLIENT_OU25_MIN_CONFIDENCE;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
@@ -6076,6 +6248,12 @@ Réponds en JSON pur (pas de markdown):
       // "toutes les lignes du match aujourd'hui" et contaminait les analyses
       // bloquees du meme match (bug Club Brugge du 07/08/2026).
       const _ligneAnalysee = getPredictionSnapshotKey(match);
+      const _deliveryMeta = (channel) => ({
+        matchKey: _ligneAnalysee,
+        channel,
+        market: analysisResult.best_bet,
+        voteCount: voteCountForSignal,
+      });
 
       // 🟢 STANDARD — cap 3/j
       // markSignalSent() APRES confirmation d'envoi, jamais avant : marquer en
@@ -6088,7 +6266,7 @@ Réponds en JSON pur (pas de markdown):
       // on rend donc aussi le credit de quota.
       if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP) {
         _standardSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD")).then(ok => {
+        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD"), _deliveryMeta("standard")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_standard", _ligneAnalysee);
           else _standardSignalDaily.count--;
           console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
@@ -6098,7 +6276,7 @@ Réponds en JSON pur (pas de markdown):
       // 🟣 PREMIUM — cap 10/j (canal socle, toujours présent)
       if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP) {
         _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM")).then(ok => {
+        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM"), _deliveryMeta("premium")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_premium", _ligneAnalysee);
           else _premiumSignalDaily.count--;
           console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
@@ -6111,7 +6289,7 @@ Réponds en JSON pur (pas de markdown):
       if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
         _eliteSignalDaily.count++;
         const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
-        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio).then(ok => {
+        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio, _deliveryMeta("elite")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_elite", _ligneAnalysee);
           else _eliteSignalDaily.count--;
           console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
@@ -6129,7 +6307,7 @@ Réponds en JSON pur (pas de markdown):
       // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
       if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID) {
         _freeSignalDailyDate.count++;
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree).then(ok => {
+        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree, _deliveryMeta("free")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_free", _ligneAnalysee);
           else _freeSignalDailyDate.count--;
           console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
@@ -7359,6 +7537,7 @@ function saveAgentMarketPredictions(match, agentMarketList) {
         if (bet) stmt.run(matchKey, match.home, match.away, am.name, line, bet, Math.min(95, Math.max(40, conf)), match.competition || null);
       });
     });
+    storedOu25ConsensusCache.delete(matchKey);
   } catch (e) { console.error("[agent-market] save:", e.message); }
 }
 
@@ -10856,7 +11035,7 @@ function refreshDailyPickFromDB() {
   try {
     const _db = new Database(DB_PATH, { readonly: true });
     const rows = _db.prepare(
-      "SELECT home, away, competition, sport, best_bet, confidence, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg, final_score_home, final_score_away " +
+      "SELECT match_key, home, away, competition, country, sport, best_bet, confidence, consensus_votes, real_odd, real_odd_source, cote_suggested, raison, home_logo, away_logo, outcome, analysed_at, minute_at_analysis, home_form, away_form, home_goals_avg, away_goals_avg, final_score_home, final_score_away, sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free " +
       "FROM concile_analyses WHERE analysed_at >= datetime('now','-7 days') AND confidence IS NOT NULL AND home IS NOT NULL " +
       "ORDER BY confidence DESC, id DESC LIMIT 300"
     ).all();
@@ -10878,10 +11057,10 @@ function refreshDailyPickFromDB() {
     // les sports non-football (basket/hockey n'ont pas ces marchés), ce qui
     // règle par la même occasion le cas des données live corrompues côté
     // basket (voir le correctif du 31/07/2026 sur Toronto Tempo/Minnesota Lynx).
-    const DAILY_PICK_ALLOWED_BETS = new Set(["Victoire domicile", "Victoire extérieur", "BTTS Oui", "BTTS Non", "Under 2.5 buts"]);
     const eligible = rows.filter(r => r.home && r.away && !isExcludedFromPicks(r)
       && Number(r.confidence) >= getPublishedMinConfidence()
-      && DAILY_PICK_ALLOWED_BETS.has(String(r.best_bet || "").trim()));
+      && (r.analysed_at || "").slice(0, 10) === todayISO
+      && isVerifiedClientOu25Row(r));
     if (!eligible.length) { console.log("[daily-pick] aucun pick eligible sur 7j (hors blacklist, seuil " + getPublishedMinConfidence() + "%, marches autorises) — pick inchangé"); return false; }
     // Priorité 1 : un match d'AUJOURD'HUI déjà RESOLU (score final réellement
     //   confirmé par nos sources — c'est la seule garantie qu'on affiche un
@@ -10999,10 +11178,12 @@ function storedPickIsFresh() {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
     if (!p || !p.home || p.home === "Analyse en cours") return false;
+    if (p.source === "auto-h2h-seed") return false;
     const todayISO = new Date().toISOString().slice(0, 10);
     const pDate = (p.date || (p.publishedAt || "").slice(0, 10) || "").slice(0, 10);
     if (pDate !== todayISO) return false;
     if (isExcludedFromPicks(p)) return false;
+    if (!isOu25Bet(p.best_bet || p.bet)) return false;
     // Force une regeneration si le pick stocke est sous le seuil de diffusion
     // reel (voir refreshDailyPickFromDB) — sinon un pick deja "frais"
     // aujourd'hui mais trop faible resterait affiche jusqu'a minuit.
@@ -11033,12 +11214,16 @@ app.get("/current-pick", (req, res) => {
     const raw = JSON.parse(fs.readFileSync(HERMES_PICKS_PATH, "utf8"));
     const p = raw.currentPick;
     const belowThreshold = p && p.confidence != null && Number(p.confidence) < getPublishedMinConfidence();
-    if (p && p.home && p.home !== "Analyse en cours" && !isExcludedFromPicks(p) && !belowThreshold) {
+    const pDate = String(p?.date || p?.publishedAt || "").slice(0, 10);
+    const todayISO = new Date().toISOString().slice(0, 10);
+    if (p && p.home && p.home !== "Analyse en cours" && p.source !== "auto-h2h-seed" && pDate === todayISO
+        && isOu25Bet(p.best_bet || p.bet) && !isExcludedFromPicks(p) && !belowThreshold) {
       return res.json({ ok: true, pick: normalizeCurrentPick(p, p.source || "hermes") });
     }
   } catch (e) { /* picks.json absent ou invalide */ }
-  // 2. Fallback sur le pick manuel admin
-  res.json({ ok: true, pick: normalizeCurrentPick(loadPick(), "manual-admin") });
+  // Aucun signal verifie aujourd'hui : ne pas recycler un ancien pick manuel
+  // ou un autre marche comme s'il appartenait au produit O/U 2,5.
+  res.json({ ok: true, pick: null });
 });
 
 // ── Pages SEO (pronostics) — contenu public indexable ────────────────────────
@@ -11047,7 +11232,9 @@ app.get("/current-pick", (req, res) => {
 function seoPublishedRows(limit) {
   try {
     const rows = db.prepare(`
-      SELECT home, away, competition, sport, best_bet, confidence, raison, real_odd, outcome, analysed_at
+      SELECT match_key, home, away, competition, country, sport, best_bet, confidence, raison, real_odd,
+             real_odd_source, outcome, analysed_at, minute_at_analysis, consensus_votes,
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
       FROM (
         SELECT *, ROW_NUMBER() OVER (
           PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
@@ -11061,7 +11248,7 @@ function seoPublishedRows(limit) {
       ORDER BY analysed_at DESC
       LIMIT ?
     `).all(limit);
-    return rows.filter(r => !isNoiseForDisplay(r)).map(r => ({
+    return rows.filter(r => !isNoiseForDisplay(r) && isVerifiedClientOu25Row(r)).map(r => ({
       home: r.home, away: r.away, competition: r.competition, sport: r.sport || "Football",
       date: r.analysed_at, bet: maskAiNamesGlobal(r.best_bet || "Analyse IA"),
       confidence: r.confidence, cote: rowOdd(r), outcome: r.outcome,
@@ -11167,13 +11354,15 @@ const TIER_LABEL = { standard: "Standard", premium: "Premium", elite: "Elite/VIP
 
 function fetchResolvedRowsForDate(dateStr) {
   const rows = db.prepare(`
-    SELECT home, away, competition, sport, best_bet, confidence, outcome,
-           real_odd, real_odd_source, final_score_home, final_score_away, analysed_at
+    SELECT match_key, home, away, competition, country, sport, best_bet, confidence, outcome,
+           real_odd, real_odd_source, final_score_home, final_score_away, analysed_at,
+           minute_at_analysis, consensus_votes,
+           sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
     FROM concile_analyses
     WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
       AND date(analysed_at) = ?
   `).all(dateStr);
-  return dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
+  return dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r) && isVerifiedClientOu25Row(r)));
 }
 
 function outperformEmailHtml(email, ownTier, ownStats, aboveTier, aboveStats, dateLabel) {
@@ -11343,8 +11532,10 @@ async function sendDailyGainImages() {
 app.get("/tier-stats", (req, res) => {
   try {
     const rows = db.prepare(`
-      SELECT home, away, competition, sport, confidence, best_bet, outcome, real_odd,
-             real_odd_source, final_score_home, final_score_away, analysed_at
+      SELECT match_key, home, away, competition, country, sport, confidence, best_bet, outcome, real_odd,
+             real_odd_source, final_score_home, final_score_away, analysed_at,
+             minute_at_analysis, consensus_votes,
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
       FROM (
         SELECT *, ROW_NUMBER() OVER (
           PARTITION BY lower(trim(home)), lower(trim(away)), date(analysed_at)
@@ -11357,7 +11548,7 @@ app.get("/tier-stats", (req, res) => {
       ) WHERE _rn = 1
       ORDER BY analysed_at DESC
     `).all();
-    const clean = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
+    const clean = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r) && isVerifiedClientOu25Row(r)));
     const standard = clean.filter(r => tierEligible(r, "standard"));
     const premium  = clean.filter(r => tierEligible(r, "premium"));
     const elite    = clean.filter(r => tierEligible(r, "elite"));
@@ -13175,7 +13366,7 @@ app.get("/analysis-history", (req, res) => {
     // ne s'exprime pas en SQL (dépend de seuils dynamiques + regex JS), donc on
     // filtre après coup et on pagine sur le résultat filtré.
     const rawRows = db.prepare(`
-      SELECT id, home, away, competition, sport, best_bet, confidence, raison,
+      SELECT id, match_key, home, away, competition, country, sport, best_bet, confidence, raison,
              consensus_votes, outcome, analysed_at, real_odd, real_odd_source,
              score_home_at_analysis, score_away_at_analysis, minute_at_analysis,
              final_score_home, final_score_away, resolved_at,
@@ -13196,9 +13387,17 @@ app.get("/analysis-history", (req, res) => {
       WHERE _rn = 1
       ORDER BY analysed_at DESC
     `).all();
-    const tierFilteredRows = tierFilter ? rawRows.filter(r => tierEligible(r, tierFilter)) : rawRows;
-    const total = tierFilteredRows.length;
-    const rows = tierFilteredRows.slice(offset, offset + limit);
+    // Cote client : une analyse n'entre dans l'historique que si elle a ete
+    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 4/5.
+    // L'admin conserve l'integralite des lignes pour diagnostiquer les rejets.
+    const clientRows = viewerIsAdmin ? rawRows : rawRows.filter(isVerifiedClientOu25Row);
+    const planColumn = tierFilter ? SIG_COLUMN_BY_PLAN[tierFilter] : null;
+    const planRows = planColumn
+      ? clientRows.filter(r => r[planColumn] === 1 || r[planColumn] === true)
+      : clientRows;
+    const cleanedRows = dedupeAnalysesByMatch(planRows.filter(r => !isNoiseForDisplay(r)));
+    const total = cleanedRows.length;
+    const rows = cleanedRows.slice(offset, offset + limit);
 
     // isPaidViewer (résolu plus haut) : seuls les abonnés — ou l'admin — voient le
     // pick des analyses EN COURS. Les visiteurs voient les résultats passés
@@ -13212,7 +13411,7 @@ app.get("/analysis-history", (req, res) => {
     // doublons sont déjà éliminés en SQL ci-dessus.
     // Le PARTITION BY SQL ne dedoublonne que sur des noms strictement egaux :
     // on repasse avec la comparaison tolerante aux variantes de source.
-    const visibleRows = dedupeAnalysesByMatch(rows.filter(r => !isNoiseForDisplay(r)));
+    const visibleRows = rows;
 
     // Palier le plus bas qui reçoit cette analyse (cf. tierEligible : miroir exact
     // des règles de diffusion Telegram). "hors-palier" = publiée sur le site mais
@@ -13227,6 +13426,7 @@ app.get("/analysis-history", (req, res) => {
     const analyses = visibleRows.map(r => {
       let agents = [];
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
+      const ou25Proof = storedOu25Consensus(r);
       const resolved = r.outcome === "win" || r.outcome === "loss";
       const reveal = resolved || isPaidViewer; // pick visible si terminé OU abonné
       return {
@@ -13235,7 +13435,7 @@ app.get("/analysis-history", (req, res) => {
         competition: r.competition, sport: r.sport || "Football",
         bet: reveal ? r.best_bet : null, confidence: r.confidence,
         cote: reveal ? rowOdd(r) : null,
-        reasoning: reveal ? r.raison : null, consensus: r.consensus_votes,
+        reasoning: reveal ? r.raison : null, consensus: ou25Proof.voteCount,
         locked: !reveal,
         outcome: r.outcome,
         analysed_at: r.analysed_at,
@@ -13274,8 +13474,9 @@ app.get("/analysis-history", (req, res) => {
     // TOUTES les analyses publiees, diffusees ou non. Un visiteur lisait donc
     // comme gain d'abonne un resultat que personne n'avait recu.
     const allResolved = db.prepare(`
-      SELECT home, away, competition, sport, outcome, analysed_at, confidence,
+      SELECT match_key, home, away, competition, country, sport, outcome, analysed_at, confidence,
              best_bet, real_odd, real_odd_source, final_score_home, final_score_away,
+             minute_at_analysis, consensus_votes,
              sig_sent_free, sig_sent_standard, sig_sent_premium, sig_sent_elite
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND confidence >= ${getPublishedMinConfidence()}
@@ -13286,7 +13487,7 @@ app.get("/analysis-history", (req, res) => {
     const dedupResolved = [];
     for (const r of allResolved) {
       // Mêmes exclusions que la liste (jeunes / douteuses) pour un winrate cohérent.
-      if (isNoiseForDisplay(r)) continue;
+      if (isNoiseForDisplay(r) || !isVerifiedClientOu25Row(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenStat.has(k)) continue;
       seenStat.add(k);
@@ -13316,9 +13517,8 @@ app.get("/analysis-history", (req, res) => {
     // DIFFUSEES : au moins un sig_sent_* a 1, donc un abonne (ou le canal
     //   gratuit) a reellement recu ce signal. Seules celles-ci peuvent porter
     //   un montant en euros.
-    // OBSERVEES : le Concile avait vu juste, mais rien n'est parti. Elles
-    //   restent comptees en volume et en winrate — les masquer serait
-    //   malhonnete — mais sans aucun euro.
+    // OBSERVEES : conserve pour compatibilite API, mais les analyses non
+    // diffusees ne font plus partie de la vue client et restent donc a zero.
     const estDiffusee = (r) =>
       r.sig_sent_free === 1 || r.sig_sent_standard === 1 ||
       r.sig_sent_premium === 1 || r.sig_sent_elite === 1;
@@ -13351,7 +13551,10 @@ app.get("/analysis-history", (req, res) => {
 
     // Analyses publiées non encore résolues (dédoublonnées, hors bruit) = "en attente".
     const pendingRows = db.prepare(`
-      SELECT home, away, competition, sport, analysed_at FROM concile_analyses
+      SELECT match_key, home, away, competition, country, sport, analysed_at, best_bet,
+             minute_at_analysis, consensus_votes, real_odd, real_odd_source,
+             sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free
+      FROM concile_analyses
       WHERE (outcome IS NULL OR outcome NOT IN ('win','loss'))
         AND confidence >= ${getPublishedMinConfidence()}
         AND date(analysed_at) >= '2026-07-03'
@@ -13360,7 +13563,7 @@ app.get("/analysis-history", (req, res) => {
     const seenP = new Set();
     let pending = 0;
     for (const r of pendingRows) {
-      if (isNoiseForDisplay(r)) continue;
+      if (isNoiseForDisplay(r) || !isVerifiedClientOu25Row(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
       if (seenP.has(k)) continue;
       seenP.add(k);
@@ -15610,12 +15813,9 @@ function checkAnalyticsSchedule() {
     sendDailyGainImages();
   }
 
-  // Garantit un pick du jour daté d'aujourd'hui en ligne au plus tard 4h-5h
-  // du matin (demande de Greg, 01/08/2026) — voir seedDailyPickIfMissingForToday.
-  if (hour >= 4 && _lastDailyPickSeedDate !== todayKey) {
-    _lastDailyPickSeedDate = todayKey;
-    seedDailyPickIfMissingForToday();
-  }
+  // Le seed pre-match H2H est volontairement desactive : le produit client
+  // repose desormais uniquement sur un signal live O/U 2,5 effectivement
+  // diffuse entre la 15e et la 40e minute.
 
   if (hour >= 22 && _lastBilanDate !== todayKey) {
     _lastBilanDate = todayKey;
