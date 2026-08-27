@@ -9,10 +9,12 @@
 - La diffusion est limitée au football de championnat entre la 15e et la 40e minute ;
   les autres sports, marchés, coupes, barrages, amicaux et ligues non fiables restent
   disponibles uniquement pour l'audit interne.
-- L'historique, les statistiques, les pages pronostics et le pick du jour ne montrent
-  plus les analyses non envoyées, les autres marchés ni les consensus sous 4/5.
-- Le quorum historique est recalculé depuis les cinq bulletins O/U 2,5 stockés par
-  instant de match ; l'ancienne colonne de consensus principal n'est plus crue seule.
+- L'historique antérieur est conservé. Seule la journée défectueuse du 26 août est
+  retraitée : analyses non envoyées, autres marchés et consensus sous 4/5 sont retirés.
+- Pour ce retraitement, le quorum est recalculé depuis les cinq bulletins O/U 2,5
+  stockés par instant de match ; l'ancien consensus principal n'est plus cru seul.
+- Le filtre de diffusion est appliqué avant le dédoublonnage des snapshots d'un
+  match : une observation tardive ne peut plus remplacer l'instant exact envoyé.
 - Chaque futur envoi de signal conserve le `message_id` retourné par Telegram afin
   d'apporter une preuve durable de livraison et de distinguer analyse et diffusion.
 

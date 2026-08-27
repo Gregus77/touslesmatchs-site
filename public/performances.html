@@ -279,7 +279,7 @@ async function doLogin(){
 
 <div class="page">
   <div class="page-title">Performances du Concile</div>
-  <div class="page-sub">Tous les résultats depuis le lancement. Aucun pick caché, aucune statistique modifiée. Winrate, ROI et bénéfice sont calculés automatiquement depuis notre base, sur une mise fixe de 10&nbsp;€ par analyse.</div>
+  <div class="page-sub">L'historique antérieur est conservé. La journée défectueuse du 26 août a été retraitée avec les bons critères. Depuis le 27 août 2026, chaque nouveau signal Over/Under 2,5 est associé à une preuve d'envoi Telegram.</div>
 
   <div class="tier-tabs" id="tier-tabs">
     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
@@ -288,10 +288,10 @@ async function doLogin(){
     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
     <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
   </div>
-  <div class="tier-note" id="tier-note">Les paliers sont cumulatifs, score de confiance minimum 82/100 pour Standard et Premium, 75/100 pour Elite-VIP : Standard = la sélection la plus stricte du jour (cote réelle ANJ), Premium l'élargit, Elite regroupe tout le vivier diffusable.</div>
+  <div class="tier-note" id="tier-note">Règle commune aux trois paliers : football de championnat entre la 15e et la 40e minute, cinq sièges O/U 2,5 renseignés, majorité minimale 4/5 et cote bookmaker réelle.</div>
 
   <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Analyses</div></div>
+    <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Résultats</div></div>
     <div class="kpi"><div class="kpi-val c-green" id="k-winrate">—</div><div class="kpi-lbl">Winrate</div></div>
     <div class="kpi"><div class="kpi-val c-green" id="k-wins">—</div><div class="kpi-lbl">Gagnées</div></div>
     <div class="kpi"><div class="kpi-val c-red" id="k-losses">—</div><div class="kpi-lbl">Perdues</div></div>
@@ -419,9 +419,9 @@ function renderKpis() {
 
   var cap = document.getElementById('roi-caption');
   if (total > 0) {
-    cap.textContent = 'Sur ' + total + ' analyse' + (total > 1 ? 's' : '') + ' résolue' + (total > 1 ? 's' : '') + ' et diffusée' + (total > 1 ? 's' : '') + ' à nos abonnés'
+    cap.textContent = 'Sur ' + total + ' résultat' + (total > 1 ? 's' : '') + ' résolu' + (total > 1 ? 's' : '')
       + ' — ' + wins + ' gagnée' + (wins > 1 ? 's' : '') + ', ' + losses + ' perdue' + (losses > 1 ? 's' : '')
-      + '. Bénéfice simulé à 10 € la mise : ' + fmtSigned(s.profit10) + ' (ROI ' + (Number(s.roi_pct) >= 0 ? '+' : '') + (Number(s.roi_pct) || 0) + ' %). La liste ci-dessous montre aussi les analyses observées mais non envoyées (badge Observé).';
+      + '. Bénéfice simulé à 10 € la mise : ' + fmtSigned(s.profit10) + ' (ROI ' + (Number(s.roi_pct) >= 0 ? '+' : '') + (Number(s.roi_pct) || 0) + ' %).';
   } else {
     cap.textContent = 'Aucune analyse résolue pour ce palier pour l\'instant.';
   }
@@ -465,9 +465,11 @@ function renderRow(a) {
   // 2 perdues") et cette liste (toutes les analyses qualifiees) racontent
   // deux histoires differentes et ca ressemble a des stats triees.
   var wasDiffused = !!(a.sent && (a.sent.standard || a.sent.premium || a.sent.elite || a.sent.free));
-  var diffusionHtml = wasDiffused
-    ? '<span class="h-badge diffused">📡 Diffusé</span>'
-    : '<span class="h-badge observed">👁 Observé, non envoyé</span>';
+  var diffusionHtml = a.history_mode === 'legacy'
+    ? '<span class="h-badge observed">🗂 Ancien système</span>'
+    : a.delivery_proven
+      ? '<span class="h-badge diffused">✅ Telegram vérifié</span>'
+      : '<span class="h-badge observed">⚠️ Livraison non prouvée</span>';
 
   // Un montant en euros sur une ligne jamais diffusee ferait croire a un gain/perte
   // reel alors que personne n'a recu ce pick — meme regle que le compteur du haut
