@@ -2,6 +2,9 @@
 
 ## 2026-08-27 — Fiabilisation client Over/Under 2,5
 
+- La page Résultats applique désormais le même historique vérifié au fondateur
+  connecté qu'aux visiteurs ; les analyses brutes restent consultables uniquement
+  dans l'audit quotidien d'administration.
 - Le verdict client est désormais construit uniquement à partir des cinq bulletins
   réels `buts` du Concile, et non du pari principal libre de chaque IA.
 - Aucun signal ne part si les cinq sièges O/U 2,5 ne sont pas renseignés, si la
