@@ -1,5 +1,12 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-28 — Réparation du tunnel Concile → Telegram
+
+- Le moteur automatique filtre désormais les matchs hors produit client avant les cinq appels IA : football, championnat fiable et minute 15 à 40.
+- Le préfiltre des cotes ARJEL est limité au marché Over/Under 2,5.
+- `/api/live-activity` ne présente plus une analyse à forte confiance comme un signal : une livraison Telegram réussie avec `message_id` est maintenant obligatoire.
+- Le plafond de sécurité OpenRouter reste inchangé à 100 appels par jour.
+
 ## 2026-08-28 — Cohérence publique, fin de la bêta fondatrice et cache PWA
 
 - L'accueil utilise désormais exactement le bloc `stats.abonnes` de
