@@ -1,0 +1,388 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 9741ae5..e87f996 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,14 @@
+ # CHANGELOG — TousLesMatchs
+ 
++## 2026-08-28 — Fin publique de la bêta et tunnel gratuit maîtrisé
++
++- L'application ne présente plus d'accès fondateur, de cycle bêta ni de places
++  gratuites +0,5 ; les anciennes candidatures restent archivées côté admin.
++- Toute nouvelle candidature bêta est refusée proprement par l'API avec HTTP 410.
++- Le compte gratuit conserve le pick vitrine et les résultats publics ; les
++  sélections exactes +0,5 et leurs alertes sont réservées aux membres dès 4,90€.
++- Le cache PWA passe en v7 pour retirer les anciens libellés des appareils déjà installés.
++
+ ## 2026-08-28 — Traçabilité prématch et compteur Live
+ 
+ - Les picks H2H prématch sont désormais marqués explicitement comme internes et non diffusables.
+@@ -287,4 +296,4 @@
+ - Regle de relais : Claude/Codex peuvent modifier site/API ; Hermes audite/recommande et ne pousse pas de MAJ site/API sans validation Greg.
+ - Attention VPS : ne pas copier `public/index.html` sur `site/index.html` sans verification, car `site/` est le rendu public servi par Caddy.
+ - Correctif live : si le cache `/live-matches` contient seulement du football, l'API tente maintenant d'enrichir avec TheSportsDB avant de repondre. La route envoie aussi `Cache-Control: no-store` pour eviter une reponse navigateur ancienne.
+-- Correctif presentation : suppression des restes publics "4 agents + 1 Chief" dans `public/js/i18n.js` et `public/faq.html`, remplacement par "5 IA independantes votent". FAQ nettoyee aussi du tennis.
+\ No newline at end of file
++- Correctif presentation : suppression des restes publics "4 agents + 1 Chief" dans `public/js/i18n.js` et `public/faq.html`, remplacement par "5 IA independantes votent". FAQ nettoyee aussi du tennis.
+diff --git a/public/app.html b/public/app.html
+index 99ed1fc..52ed7f9 100644
+--- a/public/app.html
++++ b/public/app.html
+@@ -535,7 +535,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+     if (el) el.style.display = offline ? "block" : "none";
+   }
+   function get(path) {
+-    return fetch(path, { headers: { "Accept": "application/json" }, cache: "no-store" })
++    var headers = { "Accept": "application/json" };
++    var sessionToken = token();
++    var sessionEmail = "";
++    try { sessionEmail = localStorage.getItem("tlm_email") || ""; } catch (e) {}
++    if (sessionToken) headers.Authorization = "Bearer " + sessionToken;
++    if (sessionEmail) headers["X-TLM-Email"] = sessionEmail;
++    return fetch(path, { headers: headers, cache: "no-store" })
+       .then(function (r) {
+         if (!r.ok) throw new Error("HTTP " + r.status);
+         return r.json();
+@@ -716,7 +722,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+       return;
+     }
+     pushFeedback('Activation en cours...', true);
+-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v3-20260826').then(function (reg) {
++    navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828').then(function (reg) {
+       return Notification.requestPermission().then(function (perm) {
+         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
+         return get('/api/push/vapid-public-key').then(function (d) {
+@@ -754,13 +760,18 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+       + '</div>';
+   }
+ 
+-  function goal05BetaRow() {
+-    return '<div class="offer-stack" aria-label="Accès Goal plus 0,5"><a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a></div>';
++  function goal05MemberAccess() {
++    var currentPlan = String(plan() || 'free');
++    return !!token() && /(standard|premium|elite|vip|founder|fondateur|admin)/i.test(currentPlan);
++  }
++
++  function goal05MemberRow() {
++    return '<div class="offer-stack" aria-label="Accès membre Goal plus 0,5"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">+0,5 but — accès membre</div><div class="offer-desc">Sélections exactes et alertes réservées aux abonnés</div></div><div class="offer-price">Dès 4,90€</div></a></div>';
+   }
+ 
+   function renderGoal05Pick(signal) {
+     var box = $("pick-box");
+-    var locked = !token();
++    var locked = !goal05MemberAccess();
+     var _alertsOn = false; try { _alertsOn = localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
+     var _pushOn = false; try { _pushOn = localStorage.getItem('tlm_push_enabled') === '1' && typeof Notification !== 'undefined' && Notification.permission === 'granted'; } catch (e) {}
+     var _statusHtml = locked ? '' : (
+@@ -769,15 +780,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+       + '<div><span style="color:' + (_pushOn ? '#22c55e' : '#ef4444') + ';font-weight:900">' + (_pushOn ? '\u2713' : '\u2717') + '</span> Notifications même app fermée : ' + (_pushOn ? 'activées' : 'non activées') + '</div>'
+       + '</div>'
+     );
+-    box.innerHTML = goal05VerdictCard(signal)
+-      + goal05BetaRow()
++    box.innerHTML = goal05VerdictCard(locked ? null : signal)
++      + goal05MemberRow()
+       + (locked
+-          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accès +0,5</a>'
++          ? '<a class="btn btn-g" href="/#plans" style="margin-top:12px">Voir les offres dès 4,90€</a>'
+           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button><button class="btn btn-o" type="button" onclick="enablePushNotifications()" style="margin-top:8px">Activer notifications meme app fermee</button>')
+       + _statusHtml;
+-    var link = box.querySelector('[data-tab-link="me"]');
+-    if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });
+-    if (signal && token()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
++    if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
+   }
+ 
+   function renderCurrentPick(data) {
+@@ -951,13 +960,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+       + '<button class="btn btn-p" id="btn-in">Me connecter</button>'
+       + '<button class="btn btn-o" id="btn-forgot">Recevoir mon code par email</button>'
+       + '<div class="state" id="log-msg" style="padding:9px 0 0"></div></div>'
+-      + '<div class="card app-auth-card"><div class="lbl">Nouveau sur TousLesMatchs ?</div><div class="app-auth-title">Entre dans la bêta</div>'
+-      + '<div class="app-auth-note">Laisse ton email : tu entres dans le tunnel TousLesMatchs/Brevo et tu reçois un code d’accès gratuit pour tester l’app.</div>'
++      + '<div class="card app-auth-card"><div class="lbl">Nouveau sur TousLesMatchs ?</div><div class="app-auth-title">Crée ton compte gratuit</div>'
++      + '<div class="app-auth-note">Découvre le pick gratuit du jour et les résultats publics, sans carte bancaire.</div>'
+       + '<input id="lead-mail" type="email" inputmode="email" autocomplete="email" placeholder="Ton email">'
+       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
+-      + '<button class="btn btn-g" id="btn-lead">Recevoir mon accès gratuit</button>'
++      + '<button class="btn btn-g" id="btn-lead">Créer mon compte gratuit</button>'
+       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
+-      + '<div class="app-auth-note">Tu recevras ton code par email, puis les signaux +0,5 arriveront dans l’app et sur Telegram.</div></div></div>';
++      + '<div class="app-auth-note">Les sélections exactes +0,5 et les alertes membres sont disponibles à partir de 4,90€/mois.</div></div></div>';
+ 
+     $("btn-in").addEventListener("click", function () {
+       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
+@@ -1020,7 +1029,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+   // les notifications ne sont pas encore activées. Cela force la récupération
+   // des corrections de cache pour tous les utilisateurs Android.
+   if ('serviceWorker' in navigator) {
+-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v3-20260826')
++    navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828')
+       .then(function (reg) { return reg.update(); })
+       .catch(function () {});
+   }
+diff --git a/public/index.html b/public/index.html
+index f2e88f3..aeb9019 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -1585,13 +1585,16 @@ function liveHomeLogo(m){return m&&(m.home_logo||m.homeLogo||m.home_badge||m.str
+ function liveAwayLogo(m){return m&&(m.away_logo||m.awayLogo||m.away_badge||m.strAwayTeamBadge||(m.teamB&&m.teamB.logo))||'';}
+ function liveHomeScore(m){var v=m&&(m.score_home!=null?m.score_home:m.home_score!=null?m.home_score:m.intHomeScore!=null?m.intHomeScore:m.goals&&(m.goals.home!=null?m.goals.home:null));return v==null?'':v;}
+ function liveAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
++function tlmHomepageAnalyzedMatch(m){
++  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true);
++}
+ async function loadLive(){
+   var grid=document.getElementById('live-rows');
+   try{
+     var r=await fetch('/api/live-matches');
+     var d=await r.json();
+-    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).slice(0,3);
+-    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.<br>Consulte les prochaines rencontres disponibles.</div>'; return; }
++    var matches=(d.matches||d.live||[]).filter(tlmHomepageAnalyzedMatch).slice(0,3);
++    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun signal n\'a encore été validé par au moins 4 IA sur 5.<br>Le moteur continue d\'analyser les championnats autorisés.</div>'; return; }
+     grid.innerHTML=matches.map(function(m){
+       var icon=SPORT_ICO[m.sport]||'🏟️';
+       var rawHomeScore=liveHomeScore(m),rawAwayScore=liveAwayScore(m),sh=rawHomeScore===''?'-':rawHomeScore,sa=rawAwayScore===''?'-':rawAwayScore;
+@@ -1679,19 +1682,19 @@ function renderHeroWatchlist(p){
+ async function loadHeroLive(){
+   try{
+     var r=await fetch('/api/live-matches?t='+Date.now(),{cache:'no-store'}),d=await r.json();
+-    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed);
++    var matches=(d.matches||d.live||[]).filter(tlmHomepageAnalyzedMatch);
+     matches.sort(function(a,b){
+       function quality(m){return (liveHomeLogo(m)?2:0)+(liveAwayLogo(m)?2:0)+(liveHomeScore(m)!==''?2:0)+(liveAwayScore(m)!==''?2:0)+Math.min(1,Number(m.minute||0)/100);}
+       return quality(b)-quality(a);
+     });
+     tlmHasLiveMatch=!!matches[0];
+-    if(tlmHasLiveMatch)renderHeroLive(matches[0]);else renderHeroWatchlist(tlmFeaturedMatch);
+-  }catch(e){tlmHasLiveMatch=false;renderHeroWatchlist(tlmFeaturedMatch);}
++    if(tlmHasLiveMatch)renderHeroLive(matches[0]);else renderHeroLive(null);
++  }catch(e){tlmHasLiveMatch=false;renderHeroLive(null);}
+ }
+ loadHeroLive();setInterval(loadHeroLive,30000);
+ 
+ /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
+-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v5-20260828').catch(function(){});});}
++if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828').catch(function(){});});}
+ 
+ /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
+ function renderUpcomingItem(p){
+@@ -2282,4 +2285,4 @@ document.addEventListener('click', function(e){
+ })();
+ </script>
+ </body>
+-</html>
+\ No newline at end of file
++</html>
+diff --git a/public/sw.js b/public/sw.js
+index 1c147e1..2d02188 100644
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -3,7 +3,7 @@
+  * Le cache reste uniquement un secours hors ligne.
+  */
+ 
+-const VERSION = "tlm-app-v5-history-beta-20260828";
++const VERSION = "tlm-app-v7-paid-funnel-20260828";
+ const SHELL_CACHE = `${VERSION}-shell`;
+ const DATA_CACHE = `${VERSION}-data`;
+ 
+@@ -128,4 +128,4 @@ self.addEventListener("fetch", (event) => {
+     }
+     return response;
+   })));
+-});
+\ No newline at end of file
++});
+diff --git a/scripts/api_server.js b/scripts/api_server.js
+index c511b3c..22de7be 100644
+--- a/scripts/api_server.js
++++ b/scripts/api_server.js
+@@ -486,7 +486,10 @@ db.exec(`
+   CREATE INDEX IF NOT EXISTS idx_tg_delivery_match ON telegram_signal_deliveries(match_key, channel, ok);
+ `);
+ 
+-// Beta privee +0,5 : capacite reelle, liste d attente et aucune diffusion automatique.
++// Anciennes candidatures +0,5 conservees uniquement pour l'historique admin.
++// La campagne publique est fermee : aucun nouveau compte gratuit ne doit etre
++// transforme en acces +0,5 complet par une vieille page restee en cache.
++const FOUNDER_BETA_ENABLED = false;
+ db.exec(`CREATE TABLE IF NOT EXISTS beta_plus05_applications (
+   email TEXT PRIMARY KEY,
+   status TEXT NOT NULL CHECK(status IN ('accepted','waitlist')),
+@@ -9085,17 +9088,56 @@ function normalizeContactLang(lang = "", country = "") {
+ }
+ 
+ // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
+-app.get("/goal05/latest", (req, res) => {
+-  res.json(readGoal05LatestSignal());
+-});
+-app.get("/api/goal05/latest", (req, res) => {
+-  res.json(readGoal05LatestSignal());
+-});
++// Le verrouillage visuel ne suffit pas : l'API publique ne doit jamais livrer
++// l'equipe, le pari ou la cote exacte a un visiteur gratuit/non connecte.
++function paidGoal05Account(req) {
++  const auth = String(req.headers.authorization || "");
++  const sessionToken = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
++  const email = String(req.headers["x-tlm-email"] || "").toLowerCase().trim();
++  if (!sessionToken) return null;
++
++  if (email) {
++    const subscriber = verifyFcmSubscriber(email, sessionToken);
++    if (subscriber) return subscriber;
++  }
++
++  try {
++    const session = db.prepare("SELECT email, expires_at FROM sessions WHERE token = ?").get(sessionToken);
++    if (!session || Date.parse(session.expires_at) < Date.now()) return null;
++    const account = lookupAccountByEmail(session.email);
++    if (!account || String(account.plan || "free").toLowerCase() === "free") return null;
++    if (account.expires_at && Date.parse(account.expires_at) < Date.now()) return null;
++    return { email: session.email, ...account };
++  } catch (error) {
++    console.error("[goal05] verification membre:", error.message);
++    return null;
++  }
++}
++
++function sendGoal05Latest(req, res) {
++  const latest = readGoal05LatestSignal();
++  if (!paidGoal05Account(req)) {
++    return res.json({
++      ok: true,
++      locked: true,
++      available: !!latest?.signal,
++      signal: null,
++      cta: "Selection exacte reservee aux membres des 4,90 euros par mois",
++    });
++  }
++  return res.json({ ...latest, locked: false });
++}
++
++app.get("/goal05/latest", sendGoal05Latest);
++app.get("/api/goal05/latest", sendGoal05Latest);
+ app.get("/beta-plus05/status", (req, res) => {
+   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
+-  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
++  res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
+ });
+ app.post("/beta-plus05/apply", (req, res) => {
++  if (!FOUNDER_BETA_ENABLED) {
++    return res.status(410).json({ ok:false, error:"La campagne beta est terminee. Creez un compte gratuit ou choisissez une formule membre." });
++  }
+   const email = normalizeBetaEmail(req.body?.email);
+   const adultConfirmed = req.body?.adultConfirmed === true;
+   const legalAccepted = req.body?.legalAccepted === true;
+@@ -11946,9 +11988,23 @@ app.get("/live-matches", async (req, res) => {
+     // message parlant de minutes de football. Une seule source de vérité ici.
+     const withVerdict = matches.map((m) => {
+       const ou25 = getLiveOu25VoteState(m);
+-      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25 };
++      const clientProductEligible = isClientOu25MatchEligible(m, true);
++      const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
++      // Source de verite pour l'accueil public : un match ne peut etre presente
++      // comme un signal que si le championnat est dans le perimetre client ET
++      // qu'au moins 4 IA ont reellement enregistre le meme vote O/U 2,5.
++      // Cela evite qu'un simple match live bien illustre (logos + score) soit
++      // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
++      const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
++      const visibility = {
++        client_product_eligible: clientProductEligible,
++        analysis_started: Number(ou25.vote_count || 0) > 0,
++        analysis_verified: homepageDisplayEligible,
++        homepage_display_eligible: homepageDisplayEligible,
++      };
++      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25, ...visibility };
+       const reason = livePickBlockReason(m);
+-      return { ...m, analysable: !reason, block_reason: reason, ou25 };
++      return { ...m, analysable: !reason, block_reason: reason, ou25, ...visibility };
+     });
+ 
+     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
+diff --git a/scripts/test_beta_retirement_and_free_funnel.js b/scripts/test_beta_retirement_and_free_funnel.js
+new file mode 100644
+index 0000000..213cb6a
+--- /dev/null
++++ b/scripts/test_beta_retirement_and_free_funnel.js
+@@ -0,0 +1,32 @@
++#!/usr/bin/env node
++"use strict";
++
++const fs = require("fs");
++const path = require("path");
++
++const root = path.resolve(__dirname, "..");
++const api = fs.readFileSync(path.join(root, "scripts", "api_server.js"), "utf8");
++const home = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
++const app = fs.readFileSync(path.join(root, "public", "app.html"), "utf8");
++const sw = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
++
++function assert(condition, message) {
++  if (!condition) throw new Error(message);
++  console.log("  ✅ " + message);
++}
++
++assert(!/bêta privée|entre dans la bêta|20 places fondatrices|accès fondateur|cycle 01/i.test(home + app), "aucun discours bêta visible dans le site ou l'application");
++assert(api.includes("const FOUNDER_BETA_ENABLED = false"), "campagne bêta désactivée côté serveur");
++assert(api.includes("return res.status(410)"), "ancienne route de candidature fermée explicitement");
++assert(app.includes("var locked = !goal05MemberAccess()"), "le compte gratuit ne déverrouille plus le signal +0,5 exact");
++assert(api.includes("function paidGoal05Account(req)") && api.includes("signal: null") && api.includes("locked: true"), "l'API masque aussi le signal +0,5 exact sans abonnement vérifié");
++assert(api.includes('db.prepare("SELECT email, expires_at FROM sessions WHERE token = ?")') && api.includes("verifyFcmSubscriber(email, sessionToken)"), "les deux systèmes de connexion existants vérifient les droits payants");
++assert(app.includes('headers.Authorization = "Bearer " + sessionToken') && app.includes('headers["X-TLM-Email"] = sessionEmail'), "l'application transmet la session au contrôle d'accès serveur");
++assert(app.includes("goal05VerdictCard(locked ? null : signal)"), "aucune donnée exacte n'est rendue derrière le verrou gratuit");
++assert(app.includes("Dès 4,90€") && app.includes("Sélections exactes et alertes réservées aux abonnés"), "offre membre +0,5 claire dès 4,90€");
++assert(home.includes("Pick gratuit du jour") && home.includes("Aucune carte bancaire"), "une preuve gratuite reste disponible pour attirer les visiteurs");
++assert(api.includes("_freeSignalDailyDate.count < 1"), "diffusion gratuite limitée à une vitrine par jour");
++assert(api.includes("SANS la sélection exacte"), "Telegram gratuit reste un teaser et ne remplace pas l'abonnement");
++assert(home.includes("tlm-app-v7-paid-funnel-20260828") && app.includes("tlm-app-v7-paid-funnel-20260828") && sw.includes("tlm-app-v7-paid-funnel-20260828"), "cache PWA v7 cohérent sur toutes les pages");
++
++console.log("\nRÉSULTAT : OK");
+diff --git a/scripts/test_homepage_analysis_gate.js b/scripts/test_homepage_analysis_gate.js
+new file mode 100644
+index 0000000..577d2c1
+--- /dev/null
++++ b/scripts/test_homepage_analysis_gate.js
+@@ -0,0 +1,41 @@
++#!/usr/bin/env node
++"use strict";
++
++const fs = require("fs");
++const path = require("path");
++
++const root = path.resolve(__dirname, "..");
++const api = fs.readFileSync(path.join(root, "scripts", "api_server.js"), "utf8");
++const home = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
++const serviceWorker = fs.readFileSync(path.join(root, "public", "sw.js"), "utf8");
++
++function assert(condition, message) {
++  if (!condition) throw new Error(message);
++}
++
++assert(
++  api.includes("const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES"),
++  "Le serveur doit exiger une ligue client eligible et au moins 4 votes alignes."
++);
++assert(
++  api.includes("homepage_display_eligible: homepageDisplayEligible"),
++  "L'API doit exposer la decision d'affichage issue du serveur."
++);
++assert(
++  home.includes("function tlmHomepageAnalyzedMatch(m)"),
++  "L'accueil doit posseder un garde-fou explicite."
++);
++assert(
++  home.includes(".filter(tlmHomepageAnalyzedMatch)"),
++  "Le hero et la liste live doivent filtrer les matchs non analyses."
++);
++assert(
++  !home.includes("var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).slice(0,3)"),
++  "La liste d'accueil ne doit plus se contenter du filtre visuel historique."
++);
++assert(
++  home.includes("/sw.js?v=tlm-app-v7-paid-funnel-20260828") && serviceWorker.includes("tlm-app-v7-paid-funnel-20260828"),
++  "Le cache PWA doit changer de version avec le garde-fou d'accueil."
++);
++
++console.log("OK homepage_analysis_gate");
