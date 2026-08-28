@@ -1,0 +1,265 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index e87f996..5f92c8b 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,15 @@
+ # CHANGELOG — TousLesMatchs
+ 
++## 2026-08-28 — Preuve gratuite et fin du chargement infini
++
++- Le calcul H2H des matchs à venir se fait désormais en arrière-plan : l'accueil
++  répond immédiatement, affiche un état explicite et se réactualise tout seul.
++- Le navigateur abandonne proprement une requête après 12 secondes au lieu de
++  laisser « Chargement… » indéfiniment.
++- Quand aucun pick du jour n'est validé, l'accueil montre le dernier résultat
++  gratuit résolu et daté, sans le présenter comme un nouveau signal.
++- Le cache PWA passe en v8 pour diffuser ces corrections aux appareils installés.
++
+ ## 2026-08-28 — Fin publique de la bêta et tunnel gratuit maîtrisé
+ 
+ - L'application ne présente plus d'accès fondateur, de cycle bêta ni de places
+diff --git a/public/app.html b/public/app.html
+index 52ed7f9..867175b 100644
+--- a/public/app.html
++++ b/public/app.html
+@@ -722,7 +722,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+       return;
+     }
+     pushFeedback('Activation en cours...', true);
+-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828').then(function (reg) {
++    navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828').then(function (reg) {
+       return Notification.requestPermission().then(function (perm) {
+         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
+         return get('/api/push/vapid-public-key').then(function (d) {
+@@ -1029,7 +1029,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
+   // les notifications ne sont pas encore activées. Cela force la récupération
+   // des corrections de cache pour tous les utilisateurs Android.
+   if ('serviceWorker' in navigator) {
+-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828')
++    navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828')
+       .then(function (reg) { return reg.update(); })
+       .catch(function () {});
+   }
+diff --git a/public/index.html b/public/index.html
+index aeb9019..36f26d7 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -1694,7 +1694,7 @@ async function loadHeroLive(){
+ loadHeroLive();setInterval(loadHeroLive,30000);
+ 
+ /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
+-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828').catch(function(){});});}
++if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828').catch(function(){});});}
+ 
+ /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
+ function renderUpcomingItem(p){
+@@ -1734,8 +1734,13 @@ async function loadUpcoming(){
+   // Identifiants en EN-TETES, plus en query string : une URL finit dans
+   // l'historique du navigateur, les journaux du proxy et l'en-tete Referer.
+   var authHdr=(email&&code)?{'X-TLM-Email':email,'X-TLM-Code':code}:{};
++  var controller=typeof AbortController!=='undefined'?new AbortController():null;
++  var timeout=controller?setTimeout(function(){controller.abort();},12000):null;
+   try{
+-    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{headers:authHdr});
++    var requestOptions={headers:authHdr,cache:'no-store'};
++    if(controller)requestOptions.signal=controller.signal;
++    var r=await fetch('/api/upcoming-picks?t='+Date.now(),requestOptions);
++    if(!r.ok)throw new Error('HTTP '+r.status);
+     var d=await r.json();
+     tlmFeaturedMatch=(d.featuredMatch&&tlmMatchAllowed(d.featuredMatch))?d.featuredMatch:null;
+     var allPicks=(d.picks||[]).filter(tlmMatchAllowed);
+@@ -1761,12 +1766,15 @@ async function loadUpcoming(){
+         if(!tlmHasLiveMatch)renderHeroWatchlist(wf);
+       }else hl.innerHTML='';
+       var s=d.stats;
+-      var detail=(s&&s.totalFixtures)
++      var detail=d.refreshing
++        ? '🔍 Le moteur vérifie les prochains matchs et leurs historiques. Cette zone se mettra à jour automatiquement.'
++        :(s&&s.totalFixtures)
+         ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
+-        : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
++        : 'Aucun match à venir ne respecte actuellement les championnats et critères analysés.';
+       box.innerHTML='<div class="empty-note">'+detail+'<br>'+
+         'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
+         '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
++      if(d.refreshing)setTimeout(loadUpcoming,10000);
+       return;
+     }
+     // Le meilleur pick (confiance la plus haute, verrouille ou non) mis en
+@@ -1791,7 +1799,8 @@ async function loadUpcoming(){
+       '</div>'+upcomingTeamLogo(top.away_logo,top.away)+bet0+
+     '</div>';
+     box.innerHTML=rest.map(renderUpcomingItem).join('');
+-  } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
++  } catch(e){ box.innerHTML='<div class="empty-note">Les prochains matchs sont momentanément indisponibles. Le moteur continue sa vérification.</div>'; }
++  finally{if(timeout)clearTimeout(timeout);}
+ }
+ loadUpcoming();
+ 
+@@ -1930,6 +1939,20 @@ async function loadPick(){
+     var r=await fetch('/api/current-pick?t='+Date.now());
+     var d=await r.json();
+     var p=d.pick&&d.pick.currentPick?d.pick.currentPick:d.pick;
++    if(!p&&d.lastResult){
++      var proof=d.lastResult;
++      var proofWin=proof.outcome==='win';
++      var proofScore=(proof.final_score_home!=null&&proof.final_score_away!=null)
++        ? esc(proof.final_score_home)+' - '+esc(proof.final_score_away):'Score final vérifié';
++      box.innerHTML='<div class="pick-comp">Dernier résultat gratuit vérifié'+(proof.date?' · '+esc(proof.date):'')+'</div>'+
++        '<div class="pick-match"><div class="pick-team"><div class="pick-team-logo">'+logo(proof.home_logo,proof.home)+'</div><div class="pick-team-name">'+esc(proof.home)+'</div></div>'+
++        '<div class="pick-vs">VS</div><div class="pick-team"><div class="pick-team-logo">'+logo(proof.away_logo,proof.away)+'</div><div class="pick-team-name">'+esc(proof.away)+'</div></div></div>'+
++        '<div class="pick-score-badge '+(proofWin?'win':'loss')+'">'+proofScore+' · '+(proofWin?'✓ Gagné':'✗ Perdu')+'</div>'+
++        '<div class="pick-bet">'+esc(proof.bet||'Over / Under 2,5')+'</div>'+
++        '<div class="empty-note">Aucun nouveau pick ne respecte encore les critères aujourd\'hui. Le moteur continue l\'analyse.</div>'+
++        '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le prochain pick</button>';
++      return;
++    }
+     // /current-pick passe toujours par normalizeCurrentPick() cote serveur,
+     // qui renvoie teamA/teamB/marketLabel (partage avec d'autres consommateurs,
+     // ex. generateur d'image Telegram) — jamais home/away/best_bet. Ce code
+diff --git a/public/sw.js b/public/sw.js
+index 2d02188..7feb746 100644
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -3,7 +3,7 @@
+  * Le cache reste uniquement un secours hors ligne.
+  */
+ 
+-const VERSION = "tlm-app-v7-paid-funnel-20260828";
++const VERSION = "tlm-app-v8-proof-and-upcoming-20260828";
+ const SHELL_CACHE = `${VERSION}-shell`;
+ const DATA_CACHE = `${VERSION}-data`;
+ 
+diff --git a/scripts/api_server.js b/scripts/api_server.js
+index 22de7be..c9dc7d5 100644
+--- a/scripts/api_server.js
++++ b/scripts/api_server.js
+@@ -4342,6 +4342,19 @@ function savePrematchPickIfNew(pick) {
+ // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
+ // appel IA payant, juste des statistiques de confrontations directes.
+ let _upcomingPicksCache = { ts: 0, data: [], featuredMatch: null, stats: null };
++let _upcomingPicksRefreshPromise = null;
++
++function refreshUpcomingPicksInBackground() {
++  if (_upcomingPicksRefreshPromise) return _upcomingPicksRefreshPromise;
++  _upcomingPicksRefreshPromise = computeUpcomingPicks()
++    .catch(error => {
++      console.error("[upcoming-picks] refresh arriere-plan:", error.message);
++      return _upcomingPicksCache;
++    })
++    .finally(() => { _upcomingPicksRefreshPromise = null; });
++  return _upcomingPicksRefreshPromise;
++}
++
+ async function computeUpcomingPicks() {
+   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
+   if (!API_SPORTS_KEY) return _upcomingPicksCache;
+@@ -4504,7 +4517,11 @@ app.get("/upcoming-picks", async (req, res) => {
+         unlocked = !!((a.valid && a.plan) || isAdminAccess(qEmail, qCode));
+       } catch (_) {}
+     }
+-    const result = await computeUpcomingPicks();
++    // Un calcul froid peut consulter jusqu'a 60 historiques H2H. La route
++    // repond avec le cache sans bloquer le navigateur et actualise en fond.
++    const cacheFresh = _upcomingPicksCache.ts && Date.now() - _upcomingPicksCache.ts < 30 * 60000;
++    if (!cacheFresh) refreshUpcomingPicksInBackground();
++    const result = _upcomingPicksCache;
+     // Le cache dure 30 min : un match peut avoir donne son coup d'envoi entre
+     // deux recalculs et rester affiche avec sa cote figee d'avant-match, alors
+     // qu'il est deja en direct ailleurs sur le site. Filtre applique a chaque
+@@ -4532,6 +4549,7 @@ app.get("/upcoming-picks", async (req, res) => {
+         home_logo: featured.home_logo, away_logo: featured.away_logo,
+       } : null,
+       stats: result.stats,
++      refreshing: !cacheFresh || !!_upcomingPicksRefreshPromise,
+     });
+   } catch (e) {
+     console.error("[upcoming-picks] endpoint:", e.message);
+@@ -11376,7 +11394,31 @@ app.get("/current-pick", (req, res) => {
+   } catch (e) { /* picks.json absent ou invalide */ }
+   // Aucun signal verifie aujourd'hui : ne pas recycler un ancien pick manuel
+   // ou un autre marche comme s'il appartenait au produit O/U 2,5.
+-  res.json({ ok: true, pick: null });
++  let lastResult = null;
++  try {
++    const rows = db.prepare(`
++      SELECT date, home, away, competition, sport, bet, confidence, cote,
++             outcome, final_score_home, final_score_away, home_logo, away_logo
++      FROM daily_pick_log
++      WHERE outcome IN ('win','loss')
++      ORDER BY date DESC LIMIT 30
++    `).all();
++    const row = rows.find(candidate => isOu25Bet(candidate.bet) && !isExcludedFromPicks(candidate));
++    if (row) {
++      lastResult = {
++        date: row.date, home: row.home, away: row.away,
++        competition: row.competition, sport: row.sport || "Football",
++        bet: row.bet, confidence: row.confidence, cote: row.cote,
++        outcome: row.outcome,
++        final_score_home: row.final_score_home,
++        final_score_away: row.final_score_away,
++        home_logo: row.home_logo, away_logo: row.away_logo,
++      };
++    }
++  } catch (error) {
++    console.error("[current-pick] derniere preuve:", error.message);
++  }
++  res.json({ ok: true, pick: null, lastResult });
+ });
+ 
+ // ── Pages SEO (pronostics) — contenu public indexable ────────────────────────
+diff --git a/scripts/test_beta_retirement_and_free_funnel.js b/scripts/test_beta_retirement_and_free_funnel.js
+index 213cb6a..9387088 100644
+--- a/scripts/test_beta_retirement_and_free_funnel.js
++++ b/scripts/test_beta_retirement_and_free_funnel.js
+@@ -27,6 +27,6 @@ assert(app.includes("Dès 4,90€") && app.includes("Sélections exactes et aler
+ assert(home.includes("Pick gratuit du jour") && home.includes("Aucune carte bancaire"), "une preuve gratuite reste disponible pour attirer les visiteurs");
+ assert(api.includes("_freeSignalDailyDate.count < 1"), "diffusion gratuite limitée à une vitrine par jour");
+ assert(api.includes("SANS la sélection exacte"), "Telegram gratuit reste un teaser et ne remplace pas l'abonnement");
+-assert(home.includes("tlm-app-v7-paid-funnel-20260828") && app.includes("tlm-app-v7-paid-funnel-20260828") && sw.includes("tlm-app-v7-paid-funnel-20260828"), "cache PWA v7 cohérent sur toutes les pages");
++assert(home.includes("tlm-app-v8-proof-and-upcoming-20260828") && app.includes("tlm-app-v8-proof-and-upcoming-20260828") && sw.includes("tlm-app-v8-proof-and-upcoming-20260828"), "cache PWA v8 cohérent sur toutes les pages");
+ 
+ console.log("\nRÉSULTAT : OK");
+diff --git a/scripts/test_free_proof_and_upcoming_state.js b/scripts/test_free_proof_and_upcoming_state.js
+new file mode 100644
+index 0000000..8734449
+--- /dev/null
++++ b/scripts/test_free_proof_and_upcoming_state.js
+@@ -0,0 +1,24 @@
++#!/usr/bin/env node
++"use strict";
++
++const fs = require("fs");
++const path = require("path");
++const root = path.resolve(__dirname, "..");
++const api = fs.readFileSync(path.join(root, "scripts", "api_server.js"), "utf8");
++const home = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
++
++function assert(condition, message) {
++  if (!condition) throw new Error(message);
++  console.log("  ✅ " + message);
++}
++
++assert(api.includes("refreshUpcomingPicksInBackground"), "le calcul H2H froid passe en arrière-plan");
++assert(api.includes("refreshing: !cacheFresh"), "l'API expose honnêtement son état de calcul");
++assert(home.includes("AbortController") && home.includes("12000"), "le navigateur ne peut plus rester indéfiniment sur Chargement");
++assert(home.includes("setTimeout(loadUpcoming,10000)"), "la zone à venir se réactualise après le calcul");
++assert(!home.includes("encore en pause estivale, la reprise c'est mi-août"), "le message saisonnier périmé est retiré");
++assert(api.includes("lastResult") && api.includes("daily_pick_log"), "l'API fournit la dernière preuve résolue quand le pick du jour est vide");
++assert(home.includes("Dernier résultat gratuit vérifié"), "l'accueil affiche la preuve sans la présenter comme un nouveau pick");
++assert(home.includes("Aucun nouveau pick ne respecte encore les critères"), "l'absence de nouveau signal reste explicite");
++
++console.log("\nRÉSULTAT : OK");
+diff --git a/scripts/test_homepage_analysis_gate.js b/scripts/test_homepage_analysis_gate.js
+index 577d2c1..1fd474c 100644
+--- a/scripts/test_homepage_analysis_gate.js
++++ b/scripts/test_homepage_analysis_gate.js
+@@ -34,7 +34,7 @@ assert(
+   "La liste d'accueil ne doit plus se contenter du filtre visuel historique."
+ );
+ assert(
+-  home.includes("/sw.js?v=tlm-app-v7-paid-funnel-20260828") && serviceWorker.includes("tlm-app-v7-paid-funnel-20260828"),
++  home.includes("/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828") && serviceWorker.includes("tlm-app-v8-proof-and-upcoming-20260828"),
+   "Le cache PWA doit changer de version avec le garde-fou d'accueil."
+ );
+ 
