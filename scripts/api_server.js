@@ -486,7 +486,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tg_delivery_match ON telegram_signal_deliveries(match_key, channel, ok);
 `);
 
-// Beta privee +0,5 : capacite reelle, liste d attente et aucune diffusion automatique.
+// Anciennes candidatures +0,5 conservees uniquement pour l'historique admin.
+// La campagne publique est fermee : aucun nouveau compte gratuit ne doit etre
+// transforme en acces +0,5 complet par une vieille page restee en cache.
+const FOUNDER_BETA_ENABLED = false;
 db.exec(`CREATE TABLE IF NOT EXISTS beta_plus05_applications (
   email TEXT PRIMARY KEY,
   status TEXT NOT NULL CHECK(status IN ('accepted','waitlist')),
@@ -9085,17 +9088,56 @@ function normalizeContactLang(lang = "", country = "") {
 }
 
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
-app.get("/goal05/latest", (req, res) => {
-  res.json(readGoal05LatestSignal());
-});
-app.get("/api/goal05/latest", (req, res) => {
-  res.json(readGoal05LatestSignal());
-});
+// Le verrouillage visuel ne suffit pas : l'API publique ne doit jamais livrer
+// l'equipe, le pari ou la cote exacte a un visiteur gratuit/non connecte.
+function paidGoal05Account(req) {
+  const auth = String(req.headers.authorization || "");
+  const sessionToken = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const email = String(req.headers["x-tlm-email"] || "").toLowerCase().trim();
+  if (!sessionToken) return null;
+
+  if (email) {
+    const subscriber = verifyFcmSubscriber(email, sessionToken);
+    if (subscriber) return subscriber;
+  }
+
+  try {
+    const session = db.prepare("SELECT email, expires_at FROM sessions WHERE token = ?").get(sessionToken);
+    if (!session || Date.parse(session.expires_at) < Date.now()) return null;
+    const account = lookupAccountByEmail(session.email);
+    if (!account || String(account.plan || "free").toLowerCase() === "free") return null;
+    if (account.expires_at && Date.parse(account.expires_at) < Date.now()) return null;
+    return { email: session.email, ...account };
+  } catch (error) {
+    console.error("[goal05] verification membre:", error.message);
+    return null;
+  }
+}
+
+function sendGoal05Latest(req, res) {
+  const latest = readGoal05LatestSignal();
+  if (!paidGoal05Account(req)) {
+    return res.json({
+      ok: true,
+      locked: true,
+      available: !!latest?.signal,
+      signal: null,
+      cta: "Selection exacte reservee aux membres des 4,90 euros par mois",
+    });
+  }
+  return res.json({ ...latest, locked: false });
+}
+
+app.get("/goal05/latest", sendGoal05Latest);
+app.get("/api/goal05/latest", sendGoal05Latest);
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
-  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+  res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
 });
 app.post("/beta-plus05/apply", (req, res) => {
+  if (!FOUNDER_BETA_ENABLED) {
+    return res.status(410).json({ ok:false, error:"La campagne beta est terminee. Creez un compte gratuit ou choisissez une formule membre." });
+  }
   const email = normalizeBetaEmail(req.body?.email);
   const adultConfirmed = req.body?.adultConfirmed === true;
   const legalAccepted = req.body?.legalAccepted === true;
@@ -11946,9 +11988,23 @@ app.get("/live-matches", async (req, res) => {
     // message parlant de minutes de football. Une seule source de vérité ici.
     const withVerdict = matches.map((m) => {
       const ou25 = getLiveOu25VoteState(m);
-      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25 };
+      const clientProductEligible = isClientOu25MatchEligible(m, true);
+      const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
+      // Source de verite pour l'accueil public : un match ne peut etre presente
+      // comme un signal que si le championnat est dans le perimetre client ET
+      // qu'au moins 4 IA ont reellement enregistre le meme vote O/U 2,5.
+      // Cela evite qu'un simple match live bien illustre (logos + score) soit
+      // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
+      const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
+      const visibility = {
+        client_product_eligible: clientProductEligible,
+        analysis_started: Number(ou25.vote_count || 0) > 0,
+        analysis_verified: homepageDisplayEligible,
+        homepage_display_eligible: homepageDisplayEligible,
+      };
+      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m);
-      return { ...m, analysable: !reason, block_reason: reason, ou25 };
+      return { ...m, analysable: !reason, block_reason: reason, ou25, ...visibility };
     });
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le

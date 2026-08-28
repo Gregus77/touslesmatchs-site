@@ -1,5 +1,14 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-28 — Fin publique de la bêta et tunnel gratuit maîtrisé
+
+- L'application ne présente plus d'accès fondateur, de cycle bêta ni de places
+  gratuites +0,5 ; les anciennes candidatures restent archivées côté admin.
+- Toute nouvelle candidature bêta est refusée proprement par l'API avec HTTP 410.
+- Le compte gratuit conserve le pick vitrine et les résultats publics ; les
+  sélections exactes +0,5 et leurs alertes sont réservées aux membres dès 4,90€.
+- Le cache PWA passe en v7 pour retirer les anciens libellés des appareils déjà installés.
+
 ## 2026-08-28 — Traçabilité prématch et compteur Live
 
 - Les picks H2H prématch sont désormais marqués explicitement comme internes et non diffusables.

@@ -535,7 +535,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     if (el) el.style.display = offline ? "block" : "none";
   }
   function get(path) {
-    return fetch(path, { headers: { "Accept": "application/json" }, cache: "no-store" })
+    var headers = { "Accept": "application/json" };
+    var sessionToken = token();
+    var sessionEmail = "";
+    try { sessionEmail = localStorage.getItem("tlm_email") || ""; } catch (e) {}
+    if (sessionToken) headers.Authorization = "Bearer " + sessionToken;
+    if (sessionEmail) headers["X-TLM-Email"] = sessionEmail;
+    return fetch(path, { headers: headers, cache: "no-store" })
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
@@ -716,7 +722,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       return;
     }
     pushFeedback('Activation en cours...', true);
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v3-20260826').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
         return get('/api/push/vapid-public-key').then(function (d) {
@@ -754,13 +760,18 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       + '</div>';
   }
 
-  function goal05BetaRow() {
-    return '<div class="offer-stack" aria-label="Accès Goal plus 0,5"><a class="offer-row hot" href="/#goal05-founder-card"><div><div class="offer-name">+0,5 but — bêta privée</div><div class="offer-desc">20 places fondatrices, football uniquement</div></div><div class="offer-price">0€</div></a></div>';
+  function goal05MemberAccess() {
+    var currentPlan = String(plan() || 'free');
+    return !!token() && /(standard|premium|elite|vip|founder|fondateur|admin)/i.test(currentPlan);
+  }
+
+  function goal05MemberRow() {
+    return '<div class="offer-stack" aria-label="Accès membre Goal plus 0,5"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">+0,5 but — accès membre</div><div class="offer-desc">Sélections exactes et alertes réservées aux abonnés</div></div><div class="offer-price">Dès 4,90€</div></a></div>';
   }
 
   function renderGoal05Pick(signal) {
     var box = $("pick-box");
-    var locked = !token();
+    var locked = !goal05MemberAccess();
     var _alertsOn = false; try { _alertsOn = localStorage.getItem('tlm_signal_alerts') === '1'; } catch (e) {}
     var _pushOn = false; try { _pushOn = localStorage.getItem('tlm_push_enabled') === '1' && typeof Notification !== 'undefined' && Notification.permission === 'granted'; } catch (e) {}
     var _statusHtml = locked ? '' : (
@@ -769,15 +780,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       + '<div><span style="color:' + (_pushOn ? '#22c55e' : '#ef4444') + ';font-weight:900">' + (_pushOn ? '\u2713' : '\u2717') + '</span> Notifications même app fermée : ' + (_pushOn ? 'activées' : 'non activées') + '</div>'
       + '</div>'
     );
-    box.innerHTML = goal05VerdictCard(signal)
-      + goal05BetaRow()
+    box.innerHTML = goal05VerdictCard(locked ? null : signal)
+      + goal05MemberRow()
       + (locked
-          ? '<a class="btn btn-g" href="#" data-tab-link="me" style="margin-top:12px">Recevoir mon accès +0,5</a>'
+          ? '<a class="btn btn-g" href="/#plans" style="margin-top:12px">Voir les offres dès 4,90€</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button><button class="btn btn-o" type="button" onclick="enablePushNotifications()" style="margin-top:8px">Activer notifications meme app fermee</button>')
       + _statusHtml;
-    var link = box.querySelector('[data-tab-link="me"]');
-    if (link) link.addEventListener('click', function(e){ e.preventDefault(); show('me'); });
-    if (signal && token()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
+    if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || (signal.team ? signal.team + ' +0,5 but' : '+0,5 but'), cote: signal.odd, competition: signal.competition || signal.meta });
   }
 
   function renderCurrentPick(data) {
@@ -951,13 +960,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       + '<button class="btn btn-p" id="btn-in">Me connecter</button>'
       + '<button class="btn btn-o" id="btn-forgot">Recevoir mon code par email</button>'
       + '<div class="state" id="log-msg" style="padding:9px 0 0"></div></div>'
-      + '<div class="card app-auth-card"><div class="lbl">Nouveau sur TousLesMatchs ?</div><div class="app-auth-title">Entre dans la bêta</div>'
-      + '<div class="app-auth-note">Laisse ton email : tu entres dans le tunnel TousLesMatchs/Brevo et tu reçois un code d’accès gratuit pour tester l’app.</div>'
+      + '<div class="card app-auth-card"><div class="lbl">Nouveau sur TousLesMatchs ?</div><div class="app-auth-title">Crée ton compte gratuit</div>'
+      + '<div class="app-auth-note">Découvre le pick gratuit du jour et les résultats publics, sans carte bancaire.</div>'
       + '<input id="lead-mail" type="email" inputmode="email" autocomplete="email" placeholder="Ton email">'
       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
-      + '<button class="btn btn-g" id="btn-lead">Recevoir mon accès gratuit</button>'
+      + '<button class="btn btn-g" id="btn-lead">Créer mon compte gratuit</button>'
       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
-      + '<div class="app-auth-note">Tu recevras ton code par email, puis les signaux +0,5 arriveront dans l’app et sur Telegram.</div></div></div>';
+      + '<div class="app-auth-note">Les sélections exactes +0,5 et les alertes membres sont disponibles à partir de 4,90€/mois.</div></div></div>';
 
     $("btn-in").addEventListener("click", function () {
       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();
@@ -1020,7 +1029,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   // les notifications ne sont pas encore activées. Cela force la récupération
   // des corrections de cache pour tous les utilisateurs Android.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v3-20260826')
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828')
       .then(function (reg) { return reg.update(); })
       .catch(function () {});
   }
