@@ -1694,7 +1694,7 @@ async function loadHeroLive(){
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v7-paid-funnel-20260828').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828').catch(function(){});});}
 
 /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
 function renderUpcomingItem(p){
@@ -1734,8 +1734,13 @@ async function loadUpcoming(){
   // Identifiants en EN-TETES, plus en query string : une URL finit dans
   // l'historique du navigateur, les journaux du proxy et l'en-tete Referer.
   var authHdr=(email&&code)?{'X-TLM-Email':email,'X-TLM-Code':code}:{};
+  var controller=typeof AbortController!=='undefined'?new AbortController():null;
+  var timeout=controller?setTimeout(function(){controller.abort();},12000):null;
   try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{headers:authHdr});
+    var requestOptions={headers:authHdr,cache:'no-store'};
+    if(controller)requestOptions.signal=controller.signal;
+    var r=await fetch('/api/upcoming-picks?t='+Date.now(),requestOptions);
+    if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     tlmFeaturedMatch=(d.featuredMatch&&tlmMatchAllowed(d.featuredMatch))?d.featuredMatch:null;
     var allPicks=(d.picks||[]).filter(tlmMatchAllowed);
@@ -1761,12 +1766,15 @@ async function loadUpcoming(){
         if(!tlmHasLiveMatch)renderHeroWatchlist(wf);
       }else hl.innerHTML='';
       var s=d.stats;
-      var detail=(s&&s.totalFixtures)
+      var detail=d.refreshing
+        ? '🔍 Le moteur vérifie les prochains matchs et leurs historiques. Cette zone se mettra à jour automatiquement.'
+        :(s&&s.totalFixtures)
         ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
-        : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
+        : 'Aucun match à venir ne respecte actuellement les championnats et critères analysés.';
       box.innerHTML='<div class="empty-note">'+detail+'<br>'+
         'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
         '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
+      if(d.refreshing)setTimeout(loadUpcoming,10000);
       return;
     }
     // Le meilleur pick (confiance la plus haute, verrouille ou non) mis en
@@ -1791,7 +1799,8 @@ async function loadUpcoming(){
       '</div>'+upcomingTeamLogo(top.away_logo,top.away)+bet0+
     '</div>';
     box.innerHTML=rest.map(renderUpcomingItem).join('');
-  } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
+  } catch(e){ box.innerHTML='<div class="empty-note">Les prochains matchs sont momentanément indisponibles. Le moteur continue sa vérification.</div>'; }
+  finally{if(timeout)clearTimeout(timeout);}
 }
 loadUpcoming();
 
@@ -1930,6 +1939,20 @@ async function loadPick(){
     var r=await fetch('/api/current-pick?t='+Date.now());
     var d=await r.json();
     var p=d.pick&&d.pick.currentPick?d.pick.currentPick:d.pick;
+    if(!p&&d.lastResult){
+      var proof=d.lastResult;
+      var proofWin=proof.outcome==='win';
+      var proofScore=(proof.final_score_home!=null&&proof.final_score_away!=null)
+        ? esc(proof.final_score_home)+' - '+esc(proof.final_score_away):'Score final vérifié';
+      box.innerHTML='<div class="pick-comp">Dernier résultat gratuit vérifié'+(proof.date?' · '+esc(proof.date):'')+'</div>'+
+        '<div class="pick-match"><div class="pick-team"><div class="pick-team-logo">'+logo(proof.home_logo,proof.home)+'</div><div class="pick-team-name">'+esc(proof.home)+'</div></div>'+
+        '<div class="pick-vs">VS</div><div class="pick-team"><div class="pick-team-logo">'+logo(proof.away_logo,proof.away)+'</div><div class="pick-team-name">'+esc(proof.away)+'</div></div></div>'+
+        '<div class="pick-score-badge '+(proofWin?'win':'loss')+'">'+proofScore+' · '+(proofWin?'✓ Gagné':'✗ Perdu')+'</div>'+
+        '<div class="pick-bet">'+esc(proof.bet||'Over / Under 2,5')+'</div>'+
+        '<div class="empty-note">Aucun nouveau pick ne respecte encore les critères aujourd\'hui. Le moteur continue l\'analyse.</div>'+
+        '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le prochain pick</button>';
+      return;
+    }
     // /current-pick passe toujours par normalizeCurrentPick() cote serveur,
     // qui renvoie teamA/teamB/marketLabel (partage avec d'autres consommateurs,
     // ex. generateur d'image Telegram) — jamais home/away/best_bet. Ce code

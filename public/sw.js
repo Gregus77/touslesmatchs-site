@@ -3,7 +3,7 @@
  * Le cache reste uniquement un secours hors ligne.
  */
 
-const VERSION = "tlm-app-v7-paid-funnel-20260828";
+const VERSION = "tlm-app-v8-proof-and-upcoming-20260828";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 

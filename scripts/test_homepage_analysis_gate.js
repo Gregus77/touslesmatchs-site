@@ -34,7 +34,7 @@ assert(
   "La liste d'accueil ne doit plus se contenter du filtre visuel historique."
 );
 assert(
-  home.includes("/sw.js?v=tlm-app-v7-paid-funnel-20260828") && serviceWorker.includes("tlm-app-v7-paid-funnel-20260828"),
+  home.includes("/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828") && serviceWorker.includes("tlm-app-v8-proof-and-upcoming-20260828"),
   "Le cache PWA doit changer de version avec le garde-fou d'accueil."
 );
 

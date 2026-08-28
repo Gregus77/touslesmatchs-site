@@ -4342,6 +4342,19 @@ function savePrematchPickIfNew(pick) {
 // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
 // appel IA payant, juste des statistiques de confrontations directes.
 let _upcomingPicksCache = { ts: 0, data: [], featuredMatch: null, stats: null };
+let _upcomingPicksRefreshPromise = null;
+
+function refreshUpcomingPicksInBackground() {
+  if (_upcomingPicksRefreshPromise) return _upcomingPicksRefreshPromise;
+  _upcomingPicksRefreshPromise = computeUpcomingPicks()
+    .catch(error => {
+      console.error("[upcoming-picks] refresh arriere-plan:", error.message);
+      return _upcomingPicksCache;
+    })
+    .finally(() => { _upcomingPicksRefreshPromise = null; });
+  return _upcomingPicksRefreshPromise;
+}
+
 async function computeUpcomingPicks() {
   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
   if (!API_SPORTS_KEY) return _upcomingPicksCache;
@@ -4504,7 +4517,11 @@ app.get("/upcoming-picks", async (req, res) => {
         unlocked = !!((a.valid && a.plan) || isAdminAccess(qEmail, qCode));
       } catch (_) {}
     }
-    const result = await computeUpcomingPicks();
+    // Un calcul froid peut consulter jusqu'a 60 historiques H2H. La route
+    // repond avec le cache sans bloquer le navigateur et actualise en fond.
+    const cacheFresh = _upcomingPicksCache.ts && Date.now() - _upcomingPicksCache.ts < 30 * 60000;
+    if (!cacheFresh) refreshUpcomingPicksInBackground();
+    const result = _upcomingPicksCache;
     // Le cache dure 30 min : un match peut avoir donne son coup d'envoi entre
     // deux recalculs et rester affiche avec sa cote figee d'avant-match, alors
     // qu'il est deja en direct ailleurs sur le site. Filtre applique a chaque
@@ -4532,6 +4549,7 @@ app.get("/upcoming-picks", async (req, res) => {
         home_logo: featured.home_logo, away_logo: featured.away_logo,
       } : null,
       stats: result.stats,
+      refreshing: !cacheFresh || !!_upcomingPicksRefreshPromise,
     });
   } catch (e) {
     console.error("[upcoming-picks] endpoint:", e.message);
@@ -11376,7 +11394,50 @@ app.get("/current-pick", (req, res) => {
   } catch (e) { /* picks.json absent ou invalide */ }
   // Aucun signal verifie aujourd'hui : ne pas recycler un ancien pick manuel
   // ou un autre marche comme s'il appartenait au produit O/U 2,5.
-  res.json({ ok: true, pick: null });
+  let lastResult = null;
+  try {
+    const rows = db.prepare(`
+      SELECT date, home, away, competition, sport, bet, confidence, cote,
+             outcome, final_score_home, final_score_away, home_logo, away_logo
+      FROM daily_pick_log
+      WHERE outcome IN ('win','loss')
+      ORDER BY date DESC LIMIT 30
+    `).all();
+    let row = rows.find(candidate => isOu25Bet(candidate.bet) && !isExcludedFromPicks(candidate));
+    // Les premiers jours suivant l'activation du journal quotidien, celui-ci
+    // peut être vide alors que des signaux Telegram résolus existent déjà.
+    // Repli strict : uniquement un vrai O/U 2,5 diffusé, jamais une analyse
+    // interne, un test ou un prématch non livré.
+    if (!row) {
+      const delivered = db.prepare(`
+        SELECT date(analysed_at) AS date, home, away, competition, sport,
+               best_bet AS bet, confidence, real_odd AS cote, outcome,
+               final_score_home, final_score_away, home_logo, away_logo
+        FROM concile_analyses
+        WHERE outcome IN ('win','loss')
+          AND COALESCE(source_type,'live') <> 'prematch'
+          AND (sig_sent_free=1 OR sig_sent_standard=1 OR sig_sent_premium=1 OR sig_sent_elite=1)
+          AND lower(home) NOT LIKE '%[test]%'
+          AND lower(away) NOT LIKE '%[test]%'
+        ORDER BY datetime(analysed_at) DESC LIMIT 50
+      `).all();
+      row = delivered.find(candidate => isOu25Bet(candidate.bet) && !isExcludedFromPicks(candidate));
+    }
+    if (row) {
+      lastResult = {
+        date: row.date, home: row.home, away: row.away,
+        competition: row.competition, sport: row.sport || "Football",
+        bet: row.bet, confidence: row.confidence, cote: row.cote,
+        outcome: row.outcome,
+        final_score_home: row.final_score_home,
+        final_score_away: row.final_score_away,
+        home_logo: row.home_logo, away_logo: row.away_logo,
+      };
+    }
+  } catch (error) {
+    console.error("[current-pick] derniere preuve:", error.message);
+  }
+  res.json({ ok: true, pick: null, lastResult });
 });
 
 // ── Pages SEO (pronostics) — contenu public indexable ────────────────────────

@@ -27,6 +27,6 @@ assert(app.includes("Dès 4,90€") && app.includes("Sélections exactes et aler
 assert(home.includes("Pick gratuit du jour") && home.includes("Aucune carte bancaire"), "une preuve gratuite reste disponible pour attirer les visiteurs");
 assert(api.includes("_freeSignalDailyDate.count < 1"), "diffusion gratuite limitée à une vitrine par jour");
 assert(api.includes("SANS la sélection exacte"), "Telegram gratuit reste un teaser et ne remplace pas l'abonnement");
-assert(home.includes("tlm-app-v7-paid-funnel-20260828") && app.includes("tlm-app-v7-paid-funnel-20260828") && sw.includes("tlm-app-v7-paid-funnel-20260828"), "cache PWA v7 cohérent sur toutes les pages");
+assert(home.includes("tlm-app-v8-proof-and-upcoming-20260828") && app.includes("tlm-app-v8-proof-and-upcoming-20260828") && sw.includes("tlm-app-v8-proof-and-upcoming-20260828"), "cache PWA v8 cohérent sur toutes les pages");
 
 console.log("\nRÉSULTAT : OK");

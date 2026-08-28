@@ -1,5 +1,15 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-28 — Preuve gratuite et fin du chargement infini
+
+- Le calcul H2H des matchs à venir se fait désormais en arrière-plan : l'accueil
+  répond immédiatement, affiche un état explicite et se réactualise tout seul.
+- Le navigateur abandonne proprement une requête après 12 secondes au lieu de
+  laisser « Chargement… » indéfiniment.
+- Quand aucun pick du jour n'est validé, l'accueil montre le dernier résultat
+  gratuit résolu et daté, sans le présenter comme un nouveau signal.
+- Le cache PWA passe en v8 pour diffuser ces corrections aux appareils installés.
+
 ## 2026-08-28 — Fin publique de la bêta et tunnel gratuit maîtrisé
 
 - L'application ne présente plus d'accès fondateur, de cycle bêta ni de places
