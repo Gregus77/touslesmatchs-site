@@ -604,6 +604,28 @@ ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 // l'historique existant, qui vient exclusivement du pipeline live.
 ensureColumn("concile_analyses", "source_type",       "TEXT DEFAULT 'live'");
 
+// Les picks H2H pre-match servent uniquement a l'apprentissage interne. Ils
+// n'ont ni minute live, ni cinq votes du Concile, ni preuve Telegram et ne
+// doivent donc jamais rester avec diffusion_block=NULL (qui signifie qu'une
+// decision de diffusion valide est encore possible). Ce backfill est cible,
+// idempotent et preserve toutes les analyses live ainsi que l'historique.
+try {
+  const fixedPrematchTrace = db.prepare(`
+    UPDATE concile_analyses
+    SET diffusion_block = 'prematch interne: non diffuse aux clients'
+    WHERE source_type = 'prematch'
+      AND (diffusion_block IS NULL OR trim(diffusion_block) = '')
+      AND sig_sent_standard = 0
+      AND sig_sent_premium = 0
+      AND sig_sent_elite = 0
+  `).run();
+  if (fixedPrematchTrace.changes) {
+    console.log(`[migration] ${fixedPrematchTrace.changes} analyse(s) prematch tracee(s) comme non diffusables`);
+  }
+} catch (e) {
+  console.error("[migration] trace prematch:", e.message);
+}
+
 // Championnat de chaque avis agent x marche — absent jusqu'ici (voir
 // commentaire plus bas), impossible donc de savoir "quelle IA est forte sur
 // quel type de pari DANS quel championnat" comme demande par Greg le
@@ -4298,12 +4320,14 @@ function savePrematchPickIfNew(pick) {
     db.prepare(`
       INSERT INTO concile_analyses
         (match_key, home, away, competition, sport, best_bet, confidence,
-         raison, consensus_votes, source_type, home_logo, away_logo)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+         raison, consensus_votes, source_type, home_logo, away_logo,
+         diffusion_block)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       matchKey, pick.home, pick.away, pick.competition, pick.sport,
       pick.bet, pick.confidence, "Pick pré-match (H2H)", 0, "prematch",
-      pick.home_logo || null, pick.away_logo || null
+      pick.home_logo || null, pick.away_logo || null,
+      "prematch interne: non diffuse aux clients"
     );
   } catch (e) { console.error("[upcoming-picks] savePrematchPickIfNew:", e.message); }
 }
@@ -11711,8 +11735,13 @@ app.get("/council-vote", (req, res) => {
 // ── Activité en direct — compteurs réels du jour (réassurance "site vivant") ──
 app.get("/live-activity", (req, res) => {
   try {
+    // Le bandeau Live ne doit pas compter les picks H2H pre-match internes.
+    // Ils n'utilisent pas le Concile live et ne peuvent pas devenir un signal
+    // client. Les melanger expliquait le faux volume "26 analyses" du 28/08.
     const analysesToday = db.prepare(
-      "SELECT COUNT(*) AS c FROM concile_analyses WHERE date(analysed_at)=date('now')"
+      `SELECT COUNT(*) AS c FROM concile_analyses
+       WHERE date(analysed_at)=date('now')
+         AND COALESCE(source_type, 'live') = 'live'`
     ).get()?.c || 0;
     // Un signal n'existe cote client qu'apres une reponse Telegram OK avec un
     // message_id. Compter seulement la confiance transformait 24 analyses

@@ -37,6 +37,23 @@ const activity = source.slice(activityStart, activityEnd);
 assert(activity.includes("FROM telegram_signal_deliveries"), "activité publique fondée sur les livraisons Telegram");
 assert(activity.includes("telegram_message_id IS NOT NULL"), "message_id Telegram obligatoire");
 assert(!activity.includes("confidence >= ?"), "la confiance seule n'est plus comptée comme un signal");
+assert(
+  activity.includes("COALESCE(source_type, 'live') = 'live'"),
+  "le compteur d'analyses live exclut le prematch interne"
+);
+
+const prematchStart = source.indexOf("function savePrematchPickIfNew(pick)");
+const prematchEnd = source.indexOf("// ── Matchs à venir", prematchStart);
+const prematch = source.slice(prematchStart, prematchEnd);
+assert(prematchStart >= 0 && prematchEnd > prematchStart, "bloc de sauvegarde prematch trouvé");
+assert(
+  prematch.includes("prematch interne: non diffuse aux clients"),
+  "chaque nouveau pick prematch reçoit un blocage de diffusion explicite"
+);
+assert(
+  source.includes("fixedPrematchTrace") && source.includes("source_type = 'prematch'"),
+  "les anciennes lignes prematch non tracées sont corrigées au démarrage"
+);
 
 console.log(`\nRÉSULTAT : ${failed ? "ÉCHEC" : "OK"}`);
 process.exit(failed ? 1 : 0);

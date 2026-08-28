@@ -1,5 +1,11 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-28 — Traçabilité prématch et compteur Live
+
+- Les picks H2H prématch sont désormais marqués explicitement comme internes et non diffusables.
+- Les anciennes lignes prématch sans motif de blocage sont régularisées au démarrage sans toucher aux signaux live.
+- Le compteur `analyses_today` de `/live-activity` exclut le prématch interne.
+
 ## 2026-08-28 — Réparation du tunnel Concile → Telegram
 
 - Le moteur automatique filtre désormais les matchs hors produit client avant les cinq appels IA : football, championnat fiable et minute 15 à 40.
