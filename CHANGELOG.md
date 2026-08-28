@@ -1,5 +1,19 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-28 — Cohérence publique, fin de la bêta fondatrice et cache PWA
+
+- L'accueil utilise désormais exactement le bloc `stats.abonnes` de
+  `/analysis-history`, comme la page Résultats : il ne recompte plus les
+  observations non diffusées parmi les résultats clients.
+- Les libellés publics distinguent les marqueurs d'envoi archivés de l'ancien
+  système et les preuves Telegram obligatoires depuis le 27 août.
+- La campagne publique Goal +0,5 « Accès fondateur / Cycle 01 » et ses liens APK
+  ont été retirés de l'accueil ; aucune fenêtre bêta ne s'ouvre automatiquement.
+- Les fenêtres restantes sont bornées au viewport mobile, sans largeur minimale
+  ni débordement horizontal.
+- Le service worker passe en v5 et ne supprime que les anciens caches
+  `tlm-app-*`, afin d'éliminer l'ancienne page sans toucher d'autres caches.
+
 ## 2026-08-27 — Fiabilisation client Over/Under 2,5
 
 - Le chatbot journalise désormais les erreurs fournisseur et bascule automatiquement

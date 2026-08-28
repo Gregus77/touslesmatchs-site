@@ -3,7 +3,7 @@
  * Le cache reste uniquement un secours hors ligne.
  */
 
-const VERSION = "tlm-app-v4-brand-20260826";
+const VERSION = "tlm-app-v5-history-beta-20260828";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
@@ -38,7 +38,9 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => !key.startsWith(VERSION)).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys
+        .filter((key) => key.startsWith("tlm-app-") && !key.startsWith(VERSION))
+        .map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
 });
