@@ -94,7 +94,8 @@ echo "[5/7] Reconstruction du site"
 docker compose up -d --build site
 for TLM_TRY in $(seq 1 15); do
   if test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-site 2>/dev/null || true)" = "true" && \
-     curl -kfsS -H 'Host: www.touslesmatchs.com' https://127.0.0.1/ >/dev/null; then
+     curl -kfsS --resolve 'www.touslesmatchs.com:443:127.0.0.1' \
+       https://www.touslesmatchs.com/ >/dev/null; then
     break
   fi
   sleep 2
@@ -102,8 +103,8 @@ done
 test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-site)" = "true"
 
 echo "[6/7] Verification du site, API et Telegram"
-curl -kfsS -H 'Host: www.touslesmatchs.com' -H 'Cache-Control: no-cache' \
-  "https://127.0.0.1/?v=$TLM_TS" -o "$TLM_TMP/origin.html"
+curl -kfsS --resolve 'www.touslesmatchs.com:443:127.0.0.1' -H 'Cache-Control: no-cache' \
+  "https://www.touslesmatchs.com/?v=$TLM_TS" -o "$TLM_TMP/origin.html"
 curl -fsS -H 'Cache-Control: no-cache' \
   "https://www.touslesmatchs.com/?v=$TLM_TS" -o "$TLM_TMP/public.html"
 curl -fsS -H 'Cache-Control: no-cache' \
