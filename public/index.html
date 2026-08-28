@@ -299,7 +299,6 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .partner-btn.pb-unibet{padding:13px 30px;border-radius:8px;background:#0a7a3d;color:#fff;font-weight:800;font-size:14px;text-transform:uppercase;letter-spacing:.06em;border:2px solid #0fae5a}
 .partner-btn.pb-pmu{padding:13px 30px;border-radius:6px;background:#00287a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.08em}
 .partner-btn.pb-betclic{padding:13px 30px 10px;border-radius:4px;background:#e2001a;color:#fff;font-weight:900;font-size:15px;text-transform:uppercase;letter-spacing:.02em;border-bottom:4px solid #16110f}
-.nav-apk-cta{border-color:rgba(79,214,242,.45)!important;color:#eaf7ff!important;background:rgba(79,214,242,.10)!important}.site-apk-download{margin:0 auto 18px;max-width:720px;padding:14px;border:1px solid rgba(79,214,242,.28);border-radius:14px;background:linear-gradient(135deg,rgba(79,214,242,.10),rgba(138,104,255,.08))}.site-apk-download .btn{justify-content:center}.site-apk-download-note{font-size:11px;color:var(--muted);line-height:1.55;margin-top:9px}
 @media(max-width:600px){.partner-btn{min-width:0;flex:1 1 auto;font-size:13px;padding:12px 16px}}
 
 .side-card{padding:26px 22px}
@@ -326,9 +325,10 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 @media(max-width:820px){.foot-grid{grid-template-columns:1fr 1fr}}
 
 /* ── LOGIN MODAL ── */
-.modal-bg{position:fixed;inset:0;z-index:300;background:rgba(18,21,42,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg{position:fixed;inset:0;z-index:300;background:rgba(18,21,42,.75);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:clamp(12px,4vw,20px);overflow-x:hidden;overflow-y:auto}
 .modal-bg.open{display:flex}
-.modal-box{background:var(--panel);border:1px solid var(--b2);border-radius:var(--r-lg);padding:26px;max-width:380px;width:100%;position:relative}
+.modal-box{box-sizing:border-box;background:var(--panel);border:1px solid var(--b2);border-radius:var(--r-lg);padding:clamp(18px,5vw,26px);max-width:min(380px,calc(100vw - 24px));width:100%;min-width:0;position:relative;overflow-wrap:anywhere}
+.modal-box .modal-input,.modal-box .modal-btn{box-sizing:border-box;max-width:100%;min-width:0}
 .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:23px;cursor:pointer}
 .modal-title{font-size:19.5px;font-weight:800}
 .modal-sub{font-size:14px;color:var(--tx2);margin:8px 0 16px}
@@ -734,23 +734,7 @@ body :where(
 .day-acc-item.vide .day-acc-head{opacity:.62}
 .day-acc-item.vide .day-acc-caret{opacity:.35}
 .day-vide-note{padding:10px 13px;font-size:11.5px;line-height:1.55;color:var(--muted)}
-/* Carte locale Goal 0.5 IA : offre fondatrice sans paiement actif. */
-.goal05-founder-card{position:relative;overflow:hidden;border-color:rgba(79,214,242,.25);background:linear-gradient(135deg,rgba(18,21,42,.98),rgba(30,35,64,.96));box-shadow:0 22px 46px -24px rgba(79,214,242,.42)}
-.goal05-founder-card:before{content:"";position:absolute;inset:0;border-top:1px solid rgba(138,104,255,.45);background:linear-gradient(120deg,rgba(79,214,242,.08),transparent 46%,rgba(138,104,255,.12));pointer-events:none}
-.goal05-founder-inner{position:relative;display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center;padding:24px}
-.goal05-kicker{font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--cyan)}
-.goal05-title{font-size:26px;line-height:1.1;font-weight:900;margin:8px 0 10px;color:var(--tx)}
-.goal05-text{font-size:13px;line-height:1.65;color:var(--tx2);max-width:690px}
-.goal05-proof-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:15px}
-.goal05-proof{border:1px solid rgba(166,136,255,.24);background:rgba(12,17,40,.58);border-radius:10px;padding:10px 11px;font-size:11.5px;color:var(--tx2)}
-.goal05-proof b{display:block;color:var(--tx);font-size:12px;margin-bottom:2px}
-.goal05-offer{border:1px solid rgba(79,214,242,.28);background:rgba(79,214,242,.08);border-radius:14px;padding:16px}
-.goal05-offer-label{font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--violet2);margin-bottom:8px}
-.goal05-offer-price{font-size:28px;font-weight:950;color:var(--tx);line-height:1}.goal05-offer-price span{display:block;font-size:12px;color:var(--muted);font-weight:700;margin-top:6px}.goal05-live-places{position:relative;margin:13px 0 3px;padding:13px 14px;border-radius:14px;border:1px solid rgba(79,214,242,.42);background:linear-gradient(135deg,rgba(79,214,242,.16),rgba(138,104,255,.13));box-shadow:0 0 0 1px rgba(255,255,255,.04) inset,0 14px 34px rgba(79,214,242,.12);animation:goal05Pulse 1.8s ease-in-out infinite}.goal05-live-places:before{content:"";position:absolute;inset:-1px;border-radius:inherit;background:linear-gradient(120deg,transparent,rgba(255,255,255,.22),transparent);opacity:.38;transform:translateX(-70%);animation:goal05Sweep 2.6s ease-in-out infinite;pointer-events:none}.goal05-live-label{display:block;font-size:10px;font-weight:900;letter-spacing:.13em;text-transform:uppercase;color:var(--cyan)}.goal05-live-number{display:flex;align-items:flex-end;gap:8px;margin-top:5px;font-weight:950;color:#fff}.goal05-live-number strong{font-size:38px;line-height:.88;text-shadow:0 0 18px rgba(79,214,242,.55)}.goal05-live-number span{font-size:12px;color:var(--tx2);font-weight:800;padding-bottom:2px}.goal05-live-hint{font-size:10.5px;color:var(--muted);margin-top:6px}@keyframes goal05Pulse{0%,100%{box-shadow:0 0 0 1px rgba(79,214,242,.22) inset,0 10px 26px rgba(79,214,242,.12)}50%{box-shadow:0 0 0 1px rgba(79,214,242,.58) inset,0 18px 38px rgba(138,104,255,.26)}}@keyframes goal05Sweep{0%,55%{transform:translateX(-80%)}100%{transform:translateX(80%)}}@media(prefers-reduced-motion:reduce){.goal05-live-places,.goal05-live-places:before{animation:none!important}}
-.goal05-offer .btn{width:100%;justify-content:center;margin-top:14px}
-.goal05-small{font-size:10.5px;color:var(--muted);line-height:1.55;margin-top:10px}.goal05-apk-download{margin-top:11px;padding:12px;border:1px solid rgba(52,211,153,.28);border-radius:13px;background:rgba(52,211,153,.08)}.goal05-apk-download .btn{width:100%;justify-content:center;margin-top:0}.goal05-apk-download small{display:block;margin-top:8px;color:var(--muted);font-size:10.5px;line-height:1.45}
-@media(max-width:760px){.goal05-founder-inner{grid-template-columns:1fr;padding:20px}.goal05-proof-grid{grid-template-columns:1fr}.goal05-title{font-size:23px}}/* Acces fondateur +0,5 : invitation affichee une seule fois par session. */
-.beta-cycle01-launcher{position:fixed;right:18px;bottom:18px;z-index:180;padding:11px 14px;border:1px solid rgba(166,136,255,.45);border-radius:999px;background:#1e2340;color:#f6f7ff;box-shadow:0 14px 32px rgba(0,0,0,.3);font:800 12px Inter,system-ui;cursor:pointer}.beta-cycle01-launcher b{color:#4fd6f2}.beta-cycle01{max-width:440px}.beta-cycle01 .beta-kicker{color:#4fd6f2;font-size:10px;font-weight:900;letter-spacing:.13em}.beta-cycle01 .beta-meta{margin:13px 0;color:#c4c9e6;font-size:12px}.beta-cycle01 .beta-form{display:grid;gap:10px;margin-top:16px}.beta-cycle01 .beta-check{display:flex;gap:8px;color:#c4c9e6;font-size:11px;line-height:1.45}.beta-cycle01 .beta-check input{margin-top:2px;accent-color:#8a68ff}.beta-cycle01 .beta-status{margin-top:10px;font-size:12px;line-height:1.45}@media(max-width:700px){.beta-cycle01-launcher{right:12px;bottom:12px}}</style>
+</style>
 
 
 <!-- TLM OFFICIAL BRAND / SEO / TELEGRAM -->
@@ -981,7 +965,6 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       </div>
     </div>
     <div id="nav-auth"><button class="btn btn-ghost" onclick="openModal()" data-i18n="nav_login">Se connecter</button></div>
-    <a href="/downloads/TousLesMatchs-Goal05-v107-20260817-161610.apk" class="btn btn-ghost nav-apk-cta" download>📲 APK bêta</a>
     <a href="/dashboard" class="btn btn-prim" data-i18n="nav_signup">Créer mon compte gratuit</a>
     <button class="nav-hamburger" onclick="toggleMenu()">☰</button>
   </div>
@@ -993,7 +976,6 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   <a href="/bankroll" data-i18n="nav_bankroll">Bankroll</a>
   <a href="#methode" onclick="toggleMenu()" data-i18n="nav_method">Méthode</a>
   <a href="#plans" onclick="toggleMenu()" data-i18n="nav_plans">Tarifs</a>
-  <a href="/downloads/TousLesMatchs-Goal05-v107-20260817-161610.apk" download>📲 Télécharger l’app Android bêta</a>
   <a href="/dashboard" data-i18n="nav_signup">Créer mon compte gratuit</a>
   <div class="mm-lang">
     <div class="mm-lang-h"><span data-i18n="lang_label">Langue</span></div>
@@ -1063,13 +1045,13 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   <!-- RANGEE 2 : PREUVES -->
   <div class="row" style="grid-template-columns:1fr">
     <div class="card proof-card">
-      <div class="proof-head"><div><div class="proof-eyebrow">Historique vérifiable</div><div class="proof-title">Toutes les analyses résolues, sans cacher les défaites</div><div class="proof-copy">Les analyses diffusées et celles seulement observées sont comptées séparément. Chaque résultat reste consultable.</div></div><a class="proof-link" href="/performances">Voir l’historique complet →</a></div>
+      <div class="proof-head"><div><div class="proof-eyebrow">Historique vérifiable</div><div class="proof-title">Historique des diffusions enregistrées, sans cacher les défaites</div><div class="proof-copy">Avant le 27 août, les envois proviennent des marqueurs archivés. Depuis le 27 août, une preuve Telegram est obligatoire.</div></div><a class="proof-link" href="/performances">Voir l’historique complet →</a></div>
       <div class="proof-bar" id="proof-bar">
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl">Analyses résolues</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl">Gagnées / Perdues observées</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl">Taux observé</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl">Simulation historique (10€)</div></div></div>
-        <div class="proof-cell"><div><div class="proof-num" id="pf-sent">—</div><div class="proof-lbl">Signaux réellement diffusés</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl">Diffusions résolues</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl">Gagnées / Perdues diffusées</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl">Taux des diffusions</div></div></div>
+        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl">Simulation des diffusions (10€)</div></div></div>
+        <div class="proof-cell"><div><div class="proof-num" id="pf-sent">—</div><div class="proof-lbl">Diffusions archivées / vérifiées</div></div></div>
         <div class="proof-cell"><div><div class="proof-num" id="pf-days">—</div><div class="proof-lbl">Jours avec résultat mesuré</div></div></div>
       </div>
       <div class="proof-note">Les observations non diffusées ne sont pas présentées comme des signaux reçus. Les performances passées ne garantissent pas les résultats futurs.</div>
@@ -1107,30 +1089,6 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     </div>
   </div>
 
-  <div class="row" style="grid-template-columns:1fr;padding-top:0">
-    <section class="card goal05-founder-card" id="goal05-founder-card" aria-labelledby="goal05-title" hidden>
-      <div class="goal05-founder-inner">
-        <div>
-          <div class="goal05-kicker">GOAL 0.5 IA · Acces fondateur</div>
-          <h2 class="goal05-title" id="goal05-title">Equipe +0,5 but</h2>
-          <p class="goal05-text">La selection n'est pas liee au domicile : elle vise l'equipe historiquement plus forte sur 4 saisons, encore bien classee cette annee, face a une equipe faible au classement et vulnerable.</p>
-          <div class="goal05-proof-grid" aria-label="Criteres principaux Goal 0.5">
-            <div class="goal05-proof"><b>Analyse historique 4 saisons</b>Moyenne ponderee 40 / 30 / 20 / 10 par championnat.</div>
-            <div class="goal05-proof"><b>Ecart de niveau</b>Top 25% historique contre bottom 25% historique.</div>
-            <div class="goal05-proof"><b>Score minimum</b>80/100 avant toute surveillance live.</div>
-            <div class="goal05-proof"><b>Declenchement prudent</b>Cote live 1.60, marche frais, aucun signal apres 85e.</div>
-          </div>
-        </div>
-        <aside class="goal05-offer" aria-label="Offre beta Goal 0.5">
-          <div class="goal05-offer-label">Beta privee · Cycle 01</div>
-          <div class="goal05-offer-price">20 places offertes pendant la beta<span>Acces reserve aux testeurs majeurs, sans promesse de resultat.</span></div><div class="goal05-live-places" aria-live="polite"><span class="goal05-live-label">Places fondatrices restantes</span><div class="goal05-live-number"><strong id="goal05-remaining-count">20</strong><span>sur 20</span></div><div class="goal05-live-hint" id="goal05-remaining-hint">Le compteur descend automatiquement a chaque invitation reservee.</div></div>
-          <button class="btn btn-prim" type="button" onclick="openBetaCycle01()">Demander une invitation</button>
-          <div class="goal05-apk-download"><a class="btn btn-ghost" href="/downloads/TousLesMatchs-Goal05-v107-20260817-161610.apk" download>Télécharger l'APK Android bêta</a><small>Installation hors Play Store pour les testeurs. Version bêta privée, football uniquement, 18+.</small></div>
-          <div class="goal05-small">La version payante viendra apres preuve des donnees live, historique complet et bilan transparent des signaux vraiment delivres.</div>
-        </aside>
-      </div>
-    </section>
-  </div>
   <!-- RANGEE 4 : FORMULES (parcours principal : hero -> preuve -> pick gratuit -> formules) -->
   <div class="row row-4" id="plans">
     <div class="card plan">
@@ -1205,7 +1163,6 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     <div class="card" style="text-align:center">
       <div style="font-size:13px;font-weight:800;color:var(--tx2);margin-bottom:4px" data-i18n="partners_title">Nos partenaires bookmakers agréés ANJ</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:18px" data-i18n="partners_sub">En passant par nos liens, tu soutiens le site — sans surcoût pour toi.</div>
-      <div class="site-apk-download"><a class="btn btn-prim" href="/downloads/TousLesMatchs-Goal05-v107-20260817-161610.apk" download>📲 Télécharger l’app Android bêta</a><div class="site-apk-download-note">Gmail bloque les fichiers APK en pièce jointe : partage plutôt ce lien officiel du site. Installation hors Play Store réservée aux testeurs · Football uniquement · 18+.</div></div>
       <div class="partner-row">
         <a href="https://www.winamax.fr/parrain?code=77953728" target="_blank" rel="noopener sponsored" class="partner-btn pb-winamax">Winamax</a>
         <a href="https://www.unibet.fr/inscription/?campaign=210726&parrain=5EBF919DF1008254" target="_blank" rel="noopener sponsored" class="partner-btn pb-unibet">Unibet</a>
@@ -1244,8 +1201,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   </div>
 </footer>
 
-<button type="button" class="beta-cycle01-launcher" id="beta-cycle01-launcher" onclick="openBetaCycle01()"><b>Cycle 01</b> · demander une invitation</button>
-<div class="modal-bg" id="beta-cycle01-modal" aria-hidden="true"><div class="modal-box beta-cycle01"><button class="modal-close" onclick="closeBetaCycle01()">×</button><div class="beta-kicker">ACCES FONDATEUR · CYCLE 01</div><div class="modal-title" style="margin-top:12px">Une premiere table de test.</div><div class="modal-sub">20 invitations pour suivre le protocole +0,5 but : signaux, refus et resultats visibles sans filtre.</div><div class="beta-meta" id="beta-cycle01-count">Verification des invitations disponibles…</div><div class="beta-form"><input class="modal-input" id="beta-cycle01-email" type="email" autocomplete="email" placeholder="toi@exemple.com"><label class="beta-check"><input id="beta-cycle01-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter les <a href="/mentions-legales" target="_blank">mentions legales</a> et la <a href="/confidentialite" target="_blank">politique de confidentialite</a>.</label><button class="modal-btn" type="button" id="beta-cycle01-submit" onclick="applyBetaCycle01()">Demander une invitation</button></div><div class="beta-status" id="beta-cycle01-status" aria-live="polite"></div><div style="font-size:10px;color:var(--muted);margin-top:14px">Acces offert pendant la beta · Aucun gain n est garanti · Jouez avec moderation</div></div></div><!-- LOGIN MODAL -->
+<!-- LOGIN MODAL -->
 <div class="modal-bg" id="modal-login">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">×</button>
@@ -1544,25 +1500,25 @@ async function loadProof(){
     var d=await fetchAllAnalysisHistory(2000);
     if(!d.ok) return;
     var s=d.stats||{};
+    var verified=s.abonnes||s;
     var allRows=d.analyses||[];
     var resolvedRows=allRows.filter(function(a){return a.outcome==='win'||a.outcome==='loss';});
-    var sentRows=resolvedRows.filter(function(a){var sent=a.sent||{};return !!(a.diffused||a.signal_delivered||sent.standard||sent.premium||sent.elite);});
-    var historyWins=resolvedRows.filter(function(a){return a.outcome==='win';}).length;
-    var historyLosses=resolvedRows.length-historyWins;
-    var historyProfit=0;
-    resolvedRows.forEach(function(a){var odd=Number(a.cote)>1?Number(a.cote):0;historyProfit+=a.outcome==='win'?(odd?odd*10-10:0):-10;});
-    document.getElementById('pf-total').textContent=resolvedRows.length||0;
-    document.getElementById('pf-wins').textContent=historyWins;
-    document.getElementById('pf-losses').textContent=historyLosses;
-    document.getElementById('pf-winrate').textContent=(resolvedRows.length?Math.round(historyWins/resolvedRows.length*100):0)+'%';
-    document.getElementById('pf-profit').textContent=fmtEur(Math.round(historyProfit));
-    var measuredDays={};resolvedRows.forEach(function(a){var day=String(a.analysed_at||a.date||'').slice(0,10);if(day)measuredDays[day]=1;});
-    document.getElementById('pf-sent').textContent=sentRows.length?sentRows.length:'—';
+    var sentRows=resolvedRows.filter(function(a){var sent=a.sent||{};return !!(a.delivery_proven||a.diffused||a.signal_delivered||sent.standard||sent.premium||sent.elite);});
+    var verifiedTotal=Number(verified.total||sentRows.length||0);
+    var verifiedWins=Number(verified.wins||0);
+    var verifiedLosses=Number(verified.losses||Math.max(0,verifiedTotal-verifiedWins));
+    document.getElementById('pf-total').textContent=verifiedTotal;
+    document.getElementById('pf-wins').textContent=verifiedWins;
+    document.getElementById('pf-losses').textContent=verifiedLosses;
+    document.getElementById('pf-winrate').textContent=Number(verified.winrate||0)+'%';
+    document.getElementById('pf-profit').textContent=fmtEur(Math.round(Number(verified.profit10||0)));
+    var measuredDays={};sentRows.forEach(function(a){var day=String(a.analysed_at||a.date||'').slice(0,10);if(day)measuredDays[day]=1;});
+    document.getElementById('pf-sent').textContent=verifiedTotal||'—';
     document.getElementById('pf-days').textContent=Object.keys(measuredDays).length||'—';
 
     var tbody=document.getElementById('res-body');
     var seenProof={};
-    var resolved=resolvedRows.filter(function(a){
+    var resolved=sentRows.filter(function(a){
       var key=[a.home||'',a.away||''].join('|').toLowerCase();
       if(seenProof[key]) return false;
       seenProof[key]=true;
@@ -1579,12 +1535,6 @@ async function loadProof(){
 loadProof();
 
 /* ══ CAPTURE EMAIL (active la sequence nurturing J0/J+1/J+3 deja codee cote API) ══ */
-function openBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.add("open");m.setAttribute("aria-hidden","false");loadBetaCycle01Status();}
-function closeBetaCycle01(){var m=document.getElementById("beta-cycle01-modal");m.classList.remove("open");m.setAttribute("aria-hidden","true");}
-function updateGoal05Remaining(d){var n=document.getElementById("goal05-remaining-count"),h=document.getElementById("goal05-remaining-hint");if(!n||!d||typeof d.remaining==="undefined")return;n.textContent=Math.max(0,d.remaining);if(h)h.textContent=d.remaining>0?"Le compteur descend automatiquement a chaque invitation reservee.":"Les 20 places sont prises : les nouvelles demandes passent en liste d attente."}function loadBetaCycle01Status(){fetch("/api/beta-plus05/status").then(function(r){return r.json()}).then(function(d){updateGoal05Remaining(d);document.getElementById("beta-cycle01-count").textContent=d.remaining>0?(d.remaining+" invitation"+(d.remaining>1?"s":"")+" disponible"+(d.remaining>1?"s":"")):"Beta complete : inscription en liste d attente."}).catch(function(){document.getElementById("beta-cycle01-count").textContent="Les invitations seront confirmees apres verification."})}
-function applyBetaCycle01(){var email=document.getElementById("beta-cycle01-email").value.trim(),adult=document.getElementById("beta-cycle01-adult").checked,status=document.getElementById("beta-cycle01-status"),btn=document.getElementById("beta-cycle01-submit");if(!email||!adult){status.style.color="var(--red)";status.textContent="Email valide et confirmation +18 requis.";return}btn.disabled=true;fetch("/api/beta-plus05/apply",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:email,adultConfirmed:adult,legalAccepted:adult})}).then(function(r){return r.json()}).then(function(d){status.style.color=d.ok?"var(--green)":"var(--red)";status.textContent=d.ok?(d.status==="accepted"?"Invitation reservee. Nous confirmerons la phase de test avant tout acces.":"Beta complete : ta demande est en liste d attente."):(d.error||"Demande non valide.");if(d.ok)loadBetaCycle01Status()}).catch(function(){status.style.color="var(--red)";status.textContent="Erreur de connexion. Reessaie plus tard."}).finally(function(){btn.disabled=false})}
-(function(){var betaModal=document.getElementById("beta-cycle01-modal");if(betaModal){betaModal.addEventListener("click",function(e){if(e.target===this)closeBetaCycle01()});}})();
-setTimeout(function(){if(!sessionStorage.getItem("tlm_beta_cycle01_seen")){openBetaCycle01();sessionStorage.setItem("tlm_beta_cycle01_seen","1")}},7000);loadBetaCycle01Status();
 function submitEmailCapture(ev) {
   ev.preventDefault();
   var input = document.getElementById('email-capture-input');
@@ -1741,7 +1691,7 @@ async function loadHeroLive(){
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v2-20260825').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v5-20260828').catch(function(){});});}
 
 /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
 function renderUpcomingItem(p){
