@@ -8480,9 +8480,11 @@ function hasPredictionSnapshot(match) {
 // Reactivable sans redeploiement : AUTO_CONCILE_ARJEL_ONLY=0 dans le .env.
 // Ne pas remettre l'analyse hors ARJEL sans accord explicite du fondateur.
 const AUTO_CONCILE_ARJEL_ONLY = process.env.AUTO_CONCILE_ARJEL_ONLY !== "0";
-// Marches sur lesquels une analyse peut reellement devenir un signal
-// (miroir de DAILY_PICK_ALLOWED_BETS). Inutile de sonder autre chose.
-const ARJEL_PREFILTER_MARKETS = ["Under 2.5 buts", "BTTS Oui", "Victoire domicile", "Victoire extérieur"];
+// Marches sur lesquels une analyse peut reellement devenir un signal CLIENT.
+// Depuis le recentrage produit, Telegram ne diffuse que le O/U 2,5. Accepter
+// ici une cote BTTS ou victoire faisait depenser cinq appels IA sur un match
+// qui etait ensuite refuse par la barriere finale "O/U 2,5 uniquement".
+const ARJEL_PREFILTER_MARKETS = ["Over 2.5 buts", "Under 2.5 buts"];
 
 async function isArjelPlayableBeforeAnalysis(match) {
   if (!AUTO_CONCILE_ARJEL_ONLY) return { ok: true, why: "filtre desactive" };
@@ -8512,6 +8514,12 @@ async function runAutoConcileObserver() {
     const matches = await fetchLiveMatches();
     const observed = matches
       .filter(shouldAutoObserveMatch)
+      // Le filtre produit doit preceder les cinq appels du Concile. Le 27/08,
+      // des coupes UEFA et des matchs hors minute 15-40 ont consomme les 100
+      // appels OpenRouter du jour, puis le coupe-circuit daily_requests a rendu
+      // les cinq agents muets. La meme regle reste repetee avant Telegram en
+      // defense en profondeur dans runConcileAnalysis().
+      .filter(m => isClientOu25MatchEligible(m, true))
       .filter(m => !hasPredictionSnapshot(m));
     // Priorite jetons : le foot en ligue fiable est le seul a pouvoir devenir
     // le pick du jour (DAILY_PICK_ALLOWED_BETS = marches foot uniquement) —
@@ -11706,24 +11714,23 @@ app.get("/live-activity", (req, res) => {
     const analysesToday = db.prepare(
       "SELECT COUNT(*) AS c FROM concile_analyses WHERE date(analysed_at)=date('now')"
     ).get()?.c || 0;
+    // Un signal n'existe cote client qu'apres une reponse Telegram OK avec un
+    // message_id. Compter seulement la confiance transformait 24 analyses
+    // prematch sans minute, cote ni vote en "24 signaux" le 28/08.
     const publishedToday = db.prepare(
-      `SELECT COUNT(*) AS c FROM (
-         SELECT 1 FROM concile_analyses
-         WHERE date(analysed_at)=date('now') AND confidence >= ${getPublishedMinConfidence()}
-         GROUP BY lower(trim(home)), lower(trim(away))
-       )`
+      `SELECT COUNT(DISTINCT match_key) AS c
+       FROM telegram_signal_deliveries
+       WHERE ok=1 AND telegram_message_id IS NOT NULL
+         AND channel IN ('standard','premium','elite')
+         AND date(created_at)=date('now')`
     ).get()?.c || 0;
     const totalPublished = db.prepare(
-      `SELECT COUNT(*) AS c FROM (
-         SELECT 1 FROM concile_analyses
-         WHERE confidence >= ${getPublishedMinConfidence()}
-         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-       )`
+      `SELECT COUNT(DISTINCT match_key || '|' || date(created_at)) AS c
+       FROM telegram_signal_deliveries
+       WHERE ok=1 AND telegram_message_id IS NOT NULL
+         AND channel IN ('standard','premium','elite')`
     ).get()?.c || 0;
-    const signalsToday = db.prepare(
-      `SELECT COUNT(*) AS c FROM concile_analyses
-       WHERE date(analysed_at)=date('now') AND confidence >= ?`
-    ).get(getAdaptiveSignalThreshold())?.c || 0;
+    const signalsToday = publishedToday;
     res.json({
       ok: true,
       analyses_today: analysesToday,
