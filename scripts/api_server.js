@@ -486,7 +486,10 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tg_delivery_match ON telegram_signal_deliveries(match_key, channel, ok);
 `);
 
-// Beta privee +0,5 : capacite reelle, liste d attente et aucune diffusion automatique.
+// Anciennes candidatures +0,5 conservees uniquement pour l'historique admin.
+// La campagne publique est fermee : aucun nouveau compte gratuit ne doit etre
+// transforme en acces +0,5 complet par une vieille page restee en cache.
+const FOUNDER_BETA_ENABLED = false;
 db.exec(`CREATE TABLE IF NOT EXISTS beta_plus05_applications (
   email TEXT PRIMARY KEY,
   status TEXT NOT NULL CHECK(status IN ('accepted','waitlist')),
@@ -603,6 +606,28 @@ ensureColumn("concile_analyses", "signal_tier",       "TEXT DEFAULT NULL");
 // moins de contexte disponible qu'en live). Defaut 'live' : couvre tout
 // l'historique existant, qui vient exclusivement du pipeline live.
 ensureColumn("concile_analyses", "source_type",       "TEXT DEFAULT 'live'");
+
+// Les picks H2H pre-match servent uniquement a l'apprentissage interne. Ils
+// n'ont ni minute live, ni cinq votes du Concile, ni preuve Telegram et ne
+// doivent donc jamais rester avec diffusion_block=NULL (qui signifie qu'une
+// decision de diffusion valide est encore possible). Ce backfill est cible,
+// idempotent et preserve toutes les analyses live ainsi que l'historique.
+try {
+  const fixedPrematchTrace = db.prepare(`
+    UPDATE concile_analyses
+    SET diffusion_block = 'prematch interne: non diffuse aux clients'
+    WHERE source_type = 'prematch'
+      AND (diffusion_block IS NULL OR trim(diffusion_block) = '')
+      AND sig_sent_standard = 0
+      AND sig_sent_premium = 0
+      AND sig_sent_elite = 0
+  `).run();
+  if (fixedPrematchTrace.changes) {
+    console.log(`[migration] ${fixedPrematchTrace.changes} analyse(s) prematch tracee(s) comme non diffusables`);
+  }
+} catch (e) {
+  console.error("[migration] trace prematch:", e.message);
+}
 
 // Championnat de chaque avis agent x marche — absent jusqu'ici (voir
 // commentaire plus bas), impossible donc de savoir "quelle IA est forte sur
@@ -4298,12 +4323,14 @@ function savePrematchPickIfNew(pick) {
     db.prepare(`
       INSERT INTO concile_analyses
         (match_key, home, away, competition, sport, best_bet, confidence,
-         raison, consensus_votes, source_type, home_logo, away_logo)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+         raison, consensus_votes, source_type, home_logo, away_logo,
+         diffusion_block)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
     `).run(
       matchKey, pick.home, pick.away, pick.competition, pick.sport,
       pick.bet, pick.confidence, "Pick pré-match (H2H)", 0, "prematch",
-      pick.home_logo || null, pick.away_logo || null
+      pick.home_logo || null, pick.away_logo || null,
+      "prematch interne: non diffuse aux clients"
     );
   } catch (e) { console.error("[upcoming-picks] savePrematchPickIfNew:", e.message); }
 }
@@ -4315,6 +4342,19 @@ function savePrematchPickIfNew(pick) {
 // (fetchH2H, déjà utilisé pour enrichir les analyses live) — pas de nouvel
 // appel IA payant, juste des statistiques de confrontations directes.
 let _upcomingPicksCache = { ts: 0, data: [], featuredMatch: null, stats: null };
+let _upcomingPicksRefreshPromise = null;
+
+function refreshUpcomingPicksInBackground() {
+  if (_upcomingPicksRefreshPromise) return _upcomingPicksRefreshPromise;
+  _upcomingPicksRefreshPromise = computeUpcomingPicks()
+    .catch(error => {
+      console.error("[upcoming-picks] refresh arriere-plan:", error.message);
+      return _upcomingPicksCache;
+    })
+    .finally(() => { _upcomingPicksRefreshPromise = null; });
+  return _upcomingPicksRefreshPromise;
+}
+
 async function computeUpcomingPicks() {
   if (Date.now() - _upcomingPicksCache.ts < 30 * 60000) return _upcomingPicksCache;
   if (!API_SPORTS_KEY) return _upcomingPicksCache;
@@ -4477,7 +4517,11 @@ app.get("/upcoming-picks", async (req, res) => {
         unlocked = !!((a.valid && a.plan) || isAdminAccess(qEmail, qCode));
       } catch (_) {}
     }
-    const result = await computeUpcomingPicks();
+    // Un calcul froid peut consulter jusqu'a 60 historiques H2H. La route
+    // repond avec le cache sans bloquer le navigateur et actualise en fond.
+    const cacheFresh = _upcomingPicksCache.ts && Date.now() - _upcomingPicksCache.ts < 30 * 60000;
+    if (!cacheFresh) refreshUpcomingPicksInBackground();
+    const result = _upcomingPicksCache;
     // Le cache dure 30 min : un match peut avoir donne son coup d'envoi entre
     // deux recalculs et rester affiche avec sa cote figee d'avant-match, alors
     // qu'il est deja en direct ailleurs sur le site. Filtre applique a chaque
@@ -4505,6 +4549,7 @@ app.get("/upcoming-picks", async (req, res) => {
         home_logo: featured.home_logo, away_logo: featured.away_logo,
       } : null,
       stats: result.stats,
+      refreshing: !cacheFresh || !!_upcomingPicksRefreshPromise,
     });
   } catch (e) {
     console.error("[upcoming-picks] endpoint:", e.message);
@@ -8480,9 +8525,11 @@ function hasPredictionSnapshot(match) {
 // Reactivable sans redeploiement : AUTO_CONCILE_ARJEL_ONLY=0 dans le .env.
 // Ne pas remettre l'analyse hors ARJEL sans accord explicite du fondateur.
 const AUTO_CONCILE_ARJEL_ONLY = process.env.AUTO_CONCILE_ARJEL_ONLY !== "0";
-// Marches sur lesquels une analyse peut reellement devenir un signal
-// (miroir de DAILY_PICK_ALLOWED_BETS). Inutile de sonder autre chose.
-const ARJEL_PREFILTER_MARKETS = ["Under 2.5 buts", "BTTS Oui", "Victoire domicile", "Victoire extérieur"];
+// Marches sur lesquels une analyse peut reellement devenir un signal CLIENT.
+// Depuis le recentrage produit, Telegram ne diffuse que le O/U 2,5. Accepter
+// ici une cote BTTS ou victoire faisait depenser cinq appels IA sur un match
+// qui etait ensuite refuse par la barriere finale "O/U 2,5 uniquement".
+const ARJEL_PREFILTER_MARKETS = ["Over 2.5 buts", "Under 2.5 buts"];
 
 async function isArjelPlayableBeforeAnalysis(match) {
   if (!AUTO_CONCILE_ARJEL_ONLY) return { ok: true, why: "filtre desactive" };
@@ -8512,6 +8559,12 @@ async function runAutoConcileObserver() {
     const matches = await fetchLiveMatches();
     const observed = matches
       .filter(shouldAutoObserveMatch)
+      // Le filtre produit doit preceder les cinq appels du Concile. Le 27/08,
+      // des coupes UEFA et des matchs hors minute 15-40 ont consomme les 100
+      // appels OpenRouter du jour, puis le coupe-circuit daily_requests a rendu
+      // les cinq agents muets. La meme regle reste repetee avant Telegram en
+      // defense en profondeur dans runConcileAnalysis().
+      .filter(m => isClientOu25MatchEligible(m, true))
       .filter(m => !hasPredictionSnapshot(m));
     // Priorite jetons : le foot en ligue fiable est le seul a pouvoir devenir
     // le pick du jour (DAILY_PICK_ALLOWED_BETS = marches foot uniquement) —
@@ -9053,17 +9106,56 @@ function normalizeContactLang(lang = "", country = "") {
 }
 
 // ── Subscribe email (capture gratuite → Brevo) ───────────────────────────────
-app.get("/goal05/latest", (req, res) => {
-  res.json(readGoal05LatestSignal());
-});
-app.get("/api/goal05/latest", (req, res) => {
-  res.json(readGoal05LatestSignal());
-});
+// Le verrouillage visuel ne suffit pas : l'API publique ne doit jamais livrer
+// l'equipe, le pari ou la cote exacte a un visiteur gratuit/non connecte.
+function paidGoal05Account(req) {
+  const auth = String(req.headers.authorization || "");
+  const sessionToken = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
+  const email = String(req.headers["x-tlm-email"] || "").toLowerCase().trim();
+  if (!sessionToken) return null;
+
+  if (email) {
+    const subscriber = verifyFcmSubscriber(email, sessionToken);
+    if (subscriber) return subscriber;
+  }
+
+  try {
+    const session = db.prepare("SELECT email, expires_at FROM sessions WHERE token = ?").get(sessionToken);
+    if (!session || Date.parse(session.expires_at) < Date.now()) return null;
+    const account = lookupAccountByEmail(session.email);
+    if (!account || String(account.plan || "free").toLowerCase() === "free") return null;
+    if (account.expires_at && Date.parse(account.expires_at) < Date.now()) return null;
+    return { email: session.email, ...account };
+  } catch (error) {
+    console.error("[goal05] verification membre:", error.message);
+    return null;
+  }
+}
+
+function sendGoal05Latest(req, res) {
+  const latest = readGoal05LatestSignal();
+  if (!paidGoal05Account(req)) {
+    return res.json({
+      ok: true,
+      locked: true,
+      available: !!latest?.signal,
+      signal: null,
+      cta: "Selection exacte reservee aux membres des 4,90 euros par mois",
+    });
+  }
+  return res.json({ ...latest, locked: false });
+}
+
+app.get("/goal05/latest", sendGoal05Latest);
+app.get("/api/goal05/latest", sendGoal05Latest);
 app.get("/beta-plus05/status", (req, res) => {
   const accepted = db.prepare("SELECT COUNT(*) AS n FROM beta_plus05_applications WHERE status='accepted'").get()?.n || 0;
-  res.json({ ok:true, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:Math.max(0,BETA_PLUS05_CAPACITY-accepted) });
+  res.json({ ok:true, enabled:FOUNDER_BETA_ENABLED, capacity:BETA_PLUS05_CAPACITY, accepted, remaining:0 });
 });
 app.post("/beta-plus05/apply", (req, res) => {
+  if (!FOUNDER_BETA_ENABLED) {
+    return res.status(410).json({ ok:false, error:"La campagne beta est terminee. Creez un compte gratuit ou choisissez une formule membre." });
+  }
   const email = normalizeBetaEmail(req.body?.email);
   const adultConfirmed = req.body?.adultConfirmed === true;
   const legalAccepted = req.body?.legalAccepted === true;
@@ -11302,7 +11394,50 @@ app.get("/current-pick", (req, res) => {
   } catch (e) { /* picks.json absent ou invalide */ }
   // Aucun signal verifie aujourd'hui : ne pas recycler un ancien pick manuel
   // ou un autre marche comme s'il appartenait au produit O/U 2,5.
-  res.json({ ok: true, pick: null });
+  let lastResult = null;
+  try {
+    const rows = db.prepare(`
+      SELECT date, home, away, competition, sport, bet, confidence, cote,
+             outcome, final_score_home, final_score_away, home_logo, away_logo
+      FROM daily_pick_log
+      WHERE outcome IN ('win','loss')
+      ORDER BY date DESC LIMIT 30
+    `).all();
+    let row = rows.find(candidate => isOu25Bet(candidate.bet) && !isExcludedFromPicks(candidate));
+    // Les premiers jours suivant l'activation du journal quotidien, celui-ci
+    // peut être vide alors que des signaux Telegram résolus existent déjà.
+    // Repli strict : uniquement un vrai O/U 2,5 diffusé, jamais une analyse
+    // interne, un test ou un prématch non livré.
+    if (!row) {
+      const delivered = db.prepare(`
+        SELECT date(analysed_at) AS date, home, away, competition, sport,
+               best_bet AS bet, confidence, real_odd AS cote, outcome,
+               final_score_home, final_score_away, home_logo, away_logo
+        FROM concile_analyses
+        WHERE outcome IN ('win','loss')
+          AND COALESCE(source_type,'live') <> 'prematch'
+          AND (sig_sent_free=1 OR sig_sent_standard=1 OR sig_sent_premium=1 OR sig_sent_elite=1)
+          AND lower(home) NOT LIKE '%[test]%'
+          AND lower(away) NOT LIKE '%[test]%'
+        ORDER BY datetime(analysed_at) DESC LIMIT 50
+      `).all();
+      row = delivered.find(candidate => isOu25Bet(candidate.bet) && !isExcludedFromPicks(candidate));
+    }
+    if (row) {
+      lastResult = {
+        date: row.date, home: row.home, away: row.away,
+        competition: row.competition, sport: row.sport || "Football",
+        bet: row.bet, confidence: row.confidence, cote: row.cote,
+        outcome: row.outcome,
+        final_score_home: row.final_score_home,
+        final_score_away: row.final_score_away,
+        home_logo: row.home_logo, away_logo: row.away_logo,
+      };
+    }
+  } catch (error) {
+    console.error("[current-pick] derniere preuve:", error.message);
+  }
+  res.json({ ok: true, pick: null, lastResult });
 });
 
 // ── Pages SEO (pronostics) — contenu public indexable ────────────────────────
@@ -11703,27 +11838,31 @@ app.get("/council-vote", (req, res) => {
 // ── Activité en direct — compteurs réels du jour (réassurance "site vivant") ──
 app.get("/live-activity", (req, res) => {
   try {
+    // Le bandeau Live ne doit pas compter les picks H2H pre-match internes.
+    // Ils n'utilisent pas le Concile live et ne peuvent pas devenir un signal
+    // client. Les melanger expliquait le faux volume "26 analyses" du 28/08.
     const analysesToday = db.prepare(
-      "SELECT COUNT(*) AS c FROM concile_analyses WHERE date(analysed_at)=date('now')"
+      `SELECT COUNT(*) AS c FROM concile_analyses
+       WHERE date(analysed_at)=date('now')
+         AND COALESCE(source_type, 'live') = 'live'`
     ).get()?.c || 0;
+    // Un signal n'existe cote client qu'apres une reponse Telegram OK avec un
+    // message_id. Compter seulement la confiance transformait 24 analyses
+    // prematch sans minute, cote ni vote en "24 signaux" le 28/08.
     const publishedToday = db.prepare(
-      `SELECT COUNT(*) AS c FROM (
-         SELECT 1 FROM concile_analyses
-         WHERE date(analysed_at)=date('now') AND confidence >= ${getPublishedMinConfidence()}
-         GROUP BY lower(trim(home)), lower(trim(away))
-       )`
+      `SELECT COUNT(DISTINCT match_key) AS c
+       FROM telegram_signal_deliveries
+       WHERE ok=1 AND telegram_message_id IS NOT NULL
+         AND channel IN ('standard','premium','elite')
+         AND date(created_at)=date('now')`
     ).get()?.c || 0;
     const totalPublished = db.prepare(
-      `SELECT COUNT(*) AS c FROM (
-         SELECT 1 FROM concile_analyses
-         WHERE confidence >= ${getPublishedMinConfidence()}
-         GROUP BY lower(trim(home)), lower(trim(away)), date(analysed_at)
-       )`
+      `SELECT COUNT(DISTINCT match_key || '|' || date(created_at)) AS c
+       FROM telegram_signal_deliveries
+       WHERE ok=1 AND telegram_message_id IS NOT NULL
+         AND channel IN ('standard','premium','elite')`
     ).get()?.c || 0;
-    const signalsToday = db.prepare(
-      `SELECT COUNT(*) AS c FROM concile_analyses
-       WHERE date(analysed_at)=date('now') AND confidence >= ?`
-    ).get(getAdaptiveSignalThreshold())?.c || 0;
+    const signalsToday = publishedToday;
     res.json({
       ok: true,
       analyses_today: analysesToday,
@@ -11910,9 +12049,23 @@ app.get("/live-matches", async (req, res) => {
     // message parlant de minutes de football. Une seule source de vérité ici.
     const withVerdict = matches.map((m) => {
       const ou25 = getLiveOu25VoteState(m);
-      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25 };
+      const clientProductEligible = isClientOu25MatchEligible(m, true);
+      const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
+      // Source de verite pour l'accueil public : un match ne peut etre presente
+      // comme un signal que si le championnat est dans le perimetre client ET
+      // qu'au moins 4 IA ont reellement enregistre le meme vote O/U 2,5.
+      // Cela evite qu'un simple match live bien illustre (logos + score) soit
+      // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
+      const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
+      const visibility = {
+        client_product_eligible: clientProductEligible,
+        analysis_started: Number(ou25.vote_count || 0) > 0,
+        analysis_verified: homepageDisplayEligible,
+        homepage_display_eligible: homepageDisplayEligible,
+      };
+      if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m);
-      return { ...m, analysable: !reason, block_reason: reason, ou25 };
+      return { ...m, analysable: !reason, block_reason: reason, ou25, ...visibility };
     });
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le

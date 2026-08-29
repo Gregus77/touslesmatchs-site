@@ -1585,13 +1585,16 @@ function liveHomeLogo(m){return m&&(m.home_logo||m.homeLogo||m.home_badge||m.str
 function liveAwayLogo(m){return m&&(m.away_logo||m.awayLogo||m.away_badge||m.strAwayTeamBadge||(m.teamB&&m.teamB.logo))||'';}
 function liveHomeScore(m){var v=m&&(m.score_home!=null?m.score_home:m.home_score!=null?m.home_score:m.intHomeScore!=null?m.intHomeScore:m.goals&&(m.goals.home!=null?m.goals.home:null));return v==null?'':v;}
 function liveAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
+function tlmHomepageAnalyzedMatch(m){
+  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true);
+}
 async function loadLive(){
   var grid=document.getElementById('live-rows');
   try{
     var r=await fetch('/api/live-matches');
     var d=await r.json();
-    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).slice(0,3);
-    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.<br>Consulte les prochaines rencontres disponibles.</div>'; return; }
+    var matches=(d.matches||d.live||[]).filter(tlmHomepageAnalyzedMatch).slice(0,3);
+    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun signal n\'a encore été validé par au moins 4 IA sur 5.<br>Le moteur continue d\'analyser les championnats autorisés.</div>'; return; }
     grid.innerHTML=matches.map(function(m){
       var icon=SPORT_ICO[m.sport]||'🏟️';
       var rawHomeScore=liveHomeScore(m),rawAwayScore=liveAwayScore(m),sh=rawHomeScore===''?'-':rawHomeScore,sa=rawAwayScore===''?'-':rawAwayScore;
@@ -1679,19 +1682,19 @@ function renderHeroWatchlist(p){
 async function loadHeroLive(){
   try{
     var r=await fetch('/api/live-matches?t='+Date.now(),{cache:'no-store'}),d=await r.json();
-    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed);
+    var matches=(d.matches||d.live||[]).filter(tlmHomepageAnalyzedMatch);
     matches.sort(function(a,b){
       function quality(m){return (liveHomeLogo(m)?2:0)+(liveAwayLogo(m)?2:0)+(liveHomeScore(m)!==''?2:0)+(liveAwayScore(m)!==''?2:0)+Math.min(1,Number(m.minute||0)/100);}
       return quality(b)-quality(a);
     });
     tlmHasLiveMatch=!!matches[0];
-    if(tlmHasLiveMatch)renderHeroLive(matches[0]);else renderHeroWatchlist(tlmFeaturedMatch);
-  }catch(e){tlmHasLiveMatch=false;renderHeroWatchlist(tlmFeaturedMatch);}
+    if(tlmHasLiveMatch)renderHeroLive(matches[0]);else renderHeroLive(null);
+  }catch(e){tlmHasLiveMatch=false;renderHeroLive(null);}
 }
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v5-20260828').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828').catch(function(){});});}
 
 /* ══ MATCHS A VENIR (pre-match, H2H) ══ */
 function renderUpcomingItem(p){
@@ -1731,8 +1734,13 @@ async function loadUpcoming(){
   // Identifiants en EN-TETES, plus en query string : une URL finit dans
   // l'historique du navigateur, les journaux du proxy et l'en-tete Referer.
   var authHdr=(email&&code)?{'X-TLM-Email':email,'X-TLM-Code':code}:{};
+  var controller=typeof AbortController!=='undefined'?new AbortController():null;
+  var timeout=controller?setTimeout(function(){controller.abort();},12000):null;
   try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{headers:authHdr});
+    var requestOptions={headers:authHdr,cache:'no-store'};
+    if(controller)requestOptions.signal=controller.signal;
+    var r=await fetch('/api/upcoming-picks?t='+Date.now(),requestOptions);
+    if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     tlmFeaturedMatch=(d.featuredMatch&&tlmMatchAllowed(d.featuredMatch))?d.featuredMatch:null;
     var allPicks=(d.picks||[]).filter(tlmMatchAllowed);
@@ -1758,12 +1766,15 @@ async function loadUpcoming(){
         if(!tlmHasLiveMatch)renderHeroWatchlist(wf);
       }else hl.innerHTML='';
       var s=d.stats;
-      var detail=(s&&s.totalFixtures)
+      var detail=d.refreshing
+        ? '🔍 Le moteur vérifie les prochains matchs et leurs historiques. Cette zone se mettra à jour automatiquement.'
+        :(s&&s.totalFixtures)
         ? '🔍 '+s.totalFixtures+' matchs passés en revue, '+s.trustedChecked+' en ligue fiable, '+s.h2hEligible+' avec assez d\'historique — et aucun n\'atteint notre score de confiance minimum (75/100) pour l\'instant.'
-        : '😴 Calme plat côté grands championnats : Ligue 1, Premier League, Bundesliga... sont encore en pause estivale, la reprise c\'est mi-août !';
+        : 'Aucun match à venir ne respecte actuellement les championnats et critères analysés.';
       box.innerHTML='<div class="empty-note">'+detail+'<br>'+
         'On ne propose que des matchs de ligues vraiment fiables — jamais de remplissage avec des matchs amateurs juste pour occuper la page.<br>'+
         '<button type="button" class="upcoming-lock-btn" style="margin-top:10px" onclick="openModal()">📩 Être prévenu dès qu\'un match qualifie</button></div>';
+      if(d.refreshing)setTimeout(loadUpcoming,10000);
       return;
     }
     // Le meilleur pick (confiance la plus haute, verrouille ou non) mis en
@@ -1788,7 +1799,8 @@ async function loadUpcoming(){
       '</div>'+upcomingTeamLogo(top.away_logo,top.away)+bet0+
     '</div>';
     box.innerHTML=rest.map(renderUpcomingItem).join('');
-  } catch(e){ box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>'; }
+  } catch(e){ box.innerHTML='<div class="empty-note">Les prochains matchs sont momentanément indisponibles. Le moteur continue sa vérification.</div>'; }
+  finally{if(timeout)clearTimeout(timeout);}
 }
 loadUpcoming();
 
@@ -1927,6 +1939,20 @@ async function loadPick(){
     var r=await fetch('/api/current-pick?t='+Date.now());
     var d=await r.json();
     var p=d.pick&&d.pick.currentPick?d.pick.currentPick:d.pick;
+    if(!p&&d.lastResult){
+      var proof=d.lastResult;
+      var proofWin=proof.outcome==='win';
+      var proofScore=(proof.final_score_home!=null&&proof.final_score_away!=null)
+        ? esc(proof.final_score_home)+' - '+esc(proof.final_score_away):'Score final vérifié';
+      box.innerHTML='<div class="pick-comp">Dernier résultat gratuit vérifié'+(proof.date?' · '+esc(proof.date):'')+'</div>'+
+        '<div class="pick-match"><div class="pick-team"><div class="pick-team-logo">'+logo(proof.home_logo,proof.home)+'</div><div class="pick-team-name">'+esc(proof.home)+'</div></div>'+
+        '<div class="pick-vs">VS</div><div class="pick-team"><div class="pick-team-logo">'+logo(proof.away_logo,proof.away)+'</div><div class="pick-team-name">'+esc(proof.away)+'</div></div></div>'+
+        '<div class="pick-score-badge '+(proofWin?'win':'loss')+'">'+proofScore+' · '+(proofWin?'✓ Gagné':'✗ Perdu')+'</div>'+
+        '<div class="pick-bet">'+esc(proof.bet||'Over / Under 2,5')+'</div>'+
+        '<div class="empty-note">Aucun nouveau pick ne respecte encore les critères aujourd\'hui. Le moteur continue l\'analyse.</div>'+
+        '<button type="button" class="pick-email-btn" onclick="openModal()">📩 Recevoir le prochain pick</button>';
+      return;
+    }
     // /current-pick passe toujours par normalizeCurrentPick() cote serveur,
     // qui renvoie teamA/teamB/marketLabel (partage avec d'autres consommateurs,
     // ex. generateur d'image Telegram) — jamais home/away/best_bet. Ce code

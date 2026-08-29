@@ -1,5 +1,37 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-08-28 — Preuve gratuite et fin du chargement infini
+
+- Le calcul H2H des matchs à venir se fait désormais en arrière-plan : l'accueil
+  répond immédiatement, affiche un état explicite et se réactualise tout seul.
+- Le navigateur abandonne proprement une requête après 12 secondes au lieu de
+  laisser « Chargement… » indéfiniment.
+- Quand aucun pick du jour n'est validé, l'accueil montre le dernier résultat
+  gratuit résolu et daté, sans le présenter comme un nouveau signal.
+- Le cache PWA passe en v8 pour diffuser ces corrections aux appareils installés.
+
+## 2026-08-28 — Fin publique de la bêta et tunnel gratuit maîtrisé
+
+- L'application ne présente plus d'accès fondateur, de cycle bêta ni de places
+  gratuites +0,5 ; les anciennes candidatures restent archivées côté admin.
+- Toute nouvelle candidature bêta est refusée proprement par l'API avec HTTP 410.
+- Le compte gratuit conserve le pick vitrine et les résultats publics ; les
+  sélections exactes +0,5 et leurs alertes sont réservées aux membres dès 4,90€.
+- Le cache PWA passe en v7 pour retirer les anciens libellés des appareils déjà installés.
+
+## 2026-08-28 — Traçabilité prématch et compteur Live
+
+- Les picks H2H prématch sont désormais marqués explicitement comme internes et non diffusables.
+- Les anciennes lignes prématch sans motif de blocage sont régularisées au démarrage sans toucher aux signaux live.
+- Le compteur `analyses_today` de `/live-activity` exclut le prématch interne.
+
+## 2026-08-28 — Réparation du tunnel Concile → Telegram
+
+- Le moteur automatique filtre désormais les matchs hors produit client avant les cinq appels IA : football, championnat fiable et minute 15 à 40.
+- Le préfiltre des cotes ARJEL est limité au marché Over/Under 2,5.
+- `/api/live-activity` ne présente plus une analyse à forte confiance comme un signal : une livraison Telegram réussie avec `message_id` est maintenant obligatoire.
+- Le plafond de sécurité OpenRouter reste inchangé à 100 appels par jour.
+
 ## 2026-08-28 — Cohérence publique, fin de la bêta fondatrice et cache PWA
 
 - L'accueil utilise désormais exactement le bloc `stats.abonnes` de
