@@ -1,0 +1,95 @@
+diff --git a/scripts/api_server.js b/scripts/api_server.js
+--- a/scripts/api_server.js
++++ b/scripts/api_server.js
+@@
+-let _upcomingPicksCache = { ts: 0, data: [], featuredMatch: null, stats: null };
++let _upcomingPicksCache = { ts: 0, data: [], fixtures: [], featuredMatch: null, stats: null };
+ async function computeUpcomingPicks() {
+@@
+   const picks = [];
++  const publicFixtures = [];
+@@
+     const seenFixtureIds = new Set();
+     const seenPairs = new Set();
+@@
+       const compObj = {
+@@
+       };
+       if (isCategoryBanned(compObj) || (!isUefaCompetition(compObj) && isLowTrustCompetition(compObj))) continue;
+@@
+       if (isWomenMatch(compObj)) continue;
++
++      // Programme public : toutes les rencontres football autorisees depuis
++      // maintenant jusqu'a demain, independamment du fait qu'elles atteignent
++      // ou non le seuil d'un pick. C'est volontairement separe de `picks` :
++      // l'accueil doit montrer le calendrier suivi, pas uniquement les signaux.
++      publicFixtures.push({
++        id: String(f.fixture.id),
++        home: f.teams.home?.name || "",
++        away: f.teams.away?.name || "",
++        competition: f.league?.name || "",
++        country: f.league?.country || "",
++        sport: "Football",
++        kickoff: f.fixture.date,
++        home_logo: f.teams.home?.logo || null,
++        away_logo: f.teams.away?.logo || null,
++      });
+@@
+   picks.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
++  publicFixtures.sort((a, b) => new Date(a.kickoff) - new Date(b.kickoff));
+@@
+-  _upcomingPicksCache = { ts: Date.now(), data: top, featuredMatch, stats };
++  _upcomingPicksCache = { ts: Date.now(), data: top, fixtures: publicFixtures, featuredMatch, stats };
+@@
+     const stillUpcoming = result.data.filter(p => new Date(p.kickoff).getTime() > Date.now());
++    const stillScheduled = (result.fixtures || []).filter(p => new Date(p.kickoff).getTime() > Date.now());
+@@
+     res.json({
+       ok: true,
++      fixtures: stillScheduled,
+       picks: stillUpcoming.map(p => ({
+@@
+diff --git a/public/index.html b/public/index.html
+--- a/public/index.html
++++ b/public/index.html
+@@
+-        <div class="live-panel-title"><span class="dot up"></span><span data-i18n="live_upcoming">Matchs à venir — prochaines 24h</span></div>
++        <div class="live-panel-title"><span class="dot up"></span><span data-i18n="live_upcoming">Matchs à venir — maintenant jusqu’à demain</span></div>
+@@
+ async function loadUpcoming(){
+@@
+     var d=await r.json();
+     tlmFeaturedMatch=(d.featuredMatch&&tlmMatchAllowed(d.featuredMatch))?d.featuredMatch:null;
++    var program=(d.fixtures||[]).filter(tlmMatchAllowed).filter(function(f){
++      var kd=new Date(f.kickoff);
++      return !isNaN(kd.getTime()) && kd.getTime()>Date.now();
++    }).sort(function(a,b){ return new Date(a.kickoff)-new Date(b.kickoff); });
++
++    // Le calendrier complet prime sur les picks : chaque rencontre suivie est
++    // visible avec son pays, son fanion, ses logos et son heure locale. Les
++    // selections du Concile restent gerees separement et ne sont pas modifiees.
++    if(program.length){
++      hl.innerHTML='';
++      box.innerHTML=program.map(function(f){
++        var country=String(f.country||splitComp(f.competition||'').country||'').trim();
++        var flag=COUNTRY_FLAGS[country]||'';
++        var ico=SPORT_ICO[f.sport]||'⚽';
++        var kt='';
++        try{
++          var kd=new Date(f.kickoff);
++          if(!isNaN(kd.getTime())){
++            kt=kd.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})+' · '+kd.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
++          }
++        }catch(e){}
++        return '<div class="upcoming-item">'+
++          '<div class="upcoming-highlight-logo">'+logo(f.home_logo,f.home)+'</div>'+
++          '<div class="upcoming-info">'+
++            '<div class="upcoming-teams">'+ico+' '+(flag?flag+' ':'')+esc(f.home)+' — '+esc(f.away)+'</div>'+
++            '<div class="upcoming-comp">'+esc(f.competition||'Football')+(country?' · '+esc(country):'')+(kt?' · '+esc(kt):'')+'</div>'+
++          '</div>'+
++          '<div class="upcoming-highlight-logo">'+logo(f.away_logo,f.away)+'</div>'+
++        '</div>';
++      }).join('');
++      return;
++    }
+     var allPicks=(d.picks||[]).filter(tlmMatchAllowed);
