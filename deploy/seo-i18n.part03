@@ -1,0 +1,26 @@
+et;f=a}if(!f.length){b.innerHTML='<tr><td colspan=6>'+esc(note.dataset.empty)+'</td></tr>';return}b.innerHTML=f.slice(0,18).map(function(x){var m=x[0],live=x[1],kd=live?String(m.minute||'Live'):new Date(m.kickoff||m.date||'').toLocaleString(document.documentElement.lang,{weekday:'short',hour:'2-digit',minute:'2-digit'});return '<tr><td><b>'+esc(m.home)+' — '+esc(m.away)+'</b></td><td>'+esc(m.league||m.competition||'Football')+(ct(m)?' · '+esc(ct(m)):'')+'</td><td>'+esc(kd)+'</td><td>'+esc(vt(m))+'</td><td>'+(mk(m)?esc(mk(m)):'—')+'</td><td>'+esc(cf(m))+'</td></tr>'}).join('')}).catch(function(){b.innerHTML='<tr><td colspan=6>'+esc(note.dataset.empty)+'</td></tr>'})})();'''
+(R/'seo/seo.js').write_text(JS+'\n')
+for c,L in D.items():
+ for i,k in enumerate(K):
+  title=L['t'][i]+' | TousLesMatchs'; h=L['h'][i]; desc=L['def'][:150]; can=absu(c,i); out=R/path(c,i).strip('/')/'index.html'; out.parent.mkdir(parents=True,exist_ok=True)
+  al='\n'.join('<link rel="alternate" hreflang="%s" href="%s">'%(D[x]['l'],e(absu(x,i))) for x in D)+'\n<link rel="alternate" hreflang="x-default" href="%s">'%e(absu('en',i))
+  ls=''.join('<a href="%s">%s</a>'%(e(absu(x,i)),e(D[x]['n'])) for x in D)
+  nav=''.join('<a href="%s">%s</a>'%(e(absu(c,j)),e(L['h'][j])) for j in range(1,5))
+  q=L['fq']; graph={'@context':'https://schema.org','@graph':[{'@type':'Organization','@id':S+'/#organization','name':'TousLesMatchs','url':S+'/'},{'@type':'WebSite','@id':S+'/#website','url':S+'/','name':'TousLesMatchs','publisher':{'@id':S+'/#organization'}},{'@type':'WebPage','url':can,'name':title,'description':desc,'inLanguage':L['l'],'isPartOf':{'@id':S+'/#website'}},{'@type':'BreadcrumbList','itemListElement':[{'@type':'ListItem','position':1,'name':L['t'][0],'item':absu(c,0)}]+([] if i==0 else [{'@type':'ListItem','position':2,'name':h,'item':can}])},{'@type':'FAQPage','mainEntity':[{'@type':'Question','name':q[z],'acceptedAnswer':{'@type':'Answer','text':q[z+1]}} for z in (0,2,4)]}]}
+  market='over 2.5' if k=='over' else 'under 2.5' if k=='under' else ''
+  U=L['ui']; faq=''.join('<details><summary>'+e(q[z])+'</summary><p>'+e(q[z+1])+'</p></details>' for z in (0,2,4))
+  page=f'''<!doctype html><html lang="{e(L['l'])}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><meta name="description" content="{e(desc)}"><meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large"><link rel="canonical" href="{e(can)}">{al}<meta property="og:title" content="{e(title)}"><meta property="og:description" content="{e(desc)}"><meta property="og:url" content="{e(can)}"><meta property="og:site_name" content="TousLesMatchs"><link rel="stylesheet" href="/seo/seo.css"><script type="application/ld+json">{json.dumps(graph,ensure_ascii=False,separators=(',',':'))}</script></head><body data-market="{market}"><header class="top"><div class="w ti"><a class="brand" href="{e(absu(c,0))}">TOUSLES<b>MATCHS</b></a><nav class="langs">{ls}</nav></div></header><main class="w"><section class="hero"><div class="muted">TousLesMatchs · Over/Under 2.5 · AI</div><h1>{e(h)}</h1><p class="lead">{e(L['def'])}</p><p class="muted">{e(L['meth'])}</p><nav class="nav">{nav}</nav></section><section class="panel"><h2>{e(U[0])}</h2><p id="note" class="muted" data-empty="{e(U[8])}" data-nomarket="{e(U[8])}">{e(U[7])}</p><div class="tw"><table><thead><tr>{''.join('<th>'+e(x)+'</th>' for x in U[1:7])}</tr></thead><tbody id="rows"><tr><td colspan="6">{e(U[7])}</td></tr></tbody></table></div></section><section class="panel"><h2>{e(L['h'][4])}</h2><p>{e(L['def'])}</p><p class="muted">{e(L['meth'])}</p></section><section class="panel"><h2>{e(U[9])}</h2><div class="faq">{faq}</div></section><section class="panel"><h2>{e(U[10])}</h2><div class="links">{nav}<a href="/live-ia">Live IA</a><a href="/performances">Results</a></div></section></main><footer><div class="w">© TousLesMatchs · <a href="/mentions-legales">Legal</a><div>{e(L['risk'])}</div></div></footer><script src="/seo/seo.js" defer></script></body></html>'''
+  out.write_text(page,encoding='utf-8')
+# robots: preserve + explicit OAI search bot restrictions
+rp=R/'robots.txt'; rob=rp.read_text();
+if 'User-agent: OAI-SearchBot' not in rob: rob=rob.rstrip()+'\n\nUser-agent: OAI-SearchBot\nAllow: /\nDisallow: /admin\nDisallow: /admin-dashboard\nDisallow: /api/\n'
+if 'Sitemap: https://www.touslesmatchs.com/sitemap.xml' not in rob: rob += '\nSitemap: https://www.touslesmatchs.com/sitemap.xml\n'
+rp.write_text(rob.rstrip()+'\n')
+# sitemap: preserve old locs and append 30 new canonical URLs + reciprocal hreflang
+old=ET.fromstring((R/'sitemap.xml').read_text()); loc=[]
+for x in old.iter():
+ if x.tag.endswith('loc') and x.text and x.text.strip() not in loc: loc.append(x.text.strip())
+new=[absu(c,i) for i in range(5) for c in D]; ordered=[]
+for u in loc+new:
+ if u not in ordered: ordered.append(u)
+rev={absu(c,i):(c,i) for i in range(5) for c in D}; lines=['<?xml version="1.0" e
