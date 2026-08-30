@@ -96,7 +96,7 @@ docker compose up -d --no-deps api
 
 # L'audit a deja ete recu aujourd'hui. Ce marqueur empeche un nouvel envoi
 # provoque uniquement par le redemarrage necessaire au deploiement.
-docker exec touslesmatchs-api node - <<'NODE'
+docker exec -i touslesmatchs-api node - <<'NODE'
 const fs = require("fs");
 const d = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" });
 fs.writeFileSync(`/data/hermes-daily-digest-${d}.sent`, new Date().toISOString() + "\n", { mode: 0o600 });
