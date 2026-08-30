@@ -27,6 +27,7 @@ echo "SHA_API_AVANT=$(sha256sum scripts/api_server.js | awk '{print $1}')"
 echo "[2/7] Installation du périmètre football public"
 python3 - <<'PY'
 from pathlib import Path
+import re
 p=Path('scripts/api_server.js')
 s=p.read_text(encoding='utf-8')
 orig=s
@@ -130,12 +131,21 @@ elif 'const cachedInScope = cachedNoNfl.filter(isPublicFootballScopeMatch);' not
     raise SystemExit('Cache NFL courant inattendu')
 
 # Enrichissement TheSportsDB du cache : ne réinjecte jamais une ligue hors scope.
-old_enrich='''    const enrichedMatches = mergeLiveMatchSources(cacheData, theSportsDbMatches)\n      .filter(m => !isFinishedOrTooLateForLiveIa(m));'''
-new_enrich='''    const enrichedMatches = mergeLiveMatchSources(cacheData, theSportsDbMatches)\n      .filter(isPublicFootballScopeMatch)\n      .filter(m => !isFinishedOrTooLateForLiveIa(m));'''
-if old_enrich in s:
-    s=s.replace(old_enrich,new_enrich,1)
-elif '.filter(isPublicFootballScopeMatch)' not in s[s.find('async function enrichFootballOnlyLiveCache'):s.find('async function fetchLiveMatches')]:
-    raise SystemExit('Enrichissement cache inattendu')
+# Recherche limitée à cette fonction, sans dépendre de l'espacement exact déjà
+# modifié par le garde-fou NFL précédent.
+enrich_start=s.find('async function enrichFootballOnlyLiveCache')
+enrich_end=s.find('async function fetchLiveMatches', enrich_start)
+if enrich_start < 0 or enrich_end < 0:
+    raise SystemExit('Fonction enrichissement cache introuvable')
+enrich_block=s[enrich_start:enrich_end]
+if '.filter(isPublicFootballScopeMatch)' not in enrich_block:
+    pattern=r'(const enrichedMatches\s*=\s*mergeLiveMatchSources\(cacheData,\s*theSportsDbMatches\)\s*\n)(\s*)(\.filter\([^\n]*isFinishedOrTooLateForLiveIa[^\n]*\);)'
+    match=re.search(pattern,enrich_block)
+    if not match:
+        raise SystemExit('Enrichissement cache incompatible — arrêt sans écriture')
+    replacement=match.group(1)+match.group(2)+'.filter(isPublicFootballScopeMatch)\n'+match.group(2)+match.group(3)
+    enrich_block=enrich_block[:match.start()]+replacement+enrich_block[match.end():]
+    s=s[:enrich_start]+enrich_block+s[enrich_end:]
 
 # Après fusion, on résout encore les anciens résultats à partir de TOUS les
 # matchs récupérés, puis seulement ensuite on réduit le flux public/IA.
