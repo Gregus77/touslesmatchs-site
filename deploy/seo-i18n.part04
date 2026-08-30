@@ -1,0 +1,43 @@
+ncoding="UTF-8"?>','<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">']
+for u in ordered:
+ lines+=['  <url>','    <loc>'+e(u)+'</loc>']
+ if u in rev:
+  _,i=rev[u]
+  for c in D: lines.append('    <xhtml:link rel="alternate" hreflang="'+D[c]['l']+'" href="'+e(absu(c,i))+'" />')
+  lines+=['    <xhtml:link rel="alternate" hreflang="x-default" href="'+e(absu('en',i))+'" />','    <lastmod>'+date.today().isoformat()+'</lastmod>']
+ lines.append('  </url>')
+lines.append('</urlset>'); (R/'sitemap.xml').write_text('\n'.join(lines)+'\n')
+print('PAGES=30')
+PY
+
+echo '=== VALIDATION ==='
+python3 - <<'PY'
+from pathlib import Path
+import re,json,xml.etree.ElementTree as ET
+P=[]
+for d in ['fr','en','es','pt-br','ru','zh-cn']: P += list((Path('public')/d).rglob('index.html'))
+assert len(P)==30
+for p in P:
+ s=p.read_text(); assert s.lower().count('<h1')==1; assert s.count('hreflang=')>=7; assert '<link rel="canonical"' in s; assert 'noindex' not in s.lower(); m=re.search(r'<script type="application/ld\+json">(.*?)</script>',s,re.S); json.loads(m.group(1))
+ET.parse('public/sitemap.xml'); r=Path('public/robots.txt').read_text(); assert 'OAI-SearchBot' in r and 'Disallow: /api/' in r
+print('30 pages / canonical / hreflang / JSON-LD / sitemap / robots = OK')
+PY
+: > "$BK/critical.after"; for f in "${CRIT[@]}"; do [ -f "$f" ] && sha256sum "$f" >> "$BK/critical.after"; done; cmp "$BK/critical.before" "$BK/critical.after"
+
+curl -fsS https://www.touslesmatchs.com/ >/dev/null
+curl -fsS https://www.touslesmatchs.com/live-ia >/dev/null
+curl -fsS https://www.touslesmatchs.com/performances >/dev/null
+curl -fsS "https://www.touslesmatchs.com/api/homepage-fixtures?t=$STAMP" > "$BK/fixtures.json"
+python3 - "$BK/fixtures.json" <<'PY'
+import json,sys
+x=json.load(open(sys.argv[1])); assert x.get('ok'); print('HOME_FIXTURES OK',len(x.get('live',[])),len(x.get('upcoming',[])))
+PY
+CODE="$(curl -sS -o /dev/null -w '%{http_code}' https://touslesmatchs.com/)"; [ "$CODE" = 301 ] || [ "$CODE" = 308 ]; curl -sSI https://touslesmatchs.com/ | tr -d '\r' | grep -qi '^location: https://www.touslesmatchs.com/'
+for u in /fr/ /en/ /es/ /pt-br/ /ru/ /zh-cn/ /fr/pronostics-foot-aujourdhui/ /en/football-predictions-today/ /es/pronosticos-futbol-hoy/ /pt-br/palpites-futebol-hoje/ /ru/prognozy-futbol-segodnya/ /zh-cn/jinri-zuqiu-yuce/; do curl -fsS "https://www.touslesmatchs.com$u" >/dev/null; done
+curl -fsS https://www.touslesmatchs.com/sitemap.xml >/dev/null; curl -fsS https://www.touslesmatchs.com/robots.txt | grep -q OAI-SearchBot
+docker compose ps || true
+
+git add public/robots.txt public/sitemap.xml public/seo public/fr public/en public/es public/pt-br public/ru public/zh-cn
+if ! git diff --cached --quiet; then git commit -m 'seo: international SEO and GEO optimization'; fi
+trap - ERR
+echo '=== FINAL ==='; echo "BACKUP=$BK"; echo "COMMIT=$(git rev-parse HEAD)"; echo 'FILES_CREATED=public/{fr,en,es,pt-br,ru,zh-cn}/ + public/seo'; echo 'FILES_MODIFIED=public/robots.txt public/sitemap.xml'; echo 'PAGES_SEO=30'; echo 'LANGUAGES=FR EN ES PT-BR RU ZH-CN'; echo 'SITEMAP=OK ROBOTS=OK HREFLANG=OK CANONICAL=OK JSON-LD=OK TESTS=OK'; echo 'CRITICAL_EXISTING_FILES=UNCHANGED_BY_SHA256'
