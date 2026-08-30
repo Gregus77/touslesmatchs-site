@@ -6,3 +6,9 @@ Disallow: /api/
 
 Sitemap: https://www.touslesmatchs.com/sitemap.xml
 Sitemap: https://www.touslesmatchs.com/sitemap-pronostics.xml
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /admin-dashboard
+Disallow: /api/
