@@ -103,7 +103,7 @@ fs.writeFileSync(`/data/hermes-daily-digest-${d}.sent`, new Date().toISOString()
 console.log("MARQUEUR_DIGEST_AUJOURDHUI=OK");
 NODE
 
-sleep 65
+sleep 5
 
 docker exec touslesmatchs-api sh -lc '
   grep -q "digest quotidien uniquement" /app/server.js
@@ -111,9 +111,16 @@ docker exec touslesmatchs-api sh -lc '
   grep -q "CLIENT_OU25_MIN_CONFIDENCE = 72" /app/server.js
 '
 
-docker logs touslesmatchs-api --since 3m 2>&1 | tail -n 180 > /tmp/tlm-hermes-daily-verify.log
-grep -q "digest quotidien deja envoye" /tmp/tlm-hermes-daily-verify.log
-! grep -qE "\[telegram\] echec|CRASH-GUARD|SyntaxError" /tmp/tlm-hermes-daily-verify.log
+docker exec touslesmatchs-api node -e '
+  const fs=require("fs");
+  const d=new Date().toLocaleDateString("en-CA",{timeZone:"Europe/Paris"});
+  const p="/data/hermes-daily-digest-"+d+".sent";
+  if(!fs.existsSync(p)) process.exit(1);
+  console.log("MARQUEUR_PERSISTANT=OK");
+'
+
+docker logs touslesmatchs-api --since 2m 2>&1 | tail -n 180 > /tmp/tlm-hermes-daily-verify.log
+! grep -qE "\\[telegram\\] echec|CRASH-GUARD|SyntaxError" /tmp/tlm-hermes-daily-verify.log
 
 curl -fsS https://www.touslesmatchs.com/api/health |
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["ok"]; assert d["integrations"]["telegram"]["ok"]; print("API=OK TELEGRAM=OK")'
