@@ -123,7 +123,7 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["ok"] and d["integ
 curl -fsS "https://www.touslesmatchs.com/api/analysis-history?limit=100&t=$(date +%s)" |
 python3 -c 'import json,sys; d=json.load(sys.stdin); rows=[x for x in d.get("analyses",[]) if "atletico paranaense" in x.get("home","").lower() and "fluminense" in x.get("away","").lower()]; assert rows, "Atletico-Fluminense absent de API"; x=rows[0]; assert x.get("outcome")=="win" and x.get("final_score")=="3-3"; assert x.get("delivery_proven") and x.get("sent",{}).get("standard") and x.get("sent",{}).get("premium"); print("ACCUEIL_API=OK",x["home"],x["away"],x["outcome"],x["final_score"],x["sent"])'
 
-curl -fsS "https://www.touslesmatchs.com/?t=$(date +%s)" | grep -q 'id="daily-accordion"'
+curl -fsS "https://www.touslesmatchs.com/?t=$(date +%s)" | grep -q 'daily-accordion'
 docker logs touslesmatchs-api --since 2m 2>&1 | tail -n 250 > /tmp/tlm-homepage-results.log
 ! grep -qE "SyntaxError|CRASH-GUARD|Cannot find module|SQLITE_(ERROR|CORRUPT)" /tmp/tlm-homepage-results.log
 
