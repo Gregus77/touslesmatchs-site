@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/touslesmatchs
+umask 077
+STAMP="$(date +%Y%m%d-%H%M%S)"
+BK="/opt/backups/tlm-seo-geo-i18n-$STAMP"
+mkdir -p "$BK"
+
+echo '=== AUDIT GIT ==='
+git status --short
+echo "BRANCHE=$(git branch --show-current)"
+echo "COMMIT=$(git rev-parse HEAD)"
+git log -1 --oneline
+
+for f in public/robots.txt public/sitemap.xml; do
+  [ -f "$f" ] || { echo "ERREUR: $f absent"; exit 1; }
+  [ -z "$(git status --porcelain -- "$f")" ] || { echo "ERREUR: $f a déjà des changements locaux; abandon."; exit 1; }
+done
+if [ -e public/seo ] && [ ! -f public/seo/TLM-SEO-I18N-20260830.txt ]; then echo 'ERREUR: public/seo existe déjà'; exit 1; fi
+for d in fr en es pt-br ru zh-cn; do if [ -e "public/$d" ] && [ ! -f public/seo/TLM-SEO-I18N-20260830.txt ]; then echo "ERREUR: public/$d existe déjà"; exit 1; fi; done
+
+cp -a public/robots.txt "$BK/robots.txt"; cp -a public/sitemap.xml "$BK/sitemap.xml"
+git status --porcelain > "$BK/git-status-before.txt"; git diff > "$BK/git-diff-before.patch" || true
+CRIT=(public/index.html public/app.html public/live-ia.html Caddyfile scripts/api_server.js)
+: > "$BK/critical.before"; for f in "${CRIT[@]}"; do [ -f "$f" ] && sha256sum "$f" >> "$BK/critical.before"; done
+rollback(){ echo 'ERREUR — rollback SEO/GEO'; rm -rf public/fr public/en public/es public/pt-br public/ru public/zh-cn public/seo; cp -a "$BK/robots.txt" public/robots.txt; cp -a "$BK/sitemap.xml" public/sitemap.xml; git reset -q -- public/robots.txt public/sitemap.xml public/seo public/fr public/en public/es public/pt-br public/ru public/zh-cn 2>/dev/null || true; }
+trap rollback ERR
+
+python3 - <<'PY'
+from pathlib import Path
+from datetime import date
+import html,json,re,xml.etree.ElementTree as ET
+R=Path('public'); S='https://www.touslesmatchs.com'; (R/'seo').mkdir(parents=True,exist_ok=True); (R/'seo/TLM-SEO-I18N-20260830.txt').write_text('TLM SEO i18n 2026-08-30\n')
+# code,label,lang,routes,titles/h1, common definition, method, FAQ, UI, risk
+D={
+'fr':{'l':'fr','n':'Français','r':['','pronostics-foot-aujourdhui','pronostics-over-2-5','pronostics-under-2-5','pronostics-foot-ia'],'t':['Pronostics Foot Aujourd’hui avec IA','Pronostics Foot Aujourd’hui','Pronostics Over 2.5 Aujourd’hui','Pronostics Under 2.5 Aujourd’hui','Pronostics Foot IA'],'h':['Pronostics football aujourd’hui : Over/Under 2,5 avec IA','Pronostics foot aujourd’hui','Pronostics Over 2,5 buts aujourd’hui','Pronostics Under 2,5 buts aujourd’hui','Pronostics foot par intelligence artificielle'],'def':'TousLesMatchs est un service d’analyse et de pronostics football spécialisé dans le marché Over/Under 2,5 buts. Les matchs du jour et les matchs à venir sont suivis à partir de données réelles, puis plusieurs modèles d’intelligence artificielle comparent leurs analyses.','meth':'Les équipes, horaires, pays, compétitions, scores et états d’analyse viennent du système TousLesMatchs. Un marché ou une confiance n’est affiché que si cette information existe réellement dans les données publiques. Aucun pronostic, résultat, cote ou pourcentage n’est inventé.','fq':['TousLesMatchs garantit-il ses pronostics ?','Non. Aucun résultat sportif n’est garanti.','Que signifie Over/Under 2,5 buts ?','Over 2,5 signifie au moins trois buts ; Under 2,5 signifie zéro, un ou deux buts.','TousLesMatchs est-il un bookmaker ?','Non. TousLesMatchs fournit des analyses et pronostics, sans accepter de mises.'],'ui':['Matchs réellement suivis','Match','Compétition / pays','Heure / statut','Analyse','Marché public','Confiance','Chargement des matchs réels…','Aucun match football disponible actuellement.','Questions fréquentes','Explorer TousLesMatchs','En direct','À venir','Surveillance'],'risk':'18+ · Les paris comportent des risques. Aucun résultat n’est garanti.'},
+'en':{'l':'en','n':'English','r':['','football-predictions-today','over-2-5-goals-predictions','under-2-5-goals-predictions','ai-football-predictions'],'t':['Football Predictions Today with AI','Football Predictions Today','Over 2.5 Goals Predictions Today','Under 2.5 Goals Predictions Today','AI Football Predictions'],'h':['Football predictions today: AI Over/Under 2.5 analysis','Football and soccer predictions today','Over 2.5 goals predictions today','Under 2.5 goals predictions today','AI football and soccer predictions'],'def':'TousLesMatchs is a football and soccer analysis service focused on Over/Under 2.5 goals. Today’s matches and upcoming fixtures are tracked from real data, then several AI models compare their independent analyses.','meth':'Teams, kickoff times, countries, competitions, scores and analysis status come from TousLesMatchs. A market or confidence figure is shown only when it really exists in public data. No prediction, result, odds or probability is fabricated.','fq':['Are TousLesMatchs football predictions guaranteed?','No. No sporting result is guaranteed.','What does Over/Under 2.5 goals mean?','Over 2.5 means at least three goals; Under 2.5 means zero, one or two goals.','Is TousLesM
