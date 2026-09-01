@@ -253,11 +253,15 @@ s = s.replace(
 )
 write(rel, s)
 
-# 6) Invalidation propre du cache PWA.
+# 6) Invalidation propre du cache PWA, quelle que soit la mise en forme locale.
 rel = 'public/sw.js'
 s = read(rel)
-s = re.sub(r'const VERSION = "tlm-app-[^"]+";',
-           'const VERSION = "tlm-app-v9-consistency-20260901";', s, count=1)
+target_sw_version = 'const VERSION = "tlm-app-v9-consistency-20260901";'
+if target_sw_version not in s:
+    version_pattern = r"(?m)^\s*(?:const|let|var)\s+VERSION\s*=\s*([\"'\x60])[^\"'\x60]+\1\s*;"
+    s, changed = re.subn(version_pattern, target_sw_version, s, count=1)
+    if changed != 1:
+        raise SystemExit('FAILED: ancre version service worker introuvable')
 write(rel, s)
 
 # Garde-fous produit.
@@ -286,6 +290,7 @@ for stale in ('Elite / VIP', 'Premium et Elite', '82/100 pour Standard', '1.30 e
 PY
 
 node --check scripts/api_server.js
+node --check public/sw.js
 
 echo "[deploy] reconstruction API + site uniquement"
 docker compose up -d --build api site
@@ -301,11 +306,13 @@ curl -fsS --max-time 15 "https://www.touslesmatchs.com/api/health?t=${TLM_STAMP}
 curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/live-matches?force=1&t=${TLM_STAMP}" >/tmp/tlm-live-after.json
 curl -fsS --max-time 15 "https://www.touslesmatchs.com/faq?v=${TLM_STAMP}" >/tmp/tlm-faq-after.html
 curl -fsS --max-time 15 "https://www.touslesmatchs.com/app.html?v=${TLM_STAMP}" >/tmp/tlm-app-after.html
+curl -fsS --max-time 15 "https://www.touslesmatchs.com/sw.js?v=${TLM_STAMP}" >/tmp/tlm-sw-after.js
 
 docker exec touslesmatchs-api grep -q 'canonicalLiveTeamName20260901' /app/server.js
 docker exec touslesmatchs-api grep -q 'analysis_exclusion_reason' /app/server.js
 grep -q '78/100 minimum' /tmp/tlm-faq-after.html
 grep -q 'Analyse non lancée' /tmp/tlm-app-after.html
+grep -q 'tlm-app-v9-consistency-20260901' /tmp/tlm-sw-after.js
 ! grep -q 'Elite / VIP' /tmp/tlm-faq-after.html
 ! grep -q 'Premium et Elite' /tmp/tlm-faq-after.html
 
