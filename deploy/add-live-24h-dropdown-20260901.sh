@@ -58,7 +58,7 @@ if MARKER not in s:
         raise SystemExit('FAILED: ancre CSS du panneau 24 h introuvable')
     s = s.replace(css_anchor, css_insert, 1)
 
-    js_anchor = '''function upcomingTeamLogo(src,name){return '<span class="upcoming-highlight-logo">'+logo(src,name)+'</span>';}'''
+    js_anchor = 'async function loadUpcoming(){'
     js_insert = r'''/* TLM_UPCOMING24_GROUPS_20260901 */
 var upcomingOpenGroups={};
 function rememberUpcomingGroup(el){
@@ -88,16 +88,15 @@ function renderUpcomingGroups(rows){
     '</details>';
   }).join('')+'</div>';
 }
-function upcomingTeamLogo(src,name){return '<span class="upcoming-highlight-logo">'+logo(src,name)+'</span>';}'''
+async function loadUpcoming(){'''
     if js_anchor not in s:
         raise SystemExit('FAILED: ancre JavaScript du panneau 24 h introuvable')
     s = s.replace(js_anchor, js_insert, 1)
 
-    render_old = "    box.innerHTML=rest.map(renderUpcomingItem).join('');"
-    render_new = '    box.innerHTML=renderUpcomingGroups(rest);'
-    if render_old not in s:
+    render_pattern = r"box\.innerHTML\s*=\s*rest\.map\(renderUpcomingItem\)\.join\((['\"])\1\)\s*;"
+    s, render_changed = re.subn(render_pattern, 'box.innerHTML=renderUpcomingGroups(rest);', s, count=1)
+    if render_changed != 1:
         raise SystemExit('FAILED: rendu de la liste 24 h introuvable')
-    s = s.replace(render_old, render_new, 1)
     INDEX.write_text(s, encoding='utf-8')
 
 sw = SW.read_text(encoding='utf-8')
