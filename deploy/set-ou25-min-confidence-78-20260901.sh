@@ -23,7 +23,10 @@ git status --short --branch
 docker compose ps
 
 TLM_TARGET_DIRTY="$(git status --porcelain -- scripts/api_server.js docker-compose.yml)"
-test -z "$TLM_TARGET_DIRTY" || fail "les deux fichiers cibles contiennent deja des modifications; aucune ecriture effectuee"
+if test -n "$TLM_TARGET_DIRTY"; then
+  echo "[preserve] fichiers cibles deja modifies; sauvegarde integrale avant modification ciblee"
+  printf '%s\n' "$TLM_TARGET_DIRTY"
+fi
 
 TLM_DECL_COUNT="$(grep -Ec '^const CLIENT_OU25_MIN_CONFIDENCE[[:space:]]*=' "$TLM_API_FILE" || true)"
 test "$TLM_DECL_COUNT" = "1" || fail "declaration CLIENT_OU25_MIN_CONFIDENCE attendue exactement une fois, trouvee: $TLM_DECL_COUNT"
@@ -35,6 +38,7 @@ cp -a "$TLM_COMPOSE_FILE" "$TLM_BACKUP_DIR/docker-compose.yml.before"
 cp -a "$TLM_ENV_FILE" "$TLM_BACKUP_DIR/env.before"
 chmod 600 "$TLM_BACKUP_DIR/env.before"
 printf '%s\n' "branch=$(git branch --show-current)" "head=$(git rev-parse HEAD)" > "$TLM_BACKUP_DIR/baseline.txt"
+git diff -- scripts/api_server.js docker-compose.yml > "$TLM_BACKUP_DIR/preexisting-worktree.patch" || true
 
 export TLM_API_FILE TLM_COMPOSE_FILE TLM_ENV_FILE
 node <<'NODE'
@@ -114,18 +118,8 @@ test -z "$TLM_BAD_LOGS" || fail "erreur detectee dans les logs API: $TLM_BAD_LOG
 
 trap - ERR
 
-git add scripts/api_server.js docker-compose.yml
-if ! git diff --cached --quiet; then
-  git commit -m "fix(signals): enforce 78% minimum confidence for O/U 2.5"
-  TLM_BRANCH="$(git branch --show-current)"
-  if test -n "$TLM_BRANCH" && git push origin "$TLM_BRANCH"; then
-    echo "[git] modification poussee sur $TLM_BRANCH"
-  else
-    echo "[git] AVERTISSEMENT: production verifiee, mais push Git non realise" >&2
-  fi
-fi
-
 echo "OK: seuil O/U 2,5 minimal=78, API reconstruite et saine"
 echo "BACKUP=$TLM_BACKUP_DIR"
 echo "PROOF_ENV=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' touslesmatchs-api | grep '^CLIENT_OU25_MIN_CONFIDENCE=')"
 echo "PROOF_SOURCE=$(docker exec touslesmatchs-api sh -lc \"grep '^const CLIENT_OU25_MIN_CONFIDENCE' /app/server.js\")"
+echo "GIT=non modifie automatiquement; les changements locaux preexistants ont ete preserves"
