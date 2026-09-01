@@ -358,6 +358,7 @@ db.close();
 
 PUBLIC_JSON="$(curl -fsS https://www.touslesmatchs.com/api/shadow-bench/status)"
 printf '%s' "$PUBLIC_JSON" | grep -q '"mode":"shadow_only"'
+printf '%s' "$PUBLIC_JSON" | grep -q '"enabled":true'
 printf '%s' "$PUBLIC_JSON" | grep -q '"official_voters":5'
 printf '%s' "$PUBLIC_JSON" | grep -q '"api_provider_is_not_a_vote":true'
 curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
