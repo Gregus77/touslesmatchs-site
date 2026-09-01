@@ -163,9 +163,24 @@ docker compose config -q
 echo "[deploy] reconstruction du site uniquement"
 docker compose up -d --build site
 
-curl -fsS --max-time 15 "https://www.touslesmatchs.com/?v=${TLM_STAMP}" > /tmp/tlm-upcoming24-page.html
-curl -fsS --max-time 15 "https://www.touslesmatchs.com/sw.js?v=${TLM_STAMP}" > /tmp/tlm-upcoming24-sw.js
-curl -fsS --max-time 15 "https://www.touslesmatchs.com/api/health?t=${TLM_STAMP}" > /tmp/tlm-upcoming24-health.json
+echo "[verify] attente du redemarrage HTTPS"
+for TLM_TRY in $(seq 1 45); do
+  if curl -fsS --max-time 8 "https://www.touslesmatchs.com/?v=${TLM_STAMP}" > /tmp/tlm-upcoming24-page.html 2>/dev/null; then
+    break
+  fi
+  sleep 2
+done
+test -s /tmp/tlm-upcoming24-page.html || { echo "FAILED: accueil public indisponible apres 90 secondes" >&2; exit 1; }
+
+for TLM_TRY in $(seq 1 15); do
+  if curl -fsS --max-time 8 "https://www.touslesmatchs.com/sw.js?v=${TLM_STAMP}" > /tmp/tlm-upcoming24-sw.js 2>/dev/null \
+    && curl -fsS --max-time 8 "https://www.touslesmatchs.com/api/health?t=${TLM_STAMP}" > /tmp/tlm-upcoming24-health.json 2>/dev/null; then
+    break
+  fi
+  sleep 2
+done
+test -s /tmp/tlm-upcoming24-sw.js || { echo "FAILED: service worker public indisponible" >&2; exit 1; }
+test -s /tmp/tlm-upcoming24-health.json || { echo "FAILED: API publique indisponible" >&2; exit 1; }
 
 grep -q 'TLM_UPCOMING24_RUNTIME_20260901' /tmp/tlm-upcoming24-page.html
 grep -q 'tlm-upcoming24-runtime' /tmp/tlm-upcoming24-page.html
