@@ -66,7 +66,10 @@ if marker not in s:
     if anchor not in s:
         raise SystemExit('FAILED: ancre sameLiveTeamName absente')
     helper = r'''function canonicalLiveTeamName20260901(name) {
-  const normalized = normalizeMatchName(name);
+  const normalized = normalizeMatchName(name)
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!normalized) return "";
   // Alias observes entre API-Sports et TheSportsDB. Cette liste est volontairement
   // explicite afin de ne jamais fusionner deux rencontres sur un simple score/minute.
