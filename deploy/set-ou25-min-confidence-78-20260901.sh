@@ -116,10 +116,38 @@ curl -fsS --max-time 20 https://www.touslesmatchs.com/api/health | grep -q '"ok"
 TLM_BAD_LOGS="$(docker logs --since 3m touslesmatchs-api 2>&1 | grep -E 'SyntaxError|ReferenceError|uncaughtException|CRASH-GUARD' || true)"
 test -z "$TLM_BAD_LOGS" || fail "erreur detectee dans les logs API: $TLM_BAD_LOGS"
 
+TLM_OBSERVER_OK=0
+for _ in $(seq 1 30); do
+  if docker logs --since 5m touslesmatchs-api 2>&1 | grep -q '\[auto-concile\] enabled:'; then
+    TLM_OBSERVER_OK=1
+    break
+  fi
+  sleep 2
+done
+test "$TLM_OBSERVER_OK" = "1" || fail "planificateur auto-concile non demarre dans le conteneur API"
+
+# Le premier cycle est programme 30 secondes apres le demarrage. Cette preuve
+# distingue un observateur relance d'un simple conteneur sain mais inactif.
+TLM_CYCLE_OK=0
+for _ in $(seq 1 45); do
+  if docker logs --since 5m touslesmatchs-api 2>&1 | grep -q '\[auto-concile\] live='; then
+    TLM_CYCLE_OK=1
+    break
+  fi
+  sleep 2
+done
+test "$TLM_CYCLE_OK" = "1" || fail "aucun cycle auto-concile observe apres redemarrage"
+
+echo "[auto-concile] preuves recentes"
+docker logs --since 5m touslesmatchs-api 2>&1 \
+  | grep -E '\[auto-concile\] (enabled:|live=|analyse snapshot:|hors ARJEL|analyse:|cycle:)' \
+  | tail -n 30 || true
+
 trap - ERR
 
 echo "OK: seuil O/U 2,5 minimal=78, API reconstruite et saine"
 echo "BACKUP=$TLM_BACKUP_DIR"
 echo "PROOF_ENV=$(docker inspect -f '{{range .Config.Env}}{{println .}}{{end}}' touslesmatchs-api | grep '^CLIENT_OU25_MIN_CONFIDENCE=')"
 echo "PROOF_SOURCE=$(docker exec touslesmatchs-api sh -lc \"grep '^const CLIENT_OU25_MIN_CONFIDENCE' /app/server.js\")"
+echo "PROOF_CONCILE=observateur actif et premier cycle termine"
 echo "GIT=non modifie automatiquement; les changements locaux preexistants ont ete preserves"
