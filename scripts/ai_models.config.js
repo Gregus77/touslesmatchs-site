@@ -94,16 +94,75 @@ const MODELS = {
     costPer1kTokensEur: 0.003,
   },
 
+
+  // ── Tournoi shadow moderne : 10 candidats, zéro influence sur Telegram ──
+  // Tous passent par le même plafond budgétaire et ne peuvent être promus
+  // qu'après un minimum de résultats résolus.
+  gemini37: {
+    id: process.env.OR_GEMINI37_MODEL || "google/gemini-3.7-flash",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_GEMINI37_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.00375,
+  },
+  deepseekv4: {
+    id: process.env.OR_DEEPSEEKV4_MODEL || "deepseek/deepseek-v4-pro-0813",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_DEEPSEEKV4_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.00198,
+  },
+  grok46: {
+    id: process.env.OR_GROK46_MODEL || "x-ai/grok-4.6",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_GROK46_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.006,
+  },
+  glm53: {
+    id: process.env.OR_GLM53_MODEL || "z-ai/glm-5.3-flash",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_GLM53_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.00025,
+  },
+  qwen38: {
+    id: process.env.OR_QWEN38_MODEL || "qwen/qwen3.8-max",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_QWEN38_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.005,
+  },
+  muse12: {
+    id: process.env.OR_MUSE12_MODEL || "meta/muse-spark-1.2",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_MUSE12_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.00425,
+  },
+  mercury25: {
+    id: process.env.OR_MERCURY25_MODEL || "inception/mercury-2.5-preview",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_MERCURY25_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.00015,
+  },
+
   // ── Désactivés par défaut : coûteux, à activer explicitement seulement ─
   gpt: {
-    id: process.env.OR_GPT_MODEL || "openai/gpt-4o-mini",
-    provider: "openrouter",
-    role: "shadow_test",
-    mode: "test",
-    enabled: bool(process.env.AI_MODEL_GPT_ENABLED, false),
-    dailyLimit: Number(process.env.AI_MODEL_GPT_DAILY_LIMIT || 10),
-    maxTokensOut: Number(process.env.AI_MODEL_GPT_MAX_TOKENS || 120),
-    costPer1kTokensEur: 0.01,
+    id: process.env.OR_GPT_MODEL || "openai/gpt-5.2",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_GPT_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.014,
   },
   // ── Chatbot d'assistance client (/chat, /chatbot/ask) : ne fait AUCUNE
   // analyse de match, mais reste soumis au meme devoir de tracabilite et de
@@ -123,14 +182,12 @@ const MODELS = {
   },
 
   claude: {
-    id: process.env.OR_CLAUDE_MODEL || "anthropic/claude-3.5-haiku",
-    provider: "openrouter",
-    role: "shadow_test",
-    mode: "test",
-    enabled: bool(process.env.AI_MODEL_CLAUDE_ENABLED, false),
-    dailyLimit: Number(process.env.AI_MODEL_CLAUDE_DAILY_LIMIT || 10),
-    maxTokensOut: Number(process.env.AI_MODEL_CLAUDE_MAX_TOKENS || 120),
-    costPer1kTokensEur: 0.015,
+    id: process.env.OR_CLAUDE_MODEL || "anthropic/claude-sonnet-5",
+    provider: "openrouter", role: "shadow_test", mode: "test",
+    enabled: bool(process.env.AI_MODEL_CLAUDE_ENABLED, true),
+    dailyLimit: Number(process.env.AI_SHADOW_MODEL_DAILY_LIMIT || 5),
+    maxTokensOut: Number(process.env.AI_SHADOW_MAX_TOKENS || 160),
+    costPer1kTokensEur: 0.01,
   },
 };
 
