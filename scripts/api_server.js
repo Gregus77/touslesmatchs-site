@@ -1301,7 +1301,8 @@ let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
 // et reste naturellement bien au-dessus de ce plancher.
 // Devenu saisonnier le 04/08/2026 : voir getEliteMinConf() — 75 jusqu'au 15
 // aout, 82 ensuite. Fonction (pas une const) pour retomber a 82 sans redeploiement.
-// Décision qualité du 01/09/2026 : aucun signal client O/U 2,5 sous 78 %.\nfunction getSignalFloor() { return 78; }
+// Décision qualité du 01/09/2026 : aucun signal client O/U 2,5 sous 78 %.
+function getSignalFloor() { return 78; }
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
