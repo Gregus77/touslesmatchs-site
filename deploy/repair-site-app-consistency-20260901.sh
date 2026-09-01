@@ -212,6 +212,9 @@ if '1.40 et 2.50' not in s:
         'avec au moins 4 votes concordants sur 5. Cote ANJ réelle entre 1.40 et 2.50.<br>',
         1,
     )
+# Nettoyer l'apostrophe echappee produite par certaines versions du bloc FAQ.
+s = s.replace(r"jusqu\'à", "jusqu'à")
+
 s = s.replace('5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA.',
               '5/5 = signal unanime, 4/5 = signal fort. À 3/5 ou moins, aucun signal client n’est diffusé.')
 s = s.replace('Les abonnés Premium et Elite accèdent aux analyses Live IA en temps réel.',
@@ -314,6 +317,7 @@ curl -fsS --max-time 15 "https://www.touslesmatchs.com/sw.js?v=${TLM_STAMP}" >/t
 docker exec touslesmatchs-api grep -q 'canonicalLiveTeamName20260901' /app/server.js
 docker exec touslesmatchs-api grep -q 'analysis_exclusion_reason' /app/server.js
 grep -q '78/100 minimum' /tmp/tlm-faq-after.html
+! grep -Fq "jusqu\\'à" /tmp/tlm-faq-after.html
 grep -q 'Analyse non lancée' /tmp/tlm-app-after.html
 grep -q 'tlm-app-v9-consistency-20260901' /tmp/tlm-sw-after.js
 ! grep -q 'Elite / VIP' /tmp/tlm-faq-after.html
