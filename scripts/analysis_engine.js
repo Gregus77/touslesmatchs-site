@@ -22,11 +22,19 @@ const models = require("./ai_models.config");
 // OR-Mistral7B ":free") utilisent des clés/comptes séparés, hors du budget
 // OpenRouter : leur appliquer le même plafond n'aurait pas de sens.
 const TRACKED_SHADOW_MODELS = {
-  "OR-Qwen37Max": "qwen",
   "OR-KimiK3": "kimi",
+  "OR-GPT52": "gpt",
+  "OR-ClaudeSonnet5": "claude",
+  "OR-Gemini37Flash": "gemini37",
+  "OR-DeepSeekV4Pro": "deepseekv4",
+  "OR-Grok46": "grok46",
+  "OR-GLM53Flash": "glm53",
+  "OR-Qwen38Max": "qwen38",
+  "OR-MuseSpark12": "muse12",
+  "OR-Mercury25": "mercury25",
 };
 
-const SHADOW_PROMPT_VERSION = "shadow_v1";
+const SHADOW_PROMPT_VERSION = "shadow_ou25_v2_20260901";
 
 // ~4 caractères par token — approximation usuelle pour un texte français/anglais
 // mêlé de JSON. Sert uniquement à ESTIMER le coût avant l'appel ; le coût
