@@ -36,7 +36,7 @@ import re
 ROOT = Path('/opt/touslesmatchs')
 INDEX = ROOT / 'public/index.html'
 SW = ROOT / 'public/sw.js'
-MARKER = 'TLM_UPCOMING24_GROUPS_20260901'
+MARKER = 'TLM_UPCOMING24_RUNTIME_20260901'
 
 s = INDEX.read_text(encoding='utf-8')
 if MARKER not in s:
@@ -58,45 +58,70 @@ if MARKER not in s:
         raise SystemExit('FAILED: ancre CSS du panneau 24 h introuvable')
     s = s.replace(css_anchor, css_insert, 1)
 
-    js_anchor = 'async function loadUpcoming(){'
-    js_insert = r'''/* TLM_UPCOMING24_GROUPS_20260901 */
-var upcomingOpenGroups={};
-function rememberUpcomingGroup(el){
-  var key=el&&el.getAttribute('data-group');
-  if(key)upcomingOpenGroups[key]=!!el.open;
-}
-function renderUpcomingGroups(rows){
-  if(!rows||!rows.length)return '<div class="empty-note">Aucun autre match qualifié dans les prochaines 24 h.</div>';
-  var groups={};
-  rows.slice().sort(function(a,b){
-    var ta=new Date(a.kickoff).getTime(),tb=new Date(b.kickoff).getTime();
-    return (isNaN(ta)?Number.MAX_SAFE_INTEGER:ta)-(isNaN(tb)?Number.MAX_SAFE_INTEGER:tb);
-  }).forEach(function(p){
-    var comp=splitComp(p.competition||'');
-    var country=comp.country||'Autres pays';
-    var league=comp.league||p.sport||'Football';
-    var key=country+'|'+league;
-    if(!groups[key])groups[key]={country:country,league:league,rows:[]};
-    groups[key].rows.push(p);
-  });
-  return '<div class="upcoming-groups">'+Object.keys(groups).sort(function(a,b){return a.localeCompare(b,'fr');}).map(function(key,index){
-    var g=groups[key],flag=COUNTRY_FLAGS[g.country]||'',encoded=encodeURIComponent(key);
-    var open=upcomingOpenGroups[encoded]===true||(!(encoded in upcomingOpenGroups)&&index===0);
-    return '<details class="upcoming-group" data-group="'+encoded+'"'+(open?' open':'')+' ontoggle="rememberUpcomingGroup(this)">'+
-      '<summary><span aria-hidden="true">'+(flag||'🏳️')+'</span><span class="upcoming-group-title">'+esc(g.country)+' · '+esc(g.league)+'</span><span class="upcoming-group-count">'+g.rows.length+' match'+(g.rows.length>1?'s':'')+'</span></summary>'+
-      '<div class="upcoming-group-list">'+g.rows.map(renderUpcomingItem).join('')+'</div>'+
-    '</details>';
-  }).join('')+'</div>';
-}
-async function loadUpcoming(){'''
-    if js_anchor not in s:
-        raise SystemExit('FAILED: ancre JavaScript du panneau 24 h introuvable')
-    s = s.replace(js_anchor, js_insert, 1)
-
-    render_pattern = r"box\.innerHTML\s*=\s*rest\.map\(renderUpcomingItem\)\.join\((['\"])\1\)\s*;"
-    s, render_changed = re.subn(render_pattern, 'box.innerHTML=renderUpcomingGroups(rest);', s, count=1)
-    if render_changed != 1:
-        raise SystemExit('FAILED: rendu de la liste 24 h introuvable')
+    runtime = r'''<script id="tlm-upcoming24-runtime">
+/* TLM_UPCOMING24_RUNTIME_20260901 */
+(function(){
+  var openGroups={};
+  var busy=false;
+  function groupRows(){
+    var box=document.getElementById('upcoming-rows');
+    if(!box||busy)return;
+    var items=Array.prototype.filter.call(box.children,function(el){return el.classList&&el.classList.contains('upcoming-item');});
+    if(!items.length)return;
+    busy=true;
+    try{
+      var groups={};
+      items.forEach(function(item){
+        var meta=item.querySelector('.upcoming-comp');
+        var parts=String(meta&&meta.textContent||'').split('·').map(function(x){return x.trim();}).filter(Boolean);
+        var league=parts[0]||'Football';
+        var country=parts.length>=3?parts[1]:'Autres pays';
+        var key=country+'|'+league;
+        if(!groups[key])groups[key]={country:country,league:league,items:[]};
+        groups[key].items.push(item);
+      });
+      var wrap=document.createElement('div');
+      wrap.className='upcoming-groups';
+      Object.keys(groups).sort(function(a,b){return a.localeCompare(b,'fr');}).forEach(function(key,index){
+        var g=groups[key];
+        var details=document.createElement('details');
+        details.className='upcoming-group';
+        details.dataset.group=key;
+        details.open=openGroups[key]===true||(!(key in openGroups)&&index===0);
+        details.addEventListener('toggle',function(){openGroups[key]=details.open;});
+        var summary=document.createElement('summary');
+        var flag=document.createElement('span');
+        flag.setAttribute('aria-hidden','true');
+        flag.textContent=(window.COUNTRY_FLAGS&&window.COUNTRY_FLAGS[g.country])||'🏳️';
+        var title=document.createElement('span');
+        title.className='upcoming-group-title';
+        title.textContent=g.country+' · '+g.league;
+        var count=document.createElement('span');
+        count.className='upcoming-group-count';
+        count.textContent=g.items.length+' match'+(g.items.length>1?'s':'');
+        summary.appendChild(flag);summary.appendChild(title);summary.appendChild(count);
+        var list=document.createElement('div');
+        list.className='upcoming-group-list';
+        g.items.forEach(function(item){list.appendChild(item);});
+        details.appendChild(summary);details.appendChild(list);wrap.appendChild(details);
+      });
+      box.replaceChildren(wrap);
+    }finally{busy=false;}
+  }
+  function start(){
+    var box=document.getElementById('upcoming-rows');
+    if(!box)return;
+    new MutationObserver(function(){setTimeout(groupRows,0);}).observe(box,{childList:true});
+    groupRows();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
+'''
+    body_anchor = '</body>'
+    if body_anchor not in s:
+        raise SystemExit('FAILED: balise de fin de page introuvable')
+    s = s.replace(body_anchor, runtime + body_anchor, 1)
     INDEX.write_text(s, encoding='utf-8')
 
 sw = SW.read_text(encoding='utf-8')
@@ -113,7 +138,7 @@ if target not in sw:
     SW.write_text(sw, encoding='utf-8')
 
 proof = INDEX.read_text(encoding='utf-8')
-for needle in (MARKER, 'renderUpcomingGroups(rest)', 'upcoming-group-count', 'rememberUpcomingGroup'):
+for needle in (MARKER, 'upcoming-group-count', 'MutationObserver', 'tlm-upcoming24-runtime'):
     if needle not in proof:
         raise SystemExit(f'FAILED: preuve source absente: {needle}')
 PY
@@ -142,8 +167,8 @@ curl -fsS --max-time 15 "https://www.touslesmatchs.com/?v=${TLM_STAMP}" > /tmp/t
 curl -fsS --max-time 15 "https://www.touslesmatchs.com/sw.js?v=${TLM_STAMP}" > /tmp/tlm-upcoming24-sw.js
 curl -fsS --max-time 15 "https://www.touslesmatchs.com/api/health?t=${TLM_STAMP}" > /tmp/tlm-upcoming24-health.json
 
-grep -q 'TLM_UPCOMING24_GROUPS_20260901' /tmp/tlm-upcoming24-page.html
-grep -q 'renderUpcomingGroups(rest)' /tmp/tlm-upcoming24-page.html
+grep -q 'TLM_UPCOMING24_RUNTIME_20260901' /tmp/tlm-upcoming24-page.html
+grep -q 'tlm-upcoming24-runtime' /tmp/tlm-upcoming24-page.html
 grep -q 'tlm-app-v10-upcoming24-dropdown-20260901' /tmp/tlm-upcoming24-sw.js
 python3 - <<'PY'
 import json
