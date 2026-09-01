@@ -195,6 +195,20 @@ s = s.replace(
     "La sélection se fait sur la cote réelle chez un opérateur agréé (entre 1.30 et 2.50), pas sur la minute de jeu. Un match à finalité déjà connue (écart de 3 buts ou plus) est aussi automatiquement écarté.",
     "Un match n'est analysé qu'entre la 15e et la 40e minute, avec une cote réelle chez un opérateur agréé entre 1.40 et 2.50. Sans cote ANJ admissible ou sans consensus 4/5, aucun signal n'est diffusé."
 )
+
+# Harmoniser les variantes décimales présentes dans les versions locales du VPS.
+# Le texte public reste français, mais le garde-fou utilise une forme canonique.
+s = re.sub(r'1[.,]30\\s+(?:à|et)\\s+2[.,]50', '1.40 et 2.50', s)
+s = re.sub(r'1[.,]40\\s+(?:à|et)\\s+2[.,]50', '1.40 et 2.50', s)
+if '1.40 et 2.50' not in s:
+    marker_anj = 'avec au moins 4 votes concordants sur 5.<br>'
+    if marker_anj not in s:
+        raise SystemExit('FAILED: ancre plage ANJ FAQ introuvable')
+    s = s.replace(
+        marker_anj,
+        'avec au moins 4 votes concordants sur 5. Cote ANJ réelle entre 1.40 et 2.50.<br>',
+        1,
+    )
 s = s.replace('5/5 = signal Elite, 4/5 = signal fort, 3/5 = tendance IA.',
               '5/5 = signal unanime, 4/5 = signal fort. À 3/5 ou moins, aucun signal client n’est diffusé.')
 s = s.replace('Les abonnés Premium et Elite accèdent aux analyses Live IA en temps réel.',
