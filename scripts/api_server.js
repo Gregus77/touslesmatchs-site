@@ -839,7 +839,7 @@ db.exec(`
 // Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
 // agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
 // alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
-const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Kimi"];
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Qwen"];
 
 // ── Initialise agent weights if empty ──
 try {
@@ -1301,7 +1301,7 @@ let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
 // et reste naturellement bien au-dessus de ce plancher.
 // Devenu saisonnier le 04/08/2026 : voir getEliteMinConf() — 75 jusqu'au 15
 // aout, 82 ensuite. Fonction (pas une const) pour retomber a 82 sans redeploiement.
-function getSignalFloor() { return getEliteMinConf(); }
+// Décision qualité du 01/09/2026 : aucun signal client O/U 2,5 sous 78 %.\nfunction getSignalFloor() { return 78; }
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
@@ -1321,8 +1321,10 @@ const MARKET_SIGNAL_FLOORS = {
 };
 
 function getSignalThresholdForBet(bet) {
+  // Le produit client O/U 2,5 suit un seuil explicite et auditable.
+  if (isOu25Bet(bet)) return CLIENT_OU25_MIN_CONFIDENCE;
   const overrideForBet = MARKET_SIGNAL_FLOORS[bet];
-  if (overrideForBet !== undefined) return overrideForBet;
+  if (overrideForBet !== undefined) return Math.max(getSignalFloor(), overrideForBet);
   return getAdaptiveSignalThreshold();
 }
 
@@ -1495,11 +1497,8 @@ const SHADOW_AGENTS = [
   {
     name: "OR-Qwen37Max",
     icon: "🌟",
-    // Retire du banc automatique le 26/08/2026 : 0 vote produit sur 26 appels.
-    // Il reste disponible pour un nouveau test explicite, sans consommer le
-    // budget tant que l'identifiant n'a pas ete diagnostique.
-    enabled: () => !!OPENROUTER_API_KEY
-      && ["1", "true"].includes(String(process.env.OPENROUTER_QWEN_TEST_ENABLED || "").toLowerCase()),
+    // Redevenu titulaire : ne pas le doubler en shadow sur le même match.
+    enabled: () => false,
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
@@ -1509,9 +1508,10 @@ const SHADOW_AGENTS = [
   {
     name: "OR-KimiK3",
     icon: "🌙",
-    // Promu titulaire le 26/08/2026 : ne pas l'appeler une seconde fois en
-    // shadow sur le meme match (double cout et statistiques dupliquees).
-    enabled: () => false,
+    // Replacé au banc automatique le 01/09/2026 après la baisse observée.
+    // Il reste évalué à blanc, sans influencer les cinq votes officiels.
+    enabled: () => !!OPENROUTER_API_KEY
+      && ["1", "true"].includes(String(process.env.OPENROUTER_KIMI_TEST_ENABLED || "true").toLowerCase()),
     call: (prompt) => callOpenAICompat(prompt, {
       url: "https://openrouter.ai/api/v1/chat/completions",
       key: OPENROUTER_API_KEY,
@@ -2414,7 +2414,11 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
 const CLIENT_OU25_MIN_VOTES = 4;
-const CLIENT_OU25_MIN_CONFIDENCE = Math.max(80, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 80));
+const CLIENT_OU25_MIN_CONFIDENCE = Math.max(78, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 78));
+const CLIENT_OU25_CLIENT_MAX_MINUTE = Math.min(
+  32,
+  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 32))
+);
 function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
 }
@@ -3161,11 +3165,11 @@ function isCategoryBanned(matchOrCompetition = "") {
 // Perimetre volontairement etroit du produit client O/U 2,5. Les analyses
 // hors de ce cadre restent en base pour apprendre, mais ne sont ni diffusees
 // ni presentees comme des signaux recus par les abonnes.
-function isClientOu25MatchEligible(match, requireMinute = true) {
+function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = 40) {
   const sport = String(match?.sport || "Football").toLowerCase();
   if (!sport.includes("foot")) return false;
   const minute = parseLiveMinuteValue(match?.minute_at_analysis ?? match?.minute);
-  if (requireMinute && (minute === null || minute < 15 || minute > 40)) return false;
+  if (requireMinute && (minute === null || minute < 15 || minute > maxMinute)) return false;
   if (isWomenMatch(match) || isCategoryBanned(match) || isLowTrustCompetition(match)) return false;
   if (leagueTier(match) !== "trusted_major") return false;
   const h = leagueHaystack(match);
@@ -3173,6 +3177,17 @@ function isClientOu25MatchEligible(match, requireMinute = true) {
   // pour le track-record championnat utilise par le Concile.
   if (/\bcup\b|coupe|copa|pokal|coppa|taça|champions league|europa league|conference league|qualif|play[ -]?off|barrage|friendly|amical/.test(h)) return false;
   return true;
+}
+
+// Garde-fous temporaires fondés sur les résultats observés depuis le 25/08.
+// Les segments fragiles exigent l'unanimité ; les autres conservent la règle 4/5.
+function clientOu25RequiredVotes(match, bet) {
+  const market = String(bet || "").toLowerCase();
+  if (market.startsWith("under 2.5")) return 5;
+  const league = leagueHaystack(match);
+  if (/championship/.test(league) && /england|angleterre/.test(league)) return 5;
+  if (/(brazil|brésil|bresil).*(serie a|serie b)|(serie a|serie b).*(brazil|brésil|bresil)/.test(league)) return 5;
+  return CLIENT_OU25_MIN_VOTES;
 }
 
 const storedOu25ConsensusCache = new Map();
@@ -5499,11 +5514,11 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       useCohere,
     },
     {
-      name: "OpenRouter-Kimi",
-      model: resolveModel(process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3"),
-      icon: "🌙",
+      name: "OpenRouter-Qwen",
+      model: resolveModel(process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"),
+      icon: "🌟",
       useOpenRouter,
-      openRouterModelKey: "kimi",
+      openRouterModelKey: "qwen",
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
@@ -5523,7 +5538,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Cohere-Command, expert en valeur et marchés. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
 
-    `Tu es OpenRouter-Kimi, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
+    `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
 
     `Tu es Claude Chief, arbitre du Concile v3. Tu reçois 5 votes d'IA. Critères de décision par ordre de poids : 1) Classement + écart de niveau (30%), 2) Forme récente 5 matchs (25%), 3) H2H + moyenne buts (15%), 4) Facteur dom/ext (15%), 5) Moyenne buts/match (10%), 6) Cotes/value (5%). Ne valide que si au moins 2 critères forts sont alignés. NOPICK si les signaux sont contradictoires. Mieux vaut 0 pick qu'un mauvais pick.
 
@@ -6172,7 +6187,8 @@ Réponds en JSON pur (pas de markdown):
   const voteCountForSignal = Number(voteInfo.vote_count || analysisResult.consensus_votes || 0);
   const fiveOu25SeatsPresent = Number(voteInfo.vote_active || 0) === 5;
   const ou25Only = isOu25Bet(analysisResult.best_bet) && voteInfo.market === "over_under_2_5";
-  const clientOu25MatchEligible = isClientOu25MatchEligible(match, true);
+  const clientOu25MatchEligible = isClientOu25MatchEligible(match, true, CLIENT_OU25_CLIENT_MAX_MINUTE);
+  const requiredVotesForSignal = clientOu25RequiredVotes(match, analysisResult.best_bet);
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
@@ -6212,12 +6228,12 @@ Réponds en JSON pur (pas de markdown):
   const _blockReason = (() => {
     if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
-    if (!clientOu25MatchEligible) return "hors perimetre client O/U 2,5 (football championnat, minute 15-40)";
+    if (!clientOu25MatchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${CLIENT_OU25_CLIENT_MAX_MINUTE})`;
     if (!ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
     if (!fiveOu25SeatsPresent) return `sieges O/U 2,5 incomplets: ${Number(voteInfo.vote_active || 0)}/5`;
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
     if (analysisResult.confidence < CLIENT_OU25_MIN_CONFIDENCE) return `confiance ${analysisResult.confidence} < plancher O/U 2,5 ${CLIENT_OU25_MIN_CONFIDENCE}`;
-    if (voteCountForSignal < 4) return `votes ${voteCountForSignal} < 4`;
+    if (voteCountForSignal < requiredVotesForSignal) return `votes ${voteCountForSignal} < ${requiredVotesForSignal}`;
     if (!_coteReelle) return "pas de vraie cote bookmaker";
     if (!hasRealData) return "donnees stats/H2H indisponibles";
     if (!qualityGate.ok) return `filtre qualite: ${qualityGate.reason}`;
@@ -6307,7 +6323,7 @@ Réponds en JSON pur (pas de markdown):
       const sportDiffusable = sportLc.includes("foot");
       const diffusable = arjelPlayable && oddOk && sportDiffusable
         && clientOu25MatchEligible && ou25Only && fiveOu25SeatsPresent
-        && voteCountForSignal >= CLIENT_OU25_MIN_VOTES
+        && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
@@ -6328,9 +6344,9 @@ Réponds en JSON pur (pas de markdown):
       // palier restait vide la plupart des jours (0/3 le 28/07/2026). Une majorite
       // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
       // eleve que les autres paliers, qui porte l'exigence Standard.
-      const gradeStandard = diffusable && voteCountForSignal >= 4 && conf >= TH.standard;
-      const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= 4 && conf >= TH.premium);
-      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= 4 && conf >= TH.elite);
+      const gradeStandard = diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.standard;
+      const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.premium);
+      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.elite);
       shadowWorthy = gradeElite;
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
@@ -6696,8 +6712,14 @@ function saveConcileAnalysis(match, result, pickBet) {
 
     const sigTier = computeSignalTier(result.best_bet, result.confidence, minute);
 
-    const existing = db.prepare("SELECT id, best_bet FROM concile_analyses WHERE match_key = ?").get(matchKey);
+    const existing = db.prepare(
+      "SELECT id, best_bet, outcome, final_score_home, resolved_at FROM concile_analyses WHERE match_key = ?"
+    ).get(matchKey);
     if (existing) {
+      if (isProtectedFromOverwrite(existing)) {
+        console.warn(`[concile-trace] analyse résolue immuable, réanalyse ignorée: ${matchKey}`);
+        return;
+      }
       const betChanged = existing.best_bet !== result.best_bet;
       db.prepare(`
         UPDATE concile_analyses SET
@@ -8265,7 +8287,7 @@ async function resolveSignalFortFast() {
   try {
     const sfThreshold = getAdaptiveSignalThreshold();
     const pending = db.prepare(`
-      SELECT DISTINCT home, away FROM concile_analyses
+      SELECT DISTINCT home, away, competition, analysed_at FROM concile_analyses
       WHERE outcome IS NULL AND confidence >= ?
         AND analysed_at <= datetime('now','-90 minutes')
         AND analysed_at >= datetime('now','-48 hours')
@@ -8285,6 +8307,8 @@ async function resolveSignalFortFast() {
           if (f.teams?.home?.name && f.goals?.home != null) {
             finished.push({
               home: f.teams.home.name, away: f.teams.away.name,
+              competition: f.league?.name || "",
+              date: f.fixture?.date || date,
               score_home: f.goals.home, score_away: f.goals.away,
               ht_home: f.score?.halftime?.home ?? null,
               ht_away: f.score?.halftime?.away ?? null,
@@ -8297,16 +8321,19 @@ async function resolveSignalFortFast() {
 
     let resolved = 0;
     for (const s of pending) {
-      const hw = String(s.home).split(" ")[0].toLowerCase();
-      const aw = String(s.away).split(" ")[0].toLowerCase();
-      if (!hw || !aw) continue;
-      const m = finished.find(f => {
-        const fh = String(f.home).toLowerCase();
-        const fa = String(f.away).toLowerCase();
-        return (fh.includes(hw) && fa.includes(aw)) || (fh.includes(aw) && fa.includes(hw));
+      const analysedDay = String(s.analysed_at || "").slice(0, 10);
+      const matches = finished.filter(f => {
+        const finishedDay = String(f.date || "").slice(0, 10);
+        return (!analysedDay || !finishedDay || analysedDay === finishedDay) && sameLiveTeams(s, f);
       });
+      // Zéro ou plusieurs correspondances : aucune résolution automatique.
+      if (matches.length !== 1) {
+        if (matches.length > 1) console.warn(`[signal-fort-fast] correspondance ambiguë ignorée: ${s.home} vs ${s.away}`);
+        continue;
+      }
+      const m = matches[0];
       if (m) {
-        const reversed = String(m.home).toLowerCase().includes(aw);
+        const reversed = matchToken(m.home) === matchToken(s.away);
         autoResolvePredictions({
           home: s.home, away: s.away,
           score_home: reversed ? m.score_away : m.score_home,
