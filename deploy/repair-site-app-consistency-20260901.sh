@@ -172,6 +172,25 @@ new_block = '''      Seuil actuel de diffusion : <strong>78/100 minimum</strong>
       <strong>Premium</strong> — jusqu'à 10 signaux/jour, Telegram Premium, inclut Standard.<br><br>'''
 if old_block in s:
     s = s.replace(old_block, new_block, 1)
+elif '78/100 minimum' not in s:
+    # Le VPS peut contenir une version mise en forme différemment de la branche.
+    # On remplace alors tout le contenu de la réponse concernée, sans dépendre
+    # des espaces, retours à la ligne ou adjectifs historiques.
+    pattern = (
+        r'(<div class="faq-q"[^>]*>\s*Comment fonctionnent les abonnements \?\s*'
+        r'<span class="faq-arrow">\+</span>\s*</div>\s*<div class="faq-a">)'
+        r'.*?'
+        r'(Voir les tarifs à jour.*?</div>)'
+    )
+    replacement = (
+        r'\1\n      Seuil actuel de diffusion : <strong>78/100 minimum</strong>, avec au moins 4 votes concordants sur 5.<br>\n'
+        r'      <strong>Standard</strong> — jusqu\'à 3 signaux/jour, Telegram Standard.<br>\n'
+        r'      <strong>Premium</strong> — jusqu\'à 10 signaux/jour, Telegram Premium, inclut Standard.<br><br>\n'
+        r'      \2'
+    )
+    s, changed = re.subn(pattern, replacement, s, count=1, flags=re.S)
+    if changed != 1:
+        raise SystemExit('FAILED: bloc abonnements FAQ introuvable')
 s = s.replace(
     "La sélection se fait sur la cote réelle chez un opérateur agréé (entre 1.30 et 2.50), pas sur la minute de jeu. Un match à finalité déjà connue (écart de 3 buts ou plus) est aussi automatiquement écarté.",
     "Un match n'est analysé qu'entre la 15e et la 40e minute, avec une cote réelle chez un opérateur agréé entre 1.40 et 2.50. Sans cote ANJ admissible ou sans consensus 4/5, aucun signal n'est diffusé."
