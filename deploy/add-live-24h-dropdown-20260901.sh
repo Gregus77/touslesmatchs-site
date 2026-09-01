@@ -124,8 +124,22 @@ if MARKER not in s:
     s = s.replace(body_anchor, runtime + body_anchor, 1)
     INDEX.write_text(s, encoding='utf-8')
 
+# La variante actuellement en production ecrit "Pays · Championnat · date".
+# Corriger l'ordre detecte par le module autonome afin d'afficher le bon drapeau.
+s = INDEX.read_text(encoding='utf-8')
+country_old = '''        var league=parts[0]||'Football';
+        var country=parts.length>=3?parts[1]:'Autres pays';'''
+country_new = '''        /* TLM_UPCOMING24_COUNTRY_FIRST_20260901 */
+        var country=parts.length>=3?parts[0]:'Autres pays';
+        var league=parts.length>=3?parts[1]:(parts[0]||'Football');'''
+if country_new not in s:
+    if country_old not in s:
+        raise SystemExit('FAILED: ordre pays/championnat du module 24 h introuvable')
+    s = s.replace(country_old, country_new, 1)
+    INDEX.write_text(s, encoding='utf-8')
+
 sw = SW.read_text(encoding='utf-8')
-target = 'const VERSION = "tlm-app-v10-upcoming24-dropdown-20260901";'
+target = 'const VERSION = "tlm-app-v11-upcoming24-country-20260901";'
 if target not in sw:
     sw, changed = re.subn(
         r'(?m)^\s*(?:const|let|var)\s+VERSION\s*=\s*(["\'`])[^"\'`]+\1\s*;',
@@ -138,7 +152,7 @@ if target not in sw:
     SW.write_text(sw, encoding='utf-8')
 
 proof = INDEX.read_text(encoding='utf-8')
-for needle in (MARKER, 'upcoming-group-count', 'MutationObserver', 'tlm-upcoming24-runtime'):
+for needle in (MARKER, 'TLM_UPCOMING24_COUNTRY_FIRST_20260901', 'upcoming-group-count', 'MutationObserver', 'tlm-upcoming24-runtime'):
     if needle not in proof:
         raise SystemExit(f'FAILED: preuve source absente: {needle}')
 PY
@@ -183,8 +197,9 @@ test -s /tmp/tlm-upcoming24-sw.js || { echo "FAILED: service worker public indis
 test -s /tmp/tlm-upcoming24-health.json || { echo "FAILED: API publique indisponible" >&2; exit 1; }
 
 grep -q 'TLM_UPCOMING24_RUNTIME_20260901' /tmp/tlm-upcoming24-page.html
+grep -q 'TLM_UPCOMING24_COUNTRY_FIRST_20260901' /tmp/tlm-upcoming24-page.html
 grep -q 'tlm-upcoming24-runtime' /tmp/tlm-upcoming24-page.html
-grep -q 'tlm-app-v10-upcoming24-dropdown-20260901' /tmp/tlm-upcoming24-sw.js
+grep -q 'tlm-app-v11-upcoming24-country-20260901' /tmp/tlm-upcoming24-sw.js
 python3 - <<'PY'
 import json
 from pathlib import Path
@@ -199,5 +214,6 @@ trap - EXIT
 echo "OK: menus deroulants des prochaines 24 h installes"
 echo "BACKUP=$TLM_BACKUP"
 echo "PROOF_SITE=upcoming24_dropdown_present"
-echo "PROOF_CACHE=tlm-app-v10-upcoming24-dropdown-20260901"
+echo "PROOF_COUNTRY_LEAGUE=country_first"
+echo "PROOF_CACHE=tlm-app-v11-upcoming24-country-20260901"
 echo "GIT=non modifie automatiquement; changements locaux preexistants preserves"
