@@ -4100,6 +4100,10 @@ function normalizeMatchName(value) {
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
     .replace(/\bman(chester)?\b/g, "man")
     .replace(/\b(united|utd)\b/g, "utd")
+    // TLM_LIVE_DEDUP_WOLVES_20260901 — deux fournisseurs nomment le meme club
+    // "Wolverhampton Wanderers" et "Wolves". Sans cet alias, le meme match
+    // est analyse deux fois et peut declencher le coupe-circuit de sursaut.
+    .replace(/\bwolverhampton(?:\s+wanderers)?\b|\bwolves\b/g, "wolves")
     .replace(/\bcity\b/g, "city")
     .replace(/\bparis\s*(saint|st)[\s-]*germain\b/g, "psg")
     .replace(/\bp\.?\s*s\.?\s*g\.?\b/g, "psg")
