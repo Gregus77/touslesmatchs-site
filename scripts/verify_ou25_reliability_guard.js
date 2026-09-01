@@ -11,6 +11,7 @@ const models = fs.readFileSync(path.join(root, "scripts/ai_models.config.js"), "
 
 const checks = [
   ["plancher client 78", /CLIENT_OU25_MIN_CONFIDENCE\s*=\s*Math\.max\(78,/],
+  ["fonction plancher exécutable", /\nfunction getSignalFloor\(\) \{ return 78; \}/],
   ["fin de fenêtre client 32e", /CLIENT_OU25_CLIENT_MAX_MINUTE[\s\S]{0,160}Number\(process\.env\.CLIENT_OU25_CLIENT_MAX_MINUTE \|\| 32\)/],
   ["Qwen titulaire", /CONCILE_AGENT_NAMES[^\n]+OpenRouter-Qwen/],
   ["Kimi absent des titulaires", /CONCILE_AGENT_NAMES[^\n]+OpenRouter-Kimi/],
