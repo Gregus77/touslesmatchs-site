@@ -198,8 +198,8 @@ s = s.replace(
 
 # Harmoniser les variantes décimales présentes dans les versions locales du VPS.
 # Le texte public reste français, mais le garde-fou utilise une forme canonique.
-s = re.sub(r'1[.,]30\\s+(?:à|et)\\s+2[.,]50', '1.40 et 2.50', s)
-s = re.sub(r'1[.,]40\\s+(?:à|et)\\s+2[.,]50', '1.40 et 2.50', s)
+s = re.sub(r'1[.,]30\s+(?:à|et)\s+2[.,]50', '1.40 et 2.50', s)
+s = re.sub(r'1[.,]40\s+(?:à|et)\s+2[.,]50', '1.40 et 2.50', s)
 if '1.40 et 2.50' not in s:
     marker_anj = 'avec au moins 4 votes concordants sur 5.<br>'
     if marker_anj not in s:
