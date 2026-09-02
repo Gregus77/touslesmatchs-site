@@ -1114,11 +1114,9 @@ const ELITE_TIER_RAMP_UP_DATE = new Date("2026-09-01T00:00:00Z").getTime();
 // 80-84% (75.7%) — le seuil 80% coupait des matchs sans aucun gain de
 // fiabilite, juste moins de volume. Decision fondateur.
 function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 82; }
-// Fenêtre de cote réelle ARJEL pour diffuser sur un canal payant — réglée par le
-// fondateur le 28/07/2026 : en dessous de 1.30 aucune valeur, au-dessus de 2.50
-// c'est un longshot que le book juge improbable.
-const TIER_MIN_REAL_ODD = Number(process.env.TIER_MIN_REAL_ODD || 1.30);
-const TIER_MAX_REAL_ODD = Number(process.env.TIER_MAX_REAL_ODD || 2.50);
+// Fenetre de cote reelle demandee le 02/09/2026 : jamais sous 1.40 ni au-dessus de 2.10.
+const TIER_MIN_REAL_ODD = Math.max(1.40, Number(process.env.TIER_MIN_REAL_ODD || 1.40));
+const TIER_MAX_REAL_ODD = Math.min(2.10, Number(process.env.TIER_MAX_REAL_ODD || 2.10));
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
 // signal football à 84 %, et un mardi sans football vidait le palier.
@@ -3187,9 +3185,9 @@ function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = 40) 
   return true;
 }
 
-// Mode Recovery : unanimite obligatoire pour chaque signal client O/U 2,5.
+// Decision du 02/09/2026 : signal client des 4 votes concordants sur 5.
 function clientOu25RequiredVotes() {
-  return RECOVERY_MODE_ENABLED ? 5 : CLIENT_OU25_MIN_VOTES;
+  return CLIENT_OU25_MIN_VOTES;
 }
 
 const recoveryRecentFormCache = new Map();
@@ -5605,7 +5603,7 @@ async function runConcileAnalysis(match) {
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
   const recoveryPromptBlock = RECOVERY_MODE_ENABLED
-    ? `\n\nMODE RECOVERY — sortie client uniquement si : championnat autorise, historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= 78 et unanimite 5/5. En cas de doute, ne force jamais la confiance.`
+    ? `\n\nMODE RECOVERY — sortie client uniquement si : championnat autorise, historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= 78 et au moins 4 votes concordants sur 5. En cas de doute, ne force jamais la confiance.`
     : "";
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
