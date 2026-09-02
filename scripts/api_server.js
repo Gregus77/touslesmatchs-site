@@ -6507,9 +6507,17 @@ Réponds en JSON pur (pas de markdown):
       // palier restait vide la plupart des jours (0/3 le 28/07/2026). Une majorite
       // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
       // eleve que les autres paliers, qui porte l'exigence Standard.
-      const gradeStandard = diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.standard;
-      const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.premium);
-      const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.elite);
+      // En Mode Recovery, les 1-2 signaux qui franchissent tous les garde-fous
+      // sont envoyes aux canaux payants des 4/5 et 78 %, sans second seuil cache.
+      const gradeStandard = RECOVERY_MODE_ENABLED
+        ? diffusable
+        : diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.standard;
+      const gradePremium = RECOVERY_MODE_ENABLED
+        ? diffusable
+        : gradeStandard || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.premium);
+      const gradeElite = RECOVERY_MODE_ENABLED
+        ? diffusable
+        : gradePremium || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.elite);
       if (RECOVERY_MODE_ENABLED && gradeElite
           && (TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || TELEGRAM_ELITE_CHANNEL_ID)) {
         // Reservation synchrone : evite que deux analyses paralleles depassent le plafond.
