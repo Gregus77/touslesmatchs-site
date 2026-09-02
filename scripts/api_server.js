@@ -486,6 +486,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_tg_delivery_match ON telegram_signal_deliveries(match_key, channel, ok);
 `);
 
+// Coupe-circuit Recovery : il observe uniquement les prochains signaux payants
+// réellement acceptés par Telegram. Après trois résultats résolus, 0 ou 1
+// victoire met les diffusions clients en pause. L'analyse continue en base.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS recovery_safety_state (
+    id INTEGER PRIMARY KEY CHECK(id = 1),
+    activated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    paused INTEGER NOT NULL DEFAULT 0,
+    paused_at TEXT DEFAULT NULL,
+    reason TEXT DEFAULT NULL
+  );
+  INSERT OR IGNORE INTO recovery_safety_state (id) VALUES (1);
+`);
+
 // Anciennes candidatures +0,5 conservees uniquement pour l'historique admin.
 // La campagne publique est fermee : aucun nouveau compte gratuit ne doit etre
 // transforme en acces +0,5 complet par une vieille page restee en cache.
@@ -3332,6 +3346,49 @@ function recoverySignalsSentToday() {
     signalsSentToday("sig_sent_premium"),
     signalsSentToday("sig_sent_elite")
   );
+}
+
+const RECOVERY_SAFETY_STOP_AFTER = 3;
+const RECOVERY_SAFETY_MAX_WINS = 1;
+function recoverySafetyStatus() {
+  try {
+    const state = db.prepare(
+      "SELECT activated_at, paused, paused_at, reason FROM recovery_safety_state WHERE id = 1"
+    ).get();
+    if (!state) return { paused: true, resolved: 0, wins: 0, reason: "etat securite absent" };
+    if (Number(state.paused) === 1) {
+      return { paused: true, resolved: RECOVERY_SAFETY_STOP_AFTER, wins: null, reason: state.reason || "coupe-circuit actif" };
+    }
+    const rows = db.prepare(`
+      SELECT ca.match_key, ca.outcome, MIN(td.created_at) AS delivered_at
+      FROM concile_analyses ca
+      JOIN telegram_signal_deliveries td ON td.match_key = ca.match_key
+      WHERE td.ok = 1
+        AND td.telegram_message_id IS NOT NULL
+        AND td.channel IN ('standard','premium','elite')
+        AND td.created_at >= ?
+        AND ca.outcome IN ('win','loss')
+      GROUP BY ca.match_key, ca.outcome
+      ORDER BY delivered_at ASC
+      LIMIT ?
+    `).all(state.activated_at, RECOVERY_SAFETY_STOP_AFTER);
+    const resolved = rows.length;
+    const wins = rows.filter(row => row.outcome === "win").length;
+    if (resolved >= RECOVERY_SAFETY_STOP_AFTER && wins <= RECOVERY_SAFETY_MAX_WINS) {
+      const reason = `pause automatique: ${wins}/${resolved} gagnant(s) sur les prochains signaux Recovery`;
+      db.prepare(`
+        UPDATE recovery_safety_state
+        SET paused = 1, paused_at = datetime('now'), reason = ?
+        WHERE id = 1 AND paused = 0
+      `).run(reason);
+      return { paused: true, justPaused: true, resolved, wins, reason };
+    }
+    return { paused: false, justPaused: false, resolved, wins, reason: "surveillance active" };
+  } catch (error) {
+    console.error("[recovery-safety]", error.message);
+    // Fail closed : si l'état ne peut pas être lu, aucun signal client ne part.
+    return { paused: true, justPaused: false, resolved: 0, wins: 0, reason: "controle securite indisponible" };
+  }
 }
 
 const storedOu25ConsensusCache = new Map();
@@ -6344,7 +6401,17 @@ Réponds en JSON pur (pas de markdown):
   }
   const recoveryCapacityAvailable = !RECOVERY_MODE_ENABLED
     || _recoverySignalDaily.count < RECOVERY_MAX_DAILY_SIGNALS;
-  console.log(`[recovery] ${match.home} vs ${match.away}: ${recoveryEvidence.ok ? "OK" : "BLOCK"} — ${recoveryEvidence.reason}`);
+  const recoverySafety = recoverySafetyStatus();
+  if (RECOVERY_MODE_ENABLED && recoverySafety.justPaused) {
+    console.error(`[recovery-safety] COUPE-CIRCUIT — ${recoverySafety.reason}`);
+    if (TELEGRAM_ADMIN_CHAT_ID) {
+      sendTelegramMessage(
+        TELEGRAM_ADMIN_CHAT_ID,
+        `🛑 <b>Mode Recovery mis en pause</b>\n\n${escTgHtml(recoverySafety.reason)}\nLes analyses continuent à blanc. Les canaux clients sont suspendus.`
+      ).catch(error => console.error("[recovery-safety] alerte admin:", error.message));
+    }
+  }
+  console.log(`[recovery] ${match.home} vs ${match.away}: ${recoveryEvidence.ok ? "OK" : "BLOCK"} — ${recoveryEvidence.reason}; securite=${recoverySafety.paused ? "PAUSE" : `${recoverySafety.wins}/${recoverySafety.resolved}`}`);
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
@@ -6384,6 +6451,7 @@ Réponds en JSON pur (pas de markdown):
   const _blockReason = (() => {
     if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
+    if (RECOVERY_MODE_ENABLED && recoverySafety.paused) return `mode Recovery: ${recoverySafety.reason}`;
     if (RECOVERY_MODE_ENABLED && !recoveryEvidence.ok) return `mode Recovery: ${recoveryEvidence.reason}`;
     if (!recoveryCapacityAvailable) return `mode Recovery: plafond ${RECOVERY_MAX_DAILY_SIGNALS} signaux/jour atteint`;
     if (!clientOu25MatchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${CLIENT_OU25_CLIENT_MAX_MINUTE})`;
@@ -6483,7 +6551,8 @@ Réponds en JSON pur (pas de markdown):
         && clientOu25MatchEligible && ou25Only && fiveOu25SeatsPresent
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
-        && recoveryEvidence.ok && recoveryCapacityAvailable;
+        && recoveryEvidence.ok && recoveryCapacityAvailable
+        && !recoverySafety.paused;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
