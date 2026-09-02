@@ -1067,6 +1067,7 @@ const _freeSignalDailyDate = { date: "", count: 0 };
 const _standardSignalDaily = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
 const _eliteSignalDaily = { date: "", count: 0 };
+const _recoverySignalDaily = { date: "", count: 0 };
 // Plafonds journaliers par palier (conditions données par le fondateur)
 const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL 1.30-2.50
 const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote 1.30-2.50 (inclut Standard)
@@ -2416,9 +2417,15 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
 const CLIENT_OU25_MIN_VOTES = 4;
 const CLIENT_OU25_MIN_CONFIDENCE = Math.max(78, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 78));
+// Mode Recovery : active par defaut, fail-closed et limite a 1 ou 2 matchs/jour.
+const RECOVERY_MODE_ENABLED = process.env.OU25_RECOVERY_MODE !== "0";
+const RECOVERY_MAX_DAILY_SIGNALS = Math.min(2, Math.max(1, Number(process.env.OU25_RECOVERY_MAX_DAILY_SIGNALS || 2)));
+const RECOVERY_OVER_MIN_AVG = 2.80;
+const RECOVERY_UNDER_MAX_AVG = 2.20;
+const RECOVERY_MIN_CONVERGENT_INDICATORS = 3;
 const CLIENT_OU25_CLIENT_MAX_MINUTE = Math.min(
-  32,
-  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 32))
+  40,
+  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 40))
 );
 function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
@@ -3180,15 +3187,153 @@ function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = 40) 
   return true;
 }
 
-// Garde-fous temporaires fondés sur les résultats observés depuis le 25/08.
-// Les segments fragiles exigent l'unanimité ; les autres conservent la règle 4/5.
-function clientOu25RequiredVotes(match, bet) {
-  const market = String(bet || "").toLowerCase();
-  if (market.startsWith("under 2.5")) return 5;
-  const league = leagueHaystack(match);
-  if (/championship/.test(league) && /england|angleterre/.test(league)) return 5;
-  if (/(brazil|brésil|bresil).*(serie a|serie b)|(serie a|serie b).*(brazil|brésil|bresil)/.test(league)) return 5;
-  return CLIENT_OU25_MIN_VOTES;
+// Mode Recovery : unanimite obligatoire pour chaque signal client O/U 2,5.
+function clientOu25RequiredVotes() {
+  return RECOVERY_MODE_ENABLED ? 5 : CLIENT_OU25_MIN_VOTES;
+}
+
+const recoveryRecentFormCache = new Map();
+
+function recoveryNormalize(value) {
+  return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
+
+function recoveryLeagueAllowed(match) {
+  const h = recoveryNormalize([match?.competition, match?.league, match?.country].filter(Boolean).join(" · "));
+  const country = (pattern) => pattern.test(h);
+  const league = (pattern) => pattern.test(h);
+  if (country(/england|angleterre/) && league(/premier league|championship/)) return true;
+  if (country(/spain|espagne/) && league(/la ?liga( 2)?|laliga( 2)?|segunda division/)) return true;
+  if (country(/italy|italie/) && league(/serie a|serie b/)) return true;
+  if (country(/germany|allemagne/) && league(/bundesliga|2[.] bundesliga/)) return true;
+  if (country(/france/) && league(/ligue 1|ligue 2/)) return true;
+  if (country(/netherlands|pays-bas/) && league(/eredivisie/)) return true;
+  if (country(/portugal/) && league(/liga portugal|primeira liga/)) return true;
+  if (country(/belgium|belgique/) && league(/jupiler pro league|first division a|pro league/)) return true;
+  return false;
+}
+
+function recoveryNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function fetchRecoveryRecentGoalProfile(match, teamId, venue) {
+  if (!API_SPORTS_KEY || !match?.leagueId || !match?.season || !teamId) return null;
+  const key = `recovery_${match.leagueId}_${match.season}_${teamId}_${venue}`;
+  const cached = recoveryRecentFormCache.get(key);
+  if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
+  if (!apiSportsBudgetOk()) return null;
+  try {
+    const data = await httpGet(
+      `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${match.season}&last=8&status=FT`,
+      { "x-apisports-key": API_SPORTS_KEY }
+    );
+    const rows = (Array.isArray(data?.response) ? data.response : []).map((fixture) => {
+      const homeId = Number(fixture?.teams?.home?.id);
+      const awayId = Number(fixture?.teams?.away?.id);
+      const homeGoals = recoveryNumber(fixture?.goals?.home);
+      const awayGoals = recoveryNumber(fixture?.goals?.away);
+      if (homeGoals === null || awayGoals === null || (homeId !== Number(teamId) && awayId !== Number(teamId))) return null;
+      return { homeId, awayId, total: homeGoals + awayGoals };
+    }).filter(Boolean).slice(0, 8);
+    if (rows.length < 6) {
+      recoveryRecentFormCache.set(key, { data: null, ts: Date.now() });
+      return null;
+    }
+    const venueRows = rows.filter((row) => venue === "home"
+      ? row.homeId === Number(teamId)
+      : row.awayId === Number(teamId));
+    if (venueRows.length < 2) {
+      recoveryRecentFormCache.set(key, { data: null, ts: Date.now() });
+      return null;
+    }
+    const avg = (items) => items.reduce((sum, row) => sum + row.total, 0) / items.length;
+    const pct = (items, predicate) => 100 * items.filter(predicate).length / items.length;
+    const out = {
+      sample: rows.length,
+      totalAvg: avg(rows),
+      over25Pct: pct(rows, (row) => row.total >= 3),
+      under25Pct: pct(rows, (row) => row.total <= 2),
+      venueSample: venueRows.length,
+      venueAvg: avg(venueRows),
+      venueOver25Pct: pct(venueRows, (row) => row.total >= 3),
+      venueUnder25Pct: pct(venueRows, (row) => row.total <= 2),
+    };
+    recoveryRecentFormCache.set(key, { data: out, ts: Date.now() });
+    return out;
+  } catch (error) {
+    console.error("[recovery] forme recente:", error.message);
+    return null;
+  }
+}
+
+async function evaluateRecoveryEvidence(match, bet, liveStats) {
+  if (!RECOVERY_MODE_ENABLED) return { ok: true, reason: "mode recovery desactive", indicators: [] };
+  if (!recoveryLeagueAllowed(match)) return { ok: false, reason: "championnat hors liste Recovery", indicators: [] };
+  const side = /^Over 2[.,]5 buts$/i.test(String(bet || "")) ? "over"
+    : /^Under 2[.,]5 buts$/i.test(String(bet || "")) ? "under" : null;
+  if (!side) return { ok: false, reason: "marche hors O/U 2,5", indicators: [] };
+
+  const [homeProfile, awayProfile, injuries] = await Promise.all([
+    fetchRecoveryRecentGoalProfile(match, match.homeId, "home"),
+    fetchRecoveryRecentGoalProfile(match, match.awayId, "away"),
+    fetchInjuries(match),
+  ]);
+  if (!homeProfile || !awayProfile) return { ok: false, reason: "historique 6-8 matchs ou contexte domicile/exterieur indisponible", indicators: [] };
+  if (!injuries) return { ok: false, reason: "donnees absences indisponibles", indicators: [] };
+
+  const combinedAvg = (homeProfile.totalAvg + awayProfile.totalAvg) / 2;
+  const venueCombinedAvg = (homeProfile.venueAvg + awayProfile.venueAvg) / 2;
+  const totals = [
+    liveStats?.total_shots_home, liveStats?.total_shots_away,
+    liveStats?.shots_on_goal_home, liveStats?.shots_on_goal_away,
+    match?.score_home, match?.score_away,
+  ].map(recoveryNumber);
+  if (totals.some((value) => value === null)) return { ok: false, reason: "statistiques live incompletes", indicators: [] };
+  const [shotsHome, shotsAway, onTargetHome, onTargetAway, scoreHome, scoreAway] = totals;
+  const totalShots = shotsHome + shotsAway;
+  const shotsOnTarget = onTargetHome + onTargetAway;
+  const goals = scoreHome + scoreAway;
+
+  const combinedAligned = side === "over"
+    ? combinedAvg >= RECOVERY_OVER_MIN_AVG
+    : combinedAvg <= RECOVERY_UNDER_MAX_AVG;
+  const recentTrendAligned = side === "over"
+    ? Math.max(homeProfile.over25Pct, awayProfile.over25Pct) >= 62.5
+    : Math.max(homeProfile.under25Pct, awayProfile.under25Pct) >= 62.5;
+  const venueAligned = side === "over"
+    ? venueCombinedAvg >= RECOVERY_OVER_MIN_AVG && Math.max(homeProfile.venueOver25Pct, awayProfile.venueOver25Pct) >= 60
+    : venueCombinedAvg <= RECOVERY_UNDER_MAX_AVG && Math.max(homeProfile.venueUnder25Pct, awayProfile.venueUnder25Pct) >= 60;
+  const liveAligned = side === "over"
+    ? (goals >= 1 || (totalShots >= 8 && shotsOnTarget >= 3))
+    : (goals === 0 && totalShots <= 10 && shotsOnTarget <= 4);
+
+  const indicators = [
+    combinedAligned && "moyenne combinee",
+    recentTrendAligned && "tendance recente",
+    venueAligned && "domicile/exterieur",
+    liveAligned && "confirmation live",
+  ].filter(Boolean);
+  const ok = combinedAligned && recentTrendAligned && venueAligned && liveAligned
+    && indicators.length >= RECOVERY_MIN_CONVERGENT_INDICATORS;
+  return {
+    ok,
+    reason: ok ? "criteres Recovery valides" : `indicateurs non convergents (${indicators.length}/4)`,
+    indicators,
+    combinedAvg: Math.round(combinedAvg * 100) / 100,
+    venueCombinedAvg: Math.round(venueCombinedAvg * 100) / 100,
+    injuriesAvailable: true,
+  };
+}
+
+function recoverySignalsSentToday() {
+  return Math.max(
+    signalsSentToday("sig_sent_standard"),
+    signalsSentToday("sig_sent_premium"),
+    signalsSentToday("sig_sent_elite")
+  );
 }
 
 const storedOu25ConsensusCache = new Map();
@@ -5459,11 +5604,14 @@ async function runConcileAnalysis(match) {
   const estimatedMin = estimateMinute(match);
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
+  const recoveryPromptBlock = RECOVERY_MODE_ENABLED
+    ? `\n\nMODE RECOVERY — sortie client uniquement si : championnat autorise, historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= 78 et unanimite 5/5. En cas de doute, ne force jamais la confiance.`
+    : "";
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${deepBlock}${liveConstraints}
+Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${deepBlock}${liveConstraints}${recoveryPromptBlock}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
@@ -6190,6 +6338,15 @@ Réponds en JSON pur (pas de markdown):
   const ou25Only = isOu25Bet(analysisResult.best_bet) && voteInfo.market === "over_under_2_5";
   const clientOu25MatchEligible = isClientOu25MatchEligible(match, true, CLIENT_OU25_CLIENT_MAX_MINUTE);
   const requiredVotesForSignal = clientOu25RequiredVotes(match, analysisResult.best_bet);
+  const recoveryEvidence = await evaluateRecoveryEvidence(match, analysisResult.best_bet, liveStats);
+  const recoveryToday = new Date().toISOString().slice(0, 10);
+  if (_recoverySignalDaily.date !== recoveryToday) {
+    _recoverySignalDaily.date = recoveryToday;
+    _recoverySignalDaily.count = recoverySignalsSentToday();
+  }
+  const recoveryCapacityAvailable = !RECOVERY_MODE_ENABLED
+    || _recoverySignalDaily.count < RECOVERY_MAX_DAILY_SIGNALS;
+  console.log(`[recovery] ${match.home} vs ${match.away}: ${recoveryEvidence.ok ? "OK" : "BLOCK"} — ${recoveryEvidence.reason}`);
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
@@ -6229,6 +6386,8 @@ Réponds en JSON pur (pas de markdown):
   const _blockReason = (() => {
     if (_blockTier) return _blockTier;
     if (!TELEGRAM_BOT_TOKEN) return "config: TELEGRAM_BOT_TOKEN absent";
+    if (RECOVERY_MODE_ENABLED && !recoveryEvidence.ok) return `mode Recovery: ${recoveryEvidence.reason}`;
+    if (!recoveryCapacityAvailable) return `mode Recovery: plafond ${RECOVERY_MAX_DAILY_SIGNALS} signaux/jour atteint`;
     if (!clientOu25MatchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${CLIENT_OU25_CLIENT_MAX_MINUTE})`;
     if (!ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
     if (!fiveOu25SeatsPresent) return `sieges O/U 2,5 incomplets: ${Number(voteInfo.vote_active || 0)}/5`;
@@ -6325,18 +6484,23 @@ Réponds en JSON pur (pas de markdown):
       const diffusable = arjelPlayable && oddOk && sportDiffusable
         && clientOu25MatchEligible && ou25Only && fiveOu25SeatsPresent
         && voteCountForSignal >= requiredVotesForSignal
-        && conf >= CLIENT_OU25_MIN_CONFIDENCE;
+        && conf >= CLIENT_OU25_MIN_CONFIDENCE
+        && recoveryEvidence.ok && recoveryCapacityAvailable;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
       if (!diffusable) {
-        _tierBlock = !sportDiffusable
-          ? `sport non diffusable: ${match.sport || "?"}`
-          : !arjelPlayable
-            ? `hors ARJEL (source cote: ${analysisResult.cote_source || "estimation"})`
-            : realOdd === 0
-              ? "pas de vraie cote bookmaker (estimation seulement)"
-              : `cote ${realOdd} hors fenetre ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}`;
+        _tierBlock = RECOVERY_MODE_ENABLED && !recoveryEvidence.ok
+          ? `mode Recovery: ${recoveryEvidence.reason}`
+          : !recoveryCapacityAvailable
+            ? `mode Recovery: plafond ${RECOVERY_MAX_DAILY_SIGNALS} signaux/jour atteint`
+            : !sportDiffusable
+              ? `sport non diffusable: ${match.sport || "?"}`
+              : !arjelPlayable
+                ? `hors ARJEL (source cote: ${analysisResult.cote_source || "estimation"})`
+                : realOdd === 0
+                  ? "pas de vraie cote bookmaker (estimation seulement)"
+                  : `cote ${realOdd} hors fenetre ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}`;
       }
       // Seuils recalculés chaque jour pour servir le quota vendu (3 / 10 / 30).
       const TH = getTierThresholds();
@@ -6348,6 +6512,11 @@ Réponds en JSON pur (pas de markdown):
       const gradeStandard = diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.standard;
       const gradePremium  = gradeStandard || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.premium);
       const gradeElite    = gradePremium  || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.elite);
+      if (RECOVERY_MODE_ENABLED && gradeElite
+          && (TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || TELEGRAM_ELITE_CHANNEL_ID)) {
+        // Reservation synchrone : evite que deux analyses paralleles depassent le plafond.
+        _recoverySignalDaily.count++;
+      }
       shadowWorthy = gradeElite;
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
