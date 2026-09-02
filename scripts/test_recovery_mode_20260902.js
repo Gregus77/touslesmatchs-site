@@ -16,6 +16,7 @@ const checks = [
   ["consensus 4/5", "return CLIENT_OU25_MIN_VOTES;"],
   ["cote minimum 1.40", "const TIER_MIN_REAL_ODD = Math.max(1.40"],
   ["cote maximum 2.10", "const TIER_MAX_REAL_ODD = Math.min(2.10"],
+  ["envoi Recovery sans seuil cache", "const gradePremium = RECOVERY_MODE_ENABLED"],
   ["championnats autorises", "function recoveryLeagueAllowed(match)"],
   ["historique 6-8", "if (rows.length < 6)"],
   ["domicile/exterieur", 'fetchRecoveryRecentGoalProfile(match, match.homeId, "home")'],
