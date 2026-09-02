@@ -68,7 +68,7 @@ docker compose up -d --no-deps api
 
 READY=0
 for _ in $(seq 1 30); do
-  if curl -fsS --max-time 5 http://127.0.0.1:3001/api/health > "$TMP_DIR/health-local.json"; then
+  if curl -fsS --max-time 5 http://127.0.0.1:3001/health > "$TMP_DIR/health-local.json"; then
     READY=1
     break
   fi
@@ -77,7 +77,7 @@ done
 [ "$READY" -eq 1 ]
 
 HOST_SHA="$(sha256sum scripts/api_server.js | awk '{print $1}')"
-CONTAINER_SHA="$(docker compose exec -T api sha256sum /app/api_server.js | awk '{print $1}')"
+CONTAINER_SHA="$(docker compose exec -T api sha256sum /app/server.js | awk '{print $1}')"
 [ "$HOST_SHA" = "$CONTAINER_SHA" ]
 
 curl -fsS --max-time 15 https://www.touslesmatchs.com/api/health > "$TMP_DIR/health-public.json"
@@ -111,7 +111,7 @@ fi
 
 docker compose exec -T api node -e '
 const fs=require("fs");
-const s=fs.readFileSync("/app/api_server.js","utf8");
+const s=fs.readFileSync("/app/server.js","utf8");
 const required=[
   "RECOVERY_MODE_ENABLED",
   "RECOVERY_OVER_MIN_AVG = 2.80",
