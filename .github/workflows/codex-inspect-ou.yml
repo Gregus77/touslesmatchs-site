@@ -1,4 +1,4 @@
-name: Codex Stripe read-only gate
+name: Codex remove maintenance notices
 on:
   push:
     branches: [main]
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  gate:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.2.0
@@ -15,12 +15,36 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 5m
+          command_timeout: 10m
           script_stop: true
           script: |
             set -euo pipefail
             cd /opt/touslesmatchs
-            test "$(git branch --show-current)" = main
-            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-            docker exec touslesmatchs-api node -e "eval(Buffer.from('KGFzeW5jKCk9Pntjb25zdCBrPXByb2Nlc3MuZW52LlNUUklQRV9TRUNSRVRfS0VZfHwiIjtpZighL14ocmt8c2spX2xpdmVfLy50ZXN0KGspKXByb2Nlc3MuZXhpdCgyMCk7Y29uc3Qgcj1hd2FpdCBmZXRjaCgiaHR0cHM6Ly9hcGkuc3RyaXBlLmNvbS92MS9iYWxhbmNlIix7aGVhZGVyczp7QXV0aG9yaXphdGlvbjoiQmFzaWMgIitCdWZmZXIuZnJvbShrKyI6IikudG9TdHJpbmcoImJhc2U2NCIpfX0pO2lmKHIuc3RhdHVzIT09MjAwKXByb2Nlc3MuZXhpdCgyMSk7Y29uc3Qgdz1wcm9jZXNzLmVudi5TVFJJUEVfV0VCSE9PS19TRUNSRVR8fCIiO2lmKCF3LnN0YXJ0c1dpdGgoIndoc2VjXyIpKXByb2Nlc3MuZXhpdCgyMil9KSgpLmNhdGNoKCgpPT5wcm9jZXNzLmV4aXQoMjMpKTs=','base64').toString())"
-            curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+            git fetch origin main
+            git pull --ff-only origin main
+            STAMP=$(date -u +%Y%m%d-%H%M%S)
+            BACKUP=/opt/backups/tlm-maintenance-notices-$STAMP
+            mkdir -p "$BACKUP"
+            cp -a public/resultats-quotidiens.html "$BACKUP/"
+            rollback() {
+              cp -a "$BACKUP/resultats-quotidiens.html" public/resultats-quotidiens.html
+              git add public/resultats-quotidiens.html
+              git commit -m "revert: restore results page after failed verification" || true
+              git push origin HEAD:main || true
+              docker compose up -d --build site || true
+            }
+            trap rollback ERR
+            python3 -c "import base64;exec(base64.b64decode('ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCByZQpwPVBhdGgoInB1YmxpYy9yZXN1bHRhdHMtcXVvdGlkaWVucy5odG1sIikKcz1wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQpwYXR0ZXJucz1bCiByIlxuKjwhLS0gVExNX01BSU5URU5BTkNFX0RBWVNfU1RBUlQgLS0+Lio/PCEtLSBUTE1fTUFJTlRFTkFOQ0VfREFZU19FTkQgLS0+XG4qIiwKIHIiXG4qPGRpdiBpZD1cInRsbS1pbXBvcnRhbnQtdXBkYXRlXCIuKj88L2Rpdj5cbioiLAogciJcbio8ZGl2IGNsYXNzPVwidGxtLW1haW50ZW5hbmNlLXJlc3VsdHNcIi4qPzwvZGl2PlxuKiIsCl0KZm9yIHBhdCBpbiBwYXR0ZXJuczoKIHMsbj1yZS5zdWJuKHBhdCwiXG5cbiIscyxjb3VudD0xLGZsYWdzPXJlLlMpCiBpZiBuIT0xOiByYWlzZSBTeXN0ZW1FeGl0KCJibG9jIG1haW50ZW5hbmNlIGludHJvdXZhYmxlIikKcC53cml0ZV90ZXh0KHMsZW5jb2Rpbmc9InV0Zi04IikK'))"
+            ! grep -qE 'tlm-important-update|tlm-maintenance-results|TLM_MAINTENANCE_DAYS_START|Maintenance technique des 27' public/resultats-quotidiens.html
+            git diff --check
+            git add public/resultats-quotidiens.html
+            git commit -m "fix: retirer les anciens messages de maintenance"
+            git push origin HEAD:main
+            docker compose up -d --build site
+            sleep 5
+            curl -fsS "https://www.touslesmatchs.com/resultats-quotidiens.html?t=$(date +%s)" -o /tmp/results.html
+            ! grep -qE 'Mise à jour importante TousLesMatchs|Maintenance technique des 27|tlm-maintenance-results' /tmp/results.html
+            grep -q 'id="lead-form"' /tmp/results.html
+            echo "BACKUP=$BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            trap - ERR
