@@ -44,7 +44,7 @@ jobs:
             STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
             BACKUP="/opt/backups/tlm-live-votes-$STAMP"
             install -d -m 700 "$BACKUP/public"
-            cp -a public/app.html public/live-ia.html public/sw.js "$BACKUP/public/"
+            cp -a public/app.html public/live-ia.html public/sw.js public/index.html public/resultats-quotidiens.html public/faq.html public/performances.html "$BACKUP/public/"
             if [ -f shared/vps-status.json ]; then
               install -D -m 600 shared/vps-status.json "$BACKUP/shared/vps-status.json"
             fi
@@ -57,7 +57,11 @@ jobs:
             grep -q 'TLM_APP_LIVE_VOTES_V1' public/app.html
             grep -q 'TLM_LIVE_OU25_VOTES_V1' public/live-ia.html
             grep -q 'tlm-app-v12-live-votes-20260903' public/sw.js
-            ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' public/app.html
+            ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27|maintenanceDays' public/app.html public/index.html public/resultats-quotidiens.html
+            ! grep -qE '15e (et|à) la 40e|15e-40e|n<=40|minute>40' public/index.html public/faq.html public/performances.html
+            grep -q '15e et la 45e minute' public/index.html
+            grep -q '15e et la 45e minute' public/faq.html
+            grep -q '15e et la 45e minute' public/performances.html
 
             if ! grep -qxF '/shared/vps-status.json' .gitignore; then
               printf '\n# État généré par la vigie horaire sur le VPS\n/shared/vps-status.json\n' >> .gitignore
@@ -71,16 +75,14 @@ jobs:
 
             rollback_site() {
               set +e
-              cp -a "$BACKUP/public/app.html" public/app.html
-              cp -a "$BACKUP/public/live-ia.html" public/live-ia.html
-              cp -a "$BACKUP/public/sw.js" public/sw.js
+              cp -a "$BACKUP/public/." public/
               docker compose up -d --build site >/dev/null 2>&1
-              git restore --source=HEAD --worktree -- public/app.html public/live-ia.html public/sw.js
+              git restore --source=HEAD --worktree -- public/app.html public/live-ia.html public/sw.js public/index.html public/resultats-quotidiens.html public/faq.html public/performances.html
               echo "ROLLBACK_SITE_OK"
             }
             trap rollback_site ERR
 
-            node -e "$(printf '%s' 'Y29uc3QgZnM9cmVxdWlyZSgiZnMiKTtmb3IoY29uc3QgZiBvZiBbInB1YmxpYy9hcHAuaHRtbCIsInB1YmxpYy9saXZlLWlhLmh0bWwiXSl7Y29uc3QgaD1mcy5yZWFkRmlsZVN5bmMoZiwidXRmOCIpO2NvbnN0IHI9LzxzY3JpcHRcYihbXj5dKik+KFtzXFNdKj8pPFwvc2NyaXB0Pi9naTtsZXQgbTt3aGlsZSgobT1yLmV4ZWMoaCkpKXtjb25zdCBhPW1bMV18fCIiO2lmKC9cYnNyY1xzKj0vLnRlc3QoYSl8fC90eXBlXHMqPVxzKlsiJ10oPzphcHBcL3gtZGlzYWJsZWR8YXBwbGljYXRpb25cL2xkXCtqc29ufG1vZHVsZSlbIiddL2kudGVzdChhKSljb250aW51ZTtuZXcgRnVuY3Rpb24obVsyXXx8IiIpO319Y29uc29sZS5sb2coIkZST05URU5EX1NZTlRBWF9PSyIpOw==' | base64 -d)"
+            node -e "$(printf '%s' 'Y29uc3QgZnMgPSByZXF1aXJlKCJmcyIpOwpmb3IgKGNvbnN0IGZpbGUgb2YgWwogICJwdWJsaWMvYXBwLmh0bWwiLAogICJwdWJsaWMvbGl2ZS1pYS5odG1sIiwKICAicHVibGljL2luZGV4Lmh0bWwiLAogICJwdWJsaWMvcmVzdWx0YXRzLXF1b3RpZGllbnMuaHRtbCIsCiAgInB1YmxpYy9mYXEuaHRtbCIsCiAgInB1YmxpYy9wZXJmb3JtYW5jZXMuaHRtbCIsCl0pIHsKICBjb25zdCBodG1sID0gZnMucmVhZEZpbGVTeW5jKGZpbGUsICJ1dGY4Iik7CiAgY29uc3Qgc2NyaXB0ID0gLzxzY3JpcHRcYihbXj5dKik+KFtcc1xTXSo/KTxcL3NjcmlwdD4vZ2k7CiAgbGV0IG1hdGNoOwogIHdoaWxlICgobWF0Y2ggPSBzY3JpcHQuZXhlYyhodG1sKSkpIHsKICAgIGNvbnN0IGF0dHJzID0gbWF0Y2hbMV0gfHwgIiI7CiAgICBpZiAoL1xic3JjXHMqPS8udGVzdChhdHRycykgfHwgL3R5cGVccyo9XHMqWyInXSg/OmFwcGxpY2F0aW9uXC9sZFwranNvbnxtb2R1bGUpWyInXS9pLnRlc3QoYXR0cnMpKSBjb250aW51ZTsKICAgIG5ldyBGdW5jdGlvbihtYXRjaFsyXSB8fCAiIik7CiAgfQp9CmNvbnNvbGUubG9nKCJGUk9OVEVORF9TWU5UQVhfT0siKTsK' | base64 -d)"
 
             docker compose up -d --build site
             sleep 10
@@ -89,13 +91,21 @@ jobs:
             curl -fsS "https://www.touslesmatchs.com/app.html?proof=$STAMP" -o "/tmp/tlm-app-$STAMP.html"
             curl -fsS "https://www.touslesmatchs.com/live-ia.html?proof=$STAMP" -o "/tmp/tlm-live-$STAMP.html"
             curl -fsS "https://www.touslesmatchs.com/sw.js?proof=$STAMP" -o "/tmp/tlm-sw-$STAMP.js"
+            curl -fsS "https://www.touslesmatchs.com/?proof=$STAMP" -o "/tmp/tlm-index-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/resultats-quotidiens.html?proof=$STAMP" -o "/tmp/tlm-results-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/faq.html?proof=$STAMP" -o "/tmp/tlm-faq-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/performances.html?proof=$STAMP" -o "/tmp/tlm-performance-$STAMP.html"
             curl -fsS "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" -o "/tmp/tlm-matches-$STAMP.json"
             curl -fsS "https://www.touslesmatchs.com/api/health?t=$STAMP" >/dev/null
 
             grep -q 'TLM_APP_LIVE_VOTES_V1' "/tmp/tlm-app-$STAMP.html"
             grep -q 'TLM_LIVE_OU25_VOTES_V1' "/tmp/tlm-live-$STAMP.html"
             grep -q 'tlm-app-v12-live-votes-20260903' "/tmp/tlm-sw-$STAMP.js"
-            ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' "/tmp/tlm-app-$STAMP.html"
+            ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27|maintenanceDays' "/tmp/tlm-app-$STAMP.html" "/tmp/tlm-index-$STAMP.html" "/tmp/tlm-results-$STAMP.html"
+            ! grep -qE '15e (et|à) la 40e|15e-40e|n<=40|minute>40' "/tmp/tlm-index-$STAMP.html" "/tmp/tlm-faq-$STAMP.html" "/tmp/tlm-performance-$STAMP.html"
+            grep -q '15e et la 45e minute' "/tmp/tlm-index-$STAMP.html"
+            grep -q '15e et la 45e minute' "/tmp/tlm-faq-$STAMP.html"
+            grep -q '15e et la 45e minute' "/tmp/tlm-performance-$STAMP.html"
             python3 -c "$(printf '%s' 'aW1wb3J0IGpzb24sc3lzCnA9c3lzLmFyZ3ZbMV0KbWF0Y2hlcz1qc29uLmxvYWQob3BlbihwLGVuY29kaW5nPSJ1dGYtOCIpKS5nZXQoIm1hdGNoZXMiLFtdKQpmb3IgbWF0Y2ggaW4gbWF0Y2hlczoKIHN0YXRlPW1hdGNoLmdldCgib3UyNSIpIG9yIHt9CiBhc3NlcnQgc3RhdGUuZ2V0KCJ0b19taW51dGUiKT09NDUKIGFzc2VydCBsZW4oc3RhdGUuZ2V0KCJ2b3RlcyIpIG9yIFtdKT09NQpwcmludCgiT1UyNV9QVUJMSUNfT0siKQo=' | base64 -d)" "/tmp/tlm-matches-$STAMP.json"
 
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
