@@ -15,6 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - name: Derive configured SSH public key
+        shell: bash
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -eu
+          umask 077
+          printf '%s\n' "$VPS_SSH_KEY" > /tmp/vps_key
+          printf 'VPS_PUBLIC_KEY='
+          ssh-keygen -y -f /tmp/vps_key
+          rm -f /tmp/vps_key
+
       - name: Read-only VPS baseline
         uses: appleboy/ssh-action@v1.0.3
         with:
