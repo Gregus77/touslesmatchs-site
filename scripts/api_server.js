@@ -1592,6 +1592,7 @@ function translateTelegramClientRu(input) {
     [/Vote IA/gi, "Голосование ИИ"],
     [/Résultat vérifiable demain sur le site/gi, "Результат можно проверить завтра на сайте"],
     [/Résultats complets : gagnés comme perdus/gi, "Полные результаты: выигрыши и проигрыши"],
+    [/Résultats complets dans le canal/gi, "Полные результаты внутри канала"],
     [/La sélection exacte et la raison sont réservées aux membres/gi, "Точный прогноз и обоснование доступны только подписчикам"],
     [/Imagine si tu avais eu le pick en direct/gi, "Представьте, если бы вы получили прогноз в прямом эфире"],
     [/Recevoir tous les signaux dès 4,90€/gi, "Получать все сигналы от 4,90 €"],
@@ -14361,7 +14362,10 @@ async function sendTransparentDailyRecap() {
     }).join("\n\n");
 
     return [
-      `📊 <b>BILAN DU JOUR</b>`,
+      // TELEGRAM_DAILY_PREVIEW_BALANCED_V1
+      // Première ligne exacte mais volontairement longue : l'aperçu Telegram
+      // met la réussite en contexte sans afficher le rouge avant l'ouverture.
+      `📊 <b>BILAN DU JOUR · ✅ Gagnés : ${wins} · Signaux réellement diffusés : ${list.length} · Réussite : ${rate}% · Résultats complets dans le canal</b>`,
       ``,
       `⚽ Signaux réellement diffusés : <b>${list.length}</b>`,
       `✅ Gagnés : <b>${wins}</b>`,
