@@ -115,3 +115,5 @@ jobs:
             echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
             echo "SITE_CONTAINER=$(docker inspect -f '{{.Id}}' touslesmatchs-site | cut -c1-12)"
             trap - ERR
+
+# deployment trigger: align-window-45-20260904
