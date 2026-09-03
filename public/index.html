@@ -1058,7 +1058,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">Entre la 15e et la 40e minute, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 4 IA sur 5.</p>
+          <p class="tlm-hero-lead">Entre la 15e et la 45e minute, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 4 IA sur 5.</p>
           <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="#pick" class="btn btn-prim">Voir le signal gratuit</a><a href="#plans" class="btn btn-ghost">Voir les offres</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
@@ -1748,13 +1748,13 @@ function renderHeroLive(m){
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
   var hs=liveHomeScore(m),as=liveAwayScore(m);setHeroText('hero-live-score',(hs===''?'—':hs)+' - '+(as===''?'—':as));
   setHeroText('hero-live-period',String(m.status||m.elapsed||m.period||'1ère période'));
-  var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>40);
+  var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>45);
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
   setHeroText('hero-consensus-current',votes+' / 5');
   setHeroText('hero-ai-title',votes?'Votes IA Over/Under 2,5':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours');
-  setHeroText('hero-consensus-label',votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 40e':'En attente des IA');
+  setHeroText('hero-consensus-label',votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var i=0;i<voteEls.length;i++){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted'&&(dir==='over'||dir==='under');voteEls[i].classList.toggle('on',voted);voteEls[i].classList.toggle('over',dir==='over');voteEls[i].classList.toggle('under',dir==='under');var mark=voteEls[i].querySelector('i');if(mark)mark.textContent=dir==='over'?'O':dir==='under'?'U':String(i+1);var detail=voted?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');voteEls[i].title=detail;voteEls[i].setAttribute('aria-label',detail);}
-  var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/25*100)):12;progress.style.width=pct+'%';}
+  var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/30*100)):12;progress.style.width=pct+'%';}
 }
 function renderHeroWatchlist(p){
   if(!p){renderHeroLive(null);return;}
@@ -1793,20 +1793,20 @@ async function loadHeroLive(){
       }
       function group(m){
         var n=minuteOf(m);
-        if(n>=15&&n<=40)return 0;  /* priorité absolue */
+        if(n>=15&&n<=45)return 0;  /* priorité absolue */
         if(n>=0&&n<15)return 1;    /* prochain à entrer dans la fenêtre */
-        return 2;                  /* >40', 90'+ ou minute inconnue */
+        return 2;                  /* >45', 90'+ ou minute inconnue */
       }
       function quality(m){
         return (liveHomeLogo(m)?2:0)+(liveAwayLogo(m)?2:0)+(liveHomeScore(m)!==''?2:0)+(liveAwayScore(m)!==''?2:0);
       }
       var ga=group(a),gb=group(b),ma=minuteOf(a),mb=minuteOf(b);
       if(ga!==gb)return ga-gb;
-      /* 15'-40' : le match ayant démarré le plus récemment (minute la plus basse) gagne. */
+      /* 15'-45' : le match ayant démarré le plus récemment (minute la plus basse) gagne. */
       if(ga===0&&ma!==mb)return ma-mb;
       /* Avant 15' : celui qui est le plus proche de 15' gagne. */
       if(ga===1&&ma!==mb)return mb-ma;
-      /* Après 40' : le moins avancé reste devant un 90'+. Minute inconnue tout au fond. */
+      /* Après 45' : le moins avancé reste devant un 90'+. Minute inconnue tout au fond. */
       if(ga===2){
         if(ma<0&&mb>=0)return 1;
         if(mb<0&&ma>=0)return -1;
@@ -1966,95 +1966,6 @@ async function loadDailyAccordion(){
     var TIER_ORDRE=['standard','premium','elite'];
     box.innerHTML=banniere+order.map(function(day,idx){
       var list=byDay[day]||[];
-
-      var maintenanceDays={
-        "2026-08-27":{
-          summary:"🔧 Mise à jour · 5/5 gagnés en simulation · non diffusés",
-          detail:`
-            <div style="line-height:1.65">
-              <div style="margin-bottom:9px">
-                🔧 Mise à jour du moteur IA Over/Under 2,5.
-                Nous testons en permanence plusieurs IA en arrière-plan.
-                Lorsqu'une IA devient durablement plus performante qu'une des 5 titulaires,
-                elle prend sa place après une courte phase de validation et de maintenance.
-              </div>
-
-              <div style="color:#25e6cf;font-weight:800;margin-bottom:8px">
-                ✅ Analyses internes enregistrées ce jour-là :
-              </div>
-
-              <div style="display:grid;gap:6px">
-                <div>✅ <strong>Qarabag – Twente</strong> · Under 2,5 · @2,20 · 4/5 votes</div>
-                <div>✅ <strong>FC Iberia 1999 – Jagiellonia</strong> · Over 2,5 · @1,77 · 4/5 votes</div>
-                <div>✅ <strong>FK Jablonec – Rangers</strong> · Under 2,5 · @1,88 · 5/5 votes</div>
-                <div>✅ <strong>KuPS – Shamrock Rovers</strong> · Under 2,5 · @1,56 · 5/5 votes</div>
-                <div>✅ <strong>Future FC – Ghazl El Mehalla</strong> · Under 2,5 · @1,34 · 5/5 votes</div>
-              </div>
-
-              <div style="margin-top:10px;color:#25e6cf;font-weight:700">
-                ℹ️ 5 analyses gagnantes sur 5, mais aucun de ces signaux n'a été diffusé aux abonnés pendant la maintenance.
-              </div>
-            </div>`
-        },
-
-        "2026-08-28":{
-          summary:"🔧 Mise à jour · 3/3 gagnés en simulation · non diffusés",
-          detail:`
-            <div style="line-height:1.65">
-              <div style="margin-bottom:9px">
-                🔧 Mise à jour du moteur IA et de la diffusion Telegram.
-                Nous comparons continuellement les IA titulaires avec plusieurs modèles testés en parallèle.
-                Si un modèle devient plus fiable sur l'Over/Under 2,5, il remplace le moins performant
-                après validation.
-              </div>
-
-              <div style="color:#25e6cf;font-weight:800;margin-bottom:8px">
-                ✅ Analyses internes enregistrées ce jour-là :
-              </div>
-
-              <div style="display:grid;gap:6px">
-                <div>✅ <strong>Wrexham – Birmingham</strong> · Over 2,5 · @2,00 · 3/5 votes</div>
-                <div>✅ <strong>Crystal Palace – Manchester City</strong> · Over 2,5 · @1,65 · 3/5 votes</div>
-                <div>✅ <strong>AC Milan – Venezia</strong> · Under 2,5 · @2,12 · 4/5 votes</div>
-              </div>
-
-              <div style="margin-top:10px;color:#25e6cf;font-weight:700">
-                ℹ️ 3 analyses gagnantes sur 3, non diffusées pendant cette phase de maintenance.
-              </div>
-            </div>`
-        },
-
-        "2026-08-29":{
-          summary:"🔧 Mise à jour importante · diffusion suspendue",
-          detail:`
-            <div style="line-height:1.65">
-              🔧 Le Conseil IA et la diffusion Telegram sont en cours d'amélioration.
-              Nous testons plusieurs IA en parallèle et conservons les 5 plus performantes
-              sur l'Over/Under 2,5.
-              <br><br>
-              Lorsqu'une nouvelle IA dépasse durablement une titulaire,
-              elle prend sa place après une courte phase de validation.
-              Pendant cette maintenance, aucun pronostic client n'est comptabilisé comme diffusé.
-            </div>`
-        }
-      };
-
-      if(!list.length && maintenanceDays[day]){
-        var md=maintenanceDays[day];
-
-        return '<div class="day-acc-item vide maintenance" data-day-idx="'+idx+'">'
-          + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
-          +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
-          +   '<div class="day-acc-summary" style="color:#25e6cf;font-weight:800">'+md.summary+'</div>'
-          + '</div>'
-          + '<div class="day-acc-body">'
-          +   '<div class="day-vide-note" style="border-color:rgba(251,191,36,.35)">'
-          +     md.detail
-          +     '<br><br><strong style="color:#25e6cf">ℹ️ Ces résultats ne sont pas comptabilisés comme gains abonnés.</strong>'
-          +   '</div>'
-          + '</div>'
-          + '</div>';
-      }
 
       if(!list.length){
         return '<div class="day-acc-item vide" data-day-idx="'+idx+'">'
