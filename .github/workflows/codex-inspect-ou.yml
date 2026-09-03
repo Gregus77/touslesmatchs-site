@@ -24,3 +24,4 @@ jobs:
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             docker exec touslesmatchs-api node -e "eval(Buffer.from('KGFzeW5jKCk9Pntjb25zdCB0PXByb2Nlc3MuZW52LlRFTEVHUkFNX0JPVF9UT0tFTnx8IiI7aWYoIXQpcHJvY2Vzcy5leGl0KDEwKTtjb25zdCBpZHM9T2JqZWN0LmtleXMocHJvY2Vzcy5lbnYpLmZpbHRlcihrPT4vXlRFTEVHUkFNXy4qKENIQVR8Q0hBTk5FTCkuKklEJC8udGVzdChrKSkubWFwKGs9PnByb2Nlc3MuZW52W2tdKS5maWx0ZXIoQm9vbGVhbik7aWYoIWlkcy5sZW5ndGgpcHJvY2Vzcy5leGl0KDExKTtmb3IoY29uc3QgaWQgb2YgaWRzKXtjb25zdCBkPWF3YWl0IGZldGNoKCJodHRwczovL2FwaS50ZWxlZ3JhbS5vcmcvYm90Iit0KyIvZ2V0Q2hhdD9jaGF0X2lkPSIrZW5jb2RlVVJJQ29tcG9uZW50KGlkKSkudGhlbihyPT5yLmpzb24oKSkuY2F0Y2goKCk9Pih7b2s6ZmFsc2V9KSk7aWYoIWQub2spcHJvY2Vzcy5leGl0KDEyKX19KSgpLmNhdGNoKCgpPT5wcm9jZXNzLmV4aXQoMTMpKTs=','base64').toString())"
             curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+
