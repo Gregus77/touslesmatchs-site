@@ -37,7 +37,6 @@ jobs:
             git fetch origin main
             test "$(git branch --show-current)" = "main"
             test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
-            test -z "$(git status --porcelain --untracked-files=no)"
 
             STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
             BACKUP="/opt/backups/tlm-live-votes-$STAMP"
@@ -46,7 +45,12 @@ jobs:
             cp public/app.html "$BACKUP/app.html"
             cp public/live-ia.html "$BACKUP/live-ia.html"
             cp public/sw.js "$BACKUP/sw.js"
-            trap 'cp "$BACKUP/app.html" public/app.html; cp "$BACKUP/live-ia.html" public/live-ia.html; cp "$BACKUP/sw.js" public/sw.js; docker compose up -d --build site >/dev/null 2>&1 || true' ERR
+
+            test -z "$(git diff --cached --name-only)"
+            test -z "$(git diff --name-only | grep -vE '^(public/app.html|public/live-ia.html|public/sw.js)$' || true)"
+            git stash push -m "codex-preserved-predeploy-$STAMP" -- public/app.html public/live-ia.html public/sw.js
+            test -z "$(git status --porcelain --untracked-files=no)"
+            trap 'cp "$BACKUP/app.html" public/app.html; cp "$BACKUP/live-ia.html" public/live-ia.html; cp "$BACKUP/sw.js" public/sw.js; docker compose up -d --build site >/dev/null 2>&1 || true; git stash push -m "codex-preserved-failed-deploy-$STAMP" -- public/app.html public/live-ia.html public/sw.js >/dev/null 2>&1 || true' ERR
 
             git pull --ff-only origin main
             node -e "$(printf '%s' 'Y29uc3QgZnM9cmVxdWlyZSgiZnMiKTtmb3IoY29uc3QgZiBvZiBbIi9vcHQvdG91c2xlc21hdGNocy9wdWJsaWMvYXBwLmh0bWwiLCIvb3B0L3RvdXNsZXNtYXRjaHMvcHVibGljL2xpdmUtaWEuaHRtbCJdKXtjb25zdCBoPWZzLnJlYWRGaWxlU3luYyhmLCJ1dGY4Iik7Y29uc3Qgcj0vPHNjcmlwdFxiKFtePl0qKT4oW1xzXFNdKj8pPFwvc2NyaXB0Pi9naTtsZXQgbTt3aGlsZSgobT1yLmV4ZWMoaCkpKXtjb25zdCBhPW1bMV18fCIiO2lmKC9cYnNyY1xzKj0vLnRlc3QoYSl8fC90eXBlXHMqPVxzKlsiJ10oPzphcHBcL3gtZGlzYWJsZWR8YXBwbGljYXRpb25cL2xkXCtqc29ufG1vZHVsZSlbIiddL2kudGVzdChhKSljb250aW51ZTtuZXcgRnVuY3Rpb24obVsyXXx8IiIpO319Y29uc29sZS5sb2coIkZST05URU5EX1NZTlRBWF9PSyIpOw==' | base64 -d)"
@@ -58,10 +62,10 @@ jobs:
             docker compose up -d --build site
             sleep 8
 
-            curl -fsS "https://www.touslesmatchs.com/app.html?proof=$STAMP" -o "/tmp/tlm-app-$STAMP.html"
-            curl -fsS "https://www.touslesmatchs.com/live-ia.html?proof=$STAMP" -o "/tmp/tlm-live-$STAMP.html"
-            curl -fsS "https://www.touslesmatchs.com/sw.js?proof=$STAMP" -o "/tmp/tlm-sw-$STAMP.js"
-            curl -fsS "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" -o "/tmp/tlm-matches-$STAMP.json"
+            curl -fsSL "https://www.touslesmatchs.com/app.html?proof=$STAMP" -o "/tmp/tlm-app-$STAMP.html"
+            curl -fsSL "https://www.touslesmatchs.com/live-ia.html?proof=$STAMP" -o "/tmp/tlm-live-$STAMP.html"
+            curl -fsSL "https://www.touslesmatchs.com/sw.js?proof=$STAMP" -o "/tmp/tlm-sw-$STAMP.js"
+            curl -fsSL "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" -o "/tmp/tlm-matches-$STAMP.json"
             grep -q 'TLM_APP_LIVE_VOTES_V1' "/tmp/tlm-app-$STAMP.html"
             grep -q 'TLM_LIVE_OU25_VOTES_V1' "/tmp/tlm-live-$STAMP.html"
             grep -q 'tlm-app-v12-live-votes-20260903' "/tmp/tlm-sw-$STAMP.js"
