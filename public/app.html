@@ -964,12 +964,12 @@ Elles restent donc séparées des performances des signaux réellement envoyés.
     [$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(!img)return;if(!flag){img.hidden=true;return;}img.hidden=false;img.src=flag;img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};});
     var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
     var minute=Number(String(m.minute||'').replace(/[^0-9.]/g,''));
-    var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>40);
+    var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>45);
     var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
     var exclusionReason=String(m.analysis_exclusion_reason||'');
     $("app-ai-total").textContent=votes+' / 5';
     $("app-ai-label").textContent=votes?'Votes IA Over/Under 2,5':exclusionReason?'Analyse non lancée':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
-    $("app-ai-result").textContent=votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 40e':'En attente des IA';
+    $("app-ai-result").textContent=votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
     Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted'&&(dir==='over'||dir==='under');el.classList.toggle('on',voted);el.classList.toggle('over',dir==='over');el.classList.toggle('under',dir==='under');el.textContent=dir==='over'?'O':dir==='under'?'U':String(i+1);var detail=voted?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');el.title=detail;el.setAttribute('aria-label',detail);});
   }
   function loadLive() {
@@ -983,13 +983,13 @@ Elles restent donc séparées des performances des signaux réellement envoyés.
         function rank(m){
           var minute=Number(String(m&&m.minute||'').replace(/[^0-9.]/g,''));
           if(!isFinite(minute)) minute=999;
-          // Priorité absolue : fenêtre d'analyse 15'-40'.
+          // Priorité absolue : fenêtre d'analyse 15'-45'.
           // Le plus récent à être entré dans la fenêtre passe devant.
-          if(minute>=15&&minute<=40) return 100000-((minute-15)*100)+quality(m);
+          if(minute>=15&&minute<=45) return 100000-((minute-15)*100)+quality(m);
           // Ensuite ceux qui approchent de 15'.
           if(minute>0&&minute<15) return 50000+(minute*100)+quality(m);
           // Les fins de match restent visibles mais passent derrière.
-          if(minute>40) return 10000-Math.min(minute,999)+quality(m);
+          if(minute>45) return 10000-Math.min(minute,999)+quality(m);
           return quality(m);
         }
         return rank(b)-rank(a);

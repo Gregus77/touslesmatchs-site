@@ -2544,8 +2544,8 @@ const RECOVERY_OVER_MIN_AVG = 2.80;
 const RECOVERY_UNDER_MAX_AVG = 2.20;
 const RECOVERY_MIN_CONVERGENT_INDICATORS = 3;
 const CLIENT_OU25_CLIENT_MAX_MINUTE = Math.min(
-  40,
-  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 40))
+  45,
+  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 45))
 );
 function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
@@ -3309,7 +3309,7 @@ function isCategoryBanned(matchOrCompetition = "") {
 // Perimetre volontairement etroit du produit client O/U 2,5. Les analyses
 // hors de ce cadre restent en base pour apprendre, mais ne sont ni diffusees
 // ni presentees comme des signaux recus par les abonnes.
-function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = 40) {
+function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = CLIENT_OU25_CLIENT_MAX_MINUTE) {
 
   if (isAmericanFootballMatch(match)) return false;
   const sport = String(match?.sport || "Football").toLowerCase();
@@ -4288,8 +4288,12 @@ function hasKnownScore(match) {
 
 function parseLiveMinuteValue(minute) {
   if (minute === null || minute === undefined) return null;
-  const parsed = parseInt(String(minute).replace(/[^\d]/g, ""), 10);
-  return Number.isFinite(parsed) ? parsed : null;
+  const raw = String(minute).trim();
+  // Accepte uniquement une minute entière réelle. Les statuts et arrêts de jeu sont exclus.
+  const matched = raw.match(/^(\d{1,3})(?:['’′])?$/);
+  if (!matched) return null;
+  const parsed = Number(matched[1]);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 120 ? parsed : null;
 }
 
 // Codes de statut bruts (API-Sports / TheSportsDB) qui ne sont PAS du live
@@ -12562,7 +12566,7 @@ app.delete("/admin/set-score", (req, res) => {
 // multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
 function getLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
-  const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= 40 ? "open" : "closed";
+  const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= CLIENT_OU25_CLIENT_MAX_MINUTE ? "open" : "closed";
   const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
     agent,
     direction: null,
@@ -12574,7 +12578,7 @@ function getLiveOu25VoteState(match) {
   const empty = {
     market: "over_under_2_5",
     from_minute: 15,
-    to_minute: 40,
+    to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
     window_status: windowStatus,
     vote_count: 0,
     over_count: 0,
@@ -14687,7 +14691,7 @@ app.get("/analysis-history", (req, res) => {
       verification: {
         repaired_date: CLIENT_HISTORY_REPAIR_DATE,
         telegram_proof_since: CLIENT_TELEGRAM_PROOF_SINCE,
-        rule: "football_ou25_5_seats_min_4_votes_minute_15_40",
+        rule: "football_ou25_5_seats_min_4_votes_minute_15_45",
       },
     });
   } catch (e) {
