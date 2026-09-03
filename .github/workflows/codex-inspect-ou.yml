@@ -28,12 +28,26 @@ jobs:
             cd /opt/touslesmatchs
 
             git fetch origin main
-            test "$(git branch --show-current)" = "main"
-            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
-            test -z "$(git status --porcelain --untracked-files=no)"
-            read LOCAL_ONLY REMOTE_ONLY <<EOF_COUNTS
-            $(git rev-list --left-right --count HEAD...origin/main)
-            EOF_COUNTS
+            BRANCH="$(git branch --show-current)"
+            UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || true)"
+            TRACKED="$(git status --porcelain --untracked-files=no)"
+            COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
+            LOCAL_ONLY="$(printf '%s' "$COUNTS" | awk '{print $1}')"
+            REMOTE_ONLY="$(printf '%s' "$COUNTS" | awk '{print $2}')"
+            echo "GATE_BRANCH=$BRANCH"
+            echo "GATE_UPSTREAM=$UPSTREAM"
+            echo "GATE_AHEAD=$LOCAL_ONLY"
+            echo "GATE_BEHIND=$REMOTE_ONLY"
+            if [ -n "$TRACKED" ]; then
+              echo "GATE_TRACKED_DIRTY_BEGIN"
+              printf '%s\n' "$TRACKED" | sed -E 's/^...//'
+              echo "GATE_TRACKED_DIRTY_END"
+            else
+              echo "GATE_TRACKED_CLEAN=true"
+            fi
+            test "$BRANCH" = "main"
+            test "$UPSTREAM" = "origin/main"
+            test -z "$TRACKED"
             test "$LOCAL_ONLY" = "0"
             git pull --ff-only origin main
 
