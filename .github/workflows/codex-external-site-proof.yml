@@ -1,0 +1,30 @@
+name: Codex external public site proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codex-external-site-proof.yml
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public site from outside the VPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/app.html?external_proof=$stamp" -o /tmp/tlm-app.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/live-ia.html?external_proof=$stamp" -o /tmp/tlm-live.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/sw.js?external_proof=$stamp" -o /tmp/tlm-sw.js
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/api/health?external_proof=$stamp" -o /tmp/tlm-health.json
+          grep -q 'TLM_APP_LIVE_VOTES_V1' /tmp/tlm-app.html
+          grep -q 'TLM_LIVE_OU25_VOTES_V1' /tmp/tlm-live.html
+          grep -q 'tlm-app-v12-live-votes-20260903' /tmp/tlm-sw.js
+          ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' /tmp/tlm-app.html
+          echo "EXTERNAL_PUBLIC_SITE_OK"
