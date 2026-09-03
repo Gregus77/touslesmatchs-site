@@ -1,0 +1,77 @@
+name: Deploy TLM Recovery quorum fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-tlm-recovery-quorum.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy API and prove Recovery quorum
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            TLM_OLD_HEAD="$(git rev-parse HEAD)"
+            TLM_BACKUP="/opt/backups/recovery-quorum-$(date +%Y%m%d-%H%M%S)"
+            install -d -m 700 "$TLM_BACKUP"
+            cp -a scripts/api_server.js "$TLM_BACKUP/api_server.js"
+
+            rollback_api() {
+              TLM_EXIT=$?
+              set +e
+              cp -a "$TLM_BACKUP/api_server.js" scripts/api_server.js
+              docker compose up -d --build api >/dev/null 2>&1
+              git restore --source=HEAD --worktree -- scripts/api_server.js
+              echo "ROLLBACK_API_OK — source précédent remis en service — sauvegarde: $TLM_BACKUP" >&2
+              exit "$TLM_EXIT"
+            }
+
+            git fetch origin main
+            test "$(git branch --show-current)" = "main"
+            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
+            TLM_DIRTY="$(git status --porcelain --untracked-files=no)"
+            test -z "$TLM_DIRTY" || { echo "Fichiers suivis modifiés:"; printf '%s\n' "$TLM_DIRTY"; exit 2; }
+            TLM_COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
+            test "$(printf '%s' "$TLM_COUNTS" | awk '{print $1}')" = "0"
+            git pull --ff-only origin main
+            trap rollback_api ERR
+
+            node --check scripts/api_server.js
+            grep -Fq "const ok = indicators.length >= RECOVERY_MIN_CONVERGENT_INDICATORS;" scripts/api_server.js
+            ! sed -n '3465,3480p' scripts/api_server.js | grep -Fq "const ok = combinedAligned"
+            docker compose config -q
+
+            docker compose up -d --build api
+            sleep 15
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            test "$(sha256sum scripts/api_server.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/server.js | awk '{print $1}')"
+
+            TLM_HEALTH="$(curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/health?recovery=$(date +%s)")"
+            printf '%s' "$TLM_HEALTH" | python3 -c 'import json,sys; h=json.load(sys.stdin); assert h.get("ok") is not False; i=h.get("integrations",{}); assert i.get("telegram",{}).get("ok") is True; assert i.get("brevo",{}).get("ok") is True; print("HEALTH_TELEGRAM_BREVO_OK")'
+
+            systemctl start tlm-autodirector.service
+            python3 -c 'import json; s=json.load(open("/var/lib/tlm-autodirector/state.json")); assert all(x.get("code") != "recovery_rule_conflict" for x in s.get("last_issues",[])); print("DIRECTOR_RECOVERY_RULE_OK")'
+
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            trap - ERR
+            echo "OK — quorum Recovery 3/4 déployé — sauvegarde: $TLM_BACKUP — précédent: $TLM_OLD_HEAD"
