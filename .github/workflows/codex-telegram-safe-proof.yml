@@ -1,0 +1,131 @@
+name: Codex Telegram safe proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codex-telegram-safe-proof.yml
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Prove Telegram delivery without exposing runtime data
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 6m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+
+            git fetch origin main
+            test "$(git branch --show-current)" = "main"
+            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git pull --ff-only origin main
+
+            curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+            docker inspect touslesmatchs-api >/dev/null
+            docker exec touslesmatchs-api grep -q 'telegram_signal_deliveries' /app/server.js
+            docker exec touslesmatchs-api grep -q 'frenchClientSignal' /app/server.js
+
+            docker exec -i touslesmatchs-api node <<'NODE'
+            const https = require("https");
+            const Database = require("better-sqlite3");
+
+            function call(method, payload = {}) {
+              return new Promise((resolve, reject) => {
+                const body = JSON.stringify(payload);
+                const request = https.request({
+                  hostname: "api.telegram.org",
+                  path: "/bot" + process.env.TELEGRAM_BOT_TOKEN + "/" + method,
+                  method: "POST",
+                  timeout: 12000,
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Content-Length": Buffer.byteLength(body)
+                  }
+                }, response => {
+                  let raw = "";
+                  response.on("data", chunk => raw += chunk);
+                  response.on("end", () => {
+                    try { resolve(JSON.parse(raw)); }
+                    catch { reject(new Error("Telegram response unreadable")); }
+                  });
+                });
+                request.on("error", reject);
+                request.on("timeout", () => {
+                  request.destroy(new Error("Telegram timeout"));
+                });
+                request.write(body);
+                request.end();
+              });
+            }
+
+            (async () => {
+              if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("Bot token absent");
+
+              const me = await call("getMe");
+              if (!me.ok || !me.result?.id) throw new Error("Bot authentication failed");
+
+              const required = [
+                "TELEGRAM_CHANNEL_ID",
+                "TELEGRAM_STANDARD_CHANNEL_ID",
+                "TELEGRAM_PREMIUM_CHANNEL_ID",
+                "TELEGRAM_RU_FREE_CHANNEL_ID",
+                "TELEGRAM_RU_STANDARD_CHANNEL_ID",
+                "TELEGRAM_RU_PREMIUM_CHANNEL_ID",
+                "TELEGRAM_ADMIN_CHAT_ID"
+              ];
+
+              for (const key of required) {
+                const chatId = process.env[key];
+                if (!chatId) throw new Error(key + " absent");
+
+                const membership = await call("getChatMember", {
+                  chat_id: chatId,
+                  user_id: me.result.id
+                });
+
+                if (!membership.ok) throw new Error(key + " inaccessible");
+                const status = membership.result?.status;
+                if (!["administrator", "creator", "member"].includes(status)) {
+                  throw new Error(key + " membership invalid");
+                }
+                if (membership.result?.can_post_messages === false) {
+                  throw new Error(key + " cannot post");
+                }
+              }
+
+              const test = await call("sendMessage", {
+                chat_id: process.env.TELEGRAM_ADMIN_CHAT_ID,
+                text: "✅ Test technique Codex — Telegram opérationnel — aucun pronostic — " + new Date().toISOString(),
+                disable_web_page_preview: true
+              });
+              if (!test.ok || !test.result?.message_id) {
+                throw new Error("Admin delivery failed");
+              }
+
+              const db = new Database("/data/tlm.db", {readonly:true});
+              db.prepare("SELECT COUNT(*) AS n FROM telegram_signal_deliveries").get();
+              db.prepare("SELECT COUNT(*) AS n FROM concile_analyses WHERE analysed_at >= datetime('now','-48 hours')").get();
+              db.close();
+
+              console.log("TELEGRAM_RUNTIME_PROOF_OK");
+            })().catch(error => {
+              console.error("TELEGRAM_RUNTIME_PROOF_FAILED");
+              process.exit(1);
+            });
+            NODE
+
+            git commit --allow-empty -m "test: prove Telegram admin delivery on production"
+            git push origin HEAD:main
