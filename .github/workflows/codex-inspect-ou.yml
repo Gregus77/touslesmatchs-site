@@ -53,3 +53,4 @@ jobs:
             echo "BACKUP=$BACKUP"
             echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
             trap - ERR
+
