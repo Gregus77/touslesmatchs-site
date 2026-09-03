@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Performances du Concile IA — TousLesMatchs</title>
-<meta name="description" content="Statistiques vérifiées du Concile Hermès : winrate, ROI, bénéfice simulé, cote moyenne et historique daté complet. Filtrable par palier. Aucun résultat caché.">
+<title>Performances du Conseil IA — TousLesMatchs</title>
+<meta name="description" content="Statistiques vérifiées du Conseil IA : winrate, ROI, bénéfice simulé, cote moyenne et historique daté complet. Filtrable par formule. Aucun résultat caché.">
 <link rel="canonical" href="https://www.touslesmatchs.com/performances">
 <link rel="icon" href="/favicon.ico">
 <meta property="og:title" content="Performances — TousLesMatchs">
-<meta property="og:description" content="Winrate, ROI, bénéfice simulé et historique complet du Concile IA. Transparence totale.">
+<meta property="og:description" content="Winrate, ROI, bénéfice simulé et historique complet du Conseil IA. Transparence totale.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.touslesmatchs.com/performances">
 <meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Performances — TousLesMatchs">
-<meta name="twitter:description" content="Résultats vérifiés du Concile IA. Aucun pick caché.">
+<meta name="twitter:description" content="Résultats vérifiés du Conseil IA. Aucun pick caché.">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#12152a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,7 +24,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "name": "Performances du Concile IA",
+  "name": "Performances du Conseil IA",
   "description": "Statistiques vérifiées : winrate, ROI, bénéfice simulé, cote moyenne et historique complet des analyses sportives IA.",
   "url": "https://www.touslesmatchs.com/performances",
   "isPartOf": { "@id": "https://www.touslesmatchs.com/#website" }
@@ -286,9 +286,8 @@ async function doLogin(){
     <div class="tier-tab" data-tier="dailypick" onclick="selectTier('dailypick')">🎯 Pick du jour</div>
     <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥇 Standard</div>
     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
-    <div class="tier-tab" data-tier="elite" onclick="selectTier('elite')">🥉 Elite</div>
   </div>
-  <div class="tier-note" id="tier-note">Règle commune aux trois paliers : football de championnat entre la 15e et la 40e minute, cinq sièges O/U 2,5 renseignés, majorité minimale 4/5 et cote bookmaker réelle.</div>
+  <div class="tier-note" id="tier-note">Règle actuelle Standard et Premium : football de championnat entre la 15e et la 40e minute, cinq sièges O/U 2,5, majorité minimale 4/5, confiance ≥78/100 et cote ANJ réelle entre 1,40 et 2,50.</div>
 
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Résultats</div></div>
@@ -305,12 +304,12 @@ async function doLogin(){
   <div class="section-title">Historique daté</div>
   <div class="conf-legend">
     <span class="conf-legend-item"><span class="conf-dot green"></span>≥85/100 Fiable</span>
-    <span class="conf-legend-item"><span class="conf-dot yellow"></span>75-84/100 Bon</span>
+    <span class="conf-legend-item"><span class="conf-dot yellow"></span>78-84/100 Diffusable</span>
     <span class="conf-legend-item"><span class="conf-dot orange"></span>65-74/100 Risqué</span>
     <span class="conf-legend-item"><span class="conf-dot red"></span>&lt;65/100 Prudence</span>
   </div>
   <div class="freshness-banner"><span class="fb-icon">🔄</span><span>Statistiques calculées en temps réel à chaque chargement de cette page, directement depuis notre base de données — pas de mise à jour différée, aucun chiffre mis en cache.</span></div>
-  <div class="section-hint" id="history-hint">Chaque ligne = une analyse. Cote réelle ANJ quand disponible, sinon estimation marché.</div>
+  <div class="section-hint" id="history-hint">Depuis le 27 août : signaux Telegram vérifiés. Les lignes « Ancien système » ou « Livraison non prouvée » sont conservées séparément et ne prouvent pas un envoi.</div>
   <div id="history-list" class="history-list">
     <div class="spinner-wrap"><div class="spinner"></div></div>
   </div>
@@ -369,8 +368,7 @@ function fmtDate(d) {
 function rowInTier(a, tier) {
   if (tier === 'all') return true;
   if (tier === 'standard') return a.tier === 'standard';
-  if (tier === 'premium') return a.tier === 'standard' || a.tier === 'premium';
-  if (tier === 'elite') return a.tier === 'standard' || a.tier === 'premium' || a.tier === 'elite';
+  if (tier === 'premium') return a.tier === 'standard' || a.tier === 'premium' || a.tier === 'elite';
   return true;
 }
 
@@ -430,7 +428,7 @@ function renderKpis() {
 function tierBadgeLabel(t) {
   if (t === 'standard') return '🥇 Standard';
   if (t === 'premium') return '🥈 Premium';
-  if (t === 'elite') return '🥉 Elite';
+  if (t === 'elite') return '🥈 Premium';
   return '';
 }
 

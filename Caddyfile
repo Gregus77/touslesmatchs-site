@@ -78,7 +78,11 @@ www.touslesmatchs.com {
     # Frontend statique
     handle {
         root * /srv
-        try_files {path} {path}.html /index.html
+        # TLM-SEO-I18N-DIR-INDEX-20260830
+        # Les pages SEO multilingues sont des dossiers contenant index.html.
+        # On teste donc index.html AVANT le dossier lui-même, sinon Caddy
+        # retombe sur /index.html et sert à tort l’accueil français.
+        try_files {path}index.html {path}/index.html {path} {path}.html /index.html
         file_server
         encode gzip
     }

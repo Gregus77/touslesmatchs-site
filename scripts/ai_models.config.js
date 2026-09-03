@@ -42,7 +42,7 @@ const MODELS = {
     costPer1kTokensEur: 0.0003,
   },
   mistral: {
-    id: "mistralai/mistral-large",
+    id: process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603",
     provider: "openrouter",
     role: "official_fallback",
     mode: "official",
@@ -56,7 +56,7 @@ const MODELS = {
     provider: "openrouter",
     role: "official_fallback",
     mode: "official",
-    enabled: true,
+    enabled: false,
     dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
     maxTokensOut: Number(process.env.AI_MODEL_COHERE_MAX_TOKENS || 400),
     costPer1kTokensEur: 0.003,
@@ -72,22 +72,22 @@ const MODELS = {
     costPer1kTokensEur: 0.003,
   },
 
-  // ── Qwen au banc ; Kimi promu titulaire le 26/08/2026 ──────────────────
+  // ── Qwen titulaire ; Kimi au banc depuis le 01/09/2026 ──────────────────
   qwen: {
     id: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max",
     provider: "openrouter",
-    role: "shadow_test",
-    mode: "test",
-    enabled: bool(process.env.OPENROUTER_QWEN_TEST_ENABLED, true),
+    role: "official",
+    mode: "official",
+    enabled: true,
     dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
-    maxTokensOut: Number(process.env.AI_MODEL_QWEN_MAX_TOKENS || 120),
+    maxTokensOut: Number(process.env.AI_MODEL_QWEN_MAX_TOKENS || 400),
     costPer1kTokensEur: 0.002,
   },
   kimi: {
     id: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3",
     provider: "openrouter",
-    role: "official",
-    mode: "official",
+    role: "shadow_test",
+    mode: "test",
     enabled: bool(process.env.OPENROUTER_KIMI_TEST_ENABLED, true),
     dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
     maxTokensOut: Number(process.env.AI_MODEL_KIMI_MAX_TOKENS || 400),
@@ -134,14 +134,36 @@ const MODELS = {
   },
 };
 
+function normalizeModelKey(key) {
+  const k = String(key || "").trim().toLowerCase();
+
+  const aliases = {
+    "mistralai": "mistral",
+    "mistral-large": "mistral",
+    "mistral-small": "mistral",
+    "moonshotai": "kimi",
+    "openrouter-kimi": "kimi",
+    "kimi-k2": "kimi",
+    "kimi-k3": "kimi",
+    "perplexity-web": "perplexity",
+    "deepseek-v3": "deepseek",
+    "cohere-command": "cohere",
+    "openrouter-qwen": "qwen"
+  };
+
+  return aliases[k] || k;
+}
+
 function getModel(key) {
-  const m = MODELS[key];
+  const normalized = normalizeModelKey(key);
+  const m = MODELS[normalized];
   if (!m) throw new Error(`[ai_models.config] modèle inconnu: ${key}`);
   return m;
 }
 
 function isModelAuthorized(key) {
-  const m = MODELS[key];
+  const normalized = normalizeModelKey(key);
+  const m = MODELS[normalized];
   return !!m && m.enabled;
 }
 
@@ -156,4 +178,4 @@ function listEnabledModels() {
   return Object.keys(MODELS).filter((k) => MODELS[k].enabled);
 }
 
-module.exports = { MODELS, getModel, isModelAuthorized, estimateCostEur, listEnabledModels };
+module.exports = { MODELS, getModel, isModelAuthorized, estimateCostEur, listEnabledModels, normalizeModelKey };
