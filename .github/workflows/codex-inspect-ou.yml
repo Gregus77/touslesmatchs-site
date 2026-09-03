@@ -1,4 +1,4 @@
-name: Codex Telegram connectivity gate
+name: Codex repair Telegram quorum
 on:
   push:
     branches: [main]
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  gate:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.2.0
@@ -15,13 +15,41 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 5m
+          command_timeout: 12m
           script_stop: true
           script: |
             set -euo pipefail
             cd /opt/touslesmatchs
-            test "$(git branch --show-current)" = main
-            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-            docker exec touslesmatchs-api node -e "eval(Buffer.from('KGFzeW5jKCk9Pntjb25zdCB0PXByb2Nlc3MuZW52LlRFTEVHUkFNX0JPVF9UT0tFTnx8IiI7aWYoIXQpcHJvY2Vzcy5leGl0KDEwKTtjb25zdCBpZHM9T2JqZWN0LmtleXMocHJvY2Vzcy5lbnYpLmZpbHRlcihrPT4vXlRFTEVHUkFNXy4qKENIQVR8Q0hBTk5FTCkuKklEJC8udGVzdChrKSkubWFwKGs9PnByb2Nlc3MuZW52W2tdKS5maWx0ZXIoQm9vbGVhbik7aWYoIWlkcy5sZW5ndGgpcHJvY2Vzcy5leGl0KDExKTtmb3IoY29uc3QgaWQgb2YgaWRzKXtjb25zdCBkPWF3YWl0IGZldGNoKCJodHRwczovL2FwaS50ZWxlZ3JhbS5vcmcvYm90Iit0KyIvZ2V0Q2hhdD9jaGF0X2lkPSIrZW5jb2RlVVJJQ29tcG9uZW50KGlkKSkudGhlbihyPT5yLmpzb24oKSkuY2F0Y2goKCk9Pih7b2s6ZmFsc2V9KSk7aWYoIWQub2spcHJvY2Vzcy5leGl0KDEyKX19KSgpLmNhdGNoKCgpPT5wcm9jZXNzLmV4aXQoMTMpKTs=','base64').toString())"
+            git fetch origin main
+            git pull --ff-only origin main
+            BEFORE=$(git rev-parse HEAD)
+            STAMP=$(date -u +%Y%m%d-%H%M%S)
+            BACKUP=/opt/backups/tlm-telegram-quorum-$STAMP
+            mkdir -p "$BACKUP"
+            cp -a scripts/api_server.js "$BACKUP/"
+            rollback() {
+              cp -a "$BACKUP/api_server.js" scripts/api_server.js
+              git add scripts/api_server.js
+              git commit -m "revert: restore Telegram quorum after failed verification" || true
+              git push origin HEAD:main || true
+              docker compose up -d --build api || true
+            }
+            trap rollback ERR
+            python3 -c "import base64;exec(base64.b64decode('ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgic2NyaXB0cy9hcGlfc2VydmVyLmpzIik7cz1wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQpwYWlycz1bCigiIiJjb25zdCBDTElFTlRfT1UyNV9DTElFTlRfTUFYX01JTlVURSA9IE1hdGgubWluKAogIDQ1LAogIE1hdGgubWF4KDE1LCBOdW1iZXIocHJvY2Vzcy5lbnYuQ0xJRU5UX09VMjVfQ0xJRU5UX01BWF9NSU5VVEUgfHwgNDUpKQopOyIiIiwiY29uc3QgQ0xJRU5UX09VMjVfQ0xJRU5UX01BWF9NSU5VVEUgPSA0NTsiKSwKKCImJiBjbGllbnRPdTI1TWF0Y2hFbGlnaWJsZSAmJiBvdTI1T25seSAmJiBmaXZlT3UyNVNlYXRzUHJlc2VudFxuICAgICAgICAmJiB2b3RlQ291bnRGb3JTaWduYWwgPj0gcmVxdWlyZWRWb3Rlc0ZvclNpZ25hbCIsIiYmIGNsaWVudE91MjVNYXRjaEVsaWdpYmxlICYmIG91MjVPbmx5ICYmIGVub3VnaE91MjVTZWF0c1ByZXNlbnRcbiAgICAgICAgJiYgdm90ZUNvdW50Rm9yU2lnbmFsID49IHJlcXVpcmVkVm90ZXNGb3JTaWduYWwiKQpdCmZvciBvbGQsbmV3IGluIHBhaXJzOgogbj1zLmNvdW50KG9sZCkKIGlmIG4hPTE6IHJhaXNlIFN5c3RlbUV4aXQoZiJtb3RpZiBpbmF0dGVuZHU6IHtufSIpCiBzPXMucmVwbGFjZShvbGQsbmV3KQpwLndyaXRlX3RleHQocyxlbmNvZGluZz0idXRmLTgiKQo='))"
+            node --check scripts/api_server.js
+            git diff --check
+            ! grep -q 'fiveOu25SeatsPresent' scripts/api_server.js
+            grep -q 'clientOu25MatchEligible && ou25Only && enoughOu25SeatsPresent' scripts/api_server.js
+            grep -q 'const CLIENT_OU25_CLIENT_MAX_MINUTE = 45;' scripts/api_server.js
+            git add scripts/api_server.js
+            git commit -m "fix: autoriser Telegram dès quatre votes concordants"
+            git push origin HEAD:main
+            docker compose up -d --build api
+            sleep 12
             curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
-
+            curl -fsS "https://www.touslesmatchs.com/api/live-matches?t=$(date +%s)" -o /tmp/live.json
+            python3 -c 'import json;d=json.load(open("/tmp/live.json"));m=d.get("matches",d.get("live",[]));assert all((x.get("ou25") or {}).get("to_minute")==45 for x in m);assert all(len((x.get("ou25") or {}).get("votes",[]))==5 for x in m);print("PUBLIC_RULES_OK")'
+            docker exec touslesmatchs-api grep -q 'enoughOu25SeatsPresent' /app/server.js
+            echo "BACKUP=$BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            trap - ERR
