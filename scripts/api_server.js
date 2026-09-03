@@ -2543,10 +2543,7 @@ const RECOVERY_MAX_DAILY_SIGNALS = Math.min(2, Math.max(1, Number(process.env.OU
 const RECOVERY_OVER_MIN_AVG = 2.80;
 const RECOVERY_UNDER_MAX_AVG = 2.20;
 const RECOVERY_MIN_CONVERGENT_INDICATORS = 3;
-const CLIENT_OU25_CLIENT_MAX_MINUTE = Math.min(
-  45,
-  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 45))
-);
+const CLIENT_OU25_CLIENT_MAX_MINUTE = 45;
 function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
 }
@@ -6861,7 +6858,7 @@ Réponds en JSON pur (pas de markdown):
       // presents et majorite forte. Les autres sports/marches restent internes.
       const sportDiffusable = sportLc.includes("foot");
       const diffusable = arjelPlayable && oddOk && sportDiffusable
-        && clientOu25MatchEligible && ou25Only && fiveOu25SeatsPresent
+        && clientOu25MatchEligible && ou25Only && enoughOu25SeatsPresent
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
         && recoveryEvidence.ok && recoveryCapacityAvailable;
