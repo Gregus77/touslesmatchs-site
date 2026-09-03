@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - .github/workflows/codex-vps-baseline.yml
+  schedule:
+    - cron: '7 * * * *'
   workflow_dispatch:
 
 permissions:
