@@ -1,4 +1,4 @@
-name: Codex inspect production O/U
+name: Codex repair O/U window
 on:
   push:
     branches: [main]
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.2.0
@@ -15,19 +15,37 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 15m
           script_stop: true
           script: |
-            set -eu
+            set -euo pipefail
             cd /opt/touslesmatchs
-            echo "=== GIT ==="
+            git fetch origin main
+            git pull --ff-only origin main
+            BEFORE=$(git rev-parse HEAD)
+            STAMP=$(date -u +%Y%m%d-%H%M%S)
+            BACKUP=/opt/backups/tlm-ou25-15-45-$STAMP
+            mkdir -p "$BACKUP"
+            cp -a scripts/api_server.js public/app.html "$BACKUP/"
+            rollback() {
+              echo "ROLLBACK vers $BEFORE"
+              git reset --hard "$BEFORE"
+              docker compose up -d --build api site || true
+            }
+            trap rollback ERR
+            python3 -c "import base64;exec(base64.b64decode('ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmRlZiByKHBhdGgsIG9sZCwgbmV3KToKIHA9UGF0aChwYXRoKTsgcz1wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKTsgbj1zLmNvdW50KG9sZCkKIGlmIG4gIT0gMTogcmFpc2UgU3lzdGVtRXhpdChmIntwYXRofTogbW90aWYgdHJvdXZlIHtufSBmb2lzIikKIHAud3JpdGVfdGV4dChzLnJlcGxhY2Uob2xkLG5ldyksZW5jb2Rpbmc9InV0Zi04IikKcigic2NyaXB0cy9hcGlfc2VydmVyLmpzIiwiIiJjb25zdCBDTElFTlRfT1UyNV9DTElFTlRfTUFYX01JTlVURSA9IE1hdGgubWluKAogIDQwLAogIE1hdGgubWF4KDE1LCBOdW1iZXIocHJvY2Vzcy5lbnYuQ0xJRU5UX09VMjVfQ0xJRU5UX01BWF9NSU5VVEUgfHwgNDApKQopOyIiIiwiIiJjb25zdCBDTElFTlRfT1UyNV9DTElFTlRfTUFYX01JTlVURSA9IE1hdGgubWluKAogIDQ1LAogIE1hdGgubWF4KDE1LCBOdW1iZXIocHJvY2Vzcy5lbnYuQ0xJRU5UX09VMjVfQ0xJRU5UX01BWF9NSU5VVEUgfHwgNDUpKQopOyIiIikKcigic2NyaXB0cy9hcGlfc2VydmVyLmpzIiwiZnVuY3Rpb24gaXNDbGllbnRPdTI1TWF0Y2hFbGlnaWJsZShtYXRjaCwgcmVxdWlyZU1pbnV0ZSA9IHRydWUsIG1heE1pbnV0ZSA9IDQwKSB7IiwiZnVuY3Rpb24gaXNDbGllbnRPdTI1TWF0Y2hFbGlnaWJsZShtYXRjaCwgcmVxdWlyZU1pbnV0ZSA9IHRydWUsIG1heE1pbnV0ZSA9IENMSUVOVF9PVTI1X0NMSUVOVF9NQVhfTUlOVVRFKSB7IikKcigic2NyaXB0cy9hcGlfc2VydmVyLmpzIiwiIiJmdW5jdGlvbiBwYXJzZUxpdmVNaW51dGVWYWx1ZShtaW51dGUpIHsKICBpZiAobWludXRlID09PSBudWxsIHx8IG1pbnV0ZSA9PT0gdW5kZWZpbmVkKSByZXR1cm4gbnVsbDsKICBjb25zdCBwYXJzZWQgPSBwYXJzZUludChTdHJpbmcobWludXRlKS5yZXBsYWNlKC9bXlxcZF0vZywgIiIpLCAxMCk7CiAgcmV0dXJuIE51bWJlci5pc0Zpbml0ZShwYXJzZWQpID8gcGFyc2VkIDogbnVsbDsKfSIiIiwiIiJmdW5jdGlvbiBwYXJzZUxpdmVNaW51dGVWYWx1ZShtaW51dGUpIHsKICBpZiAobWludXRlID09PSBudWxsIHx8IG1pbnV0ZSA9PT0gdW5kZWZpbmVkKSByZXR1cm4gbnVsbDsKICBjb25zdCByYXcgPSBTdHJpbmcobWludXRlKS50cmltKCk7CiAgLy8gQWNjZXB0ZSB1bmlxdWVtZW50IHVuZSBtaW51dGUgZW50acOocmUgcsOpZWxsZS4gTGVzIHN0YXR1dHMgZXQgYXJyw6p0cyBkZSBqZXUgc29udCBleGNsdXMuCiAgY29uc3QgbWF0Y2hlZCA9IHJhdy5tYXRjaCgvXihcXGR7MSwzfSkoPzpbJ+KAmeKAsl0pPyQvKTsKICBpZiAoIW1hdGNoZWQpIHJldHVybiBudWxsOwogIGNvbnN0IHBhcnNlZCA9IE51bWJlcihtYXRjaGVkWzFdKTsKICByZXR1cm4gTnVtYmVyLmlzSW50ZWdlcihwYXJzZWQpICYmIHBhcnNlZCA+PSAwICYmIHBhcnNlZCA8PSAxMjAgPyBwYXJzZWQgOiBudWxsOwp9IiIiKQpyKCJzY3JpcHRzL2FwaV9zZXJ2ZXIuanMiLCdjb25zdCB3aW5kb3dTdGF0dXMgPSBtaW51dGUgPT09IG51bGwgPyAidW5rbm93biIgOiBtaW51dGUgPCAxNSA/ICJ3YWl0aW5nIiA6IG1pbnV0ZSA8PSA0MCA/ICJvcGVuIiA6ICJjbG9zZWQiOycsJ2NvbnN0IHdpbmRvd1N0YXR1cyA9IG1pbnV0ZSA9PT0gbnVsbCA/ICJ1bmtub3duIiA6IG1pbnV0ZSA8IDE1ID8gIndhaXRpbmciIDogbWludXRlIDw9IENMSUVOVF9PVTI1X0NMSUVOVF9NQVhfTUlOVVRFID8gIm9wZW4iIDogImNsb3NlZCI7JykKcigic2NyaXB0cy9hcGlfc2VydmVyLmpzIiwidG9fbWludXRlOiA0MCwiLCJ0b19taW51dGU6IENMSUVOVF9PVTI1X0NMSUVOVF9NQVhfTUlOVVRFLCIpCnIoInNjcmlwdHMvYXBpX3NlcnZlci5qcyIsJ3J1bGU6ICJmb290YmFsbF9vdTI1XzVfc2VhdHNfbWluXzRfdm90ZXNfbWludXRlXzE1XzQwIiwnLCdydWxlOiAiZm9vdGJhbGxfb3UyNV81X3NlYXRzX21pbl80X3ZvdGVzX21pbnV0ZV8xNV80NSIsJykKcigicHVibGljL2FwcC5odG1sIiwidmFyIGFuYWx5c2lzQ2xvc2VkPXZvdGVTdGF0ZS53aW5kb3dTdGF0dXM9PT0nY2xvc2VkJ3x8KGlzRmluaXRlKG1pbnV0ZSkmJm1pbnV0ZT40MCk7IiwidmFyIGFuYWx5c2lzQ2xvc2VkPXZvdGVTdGF0ZS53aW5kb3dTdGF0dXM9PT0nY2xvc2VkJ3x8KGlzRmluaXRlKG1pbnV0ZSkmJm1pbnV0ZT40NSk7IikKcigicHVibGljL2FwcC5odG1sIiwiRW50cmUgbGEgMTVlIGV0IGxhIDQwZSIsIkVudHJlIGxhIDE1ZSBldCBsYSA0NWUiKQpyKCJwdWJsaWMvYXBwLmh0bWwiLCJmZW7DqnRyZSBkJ2FuYWx5c2UgMTUnLTQwJy4iLCJmZW7DqnRyZSBkJ2FuYWx5c2UgMTUnLTQ1Jy4iKQpyKCJwdWJsaWMvYXBwLmh0bWwiLCJpZihtaW51dGU+PTE1JiZtaW51dGU8PTQwKSIsImlmKG1pbnV0ZT49MTUmJm1pbnV0ZTw9NDUpIikKcigicHVibGljL2FwcC5odG1sIiwiaWYobWludXRlPjQwKSIsImlmKG1pbnV0ZT40NSkiKQo='))"
+            node --check scripts/api_server.js
+            git diff --check
+            git add scripts/api_server.js public/app.html
+            git commit -m "fix: analyse O/U de 15 à 45 minutes"
+            git push origin HEAD:main
+            docker compose up -d --build api site
+            sleep 12
+            curl -fsS https://www.touslesmatchs.com/api/health >/tmp/tlm-health.json
+            curl -fsS "https://www.touslesmatchs.com/api/live-matches?t=$(date +%s)" >/tmp/tlm-live.json
+            python3 -c 'import json,re; d=json.load(open("/tmp/tlm-live.json")); ms=d.get("matches",d.get("live",[])); bad=[(m.get("home"),m.get("minute")) for m in ms if not re.fullmatch(r"[0-9]{1,3}['"'"'’′]?",str(m.get("minute","")).strip()) and m.get("client_product_eligible") is True]; assert not bad,bad; print("LIVE_VALIDATION_OK matches=",len(ms))'
+            echo "BACKUP=$BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
             git status --short --branch
-            echo "HEAD=$(git rev-parse HEAD)"
-            echo "ORIGIN_MAIN=$(git rev-parse origin/main)"
-            echo "=== DEFINITIONS ==="
-            grep -nE '^(const|function) (CLIENT_OU25_CLIENT_MAX_MINUTE|CLIENT_OU25_MIN_VOTES|parseLiveMinuteValue|isClientOu25MatchEligible|clientOu25RequiredVotes)' scripts/api_server.js || true
-            for n in $(grep -nE '^(const|function) (CLIENT_OU25_CLIENT_MAX_MINUTE|CLIENT_OU25_MIN_VOTES|parseLiveMinuteValue|isClientOu25MatchEligible|clientOu25RequiredVotes)' scripts/api_server.js | cut -d: -f1); do
-              a=$((n-8)); [ $a -lt 1 ] && a=1; b=$((n+45)); echo "--- lines $a-$b ---"; sed -n "${a},${b}p" scripts/api_server.js
-            done
-            echo "=== EXACT 15-40 REFERENCES ==="
-            grep -nE '15.?[-–].?40|<= ?40|to_minute: 40|minute>40|minute<=40|MINUTE.*40|MAX_MINUTE.*40|_15_40' scripts/api_server.js public/app.html public/live-ia.html || true
-
+            docker compose ps api site
+            trap - ERR
