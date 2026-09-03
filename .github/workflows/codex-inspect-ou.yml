@@ -54,3 +54,4 @@ jobs:
             echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
             trap - ERR
 
+
