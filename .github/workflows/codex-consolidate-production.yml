@@ -21,83 +21,45 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          script_stop: true
           command_timeout: 25m
           script: |
             set -euo pipefail
             cd /opt/touslesmatchs
             STAMP="$(date -u +%Y%m%d-%H%M%S)"
             BACKUP="/opt/backups/tlm-full-consolidation-$STAMP"
+            export BACKUP
             install -d -m 700 "$BACKUP" "$BACKUP/databases"
-
             echo "BACKUP_BEGIN=$BACKUP"
             git status --short --branch > "$BACKUP/git-status.before.txt"
             git rev-parse HEAD > "$BACKUP/git-head.before.txt"
             git branch --show-current > "$BACKUP/git-branch.before.txt"
             git show-ref > "$BACKUP/git-refs.before.txt"
             git bundle create "$BACKUP/repository-all-refs.bundle" --all
-
-            if [ -f .env ]; then
-              cp -a .env "$BACKUP/env.before"
-              chmod 600 "$BACKUP/env.before"
-            fi
-
-            python3 - <<'PY'
-            from pathlib import Path
-            import sqlite3
-            root = Path("/opt/touslesmatchs")
-            out = Path("'"$BACKUP"'") / "databases"
-            for src in root.rglob("*.db"):
-                if "backups" in src.parts or ".git" in src.parts:
-                    continue
-                rel = src.relative_to(root)
-                dst = out / rel
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                try:
-                    source = sqlite3.connect(f"file:{src}?mode=ro", uri=True)
-                    target = sqlite3.connect(dst)
-                    source.backup(target)
-                    target.close()
-                    source.close()
-                    print(f"DB_BACKUP_OK={rel}")
-                except Exception as exc:
-                    print(f"DB_BACKUP_FAILED={rel}:{type(exc).__name__}")
-                    raise
-            PY
-
-            tar --warning=no-file-changed --ignore-failed-read -czf "$BACKUP/project-full.tar.gz"               --exclude='*.db-wal' --exclude='*.db-shm'               -C /opt touslesmatchs
+            if [ -f .env ]; then cp -a .env "$BACKUP/env.before"; chmod 600 "$BACKUP/env.before"; fi
+            python3 -c "import base64;exec(base64.b64decode('ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCmltcG9ydCBvcywgc3FsaXRlMwpyb290ID0gUGF0aCgiL29wdC90b3VzbGVzbWF0Y2hzIikKb3V0ID0gUGF0aChvcy5lbnZpcm9uWyJCQUNLVVAiXSkgLyAiZGF0YWJhc2VzIgpmb3Igc3JjIGluIHJvb3Qucmdsb2IoIiouZGIiKToKICAgIGlmICJiYWNrdXBzIiBpbiBzcmMucGFydHMgb3IgIi5naXQiIGluIHNyYy5wYXJ0czoKICAgICAgICBjb250aW51ZQogICAgcmVsID0gc3JjLnJlbGF0aXZlX3RvKHJvb3QpCiAgICBkc3QgPSBvdXQgLyByZWwKICAgIGRzdC5wYXJlbnQubWtkaXIocGFyZW50cz1UcnVlLCBleGlzdF9vaz1UcnVlKQogICAgc291cmNlID0gc3FsaXRlMy5jb25uZWN0KGYiZmlsZTp7c3JjfT9tb2RlPXJvIiwgdXJpPVRydWUpCiAgICB0YXJnZXQgPSBzcWxpdGUzLmNvbm5lY3QoZHN0KQogICAgc291cmNlLmJhY2t1cCh0YXJnZXQpCiAgICB0YXJnZXQuY2xvc2UoKQogICAgc291cmNlLmNsb3NlKCkKICAgIHByaW50KGYiREJfQkFDS1VQX09LPXtyZWx9IikK'))"
+            tar --warning=no-file-changed --ignore-failed-read -czf "$BACKUP/project-full.tar.gz" --exclude='*.db-wal' --exclude='*.db-shm' -C /opt touslesmatchs
             sha256sum "$BACKUP/repository-all-refs.bundle" "$BACKUP/project-full.tar.gz" > "$BACKUP/SHA256SUMS"
             find "$BACKUP" -type f -exec chmod go-rwx {} +
             echo "BACKUP_OK=$BACKUP"
-
             git fetch origin main agent/android-fcm-v107
             OLD_MAIN="$(git rev-parse origin/main)"
             OLD_BRANCH="$(git branch --show-current)"
             OLD_HEAD="$(git rev-parse HEAD)"
-
             install -d .github/workflows
-            curl -fsSL "https://raw.githubusercontent.com/Gregus77/touslesmatchs-site/main/.github/workflows/codex-vps-baseline.yml"               -o .github/workflows/codex-vps-baseline.yml
-
+            curl -fsSL "https://raw.githubusercontent.com/Gregus77/touslesmatchs-site/main/.github/workflows/codex-vps-baseline.yml" -o .github/workflows/codex-vps-baseline.yml
             git add -u
-            for path in               .github/workflows/codex-vps-baseline.yml               scripts/shadow_tournament_worker.js               scripts/tlm_hourly_director.py               scripts/verify_ou25_reliability_guard.js
-            do
-              [ ! -f "$path" ] || git add -- "$path"
-            done
-
+            for path in .github/workflows/codex-vps-baseline.yml scripts/shadow_tournament_worker.js scripts/tlm_hourly_director.py scripts/verify_ou25_reliability_guard.js; do [ ! -f "$path" ] || git add -- "$path"; done
             git config user.name "TousLesMatchs Production"
             git config user.email "production@touslesmatchs.com"
             git commit -m "chore: consolidate current VPS production state"
-
             NEW_HEAD="$(git rev-parse HEAD)"
             SAFE_TAG="backup/pre-consolidation-main-$STAMP"
             git tag "$SAFE_TAG" "$OLD_MAIN"
             git push origin "refs/tags/$SAFE_TAG"
             git push --force-with-lease="main:$OLD_MAIN" origin "$NEW_HEAD:refs/heads/main"
-
             git branch -M main
             git branch --set-upstream-to=origin/main main
             git fetch origin main
-
             printf 'OLD_VPS_BRANCH=%s\n' "$OLD_BRANCH"
             printf 'OLD_VPS_HEAD=%s\n' "$OLD_HEAD"
             printf 'OLD_MAIN=%s\n' "$OLD_MAIN"
