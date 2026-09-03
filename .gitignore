@@ -27,3 +27,6 @@ public/data/*.backup*
 secrets/
 android-native/app/google-services.json
 .tlm-apk-release.keystore
+
+# État généré par la vigie horaire sur le VPS
+/shared/vps-status.json
