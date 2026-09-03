@@ -193,7 +193,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
       <div id="ref-stats" style="font-size:12px;color:var(--muted);margin-top:10px"></div>
     </div>
 
-    <div class="section-title" style="margin-top:40px">Performance par palier</div>
+    <div class="section-title" style="margin-top:40px">Performance par formule</div>
     <div id="tier-cards" class="tier-cards">
       <div class="empty-state">Chargement...</div>
     </div>
@@ -287,6 +287,7 @@ function verifyOtp() {
   }).then(function(r) { return r.json(); }).then(function(d) {
     btn.disabled = false; btn.textContent = 'Se connecter →';
     if (!d.ok) return showErr(d.error || 'Code invalide.');
+    try { if (typeof gtag === 'function') gtag('event','account_access_verified'); } catch (_) {}
     localStorage.setItem('tlm_session_token', d.token);
     token = d.token;
     loadDashboard();
@@ -341,9 +342,9 @@ function loadDashboard() {
     var isPaidActive = plan !== 'free' && status === 'active';
 
     var planEl = document.getElementById('dash-plan');
-    var planLabel = isElite ? 'Elite/VIP' : plan === 'premium' ? 'Premium' : plan === 'standard' ? 'Standard' : 'Gratuit';
+    var planLabel = isElite ? 'Premium' : plan === 'premium' ? 'Premium' : plan === 'standard' ? 'Standard' : 'Gratuit';
     planEl.textContent = planLabel;
-    planEl.className = 'dash-plan ' + (isElite ? 'elite' : plan === 'premium' ? 'premium' : 'standard');
+    planEl.className = 'dash-plan ' + (isElite ? 'premium' : plan === 'premium' ? 'premium' : 'standard');
 
     var statusEl = document.getElementById('dash-status');
     if (STATUS_LABELS[status]) {
@@ -375,10 +376,9 @@ function loadDashboard() {
       document.getElementById('upgrade-text').textContent = 'Passe Standard dès 4,90€/mois pour débloquer les analyses Live IA.';
     } else if (plan === 'standard') {
       document.getElementById('upgrade-box').style.display = 'block';
-      document.getElementById('upgrade-text').textContent = 'Passe Premium pour 10 analyses/jour et une sélection élargie.';
-    } else if (plan === 'premium') {
-      document.getElementById('upgrade-box').style.display = 'block';
-      document.getElementById('upgrade-text').textContent = 'Passe à Elite pour 30 analyses/jour et les alertes Signal Fort.';
+      document.getElementById('upgrade-text').textContent = 'Passe Premium pour jusqu’à 10 signaux/jour et une sélection élargie.';
+    } else if (plan === 'premium' || isElite) {
+      document.getElementById('upgrade-box').style.display = 'none';
     } else {
       document.getElementById('upgrade-box').style.display = 'none';
     }
@@ -486,15 +486,14 @@ function renderTierStats(status) {
   var META = {
     standard: { label: '🟢 Standard' },
     premium:  { label: '🟣 Premium' },
-    elite:    { label: '🟠 Elite' }
   };
-  var UPSELL = { premium: 'Réservé aux membres Pro et Elite', elite: 'Réservé aux membres Elite' };
+  var UPSELL = { premium: 'Réservé aux membres Premium' };
   var container = document.getElementById('tier-cards');
   var note = document.getElementById('tier-note');
   if (!container) return;
   fetch('/api/tier-stats').then(function(r) { return r.json(); }).then(function(d) {
     if (!d || !d.ok || !d.tiers) { container.innerHTML = '<div class="empty-state">Statistiques indisponibles pour le moment.</div>'; return; }
-    var order = ['standard', 'premium', 'elite'];
+    var order = ['standard', 'premium'];
     container.innerHTML = order.map(function(k) {
       var s = d.tiers[k] || { total: 0, winrate: 0, roi: 0 };
       var unlocked = allowed[k];
@@ -510,9 +509,9 @@ function renderTierStats(status) {
       return '<div class="tc ' + k + (unlocked ? '' : ' locked') + '">' + body + lock + '</div>';
     }).join('');
     if (note) {
-      if (status === 'elite' || status === 'vip') note.textContent = 'Accès complet aux 3 paliers, matchs « IA seulement » inclus.';
-      else if (status === 'premium') note.textContent = 'Tu vois Standard + Premium. Elite débloque tout le volume, y compris les analyses « IA seulement ».';
-      else if (status === 'standard') note.textContent = 'Tu vois le palier Standard. Premium et Elite débloquent plus de volume d\'analyses.';
+      if (status === 'elite' || status === 'vip') note.textContent = 'Accès Premium complet.';
+      else if (status === 'premium') note.textContent = 'Tu vois Standard + Premium.';
+      else if (status === 'standard') note.textContent = 'Tu vois Standard. Premium débloque une sélection élargie.';
       else note.textContent = 'Palier Standard visible en aperçu. Abonne-toi pour débloquer les analyses en direct.';
     }
   }).catch(function() { container.innerHTML = '<div class="empty-state">Erreur de chargement des paliers</div>'; });
@@ -526,9 +525,10 @@ if (token) {
 }
 
 // Enter key support
-document.getElementById('auth-pass').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') submitAuth();
-});
+var legacyAuthPass = document.getElementById('auth-pass');
+if (legacyAuthPass && typeof submitAuth === 'function') {
+  legacyAuthPass.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitAuth(); });
+}
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>

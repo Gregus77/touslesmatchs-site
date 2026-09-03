@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Live IA — TousLesMatchs</title>
-<meta name="description" content="Matchs de football en direct analysés par le Concile IA — scores en temps réel.">
+<meta name="description" content="Matchs de football en direct analysés par le Conseil IA — scores en temps réel.">
 <link rel="canonical" href="https://www.touslesmatchs.com/live-ia">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Live IA — TousLesMatchs">
-<meta property="og:description" content="Matchs de football en direct analysés par le Concile IA — scores en temps réel.">
+<meta property="og:description" content="Matchs de football en direct analysés par le Conseil IA — scores en temps réel.">
 <meta property="og:url" content="https://www.touslesmatchs.com/live-ia">
 <meta property="og:site_name" content="TousLesMatchs">
 <meta property="og:image" content="https://www.touslesmatchs.com/telegram-preview-20260623.png">
@@ -98,7 +98,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-body{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .mc-team{flex:1;display:flex;align-items:center;gap:10px}
 .mc-team.away{flex-direction:row-reverse;text-align:right}
-.mc-logo{width:38px;height:38px;border-radius:9px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--text);flex-shrink:0;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.mc-logo{width:44px;height:44px;border-radius:9px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--text);flex-shrink:0;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
 .mc-logo img{width:100%;height:100%;object-fit:contain}
 .mc-name{font-size:15px;font-weight:700;line-height:1.3}
 .mc-score-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:70px}
@@ -238,6 +238,36 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   .filter-btn{padding:6px 12px;font-size:11px}
   .tab-btn{font-size:13px;padding:12px 10px}
 }
+
+.tlm-country-group{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin:24px 0 10px;
+  padding:11px 14px;
+  border-radius:13px;
+  background:rgba(114,117,255,.13);
+  border:1px solid rgba(114,117,255,.25);
+  font-size:16px;
+  font-weight:900;
+}
+.tlm-country-flag{
+  font-size:23px;
+}
+.tlm-league-group{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin:14px 4px 8px;
+  padding:7px 10px;
+  border-left:3px solid var(--cyan);
+  color:var(--muted2);
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+
 </style>
 <!-- Google Analytics (GA4) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
@@ -250,6 +280,29 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+
+<style>
+/* TLM_TIME_SECTION_STYLE_V2 */
+.tlm-time-section{
+  margin:22px 0 10px;
+  padding:11px 15px;
+  border-radius:12px;
+  background:rgba(23,30,68,.96);
+  border:1px solid rgba(79,214,242,.25);
+  font-size:16px;
+  font-weight:900;
+  color:#4fd6f2;
+}
+.tlm-time-section.live{
+  color:#ff647c;
+  border-color:rgba(255,100,124,.32);
+}
+.tlm-country-section{
+  margin:14px 0 7px;
+  font-weight:900;
+  color:#fff;
+}
+</style>
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -283,7 +336,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <!-- HEADER -->
 <div class="page-header">
   <div class="page-title"><span class="live-dot"></span> Live IA</div>
-  <div class="page-sub">Matchs en direct analysés par le Concile IA. Analyses automatiques et statistiques en temps réel.</div>
+  <div class="page-sub">Matchs en direct analysés par le Conseil IA. Analyses automatiques et statistiques en temps réel.</div>
 </div>
 
 <!-- BOOKMAKERS — comparer la cote chez un bookmaker agréé ANJ -->
@@ -408,7 +461,7 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
   LES JEUX D'ARGENT ET DE HASARD PEUVENT ETRE DANGEREUX : pertes d'argent, conflits familiaux, addiction.<br>
   Conseils sur joueurs-info-service.fr - 09 74 75 13 13, appel non surtaxé.<br>
   18+ · TousLesMatchs ne garantit aucun gain · Analyses informatives<br>
-  <a href="/mentions-legales.html">Mentions légales</a> · <a href="mailto:hermes@touslesmatchs.com">Contact</a>
+  <a href="/mentions-legales.html">Mentions légales</a> · <a href="mailto:contact@touslesmatchs.com">Contact</a>
 </div>
 
 <script>
@@ -437,6 +490,37 @@ const COUNTRY_FLAGS = {
 };
 
 // ── State ──
+
+// TLM-LIVE-SOCCER-ONLY-20260830
+function tlmSoccerOnly(m) {
+  function norm(v) {
+    return String(v || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .toLowerCase();
+  }
+
+  var sport = norm(m && m.sport);
+  var text = norm([
+    m && m.competition,
+    m && m.league,
+    m && m.category,
+    m && m.home,
+    m && m.away
+  ].join(' '));
+
+  // Football américain explicitement interdit.
+  if (/\b(nfl|ncaa|american football|gridiron|super bowl|national football league)\b/.test(text)) {
+    return false;
+  }
+
+  // Tout sport explicitement différent du football/soccer est interdit.
+  if (sport && sport !== 'football' && sport !== 'soccer') {
+    return false;
+  }
+
+  return true;
+}
+
 let allMatches = [];
 let currentFilter = "Football"; // le foot est affiché par défaut ; les autres sports se choisissent via les filtres
 let searchTerm = "";
@@ -665,16 +749,19 @@ function loadMatches(force) {
   var url = "/api/live-matches" + (force ? "?force=1" : "");
   fetch(url).then(function(r){ return r.json(); }).then(function(d) {
     if (d.ok && d.matches) {
-      allMatches = d.matches;
+      allMatches = d.matches.filter(tlmSoccerOnly);
       renderMatches();
       document.getElementById("last-update").textContent = new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
       preselectFromFixtureParam();
     } else {
       showEmpty();
     }
-    document.getElementById("loading").style.display = "none";
-  }).catch(function() {
-    document.getElementById("loading").style.display = "none";
+    var loading = document.getElementById("loading");
+    if (loading) loading.style.display = "none";
+  }).catch(function(error) {
+    console.error("[Live IA] affichage des matchs impossible:", error);
+    var loading = document.getElementById("loading");
+    if (loading) loading.style.display = "none";
     showEmpty();
   });
 }
@@ -762,14 +849,13 @@ function renderMatches() {
     var n = parseInt(m.minute, 10);
     return isNaN(n) ? -1 : n;
   }
-  filtered.sort(function(a, b) {
-    var oa = order[a.status] || 1, ob = order[b.status] || 1;
-    if (oa !== ob) return oa - ob;
-    if (oa === 0) return minuteOf(b) - minuteOf(a); // tri secondaire : minute décroissante pour les matchs en direct
-    return 0;
-  });
+  filtered.sort(tlmTimeFirstSort);
 
   var html = "";
+  var tlmLastSection = "";
+  var tlmLastCountry = "";
+  var tlmLastLeague = "";
+
   filtered.forEach(function(m) {
     var isLive = m.status === "IN_PLAY" || m.status === "HT" || m.status === "PINNED_SIGNAL";
     var isDone = m.status === "FINISHED";
@@ -779,6 +865,38 @@ function renderMatches() {
     var comp = splitCompetition(m.competition || m.sport);
     var flag = countryFlag(comp.country);
     var countryHtml = comp.country ? '<span class="mc-country">' + (flag ? '<span>' + flag + '</span>' : '') + escHtml(comp.country) + '</span>' : '';
+
+    /* Regroupement visuel : section -> pays -> championnat */
+    var tlmSection = String(tlmTimeSection(m));
+    var tlmCountry = comp.country || m.country || "International";
+    var tlmLeague = comp.league || m.league || "Championnat";
+
+    if(tlmSection !== tlmLastSection){
+      tlmLastSection = tlmSection;
+      tlmLastCountry = "";
+      tlmLastLeague = "";
+    }
+
+    if(tlmCountry !== tlmLastCountry){
+      var groupFlag = countryFlag(tlmCountry) || "🌍";
+
+      html += '<div class="tlm-country-group">'
+        + '<span class="tlm-country-flag">' + groupFlag + '</span>'
+        + '<span>' + escHtml(tlmCountry) + '</span>'
+        + '</div>';
+
+      tlmLastCountry = tlmCountry;
+      tlmLastLeague = "";
+    }
+
+    if(tlmLeague !== tlmLastLeague){
+      html += '<div class="tlm-league-group">'
+        + '<span>🏆</span>'
+        + '<span>' + escHtml(tlmLeague) + '</span>'
+        + '</div>';
+
+      tlmLastLeague = tlmLeague;
+    }
 
     var statusClass = isLive ? "live" : (isDone ? "finished" : "scheduled");
     var statusLabel = isLive ? (m.status === "HT" ? "Mi-temps" : "En direct") : (isDone ? "Terminé" : "À venir");
@@ -824,7 +942,7 @@ function renderMatches() {
     // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
     if (isLive && !isDone && !m.pinnedSignal) {
       if (m.analysable === false) {
-        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
+        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(m.analysis_exclusion_reason || m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
       } else {
         var cached = analysisCache[matchId];
         html += '<div class="mc-cta">';
@@ -854,7 +972,7 @@ function buildAnalysisHtml(d) {
   var confText = d.value_bet ? d.value_bet.prob : (synthese ? synthese.confidence : "");
   var vote = d.vote_summary || {};
   var voteLabel = vote.vote_label || (d.consensus_votes && d.total_agents ? (d.consensus_votes + "/" + d.total_agents) : "");
-  var voteStatus = vote.vote_status === "elite" ? "Signal Elite"
+  var voteStatus = vote.vote_status === "elite" ? "Signal unanime 5/5"
     : vote.vote_status === "strong" ? "Signal Fort"
     : vote.vote_status === "trend" ? "Tendance IA"
     : "Aucun signal validé";
@@ -916,7 +1034,7 @@ function buildAnalysisHtml(d) {
       + '</div>';
   }
   var voteReportHtml = voteLabel ? '<div class="mc-analysis-bet" style="background:rgba(34,211,238,.1);border-color:rgba(34,211,238,.22);color:var(--cyan)">Vote IA : ' + escHtml(voteLabel) + ' · ' + escHtml(voteStatus) + '</div>' : "";
-  var html = '<div class="mc-analysis-title">🧠 Verdict du Concile IA</div>'
+  var html = '<div class="mc-analysis-title">🧠 Verdict du Conseil IA</div>'
     + noSignalHtml
     + '<div class="mc-analysis-text">' + escHtml(resumeText) + '</div>'
     + (betText ? '<div class="conf-badge ' + cm.cls + '"><span class="conf-dot ' + cm.cls + '"></span>🎯 ' + escHtml(betText) + (confText ? " · " + confText + "/100 · " + cm.label : "") + '</div>' : "")
@@ -989,7 +1107,7 @@ function requestAnalysis(btn, matchId, home, away) {
       saveAnalysisCache();
       // Un jeton vient d'être dépensé sur ce match : on le surveille désormais
       // en arrière-plan (voir watchMatch/checkWatchedForUpdates) pour prévenir
-      // si le vote du Concile évolue, même si le client a 30 onglets ouverts et
+      // si le vote du Conseil évolue, même si le client a 30 onglets ouverts et
       // ne regarde plus cette carte. Demande du fondateur le 03/08/2026.
       watchMatch(matchId, home, away, built.voteLabel, built.betText, built.confText, built.resumeText);
       // Met à jour le compteur de la barre du haut
@@ -1311,7 +1429,7 @@ function renderHistoryList(analyses, append) {
   var el = document.getElementById("history-list");
   if (!analyses || !analyses.length) {
     if (!append) {
-      el.innerHTML = '<div class="h-empty"><div class="h-empty-icon">📊</div><div class="h-empty-title">Les analyses arrivent bientôt</div><div>Le Concile IA analyse les matchs en direct automatiquement. L\'historique se remplira dès les prochaines analyses.</div></div>';
+      el.innerHTML = '<div class="h-empty"><div class="h-empty-icon">📊</div><div class="h-empty-title">Les analyses arrivent bientôt</div><div>Le Conseil IA analyse les matchs en direct automatiquement. L\'historique se remplira dès les prochaines analyses.</div></div>';
     }
     return;
   }
@@ -1420,5 +1538,187 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
 <script src="/js/widgets.js?v=2" defer></script>
 <script src="/js/cookie-consent.js" defer></script>
   <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+  <script>
+/* TLM_TIME_FIRST_ORDER_V1
+   Ordre officiel :
+   1 LIVE
+   2 aujourd'hui
+   3 demain
+   4 jours suivants
+   puis pays > championnat > heure
+*/
+function tlmMatchDate(m){
+  var raw=m.kickoff||m.utcDate||m.date||m.start_time||m.startTime||"";
+  var d=new Date(raw);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function tlmParisDayKey(d){
+  if(!d)return "";
+  try{
+    var parts=new Intl.DateTimeFormat("fr-CA",{
+      timeZone:"Europe/Paris",
+      year:"numeric",month:"2-digit",day:"2-digit"
+    }).formatToParts(d);
+    var o={};
+    parts.forEach(function(x){o[x.type]=x.value;});
+    return o.year+"-"+o.month+"-"+o.day;
+  }catch(e){
+    return d.toISOString().slice(0,10);
+  }
+}
+
+function tlmAddDaysKey(n){
+  var d=new Date();
+  d.setDate(d.getDate()+n);
+  return tlmParisDayKey(d);
+}
+
+function tlmIsLive(m){
+  var s=String(m.status||"").toUpperCase();
+  return s==="IN_PLAY" || s==="LIVE" || s==="HT" ||
+         s==="1H" || s==="2H" || s==="PINNED_SIGNAL";
+}
+
+function tlmTimeSection(m){
+  if(tlmIsLive(m))return 0;
+
+  var d=tlmMatchDate(m);
+  if(!d)return 3;
+
+  var k=tlmParisDayKey(d);
+
+  if(k===tlmAddDaysKey(0))return 1;
+  if(k===tlmAddDaysKey(1))return 2;
+  return 3;
+}
+
+function tlmCountryName(m){
+  if(m.country)return String(m.country);
+
+  var raw=String(m.competition||m.league||"");
+  var p=raw.split(/\s*[·•]\s*/);
+
+  return p.length>1 ? p[p.length-1].trim() : "Autres";
+}
+
+function tlmLeagueName(m){
+  if(m.league)return String(m.league);
+
+  var raw=String(m.competition||"");
+  var p=raw.split(/\s*[·•]\s*/);
+
+  return (p[0]||raw||"Championnat").trim();
+}
+
+function tlmTimeFirstSort(a,b){
+  var sa=tlmTimeSection(a);
+  var sb=tlmTimeSection(b);
+
+  if(sa!==sb)return sa-sb;
+
+  var ca=tlmCountryName(a);
+  var cb=tlmCountryName(b);
+
+  var c=ca.localeCompare(cb,"fr",{sensitivity:"base"});
+  if(c)return c;
+
+  var la=tlmLeagueName(a);
+  var lb=tlmLeagueName(b);
+
+  c=la.localeCompare(lb,"fr",{sensitivity:"base"});
+  if(c)return c;
+
+  /* LIVE : du début vers la fin du match — 1' -> 90' */
+  if(sa===0){
+    var ma=parseInt(a.minute,10);
+    var mb=parseInt(b.minute,10);
+
+    if(isNaN(ma))ma=999;
+    if(isNaN(mb))mb=999;
+
+    return ma-mb;
+  }
+
+  /* A venir : heure chronologique */
+  var da=tlmMatchDate(a);
+  var db=tlmMatchDate(b);
+
+  return (da?da.getTime():Number.MAX_SAFE_INTEGER) -
+         (db?db.getTime():Number.MAX_SAFE_INTEGER);
+}
+
+function tlmSectionTitle(m){
+  var s=tlmTimeSection(m);
+
+  if(s===0)return "🔴 EN DIRECT";
+  if(s===1)return "🕒 PLUS TARD AUJOURD’HUI";
+
+  if(s===2){
+    var d=tlmMatchDate(m);
+    var label=d ? d.toLocaleDateString("fr-FR",{
+      timeZone:"Europe/Paris",
+      day:"numeric",
+      month:"long"
+    }) : "";
+    return "📅 DEMAIN"+(label?" — "+label.toUpperCase():"");
+  }
+
+  return "📆 JOURS SUIVANTS";
+}
+
+function tlmMatchHour(m){
+  if(tlmIsLive(m)){
+    return m.minute ? String(m.minute)+"e minute" : "En direct";
+  }
+
+  var d=tlmMatchDate(m);
+  if(!d)return "";
+
+  return d.toLocaleTimeString("fr-FR",{
+    timeZone:"Europe/Paris",
+    hour:"2-digit",
+    minute:"2-digit"
+  }).replace(":"," h ");
+}
+
+</script>
+
+<script>
+/* TLM_DISPLAY_OU25_ONLY_V1 */
+(function(){
+  function allowedBet(text){
+    var t=String(text||"").toLowerCase();
+    if(!t)return true;
+    return t.indexOf("over 2.5")>=0 ||
+           t.indexOf("over 2,5")>=0 ||
+           t.indexOf("under 2.5")>=0 ||
+           t.indexOf("under 2,5")>=0 ||
+           t.indexOf("sélection réservée")>=0 ||
+           t.indexOf("selection reservee")>=0;
+  }
+
+  function cleanOldMarkets(){
+    document.querySelectorAll(
+      ".match-card,.analysis-card,.prediction-card,.item,.tlm-app-live-row"
+    ).forEach(function(el){
+      var t=el.textContent||"";
+
+      var oldMarket=
+        /victoire domicile|victoire extérieur|victoire exterieur|btts|but en 1[eè]re mi-temps|double chance/i.test(t);
+
+      if(oldMarket && !allowedBet(t)){
+        el.style.display="none";
+      }
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded",cleanOldMarkets);
+  setInterval(cleanOldMarkets,3000);
+})();
+</script>
+<script id="TLM_EXTRA_COUNTRY_FLAGS_FINAL">
+window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨🇿", "Czechia": "🇨🇿", "Serbia": "🇷🇸", "Croatia": "🇭🇷", "Slovenia": "🇸🇮", "Hungary": "🇭🇺", "Romania": "🇷🇴", "Bulgaria": "🇧🇬", "Ukraine": "🇺🇦", "Georgia": "🇬🇪", "Poland": "🇵🇱", "Austria": "🇦🇹", "Switzerland": "🇨🇭", "Greece": "🇬🇷", "Norway": "🇳🇴", "Sweden": "🇸🇪", "Denmark": "🇩🇰", "Finland": "🇫🇮"};
+</script>
 </body>
 </html>

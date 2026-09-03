@@ -43,7 +43,7 @@ const CFG = {
   spikeThreshold: Number(process.env.AI_GUARD_SPIKE_THRESHOLD || 15),
   // Même modèle + même match rappelé plus de N fois en 10 minutes = worker qui boucle.
   duplicateBurstWindowMinutes: 10,
-  duplicateBurstThreshold: Number(process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD || 3),
+  duplicateBurstThreshold: Number(process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD || 8),
   // Estimation par défaut des tokens d'ENTRÉE quand l'appelant ne la fournit pas.
   // Les prompts d'analyse de match (statistiques, historique, forme, cotes) font
   // couramment plusieurs milliers de tokens — un défaut trop bas sous-estimerait
@@ -198,7 +198,7 @@ function canProceed(db, { modelKey, matchKey, competition, market, promptVersion
   }
 
   // 4) Coupe-circuit actif ?
-  for (const type of ["daily_budget", "daily_requests", "spike", "duplicate_burst"]) {
+  for (const type of ["daily_budget", "daily_requests", "duplicate_burst"]) {
     if (!isBreakerTripped(db, type)) continue;
     if (type === "spike" && allowDespiteSpike) {
       console.warn(`[ai-guard] coupe-circuit "spike" franchi pour "${modelKey}" — repli autorise car fournisseur direct ecarte`);

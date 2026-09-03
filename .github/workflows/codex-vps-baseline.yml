@@ -1,0 +1,59 @@
+name: Codex VPS baseline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codex-vps-baseline.yml
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Derive configured SSH public key
+        shell: bash
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -eu
+          umask 077
+          printf '%s\n' "$VPS_SSH_KEY" > /tmp/vps_key
+          printf 'VPS_PUBLIC_KEY='
+          ssh-keygen -y -f /tmp/vps_key
+          rm -f /tmp/vps_key
+
+      - name: Read-only VPS baseline
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            echo "TLM_BASELINE_BEGIN"
+            printf 'BRANCH='
+            git branch --show-current
+            printf 'COMMIT='
+            git rev-parse HEAD
+            printf 'UPSTREAM='
+            git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo NONE
+            echo "STATUS_BEGIN"
+            git status --short --branch
+            echo "STATUS_END"
+            echo "CONTAINERS_BEGIN"
+            docker compose ps --format json 2>/dev/null || docker compose ps
+            echo "CONTAINERS_END"
+            echo "TIMERS_BEGIN"
+            systemctl list-timers --all --no-pager | grep -E 'tlm|hermes' || true
+            echo "TIMERS_END"
+            echo "TLM_BASELINE_END"
