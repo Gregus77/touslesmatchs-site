@@ -1,0 +1,39 @@
+name: Codex inspect production O/U
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/codex-inspect-ou.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script_stop: true
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            git config --unset-all branch.main.remote || true
+            git config --unset-all branch.main.merge || true
+            git config branch.main.remote origin
+            git config branch.main.merge refs/heads/main
+            echo "=== GIT ==="
+            git status --short --branch
+            echo "HEAD=$(git rev-parse HEAD)"
+            echo "ORIGIN_MAIN=$(git rev-parse origin/main)"
+            echo "=== WINDOW AND VOTES ==="
+            grep -RInE '15.{0,30}40|minute.{0,30}(40|45)|MINUTE|votes?.{0,40}(4|5)|consensus|eligible' scripts/api_server.js scripts/analysis_engine.js public/app.html public/live-ia.html 2>/dev/null | tail -n 300 || true
+            echo "=== MAINTENANCE ==="
+            grep -RInE 'Maintenance technique|Mise à jour importante|maintenance' public --include='*.html' --include='*.js' | head -n 120 || true
+            echo "=== PUBLIC ==="
+            for u in / /api/health /api/live-matches /api/analysis-history /api/public-analysis-stats; do
+              code=$(curl -sS -o /tmp/tlm-body -w '%{http_code}' "https://www.touslesmatchs.com$u")
+              bytes=$(wc -c </tmp/tlm-body)
+              echo "$u HTTP=$code BYTES=$bytes"
+            done
