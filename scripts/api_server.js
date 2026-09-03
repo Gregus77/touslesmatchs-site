@@ -22,7 +22,7 @@ const crypto = require("crypto");
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
-const { bookmakerButtons } = require("./bookmakers.config");
+const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
 // ── Pages SEO (pronostics) — inliné pour éviter tout module externe ───────────
 // (le Dockerfile ne copie que api_server.js + bookmakers.config.js). Rendu de
@@ -1210,6 +1210,9 @@ function verifyTelegramChannels() {
     ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
     ["Premium",  TELEGRAM_PREMIUM_CHANNEL_ID],
     ...(TELEGRAM_ELITE_CHANNEL_ID ? [["Elite", TELEGRAM_ELITE_CHANNEL_ID]] : []),
+    ["RU Gratuit",  TELEGRAM_RU_FREE_CHANNEL_ID],
+    ["RU Standard", TELEGRAM_RU_STANDARD_CHANNEL_ID],
+    ["RU Premium",  TELEGRAM_RU_PREMIUM_CHANNEL_ID],
     ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
   ];
   // Tous les canaux commencent a "non verifies". Sans cette initialisation,
@@ -1240,7 +1243,7 @@ function verifyTelegramChannels() {
             const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
             console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
           }
-          const requiredTelegramChannels = ["gratuit", "standard", "premium", "admin"];
+          const requiredTelegramChannels = ["gratuit", "standard", "premium", "ru gratuit", "ru standard", "ru premium", "admin"];
           const states = requiredTelegramChannels
             .filter(k => Object.prototype.hasOwnProperty.call(_integrationHealth.telegram.channels, k))
             .map(k => _integrationHealth.telegram.channels[k]);
@@ -1580,6 +1583,11 @@ function translateTelegramClientRu(input) {
     [/Signaux réellement diffusés/gi, "Реально отправленные сигналы"],
     [/Score final/gi, "Итоговый счёт"],
     [/Score de confiance/gi, "Уровень доверия"],
+    [/Signal\s*:/gi, "Прогноз:"],
+    [/Palier\s*:/gi, "Уровень:"],
+    [/S'abonner à Standard — 4,90€\/mois/gi, "Подписаться на Стандарт — 4,90 €\/месяц"],
+    [/STANDARD/g, "СТАНДАРТ"],
+    [/PREMIUM/g, "ПРЕМИУМ"],
     [/Vote IA/gi, "Голосование ИИ"],
     [/Résultat vérifiable demain sur le site/gi, "Результат можно проверить завтра на сайте"],
     [/Résultats complets : gagnés comme perdus/gi, "Полные результаты: выигрыши и проигрыши"],
@@ -1620,7 +1628,14 @@ function sendTelegramMessage(chatId, text, deliveryMeta = null, skipRussianMirro
     console.log("[telegram-admin] bloque: digest quotidien uniquement");
     return Promise.resolve(false);
   }
-  const body = JSON.stringify({ chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true });
+  const payload = { chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true };
+  const frenchClientSignal = !skipRussianMirror
+    && !!deliveryMeta?.matchKey
+    && ["free", "standard", "premium"].includes(String(deliveryMeta?.channel || ""));
+  if (frenchClientSignal) {
+    payload.reply_markup = { inline_keyboard: buildInlineKeyboard() };
+  }
+  const body = JSON.stringify(payload);
   return new Promise((resolve) => {
     const req = https.request({
       hostname: "api.telegram.org",

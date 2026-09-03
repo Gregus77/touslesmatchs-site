@@ -7,9 +7,9 @@ const links = {
 
 const bookmakerButtons = [
   { text: "Winamax", url: links.winamax },
+  { text: "Betclic", url: links.betclic },
   { text: "Unibet", url: links.unibet },
   { text: "PMU", url: links.pmu },
-  { text: "Betclic", url: links.betclic },
 ];
 
 function buildInlineKeyboard(extraRows = []) {
