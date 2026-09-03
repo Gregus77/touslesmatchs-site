@@ -4,9 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - public/app.html
-      - public/live-ia.html
-      - public/sw.js
       - .github/workflows/codex-deploy-live-votes.yml
 
 permissions:
@@ -19,16 +16,16 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
-      - name: Deploy and prove public live vote visibility
+      - name: Preserve generated state, deploy and prove site
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 8m
+          command_timeout: 10m
           script_stop: true
           script: |
             set -euo pipefail
@@ -37,43 +34,82 @@ jobs:
             git fetch origin main
             test "$(git branch --show-current)" = "main"
             test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
+            DIRTY_FILES="$(git status --porcelain --untracked-files=no | sed -E 's/^...//')"
+            if [ -n "$DIRTY_FILES" ]; then
+              test "$DIRTY_FILES" = "shared/vps-status.json"
+            fi
+            COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
+            test "$(printf '%s' "$COUNTS" | awk '{print $1}')" = "0"
 
             STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
             BACKUP="/opt/backups/tlm-live-votes-$STAMP"
-            mkdir -p "$BACKUP"
-            chmod 700 "$BACKUP"
-            cp public/app.html "$BACKUP/app.html"
-            cp public/live-ia.html "$BACKUP/live-ia.html"
-            cp public/sw.js "$BACKUP/sw.js"
+            install -d -m 700 "$BACKUP/public"
+            cp -a public/app.html public/live-ia.html public/sw.js "$BACKUP/public/"
+            if [ -f shared/vps-status.json ]; then
+              install -D -m 600 shared/vps-status.json "$BACKUP/shared/vps-status.json"
+            fi
 
-            test -z "$(git diff --cached --name-only)"
-            test -z "$(git diff --name-only | grep -vE '^(public/app.html|public/live-ia.html|public/sw.js)$' || true)"
-            git stash push -m "codex-preserved-predeploy-$STAMP" -- public/app.html public/live-ia.html public/sw.js
-            test -z "$(git status --porcelain --untracked-files=no)"
-            trap 'cp "$BACKUP/app.html" public/app.html; cp "$BACKUP/live-ia.html" public/live-ia.html; cp "$BACKUP/sw.js" public/sw.js; docker compose up -d --build site >/dev/null 2>&1 || true; git stash push -m "codex-preserved-failed-deploy-$STAMP" -- public/app.html public/live-ia.html public/sw.js >/dev/null 2>&1 || true' ERR
-
+            if [ -n "$DIRTY_FILES" ]; then
+              git restore --source=HEAD --worktree -- shared/vps-status.json
+            fi
             git pull --ff-only origin main
-            node -e "$(printf '%s' 'Y29uc3QgZnM9cmVxdWlyZSgiZnMiKTtmb3IoY29uc3QgZiBvZiBbIi9vcHQvdG91c2xlc21hdGNocy9wdWJsaWMvYXBwLmh0bWwiLCIvb3B0L3RvdXNsZXNtYXRjaHMvcHVibGljL2xpdmUtaWEuaHRtbCJdKXtjb25zdCBoPWZzLnJlYWRGaWxlU3luYyhmLCJ1dGY4Iik7Y29uc3Qgcj0vPHNjcmlwdFxiKFtePl0qKT4oW1xzXFNdKj8pPFwvc2NyaXB0Pi9naTtsZXQgbTt3aGlsZSgobT1yLmV4ZWMoaCkpKXtjb25zdCBhPW1bMV18fCIiO2lmKC9cYnNyY1xzKj0vLnRlc3QoYSl8fC90eXBlXHMqPVxzKlsiJ10oPzphcHBcL3gtZGlzYWJsZWR8YXBwbGljYXRpb25cL2xkXCtqc29ufG1vZHVsZSlbIiddL2kudGVzdChhKSljb250aW51ZTtuZXcgRnVuY3Rpb24obVsyXXx8IiIpO319Y29uc29sZS5sb2coIkZST05URU5EX1NZTlRBWF9PSyIpOw==' | base64 -d)"
+
             grep -q 'TLM_APP_LIVE_VOTES_V1' public/app.html
             grep -q 'TLM_LIVE_OU25_VOTES_V1' public/live-ia.html
             grep -q 'tlm-app-v12-live-votes-20260903' public/sw.js
-            ! grep -q 'tlm-real-maint-results' public/app.html
+            ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' public/app.html
+
+            if ! grep -qxF '/shared/vps-status.json' .gitignore; then
+              printf '\n# État généré par la vigie horaire sur le VPS\n/shared/vps-status.json\n' >> .gitignore
+            fi
+            git rm --cached --ignore-unmatch shared/vps-status.json
+            git add .gitignore
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: ne plus suivre l'état généré du VPS"
+              git push origin HEAD:main
+            fi
+
+            rollback_site() {
+              set +e
+              cp -a "$BACKUP/public/app.html" public/app.html
+              cp -a "$BACKUP/public/live-ia.html" public/live-ia.html
+              cp -a "$BACKUP/public/sw.js" public/sw.js
+              docker compose up -d --build site >/dev/null 2>&1
+              git restore --source=HEAD --worktree -- public/app.html public/live-ia.html public/sw.js
+              echo "ROLLBACK_SITE_OK"
+            }
+            trap rollback_site ERR
+
+            node -e "$(printf '%s' 'Y29uc3QgZnM9cmVxdWlyZSgiZnMiKTtmb3IoY29uc3QgZiBvZiBbInB1YmxpYy9hcHAuaHRtbCIsInB1YmxpYy9saXZlLWlhLmh0bWwiXSl7Y29uc3QgaD1mcy5yZWFkRmlsZVN5bmMoZiwidXRmOCIpO2NvbnN0IHI9LzxzY3JpcHRcYihbXj5dKik+KFtzXFNdKj8pPFwvc2NyaXB0Pi9naTtsZXQgbTt3aGlsZSgobT1yLmV4ZWMoaCkpKXtjb25zdCBhPW1bMV18fCIiO2lmKC9cYnNyY1xzKj0vLnRlc3QoYSl8fC90eXBlXHMqPVxzKlsiJ10oPzphcHBcL3gtZGlzYWJsZWR8YXBwbGljYXRpb25cL2xkXCtqc29ufG1vZHVsZSlbIiddL2kudGVzdChhKSljb250aW51ZTtuZXcgRnVuY3Rpb24obVsyXXx8IiIpO319Y29uc29sZS5sb2coIkZST05URU5EX1NZTlRBWF9PSyIpOw==' | base64 -d)"
 
             docker compose up -d --build site
-            sleep 8
+            sleep 10
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-site)" = "true"
 
-            curl -fsSL "https://www.touslesmatchs.com/app.html?proof=$STAMP" -o "/tmp/tlm-app-$STAMP.html"
-            curl -fsSL "https://www.touslesmatchs.com/live-ia.html?proof=$STAMP" -o "/tmp/tlm-live-$STAMP.html"
-            curl -fsSL "https://www.touslesmatchs.com/sw.js?proof=$STAMP" -o "/tmp/tlm-sw-$STAMP.js"
-            curl -fsSL "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" -o "/tmp/tlm-matches-$STAMP.json"
+            curl -fsS "https://www.touslesmatchs.com/app.html?proof=$STAMP" -o "/tmp/tlm-app-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/live-ia.html?proof=$STAMP" -o "/tmp/tlm-live-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/sw.js?proof=$STAMP" -o "/tmp/tlm-sw-$STAMP.js"
+            curl -fsS "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" -o "/tmp/tlm-matches-$STAMP.json"
+            curl -fsS "https://www.touslesmatchs.com/api/health?t=$STAMP" >/dev/null
+
             grep -q 'TLM_APP_LIVE_VOTES_V1' "/tmp/tlm-app-$STAMP.html"
             grep -q 'TLM_LIVE_OU25_VOTES_V1' "/tmp/tlm-live-$STAMP.html"
             grep -q 'tlm-app-v12-live-votes-20260903' "/tmp/tlm-sw-$STAMP.js"
-            grep -q '"ou25"' "/tmp/tlm-matches-$STAMP.json"
-            ! grep -q 'tlm-real-maint-results' "/tmp/tlm-app-$STAMP.html"
-            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-            docker compose ps site
-            trap - ERR
+            ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' "/tmp/tlm-app-$STAMP.html"
+            python3 - <<'PY'
+            import json
+            from pathlib import Path
+            matches=json.loads(next(Path("/tmp").glob("tlm-matches-*.json")).read_text()).get("matches", [])
+            for match in matches:
+                state=match.get("ou25") or {}
+                assert state.get("to_minute") == 45
+                assert len(state.get("votes") or []) == 5
+            PY
 
-            git commit --allow-empty -m "test: prove live AI vote visibility on production"
-            git push origin HEAD:main
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            echo "RESULT=OK"
+            echo "BACKUP=$BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            echo "SITE_CONTAINER=$(docker inspect -f '{{.Id}}' touslesmatchs-site | cut -c1-12)"
+            trap - ERR
