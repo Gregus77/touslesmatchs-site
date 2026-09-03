@@ -96,15 +96,7 @@ jobs:
             grep -q 'TLM_LIVE_OU25_VOTES_V1' "/tmp/tlm-live-$STAMP.html"
             grep -q 'tlm-app-v12-live-votes-20260903' "/tmp/tlm-sw-$STAMP.js"
             ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' "/tmp/tlm-app-$STAMP.html"
-            python3 - <<'PY'
-            import json
-            from pathlib import Path
-            matches=json.loads(next(Path("/tmp").glob("tlm-matches-*.json")).read_text()).get("matches", [])
-            for match in matches:
-                state=match.get("ou25") or {}
-                assert state.get("to_minute") == 45
-                assert len(state.get("votes") or []) == 5
-            PY
+            python3 -c "$(printf '%s' 'aW1wb3J0IGpzb24sc3lzCnA9c3lzLmFyZ3ZbMV0KbWF0Y2hlcz1qc29uLmxvYWQob3BlbihwLGVuY29kaW5nPSJ1dGYtOCIpKS5nZXQoIm1hdGNoZXMiLFtdKQpmb3IgbWF0Y2ggaW4gbWF0Y2hlczoKIHN0YXRlPW1hdGNoLmdldCgib3UyNSIpIG9yIHt9CiBhc3NlcnQgc3RhdGUuZ2V0KCJ0b19taW51dGUiKT09NDUKIGFzc2VydCBsZW4oc3RhdGUuZ2V0KCJ2b3RlcyIpIG9yIFtdKT09NQpwcmludCgiT1UyNV9QVUJMSUNfT0siKQo=' | base64 -d)" "/tmp/tlm-matches-$STAMP.json"
 
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             test -z "$(git status --porcelain --untracked-files=no)"
