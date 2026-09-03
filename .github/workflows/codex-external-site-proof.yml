@@ -21,9 +21,17 @@ jobs:
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
           app_url="https://www.touslesmatchs.com/app.html?external_proof=$stamp"
           live_url="https://www.touslesmatchs.com/live-ia.html?external_proof=$stamp"
+          index_url="https://www.touslesmatchs.com/?external_proof=$stamp"
+          results_url="https://www.touslesmatchs.com/resultats-quotidiens.html?external_proof=$stamp"
+          faq_url="https://www.touslesmatchs.com/faq.html?external_proof=$stamp"
+          performance_url="https://www.touslesmatchs.com/performances.html?external_proof=$stamp"
 
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$app_url" -o /tmp/tlm-app.html
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$live_url" -o /tmp/tlm-live.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$index_url" -o /tmp/tlm-index.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$results_url" -o /tmp/tlm-results.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$faq_url" -o /tmp/tlm-faq.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$performance_url" -o /tmp/tlm-performance.html
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/sw.js?external_proof=$stamp" -o /tmp/tlm-sw.js
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/api/health?external_proof=$stamp" -o /tmp/tlm-health.json
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/api/live-matches?external_proof=$stamp" -o /tmp/tlm-matches.json
@@ -31,11 +39,17 @@ jobs:
           grep -q 'TLM_APP_LIVE_VOTES_V1' /tmp/tlm-app.html
           grep -q 'TLM_LIVE_OU25_VOTES_V1' /tmp/tlm-live.html
           grep -q 'tlm-app-v12-live-votes-20260903' /tmp/tlm-sw.js
-          ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' /tmp/tlm-app.html
+          ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27|maintenanceDays' /tmp/tlm-app.html /tmp/tlm-index.html /tmp/tlm-results.html
+          ! grep -qE '15e (et|à) la 40e|15e-40e|n<=40|minute>40' /tmp/tlm-index.html /tmp/tlm-faq.html /tmp/tlm-performance.html
+          grep -q '15e et la 45e minute' /tmp/tlm-index.html
+          grep -q '15e et la 45e minute' /tmp/tlm-faq.html
+          grep -q '15e et la 45e minute' /tmp/tlm-performance.html
 
           match_count="$(node -e 'const d=require("/tmp/tlm-matches.json");const m=d.matches||d.live||[];for(const x of m){if(!x.ou25||!Array.isArray(x.ou25.votes)||x.ou25.votes.length!==5)process.exit(1)};process.stdout.write(String(m.length))')"
           google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$app_url" > /tmp/tlm-app-dom.html
           google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$live_url" > /tmp/tlm-live-dom.html
+          google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --screenshot=/tmp/tlm-app-mobile.png "$app_url"
+          google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --screenshot=/tmp/tlm-live-mobile.png "$live_url"
 
           if [ "$match_count" -gt 0 ]; then
             grep -q 'tlm-app-live-mini-votes' /tmp/tlm-app-dom.html
@@ -45,3 +59,12 @@ jobs:
 
           echo "EXTERNAL_PUBLIC_SITE_OK"
           echo "RENDERED_LIVE_VOTE_UI_OK"
+
+      - name: Archive mobile visual proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlm-mobile-public-proof
+          path: |
+            /tmp/tlm-app-mobile.png
+            /tmp/tlm-live-mobile.png
+          retention-days: 7
