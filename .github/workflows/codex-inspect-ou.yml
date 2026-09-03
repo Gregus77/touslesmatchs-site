@@ -19,21 +19,14 @@ jobs:
           script: |
             set -eu
             cd /opt/touslesmatchs
-            git config --unset-all branch.main.remote || true
-            git config --unset-all branch.main.merge || true
-            git config branch.main.remote origin
-            git config branch.main.merge refs/heads/main
             echo "=== GIT ==="
             git status --short --branch
             echo "HEAD=$(git rev-parse HEAD)"
             echo "ORIGIN_MAIN=$(git rev-parse origin/main)"
-            echo "=== WINDOW AND VOTES ==="
-            grep -RInE '15.{0,30}40|minute.{0,30}(40|45)|MINUTE|votes?.{0,40}(4|5)|consensus|eligible' scripts/api_server.js scripts/analysis_engine.js public/app.html public/live-ia.html 2>/dev/null | tail -n 300 || true
-            echo "=== MAINTENANCE ==="
-            grep -RInE 'Maintenance technique|Mise à jour importante|maintenance' public --include='*.html' --include='*.js' | head -n 120 || true
-            echo "=== PUBLIC ==="
-            for u in / /api/health /api/live-matches /api/analysis-history /api/public-analysis-stats; do
-              code=$(curl -sS -o /tmp/tlm-body -w '%{http_code}' "https://www.touslesmatchs.com$u")
-              bytes=$(wc -c </tmp/tlm-body)
-              echo "$u HTTP=$code BYTES=$bytes"
+            echo "=== DEFINITIONS ==="
+            grep -nE '^(const|function) (CLIENT_OU25_CLIENT_MAX_MINUTE|CLIENT_OU25_MIN_VOTES|parseLiveMinuteValue|isClientOu25MatchEligible|clientOu25RequiredVotes)' scripts/api_server.js || true
+            for n in $(grep -nE '^(const|function) (CLIENT_OU25_CLIENT_MAX_MINUTE|CLIENT_OU25_MIN_VOTES|parseLiveMinuteValue|isClientOu25MatchEligible|clientOu25RequiredVotes)' scripts/api_server.js | cut -d: -f1); do
+              a=$((n-8)); [ $a -lt 1 ] && a=1; b=$((n+45)); echo "--- lines $a-$b ---"; sed -n "${a},${b}p" scripts/api_server.js
             done
+            echo "=== EXACT 15-40 REFERENCES ==="
+            grep -nE '15.?[-–].?40|<= ?40|to_minute: 40|minute>40|minute<=40|MINUTE.*40|MAX_MINUTE.*40|_15_40' scripts/api_server.js public/app.html public/live-ia.html || true
