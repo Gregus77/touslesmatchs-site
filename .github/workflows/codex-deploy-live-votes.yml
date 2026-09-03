@@ -1,0 +1,75 @@
+name: Codex deploy live vote visibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - public/app.html
+      - public/live-ia.html
+      - public/sw.js
+      - .github/workflows/codex-deploy-live-votes.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Deploy and prove public live vote visibility
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 8m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+
+            git fetch origin main
+            test "$(git branch --show-current)" = "main"
+            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
+            test -z "$(git status --porcelain --untracked-files=no)"
+
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            BACKUP="/opt/backups/tlm-live-votes-$STAMP"
+            mkdir -p "$BACKUP"
+            chmod 700 "$BACKUP"
+            cp public/app.html "$BACKUP/app.html"
+            cp public/live-ia.html "$BACKUP/live-ia.html"
+            cp public/sw.js "$BACKUP/sw.js"
+            trap 'cp "$BACKUP/app.html" public/app.html; cp "$BACKUP/live-ia.html" public/live-ia.html; cp "$BACKUP/sw.js" public/sw.js; docker compose up -d --build site >/dev/null 2>&1 || true' ERR
+
+            git pull --ff-only origin main
+            node -e "$(printf '%s' 'Y29uc3QgZnM9cmVxdWlyZSgiZnMiKTtmb3IoY29uc3QgZiBvZiBbIi9vcHQvdG91c2xlc21hdGNocy9wdWJsaWMvYXBwLmh0bWwiLCIvb3B0L3RvdXNsZXNtYXRjaHMvcHVibGljL2xpdmUtaWEuaHRtbCJdKXtjb25zdCBoPWZzLnJlYWRGaWxlU3luYyhmLCJ1dGY4Iik7Y29uc3Qgcj0vPHNjcmlwdFxiKFtePl0qKT4oW1xzXFNdKj8pPFwvc2NyaXB0Pi9naTtsZXQgbTt3aGlsZSgobT1yLmV4ZWMoaCkpKXtjb25zdCBhPW1bMV18fCIiO2lmKC9cYnNyY1xzKj0vLnRlc3QoYSl8fC90eXBlXHMqPVxzKlsiJ10oPzphcHBcL3gtZGlzYWJsZWR8YXBwbGljYXRpb25cL2xkXCtqc29ufG1vZHVsZSlbIiddL2kudGVzdChhKSljb250aW51ZTtuZXcgRnVuY3Rpb24obVsyXXx8IiIpO319Y29uc29sZS5sb2coIkZST05URU5EX1NZTlRBWF9PSyIpOw==' | base64 -d)"
+            grep -q 'TLM_APP_LIVE_VOTES_V1' public/app.html
+            grep -q 'TLM_LIVE_OU25_VOTES_V1' public/live-ia.html
+            grep -q 'tlm-app-v12-live-votes-20260903' public/sw.js
+            ! grep -q 'tlm-real-maint-results' public/app.html
+
+            docker compose up -d --build site
+            sleep 8
+
+            curl -fsS "https://www.touslesmatchs.com/app.html?proof=$STAMP" -o "/tmp/tlm-app-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/live-ia.html?proof=$STAMP" -o "/tmp/tlm-live-$STAMP.html"
+            curl -fsS "https://www.touslesmatchs.com/sw.js?proof=$STAMP" -o "/tmp/tlm-sw-$STAMP.js"
+            curl -fsS "https://www.touslesmatchs.com/api/live-matches?t=$STAMP" -o "/tmp/tlm-matches-$STAMP.json"
+            grep -q 'TLM_APP_LIVE_VOTES_V1' "/tmp/tlm-app-$STAMP.html"
+            grep -q 'TLM_LIVE_OU25_VOTES_V1' "/tmp/tlm-live-$STAMP.html"
+            grep -q 'tlm-app-v12-live-votes-20260903' "/tmp/tlm-sw-$STAMP.js"
+            grep -q '"ou25"' "/tmp/tlm-matches-$STAMP.json"
+            ! grep -q 'tlm-real-maint-results' "/tmp/tlm-app-$STAMP.html"
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            docker compose ps site
+            trap - ERR
+
+            git commit --allow-empty -m "test: prove live AI vote visibility on production"
+            git push origin HEAD:main

@@ -445,6 +445,16 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 }
 </style>
 <!-- TLM-APP-SITE-MASTER-V2-20260830 -->
+
+<style id="tlm-app-live-votes-css">
+/* TLM_APP_LIVE_VOTES_V1 */
+.tlm-app-live-vote-summary{display:flex;align-items:center;gap:6px;margin-top:6px;color:#aeb8d8;font-size:8.5px;font-weight:850}
+.tlm-app-live-mini-votes{display:flex;gap:3px;flex:0 0 auto}
+.tlm-app-live-mini-vote{width:14px;height:14px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:rgba(255,255,255,.035);color:#7580a2;font-size:6px;font-weight:950;line-height:1}
+.tlm-app-live-mini-vote.over{border-color:#22d3ee;background:rgba(34,211,238,.18);color:#dffaff}
+.tlm-app-live-mini-vote.under{border-color:#d946ef;background:rgba(217,70,239,.18);color:#fff0ff}
+@media(max-width:420px){.tlm-app-live-row{grid-template-columns:38px minmax(0,1fr) auto;gap:8px}.tlm-app-live-mini-vote{width:13px;height:13px}}
+</style>
 </head>
 <body class="tlm-wow tlm-page-app">
 
@@ -453,78 +463,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 <!-- TLM_UNIBET_VISIBLE_END -->
 
 
-<!-- TLM_REAL_MAINT_RESULTS_START -->
-<section id="tlm-real-maint-results" style="
-max-width:1100px;
-margin:16px auto 22px;
-padding:17px;
-border-radius:16px;
-background:linear-gradient(135deg,rgba(15,23,42,.96),rgba(8,47,73,.75));
-border:1px solid rgba(37,230,207,.45);
-color:#fff;
-font-family:inherit;
-box-sizing:border-box;
-">
-
-<div style="color:#25e6cf;font-size:18px;font-weight:900;margin-bottom:8px">
-🔧 Mise à jour permanente du Conseil IA
-</div>
-
-<div style="font-size:13px;line-height:1.6;opacity:.9;margin-bottom:14px">
-Nous testons en permanence de nouvelles intelligences artificielles en parallèle.
-Dès qu'une IA devient durablement plus performante qu'une des 5 utilisées,
-elle peut prendre sa place après une courte période de validation et de maintenance.
-Pendant ces phases, certaines analyses continuent d'être enregistrées mais ne sont pas diffusées aux abonnés.
-</div>
-
-<div style="
-padding:13px;
-margin-bottom:10px;
-border-radius:12px;
-background:rgba(37,230,207,.07);
-border:1px solid rgba(37,230,207,.22)">
-
-<div style="color:#25e6cf;font-weight:900;margin-bottom:8px">
-📅 28 août · 3/3 analyses gagnantes · non diffusées
-</div>
-
-<div style="display:grid;gap:6px;font-size:13px">
-<div>✅ Wrexham – Birmingham · <strong>Over 2,5</strong> · @2,00 · 3/5 votes</div>
-<div>✅ Crystal Palace – Manchester City · <strong>Over 2,5</strong> · @1,65 · 3/5 votes</div>
-<div>✅ AC Milan – Venezia · <strong>Under 2,5</strong> · @2,12 · 4/5 votes</div>
-</div>
-
-</div>
-
-<div style="
-padding:13px;
-margin-bottom:10px;
-border-radius:12px;
-background:rgba(37,230,207,.07);
-border:1px solid rgba(37,230,207,.22)">
-
-<div style="color:#25e6cf;font-weight:900;margin-bottom:8px">
-📅 27 août · 5/5 analyses gagnantes · non diffusées
-</div>
-
-<div style="display:grid;gap:6px;font-size:13px">
-<div>✅ Qarabag – Twente · <strong>Under 2,5</strong> · @2,20 · 4/5 votes</div>
-<div>✅ FC Iberia 1999 – Jagiellonia · <strong>Over 2,5</strong> · @1,77 · 4/5 votes</div>
-<div>✅ FK Jablonec – Rangers · <strong>Under 2,5</strong> · @1,88 · 5/5 votes</div>
-<div>✅ KuPS – Shamrock Rovers · <strong>Under 2,5</strong> · @1,56 · 5/5 votes</div>
-<div>✅ Future FC – Ghazl El Mehalla · <strong>Under 2,5</strong> · @1,34 · 5/5 votes</div>
-</div>
-
-</div>
-
-<div style="color:#25e6cf;font-size:11px;line-height:1.5">
-ℹ️ Ces analyses sont issues de la base TousLesMatchs.
-Elles ont été résolues gagnantes mais n'ont pas été diffusées aux abonnés.
-Elles restent donc séparées des performances des signaux réellement envoyés.
-</div>
-
-</section>
-<!-- TLM_REAL_MAINT_RESULTS_END -->
+<!-- TLM_OLD_UPDATE_MESSAGE_REMOVED_20260903 -->
 
 
 
@@ -826,7 +765,7 @@ Elles restent donc séparées des performances des signaux réellement envoyés.
       return;
     }
     pushFeedback('Activation en cours...', true);
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v12-live-votes-20260903').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
         return get('/api/push/vapid-public-key').then(function (d) {
@@ -951,6 +890,16 @@ Elles restent donc séparées des performances des signaux réellement envoyés.
   function appAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
   function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:over+under,overCount:over,underCount:under,windowStatus:String(raw.window_status||'unknown')};}
   function appVotes(m){return appOu25(m).voteCount;}
+  function appMiniVotes(m){
+    var state=appOu25(m);
+    var dots=state.slots.map(function(slot,i){
+      var dir=slot&&slot.status==='voted'&&(slot.direction==='over'||slot.direction==='under')?slot.direction:'';
+      var label=dir==='over'?'O':dir==='under'?'U':String(i+1);
+      var detail=dir?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');
+      return '<span class="tlm-app-live-mini-vote '+dir+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
+    }).join('');
+    return '<span class="tlm-app-live-vote-summary"><span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
+  }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
     var country=appCountry(m), flag=appFlagUrl(country), voteState=appOu25(m), votes=voteState.voteCount, status=$("app-live-status");
@@ -998,7 +947,7 @@ Elles restent donc séparées des performances des signaux réellement envoyés.
       if (!list.length) {box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';return;}
       box.innerHTML='<div class="tlm-app-live-list">'+list.slice(0,25).map(function(m){
         var rhs=appHomeScore(m),ras=appAwayScore(m),sh=rhs===''?'—':rhs,sa=ras===''?'—':ras,country=appCountry(m),flag=appFlagUrl(country);
-        return '<a class="tlm-app-live-row" href="/live-ia?fixture='+encodeURIComponent(m.fixtureId||m.id||m.sourceId||'')+'"><span class="tlm-app-live-logos"><img src="'+esc(appHomeLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.home||'équipe')+'"><img src="'+esc(appAwayLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.away||'équipe')+'"></span><span><strong>'+esc(m.home)+' — '+esc(m.away)+'</strong><span class="tlm-app-live-meta">'+(flag?'<img src="'+flag+'" alt="Drapeau '+esc(country)+'">':'')+esc(country||m.competition||'Football')+'</span></span><span class="tlm-app-live-result"><b>'+esc(sh)+'-'+esc(sa)+'</b><span>'+(m.minute?esc(m.minute)+"'":'Live')+'</span></span></a>';
+        return '<a class="tlm-app-live-row" href="/live-ia?fixture='+encodeURIComponent(m.fixtureId||m.id||m.sourceId||'')+'"><span class="tlm-app-live-logos"><img src="'+esc(appHomeLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.home||'équipe')+'"><img src="'+esc(appAwayLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.away||'équipe')+'"></span><span><strong>'+esc(m.home)+' — '+esc(m.away)+'</strong><span class="tlm-app-live-meta">'+(flag?'<img src="'+flag+'" alt="Drapeau '+esc(country)+'">':'')+esc(country||m.competition||'Football')+'</span>'+appMiniVotes(m)+'</span><span class="tlm-app-live-result"><b>'+esc(sh)+'-'+esc(sa)+'</b><span>'+(m.minute?esc(m.minute)+"'":'Live')+'</span></span></a>';
       }).join('')+'</div>';
     }).catch(function(){renderAppHero(null);$("live-box").innerHTML='<div class="card"><div class="state">Direct momentanément indisponible.</div></div>';});
   }
@@ -1184,7 +1133,7 @@ $("perf-kpis").innerHTML =
   // les notifications ne sont pas encore activées. Cela force la récupération
   // des corrections de cache pour tous les utilisateurs Android.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828')
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v12-live-votes-20260903')
       .then(function (reg) { return reg.update(); })
       .catch(function () {});
   }

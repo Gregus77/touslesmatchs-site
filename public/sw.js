@@ -2,7 +2,7 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v11-upcoming24-country-20260901";
+const VERSION = "tlm-app-v12-live-votes-20260903";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
