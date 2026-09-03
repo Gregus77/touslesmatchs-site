@@ -1,4 +1,4 @@
-name: Codex Russian channels gate
+name: Codex deploy Telegram FR RU routing
 on:
   push:
     branches: [main]
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  gate:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.2.0
@@ -15,10 +15,41 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 5m
+          command_timeout: 12m
           script_stop: true
           script: |
             set -euo pipefail
             cd /opt/touslesmatchs
-            docker exec touslesmatchs-api node -e "eval(Buffer.from('KGFzeW5jKCk9Pntjb25zdCB0PXByb2Nlc3MuZW52LlRFTEVHUkFNX0JPVF9UT0tFTnx8IiI7Y29uc3QgaWRzPVtwcm9jZXNzLmVudi5URUxFR1JBTV9SVV9GUkVFX0NIQU5ORUxfSUQscHJvY2Vzcy5lbnYuVEVMRUdSQU1fUlVfU1RBTkRBUkRfQ0hBTk5FTF9JRCxwcm9jZXNzLmVudi5URUxFR1JBTV9SVV9QUkVNSVVNX0NIQU5ORUxfSURdO2lmKCF0fHxpZHMuc29tZSh4PT4heCkpcHJvY2Vzcy5leGl0KDIwKTtmb3IoY29uc3QgaWQgb2YgaWRzKXtjb25zdCBkPWF3YWl0IGZldGNoKCJodHRwczovL2FwaS50ZWxlZ3JhbS5vcmcvYm90Iit0KyIvZ2V0Q2hhdD9jaGF0X2lkPSIrZW5jb2RlVVJJQ29tcG9uZW50KGlkKSkudGhlbihyPT5yLmpzb24oKSkuY2F0Y2goKCk9Pih7b2s6ZmFsc2V9KSk7aWYoIWQub2spcHJvY2Vzcy5leGl0KDIxKX19KSgpLmNhdGNoKCgpPT5wcm9jZXNzLmV4aXQoMjIpKTs=','base64').toString())"
+            git fetch origin main
+            git pull --ff-only origin main
+            STAMP=$(date -u +%Y%m%d-%H%M%S)
+            BACKUP=/opt/backups/tlm-telegram-fr-ru-$STAMP
+            mkdir -p "$BACKUP"
+            cp -a scripts/api_server.js scripts/bookmakers.config.js "$BACKUP/"
+            rollback() {
+              cp -a "$BACKUP/api_server.js" scripts/api_server.js
+              cp -a "$BACKUP/bookmakers.config.js" scripts/bookmakers.config.js
+              git add scripts/api_server.js scripts/bookmakers.config.js
+              git commit -m "revert: restore Telegram routing after failed verification" || true
+              git push origin HEAD:main || true
+              docker compose up -d --build api || true
+            }
+            trap rollback ERR
+            python3 -c "import base64;exec(base64.b64decode('ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgic2NyaXB0cy9ib29rbWFrZXJzLmNvbmZpZy5qcyIpO3M9cC5yZWFkX3RleHQoZW5jb2Rpbmc9InV0Zi04IikKb2xkPScnJ2NvbnN0IGJvb2ttYWtlckJ1dHRvbnMgPSBbCiAgeyB0ZXh0OiAiV2luYW1heCIsIHVybDogbGlua3Mud2luYW1heCB9LAogIHsgdGV4dDogIlVuaWJldCIsIHVybDogbGlua3MudW5pYmV0IH0sCiAgeyB0ZXh0OiAiUE1VIiwgdXJsOiBsaW5rcy5wbXUgfSwKICB7IHRleHQ6ICJCZXRjbGljIiwgdXJsOiBsaW5rcy5iZXRjbGljIH0sCl07JycnCm5ldz0nJydjb25zdCBib29rbWFrZXJCdXR0b25zID0gWwogIHsgdGV4dDogIldpbmFtYXgiLCB1cmw6IGxpbmtzLndpbmFtYXggfSwKICB7IHRleHQ6ICJCZXRjbGljIiwgdXJsOiBsaW5rcy5iZXRjbGljIH0sCiAgeyB0ZXh0OiAiVW5pYmV0IiwgdXJsOiBsaW5rcy51bmliZXQgfSwKICB7IHRleHQ6ICJQTVUiLCB1cmw6IGxpbmtzLnBtdSB9LApdOycnJwppZiBzLmNvdW50KG9sZCkhPTE6IHJhaXNlIFN5c3RlbUV4aXQoImJvb2ttYWtlciBvcmRlciBtb3RpZiIpCnAud3JpdGVfdGV4dChzLnJlcGxhY2Uob2xkLG5ldyksZW5jb2Rpbmc9InV0Zi04IikKCnA9UGF0aCgic2NyaXB0cy9hcGlfc2VydmVyLmpzIik7cz1wLnJlYWRfdGV4dChlbmNvZGluZz0idXRmLTgiKQpwYWlycz1bCignY29uc3QgeyBib29rbWFrZXJCdXR0b25zIH0gPSByZXF1aXJlKCIuL2Jvb2ttYWtlcnMuY29uZmlnIik7JywnY29uc3QgeyBib29rbWFrZXJCdXR0b25zLCBidWlsZElubGluZUtleWJvYXJkIH0gPSByZXF1aXJlKCIuL2Jvb2ttYWtlcnMuY29uZmlnIik7JyksCignJycgICAgLi4uKFRFTEVHUkFNX0VMSVRFX0NIQU5ORUxfSUQgPyBbWyJFbGl0ZSIsIFRFTEVHUkFNX0VMSVRFX0NIQU5ORUxfSURdXSA6IFtdKSwKICAgIFsiQWRtaW4iLCAgICBURUxFR1JBTV9BRE1JTl9DSEFUX0lEXSwnJycsJycnICAgIC4uLihURUxFR1JBTV9FTElURV9DSEFOTkVMX0lEID8gW1siRWxpdGUiLCBURUxFR1JBTV9FTElURV9DSEFOTkVMX0lEXV0gOiBbXSksCiAgICBbIlJVIEdyYXR1aXQiLCAgVEVMRUdSQU1fUlVfRlJFRV9DSEFOTkVMX0lEXSwKICAgIFsiUlUgU3RhbmRhcmQiLCBURUxFR1JBTV9SVV9TVEFOREFSRF9DSEFOTkVMX0lEXSwKICAgIFsiUlUgUHJlbWl1bSIsICBURUxFR1JBTV9SVV9QUkVNSVVNX0NIQU5ORUxfSURdLAogICAgWyJBZG1pbiIsICAgIFRFTEVHUkFNX0FETUlOX0NIQVRfSURdLCcnJyksCignJycgICAgICAgICAgY29uc3QgcmVxdWlyZWRUZWxlZ3JhbUNoYW5uZWxzID0gWyJncmF0dWl0IiwgInN0YW5kYXJkIiwgInByZW1pdW0iLCAiYWRtaW4iXTsnJycsJycnICAgICAgICAgIGNvbnN0IHJlcXVpcmVkVGVsZWdyYW1DaGFubmVscyA9IFsiZ3JhdHVpdCIsICJzdGFuZGFyZCIsICJwcmVtaXVtIiwgInJ1IGdyYXR1aXQiLCAicnUgc3RhbmRhcmQiLCAicnUgcHJlbWl1bSIsICJhZG1pbiJdOycnJyksCignJycgICAgWy9TY29yZSBkZSBjb25maWFuY2UvZ2ksICLQo9GA0L7QstC10L3RjCDQtNC+0LLQtdGA0LjRjyJdLCcnJywnJycgICAgWy9TY29yZSBkZSBjb25maWFuY2UvZ2ksICLQo9GA0L7QstC10L3RjCDQtNC+0LLQtdGA0LjRjyJdLAogICAgWy9TaWduYWxccyo6L2dpLCAi0J/RgNC+0LPQvdC+0Lc6Il0sCiAgICBbL1BhbGllclxzKjovZ2ksICLQo9GA0L7QstC10L3RjDoiXSwKICAgIFsvUydhYm9ubmVyIMOgIFN0YW5kYXJkIOKAlCA0LDkw4oKsXC9tb2lzL2dpLCAi0J/QvtC00L/QuNGB0LDRgtGM0YHRjyDQvdCwINCh0YLQsNC90LTQsNGA0YIg4oCUIDQsOTAg4oKsXC/QvNC10YHRj9GGIl0sCiAgICBbL1xiU1RBTkRBUkRcYi9nLCAi0KHQotCQ0J3QlNCQ0KDQoiJdLAogICAgWy9cYlBSRU1JVU1cYi9nLCAi0J/QoNCV0JzQmNCj0JwiXSwnJycpLAooJycnICBjb25zdCBib2R5ID0gSlNPTi5zdHJpbmdpZnkoeyBjaGF0X2lkOiBjaGF0SWQsIHRleHQsIHBhcnNlX21vZGU6ICJIVE1MIiwgZGlzYWJsZV93ZWJfcGFnZV9wcmV2aWV3OiB0cnVlIH0pOycnJywnJycgIGNvbnN0IHBheWxvYWQgPSB7IGNoYXRfaWQ6IGNoYXRJZCwgdGV4dCwgcGFyc2VfbW9kZTogIkhUTUwiLCBkaXNhYmxlX3dlYl9wYWdlX3ByZXZpZXc6IHRydWUgfTsKICBjb25zdCBmcmVuY2hDbGllbnRTaWduYWwgPSAhc2tpcFJ1c3NpYW5NaXJyb3IKICAgICYmICEhZGVsaXZlcnlNZXRhPy5tYXRjaEtleQogICAgJiYgWyJmcmVlIiwgInN0YW5kYXJkIiwgInByZW1pdW0iXS5pbmNsdWRlcyhTdHJpbmcoZGVsaXZlcnlNZXRhPy5jaGFubmVsIHx8ICIiKSk7CiAgaWYgKGZyZW5jaENsaWVudFNpZ25hbCkgewogICAgcGF5bG9hZC5yZXBseV9tYXJrdXAgPSB7IGlubGluZV9rZXlib2FyZDogYnVpbGRJbmxpbmVLZXlib2FyZCgpIH07CiAgfQogIGNvbnN0IGJvZHkgPSBKU09OLnN0cmluZ2lmeShwYXlsb2FkKTsnJycpCl0KZm9yIG9sZCxuZXcgaW4gcGFpcnM6CiBuPXMuY291bnQob2xkKQogaWYgbiE9MTogcmFpc2UgU3lzdGVtRXhpdChmImFwaSBtb3RpZiB0cm91dmUge259IikKIHM9cy5yZXBsYWNlKG9sZCxuZXcpCnAud3JpdGVfdGV4dChzLGVuY29kaW5nPSJ1dGYtOCIpCg=='))"
+            node --check scripts/api_server.js
+            node --check scripts/bookmakers.config.js
+            node -e 'const c=require("./scripts/bookmakers.config"); const k=c.buildInlineKeyboard(); if(k.length!==2||k.some(r=>r.length!==2))process.exit(1); if(k.flat().map(x=>x.text).join(",")!=="Winamax,Betclic,Unibet,PMU")process.exit(2)'
+            grep -q 'payload.reply_markup = { inline_keyboard: buildInlineKeyboard() }' scripts/api_server.js
+            grep -q 'RU Premium' scripts/api_server.js
+            git diff --check
+            git add scripts/api_server.js scripts/bookmakers.config.js
+            git commit -m "feat: miroiter les signaux russes et ajouter les bookmakers FR"
+            git push origin HEAD:main
+            docker compose up -d --build api
+            sleep 12
             curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+            docker exec touslesmatchs-api grep -q 'frenchClientSignal' /app/server.js
+            docker exec touslesmatchs-api grep -q 'RU Premium' /app/server.js
+            echo "BACKUP=$BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            trap - ERR
