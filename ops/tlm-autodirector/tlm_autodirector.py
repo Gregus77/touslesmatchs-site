@@ -469,8 +469,30 @@ def correlate_pipeline(db_stats: dict[str, Any], activity: dict[str, Any], issue
     last_delivery_hours = hours_since(db_stats.get("last_telegram"))
     live_count = int(activity.get("live_matches") or 0)
     if analyses >= 5 and deliveries == 0:
-        blockers = ", ".join(f"{row['reason']}={row['n']}" for row in db_stats.get("blockers", [])[:3])
-        add_issue(issues, "P0", "pipeline_dry", f"{analyses} analyses/24 h mais 0 livraison Telegram; blocages: {blockers or 'inconnus'}")
+        blocker_rows = db_stats.get("blockers", [])[:5]
+        blockers = ", ".join(f"{row['reason']}={row['n']}" for row in blocker_rows)
+        reasons = [str(row.get("reason", "")).lower() for row in blocker_rows]
+        failure_words = ("non_renseigne", "erreur", "echec", "échec", "timeout", "quota", "aucun vote", "cle ", "clé ")
+        expected_words = (
+            "prematch interne",
+            "historique 6-8 matchs",
+            "championnat hors liste recovery",
+            "donnees absences indisponibles",
+            "données absences indisponibles",
+            "statistiques live incompletes",
+            "statistiques live incomplètes",
+        )
+        if not reasons or any(any(word in reason for word in failure_words) for reason in reasons):
+            add_issue(issues, "P0", "pipeline_dry", f"{analyses} analyses/24 h mais 0 livraison Telegram; blocages: {blockers or 'inconnus'}")
+        elif all(any(word in reason for word in expected_words) for reason in reasons):
+            add_issue(
+                issues,
+                "P2",
+                "no_eligible_signal",
+                f"Aucun match admissible sur {analyses} analyses/24 h; Telegram fonctionne; filtres prévus: {blockers}",
+            )
+        else:
+            add_issue(issues, "P1", "pipeline_filtered", f"0 livraison sur {analyses} analyses/24 h; filtres à examiner: {blockers}")
     elif last_delivery_hours is not None and last_delivery_hours >= 48 and analyses > 0:
         add_issue(issues, "P1", "delivery_stale", f"Dernière livraison Telegram prouvée il y a {last_delivery_hours:.1f} h")
     if live_count > 0 and analyses == 0:
@@ -568,7 +590,8 @@ def main() -> int:
 
     report_sent = False
     report_detail = "non requis (état inchangé)"
-    if should_report(state, fingerprint, bool(issues), args.report_always):
+    actionable_issues = any(item["severity"] in ("P0", "P1") for item in issues)
+    if should_report(state, fingerprint, actionable_issues, args.report_always):
         report_sent, report_detail = send_admin_report(report)
         if report_sent:
             state["last_report_at"] = time.time()

@@ -88,6 +88,38 @@ class DirectorTests(unittest.TestCase):
             self.assertEqual(stats["agent_calls_24h"], 1)
             self.assertFalse(issues)
 
+    def test_expected_filters_are_not_reported_as_an_outage(self):
+        issues = []
+        director.correlate_pipeline(
+            {
+                "analyses_24h": 18,
+                "telegram_24h": 0,
+                "last_telegram": None,
+                "blockers": [
+                    {"reason": "prematch interne: non diffuse aux clients", "n": 14},
+                    {"reason": "mode Recovery: historique 6-8 matchs ou contexte domicile/exterieur indisponible", "n": 3},
+                    {"reason": "mode Recovery: championnat hors liste Recovery", "n": 1},
+                ],
+            },
+            {"live_matches": 1},
+            issues,
+        )
+        self.assertEqual([(item["severity"], item["code"]) for item in issues], [("P2", "no_eligible_signal")])
+
+    def test_unexplained_dry_pipeline_remains_critical(self):
+        issues = []
+        director.correlate_pipeline(
+            {
+                "analyses_24h": 8,
+                "telegram_24h": 0,
+                "last_telegram": None,
+                "blockers": [{"reason": "non_renseigne", "n": 8}],
+            },
+            {"live_matches": 1},
+            issues,
+        )
+        self.assertEqual([(item["severity"], item["code"]) for item in issues], [("P0", "pipeline_dry")])
+
 
 if __name__ == "__main__":
     unittest.main()
