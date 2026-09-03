@@ -1128,8 +1128,8 @@ const ELITE_TIER_RAMP_UP_DATE = new Date("2026-09-01T00:00:00Z").getTime();
 // 80-84% (75.7%) — le seuil 80% coupait des matchs sans aucun gain de
 // fiabilite, juste moins de volume. Decision fondateur.
 function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 82; }
-// Fenetre de cote reelle demandee le 02/09/2026 : jamais sous 1.40 ni au-dessus de 2.10.
-const TIER_MIN_REAL_ODD = Math.max(1.40, Number(process.env.TIER_MIN_REAL_ODD || 1.40));
+// Fenetre de cote reelle demandee le 03/09/2026 : jamais sous 1.30 ni au-dessus de 2.10.
+const TIER_MIN_REAL_ODD = Math.max(1.30, Number(process.env.TIER_MIN_REAL_ODD || 1.30));
 const TIER_MAX_REAL_ODD = Math.min(2.10, Number(process.env.TIER_MAX_REAL_ODD || 2.10));
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
@@ -1314,8 +1314,8 @@ let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
 // et reste naturellement bien au-dessus de ce plancher.
 // Devenu saisonnier le 04/08/2026 : voir getEliteMinConf() — 75 jusqu'au 15
 // aout, 82 ensuite. Fonction (pas une const) pour retomber a 82 sans redeploiement.
-// Décision qualité du 01/09/2026 : aucun signal client O/U 2,5 sous 78 %.
-function getSignalFloor() { return 78; }
+// Décision du 03/09/2026 : aucun signal client O/U 2,5 sous 77 %.
+function getSignalFloor() { return 77; }
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
@@ -2428,7 +2428,7 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
 const CLIENT_OU25_MIN_VOTES = 4;
-const CLIENT_OU25_MIN_CONFIDENCE = Math.max(78, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 78));
+const CLIENT_OU25_MIN_CONFIDENCE = Math.max(77, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 77));
 // Mode Recovery : active par defaut, fail-closed et limite a 1 ou 2 matchs/jour.
 const RECOVERY_MODE_ENABLED = process.env.OU25_RECOVERY_MODE !== "0";
 const RECOVERY_MAX_DAILY_SIGNALS = Math.min(2, Math.max(1, Number(process.env.OU25_RECOVERY_MAX_DAILY_SIGNALS || 2)));
@@ -6577,7 +6577,7 @@ Réponds en JSON pur (pas de markdown):
       // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
       // eleve que les autres paliers, qui porte l'exigence Standard.
       // En Mode Recovery, les 1-2 signaux qui franchissent tous les garde-fous
-      // sont envoyes aux canaux payants des 4/5 et 78 %, sans second seuil cache.
+      // sont envoyes aux canaux payants des 4/5 et 77 %, sans second seuil cache.
       const gradeStandard = RECOVERY_MODE_ENABLED
         ? diffusable
         : diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.standard;
