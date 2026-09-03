@@ -1,4 +1,5 @@
 // TousLesMatchs — API Server
+// TELEGRAM_AUDIT_FALSE_FAILURES_V1
 // Auth, live matches, Live IA, Stripe, Brevo, Admin
 
 process.on("uncaughtException", (err) => {
@@ -1701,8 +1702,9 @@ async function sendHermesDailyDigest(text) {
   const parisDay = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Paris" });
   const marker = `/data/hermes-daily-digest-${parisDay}.sent`;
   if (fs.existsSync(marker)) {
-    console.log(`[telegram-admin] digest quotidien deja envoye: ${parisDay}`);
-    return false;
+    // Idempotence : le digest déjà livré n'est pas un échec Telegram.
+    console.log(`[telegram-admin] digest quotidien deja livre: ${parisDay}`);
+    return true;
   }
   const ok = await sendTelegramMessage(
     TELEGRAM_ADMIN_CHAT_ID,
@@ -6973,12 +6975,10 @@ Réponds en JSON pur (pas de markdown):
         });
       }
 
-      // 👑 ADMIN (Hermès) — supervision, reçoit tout y compris hors-ARJEL
+      // 👑 ADMIN (Hermès) — les signaux individuels restent dans les logs.
+      // Le canal admin reçoit uniquement le digest quotidien afin d'éviter le spam.
       if (TELEGRAM_ADMIN_CHAT_ID) {
-        const adminHeader = arjelPlayable
-          ? `👑 <b>[ADMIN · conf ${conf}% · cote ${realOdd || "est."}]</b>\n🏦 ${analysisResult.cote_source || "estimation"}`
-          : `👑 <b>[ADMIN · HORS ARJEL — non diffusé clients]</b>\n⚠️ ${analysisResult.cote_source || "estimation"} (pas de bookmaker FR agréé)`;
-        sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `${adminHeader}\n\n${tgPremium}`).then(ok => console.log(`[signal-fort] Telegram admin: ${ok ? "OK" : "FAIL"}`));
+        console.log("[signal-fort] Telegram admin: non envoyé (inclus dans le digest quotidien)");
       }
 
       // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
@@ -16642,13 +16642,16 @@ async function runMorningAudit() {
     return { ok: true, info: `${rows.length} analyses, ${sansVote}% sans vote, ${sansCons}% sans consensus` };
   });
 
-  // 3. Diffusion : le budget peut bruler sans qu'un seul abonne recoive rien.
-  await test("Diffusion Telegram", async () => {
+  // 3. Volume métier : zéro signal peut être parfaitement normal avec les filtres
+  // stricts 4/5. Le transport Telegram est contrôlé séparément juste après.
+  await test("Volume de signaux", async () => {
     const depuis = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
     const rows = db.prepare("SELECT sig_sent_standard s, sig_sent_premium p, sig_sent_elite e FROM concile_analyses WHERE analysed_at >= ?").all(depuis);
     const envoyes = rows.filter(r => r.s === 1 || r.p === 1 || r.e === 1).length;
-    if (rows.length >= 30 && envoyes === 0) return { ok: false, info: `0 signal sur ${rows.length} analyses en 48h` };
-    return { ok: true, info: `${envoyes} signaux diffuses en 48h` };
+    if (rows.length >= 30 && envoyes === 0) {
+      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 4/5, transport vérifié séparément` };
+    }
+    return { ok: true, info: `${envoyes} signaux diffusés en 48h` };
   });
 
   // 4. Les canaux existent-ils toujours et le bot y a-t-il acces.

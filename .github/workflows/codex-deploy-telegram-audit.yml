@@ -1,0 +1,68 @@
+name: Codex deploy Telegram audit correction
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/api_server.js
+      - .github/workflows/codex-deploy-telegram-audit.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy API and prove Telegram access
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+
+            git fetch origin main
+            test "$(git branch --show-current)" = "main"
+            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
+            test -z "$(git status --porcelain --untracked-files=no)"
+
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            BACKUP="/opt/backups/tlm-telegram-audit-$STAMP"
+            mkdir -p "$BACKUP"
+            chmod 700 "$BACKUP"
+            cp scripts/api_server.js "$BACKUP/api_server.js"
+            cp .env "$BACKUP/.env"
+            cp data/tlm.db "$BACKUP/tlm.db"
+            chmod 600 "$BACKUP/.env" "$BACKUP/tlm.db"
+
+            git pull --ff-only origin main
+            trap 'cp "$BACKUP/api_server.js" scripts/api_server.js; docker compose up -d --build api >/dev/null 2>&1 || true; git stash push -m "codex-preserved-failed-telegram-audit-$STAMP" -- scripts/api_server.js >/dev/null 2>&1 || true' ERR
+
+            node --check scripts/api_server.js
+            grep -q 'TELEGRAM_AUDIT_FALSE_FAILURES_V1' scripts/api_server.js
+            grep -q 'await test("Volume de signaux"' scripts/api_server.js
+            ! grep -q 'await test("Diffusion Telegram"' scripts/api_server.js
+            echo "TELEGRAM_AUDIT_CODE_OK"
+
+            docker compose up -d --build api
+            sleep 15
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" >/dev/null
+            docker exec touslesmatchs-api grep -q 'TELEGRAM_AUDIT_FALSE_FAILURES_V1' /app/server.js
+            docker exec touslesmatchs-api node -e "$(printf '%s' 'Y29uc3QgaHR0cHM9cmVxdWlyZSgiaHR0cHMiKTtmdW5jdGlvbiBjYWxsKG1ldGhvZCxwYXlsb2FkPXt9KXtyZXR1cm4gbmV3IFByb21pc2UoKHJlc29sdmUscmVqZWN0KT0+e2NvbnN0IGJvZHk9SlNPTi5zdHJpbmdpZnkocGF5bG9hZCk7Y29uc3QgcT1odHRwcy5yZXF1ZXN0KHtob3N0bmFtZToiYXBpLnRlbGVncmFtLm9yZyIscGF0aDoiL2JvdCIrcHJvY2Vzcy5lbnYuVEVMRUdSQU1fQk9UX1RPS0VOKyIvIittZXRob2QsbWV0aG9kOiJQT1NUIix0aW1lb3V0OjEyMDAwLGhlYWRlcnM6eyJDb250ZW50LVR5cGUiOiJhcHBsaWNhdGlvbi9qc29uIiwiQ29udGVudC1MZW5ndGgiOkJ1ZmZlci5ieXRlTGVuZ3RoKGJvZHkpfX0scj0+e2xldCByYXc9IiI7ci5vbigiZGF0YSIsYz0+cmF3Kz1jKTtyLm9uKCJlbmQiLCgpPT57dHJ5e3Jlc29sdmUoSlNPTi5wYXJzZShyYXcpKX1jYXRjaChlKXtyZWplY3QoZSl9fSl9KTtxLm9uKCJlcnJvciIscmVqZWN0KTtxLm9uKCJ0aW1lb3V0IiwoKT0+cS5kZXN0cm95KG5ldyBFcnJvcigidGltZW91dCIpKSk7cS5lbmQoYm9keSl9KX0oYXN5bmMoKT0+e2lmKCFwcm9jZXNzLmVudi5URUxFR1JBTV9CT1RfVE9LRU4pdGhyb3cgbmV3IEVycm9yKCJ0b2tlbiBhYnNlbnQiKTtjb25zdCBtZT1hd2FpdCBjYWxsKCJnZXRNZSIpO2lmKCFtZS5va3x8IW1lLnJlc3VsdHx8IW1lLnJlc3VsdC5pZCl0aHJvdyBuZXcgRXJyb3IoImJvdCBhdXRoIik7Y29uc3Qga2V5cz1bIlRFTEVHUkFNX0NIQU5ORUxfSUQiLCJURUxFR1JBTV9TVEFOREFSRF9DSEFOTkVMX0lEIiwiVEVMRUdSQU1fUFJFTUlVTV9DSEFOTkVMX0lEIiwiVEVMRUdSQU1fUlVfRlJFRV9DSEFOTkVMX0lEIiwiVEVMRUdSQU1fUlVfU1RBTkRBUkRfQ0hBTk5FTF9JRCIsIlRFTEVHUkFNX1JVX1BSRU1JVU1fQ0hBTk5FTF9JRCIsIlRFTEVHUkFNX0FETUlOX0NIQVRfSUQiXTtmb3IoY29uc3Qga2V5IG9mIGtleXMpe2NvbnN0IGlkPXByb2Nlc3MuZW52W2tleV07aWYoIWlkKXRocm93IG5ldyBFcnJvcihrZXkrIiBhYnNlbnQiKTtjb25zdCByPWF3YWl0IGNhbGwoImdldENoYXRNZW1iZXIiLHtjaGF0X2lkOmlkLHVzZXJfaWQ6bWUucmVzdWx0LmlkfSk7aWYoIXIub2t8fCFyLnJlc3VsdHx8IVsiYWRtaW5pc3RyYXRvciIsImNyZWF0b3IiLCJtZW1iZXIiXS5pbmNsdWRlcyhyLnJlc3VsdC5zdGF0dXMpfHxyLnJlc3VsdC5jYW5fcG9zdF9tZXNzYWdlcz09PWZhbHNlKXRocm93IG5ldyBFcnJvcihrZXkrIiBpbmFjY2Vzc2libGUiKX1jb25zb2xlLmxvZygiVEVMRUdSQU1fQUNDRVNTX09LIil9KSgpLmNhdGNoKGU9Pntjb25zb2xlLmVycm9yKCJURUxFR1JBTV9BQ0NFU1NfRkFJTEVEIik7cHJvY2Vzcy5leGl0KDEpfSk7' | base64 -d)"
+            echo "API_AND_TELEGRAM_OK"
+
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            trap - ERR
