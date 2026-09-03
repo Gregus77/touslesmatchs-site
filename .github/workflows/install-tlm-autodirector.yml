@@ -1,0 +1,116 @@
+name: Install TLM autonomous director
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "ops/tlm-autodirector/**"
+      - ".github/workflows/install-tlm-autodirector.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-autodirector-production
+  cancel-in-progress: false
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate files
+        run: |
+          python3 -m py_compile ops/tlm-autodirector/tlm_autodirector.py
+          python3 -m unittest ops/tlm-autodirector/test_autodirector.py
+          systemd-analyze verify ops/tlm-autodirector/tlm-autodirector.service ops/tlm-autodirector/tlm-autodirector.timer
+
+      - name: Upload director files
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "ops/tlm-autodirector/tlm_autodirector.py,ops/tlm-autodirector/tlm-autodirector.service,ops/tlm-autodirector/tlm-autodirector.timer"
+          target: "/tmp/tlm-autodirector-${{ github.run_id }}"
+          strip_components: 2
+
+      - name: Install, run and verify
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 8m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            TLM_UPLOAD="/tmp/tlm-autodirector-${{ github.run_id }}"
+            TLM_BACKUP="/opt/backups/tlm-autodirector-$(date +%Y%m%d-%H%M%S)"
+            TLM_SCRIPT="/usr/local/sbin/tlm-autodirector.py"
+            TLM_SERVICE="/etc/systemd/system/tlm-autodirector.service"
+            TLM_TIMER="/etc/systemd/system/tlm-autodirector.timer"
+            case "$TLM_UPLOAD" in /tmp/tlm-autodirector-[0-9]*) ;; *) echo "Chemin temporaire refusé" >&2; exit 90 ;; esac
+            mkdir -p "$TLM_BACKUP"
+            chmod 700 "$TLM_BACKUP"
+            for TLM_FILE in "$TLM_SCRIPT" "$TLM_SERVICE" "$TLM_TIMER"; do
+              if [ -f "$TLM_FILE" ]; then cp -a "$TLM_FILE" "$TLM_BACKUP/"; fi
+            done
+            TLM_ROLLBACK=1
+            rollback() {
+              TLM_EXIT=$?
+              set +e
+              if [ "$TLM_ROLLBACK" = 1 ]; then
+                systemctl disable --now tlm-autodirector.timer 2>/dev/null || true
+                for TLM_NAME in tlm-autodirector.py tlm-autodirector.service tlm-autodirector.timer; do
+                  case "$TLM_NAME" in
+                    tlm-autodirector.py) TLM_DEST="$TLM_SCRIPT" ;;
+                    tlm-autodirector.service) TLM_DEST="$TLM_SERVICE" ;;
+                    *) TLM_DEST="$TLM_TIMER" ;;
+                  esac
+                  if [ -f "$TLM_BACKUP/$TLM_NAME" ]; then cp -a "$TLM_BACKUP/$TLM_NAME" "$TLM_DEST"; else rm -f "$TLM_DEST"; fi
+                done
+                systemctl daemon-reload
+                if [ -f "$TLM_TIMER" ]; then systemctl enable --now tlm-autodirector.timer 2>/dev/null || true; fi
+                echo "ROLLBACK exécuté — sauvegarde: $TLM_BACKUP" >&2
+              fi
+              rm -rf "$TLM_UPLOAD"
+              exit "$TLM_EXIT"
+            }
+            trap rollback EXIT
+
+            test -s "$TLM_UPLOAD/tlm_autodirector.py"
+            test -s "$TLM_UPLOAD/tlm-autodirector.service"
+            test -s "$TLM_UPLOAD/tlm-autodirector.timer"
+            python3 -m py_compile "$TLM_UPLOAD/tlm_autodirector.py"
+            systemd-analyze verify "$TLM_UPLOAD/tlm-autodirector.service" "$TLM_UPLOAD/tlm-autodirector.timer"
+
+            install -o root -g root -m 0750 "$TLM_UPLOAD/tlm_autodirector.py" "$TLM_SCRIPT"
+            install -o root -g root -m 0644 "$TLM_UPLOAD/tlm-autodirector.service" "$TLM_SERVICE"
+            install -o root -g root -m 0644 "$TLM_UPLOAD/tlm-autodirector.timer" "$TLM_TIMER"
+            systemctl daemon-reload
+            systemctl enable --now tlm-autodirector.timer
+            systemctl start tlm-autodirector.service
+
+            test "$(systemctl is-enabled tlm-autodirector.timer)" = "enabled"
+            test "$(systemctl is-active tlm-autodirector.timer)" = "active"
+            test "$(systemctl show -p Result --value tlm-autodirector.service)" = "success"
+            test -s /var/lib/tlm-autodirector/state.json
+            journalctl -u tlm-autodirector.service -n 120 --no-pager | grep -Fq "DIRECTEUR AUTONOME TLM"
+            if ! journalctl -u tlm-autodirector.service --since "3 minutes ago" --no-pager | grep -Fq "HERMES_REPORT=SENT"; then
+              TLM_VERIFY_LOG="/tmp/tlm-autodirector-verify-${{ github.run_id }}.log"
+              /usr/bin/flock -n /run/tlm-autodirector/director.lock /usr/bin/python3 "$TLM_SCRIPT" --no-repair --report-always | tee "$TLM_VERIFY_LOG"
+              grep -Fq "HERMES_REPORT=SENT" "$TLM_VERIFY_LOG"
+              rm -f "$TLM_VERIFY_LOG"
+            fi
+            journalctl -u tlm-autodirector.service -n 120 --no-pager | tail -n 80
+
+            TLM_ROLLBACK=0
+            rm -rf "$TLM_UPLOAD"
+            trap - EXIT
+            echo "OK — directeur autonome installé — sauvegarde: $TLM_BACKUP"

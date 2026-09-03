@@ -1,0 +1,12 @@
+[Unit]
+Description=Audit and self-repair TousLesMatchs every hour
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1h
+RandomizedDelaySec=3min
+Persistent=true
+Unit=tlm-autodirector.service
+
+[Install]
+WantedBy=timers.target
