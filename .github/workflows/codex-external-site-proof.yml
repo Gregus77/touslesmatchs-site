@@ -12,19 +12,36 @@ permissions:
 jobs:
   proof:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 7
     steps:
-      - name: Verify public site from outside the VPS
+      - name: Verify public pages and rendered live vote UI
         shell: bash
         run: |
           set -euo pipefail
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/app.html?external_proof=$stamp" -o /tmp/tlm-app.html
-          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/live-ia.html?external_proof=$stamp" -o /tmp/tlm-live.html
+          app_url="https://www.touslesmatchs.com/app.html?external_proof=$stamp"
+          live_url="https://www.touslesmatchs.com/live-ia.html?external_proof=$stamp"
+
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$app_url" -o /tmp/tlm-app.html
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "$live_url" -o /tmp/tlm-live.html
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/sw.js?external_proof=$stamp" -o /tmp/tlm-sw.js
           curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/api/health?external_proof=$stamp" -o /tmp/tlm-health.json
+          curl -fSL --retry 5 --retry-all-errors --retry-delay 3 "https://www.touslesmatchs.com/api/live-matches?external_proof=$stamp" -o /tmp/tlm-matches.json
+
           grep -q 'TLM_APP_LIVE_VOTES_V1' /tmp/tlm-app.html
           grep -q 'TLM_LIVE_OU25_VOTES_V1' /tmp/tlm-live.html
           grep -q 'tlm-app-v12-live-votes-20260903' /tmp/tlm-sw.js
           ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27' /tmp/tlm-app.html
+
+          match_count="$(node -e 'const d=require("/tmp/tlm-matches.json");const m=d.matches||d.live||[];for(const x of m){if(!x.ou25||!Array.isArray(x.ou25.votes)||x.ou25.votes.length!==5)process.exit(1)};process.stdout.write(String(m.length))')"
+          google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$app_url" > /tmp/tlm-app-dom.html
+          google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=12000 --dump-dom "$live_url" > /tmp/tlm-live-dom.html
+
+          if [ "$match_count" -gt 0 ]; then
+            grep -q 'tlm-app-live-mini-votes' /tmp/tlm-app-dom.html
+            grep -q 'data-vote-details' /tmp/tlm-live-dom.html
+            grep -q 'mc-vote-seat' /tmp/tlm-live-dom.html
+          fi
+
           echo "EXTERNAL_PUBLIC_SITE_OK"
+          echo "RENDERED_LIVE_VOTE_UI_OK"
