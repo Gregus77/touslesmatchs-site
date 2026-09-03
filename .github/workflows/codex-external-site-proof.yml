@@ -42,6 +42,8 @@ jobs:
           ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27|maintenanceDays' /tmp/tlm-app.html /tmp/tlm-index.html /tmp/tlm-results.html
           ! grep -qE '15e (et|à) la 40e|15e-40e|n<=40|minute>40' /tmp/tlm-index.html /tmp/tlm-faq.html /tmp/tlm-performance.html
           grep -q '15e et la 45e minute' /tmp/tlm-index.html
+          grep -q "<b>45'</b>" /tmp/tlm-index.html
+          node -e 'const h=require("/tmp/tlm-health.json"); if(h.ok===false || h.status==="error") process.exit(1)'
           grep -q '15e et la 45e minute' /tmp/tlm-faq.html
           grep -q '15e et la 45e minute' /tmp/tlm-performance.html
 
