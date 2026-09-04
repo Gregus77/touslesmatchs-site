@@ -12675,7 +12675,35 @@ function getLiveOu25VoteState(match) {
 }
 
 // ── Live matches ──────────────────────────────────────────────────────────────
-app.get("/live-matches", async (req, res) => {
+// The homepage receives only the fields it displays. Paid directions are never
+// included in its anonymous response, including labels and tooltips.
+function homepageLiveMatch(match, canReveal) {
+  const out = {};
+  for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
+    'competition','league','sport','status','minute','utcDate','home_logo','away_logo',
+    'score_home','score_away','block_reason','analysis_exclusion_reason']) {
+    if (match[key] !== undefined) out[key] = match[key];
+  }
+  const raw = match.ou25 || {};
+  const slots = (raw.votes || []).slice(0,5);
+  const valid = slots.filter(v => v.status === 'voted' && ['over','under'].includes(v.direction));
+  const over = valid.filter(v => v.direction === 'over').length;
+  const under = valid.filter(v => v.direction === 'under').length;
+  out.ou25 = {
+    locked: !canReveal, window_status: raw.window_status,
+    from_minute: raw.from_minute, to_minute: raw.to_minute,
+    vote_count: valid.length, consensus_count: Math.max(over, under),
+    over_count: canReveal ? over : null, under_count: canReveal ? under : null,
+    votes: slots.map(v => ({
+      status: v.status, agent: v.agent,
+      direction: canReveal ? v.direction : null,
+      label: canReveal ? v.label : null,
+      confidence: canReveal ? v.confidence : null,
+    })),
+  };
+  return out;
+}
+app.get(["/live-matches", "/homepage-live"], async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
     if (req.query.force === "1") {
@@ -12750,6 +12778,15 @@ app.get("/live-matches", async (req, res) => {
       const reason = livePickBlockReason(m) || analysisExclusionReason;
       return { ...m, analysable: !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
+
+    if (req.path === '/homepage-live') {
+      const account = paidGoal05Account(req);
+      const expiry = account?.expires_at;
+      const canReveal = !!account && (!expiry || (Number.isFinite(Date.parse(expiry)) && Date.parse(expiry) > Date.now()));
+      res.set('Vary', 'Authorization, X-TLM-Email');
+      return res.json({ok: true, locked: !canReveal,
+        matches: withVerdict.filter(isPublicFootballScopeMatch).map(m => homepageLiveMatch(m, canReveal))});
+    }
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
     // 01/08/2026 sur demande de Greg : un match sans signal disparaissait
