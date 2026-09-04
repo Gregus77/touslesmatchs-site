@@ -21,5 +21,9 @@ assert(api.includes("lastResult") && api.includes("daily_pick_log"), "l'API four
 assert(api.includes("sig_sent_free=1 OR sig_sent_standard=1") && api.includes("COALESCE(source_type,'live') <> 'prematch'"), "le repli accepte uniquement un ancien signal réellement diffusé");
 assert(home.includes("Dernier résultat gratuit vérifié"), "l'accueil affiche la preuve sans la présenter comme un nouveau pick");
 assert(home.includes("Aucun nouveau pick ne respecte encore les critères"), "l'absence de nouveau signal reste explicite");
+assert(
+  home.includes('id="proof-bar" hidden aria-hidden="true" style="display:none"'),
+  "les anciens totaux cumulés ne sont plus présentés comme un décompte quotidien"
+);
 
 console.log("\nRÉSULTAT : OK");
