@@ -6850,10 +6850,11 @@ Réponds en JSON pur (pas de markdown):
       const sigTier = computeSignalTier(analysisResult.best_bet, analysisResult.confidence, minute);
       const tierBadge = sigTier === "standard" ? "🥇 STANDARD" : sigTier === "premium" ? "🥈 PREMIUM" : "🥉 ELITE";
       console.log(`[signal-fort] Palier: ${tierBadge} (${sigTier}) — ${analysisResult.best_bet} ${analysisResult.confidence}% min=${minute}`);
-      const arjelPlayable = ARJEL_BOOKMAKERS.some(a => String(analysisResult.cote_source || "").toLowerCase().includes(a))
-        || isArjelMajorCompetition(match);
-      if (!arjelPlayable) {
-        console.log(`[signal-fort] Hors ARJEL (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — réservé admin, non diffusé Premium/Free`);
+      // Decision proprietaire du 04/09/2026 : toute vraie cote bookmaker
+      // peut soutenir un signal. Une estimation ne le peut jamais.
+      const bookmakerPlayable = _coteReelle;
+      if (!bookmakerPlayable) {
+        console.log(`[signal-fort] Sans cote bookmaker reelle (source: ${analysisResult.cote_source || "estimation"}, ${match.competition || match.sport}) — non diffuse`);
       }
       // Réinitialisation des compteurs journaliers
       // Au changement de jour ET au premier passage après un redémarrage
@@ -6877,7 +6878,7 @@ Réponds en JSON pur (pas de markdown):
       // Produit client recentre : football O/U 2,5 uniquement, cinq sieges
       // presents et majorite forte. Les autres sports/marches restent internes.
       const sportDiffusable = sportLc.includes("foot");
-      const diffusable = arjelPlayable && oddOk && sportDiffusable
+      const diffusable = bookmakerPlayable && oddOk && sportDiffusable
         && clientOu25MatchEligible && ou25Only && enoughOu25SeatsPresent
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
@@ -6892,8 +6893,8 @@ Réponds en JSON pur (pas de markdown):
             ? `mode Recovery: plafond ${RECOVERY_MAX_DAILY_SIGNALS} signaux/jour atteint`
             : !sportDiffusable
               ? `sport non diffusable: ${match.sport || "?"}`
-              : !arjelPlayable
-                ? `hors ARJEL (source cote: ${analysisResult.cote_source || "estimation"})`
+              : !bookmakerPlayable
+                ? `sans cote bookmaker reelle (source: ${analysisResult.cote_source || "estimation"})`
                 : realOdd === 0
                   ? "pas de vraie cote bookmaker (estimation seulement)"
                   : `cote ${realOdd} hors fenetre ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}`;
@@ -9145,12 +9146,14 @@ function hasPredictionSnapshot(match) {
 // proposait, ou dont la cote ne pouvait de toute facon jamais etre diffusee.
 //
 // Le filtre s'appuie sur UN appel de cotes (quota API-Sports, deja mis en
-// cache par fetchRealOdds) pour eviter CINQ appels IA (budget en euros). Le
-// troc est favorable dans tous les cas.
+// cache par fetchRealOdds) pour eviter CINQ appels IA (budget en euros).
+// Decision proprietaire du 04/09/2026 : une vraie cote bookmaker suffit pour
+// lancer le Concile ; l'agrement ARJEL n'est plus un prerequis technique.
+// Les estimations restent interdites a la diffusion et les plafonds IA restent
+// inchanges.
 //
-// Reactivable sans redeploiement : AUTO_CONCILE_ARJEL_ONLY=0 dans le .env.
-// Ne pas remettre l'analyse hors ARJEL sans accord explicite du fondateur.
-const AUTO_CONCILE_ARJEL_ONLY = process.env.AUTO_CONCILE_ARJEL_ONLY !== "0";
+// Reactivable sans redeploiement : AUTO_CONCILE_REAL_ODDS_ONLY=0 dans le .env.
+const AUTO_CONCILE_REAL_ODDS_ONLY = process.env.AUTO_CONCILE_REAL_ODDS_ONLY !== "0";
 // Marches sur lesquels une analyse peut reellement devenir un signal CLIENT.
 // Depuis le recentrage produit, Telegram ne diffuse que le O/U 2,5. Accepter
 // ici une cote BTTS ou victoire faisait depenser cinq appels IA sur un match
@@ -9175,25 +9178,21 @@ d'inventer un autre marché.
 `;
 
 
-async function isArjelPlayableBeforeAnalysis(match) {
-  if (!AUTO_CONCILE_ARJEL_ONLY) return { ok: true, why: "filtre desactive" };
-  // Hors football, l'API de cotes ne couvre rien : on ne peut pas verifier, et
-  // refuser reviendrait a supprimer le multisport. On laisse passer, la barriere
-  // de diffusion reste en place en aval.
-  if (String(match.sport || "Football") !== "Football") return { ok: true, why: "hors football, non verifiable" };
+async function isBookmakerPlayableBeforeAnalysis(match) {
+  if (!AUTO_CONCILE_REAL_ODDS_ONLY) return { ok: true, why: "filtre desactive" };
   let oddsData;
   try { oddsData = await fetchRealOdds(match); }
-  catch (e) { return { ok: true, why: "cotes injoignables (" + e.message + ")" }; }
-  // Aucun operateur ARJEL ne propose ce match : par definition hors perimetre.
-  if (!oddsData?.arjelBookmakers?.length) return { ok: false, why: "aucun bookmaker ARJEL" };
+  catch (e) { return { ok: false, why: "cotes injoignables (" + e.message + ")" }; }
   for (const marche of ARJEL_PREFILTER_MARKETS) {
+    // Preferer la moyenne ARJEL quand elle existe, sinon accepter toute vraie
+    // cote bookmaker retournee par le fournisseur. Jamais une estimation.
     const moyenne = computeArjelAverageOdd(oddsData, marche, match);
     const cote = moyenne?.avg || pickRealOdd(oddsData, marche, match);
     if (cote && cote >= TIER_MIN_REAL_ODD && cote <= TIER_MAX_REAL_ODD) {
       return { ok: true, why: `${marche} a ${cote}` };
     }
   }
-  return { ok: false, why: `aucune cote ARJEL dans ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}` };
+  return { ok: false, why: `aucune cote bookmaker reelle dans ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}` };
 }
 
 async function runAutoConcileObserver() {
@@ -9223,23 +9222,23 @@ async function runAutoConcileObserver() {
     // le quota d'analyses du cycle est rempli. Plafond de sondages pour ne pas
     // vider le quota API-Sports un jour ou aucun match ne serait eligible.
     const candidates = [];
-    let refusesArjel = 0;
+    let refusesBookmaker = 0;
     const maxSondages = AUTO_CONCILE_MAX_MATCHES * 4;
     for (const m of prioritized.slice(0, maxSondages)) {
       if (candidates.length >= AUTO_CONCILE_MAX_MATCHES) break;
-      const verdict = await isArjelPlayableBeforeAnalysis(m);
+      const verdict = await isBookmakerPlayableBeforeAnalysis(m);
       if (verdict.ok) {
         delete m.analysis_exclusion_reason;
         candidates.push(m);
         continue;
       }
-      refusesArjel++;
+      refusesBookmaker++;
       m.analysis_exclusion_reason = `Analyse non lancée : ${verdict.why}.`;
-      console.log(`[auto-concile] hors ARJEL, aucun jeton depense: ${m.home} vs ${m.away} — ${verdict.why}`);
+      console.log(`[auto-concile] sans cote reelle, aucun jeton depense: ${m.home} vs ${m.away} — ${verdict.why}`);
     }
     console.log(
       `[auto-concile] live=${matches.length} eligible=${observed.length} analysed_this_cycle=${candidates.length} ` +
-      `skipped_low_trust=${matches.filter(isLowTrustCompetition).length} skipped_hors_arjel=${refusesArjel}`
+      `skipped_low_trust=${matches.filter(isLowTrustCompetition).length} skipped_sans_cote_reelle=${refusesBookmaker}`
     );
 
     for (const match of candidates) {
@@ -12152,6 +12151,10 @@ function rowIsArjel(r) {
   return ARJEL_BOOKMAKERS.some(a => String(r.real_odd_source || "").toLowerCase().includes(a))
     || isArjelMajorCompetition(r);
 }
+function rowHasRealBookmakerOdd(r) {
+  const source = String(r.real_odd_source || "");
+  return Number(r.real_odd) > 1 && !!source && !/estimation/i.test(source);
+}
 
 // Éligibilité d'une analyse à un palier — MIROIR EXACT des règles de diffusion
 // Telegram (cf. gradeStandard/gradePremium/gradeElite dans runAutoConcile).
@@ -12161,7 +12164,7 @@ function rowIsArjel(r) {
 // Modèle imbriqué : Elite ⊇ Premium ⊇ Standard.
 function tierEligible(r, tier) {
   const conf = Number(r.confidence) || 0;
-  if (!rowIsArjel(r)) return false;
+  if (!rowHasRealBookmakerOdd(r)) return false;
   const _ro = Number(r.real_odd) || 0;
   if (_ro < TIER_MIN_REAL_ODD || _ro > TIER_MAX_REAL_ODD) return false;
   const sport = String(r.sport || "Football").toLowerCase();
