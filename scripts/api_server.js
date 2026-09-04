@@ -2561,7 +2561,10 @@ const RECOVERY_MAX_DAILY_SIGNALS = Math.min(2, Math.max(1, Number(process.env.OU
 const RECOVERY_OVER_MIN_AVG = 2.80;
 const RECOVERY_UNDER_MAX_AVG = 2.20;
 const RECOVERY_MIN_CONVERGENT_INDICATORS = 3;
-const CLIENT_OU25_CLIENT_MAX_MINUTE = 45;
+const CLIENT_OU25_CLIENT_MAX_MINUTE = Math.min(
+  40,
+  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 40))
+);
 function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
 }
@@ -3379,18 +3382,50 @@ async function fetchRecoveryRecentGoalProfile(match, teamId, venue) {
   if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
   if (!apiSportsBudgetOk()) return null;
   try {
-    const data = await httpGet(
-      `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${match.season}&last=8&status=FT`,
-      { "x-apisports-key": API_SPORTS_KEY }
-    );
-    const rows = (Array.isArray(data?.response) ? data.response : []).map((fixture) => {
-      const homeId = Number(fixture?.teams?.home?.id);
-      const awayId = Number(fixture?.teams?.away?.id);
-      const homeGoals = recoveryNumber(fixture?.goals?.home);
-      const awayGoals = recoveryNumber(fixture?.goals?.away);
-      if (homeGoals === null || awayGoals === null || (homeId !== Number(teamId) && awayId !== Number(teamId))) return null;
-      return { homeId, awayId, total: homeGoals + awayGoals };
-    }).filter(Boolean).slice(0, 8);
+    const fetchSeasonRows = async (season) => {
+      const data = await httpGet(
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${season}&last=8&status=FT`,
+        { "x-apisports-key": API_SPORTS_KEY }
+      );
+      return (Array.isArray(data?.response) ? data.response : []).map((fixture) => {
+        const homeId = Number(fixture?.teams?.home?.id);
+        const awayId = Number(fixture?.teams?.away?.id);
+        const homeGoals = recoveryNumber(fixture?.goals?.home);
+        const awayGoals = recoveryNumber(fixture?.goals?.away);
+        if (homeGoals === null || awayGoals === null || (homeId !== Number(teamId) && awayId !== Number(teamId))) return null;
+        return {
+          fixtureId: String(fixture?.fixture?.id || ""),
+          playedAt: String(fixture?.fixture?.date || ""),
+          homeId,
+          awayId,
+          total: homeGoals + awayGoals,
+        };
+      }).filter(Boolean);
+    };
+
+    let rows = await fetchSeasonRows(match.season);
+    // En août/septembre, la saison courante contient souvent moins de six matchs.
+    // Compléter avec la saison précédente conserve de vrais "6 à 8 derniers matchs"
+    // au lieu de bloquer toutes les équipes jusqu'à l'automne.
+    const numericSeason = Number(match.season);
+    if (rows.length < 6 && Number.isInteger(numericSeason) && numericSeason > 1) {
+      const previousRows = await fetchSeasonRows(numericSeason - 1);
+      const seen = new Set();
+      rows = [...rows, ...previousRows]
+        .sort((a, b) => String(b.playedAt).localeCompare(String(a.playedAt)))
+        .filter((row) => {
+          const id = row.fixtureId || `${row.playedAt}_${row.homeId}_${row.awayId}`;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        })
+        .slice(0, 8);
+    } else {
+      rows = rows
+        .sort((a, b) => String(b.playedAt).localeCompare(String(a.playedAt)))
+        .slice(0, 8);
+    }
+
     if (rows.length < 6) {
       recoveryRecentFormCache.set(key, { data: null, ts: Date.now() });
       return null;
@@ -3469,10 +3504,11 @@ async function evaluateRecoveryEvidence(match, bet, liveStats) {
     venueAligned && "domicile/exterieur",
     liveAligned && "confirmation live",
   ].filter(Boolean);
-  // La règle annoncée est un quorum : trois signaux indépendants sur quatre.
-  // Exiger les quatre booléens rendait la constante ci-dessus inopérante et
-  // bloquait des dossiers pourtant conformes au mode Recovery.
-  const ok = indicators.length >= RECOVERY_MIN_CONVERGENT_INDICATORS;
+  // Le contrat Recovery est bien "3 indicateurs convergents", pas 4/4 caché.
+  // La moyenne récente et la confirmation live restent obligatoires; l'un des deux
+  // contrôles tendance récente / domicile-extérieur complète le troisième indicateur.
+  const ok = combinedAligned && liveAligned
+    && indicators.length >= RECOVERY_MIN_CONVERGENT_INDICATORS;
   return {
     ok,
     reason: ok ? "criteres Recovery valides" : `indicateurs non convergents (${indicators.length}/4)`,
