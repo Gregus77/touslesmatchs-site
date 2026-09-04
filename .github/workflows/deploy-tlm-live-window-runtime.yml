@@ -1,0 +1,173 @@
+name: Deploy TLM live window runtime fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-tlm-live-window-runtime.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy API and prove live window
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+
+            TLM_OLD_HEAD="$(git rev-parse HEAD)"
+            TLM_BRANCH="$(git branch --show-current)"
+            TLM_UPSTREAM="$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')"
+            TLM_REMOTE="$(git remote get-url origin)"
+            printf 'BASELINE branch=%s commit=%s upstream=%s remote=%s\n' "$TLM_BRANCH" "$TLM_OLD_HEAD" "$TLM_UPSTREAM" "$TLM_REMOTE"
+            git status --short --branch
+            printf '%s\n' "UNTRACKED_BEGIN"
+            git ls-files --others --exclude-standard
+            printf '%s\n' "UNTRACKED_END"
+
+            git fetch origin main
+            test "$TLM_BRANCH" = "main"
+            test "$TLM_UPSTREAM" = "origin/main"
+            case "$TLM_REMOTE" in *Gregus77/touslesmatchs-site*) ;; *) echo "Dépôt inattendu" >&2; exit 2 ;; esac
+            TLM_DIRTY="$(git status --porcelain --untracked-files=no)"
+            test -z "$TLM_DIRTY" || { echo "Fichiers suivis modifiés:"; printf '%s\n' "$TLM_DIRTY"; exit 2; }
+            TLM_COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
+            test "$(printf '%s' "$TLM_COUNTS" | awk '{print $1}')" = "0"
+
+            TLM_BACKUP="/opt/backups/live-window-runtime-$(date -u +%Y%m%dT%H%M%SZ)"
+            install -d -m 700 "$TLM_BACKUP"
+            cp -a scripts/api_server.js "$TLM_BACKUP/api_server.js"
+
+            rollback_api() {
+              TLM_EXIT=$?
+              set +e
+              cp -a "$TLM_BACKUP/api_server.js" scripts/api_server.js
+              docker compose up -d --build api >/dev/null 2>&1
+              sleep 12
+              docker inspect -f '{{.State.Running}} restart={{.RestartCount}}' touslesmatchs-api
+              curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/health?rollback=$(date +%s)" >/dev/null
+              git restore --source=HEAD --worktree -- scripts/api_server.js
+              echo "ROLLBACK_API_OK — sauvegarde: $TLM_BACKUP" >&2
+              exit "$TLM_EXIT"
+            }
+
+            git pull --ff-only origin main
+            trap rollback_api ERR
+
+            node --check scripts/api_server.js
+            node <<'NODE'
+            const fs = require("fs");
+            const vm = require("vm");
+            const source = fs.readFileSync("scripts/api_server.js", "utf8");
+
+            function extract(name) {
+              const start = source.indexOf("function " + name + "(");
+              if (start < 0) throw new Error(name + " absent");
+              const open = source.indexOf("{", start);
+              let depth = 0;
+              for (let i = open; i < source.length; i += 1) {
+                if (source[i] === "{") depth += 1;
+                if (source[i] === "}") {
+                  depth -= 1;
+                  if (depth === 0) return source.slice(start, i + 1);
+                }
+              }
+              throw new Error(name + " incomplet");
+            }
+
+            if (!source.includes("const AUTO_CONCILE_WINDOW_MIN = 15;")) throw new Error("borne basse");
+            if (!source.includes("const AUTO_CONCILE_WINDOW_MAX = CLIENT_OU25_CLIENT_MAX_MINUTE;")) throw new Error("borne haute");
+            if (!source.includes("const AUTO_CONCILE_TIME_WINDOW = true;")) throw new Error("fenêtre désactivable");
+            if (/AUTO_CONCILE_WINDOW_MAX \|\| 40/.test(source)) throw new Error("ancienne borne 40");
+
+            const sandbox = {
+              AUTO_CONCILE_WINDOW_MIN: 15,
+              AUTO_CONCILE_WINDOW_MAX: 45,
+              isMatchDecided: () => false,
+              results: null,
+            };
+            vm.createContext(sandbox);
+            vm.runInContext(
+              extract("parseLiveMinuteValue") + "\n" +
+              extract("livePickBlockReason") + "\n" +
+              "results=[" +
+              "livePickBlockReason({minute:15})," +
+              "livePickBlockReason({minute:45})," +
+              "livePickBlockReason({minute:14})," +
+              "livePickBlockReason({minute:46})," +
+              "livePickBlockReason({minute:'45+2'})," +
+              "livePickBlockReason({minute:'P'})" +
+              "];",
+              sandbox
+            );
+            const [m15, m45, m14, m46, added, unknown] = sandbox.results;
+            if (m15 !== null || m45 !== null) throw new Error("15 ou 45 refusée");
+            if (!/15e/.test(m14) || !/45e/.test(m46)) throw new Error("bornes incorrectes");
+            if (!/inconnue|numérique/.test(added) || !/inconnue|numérique/.test(unknown)) throw new Error("minute invalide acceptée");
+            console.log("LIVE_WINDOW_UNIT_OK");
+            NODE
+            docker compose config -q
+
+            docker compose up -d --build api
+            sleep 15
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            TLM_RESTARTS="$(docker inspect -f '{{.RestartCount}}' touslesmatchs-api)"
+            sleep 12
+            test "$(docker inspect -f '{{.RestartCount}}' touslesmatchs-api)" = "$TLM_RESTARTS"
+            test "$(sha256sum scripts/api_server.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/server.js | awk '{print $1}')"
+
+            TLM_STAMP="$(date +%s)"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/health?window=$TLM_STAMP" -o "/tmp/tlm-health-$TLM_STAMP.json"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/live-matches?window=$TLM_STAMP" -o "/tmp/tlm-live-$TLM_STAMP.json"
+            python3 - "/tmp/tlm-health-$TLM_STAMP.json" "/tmp/tlm-live-$TLM_STAMP.json" <<'PY'
+            import json, sys
+            health = json.load(open(sys.argv[1], encoding="utf-8"))
+            live = json.load(open(sys.argv[2], encoding="utf-8"))
+            assert health.get("ok") is not False
+            integrations = health.get("integrations", {})
+            assert integrations.get("telegram", {}).get("ok") is True
+            assert integrations.get("brevo", {}).get("ok") is True
+            assert live.get("ok") is True
+            checked = 0
+            for match in live.get("matches", []):
+                state = match.get("ou25") or {}
+                assert state.get("to_minute") == 45
+                assert len(state.get("votes") or []) == 5
+                minute = match.get("minute")
+                reason = str(match.get("block_reason") or "")
+                assert "40e minute" not in reason
+                if isinstance(minute, int) and 15 <= minute <= 45:
+                    assert state.get("window_status") == "open"
+                    assert "minute" not in reason.lower()
+                    checked += 1
+                if not isinstance(minute, int):
+                    assert match.get("analysable") is False
+            print(f"LIVE_WINDOW_PUBLIC_OK eligible_checked={checked}")
+            PY
+
+            ! docker logs --since 3m touslesmatchs-api 2>&1 | grep -Ei 'SyntaxError|UnhandledPromiseRejection|EADDRINUSE|FATAL'
+            systemctl start tlm-autodirector.service || true
+
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            trap - ERR
+            echo "RESULT=OK"
+            echo "BACKUP=$TLM_BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
+            echo "API_CONTAINER=$(docker inspect -f '{{.Id}}' touslesmatchs-api | cut -c1-12)"
