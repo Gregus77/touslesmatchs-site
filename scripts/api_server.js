@@ -3238,18 +3238,50 @@ async function fetchRecoveryRecentGoalProfile(match, teamId, venue) {
   if (cached && Date.now() - cached.ts < 6 * 3600 * 1000) return cached.data;
   if (!apiSportsBudgetOk()) return null;
   try {
-    const data = await httpGet(
-      `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${match.season}&last=8&status=FT`,
-      { "x-apisports-key": API_SPORTS_KEY }
-    );
-    const rows = (Array.isArray(data?.response) ? data.response : []).map((fixture) => {
-      const homeId = Number(fixture?.teams?.home?.id);
-      const awayId = Number(fixture?.teams?.away?.id);
-      const homeGoals = recoveryNumber(fixture?.goals?.home);
-      const awayGoals = recoveryNumber(fixture?.goals?.away);
-      if (homeGoals === null || awayGoals === null || (homeId !== Number(teamId) && awayId !== Number(teamId))) return null;
-      return { homeId, awayId, total: homeGoals + awayGoals };
-    }).filter(Boolean).slice(0, 8);
+    const fetchSeasonRows = async (season) => {
+      const data = await httpGet(
+        `https://v3.football.api-sports.io/fixtures?team=${teamId}&league=${match.leagueId}&season=${season}&last=8&status=FT`,
+        { "x-apisports-key": API_SPORTS_KEY }
+      );
+      return (Array.isArray(data?.response) ? data.response : []).map((fixture) => {
+        const homeId = Number(fixture?.teams?.home?.id);
+        const awayId = Number(fixture?.teams?.away?.id);
+        const homeGoals = recoveryNumber(fixture?.goals?.home);
+        const awayGoals = recoveryNumber(fixture?.goals?.away);
+        if (homeGoals === null || awayGoals === null || (homeId !== Number(teamId) && awayId !== Number(teamId))) return null;
+        return {
+          fixtureId: String(fixture?.fixture?.id || ""),
+          playedAt: String(fixture?.fixture?.date || ""),
+          homeId,
+          awayId,
+          total: homeGoals + awayGoals,
+        };
+      }).filter(Boolean);
+    };
+
+    let rows = await fetchSeasonRows(match.season);
+    // En août/septembre, la saison courante contient souvent moins de six matchs.
+    // Compléter avec la saison précédente conserve de vrais "6 à 8 derniers matchs"
+    // au lieu de bloquer toutes les équipes jusqu'à l'automne.
+    const numericSeason = Number(match.season);
+    if (rows.length < 6 && Number.isInteger(numericSeason) && numericSeason > 1) {
+      const previousRows = await fetchSeasonRows(numericSeason - 1);
+      const seen = new Set();
+      rows = [...rows, ...previousRows]
+        .sort((a, b) => String(b.playedAt).localeCompare(String(a.playedAt)))
+        .filter((row) => {
+          const id = row.fixtureId || `${row.playedAt}_${row.homeId}_${row.awayId}`;
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        })
+        .slice(0, 8);
+    } else {
+      rows = rows
+        .sort((a, b) => String(b.playedAt).localeCompare(String(a.playedAt)))
+        .slice(0, 8);
+    }
+
     if (rows.length < 6) {
       recoveryRecentFormCache.set(key, { data: null, ts: Date.now() });
       return null;
@@ -3328,7 +3360,10 @@ async function evaluateRecoveryEvidence(match, bet, liveStats) {
     venueAligned && "domicile/exterieur",
     liveAligned && "confirmation live",
   ].filter(Boolean);
-  const ok = combinedAligned && recentTrendAligned && venueAligned && liveAligned
+  // Le contrat Recovery est bien "3 indicateurs convergents", pas 4/4 caché.
+  // La moyenne récente et la confirmation live restent obligatoires; l'un des deux
+  // contrôles tendance récente / domicile-extérieur complète le troisième indicateur.
+  const ok = combinedAligned && liveAligned
     && indicators.length >= RECOVERY_MIN_CONVERGENT_INDICATORS;
   return {
     ok,
@@ -6389,7 +6424,9 @@ Réponds en JSON pur (pas de markdown):
   }
   const voteInfo = analysisResult.vote_summary || {};
   const voteCountForSignal = Number(voteInfo.vote_count || analysisResult.consensus_votes || 0);
-  const fiveOu25SeatsPresent = Number(voteInfo.vote_active || 0) === 5;
+  // Quatre réponses réelles suffisent quand elles concordent : la cinquième reste souhaitable,
+  // mais son indisponibilité ne doit plus annuler un consensus 4/5 exploitable.
+  const enoughOu25SeatsPresent = Number(voteInfo.vote_active || 0) >= CLIENT_OU25_MIN_VOTES;
   const ou25Only = isOu25Bet(analysisResult.best_bet) && voteInfo.market === "over_under_2_5";
   const clientOu25MatchEligible = isClientOu25MatchEligible(match, true, CLIENT_OU25_CLIENT_MAX_MINUTE);
   const requiredVotesForSignal = clientOu25RequiredVotes(match, analysisResult.best_bet);
@@ -6456,7 +6493,7 @@ Réponds en JSON pur (pas de markdown):
     if (!recoveryCapacityAvailable) return `mode Recovery: plafond ${RECOVERY_MAX_DAILY_SIGNALS} signaux/jour atteint`;
     if (!clientOu25MatchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${CLIENT_OU25_CLIENT_MAX_MINUTE})`;
     if (!ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
-    if (!fiveOu25SeatsPresent) return `sieges O/U 2,5 incomplets: ${Number(voteInfo.vote_active || 0)}/5`;
+    if (!enoughOu25SeatsPresent) return `sieges O/U 2,5 incomplets: ${Number(voteInfo.vote_active || 0)}/5`;
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
     if (analysisResult.confidence < CLIENT_OU25_MIN_CONFIDENCE) return `confiance ${analysisResult.confidence} < plancher O/U 2,5 ${CLIENT_OU25_MIN_CONFIDENCE}`;
     if (voteCountForSignal < requiredVotesForSignal) return `votes ${voteCountForSignal} < ${requiredVotesForSignal}`;
@@ -6548,7 +6585,7 @@ Réponds en JSON pur (pas de markdown):
       // presents et majorite forte. Les autres sports/marches restent internes.
       const sportDiffusable = sportLc.includes("foot");
       const diffusable = arjelPlayable && oddOk && sportDiffusable
-        && clientOu25MatchEligible && ou25Only && fiveOu25SeatsPresent
+        && clientOu25MatchEligible && ou25Only && enoughOu25SeatsPresent
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
         && recoveryEvidence.ok && recoveryCapacityAvailable
