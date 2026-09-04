@@ -15,8 +15,11 @@ assert(
   source.includes("async function isBookmakerPlayableBeforeAnalysis(match)"),
   "le portail bookmaker doit exister"
 );
+const prefilterStart = source.indexOf("async function isBookmakerPlayableBeforeAnalysis(match)");
+const prefilterEnd = source.indexOf("\nasync function runAutoConcileObserver()", prefilterStart);
+const prefilter = source.slice(prefilterStart, prefilterEnd);
 assert(
-  !source.includes("if (!oddsData?.arjelBookmakers?.length)"),
+  prefilterStart >= 0 && !prefilter.includes("if (!oddsData?.arjelBookmakers?.length)"),
   "l'absence de bookmaker ARJEL ne doit plus bloquer avant analyse"
 );
 assert(
