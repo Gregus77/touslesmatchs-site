@@ -10,14 +10,14 @@ const api = fs.readFileSync(path.join(root, "scripts/api_server.js"), "utf8");
 const models = fs.readFileSync(path.join(root, "scripts/ai_models.config.js"), "utf8");
 
 const checks = [
-  ["plancher client 78", /CLIENT_OU25_MIN_CONFIDENCE\s*=\s*Math\.max\(78,/],
-  ["fonction plancher exécutable", /\nfunction getSignalFloor\(\) \{ return 78; \}/],
-  ["fin de fenêtre client 32e", /CLIENT_OU25_CLIENT_MAX_MINUTE[\s\S]{0,160}Number\(process\.env\.CLIENT_OU25_CLIENT_MAX_MINUTE \|\| 32\)/],
+  ["plancher client 77", /CLIENT_OU25_MIN_CONFIDENCE\s*=\s*Math\.max\(77,/],
+  ["fonction plancher exécutable", /\nfunction getSignalFloor\(\) \{ return 77; \}/],
+  ["fin de fenêtre client 40e", /CLIENT_OU25_CLIENT_MAX_MINUTE[\s\S]{0,160}Number\(process\.env\.CLIENT_OU25_CLIENT_MAX_MINUTE \|\| 40\)/],
   ["Qwen titulaire", /CONCILE_AGENT_NAMES[^\n]+OpenRouter-Qwen/],
   ["Kimi absent des titulaires", /CONCILE_AGENT_NAMES[^\n]+OpenRouter-Kimi/],
-  ["unanimité Under", /market\.startsWith\("under 2\.5"\)\) return 5/],
-  ["unanimité Championship", /championship[\s\S]{0,100}return 5/],
-  ["unanimité Brésil A-B", /serie a\|serie b[\s\S]{0,160}return 5/],
+  ["quatre réponses actives suffisent", /enoughOu25SeatsPresent\s*=\s*Number\(voteInfo\.vote_active \|\| 0\)\s*>=\s*CLIENT_OU25_MIN_VOTES/],
+  ["minimum trois indicateurs", /const ok = combinedAligned && liveAligned[\s\S]{0,100}RECOVERY_MIN_CONVERGENT_INDICATORS/],
+  ["saison précédente en complément", /fetchSeasonRows\(numericSeason - 1\)/],
   ["résultats immuables", /analyse résolue immuable, réanalyse ignorée/],
   ["résolution unique", /if \(matches\.length !== 1\)/],
 ];
