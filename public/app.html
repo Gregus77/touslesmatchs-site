@@ -765,7 +765,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       return;
     }
     pushFeedback('Activation en cours...', true);
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v13-responsive-20260904').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v14-responsive-20260904').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
         return get('/api/push/vapid-public-key').then(function (d) {
@@ -1133,7 +1133,7 @@ $("perf-kpis").innerHTML =
   // les notifications ne sont pas encore activées. Cela force la récupération
   // des corrections de cache pour tous les utilisateurs Android.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v13-responsive-20260904')
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v14-responsive-20260904')
       .then(function (reg) { return reg.update(); })
       .catch(function () {});
   }
