@@ -1,0 +1,31 @@
+name: Deploy verified public data repair
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/deploy-public-data-repair.yml
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Apply scoped repair and collect evidence
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            git fetch origin main
+            TLM_SCRIPT="$(mktemp /tmp/tlm-public-data-XXXXXX.sh)"
+            git show '${{ github.sha }}:deploy/apply-public-data-repair-20260905.sh' > "$TLM_SCRIPT"
+            bash "$TLM_SCRIPT" '${{ github.sha }}'

@@ -1059,7 +1059,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">Entre la 15e et la 45e minute, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 4 IA sur 5.</p>
+          <p class="tlm-hero-lead">En première mi-temps, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 4 IA sur 5.</p>
           <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="#pick" class="btn btn-prim">Voir le signal gratuit</a><a href="#plans" class="btn btn-ghost">Voir les offres</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
@@ -1074,7 +1074,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           <div class="tlm-ai-box">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
             <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><span class="tlm-ai-vote"><i>1</i>IA 1</span><span class="tlm-ai-vote"><i>2</i>IA 2</span><span class="tlm-ai-vote"><i>3</i>IA 3</span><span class="tlm-ai-vote"><i>4</i>IA 4</span><span class="tlm-ai-vote"><i>5</i>IA 5</span></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0 / 5</strong><span>IA validées</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
-            <div class="tlm-analysis-track"><b>15'</b><span><i id="hero-analysis-progress"></i></span><b>45'</b></div>
+            <div class="tlm-analysis-track"><b>15'</b><span><i id="hero-analysis-progress"></i></span><b id="hero-window-end">—</b></div>
           </div>
         </div>
       </div>
@@ -1707,6 +1707,7 @@ function setHeroLogo(id,src,name){var el=document.getElementById(id);if(!el)retu
 function heroOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:over+under,overCount:over,underCount:under,windowStatus:String(raw.window_status||'unknown')};}
 /* TLM-HERO-VOTE-CACHE-20260830 */
 var tlmHeroVoteCache={};
+var tlmSignalWindowEnd=null;
 function tlmHeroKey(m){
   return String((m&&(m.fixtureId||m.fixture_id||m.id||m.sourceId))||((m&&m.home)||'')+'|'+((m&&m.away)||''));
 }
@@ -1749,13 +1750,13 @@ function renderHeroLive(m){
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
   var hs=liveHomeScore(m),as=liveAwayScore(m);setHeroText('hero-live-score',(hs===''?'—':hs)+' - '+(as===''?'—':as));
   setHeroText('hero-live-period',String(m.status||m.elapsed||m.period||'1ère période'));
-  var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>45);
+  var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
   setHeroText('hero-consensus-current',votes+' / 5');
   setHeroText('hero-ai-title',votes?'Votes IA Over/Under 2,5':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours');
-  setHeroText('hero-consensus-label',votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA');
+  setHeroText('hero-consensus-label',votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):analysisClosed?'Aucun vote enregistré':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var i=0;i<voteEls.length;i++){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted'&&(dir==='over'||dir==='under');voteEls[i].classList.toggle('on',voted);voteEls[i].classList.toggle('over',dir==='over');voteEls[i].classList.toggle('under',dir==='under');var mark=voteEls[i].querySelector('i');if(mark)mark.textContent=dir==='over'?'O':dir==='under'?'U':String(i+1);var detail=voted?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');voteEls[i].title=detail;voteEls[i].setAttribute('aria-label',detail);}
-  var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/30*100)):12;progress.style.width=pct+'%';}
+  var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/Math.max(1,(tlmSignalWindowEnd||45)-15)*100)):12;progress.style.width=pct+'%';}
 }
 function renderHeroWatchlist(p){
   if(!p){renderHeroLive(null);return;}
@@ -1794,7 +1795,7 @@ async function loadHeroLive(){
       }
       function group(m){
         var n=minuteOf(m);
-        if(n>=15&&n<=45)return 0;  /* priorité absolue */
+        if(n>=15&&n<=(tlmSignalWindowEnd||45))return 0;  /* priorité absolue */
         if(n>=0&&n<15)return 1;    /* prochain à entrer dans la fenêtre */
         return 2;                  /* >45', 90'+ ou minute inconnue */
       }
@@ -1822,7 +1823,7 @@ async function loadHeroLive(){
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v14-responsive-20260904').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v15-data-repair-20260905').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -1909,7 +1910,7 @@ async function loadUpcoming(){
     box.innerHTML='<div class="empty-note">Les matchs à venir sont momentanément indisponibles.</div>';
   }
 }
-loadUpcoming();
+/* Le rafraîchissement homepage-fixtures ci-dessous possède ce bloc. */
 
 /* ══ DERNIERS VERDICTS DU CONCILE — accordéon par jour ══ */
 function fmtSignedEur(n){var v=Math.round(Number(n)||0);return (v>0?'+':'')+v+'€';}
@@ -1927,7 +1928,9 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var d=await fetchAllAnalysisHistory(2000);
+    var loaded=await Promise.all([fetchAllAnalysisHistory(2000),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
+    var d=loaded[0],dailyStats={};
+    if(loaded[1]&&loaded[1].ok)(loaded[1].daily_concile||[]).forEach(function(r){dailyStats[r.jour]=r;});
     var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
     var byDay={};
     rows.forEach(function(a){
@@ -1969,14 +1972,12 @@ async function loadDailyAccordion(){
       var list=byDay[day]||[];
 
       if(!list.length){
-        return '<div class="day-acc-item vide" data-day-idx="'+idx+'">'
+        return '<div class="day-acc-item vide" data-day-idx="'+idx+'" data-history-day="'+esc(day)+'">'
           + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
           +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
-          +   '<div class="day-acc-summary" style="color:var(--muted)">0 sélection retenue</div>'
+          +   '<div class="day-acc-summary" style="color:var(--muted)">'+(dailyStats[day]?esc(dailyStats[day].analyses+' analyses · '+dailyStats[day].resolved+' résolues'):'Aucun résultat diffusé enregistré')+'</div>'
           + '</div>'
-          + '<div class="day-acc-body"><div class="day-vide-note">Aucune rencontre n\'a satisfait '
-          + 'les critères du Concile ce jour-là : championnat non fiable, accord des IA insuffisant '
-          + 'ou cote hors de la fenêtre retenue. Une journée sans sélection est un choix, pas une absence de suivi.</div></div>'
+          + '<div class="day-acc-body"><div class="day-vide-note">Aucun résultat de sélection diffusée enregistré pour cette date.</div></div>'
           + '</div>';
       }
       var wins=list.filter(function(a){ return a.outcome==='win'; }).length;
@@ -2027,7 +2028,7 @@ async function loadDailyAccordion(){
           + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
           + '</div>';
       }).join('');
-      return '<div class="day-acc-item" data-day-idx="'+idx+'">'
+      return '<div class="day-acc-item" data-day-idx="'+idx+'" data-history-day="'+esc(day)+'">'
         + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
         +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
         +   '<div class="day-acc-summary" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+wins+'/'+list.length+' gagnés · '+fmtSignedEur(profit)+'</div>'
@@ -2197,111 +2198,12 @@ document.addEventListener('click', function(e){
 <script src="/js/simplewebauthn-browser.js"></script>
   <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
 
-<script>
-(function(){
-  function fmt(n){ return Number(n||0).toLocaleString('fr-FR'); }
-  function replaceText(root, d){
-    var msg = fmt(d.matches_tracked) + " matchs analysés par IA · " + fmt(d.predictions_tracked) + " prédictions · " + fmt(d.predictions_resolved) + " résolues";
-    var walker = document.createTreeWalker(root || document.body, NodeFilter.SHOW_TEXT);
-    var nodes = [];
-    while(walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function(n){
-      var t = n.nodeValue || "";
-      if (/\b\d+\s+analyses?\s+de\s+matchs?\b/i.test(t) || /\b\d+\s+analyses?\b/i.test(t)) {
-        n.nodeValue = t.replace(/\b\d+\s+analyses?\s+de\s+matchs?\b/i, msg).replace(/\b\d+\s+analyses?\b/i, msg);
-      }
-    });
-    var meta = document.getElementById("agent-meta");
-    if(meta && !meta.textContent.trim()){
-      meta.textContent = msg;
-    }
-  }
-  fetch('/api/public-analysis-stats?t=' + Date.now())
-    .then(function(r){ return r.json(); })
-    .then(function(d){ if(d && d.ok) replaceText(document.body, d); })
-    .catch(function(){});
-})();
-</script>
 
 
-<script>
-(function(){
-  function norm(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();}
-  function fmt(n){return Number(n||0).toLocaleString('fr-FR');}
-  var mois={janvier:'01',fevrier:'02',mars:'03',avril:'04',mai:'05',juin:'06',juillet:'07',aout:'08',septembre:'09',octobre:'10',novembre:'11',decembre:'12'};
-  function isoFromText(t){
-    var x=norm(t);
-    var m=x.match(/(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+([a-z]+)/);
-    if(!m||!mois[m[3]]) return null;
-    return '2026-'+mois[m[3]]+'-'+String(m[2]).padStart(2,'0');
-  }
-  function applyDailyStats(d){
-    if(!d||!d.ok) return;
-    var concile={}, agent={};
-    (d.daily_concile||[]).forEach(function(r){concile[r.jour]=r;});
-    (d.daily_agent||[]).forEach(function(r){agent[r.jour]=r;});
 
-    document.querySelectorAll('summary, .day-row, .history-day, details, div').forEach(function(el){
-      var txt=el.textContent||'';
-      if(!/selection retenue|sélection retenue/i.test(txt)) return;
-      var iso=isoFromText(txt);
-      if(!iso) return;
-      var c=concile[iso]||{};
-      var a=agent[iso]||{};
-      if(!c.analyses && !a.matches) return;
-      var msg=fmt(c.analyses||0)+' analyses Concile · '+fmt(a.matches||0)+' matchs IA · '+fmt(a.predictions||0)+' prédictions';
-      el.querySelectorAll('*').forEach(function(child){
-        if(/selection retenue|sélection retenue/i.test(child.textContent||'')) child.textContent=msg;
-      });
-      if(/selection retenue|sélection retenue/i.test(el.textContent||'') && el.children.length===0) el.textContent=el.textContent.replace(/0\s+s[ée]lection retenue/i,msg);
-    });
-  }
-  fetch('/api/public-analysis-stats?t='+Date.now()).then(function(r){return r.json();}).then(applyDailyStats).catch(function(){});
-})();
-</script>
+
 \n
-<script id="tlm-force-visible-ia-stats">
-(function(){
-  function fmt(n){return Number(n||0).toLocaleString('fr-FR');}
-  function mountStats(){
-    fetch('/api/public-analysis-stats?t='+Date.now(), {cache:'no-store'})
-      .then(r=>r.json())
-      .then(function(d){
-        if(!d||!d.ok)return;
-        var msg='<div id="tlm-real-ia-stats" style="margin:18px 0;padding:14px 16px;border:1px solid rgba(79,214,242,.42);border-radius:14px;background:linear-gradient(135deg,rgba(79,214,242,.13),rgba(138,104,255,.12));color:#fff;font-weight:900;box-shadow:0 14px 34px rgba(79,214,242,.12)">'
-          + '<div style="font-size:13px;color:#8eeeff;text-transform:uppercase;letter-spacing:.08em">Volume réel analysé par IA</div>'
-          + '<div style="font-size:21px;margin-top:5px">'+fmt(d.matches_tracked)+' matchs analysés · '+fmt(d.predictions_tracked)+' prédictions IA · '+fmt(d.predictions_resolved)+' résolues</div>'
-          + '<div style="font-size:12px;color:#b9c2ff;margin-top:5px">'+fmt(d.concile_analyses)+' verdicts Concile enregistrés · '+fmt(d.concile_resolved)+' résolus</div>'
-          + '</div>';
 
-        var target=[].slice.call(document.querySelectorAll('h1,h2,h3,div,strong'))
-          .find(el=>/Derniers verdicts du Concile/i.test(el.textContent||''));
-        if(target && !document.getElementById('tlm-real-ia-stats')){
-          target.insertAdjacentHTML('afterend', msg);
-        }
-
-        var byDay={};
-        (d.daily_concile||[]).forEach(r=>byDay[r.jour]=r);
-        var mois={janvier:'01',fevrier:'02',mars:'03',avril:'04',mai:'05',juin:'06',juillet:'07',aout:'08',août:'08',septembre:'09',octobre:'10',novembre:'11',decembre:'12',décembre:'12'};
-        function iso(t){
-          t=String(t||'').toLowerCase();
-          var m=t.match(/(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+([a-zûé]+)/i);
-          return m&&mois[m[3]] ? '2026-'+mois[m[3]]+'-'+String(m[2]).padStart(2,'0') : null;
-        }
-        document.querySelectorAll('div,summary,details').forEach(function(el){
-          if(!/0\s+s[ée]lection retenue/i.test(el.textContent||''))return;
-          var day=iso(el.textContent);
-          if(!day||!byDay[day])return;
-          var stat=fmt(byDay[day].analyses)+' analyses Concile · '+fmt(byDay[day].resolved)+' résolues';
-          el.innerHTML=el.innerHTML.replace(/0\s+s[ée]lection retenue/gi, stat);
-        });
-      }).catch(function(){});
-  }
-  mountStats();
-  setTimeout(mountStats,1000);
-  setTimeout(mountStats,3000);
-})();
-</script>
 
 
 
@@ -2373,47 +2275,7 @@ document.addEventListener('click', function(e){
 })();
 </script>
 <script id="tlm-history-backfill-js">
-(function(){
-  var months={'01':'janvier','02':'février','03':'mars','04':'avril','05':'mai','06':'juin','07':'juillet','08':'août','09':'septembre','10':'octobre','11':'novembre','12':'décembre'};
-  var days=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-  function label(iso){
-    var d=new Date(iso+'T12:00:00');
-    return days[d.getDay()]+' '+Number(iso.slice(8,10))+' '+months[iso.slice(5,7)];
-  }
-  function root(){
-    var h=[].slice.call(document.querySelectorAll('h1,h2,h3,div,strong')).find(function(x){return /Derniers verdicts du Concile|Historique complet depuis le 1er août/i.test(x.textContent||'');});
-    return h ? (h.parentElement || h) : null;
-  }
-  function apply(){
-    fetch('/api/public-analysis-stats?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
-      var today=new Date().toISOString().slice(0,10);
-      var rows=(d.daily_concile||[]).filter(function(r){return r.jour>='2026-08-01'&&r.jour<=today;});
-      var map={}; rows.forEach(function(r){map[r.jour]=r;});
-      document.querySelectorAll('details,div').forEach(function(el){
-        var txt=(el.textContent||'').toLowerCase();
-        Object.keys(map).forEach(function(iso){
-          var lab=label(iso).toLowerCase();
-          if(txt.indexOf(lab)>=0 && /0\s+s[ée]lection retenue/i.test(el.innerHTML||'')){
-            el.innerHTML=el.innerHTML.replace(/0\s+s[ée]lection retenue/gi, map[iso].analyses+' analyses · '+map[iso].resolved+' résolues');
-          }
-        });
-      });
-      var box=root(); if(!box)return;
-      rows.forEach(function(r){
-        var lab=label(r.jour);
-        if((document.body.textContent||'').toLowerCase().indexOf(lab.toLowerCase())>=0)return;
-        var row=document.createElement('div');
-        row.className='tlm-history-backfill-row';
-        row.setAttribute('data-tlm-history-day',r.jour);
-        row.innerHTML='<span>▶ '+lab+'</span><span>'+r.analyses+' analyses · '+r.resolved+' résolues</span>';
-        box.appendChild(row);
-      });
-    }).catch(function(){});
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
-  setTimeout(apply,1200);
-  setInterval(apply,30000);
-})();
+
 
 
 /* TLM_TIME_FIRST_ORDER_V1
@@ -2596,7 +2458,7 @@ window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨�
   const flag=x=>x.country_flag?'<img src="'+esc(x.country_flag)+'" alt="'+esc(x.country||'')+'" style="width:24px;height:17px;display:inline-block;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-right:6px" onerror="this.style.display=\'none\'">':('<span style="margin-right:6px">'+(FLAGS[x.country]||'🌍')+'</span>');
   function liveRow(m){const sh=m.score_home??'-',sa=m.score_away??'-';return '<div class="live-row"><div class="live-comp"><div class="live-comp-name">⚽ '+flag(m)+esc(m.country||m.competition||'Football')+'</div><div class="live-comp-min">'+esc(m.minute?m.minute+"'":'LIVE')+'</div></div><div class="live-logo">'+logo(m.home_logo,m.home)+'</div><div class="live-team-name">'+esc(m.home)+'</div><div class="live-score">'+esc(sh)+'-'+esc(sa)+'</div><div class="live-logo">'+logo(m.away_logo,m.away)+'</div><div class="live-team-name">'+esc(m.away)+'</div></div>'}
   function upcomingRow(m){let d=new Date(m.kickoff),when='';if(!isNaN(d)) when=d.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});return '<div class="upcoming-item"><div class="upcoming-highlight-logo">'+logo(m.home_logo,m.home)+'</div><div class="upcoming-info"><div class="upcoming-teams">⚽ '+flag(m)+esc(m.home)+' — '+esc(m.away)+'</div><div class="upcoming-comp">'+esc(m.country||'International')+' · '+esc(m.competition||'Football')+(when?' · '+esc(when):'')+'</div></div><div class="upcoming-highlight-logo">'+logo(m.away_logo,m.away)+'</div></div>'}
-  async function refreshHomeFixtures(){try{const r=await fetch('/api/homepage-fixtures?t='+Date.now(),{cache:'no-store'}),d=await r.json();if(!d.ok)return;const live=document.getElementById('live-rows'),up=document.getElementById('upcoming-rows'),hl=document.getElementById('upcoming-highlight');if(live)live.innerHTML=(d.live||[]).length?(d.live||[]).map(liveRow).join(''):'<div class="empty-note">Aucun match en direct actuellement.</div>';if(hl)hl.innerHTML='';if(up)up.innerHTML=(d.upcoming||[]).length?(d.upcoming||[]).map(upcomingRow).join(''):'<div class="empty-note">Aucun match programmé d’ici demain.</div>';}catch(e){console.error('[home-fixtures-ui]',e)}}
+  async function refreshHomeFixtures(){try{const r=await fetch('/api/homepage-fixtures?t='+Date.now(),{cache:'no-store'}),d=await r.json();if(!d.ok)return;const live=document.getElementById('live-rows'),up=document.getElementById('upcoming-rows'),hl=document.getElementById('upcoming-highlight');if(live)live.innerHTML=(d.live||[]).length?(d.live||[]).map(liveRow).join(''):'<div class="empty-note">Aucun match en direct actuellement.</div>';if(hl)hl.innerHTML='';if(up)up.innerHTML=(d.upcoming||[]).length?(d.upcoming||[]).filter(tlmMatchAllowed).map(upcomingRow).join(''):'<div class="empty-note">Aucun match à venir disponible.</div>';}catch(e){console.error('[home-fixtures-ui]',e)}}
   refreshHomeFixtures(); setInterval(refreshHomeFixtures,60000);
 })();
 </script>
@@ -2679,5 +2541,6 @@ window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨�
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
+<script src="/js/signal-rules.js?v=20260905" defer></script>
 </body>
 </html>

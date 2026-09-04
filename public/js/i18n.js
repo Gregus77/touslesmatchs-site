@@ -28,7 +28,7 @@ const i18n = (function () {
       hero_r1: "✓ Résultats publics", hero_r2: "✓ Données vérifiées",
       hero_r3: "✓ Sans engagement",
 
-      live_now: "Matchs en cours", live_upcoming: "Matchs à venir — prochaines 24h",
+      live_now: "Matchs en cours", live_upcoming: "Matchs à venir — calendrier",
       live_all: "Voir tous les matchs →", loading: "Chargement…",
 
       proof_total: "Sélections terminées", proof_wl: "Gagnées / Perdues",
@@ -90,7 +90,7 @@ const i18n = (function () {
       hero_r1: "✓ Public results", hero_r2: "✓ Verified data",
       hero_r3: "✓ No commitment",
 
-      live_now: "Matches in progress", live_upcoming: "Upcoming matches — next 24h",
+      live_now: "Matches in progress", live_upcoming: "Upcoming matches — schedule",
       live_all: "See all matches →", loading: "Loading…",
 
       proof_total: "Completed selections", proof_wl: "Won / Lost",
@@ -152,7 +152,7 @@ const i18n = (function () {
       hero_r1: "✓ Resultados públicos", hero_r2: "✓ Datos verificados",
       hero_r3: "✓ Sin compromiso",
 
-      live_now: "Partidos en curso", live_upcoming: "Próximos partidos — 24 h",
+      live_now: "Partidos en curso", live_upcoming: "Próximos partidos — calendario",
       live_all: "Ver todos los partidos →", loading: "Cargando…",
 
       proof_total: "Selecciones finalizadas", proof_wl: "Acertadas / Falladas",
@@ -214,7 +214,7 @@ const i18n = (function () {
       hero_r1: "✓ Resultados públicos", hero_r2: "✓ Dados verificados",
       hero_r3: "✓ Sem compromisso",
 
-      live_now: "Jogos a decorrer", live_upcoming: "Próximos jogos — 24 h",
+      live_now: "Jogos a decorrer", live_upcoming: "Próximos jogos — calendário",
       live_all: "Ver todos os jogos →", loading: "A carregar…",
 
       proof_total: "Seleções concluídas", proof_wl: "Certas / Erradas",
@@ -276,7 +276,7 @@ const i18n = (function () {
       hero_r1: "✓ Открытые результаты", hero_r2: "✓ Проверенные данные",
       hero_r3: "✓ Без обязательств",
 
-      live_now: "Текущие матчи", live_upcoming: "Ближайшие матчи — 24 часа",
+      live_now: "Текущие матчи", live_upcoming: "Ближайшие матчи — расписание",
       live_all: "Все матчи →", loading: "Загрузка…",
 
       proof_total: "Завершённых отборов", proof_wl: "Верно / Неверно",
@@ -338,7 +338,7 @@ const i18n = (function () {
       hero_r1: "✓ 战绩公开", hero_r2: "✓ 数据可核查",
       hero_r3: "✓ 无需长期承诺",
 
-      live_now: "进行中的比赛", live_upcoming: "即将开始 — 未来 24 小时",
+      live_now: "进行中的比赛", live_upcoming: "即将开始 — 赛程",
       live_all: "查看全部比赛 →", loading: "加载中…",
 
       proof_total: "已结算分析", proof_wl: "命中 / 未命中",

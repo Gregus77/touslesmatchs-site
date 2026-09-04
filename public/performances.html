@@ -287,7 +287,7 @@ async function doLogin(){
     <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥇 Standard</div>
     <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
   </div>
-  <div class="tier-note" id="tier-note">Règle actuelle Standard et Premium : football de championnat entre la 15e et la 45e minute, cinq sièges O/U 2,5, majorité minimale 4/5, confiance ≥78/100 et cote ANJ réelle entre 1,40 et 2,50.</div>
+  <div class="tier-note" id="tier-note">Les critères de diffusion en vigueur sont chargés depuis le serveur.</div>
 
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-val c-cyan" id="k-total">—</div><div class="kpi-lbl">Résultats</div></div>
@@ -648,5 +648,6 @@ fetchData(true).then(function () {
 <script src="/js/cookie-consent.js" defer></script>
 
   <script src="/js/tlm-wow-theme.js?v=20260805" defer></script>
+<script src="/js/signal-rules.js?v=20260905" defer></script>
 </body>
 </html>
