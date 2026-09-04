@@ -22,7 +22,20 @@ async function main(){
     FROM concile_analyses ORDER BY id DESC LIMIT 6`).all();
   const r=await fetch('http://127.0.0.1:3001/live-matches',{signal:AbortSignal.timeout(25000)});
   const d=await r.json();
-  console.log(JSON.stringify({verdict:'AUDIT',budget,breakers,settings,agents_24h:agents,blocks_24h:blocks,recent,
+  const liveGates=(d.matches||[]).map(m=>{
+    const performance=db.prepare(`SELECT COUNT(*) total,SUM(outcome='win') wins FROM concile_analyses
+      WHERE outcome IN ('win','loss') AND competition=?`).get(m.competition);
+    const snapshots=db.prepare(`SELECT COUNT(*) n FROM agent_predictions WHERE match_key LIKE ?`).get(String(m.id)+'_%');
+    const analyses=db.prepare(`SELECT analysed_at,source_type,diffusion_block FROM concile_analyses
+      WHERE home=? AND away=? AND analysed_at>=datetime('now','-24 hours') ORDER BY id DESC LIMIT 3`).all(m.home,m.away);
+    const ballots=db.prepare(`SELECT agent_name,market_line,COUNT(*) n,MAX(created_at) latest FROM agent_market_predictions
+      WHERE home=? AND away=? AND created_at>=datetime('now','-24 hours') GROUP BY agent_name,market_line`).all(m.home,m.away);
+    return {id:m.id,home:m.home,away:m.away,competition:m.competition,minute:m.minute,
+      product_eligible:m.client_product_eligible,performance,
+      blocked_by_performance:performance.total>=8 && performance.wins/performance.total<0.45,
+      snapshots,analyses,ballots};
+  });
+  console.log(JSON.stringify({verdict:'AUDIT',liveGates,budget,breakers,settings,agents_24h:agents,blocks_24h:blocks,recent,
     live:(d.matches||[]).map(m=>({home:m.home,away:m.away,minute:m.minute,
       block:m.block_reason,exclusion:m.analysis_exclusion_reason,votes:m.ou25}))},null,2));
 }
