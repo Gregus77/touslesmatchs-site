@@ -34,6 +34,11 @@ services:
       - THESPORTSDB_API_KEY=${THESPORTSDB_API_KEY}
       - AUTO_CONCILE_MULTISPORT=${AUTO_CONCILE_MULTISPORT}
       - SHADOW_DAILY_CAP=${SHADOW_DAILY_CAP}
+      # Décisions client O/U 2,5 du 04/09/2026.
+      - CLIENT_OU25_MIN_CONFIDENCE=${CLIENT_OU25_MIN_CONFIDENCE:-77}
+      - CLIENT_OU25_CLIENT_MAX_MINUTE=${CLIENT_OU25_CLIENT_MAX_MINUTE:-40}
+      - OU25_RECOVERY_MODE=${OU25_RECOVERY_MODE:-1}
+      - OU25_RECOVERY_MAX_DAILY_SIGNALS=${OU25_RECOVERY_MAX_DAILY_SIGNALS:-2}
       # Rationnement horaire API-Sports (scripts/api_server.js, apiSportsBudgetOk) —
       # absente d'ici, cette variable ne passait jamais du .env au conteneur et le
       # budget par defaut (90/j, ~4/h) s'appliquait meme si .env disait autre chose.
@@ -76,10 +81,10 @@ services:
       - AUTO_CONCILE_WINDOW_MIN=${AUTO_CONCILE_WINDOW_MIN}
       - AUTO_CONCILE_WINDOW_MAX=${AUTO_CONCILE_WINDOW_MAX}
       # Fenetre de cote reelle ARJEL (1.30-2.50 par defaut)
-      - TIER_MIN_REAL_ODD=${TIER_MIN_REAL_ODD}
-      - TIER_MAX_REAL_ODD=${TIER_MAX_REAL_ODD}
-      - MIN_PLAYABLE_ODD=${MIN_PLAYABLE_ODD}
-      - MAX_PLAYABLE_ODD=${MAX_PLAYABLE_ODD}
+      - TIER_MIN_REAL_ODD=${TIER_MIN_REAL_ODD:-1.30}
+      - TIER_MAX_REAL_ODD=${TIER_MAX_REAL_ODD:-2.10}
+      - MIN_PLAYABLE_ODD=${MIN_PLAYABLE_ODD:-1.30}
+      - MAX_PLAYABLE_ODD=${MAX_PLAYABLE_ODD:-2.10}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
