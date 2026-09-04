@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/deploy-public-data-repair.yml
+      - scripts/audit_votes_readonly_20260905.js
 permissions:
   contents: read
 concurrency:
