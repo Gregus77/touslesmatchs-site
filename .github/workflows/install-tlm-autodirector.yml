@@ -107,6 +107,7 @@ jobs:
               *"HERMES_REPORT=SENT"*) ;;
               *)
               TLM_VERIFY_LOG="/tmp/tlm-autodirector-verify-${{ github.run_id }}.log"
+              install -d -o root -g root -m 0755 /run/tlm-autodirector
               /usr/bin/flock -n /run/tlm-autodirector/director.lock /usr/bin/python3 "$TLM_SCRIPT" --no-repair --report-always | tee "$TLM_VERIFY_LOG"
               grep -Fq "HERMES_REPORT=SENT" "$TLM_VERIFY_LOG"
               rm -f "$TLM_VERIFY_LOG"
