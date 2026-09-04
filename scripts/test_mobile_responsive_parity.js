@@ -35,12 +35,12 @@ assert(
   "la date doit rester compacte sans agrandir la carte"
 );
 assert(
-  mobileCss.includes("body.tlm-page-home .tlm-floating-widgets") &&
+  mobileCss.includes("body.tlm-page-home #tlm-widgets") &&
     mobileCss.includes("display:none!important;visibility:hidden!important"),
   "les boutons flottants ne doivent pas recouvrir le hero mobile"
 );
 
-const version = "tlm-app-v13-responsive-20260904";
+const version = "tlm-app-v14-responsive-20260904";
 assert(sw.includes(`const VERSION = "${version}"`), "le cache PWA doit utiliser la nouvelle version");
 assert(home.includes(`/sw.js?v=${version}`), "l'accueil doit demander le nouveau service worker");
 assert(
