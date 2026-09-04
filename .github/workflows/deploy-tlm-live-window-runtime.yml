@@ -71,57 +71,7 @@ jobs:
             trap rollback_api ERR
 
             node --check scripts/api_server.js
-            node <<'NODE'
-            const fs = require("fs");
-            const vm = require("vm");
-            const source = fs.readFileSync("scripts/api_server.js", "utf8");
-
-            function extract(name) {
-              const start = source.indexOf("function " + name + "(");
-              if (start < 0) throw new Error(name + " absent");
-              const open = source.indexOf("{", start);
-              let depth = 0;
-              for (let i = open; i < source.length; i += 1) {
-                if (source[i] === "{") depth += 1;
-                if (source[i] === "}") {
-                  depth -= 1;
-                  if (depth === 0) return source.slice(start, i + 1);
-                }
-              }
-              throw new Error(name + " incomplet");
-            }
-
-            if (!source.includes("const AUTO_CONCILE_WINDOW_MIN = 15;")) throw new Error("borne basse");
-            if (!source.includes("const AUTO_CONCILE_WINDOW_MAX = CLIENT_OU25_CLIENT_MAX_MINUTE;")) throw new Error("borne haute");
-            if (!source.includes("const AUTO_CONCILE_TIME_WINDOW = true;")) throw new Error("fenêtre désactivable");
-            if (/AUTO_CONCILE_WINDOW_MAX \|\| 40/.test(source)) throw new Error("ancienne borne 40");
-
-            const sandbox = {
-              AUTO_CONCILE_WINDOW_MIN: 15,
-              AUTO_CONCILE_WINDOW_MAX: 45,
-              isMatchDecided: () => false,
-              results: null,
-            };
-            vm.createContext(sandbox);
-            vm.runInContext(
-              extract("parseLiveMinuteValue") + "\n" +
-              extract("livePickBlockReason") + "\n" +
-              "results=[" +
-              "livePickBlockReason({minute:15})," +
-              "livePickBlockReason({minute:45})," +
-              "livePickBlockReason({minute:14})," +
-              "livePickBlockReason({minute:46})," +
-              "livePickBlockReason({minute:'45+2'})," +
-              "livePickBlockReason({minute:'P'})" +
-              "];",
-              sandbox
-            );
-            const [m15, m45, m14, m46, added, unknown] = sandbox.results;
-            if (m15 !== null || m45 !== null) throw new Error("15 ou 45 refusée");
-            if (!/15e/.test(m14) || !/45e/.test(m46)) throw new Error("bornes incorrectes");
-            if (!/inconnue|numérique/.test(added) || !/inconnue|numérique/.test(unknown)) throw new Error("minute invalide acceptée");
-            console.log("LIVE_WINDOW_UNIT_OK");
-            NODE
+            node -e "$(printf '%s' 'Y29uc3QgZnMgPSByZXF1aXJlKCJmcyIpOwpjb25zdCB2bSA9IHJlcXVpcmUoInZtIik7CmNvbnN0IHNvdXJjZSA9IGZzLnJlYWRGaWxlU3luYygic2NyaXB0cy9hcGlfc2VydmVyLmpzIiwgInV0ZjgiKTsKCmZ1bmN0aW9uIGV4dHJhY3QobmFtZSkgewogIGNvbnN0IHN0YXJ0ID0gc291cmNlLmluZGV4T2YoImZ1bmN0aW9uICIgKyBuYW1lICsgIigiKTsKICBpZiAoc3RhcnQgPCAwKSB0aHJvdyBuZXcgRXJyb3IobmFtZSArICIgYWJzZW50Iik7CiAgY29uc3Qgb3BlbiA9IHNvdXJjZS5pbmRleE9mKCJ7Iiwgc3RhcnQpOwogIGxldCBkZXB0aCA9IDA7CiAgZm9yIChsZXQgaSA9IG9wZW47IGkgPCBzb3VyY2UubGVuZ3RoOyBpICs9IDEpIHsKICAgIGlmIChzb3VyY2VbaV0gPT09ICJ7IikgZGVwdGggKz0gMTsKICAgIGlmIChzb3VyY2VbaV0gPT09ICJ9IikgewogICAgICBkZXB0aCAtPSAxOwogICAgICBpZiAoZGVwdGggPT09IDApIHJldHVybiBzb3VyY2Uuc2xpY2Uoc3RhcnQsIGkgKyAxKTsKICAgIH0KICB9CiAgdGhyb3cgbmV3IEVycm9yKG5hbWUgKyAiIGluY29tcGxldCIpOwp9CgppZiAoIXNvdXJjZS5pbmNsdWRlcygiY29uc3QgQVVUT19DT05DSUxFX1dJTkRPV19NSU4gPSAxNTsiKSkgdGhyb3cgbmV3IEVycm9yKCJib3JuZSBiYXNzZSIpOwppZiAoIXNvdXJjZS5pbmNsdWRlcygiY29uc3QgQVVUT19DT05DSUxFX1dJTkRPV19NQVggPSBDTElFTlRfT1UyNV9DTElFTlRfTUFYX01JTlVURTsiKSkgdGhyb3cgbmV3IEVycm9yKCJib3JuZSBoYXV0ZSIpOwppZiAoIXNvdXJjZS5pbmNsdWRlcygiY29uc3QgQVVUT19DT05DSUxFX1RJTUVfV0lORE9XID0gdHJ1ZTsiKSkgdGhyb3cgbmV3IEVycm9yKCJmZW7DqnRyZSBkw6lzYWN0aXZhYmxlIik7CmlmICgvQVVUT19DT05DSUxFX1dJTkRPV19NQVggXHxcfCA0MC8udGVzdChzb3VyY2UpKSB0aHJvdyBuZXcgRXJyb3IoImFuY2llbm5lIGJvcm5lIDQwIik7Cgpjb25zdCBzYW5kYm94ID0gewogIEFVVE9fQ09OQ0lMRV9XSU5ET1dfTUlOOiAxNSwKICBBVVRPX0NPTkNJTEVfV0lORE9XX01BWDogNDUsCiAgaXNNYXRjaERlY2lkZWQ6ICgpID0+IGZhbHNlLAogIHJlc3VsdHM6IG51bGwsCn07CnZtLmNyZWF0ZUNvbnRleHQoc2FuZGJveCk7CnZtLnJ1bkluQ29udGV4dCgKICBleHRyYWN0KCJwYXJzZUxpdmVNaW51dGVWYWx1ZSIpICsgIlxuIiArCiAgZXh0cmFjdCgibGl2ZVBpY2tCbG9ja1JlYXNvbiIpICsgIlxuIiArCiAgInJlc3VsdHM9WyIgKwogICJsaXZlUGlja0Jsb2NrUmVhc29uKHttaW51dGU6MTV9KSwiICsKICAibGl2ZVBpY2tCbG9ja1JlYXNvbih7bWludXRlOjQ1fSksIiArCiAgImxpdmVQaWNrQmxvY2tSZWFzb24oe21pbnV0ZToxNH0pLCIgKwogICJsaXZlUGlja0Jsb2NrUmVhc29uKHttaW51dGU6NDZ9KSwiICsKICAibGl2ZVBpY2tCbG9ja1JlYXNvbih7bWludXRlOic0NSsyJ30pLCIgKwogICJsaXZlUGlja0Jsb2NrUmVhc29uKHttaW51dGU6J1AnfSkiICsKICAiXTsiLAogIHNhbmRib3gKKTsKY29uc3QgW20xNSwgbTQ1LCBtMTQsIG00NiwgYWRkZWQsIHVua25vd25dID0gc2FuZGJveC5yZXN1bHRzOwppZiAobTE1ICE9PSBudWxsIHx8IG00NSAhPT0gbnVsbCkgdGhyb3cgbmV3IEVycm9yKCIxNSBvdSA0NSByZWZ1c8OpZSIpOwppZiAoIS8xNWUvLnRlc3QobTE0KSB8fCAhLzQ1ZS8udGVzdChtNDYpKSB0aHJvdyBuZXcgRXJyb3IoImJvcm5lcyBpbmNvcnJlY3RlcyIpOwppZiAoIS9pbmNvbm51ZXxudW3DqXJpcXVlLy50ZXN0KGFkZGVkKSB8fCAhL2luY29ubnVlfG51bcOpcmlxdWUvLnRlc3QodW5rbm93bikpIHRocm93IG5ldyBFcnJvcigibWludXRlIGludmFsaWRlIGFjY2VwdMOpZSIpOwpjb25zb2xlLmxvZygiTElWRV9XSU5ET1dfVU5JVF9PSyIpOwo=' | base64 -d)"
             docker compose config -q
 
             docker compose up -d --build api
@@ -135,31 +85,7 @@ jobs:
             TLM_STAMP="$(date +%s)"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/health?window=$TLM_STAMP" -o "/tmp/tlm-health-$TLM_STAMP.json"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/live-matches?window=$TLM_STAMP" -o "/tmp/tlm-live-$TLM_STAMP.json"
-            python3 - "/tmp/tlm-health-$TLM_STAMP.json" "/tmp/tlm-live-$TLM_STAMP.json" <<'PY'
-            import json, sys
-            health = json.load(open(sys.argv[1], encoding="utf-8"))
-            live = json.load(open(sys.argv[2], encoding="utf-8"))
-            assert health.get("ok") is not False
-            integrations = health.get("integrations", {})
-            assert integrations.get("telegram", {}).get("ok") is True
-            assert integrations.get("brevo", {}).get("ok") is True
-            assert live.get("ok") is True
-            checked = 0
-            for match in live.get("matches", []):
-                state = match.get("ou25") or {}
-                assert state.get("to_minute") == 45
-                assert len(state.get("votes") or []) == 5
-                minute = match.get("minute")
-                reason = str(match.get("block_reason") or "")
-                assert "40e minute" not in reason
-                if isinstance(minute, int) and 15 <= minute <= 45:
-                    assert state.get("window_status") == "open"
-                    assert "minute" not in reason.lower()
-                    checked += 1
-                if not isinstance(minute, int):
-                    assert match.get("analysable") is False
-            print(f"LIVE_WINDOW_PUBLIC_OK eligible_checked={checked}")
-            PY
+            python3 -c "$(printf '%s' 'aW1wb3J0IGpzb24sIHN5cwpoZWFsdGggPSBqc29uLmxvYWQob3BlbihzeXMuYXJndlsxXSwgZW5jb2Rpbmc9InV0Zi04IikpCmxpdmUgPSBqc29uLmxvYWQob3BlbihzeXMuYXJndlsyXSwgZW5jb2Rpbmc9InV0Zi04IikpCmFzc2VydCBoZWFsdGguZ2V0KCJvayIpIGlzIG5vdCBGYWxzZQppbnRlZ3JhdGlvbnMgPSBoZWFsdGguZ2V0KCJpbnRlZ3JhdGlvbnMiLCB7fSkKYXNzZXJ0IGludGVncmF0aW9ucy5nZXQoInRlbGVncmFtIiwge30pLmdldCgib2siKSBpcyBUcnVlCmFzc2VydCBpbnRlZ3JhdGlvbnMuZ2V0KCJicmV2byIsIHt9KS5nZXQoIm9rIikgaXMgVHJ1ZQphc3NlcnQgbGl2ZS5nZXQoIm9rIikgaXMgVHJ1ZQpjaGVja2VkID0gMApmb3IgbWF0Y2ggaW4gbGl2ZS5nZXQoIm1hdGNoZXMiLCBbXSk6CiAgICBzdGF0ZSA9IG1hdGNoLmdldCgib3UyNSIpIG9yIHt9CiAgICBhc3NlcnQgc3RhdGUuZ2V0KCJ0b19taW51dGUiKSA9PSA0NQogICAgYXNzZXJ0IGxlbihzdGF0ZS5nZXQoInZvdGVzIikgb3IgW10pID09IDUKICAgIG1pbnV0ZSA9IG1hdGNoLmdldCgibWludXRlIikKICAgIHJlYXNvbiA9IHN0cihtYXRjaC5nZXQoImJsb2NrX3JlYXNvbiIpIG9yICIiKQogICAgYXNzZXJ0ICI0MGUgbWludXRlIiBub3QgaW4gcmVhc29uCiAgICBpZiBpc2luc3RhbmNlKG1pbnV0ZSwgaW50KSBhbmQgMTUgPD0gbWludXRlIDw9IDQ1OgogICAgICAgIGFzc2VydCBzdGF0ZS5nZXQoIndpbmRvd19zdGF0dXMiKSA9PSAib3BlbiIKICAgICAgICBhc3NlcnQgIm1pbnV0ZSIgbm90IGluIHJlYXNvbi5sb3dlcigpCiAgICAgICAgY2hlY2tlZCArPSAxCiAgICBpZiBub3QgaXNpbnN0YW5jZShtaW51dGUsIGludCk6CiAgICAgICAgYXNzZXJ0IG1hdGNoLmdldCgiYW5hbHlzYWJsZSIpIGlzIEZhbHNlCnByaW50KGYiTElWRV9XSU5ET1dfUFVCTElDX09LIGVsaWdpYmxlX2NoZWNrZWQ9e2NoZWNrZWR9IikK' | base64 -d)" "/tmp/tlm-health-$TLM_STAMP.json" "/tmp/tlm-live-$TLM_STAMP.json"
 
             ! docker logs --since 3m touslesmatchs-api 2>&1 | grep -Ei 'SyntaxError|UnhandledPromiseRejection|EADDRINUSE|FATAL'
             systemctl start tlm-autodirector.service || true
