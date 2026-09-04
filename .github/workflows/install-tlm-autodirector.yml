@@ -100,13 +100,18 @@ jobs:
             test "$(systemctl is-active tlm-autodirector.timer)" = "active"
             test "$(systemctl show -p Result --value tlm-autodirector.service)" = "success"
             test -s /var/lib/tlm-autodirector/state.json
-            journalctl -u tlm-autodirector.service -n 120 --no-pager | grep -Fq "DIRECTEUR AUTONOME TLM"
-            if ! journalctl -u tlm-autodirector.service --since "3 minutes ago" --no-pager | grep -Fq "HERMES_REPORT=SENT"; then
+            TLM_JOURNAL="$(journalctl -u tlm-autodirector.service -n 120 --no-pager)"
+            case "$TLM_JOURNAL" in *"DIRECTEUR AUTONOME TLM"*) ;; *) echo "Rapport du directeur absent" >&2; exit 4 ;; esac
+            TLM_RECENT_JOURNAL="$(journalctl -u tlm-autodirector.service --since "3 minutes ago" --no-pager)"
+            case "$TLM_RECENT_JOURNAL" in
+              *"HERMES_REPORT=SENT"*) ;;
+              *)
               TLM_VERIFY_LOG="/tmp/tlm-autodirector-verify-${{ github.run_id }}.log"
               /usr/bin/flock -n /run/tlm-autodirector/director.lock /usr/bin/python3 "$TLM_SCRIPT" --no-repair --report-always | tee "$TLM_VERIFY_LOG"
               grep -Fq "HERMES_REPORT=SENT" "$TLM_VERIFY_LOG"
               rm -f "$TLM_VERIFY_LOG"
-            fi
+              ;;
+            esac
             journalctl -u tlm-autodirector.service -n 120 --no-pager | tail -n 80
 
             TLM_ROLLBACK=0
