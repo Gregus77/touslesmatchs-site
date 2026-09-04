@@ -1046,7 +1046,9 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   <div class="row" style="grid-template-columns:1fr">
     <div class="card proof-card">
       <div class="proof-head"><div><div class="proof-eyebrow">Historique vérifiable</div><div class="proof-title">Historique des diffusions enregistrées, sans cacher les défaites</div><div class="proof-copy">Avant le 27 août, les envois proviennent des marqueurs archivés. Depuis le 27 août, une preuve Telegram est obligatoire.</div></div><a class="proof-link" href="/performances">Voir l’historique complet →</a></div>
-      <div class="proof-bar" id="proof-bar">
+      <!-- Les totaux cumules restent alimentes pour les controles internes,
+           mais ne sont plus affiches comme un decompte quotidien. -->
+      <div class="proof-bar" id="proof-bar" hidden aria-hidden="true" style="display:none">
         <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl">Diffusions résolues</div></div></div>
         <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl">Gagnées / Perdues diffusées</div></div></div>
         <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl">Taux des diffusions</div></div></div>
