@@ -99,5 +99,18 @@ if ! docker exec touslesmatchs-api node /app/tlm-score-repair.js; then
 fi
 docker cp scripts/audit_votes_readonly_20260905.js touslesmatchs-api:/app/tlm-vote-audit.js
 docker exec touslesmatchs-api node /app/tlm-vote-audit.js || echo 'PARTIAL: audit des votes incomplet'
+docker logs --since 30m touslesmatchs-api 2>&1 | python3 -c '
+import sys,re,json
+s=sys.stdin.read()
+cycles=re.findall(r"\[auto-concile\] live=\d+ eligible=\d+ analysed_this_cycle=\d+ skipped_low_trust=\d+ skipped_sans_cote_reelle=\d+",s)
+categories={k:len(re.findall(p,s,re.I)) for k,p in {
+ "observer_error":r"\[auto-concile\] (?:cycle|analyse):",
+ "no_real_odds":r"\[auto-concile\] sans cote reelle",
+ "rate_limit":r"rate.?limit|too many requests",
+ "timeout":r"timeout|timed out",
+ "budget_block":r"\[LIMIT\]",
+ "snapshot_launched":r"\[auto-concile\] analyse snapshot:"
+}.items()}
+print(json.dumps({"observer_cycles":cycles[-8:],"log_counts_30m":categories}))'
 docker compose ps
 echo 'PARTIAL: contrôle navigateur et prochain vote réel nécessaires pour valider la réparation complète'
