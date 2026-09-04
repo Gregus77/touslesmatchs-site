@@ -307,3 +307,12 @@
 - Attention VPS : ne pas copier `public/index.html` sur `site/index.html` sans verification, car `site/` est le rendu public servi par Caddy.
 - Correctif live : si le cache `/live-matches` contient seulement du football, l'API tente maintenant d'enrichir avec TheSportsDB avant de repondre. La route envoie aussi `Cache-Control: no-store` pour eviter une reponse navigateur ancienne.
 - Correctif presentation : suppression des restes publics "4 agents + 1 Chief" dans `public/js/i18n.js` et `public/faq.html`, remplacement par "5 IA independantes votent". FAQ nettoyee aussi du tennis.
+
+## 2026-09-05 — Correctifs des données publiques
+
+- Le rattrapage des résultats exige la même date, les mêmes équipes et un score non contradictoire ; la date est transmise aux mises à jour des tables.
+- Les votes multi-marchés sont enregistrés dès la réponse de chaque agent.
+- Les compteurs quotidiens sont rendus dans leur journée ; retrait des quatre réécritures globales du DOM.
+- Les limites publiées viennent des paramètres serveur, sans modification des seuils. Le calendrier ne promet plus une fenêtre de 24 heures.
+- Réparation ciblée Lyon–Auxerre du 4 septembre uniquement sur fixture officielle FT, avec sauvegarde et journal, sans message Telegram manuel.
+- Déploiement main strictement en avance rapide, retour arrière sur échec technique, audit des votes en lecture seule. Validation live encore requise après déploiement.

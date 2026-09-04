@@ -1971,7 +1971,7 @@ async function runShadowEvaluation(match) {
   }
 }
 
-function resolveShadowOutcomes(home, away, scoreHome, scoreAway) {
+function resolveShadowOutcomes(home, away, scoreHome, scoreAway, resolutionDay = null) {
   try {
     // Match par équipes (comme les autres résolveurs) — l'ancien code matchait
     // par match_key exact, mais le match_key de shadow_evals (home_away_date)
@@ -1981,9 +1981,11 @@ function resolveShadowOutcomes(home, away, scoreHome, scoreAway) {
     const aw = String(away || "").split(" ")[0];
     if (!hw || !aw) return;
     const rows = db.prepare(
-      "SELECT id, bet FROM shadow_evals WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
+      "SELECT id, bet, home, away, created_at FROM shadow_evals WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
     ).all(`%${hw}%`, `%${aw}%`);
     for (const row of rows) {
+      if (resolutionDay && (String(row.created_at).slice(0, 10) !== resolutionDay
+          || !sameLiveTeamName(home, row.home) || !sameLiveTeamName(away, row.away))) continue;
       const outcome = getBetOutcomeForScore(row.bet, scoreHome, scoreAway);
       if (outcome) {
         db.prepare(`UPDATE shadow_evals SET outcome = ?, final_score_home = ?, final_score_away = ?, resolved_at = datetime('now') WHERE id = ?`)
@@ -6391,6 +6393,7 @@ Réponds en JSON pur (pas de markdown):
       const rawBet = parsed.bet || availableBets[0];
       if (parsed.marches && typeof parsed.marches === "object") {
         agentMarketList.push({ name: agCfg.name, marches: parsed.marches });
+        saveAgentMarketPredictions(match, [{ name: agCfg.name, marches: parsed.marches }]);
       }
       const { bet: validBet, corrected, original } = validateAndCorrectBet(rawBet, match, availableBets);
       const fallbackRaison = `Score actuel ${match.score_home}-${match.score_away}, analyse basée sur le rythme du match.`;
@@ -7428,7 +7431,7 @@ function resolveTeamWinBet(bet, home, away, h, a) {
   return null;
 }
 
-function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
+function resolveConcileAnalyses(home, away, scoreHome, scoreAway, resolutionDay = null) {
   if (scoreHome === null || scoreHome === undefined || scoreAway === null || scoreAway === undefined) return;
   const h = Number(scoreHome), a = Number(scoreAway);
   const total = h + a;
@@ -7462,7 +7465,8 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
     const candidates = hw && aw ? db.prepare(
       "SELECT * FROM concile_analyses WHERE outcome IS NULL AND analysed_at >= datetime('now','-30 days')"
     ).all() : [];
-    const pending = candidates.filter(r => matchToken(r.home) === hw && matchToken(r.away) === aw);
+    const pending = candidates.filter(r => matchToken(r.home) === hw && matchToken(r.away) === aw
+      && (!resolutionDay || String(r.analysed_at).slice(0, 10) === resolutionDay));
 
     if (pending.length) {
       // PROTECTION IMMUTABILITÉ : le AND outcome IS NULL en clause WHERE garantit
@@ -7495,7 +7499,7 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway) {
     // concile_analyses : avant, ça ne se déclenchait QUE si ce match avait des
     // lignes concile_analyses en attente, donc quasiment jamais pour les agents
     // du banc d'essai (Groq-Llama70B/8B, Cerebras, OpenRouter, Mistral-Small...).
-    resolveShadowOutcomes(home, away, h, a);
+    resolveShadowOutcomes(home, away, h, a, resolutionDay);
   } catch(e) { console.error("[concile-trace] resolve:", e.message); }
 }
 
@@ -8387,14 +8391,15 @@ function meilleurMarcheParSpecialistes(agentMarketList) {
   return meilleur;
 }
 
-function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
+function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway, resolutionDay = null) {
   try {
     const hw = String(home || "").split(" ")[0];
     const aw = String(away || "").split(" ")[0];
     if (!hw || !aw) return;
     const pending = db.prepare(
       "SELECT * FROM agent_market_predictions WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL"
-    ).all(`%${hw}%`, `%${aw}%`);
+    ).all(`%${hw}%`, `%${aw}%`).filter(r => !resolutionDay || (String(r.created_at).slice(0, 10) === resolutionDay
+      && sameLiveTeamName(home, r.home) && sameLiveTeamName(away, r.away)));
     if (!pending.length) return;
     const upd = db.prepare("UPDATE agent_market_predictions SET outcome = ? WHERE id = ?");
     let n = 0;
@@ -8407,8 +8412,9 @@ function resolveAgentMarketPredictions(home, away, h, a, htHome, htAway) {
     const hw = String(home || "").split(" ")[0];
     const aw = String(away || "").split(" ")[0];
     if (!hw || !aw) return;
-    const sh = db.prepare("SELECT id, bet FROM routage_shadow WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL")
-      .all(`%${hw}%`, `%${aw}%`);
+    const sh = db.prepare("SELECT id, bet, home, away, created_at FROM routage_shadow WHERE home LIKE ? AND away LIKE ? AND outcome IS NULL")
+      .all(`%${hw}%`, `%${aw}%`).filter(r => !resolutionDay || (String(r.created_at).slice(0, 10) === resolutionDay
+      && sameLiveTeamName(home, r.home) && sameLiveTeamName(away, r.away)));
     if (!sh.length) return;
     const up = db.prepare("UPDATE routage_shadow SET outcome = ?, resolved_at = datetime('now') WHERE id = ?");
     let m = 0;
@@ -8467,7 +8473,7 @@ function isProtectedFromOverwrite(existing) {
 }
 
 function autoResolvePredictions(match) {
-  const { home, away, score_home, score_away } = match;
+  const { home, away, score_home, score_away, resolutionDay = finalMatchDay(match) || null } = match;
   if (score_home === null || score_home === undefined || score_away === null || score_away === undefined) return;
 
   const h = Number(score_home), a = Number(score_away);
@@ -8503,7 +8509,8 @@ function autoResolvePredictions(match) {
     const candidates = hw && aw ? db.prepare(
       "SELECT * FROM agent_predictions WHERE outcome IS NULL AND created_at >= datetime('now','-30 days')"
     ).all() : [];
-    const pending = candidates.filter(p => matchToken(p.home) === hw && matchToken(p.away) === aw);
+    const pending = candidates.filter(p => matchToken(p.home) === hw && matchToken(p.away) === aw
+      && (!resolutionDay || String(p.created_at).slice(0, 10) === resolutionDay));
 
     if (pending.length) {
       const updateStmt = db.prepare("UPDATE agent_predictions SET outcome = ? WHERE id = ?");
@@ -8524,10 +8531,10 @@ function autoResolvePredictions(match) {
   // marque en 1ere/2e mi-temps", pas seulement "un but en 1ere mi-temps".
   const htHome = match.ht_home != null ? Number(match.ht_home) : null;
   const htAway = match.ht_away != null ? Number(match.ht_away) : null;
-  resolveAgentMarketPredictions(home, away, h, a, htHome, htAway);
+  resolveAgentMarketPredictions(home, away, h, a, htHome, htAway, resolutionDay);
 
   // Résoudre aussi les traces Concile
-  resolveConcileAnalyses(home, away, score_home, score_away);
+  resolveConcileAnalyses(home, away, score_home, score_away, resolutionDay);
 }
 
 // ── Rattrapage : résout les prédictions en attente dont le match est fini mais
@@ -8672,6 +8679,37 @@ function dedupeAnalysesByMatch(rows) {
   return merged;
 }
 
+// Verrou de résolution : un score terminé ne peut être associé qu'à une analyse
+// du même jour calendaire et aux deux mêmes équipes. Sans ce garde-fou, le
+// rattrapage pouvait confondre Lyon avec Lens et attribuer le 5-2 de
+// Lens-Auxerre (22/08/2026) au Lyon-Auxerre du 04/09/2026.
+function finalMatchDay(match) {
+  const raw = match?.utcDate || match?.date || match?.kickoff || match?.analysed_at || "";
+  return String(raw).slice(0, 10);
+}
+function findUniqueFinishedMatchForStale(stale, finished) {
+  const day = String(stale?.day || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const sport = String(stale?.sport || "Football");
+  const direct = (finished || []).filter((candidate) => {
+    if (finalMatchDay(candidate) !== day) return false;
+    if (String(candidate?.sport || sport) !== sport) return false;
+    return sameLiveTeamName(stale?.home, candidate?.home) && sameLiveTeamName(stale?.away, candidate?.away);
+  });
+  const uniqueScore = (rows) => rows.length && rows.every(r =>
+    r.score_home != null && r.score_away != null &&
+    Number.isInteger(Number(r.score_home)) && Number(r.score_home) >= 0 &&
+    Number.isInteger(Number(r.score_away)) && Number(r.score_away) >= 0 &&
+    Number(r.score_home) === Number(rows[0].score_home) &&
+    Number(r.score_away) === Number(rows[0].score_away));
+  if (direct.length) return uniqueScore(direct) ? { match: direct[0], reversed: false } : null;
+  const reversed = (finished || []).filter((candidate) => {
+    if (finalMatchDay(candidate) !== day) return false;
+    if (String(candidate?.sport || sport) !== sport) return false;
+    return sameLiveTeamName(stale?.home, candidate?.away) && sameLiveTeamName(stale?.away, candidate?.home);
+  });
+  return uniqueScore(reversed) ? { match: reversed[0], reversed: true } : null;
+}
 let staleResolveRunning = false;
 async function resolveStalePredictions() {
   if (staleResolveRunning || (!FOOTBALL_DATA_KEY && !API_SPORTS_KEY)) return;
@@ -8695,7 +8733,7 @@ async function resolveStalePredictions() {
     const stale = [];
     const seenPair = new Set();
     for (const r of staleRows) {
-      const k = `${r.home}|${r.away}`;
+      const k = `${r.home}|${r.away}|${r.day || ""}|${r.sport || "Football"}`;
       if (seenPair.has(k)) continue;
       seenPair.add(k); stale.push(r);
     }
@@ -8753,6 +8791,7 @@ async function resolveStalePredictions() {
                 finished.push({
                   home: g.teams.home.name, away: g.teams.away.name,
                   score_home: g.scores.home.total, score_away: g.scores.away.total,
+                  utcDate: date, sport: "Basketball",
                 });
               }
             });
@@ -8769,6 +8808,7 @@ async function resolveStalePredictions() {
                 finished.push({
                   home: g.teams.home.name, away: g.teams.away.name,
                   score_home: g.scores.home, score_away: g.scores.away,
+                  utcDate: date, sport: "Hockey",
                 });
               }
             });
@@ -8787,6 +8827,7 @@ async function resolveStalePredictions() {
                 finished.push({
                   home: g.teams.home.name, away: g.teams.away.name,
                   score_home: sh, score_away: sa,
+                  utcDate: date, sport: "Baseball",
                 });
               }
             });
@@ -8800,70 +8841,22 @@ async function resolveStalePredictions() {
     // Rapprochement robuste : mot distinctif + normalisation accents.
     let resolvedMatches = 0;
     for (const s of stale) {
-      const hw = matchToken(s.home);
-      const aw = matchToken(s.away);
-      if (!hw || !aw) continue;
-      let m = finished.find(f => {
-        const fh = NORM(f.home);
-        const fa = NORM(f.away);
-        return (fh.includes(hw) && fa.includes(aw)) || (fh.includes(aw) && fa.includes(hw));
+      const resolvedMatch = findUniqueFinishedMatchForStale(s, finished);
+      if (!resolvedMatch) {
+        console.warn(`[catch-up] aucune correspondance finale unique et datée: ${s.home} vs ${s.away} (${s.day || "date inconnue"})`);
+        continue;
+      }
+      const m = resolvedMatch.match;
+      const reversed = resolvedMatch.reversed;
+      autoResolvePredictions({
+        home: s.home, away: s.away, resolutionDay: s.day,
+        score_home: reversed ? m.score_away : m.score_home,
+        score_away: reversed ? m.score_home : m.score_away,
+        ht_home: reversed ? m.ht_away : m.ht_home,
+        ht_away: reversed ? m.ht_home : m.ht_away,
+        status: "FINISHED",
       });
-      // Repli flou : variante orthographique a 1-2 lettres pres (ex: "Polissya"
-      // chez nous / "Polessya" chez api-sports — translitteration differente
-      // selon la source, constate le 31/07/2026 sur Zhytomyr). Un seul cote
-      // peut etre flou, l'autre doit rester une inclusion stricte pour eviter
-      // de rapprocher deux matchs differents.
-      if (!m) {
-        m = finished.find(f => {
-          const fh = NORM(f.home);
-          const fa = NORM(f.away);
-          const homeStrict = fh.includes(hw), awayStrict = fa.includes(aw);
-          if (homeStrict && !awayStrict && aw.length >= 6) {
-            return teamPlaceWords(f.away).some(w => levenshteinAtMost(w, aw, 2));
-          }
-          if (awayStrict && !homeStrict && hw.length >= 6) {
-            return teamPlaceWords(f.home).some(w => levenshteinAtMost(w, hw, 2));
-          }
-          return false;
-        });
-      }
-      // Dernier repli, scope compétition : quand les deux mots-clés d'équipe
-      // restent trop différents (transliteration cyrillique/latine, nom
-      // complet vs raccourci), on restreint d'abord aux matchs de la MEME
-      // ligue/pays (mot distinctif partagé dans le nom de competition), puis
-      // on accepte une tolerance plus large sur les deux cotes a la fois —
-      // le scope competition rend ce relachement sur sans risque de
-      // rapprocher deux matchs differents. Demande explicite de Greg le
-      // 31/07/2026 : "voir les matchs du pays et de la ligue en question,
-      // et le nom qui se rapproche le plus".
-      if (!m && s.competition) {
-        const compWordsA = new Set(NORM(s.competition).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 4));
-        if (compWordsA.size) {
-          const sameCompetition = finished.filter((f) => {
-            if (!f.competition) return false;
-            const compWordsB = NORM(f.competition).replace(/[^a-z0-9 ]/g, " ").split(/\s+/).filter((w) => w.length >= 4);
-            return compWordsB.some((w) => compWordsA.has(w));
-          });
-          m = sameCompetition.find((f) => {
-            const fh = NORM(f.home), fa = NORM(f.away);
-            const homeClose = fh.includes(hw) || teamPlaceWords(f.home).some((w) => levenshteinAtMost(w, hw, 3));
-            const awayClose = fa.includes(aw) || teamPlaceWords(f.away).some((w) => levenshteinAtMost(w, aw, 3));
-            return homeClose && awayClose;
-          });
-        }
-      }
-      if (m) {
-        // Réordonne le score si le match a été trouvé dans le sens inverse
-        const reversed = NORM(m.home).includes(aw) && !NORM(m.home).includes(hw);
-        autoResolvePredictions({
-          home: s.home, away: s.away,
-          score_home: reversed ? m.score_away : m.score_home,
-          score_away: reversed ? m.score_home : m.score_away,
-          ht_home: reversed ? m.ht_away : m.ht_home,
-          ht_away: reversed ? m.ht_home : m.ht_away,
-        });
-        resolvedMatches++;
-      }
+      resolvedMatches++;
     }
     if (resolvedMatches) {
       console.log(`[catch-up] ${resolvedMatches}/${stale.length} matchs en attente résolus (football-data + api-sports)`);
@@ -8962,7 +8955,7 @@ async function resolveSignalFortFast() {
       const analysedDay = String(s.analysed_at || "").slice(0, 10);
       const matches = finished.filter(f => {
         const finishedDay = String(f.date || "").slice(0, 10);
-        return (!analysedDay || !finishedDay || analysedDay === finishedDay) && sameLiveTeams(s, f);
+        return (analysedDay && finishedDay && analysedDay === finishedDay) && sameLiveTeams(s, f);
       });
       // Zéro ou plusieurs correspondances : aucune résolution automatique.
       if (matches.length !== 1) {
@@ -8973,7 +8966,7 @@ async function resolveSignalFortFast() {
       if (m) {
         const reversed = matchToken(m.home) === matchToken(s.away);
         autoResolvePredictions({
-          home: s.home, away: s.away,
+          home: s.home, away: s.away, resolutionDay: analysedDay,
           score_home: reversed ? m.score_away : m.score_home,
           score_away: reversed ? m.score_home : m.score_away,
           ht_home: reversed ? m.ht_away : m.ht_home,
@@ -13644,6 +13637,12 @@ app.post("/internal/strong-signals", (req, res) => {
 
 
 // ── Statistiques publiques réelles utilisées par le site et l'application ──
+app.get("/public-signal-rules", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ ok: true, from_minute: 15, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
+    min_votes: CLIENT_OU25_MIN_VOTES, min_confidence: CLIENT_OU25_MIN_CONFIDENCE,
+    min_odd: TIER_MIN_REAL_ODD, max_odd: TIER_MAX_REAL_ODD });
+});
 app.get("/public-analysis-stats", (req, res) => {
   try {
     const agentTotals = db.prepare(`
