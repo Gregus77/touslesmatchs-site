@@ -56,9 +56,9 @@ jobs:
 
             grep -q 'TLM_APP_LIVE_VOTES_V1' public/app.html
             grep -q 'TLM_LIVE_OU25_VOTES_V1' public/live-ia.html
-            grep -q 'tlm-app-v13-responsive-20260904' public/sw.js
-            grep -q 'tlm-app-v13-responsive-20260904' public/index.html
-            grep -q 'tlm-app-v13-responsive-20260904' public/app.html
+            grep -q 'tlm-app-v14-responsive-20260904' public/sw.js
+            grep -q 'tlm-app-v14-responsive-20260904' public/index.html
+            grep -q 'tlm-app-v14-responsive-20260904' public/app.html
             node scripts/test_mobile_responsive_parity.js
             ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27|maintenanceDays' public/app.html public/index.html public/resultats-quotidiens.html
             ! grep -qE '15e (et|à) la 40e|15e-40e|n<=40|minute>40' public/index.html public/faq.html public/performances.html
@@ -103,7 +103,7 @@ jobs:
 
             grep -q 'TLM_APP_LIVE_VOTES_V1' "/tmp/tlm-app-$STAMP.html"
             grep -q 'TLM_LIVE_OU25_VOTES_V1' "/tmp/tlm-live-$STAMP.html"
-            grep -q 'tlm-app-v13-responsive-20260904' "/tmp/tlm-sw-$STAMP.js"
+            grep -q 'tlm-app-v14-responsive-20260904' "/tmp/tlm-sw-$STAMP.js"
             grep -q 'grid-template-columns:minmax(0,1fr) auto' "/tmp/tlm-index-$STAMP.html"
             grep -q 'white-space:nowrap' "/tmp/tlm-index-$STAMP.html"
             ! grep -qiE 'tlm-real-maint-results|Mise à jour importante TousLesMatchs|Maintenance technique des 27|maintenanceDays' "/tmp/tlm-app-$STAMP.html" "/tmp/tlm-index-$STAMP.html" "/tmp/tlm-results-$STAMP.html"
@@ -128,7 +128,7 @@ jobs:
           stamp="$(date -u +%Y%m%dT%H%M%SZ)"
           url="https://www.touslesmatchs.com/?responsive_proof=$stamp"
           google-chrome --headless=new --no-sandbox --disable-gpu \
-            --window-size=390,844 --virtual-time-budget=12000 \
+            --window-size=390,1800 --virtual-time-budget=12000 \
             --screenshot=/tmp/tlm-home-mobile-responsive.png "$url"
           test -s /tmp/tlm-home-mobile-responsive.png
 
