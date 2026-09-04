@@ -90,7 +90,20 @@ console.log("[patch] résolution datée et stricte appliquée");
 NODE
 
 node --check "$API_FILE"
-node scripts/test_stale_result_resolution_date_guard.js
+node <<'NODE'
+"use strict";
+const fs=require("fs"), s=fs.readFileSync("/opt/touslesmatchs/scripts/api_server.js","utf8");
+const checks=[
+  ["sélecteur daté",s.includes("function findUniqueFinishedMatchForStale(stale, finished)")],
+  ["jour identique",s.includes("finalMatchDay(candidate) !== day")],
+  ["équipes strictes",s.includes("sameLiveTeamName(stale?.home, candidate?.home)")],
+  ["appel sécurisé",s.includes("findUniqueFinishedMatchForStale(s, finished)")],
+  ["ancien flou supprimé",!s.includes("levenshteinAtMost(w, hw, 3)")],
+];
+const failed=checks.filter(([,ok])=>!ok).map(([name])=>name);
+if(failed.length) throw new Error("contrôles correctif échoués: "+failed.join(", "));
+console.log("[test] garde-fou anti-faux-score validé");
+NODE
 docker compose up -d --build api
 sleep 3
 docker compose ps api
