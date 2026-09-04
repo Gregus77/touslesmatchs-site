@@ -14,6 +14,7 @@ mapfile -t FILES < <(git diff --name-only "$BEFORE" "$TARGET")
 for file in "${FILES[@]}"; do
   case "$file" in
     .github/workflows/deploy-public-data-repair.yml) ;;
+    scripts/test_homepage_consensus_20260905.js) ;;
     scripts/api_server.js|public/index.html|public/performances.html|public/js/i18n.js|public/js/signal-rules.js|public/sw.js|scripts/test_public_data_repair_20260905.js|scripts/test_stale_result_resolution_date_guard.js|scripts/repair_lyon_auxerre_20260904.js|scripts/audit_votes_readonly_20260905.js|deploy/fix-premature-final-score-lyon-auxerre-20260904.sh|deploy/apply-public-data-repair-20260905.sh|CHANGELOG.md) ;;
     *) echo "STOP: modification hors périmètre: $file"; exit 1 ;;
   esac
@@ -71,6 +72,17 @@ docker exec -i touslesmatchs-api node - <<'NODE'
  const r=await fetch('http://127.0.0.1:3001/public-signal-rules');const d=await r.json();
  if(!r.ok||!d.ok||!Number.isFinite(d.to_minute)||d.min_votes!==4)throw Error('règles non vérifiées');
  console.log('Règles API:',JSON.stringify(d));
+ for(const authorization of ['', 'Bearer invalid-homepage-verification']){
+   const r=await fetch('https://www.touslesmatchs.com/api/homepage-live',
+     {headers:authorization?{Authorization:authorization}:{},signal:AbortSignal.timeout(20000)});
+   const d=await r.json();
+   if(!r.ok||!d.ok||d.locked!==true||!Array.isArray(d.matches))throw Error('accès accueil non vérifié');
+   for(const m of d.matches){
+     if(m.ou25?.locked!==true||m.ou25.over_count!==null||m.ou25.under_count!==null
+       ||m.ou25.votes.some(v=>v.direction!=null||v.label!=null||v.confidence!=null))throw Error('direction publique non masquée');
+   }
+   console.log('Accueil anonyme masqué:',d.matches.length,'matchs; jeton invalide:',!!authorization);
+ }
 })().catch(e=>{console.error(e.message);process.exitCode=1;});
 NODE
 curl -fsS --max-time 20 "https://www.touslesmatchs.com/?repair=$STAMP" > "$BACKUP/public-home.html"
