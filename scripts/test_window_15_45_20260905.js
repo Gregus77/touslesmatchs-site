@@ -43,7 +43,7 @@ for (const minute of [14,46,90,'45+1','HT',null,undefined]) {
   assert.notEqual(ctx.getLiveOu25VoteState(match).window_status, 'open');
 }
 // Unchanged criteria and actual public endpoint output.
-Object.assign(ctx, {CLIENT_OU25_MIN_VOTES:4,CLIENT_OU25_MIN_CONFIDENCE:77,TIER_MIN_REAL_ODD:1.3,TIER_MAX_REAL_ODD:2.1});
+Object.assign(ctx, {CLIENT_OU25_MIN_VOTES:3,CLIENT_OU25_MIN_CONFIDENCE:77,TIER_MIN_REAL_ODD:1.3,TIER_MAX_REAL_ODD:2.1});
 let handler;
 ctx.app = {get(route, callback) { assert.equal(route,'/public-signal-rules'); handler = callback; }};
 vm.runInContext(section('app.get("/public-signal-rules"', 'app.get("/public-analysis-stats"'), ctx);
