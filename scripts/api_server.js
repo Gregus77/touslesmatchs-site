@@ -12782,8 +12782,8 @@ function getLiveOu25VoteState(match) {
 
   try {
     const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
-    const rows = db.prepare(`
-      SELECT agent_name, bet, confidence, created_at
+    const marketRows = db.prepare(`
+      SELECT agent_name, bet, confidence, created_at, 0 AS source_priority
       FROM agent_market_predictions
       WHERE market_line = 'buts'
         AND date(created_at) = date('now')
@@ -12792,6 +12792,23 @@ function getLiveOu25VoteState(match) {
         AND agent_name IN (${placeholders})
       ORDER BY datetime(created_at) DESC, id DESC
     `).all(match?.home || "", match?.away || "", ...CONCILE_AGENT_NAMES);
+    // Certaines reponses IA valides contiennent le vote principal O/U 2,5
+    // mais pas le bloc multi-marches. Le vote reste une preuve individuelle
+    // reelle : on l'utilise seulement comme repli pour le siege manquant.
+    const primaryRows = db.prepare(`
+      SELECT agent_name, bet, confidence, created_at, 1 AS source_priority
+      FROM agent_predictions
+      WHERE date(created_at) = date('now')
+        AND lower(trim(home)) = lower(trim(?))
+        AND lower(trim(away)) = lower(trim(?))
+        AND agent_name IN (${placeholders})
+        AND bet IN ('Over 2.5 buts','Under 2.5 buts')
+      ORDER BY datetime(created_at) DESC, id DESC
+    `).all(match?.home || "", match?.away || "", ...CONCILE_AGENT_NAMES);
+    const rows = [...marketRows, ...primaryRows].sort((a, b) =>
+      String(b.created_at || "").localeCompare(String(a.created_at || ""))
+      || Number(a.source_priority || 0) - Number(b.source_priority || 0)
+    );
 
     const latestByAgent = new Map();
     for (const row of rows) {
