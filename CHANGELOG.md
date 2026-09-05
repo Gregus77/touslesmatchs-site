@@ -1,5 +1,16 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-05 — Fenêtre client 15–45 confirmée par le propriétaire
+
+- Supprime le plafond résiduel de 40 minutes dans la constante du produit O/U 2,5.
+- Docker transmet 45; une ancienne valeur `.env` à 32/40 ne réduit plus la fenêtre.
+- L'analyse, la validation, les états des votes et l'accueil utilisent cette même
+  limite, via `/public-signal-rules` pour la barre et les textes dynamiques.
+- Tests hors production : 15, 40, 41, 44 et 45 acceptées; 14, 46, arrêts de jeu et
+  minutes inconnues refusées. Confiance, cotes, consensus, Recovery et budgets inchangés.
+- Les textes statiques de la FAQ et de l'application indiquaient déjà 15–45.
+- Code préparé sur branche dédiée; activation VPS à vérifier après déploiement.
+
 ## 2026-08-28 — Preuve gratuite et fin du chargement infini
 
 - Le calcul H2H des matchs à venir se fait désormais en arrière-plan : l'accueil
