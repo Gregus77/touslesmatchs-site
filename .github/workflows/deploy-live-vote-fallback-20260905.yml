@@ -1,0 +1,99 @@
+name: Deploy live vote fallback
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-live-vote-fallback-20260905.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Backup, deploy API and verify
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            test "$(git branch --show-current)" = main
+            test "$(git rev-parse --abbrev-ref '@{upstream}')" = origin/main
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git fetch origin main
+            COUNTS="$(git rev-list --left-right --count HEAD...origin/main)"
+            test "$(printf '%s' "$COUNTS" | awk '{print $1}')" = 0
+
+            BACKUP="/opt/backups/tlm-live-vote-fallback-$(date -u +%Y%m%dT%H%M%SZ)"
+            install -d -m 700 "$BACKUP"
+            cp -a scripts/api_server.js "$BACKUP/api_server.js"
+
+            rollback() {
+              code=$?
+              trap - ERR
+              cp -a "$BACKUP/api_server.js" scripts/api_server.js
+              docker compose up -d --build api >/dev/null 2>&1 || true
+              sleep 12
+              git restore --source=HEAD --worktree -- scripts/api_server.js
+              echo "ROLLBACK_API_OK"
+              exit "$code"
+            }
+            trap rollback ERR
+
+            git pull --ff-only origin main
+            node --check scripts/api_server.js
+            node scripts/test_real_odds_selection_20260905.js
+            node scripts/test_live_vote_fallback_20260905.js
+            node scripts/test_real_bookmaker_filter.js
+            node scripts/test_signal_pipeline_order.js
+            docker compose config -q
+            docker compose up -d --build api
+            sleep 15
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = true
+            RESTARTS="$(docker inspect -f '{{.RestartCount}}' touslesmatchs-api)"
+            sleep 12
+            test "$(docker inspect -f '{{.RestartCount}}' touslesmatchs-api)" = "$RESTARTS"
+            docker exec touslesmatchs-api grep -q "const primaryRows = db.prepare" /app/server.js
+            test "$(sha256sum scripts/api_server.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/server.js | awk '{print $1}')"
+
+            STAMP="$(date +%s)"
+            curl -fsS --max-time 90 "https://www.touslesmatchs.com/api/health?vote=$STAMP" -o "/tmp/tlm-health-$STAMP.json"
+            curl -fsS --max-time 90 "https://www.touslesmatchs.com/api/live-matches?vote=$STAMP" -o "/tmp/tlm-live-$STAMP.json"
+            python3 - "/tmp/tlm-health-$STAMP.json" "/tmp/tlm-live-$STAMP.json" <<'PY'
+            import json,sys
+            health=json.load(open(sys.argv[1],encoding="utf-8"))
+            live=json.load(open(sys.argv[2],encoding="utf-8"))
+            assert health.get("ok") is not False
+            assert (health.get("integrations") or {}).get("telegram",{}).get("ok") is True
+            matches=live.get("matches",[]) if isinstance(live,dict) else live
+            assert isinstance(matches,list)
+            checked=0
+            for match in matches:
+                state=match.get("ou25") or {}
+                if not state:
+                    continue
+                assert state.get("to_minute")==45
+                assert len(state.get("votes") or [])==5
+                checked+=1
+            print("LIVE_VOTE_PUBLIC_OK",checked)
+            PY
+
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            trap - ERR
+            echo "RESULT=OK"
+            echo "BACKUP=$BACKUP"
+            echo "DEPLOYED_COMMIT=$(git rev-parse HEAD)"
