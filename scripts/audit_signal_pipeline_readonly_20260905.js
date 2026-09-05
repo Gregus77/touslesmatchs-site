@@ -19,20 +19,31 @@ function ou25(odds){let bookmakers=0,playable=false,values=0;for(const block of 
  const inWindow=matches.filter(m=>{const n=minute(m);return n!==null&&n>=15&&n<=45});
  const pool=[...(direct.json.response||[]),...(day.json.response||[]).filter(liveStatus)].map(apiFixture);
  const unique=new Map(pool.map(f=>[f.id,f]));
- const targets=[];
- for(const m of inWindow.slice(0,12)){const found=[...unique.values()].find(f=>norm(f.home)===norm(m.home)&&norm(f.away)===norm(m.away));targets.push({match:m.home+" - "+m.away,minute:minute(m),public_source:m.source||null,public_fixture:m.fixtureId||m.fixture_id||null,api_fixture:found?.id||null,votes:votes(m),reason:reason(m),odds:null})}
- for(const t of targets){if(!t.api_fixture)continue;const o=await getApi("/odds?fixture="+encodeURIComponent(t.api_fixture));t.odds={http:o.status,errors:Object.keys(o.json.errors||{}),...ou25(o.json)}}
+ let mapped=0,oddsQueried=0,withOu25=0,playableOdds=0;
+ for(const m of inWindow.slice(0,12)){
+  const found=[...unique.values()].find(f=>norm(f.home)===norm(m.home)&&norm(f.away)===norm(m.away));
+  if(!found)continue;
+  mapped++;
+  const o=await getApi("/odds?fixture="+encodeURIComponent(found.id));
+  oddsQueried++;
+  const summary=ou25(o.json);
+  if(summary.ou25_values>0)withOu25++;
+  if(summary.playable)playableOdds++;
+ }
+ const reasons={};
+ for(const m of inWindow){const key=String(reason(m)||"none").replace(/[0-9]+(?:[.,][0-9]+)?/g,"#").slice(0,120);reasons[key]=(reasons[key]||0)+1}
  const db=new DB("/data/tlm.db",{readonly:true});
  const tables=new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(x=>x.name));
  function count(table,timeCols){if(!tables.has(table))return null;const cols=new Set(db.prepare("PRAGMA table_info("+table+")").all().map(x=>x.name));const tc=timeCols.find(x=>cols.has(x));if(!tc)return db.prepare("SELECT count(*) n FROM "+table).get().n;return db.prepare("SELECT count(*) n FROM "+table+" WHERE datetime("+tc+")>=datetime('now','-24 hours')").get().n}
  const hist=Array.isArray(history.json)?history.json:(history.json.analyses||history.json.history||history.json.data||[]);
  const sub=status.json.response||{};
  console.log("AUDIT_JSON",JSON.stringify({
-  utc:new Date().toISOString(),
-  endpoints:{health_http:health.status,health:health.json,rules:rules.json,live_http:live.status,history_http:history.status},
-  api_football:{status_http:status.status,active:sub.subscription?.active??null,end:sub.subscription?.end??null,requests:sub.requests||null,errors:Object.keys(status.json.errors||{})},
-  provider_counts:{direct_http:direct.status,direct_live:(direct.json.response||[]).length,direct_errors:Object.keys(direct.json.errors||{}),day_http:day.status,day_total:(day.json.response||[]).length,day_live:(day.json.response||[]).filter(liveStatus).length,day_errors:Object.keys(day.json.errors||{})},
-  pipeline:{public_live:matches.length,in_window:inWindow.length,with_votes:inWindow.filter(m=>votes(m)>0).length,four_plus:inWindow.filter(m=>votes(m)>=4).length,api_identity:inWindow.filter(m=>m.source==="api-sports"&&(m.fixtureId||m.fixture_id||m.sourceId)).length,targets},
+  endpoint_http:{health:health.status,rules:rules.status,live:live.status,history:history.status},
+  health_ok:health.json.ok===true,
+  telegram_ok:health.json.integrations?.telegram?.ok??health.json.telegram?.ok??health.json.telegram??null,
+  api_football:{status_http:status.status,active:sub.subscription?.active??null,requests_current:sub.requests?.current??null,requests_limit:sub.requests?.limit_day??null,error_count:Object.keys(status.json.errors||{}).length},
+  provider_counts:{direct_http:direct.status,direct_live:(direct.json.response||[]).length,direct_error_count:Object.keys(direct.json.errors||{}).length,day_http:day.status,day_total:(day.json.response||[]).length,day_live:(day.json.response||[]).filter(liveStatus).length,day_error_count:Object.keys(day.json.errors||{}).length},
+  pipeline:{public_live:matches.length,in_window:inWindow.length,with_votes:inWindow.filter(m=>votes(m)>0).length,four_plus:inWindow.filter(m=>votes(m)>=4).length,api_identity:inWindow.filter(m=>m.source==="api-sports"&&(m.fixtureId||m.fixture_id||m.sourceId)).length,reason_counts:reasons,mapped_to_api:mapped,odds_queried:oddsQueried,with_ou25_odds:withOu25,playable_ou25_odds:playableOdds},
   public_history_rows:hist.length,
   db24h:{analyses:count("concile_analyses",["analysed_at","created_at"]),deliveries:count("telegram_signal_deliveries",["created_at","sent_at"]),agent_predictions:count("agent_predictions",["created_at","analysed_at"])}
  }));
