@@ -7,7 +7,7 @@ const vm = require("vm");
 
 const source = fs.readFileSync(path.join(__dirname, "api_server.js"), "utf8");
 const start = source.indexOf("function betIsPlayable(");
-const end = source.indexOf("\n// ── Plafond journalier", start);
+const end = source.indexOf("\nfunction getVerifiedFixtureId(", start);
 assert.ok(start >= 0 && end > start, "fonction betIsPlayable introuvable");
 
 const ctx = vm.createContext({
