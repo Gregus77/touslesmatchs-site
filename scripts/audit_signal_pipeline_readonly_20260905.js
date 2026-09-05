@@ -42,6 +42,9 @@ function ou25(odds){const all=(odds?.response||[]).flatMap(x=>x.bookmakers||[]);
  const tables=new Set(db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(x=>x.name));
  function count(table,timeCols){if(!tables.has(table))return null;const cols=new Set(db.prepare("PRAGMA table_info("+table+")").all().map(x=>x.name));const tc=timeCols.find(x=>cols.has(x));if(!tc)return db.prepare("SELECT count(*) n FROM "+table).get().n;return db.prepare("SELECT count(*) n FROM "+table+" WHERE datetime("+tc+")>=datetime('now','-24 hours')").get().n}
  const hist=Array.isArray(history.json)?history.json:(history.json.analyses||history.json.history||history.json.data||[]);
+ const classifyIssue=(value,statusCode)=>{const s=String(value||"").toLowerCase();const h=Number(statusCode)||0;if(h===401||h===403)return "auth";if(h===429||/rate.?limit|quota/.test(s))return "quota";if(/timeout|timed out/.test(s))return "timeout";if(/\[limit\]|daily|circuit|budget|doublon/.test(s))return "guard";if(/parse|json|format|schema|vide|empty|vote/.test(s))return "format_or_empty";if(h>=400)return "http_other";if(/success|ok/.test(s)||h>=200&&h<300)return "ok_no_vote";return "other";};
+ let aiCalls={total:0,votes:0,categories:{}};
+ if(tables.has("agent_calls")){const cols=new Set(db.prepare("PRAGMA table_info(agent_calls)").all().map(x=>x.name));const tc=cols.has("created_at")?"created_at":null;const rows=tc?db.prepare("SELECT issue,http_status,vote_produit,COUNT(*) n FROM agent_calls WHERE datetime(created_at)>=datetime('now','-30 minutes') GROUP BY issue,http_status,vote_produit").all():[];for(const row of rows){const n=Number(row.n)||0;aiCalls.total+=n;if(Number(row.vote_produit)===1)aiCalls.votes+=n;const k=classifyIssue(row.issue,row.http_status);aiCalls.categories[k]=(aiCalls.categories[k]||0)+n;}}
  const sub=status.json.response||{};
  console.log("AUDIT_JSON",JSON.stringify({
   endpoint_http:{health:health.status,rules:rules.status,live:live.status,history:history.status},
@@ -51,6 +54,7 @@ function ou25(odds){const all=(odds?.response||[]).flatMap(x=>x.bookmakers||[]);
   provider_counts:{direct_http:direct.status,direct_live:(direct.json.response||[]).length,direct_error_count:Object.keys(direct.json.errors||{}).length,day_http:day.status,day_total:(day.json.response||[]).length,day_live:(day.json.response||[]).filter(liveStatus).length,day_error_count:Object.keys(day.json.errors||{}).length},
   pipeline:{public_live:matches.length,in_window:inWindow.length,with_votes:inWindow.filter(m=>votes(m)>0).length,four_plus:inWindow.filter(m=>votes(m)>=4).length,api_identity:inWindow.filter(m=>m.source==="api-sports"&&(m.fixtureId||m.fixture_id||m.sourceId)).length,reason_counts:reasons,mapped_to_api:mapped,odds_queried:oddsQueried,with_ou25_odds:withOu25,playable_ou25_odds:playableOdds,chosen_bookmaker_playable:chosenPlayable,arjel_playable:arjelPlayable,public_id_matches_mapping:publicIdMatches,public_id_playable:publicIdPlayable},
   public_history_rows:hist.length,
+  ai_calls_30m:aiCalls,
   db24h:{analyses:count("concile_analyses",["analysed_at","created_at"]),deliveries:count("telegram_signal_deliveries",["created_at","sent_at"]),agent_predictions:count("agent_predictions",["created_at","analysed_at"])}
  }));
 })().catch(e=>{console.error("AUDIT_FAILED",e.message);process.exit(1)});
