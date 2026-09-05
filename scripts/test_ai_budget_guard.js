@@ -119,21 +119,42 @@ console.log("\n═══ Scénario 4 — plafond de requêtes par modèle et par
   db.close();
 }
 
-console.log("\n═══ Scénario 5 — sursaut anormal (boucle) détecté et stoppé ═══");
+console.log("\n═══ Scénario 5 — trafic multi-match normal, boucle concentrée stoppée ═══");
 {
   process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY = "100";
-  process.env.OPENROUTER_DAILY_BUDGET_EUR = "2";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_DAY = "200";
+  process.env.OPENROUTER_MAX_MATCHES_PER_DAY = "100";
+  process.env.OPENROUTER_DAILY_BUDGET_EUR = "20";
   process.env.AI_GUARD_SPIKE_THRESHOLD = "5";
-  const guard = loadGuard();
-  const db = freshDb();
+  process.env.AI_GUARD_SPIKE_MAX_CALLS_PER_MATCH = "8";
+  process.env.AI_GUARD_SPIKE_EMERGENCY_THRESHOLD = "100";
+  process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD = "50";
+  let guard = loadGuard();
+  let db = freshDb();
+
+  // 10 appels répartis sur 10 matchs : soirée chargée mais aucune boucle.
+  let normalAllowed = true;
+  for (let i = 0; i < 10; i++) {
+    const req = { modelKey: "qwen", matchKey: `NORMAL${i}`, promptVersion: "v1" };
+    const check = guard.canProceed(db, req);
+    if (!check.allowed) { normalAllowed = false; break; }
+    guard.recordCall(db, { ...req, requestKey: check.requestKey, tokensIn: 500, tokensOut: 80, status: "ok" });
+  }
+  assert(normalAllowed === true, "un pic réparti sur plusieurs matchs reste autorisé");
+  assert(!guard.isBreakerTripped(db, "spike"), "aucun coupe-circuit pour le fan-out normal");
+  db.close();
+
+  // Même volume concentré sur un seul match : boucle réelle.
+  guard = loadGuard();
+  db = freshDb();
   let tripped = false;
-  for (let i = 0; i < 8; i++) {
-    const req = { modelKey: "qwen", matchKey: `SPIKE${i}`, promptVersion: "v1" };
+  for (let i = 0; i < 10; i++) {
+    const req = { modelKey: "qwen", matchKey: "LOOP_SPIKE", promptVersion: `v${i}` };
     const check = guard.canProceed(db, req);
     if (!check.allowed && check.reason.includes("sursaut")) { tripped = true; break; }
     if (check.allowed) guard.recordCall(db, { ...req, requestKey: check.requestKey, tokensIn: 500, tokensOut: 80, status: "ok" });
   }
-  assert(tripped === true, "un sursaut de requêtes déclenche le coupe-circuit avant la limite de budget");
+  assert(tripped === true, "un sursaut concentré sur un match déclenche le coupe-circuit");
   db.close();
 }
 

@@ -41,6 +41,11 @@ const CFG = {
   // coupe-circuit se déclenche — signature d'une boucle, pas d'un usage normal.
   spikeWindowMinutes: 5,
   spikeThreshold: Number(process.env.AI_GUARD_SPIKE_THRESHOLD || 15),
+  // Un soir chargé produit normalement 5 appels par match (un par siège). Le
+  // volume brut ne devient un spike que s'il est concentré anormalement sur
+  // trop peu de matchs, ou s'il atteint le plafond d'urgence absolu.
+  spikeMaxCallsPerMatch: Number(process.env.AI_GUARD_SPIKE_MAX_CALLS_PER_MATCH || 8),
+  spikeEmergencyThreshold: Number(process.env.AI_GUARD_SPIKE_EMERGENCY_THRESHOLD || 100),
   // Même modèle + même match rappelé plus de N fois en 10 minutes = worker qui boucle.
   duplicateBurstWindowMinutes: 10,
   duplicateBurstThreshold: Number(process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD || 8),
@@ -261,14 +266,23 @@ function canProceed(db, { modelKey, matchKey, competition, market, promptVersion
     return { allowed: false, reason: `[LIMIT] plafond quotidien du modèle "${modelKey}" atteint`, requestKey };
   }
 
-  // 9) Détection de sursaut (boucle probable) — dernières N minutes
-  const recentCalls = _todaySum(db, `
-    SELECT COUNT(*) FROM ai_call_budget_log
+  // 9) Détection de sursaut (boucle probable) — dernières N minutes.
+  // Cinq sièges sur plusieurs matchs simultanés constituent un trafic normal :
+  // on tient donc compte du nombre de matchs, pas seulement du volume brut.
+  const recentSpike = db.prepare(`
+    SELECT COUNT(*) AS calls, COUNT(DISTINCT match_key) AS matches
+    FROM ai_call_budget_log
     WHERE created_at >= datetime('now', ?) AND status = 'ok'
-  `, [`-${CFG.spikeWindowMinutes} minutes`]);
-  if (recentCalls >= CFG.spikeThreshold) {
-    tripBreaker(db, "spike", `${recentCalls} appels IA en ${CFG.spikeWindowMinutes} minutes (seuil ${CFG.spikeThreshold}) — hausse anormale, probable boucle.`);
-    if (CFG.hardStop) return { allowed: false, reason: "[LIMIT] sursaut anormal détecté", requestKey };
+  `).get(`-${CFG.spikeWindowMinutes} minutes`) || { calls: 0, matches: 0 };
+  const recentCalls = Number(recentSpike.calls) || 0;
+  const recentMatches = Number(recentSpike.matches) || 0;
+  const callsPerMatch = recentCalls / Math.max(1, recentMatches);
+  const concentratedSpike = recentCalls >= CFG.spikeThreshold
+    && (recentMatches <= 1 || callsPerMatch > CFG.spikeMaxCallsPerMatch);
+  const emergencySpike = recentCalls >= CFG.spikeEmergencyThreshold;
+  if (concentratedSpike || emergencySpike) {
+    tripBreaker(db, "spike", `${recentCalls} appels IA en ${CFG.spikeWindowMinutes} minutes sur ${recentMatches} match(s) (${callsPerMatch.toFixed(1)}/match) — concentration anormale, probable boucle.`);
+    if (CFG.hardStop) return { allowed: false, reason: "[LIMIT] sursaut anormal détecté" };
   }
 
   // 10) Détection de rappels identiques en rafale (même modèle + même match)

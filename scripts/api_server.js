@@ -3860,13 +3860,17 @@ const MIN_PLAYABLE_ODD = Math.max(1.05, Number(process.env.MIN_PLAYABLE_ODD || 1
 const MAX_PLAYABLE_ODD = Math.min(3.0, Number(process.env.MAX_PLAYABLE_ODD || 2.50));
 
 function betIsPlayable(match, bet, cote) {
+  // Le produit client O/U 2,5 possède sa fenêtre publique unique 1,30–2,10.
+  // Une ancienne valeur MIN_PLAYABLE_ODD du VPS ne doit pas la resserrer.
+  const minPlayableOdd = isOu25Bet(bet) ? TIER_MIN_REAL_ODD : MIN_PLAYABLE_ODD;
+  const maxPlayableOdd = isOu25Bet(bet) ? TIER_MAX_REAL_ODD : MAX_PLAYABLE_ODD;
   // Cote trop faible = aucune valeur (ex: victoire à 1.10 sur un 3-0)
-  if (cote && cote < MIN_PLAYABLE_ODD) {
-    return { ok: false, reason: `cote ${cote} < ${MIN_PLAYABLE_ODD} (trop faible, pas de valeur)` };
+  if (cote && cote < minPlayableOdd) {
+    return { ok: false, reason: `cote ${cote} < ${minPlayableOdd} (trop faible, pas de valeur)` };
   }
-  // Cote trop haute = longshot que le book juge improbable (règle métier : max 1.95)
-  if (cote && cote > MAX_PLAYABLE_ODD) {
-    return { ok: false, reason: `cote ${cote} > ${MAX_PLAYABLE_ODD} (longshot, trop risqué)` };
+  // Cote trop haute = longshot que le book juge improbable.
+  if (cote && cote > maxPlayableOdd) {
+    return { ok: false, reason: `cote ${cote} > ${maxPlayableOdd} (longshot, trop risqué)` };
   }
   const sh = Number(match?.score_home), sa = Number(match?.score_away);
   if (Number.isFinite(sh) && Number.isFinite(sa)) {
