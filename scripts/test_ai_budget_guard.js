@@ -52,8 +52,8 @@ console.log("═══ Scénario 1 — anti-doublon : un match ne peut pas être
   assert(second.allowed === false, "deuxième appel sur le MÊME match+modèle bloqué");
   assert(second.reason.startsWith("[LIMIT]"), "raison correctement codée [LIMIT]");
 
-  const differentModel = guard.canProceed(db, { ...req, modelKey: "kimi" });
-  assert(differentModel.allowed === true, "un AUTRE modèle sur le même match reste autorisé (clé = match+modèle+prompt)");
+  const differentMatch = guard.canProceed(db, { ...req, matchKey: "PSG_LYON_2026-07-28" });
+  assert(differentMatch.allowed === true, "le même modèle sur un AUTRE match reste autorisé");
 
   db.close();
 }
