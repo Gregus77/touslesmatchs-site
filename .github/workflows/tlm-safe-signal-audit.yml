@@ -3,7 +3,7 @@ name: TLM safe end-to-end signal audit
 on:
   push:
     branches: [codex/audit-signal-pipeline-20260905-v2]
-    paths: [".github/workflows/tlm-safe-signal-audit.yml"]
+    paths: [".github/workflows/tlm-safe-signal-audit.yml", "scripts/audit_signal_pipeline_readonly_20260905.js"]
   workflow_dispatch:
 
 permissions:
