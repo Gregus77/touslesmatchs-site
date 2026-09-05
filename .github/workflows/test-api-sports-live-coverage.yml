@@ -1,0 +1,27 @@
+name: Test API-Sports live coverage
+
+on:
+  pull_request:
+    paths:
+      - "scripts/api_server.js"
+      - "scripts/test_api_sports_live_coverage_20260905.js"
+      - ".github/workflows/test-api-sports-live-coverage.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate live source coverage
+        run: node scripts/test_api_sports_live_coverage_20260905.js
+      - name: Preserve bookmaker and pipeline gates
+        run: |
+          node scripts/test_real_bookmaker_filter.js
+          node scripts/test_signal_pipeline_order.js
