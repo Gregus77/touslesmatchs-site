@@ -35,4 +35,8 @@ jobs:
             rm -f /tmp/tlm-signal-audit.js
             docker exec touslesmatchs-api rm -f /tmp/tlm-signal-audit.js
             LOGS="$(docker logs touslesmatchs-api --since 2h 2>&1 || true)"
-            echo "LOG_COUNTS auto_cycles=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] live=' || true) analyses_started=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] analyse snapshot:' || true) no_real_odds=$(printf '%s' "$LOGS" | grep -c 'sans cote reelle' || true) ai_errors=$(printf '%s' "$LOGS" | grep -Eic '\[concile\].*(erreur|timeout|echec)' || true) telegram_errors=$(printf '%s' "$LOGS" | grep -Eic 'telegram.*(error|failed|echec|inaccessible)' || true)"
+            echo "LOG_COUNTS auto_cycles=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] live=' || true) analyses_started=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] analyse snapshot:' || true) no_real_odds=$(printf '%s' "$LOGS" | grep -c 'sans cote reelle' || true) ai_errors=$(printf '%s' "$LOGS" | grep -Eic '\[concile\].*(erreur|timeout|echec)' || true) telegram_errors=$(printf '%s' "$LOGS" | grep -Eic 'telegram.*(error|failed|echec|inaccessible)' || true) snapshot_errors=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] snapshot check:' || true) cycle_errors=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] cycle:' || true)"
+            printf '%s' "$LOGS" | python3 -c 'import sys,re,json
+p=re.compile(r"\[auto-concile\] live=(\d+) eligible=(\d+) analysed_this_cycle=(\d+) skipped_low_trust=(\d+) skipped_sans_cote_reelle=(\d+)")
+rows=[dict(zip(("live","eligible","analysed","low_trust","no_odds"),map(int,m.groups()))) for line in sys.stdin for m in [p.search(line)] if m]
+print("CYCLE_COUNTERS",json.dumps(rows[-12:],separators=(",",":")))'
