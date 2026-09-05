@@ -44,53 +44,7 @@ jobs:
             curl -fsS --max-time 30 "http://127.0.0.1:3001/public-signal-rules?audit=$STAMP" -o "$RULES"
             curl -fsS --max-time 45 "http://127.0.0.1:3001/live-matches?audit=$STAMP" -o "$LIVE"
             curl -fsS --max-time 45 "http://127.0.0.1:3001/analysis-history?audit=$STAMP" -o "$HIST"
-
-            node - "$HEALTH" "$RULES" "$LIVE" "$HIST" <<'NODE'
-            const fs=require("fs");
-            const read=p=>JSON.parse(fs.readFileSync(p,"utf8"));
-            const [health,rules,live,hist]=process.argv.slice(2).map(read);
-            const matches=Array.isArray(live)?live:(live.matches||live.data||[]);
-            const history=Array.isArray(hist)?hist:(hist.analyses||hist.history||hist.data||[]);
-            const minuteOf=m=>{
-              const raw=m.minute_at_analysis??m.minute??m.elapsed;
-              const hit=String(raw??"").match(/^\s*(\d+)\s*$/);
-              return hit?Number(hit[1]):null;
-            };
-            const votesOf=m=>{
-              const state=m.ou25||m.vote_summary||m.analysis||{};
-              const arr=state.votes||m.votes||[];
-              return Number(state.vote_count??state.consensus_votes??m.vote_count??m.consensus_votes??(Array.isArray(arr)?arr.filter(v=>v&&((v.direction??v.bet??v.vote)!=null)).length:0))||0;
-            };
-            const compact=m=>{
-              const state=m.ou25||m.vote_summary||m.analysis||{};
-              return {
-                fixture_id:m.fixture_id??m.id??null,
-                match:`${m.home??m.home_team??"?"} — ${m.away??m.away_team??"?"}`,
-                competition:m.competition??m.league??null,
-                minute:minuteOf(m),
-                score:`${m.score_home??m.home_score??"?"}-${m.score_away??m.away_score??"?"}`,
-                analysable:m.analysable??m.analyzable??null,
-                window_status:state.window_status??m.window_status??null,
-                votes:votesOf(m),
-                confidence:state.confidence??m.confidence??null,
-                odd:state.odd??m.odd??m.cote??null,
-                block_reason:m.block_reason??m.analysis_exclusion_reason??m.diffusion_block??state.block_reason??state.reason??null
-              };
-            };
-            const inWindow=matches.filter(m=>{const n=minuteOf(m);return n!==null&&n>=15&&n<=45});
-            const completed=history.filter(x=>x.outcome==="win"||x.outcome==="loss");
-            const deliveries=history.filter(x=>x.telegram_sent===true||x.telegram_delivered===true||x.diffused===true||x.sent===true);
-            console.log("HEALTH",JSON.stringify({
-              ok:health.ok!==false,
-              telegram:health.integrations?.telegram?.ok??health.telegram?.ok??null,
-              brevo:health.integrations?.brevo?.ok??health.brevo?.ok??null
-            }));
-            console.log("RULES",JSON.stringify(rules));
-            console.log("LIVE_SUMMARY",JSON.stringify({total:matches.length,in_window:inWindow.length,with_votes:inWindow.filter(m=>votesOf(m)>0).length,four_plus:inWindow.filter(m=>votesOf(m)>=4).length}));
-            console.log("LIVE_IN_WINDOW");
-            inWindow.map(compact).forEach(x=>console.log(JSON.stringify(x)));
-            console.log("HISTORY_SUMMARY",JSON.stringify({rows:history.length,resolved:completed.length,deliveries_detected:deliveries.length}));
-            NODE
+            node -e "$(printf '%s' 'Y29uc3QgZnM9cmVxdWlyZSgiZnMiKTsKY29uc3QgcmVhZD1wPT5KU09OLnBhcnNlKGZzLnJlYWRGaWxlU3luYyhwLCJ1dGY4IikpOwpjb25zdCBbaGVhbHRoLHJ1bGVzLGxpdmUsaGlzdF09cHJvY2Vzcy5hcmd2LnNsaWNlKDEpLm1hcChyZWFkKTsKY29uc3QgbWF0Y2hlcz1BcnJheS5pc0FycmF5KGxpdmUpP2xpdmU6KGxpdmUubWF0Y2hlc3x8bGl2ZS5kYXRhfHxbXSk7CmNvbnN0IGhpc3Rvcnk9QXJyYXkuaXNBcnJheShoaXN0KT9oaXN0OihoaXN0LmFuYWx5c2VzfHxoaXN0Lmhpc3Rvcnl8fGhpc3QuZGF0YXx8W10pOwpjb25zdCBtaW51dGVPZj1tPT57Y29uc3QgcmF3PW0ubWludXRlX2F0X2FuYWx5c2lzPz9tLm1pbnV0ZT8/bS5lbGFwc2VkO2NvbnN0IGhpdD1TdHJpbmcocmF3Pz8iIikubWF0Y2goL15ccyooXGQrKVxzKiQvKTtyZXR1cm4gaGl0P051bWJlcihoaXRbMV0pOm51bGx9Owpjb25zdCB2b3Rlc09mPW09Pntjb25zdCBzdGF0ZT1tLm91MjV8fG0udm90ZV9zdW1tYXJ5fHxtLmFuYWx5c2lzfHx7fTtjb25zdCBhcnI9c3RhdGUudm90ZXN8fG0udm90ZXN8fFtdO3JldHVybiBOdW1iZXIoc3RhdGUudm90ZV9jb3VudD8/c3RhdGUuY29uc2Vuc3VzX3ZvdGVzPz9tLnZvdGVfY291bnQ/P20uY29uc2Vuc3VzX3ZvdGVzPz8oQXJyYXkuaXNBcnJheShhcnIpP2Fyci5maWx0ZXIodj0+diYmKCh2LmRpcmVjdGlvbj8/di5iZXQ/P3Yudm90ZSkhPW51bGwpKS5sZW5ndGg6MCkpfHwwfTsKY29uc3QgY29tcGFjdD1tPT57Y29uc3Qgc3RhdGU9bS5vdTI1fHxtLnZvdGVfc3VtbWFyeXx8bS5hbmFseXNpc3x8e307cmV0dXJuIHtmaXh0dXJlX2lkOm0uZml4dHVyZV9pZD8/bS5pZD8/bnVsbCxtYXRjaDpTdHJpbmcobS5ob21lPz9tLmhvbWVfdGVhbT8/Ij8iKSsiIC0gIitTdHJpbmcobS5hd2F5Pz9tLmF3YXlfdGVhbT8/Ij8iKSxjb21wZXRpdGlvbjptLmNvbXBldGl0aW9uPz9tLmxlYWd1ZT8/bnVsbCxtaW51dGU6bWludXRlT2YobSksc2NvcmU6U3RyaW5nKG0uc2NvcmVfaG9tZT8/bS5ob21lX3Njb3JlPz8iPyIpKyItIitTdHJpbmcobS5zY29yZV9hd2F5Pz9tLmF3YXlfc2NvcmU/PyI/IiksYW5hbHlzYWJsZTptLmFuYWx5c2FibGU/P20uYW5hbHl6YWJsZT8/bnVsbCx3aW5kb3dfc3RhdHVzOnN0YXRlLndpbmRvd19zdGF0dXM/P20ud2luZG93X3N0YXR1cz8/bnVsbCx2b3Rlczp2b3Rlc09mKG0pLGNvbmZpZGVuY2U6c3RhdGUuY29uZmlkZW5jZT8/bS5jb25maWRlbmNlPz9udWxsLG9kZDpzdGF0ZS5vZGQ/P20ub2RkPz9tLmNvdGU/P251bGwsYmxvY2tfcmVhc29uOm0uYmxvY2tfcmVhc29uPz9tLmFuYWx5c2lzX2V4Y2x1c2lvbl9yZWFzb24/P20uZGlmZnVzaW9uX2Jsb2NrPz9zdGF0ZS5ibG9ja19yZWFzb24/P3N0YXRlLnJlYXNvbj8/bnVsbH19Owpjb25zdCBpbldpbmRvdz1tYXRjaGVzLmZpbHRlcihtPT57Y29uc3Qgbj1taW51dGVPZihtKTtyZXR1cm4gbiE9PW51bGwmJm4+PTE1JiZuPD00NX0pOwpjb25zdCBjb21wbGV0ZWQ9aGlzdG9yeS5maWx0ZXIoeD0+eC5vdXRjb21lPT09IndpbiJ8fHgub3V0Y29tZT09PSJsb3NzIik7CmNvbnN0IGRlbGl2ZXJpZXM9aGlzdG9yeS5maWx0ZXIoeD0+eC50ZWxlZ3JhbV9zZW50PT09dHJ1ZXx8eC50ZWxlZ3JhbV9kZWxpdmVyZWQ9PT10cnVlfHx4LmRpZmZ1c2VkPT09dHJ1ZXx8eC5zZW50PT09dHJ1ZSk7CmNvbnNvbGUubG9nKCJIRUFMVEgiLEpTT04uc3RyaW5naWZ5KHtvazpoZWFsdGgub2shPT1mYWxzZSx0ZWxlZ3JhbTpoZWFsdGguaW50ZWdyYXRpb25zPy50ZWxlZ3JhbT8ub2s/P2hlYWx0aC50ZWxlZ3JhbT8ub2s/P251bGwsYnJldm86aGVhbHRoLmludGVncmF0aW9ucz8uYnJldm8/Lm9rPz9oZWFsdGguYnJldm8/Lm9rPz9udWxsfSkpOwpjb25zb2xlLmxvZygiUlVMRVMiLEpTT04uc3RyaW5naWZ5KHJ1bGVzKSk7CmNvbnNvbGUubG9nKCJMSVZFX1NVTU1BUlkiLEpTT04uc3RyaW5naWZ5KHt0b3RhbDptYXRjaGVzLmxlbmd0aCxpbl93aW5kb3c6aW5XaW5kb3cubGVuZ3RoLHdpdGhfdm90ZXM6aW5XaW5kb3cuZmlsdGVyKG09PnZvdGVzT2YobSk+MCkubGVuZ3RoLGZvdXJfcGx1czppbldpbmRvdy5maWx0ZXIobT0+dm90ZXNPZihtKT49NCkubGVuZ3RofSkpOwpjb25zb2xlLmxvZygiTElWRV9JTl9XSU5ET1ciKTsKaW5XaW5kb3cubWFwKGNvbXBhY3QpLmZvckVhY2goeD0+Y29uc29sZS5sb2coSlNPTi5zdHJpbmdpZnkoeCkpKTsKY29uc29sZS5sb2coIkhJU1RPUllfU1VNTUFSWSIsSlNPTi5zdHJpbmdpZnkoe3Jvd3M6aGlzdG9yeS5sZW5ndGgscmVzb2x2ZWQ6Y29tcGxldGVkLmxlbmd0aCxkZWxpdmVyaWVzX2RldGVjdGVkOmRlbGl2ZXJpZXMubGVuZ3RofSkpOw==' | base64 -d)" "$HEALTH" "$RULES" "$LIVE" "$HIST"
 
             echo "ENV_STATUS"
             docker exec touslesmatchs-api node -e 'for(const k of ["API_FOOTBALL_KEY","TELEGRAM_BOT_TOKEN","OPENROUTER_API_KEY","PERPLEXITY_API_KEY","DEEPSEEK_API_KEY","MISTRAL_API_KEY","COHERE_API_KEY","OPENAI_API_KEY"]) console.log(k,process.env[k]?"SET":"EMPTY")'
