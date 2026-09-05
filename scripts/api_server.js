@@ -4033,6 +4033,16 @@ function isApiSportsLiveGame(g) {
   return !API_SPORTS_NON_LIVE_STATUSES.has(short);
 }
 
+function mergeApiSportsFootballItems(primary = [], supplement = []) {
+  const byFixture = new Map();
+  for (const match of [...primary, ...supplement]) {
+    const key = String(match?.fixtureId || match?.sourceId || match?.id || "");
+    if (!key || byFixture.has(key)) continue;
+    byFixture.set(key, match);
+  }
+  return [...byFixture.values()];
+}
+
 // Basketball/hockey/baseball sont facturés par API-Sports sur un quota SEPARE
 // de celui du football (100 requêtes/jour chacun sur le plan actuel), mais
 // partageaient jusqu'ici le même cache 60 s que le football — un simple
@@ -4043,6 +4053,45 @@ function isApiSportsLiveGame(g) {
 // du cache global. Le football garde son cadencement normal (produit principal).
 const SECONDARY_SPORT_MIN_INTERVAL_MS = Math.max(1, Number(process.env.SECONDARY_SPORT_POLL_MIN_MINUTES || 10)) * 60 * 1000;
 const apiSportsLastFetch = { basketball: 0, hockey: 0, baseball: 0 };
+
+// Le flux ?live=all a omis des affiches de Bundesliga le 05/09/2026 alors
+// qu'elles etaient bien en cours. La liste du jour sert de filet de securite,
+// avec un cache de 5 minutes pour rester tres loin du quota Pro.
+const API_SPORTS_FOOTBALL_DAY_CACHE_MS = Math.max(
+  3,
+  Number(process.env.API_SPORTS_FOOTBALL_DAY_CACHE_MINUTES || 5)
+) * 60 * 1000;
+let apiSportsFootballDayLiveCache = { date: "", ts: 0, matches: [] };
+
+function parisDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+async function fetchApiSportsFootballDayLive() {
+  const date = parisDayKey();
+  if (
+    apiSportsFootballDayLiveCache.date === date
+    && Date.now() - apiSportsFootballDayLiveCache.ts < API_SPORTS_FOOTBALL_DAY_CACHE_MS
+  ) return apiSportsFootballDayLiveCache.matches;
+
+  const data = await httpGet(
+    `https://v3.football.api-sports.io/fixtures?date=${encodeURIComponent(date)}&timezone=Europe%2FParis`,
+    { "x-apisports-key": API_SPORTS_KEY }
+  );
+  if (handleApiSportsErrors("football", data)) return apiSportsFootballDayLiveCache.matches;
+  const matches = (data.response || [])
+    .filter(isApiSportsLiveGame)
+    .map(normalizeApiSportsFootballFixture)
+    .filter((match) => match.home && match.away);
+  apiSportsFootballDayLiveCache = { date, ts: Date.now(), matches };
+  console.log(`[live-matches] API-Sports football jour/live: ${matches.length}`);
+  return matches;
+}
 
 function shouldSkipSecondarySportPoll(sport) {
   const last = apiSportsLastFetch[sport] || 0;
@@ -4055,14 +4104,20 @@ async function fetchFromApiSports() {
   if (!API_SPORTS_KEY) return null;
   const results = [];
 
-  // Football live
+  // Football live. Le flux du jour complete automatiquement les rencontres
+  // oubliees par ?live=all (notamment les grosses affiches), sans doublon.
   try {
     if (!shouldSkipApiSportsSport("football")) {
       const data = await httpGet("https://v3.football.api-sports.io/fixtures?live=all", { "x-apisports-key": API_SPORTS_KEY });
       if (!handleApiSportsErrors("football", data)) {
-      const items = (data.response || []).slice(0, 60).map(normalizeApiSportsFootballFixture);
-      results.push(...items);
-      console.log(`[live-matches] API-Sports football: ${items.length}`);
+        const directItems = (data.response || []).slice(0, 60).map(normalizeApiSportsFootballFixture);
+        const dayItems = await fetchApiSportsFootballDayLive();
+        const items = mergeApiSportsFootballItems(directItems, dayItems);
+        results.push(...items);
+        console.log(
+          `[live-matches] API-Sports football: ${items.length} ` +
+          `(direct=${directItems.length}, ajoutes_par_jour=${Math.max(0, items.length - directItems.length)})`
+        );
       }
     }
   } catch(e) { console.error("[live-matches] API-Sports football:", e.message); }
