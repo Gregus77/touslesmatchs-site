@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/api_server.js"
       - "scripts/test_api_sports_live_coverage_20260905.js"
+      - "scripts/test_real_odds_selection_20260905.js"
       - ".github/workflows/test-api-sports-live-coverage.yml"
   workflow_dispatch:
 
@@ -24,4 +25,5 @@ jobs:
       - name: Preserve bookmaker and pipeline gates
         run: |
           node scripts/test_real_bookmaker_filter.js
+          node scripts/test_real_odds_selection_20260905.js
           node scripts/test_signal_pipeline_order.js
