@@ -10,7 +10,7 @@ assert.match(source, /const CLIENT_OU25_MIN_VOTES\s*=\s*3;/, "le consensus clien
 assert.match(source, /CLIENT_OU25_MIN_CONFIDENCE\s*=\s*Math\.max\(77,/, "la confiance minimale doit rester a 77");
 assert.match(source, /TIER_MIN_REAL_ODD\s*=\s*Math\.max\(1\.30,/, "la cote reelle minimale doit rester a 1,30");
 assert.match(source, /TIER_MAX_REAL_ODD\s*=\s*Math\.min\(2\.10,/, "la cote reelle maximale doit rester a 2,10");
-assert.match(source, /CLIENT_OU25_CLIENT_MAX_MINUTE\s*=\s*Math\.min\(\s*45,/, "la fenetre client doit rester fermee a 45 minutes");
+assert.match(source, /CLIENT_OU25_CLIENT_MAX_MINUTE\s*=\s*45;/, "la fenetre client doit rester fermee a 45 minutes");
 assert.match(source, /RECOVERY_MIN_CONVERGENT_INDICATORS\s*=\s*3;/, "Recovery doit garder trois indicateurs convergents");
 
 const start = source.indexOf("function buildOu25VoteSummary");
