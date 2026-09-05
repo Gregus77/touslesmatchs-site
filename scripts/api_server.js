@@ -2609,15 +2609,15 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
     : 0;
   const unanimous = voteCount === 5;
   const complete = byAgent.size === 5;
-  const voteStatus = complete && unanimous ? "elite" : voteCount >= CLIENT_OU25_MIN_VOTES ? "strong" : "none";
-  const voteLabel = !complete
-    ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
-    : unanimous
-      ? "5/5 unanime O/U 2,5"
-      : voteCount >= 4
-        ? "4/5 signal fort O/U 2,5"
-        : voteCount >= CLIENT_OU25_MIN_VOTES
-          ? "3/5 signal valide O/U 2,5"
+  const voteStatus = unanimous ? "elite" : voteCount >= CLIENT_OU25_MIN_VOTES ? "strong" : "none";
+  const voteLabel = unanimous
+    ? "5/5 unanime O/U 2,5"
+    : voteCount >= 4
+      ? "4/5 signal fort O/U 2,5"
+      : voteCount >= CLIENT_OU25_MIN_VOTES
+        ? "3/5 signal valide O/U 2,5"
+        : !complete
+          ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
           : `${voteCount}/5 aucun signal O/U 2,5`;
   return {
     market: "over_under_2_5",
@@ -2629,7 +2629,7 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
     vote_status: voteStatus,
     unanimous,
     complete,
-    recommended: complete && voteCount >= CLIENT_OU25_MIN_VOTES,
+    recommended: voteCount >= CLIENT_OU25_MIN_VOTES,
     average_confidence: avgConfidence,
     over_count: over.length,
     under_count: under.length,
