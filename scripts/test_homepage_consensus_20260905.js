@@ -44,3 +44,17 @@ assert(!html.includes('tlmKeepHeroVotes'));assert(!html.includes('tlmHeroVoteCac
 assert(html.includes("matches=(d.matches||[]).filter(tlmMatchAllowed).sort(compareHeroMatches)"));
 assert(api.includes('const matches = await fetchLiveMatches();\n    const observed = matches'));
 console.log('OK: strongest consensus across all matches, leader changes, paid/anonymous projection, masks and accessible labels');
+
+// Owner-approved leagues must pass by exact country and division.
+const leagues=vm.createContext({recoveryNormalize:s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim()});
+vm.runInContext(part(api,'function ownerExpandedLeagueAllowed(', '// trusted_major |'),leagues);
+for(const [country,league] of [['Brazil','Serie B'],['Brazil','Serie A'],['Argentina','Liga Profesional Argentina'],['Denmark','Superliga'],['Australia','A-League'],['Ireland','Premier Division'],['Netherlands','Eredivisie']]){
+ assert(leagues.ownerExpandedLeagueAllowed({country,league}),country);
+ assert(leagues.ownerExpandedLeagueAllowed({competition:league+' · '+country}),country+' provider format');
+ assert(!leagues.ownerExpandedLeagueAllowed({country,league:league+' Women'}));
+}
+for(const m of [{country:'Northern Ireland',league:'Premier Division'},{country:'Australia',league:'NPL Queensland'},{country:'Brazil',league:'Serie C'},{country:'Denmark',league:'Cup'},{country:'Argentina',league:'Primera Nacional'}])assert(!leagues.ownerExpandedLeagueAllowed(m));
+ctx.renderHeroLive({...ctx.homepageLiveMatch(fixture('blocked',[]),false),block_reason:'Cote bookmaker indisponible.'});
+assert.equal(elements.get('hero-ai-title').textContent,'Match non analysé');
+assert.equal(elements.get('hero-consensus-label').textContent,'Cote bookmaker indisponible.');
+console.log('OK: approved country/division pairs, exclusions and factual non-analysis banner');

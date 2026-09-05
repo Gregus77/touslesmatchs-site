@@ -1751,8 +1751,9 @@ function renderHeroLive(m){
   var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
   setHeroText('hero-consensus-current',votes+' / 5');
-  setHeroText('hero-ai-title',votes?'Votes IA Over/Under 2,5':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours');
+  setHeroText('hero-ai-title',votes?'Votes IA Over/Under 2,5':m.block_reason?'Match non analysé':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'En attente d’analyse');
   setHeroText('hero-consensus-label',votes?(voteState.locked?('Direction ? · '+voteState.consensusCount+'/5 d’accord · forfait actif requis'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):analysisClosed?'Aucun vote enregistré':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
+  if(!votes)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
   for(var i=0;i<voteEls.length;i++){
     var slot=voteState.slots[i]||{},voted=slot.status==='voted',dir=voteState.locked?null:slot.direction;
