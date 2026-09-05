@@ -31,7 +31,7 @@ jobs:
             echo "RUNTIME_PATCH=1"
             git show origin/codex/audit-signal-pipeline-20260905-v2:scripts/audit_signal_pipeline_readonly_20260905.js > /tmp/tlm-signal-audit.js
             docker cp /tmp/tlm-signal-audit.js touslesmatchs-api:/tmp/tlm-signal-audit.js >/dev/null
-            docker exec touslesmatchs-api node /tmp/tlm-signal-audit.js
+            docker exec -e NODE_PATH=/app/node_modules touslesmatchs-api node /tmp/tlm-signal-audit.js
             rm -f /tmp/tlm-signal-audit.js
             docker exec touslesmatchs-api rm -f /tmp/tlm-signal-audit.js
             LOGS="$(docker logs touslesmatchs-api --since 2h 2>&1 || true)"
