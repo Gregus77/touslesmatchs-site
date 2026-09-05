@@ -15,7 +15,7 @@ function assert(condition, message) {
 
 assert(
   api.includes("const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES"),
-  "Le serveur doit exiger une ligue client eligible et au moins 4 votes alignes."
+  "Le serveur doit exiger une ligue client eligible et au moins 3 votes alignes."
 );
 assert(
   api.includes("homepage_display_eligible: homepageDisplayEligible"),

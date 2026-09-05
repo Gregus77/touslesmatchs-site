@@ -2555,7 +2555,7 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Produit client unique : les cinq sieges votent tous sur Over/Under 2,5.
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
-const CLIENT_OU25_MIN_VOTES = 4;
+const CLIENT_OU25_MIN_VOTES = 3;
 const CLIENT_OU25_MIN_CONFIDENCE = Math.max(77, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 77));
 // Mode Recovery : active par defaut, fail-closed et limite a 1 ou 2 matchs/jour.
 const RECOVERY_MODE_ENABLED = process.env.OU25_RECOVERY_MODE !== "0";
@@ -2609,14 +2609,16 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
     : 0;
   const unanimous = voteCount === 5;
   const complete = byAgent.size === 5;
-  const voteStatus = complete && unanimous ? "elite" : complete && voteCount >= 4 ? "strong" : "none";
-  const voteLabel = !complete
-    ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
-    : unanimous
-      ? "5/5 unanime O/U 2,5"
-      : voteCount >= 4
-        ? "4/5 signal fort O/U 2,5"
-        : `${voteCount}/5 aucun signal O/U 2,5`;
+  const voteStatus = unanimous ? "elite" : voteCount >= CLIENT_OU25_MIN_VOTES ? "strong" : "none";
+  const voteLabel = unanimous
+    ? "5/5 unanime O/U 2,5"
+    : voteCount >= 4
+      ? "4/5 signal fort O/U 2,5"
+      : voteCount >= CLIENT_OU25_MIN_VOTES
+        ? "3/5 signal valide O/U 2,5"
+        : !complete
+          ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
+          : `${voteCount}/5 aucun signal O/U 2,5`;
   return {
     market: "over_under_2_5",
     vote_total: 5,
@@ -2627,7 +2629,7 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
     vote_status: voteStatus,
     unanimous,
     complete,
-    recommended: complete && voteCount >= CLIENT_OU25_MIN_VOTES,
+    recommended: voteCount >= CLIENT_OU25_MIN_VOTES,
     average_confidence: avgConfidence,
     over_count: over.length,
     under_count: under.length,
@@ -3360,7 +3362,7 @@ function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = CLIE
   return true;
 }
 
-// Decision du 02/09/2026 : signal client des 4 votes concordants sur 5.
+// Decision du 05/09/2026 : signal client des 3 votes concordants sur 5.
 function clientOu25RequiredVotes() {
   return CLIENT_OU25_MIN_VOTES;
 }
@@ -6168,7 +6170,7 @@ async function runConcileAnalysis(match) {
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
   const recoveryPromptBlock = RECOVERY_MODE_ENABLED
-    ? `\n\nMODE RECOVERY — sortie client uniquement si : championnat autorise, historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= 78 et au moins 4 votes concordants sur 5. En cas de doute, ne force jamais la confiance.`
+    ? `\n\nMODE RECOVERY — sortie client uniquement si : championnat autorise, historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= 78 et au moins 3 votes concordants sur 5. En cas de doute, ne force jamais la confiance.`
     : "";
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
@@ -6964,7 +6966,7 @@ Réponds en JSON pur (pas de markdown):
     if (!recoveryCapacityAvailable) return `mode Recovery: plafond ${RECOVERY_MAX_DAILY_SIGNALS} signaux/jour atteint`;
     if (!clientOu25MatchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${CLIENT_OU25_CLIENT_MAX_MINUTE})`;
     if (!ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
-    if (!enoughOu25SeatsPresent) return `sieges O/U 2,5 insuffisants: ${Number(voteInfo.vote_active || 0)}/5 (<4)`;
+    if (!enoughOu25SeatsPresent) return `sieges O/U 2,5 insuffisants: ${Number(voteInfo.vote_active || 0)}/5 (<3)`;
     if (analysisResult.confidence < signalThreshold) return `confiance ${analysisResult.confidence} < seuil ${signalThreshold}`;
     if (analysisResult.confidence < CLIENT_OU25_MIN_CONFIDENCE) return `confiance ${analysisResult.confidence} < plancher O/U 2,5 ${CLIENT_OU25_MIN_CONFIDENCE}`;
     if (voteCountForSignal < requiredVotesForSignal) return `votes ${voteCountForSignal} < ${requiredVotesForSignal}`;
@@ -7084,7 +7086,7 @@ Réponds en JSON pur (pas de markdown):
       // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
       // eleve que les autres paliers, qui porte l'exigence Standard.
       // En Mode Recovery, les 1-2 signaux qui franchissent tous les garde-fous
-      // sont envoyes aux canaux payants des 4/5 et 78 %, sans second seuil cache.
+      // sont envoyes aux canaux payants des 3/5 et 77 %, sans second seuil cache.
       const gradeStandard = RECOVERY_MODE_ENABLED
         ? diffusable
         : diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.standard;
@@ -12936,7 +12938,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
       // Source de verite pour l'accueil public : un match ne peut etre presente
       // comme un signal que si le championnat est dans le perimetre client ET
-      // qu'au moins 4 IA ont reellement enregistre le meme vote O/U 2,5.
+      // qu'au moins 3 IA ont reellement enregistre le meme vote O/U 2,5.
       // Cela evite qu'un simple match live bien illustre (logos + score) soit
       // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
       const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
@@ -14746,7 +14748,7 @@ app.get("/analysis-history", (req, res) => {
       ORDER BY analysed_at DESC
     `).all();
     // Cote client : une analyse n'entre dans l'historique que si elle a ete
-    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 4/5.
+    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 3/5.
     // Cette route alimente la page Resultats, y compris quand le fondateur est
     // connecte : elle doit donc rester identique pour tous les lecteurs. La vue
     // exhaustive de diagnostic reste disponible via /admin/daily-audit.
@@ -16890,13 +16892,13 @@ async function runMorningAudit() {
   });
 
   // 3. Volume métier : zéro signal peut être parfaitement normal avec les filtres
-  // stricts 4/5. Le transport Telegram est contrôlé séparément juste après.
+  // stricts 3/5. Le transport Telegram est contrôlé séparément juste après.
   await test("Volume de signaux", async () => {
     const depuis = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
     const rows = db.prepare("SELECT sig_sent_standard s, sig_sent_premium p, sig_sent_elite e FROM concile_analyses WHERE analysed_at >= ?").all(depuis);
     const envoyes = rows.filter(r => r.s === 1 || r.p === 1 || r.e === 1).length;
     if (rows.length >= 30 && envoyes === 0) {
-      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 4/5, transport vérifié séparément` };
+      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 3/5, transport vérifié séparément` };
     }
     return { ok: true, info: `${envoyes} signaux diffusés en 48h` };
   });

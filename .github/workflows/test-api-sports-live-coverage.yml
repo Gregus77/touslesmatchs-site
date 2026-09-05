@@ -7,6 +7,7 @@ on:
       - "scripts/test_api_sports_live_coverage_20260905.js"
       - "scripts/test_real_odds_selection_20260905.js"
       - "scripts/test_live_vote_fallback_20260905.js"
+      - "scripts/test_ou25_consensus_3of5_20260905.js"
       - ".github/workflows/test-api-sports-live-coverage.yml"
   workflow_dispatch:
 
@@ -28,4 +29,5 @@ jobs:
           node scripts/test_real_bookmaker_filter.js
           node scripts/test_real_odds_selection_20260905.js
           node scripts/test_live_vote_fallback_20260905.js
+          node scripts/test_ou25_consensus_3of5_20260905.js
           node scripts/test_signal_pipeline_order.js
