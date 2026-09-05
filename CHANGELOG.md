@@ -1,5 +1,14 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-05 — Couverture live API-Football complétée
+
+- Complète automatiquement le flux `fixtures?live=all` avec les rencontres en cours
+  de la journée, afin de récupérer les grosses affiches parfois absentes du flux live.
+- Déduplique strictement par identifiant de fixture et conserve API-Football comme
+  identité nécessaire aux vraies cotes O/U 2,5.
+- Cache de cinq minutes pour protéger le quota Pro. Aucun seuil, vote, modèle,
+  budget IA ni canal Telegram modifié.
+
 ## 2026-09-05 — Fenêtre client 15–45 confirmée par le propriétaire
 
 - Supprime le plafond résiduel de 40 minutes dans la constante du produit O/U 2,5.
