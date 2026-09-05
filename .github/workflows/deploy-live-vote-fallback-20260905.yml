@@ -72,24 +72,7 @@ jobs:
             STAMP="$(date +%s)"
             curl -fsS --max-time 90 "https://www.touslesmatchs.com/api/health?vote=$STAMP" -o "/tmp/tlm-health-$STAMP.json"
             curl -fsS --max-time 90 "https://www.touslesmatchs.com/api/live-matches?vote=$STAMP" -o "/tmp/tlm-live-$STAMP.json"
-            python3 - "/tmp/tlm-health-$STAMP.json" "/tmp/tlm-live-$STAMP.json" <<'PY'
-            import json,sys
-            health=json.load(open(sys.argv[1],encoding="utf-8"))
-            live=json.load(open(sys.argv[2],encoding="utf-8"))
-            assert health.get("ok") is not False
-            assert (health.get("integrations") or {}).get("telegram",{}).get("ok") is True
-            matches=live.get("matches",[]) if isinstance(live,dict) else live
-            assert isinstance(matches,list)
-            checked=0
-            for match in matches:
-                state=match.get("ou25") or {}
-                if not state:
-                    continue
-                assert state.get("to_minute")==45
-                assert len(state.get("votes") or [])==5
-                checked+=1
-            print("LIVE_VOTE_PUBLIC_OK",checked)
-            PY
+            node -e 'const fs=require("fs"); const health=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); const live=JSON.parse(fs.readFileSync(process.argv[2],"utf8")); if(health.ok===false) throw new Error("health not ok"); if(!health.integrations?.telegram?.ok) throw new Error("telegram not ok"); const matches=Array.isArray(live)?live:(live.matches||[]); if(!Array.isArray(matches)) throw new Error("invalid live response"); let checked=0; for(const match of matches){const state=match.ou25||{}; if(!Object.keys(state).length) continue; if(state.to_minute!==45) throw new Error("invalid to_minute"); if(!Array.isArray(state.votes)||state.votes.length!==5) throw new Error("invalid votes"); checked++;} console.log("LIVE_VOTE_PUBLIC_OK",checked);' "/tmp/tlm-health-$STAMP.json" "/tmp/tlm-live-$STAMP.json"
 
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             test -z "$(git status --porcelain --untracked-files=no)"
