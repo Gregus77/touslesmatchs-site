@@ -72,6 +72,16 @@ docker exec -i touslesmatchs-api node - <<'NODE'
  const r=await fetch('http://127.0.0.1:3001/public-signal-rules');const d=await r.json();
  if(!r.ok||!d.ok||!Number.isFinite(d.to_minute)||d.min_votes!==4)throw Error('règles non vérifiées');
  console.log('Règles API:',JSON.stringify(d));
+ const fs=require('fs'),vm=require('vm'),src=fs.readFileSync('/app/server.js','utf8');
+ const ctx=vm.createContext({});
+ function section(a,b){return src.slice(src.indexOf(a),src.indexOf(b,src.indexOf(a)+a.length));}
+ vm.runInContext(section('function recoveryNormalize(', 'function recoveryLeagueAllowed('),ctx);
+ vm.runInContext(section('function ownerExpandedLeagueAllowed(', '// trusted_major |'),ctx);
+ vm.runInContext(section('function recoveryLeagueAllowed(', 'function recoveryNumber('),ctx);
+ for(const [country,league] of [['Brazil','Serie A'],['Brazil','Serie B'],['Argentina','Liga Profesional Argentina'],['Denmark','Superliga'],['Australia','A-League'],['Ireland','Premier Division'],['Netherlands','Eredivisie']]){
+   if(!ctx.recoveryLeagueAllowed({country,league}))throw Error('Championnat absent: '+country);
+ }
+ console.log('Championnats autorisés dans le code exécuté: 7/7 OK');
  for(const authorization of ['', 'Bearer invalid-homepage-verification']){
    const r=await fetch('https://www.touslesmatchs.com/api/homepage-live',
      {headers:authorization?{Authorization:authorization}:{},signal:AbortSignal.timeout(20000)});

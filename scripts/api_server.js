@@ -3230,10 +3230,25 @@ function leagueHaystack(match) {
   return [match?.competition, match?.league, match?.country]
     .filter(Boolean).join(" · ").toLowerCase();
 }
+// Owner-approved expansion, 05/09/2026. Specific leagues, never whole countries.
+function ownerExpandedLeagueAllowed(match) {
+  const c = recoveryNormalize(match?.country || String(match?.competition || '').split(' · ').slice(1).join(' · '));
+  const l = recoveryNormalize(match?.league || String(match?.competition || '').split(' · ')[0]);
+  const allowed = [
+    [/^(brazil|brasil|bresil)$/, /^(serie [ab]|brasileirao( serie [ab])?)$/],
+    [/^(argentina|argentine)$/, /^(liga profesional( argentina)?|primera division)$/],
+    [/^(denmark|danemark)$/, /^(superliga|superligaen|danish superliga)$/],
+    [/^(australia|australie)$/, /^a[- ]league( men)?$/],
+    [/^(ireland|republic of ireland|irlande)$/, /^(premier division|league of ireland premier division)$/],
+    [/^(netherlands|pays-bas)$/, /^eredivisie$/],
+  ];
+  return allowed.some(([country,league]) => country.test(c) && league.test(l));
+}
 // trusted_major | trusted_secondary | watchlist_shadow | null (non classee)
 function leagueTier(match) {
   const h = leagueHaystack(match);
   if (!h) return null;
+  if (ownerExpandedLeagueAllowed(match)) return 'trusted_major';
   if (LEAGUE_TIER_WATCHLIST.some(k => h.includes(k))) return "watchlist_shadow";
   if (LEAGUE_TIER_SECONDARY.some(k => h.includes(k))) return "trusted_secondary";
   if (TRUSTED_COMPETITIONS.some(k => h.includes(k))) return "trusted_major";
@@ -3304,6 +3319,7 @@ function isLowTrustCompetition(matchOrCompetition = "") {
        matchOrCompetition?.away].filter(Boolean).join(" ");
   const value = String(raw || "").toLowerCase();
   if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
+  if (ownerExpandedLeagueAllowed(matchOrCompetition)) return false;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
   // Ligues classees secondaire ou en observation (07/08/2026) : elles ne sont
   // pas "de confiance" au sens du regime normal, mais elles doivent pouvoir
@@ -3357,6 +3373,7 @@ function recoveryNormalize(value) {
 }
 
 function recoveryLeagueAllowed(match) {
+  if (ownerExpandedLeagueAllowed(match)) return true;
   const h = recoveryNormalize([match?.competition, match?.league, match?.country].filter(Boolean).join(" · "));
   const country = (pattern) => pattern.test(h);
   const league = (pattern) => pattern.test(h);
@@ -9224,6 +9241,17 @@ async function isBookmakerPlayableBeforeAnalysis(match) {
   return { ok: false, why: `aucune cote bookmaker reelle dans ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}` };
 }
 
+const liveAnalysisNotices = new Map();
+function liveAnalysisNoticeKey(m) { return `${getTodayStr()}|${m.id || m.fixtureId || m.home+'|'+m.away}`; }
+function setLiveAnalysisNotice(m, reason) {
+  const now = Date.now();
+  for (const [key,value] of liveAnalysisNotices) if (now-value.at>12*60*1000) liveAnalysisNotices.delete(key);
+  liveAnalysisNotices.set(liveAnalysisNoticeKey(m), {at:now,reason});
+}
+function liveAnalysisNotice(m) {
+  const notice=liveAnalysisNotices.get(liveAnalysisNoticeKey(m));
+  return notice && Date.now()-notice.at<=12*60*1000 ? notice.reason : null;
+}
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
   autoConcileObserverRunning = true;
@@ -9258,11 +9286,13 @@ async function runAutoConcileObserver() {
       const verdict = await isBookmakerPlayableBeforeAnalysis(m);
       if (verdict.ok) {
         delete m.analysis_exclusion_reason;
+        setLiveAnalysisNotice(m, null);
         candidates.push(m);
         continue;
       }
       refusesBookmaker++;
       m.analysis_exclusion_reason = `Analyse non lancée : ${verdict.why}.`;
+      setLiveAnalysisNotice(m, 'Cote bookmaker O/U 2,5 indisponible dans la plage requise.');
       console.log(`[auto-concile] sans cote reelle, aucun jeton depense: ${m.home} vs ${m.away} — ${verdict.why}`);
     }
     console.log(
@@ -9278,7 +9308,9 @@ async function runAutoConcileObserver() {
           `score=${match.score_home ?? "?"}-${match.score_away ?? "?"}`
         );
         await runConcileAnalysis(match);
+        if (!getLiveOu25VoteState(match).vote_count) setLiveAnalysisNotice(match, 'Aucun vote IA exploitable reçu.');
       } catch (e) {
+        setLiveAnalysisNotice(match, 'Analyse interrompue : réponse IA indisponible.');
         console.error("[auto-concile] analyse:", e.message);
       }
     }
@@ -12773,9 +12805,12 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
       };
-      const analysisExclusionReason = m.analysis_exclusion_reason || null;
+      const analysisExclusionReason = liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
-      const reason = livePickBlockReason(m) || analysisExclusionReason;
+      const reason = livePickBlockReason(m)
+        || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
+        || (!clientProductEligible ? 'Championnat ou catégorie hors du périmètre d’analyse.' : null)
+        || analysisExclusionReason;
       return { ...m, analysable: !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
