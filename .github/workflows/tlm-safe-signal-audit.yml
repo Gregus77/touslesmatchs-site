@@ -1,0 +1,38 @@
+name: TLM safe end-to-end signal audit
+
+on:
+  push:
+    branches: [codex/audit-signal-pipeline-20260905-v2]
+    paths: [".github/workflows/tlm-safe-signal-audit.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Anonymous counters only
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 8m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            git fetch origin codex/audit-signal-pipeline-20260905-v2 >/dev/null
+            docker exec touslesmatchs-api grep -q 'API-Sports football jour/live' /app/server.js
+            echo "RUNTIME_PATCH=1"
+            git show origin/codex/audit-signal-pipeline-20260905-v2:scripts/audit_signal_pipeline_readonly_20260905.js > /tmp/tlm-signal-audit.js
+            docker cp /tmp/tlm-signal-audit.js touslesmatchs-api:/tmp/tlm-signal-audit.js >/dev/null
+            docker exec touslesmatchs-api node /tmp/tlm-signal-audit.js
+            rm -f /tmp/tlm-signal-audit.js
+            docker exec touslesmatchs-api rm -f /tmp/tlm-signal-audit.js
+            LOGS="$(docker logs touslesmatchs-api --since 2h 2>&1 || true)"
+            echo "LOG_COUNTS auto_cycles=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] live=' || true) analyses_started=$(printf '%s' "$LOGS" | grep -c '\[auto-concile\] analyse snapshot:' || true) no_real_odds=$(printf '%s' "$LOGS" | grep -c 'sans cote reelle' || true) ai_errors=$(printf '%s' "$LOGS" | grep -Eic '\[concile\].*(erreur|timeout|echec)' || true) telegram_errors=$(printf '%s' "$LOGS" | grep -Eic 'telegram.*(error|failed|echec|inaccessible)' || true)"
