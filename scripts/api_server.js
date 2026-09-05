@@ -5452,6 +5452,10 @@ async function fetchRealOdds(match) {
         || bookmakers[0];
       data = {
         bookmaker: chosen.name, bets: chosen.bets || [],
+        // Conserver toutes les vraies offres. Le portail de declenchement ne
+        // doit pas conclure "sans cote" uniquement parce que le bookmaker
+        // partenaire choisi en premier ne cote pas O/U 2,5 dans la plage.
+        allBookmakers: bookmakers,
         // Tous les bookmakers ARJEL renvoyés par l'API pour ce match — sert à
         // calculer une cote MOYENNE (pas juste celle d'un seul opérateur).
         arjelBookmakers: bookmakers.filter(bm => ARJEL_BOOKMAKERS.some(a => String(bm.name || "").toLowerCase().includes(a))),
@@ -5505,6 +5509,36 @@ function pickRealOdd(oddsData, betLabel, match) {
     if (home && b.includes(home.split(" ")[0])) return valOf(bt, s => s === "home");
     if (away && b.includes(away.split(" ")[0])) return valOf(bt, s => s === "away");
     if (/nul|draw|match nul/.test(b))           return valOf(bt, s => s === "draw");
+  }
+  return null;
+}
+
+// Cherche une vraie cote chez tous les bookmakers retournes par API-Sports.
+// Ordre stable : partenaires, operateurs ANJ, puis autres bookmakers reels.
+// Une plage optionnelle permet de choisir une offre effectivement diffusable
+// sans accepter une estimation ni modifier les seuils metier.
+function pickRealBookmakerOdd(oddsData, betLabel, match, minOdd = null, maxOdd = null) {
+  const all = Array.isArray(oddsData?.allBookmakers) && oddsData.allBookmakers.length
+    ? oddsData.allBookmakers
+    : oddsData?.bets?.length
+      ? [{ name: oddsData.bookmaker || "bookmaker", bets: oddsData.bets }]
+      : [];
+  const partnerNames = ["winamax", "unibet", "pmu"];
+  const rank = (bm) => {
+    const name = String(bm?.name || "").toLowerCase();
+    if (partnerNames.some((item) => name.includes(item))) return 0;
+    if (ARJEL_BOOKMAKERS.some((item) => name.includes(item))) return 1;
+    return 2;
+  };
+  const ordered = all.map((bm, index) => ({ bm, index }))
+    .sort((a, b) => rank(a.bm) - rank(b.bm) || a.index - b.index)
+    .map((item) => item.bm);
+  for (const bm of ordered) {
+    const odd = pickRealOdd({ bets: bm?.bets || [] }, betLabel, match);
+    if (!odd) continue;
+    if (minOdd !== null && odd < minOdd) continue;
+    if (maxOdd !== null && odd > maxOdd) continue;
+    return { odd, bookmaker: String(bm?.name || "bookmaker") };
   }
   return null;
 }
@@ -5627,12 +5661,18 @@ async function computeBestOdd(match, betLabel, confidence) {
       };
     }
     if (arjelAvgInfo) console.log(`[odds] moyenne ARJEL rejetee (implausible face a minute/score): ${arjelAvgInfo.avg} pour "${betLabel}" — ${match.home} vs ${match.away}`);
-    const real = pickRealOdd(oddsData, betLabel, match);
-    if (real && isPlausibleRealOdd(betLabel, real, match)) {
-      const bmName = oddsData.bookmaker || "bookmaker";
-      return { cote: real, source: `${bmName}${minuteTag}`, arjelAvg: null, arjelCount: 0 };
+    const realOffer = pickRealBookmakerOdd(
+      oddsData, betLabel, match, TIER_MIN_REAL_ODD, TIER_MAX_REAL_ODD
+    );
+    if (realOffer && isPlausibleRealOdd(betLabel, realOffer.odd, match)) {
+      return {
+        cote: realOffer.odd,
+        source: `${realOffer.bookmaker}${minuteTag}`,
+        arjelAvg: null,
+        arjelCount: 0,
+      };
     }
-    if (real) console.log(`[odds] cote bookmaker rejetee (implausible face a minute/score): ${real} pour "${betLabel}" — ${match.home} vs ${match.away}`);
+    if (realOffer) console.log(`[odds] cote bookmaker rejetee (implausible face a minute/score): ${realOffer.odd} pour "${betLabel}" — ${match.home} vs ${match.away}`);
   } catch (e) { console.error("[odds] compute:", e.message); }
   return { cote: estimateMarketOdd(confidence, betLabel), source: "estimation", arjelAvg: null, arjelCount: 0 };
 }
@@ -9314,10 +9354,13 @@ async function isBookmakerPlayableBeforeAnalysis(match) {
     // Preferer la moyenne ARJEL quand elle existe, sinon accepter toute vraie
     // cote bookmaker retournee par le fournisseur. Jamais une estimation.
     const moyenne = computeArjelAverageOdd(oddsData, marche, match);
-    const cote = moyenne?.avg || pickRealOdd(oddsData, marche, match);
-    if (cote && cote >= TIER_MIN_REAL_ODD && cote <= TIER_MAX_REAL_ODD) {
-      return { ok: true, why: `${marche} a ${cote}` };
+    if (moyenne?.avg && moyenne.avg >= TIER_MIN_REAL_ODD && moyenne.avg <= TIER_MAX_REAL_ODD) {
+      return { ok: true, why: `${marche} a ${moyenne.avg}` };
     }
+    const offer = pickRealBookmakerOdd(
+      oddsData, marche, match, TIER_MIN_REAL_ODD, TIER_MAX_REAL_ODD
+    );
+    if (offer) return { ok: true, why: `${marche} a ${offer.odd}` };
   }
   return { ok: false, why: `aucune cote bookmaker reelle dans ${TIER_MIN_REAL_ODD}-${TIER_MAX_REAL_ODD}` };
 }
