@@ -32,6 +32,7 @@ RUN npm install --save \
 RUN mkdir -p /data
 
 COPY scripts/api_server.js ./server.js
+COPY scripts/long_history.js ./long_history.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/analysis_engine.js ./analysis_engine.js
 COPY scripts/ai_budget_guard.js ./ai_budget_guard.js

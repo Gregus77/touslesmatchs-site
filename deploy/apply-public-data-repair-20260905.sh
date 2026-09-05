@@ -15,6 +15,7 @@ for file in "${FILES[@]}"; do
   case "$file" in
     .github/workflows/deploy-public-data-repair.yml) ;;
     scripts/test_homepage_consensus_20260905.js) ;;
+    scripts/long_history.js|scripts/test_long_history.js|Dockerfile.api|docs/HISTORY_REQUIREMENT.md|AGENTS.md) ;;
     scripts/api_server.js|public/index.html|public/performances.html|public/js/i18n.js|public/js/signal-rules.js|public/sw.js|scripts/test_public_data_repair_20260905.js|scripts/test_stale_result_resolution_date_guard.js|scripts/repair_lyon_auxerre_20260904.js|scripts/audit_votes_readonly_20260905.js|deploy/fix-premature-final-score-lyon-auxerre-20260904.sh|deploy/apply-public-data-repair-20260905.sh|CHANGELOG.md) ;;
     *) echo "STOP: modification hors périmètre: $file"; exit 1 ;;
   esac
@@ -66,12 +67,17 @@ done
 LOCAL_HASH="$(sha256sum scripts/api_server.js | cut -d' ' -f1)"
 RUN_HASH="$(docker exec touslesmatchs-api sha256sum /app/server.js | cut -d' ' -f1)"
 [[ "$LOCAL_HASH" == "$RUN_HASH" ]]
+[[ "$(sha256sum scripts/long_history.js | cut -d' ' -f1)" == "$(docker exec touslesmatchs-api sha256sum /app/long_history.js | cut -d' ' -f1)" ]]
 curl -fsS --max-time 20 "https://www.touslesmatchs.com/api/public-signal-rules?repair=$STAMP" > "$BACKUP/public-rules.json"
 docker exec -i touslesmatchs-api node - <<'NODE'
 (async()=>{
  const r=await fetch('http://127.0.0.1:3001/public-signal-rules');const d=await r.json();
  if(!r.ok||!d.ok||!Number.isFinite(d.to_minute)||d.min_votes!==4)throw Error('règles non vérifiées');
  console.log('Règles API:',JSON.stringify(d));
+ const historyResponse=await fetch('http://127.0.0.1:3001/historical-coverage');
+ const history=await historyResponse.json();
+ if(!historyResponse.ok||!history.ok||history.leagues?.length!==42)throw Error('registre historique incomplet');
+ console.log('HISTORICAL_COVERAGE:',JSON.stringify({worker:history.worker,leagues:history.leagues.map(l=>({country:l.country,division:l.division,name:l.name,status:l.status,complete:l.five_seasons_complete}))}));
  const fs=require('fs'),vm=require('vm'),src=fs.readFileSync('/app/server.js','utf8');
  const ctx=vm.createContext({});
  function section(a,b){return src.slice(src.indexOf(a),src.indexOf(b,src.indexOf(a)+a.length));}
