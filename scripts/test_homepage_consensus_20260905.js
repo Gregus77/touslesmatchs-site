@@ -55,6 +55,15 @@ for(const [country,league] of [['Brazil','Serie B'],['Brazil','Serie A'],['Argen
 }
 for(const m of [{country:'Northern Ireland',league:'Premier Division'},{country:'Australia',league:'NPL Queensland'},{country:'Brazil',league:'Serie C'},{country:'Denmark',league:'Cup'},{country:'Argentina',league:'Primera Nacional'}])assert(!leagues.ownerExpandedLeagueAllowed(m));
 ctx.renderHeroLive({...ctx.homepageLiveMatch(fixture('blocked',[]),false),block_reason:'Cote bookmaker indisponible.'});
-assert.equal(elements.get('hero-ai-title').textContent,'Match non analysé');
+assert.equal(elements.get('hero-ai-title').textContent,'Analyse en attente de cote');
 assert.equal(elements.get('hero-consensus-label').textContent,'Cote bookmaker indisponible.');
 console.log('OK: approved country/division pairs, exclusions and factual non-analysis banner');
+
+ctx.tlmSignalWindowEnd=40;
+ctx.renderHeroLive({...ctx.homepageLiveMatch(fixture('closed',[],41),false),block_reason:'Cote bookmaker indisponible.'});
+assert.equal(elements.get('hero-ai-title').textContent,'Fenêtre d’analyse terminée');
+ctx.renderHeroLive({...ctx.homepageLiveMatch(fixture('other',[]),false),block_reason:'Championnat hors périmètre.'});
+assert.equal(elements.get('hero-ai-title').textContent,'Match non analysé');
+ctx.renderHeroLive({...paid,block_reason:'Cote bookmaker indisponible.'});
+assert.equal(elements.get('hero-ai-title').textContent,'Votes IA Over/Under 2,5');
+console.log('OK: odds waiting label, closed window, other reasons and genuine votes preserved');
