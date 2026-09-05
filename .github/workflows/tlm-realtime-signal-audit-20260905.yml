@@ -1,0 +1,104 @@
+name: TLM realtime signal audit
+
+on:
+  push:
+    branches: [codex/realtime-signal-audit-20260905]
+    paths:
+      - ".github/workflows/tlm-realtime-signal-audit-20260905.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Read-only production audit
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 6m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+            LIVE="/tmp/tlm-live-$STAMP.json"
+            HIST="/tmp/tlm-history-$STAMP.json"
+            HEALTH="/tmp/tlm-health-$STAMP.json"
+            RULES="/tmp/tlm-rules-$STAMP.json"
+            trap 'rm -f "$LIVE" "$HIST" "$HEALTH" "$RULES"' EXIT
+
+            echo "AUDIT_REALTIME_BEGIN"
+            printf 'UTC='; date -u +%FT%TZ
+            printf 'BRANCH='; git branch --show-current
+            printf 'COMMIT='; git rev-parse HEAD
+            docker compose ps
+
+            curl -fsS --max-time 30 "http://127.0.0.1:3001/health?audit=$STAMP" -o "$HEALTH"
+            curl -fsS --max-time 30 "http://127.0.0.1:3001/public-signal-rules?audit=$STAMP" -o "$RULES"
+            curl -fsS --max-time 45 "http://127.0.0.1:3001/live-matches?audit=$STAMP" -o "$LIVE"
+            curl -fsS --max-time 45 "http://127.0.0.1:3001/analysis-history?audit=$STAMP" -o "$HIST"
+
+            node - "$HEALTH" "$RULES" "$LIVE" "$HIST" <<'NODE'
+            const fs=require("fs");
+            const read=p=>JSON.parse(fs.readFileSync(p,"utf8"));
+            const [health,rules,live,hist]=process.argv.slice(2).map(read);
+            const matches=Array.isArray(live)?live:(live.matches||live.data||[]);
+            const history=Array.isArray(hist)?hist:(hist.analyses||hist.history||hist.data||[]);
+            const minuteOf=m=>{
+              const raw=m.minute_at_analysis??m.minute??m.elapsed;
+              const hit=String(raw??"").match(/^\s*(\d+)\s*$/);
+              return hit?Number(hit[1]):null;
+            };
+            const votesOf=m=>{
+              const state=m.ou25||m.vote_summary||m.analysis||{};
+              const arr=state.votes||m.votes||[];
+              return Number(state.vote_count??state.consensus_votes??m.vote_count??m.consensus_votes??(Array.isArray(arr)?arr.filter(v=>v&&((v.direction??v.bet??v.vote)!=null)).length:0))||0;
+            };
+            const compact=m=>{
+              const state=m.ou25||m.vote_summary||m.analysis||{};
+              return {
+                fixture_id:m.fixture_id??m.id??null,
+                match:`${m.home??m.home_team??"?"} — ${m.away??m.away_team??"?"}`,
+                competition:m.competition??m.league??null,
+                minute:minuteOf(m),
+                score:`${m.score_home??m.home_score??"?"}-${m.score_away??m.away_score??"?"}`,
+                analysable:m.analysable??m.analyzable??null,
+                window_status:state.window_status??m.window_status??null,
+                votes:votesOf(m),
+                confidence:state.confidence??m.confidence??null,
+                odd:state.odd??m.odd??m.cote??null,
+                block_reason:m.block_reason??m.analysis_exclusion_reason??m.diffusion_block??state.block_reason??state.reason??null
+              };
+            };
+            const inWindow=matches.filter(m=>{const n=minuteOf(m);return n!==null&&n>=15&&n<=45});
+            const completed=history.filter(x=>x.outcome==="win"||x.outcome==="loss");
+            const deliveries=history.filter(x=>x.telegram_sent===true||x.telegram_delivered===true||x.diffused===true||x.sent===true);
+            console.log("HEALTH",JSON.stringify({
+              ok:health.ok!==false,
+              telegram:health.integrations?.telegram?.ok??health.telegram?.ok??null,
+              brevo:health.integrations?.brevo?.ok??health.brevo?.ok??null
+            }));
+            console.log("RULES",JSON.stringify(rules));
+            console.log("LIVE_SUMMARY",JSON.stringify({total:matches.length,in_window:inWindow.length,with_votes:inWindow.filter(m=>votesOf(m)>0).length,four_plus:inWindow.filter(m=>votesOf(m)>=4).length}));
+            console.log("LIVE_IN_WINDOW");
+            inWindow.map(compact).forEach(x=>console.log(JSON.stringify(x)));
+            console.log("HISTORY_SUMMARY",JSON.stringify({rows:history.length,resolved:completed.length,deliveries_detected:deliveries.length}));
+            NODE
+
+            echo "ENV_STATUS"
+            docker exec touslesmatchs-api node -e 'for(const k of ["API_FOOTBALL_KEY","TELEGRAM_BOT_TOKEN","OPENROUTER_API_KEY","PERPLEXITY_API_KEY","DEEPSEEK_API_KEY","MISTRAL_API_KEY","COHERE_API_KEY","OPENAI_API_KEY"]) console.log(k,process.env[k]?"SET":"EMPTY")'
+
+            if test -f scripts/audit_votes_readonly_20260905.js; then
+              node scripts/audit_votes_readonly_20260905.js || true
+            fi
+
+            echo "RECENT_FUNNEL_LOGS"
+            docker logs touslesmatchs-api --since 4h 2>&1 | grep -Ei '\[auto-concile\]|\[recovery\]|\[signal-fort\]|\[ai-guard\]|telegram' | tail -n 350 || true
+            echo "AUDIT_REALTIME_END"
