@@ -1,0 +1,48 @@
+name: Codex audit signal spike
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codex-audit-signal-spike.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Read-only signal incident audit
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 6m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            echo "=== CANONICAL ==="
+            git fetch origin main
+            printf 'BRANCH='; git branch --show-current
+            printf 'COMMIT='; git rev-parse HEAD
+            printf 'UPSTREAM='; git rev-parse --abbrev-ref --symbolic-full-name '@{u}'
+            git status --short --branch
+            git rev-list --left-right --count HEAD...origin/main
+            echo "=== CONTAINERS ==="
+            docker compose ps
+            echo "=== PUBLIC HEALTH ==="
+            curl -fsSL --max-time 20 "https://www.touslesmatchs.com/api/health?incident=$(date +%s)" | node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);console.log(JSON.stringify({ok:x.ok,telegram:x.telegram,brevo:x.brevo,status:x.status}))})'
+            echo "=== RUNTIME RULES ==="
+            curl -fsSL --max-time 20 "https://www.touslesmatchs.com/api/public-signal-rules?incident=$(date +%s)"
+            echo
+            echo "=== DATABASE AND LIVE AUDIT ==="
+            docker exec -i touslesmatchs-api node < scripts/audit_votes_readonly_20260905.js
+            echo "=== RECENT GUARD LOGS ==="
+            docker logs touslesmatchs-api --since 25m 2>&1 | grep -Ei 'ai-guard|circuit|spike|duplicate|provider-health|402|429|timeout|concile-trace|telegram' | tail -n 300 || true
+            echo "=== AUDIT COMPLETE ==="
