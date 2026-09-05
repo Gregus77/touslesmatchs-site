@@ -2563,10 +2563,9 @@ const RECOVERY_MAX_DAILY_SIGNALS = Math.min(2, Math.max(1, Number(process.env.OU
 const RECOVERY_OVER_MIN_AVG = 2.80;
 const RECOVERY_UNDER_MAX_AVG = 2.20;
 const RECOVERY_MIN_CONVERGENT_INDICATORS = 3;
-const CLIENT_OU25_CLIENT_MAX_MINUTE = Math.min(
-  40,
-  Math.max(15, Number(process.env.CLIENT_OU25_CLIENT_MAX_MINUTE || 40))
-);
+// Décision propriétaire confirmée le 05/09/2026 : 15–45 incluses.
+// Une ancienne valeur .env (32/40) ne doit pas refermer la fenêtre en silence.
+const CLIENT_OU25_CLIENT_MAX_MINUTE = 45;
 function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
 }
@@ -17072,7 +17071,7 @@ function checkAnalyticsSchedule() {
 
   // Le seed pre-match H2H est volontairement desactive : le produit client
   // repose desormais uniquement sur un signal live O/U 2,5 effectivement
-  // diffuse entre la 15e et la 40e minute.
+  // diffuse entre la 15e et la 45e minute.
 
   if (hour >= 22 && _lastBilanDate !== todayKey) {
     _lastBilanDate = todayKey;

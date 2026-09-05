@@ -20,7 +20,7 @@ const observer = source.slice(observerStart, observerEnd);
 assert(observerStart >= 0 && observerEnd > observerStart, "bloc auto-observer trouvé");
 assert(
   observer.indexOf(".filter(m => isClientOu25MatchEligible(m, true))") >= 0,
-  "filtre football championnat minute 15-40 appliqué avant analyse"
+  "filtre football championnat minute 15-45 appliqué avant analyse"
 );
 assert(
   observer.indexOf(".filter(m => isClientOu25MatchEligible(m, true))") < observer.indexOf("await runConcileAnalysis(match)"),
