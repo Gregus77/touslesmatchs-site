@@ -5170,6 +5170,29 @@ H2H VÉRIFIÉ (${h2h.n} dernières confrontations directes, données API réelle
 }
 
 // ── Contexte profond : forme, force/classement, enjeu, blessés (données API) ───
+// Historical research shares the existing provider quota and reserves live capacity.
+db.exec('CREATE TABLE IF NOT EXISTS long_history_usage(bucket TEXT PRIMARY KEY,count INTEGER DEFAULT 0)');
+const longHistory = require('./long_history').create(db, {
+  request: path => httpGet('https://v3.football.api-sports.io'+path, {'x-apisports-key':API_SPORTS_KEY}),
+  reserve: () => {
+    if(!API_SPORTS_KEY)return false;
+    try{return db.transaction(()=>{
+      const bucket=new Date().toISOString().slice(0,13);
+      const used=db.prepare('SELECT count FROM api_sports_usage WHERE bucket=?').get(bucket)?.count||0;
+      const research=db.prepare('SELECT count FROM long_history_usage WHERE bucket=?').get(bucket)?.count||0;
+      const dailyUsed=db.prepare('SELECT COALESCE(SUM(count),0) n FROM api_sports_usage WHERE bucket LIKE ?').get(bucket.slice(0,10)+'%').n;
+      if(dailyUsed>=API_SPORTS_DAILY_BUDGET)return false;
+      const limit=apiSportsDynamicHourlyBudget();
+      if(used>=limit||research>=Math.max(1,Math.floor(limit*0.25)))return false;
+      db.prepare('INSERT INTO api_sports_usage VALUES(?,1) ON CONFLICT(bucket) DO UPDATE SET count=count+1').run(bucket);
+      db.prepare('INSERT INTO long_history_usage VALUES(?,1) ON CONFLICT(bucket) DO UPDATE SET count=count+1').run(bucket);
+      return true;
+    }).immediate();}catch(_){return false;}
+  }
+});
+app.get('/historical-coverage', (_,res)=>res.set('Cache-Control','no-store').json({ok:true,
+  worker:db.prepare('SELECT last_attempt,last_status FROM long_history_worker WHERE id=1').get()||null,
+  leagues:longHistory.coverage()}));
 const teamStatsCache = new Map();
 const standingsCache = new Map();
 const injuriesCache = new Map();
@@ -6022,6 +6045,8 @@ async function runConcileAnalysis(match) {
 
   // H2H factuel + contexte profond (forme, classement, enjeu, blessés) en parallèle
   let h2hBlock = "", deepBlock = "", h2hData = null;
+  let historicalBlock = "";
+  try { historicalBlock=longHistory.context(match); } catch (_) { historicalBlock="\nHistorique cinq saisons indisponible : ne rien inventer."; }
   try {
     const [h2h, deep] = await Promise.all([
       fetchH2H(match),
@@ -6053,7 +6078,7 @@ async function runConcileAnalysis(match) {
 Compétition: ${match.competition || "International"}${sportNote}
 Score actuel: ${match.score_home ?? "?"}-${match.score_away ?? "?"}
 Minute: ${minuteDisplay}
-Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${deepBlock}${liveConstraints}${recoveryPromptBlock}
+Statut: ${match.status}${neutralNote}${sportRules}${statsBlock}${h2hBlock}${deepBlock}${historicalBlock}${liveConstraints}${recoveryPromptBlock}
 
 IMPORTANT — Paris AUTORISÉS dans ce contexte (les seuls disponibles mathématiquement) :
 → ${availableBets.join(", ")}
@@ -17949,6 +17974,8 @@ app.all(["/api/chat","/chat","/api/chatbot","/api/assistant","/api/support-chat"
 });
 
 app.listen(PORT, () => {
+    setTimeout(()=>longHistory.step(),10000);
+    setInterval(()=>longHistory.step(),10000);
     console.log(`TousLesMatchs API running on :${PORT}`);
     verifyTelegramChannels();
     verifyBrevoConfiguration().catch((e) => console.error("[brevo-check]", e.message));

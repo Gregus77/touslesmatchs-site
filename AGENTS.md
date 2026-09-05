@@ -398,3 +398,6 @@ ce cas, il faudra les resoudre vers une fixture API-Sports par nom et date.
 chantier à plus forte valeur : il débloque le volume (≈ 7 signaux/jour aujourd'hui) et
 rend l'argument multi-sport honnête. Prévoir aussi des marchés adaptés : « Moins de
 2,5 buts » n'existe ni au basket ni au baseball.
+
+## Exigence propriétaire du 05/09/2026 — historique des championnats
+Lire `docs/HISTORY_REQUIREMENT.md` avant toute modification des données utilisées par les pronostics. Ne jamais déclarer cinq saisons couvertes sans vérifier `/api/historical-coverage`.
