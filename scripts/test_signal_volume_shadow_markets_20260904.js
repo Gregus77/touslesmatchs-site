@@ -9,7 +9,7 @@ const api = fs.readFileSync(path.join(root, "scripts/api_server.js"), "utf8");
 const worker = fs.readFileSync(path.join(root, "scripts/shadow_tournament_worker.js"), "utf8");
 const compose = fs.readFileSync(path.join(root, "docker-compose.yml"), "utf8");
 
-assert.match(api, /CLIENT_OU25_MIN_VOTES\s*=\s*4/);
+assert.match(api, /CLIENT_OU25_MIN_VOTES\s*=\s*3/);
 assert.match(api, /CLIENT_OU25_MIN_CONFIDENCE\s*=\s*Math\.max\(77,/);
 assert.match(api, /TIER_MIN_REAL_ODD\s*=\s*Math\.max\(1\.30,/);
 assert.match(api, /TIER_MAX_REAL_ODD\s*=\s*Math\.min\(2\.10,/);
