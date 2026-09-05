@@ -1,0 +1,45 @@
+name: Codex audit signal spike
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/codex-audit-signal-spike.yml
+      - scripts/audit_signal_spike_aggregates.js
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Read-only aggregate signal audit
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 4m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            git fetch origin main
+            test "$(git branch --show-current)" = main
+            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = origin/main
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git pull --ff-only origin main
+            echo "=== SERVICES ==="
+            docker compose ps --format json
+            echo "=== PUBLIC HEALTH ==="
+            curl -fsSL --max-time 20 "https://www.touslesmatchs.com/api/health?incident=$(date +%s)" | node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);console.log(JSON.stringify({ok:x.ok,telegram:Boolean(x.telegram),brevo:Boolean(x.brevo),status:x.status||null}))})'
+            echo "=== RUNTIME RULES ==="
+            curl -fsSL --max-time 20 "https://www.touslesmatchs.com/api/public-signal-rules?incident=$(date +%s)"
+            echo
+            echo "=== SAFE AGGREGATES ==="
+            docker exec -i touslesmatchs-api node < scripts/audit_signal_spike_aggregates.js
+            echo "=== AUDIT COMPLETE ==="
