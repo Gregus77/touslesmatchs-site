@@ -392,6 +392,14 @@ const i18n = (function () {
     fr: "Français", en: "English", es: "Español",
     pt: "Português", ru: "Русский", zh: "中文",
   };
+  const LANG_LABELS = {
+    fr: { fr: "Français", en: "Anglais", es: "Espagnol", pt: "Portugais", ru: "Russe", zh: "Chinois" },
+    en: { fr: "French", en: "English", es: "Spanish", pt: "Portuguese", ru: "Russian", zh: "Chinese" },
+    es: { fr: "Francés", en: "Inglés", es: "Español", pt: "Portugués", ru: "Ruso", zh: "Chino" },
+    pt: { fr: "Francês", en: "Inglês", es: "Espanhol", pt: "Português", ru: "Russo", zh: "Chinês" },
+    ru: { fr: "Французский", en: "Английский", es: "Испанский", pt: "Португальский", ru: "Русский", zh: "Китайский" },
+    zh: { fr: "法语", en: "英语", es: "西班牙语", pt: "葡萄牙语", ru: "俄语", zh: "中文" },
+  };
 
   const STORAGE_KEY = "tlm_lang";
   let lang = "fr";
@@ -434,8 +442,13 @@ const i18n = (function () {
       if (v !== undefined) el.setAttribute("placeholder", v);
     });
     document.documentElement.setAttribute("lang", lang);
+    const languageLabels = LANG_LABELS[lang] || LANG_NAMES;
     const cur = document.getElementById("lang-current");
-    if (cur) cur.textContent = LANG_NAMES[lang] || lang;
+    if (cur) cur.textContent = languageLabels[lang] || LANG_NAMES[lang] || lang;
+    document.querySelectorAll("#nav-lang-menu button").forEach(function (button) {
+      const match = (button.getAttribute("onclick") || "").match(/pickLang\(['\"]([a-z]{2})['\"]\)/);
+      if (match) button.textContent = languageLabels[match[1]] || LANG_NAMES[match[1]] || match[1];
+    });
     document.dispatchEvent(new CustomEvent("tlm-language-change", { detail: { lang: lang } }));
   }
 
@@ -463,6 +476,6 @@ if (document.readyState === "loading") {
 (function(){
   if(document.querySelector('script[src*="/js/i18n-auto.js"]')) return;
   var script=document.createElement('script');
-  script.src='/js/i18n-auto.js?v=20260907-integral4';
+  script.src='/js/i18n-auto.js?v=20260907-integral5';
   document.head.appendChild(script);
 })();
