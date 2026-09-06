@@ -192,6 +192,31 @@ console.log("\n═══ Scénario 7 — mode observation (HARD_STOP=false) n'ar
   db.close();
 }
 
+console.log("\n═══ Scénario 8 — plusieurs snapshots live comptent pour un seul match ═══");
+{
+  process.env.OPENROUTER_HARD_STOP = "true";
+  process.env.OPENROUTER_DAILY_BUDGET_EUR = "20";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_DAY = "100";
+  process.env.OPENROUTER_MAX_MATCHES_PER_DAY = "2";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY = "100";
+  process.env.AI_GUARD_SPIKE_THRESHOLD = "100";
+  process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD = "50";
+  const guard = loadGuard();
+  const db = freshDb();
+
+  for (const matchKey of ["PSG_OM_0-0-1", "PSG_OM_1-0-2", "LILLE_LENS_0-0-1"]) {
+    const req = { modelKey: "qwen", matchKey, promptVersion: "v1" };
+    const check = guard.canProceed(db, req);
+    assert(check.allowed === true, `${matchKey} autorisé dans deux identités réelles`);
+    if (check.allowed) guard.recordCall(db, { ...req, requestKey: check.requestKey, tokensIn: 500, tokensOut: 80, status: "ok" });
+  }
+
+  const thirdFixture = guard.canProceed(db, { modelKey: "qwen", matchKey: "LYON_NICE_0-0-1", promptVersion: "v1" });
+  assert(thirdFixture.allowed === false && thirdFixture.reason.includes("plafond de matchs"),
+    "un troisième match réel reste bloqué par le plafond de 2");
+  db.close();
+}
+
 try { fs.unlinkSync(DB_FILE); } catch {}
 
 console.log(`\n${"─".repeat(50)}`);
