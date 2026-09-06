@@ -381,6 +381,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 </style>
 <!-- Google Analytics (GA4) -->
+<script src="/js/match-lifecycle.js?v=20260906"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1668,8 +1669,8 @@ async function loadLive(){
   try{
     var r=await fetch('/api/live-matches');
     var d=await r.json();
-    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).sort(tlmTimeFirstSort).slice(0,3);
-    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun signal n\'a encore été validé par au moins 4 IA sur 5.<br>Le moteur continue d\'analyser les championnats autorisés.</div>'; return; }
+    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).filter(TLMMatchLifecycle.canTrack).sort(tlmTimeFirstSort).slice(0,3);
+    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun match en direct disponible pour le moment.</div>'; return; }
     grid.innerHTML=matches.map(function(m){
       var icon=SPORT_ICO[m.sport]||'🏟️';
       var rawHomeScore=liveHomeScore(m),rawAwayScore=liveAwayScore(m),sh=rawHomeScore===''?'-':rawHomeScore,sa=rawAwayScore===''?'-':rawAwayScore;
@@ -1715,6 +1716,9 @@ function heroOu25(m){
 var tlmSignalWindowEnd=null;
 function heroVoteCount(m){return heroOu25(m).voteCount;}
 function compareHeroMatches(a,b){
+  var ap=TLMMatchLifecycle.phase(a),bp=TLMMatchLifecycle.phase(b);
+  var rank={open:0,waiting:1,closed:2,unknown:3,finished:4,unavailable:4};
+  if(rank[ap]!==rank[bp])return rank[ap]-rank[bp];
   var av=heroOu25(a),bv=heroOu25(b);
   if(av.consensusCount!==bv.consensusCount)return bv.consensusCount-av.consensusCount;
   if(av.voteCount!==bv.voteCount)return bv.voteCount-av.voteCount;
@@ -1731,7 +1735,7 @@ function renderHeroLive(m){
   var country=heroCountry(m);
   setHeroText('hero-live-date',new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}));
   if(!m){
-    if(status)status.textContent='Aucun match en direct';
+    if(status)status.textContent='Aucun match dans la fenêtre 15–45 min';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
     setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0 / 5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
@@ -1748,12 +1752,12 @@ function renderHeroLive(m){
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
   var hs=liveHomeScore(m),as=liveAwayScore(m);setHeroText('hero-live-score',(hs===''?'—':hs)+' - '+(as===''?'—':as));
   setHeroText('hero-live-period',String(m.status||m.elapsed||m.period||'1ère période'));
-  var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
+  var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
   setHeroText('hero-consensus-current',votes+' / 5');
-  setHeroText('hero-ai-title',votes?'Votes IA Over/Under 2,5':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'En attente d’analyse');
-  setHeroText('hero-consensus-label',votes?(voteState.locked?('Direction ? · '+voteState.consensusCount+'/5 d’accord · forfait actif requis'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):analysisClosed?'Aucun vote enregistré':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
-  if(!votes)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
+  setHeroText('hero-ai-title',analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'En attente d’analyse');
+  setHeroText('hero-consensus-label',analysisClosed?'Votes antérieurs · aucune nouvelle sélection':votes?(voteState.locked?('Direction ? · '+voteState.consensusCount+'/5 d’accord · forfait actif requis'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):analysisClosed?'Aucun vote enregistré':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
+  if(!votes&&!analysisClosed)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
   for(var i=0;i<voteEls.length;i++){
     var slot=voteState.slots[i]||{},voted=slot.status==='voted',dir=voteState.locked?null:slot.direction;
@@ -1802,7 +1806,7 @@ async function loadHeroLive(){
     if(request!==tlmHeroRequest||credentials!==JSON.stringify(heroAuthHeaders()))return;
     // Rank the complete live list on every refresh. This selection never starts
     // or stops an analysis; the independent observer continues scanning all matches.
-    var matches=(d.matches||[]).filter(tlmMatchAllowed).sort(compareHeroMatches);
+    var matches=(d.offline||d.cached?[]:(d.matches||[])).filter(tlmMatchAllowed).filter(TLMMatchLifecycle.canFeature).sort(compareHeroMatches);
     tlmHasLiveMatch=!!matches[0];
     renderHeroLive(matches[0]||null);
   }catch(e){if(request===tlmHeroRequest){tlmHasLiveMatch=false;renderHeroLive(null);}}

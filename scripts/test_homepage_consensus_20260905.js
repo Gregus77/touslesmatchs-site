@@ -3,7 +3,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
 const api=fs.readFileSync(__dirname+'/api_server.js','utf8');
 const html=fs.readFileSync(__dirname+'/../public/index.html','utf8');
 function part(s,a,b){const start=s.indexOf(a),end=s.indexOf(b,start+a.length);assert(start>=0&&end>start);return s.slice(start,end);}
-const ctx=vm.createContext({});
+const ctx=vm.createContext({TLMMatchLifecycle:require('../public/js/match-lifecycle.js')});
 vm.runInContext(part(api,'function homepageLiveMatch(', 'app.get(["/live-matches"'),ctx);
 vm.runInContext(part(html,'function heroOu25(', 'function heroWasSent('),ctx);
 vm.runInContext(part(html,'function tlmHeroMinuteOf(', 'function tlmHomepageAnalyzedMatch('),ctx);
@@ -41,7 +41,7 @@ assert(!slots[0].title.includes('Under'));assert(!slots[0]['aria-label'].include
 assert(!elements.get('hero-consensus-label').textContent.includes('Under'));
 // No stale paid-vote cache can restore directions after logout or a new response.
 assert(!html.includes('tlmKeepHeroVotes'));assert(!html.includes('tlmHeroVoteCache'));
-assert(html.includes("matches=(d.matches||[]).filter(tlmMatchAllowed).sort(compareHeroMatches)"));
+assert(html.includes(".filter(tlmMatchAllowed).filter(TLMMatchLifecycle.canFeature).sort(compareHeroMatches)"));
 assert(api.includes('const matches = await fetchLiveMatches();\n    const observed = matches'));
 console.log('OK: strongest consensus across all matches, leader changes, paid/anonymous projection, masks and accessible labels');
 

@@ -1,0 +1,89 @@
+name: Deploy match lifecycle display
+on:
+  push:
+    branches: [main]
+    paths:
+      - public/index.html
+      - public/app.html
+      - public/js/match-lifecycle.js
+      - public/sw.js
+      - scripts/test_match_lifecycle_20260906.js
+      - .github/workflows/deploy-match-lifecycle.yml
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Deploy scoped lifecycle fix with backup
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 6m
+          script: |
+            set -Eeuo pipefail
+            cd /opt/touslesmatchs
+            target='${{ github.sha }}'
+            test "$(git branch --show-current)" = main
+            test "$(git rev-parse --abbrev-ref '@{upstream}')" = origin/main
+            git diff --quiet
+            git diff --cached --quiet
+            git fetch origin main
+            git merge-base --is-ancestor HEAD "$target"
+            test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
+            while IFS= read -r file; do
+              case "$file" in
+                public/index.html|public/app.html|public/sw.js|public/js/match-lifecycle.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|.github/workflows/deploy-match-lifecycle.yml) ;;
+                *) echo "STOP: unrelated change: $file"; exit 1 ;;
+              esac
+            done < <(git diff --name-only HEAD "$target")
+            backup=$(mktemp -d /opt/backups/tlm-match-lifecycle.XXXXXX)
+            cp -a public/index.html public/app.html public/sw.js "$backup/"
+            git rev-parse HEAD > "$backup/git-head.txt"
+            rollback() {
+              trap - ERR
+              cp -a "$backup/index.html" public/index.html
+              cp -a "$backup/app.html" public/app.html
+              cp -a "$backup/sw.js" public/sw.js
+              echo "FAILED: public pages restored; BACKUP=$backup"
+              exit 1
+            }
+            trap rollback ERR
+            git merge --ff-only "$target"
+            node scripts/test_homepage_consensus_20260905.js
+            node scripts/test_match_lifecycle_20260906.js
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$target" -o "$backup/helper-public.js"
+            cmp public/js/match-lifecycle.js "$backup/helper-public.js"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/?v=$target" -o "$backup/home-public.html"
+            cmp public/index.html "$backup/home-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/app.html?v=$target" -o "$backup/app-public.html"
+            cmp public/app.html "$backup/app-public.html"
+            docker compose ps --services --status running
+            trap - ERR
+            echo "MATCH_LIFECYCLE_DEPLOYED=$target"
+            echo "BACKUP=$backup"
+      - name: Capture rendered site and app
+        shell: bash
+        run: |
+          set -euo pipefail
+          for page in home app; do
+            url="https://www.touslesmatchs.com/?lifecycle=${{ github.sha }}"
+            if [ "$page" = app ]; then url="https://www.touslesmatchs.com/app.html?lifecycle=${{ github.sha }}"; fi
+            google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --dump-dom "$url" > "/tmp/$page-lifecycle.html"
+            grep -q 'match-lifecycle.js' "/tmp/$page-lifecycle.html"
+            google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --screenshot="/tmp/$page-lifecycle.png" "$url"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: match-lifecycle-visual-proof
+          path: |
+            /tmp/*-lifecycle.png
+            /tmp/*-lifecycle.html
+          retention-days: 7
