@@ -463,6 +463,6 @@ if (document.readyState === "loading") {
 (function(){
   if(document.querySelector('script[src*="/js/i18n-auto.js"]')) return;
   var script=document.createElement('script');
-  script.src='/js/i18n-auto.js?v=20260906-integral';
+  script.src='/js/i18n-auto.js?v=20260906-integral2';
   document.head.appendChild(script);
 })();
