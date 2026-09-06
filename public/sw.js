@@ -2,13 +2,14 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v15-data-repair-20260905";
+const VERSION = "tlm-app-v16-match-lifecycle-20260906";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
 const SHELL_ASSETS = [
   "/app",
   "/app.html",
+  "/js/match-lifecycle.js?v=20260906",
   "/manifest.webmanifest",
   "/favicon.ico",
   "/favicon-48.png",
