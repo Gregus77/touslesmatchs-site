@@ -1,6 +1,11 @@
 /* Presentation only: never settles a result or creates a signal. */
 (function(root){
   'use strict';
+  if(typeof document!=='undefined'&&!document.querySelector('script[src*="/js/i18n.js"]')){
+    var i18nScript=document.createElement('script');
+    i18nScript.src='/js/i18n.js?v=20260906-integral';
+    document.head.appendChild(i18nScript);
+  }
   function phase(m){
     if(!m)return 'unknown';
     var statuses=[m.status,m.period,m.status_short,m.fixture&&m.fixture.status].map(function(s){return String(s&&typeof s==='object'?(s.short||s.long||''):s||'').trim().toUpperCase();});

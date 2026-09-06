@@ -1,6 +1,11 @@
 /* TousLesMatchs — activation du thème visuel global. Aucun comportement métier modifié. */
 (function(){
   'use strict';
+  if(!document.querySelector('script[src*="/js/i18n.js"]')){
+    var i18nScript=document.createElement('script');
+    i18nScript.src='/js/i18n.js?v=20260906-integral';
+    document.head.appendChild(i18nScript);
+  }
   var file=(location.pathname.split('/').pop()||'index.html').toLowerCase();
   var config={
     'index.html':['home','Le Concile IA sportif'],

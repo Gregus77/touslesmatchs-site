@@ -1,0 +1,107 @@
+name: Deploy integral public translations
+on:
+  push:
+    branches: [main]
+    paths:
+      - public/js/i18n.js
+      - public/js/i18n-auto.js
+      - public/js/tlm-wow-theme.js
+      - public/js/match-lifecycle.js
+      - scripts/test_i18n_integral_20260906.js
+      - .github/workflows/deploy-integral-i18n.yml
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy translations with backup and source checks
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 8m
+          script: |
+            set -Eeuo pipefail
+            cd /opt/touslesmatchs
+            target='${{ github.sha }}'
+            test "$(git branch --show-current)" = main
+            test "$(git rev-parse --abbrev-ref '@{upstream}')" = origin/main
+            git diff --quiet
+            git diff --cached --quiet
+            git fetch origin main
+            git merge-base --is-ancestor HEAD "$target"
+            test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
+            while IFS= read -r file; do
+              case "$file" in
+                public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|.github/workflows/deploy-integral-i18n.yml) ;;
+                *) echo "STOP: unrelated change: $file"; exit 1 ;;
+              esac
+            done < <(git diff --name-only HEAD "$target")
+            backup=$(mktemp -d /opt/backups/tlm-integral-i18n.XXXXXX)
+            mkdir -p "$backup/js"
+            cp -a public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/js/"
+            test ! -e public/js/i18n-auto.js || cp -a public/js/i18n-auto.js "$backup/js/"
+            git rev-parse HEAD > "$backup/git-head.txt"
+            rollback(){
+              trap - ERR
+              cp -a "$backup/js/i18n.js" "$backup/js/tlm-wow-theme.js" "$backup/js/match-lifecycle.js" public/js/
+              if test -e "$backup/js/i18n-auto.js"; then cp -a "$backup/js/i18n-auto.js" public/js/; else rm -f public/js/i18n-auto.js; fi
+              echo "FAILED: translations restored; BACKUP=$backup"
+              exit 1
+            }
+            trap rollback ERR
+            git merge --ff-only "$target"
+            node --check public/js/i18n.js
+            node --check public/js/i18n-auto.js
+            node --check public/js/tlm-wow-theme.js
+            node --check public/js/match-lifecycle.js
+            node scripts/test_i18n_integral_20260906.js
+            for file in i18n.js i18n-auto.js tlm-wow-theme.js match-lifecycle.js; do
+              curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/$file?v=$target" -o "$backup/$file.public"
+              cmp "public/js/$file" "$backup/$file.public"
+            done
+            test "$(git rev-parse HEAD)" = "$target"
+            test "$(git rev-parse origin/main)" = "$target"
+            docker compose ps site
+            trap - ERR
+            echo "INTEGRAL_I18N_SOURCE_OK=$target"
+            echo "BACKUP=$backup"
+      - name: Browser audit in five translated languages
+        shell: bash
+        run: |
+          set -euo pipefail
+          pages=("" "live-ia.html" "performances.html" "bankroll.html" "dashboard.html" "app.html" "faq.html")
+          langs=(en es pt ru zh)
+          for lang in "${langs[@]}"; do
+            expected="$lang"; test "$lang" = pt && expected=pt-BR; test "$lang" = zh && expected=zh-CN
+            for page in "${pages[@]}"; do
+              name="${page:-home}"; name="${name%.html}"
+              url="https://www.touslesmatchs.com/${page}?lang=${lang}&i18n=${{ github.sha }}"
+              out="/tmp/${name}-${lang}.html"
+              google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=15000 --dump-dom "$url" > "$out"
+              grep -q "<html lang=\"$expected\"" "$out"
+              grep -q 'tlm-language-universal\|lang-current' "$out"
+              ! grep -Eqi '>\s*(Se connecter|Créer mon compte|Résultats Over|Votre signal|Fenêtre d.analyse|Votes IA|IA validées|Gestion intelligente|Ma bankroll|Mon espace|Questions fréquentes|Verdict du Concile)\s*<' "$out"
+            done
+          done
+          echo "INTEGRAL_I18N_BROWSER_OK"
+      - name: Repeat audit twice to detect asynchronous regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pass in 2 3; do
+            for lang in en pt ru zh; do
+              out="/tmp/recheck-$pass-$lang.html"
+              google-chrome --headless=new --no-sandbox --disable-gpu --virtual-time-budget=18000 --dump-dom "https://www.touslesmatchs.com/live-ia.html?lang=$lang&pass=$pass&v=${{ github.sha }}" > "$out"
+              grep -q 'tlm-language-universal' "$out"
+              ! grep -Eqi '>\s*(Se connecter|Fenêtre d.analyse|Votes IA|IA validées|Verdict|Vote du signal|Under du Concile|Over du Concile)\s*<' "$out"
+            done
+          done
+          echo "INTEGRAL_I18N_THREE_PASSES_OK"
