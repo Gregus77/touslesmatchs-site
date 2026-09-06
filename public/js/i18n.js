@@ -398,6 +398,13 @@ const i18n = (function () {
 
   function detect() {
     try {
+      const requested = new URLSearchParams(location.search).get("lang");
+      if (requested && translations[requested]) {
+        localStorage.setItem(STORAGE_KEY, requested);
+        return requested;
+      }
+    } catch (e) { /* URL ou stockage indisponible : continuer avec la préférence existante */ }
+    try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved && translations[saved]) return saved;
     } catch (e) { /* localStorage indisponible (mode prive) : on suit le navigateur */ }
@@ -429,6 +436,7 @@ const i18n = (function () {
     document.documentElement.setAttribute("lang", lang);
     const cur = document.getElementById("lang-current");
     if (cur) cur.textContent = LANG_NAMES[lang] || lang;
+    document.dispatchEvent(new CustomEvent("tlm-language-change", { detail: { lang: lang } }));
   }
 
   return {
@@ -447,4 +455,14 @@ const i18n = (function () {
   };
 })();
 
-document.addEventListener("DOMContentLoaded", function () { i18n.init(); });
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", function () { i18n.init(); });
+} else {
+  i18n.init();
+}
+(function(){
+  if(document.querySelector('script[src*="/js/i18n-auto.js"]')) return;
+  var script=document.createElement('script');
+  script.src='/js/i18n-auto.js?v=20260906-integral';
+  document.head.appendChild(script);
+})();
