@@ -30,6 +30,8 @@
     ["Mentions légales","Legal notice","Aviso legal","Aviso legal","Правовая информация","法律声明"],
     ["Confidentialité","Privacy","Privacidad","Privacidade","Конфиденциальность","隐私"],
     ["Contact","Contact","Contacto","Contacto","Контакты","联系我们"],
+    ["Ce site utilise des données de navigation pour mesurer son audience et améliorer votre expérience. Aucun cookie publicitaire tiers. En savoir plus","This site uses browsing data to measure its audience and improve your experience. No third-party advertising cookies. Learn more","Este sitio utiliza datos de navegación para medir su audiencia y mejorar tu experiencia. Sin cookies publicitarias de terceros. Más información","Este site utiliza dados de navegação para medir a audiência e melhorar a sua experiência. Sem cookies publicitários de terceiros. Saber mais","Сайт использует данные навигации для измерения аудитории и улучшения работы. Сторонних рекламных cookies нет. Подробнее","本站使用浏览数据衡量访问量并改善体验，不使用第三方广告 Cookie。了解更多"],
+    ["J'ai compris","I understand","Entendido","Compreendi","Понятно","我明白了"],
     ["Chargement…","Loading…","Cargando…","A carregar…","Загрузка…","加载中…"],
     ["Chargement...","Loading...","Cargando...","A carregar...","Загрузка...","加载中..."],
     ["Actualiser","Refresh","Actualizar","Atualizar","Обновить","刷新"],
@@ -37,6 +39,7 @@
     ["Voir","View","Ver","Ver","Открыть","查看"],
     ["Tous","All","Todos","Todos","Все","全部"],
     ["En attente","Pending","Pendiente","Pendente","Ожидание","等待中"],
+    ["Pending","Pending","Pendiente","Pendente","Ожидание","等待中"],
     ["En direct","Live","En directo","Ao vivo","В эфире","直播"],
     ["IN_PLAY","IN PLAY","EN JUEGO","EM JOGO","В ИГРЕ","进行中"],
     ["Verdict","Verdict","Veredicto","Veredito","Вердикт","结论"],
@@ -63,7 +66,13 @@
     ["Fenêtre d’analyse terminée","Analysis window closed","Ventana de análisis cerrada","Janela de análise encerrada","Окно анализа закрыто","分析窗口已关闭"],
     ["Votes antérieurs · aucune nouvelle sélection","Earlier votes · no new selection","Votos anteriores · ninguna selección nueva","Votos anteriores · nenhuma nova seleção","Ранее поданные голоса · нового выбора нет","此前投票 · 无新推荐"],
     ["Votes IA Over/Under 2,5","AI votes: Over/Under 2.5","Votos IA: Más/Menos 2,5","Votos das IA: Mais/Menos 2,5","Голоса ИИ: тотал больше/меньше 2,5","AI 投票：大/小 2.5 球"],
+    ["Conseil IA · Over/Under 2,5","AI Council · Over/Under 2.5","Consejo IA · Más/Menos 2,5","Conselho de IA · Mais/Menos 2,5","Совет ИИ · Тотал больше/меньше 2,5","AI 评议会 · 大/小 2.5 球"],
     ["IA validées","validated AIs","IA validadas","IA validadas","ИИ с ответом","已响应 AI"],
+    ["Aucun vote enregistré pour le moment","No vote recorded yet","Aún no hay votos registrados","Ainda não há votos registados","Голосов пока нет","暂未记录投票"],
+    ["Aucun signal validé — ne pas jouer","No validated signal — do not play","Sin señal validada — no jugar","Nenhum sinal validado — não jogar","Нет подтверждённого сигнала — не играть","无已验证信号 — 请勿参与"],
+    ["Analyse indisponible : minute inconnue ou non numérique.","Analysis unavailable: unknown or non-numeric minute.","Análisis no disponible: minuto desconocido o no numérico.","Análise indisponível: minuto desconhecido ou não numérico.","Анализ недоступен: минута неизвестна или указана не числом.","分析不可用：分钟未知或不是数字。"],
+    ["Analyse indisponible après la 45e minute.","Analysis unavailable after minute 45.","Análisis no disponible después del minuto 45.","Análise indisponível após o minuto 45.","Анализ недоступен после 45-й минуты.","第 45 分钟后不可分析。"],
+    ["Débloquer l'analyse","Unlock the analysis","Desbloquear el análisis","Desbloquear a análise","Открыть анализ","解锁分析"],
     ["Voir le signal gratuit","View the free signal","Ver la señal gratuita","Ver o sinal gratuito","Посмотреть бесплатный сигнал","查看免费信号"],
     ["Voir les offres","View plans","Ver planes","Ver planos","Посмотреть тарифы","查看套餐"],
     ["Signal","Signal","Señal","Sinal","Сигнал","信号"],
@@ -271,6 +280,10 @@
     var m=text.match(/^IA (\d+)$/); if(m)return lang==="en"?"AI "+m[1]:lang==="ru"?"ИИ "+m[1]:lang==="zh"?"AI "+m[1]:text;
     m=text.match(/^(\d+)\s*\/\s*5 IA$/); if(m)return lang==="en"?m[1]+"/5 AIs":lang==="es"?m[1]+"/5 IA":lang==="pt"?m[1]+"/5 IA":lang==="ru"?m[1]+"/5 ИИ":m[1]+"/5 AI";
     m=text.match(/^(\d+) Over · (\d+) Under$/); if(m)return lang==="en"?m[1]+" Over · "+m[2]+" Under":lang==="es"?m[1]+" Más · "+m[2]+" Menos":lang==="pt"?m[1]+" Mais · "+m[2]+" Menos":lang==="ru"?m[1]+" Больше · "+m[2]+" Меньше":m[1]+" 大 · "+m[2]+" 小";
+    m=text.match(/^(Over|Under) 2[,.]5 · (\d+)%$/i);
+    if(m){var direction=m[1].toLowerCase()==="over"?(lang==="es"?"Más":lang==="pt"?"Mais":lang==="ru"?"Больше":lang==="zh"?"大":"Over"):(lang==="es"||lang==="pt"?"Menos":lang==="ru"?"Меньше":lang==="zh"?"小":"Under");return direction+" 2.5 · "+m[2]+"%";}
+    m=text.match(/^(\d+)\/5 signal valide O\/U 2[,.]5\s*:\s*(\d+) des 5 sieges votent (Over|Under) 2[,.]5 buts\.?$/i);
+    if(m){var dir=m[3].toLowerCase()==="over"?(lang==="es"?"Más":lang==="pt"?"Mais":lang==="ru"?"больше":lang==="zh"?"大球":"Over"):(lang==="es"||lang==="pt"?"Menos":lang==="ru"?"меньше":lang==="zh"?"小球":"Under");return lang==="en"?m[1]+"/5 valid O/U 2.5 signal: "+m[2]+" of 5 seats vote "+dir+" 2.5.":lang==="es"?"Señal O/U 2,5 validada "+m[1]+"/5: "+m[2]+" de 5 puestos votan "+dir+" 2,5.":lang==="pt"?"Sinal O/U 2,5 validado "+m[1]+"/5: "+m[2]+" de 5 lugares votam "+dir+" 2,5.":lang==="ru"?"Сигнал тотала 2,5 подтверждён "+m[1]+"/5: "+m[2]+" из 5 голосуют за "+dir+" 2,5.":"大/小 2.5 球信号以 "+m[1]+"/5 验证：五个席位中有 "+m[2]+" 个选择"+dir+"。";}
     m=text.match(/^Direction \? · (\d+)\/5 d’accord · forfait actif requis$/);
     if(m)return lang==="en"?"Direction ? · "+m[1]+"/5 agree · active plan required":lang==="es"?"Dirección ? · "+m[1]+"/5 de acuerdo · se requiere un plan activo":lang==="pt"?"Direção ? · "+m[1]+"/5 de acordo · plano ativo necessário":lang==="ru"?"Направление ? · согласны "+m[1]+"/5 · нужен активный тариф":"方向 ? · "+m[1]+"/5 达成一致 · 需要有效套餐";
     m=text.match(/^([<>≥]?\d+(?:[-–]\d+)?\/100)\s+(.+)$/);
