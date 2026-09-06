@@ -375,6 +375,10 @@
     ["Ancien système","Former system","Sistema anterior","Sistema anterior","Старая система","旧系统"],
     ["Livraison non prouvée","Delivery unproven","Entrega no probada","Envio não comprovado","Отправка не подтверждена","发送未证实"],
     ["Déjà abonné ?","Already subscribed?","¿Ya estás suscrito?","Já é assinante?","Уже есть подписка?","已经订阅？"],
+    ["Me connecter","Log in","Iniciar sesión","Entrar","Войти","登录"],
+    ["Email de ton abonnement","Your subscription email","Email de tu suscripción","Email da sua assinatura","Эл. почта подписки","订阅邮箱"],
+    ["Code d’accès","Access code","Código de acceso","Código de acesso","Код доступа","访问码"],
+    ["Ton email","Your email","Tu email","O seu email","Ваша эл. почта","您的邮箱"],
     ["Aucun résultat diffusé enregistré","No delivered result recorded","No hay resultados enviados registrados","Nenhum resultado enviado registado","Нет зарегистрированных отправленных результатов","没有已记录的发送结果"],
     ["/mois","/month","/mes","/mês","/месяц","/月"],
     ["LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr — +33 9 74 75 13 13, без повышенной тарификации.","GAMBLING CAN BE DANGEROUS: financial loss, family conflict and addiction. Help: joueurs-info-service.fr · +33 9 74 75 13 13, standard call rates.","LOS JUEGOS DE AZAR PUEDEN SER PELIGROSOS: pérdidas económicas, conflictos familiares y adicción. Ayuda: joueurs-info-service.fr · +33 9 74 75 13 13, llamada sin recargo.","OS JOGOS DE AZAR PODEM SER PERIGOSOS: perdas financeiras, conflitos familiares e dependência. Ajuda: joueurs-info-service.fr · +33 9 74 75 13 13, chamada sem custo adicional.","АЗАРТНЫЕ ИГРЫ МОГУТ БЫТЬ ОПАСНЫ: финансовые потери, семейные конфликты и зависимость. Помощь: joueurs-info-service.fr · +33 9 74 75 13 13, без повышенной тарификации.","博彩可能造成危害：经济损失、家庭矛盾和成瘾。帮助：joueurs-info-service.fr · +33 9 74 75 13 13，按普通通话收费。"],
@@ -469,6 +473,7 @@
   function translateTextNode(node,lang){
     if(!node||node.nodeType!==3||!node.parentElement)return;
     if(/^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|CODE|PRE)$/.test(node.parentElement.tagName))return;
+    if(node.parentElement.closest&&node.parentElement.closest(".brand"))return;
     if(node.parentElement.closest&&node.parentElement.closest("[data-i18n],[data-i18n-html]"))return;
     var raw=originals.has(node)?originals.get(node):node.nodeValue;
     if(!originals.has(node))originals.set(node,raw);
