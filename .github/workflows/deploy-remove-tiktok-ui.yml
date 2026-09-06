@@ -1,0 +1,104 @@
+name: Deploy removal of TikTok UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - public/js/widgets.js
+      - site/chatbot.js
+      - site/template.html
+      - src/App.js
+      - council/tools/html_generator.py
+      - scripts/test_no_tiktok_ui_20260906.js
+      - .github/workflows/deploy-remove-tiktok-ui.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Deploy scoped UI removal
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 8m
+          script: |
+            set -Eeuo pipefail
+            cd /opt/touslesmatchs
+            target='${{ github.sha }}'
+
+            test "$(git branch --show-current)" = main
+            test "$(git rev-parse --abbrev-ref '@{upstream}')" = origin/main
+            git diff --quiet
+            git diff --cached --quiet
+            git fetch origin main
+            git merge-base --is-ancestor HEAD "$target"
+
+            while IFS= read -r file; do
+              case "$file" in
+                public/js/widgets.js|site/chatbot.js|site/template.html|src/App.js|council/tools/html_generator.py|scripts/test_no_tiktok_ui_20260906.js|.github/workflows/deploy-remove-tiktok-ui.yml) ;;
+                *) echo "STOP: changement hors périmètre: $file"; exit 1 ;;
+              esac
+            done < <(git diff --name-only HEAD "$target")
+
+            stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+            backup="/opt/backups/tlm-before-remove-tiktok-$stamp"
+            mkdir -p "$backup/public/js" "$backup/site" "$backup/src" "$backup/council/tools"
+            cp -a public/js/widgets.js "$backup/public/js/widgets.js"
+            cp -a site/chatbot.js "$backup/site/chatbot.js"
+            cp -a site/template.html "$backup/site/template.html"
+            cp -a src/App.js "$backup/src/App.js"
+            cp -a council/tools/html_generator.py "$backup/council/tools/html_generator.py"
+
+            git merge --ff-only "$target"
+            node scripts/test_no_tiktok_ui_20260906.js
+            test "$(git rev-parse HEAD)" = "$target"
+            test "$(git rev-parse origin/main)" = "$target"
+            test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
+            docker compose ps site
+            echo "TIKTOK_UI_DEPLOYED"
+            echo "BACKUP=$backup"
+
+      - name: Verify public rendered pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+          widgets="https://www.touslesmatchs.com/js/widgets.js?remove_tiktok=$stamp"
+          home="https://www.touslesmatchs.com/?remove_tiktok=$stamp"
+          app="https://www.touslesmatchs.com/app.html?remove_tiktok=$stamp"
+
+          curl -fSL --retry 8 --retry-all-errors --retry-delay 3 "$widgets" -o /tmp/widgets.js
+          curl -fSL --retry 8 --retry-all-errors --retry-delay 3 "$home" -o /tmp/home.html
+          curl -fSL --retry 8 --retry-all-errors --retry-delay 3 "$app" -o /tmp/app.html
+
+          ! grep -qiE 'tlm-tiktok|aria-label=.*TikTok|tiktok\.com' /tmp/widgets.js
+          grep -q 'aria-label="Assistant"' /tmp/widgets.js
+          grep -q 'aria-label="Telegram"' /tmp/widgets.js
+
+          google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=10000 --dump-dom "$home" > /tmp/home-dom.html
+          google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=10000 --dump-dom "$app" > /tmp/app-dom.html
+          ! grep -qiE 'class="[^"]*tlm-tiktok|aria-label="TikTok"|id="htt"' /tmp/home-dom.html /tmp/app-dom.html
+
+          google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=10000 --screenshot=/tmp/home-no-tiktok.png "$home"
+          google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=10000 --screenshot=/tmp/app-no-tiktok.png "$app"
+          echo "PUBLIC_TIKTOK_UI_ABSENT"
+
+      - name: Archive visual proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: tlm-no-tiktok-visual-proof
+          path: |
+            /tmp/home-no-tiktok.png
+            /tmp/app-no-tiktok.png
+          retention-days: 7
