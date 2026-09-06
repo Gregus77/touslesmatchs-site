@@ -8,6 +8,8 @@
   décrivent la force d'un consensus, pas une condition minimale de diffusion.
 - Ajoute un test anti-régression couvrant l'accueil, la FAQ, les traductions et
   l'application.
+- Étend le déploiement sécurisé existant à ces fichiers, avec sauvegarde,
+  comparaison HTTP et retour arrière automatique en cas d'écart.
 - Aucun seuil, filtre, modèle IA, marché, tarif, droit d'accès ou canal Telegram
   n'est modifié.
 
