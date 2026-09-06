@@ -6,6 +6,10 @@ on:
       - public/index.html
       - public/app.html
       - public/faq.html
+      - public/live-ia.html
+      - public/performances.html
+      - public/bankroll.html
+      - public/dashboard.html
       - public/js/i18n.js
       - public/js/i18n-auto.js
       - public/js/tlm-wow-theme.js
@@ -46,12 +50,12 @@ jobs:
             test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
             while IFS= read -r file; do
               case "$file" in
-                CHANGELOG.md|public/index.html|public/app.html|public/faq.html|public/sw.js|public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|scripts/test_public_quorum_copy_3of5_20260906.js|.github/workflows/deploy-integral-i18n.yml|.github/workflows/deploy-match-lifecycle.yml) ;;
+                CHANGELOG.md|public/index.html|public/app.html|public/faq.html|public/live-ia.html|public/performances.html|public/bankroll.html|public/dashboard.html|public/sw.js|public/js/i18n.js|public/js/i18n-auto.js|public/js/tlm-wow-theme.js|public/js/match-lifecycle.js|scripts/test_i18n_integral_20260906.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|scripts/test_public_quorum_copy_3of5_20260906.js|.github/workflows/deploy-integral-i18n.yml|.github/workflows/deploy-match-lifecycle.yml) ;;
                 *) echo "STOP: unrelated change: $file"; exit 1 ;;
               esac
             done < <(git diff --name-only HEAD "$target")
             backup=$(mktemp -d /opt/backups/tlm-match-lifecycle.XXXXXX)
-            cp -a public/index.html public/app.html public/faq.html public/sw.js public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/"
+            cp -a public/index.html public/app.html public/faq.html public/live-ia.html public/performances.html public/bankroll.html public/dashboard.html public/sw.js public/js/i18n.js public/js/tlm-wow-theme.js public/js/match-lifecycle.js "$backup/"
             test ! -e public/js/i18n-auto.js || cp -a public/js/i18n-auto.js "$backup/"
             git rev-parse HEAD > "$backup/git-head.txt"
             rollback() {
@@ -59,6 +63,7 @@ jobs:
               cp -a "$backup/index.html" public/index.html
               cp -a "$backup/app.html" public/app.html
               cp -a "$backup/faq.html" public/faq.html
+              cp -a "$backup/live-ia.html" "$backup/performances.html" "$backup/bankroll.html" "$backup/dashboard.html" public/
               cp -a "$backup/sw.js" public/sw.js
               cp -a "$backup/i18n.js" "$backup/tlm-wow-theme.js" "$backup/match-lifecycle.js" public/js/
               if test -e "$backup/i18n-auto.js"; then cp -a "$backup/i18n-auto.js" public/js/; else rm -f public/js/i18n-auto.js; fi
