@@ -16,7 +16,6 @@ var PMU_LINK = "https://www.pmu.fr/turf/static/offre-parrainage/?codeParrainage=
 var ZEBET_LINK = "https://www.zebet.fr/fr/inscription";
 var PARIONSSPORT_LINK = "https://parionssport.lfdj.fr/fr-fr/inscription";
 var NETBET_LINK = "https://www.netbet.fr/inscription";
-var TIKTOK_LINK = "https://www.tiktok.com/@touslesmatchs.com";
 var TELEGRAM_LINK = "https://t.me/touslesmatchs_bot";
 
 var picks = [
@@ -203,7 +202,6 @@ export default function App() {
       React.createElement("button", {onClick:function(){setPage("cgu");}}, t("cgu")),
       React.createElement("button", {onClick:function(){setPage("mentions");}}, t("mentions_legales")),
       React.createElement("button", {onClick:function(){setPage("confidentialite");}}, t("confidentialite")),
-      React.createElement("a", {href:TIKTOK_LINK, target:"_blank"}, "TikTok"),
       React.createElement("a", {href:TELEGRAM_LINK, target:"_blank", style:{color:"#29b6f6"}}, "Telegram")
     ),
     React.createElement("div", {className:"footer-copy"}, t("footer_droits"))
