@@ -12,7 +12,6 @@ PMU_LINK = os.environ.get("PMU_LINK", "https://www.pmu.fr/")
 ZEBET_LINK = os.environ.get("ZEBET_LINK", "https://www.zebet.fr/")
 PARIONSSPORT_LINK = os.environ.get("PARIONSSPORT_LINK", "https://www.parionssport.fdj.fr/")
 NETBET_LINK = os.environ.get("NETBET_LINK", "https://www.netbet.fr/")
-TIKTOK_LINK = os.environ.get("TIKTOK_LINK", "https://www.tiktok.com/@touslesmatchs.com")
 
 
 def inject_pick_into_html(pick_data: dict, picks_history: list, stats: dict) -> bool:
@@ -82,8 +81,6 @@ def inject_pick_into_html(pick_data: dict, picks_history: list, stats: dict) -> 
     html = html.replace("{{ZEBET_LINK}}", ZEBET_LINK)
     html = html.replace("{{PARIONSSPORT_LINK}}", PARIONSSPORT_LINK)
     html = html.replace("{{NETBET_LINK}}", NETBET_LINK)
-    html = html.replace("{{TIKTOK_LINK}}", TIKTOK_LINK)
-
     os.makedirs(os.path.dirname(SITE_HTML_PATH), exist_ok=True)
     with open(SITE_HTML_PATH, "w", encoding="utf-8") as f:
         f.write(html)
