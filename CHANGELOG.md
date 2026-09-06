@@ -12,6 +12,8 @@
   comparaison HTTP et retour arrière automatique en cas d'écart.
 - Aucun seuil, filtre, modèle IA, marché, tarif, droit d'accès ou canal Telegram
   n'est modifié.
+- Corrige aussi les deux métadonnées techniques restées sur l'ancien libellé
+  4/5 ; la règle active demeure inchangée à 3/5 et 77 %.
 
 ## 2026-09-05 — Couverture live API-Football complétée
 
