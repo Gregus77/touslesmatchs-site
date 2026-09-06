@@ -1138,7 +1138,7 @@ const ELITE_SPORTS = DIFFUSABLE_SPORTS; // conservé : encore référencé par t
 const TIER_THRESHOLD_WINDOW_DAYS = 30;
 let _tierThresholdCache = { day: "", value: null };
 function getTierThresholds() {
-  return { standard: 72, premium: 72, elite: 72, source: "seuil fixe 4/5 valide le 30/08/2026" };
+  return { standard: 72, premium: 72, elite: 72, source: "confiance fixe 72; quorum client 3/5 valide le 05/09/2026" };
   const today = new Date().toISOString().slice(0, 10);
   if (_tierThresholdCache.day === today && _tierThresholdCache.value) return _tierThresholdCache.value;
   // Repli : les constantes calées sur la mesure du 25/07/2026.
@@ -7086,9 +7086,8 @@ Réponds en JSON pur (pas de markdown):
       const TH = getTierThresholds();
 
       // Standard exigeait l'UNANIMITE des 5 agents : une condition si rare que le
-      // palier restait vide la plupart des jours (0/3 le 28/07/2026). Une majorite
-      // large de 4 sur 5 reste tres selective — c'est le seuil de CONFIANCE, plus
-      // eleve que les autres paliers, qui porte l'exigence Standard.
+      // palier restait vide la plupart des jours (0/3 le 28/07/2026). La majorite
+      // de 3 sur 5 est le quorum client ; les autres garde-fous portent l'exigence.
       // En Mode Recovery, les 1-2 signaux qui franchissent tous les garde-fous
       // sont envoyes aux canaux payants des 3/5 et 77 %, sans second seuil cache.
       const gradeStandard = RECOVERY_MODE_ENABLED
@@ -14956,7 +14955,7 @@ app.get("/analysis-history", (req, res) => {
       verification: {
         repaired_date: CLIENT_HISTORY_REPAIR_DATE,
         telegram_proof_since: CLIENT_TELEGRAM_PROOF_SINCE,
-        rule: "football_ou25_5_seats_min_4_votes_minute_15_45",
+        rule: "football_ou25_5_seats_min_3_votes_minute_15_45",
       },
     });
   } catch (e) {

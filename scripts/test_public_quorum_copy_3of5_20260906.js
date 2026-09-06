@@ -15,6 +15,7 @@ const files = [
 const publicCopy = files
   .map((file) => fs.readFileSync(path.join(root, file), "utf8"))
   .join("\n");
+const apiSource = fs.readFileSync(path.join(root, "scripts/api_server.js"), "utf8");
 
 const obsoleteMinimums = [
   /minimum (?:de )?4 (?:IA )?(?:sur|de) 5/i,
