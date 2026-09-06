@@ -1,5 +1,18 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-06 — Libellés publics alignés sur le quorum 3 IA sur 5
+
+- Remplace les anciens minimums 4/5 par le quorum réellement déployé de 3/5
+  sur l'accueil, les offres, la FAQ et les six langues publiques.
+- Conserve les niveaux informatifs 4/5 « renforcé » et 5/5 « unanime » : ils
+  décrivent la force d'un consensus, pas une condition minimale de diffusion.
+- Ajoute un test anti-régression couvrant l'accueil, la FAQ, les traductions et
+  l'application.
+- Étend le déploiement sécurisé existant à ces fichiers, avec sauvegarde,
+  comparaison HTTP et retour arrière automatique en cas d'écart.
+- Aucun seuil, filtre, modèle IA, marché, tarif, droit d'accès ou canal Telegram
+  n'est modifié.
+
 ## 2026-09-05 — Couverture live API-Football complétée
 
 - Complète automatiquement le flux `fixtures?live=all` avec les rencontres en cours

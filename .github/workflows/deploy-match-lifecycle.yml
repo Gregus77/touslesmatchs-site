@@ -5,9 +5,12 @@ on:
     paths:
       - public/index.html
       - public/app.html
+      - public/faq.html
+      - public/js/i18n.js
       - public/js/match-lifecycle.js
       - public/sw.js
       - scripts/test_match_lifecycle_20260906.js
+      - scripts/test_public_quorum_copy_3of5_20260906.js
       - .github/workflows/deploy-match-lifecycle.yml
 permissions:
   contents: read
@@ -40,18 +43,20 @@ jobs:
             test "$(docker inspect -f '{{range .Mounts}}{{if eq .Destination "/srv"}}{{.Source}}{{end}}{{end}}' touslesmatchs-site)" = /opt/touslesmatchs/public
             while IFS= read -r file; do
               case "$file" in
-                public/index.html|public/app.html|public/sw.js|public/js/match-lifecycle.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|.github/workflows/deploy-match-lifecycle.yml) ;;
+                CHANGELOG.md|public/index.html|public/app.html|public/faq.html|public/sw.js|public/js/i18n.js|public/js/match-lifecycle.js|scripts/test_homepage_consensus_20260905.js|scripts/test_match_lifecycle_20260906.js|scripts/test_public_quorum_copy_3of5_20260906.js|.github/workflows/deploy-match-lifecycle.yml) ;;
                 *) echo "STOP: unrelated change: $file"; exit 1 ;;
               esac
             done < <(git diff --name-only HEAD "$target")
             backup=$(mktemp -d /opt/backups/tlm-match-lifecycle.XXXXXX)
-            cp -a public/index.html public/app.html public/sw.js "$backup/"
+            cp -a public/index.html public/app.html public/faq.html public/sw.js public/js/i18n.js "$backup/"
             git rev-parse HEAD > "$backup/git-head.txt"
             rollback() {
               trap - ERR
               cp -a "$backup/index.html" public/index.html
               cp -a "$backup/app.html" public/app.html
+              cp -a "$backup/faq.html" public/faq.html
               cp -a "$backup/sw.js" public/sw.js
+              cp -a "$backup/i18n.js" public/js/i18n.js
               echo "FAILED: public pages restored; BACKUP=$backup"
               exit 1
             }
@@ -59,12 +64,17 @@ jobs:
             git merge --ff-only "$target"
             node scripts/test_homepage_consensus_20260905.js
             node scripts/test_match_lifecycle_20260906.js
+            node scripts/test_public_quorum_copy_3of5_20260906.js
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/match-lifecycle.js?v=$target" -o "$backup/helper-public.js"
             cmp public/js/match-lifecycle.js "$backup/helper-public.js"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/?v=$target" -o "$backup/home-public.html"
             cmp public/index.html "$backup/home-public.html"
             curl -fsS --max-time 30 "https://www.touslesmatchs.com/app.html?v=$target" -o "$backup/app-public.html"
             cmp public/app.html "$backup/app-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/faq.html?v=$target" -o "$backup/faq-public.html"
+            cmp public/faq.html "$backup/faq-public.html"
+            curl -fsS --max-time 30 "https://www.touslesmatchs.com/js/i18n.js?v=$target" -o "$backup/i18n-public.js"
+            cmp public/js/i18n.js "$backup/i18n-public.js"
             docker compose ps --services --status running
             trap - ERR
             echo "MATCH_LIFECYCLE_DEPLOYED=$target"
@@ -78,6 +88,7 @@ jobs:
             if [ "$page" = app ]; then url="https://www.touslesmatchs.com/app.html?lifecycle=${{ github.sha }}"; fi
             google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --dump-dom "$url" > "/tmp/$page-lifecycle.html"
             grep -q 'match-lifecycle.js' "/tmp/$page-lifecycle.html"
+            ! grep -Eqi 'minimum (de )?4 (IA )?(sur|de) 5|au moins 4 votes sur 5|at least 4 of 5 AIs agree' "/tmp/$page-lifecycle.html"
             google-chrome --headless=new --no-sandbox --disable-gpu --window-size=390,844 --virtual-time-budget=12000 --screenshot="/tmp/$page-lifecycle.png" "$url"
           done
       - uses: actions/upload-artifact@v4
