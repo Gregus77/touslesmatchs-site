@@ -251,7 +251,116 @@
     ["Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal unanime, 4/5 = signal renforcé, 3/5 = signal validé. À 2/5 ou moins, aucun signal client n’est diffusé.","Each AI analyses statistics, dynamics, history and markets. 5/5 means unanimous, 4/5 reinforced and 3/5 validated. With 2/5 or less, no client signal is sent.","Cada IA analiza estadísticas, dinámica, historial y mercados. 5/5 significa unanimidad, 4/5 señal reforzada y 3/5 señal validada. Con 2/5 o menos, no se envía ninguna señal.","Cada IA analisa estatísticas, dinâmica, histórico e mercados. 5/5 significa unanimidade, 4/5 sinal reforçado e 3/5 sinal validado. Com 2/5 ou menos, nenhum sinal é enviado.","Каждый ИИ анализирует статистику, динамику, историю и рынки. 5/5 — единогласно, 4/5 — усиленный сигнал, 3/5 — подтверждённый. При 2/5 и ниже сигнал клиентам не отправляется.","每个 AI 分析统计、走势、历史和市场。5/5 表示全票一致，4/5 表示强化信号，3/5 表示验证通过；2/5 或更低时不向客户发送信号。"],
     ["Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Standard et Premium reçoivent les signaux validés en temps réel sur Telegram.","The selection is published on the site, sent by email and announced on Telegram. Standard and Premium members receive validated signals in real time on Telegram.","La selección se publica en el sitio, se envía por email y se anuncia en Telegram. Los miembros Standard y Premium reciben las señales validadas en tiempo real.","A seleção é publicada no site, enviada por email e anunciada no Telegram. Os membros Standard e Premium recebem os sinais validados em tempo real.","Выбор публикуется на сайте, отправляется по email и в Telegram. Участники Standard и Premium получают подтверждённые сигналы в Telegram в реальном времени.","推荐会发布在网站上，并通过邮件和 Telegram 通知。Standard 和 Premium 会员会在 Telegram 实时收到已验证信号。"],
     ["Chaque résultat est enregistré et intégré. Les stats sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.","Every result is recorded and included. Statistics are real and updated after each match. The Council learns from each selection.","Cada resultado se registra y se integra. Las estadísticas son reales y se actualizan después de cada partido. El Consejo aprende con cada selección.","Cada resultado é registado e integrado. As estatísticas são reais e atualizadas após cada jogo. O Conselho aprende com cada seleção.","Каждый результат сохраняется и учитывается. Статистика реальна и обновляется после каждого матча. Совет учится на каждом выборе.","每个结果都会记录并纳入统计。统计数据真实，并在每场比赛后更新。评议会会从每次推荐中学习。"],
-    ["Rejoins le Concile dès 4,90€/mois. Tu vois ce que 5 IA pensent vraiment.","Join the Council from €4.90/month and see what five AIs actually conclude.","Únete al Consejo desde 4,90 €/mes y descubre qué concluyen realmente cinco IA.","Junte-se ao Conselho desde 4,90 €/mês e veja o que cinco IA realmente concluem.","Присоединяйтесь к Совету от 4,90 € в месяц и смотрите выводы пяти ИИ.","每月 4.90 欧元起加入评议会，查看五个 AI 的真实结论。"]
+    ["Rejoins le Concile dès 4,90€/mois. Tu vois ce que 5 IA pensent vraiment.","Join the Council from €4.90/month and see what five AIs actually conclude.","Únete al Consejo desde 4,90 €/mes y descubre qué concluyen realmente cinco IA.","Junte-se ao Conselho desde 4,90 €/mês e veja o que cinco IA realmente concluem.","Присоединяйтесь к Совету от 4,90 € в месяц и смотрите выводы пяти ИИ.","每月 4.90 欧元起加入评议会，查看五个 AI 的真实结论。"],
+
+    /* Variantes historiques et contenus injectés par l'accueil, l'app et les résultats. */
+    ["TousLesMatchs — Le Conseil IA sportif","TousLesMatchs — The AI Sports Council","TousLesMatchs — El Consejo IA deportivo","TousLesMatchs — O Conselho de IA desportivo","TousLesMatchs — Спортивный Совет ИИ","TousLesMatchs — AI 体育评议会"],
+    ["Votre signal","Your signal","Tu señal","O seu sinal","Ваш сигнал","您的信号"],
+    ["Over ou Under 2,5.","Over or Under 2.5.","Más o Menos de 2,5.","Mais ou Menos de 2,5.","Тотал больше или меньше 2,5.","大于或小于 2.5 球。"],
+    ["Entre la 15e et la 45e minute, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 3 IA sur 5.","Between minutes 15 and 45, five AIs analyse the match. You receive only signals validated by at least three of five AIs.","Entre los minutos 15 y 45, cinco IA analizan el partido. Solo recibes señales validadas por al menos tres de cinco IA.","Entre os minutos 15 e 45, cinco IA analisam o jogo. Recebe apenas sinais validados por pelo menos três de cinco IA.","С 15-й по 45-ю минуту матч анализируют пять ИИ. Вы получаете только сигналы, подтверждённые минимум тремя из пяти ИИ.","第 15 至 45 分钟，五个 AI 分析比赛。您只会收到至少五个 AI 中三个验证的信号。"],
+    ["Football uniquement","Football only","Solo fútbol","Apenas futebol","Только футбол","仅限足球"],
+    ["3 IA / 5 minimum","At least 3 of 5 AIs","Mínimo 3 de 5 IA","Mínimo 3 de 5 IA","Минимум 3 ИИ из 5","至少 3/5 AI"],
+    ["Analyse sportive informative · Aucun résultat n'est garanti.","Informational sports analysis · No result is guaranteed.","Análisis deportivo informativo · Ningún resultado está garantizado.","Análise desportiva informativa · Nenhum resultado é garantido.","Спортивная аналитика носит информационный характер · Результат не гарантирован.","体育分析仅供参考 · 不保证任何结果。"],
+    ["Recherche du match en direct","Searching for a live match","Buscando un partido en directo","A procurar um jogo ao vivo","Поиск матча в эфире","正在查找直播比赛"],
+    ["MATCH NON ANALYSÉ","MATCH NOT ANALYSED","PARTIDO NO ANALIZADO","JOGO NÃO ANALISADO","МАТЧ НЕ ПРОАНАЛИЗИРОВАН","比赛未分析"],
+    ["Aucun vote IA exploitable reçu.","No usable AI vote received.","No se recibió ningún voto IA utilizable.","Nenhum voto de IA utilizável recebido.","Не получено ни одного пригодного голоса ИИ.","未收到可用的 AI 投票。"],
+    ["Méthode transparente","Transparent method","Método transparente","Método transparente","Прозрачный метод","透明方法"],
+    ["Aucun résultat promis.","No result is promised.","No se promete ningún resultado.","Nenhum resultado é prometido.","Никаких обещаний результата.","不承诺任何结果。"],
+    ["Données en temps réel","Real-time data","Datos en tiempo real","Dados em tempo real","Данные в реальном времени","实时数据"],
+    ["Équipes, scores et minutes actualisés.","Teams, scores and minutes updated.","Equipos, marcadores y minutos actualizados.","Equipas, resultados e minutos atualizados.","Команды, счёт и минуты обновляются.","球队、比分和分钟实时更新。"],
+    ["5 IA indépendantes","Five independent AIs","Cinco IA independientes","Cinco IA independentes","Пять независимых ИИ","五个独立 AI"],
+    ["Accord minimum de 3 sur 5.","At least three of five must agree.","Acuerdo mínimo de tres de cinco.","Concordância mínima de três em cinco.","Минимум три совпадающих голоса из пяти.","至少五个中三个达成一致。"],
+    ["Sécurisé et privé","Secure and private","Seguro y privado","Seguro e privado","Безопасно и конфиденциально","安全且私密"],
+    ["Vos données restent confidentielles.","Your data remains private.","Tus datos siguen siendo confidenciales.","Os seus dados permanecem confidenciais.","Ваши данные остаются конфиденциальными.","您的数据保持私密。"],
+    ["Voir tous les matchs →","See all matches →","Ver todos los partidos →","Ver todos os jogos →","Посмотреть все матчи →","查看所有比赛 →"],
+    ["HISTORIQUE VÉRIFIABLE","VERIFIABLE HISTORY","HISTORIAL VERIFICABLE","HISTÓRICO VERIFICÁVEL","ПРОВЕРЯЕМАЯ ИСТОРИЯ","可核验历史"],
+    ["Historique des diffusions enregistrées, sans cacher les défaites","Recorded delivery history, including losses","Historial de envíos registrados, incluidas las derrotas","Histórico de envios registados, incluindo derrotas","История зарегистрированных отправок, включая проигрыши","已记录的发送历史，包括未命中"],
+    ["Avant le 27 août, les envois proviennent des marqueurs archivés. Depuis le 27 août, une preuve Telegram est obligatoire.","Before 27 August, deliveries come from archived markers. Since 27 August, Telegram proof is required.","Antes del 27 de agosto, los envíos proceden de marcadores archivados. Desde el 27 de agosto, se exige una prueba de Telegram.","Antes de 27 de agosto, os envios provêm de marcadores arquivados. Desde 27 de agosto, é obrigatória uma prova do Telegram.","До 27 августа отправки подтверждаются архивными отметками. С 27 августа обязательно подтверждение Telegram.","8 月 27 日前的发送记录来自归档标记；自 8 月 27 日起必须提供 Telegram 发送证明。"],
+    ["Voir l’historique complet →","View full history →","Ver historial completo →","Ver histórico completo →","Посмотреть полную историю →","查看完整历史 →"],
+    ["Diffusions résolues","Resolved deliveries","Envíos resueltos","Envios resolvidos","Завершённые отправки","已结算发送"],
+    ["Gagnées / Perdues diffusées","Winning / Losing deliveries","Envíos acertados / fallados","Envios certos / errados","Выигрышные / проигрышные отправки","命中 / 未命中发送"],
+    ["Taux des diffusions","Delivery success rate","Tasa de acierto de envíos","Taxa de sucesso dos envios","Доля успешных отправок","发送命中率"],
+    ["Simulation des diffusions (10€)","Delivery simulation (€10)","Simulación de envíos (10 €)","Simulação dos envios (10 €)","Симуляция отправок (10 €)","发送模拟（10 欧元）"],
+    ["Diffusions archivées / vérifiées","Archived / verified deliveries","Envíos archivados / verificados","Envios arquivados / verificados","Архивные / подтверждённые отправки","已归档 / 已验证发送"],
+    ["Jours avec résultat mesuré","Days with measured results","Días con resultados medidos","Dias com resultados medidos","Дни с измеренным результатом","有统计结果的天数"],
+    ["Les observations non diffusées ne sont pas présentées comme des signaux reçus. Les performances passées ne garantissent pas les résultats futurs.","Undelivered observations are not presented as received signals. Past performance does not guarantee future results.","Las observaciones no enviadas no se presentan como señales recibidas. El rendimiento pasado no garantiza resultados futuros.","As observações não enviadas não são apresentadas como sinais recebidos. O desempenho passado não garante resultados futuros.","Неразосланные наблюдения не выдаются за полученные сигналы. Прошлые результаты не гарантируют будущих.","未发送的观察不会计作已收到的信号。过去表现不保证未来结果。"],
+    ["Historique complet depuis le 1er août","Full history since 1 August","Historial completo desde el 1 de agosto","Histórico completo desde 1 de agosto","Полная история с 1 августа","自 8 月 1 日起的完整历史"],
+    ["Aucun pick gratuit disponible pour l'instant aujourd'hui.","No free selection is available yet today.","Aún no hay una selección gratuita disponible hoy.","Ainda não há uma seleção gratuita disponível hoje.","Сегодня бесплатный выбор пока недоступен.","今天暂时没有免费推荐。"],
+    ["Le Concile n'a pas encore identifié de sélection correspondant à nos critères — reviens plus tard dans la journée.","The Council has not yet found a selection matching our criteria — check again later today.","El Consejo aún no ha encontrado una selección que cumpla nuestros criterios — vuelve más tarde.","O Conselho ainda não encontrou uma seleção que cumpra os critérios — volte mais tarde.","Совет пока не нашёл выбор, соответствующий нашим критериям — проверьте позже сегодня.","评议会尚未找到符合条件的推荐——请稍后再查看。"],
+    ["Sans engagement","No commitment","Sin compromiso","Sem compromisso","Без обязательств","无长期承诺"],
+    ["Comment ça fonctionne ?","How does it work?","¿Cómo funciona?","Como funciona?","Как это работает?","如何运作？"],
+    ["Voir la méthode","See the method","Ver el método","Ver o método","Посмотреть метод","查看方法"],
+    ["Résultats récents","Recent results","Resultados recientes","Resultados recentes","Недавние результаты","近期结果"],
+    ["Voir tout →","See all →","Ver todo →","Ver tudo →","Посмотреть всё →","查看全部 →"],
+    ["Créer un compte gratuit","Create a free account","Crear una cuenta gratis","Criar uma conta grátis","Создать бесплатный аккаунт","创建免费账户"],
+    ["Gérer mon abonnement","Manage my subscription","Gestionar mi suscripción","Gerir a minha assinatura","Управлять подпиской","管理订阅"],
+    ["Pronostic IA, comment ça marche","How AI analysis works","Cómo funciona el análisis IA","Como funciona a análise de IA","Как работает ИИ-анализ","AI 分析如何运作"],
+    ["Les jeux d'argent et de hasard comportent des risques : isolement, endettement… Appelez le 09 74 75 13 13 (appel non surtaxé).","Gambling carries risks including isolation and debt. Call +33 9 74 75 13 13 at standard rates.","El juego implica riesgos como aislamiento y endeudamiento. Llame al +33 9 74 75 13 13 sin recargo.","O jogo envolve riscos como isolamento e endividamento. Ligue +33 9 74 75 13 13 sem custo adicional.","Азартные игры связаны с риском изоляции и долгов. Телефон помощи: +33 9 74 75 13 13, без повышенной тарификации.","博彩存在孤立和债务等风险。求助电话：+33 9 74 75 13 13，按普通通话收费。"],
+    ["18+ · Interdit aux mineurs. TousLesMatchs fournit des analyses statistiques à titre informatif et ne garantit aucun gain.","18+ · Minors prohibited. TousLesMatchs provides statistical analysis for information only and guarantees no return.","18+ · Prohibido a menores. TousLesMatchs ofrece análisis estadísticos informativos y no garantiza ganancias.","18+ · Proibido a menores. O TousLesMatchs fornece análises estatísticas informativas e não garante ganhos.","18+ · Несовершеннолетним запрещено. TousLesMatchs предоставляет статистическую аналитику только в информационных целях и не гарантирует выигрыш.","18+ · 未成年人禁止参与。TousLesMatchs 仅提供统计分析，不保证收益。"],
+    ["ANALYSE NON LANCÉE","ANALYSIS NOT STARTED","ANÁLISIS NO INICIADO","ANÁLISE NÃO INICIADA","АНАЛИЗ НЕ ЗАПУЩЕН","分析未启动"],
+    ["DÉJÀ ABONNÉ ?","ALREADY SUBSCRIBED?","¿YA ESTÁS SUSCRITO?","JÁ É ASSINANTE?","УЖЕ ЕСТЬ ПОДПИСКА?","已经订阅？"],
+    ["Retrouve ton accès","Recover your access","Recupera tu acceso","Recupere o seu acesso","Восстановить доступ","找回访问权限"],
+    ["Entre l’email de ton abonnement et le code reçu après paiement. L’app gardera ensuite ta session et tes préférences.","Enter your subscription email and the code received after payment. The app will then keep your session and preferences.","Introduce el email de tu suscripción y el código recibido tras el pago. La app conservará tu sesión y preferencias.","Introduza o email da assinatura e o código recebido após o pagamento. A aplicação guardará a sessão e as preferências.","Введите email подписки и код, полученный после оплаты. Приложение сохранит вашу сессию и настройки.","输入订阅邮箱和付款后收到的代码。应用会保存您的会话和偏好。"],
+    ["Recevoir mon code par email","Receive my code by email","Recibir mi código por email","Receber o meu código por email","Получить код по электронной почте","通过邮箱接收代码"],
+    ["Crée ton compte gratuit","Create your free account","Crea tu cuenta gratis","Crie a sua conta grátis","Создайте бесплатный аккаунт","创建免费账户"],
+    ["Découvre le pick gratuit du jour et les résultats publics, sans carte bancaire.","Discover today's free selection and public results, with no bank card.","Descubre la selección gratuita del día y los resultados públicos, sin tarjeta.","Descubra a seleção gratuita do dia e os resultados públicos, sem cartão.","Получите бесплатный выбор дня и открытые результаты без банковской карты.","无需银行卡即可查看今日免费推荐和公开结果。"],
+    ["Les sélections Over / Under 2,5 et les alertes membres sont disponibles à partir de 4,90€/mois.","Over / Under 2.5 selections and member alerts are available from €4.90/month.","Las selecciones Más / Menos 2,5 y las alertas para miembros están disponibles desde 4,90 €/mes.","As seleções Mais / Menos 2,5 e os alertas para membros estão disponíveis desde 4,90 €/mês.","Выборы на тотал больше / меньше 2,5 и уведомления доступны от 4,90 € в месяц.","大/小 2.5 球推荐和会员提醒每月 4.90 欧元起。"],
+    ["Victoire extérieur","Away win","Victoria visitante","Vitória fora","Победа гостей","客胜"],
+    ["Performances","Performance","Rendimiento","Desempenho","Результаты","表现"],
+    ["EMAIL","EMAIL","EMAIL","EMAIL","ЭЛЕКТРОННАЯ ПОЧТА","邮箱"],
+    ["Football IA","Football AI","IA de fútbol","IA de futebol","Футбольный ИИ","足球 AI"],
+    ["Football","Football","Fútbol","Futebol","Футбол","足球"],
+    ["Over 2.5 buts","Over 2.5 goals","Más de 2,5 goles","Mais de 2,5 golos","Тотал больше 2,5","大于 2.5 球"],
+    ["Under 2.5 buts","Under 2.5 goals","Menos de 2,5 goles","Menos de 2,5 golos","Тотал меньше 2,5","小于 2.5 球"],
+    ["Sél.","Sel.","Sel.","Sel.","Выбор","推荐"],
+    ["Rés.","Result","Res.","Res.","Итог","结果"],
+    ["Français","French","Francés","Francês","Французский","法语"],
+    ["English","English","Inglés","Inglês","Английский","英语"],
+    ["Español","Spanish","Español","Espanhol","Испанский","西班牙语"],
+    ["Português","Portuguese","Portugués","Português","Португальский","葡萄牙语"],
+    ["Русский","Russian","Ruso","Russo","Русский","俄语"],
+    ["中文","Chinese","Chino","Chinês","Китайский","中文"],
+    ["Argentina","Argentina","Argentina","Argentina","Аргентина","阿根廷"],
+    ["Brazil","Brazil","Brasil","Brasil","Бразилия","巴西"],
+    ["Denmark","Denmark","Dinamarca","Dinamarca","Дания","丹麦"],
+    ["Egypt","Egypt","Egipto","Egito","Египет","埃及"],
+    ["England","England","Inglaterra","Inglaterra","Англия","英格兰"],
+    ["Finland","Finland","Finlandia","Finlândia","Финляндия","芬兰"],
+    ["France","France","Francia","França","Франция","法国"],
+    ["Italy","Italy","Italia","Itália","Италия","意大利"],
+    ["Malaysia","Malaysia","Malasia","Malásia","Малайзия","马来西亚"],
+    ["Netherlands","Netherlands","Países Bajos","Países Baixos","Нидерланды","荷兰"],
+    ["Portugal","Portugal","Portugal","Portugal","Португалия","葡萄牙"],
+    ["Saudi-Arabia","Saudi Arabia","Arabia Saudí","Arábia Saudita","Саудовская Аравия","沙特阿拉伯"],
+    ["South-Korea","South Korea","Corea del Sur","Coreia do Sul","Южная Корея","韩国"],
+    ["Spain","Spain","España","Espanha","Испания","西班牙"],
+    ["Turkey","Turkey","Turquía","Turquia","Турция","土耳其"],
+    ["World","World","Mundo","Mundo","Мир","世界"],
+    ["Liga Profesional Argentina","Argentine Primera División","Liga Profesional Argentina","Liga Profesional Argentina","Профессиональная лига Аргентины","阿根廷职业联赛"],
+    ["Serie A","Serie A","Serie A","Serie A","Серия A","意甲"],
+    ["Serie B","Serie B","Serie B","Serie B","Серия B","意乙"],
+    ["Superliga","Superliga","Superliga","Superliga","Суперлига","超级联赛"],
+    ["Premier League","Premier League","Premier League","Premier League","Премьер-лига","英超"],
+    ["FA Cup","FA Cup","FA Cup","FA Cup","Кубок Англии","足总杯"],
+    ["Championship","Championship","Championship","Championship","Чемпионшип","英冠"],
+    ["Veikkausliiga","Veikkausliiga","Veikkausliiga","Veikkausliiga","Вейккауслига","芬兰超级联赛"],
+    ["Eredivisie","Eredivisie","Eredivisie","Eredivisie","Эредивизи","荷甲"],
+    ["Primeira Liga","Primeira Liga","Primeira Liga","Primeira Liga","Примейра-лига","葡超"],
+    ["Pro League","Pro League","Pro League","Pro League","Про-лига","职业联赛"],
+    ["K League 1","K League 1","K League 1","K League 1","Кей-лига 1","K 联赛 1"],
+    ["La Liga","La Liga","La Liga","La Liga","Ла Лига","西甲"],
+    ["Süper Lig","Süper Lig","Süper Lig","Süper Lig","Суперлига Турции","土超"],
+    ["CONCACAF Caribbean Club Championship","CONCACAF Caribbean Club Championship","Campeonato de Clubes del Caribe CONCACAF","Campeonato de Clubes do Caribe da CONCACAF","Клубный чемпионат Карибского бассейна КОНКАКАФ","中北美及加勒比海俱乐部锦标赛"],
+    ["UEFA Champions League","UEFA Champions League","Liga de Campeones de la UEFA","Liga dos Campeões da UEFA","Лига чемпионов УЕФА","欧洲冠军联赛"],
+    ["Règle actuelle Standard et Premium : football de championnat entre la 15e et la 45e minute, majorité minimale 3/5, confiance ≥77/100 et cote ANJ réelle entre 1,30 et 2,10. Les autres critères de qualité restent applicables.","Current Standard and Premium rule: league football between minutes 15 and 45, at least 3/5 agreement, confidence ≥77/100 and verified ANJ odds from 1.30 to 2.10. Other quality criteria still apply.","Regla actual Standard y Premium: fútbol de liga entre los minutos 15 y 45, mayoría mínima de 3/5, confianza ≥77/100 y cuota ANJ real entre 1,30 y 2,10. Se mantienen los demás criterios de calidad.","Regra atual Standard e Premium: futebol de liga entre os minutos 15 e 45, maioria mínima de 3/5, confiança ≥77/100 e odd ANJ real entre 1,30 e 2,10. Mantêm-se os restantes critérios de qualidade.","Текущее правило Standard и Premium: матчи чемпионатов с 15-й по 45-ю минуту, минимум 3/5 совпадающих голосов, уверенность ≥77/100 и реальный коэффициент ANJ от 1,30 до 2,10. Остальные критерии качества сохраняются.","当前 Standard 和 Premium 规则：联赛第 15 至 45 分钟，至少 3/5 多数，置信度 ≥77/100，真实 ANJ 赔率在 1.30 至 2.10 之间。其他质量标准仍然适用。"],
+    ["BON","GOOD","BUENO","BOM","ХОРОШО","良好"],
+    ["FIABLE","RELIABLE","FIABLE","FIÁVEL","НАДЁЖНО","可靠"],
+    ["TELEGRAM VÉRIFIÉ","TELEGRAM VERIFIED","TELEGRAM VERIFICADO","TELEGRAM VERIFICADO","TELEGRAM ПОДТВЕРЖДЁН","TELEGRAM 已验证"],
+    ["ANCIEN SYSTÈME","FORMER SYSTEM","SISTEMA ANTERIOR","SISTEMA ANTERIOR","СТАРАЯ СИСТЕМА","旧系统"],
+    ["LIVRAISON NON PROUVÉE","DELIVERY UNPROVEN","ENVÍO NO PROBADO","ENVIO NÃO COMPROVADO","ОТПРАВКА НЕ ПОДТВЕРЖДЕНА","发送未证实"],
+    ["Aucun résultat diffusé enregistré","No delivered result recorded","No hay resultados enviados registrados","Nenhum resultado enviado registado","Нет зарегистрированных отправленных результатов","没有已记录的发送结果"],
+    ["/mois","/month","/mes","/mês","/месяц","/月"],
+    ["LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr — +33 9 74 75 13 13, без повышенной тарификации.","GAMBLING CAN BE DANGEROUS: financial loss, family conflict and addiction. Help: joueurs-info-service.fr · +33 9 74 75 13 13, standard call rates.","LOS JUEGOS DE AZAR PUEDEN SER PELIGROSOS: pérdidas económicas, conflictos familiares y adicción. Ayuda: joueurs-info-service.fr · +33 9 74 75 13 13, llamada sin recargo.","OS JOGOS DE AZAR PODEM SER PERIGOSOS: perdas financeiras, conflitos familiares e dependência. Ajuda: joueurs-info-service.fr · +33 9 74 75 13 13, chamada sem custo adicional.","АЗАРТНЫЕ ИГРЫ МОГУТ БЫТЬ ОПАСНЫ: финансовые потери, семейные конфликты и зависимость. Помощь: joueurs-info-service.fr · +33 9 74 75 13 13, без повышенной тарификации.","博彩可能造成危害：经济损失、家庭矛盾和成瘾。帮助：joueurs-info-service.fr · +33 9 74 75 13 13，按普通通话收费。"]
   ];
 
   var maps={fr:{},en:{},es:{},pt:{},ru:{},zh:{}};
@@ -280,6 +389,36 @@
     };
     var date=text.match(/^(\d{1,2}) (janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre) (\d{4})$/i);
     if(date){var month=months[lang][date[2].toLowerCase()];return lang==="en"?month+" "+date[1]+", "+date[3]:lang==="zh"?date[3]+" 年 "+month+" "+date[1]+" 日":date[1]+" "+month+" "+date[3];}
+    var weekdays={
+      en:{lundi:"Monday",mardi:"Tuesday",mercredi:"Wednesday",jeudi:"Thursday",vendredi:"Friday",samedi:"Saturday",dimanche:"Sunday"},
+      es:{lundi:"lunes",mardi:"martes",mercredi:"miércoles",jeudi:"jueves",vendredi:"viernes",samedi:"sábado",dimanche:"domingo"},
+      pt:{lundi:"segunda-feira",mardi:"terça-feira",mercredi:"quarta-feira",jeudi:"quinta-feira",vendredi:"sexta-feira",samedi:"sábado",dimanche:"domingo"},
+      ru:{lundi:"понедельник",mardi:"вторник",mercredi:"среда",jeudi:"четверг",vendredi:"пятница",samedi:"суббота",dimanche:"воскресенье"},
+      zh:{lundi:"星期一",mardi:"星期二",mercredi:"星期三",jeudi:"星期四",vendredi:"星期五",samedi:"星期六",dimanche:"星期日"}
+    };
+    var shortDays={
+      en:{"lun.":"Mon.","mar.":"Tue.","mer.":"Wed.","jeu.":"Thu.","ven.":"Fri.","sam.":"Sat.","dim.":"Sun."},
+      es:{"lun.":"lun.","mar.":"mar.","mer.":"mié.","jeu.":"jue.","ven.":"vie.","sam.":"sáb.","dim.":"dom."},
+      pt:{"lun.":"seg.","mar.":"ter.","mer.":"qua.","jeu.":"qui.","ven.":"sex.","sam.":"sáb.","dim.":"dom."},
+      ru:{"lun.":"пн.","mar.":"вт.","mer.":"ср.","jeu.":"чт.","ven.":"пт.","sam.":"сб.","dim.":"вс."},
+      zh:{"lun.":"周一", "mar.":"周二", "mer.":"周三", "jeu.":"周四", "ven.":"周五", "sam.":"周六", "dim.":"周日"}
+    };
+    var dayDate=text.match(/^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)$/i);
+    if(dayDate){var dayName=weekdays[lang][dayDate[1].toLowerCase()],monthName=months[lang][dayDate[3].toLowerCase()];return lang==="en"?dayName+" "+monthName+" "+dayDate[2]:lang==="zh"?monthName+dayDate[2]+" 日 "+dayName:dayName+" "+dayDate[2]+" "+monthName;}
+    var dayMonth=text.match(/^(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)$/i);
+    if(dayMonth){var translatedMonth=months[lang][dayMonth[2].toLowerCase()];return lang==="en"?translatedMonth+" "+dayMonth[1]:lang==="zh"?translatedMonth+dayMonth[1]+" 日":dayMonth[1]+" "+translatedMonth;}
+    var countMatches=text.match(/^(\d+)\s+matchs?$/i);
+    if(countMatches)return lang==="en"?countMatches[1]+(countMatches[1]==="1"?" match":" matches"):lang==="es"?countMatches[1]+(countMatches[1]==="1"?" partido":" partidos"):lang==="pt"?countMatches[1]+(countMatches[1]==="1"?" jogo":" jogos"):lang==="ru"?countMatches[1]+(countMatches[1]==="1"?" матч":" матчей"):countMatches[1]+" 场比赛";
+    var wonDay=text.match(/^(\d+)\/(\d+)\s+gagnés\s+·\s+([+-]\d+)€$/i);
+    if(wonDay)return lang==="en"?wonDay[1]+"/"+wonDay[2]+" won · "+wonDay[3]+"€":lang==="es"?wonDay[1]+"/"+wonDay[2]+" acertados · "+wonDay[3]+"€":lang==="pt"?wonDay[1]+"/"+wonDay[2]+" certos · "+wonDay[3]+"€":lang==="ru"?wonDay[1]+"/"+wonDay[2]+" выиграно · "+wonDay[3]+"€":wonDay[1]+"/"+wonDay[2]+" 命中 · "+wonDay[3]+"€";
+    var analysesDay=text.match(/^(\d+)\s+analyses\s+·\s+(\d+)\s+résolues$/i);
+    if(analysesDay)return lang==="en"?analysesDay[1]+" analyses · "+analysesDay[2]+" resolved":lang==="es"?analysesDay[1]+" análisis · "+analysesDay[2]+" resueltos":lang==="pt"?analysesDay[1]+" análises · "+analysesDay[2]+" resolvidas":lang==="ru"?analysesDay[1]+" анализов · "+analysesDay[2]+" завершено":analysesDay[1]+" 次分析 · "+analysesDay[2]+" 次已结算";
+    var netGain=text.match(/^gain net\s*:\s*([+-]\d+[,.]\d+)\s*€$/i);
+    if(netGain)return lang==="en"?"net result: "+netGain[1]+" €":lang==="es"?"resultado neto: "+netGain[1]+" €":lang==="pt"?"resultado líquido: "+netGain[1]+" €":lang==="ru"?"чистый результат: "+netGain[1]+" €":"净结果："+netGain[1]+" €";
+    var perfSummary=text.match(/^Sur (\d+) résultats résolus — (\d+) gagnées, (\d+) perdues\. Bénéfice simulé à 10 € la mise : ([+-]?\d+)€ \(ROI ([+-]?\d+(?:[.,]\d+)?) %\)\.$/i);
+    if(perfSummary)return lang==="en"?"Across "+perfSummary[1]+" resolved results — "+perfSummary[2]+" won, "+perfSummary[3]+" lost. Simulated result at €10 per selection: "+perfSummary[4]+"€ (ROI "+perfSummary[5]+"%).":lang==="es"?"Sobre "+perfSummary[1]+" resultados resueltos — "+perfSummary[2]+" acertados y "+perfSummary[3]+" fallados. Resultado simulado con 10 € por selección: "+perfSummary[4]+"€ (ROI "+perfSummary[5]+"%).":lang==="pt"?"Em "+perfSummary[1]+" resultados resolvidos — "+perfSummary[2]+" certos e "+perfSummary[3]+" errados. Resultado simulado com 10 € por seleção: "+perfSummary[4]+"€ (ROI "+perfSummary[5]+"%).":lang==="ru"?"Из "+perfSummary[1]+" завершённых результатов: "+perfSummary[2]+" выиграно, "+perfSummary[3]+" проиграно. Симуляция при 10 € на выбор: "+perfSummary[4]+"€ (ROI "+perfSummary[5]+"%).":"在 "+perfSummary[1]+" 个已结算结果中："+perfSummary[2]+" 个命中，"+perfSummary[3]+" 个未命中。每次 10 欧元的模拟结果："+perfSummary[4]+"€（ROI "+perfSummary[5]+"%）。";
+    var qualityLine=text.match(/^(\d+)\/100\s+·\s+(BON|FIABLE)(.*)$/i);
+    if(qualityLine){var q=maps[lang][qualityLine[2].toUpperCase()]||qualityLine[2],tail=qualityLine[3].replace(/TELEGRAM VÉRIFIÉ/gi,maps[lang]["TELEGRAM VÉRIFIÉ"]).replace(/ANCIEN SYSTÈME/gi,maps[lang]["ANCIEN SYSTÈME"]).replace(/LIVRAISON NON PROUVÉE/gi,maps[lang]["LIVRAISON NON PROUVÉE"]);return qualityLine[1]+"/100 · "+q+tail;}
     var m=text.match(/^IA (\d+)$/); if(m)return lang==="en"?"AI "+m[1]:lang==="ru"?"ИИ "+m[1]:lang==="zh"?"AI "+m[1]:text;
     m=text.match(/^(\d+)\s*\/\s*5 IA$/); if(m)return lang==="en"?m[1]+"/5 AIs":lang==="es"?m[1]+"/5 IA":lang==="pt"?m[1]+"/5 IA":lang==="ru"?m[1]+"/5 ИИ":m[1]+"/5 AI";
     m=text.match(/^(\d+) Over · (\d+) Under$/); if(m)return lang==="en"?m[1]+" Over · "+m[2]+" Under":lang==="es"?m[1]+" Más · "+m[2]+" Menos":lang==="pt"?m[1]+" Mais · "+m[2]+" Menos":lang==="ru"?m[1]+" Больше · "+m[2]+" Меньше":m[1]+" 大 · "+m[2]+" 小";
@@ -291,6 +430,16 @@
     if(m)return lang==="en"?"Direction ? · "+m[1]+"/5 agree · active plan required":lang==="es"?"Dirección ? · "+m[1]+"/5 de acuerdo · se requiere un plan activo":lang==="pt"?"Direção ? · "+m[1]+"/5 de acordo · plano ativo necessário":lang==="ru"?"Направление ? · согласны "+m[1]+"/5 · нужен активный тариф":"方向 ? · "+m[1]+"/5 达成一致 · 需要有效套餐";
     m=text.match(/^([<>≥]?\d+(?:[-–]\d+)?\/100)\s+(.+)$/);
     if(m)return m[1]+" "+(maps[lang][m[2]]!==undefined?maps[lang][m[2]]:m[2]);
+    if(text.indexOf(" · ")>=0){
+      var changed=false;
+      var pieces=text.split(" · ").map(function(piece){
+        if(maps[lang][piece]!==undefined){changed=true;return maps[lang][piece];}
+        var scheduled=piece.match(/^(lun\.|mar\.|mer\.|jeu\.|ven\.|sam\.|dim\.)\s+(\d{2}\/\d{2})$/i);
+        if(scheduled){changed=true;return shortDays[lang][scheduled[1].toLowerCase()]+" "+scheduled[2];}
+        return piece;
+      });
+      if(changed)return pieces.join(" · ");
+    }
     return text;
   }
   function translateTextNode(node,lang){
