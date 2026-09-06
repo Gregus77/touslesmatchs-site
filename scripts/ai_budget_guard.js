@@ -100,6 +100,14 @@ function _todaySum(db, sql, params = []) {
   return row ? Object.values(row)[0] || 0 : 0;
 }
 
+// Le Concile ajoute au match_key l'etat live "_score-score-tranche" afin
+// d'autoriser une nouvelle analyse lorsque le match evolue. Cette cle est
+// correcte pour l'anti-doublon, mais elle ne doit pas transformer trois
+// snapshots du meme match en trois matchs distincts dans le plafond journalier.
+function dailyMatchIdentity(matchKey) {
+  return String(matchKey || "").replace(/_[0-9x]+-[0-9x]+-[0-9]+$/i, "");
+}
+
 function _sendAdminAlert(text) {
   if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_ADMIN_CHAT_ID) return;
   const body = JSON.stringify({ chat_id: TELEGRAM_ADMIN_CHAT_ID, text, parse_mode: "HTML" });
@@ -243,16 +251,13 @@ function canProceed(db, { modelKey, matchKey, competition, market, promptVersion
 
   // 7) Nombre de matchs distincts / jour — un match déjà compté aujourd'hui
   //    (par un autre modèle) ne recompte pas contre ce plafond.
-  const matchAlreadyCounted = db.prepare(`
-    SELECT 1 FROM ai_call_budget_log
-    WHERE match_key = ? AND date(created_at) = date('now') AND status = 'ok' LIMIT 1
-  `).get(matchKey);
-  if (!matchAlreadyCounted) {
-    const matchesToday = _todaySum(db, `
-      SELECT COUNT(DISTINCT match_key) FROM ai_call_budget_log
-      WHERE date(created_at) = date('now') AND status = 'ok' AND match_key IS NOT NULL
-    `);
-    if (matchesToday >= CFG.maxMatchesPerDay && CFG.hardStop) {
+  const currentDailyMatch = dailyMatchIdentity(matchKey);
+  const dailyMatches = new Set(db.prepare(`
+    SELECT DISTINCT match_key FROM ai_call_budget_log
+    WHERE date(created_at) = date('now') AND status = 'ok' AND match_key IS NOT NULL
+  `).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));
+  if (!dailyMatches.has(currentDailyMatch)) {
+    if (dailyMatches.size >= CFG.maxMatchesPerDay && CFG.hardStop) {
       return { allowed: false, reason: "[LIMIT] plafond de matchs analysés/jour atteint", requestKey };
     }
   }
