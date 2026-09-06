@@ -6,6 +6,14 @@
   "use strict";
   var LANGS = ["fr", "en", "es", "pt", "ru", "zh"];
   var NAMES = {fr:"Français",en:"English",es:"Español",pt:"Português",ru:"Русский",zh:"中文"};
+  var LANGUAGE_LABELS = {
+    fr:{fr:"Français",en:"Anglais",es:"Espagnol",pt:"Portugais",ru:"Russe",zh:"Chinois"},
+    en:{fr:"French",en:"English",es:"Spanish",pt:"Portuguese",ru:"Russian",zh:"Chinese"},
+    es:{fr:"Francés",en:"Inglés",es:"Español",pt:"Portugués",ru:"Ruso",zh:"Chino"},
+    pt:{fr:"Francês",en:"Inglês",es:"Espanhol",pt:"Português",ru:"Russo",zh:"Chinês"},
+    ru:{fr:"Французский",en:"Английский",es:"Испанский",pt:"Португальский",ru:"Русский",zh:"Китайский"},
+    zh:{fr:"法语",en:"英语",es:"西班牙语",pt:"葡萄牙语",ru:"俄语",zh:"中文"}
+  };
   var LOCALES = {fr:"fr-FR",en:"en-GB",es:"es-ES",pt:"pt-BR",ru:"ru-RU",zh:"zh-CN"};
 
   /* [français, anglais, espagnol, portugais, russe, chinois] */
@@ -358,9 +366,16 @@
     ["TELEGRAM VÉRIFIÉ","TELEGRAM VERIFIED","TELEGRAM VERIFICADO","TELEGRAM VERIFICADO","TELEGRAM ПОДТВЕРЖДЁН","TELEGRAM 已验证"],
     ["ANCIEN SYSTÈME","FORMER SYSTEM","SISTEMA ANTERIOR","SISTEMA ANTERIOR","СТАРАЯ СИСТЕМА","旧系统"],
     ["LIVRAISON NON PROUVÉE","DELIVERY UNPROVEN","ENVÍO NO PROBADO","ENVIO NÃO COMPROVADO","ОТПРАВКА НЕ ПОДТВЕРЖДЕНА","发送未证实"],
+    ["Match non analysé","Match not analysed","Partido no analizado","Jogo não analisado","Матч не проанализирован","比赛未分析"],
+    ["Historique vérifiable","Verifiable history","Historial verificable","Histórico verificável","Проверяемая история","可验证的历史"],
+    ["Telegram vérifié","Telegram verified","Telegram verificado","Telegram verificado","Telegram подтверждён","Telegram 已验证"],
+    ["Ancien système","Former system","Sistema anterior","Sistema anterior","Старая система","旧系统"],
+    ["Livraison non prouvée","Delivery unproven","Entrega no probada","Envio não comprovado","Отправка не подтверждена","发送未证实"],
+    ["Déjà abonné ?","Already subscribed?","¿Ya estás suscrito?","Já é assinante?","Уже есть подписка?","已经订阅？"],
     ["Aucun résultat diffusé enregistré","No delivered result recorded","No hay resultados enviados registrados","Nenhum resultado enviado registado","Нет зарегистрированных отправленных результатов","没有已记录的发送结果"],
     ["/mois","/month","/mes","/mês","/месяц","/月"],
-    ["LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr — +33 9 74 75 13 13, без повышенной тарификации.","GAMBLING CAN BE DANGEROUS: financial loss, family conflict and addiction. Help: joueurs-info-service.fr · +33 9 74 75 13 13, standard call rates.","LOS JUEGOS DE AZAR PUEDEN SER PELIGROSOS: pérdidas económicas, conflictos familiares y adicción. Ayuda: joueurs-info-service.fr · +33 9 74 75 13 13, llamada sin recargo.","OS JOGOS DE AZAR PODEM SER PERIGOSOS: perdas financeiras, conflitos familiares e dependência. Ajuda: joueurs-info-service.fr · +33 9 74 75 13 13, chamada sem custo adicional.","АЗАРТНЫЕ ИГРЫ МОГУТ БЫТЬ ОПАСНЫ: финансовые потери, семейные конфликты и зависимость. Помощь: joueurs-info-service.fr · +33 9 74 75 13 13, без повышенной тарификации.","博彩可能造成危害：经济损失、家庭矛盾和成瘾。帮助：joueurs-info-service.fr · +33 9 74 75 13 13，按普通通话收费。"]
+    ["LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr — +33 9 74 75 13 13, без повышенной тарификации.","GAMBLING CAN BE DANGEROUS: financial loss, family conflict and addiction. Help: joueurs-info-service.fr · +33 9 74 75 13 13, standard call rates.","LOS JUEGOS DE AZAR PUEDEN SER PELIGROSOS: pérdidas económicas, conflictos familiares y adicción. Ayuda: joueurs-info-service.fr · +33 9 74 75 13 13, llamada sin recargo.","OS JOGOS DE AZAR PODEM SER PERIGOSOS: perdas financeiras, conflitos familiares e dependência. Ajuda: joueurs-info-service.fr · +33 9 74 75 13 13, chamada sem custo adicional.","АЗАРТНЫЕ ИГРЫ МОГУТ БЫТЬ ОПАСНЫ: финансовые потери, семейные конфликты и зависимость. Помощь: joueurs-info-service.fr · +33 9 74 75 13 13, без повышенной тарификации.","博彩可能造成危害：经济损失、家庭矛盾和成瘾。帮助：joueurs-info-service.fr · +33 9 74 75 13 13，按普通通话收费。"],
+    ["LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur","GAMBLING CAN BE DANGEROUS: financial loss, family conflict and addiction. Help:","LOS JUEGOS DE AZAR PUEDEN SER PELIGROSOS: pérdidas económicas, conflictos familiares y adicción. Ayuda:","OS JOGOS DE AZAR PODEM SER PERIGOSOS: perdas financeiras, conflitos familiares e dependência. Ajuda:","АЗАРТНЫЕ ИГРЫ МОГУТ БЫТЬ ОПАСНЫ: финансовые потери, семейные конфликты и зависимость. Помощь:","博彩可能造成危害：经济损失、家庭矛盾和成瘾。帮助："]
   ];
 
   var maps={fr:{},en:{},es:{},pt:{},ru:{},zh:{}};
@@ -375,6 +390,12 @@
   function translateDynamic(text,lang){
     if(lang==="fr")return text;
     var exact=maps[lang][text]; if(exact!==undefined)return exact;
+    var compact=String(text||"").replace(/\s+/g," ").trim();
+    if(compact!==text){
+      var compactExact=maps[lang][compact];
+      if(compactExact!==undefined)return compactExact;
+      text=compact;
+    }
     var prefixed=text.match(/^(\s*[^\p{L}\p{N}]*)([\p{L}\p{N}].*)$/u);
     if(prefixed&&prefixed[1]){
       var translatedCore=maps[lang][prefixed[2]];
@@ -472,10 +493,11 @@
     if(root.querySelectorAll)root.querySelectorAll("[placeholder],[title],[aria-label]").forEach(function(el){translateAttrs(el,lang);});
   }
   function addSelector(lang){
-    var existing=document.getElementById("tlm-language-universal"); if(existing){existing.value=lang;return;}
+    var labels=LANGUAGE_LABELS[lang]||NAMES;
+    var existing=document.getElementById("tlm-language-universal"); if(existing){Array.from(existing.options).forEach(function(o){o.textContent=labels[o.value]||NAMES[o.value]||o.value;});existing.value=lang;return;}
     if(document.getElementById("lang-current"))return;
     var select=document.createElement("select");select.id="tlm-language-universal";select.setAttribute("aria-label",maps[lang]["Langue"]||"Language");
-    LANGS.forEach(function(code){var o=document.createElement("option");o.value=code;o.textContent=NAMES[code];select.appendChild(o);});
+    LANGS.forEach(function(code){var o=document.createElement("option");o.value=code;o.textContent=labels[code]||NAMES[code];select.appendChild(o);});
     select.value=lang;select.addEventListener("change",function(){if(window.i18n&&i18n.setLang)i18n.setLang(select.value);else{try{localStorage.setItem("tlm_lang",select.value);}catch(e){}location.reload();}});
     var style=document.createElement("style");style.textContent="#tlm-language-universal{margin-left:auto;max-width:132px;padding:8px 10px;border:1px solid rgba(120,130,210,.35);border-radius:10px;background:#0b1030;color:#eef2ff;font:600 13px system-ui;cursor:pointer} @media(max-width:720px){#tlm-language-universal{max-width:104px;padding:7px 6px}}";
     document.head.appendChild(style);
