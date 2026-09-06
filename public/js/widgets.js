@@ -3,15 +3,13 @@
    Chargé UNE SEULE FOIS par page via <script src="/js/widgets.js?v=2" defer></script>.
    Rend UN SEUL conteneur position:fixed (bas-droite), en flex column :
         💬 Chatbot   (au-dessus)
-        TikTok       (dessous)
-        Telegram     (en dessous)
+        Telegram     (dessous)
    Aucun chevauchement possible : un seul élément fixe, le reste en flux flex.
    ════════════════════════════════════════════════════════════════════════ */
 (function () {
   if (window.__tlmWidgetsLoaded) return;      // jamais deux fois
   window.__tlmWidgetsLoaded = true;
 
-  var TIKTOK = "https://www.tiktok.com/@touslesmatchs.com?_r=1&_t=ZN-97SfTPDm8jW&utm_source=touslesmatchs_site&utm_medium=widget";
   var TELEGRAM = "https://t.me/+qFnIuKg2ZhdlMmY8";
 
   // ── Styles (injectés une fois) ─────────────────────────────────────────────
@@ -20,9 +18,8 @@
   #tlm-widgets .tlm-fab{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.35);border:none;text-decoration:none;transition:transform .15s;font-size:24px}
   #tlm-widgets .tlm-fab:hover{transform:translateY(-3px)}
   #tlm-widgets .tlm-chatbtn{background:linear-gradient(135deg,#6366f1,#7c3aed);color:#fff;order:1}
-  #tlm-widgets .tlm-tiktok{background:#111;color:#fff;order:2}
-  #tlm-widgets .tlm-telegram{background:linear-gradient(135deg,#2aabee,#229ed9);color:#fff;order:3}
-  #tlm-widgets .tlm-tiktok svg,#tlm-widgets .tlm-telegram svg{width:26px;height:26px;fill:#fff}
+  #tlm-widgets .tlm-telegram{background:linear-gradient(135deg,#2aabee,#229ed9);color:#fff;order:2}
+  #tlm-widgets .tlm-telegram svg{width:26px;height:26px;fill:#fff}
   #tlm-chatpanel{position:fixed;right:18px;bottom:84px;z-index:9001;width:340px;max-width:calc(100vw - 36px);height:460px;max-height:calc(100vh - 120px);background:#0d1020;border:1px solid rgba(99,102,241,.3);border-radius:16px;box-shadow:0 12px 48px rgba(0,0,0,.5);display:none;flex-direction:column;overflow:hidden}
   #tlm-chatpanel.open{display:flex}
   #tlm-chathead{padding:14px 16px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;font-size:15px;display:flex;align-items:center;justify-content:space-between}
@@ -42,13 +39,11 @@
   style.textContent = css;
   document.head.appendChild(style);
 
-  // ── Le conteneur unique + les 3 boutons ────────────────────────────────────
+  // ── Le conteneur unique + les 2 boutons ────────────────────────────────────
   var wrap = document.createElement("div");
   wrap.id = "tlm-widgets";
   wrap.innerHTML =
     '<button class="tlm-fab tlm-chatbtn" id="tlm-chatbtn" aria-label="Assistant">💬</button>' +
-    '<a class="tlm-fab tlm-tiktok" href="' + TIKTOK + '" target="_blank" rel="noopener" aria-label="TikTok">' +
-      '<svg viewBox="0 0 24 24"><path d="M16.6 5.82a4.28 4.28 0 0 1-1-2.82h-3.1v12.4a2.5 2.5 0 1 1-2.5-2.5c.2 0 .4 0 .6.08v-3.16a5.7 5.7 0 0 0-.6-.04A5.65 5.65 0 1 0 15.7 15.4V9.01a7.35 7.35 0 0 0 4.3 1.38V7.28a4.28 4.28 0 0 1-3.4-1.46z"/></svg></a>' +
     '<a class="tlm-fab tlm-telegram" href="' + TELEGRAM + '" target="_blank" rel="noopener" aria-label="Telegram">' +
       '<svg viewBox="0 0 24 24"><path d="M9.8 15.6 9.6 19c.4 0 .6-.2.8-.4l1.9-1.8 3.9 2.9c.7.4 1.2.2 1.4-.7l2.6-12.1c.2-1-.4-1.4-1.1-1.2L3.4 9.3c-1 .4-1 .9-.2 1.2l4.3 1.3 9.9-6.2c.5-.3.9-.1.5.2z"/></svg></a>';
   document.body.appendChild(wrap);
