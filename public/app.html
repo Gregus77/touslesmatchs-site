@@ -178,6 +178,7 @@
   body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <!-- Google Analytics (GA4) -->
+<script src="/js/match-lifecycle.js?v=20260906"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -898,13 +899,13 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       var detail=dir?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');
       return '<span class="tlm-app-live-mini-vote '+dir+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
-    return '<span class="tlm-app-live-vote-summary"><span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
+    return '<span class="tlm-app-live-vote-summary">'+(TLMMatchLifecycle.phase(m)==='closed'?'Fenêtre terminée · votes antérieurs ':'')+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
     var country=appCountry(m), flag=appFlagUrl(country), voteState=appOu25(m), votes=voteState.voteCount, status=$("app-live-status");
     if(!m){
-      status.textContent='Aucun match en direct';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='Équipe à domicile';$("app-away-name").textContent="Équipe à l'extérieur";$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0 / 5';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
+      status.textContent='Aucun match dans la fenêtre 15–45 min';$("app-live-minute").textContent='—';$("app-live-period").textContent='Actualisation automatique';$("app-live-score").textContent='— - —';$("app-home-name").textContent='Équipe à domicile';$("app-away-name").textContent="Équipe à l'extérieur";$("app-home-country").textContent='';$("app-away-country").textContent='';$("app-ai-total").textContent='0 / 5';$("app-ai-label").textContent='Les 5 IA attendent le prochain match';$("app-ai-result").textContent='Aucun signal affiché sans match réel';
       appLogo($("app-home-logo"),'/logo192.png','TousLesMatchs');appLogo($("app-away-logo"),'/logo192.png','TousLesMatchs');[$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(img)img.hidden=true;});Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){el.classList.remove('on','over','under');el.textContent=String(i+1);el.removeAttribute('title');el.removeAttribute('aria-label');});return;
     }
     status.textContent='En direct';$("app-live-minute").textContent=m.minute?esc(m.minute)+"'":'Live';
@@ -913,18 +914,18 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     [$("app-home-flag"),$("app-away-flag")].forEach(function(img){if(!img)return;if(!flag){img.hidden=true;return;}img.hidden=false;img.src=flag;img.alt='Drapeau '+country;img.onerror=function(){this.hidden=true;};});
     var hs=appHomeScore(m),as=appAwayScore(m);$("app-live-score").textContent=(hs===''?'—':hs)+' - '+(as===''?'—':as);$("app-live-period").textContent=String(m.status||m.period||'1ère période');
     var minute=Number(String(m.minute||'').replace(/[^0-9.]/g,''));
-    var analysisClosed=voteState.windowStatus==='closed'||(isFinite(minute)&&minute>45);
+    var analysisClosed=!TLMMatchLifecycle.canFeature(m);
     var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
     var exclusionReason=String(m.analysis_exclusion_reason||'');
     $("app-ai-total").textContent=votes+' / 5';
-    $("app-ai-label").textContent=votes?'Votes IA Over/Under 2,5':exclusionReason?'Analyse non lancée':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
-    $("app-ai-result").textContent=votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
+    $("app-ai-label").textContent=analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':exclusionReason?'Analyse non lancée':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
+    $("app-ai-result").textContent=analysisClosed?'Votes antérieurs · aucune nouvelle sélection':votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
     Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted'&&(dir==='over'||dir==='under');el.classList.toggle('on',voted);el.classList.toggle('over',dir==='over');el.classList.toggle('under',dir==='under');el.textContent=dir==='over'?'O':dir==='under'?'U':String(i+1);var detail=voted?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');el.title=detail;el.setAttribute('aria-label',detail);});
   }
   function loadLive() {
     get("/api/live-matches?t="+Date.now()).then(flagOffline).then(function (d) {
       var box = $("live-box");
-      var list = ((d && (d.matches || d.live)) || []).filter(appMatchAllowed);
+      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(TLMMatchLifecycle.canTrack);
       list.sort(function(a,b){
         function quality(m){
           return (appHomeLogo(m)?2:0)+(appAwayLogo(m)?2:0)+(appHomeScore(m)!==''?2:0)+(appAwayScore(m)!==''?2:0);
@@ -943,7 +944,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
         }
         return rank(b)-rank(a);
       });
-      renderAppHero(list[0]||null);
+      renderAppHero(list.filter(TLMMatchLifecycle.canFeature)[0]||null);
       if (!list.length) {box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';return;}
       box.innerHTML='<div class="tlm-app-live-list">'+list.slice(0,25).map(function(m){
         var rhs=appHomeScore(m),ras=appAwayScore(m),sh=rhs===''?'—':rhs,sa=ras===''?'—':ras,country=appCountry(m),flag=appFlagUrl(country);
