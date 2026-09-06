@@ -12,6 +12,18 @@ function all(sql, params = []) {
 }
 
 try {
+  const runtimeLimits = {
+    openrouter_configured: Boolean(process.env.OPENROUTER_API_KEY),
+    daily_budget_eur: process.env.OPENROUTER_DAILY_BUDGET_EUR || 'default:2',
+    max_requests_per_day: process.env.OPENROUTER_MAX_REQUESTS_PER_DAY || 'default:100',
+    max_matches_per_day: process.env.OPENROUTER_MAX_MATCHES_PER_DAY || 'default:30',
+    max_requests_per_model_per_day: process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 'default:30',
+    hard_stop: process.env.OPENROUTER_HARD_STOP || 'default:true',
+    fallback_daily_cap: process.env.OPENROUTER_FALLBACK_DAILY_CAP || 'default:60',
+    auto_concile_max_matches: process.env.AUTO_CONCILE_MAX_MATCHES || 'default',
+    recovery_mode: process.env.OU25_RECOVERY_MODE || 'default:1',
+    recovery_daily_signals: process.env.OU25_RECOVERY_MAX_DAILY_SIGNALS || 'default:2'
+  };
   const calls5 = one(`SELECT COUNT(*) calls, COUNT(DISTINCT match_key) matches,
     COUNT(DISTINCT request_key) unique_requests
     FROM ai_call_budget_log WHERE created_at >= datetime('now','-5 minutes')`);
@@ -58,6 +70,7 @@ try {
   console.log(JSON.stringify({
     verdict: 'READ_ONLY_AGGREGATES',
     generated_at: new Date().toISOString(),
+    runtime_limits: runtimeLimits,
     calls_5m: calls5,
     calls_30m: calls30,
     calls_today: callsToday,
