@@ -30,6 +30,7 @@ function assert(ok, message) {
 ].forEach((pattern) => assert(!pattern.test(html), `Référence interdite: ${pattern}`));
 
 assert(html.includes("window.__TLM_PLAY_STORE_FREE=true"), "mode gratuit absent");
+assert(html.includes('localStorage.setItem("tlm_lang",l)'), "langue URL non mémorisée avant navigation");
 assert(html.includes("function goal05MemberAccess() { return true; }"), "signal encore verrouillé");
 assert(html.includes("Toutes les analyses validées sont gratuites pendant la phase de lancement."), "message gratuit absent");
 assert(html.includes("joueurs-info-service.fr"), "prévention jeu responsable absente");
