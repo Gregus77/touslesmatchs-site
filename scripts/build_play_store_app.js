@@ -141,6 +141,11 @@ replaceOnce(
   'marketingConsent: false, source: "google_play_free"',
   "consentement marketing explicite"
 );
+replaceOnce(
+  "Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.",
+  "Je confirme avoir au moins 18 ans.",
+  "case majorité sans consentement marketing forcé"
+);
 
 html = html.replace("familiaux, addiction. Conseils sur", "familiaux, addiction. Aide sur");
 html = html.replace(/#plans/g, "#store-disabled");
