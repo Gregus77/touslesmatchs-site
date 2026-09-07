@@ -27,9 +27,16 @@ replaceOnce(
 );
 replaceOnce(
   '<script src="/js/match-lifecycle.js?v=20260907-integral6"></script>',
-  '<script src="/js/match-lifecycle.js?v=20260907-integral7"></script>\n<script>window.__TLM_PLAY_STORE_FREE=true;</script>',
+  '<script src="./js/i18n-auto.js?v=20260907-integral8"></script>\n<script src="./js/i18n.js?v=20260907-integral8"></script>\n<script src="./js/match-lifecycle.js?v=20260907-integral8"></script>\n<script>window.__TLM_PLAY_STORE_FREE=true;</script>',
   "mode gratuit et cache traduction"
 );
+
+// Les chemins relatifs fonctionnent à la racine en production et dans
+// l’aperçu Netlify publié sous /public/.
+html = html
+  .replace(/\/logo192\.png/g, "./logo192.png")
+  .replace(/\/assets\//g, "./assets/")
+  .replace(/\/css\//g, "./css/");
 
 replaceOnce(
   /  var BOOKMAKERS = \[[\s\S]*?\n  function bookmakerButtons\(\) \{[\s\S]*?\n  \}\n/,
