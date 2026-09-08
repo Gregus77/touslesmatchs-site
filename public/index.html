@@ -381,6 +381,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 </style>
 <!-- Google Analytics (GA4) -->
+<script src="/js/i18n.js?v=20260907-integral6" defer></script>
 <script src="/js/match-lifecycle.js?v=20260907-integral6"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
@@ -982,6 +983,8 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 @media(max-width:560px){.tlm-up-row{gap:7px}.tlm-up-logo{width:31px;height:31px;min-width:31px}.tlm-up-teams{font-size:12.5px}.tlm-up-time{font-size:11px;padding:4px 6px}}
 
 </style>
+<link rel="stylesheet" href="/css/capture-home.css?v=20260908">
+<script src="/js/capture-home.js?v=20260908" defer></script>
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1053,9 +1056,35 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 
 <div class="dash wrap">
 
+  <!-- Approved capture design. This demonstration is never connected to live scores. -->
+  <section class="capture-hero" aria-labelledby="capture-title">
+    <div class="capture-copy">
+      <p class="capture-kicker" data-capture="kicker">Football · Analyse par IA</p>
+      <h1 id="capture-title"><span data-capture="title">5 IA confrontent leurs analyses.</span><span class="capture-gradient" data-capture="decision">Vous gardez la décision.</span></h1>
+      <p class="capture-lead" data-capture="lead">Football en direct. Avis détaillés et historique consultable.</p>
+      <div class="capture-actions"><a class="capture-button capture-primary" href="/dashboard"><span data-capture="signup">Créer mon compte gratuit</span><span aria-hidden="true">→</span></a><a class="capture-button capture-secondary" href="#capture-example" data-capture="exampleLink">Voir un exemple</a></div>
+      <p class="capture-note" data-capture="emailNote">Un code par email. Sans carte bancaire.</p>
+      <div class="capture-reassurance"><div><span aria-hidden="true">✓</span><p><strong data-capture="transparent">Méthode transparente</strong><small data-capture="understand">Comprenez chaque analyse</small></p></div><div><span aria-hidden="true">≡</span><p><strong data-capture="data">Données de match</strong><small data-capture="context">Contexte et historique</small></p></div><div><span aria-hidden="true">◎</span><p><strong data-capture="control">Vous gardez le contrôle</strong><small data-capture="tool">Un outil d’aide à la décision</small></p></div></div>
+    </div>
+    <article class="capture-example" id="capture-example" aria-labelledby="capture-example-label" tabindex="-1">
+      <p class="capture-example-label" id="capture-example-label" data-capture="exampleLabel">Exemple illustratif — pas un signal en direct</p>
+      <div class="capture-teams"><div><span class="capture-team-ball" aria-hidden="true">⚽</span><strong data-capture="teamA">Équipe A</strong></div><span class="capture-team-divider" aria-hidden="true">—</span><div><span class="capture-team-ball" aria-hidden="true">⚽</span><strong data-capture="teamB">Équipe B</strong></div></div>
+      <p class="capture-market" data-capture="market">Over / Under 2,5</p>
+      <ol class="capture-votes"><li><span data-capture="ai1">IA 1</span><strong class="capture-over" data-capture="over">Over</strong></li><li><span data-capture="ai2">IA 2</span><strong class="capture-under" data-capture="under">Under</strong></li><li><span data-capture="ai3">IA 3</span><strong class="capture-over" data-capture="over">Over</strong></li><li><span data-capture="ai4">IA 4</span><strong class="capture-over" data-capture="over">Over</strong></li><li><span data-capture="ai5">IA 5</span><strong class="capture-abstain" data-capture="abstain">Abstention</strong></li></ol>
+      <div class="capture-consensus"><strong>3</strong><span data-capture="agreement">avis concordants sur 5</span></div>
+      <p class="capture-odds" data-capture="odds">Cote non fournie — à vérifier chez votre bookmaker.</p>
+    </article>
+  </section>
+  <section class="capture-method" aria-label="Notre méthode" data-capture-aria="methodLabel">
+    <article><span class="capture-method-icon" aria-hidden="true">↗</span><div><h2 data-capture="signalsTitle">Signaux envoyés</h2><p data-capture="signalsText">Une analyse n’est pas un signal envoyé. Consultez les sélections diffusées et leur contexte dans l’historique.</p><a href="/live-ia" data-capture="liveLink">Explorer le Live IA →</a></div></article>
+    <article><span class="capture-method-icon" aria-hidden="true">≡</span><div><h2 data-capture="resultsTitle">Résultats consultables</h2><p data-capture="resultsText">Gagnés, perdus et en attente : consultez les résultats enregistrés et les limites de l’historique. Aucun gain garanti.</p><a href="/performances" data-capture="resultsLink">Consulter l’historique →</a></div></article>
+    <article><span class="capture-method-icon" aria-hidden="true">◎</span><div><h2 data-capture="shadowTitle">Tests à blanc</h2><p data-capture="shadowText">Les essais internes servent à évaluer les modèles. Ils doivent rester distincts des signaux réellement diffusés.</p><a href="#methode" data-capture="methodLink">Comprendre la méthode →</a></div></article>
+  </section>
+  <section class="capture-signup" aria-labelledby="capture-signup-title"><span class="capture-mail" aria-hidden="true">✉</span><div><h2 id="capture-signup-title"><span data-capture="discover">Découvrez le fonctionnement</span> <span class="capture-gradient" data-capture="free">gratuitement</span></h2><p data-capture="discoverText">Recevez un code d’accès par email et explorez votre espace gratuit.</p><a href="/dashboard" class="capture-button capture-primary" data-capture="signup">Créer mon compte gratuit</a><p class="capture-note" data-capture="emailNote">Un code par email. Sans carte bancaire.</p></div></section>
+
   <!-- RANGEE 1 : HERO + MATCHS EN DIRECT -->
   <div class="row row-hero">
-    <section class="card tlm-live-hero" aria-labelledby="hero-title">
+    <section class="card tlm-live-hero capture-legacy-hero" aria-labelledby="hero-title" hidden inert>
       <div class="tlm-hero-grid">
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
@@ -1178,7 +1207,6 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
     </div>
 
     <div class="card plan hl">
-      <div class="plan-badge" data-i18n="plan_popular">Le plus choisi</div>
       <div class="plan-ico" style="background:rgba(155,123,255,.16);color:var(--premium)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
       <div class="plan-name" style="color:var(--premium)" data-i18n="plan_prem">PREMIUM</div>
       <div class="plan-price">14.90€ <span>/mois</span></div>
@@ -2175,7 +2203,6 @@ loadStandardYesterday();
 })();
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
-<script src="/js/i18n.js?v=20260907-integral6" defer></script>
 <script>
 function toggleLangMenu(){ document.getElementById('nav-lang-menu').classList.toggle('open'); }
 function pickLang(l){ i18n.setLang(l); document.getElementById('nav-lang-menu').classList.remove('open'); }
