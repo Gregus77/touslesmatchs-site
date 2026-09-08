@@ -477,7 +477,13 @@ function renderRow(a) {
     var g = a.outcome === 'win' ? (a.cote * 10 - 10) : -10;
     gainHtml = '<div class="h-gain" style="color:' + (g >= 0 ? 'var(--green)' : 'var(--red)') + '">' + fmtSigned(g) + '</div>';
   } else {
-    gainHtml = '<div class="h-gain" style="color:var(--muted)">—</div>';
+    var noGainLabel = !resolved ? 'En attente' : !(a.cote != null && a.cote > 1) ? 'Cote absente' : 'Non calculé';
+    var noGainTitle = !resolved
+      ? 'Le résultat final n’est pas encore connu.'
+      : !(a.cote != null && a.cote > 1)
+        ? 'Aucune cote exploitable n’a été enregistrée pour cette analyse.'
+        : 'Le montant n’est pas calculé car la livraison de ce signal n’est pas prouvée.';
+    gainHtml = '<div class="h-gain" style="color:var(--muted);font-size:11px" title="' + esc(noGainTitle) + '">' + noGainLabel + '</div>';
   }
 
   return '<div class="h-item">' +

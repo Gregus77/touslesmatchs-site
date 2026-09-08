@@ -1,0 +1,37 @@
+diff --git a/scripts/api_server.js b/scripts/api_server.js
+--- a/scripts/api_server.js
++++ b/scripts/api_server.js
+@@
+ function formatFDMatch(m) {
++  const rawStatus = String(m?.status || "").toUpperCase();
++  const status = ["FINISHED", "AWARDED"].includes(rawStatus)
++    ? "FINISHED"
++    : rawStatus === "PAUSED"
++      ? "HT"
++      : ["IN_PLAY", "LIVE"].includes(rawStatus) ? "IN_PLAY" : "SCHEDULED";
+   return {
+@@
+-    status: m.status === "FINISHED" ? "FINISHED" : "IN_PLAY",
++    status,
+@@
+-    status: "IN_PLAY",
++    status: String(f.fixture?.status?.short || "").toUpperCase() === "HT" ? "HT" : "IN_PLAY",
+@@
+-const API_SPORTS_NON_LIVE_STATUSES = new Set([
+-  "NS", "TBD", "PST", "CANC", "ABD", "AWD", "WO", "SUSP", "INTR",
+-  "FT", "AOT", "AP", "POST", "CANCELLED", "FINISHED",
++const API_SPORTS_LIVE_STATUSES = new Set([
++  "1H", "HT", "2H", "ET", "BT", "P", "LIVE", "IN_PLAY",
++  "Q1", "Q2", "Q3", "Q4", "P1", "P2", "P3", "OT", "BREAK", "IN1", "IN2", "IN3",
++  "IN4", "IN5", "IN6", "IN7", "IN8", "IN9",
+ ]);
+ function isApiSportsLiveGame(g) {
+-  const short = String(g?.status?.short || "").toUpperCase();
+-  if (!short) return true; // statut absent : on ne bloque pas (comportement inchange)
+-  return !API_SPORTS_NON_LIVE_STATUSES.has(short);
++  const short = String(g?.fixture?.status?.short || g?.status?.short || "").trim().toUpperCase();
++  // Un statut absent ou inconnu n'est jamais promu en direct. Le flux du jour
++  // contient aussi les rencontres programmees : seule une preuve positive de
++  // jeu en cours peut les faire entrer dans Live IA.
++  return API_SPORTS_LIVE_STATUSES.has(short);
+ }
