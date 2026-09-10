@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Historique des signaux : pourquoi les compteurs diffèrent ? | TousLesMatchs</title>
+  <meta name="description" content="Comprendre un compteur gagné/perdu : période, signaux envoyés, doublons, résultats en attente et cotes nécessaires pour parler de rentabilité.">
+  <link rel="canonical" href="https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Historique des signaux : pourquoi les compteurs diffèrent ?">
+  <meta property="og:description" content="Les règles simples pour lire un taux de réussite sans mélanger analyses, essais à blanc et signaux envoyés.">
+  <meta property="og:url" content="https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/">
+  <link rel="stylesheet" href="/css/guides.css?v=20260908">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Article","headline":"Historique des signaux : pourquoi les compteurs diffèrent ?","description":"Comprendre un compteur gagné/perdu : période, signaux envoyés, doublons, résultats en attente et cotes nécessaires pour parler de rentabilité.","inLanguage":"fr","author":{"@type":"Organization","name":"TousLesMatchs"},"publisher":{"@type":"Organization","name":"TousLesMatchs"},"mainEntityOfPage":"https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/"}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#contenu">Aller au contenu</a>
+  <header>
+    <a class="brand" href="/">TOUSLES<span>MATCHS</span></a>
+    <nav aria-label="Navigation">
+      <a href="/guides/">Guides</a><a href="/live-ia">Live IA</a><a href="/performances">Résultats</a><a class="cta" href="/dashboard">Compte gratuit</a>
+    </nav>
+  </header>
+  <main id="contenu">
+    <a class="breadcrumb" href="/guides/">← Tous les guides</a>
+    <article>
+      <p class="eyebrow">RÉSULTATS · GUIDE</p>
+      <h1>Historique des signaux : pourquoi les compteurs diffèrent ?</h1>
+      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-10">10 septembre 2026</time> · Français</p>
+      <p><strong>Un compteur « 1 gagné sur 1 » ne veut pas forcément dire qu’une seule analyse a été correcte.</strong> Il peut compter uniquement les signaux envoyés, résolus et compris dans une période précise. Mais si plusieurs signaux confirmés dans ce même périmètre ont un résultat final et qu’un seul apparaît, l’historique est incomplet.</p>
+      <p>Ce guide répond à une question réelle, reformulée sans information personnelle : « Vous avez indiqué plusieurs matchs gagnants aujourd’hui ; pourquoi le site n’en affiche-t-il qu’un ? » L’objectif est de savoir ce qu’il faut comparer avant de conclure.</p>
+
+      <h2>Commencer par nommer le compteur</h2>
+      <p>« Analyses », « signaux », « résultats » et « matchs gagnés » ne décrivent pas la même population. Un historique sérieux précise au minimum :</p>
+      <ul>
+        <li>la période et son fuseau horaire ;</li>
+        <li>le marché concerné, par exemple <a href="/guides/comprendre-over-under-25/">Over/Under 2,5</a> ;</li>
+        <li>les canaux ou niveaux d’accès inclus ;</li>
+        <li>si seules les sélections réellement envoyées sont comptées ;</li>
+        <li>le nombre de résultats gagnés, perdus, en attente et annulés.</li>
+      </ul>
+      <p>Sans ce périmètre, deux nombres différents peuvent tous les deux sembler plausibles. Une page peut afficher les résultats selon son jour local, tandis qu’un rapport technique regroupe les dernières 24 heures en UTC. Ce n’est pas forcément une erreur, mais cette différence doit être visible.</p>
+
+      <h2>Essai à blanc, analyse et signal envoyé</h2>
+      <table>
+        <caption>Catégories à conserver séparément</caption>
+        <thead><tr><th>Élément</th><th>À quoi sert-il ?</th><th>Historique client ?</th></tr></thead>
+        <tbody>
+          <tr><td>Essai à blanc</td><td>Évaluer une règle ou un marché sans diffusion</td><td>Non</td></tr>
+          <tr><td>Analyse non retenue</td><td>Observer une rencontre qui ne remplit pas les critères</td><td>Non</td></tr>
+          <tr><td>Signal validé mais non confirmé</td><td>État à vérifier : validation et livraison sont différentes</td><td>Pas comme envoyé</td></tr>
+          <tr><td>Signal envoyé et résolu</td><td>Mesurer l’historique réellement reçu</td><td>Oui</td></tr>
+        </tbody>
+      </table>
+      <p>Une sélection correcte en essai à blanc reste utile pour la recherche, mais elle ne devient pas rétroactivement un signal client. À l’inverse, une perte envoyée ne doit pas disparaître parce qu’une analyse ultérieure du même match a changé de direction.</p>
+      <p>Pour un message texte envoyé par un bot Telegram, l’API officielle renvoie le message transmis en cas de succès. L’identifiant et la destination de cette réponse peuvent servir de preuve technique de livraison. Une tentative sans confirmation ne doit pas être comptée comme un envoi certain. <a href="https://core.telegram.org/bots/api#sendmessage">Source : documentation officielle Telegram, consultée le 10 septembre 2026</a>.</p>
+      <p>Pour comprendre toute la chaîne, consultez aussi <a href="/guides/matchs-live-sans-signal/">pourquoi un match en direct peut apparaître sans signal</a>.</p>
+
+      <h2>Un match ne doit pas être compté plusieurs fois</h2>
+      <p>Une rencontre live peut être analysée à plusieurs instants. Ces captures successives servent au suivi, mais elles ne sont pas plusieurs événements indépendants. Pour l’historique client, l’unité utile est généralement une sélection effectivement envoyée : rencontre, marché, direction, destination et instant d’envoi.</p>
+      <p><strong>Exemple fictif :</strong> la même rencontre est observée à 20, 25 et 31 minutes. Un seul message Over 2,5 est envoyé à 25 minutes. Le résultat client comporte une sélection, pas trois. Si un autre marché a été envoyé séparément, il doit être identifié comme tel au lieu d’être fusionné silencieusement.</p>
+      <p>La règle de dédoublonnage doit être stable. Garder uniquement la dernière analyse après le match peut effacer l’instant réellement envoyé et produire un historique trompeur.</p>
+
+      <h2>Comment calculer le taux de réussite</h2>
+      <p>Le calcul le plus lisible est :</p>
+      <p><strong>Taux de réussite = gagnés ÷ (gagnés + perdus) × 100.</strong></p>
+      <p>Les résultats en attente ne sont pas placés artificiellement parmi les gagnés ou les perdus. Ils restent affichés à part. Les éléments annulés doivent aussi être séparés, avec leur motif.</p>
+      <p><strong>Exemple fictif :</strong> deux résultats gagnés, un perdu et un en attente donnent un taux provisoire de 66,7 % sur trois résultats résolus, avec un quatrième encore ouvert. Afficher seulement « 2/3 » sans signaler l’élément en attente cache une partie du contexte.</p>
+      <p>Un taux sur trois résultats est descriptif, pas une promesse pour la suite. Pour comparer des périodes ou des marchés, il faut montrer l’effectif, les dates et les mêmes règles d’inclusion. Une série <a href="/guides/btts-ou-over-25/">BTTS</a> ne doit pas être ajoutée à une série Over/Under sans l’indiquer.</p>
+
+      <h2>Sans cote enregistrée, pas de rentabilité mesurable</h2>
+      <p>La justesse d’une sélection et son résultat financier sont deux mesures différentes. Pour calculer une simulation, il faut connaître la cote réellement enregistrée au moment concerné et appliquer la même unité à chaque ligne.</p>
+      <p><strong>Exemple fictif avec cotes enregistrées :</strong> deux résultats gagnés à 1,60 et 1,70, puis un perdu, avec 10 unités par sélection. Le bilan théorique est +6 +7 −10 = +3 unités. Le taux de réussite est 66,7 %, mais le rendement théorique est +3 ÷ 30 = 10 %. Ces nombres décrivent uniquement cet exemple.</p>
+      <p>Si les cotes des deux résultats gagnés manquent, on peut encore calculer 2 gagnés sur 3 résolus. On ne peut pas reconstituer honnêtement les +3 unités ni un rendement. Une cote actuelle ou retrouvée après coup ne prouve pas la cote disponible à l’envoi.</p>
+
+      <h2>Quand « 1/1 » indique probablement un problème</h2>
+      <p>Le compteur mérite une vérification si les éléments suivants sont tous vrais :</p>
+      <ol>
+        <li>plusieurs signaux ont une confirmation d’envoi vers les canaux inclus ;</li>
+        <li>leurs rencontres sont terminées et leurs résultats vérifiés ;</li>
+        <li>ils appartiennent au même marché, à la même période et au même périmètre affiché ;</li>
+        <li>ils ne sont pas des doublons de la même sélection ;</li>
+        <li>la page n’en compte pourtant qu’un.</li>
+      </ol>
+      <p>Les causes possibles sont alors un filtre de date incohérent, un résultat non rapproché, une destination oubliée, une page mise en cache ou une erreur de dédoublonnage. Ce sont des pistes de contrôle, pas un diagnostic automatique. Le cache ne doit être accusé qu’après comparaison de la réponse de données et du rendu affiché.</p>
+
+      <h2>La fiche minimale d’un historique vérifiable</h2>
+      <p>Pour chaque ligne : date et heure avec fuseau, rencontre, marché, direction, état d’envoi, destination, résultat final, statut résolu ou en attente et cote enregistrée si une simulation financière est présentée. Toute correction devrait conserver une trace datée de l’ancienne et de la nouvelle valeur.</p>
+      <p>Le lecteur doit pouvoir répondre à trois questions : qu’est-ce qui a réellement été envoyé, quel résultat a été retenu, et quelles lignes composent le chiffre affiché ? Si l’une de ces réponses manque, le taux ne suffit pas à établir la fiabilité du service.</p>
+      <aside>
+        <h2>À retenir</h2>
+        <p>Comparez toujours le même périmètre. Les essais à blanc évaluent le moteur ; les signaux envoyés évaluent le service reçu. Sans cote enregistrée, un historique peut mesurer la justesse, pas la rentabilité.</p>
+        <a href="/performances">Consulter les résultats</a><a href="/guides/comprendre-consensus-ia/">Comprendre le consensus IA</a>
+      </aside>
+      <p class="meta">Méthode : contenu préparé avec assistance IA à partir d’une question réelle reformulée. Les calculs et situations sont fictifs ; aucune performance TousLesMatchs n’est affirmée. Source primaire consultée le 10 septembre 2026.</p>
+    </article>
+  </main>
+  <footer>
+    <p>18+ · Aucun gain garanti. Les jeux d’argent comportent des risques. <a href="https://www.joueurs-info-service.fr/">Joueurs Info Service</a></p>
+    <a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Confidentialité</a> · <a href="/faq">Questions fréquentes</a>
+  </footer>
+</body>
+</html>
