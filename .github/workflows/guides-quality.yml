@@ -1,0 +1,44 @@
+name: Guides quality
+on:
+  pull_request:
+    paths: ['public/guides/**', 'public/css/guides.css', 'public/sitemap.xml', 'scripts/guides-qa/**', '.github/workflows/guides-quality.yml']
+  push:
+    branches: ['codex/guides-publication-20260910']
+    paths: ['public/guides/**', 'public/css/guides.css', 'public/sitemap.xml', 'scripts/guides-qa/**', '.github/workflows/guides-quality.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: guides-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate HTML, links and sitemap
+        run: python3 scripts/guides-qa/check.py
+      - name: Install isolated browser test dependency
+        run: |
+          npm install --prefix "$RUNNER_TEMP/guides-qa" --no-audit --no-fund playwright@1.55.0
+          "$RUNNER_TEMP/guides-qa/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Render mobile and desktop
+        env:
+          TLM_QA_PLAYWRIGHT: ${{ runner.temp }}/guides-qa/node_modules/playwright
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory public > "$RUNNER_TEMP/guides-http.log" 2>&1 &
+          TLM_GUIDES_SERVER=$!
+          trap 'kill "$TLM_GUIDES_SERVER"' EXIT
+          for attempt in 1 2 3 4 5; do curl -fsS http://127.0.0.1:8765/guides/ -o /dev/null && break || sleep 1; done
+          node scripts/guides-qa/render.cjs
+      - name: Preserve render evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guides-proof-${{ github.sha }}
+          path: guides-proof/
+          if-no-files-found: warn
+          retention-days: 14
