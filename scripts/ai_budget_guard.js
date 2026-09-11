@@ -28,7 +28,10 @@ const models = require("./ai_models.config");
 
 // ── Configuration (jamais codée en dur — règle anti-gaspillage du prompt maître) ──
 const CFG = {
-  dailyBudgetEur: Number(process.env.OPENROUTER_DAILY_BUDGET_EUR || 2),
+  // Marge conservatrice sous le plafond fournisseur de 1 USD/jour. Le journal
+  // comptabilise les appels réellement tentés ; cette valeur n'est qu'une
+  // réservation maximale et ne doit jamais être présentée comme une dépense.
+  dailyBudgetEur: Number(process.env.OPENROUTER_DAILY_BUDGET_EUR || 0.90),
   maxRequestsPerDay: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_DAY || 100),
   maxMatchesPerDay: Number(process.env.OPENROUTER_MAX_MATCHES_PER_DAY || 30),
   maxRequestsPerModelPerDay: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
@@ -86,6 +89,12 @@ function ensureSchema(db) {
       alerted_at TEXT,
       detail TEXT
     );
+    CREATE TABLE IF NOT EXISTS admin_incident_notifications (
+      incident_key TEXT PRIMARY KEY, source TEXT NOT NULL, severity TEXT NOT NULL DEFAULT 'warning',
+      status TEXT NOT NULL DEFAULT 'active', detail TEXT DEFAULT '', first_seen_ms INTEGER NOT NULL,
+      last_seen_ms INTEGER NOT NULL, last_notified_ms INTEGER NOT NULL DEFAULT 0,
+      resolved_at_ms INTEGER DEFAULT NULL
+    );
   `);
 }
 
@@ -139,11 +148,21 @@ function tripBreaker(db, type, detail) {
       ${alreadyAlertedToday ? "" : ", alerted_at = datetime('now')"}
   `).run(type, alreadyAlertedToday ? existing.alerted_at : new Date().toISOString(), detail);
 
-  if (!alreadyAlertedToday) {
+  const incidentKey = `ai-budget:${type}`;
+  const incident = db.prepare("SELECT status,last_notified_ms FROM admin_incident_notifications WHERE incident_key=?").get(incidentKey);
+  const nowMs = Date.now();
+  const shouldNotify = !incident || incident.status !== "active" || nowMs - Number(incident.last_notified_ms || 0) >= 6 * 3600 * 1000;
+  db.prepare(`INSERT INTO admin_incident_notifications
+    (incident_key,source,severity,status,detail,first_seen_ms,last_seen_ms,last_notified_ms,resolved_at_ms)
+    VALUES (?,'ai-budget','critical','active',?,?,?,?,NULL)
+    ON CONFLICT(incident_key) DO UPDATE SET status='active',detail=excluded.detail,last_seen_ms=excluded.last_seen_ms,resolved_at_ms=NULL`)
+    .run(incidentKey, detail, nowMs, nowMs, incident?.last_notified_ms || 0);
+  if (shouldNotify) {
     console.error(`[ai-guard] 🔴 COUPE-CIRCUIT ${type} — ${detail}`);
     _sendAdminAlert(`🔴 <b>Coupe-circuit IA — ${type}</b>\n\n${detail}\n\n<i>Moteur d'analyse mis en pause pour ce motif. Une seule alerte envoyée aujourd'hui.</i>`);
+    db.prepare("UPDATE admin_incident_notifications SET last_notified_ms=? WHERE incident_key=?").run(nowMs, incidentKey);
   } else {
-    console.warn(`[ai-guard] ${type} toujours actif (déjà alerté aujourd'hui) — ${detail}`);
+    console.warn(`[ai-guard] ${type} toujours actif (notification dédupliquée) — ${detail}`);
   }
 }
 
