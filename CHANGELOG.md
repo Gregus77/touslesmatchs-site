@@ -351,3 +351,10 @@
 - Les limites publiées viennent des paramètres serveur, sans modification des seuils. Le calendrier ne promet plus une fenêtre de 24 heures.
 - Réparation ciblée Lyon–Auxerre du 4 septembre uniquement sur fixture officielle FT, avec sauvegarde et journal, sans message Telegram manuel.
 - Déploiement main strictement en avance rapide, retour arrière sur échec technique, audit des votes en lecture seule. Validation live encore requise après déploiement.
+
+## 2026-09-11 — Telegram Gratuit / Premium FR/RU
+
+- Publications client centralisées dans des gabarits FR/RU avec file SQLite persistante ; preuves et reprises propres à chaque destination, message_id obligatoire.
+- Retrait des branches de diffusion Standard/Elite, historique conservé ; teaser protégé, résultats gagnés/perdus et bilans fondés sur les livraisons prouvées.
+- Stripe audité sans mutation : produit mensuel Premium inactif et ancien lien ponctuel. Aucun lien de paiement Telegram publié tant que prix et produit ne sont pas validés actifs/live à 14,90 EUR/mois.
+- Tests isolés Telegram/SQLite et neuf contrôles ciblés sur les fichiers VPS validés. Détails et procédure : docs/handoff/2026-09-11-telegram-free-premium.md.

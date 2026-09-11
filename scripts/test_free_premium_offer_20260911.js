@@ -39,8 +39,8 @@ assert(/\[STRIPE_PRICE_ID_STANDARD, \{ status: "standard"/.test(api), "compatibi
 assert(/\[STRIPE_PRICE_ID_ELITE, \{ status: "elite"/.test(api), "compatibilite webhook Elite perdue");
 assert(/standard:\s*"sig_sent_premium"/.test(api), "ancien droit Standard non aligne sur Premium");
 assert(/elite:\s*"sig_sent_premium"/.test(api), "ancien droit Elite non aligne sur Premium");
-assert(/push\(TELEGRAM_STANDARD_CHANNEL_ID, "legacy-standard"\)/.test(api), "miroir Telegram Standard perdu");
-assert(/push\(TELEGRAM_ELITE_CHANNEL_ID, "legacy-elite"\)/.test(api), "miroir Telegram Elite perdu");
+assert(!/push\(TELEGRAM_STANDARD_CHANNEL_ID, "legacy-standard"\)/.test(api), "ancienne branche Telegram Standard encore active");
+assert(!/push\(TELEGRAM_ELITE_CHANNEL_ID, "legacy-elite"\)/.test(api), "ancienne branche Telegram Elite encore active");
 
 for (const page of ["index.html", "live-ia.html", "app.html", "faq.html"]) {
   const html = fs.readFileSync(require("path").join(__dirname, "..", "public", page), "utf8");

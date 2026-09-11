@@ -1180,8 +1180,33 @@ const TELEGRAM_RU_STANDARD_CHANNEL_ID = process.env.TELEGRAM_RU_STANDARD_CHANNEL
 const TELEGRAM_RU_PREMIUM_CHANNEL_ID = process.env.TELEGRAM_RU_PREMIUM_CHANNEL_ID || "";
 // Standard RU reste uniquement un miroir de migration pour ses membres
 // existants. Aucun nouvel achat ni lien public ne mène vers ce canal.
-const RU_STANDARD_LEGACY_MIRROR_ENABLED = process.env.RU_STANDARD_LEGACY_MIRROR_ENABLED !== "0";
-const PREMIUM_PAYMENT_LINK = "https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06";
+const RU_STANDARD_LEGACY_MIRROR_ENABLED = false; // Archived; no active publication
+const telegramClient = require('./telegram_client');
+const PREMIUM_PAYMENT_LINK = telegramClient.PAYMENT;
+let telegramPaymentVerifiedUntil = 0;
+async function refreshTelegramPaymentAvailability() {
+  try {
+    const Stripe=require('stripe');
+    await telegramClient.verifiedPrice(new Stripe(STRIPE_SECRET_KEY),STRIPE_PRICE_ID_PREMIUM);
+    telegramPaymentVerifiedUntil=Date.now()+15*60*1000;
+  } catch (_) { telegramPaymentVerifiedUntil=0; }
+}
+setTimeout(refreshTelegramPaymentAvailability,5000);
+setInterval(refreshTelegramPaymentAvailability,10*60*1000);
+const clientTelegramPublisher = telegramClient.createPublisher({
+  paymentAvailable:()=>Date.now()<telegramPaymentVerifiedUntil,
+  db, env: process.env,
+  onDelivered: row => {
+    if (!row.match_key) return;
+    storedTelegramDeliveryCache.delete(row.match_key);
+    if(row.kind === 'signal') {
+      const analysis=db.prepare('SELECT * FROM concile_analyses WHERE match_key=?').get(row.match_key);
+      if(analysis && ['win','loss'].includes(analysis.outcome))
+        notifySignalFortResult(analysis,analysis.outcome,analysis.final_score_home,analysis.final_score_away).catch(()=>{});
+    }
+  },
+});
+setInterval(() => clientTelegramPublisher.flush().catch(e => console.error('[client-telegram]', e.message)), 30000);
 const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
@@ -1266,11 +1291,8 @@ function verifyTelegramChannels() {
   }
   const channels = [
     ["Gratuit",  TELEGRAM_CHANNEL_ID],
-    ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
     ["Premium",  TELEGRAM_PREMIUM_CHANNEL_ID],
-    ...(TELEGRAM_ELITE_CHANNEL_ID ? [["Elite", TELEGRAM_ELITE_CHANNEL_ID]] : []),
     ["RU Gratuit",  TELEGRAM_RU_FREE_CHANNEL_ID],
-    ["RU Standard", TELEGRAM_RU_STANDARD_CHANNEL_ID],
     ["RU Premium",  TELEGRAM_RU_PREMIUM_CHANNEL_ID],
     ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
   ];
@@ -1356,16 +1378,10 @@ async function verifyBrevoConfiguration() {
 // sur Premium, et on ne veut pas envoyer deux fois le même message au même canal.
 // includeStandard=false réserve le message aux paliers supérieurs (modèle imbriqué).
 function sendToPaidChannels(text, opts = {}) {
-  const targets = [];
-  const push = (id, label) => { if (id && !targets.some(t => t.id === id)) targets.push({ id, label }); };
-  push(TELEGRAM_STANDARD_CHANNEL_ID, "legacy-standard");
-  push(TELEGRAM_PREMIUM_CHANNEL_ID, "premium");
-  push(TELEGRAM_ELITE_CHANNEL_ID, "legacy-elite");
-  return Promise.all(targets.map(t =>
-    sendTelegramMessage(t.id, text)
-      .then(ok => console.log(`[${opts.tag || "telegram"}] ${t.label}: ${ok ? "OK" : "FAIL"}`))
-  ));
+  // Client publications require a structured bilingual template and delivery identity.
+  return Promise.resolve(false);
 }
+
 const _freeResultDailyDate = { date: "", count: 0 };
 let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
 // Plancher aligné sur la promesse Elite-VIP ("≥75% de confiance", CLAUDE.md).
@@ -1613,19 +1629,10 @@ function escTgHtml(text) {
 // de transition pour préserver les accès historiques, jamais une nouvelle offre.
 // Hermès/Admin/Support ne figurent volontairement pas dans cette table.
 function russianClientChannelFor(frenchChatId) {
-  const source = String(frenchChatId || "");
-  if (source === String(TELEGRAM_CHANNEL_ID || "") ||
-      source === String(process.env.TELEGRAM_FREE_CHANNEL_ID || "")) {
-    return { id: TELEGRAM_RU_FREE_CHANNEL_ID, tier: "free" };
-  }
-  if (source === String(TELEGRAM_STANDARD_CHANNEL_ID || "")) {
-    return RU_STANDARD_LEGACY_MIRROR_ENABLED && TELEGRAM_RU_STANDARD_CHANNEL_ID
-      ? { id: TELEGRAM_RU_STANDARD_CHANNEL_ID, tier: "standard", legacy: true }
-      : null;
-  }
-  if (source === String(TELEGRAM_PREMIUM_CHANNEL_ID || "")) {
-    return { id: TELEGRAM_RU_PREMIUM_CHANNEL_ID, tier: "premium" };
-  }
+  const source = String(frenchChatId || '');
+  if (!source) return null;
+  if (source === String(TELEGRAM_CHANNEL_ID)) return {id:TELEGRAM_RU_FREE_CHANNEL_ID,tier:'free'};
+  if (source === String(TELEGRAM_PREMIUM_CHANNEL_ID)) return {id:TELEGRAM_RU_PREMIUM_CHANNEL_ID,tier:'premium'};
   return null;
 }
 
@@ -1640,57 +1647,15 @@ function recordSignalDeliveryExpectation(matchKey, frenchChannel, frenchChatId) 
 // Traduction deterministe des gabarits Telegram. Les equipes, scores, minutes,
 // cotes et noms de competitions restent strictement identiques.
 function translateTelegramClientRu(input) {
-  let text = String(input || "");
-  const replacements = [
-    [/SIGNAL CONSEIL IA DÉTECTÉ/gi, "СИГНАЛ ИИ ОБНАРУЖЕН"],
-    [/SIGNAL CONSEIL IA/gi, "СИГНАЛ ИИ"],
-    [/SIGNAL FORT GAGNÉ/gi, "СИЛЬНЫЙ СИГНАЛ — ВЫИГРЫШ"],
-    [/SIGNAL FORT PERDU/gi, "СИЛЬНЫЙ СИГНАЛ — ПРОИГРЫШ"],
-    [/STRONG SIGNAL WON/gi, "СИЛЬНЫЙ СИГНАЛ — ВЫИГРЫШ"],
-    [/STRONG SIGNAL LOST/gi, "СИЛЬНЫЙ СИГНАЛ — ПРОИГРЫШ"],
-    [/every result stays public, wins and losses alike/gi, "все результаты публикуются: и выигрыши, и проигрыши"],
-    [/BILAN DU JOUR/gi, "ИТОГИ ДНЯ"],
-    [/Signaux réellement diffusés/gi, "Реально отправленные сигналы"],
-    [/Score final/gi, "Итоговый счёт"],
-    [/Score de confiance/gi, "Уровень доверия"],
-    [/Signal\s*:/gi, "Прогноз:"],
-    [/Palier\s*:/gi, "Уровень:"],
-    [/S'abonner à Standard — 4,90€\/mois/gi, "Подписаться на Стандарт — 4,90 €\/месяц"],
-    [/STANDARD/g, "СТАНДАРТ"],
-    [/PREMIUM/g, "ПРЕМИУМ"],
-    [/Vote IA/gi, "Голосование ИИ"],
-    [/Résultat vérifiable demain sur le site/gi, "Результат можно проверить завтра на сайте"],
-    [/Résultats complets : gagnés comme perdus/gi, "Полные результаты: выигрыши и проигрыши"],
-    [/Résultats complets dans le canal/gi, "Полные результаты внутри канала"],
-    [/La sélection exacte et la raison sont réservées aux membres/gi, "Точный прогноз и обоснование доступны только подписчикам"],
-    [/Imagine si tu avais eu le pick en direct/gi, "Представьте, если бы вы получили прогноз в прямом эфире"],
-    [/Recevoir tous les signaux dès 4,90€/gi, "Получать все сигналы от 4,90 €"],
-    [/La discipline fait la différence sur le long terme/gi, "Дисциплина приносит результат на дистанции"],
-    [/Jeu responsable/gi, "Ответственная игра"],
-    [/Responsible gaming/gi, "Ответственная игра"],
-    [/Conseil IA/gi, "Совет ИИ"],
-    [/Championnat/gi, "Чемпионат"],
-    [/Gagnés/gi, "Выиграно"],
-    [/Perdus/gi, "Проиграно"],
-    [/Réussite/gi, "Успешность"],
-    [/gagnés sur/gi, "выигрышей из"],
-    [/Mise 10€/gi, "Ставка 10 €"],
-    [/Gain/gi, "Выплата"],
-    [/Cote/gi, "Коэффициент"],
-    [/Under 2[.,]5 buts/gi, "Тотал меньше 2,5 голов"],
-    [/Over 2[.,]5 buts/gi, "Тотал больше 2,5 голов"],
-    [/Under 2\.5 goals/gi, "Тотал меньше 2,5 голов"],
-    [/Over 2\.5 goals/gi, "Тотал больше 2,5 голов"],
-    [/unanime/gi, "единогласно"],
-    [/Score :/gi, "Счёт:"],
-    [/minute/gi, "минута"],
-  ];
-  for (const [pattern, value] of replacements) text = text.replace(pattern, value);
-  return text;
+  // Free-form translation is deliberately unavailable: use telegramClient.render.
+  throw new Error('Structured Russian Telegram template required');
 }
 
 function sendTelegramMessage(chatId, text, deliveryMeta = null, skipRussianMirror = false) {
   if (!TELEGRAM_BOT_TOKEN || !chatId) return Promise.resolve(false);
+  const clientIds = [TELEGRAM_CHANNEL_ID, TELEGRAM_PREMIUM_CHANNEL_ID, TELEGRAM_STANDARD_CHANNEL_ID,
+    TELEGRAM_ELITE_CHANNEL_ID, TELEGRAM_RU_FREE_CHANNEL_ID, TELEGRAM_RU_PREMIUM_CHANNEL_ID, TELEGRAM_RU_STANDARD_CHANNEL_ID].filter(Boolean).map(String);
+  if (clientIds.includes(String(chatId))) return Promise.resolve(false); // use durable bilingual publisher
   // Hermes est un canal d'administration: un seul digest automatique par jour.
   // Les alertes horaires, signaux admin, rapports secondaires et relances apres
   // redemarrage restent dans les logs, sans polluer Telegram.
@@ -1701,17 +1666,6 @@ function sendTelegramMessage(chatId, text, deliveryMeta = null, skipRussianMirro
     return Promise.resolve(false);
   }
   const payload = { chat_id: chatId, text, parse_mode: "HTML", disable_web_page_preview: true };
-  const frenchClientSignal = !skipRussianMirror
-    && !!deliveryMeta?.matchKey
-    && ["free", "standard", "premium"].includes(String(deliveryMeta?.channel || ""));
-  if (frenchClientSignal) {
-    payload.reply_markup = { inline_keyboard: buildInlineKeyboard() };
-  } else if (deliveryMeta?.russianPremiumCta === true) {
-    payload.reply_markup = { inline_keyboard: [[{
-      text: "Оформить Premium — 14,90 €/мес.",
-      url: PREMIUM_PAYMENT_LINK,
-    }]] };
-  }
   const body = JSON.stringify(payload);
   return new Promise((resolve) => {
     const req = https.request({
@@ -1759,21 +1713,7 @@ function sendTelegramMessage(chatId, text, deliveryMeta = null, skipRussianMirro
               });
             } catch (e) { console.error(`[telegram-audit] ${e.message}`); }
           }
-          if (parsed.ok === true && !skipRussianMirror) {
-            const ruTarget = russianClientChannelFor(chatId);
-            if (ruTarget && ruTarget.id) {
-              const ruText = translateTelegramClientRu(text);
-              const ruDeliveryMeta = deliveryMeta?.matchKey
-                ? { ...deliveryMeta, channel: `ru_${ruTarget.tier}`, russianPremiumCta: ruTarget.tier === "free" }
-                : null;
-              setImmediate(() => {
-                sendTelegramMessage(ruTarget.id, ruText, ruDeliveryMeta, true)
-                  .then(ok => console.log(`[telegram-ru] ${ruTarget.tier} chat_id=${ruTarget.id}: ${ok ? "OK" : "FAIL"}`))
-                  .catch(e => console.error(`[telegram-ru] ${ruTarget.tier}: ${e.message}`));
-              });
-            }
-          }
-          resolve(parsed.ok === true);
+          resolve(parsed.ok === true && Number.isInteger(parsed.result?.message_id) && parsed.result.message_id > 0);
         } catch (e) {
           console.error(`[telegram] reponse illisible chat_id=${chatId}: ${data.slice(0, 200)}`);
           resolve(false);
@@ -3809,7 +3749,7 @@ function storedTelegramDelivery(row) {
     const channels = new Set(rows.map(item => String(item.channel || "")));
     const strongest = rows.slice().sort((a, b) => Number(b.vote_count || 0) - Number(a.vote_count || 0))[0];
     proof = {
-      paid: ["standard", "premium", "elite"].some(channel => channels.has(channel)),
+      paid: ["standard", "premium", "elite", "ru_premium"].some(channel => channels.has(channel)),
       channels,
       voteCount: Number(strongest?.vote_count || 0),
       market: strongest?.market || null,
@@ -7362,8 +7302,6 @@ Réponds en JSON pur (pas de markdown):
       const awayEsc = escTgHtml(match.away);
       const compEsc = escTgHtml(match.competition || match.league || match.sport || "");
       const betEsc = escTgHtml(analysisResult.best_bet);
-      const tgPremium = `🚨 <b>SIGNAL CONSEIL IA — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n💡 Signal : <b>${betEsc}</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>${coteSig}${coteUnavailableLine}${arjelAvgLine}\n${safeRaison ? `\n<i>${safeRaison}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
-      const tgFree = `🚨 <b>SIGNAL CONSEIL IA DÉTECTÉ — ${confDot} ${analysisResult.confidence}/100</b>\n\n${ico} <b>${homeEsc} vs ${awayEsc}</b>\n🏆 ${compEsc}\n${match.minute ? `⏱ ${match.minute}' · Score : ${match.score_home ?? "?"}-${match.score_away ?? "?"}` : ""}${voteLine}\n\n🔒 <b>La sélection exacte et la raison sont réservées aux membres Premium.</b>\n📊 Score de confiance : ${confDot} <b>${analysisResult.confidence}/100</b>\n\n📊 <a href="https://www.touslesmatchs.com/performances">Résultat vérifiable demain sur le site</a>\n👉 <a href="https://www.touslesmatchs.com/#plans"><b>S'abonner à Premium — 14,90€/mois, sans engagement</b></a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable`;
       const todayStr = new Date().toISOString().slice(0, 10);
       const grade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
       const minute = parseLiveMinuteValue(match.minute);
@@ -7412,61 +7350,24 @@ Réponds en JSON pur (pas de markdown):
       const gradePremium = diffusable;
       shadowWorthy = gradePremium;
 
-      const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
-      const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
-      const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
-      // Ligne EXACTE de cette analyse. Sans elle, le marquage retombait sur
-      // "toutes les lignes du match aujourd'hui" et contaminait les analyses
-      // bloquees du meme match (bug Club Brugge du 07/08/2026).
       const _ligneAnalysee = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
-      const _deliveryMeta = (channel) => ({
-        matchKey: _ligneAnalysee,
-        channel,
-        market: analysisResult.best_bet,
-        voteCount: voteCountForSignal,
-      });
-
-      // Canaux historiques : memes signaux Premium, sans creer de nouvel achat.
-      if (stdDistinct && premiumSignalDispatchAllowed(gradePremium, signalDeliveredToChannelToday(match, "standard"))) {
-        recordSignalDeliveryExpectation(_ligneAnalysee, "standard", TELEGRAM_STANDARD_CHANNEL_ID);
-        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM"), _deliveryMeta("standard")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_standard", _ligneAnalysee);
-          console.log(`[signal-fort] Telegram legacy-standard conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque"}`);
-        });
-      }
-
-      // Canal Premium principal : aucune limite commerciale quotidienne.
-      if (TELEGRAM_PREMIUM_CHANNEL_ID && premiumSignalDispatchAllowed(gradePremium, signalDeliveredToChannelToday(match, "premium"))) {
-        recordSignalDeliveryExpectation(_ligneAnalysee, "premium", TELEGRAM_PREMIUM_CHANNEL_ID);
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM"), _deliveryMeta("premium")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_premium", _ligneAnalysee);
-          console.log(`[signal-fort] Telegram premium sans plafond conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque"}`);
-        });
-      }
-
-      if (eliteDistinct && premiumSignalDispatchAllowed(gradePremium, signalDeliveredToChannelToday(match, "elite"))) {
-        recordSignalDeliveryExpectation(_ligneAnalysee, "elite", TELEGRAM_ELITE_CHANNEL_ID);
-        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM"), _deliveryMeta("elite")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_elite", _ligneAnalysee);
-          console.log(`[signal-fort] Telegram legacy-elite conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL — non marque"}`);
-        });
-      }
-
-      // 👑 ADMIN (Hermès) — les signaux individuels restent dans les logs.
-      // Le canal admin reçoit uniquement le digest quotidien afin d'éviter le spam.
-      if (TELEGRAM_ADMIN_CHAT_ID) {
-        console.log("[signal-fort] Telegram admin: non envoyé (inclus dans le digest quotidien)");
-      }
-
-      // 🆓 GRATUIT (vitrine) — 1 teaser/jour, SANS la sélection exacte, pousse vers Standard
-      if (gradePremium && _freeSignalDailyDate.count < 1 && TELEGRAM_CHANNEL_ID && !signalDeliveredToChannelToday(match, "free")) {
-        _freeSignalDailyDate.count++;
-        recordSignalDeliveryExpectation(_ligneAnalysee, "free", TELEGRAM_CHANNEL_ID);
-        sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFree, _deliveryMeta("free")).then(ok => {
-          if (ok) markSignalSent(match.home, match.away, "sig_sent_free", _ligneAnalysee);
-          else _freeSignalDailyDate.count--;
-          console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
-        });
+      if (gradePremium) {
+        const data = {matchKey:_ligneAnalysee, home:match.home, away:match.away,
+          competition:match.competition || match.league || '', minute:match.minute,
+          scoreHome:match.score_home ?? '?', scoreAway:match.score_away ?? '?',
+          market:analysisResult.best_bet, votes:voteCountForSignal, confidence:analysisResult.confidence,
+          odd:_coteReelle ? Number(analysisResult.cote).toFixed(2) : null,
+          reason:maskAiNames(String(analysisResult.raison || '').slice(0,200))};
+        const identity = canonicalMatchKey(match.home,match.away) + ':' + todayStr;
+        // Bounded retries remain inside the current live window, never replay old picks.
+        const expiresAt = Date.now() + Math.max(0, Math.min(120, (CLIENT_OU25_CLIENT_MAX_MINUTE - Number(minute) + 1) * 60)) * 1000;
+        for (const dest of clientTelegramPublisher.targets) {
+          if (signalDeliveredToChannelToday(match,dest.channel)) continue;
+          if (dest.tier === 'free' && signalsSentToday('sig_sent_free') >= 1 && dest.lang === 'fr') continue;
+          const queued=clientTelegramPublisher.enqueue('signal',data,dest,dest.tier === 'free' ? todayStr : identity,expiresAt);
+          if(queued) db.prepare('INSERT OR IGNORE INTO signal_delivery_expectations(match_key,channel) VALUES (?,?)').run(_ligneAnalysee,dest.channel);
+        }
+        clientTelegramPublisher.flush().catch(e => console.error('[client-telegram]',e.message));
       }
     }
   }
@@ -10707,26 +10608,7 @@ function getSignalFortStats() {
 }
 
 async function sendSignalFortBilanTelegram() {
-  const stats = getSignalFortStats();
-  if (stats.total < 3) return;
-
-  const recentLines = stats.recent.slice(0, 10).map(r => {
-    const icon = r.outcome === "win" ? "✅" : "❌";
-    const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
-    return `${icon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${r.confidence}/100`;
-  }).join("\n");
-
-  const threshold = getAdaptiveSignalThreshold();
-  const premiumMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Signaux ≥ ${threshold}/100 de score de confiance :\n✅ Gagnés : <b>${stats.wins}</b>\n❌ Perdus : <b>${stats.losses}</b>\n📉 Winrate : <b>${stats.winrate}%</b>\n\n<b>Derniers résultats :</b>\n${recentLines}\n\n━━━━━━━━━━━━━━━━━━\n🤖 Conseil IA — ${stats.total} signaux analysés`;
-
-  const freeMsg = `📈 <b>BILAN SIGNAL FORT</b>\n\n🎯 Nos signaux ≥ ${threshold}/100 de score de confiance :\n✅ <b>${stats.wins} gagnés</b> sur ${stats.total} signaux\n📉 Winrate : <b>${stats.winrate}%</b>\n\n${recentLines.split("\n").slice(0, 5).map(l => l.replace(/ — .*/, "")).join("\n")}\n\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>\n\n━━━━━━━━━━━━━━━━━━\n🤖 Conseil IA — TousLesMatchs`;
-
-  // Bilan de résultats : tous les paliers payants le reçoivent, à l'identique.
-  await sendToPaidChannels(premiumMsg, { tag: "signal-fort-bilan" });
-  if (TELEGRAM_CHANNEL_ID) {
-    const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-    console.log(`[signal-fort-bilan] Telegram free: ${ok ? "OK" : "FAIL"}`);
-  }
+  return sendTransparentDailyRecap();
 }
 
 // Bilan hebdomadaire chaque dimanche à 20h (vérifie toutes les heures)
@@ -10815,96 +10697,16 @@ async function sendWeeklyAgentsAudit() {
 }
 
 // ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
-const _signalResultSentCache = new Set();
 async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
-  const cacheKey = `${analysis.home}_${analysis.away}`;
-  if (_signalResultSentCache.has(cacheKey)) return;
-  _signalResultSentCache.add(cacheKey);
-
-  const icon = outcome === "win" ? "✅" : "❌";
-  const resultText = outcome === "win" ? "GAGNÉ" : "PERDU";
-  const sportIcons = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
-  const si = sportIcons[analysis.sport] || "🎯";
-  const stats = getSignalFortStats();
-  const coteAffichee = rowOdd(analysis).toFixed(2);
-  const gain = (10 * parseFloat(coteAffichee)).toFixed(2);
-  // Nom du bookmaker source (transparence) — sauf si cote estimée
-  const _bm = analysis.real_odd_source && !/estimation/i.test(String(analysis.real_odd_source))
-    ? String(analysis.real_odd_source) : null;
-  const bmSuffix = _bm ? ` <i>(${_bm})</i>` : "";
-  // Cote/gain affichés UNIQUEMENT si vraie cote bookmaker (jamais l'estimation).
-  const hasReal = !!_bm;
-  const minuteStr = analysis.minute_at_analysis !== null && analysis.minute_at_analysis !== undefined
-    ? ` (donné à la ${analysis.minute_at_analysis}e min)`
-    : "";
-
-  const premiumMsg = [
-    `${icon} <b>SIGNAL FORT ${resultText}</b>`,
-    ``,
-    `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
-    analysis.competition ? `🏆 ${analysis.competition}` : "",
-    `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `💡 Analyse IA : <b>${analysis.best_bet}${minuteStr}</b>`,
-    `📊 Score de confiance : <b>${analysis.confidence}/100</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
-    ``,
-    outcome === "win" && hasReal
-      ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
-      : ``,
-    ``,
-    `📈 Bilan Signal Fort : <b>${stats.wins}W / ${stats.losses}L — ${stats.winrate}% winrate</b>`,
-    ``,
-    `━━━━━━━━━━━━━━━━━━`,
-    `🤖 Conseil IA — TousLesMatchs`,
-    // Bloc anglais compact (voir BET_LABEL_EN) : le score final et le bilan
-    // chiffres sont deja lisibles tels quels, on ne traduit que le verdict
-    // et le type d'analyse.
-    ``,
-    `🇬🇧 <b>STRONG SIGNAL ${outcome === "win" ? "WON" : "LOST"}</b> — ${betLabelEn(analysis.best_bet)}`,
-    `⚠️ 18+ — Responsible gaming`,
-  ].filter(Boolean).join("\n");
-
-  const freeMsg = [
-    `${icon} <b>SIGNAL FORT ${resultText}</b>`,
-    ``,
-    `${si} <b>${analysis.home} vs ${analysis.away}</b>`,
-    analysis.competition ? `🏆 ${analysis.competition}` : "",
-    `⚽ Score final : <b>${scoreH}-${scoreA}</b>`,
-    `📊 Score de confiance : <b>${analysis.confidence}/100</b>${hasReal ? ` · Cote : <b>${coteAffichee}</b>${bmSuffix}` : ""}`,
-    ``,
-    outcome === "win" && hasReal
-      ? `💰 Mise 10€ → <b>Gain ${gain}€</b>`
-      : ``,
-    ``,
-    `📈 Bilan : <b>${stats.wins} gagnés sur ${stats.total} — ${stats.winrate}% winrate</b>`,
-    ``,
-    outcome === "win"
-      ? `💎 Imagine si tu avais eu le pick en direct...\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`
-      : `💪 La discipline fait la différence sur le long terme.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`,
-    ``,
-    `━━━━━━━━━━━━━━━━━━`,
-    `🤖 Conseil IA — TousLesMatchs`,
-    ``,
-    `🇬🇧 <b>STRONG SIGNAL ${outcome === "win" ? "WON" : "LOST"}</b> — every result stays public, wins and losses alike.`,
-    `⚠️ 18+ — Responsible gaming`,
-  ].filter(Boolean).join("\n");
-
-  // Cohérence : on ne poste le résultat QUE sur les canaux qui ont réellement reçu
-  // le pick. Un signal jamais diffusé (bloqué/hors ARJEL/plafond) ne génère aucun
-  // message de résultat — fini les "gagné/perdu + inscris-toi" sortis de nulle part.
-  const deliveryProof = storedTelegramDelivery(analysis);
-  const sentStandard = deliveryProof.channels.has("standard");
-  const sentPremium  = deliveryProof.channels.has("premium");
-  const sentElite    = deliveryProof.channels.has("elite");
-  const sentFree     = deliveryProof.channels.has("free");
-  if (!sentStandard && !sentPremium && !sentElite && !sentFree) {
-    console.log(`[signal-fort-result] ${analysis.home} vs ${analysis.away} → ${outcome} : pick jamais diffusé, résultat non posté`);
-    return;
+  if (!['win','loss'].includes(outcome) || !analysis.match_key) return;
+  const proof = storedTelegramDelivery(analysis);
+  for (const dest of clientTelegramPublisher.targets) {
+    if (!proof.channels.has(dest.channel)) continue;
+    const data={matchKey:analysis.match_key,home:analysis.home,away:analysis.away,
+      market:proof.market || analysis.best_bet,outcome,scoreHome:scoreH,scoreAway:scoreA};
+    clientTelegramPublisher.enqueue('result',data,dest,analysis.match_key);
   }
-  if (TELEGRAM_STANDARD_CHANNEL_ID && sentStandard) sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_PREMIUM_CHANNEL_ID && sentPremium)   sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_ELITE_CHANNEL_ID && sentElite)       sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, premiumMsg);
-  if (TELEGRAM_CHANNEL_ID && sentFree)              sendTelegramMessage(TELEGRAM_CHANNEL_ID, freeMsg);
-  console.log(`[signal-fort-result] ${icon} ${analysis.home} vs ${analysis.away} → ${outcome} (posté:${sentFree ? " free" : ""}${sentStandard ? " standard" : ""}${sentPremium ? " premium" : ""}${sentElite ? " elite" : ""})`);
+  await clientTelegramPublisher.flush();
 }
 
 // Marque sur quel canal client un signal a été réellement diffusé (col interne fixe).
@@ -12857,6 +12659,7 @@ Texte entierement en francais, sans faute d'orthographe, sans watermark d'IA gen
 }
 
 async function sendDailyGainImages() {
+  if (DAILY_GAIN_IMAGE_PUBLIC) return sendTransparentDailyRecap();
   try {
     const yesterday = new Date(Date.now() - 86400000);
     const dateStr = yesterday.toISOString().slice(0, 10);
@@ -14118,6 +13921,30 @@ async function handleCreateCheckout(req, res) {
   }
 }
 
+// A monthly subscription link must validate the actual Stripe price and product.
+app.get('/premium-checkout', async (req,res) => {
+  try {
+    const Stripe=require('stripe');
+    const session=await telegramClient.verifiedCheckout(new Stripe(STRIPE_SECRET_KEY),STRIPE_PRICE_ID_PREMIUM,req.query.lang);
+    res.redirect(303,session.url);
+  } catch (_) {
+    res.status(503).send(req.query.lang === 'ru' ? 'Подписка временно недоступна.' : 'Abonnement temporairement indisponible.');
+  }
+});
+
+// Only reviewed templates can be queued by cron; no arbitrary client text.
+app.post('/internal/client-telegram-publication', (req,res) => {
+  const secret=process.env.HERMES_ADMIN_TLM_BOT;
+  if(!secret || req.body?.secret !== secret) return res.status(403).json({ok:false});
+  const kind=req.body?.kind;
+  if(!['guide','reminder','nopick'].includes(kind)) return res.status(400).json({ok:false});
+  const day=tlmParisParts().day;
+  for(const dest of clientTelegramPublisher.targets.filter(x=>kind==='guide'||x.tier==='free'))
+    clientTelegramPublisher.enqueue(kind,{},dest,day);
+  // A queue acknowledgement is not a delivery proof.
+  res.json({ok:true,status:'queued'});
+});
+
 // Legacy create-checkout accessible via /create-checkout et /api/create-checkout
 app.post("/create-checkout", handleCreateCheckout);
 app.post("/create-checkout", handleCreateCheckout);
@@ -14875,78 +14702,9 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
 // ── Daily results summary → FREE Telegram channel (22h Paris) ────────────────
 let _lastFreeResultsBilanDate = "";
 async function sendDailyResultsFreeChannel() {
-  if (!TELEGRAM_CHANNEL_ID || !TELEGRAM_BOT_TOKEN) return false;
-  try {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    // diffusion_block IS NULL, PAS signal_tier IS NOT NULL : signal_tier est
-    // une classification de confiance posee AVANT le filtre qualite/cote/
-    // ligue/feminin (voir alreadySignaledToday plus haut, correction du
-    // 02/08/2026 sur le meme malentendu — celui-la bloquait carrement tout
-    // signal reel). diffusion_block est ecrit APRES tous les filtres :
-    // null = vraiment diffuse, sinon le motif exact.
-    const rows = db.prepare(`
-      SELECT home, away, competition, sport, best_bet, confidence, outcome, real_odd,
-             final_score_home, final_score_away
-      FROM concile_analyses
-      WHERE date(analysed_at) = ? AND outcome IN ('win','loss') AND diffusion_block IS NULL
-      ORDER BY analysed_at DESC
-    `).all(todayStr);
-
-    // Dédoublonnage tolérant aux variantes de nom entre sources : sans lui, le
-    // bilan diffusé affichait deux fois le même match, parfois avec deux
-    // pronostics opposés, et calculait le winrate sur ces doublons.
-    const unique = dedupeAnalysesByMatch(rows);
-    if (unique.length < 3) return false;
-
-    const wins = unique.filter(r => r.outcome === "win");
-    const losses = unique.filter(r => r.outcome === "loss");
-    const winrate = Math.round(wins.length / unique.length * 100);
-
-    const sportIcons = { Football: "⚽", Basketball: "🏀", Hockey: "🏒", Baseball: "⚾" };
-    const matchLines = unique.map(r => {
-      const icon = r.outcome === "win" ? "✅" : "❌";
-      const sportIcon = sportIcons[r.sport] || "🎯";
-      const score = r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : "?";
-      const cote = rowOdd(r);
-      const gainStr = r.outcome === "win" ? `+${(10 * cote - 10).toFixed(0)}€` : "-10€";
-      return `${icon}${sportIcon} ${r.home} vs ${r.away} (${score}) — ${r.best_bet} @ ${cote.toFixed(2)} → ${gainStr}`;
-    }).join("\n");
-
-    const totalGain = unique.reduce((sum, r) => {
-      const cote = rowOdd(r);
-      return sum + (r.outcome === "win" ? (10 * cote - 10) : -10);
-    }, 0);
-
-    const emoji = winrate >= 70 ? "🔥" : winrate >= 50 ? "📊" : "💪";
-    const msg = [
-      `${emoji} <b>RÉSULTATS DU JOUR — ${todayStr}</b>`,
-      ``,
-      `✅ <b>${wins.length} gagnés</b> / ❌ ${losses.length} perdus — <b>${winrate}% winrate</b>`,
-      ``,
-      matchLines,
-      ``,
-      `💰 <b>Bilan du jour à 10€/analyse : ${totalGain >= 0 ? "+" : ""}${totalGain.toFixed(0)}€</b>`,
-      ``,
-      winrate >= 60
-        ? `🚀 Ces résultats sont réservés aux membres.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`
-        : `💪 La discipline fait la différence.\n👉 <a href="https://www.touslesmatchs.com/#plans">⚡ Recevoir tous les signaux dès 4,90€</a>`,
-      ``,
-      `━━━━━━━━━━━━━━━━━━`,
-      `🤖 Conseil IA — TousLesMatchs`,
-      `⚠️ 18+ — Jeu responsable`,
-    ].join("\n");
-
-    const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, msg);
-    console.log(`[daily-results-free] ${wins.length}W/${losses.length}L ${winrate}% — Telegram free: ${ok ? "OK" : "FAIL"}`);
-    return ok;
-  } catch (e) {
-    console.error("[daily-results-free]", e.message);
-    return false;
-  }
+  return sendTransparentDailyRecap();
 }
 
-
-// TLM_TRANSPARENT_RECAP_V1
 // Bilan quotidien : UNIQUEMENT les signaux réellement envoyés.
 // Les pertes sont conservées et affichées exactement comme les gains.
 let _tlmTransparentRecapDay = "";
@@ -14981,118 +14739,22 @@ function tlmOutcomeIcon(v) {
 }
 
 async function sendTransparentDailyRecap() {
-  const paris=tlmParisParts();
-
-  let rows=[];
-
-  try {
-    rows=db.prepare(`
-      SELECT
-        home, away, competition, country, sport,
-        best_bet, confidence, real_odd,
-        outcome,
-        final_score_home, final_score_away,
-        minute_at_analysis,
-        score_home_at_analysis, score_away_at_analysis,
-        sig_sent_free, sig_sent_standard,
-        sig_sent_premium, sig_sent_elite
-      FROM concile_analyses
-      WHERE date(analysed_at)=date('now')
-        AND outcome IN ('win','loss')
-        AND (
-          sig_sent_free=1 OR
-          sig_sent_standard=1 OR
-          sig_sent_premium=1 OR
-          sig_sent_elite=1
-        )
-      ORDER BY analysed_at ASC
-    `).all();
-  } catch(e) {
-    console.error("[transparent-recap] lecture DB:",e.message);
-    return false;
+  const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(Date.now()-86400000));
+  // Read only confirmed deliveries; legacy markers never become Premium proof.
+  const rows=db.prepare(`SELECT ca.* FROM concile_analyses ca
+    WHERE ca.outcome IN ('win','loss') AND date(ca.analysed_at)=?
+      AND EXISTS (SELECT 1 FROM telegram_signal_deliveries td WHERE td.match_key=ca.match_key
+        AND td.ok=1 AND td.telegram_message_id IS NOT NULL)
+    ORDER BY ca.analysed_at`).all(day);
+  for (const dest of clientTelegramPublisher.targets) {
+    const list=dedupeAnalysesByMatch(rows.filter(row=>storedTelegramDelivery(row).channels.has(dest.channel)));
+    // Stable bounded pages; include every loss and every win, no truncation.
+    for(let i=0;i<list.length;i+=10) {
+      clientTelegramPublisher.enqueue('recap',{day,rows:list.slice(i,i+10)},dest,`${day}:${i/10}`);
+    }
   }
-
-  if (!rows.length) {
-    console.log("[transparent-recap] aucun signal réellement diffusé aujourd'hui");
-    return false;
-  }
-
-  function buildFor(channel) {
-    const flagName="sig_sent_"+channel;
-
-    const list=rows.filter(r=>tlmFlag(r[flagName]));
-
-    if(!list.length) return null;
-
-    const wins=list.filter(r=>r.outcome==="win").length;
-    const losses=list.filter(r=>r.outcome==="loss").length;
-    const rate=Math.round((wins/list.length)*1000)/10;
-
-    const lines=list.map(r=>{
-      const score=
-        r.final_score_home!=null && r.final_score_away!=null
-          ? `${r.final_score_home}-${r.final_score_away}`
-          : "?";
-
-      const country=r.country ? `🇺🇳 ${r.country} · ` : "";
-      const comp=r.competition || "Championnat";
-
-      return [
-        `${tlmOutcomeIcon(r.outcome)} <b>${r.home} — ${r.away}</b>`,
-        `⚽ ${country}${comp}`,
-        `🎯 ${r.best_bet}`,
-        `🏁 Score final : <b>${score}</b>`,
-      ].join("\n");
-    }).join("\n\n");
-
-    return [
-      // TELEGRAM_DAILY_PREVIEW_BALANCED_V1
-      // Première ligne exacte mais volontairement longue : l'aperçu Telegram
-      // met la réussite en contexte sans afficher le rouge avant l'ouverture.
-      `📊 <b>BILAN DU JOUR · ✅ Gagnés : ${wins} · Signaux réellement diffusés : ${list.length} · Réussite : ${rate}% · Résultats complets dans le canal</b>`,
-      ``,
-      `⚽ Signaux réellement diffusés : <b>${list.length}</b>`,
-      `✅ Gagnés : <b>${wins}</b>`,
-      `❌ Perdus : <b>${losses}</b>`,
-      `📈 Réussite : <b>${rate}%</b>`,
-      ``,
-      `━━━━━━━━━━━━━━━━━━`,
-      ``,
-      lines,
-      ``,
-      `━━━━━━━━━━━━━━━━━━`,
-      `🤖 TousLesMatchs · Conseil IA`,
-      `🔎 Résultats complets : gagnés comme perdus.`,
-      `⚠️ 18+ · Jeu responsable`,
-    ].join("\n");
-  }
-
-  const jobs=[];
-
-  const free=buildFor("free");
-  const standard=buildFor("standard");
-  const premium=buildFor("premium");
-  const elite=buildFor("elite");
-
-  if(free && TELEGRAM_CHANNEL_ID)
-    jobs.push(sendTelegramMessage(TELEGRAM_CHANNEL_ID,free));
-
-  if(standard && TELEGRAM_STANDARD_CHANNEL_ID)
-    jobs.push(sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID,standard));
-
-  if(premium && TELEGRAM_PREMIUM_CHANNEL_ID)
-    jobs.push(sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID,premium));
-
-  if(elite && TELEGRAM_ELITE_CHANNEL_ID)
-    jobs.push(sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID,elite));
-
-  await Promise.all(jobs);
-
-  console.log(
-    `[transparent-recap] ${winsSafe(rows)} — ${rows.length} signaux résolus`
-  );
-
-  return true;
+  await clientTelegramPublisher.flush();
+  return rows.length>0;
 }
 
 function winsSafe(rows) {
@@ -16072,22 +15734,8 @@ app.post("/internal/signal-notify", async (req, res) => {
     } catch (e) { console.error("[signal-notify] free teaser:", e.message); }
 
     const sportIcons2 = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾", Rugby:"🏉" };
-    const tgIcon = sportIcons2[signal.sport] || "🎯";
-    // Bloc anglais compact : on ne repete PAS les noms d'equipes, le score ni la
-    // competition (deja universels quelques lignes plus haut) — uniquement ce
-    // qu'un non-francophone ne peut pas deviner : le type d'analyse et la
-    // mention legale. Message ~6 lignes plus long, pas deux fois plus long.
-    const enPremium = `\n\n🇬🇧 AI analysis: <b>${betLabelEn(signal.bet)}</b>\n📊 Confidence: <b>${conf}/100</b>\n⚠️ 18+ — Responsible gaming`;
-    const enFree = `\n\n🇬🇧 The exact selection and full analysis are reserved for Premium subscribers.\n⚠️ 18+ — Responsible gaming`;
-    const tgPremiumText = `🚨 <b>SIGNAL FORT — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n💡 Analyse IA : <b>${signal.bet || ""}</b>\n📊 Score de confiance : <b>${conf}/100</b>\n${signal.reason ? `\n<i>${String(signal.reason).slice(0, 200)}</i>` : ""}\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enPremium}`;
-    const tgFreeText = `🚨 <b>SIGNAL FORT DÉTECTÉ — ${conf}/100</b>\n\n${tgIcon} <b>${signal.home} vs ${signal.away}</b>\n🏆 ${signal.competition || signal.sport || ""}\n${signal.minute ? `⏱ ${signal.minute}' · Score : ${signal.score_home ?? "?"}-${signal.score_away ?? "?"}` : ""}\n\n🔒 <b>La sélection exacte et l'analyse complète sont réservées aux abonnés Premium.</b>\n\n👉 <a href="https://www.touslesmatchs.com/#plans"><b>S'abonner à Premium — 14,90€/mois, sans engagement</b></a>\n\n━━━━━━━━━━━━━━━━━━\n⚠️ 18+ — Jeu responsable${enFree}`;
-    // Signal de niveau Premium : Premium et Elite le reçoivent toujours (modèle
-    // imbriqué), Standard uniquement s'il atteint son seuil plus exigeant.
-    await sendToPaidChannels(tgPremiumText, { tag: "signal-notify" });
-    if (TELEGRAM_CHANNEL_ID) {
-      const ok = await sendTelegramMessage(TELEGRAM_CHANNEL_ID, tgFreeText);
-      console.log(`[signal-notify] Telegram free: ${ok ? "OK" : "FAIL"}`);
-    }
+    // Telegram is dispatched exclusively by the persisted quality-gated live path.
+
 
     // Épingler le signal 90 min sur Live IA pour que le lien Telegram mène au bon match
     addPinnedSignal({
