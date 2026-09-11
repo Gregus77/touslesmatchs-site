@@ -1072,6 +1072,10 @@ const _standardSignalDaily = { date: "", count: 0 };
 const _premiumSignalDaily = { date: "", count: 0 };
 const _eliteSignalDaily = { date: "", count: 0 };
 const _recoverySignalDaily = { date: "", count: 0 };
+// Les reservations empêchent deux analyses simultanées de dépasser le plafond
+// Recovery. Elles ne deviennent un signal comptabilisé qu'après au moins une
+// confirmation Telegram sur un canal payant.
+const _recoverySignalReservations = new Set();
 // Plafonds journaliers par palier (conditions données par le fondateur)
 const STANDARD_SIGNAL_DAILY_CAP = 3;  // 🟢 tri ultra-sélectif : football, conf ≥ 88, cote réelle ARJEL 1.30-2.50
 const PREMIUM_SIGNAL_DAILY_CAP = 10;  // 🟣 plus de volume : football, conf ≥ 84, cote 1.30-2.50 (inclut Standard)
@@ -3540,11 +3544,18 @@ async function evaluateRecoveryEvidence(match, bet, liveStats) {
 }
 
 function recoverySignalsSentToday() {
-  return Math.max(
-    signalsSentToday("sig_sent_standard"),
-    signalsSentToday("sig_sent_premium"),
-    signalsSentToday("sig_sent_elite")
-  );
+  try {
+    const row = db.prepare(
+      `SELECT COUNT(DISTINCT match_key) AS n FROM telegram_signal_deliveries
+       WHERE channel IN ('standard','premium','elite')
+         AND ok = 1 AND telegram_message_id IS NOT NULL
+         AND date(created_at) = date('now')`
+    ).get();
+    return Number(row?.n) || 0;
+  } catch (e) {
+    console.error("[recovery] comptage livraisons:", e.message);
+    return 0;
+  }
 }
 
 const storedOu25ConsensusCache = new Map();
@@ -6919,13 +6930,18 @@ Réponds en JSON pur (pas de markdown):
   const clientOu25MatchEligible = isClientOu25MatchEligible(match, true, CLIENT_OU25_CLIENT_MAX_MINUTE);
   const requiredVotesForSignal = clientOu25RequiredVotes(match, analysisResult.best_bet);
   const recoveryEvidence = await evaluateRecoveryEvidence(match, analysisResult.best_bet, liveStats);
+  // Ligne exacte de cette analyse, utilisée aussi comme identité de réservation
+  // Recovery afin de ne jamais consommer deux places pour un même signal.
+  const _ligneAnalysee = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
   const recoveryToday = new Date().toISOString().slice(0, 10);
   if (_recoverySignalDaily.date !== recoveryToday) {
     _recoverySignalDaily.date = recoveryToday;
     _recoverySignalDaily.count = recoverySignalsSentToday();
+    _recoverySignalReservations.clear();
   }
   const recoveryCapacityAvailable = !RECOVERY_MODE_ENABLED
-    || _recoverySignalDaily.count < RECOVERY_MAX_DAILY_SIGNALS;
+    || _recoverySignalReservations.has(_ligneAnalysee)
+    || (_recoverySignalDaily.count + _recoverySignalReservations.size) < RECOVERY_MAX_DAILY_SIGNALS;
   console.log(`[recovery] ${match.home} vs ${match.away}: ${recoveryEvidence.ok ? "OK" : "BLOCK"} — ${recoveryEvidence.reason}`);
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
@@ -7099,20 +7115,22 @@ Réponds en JSON pur (pas de markdown):
       const gradeElite = RECOVERY_MODE_ENABLED
         ? diffusable
         : gradePremium || (diffusable && voteCountForSignal >= requiredVotesForSignal && conf >= TH.elite);
+      let _recoveryReservationKey = null;
+      const _paidDeliveryPromises = [];
       if (RECOVERY_MODE_ENABLED && gradeElite
           && (TELEGRAM_STANDARD_CHANNEL_ID || TELEGRAM_PREMIUM_CHANNEL_ID || TELEGRAM_ELITE_CHANNEL_ID)) {
-        // Reservation synchrone : evite que deux analyses paralleles depassent le plafond.
-        _recoverySignalDaily.count++;
+        // Reservation synchrone : évite que deux analyses parallèles dépassent
+        // le plafond, sans déclarer le signal livré avant la réponse Telegram.
+        if (!_recoverySignalReservations.has(_ligneAnalysee)) {
+          _recoverySignalReservations.add(_ligneAnalysee);
+          _recoveryReservationKey = _ligneAnalysee;
+        }
       }
       shadowWorthy = gradeElite;
 
       const stdDistinct   = !!(TELEGRAM_STANDARD_CHANNEL_ID && TELEGRAM_STANDARD_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const eliteDistinct = !!(TELEGRAM_ELITE_CHANNEL_ID && TELEGRAM_ELITE_CHANNEL_ID !== TELEGRAM_PREMIUM_CHANNEL_ID);
       const tierTag = (label) => `\n🏅 Palier : <b>${label}</b>`;
-      // Ligne EXACTE de cette analyse. Sans elle, le marquage retombait sur
-      // "toutes les lignes du match aujourd'hui" et contaminait les analyses
-      // bloquees du meme match (bug Club Brugge du 07/08/2026).
-      const _ligneAnalysee = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
       const _deliveryMeta = (channel) => ({
         matchKey: _ligneAnalysee,
         channel,
@@ -7131,21 +7149,25 @@ Réponds en JSON pur (pas de markdown):
       // on rend donc aussi le credit de quota.
       if (stdDistinct && gradeStandard && _standardSignalDaily.count < STANDARD_SIGNAL_DAILY_CAP && !signalDeliveredToChannelToday(match, "standard")) {
         _standardSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD"), _deliveryMeta("standard")).then(ok => {
+        const _standardDelivery = sendTelegramMessage(TELEGRAM_STANDARD_CHANNEL_ID, tgPremium + tierTag("🟢 STANDARD"), _deliveryMeta("standard")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_standard", _ligneAnalysee);
           else _standardSignalDaily.count--;
           console.log(`[signal-fort] Telegram standard (${_standardSignalDaily.count}/${STANDARD_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
+          return ok;
         });
+        _paidDeliveryPromises.push(_standardDelivery);
       }
 
       // 🟣 PREMIUM — cap 10/j (canal socle, toujours présent)
       if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium && _premiumSignalDaily.count < PREMIUM_SIGNAL_DAILY_CAP && !signalDeliveredToChannelToday(match, "premium")) {
         _premiumSignalDaily.count++;
-        sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM"), _deliveryMeta("premium")).then(ok => {
+        const _premiumDelivery = sendTelegramMessage(TELEGRAM_PREMIUM_CHANNEL_ID, tgPremium + tierTag("🟣 PREMIUM"), _deliveryMeta("premium")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_premium", _ligneAnalysee);
           else _premiumSignalDaily.count--;
           console.log(`[signal-fort] Telegram premium (${_premiumSignalDaily.count}/${PREMIUM_SIGNAL_DAILY_CAP}) conf=${conf} cote=${realOdd}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
+          return ok;
         });
+        _paidDeliveryPromises.push(_premiumDelivery);
       } else if (TELEGRAM_PREMIUM_CHANNEL_ID && gradePremium) {
         console.log(`[signal-fort] Premium: plafond ${PREMIUM_SIGNAL_DAILY_CAP}/jour atteint, skip`);
       }
@@ -7154,11 +7176,13 @@ Réponds en JSON pur (pas de markdown):
       if (eliteDistinct && gradeElite && _eliteSignalDaily.count < ELITE_SIGNAL_DAILY_CAP) {
         _eliteSignalDaily.count++;
         const prio = conf >= 92 ? "\n⚡ <b>ALERTE PRIORITAIRE</b>" : "";
-        sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio, _deliveryMeta("elite")).then(ok => {
+        const _eliteDelivery = sendTelegramMessage(TELEGRAM_ELITE_CHANNEL_ID, tgPremium + tierTag("🟠 ELITE") + prio, _deliveryMeta("elite")).then(ok => {
           if (ok) markSignalSent(match.home, match.away, "sig_sent_elite", _ligneAnalysee);
           else _eliteSignalDaily.count--;
           console.log(`[signal-fort] Telegram elite (${_eliteSignalDaily.count}/${ELITE_SIGNAL_DAILY_CAP}) conf=${conf} ${sportLc}: ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
+          return ok;
         });
+        _paidDeliveryPromises.push(_eliteDelivery);
       }
 
       // 👑 ADMIN (Hermès) — les signaux individuels restent dans les logs.
@@ -7174,6 +7198,23 @@ Réponds en JSON pur (pas de markdown):
           if (ok) markSignalSent(match.home, match.away, "sig_sent_free", _ligneAnalysee);
           else _freeSignalDailyDate.count--;
           console.log(`[signal-fort] Telegram gratuit (vitrine): ${ok ? "OK" : "FAIL — non marque car envoi Telegram KO, quota rendu"}`);
+        });
+      }
+
+      // Une réservation Recovery n'est convertie en consommation réelle que si
+      // Telegram a confirmé au moins une livraison payante. Si tous les envois
+      // échouent (ou qu'aucun n'a été lancé), la place est immédiatement rendue.
+      if (_recoveryReservationKey) {
+        Promise.allSettled(_paidDeliveryPromises).then(results => {
+          const delivered = results.some(item => item.status === "fulfilled" && item.value === true);
+          _recoverySignalReservations.delete(_recoveryReservationKey);
+          if (delivered && _recoverySignalDaily.date === recoveryToday) {
+            _recoverySignalDaily.count = recoverySignalsSentToday();
+          }
+          console.log(
+            `[recovery] reservation ${delivered ? "confirmee par Telegram" : "rendue"} ` +
+            `(${_recoverySignalDaily.count}/${RECOVERY_MAX_DAILY_SIGNALS}, en_attente=${_recoverySignalReservations.size})`
+          );
         });
       }
     }
