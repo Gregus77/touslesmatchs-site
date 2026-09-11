@@ -28,7 +28,7 @@
     <article>
       <p class="eyebrow">DONNÉES LIVE · GUIDE</p>
       <h1>Matchs en direct, aucun signal : que vérifier ?</h1>
-      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-09">9 septembre 2026</time> · Français</p>
+      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-09">9 septembre 2026</time> · Complété le <time datetime="2026-09-11">11 septembre 2026</time> · Français</p>
       <p><strong>Voir un match en direct ne signifie pas qu’un signal doit être envoyé.</strong> Mais l’absence de message ne prouve pas non plus que tout fonctionne. Pour faire la différence, il faut identifier jusqu’où le match a été traité et pourquoi il s’est arrêté là.</p>
       <p>Ce guide répond à une question réelle, reformulée sans information personnelle : « Il y a des matchs en cours, pourquoi je ne reçois aucun signal ? » Il propose une méthode de lecture, pas un diagnostic de l’état actuel du service.</p>
 
@@ -57,6 +57,21 @@
       <p>Pour un envoi standard par bot Telegram, la méthode <code>sendMessage</code> retourne un objet message en cas de succès. L’identifiant du message, associé à sa destination, permet au service de documenter cet envoi. Une simple tentative n’est pas équivalente à cette confirmation. <a href="https://core.telegram.org/bots/api#sendmessage">Source : documentation officielle Telegram</a>.</p>
       <p>Si le message existe dans le bon canal mais que votre téléphone n’a pas alerté, le contrôle porte ensuite sur les notifications. Si la confirmation d’envoi manque, le statut reste à vérifier : cela ne suffit pas toujours à affirmer que rien n’est parti. Les vérifications techniques relèvent du service ; vous n’avez pas à fournir de clé ni à relancer vous-même un envoi.</p>
 
+      <h2 id="surveillance">« Le superviseur fonctionne » : qu’est-ce que cela prouve ?</h2>
+      <p>Une autre question réelle, reformulée, complète ce guide : « Peut-on me prévenir automatiquement lorsque la chaîne fonctionne de nouveau ? » Une surveillance peut être active alors que la livraison d’un nouveau signal reste à vérifier. Voici comment lire un rapport sans confondre ces deux états.</p>
+      <ul>
+        <li><strong>Un contrôle s’est exécuté :</strong> cela prouve le passage du contrôleur, pas le traitement d’un match par les IA.</li>
+        <li><strong>Aucune nouvelle analyse n’est enregistrée :</strong> cela décrit un silence dans l’historique. Pour conclure qu’il est normal, il faut aussi connaître la fraîcheur de la collecte et les motifs de non-sélection des rencontres observées.</li>
+        <li><strong>Un test simulé réussit :</strong> il vérifie le scénario testé, mais ne prouve ni un appel réel au fournisseur ni un message effectivement envoyé dans votre canal.</li>
+        <li><strong>Un nouveau signal est rapproché de ses preuves :</strong> le contrôle relie la même rencontre, le même marché et le même instant d’analyse aux votes enregistrés, à l’affichage et aux confirmations d’envoi attendues.</li>
+      </ul>
+      <p><strong>Exemple fictif :</strong> un contrôle passe à 18 h, mais aucune nouvelle analyse n’est enregistrée. Le statut honnête est « surveillance exécutée, validation de la chaîne en attente », et non « livraison rétablie ». Si une analyse apparaît ensuite, un message confirmé dans le canal français ne suffit pas à confirmer celui du canal russe.</p>
+      <p>Un contrôle de données publiques ne remplace pas non plus l’observation de la page avec les droits du lecteur : une carte accessible sans connexion ne prouve pas que le détail réservé à un abonné s’affiche correctement. Le rapport doit préciser ce qui a été vérifié et ce qui reste inconnu.</p>
+
+      <h2 id="cote-indisponible">Une cote indisponible signifie-t-elle « aucune analyse » ?</h2>
+      <p>Non : l’information sportive et le prix proposé sont deux données distinctes. Un service peut autoriser la diffusion d’une analyse sans cote lorsque ses règles le permettent et que les autres conditions sont satisfaites. Il doit alors indiquer « cote indisponible », sans remplacer le prix manquant par une estimation présentée comme réelle.</p>
+      <p>Cette mention ne prouve ni que la sélection est disponible chez un opérateur, ni qu’un prix intéressant existe. Une cote réellement observée mais hors des limites de sélection n’est pas une cote absente. Enfin, l’issue sportive peut être comptée séparément, mais le résultat financier reste non mesurable sans les données nécessaires : voir <a href="/guides/historique-signaux-taux-reussite/">comment lire l’historique des signaux</a>.</p>
+
       <h2>Cinq vérifications utiles pour le lecteur</h2>
       <ol>
         <li><strong>Identifier la carte :</strong> match en cours, analyse datée ou ancien résultat ?</li>
@@ -75,7 +90,7 @@
         <p>Le bon réflexe n’est ni de réclamer un signal pour chaque match ni de considérer tout silence comme normal. Cherchez un état explicite, un instant de référence et, si un envoi est annoncé, une confirmation vers la bonne destination.</p>
         <a href="/live-ia">Consulter Live IA</a><a href="/guides/comprendre-consensus-ia/">Comprendre les limites des IA</a>
       </aside>
-      <p class="meta">Méthode : contenu préparé avec assistance IA à partir d’une question réelle reformulée. Sources primaires consultées le 9 septembre 2026. Les scénarios et horaires sont fictifs ; ils ne décrivent ni une panne constatée aujourd’hui ni des performances TousLesMatchs.</p>
+      <p class="meta">Méthode : contenu préparé avec assistance IA à partir de questions réelles reformulées. Sources API-Football consultées le 9 septembre 2026 ; documentation Telegram revérifiée le 11 septembre 2026. Ajout du 11 septembre : lecture des preuves de surveillance et distinction entre cote absente et analyse absente. Les scénarios et horaires sont fictifs ; ils ne décrivent ni une panne constatée aujourd’hui ni des performances TousLesMatchs.</p>
     </article>
   </main>
   <footer>
