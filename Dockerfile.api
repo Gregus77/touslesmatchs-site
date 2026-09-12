@@ -33,6 +33,7 @@ RUN mkdir -p /data
 
 COPY scripts/api_server.js ./server.js
 COPY scripts/telegram_client.js ./telegram_client.js
+COPY scripts/official_signal_snapshots.js ./official_signal_snapshots.js
 COPY scripts/long_history.js ./long_history.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/analysis_engine.js ./analysis_engine.js

@@ -151,6 +151,12 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
     message_id INTEGER, next_at INTEGER NOT NULL DEFAULT 0, expires_at INTEGER NOT NULL,
     created_at INTEGER NOT NULL, delivered_at INTEGER);
     CREATE INDEX IF NOT EXISTS client_tg_pending ON client_telegram_outbox(state,next_at);`);
+  const addColumn = (table, definition) => {
+    const name=definition.trim().split(/\s+/)[0];
+    if(!db.prepare(`PRAGMA table_info(${table})`).all().some(row=>row.name===name)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+  };
+  addColumn('client_telegram_outbox','official_signal_snapshot_id TEXT');
+  addColumn('telegram_signal_deliveries','official_signal_snapshot_id TEXT');
   // Interruption pendant une requête : livraison inconnue, pas de renvoi automatique aveugle.
   db.prepare("UPDATE client_telegram_outbox SET state='uncertain' WHERE state='sending' AND next_at<?").run(now());
   let busy=false;
@@ -160,8 +166,8 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       if(db.prepare('SELECT 1 FROM client_telegram_outbox WHERE delivery_key=?').get(deliveryKey))return false;
       if(kind==='signal')data=freezeSignal(db,data,now());
       const payload=render(kind,data,{...dest,paymentVerified:paymentAvailable()});
-      return db.prepare(`INSERT OR IGNORE INTO client_telegram_outbox(delivery_key,kind,channel,chat_id,match_key,market,votes,payload,expires_at,created_at)
-        VALUES(?,?,?,?,?,?,?,?,?,?)`).run(deliveryKey,kind,dest.channel,dest.id,data.matchKey||null,data.market||'',Number(data.votes)||0,JSON.stringify(payload),expiresAt,now()).changes>0;
+      return db.prepare(`INSERT OR IGNORE INTO client_telegram_outbox(delivery_key,kind,channel,chat_id,match_key,market,votes,payload,expires_at,created_at,official_signal_snapshot_id)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(deliveryKey,kind,dest.channel,dest.id,data.matchKey||null,data.market||'',Number(data.votes)||0,JSON.stringify(payload),expiresAt,now(),data.officialSignalSnapshotId||null).changes>0;
     }).immediate();
   }
   function queueDailyRecap(day=parisParts(now()).day) {
@@ -193,7 +199,7 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
           db.transaction(()=>{
             db.prepare("UPDATE client_telegram_outbox SET state='delivered',message_id=?,delivered_at=? WHERE delivery_key=?").run(result.messageId,now(),row.delivery_key);
             if(row.kind==='signal') {
-              db.prepare(`INSERT INTO telegram_signal_deliveries(match_key,channel,telegram_message_id,market,vote_count,ok) VALUES(?,?,?,?,?,1)`).run(row.match_key,row.channel,result.messageId,row.market,row.votes);
+              db.prepare(`INSERT INTO telegram_signal_deliveries(match_key,channel,telegram_message_id,market,vote_count,ok,official_signal_snapshot_id) VALUES(?,?,?,?,?,1,?)`).run(row.match_key,row.channel,result.messageId,row.market,row.votes,row.official_signal_snapshot_id);
               if(row.channel==='premium'||row.channel==='free') db.prepare(`UPDATE concile_analyses SET sig_sent_${row.channel}=1 WHERE match_key=?`).run(row.match_key);
             }
           })();

@@ -31,13 +31,13 @@ assert(pub.enqueue('signal',{...signal,minute:45,odd:'1.90'},pub.targets[3],'mat
 const ru=db.prepare("SELECT payload FROM client_telegram_outbox WHERE channel='ru_premium'").get();assert(JSON.parse(ru.payload).text.includes('21'));assert(JSON.parse(ru.payload).text.includes('1.50'));
 assert(!pub.enqueue('signal',signal,pub.targets[1],'match'));
 for(const [key,at,id,ch] of [['start','2026-09-10 22:00:00',1,'premium'],['before','2026-09-10 21:59:59',2,'premium'],['last','2026-09-11T21:59:59Z',3,'premium'],['after','2026-09-11 22:00:00',4,'premium'],['bad','2026-09-11 10:00:00',0,'premium'],['negative','2026-09-11 10:00:00',-1,'premium'],['legacy','2026-09-11 10:00:00',8,'standard']]) {
- analysis(key);db.prepare('INSERT INTO telegram_signal_deliveries VALUES (?,?,?,?,3,1,?)').run(key,ch,id,'Under 2.5 buts',at);
+ analysis(key);db.prepare('INSERT INTO telegram_signal_deliveries(match_key,channel,telegram_message_id,market,vote_count,ok,created_at) VALUES (?,?,?,?,3,1,?)').run(key,ch,id,'Under 2.5 buts',at);
 }
 const list=c.recapRows(db,'2026-09-11','premium');assert.deepEqual(list.map(r=>r.match_key),['start','last']);assert(list.every(r=>r.outcome==='loss'));assert.equal(c.recapRows(db,'2026-09-11','ru_premium').length,0);
 assert(pub.queueDailyRecap('2026-09-11'));assert(!pub.queueDailyRecap('2026-09-11'));
 const second=new Database(file),other=c.createPublisher({db:second,env,transport,now:()=>time});assert(!other.queueDailyRecap('2026-09-11'));
 assert.equal(db.prepare("SELECT count(*) n FROM client_telegram_outbox WHERE kind='recap'").get().n,4);
-analysis('invalid-recap');db.prepare("INSERT INTO telegram_signal_deliveries VALUES ('invalid-recap','ru_premium',99,'unsupported',3,1,'2026-09-12 10:00:00')").run();
+analysis('invalid-recap');db.prepare("INSERT INTO telegram_signal_deliveries(match_key,channel,telegram_message_id,market,vote_count,ok,created_at) VALUES ('invalid-recap','ru_premium',99,'unsupported',3,1,'2026-09-12 10:00:00')").run();
 assert.throws(()=>pub.queueDailyRecap('2026-09-12'));
 assert(!db.prepare("SELECT 1 FROM client_recap_runs WHERE day='2026-09-12'").get());
 assert.equal(db.prepare("SELECT count(*) n FROM client_telegram_outbox WHERE kind='recap'").get().n,4);

@@ -23,6 +23,7 @@ for(const m of publicRows){
   for(const v of m.ou25.votes){assert.equal(v.direction,null);assert.equal(v.confidence,null);assert.equal(v.label,null);}
 }
 const paid=ctx.homepageLiveMatch(four,true);
+paid.ou25={...paid.ou25,official:true,official_signal_snapshot_id:'four-snapshot',recommendation_status:"Signal officiel à 25′, score 0-0",consensus_direction:'under',official_confidence:88,official_odd:1.8};
 assert.equal(paid.ou25.votes[0].direction,'under');assert.equal(paid.ou25.under_count,4);
 assert.equal(paid.ou25.votes[0].updated_at,'2026-09-12 18:30:00');
 paid.selection_evidence={home_rank:2,away_rank:17,rank_gap:15,top5_bottom5:true};
@@ -72,10 +73,10 @@ assert.equal(elements.get('hero-ai-title').textContent,'Fenêtre d’analyse ter
 ctx.renderHeroLive({...ctx.homepageLiveMatch(fixture('other',[]),false),block_reason:'Championnat hors périmètre.'});
 assert.equal(elements.get('hero-ai-title').textContent,'Match non analysé');
 ctx.renderHeroLive({...paid,block_reason:'Cote bookmaker indisponible.'});
-assert.equal(elements.get('hero-ai-title').textContent,'Votes IA Over/Under 2,5');
+assert.equal(elements.get('hero-ai-title').textContent,'Signal officiel figé');
 ctx.tlmSignalWindowEnd=45;
 ctx.renderHeroLive({...paid,minute:68,ou25:{...paid.ou25,window_status:'closed',snapshot_minute:31}});
-assert.equal(elements.get('hero-ai-title').textContent,'Vote enregistré en première mi-temps');
+assert.equal(elements.get('hero-ai-title').textContent,'Signal officiel figé');
 assert.equal(slots[0].mark.textContent,'U');
 assert(slots[0].title.includes('18:30'));
 console.log('OK: odds waiting label, closed window, other reasons and genuine votes preserved');
