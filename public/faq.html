@@ -25,7 +25,7 @@
     { "@type": "Question", "name": "Qui est le Conseil IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent." } },
     { "@type": "Question", "name": "Comment est choisie l'analyse du jour ?", "acceptedAnswer": { "@type": "Answer", "text": "Le Conseil IA compare consensus, value, objections, données manquantes et risque par sport. Si le doute reste trop fort, c'est NO BET." } },
     { "@type": "Question", "name": "Les résultats affichés sont-ils réels ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui. Tous les résultats sont publics sur la page Performances. Nous ne cachons aucun pick perdu. Les statistiques sont calculées automatiquement depuis notre base de données." } },
-    { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Deux abonnements sans engagement : Standard à 4,90 €/mois (jusqu'à 3 signaux/jour) et Premium à 14,90 €/mois (jusqu'à 10 signaux/jour, inclut Standard). Les signaux football concernent Over/Under 2,5 et nécessitent au moins 3 IA sur 5 d'accord." } },
+    { "@type": "Question", "name": "Comment fonctionnent les abonnements ?", "acceptedAnswer": { "@type": "Answer", "text": "Deux accès seulement : Gratuit à 0 € et Premium à 14,90 €/mois sans engagement. Premium reçoit tous les signaux football Over/Under 2,5 qui satisfont les critères, sans plafond quotidien annoncé." } },
     { "@type": "Question", "name": "Quand les analyses sont-elles publiées ?", "acceptedAnswer": { "@type": "Answer", "text": "Le pick gratuit est publié lorsqu'une sélection gratuite est disponible. Les analyses Live IA football sont prises entre la 15e et la 45e minute et un signal Over/Under 2,5 n'est validé qu'avec au moins 3 IA sur 5 d'accord." } },
     { "@type": "Question", "name": "Pourquoi certains matchs en direct ne sont pas analysables ?", "acceptedAnswer": { "@type": "Answer", "text": "Un match n'est analysable que s'il appartient au périmètre football retenu, se trouve entre la 15e et la 45e minute et dispose de données exploitables. Le signal Over/Under 2,5 n'est publié qu'avec au moins 3 IA sur 5 d'accord." } },
     { "@type": "Question", "name": "Quels sports sont analysés ?", "acceptedAnswer": { "@type": "Answer", "text": "Le football uniquement." } },
@@ -149,7 +149,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
     <label class="modal-label">Email</label>
     <input class="modal-input" id="login-email" type="email" placeholder="toi@exemple.com" autocomplete="email">
     <label class="modal-label">Code d'accès</label>
-    <input class="modal-input" id="login-code" type="text" placeholder="STANDARD-XXXXXX" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
+    <input class="modal-input" id="login-code" type="text" placeholder="Votre code d’accès" autocomplete="off" style="letter-spacing:.08em;text-transform:uppercase">
     <div class="modal-err" id="login-err"></div>
     <div class="modal-ok" id="login-ok"></div>
     <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
@@ -236,8 +236,8 @@ async function doLogin(){
     <button type="button" class="faq-q" aria-expanded="false" onclick="toggleFaq(this)">Comment fonctionnent les abonnements ? <span class="faq-arrow">+</span></button>
     <div class="faq-a">
       Seuil actuel de diffusion : <strong>77/100 minimum</strong>, avec au moins 3 votes concordants sur 5. Cote bookmaker réelle entre 1,30 et 2,10.<br>
-      <strong>Standard</strong> — jusqu'à 3 signaux/jour, Telegram Standard.<br>
-      <strong>Premium</strong> — jusqu'à 10 signaux/jour, Telegram Premium, inclut Standard.<br><br>
+      <strong>Gratuit</strong> — aperçus et résultats publics.<br>
+      <strong>Premium</strong> — tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien annoncé.<br><br>
       Voir les tarifs à jour sur la <a href="/#plans" style="color:var(--cyan)">page d'accueil</a>. Paiement sécurisé par Stripe. Annulation possible à tout moment.
     </div>
   </div>
@@ -268,7 +268,7 @@ async function doLogin(){
 
     <div class="step"><div class="step-n">1</div><div><div class="step-title">Collecte vérifiée</div><div class="step-desc">Hermès collecte les matchs via API-Sports, puis vérifie chaque donnée sur 3 sources indépendantes. Aucun match non confirmé n'est analysé.</div></div></div>
     <div class="step"><div class="step-n">2</div><div><div class="step-title">Perplexity, DeepSeek, Mistral, Cohere et Qwen votent</div><div class="step-desc">Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal unanime, 4/5 = signal renforcé, 3/5 = signal validé. À 2/5 ou moins, aucun signal client n’est diffusé.</div></div></div>
-    <div class="step"><div class="step-n">3</div><div><div class="step-title">Publication et diffusion</div><div class="step-desc">Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Standard et Premium reçoivent les signaux validés en temps réel sur Telegram.</div></div></div>
+    <div class="step"><div class="step-n">3</div><div><div class="step-title">Publication et diffusion</div><div class="step-desc">Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Premium reçoivent les signaux validés en temps réel sur Telegram.</div></div></div>
     <div class="step"><div class="step-n">4</div><div><div class="step-title">Résultats tracés, modèle amélioré</div><div class="step-desc">Chaque résultat est enregistré et intégré. Les stats sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.</div></div></div>
   </div>
 
@@ -286,7 +286,7 @@ async function doLogin(){
 
   <div class="cta-box">
     <h3>Prêt à tester Hermès ?</h3>
-    <p>Rejoins le Concile dès 4,90€/mois. Tu vois ce que 5 IA pensent vraiment.</p>
+    <p>Rejoins Premium à 14,90 €/mois. Tu vois les cinq votes IA réels et tous les signaux admissibles.</p>
     <a href="/#plans" class="cta-btn">Voir les abonnements</a>
   </div>
 </div>

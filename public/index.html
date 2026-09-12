@@ -35,9 +35,9 @@
     { "@type": "FAQPage", "@id": "https://www.touslesmatchs.com/#faq", "mainEntity": [
         { "@type": "Question", "name": "Comment fonctionne le Conseil IA ?", "acceptedAnswer": { "@type": "Answer", "text": "Cinq intelligences artificielles indépendantes (Perplexity, DeepSeek, Mistral, Cohere, Qwen) analysent chaque match séparément à partir des statistiques, de l'historique et du contexte. Un vote de convergence établit un score de confiance. Le signal n'est publié que si ce score dépasse le seuil du palier." } },
         { "@type": "Question", "name": "Que représente le score de confiance ?", "acceptedAnswer": { "@type": "Answer", "text": "C'est l'indicateur interne utilisé par le Concile pour classer ses analyses selon le niveau de convergence entre les IA. Il n'est pas une garantie de résultat : l'issue d'un événement sportif reste incertaine." } },
-        { "@type": "Question", "name": "Combien de sélections vais-je recevoir ?", "acceptedAnswer": { "@type": "Answer", "text": "Les volumes affichés (3 ou 10 par jour) sont des maximums, pas des garanties. Le nombre réel dépend des matchs qui atteignent le seuil de confiance du palier ce jour-là." } },
-        { "@type": "Question", "name": "Quelle différence entre Standard et Premium ?", "acceptedAnswer": { "@type": "Answer", "text": "Standard (4,90€/mois) réserve la sélection la plus stricte du jour, jusqu'à 3 signaux/jour. Premium (14,90€/mois) élargit la sélection, jusqu'à 10 signaux/jour. Les volumes annoncés restent des maximums dépendant des rencontres qui satisfont les critères." } },
-        { "@type": "Question", "name": "Comment fonctionne le compte gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Le compte gratuit donne accès au pick gratuit du jour, aux résultats publics, à un aperçu des sélections Standard de la veille, et à la liste des matchs en direct — sans carte bancaire." } },
+        { "@type": "Question", "name": "Combien de sélections vais-je recevoir ?", "acceptedAnswer": { "@type": "Answer", "text": "Premium reçoit tous les signaux qui satisfont les critères. Aucun volume quotidien n'est garanti : le nombre réel dépend des matchs admissibles." } },
+        { "@type": "Question", "name": "Quelle différence entre Gratuit et Premium ?", "acceptedAnswer": { "@type": "Answer", "text": "Gratuit donne accès aux aperçus et aux résultats publics. Premium coûte 14,90 €/mois et donne accès à tous les signaux qui satisfont les critères, sans plafond quotidien annoncé." } },
+        { "@type": "Question", "name": "Comment fonctionne le compte gratuit ?", "acceptedAnswer": { "@type": "Answer", "text": "Le compte gratuit donne accès au pick gratuit du jour, aux résultats publics et à la liste des matchs en direct — sans carte bancaire. Les directions exactes des votes IA restent masquées." } },
         { "@type": "Question", "name": "Puis-je résilier mon abonnement ?", "acceptedAnswer": { "@type": "Answer", "text": "Oui, tous les abonnements sont sans engagement et résiliables à tout moment depuis le portail Stripe." } },
         { "@type": "Question", "name": "Comment les résultats sont-ils calculés ?", "acceptedAnswer": { "@type": "Answer", "text": "Chaque sélection est enregistrée avec sa cote réelle au moment de l'envoi. Le résultat (gagné, perdu) est vérifié après la fin officielle du match. Le winrate et le profit simulé sont calculés uniquement sur les sélections terminées, gagnées comme perdues." } }
     ] }
@@ -483,7 +483,7 @@ body :where(
 
 #plans.row-4 {
   display:grid !important;
-  grid-template-columns:repeat(3,minmax(0,1fr)) !important;
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
   gap:16px !important;
   align-items:stretch !important;
   width:100% !important;
@@ -952,7 +952,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 .tlm-match-stage{box-sizing:border-box;width:100%;min-width:0;padding:20px;border:1px solid rgba(132,144,255,.35);border-radius:20px;background:linear-gradient(155deg,rgba(8,15,39,.93),rgba(5,10,29,.86));box-shadow:0 22px 60px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);backdrop-filter:blur(15px)}
 .tlm-stage-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;color:#aab3d6;font-size:12px}.tlm-stage-head>div{display:flex;align-items:center;gap:8px;min-width:0}.tlm-stage-live{display:inline-flex;align-items:center;gap:7px;flex:0 0 auto;padding:7px 10px;border:1px solid rgba(244,63,94,.5);border-radius:8px;background:rgba(244,63,94,.08);color:#ff5a7c;font-weight:900;letter-spacing:.06em}.tlm-stage-live:before{content:"";width:7px;height:7px;border-radius:50%;background:#ff3f6d;box-shadow:0 0 12px #ff3f6d;animation:tlmLivePulse 1.5s infinite}.tlm-stage-minute{flex:0 0 auto;color:#48d8ff;font-size:22px;font-weight:900;white-space:nowrap}#hero-live-date{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tlm-stage-teams{display:grid;grid-template-columns:1fr auto 1fr;gap:15px;align-items:center;padding:10px 0 19px}.tlm-stage-team{text-align:center;min-width:0}.tlm-stage-team-logo{width:78px;height:78px;object-fit:contain;margin:0 auto 9px;filter:drop-shadow(0 10px 22px rgba(0,0,0,.35))}.tlm-stage-team strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px}.tlm-team-country{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:7px;color:#aab3d6;font-size:11px}.tlm-country-flag{width:20px;height:14px;border-radius:2px;object-fit:cover;background:#fff}.tlm-stage-score{text-align:center;font-size:44px;font-weight:900;letter-spacing:.04em;white-space:nowrap}.tlm-stage-period{display:block;margin-top:9px;padding:5px 9px;border:1px solid rgba(255,255,255,.16);border-radius:999px;color:#adb6d8;font-size:10px;font-weight:700}
-.tlm-ai-box{padding:16px 15px 14px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(3,8,25,.5)}.tlm-ai-title{color:#52dcff;font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.tlm-ai-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:14px}.tlm-ai-votes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.tlm-ai-vote{display:flex;flex-direction:column;align-items:center;gap:5px;color:#8792b8;font-size:9px}.tlm-ai-vote i{width:38px;height:38px;display:grid;place-items:center;border:2px solid rgba(93,110,157,.46);border-radius:50%;color:#8290bd;font-style:normal;font-size:11px;font-weight:900}.tlm-ai-vote.on i{color:#fff}.tlm-ai-vote.on.over i{border-color:#22d3ee;background:rgba(34,211,238,.17);box-shadow:0 0 18px rgba(34,211,238,.42)}.tlm-ai-vote.on.under i{border-color:#d946ef;background:rgba(217,70,239,.17);box-shadow:0 0 18px rgba(217,70,239,.38)}.tlm-ai-total{min-width:105px;text-align:center}.tlm-ai-total strong{display:block;background:linear-gradient(110deg,#42d5ff,#a05fff);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:46px;line-height:1;font-weight:950}.tlm-ai-total span{display:block;margin-top:5px;color:#aab3d6;font-size:10px;font-weight:800;text-transform:uppercase}.tlm-ai-result{margin-top:5px;color:#9ba5c9;font-size:10px}.tlm-analysis-track{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;margin-top:15px;color:#b8c0dc;font-size:10px}.tlm-analysis-track span{height:5px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.10)}.tlm-analysis-track i{display:block;height:100%;width:42%;border-radius:inherit;background:linear-gradient(90deg,#1ccaf5,#7c62ff,#c145ef);transition:width .35s ease}
+.tlm-ai-box{display:block;padding:16px 15px 14px;border:1px solid rgba(255,255,255,.08);border-radius:15px;background:rgba(3,8,25,.5);color:inherit;text-decoration:none;cursor:pointer;transition:border-color .2s ease,transform .2s ease,background .2s ease}.tlm-ai-box:hover{border-color:rgba(82,220,255,.52);background:rgba(5,14,38,.72);transform:translateY(-1px)}.tlm-ai-box:focus-visible{outline:3px solid rgba(82,220,255,.55);outline-offset:3px}.tlm-ai-title{color:#52dcff;font-size:11px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.tlm-ai-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:14px}.tlm-ai-votes{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}.tlm-ai-vote{display:flex;flex-direction:column;align-items:center;gap:5px;color:#8792b8;font-size:9px}.tlm-ai-vote i{width:38px;height:38px;display:grid;place-items:center;border:2px solid rgba(93,110,157,.46);border-radius:50%;color:#8290bd;font-style:normal;font-size:11px;font-weight:900}.tlm-ai-vote.on i{color:#fff}.tlm-ai-vote.on.over i{border-color:#22d3ee;background:rgba(34,211,238,.17);box-shadow:0 0 18px rgba(34,211,238,.42)}.tlm-ai-vote.on.under i{border-color:#d946ef;background:rgba(217,70,239,.17);box-shadow:0 0 18px rgba(217,70,239,.38)}.tlm-ai-total{min-width:105px;text-align:center}.tlm-ai-total strong{display:block;background:linear-gradient(110deg,#42d5ff,#a05fff);-webkit-background-clip:text;background-clip:text;color:transparent;font-size:46px;line-height:1;font-weight:950}.tlm-ai-total span{display:block;margin-top:5px;color:#aab3d6;font-size:10px;font-weight:800;text-transform:uppercase}.tlm-ai-result{margin-top:5px;color:#9ba5c9;font-size:10px;line-height:1.35}.tlm-ai-open-hint{margin-top:11px;color:#52dcff;font-size:10px;font-weight:850;text-align:right}.tlm-analysis-track{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;margin-top:15px;color:#b8c0dc;font-size:10px}.tlm-analysis-track span{height:5px;overflow:hidden;border-radius:99px;background:rgba(255,255,255,.10)}.tlm-analysis-track i{display:block;height:100%;width:42%;border-radius:inherit;background:linear-gradient(90deg,#1ccaf5,#7c62ff,#c145ef);transition:width .35s ease}
 .tlm-hero-proof{position:relative;z-index:3;display:grid;grid-template-columns:repeat(4,1fr);margin-top:18px;border:1px solid rgba(255,255,255,.14);border-radius:14px;background:rgba(4,10,29,.78);backdrop-filter:blur(12px)}.tlm-hero-proof div{padding:16px 18px;border-right:1px solid rgba(255,255,255,.1)}.tlm-hero-proof div:last-child{border-right:0}.tlm-hero-proof strong{display:block;font-size:12px}.tlm-hero-proof span{display:block;margin-top:4px;color:#8893b9;font-size:9.5px}
 @keyframes tlmLivePulse{50%{opacity:.45;box-shadow:0 0 0 6px rgba(255,63,109,0)}}
 @media(max-width:980px){.tlm-live-hero{padding:32px 26px 24px}.tlm-hero-grid{grid-template-columns:1fr;gap:26px}.tlm-match-stage{max-width:650px;width:100%}.tlm-hero-proof{grid-template-columns:repeat(2,1fr)}.tlm-hero-proof div:nth-child(2){border-right:0}.tlm-live-hero h1{font-size:clamp(44px,8vw,67px)}}
@@ -1072,11 +1072,12 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
             <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt=""><strong id="hero-away-name">Équipe à l'extérieur</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
-          <div class="tlm-ai-box">
+          <a class="tlm-ai-box" id="hero-analysis-link" href="/live-ia" aria-label="Ouvrir ce match dans Live IA">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
             <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><span class="tlm-ai-vote"><i>1</i>IA 1</span><span class="tlm-ai-vote"><i>2</i>IA 2</span><span class="tlm-ai-vote"><i>3</i>IA 3</span><span class="tlm-ai-vote"><i>4</i>IA 4</span><span class="tlm-ai-vote"><i>5</i>IA 5</span></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0 / 5</strong><span>IA validées</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
             <div class="tlm-analysis-track"><b>15'</b><span><i id="hero-analysis-progress"></i></span><b id="hero-window-end">—</b></div>
-          </div>
+            <div class="tlm-ai-open-hint">Ouvrir ce match dans Live IA →</div>
+          </a>
         </div>
       </div>
       <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 3 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
@@ -1165,29 +1166,17 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <a href="/dashboard" class="btn btn-ghost btn-block" data-i18n="nav_signup">Créer mon compte gratuit</a>
     </div>
 
-    <div class="card plan">
-      <div class="plan-ico" style="background:rgba(91,141,239,.14);color:var(--standard)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
-      <div class="plan-name" style="color:var(--standard)" data-i18n="plan_std">STANDARD</div>
-      <div class="plan-price">4.90€ <span>/mois</span></div>
-      <ul class="plan-feats">
-        <li><span class="plan-check">✓</span><span data-i18n="plan_std_1">Jusqu'à 3 sélections/jour</span></li>
-        <li><span class="plan-check">✓</span><span data-i18n="plan_std_2">Minimum 3 IA sur 5 d'accord sur Over/Under 2,5</span></li>
-        <li><span class="plan-check">✓</span>Sans engagement</li>
-      </ul>
-      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" class="btn btn-ghost btn-block" data-i18n="plan_btn_std">Choisir Standard</a>
-    </div>
-
     <div class="card plan hl">
       <div class="plan-badge" data-i18n="plan_popular">Le plus choisi</div>
       <div class="plan-ico" style="background:rgba(155,123,255,.16);color:var(--premium)"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="8 13 11 16 16 9"></polyline></svg></div>
       <div class="plan-name" style="color:var(--premium)" data-i18n="plan_prem">PREMIUM</div>
-      <div class="plan-price">14.90€ <span>/mois</span></div>
+      <div class="plan-price">14,90 € <span>/mois</span></div>
       <ul class="plan-feats">
-        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_1">Jusqu'à 10 sélections/jour</span></li>
-        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Minimum 3 IA sur 5 d'accord · inclut Standard</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_1">Tous les signaux admissibles, sans plafond quotidien</span></li>
+        <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Votes O/U 2,5 détaillés et justification factuelle</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="https://buy.stripe.com/6oU3cvdfK4Fm0JC1yK3VC06" target="_blank" class="btn btn-prim btn-block" data-i18n="plan_btn_prem">Choisir Premium</a>
+      <a href="/api/premium-checkout?lang=fr" class="btn btn-prim btn-block" data-i18n="plan_btn_prem">Choisir Premium</a>
     </div>
 
   </div>
@@ -1200,7 +1189,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
        gratuit puis aux formules sans avoir a traverser tout ca. -->
   <div class="row row-4">
     <div class="card pcard acc-blue">
-      <div class="pcard-title" data-i18n="std_yesterday">Ce que Standard a reçu hier</div>
+      <div class="pcard-title" data-i18n="std_yesterday">Ce que Premium a reçu hier</div>
       <table class="mini-table"><thead><tr><th>Match</th><th>Sél.</th><th>Rés.</th></tr></thead>
         <tbody id="std-body"><tr><td colspan="3" class="empty-note">Chargement…</td></tr></tbody>
       </table>
@@ -1363,8 +1352,8 @@ function renderNavAuth(){
   var email=localStorage.getItem('tlm_email');
   var plan=localStorage.getItem('tlm_plan');
   if(email&&plan){
-    var isElite=plan==='elite'||plan==='vip';
-    el.innerHTML='<div class="nav-user"><span class="nav-plan-badge'+(isElite?' elite':'')+'">'+(isElite?'Elite':plan.charAt(0).toUpperCase()+plan.slice(1))+'</span><button class="nav-logout" onclick="doLogout()" title="Se déconnecter">✕</button></div>';
+    var isPaid=plan!=='free';
+    el.innerHTML='<div class="nav-user"><span class="nav-plan-badge'+(isPaid?' elite':'')+'">'+(isPaid?'Premium':'Gratuit')+'</span><button class="nav-logout" onclick="doLogout()" title="Se déconnecter">✕</button></div>';
   } else {
     el.innerHTML='<button class="btn btn-ghost" onclick="openModal()">Se connecter</button>';
   }
@@ -1711,34 +1700,57 @@ function heroOu25(m){
   while(slots.length<5)slots.push({status:'pending',direction:null});
   return {slots:slots,voteCount:Number(raw.vote_count)||0,consensusCount:Number(raw.consensus_count)||0,
     overCount:Number(raw.over_count)||0,underCount:Number(raw.under_count)||0,
-    locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown')};
+    locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute)};
+}
+function heroConsensusDetail(m){
+  var state=heroOu25(m),valid=state.slots.filter(function(v){return v&&v.status==='voted'&&(v.direction==='over'||v.direction==='under');});
+  var over=valid.filter(function(v){return v.direction==='over';}),under=valid.filter(function(v){return v.direction==='under';});
+  var leaders=over.length>=under.length?over:under,direction=over.length>=under.length?'over':'under';
+  var confidence=leaders.map(function(v){return Number(v.confidence);}).filter(function(v){return isFinite(v);});
+  return {direction:direction,count:leaders.length,averageConfidence:confidence.length?Math.round(confidence.reduce(function(a,b){return a+b;},0)/confidence.length):null};
+}
+function heroH2hText(m){
+  var h=m&&m.h2h_last3;
+  if(!h||Number(h.sample_size)!==3||!Number.isFinite(Number(h.over25_count)))return '';
+  return ' · H2H : '+Number(h.over25_count)+'/3 avec au moins 3 buts';
+}
+function heroStandingText(m){
+  var e=m&&m.selection_evidence;
+  if(!e||!Number.isFinite(Number(e.home_rank))||!Number.isFinite(Number(e.away_rank))||!Number.isFinite(Number(e.rank_gap)))return '';
+  return ' · classement '+Number(e.home_rank)+'e vs '+Number(e.away_rank)+'e ('+Number(e.rank_gap)+' places)'+(e.top5_bottom5===true?' · top 5/bottom 5':'');
 }
 var tlmSignalWindowEnd=null;
 function heroVoteCount(m){return heroOu25(m).voteCount;}
 function compareHeroMatches(a,b){
+  var ae=a&&a.selection_evidence||{},be=b&&b.selection_evidence||{};
+  if((ae.top5_bottom5===true)!==(be.top5_bottom5===true))return be.top5_bottom5===true?1:-1;
+  var av=heroOu25(a),bv=heroOu25(b);
+  if(av.consensusCount!==bv.consensusCount)return bv.consensusCount-av.consensusCount;
+  var ac=heroConsensusDetail(a).averageConfidence,bc=heroConsensusDetail(b).averageConfidence;
+  if(ac!==bc)return (bc==null?-1:bc)-(ac==null?-1:ac);
+  if(av.voteCount!==bv.voteCount)return bv.voteCount-av.voteCount;
+  var agap=Number(ae.rank_gap),bgap=Number(be.rank_gap);
+  if(isFinite(agap)&&isFinite(bgap)&&agap!==bgap)return bgap-agap;
   var ap=TLMMatchLifecycle.phase(a),bp=TLMMatchLifecycle.phase(b);
   var rank={open:0,waiting:1,closed:2,unknown:3,finished:4,unavailable:4};
   if(rank[ap]!==rank[bp])return rank[ap]-rank[bp];
-  var av=heroOu25(a),bv=heroOu25(b);
-  if(av.consensusCount!==bv.consensusCount)return bv.consensusCount-av.consensusCount;
-  if(av.voteCount!==bv.voteCount)return bv.voteCount-av.voteCount;
-  function group(v){return v.windowStatus==='open'?0:v.windowStatus==='waiting'?1:2;}
-  var ag=group(av),bg=group(bv);if(ag!==bg)return ag-bg;
   var am=tlmHeroMinuteOf(a),bm=tlmHeroMinuteOf(b);
-  if(am!==bm)return ag===1?bm-am:am-bm;
+  if(am!==bm)return am-bm;
   return String(a.id||a.home+'|'+a.away).localeCompare(String(b.id||b.home+'|'+b.away));
 }
 function heroWasSent(m){return !!(m&&(m.signal_delivered||m.sig_sent_free||m.sig_sent_standard||m.sig_sent_elite||m.sent));}
 function renderHeroLive(m){
   var status=document.getElementById('hero-live-status');
-  var voteState=heroOu25(m),votes=voteState.voteCount,sent=heroWasSent(m),minute=tlmHeroMinuteOf(m);
+  var voteState=heroOu25(m),votes=voteState.voteCount,sent=heroWasSent(m),minute=tlmHeroMinuteOf(m),consensus=heroConsensusDetail(m);
   var country=heroCountry(m);
+  var analysisLink=document.getElementById('hero-analysis-link');
   setHeroText('hero-live-date',new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}));
   if(!m){
     if(status)status.textContent='Aucun match dans la fenêtre 15–45 min';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
     setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0 / 5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
+    if(analysisLink){analysisLink.href='/live-ia';analysisLink.setAttribute('aria-label','Ouvrir Live IA');}
     var emptyVotes=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var ev=0;ev<emptyVotes.length;ev++){emptyVotes[ev].classList.remove('on','over','under');emptyVotes[ev].removeAttribute('title');emptyVotes[ev].removeAttribute('aria-label');var emptyMark=emptyVotes[ev].querySelector('i');if(emptyMark)emptyMark.textContent=String(ev+1);}
     var emptyProgress=document.getElementById('hero-analysis-progress');if(emptyProgress)emptyProgress.style.width='0%';
     setHeroText('hero-ai-title','Les 5 IA attendent le prochain match');setHeroText('hero-consensus-label','Aucun signal affiché sans match réel');
@@ -1752,11 +1764,21 @@ function renderHeroLive(m){
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
   var hs=liveHomeScore(m),as=liveAwayScore(m);setHeroText('hero-live-score',(hs===''?'—':hs)+' - '+(as===''?'—':as));
   setHeroText('hero-live-period',String(m.status||m.elapsed||m.period||'1ère période'));
+  var fixtureId=m.fixtureId||m.fixture_id||m.id||m.sourceId||'';
+  if(analysisLink){analysisLink.href='/live-ia?fixture='+encodeURIComponent(fixtureId);analysisLink.setAttribute('aria-label','Ouvrir '+String(m.home||'ce match')+' contre '+String(m.away||'')+' dans Live IA');}
   var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
   setHeroText('hero-consensus-current',votes+' / 5');
-  setHeroText('hero-ai-title',analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'En attente d’analyse');
-  setHeroText('hero-consensus-label',analysisClosed?'Votes antérieurs · aucune nouvelle sélection':votes?(voteState.locked?('Direction ? · '+voteState.consensusCount+'/5 d’accord · forfait actif requis'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):analysisClosed?'Aucun vote enregistré':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
+  setHeroText('hero-ai-title',analysisClosed&&votes?'Vote enregistré en première mi-temps':analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
+  var paidExplanation='';
+  if(votes&&!voteState.locked){
+    paidExplanation='Choix IA : '+(consensus.direction==='over'?'Over':'Under')+' 2,5 · '+consensus.count+'/5 votes';
+    if(consensus.averageConfidence!=null)paidExplanation+=' · confiance moyenne '+consensus.averageConfidence+'/100';
+    if(voteState.snapshotMinute!=null)paidExplanation+=' · enregistré à '+voteState.snapshotMinute+"'";
+    paidExplanation+=heroStandingText(m);
+    paidExplanation+=heroH2hText(m);
+  }
+  setHeroText('hero-consensus-label',votes?(voteState.locked?(voteState.consensusCount+'/5 IA alignées · détails réservés à Premium'):paidExplanation):analysisClosed?'Aucun vote enregistré':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
   if(!votes&&!analysisClosed)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
   for(var i=0;i<voteEls.length;i++){
@@ -1792,7 +1814,7 @@ function heroAuthHeaders(){
   var headers={};
   try{
     var email=localStorage.getItem('tlm_email')||'';
-    var token=localStorage.getItem('tlm_session_token')||(email?localStorage.getItem('tlm_session'):'')||'';
+    var token=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||(email?localStorage.getItem('tlm_session'):'')||'';
     if(token){headers.Authorization='Bearer '+token;if(email)headers['X-TLM-Email']=email;}
   }catch(e){}
   return headers;
@@ -1806,7 +1828,7 @@ async function loadHeroLive(){
     if(request!==tlmHeroRequest||credentials!==JSON.stringify(heroAuthHeaders()))return;
     // Rank the complete live list on every refresh. This selection never starts
     // or stops an analysis; the independent observer continues scanning all matches.
-    var matches=(d.offline||d.cached?[]:(d.matches||[])).filter(tlmMatchAllowed).filter(TLMMatchLifecycle.canFeature).sort(compareHeroMatches);
+    var matches=(d.offline||d.cached?[]:(d.matches||[])).filter(tlmHomepageAnalyzedMatch).filter(TLMMatchLifecycle.canTrack).sort(compareHeroMatches);
     tlmHasLiveMatch=!!matches[0];
     renderHeroLive(matches[0]||null);
   }catch(e){if(request===tlmHeroRequest){tlmHasLiveMatch=false;renderHeroLive(null);}}
@@ -1815,7 +1837,7 @@ window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive()
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v15-data-repair-20260905').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v17-home-consensus-20260912').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -1954,12 +1976,6 @@ async function loadDailyAccordion(){
         +   'dès la reprise.</div></div></div>';
     }
     if(!rows.length && !banniere){ box.innerHTML='<div class="empty-note">Aucun verdict résolu pour l\'instant.</div>'; return; }
-    var TIER_META={
-      standard:{ico:'🥇',nom:'Telegram Standard', court:'Standard', c:'var(--standard)'},
-      premium :{ico:'🥈',nom:'Telegram Premium',  court:'Premium',  c:'var(--premium)'},
-      elite   :{ico:'🥉',nom:'Telegram Premium',court:'Premium',  c:'var(--premium)'}
-    };
-    var TIER_ORDRE=['standard','premium','elite'];
     box.innerHTML=banniere+order.map(function(day,idx){
       var list=byDay[day]||[];
 
@@ -1989,15 +2005,12 @@ async function loadDailyAccordion(){
         // pretendant montrer la diffusion trompait le visiteur.
         // Cumulatif : un signal parti sur Standard part aussi sur Premium et Elite.
         var envoye=a.sent||{};
-        var canaux=TIER_ORDRE.filter(function(t){ return envoye[t]; });
         var tierBadge='';
-        if(canaux.length){
-          tierBadge='<span class="tier-recu">Reçu par '
-            + canaux.map(function(t){
-                var m=TIER_META[t];
-                return '<span class="tier-chip" style="color:'+m.c+'">'+m.ico+' '+m.nom+'</span>';
-              }).join('')
-            + '</span>';
+        if(a.telegram_delivery_proven){
+          var destination=(envoye.premium||envoye.standard||envoye.elite)?'🟣 Telegram Premium':'🟢 Telegram Gratuit';
+          tierBadge='<span class="tier-recu">Livraison prouvée <span class="tier-chip" style="color:var(--premium)">'+destination+'</span></span>';
+        } else if(a.history_mode==='legacy'){
+          tierBadge='<span class="tier-recu tier-none">Historique interne — livraison Telegram non prouvée</span>';
         } else {
           // Non envoye : on donne le MOTIF plutot qu'un constat sec. Le visiteur
           // comprend que la selection est filtree, pas que le systeme a rate
@@ -2135,14 +2148,14 @@ async function loadPick(){
 }
 loadPick();
 
-/* ══ STANDARD DE LA VEILLE ══ */
-async function loadStandardYesterday(){
+/* ══ PREMIUM PROUVÉ DE LA VEILLE ══ */
+async function loadPremiumYesterday(){
   var tbody=document.getElementById('std-body');
   try{
-    var r=await fetch('/api/standard-yesterday');
+    var r=await fetch('/api/premium-yesterday');
     var d=await r.json();
     if(!d.ok||!d.selections||!d.selections.length){
-      tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Standard hier.<br>Aucun match n\'a atteint le niveau de confiance requis.</td></tr>';
+      tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Premium prouvée hier.<br>Aucun match livré n\'a encore de résultat fiable.</td></tr>';
       return;
     }
     tbody.innerHTML=d.selections.map(function(s){
@@ -2151,10 +2164,10 @@ async function loadStandardYesterday(){
         '<td class="'+(win?'tag-win':'tag-loss')+'">'+(win?'✓':'✗')+'</td></tr>';
     }).join('');
   } catch(e){
-    tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Standard hier.</td></tr>';
+    tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Premium prouvée hier.</td></tr>';
   }
 }
-loadStandardYesterday();
+loadPremiumYesterday();
 
 /* ══ FAQ ══ */
 </script>

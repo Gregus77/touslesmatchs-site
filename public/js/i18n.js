@@ -47,10 +47,10 @@ const i18n = (function () {
       plan_std: "STANDARD", plan_std_1: "Jusqu'à 3 sélections/jour",
       plan_std_2: "Minimum 3 IA sur 5 d'accord sur Over/Under 2,5",
       plan_prem: "PREMIUM", plan_prem_1: "Jusqu'à 10 sélections/jour",
-      plan_prem_2: "Minimum 3 IA sur 5 d'accord · inclut Standard",
+      plan_prem_2: "Minimum 3 IA sur 5 d'accord · tous les signaux admissibles",
       plan_nocommit: "Sans engagement", plan_popular: "Le plus choisi",
       plan_month: "/mois",
-      plan_btn_std: "Choisir Standard", plan_btn_prem: "Choisir Premium",
+      plan_btn_std: "Choisir Premium", plan_btn_prem: "Choisir Premium",
       plans_note: "Les volumes indiqués correspondent à des maximums. Le nombre réel de sélections dépend des matchs atteignant les critères du Concile.<br>Le score de confiance est un indicateur interne d'analyse. Le résultat d'un événement sportif reste incertain.",
 
       method_title: "Comment ça fonctionne ?", method_see: "Voir la méthode",
@@ -62,7 +62,7 @@ const i18n = (function () {
       method_3d: "Publié seulement si la convergence dépasse le seuil.",
 
       recent_title: "Résultats récents", see_all: "Voir tout →",
-      std_yesterday: "Ce que Standard a reçu hier",
+      std_yesterday: "Ce que Premium a reçu hier",
       th_match: "Match", th_sel: "Sél.", th_res: "Rés.", th_odd: "Cote",
 
       partners_title: "Nos partenaires bookmakers agréés ANJ",
@@ -109,10 +109,10 @@ const i18n = (function () {
       plan_std: "STANDARD", plan_std_1: "Up to 3 selections/day",
       plan_std_2: "At least 3 of 5 AIs agree on Over/Under 2.5",
       plan_prem: "PREMIUM", plan_prem_1: "Up to 10 selections/day",
-      plan_prem_2: "At least 3 of 5 AIs agree · includes Standard",
+      plan_prem_2: "At least 3 of 5 AIs agree · all eligible signals",
       plan_nocommit: "No commitment", plan_popular: "Most chosen",
       plan_month: "/month",
-      plan_btn_std: "Choose Standard", plan_btn_prem: "Choose Premium",
+      plan_btn_std: "Choose Premium", plan_btn_prem: "Choose Premium",
       plans_note: "The volumes shown are maximums. The actual number of selections depends on how many matches meet the Council's criteria.<br>The confidence score is an internal analysis indicator. The outcome of a sporting event remains uncertain.",
 
       method_title: "How does it work?", method_see: "See the method",
@@ -124,7 +124,7 @@ const i18n = (function () {
       method_3d: "Published only if agreement exceeds the threshold.",
 
       recent_title: "Recent results", see_all: "See all →",
-      std_yesterday: "What Standard received yesterday",
+      std_yesterday: "What Premium received yesterday",
       th_match: "Match", th_sel: "Sel.", th_res: "Res.", th_odd: "Odds",
 
       partners_title: "Our ANJ-licensed bookmaker partners",
@@ -171,10 +171,10 @@ const i18n = (function () {
       plan_std: "STANDARD", plan_std_1: "Hasta 3 selecciones/día",
       plan_std_2: "Mínimo 3 de 5 IA de acuerdo en Más/Menos de 2,5",
       plan_prem: "PREMIUM", plan_prem_1: "Hasta 10 selecciones/día",
-      plan_prem_2: "Mínimo 3 de 5 IA de acuerdo · incluye Standard",
+      plan_prem_2: "Mínimo 3 de 5 IA de acuerdo · todas las señales admisibles",
       plan_nocommit: "Sin compromiso", plan_popular: "El más elegido",
       plan_month: "/mes",
-      plan_btn_std: "Elegir Standard", plan_btn_prem: "Elegir Premium",
+      plan_btn_std: "Elegir Premium", plan_btn_prem: "Elegir Premium",
       plans_note: "Los volúmenes indicados son máximos. El número real de selecciones depende de los partidos que cumplan los criterios del Concilio.<br>La puntuación de confianza es un indicador interno de análisis. El resultado de un evento deportivo sigue siendo incierto.",
 
       method_title: "¿Cómo funciona?", method_see: "Ver el método",
@@ -186,7 +186,7 @@ const i18n = (function () {
       method_3d: "Se publica solo si la convergencia supera el umbral.",
 
       recent_title: "Resultados recientes", see_all: "Ver todo →",
-      std_yesterday: "Lo que recibió Standard ayer",
+      std_yesterday: "Lo que recibió Premium ayer",
       th_match: "Partido", th_sel: "Sel.", th_res: "Res.", th_odd: "Cuota",
 
       partners_title: "Nuestros socios operadores con licencia ANJ",
@@ -233,10 +233,10 @@ const i18n = (function () {
       plan_std: "STANDARD", plan_std_1: "Até 3 seleções/dia",
       plan_std_2: "Mínimo de 3 de 5 IAs de acordo em Mais/Menos de 2,5",
       plan_prem: "PREMIUM", plan_prem_1: "Até 10 seleções/dia",
-      plan_prem_2: "Mínimo de 3 de 5 IAs de acordo · inclui Standard",
+      plan_prem_2: "Mínimo de 3 de 5 IAs de acordo · todos os sinais elegíveis",
       plan_nocommit: "Sem compromisso", plan_popular: "O mais escolhido",
       plan_month: "/mês",
-      plan_btn_std: "Escolher Standard", plan_btn_prem: "Escolher Premium",
+      plan_btn_std: "Escolher Premium", plan_btn_prem: "Escolher Premium",
       plans_note: "Os volumes indicados são máximos. O número real de seleções depende dos jogos que cumprem os critérios do Concílio.<br>A pontuação de confiança é um indicador interno de análise. O resultado de um evento desportivo permanece incerto.",
 
       method_title: "Como funciona?", method_see: "Ver o método",
@@ -248,7 +248,7 @@ const i18n = (function () {
       method_3d: "Publicado apenas se a convergência ultrapassar o limiar.",
 
       recent_title: "Resultados recentes", see_all: "Ver tudo →",
-      std_yesterday: "O que o Standard recebeu ontem",
+      std_yesterday: "O que o Premium recebeu ontem",
       th_match: "Jogo", th_sel: "Sel.", th_res: "Res.", th_odd: "Odd",
 
       partners_title: "Os nossos parceiros licenciados pela ANJ",
@@ -295,10 +295,10 @@ const i18n = (function () {
       plan_std: "STANDARD", plan_std_1: "До 3 отборов в день",
       plan_std_2: "Минимум 3 из 5 ИИ согласны по тоталу больше/меньше 2,5",
       plan_prem: "PREMIUM", plan_prem_1: "До 10 отборов в день",
-      plan_prem_2: "Минимум 3 из 5 ИИ согласны · включает Standard",
+      plan_prem_2: "Минимум 3 из 5 ИИ согласны · все допустимые сигналы",
       plan_nocommit: "Без обязательств", plan_popular: "Выбирают чаще всего",
       plan_month: "/месяц",
-      plan_btn_std: "Выбрать Standard", plan_btn_prem: "Выбрать Premium",
+      plan_btn_std: "Выбрать Premium", plan_btn_prem: "Выбрать Premium",
       plans_note: "Указанные объёмы являются максимальными. Фактическое количество отборов зависит от числа матчей, отвечающих критериям Совета.<br>Уровень уверенности — это внутренний аналитический показатель. Исход спортивного события остаётся неопределённым.",
 
       method_title: "Как это работает?", method_see: "Смотреть метод",
@@ -310,7 +310,7 @@ const i18n = (function () {
       method_3d: "Публикуется, только если согласованность превышает порог.",
 
       recent_title: "Последние результаты", see_all: "Показать всё →",
-      std_yesterday: "Что получил Standard вчера",
+      std_yesterday: "Что получил Premium вчера",
       th_match: "Матч", th_sel: "Выбор", th_res: "Рез.", th_odd: "Коэф.",
 
       partners_title: "Наши партнёры с лицензией ANJ",
@@ -357,10 +357,10 @@ const i18n = (function () {
       plan_std: "STANDARD", plan_std_1: "每天最多 3 条分析",
       plan_std_2: "至少 5 个 AI 中有 3 个对大/小 2.5 球达成一致",
       plan_prem: "PREMIUM", plan_prem_1: "每天最多 10 条分析",
-      plan_prem_2: "至少 5 个 AI 中有 3 个达成一致 · 包含 Standard",
+      plan_prem_2: "至少 5 个 AI 中有 3 个达成一致 · 所有符合条件的信号",
       plan_nocommit: "无需长期承诺", plan_popular: "最多人选择",
       plan_month: "/月",
-      plan_btn_std: "选择 Standard", plan_btn_prem: "选择 Premium",
+      plan_btn_std: "选择 Premium", plan_btn_prem: "选择 Premium",
       plans_note: "所示数量为上限。实际分析数量取决于有多少场比赛达到评议会的标准。<br>置信度为内部分析指标。体育赛事的结果始终存在不确定性。",
 
       method_title: "运作方式", method_see: "查看方法",
@@ -372,7 +372,7 @@ const i18n = (function () {
       method_3d: "只有共识超过阈值时才会发布。",
 
       recent_title: "近期结果", see_all: "查看全部 →",
-      std_yesterday: "Standard 昨日收到的内容",
+      std_yesterday: "Premium 昨日收到的内容",
       th_match: "比赛", th_sel: "分析", th_res: "结果", th_odd: "赔率",
 
       partners_title: "我们持有 ANJ 牌照的合作方",

@@ -338,13 +338,13 @@ function loadDashboard() {
     document.getElementById('dash-email').textContent = d.email;
     var plan = d.plan || 'free';
     var status = d.status || 'free';
-    var isElite = plan === 'elite' || plan === 'vip';
+    var isLegacyPaid = plan === 'standard' || plan === 'elite' || plan === 'vip';
     var isPaidActive = plan !== 'free' && status === 'active';
 
     var planEl = document.getElementById('dash-plan');
-    var planLabel = isElite ? 'Premium' : plan === 'premium' ? 'Premium' : plan === 'standard' ? 'Standard' : 'Gratuit';
+    var planLabel = plan === 'free' ? 'Gratuit' : 'Premium';
     planEl.textContent = planLabel;
-    planEl.className = 'dash-plan ' + (isElite ? 'premium' : plan === 'premium' ? 'premium' : 'standard');
+    planEl.className = 'dash-plan ' + (isPaidActive ? 'premium' : 'standard');
 
     var statusEl = document.getElementById('dash-status');
     if (STATUS_LABELS[status]) {
@@ -373,11 +373,8 @@ function loadDashboard() {
 
     if (plan === 'free') {
       document.getElementById('upgrade-box').style.display = 'block';
-      document.getElementById('upgrade-text').textContent = 'Passe Standard dès 4,90€/mois pour débloquer les analyses Live IA.';
-    } else if (plan === 'standard') {
-      document.getElementById('upgrade-box').style.display = 'block';
-      document.getElementById('upgrade-text').textContent = 'Passe Premium pour jusqu’à 10 signaux/jour et une sélection élargie.';
-    } else if (plan === 'premium' || isElite) {
+      document.getElementById('upgrade-text').textContent = 'Passe Premium à 14,90 €/mois pour débloquer les analyses Live IA et tous les signaux admissibles.';
+    } else if (plan === 'premium' || isLegacyPaid) {
       document.getElementById('upgrade-box').style.display = 'none';
     } else {
       document.getElementById('upgrade-box').style.display = 'none';
@@ -470,49 +467,25 @@ function openBillingPortal() {
   });
 }
 
-// Quels paliers un plan débloque : le palier Standard sert de vitrine/preuve
-// et reste visible même sans abonnement (comme sur le reste du site) ;
-// Premium et Elite restent verrouillés tant qu'on n'est pas abonné au moins
-// au palier correspondant.
-function tiersForPlan(plan) {
-  if (plan === 'elite' || plan === 'vip') return { standard: true, premium: true, elite: true };
-  if (plan === 'premium') return { standard: true, premium: true, elite: false };
-  return { standard: true, premium: false, elite: false };
-}
-
-// Affiche les 3 paliers : débloqués selon le plan, verrouillés (floutés + CTA) sinon.
 function renderTierStats(status) {
-  var allowed = tiersForPlan(status);
-  var META = {
-    standard: { label: '🟢 Standard' },
-    premium:  { label: '🟣 Premium' },
-  };
-  var UPSELL = { premium: 'Réservé aux membres Premium' };
+  var unlocked = status !== 'free';
   var container = document.getElementById('tier-cards');
   var note = document.getElementById('tier-note');
   if (!container) return;
   fetch('/api/tier-stats').then(function(r) { return r.json(); }).then(function(d) {
     if (!d || !d.ok || !d.tiers) { container.innerHTML = '<div class="empty-state">Statistiques indisponibles pour le moment.</div>'; return; }
-    var order = ['standard', 'premium'];
-    container.innerHTML = order.map(function(k) {
-      var s = d.tiers[k] || { total: 0, winrate: 0, roi: 0 };
-      var unlocked = allowed[k];
-      var body = '<div class="tc-body">' +
-        '<div class="tc-name">' + META[k].label + '</div>' +
+    var s = d.tiers.premium || { total: 0, winrate: 0, roi: 0 };
+    var body = '<div class="tc-body">' +
+        '<div class="tc-name">🟣 Premium</div>' +
         '<div class="tc-kpis">' +
           '<div class="tc-k"><div class="v" style="color:var(--green)">' + (s.winrate || 0) + '%</div><div class="l">Réussite</div></div>' +
           '<div class="tc-k"><div class="v">' + (s.total || 0) + '</div><div class="l">Analyses</div></div>' +
           '<div class="tc-k"><div class="v" style="color:var(--cyan)">' + ((s.roi >= 0 ? '+' : '') + (s.roi || 0)) + '€</div><div class="l">Profit 10€/pick</div></div>' +
         '</div></div>';
-      var lock = unlocked ? '' :
-        '<div class="tc-lock"><div class="ico">🔒</div><div class="txt">' + (UPSELL[k] || '') + '</div><a href="/#plans">Débloquer</a></div>';
-      return '<div class="tc ' + k + (unlocked ? '' : ' locked') + '">' + body + lock + '</div>';
-    }).join('');
+    var lock = unlocked ? '' : '<div class="tc-lock"><div class="ico">🔒</div><div class="txt">Réservé aux membres Premium</div><a href="/#plans">Débloquer</a></div>';
+    container.innerHTML = '<div class="tc premium' + (unlocked ? '' : ' locked') + '">' + body + lock + '</div>';
     if (note) {
-      if (status === 'elite' || status === 'vip') note.textContent = 'Accès Premium complet.';
-      else if (status === 'premium') note.textContent = 'Tu vois Standard + Premium.';
-      else if (status === 'standard') note.textContent = 'Tu vois Standard. Premium débloque une sélection élargie.';
-      else note.textContent = 'Palier Standard visible en aperçu. Abonne-toi pour débloquer les analyses en direct.';
+      note.textContent = unlocked ? 'Accès Premium complet.' : 'Abonne-toi à Premium pour débloquer les analyses en direct.';
     }
   }).catch(function() { container.innerHTML = '<div class="empty-state">Erreur de chargement des paliers</div>'; });
 }

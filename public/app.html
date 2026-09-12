@@ -613,7 +613,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 
   // â”€â”€ Session (mêmes clés que le site : une seule connexion pour les deux) â”€â”€â”€
   function plan() { try { return localStorage.getItem("tlm_plan") || "free"; } catch (e) { return "free"; } }
-  function token() { try { return localStorage.getItem("tlm_token") || ""; } catch (e) { return ""; } }
+  function token() { try { return localStorage.getItem("tlm_token") || localStorage.getItem("tlm_session_token") || ""; } catch (e) { return ""; } }
   function isPaid() { var p = plan(); return !!p && p !== "free"; }
 
   function renderChip() {
@@ -810,7 +810,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   }
 
   function goal05MemberRow() {
-    return '<div class="offer-stack" aria-label="Accès membre Over / Under 2,5"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">Over / Under 2,5 — accès membre</div><div class="offer-desc">Sélections exactes et alertes réservées aux abonnés</div></div><div class="offer-price">Dès 4,90€</div></a></div>';
+    return '<div class="offer-stack" aria-label="Accès Premium Over / Under 2,5"><a class="offer-row hot" href="/#plans"><div><div class="offer-name">Over / Under 2,5 — Premium</div><div class="offer-desc">Tous les signaux admissibles et les alertes membres</div></div><div class="offer-price">14,90 €/mois</div></a></div>';
   }
 
   function renderGoal05Pick(signal) {
@@ -827,7 +827,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     box.innerHTML = goal05VerdictCard(locked ? null : signal)
       + goal05MemberRow()
       + (locked
-          ? '<a class="btn btn-g" href="/#plans" style="margin-top:12px">Voir les offres dès 4,90€</a>'
+          ? '<a class="btn btn-g" href="/#plans" style="margin-top:12px">Découvrir Premium — 14,90 €/mois</a>'
           : '<button class="btn btn-o" type="button" onclick="enableSignalAlerts()" style="margin-top:12px">Activer popup + son</button><button class="btn btn-o" type="button" onclick="enablePushNotifications()" style="margin-top:8px">Activer notifications meme app fermee</button>')
       + _statusHtml;
     if (signal && goal05MemberAccess()) showSignalPopup({ home: signal.home || signal.team, away: signal.away || signal.opponent, teamA: { name: signal.home || signal.team }, teamB: { name: signal.away || signal.opponent }, bet: signal.bet || 'Over / Under 2,5', cote: signal.odd, competition: signal.competition || signal.meta });
@@ -889,14 +889,14 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   function appAwayLogo(m){return m&&(m.away_logo||m.awayLogo||m.away_badge||m.strAwayTeamBadge||(m.teamB&&m.teamB.logo))||'';}
   function appHomeScore(m){var v=m&&(m.score_home!=null?m.score_home:m.home_score!=null?m.home_score:m.intHomeScore!=null?m.intHomeScore:m.goals&&(m.goals.home!=null?m.goals.home:null));return v==null?'':v;}
   function appAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
-  function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:over+under,overCount:over,underCount:under,windowStatus:String(raw.window_status||'unknown')};}
+  function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var voted=slots.filter(function(v){return v&&v.status==='voted';}).length,over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:Number(raw.vote_count)||voted,consensusCount:Number(raw.consensus_count)||Math.max(over,under),overCount:over,underCount:under,locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown')};}
   function appVotes(m){return appOu25(m).voteCount;}
   function appMiniVotes(m){
     var state=appOu25(m);
     var dots=state.slots.map(function(slot,i){
-      var dir=slot&&slot.status==='voted'&&(slot.direction==='over'||slot.direction==='under')?slot.direction:'';
-      var label=dir==='over'?'O':dir==='under'?'U':String(i+1);
-      var detail=dir?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');
+      var voted=slot&&slot.status==='voted',dir=voted&&(slot.direction==='over'||slot.direction==='under')?slot.direction:'';
+      var label=voted?(state.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);
+      var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : en attente');
       return '<span class="tlm-app-live-mini-vote '+dir+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
     return '<span class="tlm-app-live-vote-summary">'+(TLMMatchLifecycle.phase(m)==='closed'?'Fenêtre terminée · votes antérieurs ':'')+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
@@ -919,22 +919,28 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     var exclusionReason=String(m.analysis_exclusion_reason||'');
     $("app-ai-total").textContent=votes+' / 5';
     $("app-ai-label").textContent=analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':exclusionReason?'Analyse non lancée':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
-    $("app-ai-result").textContent=analysisClosed?'Votes antérieurs · aucune nouvelle sélection':votes?(voteState.overCount+' Over · '+voteState.underCount+' Under'):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
-    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted'&&(dir==='over'||dir==='under');el.classList.toggle('on',voted);el.classList.toggle('over',dir==='over');el.classList.toggle('under',dir==='under');el.textContent=dir==='over'?'O':dir==='under'?'U':String(i+1);var detail=voted?((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':'')):('IA '+(i+1)+' : en attente');el.title=detail;el.setAttribute('aria-label',detail);});
+    $("app-ai-result").textContent=analysisClosed?'Votes antérieurs · aucune nouvelle sélection':votes?(voteState.locked?(voteState.consensusCount+'/5 IA alignées · détails Premium'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
+    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted';el.classList.toggle('on',voted);el.classList.toggle('over',voted&&!voteState.locked&&dir==='over');el.classList.toggle('under',voted&&!voteState.locked&&dir==='under');el.textContent=voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);var detail=voted?(voteState.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : en attente');el.title=detail;el.setAttribute('aria-label',detail);});
   }
   function loadLive() {
-    get("/api/live-matches?t="+Date.now()).then(flagOffline).then(function (d) {
+    get("/api/homepage-live?t="+Date.now()).then(flagOffline).then(function (d) {
       var box = $("live-box");
-      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(TLMMatchLifecycle.canTrack);
+      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(function(m){return m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true;}).filter(TLMMatchLifecycle.canTrack);
       list.sort(function(a,b){
+        var ae=a.selection_evidence||{},be=b.selection_evidence||{};
+        if((ae.top5_bottom5===true)!==(be.top5_bottom5===true))return be.top5_bottom5===true?1:-1;
+        var av=appOu25(a),bv=appOu25(b);
+        if(av.consensusCount!==bv.consensusCount)return bv.consensusCount-av.consensusCount;
+        if(av.voteCount!==bv.voteCount)return bv.voteCount-av.voteCount;
+        var ag=Number(ae.rank_gap),bg=Number(be.rank_gap);
+        if(isFinite(ag)&&isFinite(bg)&&ag!==bg)return bg-ag;
         function quality(m){
           return (appHomeLogo(m)?2:0)+(appAwayLogo(m)?2:0)+(appHomeScore(m)!==''?2:0)+(appAwayScore(m)!==''?2:0);
         }
         function rank(m){
           var minute=Number(String(m&&m.minute||'').replace(/[^0-9.]/g,''));
           if(!isFinite(minute)) minute=999;
-          // Priorité absolue : fenêtre d'analyse 15'-45'.
-          // Le plus récent à être entré dans la fenêtre passe devant.
+          // À qualité de consensus égale, la fenêtre active reste prioritaire.
           if(minute>=15&&minute<=45) return 100000-((minute-15)*100)+quality(m);
           // Ensuite ceux qui approchent de 15'.
           if(minute>0&&minute<15) return 50000+(minute*100)+quality(m);
@@ -944,8 +950,8 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
         }
         return rank(b)-rank(a);
       });
-      renderAppHero(list.filter(TLMMatchLifecycle.canFeature)[0]||null);
-      if (!list.length) {box.innerHTML = '<div class="card"><div class="state">Aucun match en direct pour le moment.</div></div>';return;}
+      renderAppHero(list[0]||null);
+      if (!list.length) {box.innerHTML = '<div class="card"><div class="state">Aucun match de nos championnats n’a actuellement de vote IA vérifié.</div></div>';return;}
       box.innerHTML='<div class="tlm-app-live-list">'+list.slice(0,25).map(function(m){
         var rhs=appHomeScore(m),ras=appAwayScore(m),sh=rhs===''?'—':rhs,sa=ras===''?'—':ras,country=appCountry(m),flag=appFlagUrl(country);
         return '<a class="tlm-app-live-row" href="/live-ia?fixture='+encodeURIComponent(m.fixtureId||m.id||m.sourceId||'')+'"><span class="tlm-app-live-logos"><img src="'+esc(appHomeLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.home||'équipe')+'"><img src="'+esc(appAwayLogo(m)||'/logo192.png')+'" alt="Logo '+esc(m.away||'équipe')+'"></span><span><strong>'+esc(m.home)+' — '+esc(m.away)+'</strong><span class="tlm-app-live-meta">'+(flag?'<img src="'+flag+'" alt="Drapeau '+esc(country)+'">':'')+esc(country||m.competition||'Football')+'</span>'+appMiniVotes(m)+'</span><span class="tlm-app-live-result"><b>'+esc(sh)+'-'+esc(sa)+'</b><span>'+(m.minute?esc(m.minute)+"'":'Live')+'</span></span></a>';
@@ -1071,7 +1077,7 @@ $("perf-kpis").innerHTML =
       + '<label class="app-check"><input id="lead-adult" type="checkbox">Je confirme avoir au moins 18 ans et accepter de recevoir les emails TousLesMatchs.</label>'
       + '<button class="btn btn-g" id="btn-lead">Créer mon compte gratuit</button>'
       + '<div class="state" id="lead-msg" style="padding:9px 0 0"></div>'
-      + '<div class="app-auth-note">Les sélections Over / Under 2,5 et les alertes membres sont disponibles à partir de 4,90€/mois.</div></div></div>';
+      + '<div class="app-auth-note">Les sélections Over / Under 2,5 et les alertes membres sont disponibles avec Premium à 14,90 €/mois.</div></div></div>';
 
     $("btn-in").addEventListener("click", function () {
       var email = $("in-mail").value.trim().toLowerCase(), code = $("in-code").value.trim();

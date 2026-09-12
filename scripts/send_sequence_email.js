@@ -61,12 +61,12 @@ const sequence = [
     key: "j5",
     minDays: 5,
     sentField: "email_j5_sent_at",
-    subject: "Premium lancement : 4,90€/mois",
+    subject: "Premium : 14,90 €/mois",
     title: "Pourquoi passer Premium maintenant",
     body: `
       <p>Le Free reçoit uniquement le pick gratuit quand les critères sont remplis.</p>
       <p>Premium surveille plus de matchs, plus de sports et peut envoyer jusqu’à 3 opportunités prioritaires quand elles existent.</p>
-      <p>L’offre de lancement est actuellement à 4,90€/mois.</p>
+      <p>Premium est proposé à 14,90 €/mois, sans engagement.</p>
     `
   },
   {
@@ -78,7 +78,7 @@ const sequence = [
     body: `
       <p>Si vous voulez recevoir plus d’opportunités que le canal Free, Premium est là pour ça.</p>
       <p>Aucun gain n’est garanti, mais vous recevez les analyses les plus suivies par Hermès.</p>
-      <p>Vous pouvez commencer avec l’offre de lancement à 4,90€/mois.</p>
+      <p>Vous pouvez rejoindre Premium à 14,90 €/mois.</p>
     `
   }
 ];
@@ -96,7 +96,7 @@ function emailPayload(email, step) {
 
       <p>
         <a href="${PREMIUM_URL}" style="display:inline-block;background:#d4af37;color:#111;padding:12px 18px;text-decoration:none;border-radius:6px;font-weight:bold">
-          Découvrir Premium à 4,90€
+          Découvrir Premium à 14,90 €
         </a>
       </p>
 
