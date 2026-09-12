@@ -99,6 +99,25 @@
     ["Résultats Over / Under 2,5","Over / Under 2.5 results","Resultados Más / Menos 2,5","Resultados Mais / Menos 2,5","Результаты тотала больше / меньше 2,5","大 / 小 2.5 球结果"],
     ["Historique des analyses. Les envois Telegram vérifiés sont distingués de l’ancien système.","Analysis history. Verified Telegram deliveries are separated from the former system.","Historial de análisis. Los envíos de Telegram verificados se distinguen del sistema anterior.","Histórico de análises. Os envios Telegram verificados são separados do sistema anterior.","История анализов. Подтверждённые отправки в Telegram отделены от прежней системы.","分析历史。已验证的 Telegram 发送记录与旧系统分开显示。"],
     ["Connecte-toi avec l'email et le code reçus après paiement.","Log in with the email and code received after payment.","Inicia sesión con el email y el código recibidos tras el pago.","Entra com o email e o código recebidos após o pagamento.","Войдите с email и кодом, полученными после оплаты.","使用付款后收到的邮箱和访问码登录。"],
+    ["Connecte-toi avec ton email et le code d’accès gratuit reçu.","Log in with your email and the free access code you received.","Inicia sesión con tu email y el código de acceso gratuito recibido.","Entra com o teu email e o código de acesso gratuito recebido.","Войдите с email и полученным бесплатным кодом доступа.","使用邮箱和收到的免费访问码登录。"],
+    ["TousLesMatchs — Analyses football IA","TousLesMatchs — AI football analysis","TousLesMatchs — Análisis de fútbol con IA","TousLesMatchs — Análises de futebol com IA","TousLesMatchs — Футбольная аналитика ИИ","TousLesMatchs — AI 足球分析"],
+    ["Actualisation automatique","Automatic refresh","Actualización automática","Atualização automática","Автоматическое обновление","自动刷新"],
+    ["Les 5 IA attendent le prochain match","The 5 AIs are waiting for the next match","Las 5 IA esperan el próximo partido","As 5 IA aguardam o próximo jogo","Пять ИИ ожидают следующий матч","五个 AI 正在等待下一场比赛"],
+    ["Aucun signal affiché sans match réel","No signal shown without a real match","No se muestra ninguna señal sin un partido real","Nenhum sinal é exibido sem um jogo real","Без реального матча сигнал не отображается","没有真实比赛时不显示信号"],
+    ["Nouveau sur TousLesMatchs ?","New to TousLesMatchs?","¿Nuevo en TousLesMatchs?","Novo no TousLesMatchs?","Впервые в TousLesMatchs?","初次使用 TousLesMatchs？"],
+    ["Je confirme avoir au moins 18 ans.","I confirm that I am at least 18 years old.","Confirmo que tengo al menos 18 años.","Confirmo que tenho pelo menos 18 anos.","Я подтверждаю, что мне исполнилось 18 лет.","我确认已年满 18 岁。"],
+    ["Déjà inscrit ?","Already registered?","¿Ya te has registrado?","Já te registaste?","Уже зарегистрированы?","已经注册？"],
+    ["Retrouve ton accès gratuit","Restore your free access","Recupera tu acceso gratuito","Recupera o teu acesso gratuito","Восстановите бесплатный доступ","恢复免费访问"],
+    ["Entre ton email et le code reçu. L’app gardera ensuite ta session et tes préférences.","Enter your email and the code you received. The app will keep your session and preferences.","Introduce tu email y el código recibido. La app conservará tu sesión y tus preferencias.","Introduz o teu email e o código recebido. A aplicação guardará a tua sessão e preferências.","Введите email и полученный код. Приложение сохранит вашу сессию и настройки.","输入邮箱和收到的代码。应用会保存您的会话和偏好。"],
+    ["Toutes les analyses validées sont gratuites pendant la phase de lancement.","All validated analyses are free during the launch phase.","Todos los análisis validados son gratuitos durante la fase de lanzamiento.","Todas as análises validadas são gratuitas durante a fase de lançamento.","Все подтверждённые анализы бесплатны на этапе запуска.","发布初期所有已验证分析均免费。"],
+    ["Tes préférences sont enregistrées sur cette application. Les analyses sont gratuites pendant la phase de lancement.","Your preferences are saved in this app. Analyses are free during the launch phase.","Tus preferencias se guardan en esta aplicación. Los análisis son gratuitos durante la fase de lanzamiento.","As tuas preferências ficam guardadas nesta aplicação. As análises são gratuitas durante a fase de lançamento.","Ваши настройки сохранены в приложении. Анализы бесплатны на этапе запуска.","您的偏好会保存在应用中。发布初期分析免费。"],
+    ["Analyses terminées","Completed analyses","Análisis finalizados","Análises concluídas","Завершённые анализы","已完成分析"],
+    ["Taux de réussite O/U 2,5","O/U 2.5 success rate","Tasa de acierto M/M 2,5","Taxa de acerto M/M 2,5","Точность тотала 2,5","大/小 2.5 球成功率"],
+    ["Analyses correctes","Correct analyses","Análisis correctos","Análises corretas","Верные анализы","正确分析"],
+    ["Analyses incorrectes","Incorrect analyses","Análisis incorrectos","Análises incorretas","Ошибочные анализы","错误分析"],
+    ["TENDANCE FORTE","STRONG TREND","TENDENCIA FUERTE","TENDÊNCIA FORTE","СИЛЬНЫЙ ТРЕНД","强趋势"],
+    ["AUCUNE TENDANCE","NO TREND","SIN TENDENCIA","SEM TENDÊNCIA","НЕТ ТРЕНДА","无趋势"],
+    ["Analyse statistique +0,5 en direct","Live +0.5 statistical analysis","Análisis estadístico +0,5 en directo","Análise estatística +0,5 ao vivo","Статистический анализ +0,5 в эфире","实时 +0.5 统计分析"],
     ["🟢 Signal prêt","🟢 Signal ready","🟢 Señal lista","🟢 Sinal pronto","🟢 Сигнал готов","🟢 信号已就绪"],
     ["Signal disponible","Signal available","Señal disponible","Sinal disponível","Сигнал доступен","信号可用"],
     ["Une sélection validée vient d’être détectée.","A validated selection has just been detected.","Se acaba de detectar una selección validada.","Foi detetada uma seleção validada.","Обнаружен подтверждённый выбор.","刚刚检测到一条已验证推荐。"],
@@ -375,6 +394,17 @@
     ["Ancien système","Former system","Sistema anterior","Sistema anterior","Старая система","旧系统"],
     ["Livraison non prouvée","Delivery unproven","Entrega no probada","Envio não comprovado","Отправка не подтверждена","发送未证实"],
     ["Déjà abonné ?","Already subscribed?","¿Ya estás suscrito?","Já é assinante?","Уже есть подписка?","已经订阅？"],
+    ["Me connecter","Log in","Iniciar sesión","Entrar","Войти","登录"],
+    ["Email de ton abonnement","Your subscription email","Email de tu suscripción","Email da sua assinatura","Эл. почта подписки","订阅邮箱"],
+    ["Code d’accès","Access code","Código de acceso","Código de acesso","Код доступа","访问码"],
+    ["Ton email","Your email","Tu email","O seu email","Ваша эл. почта","您的邮箱"],
+    ["Origine non autorisée.","Unauthorised origin.","Origen no autorizado.","Origem não autorizada.","Недопустимый источник.","来源未获授权。"],
+    ["Connectez-vous avant d'activer les notifications.","Log in before enabling notifications.","Inicia sesión antes de activar las notificaciones.","Entre antes de ativar as notificações.","Войдите перед включением уведомлений.","启用通知前请先登录。"],
+    ["Permission de notification refusée.","Notification permission denied.","Permiso de notificación denegado.","Permissão de notificações recusada.","Разрешение на уведомления отклонено.","通知权限被拒绝。"],
+    ["Impossible d'obtenir le jeton Firebase.","Unable to obtain the Firebase token.","No se pudo obtener el token de Firebase.","Não foi possível obter o token Firebase.","Не удалось получить токен Firebase.","无法获取 Firebase 令牌。"],
+    ["Notifications activées, même application fermée.","Notifications enabled, even when the app is closed.","Notificaciones activadas, incluso con la aplicación cerrada.","Notificações ativadas, mesmo com a aplicação fechada.","Уведомления включены, даже когда приложение закрыто.","通知已启用，应用关闭时也会接收。"],
+    ["Session ou abonnement non valide.","Invalid session or subscription.","Sesión o suscripción no válida.","Sessão ou assinatura inválida.","Недействительный сеанс или подписка.","会话或订阅无效。"],
+    ["Connexion Firebase impossible.","Unable to connect to Firebase.","No se pudo conectar con Firebase.","Não foi possível ligar ao Firebase.","Не удалось подключиться к Firebase.","无法连接 Firebase。"],
     ["Aucun résultat diffusé enregistré","No delivered result recorded","No hay resultados enviados registrados","Nenhum resultado enviado registado","Нет зарегистрированных отправленных результатов","没有已记录的发送结果"],
     ["/mois","/month","/mes","/mês","/месяц","/月"],
     ["LES JEUX D'ARGENT ET DE HASARD PEUVENT ÊTRE DANGEREUX : pertes d'argent, conflits familiaux, addiction. Conseils sur joueurs-info-service.fr — +33 9 74 75 13 13, без повышенной тарификации.","GAMBLING CAN BE DANGEROUS: financial loss, family conflict and addiction. Help: joueurs-info-service.fr · +33 9 74 75 13 13, standard call rates.","LOS JUEGOS DE AZAR PUEDEN SER PELIGROSOS: pérdidas económicas, conflictos familiares y adicción. Ayuda: joueurs-info-service.fr · +33 9 74 75 13 13, llamada sin recargo.","OS JOGOS DE AZAR PODEM SER PERIGOSOS: perdas financeiras, conflitos familiares e dependência. Ajuda: joueurs-info-service.fr · +33 9 74 75 13 13, chamada sem custo adicional.","АЗАРТНЫЕ ИГРЫ МОГУТ БЫТЬ ОПАСНЫ: финансовые потери, семейные конфликты и зависимость. Помощь: joueurs-info-service.fr · +33 9 74 75 13 13, без повышенной тарификации.","博彩可能造成危害：经济损失、家庭矛盾和成瘾。帮助：joueurs-info-service.fr · +33 9 74 75 13 13，按普通通话收费。"],
@@ -469,6 +499,7 @@
   function translateTextNode(node,lang){
     if(!node||node.nodeType!==3||!node.parentElement)return;
     if(/^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|CODE|PRE)$/.test(node.parentElement.tagName))return;
+    if(node.parentElement.closest&&node.parentElement.closest(".brand"))return;
     if(node.parentElement.closest&&node.parentElement.closest("[data-i18n],[data-i18n-html]"))return;
     var raw=originals.has(node)?originals.get(node):node.nodeValue;
     if(!originals.has(node))originals.set(node,raw);
