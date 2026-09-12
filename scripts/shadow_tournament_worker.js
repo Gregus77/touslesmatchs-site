@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-const https = require("https");
+const http = require("http");
+if(require("fs").existsSync("/data/openrouter-background-paused")){console.log("Paid shadow paused for client signals");process.exit(0);}
 const Database = require("better-sqlite3");
 
 const db = new Database(process.env.DB_PATH || "/data/tlm.db");
@@ -110,8 +111,8 @@ function callModel(name, modelId, prompt) {
   });
   const started = Date.now();
   return new Promise(resolve => {
-    const req = https.request({
-      hostname: "openrouter.ai", path: "/api/v1/chat/completions", method: "POST",
+    const req = http.request({
+      hostname: "api", port:3001, path: "/internal/openrouter/v1/chat/completions", method: "POST",
       timeout: 60000,
       headers: {
         Authorization: `Bearer ${apiKey}`,

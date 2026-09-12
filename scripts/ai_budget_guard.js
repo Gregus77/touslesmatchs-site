@@ -28,7 +28,7 @@ const models = require("./ai_models.config");
 
 // ── Configuration (jamais codée en dur — règle anti-gaspillage du prompt maître) ──
 const CFG = {
-  // Marge conservatrice sous le plafond fournisseur de 1 USD/jour. Le journal
+  // Configuration historique; le calendrier Paris autorisé prime en production.
   // comptabilise les appels réellement tentés ; cette valeur n'est qu'une
   // réservation maximale et ne doit jamais être présentée comme une dépense.
   dailyBudgetEur: Number(process.env.OPENROUTER_DAILY_BUDGET_EUR || 0.90),
@@ -107,6 +107,10 @@ function buildRequestKey({ matchKey, modelKey, promptVersion }) {
 }
 
 function _todaySum(db, sql, params = []) {
+  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") {
+    const p=parisBudget();
+    sql=sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
+  }
   const row = db.prepare(sql).get(...params);
   return row ? Object.values(row)[0] || 0 : 0;
 }
@@ -246,6 +250,8 @@ function canProceed(db, { modelKey, matchKey, competition, market, purpose, prom
     return { allowed: false, reason: `[LIMIT] coupe-circuit "${type}" actif aujourd'hui`, requestKey };
   }
 
+  const dailyBudget = process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? parisBudget().limit : CFG.dailyBudgetEur;
+
   // 5) Budget quotidien en euros (estimation)
   const estimatedCost = models.estimateCostEur(
     modelKey,
@@ -256,19 +262,19 @@ function canProceed(db, { modelKey, matchKey, competition, market, purpose, prom
     SELECT COALESCE(SUM(cost_estimate_eur),0) FROM ai_call_budget_log
     WHERE date(created_at) = date('now') AND status = 'ok'
   `);
-  if (spentToday + estimatedCost > CFG.dailyBudgetEur) {
+  if (spentToday + estimatedCost > dailyBudget) {
     if (CFG.hardStop) {
-      tripBreaker(db, "daily_budget", `Budget quotidien ${CFG.dailyBudgetEur}€ atteint (${spentToday.toFixed(4)}€ dépensés). Appels IA suspendus jusqu'à demain.`);
+      tripBreaker(db, "daily_budget", `Budget quotidien ${dailyBudget}€ atteint (${spentToday.toFixed(4)}€ dépensés). Appels IA suspendus jusqu'à demain.`);
       return { allowed: false, reason: "[LIMIT] budget quotidien dépassé", requestKey };
     }
-    console.warn(`[ai-guard] budget dépassé (mode observation, HARD_STOP=false) : ${spentToday.toFixed(4)}€/${CFG.dailyBudgetEur}€`);
+    console.warn(`[ai-guard] budget dépassé (mode observation, HARD_STOP=false) : ${spentToday.toFixed(4)}€/${dailyBudget}€`);
   }
 
   // Hermès et le Concile ont chacun leur enveloppe : l'assistance ne peut plus
   // consommer le budget réservé aux votes sportifs, tout en restant incluse
   // dans le plafond global ci-dessus.
   const purposeLimit = purpose === "hermes" ? CFG.hermesDailyBudgetEur
-    : purpose === "concile" ? CFG.concileDailyBudgetEur : null;
+    : purpose === "concile" ? (process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? dailyBudget : CFG.concileDailyBudgetEur) : null;
   if (purposeLimit !== null) {
     const spentForPurpose = _todaySum(db, `
       SELECT COALESCE(SUM(cost_estimate_eur),0) FROM ai_call_budget_log
@@ -379,20 +385,85 @@ function recordCall(db, {
 
 function getDailyStats(db) {
   ensureSchema(db);
+  const p=parisBudget();
+  const dayFilter=process.env.OPENROUTER_PARIS_SCHEDULE === "1"
+    ? `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`
+    : "date(created_at) = date('now')";
   const totals = db.prepare(`
     SELECT COUNT(*) AS requests, COALESCE(SUM(cost_estimate_eur),0) AS costEur,
            COUNT(DISTINCT match_key) AS matches
-    FROM ai_call_budget_log WHERE date(created_at) = date('now') AND status = 'ok'
+    FROM ai_call_budget_log WHERE ${dayFilter} AND status = 'ok'
   `).get();
   const byModel = db.prepare(`
     SELECT model_key, COUNT(*) AS requests, COALESCE(SUM(cost_estimate_eur),0) AS costEur
-    FROM ai_call_budget_log WHERE date(created_at) = date('now') AND status = 'ok'
+    FROM ai_call_budget_log WHERE ${dayFilter} AND status = 'ok'
     GROUP BY model_key
   `).all();
-  return { ...totals, byModel, budget: CFG };
+  return { ...totals, byModel, budget: process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? {...CFG,dailyBudgetEur:parisBudget().limit,concileDailyBudgetEur:parisBudget().limit,calendar:"Europe/Paris"} : CFG };
 }
 
 module.exports = {
   ensureSchema, canProceed, recordCall, getDailyStats,
   tripBreaker, isBreakerTripped, buildRequestKey, CFG,
 };
+
+// Incident policy: Paris civil days, shared by every OpenRouter HTTP path.
+const {parisParts,parisDayBounds}=require('./telegram_client');
+const fs=require('fs'),crypto=require('crypto');
+function parisBudget(at=Date.now()) {
+ const day=parisParts(at).day,dow=new Date(day+'T12:00:00Z').getUTCDay();
+ return {day,limit:dow===0||dow===6?6:4,...parisDayBounds(day)};
+}
+function backgroundPaused(){return fs.existsSync('/data/openrouter-background-paused');}
+let catalogCache=null,catalogAt=0;
+function readCatalog(){
+ if(catalogCache&&Date.now()-catalogAt<3600000)return Promise.resolve(catalogCache);
+ return new Promise((resolve,reject)=>{
+  const req=https.get('https://openrouter.ai/api/v1/models',{timeout:15000},res=>{let text='';res.on('data',x=>text+=x);res.on('end',()=>{try{const p=JSON.parse(text);if(res.statusCode!==200||!Array.isArray(p.data))throw Error('Pricing unavailable');catalogCache=new Map(p.data.map(x=>[x.id,x.pricing]));catalogAt=Date.now();resolve(catalogCache);}catch(e){reject(e);}});});
+  req.on('error',reject);req.on('timeout',()=>req.destroy(new Error('Pricing timeout')));
+ });
+}
+function globalSchema(db){
+ ensureSchema(db);
+ db.exec(`CREATE TABLE IF NOT EXISTS openrouter_global_calls (
+   id TEXT PRIMARY KEY, day TEXT NOT NULL, model TEXT NOT NULL,
+   reserved_eur REAL NOT NULL, charged_eur REAL, status TEXT NOT NULL,
+   usage_usd REAL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+   CREATE TABLE IF NOT EXISTS openrouter_global_opening(day TEXT PRIMARY KEY,eur REAL NOT NULL,source TEXT NOT NULL);`);
+}
+function reserveGlobal(db,body,reserved,at=Date.now()){
+ globalSchema(db);const p=parisBudget(at);
+ return db.transaction(()=>{
+  const opening=db.prepare('SELECT eur FROM openrouter_global_opening WHERE day=?').get(p.day)?.eur||0;
+  const logged=db.prepare("SELECT coalesce(sum(cost_estimate_eur),0) n FROM ai_call_budget_log WHERE datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?) AND status='ok'").get(p.start,p.end).n;
+  const used=db.prepare('SELECT coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n FROM openrouter_global_calls WHERE day=?').get(p.day).n;
+  // Old pre-call estimates remain untouched. Their sum is a conservative second floor.
+  if(!Number.isFinite(reserved)||reserved<=0||Math.max(logged,opening+used)+reserved>p.limit)return null;
+  const id=crypto.randomUUID();db.prepare("INSERT INTO openrouter_global_calls(id,day,model,reserved_eur,status) VALUES (?,?,?,?,'reserved')").run(id,p.day,body.model,reserved);return id;
+ }).immediate();
+}
+async function withGlobalBudget(db,body,send){
+ // FX is a deliberately conservative accounting rate, not a promised conversion.
+ const fx=Number(process.env.OPENROUTER_USD_PER_EUR||1);
+ if(!(fx>0)||!Number.isInteger(body.max_tokens)||body.max_tokens<=0||body.max_tokens>4096||body.stream||body.n>1||body.tools||body.plugins)
+  return {_httpStatus:429,error:{message:'Global budget: unsupported or unbounded request'}};
+ let pricing;try{pricing=(await readCatalog()).get(body.model);}catch(_){return {_httpStatus:503,error:{message:'Global budget: pricing unavailable'}};}
+ if(!pricing)return {_httpStatus:429,error:{message:'Global budget: model pricing unavailable'}};
+ const input=Buffer.byteLength(JSON.stringify(body.messages||[]))+512;
+ const amount=(input*Number(pricing.prompt||0)+body.max_tokens*Number(pricing.completion||0)+Number(pricing.request||0)+Number(pricing.web_search||0)+0.01)/fx;
+ const id=reserveGlobal(db,body,amount);
+ if(!id)return {_httpStatus:429,error:{message:'Global OpenRouter Paris daily budget reached'}};
+ let response;
+ try {response=await send();}catch(e){db.prepare("UPDATE openrouter_global_calls SET status='uncertain' WHERE id=?").run(id);throw e;}
+ const cost=response?.usage?.cost;
+ const rejected=response?._httpStatus>=400;
+ // Missing usage/timeouts keep their reservation; never silently refund an uncertain call.
+ const charged=typeof cost==='number'&&Number.isFinite(cost)&&cost>=0?cost/fx:rejected?0:null;
+ db.prepare('UPDATE openrouter_global_calls SET status=?,charged_eur=?,usage_usd=? WHERE id=?').run(rejected?'rejected':charged==null?'uncertain':'completed',charged,typeof cost==='number'?cost:null,id);
+ return response;
+}
+module.exports.parisBudget=parisBudget;
+module.exports.backgroundPaused=backgroundPaused;
+module.exports.globalSchema=globalSchema;
+module.exports.reserveGlobal=reserveGlobal;
+module.exports.withGlobalBudget=withGlobalBudget;

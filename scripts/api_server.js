@@ -1850,6 +1850,7 @@ function createInviteLinkForChannel(chatId, labelEmail, label) {
 
 // ── Shadow API helpers ────────────────────────────────────────────────────────
 function callOpenAICompat(prompt, { url, key, model }) {
+  if(new URL(url).hostname==='openrouter.ai')return httpPost(url,{model,messages:[{role:'user',content:prompt}],max_tokens:120},{Authorization:`Bearer ${key}`},15000).then(r=>({ok:!!r.choices?.[0]?.message?.content,text:r.choices?.[0]?.message?.content||'',usageIn:r.usage?.prompt_tokens,usageOut:r.usage?.completion_tokens,error:r.error?.message}));
   return new Promise((resolve) => {
     const body = JSON.stringify({
       model,
@@ -2007,6 +2008,7 @@ function shadowQuotaAllows() {
 }
 
 async function runShadowEvaluation(match) {
+  if(require('./ai_budget_guard').backgroundPaused())return;
   const prompt = buildShadowPrompt(match);
   const matchKey = `${(match.home || "").replace(/\s+/g, "_")}_${(match.away || "").replace(/\s+/g, "_")}_${(match.date || match.utcDate || "").slice(0, 10)}`;
   const activeAgents = SHADOW_AGENTS.filter(a => a.enabled());
@@ -2797,6 +2799,10 @@ async function collectAgentsUntilOu25Quorum(agentPromises, onSettled = null) {
 // toucher aux champs habituels (.choices, .message...) — aucun appelant
 // existant n'est affecte, seuls ceux qui les lisent explicitement en profitent.
 function httpPost(url, body, headers = {}, timeoutMs = 8000) {
+  if(new URL(url).hostname==='openrouter.ai')return require('./ai_budget_guard').withGlobalBudget(db,body,()=>httpPostRaw(url,body,headers,timeoutMs));
+  return httpPostRaw(url,body,headers,timeoutMs);
+}
+function httpPostRaw(url, body, headers = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const payload = JSON.stringify(body);
@@ -2829,6 +2835,7 @@ function httpPost(url, body, headers = {}, timeoutMs = 8000) {
 }
 
 function httpPostStrict(url, body, headers = {}) {
+  if(new URL(url).hostname==='openrouter.ai')return httpPost(url,body,headers).then(r=>{if(r._httpStatus>=300)throw new Error(`HTTP ${r._httpStatus}: OpenRouter request rejected`);return r;});
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const payload = JSON.stringify(body);
@@ -16646,6 +16653,7 @@ const REMPLACANT_INTERDIT = /(:free|:batch|^~|guard|-code|embed|rerank|vision|im
 // un appel direct, ont ete remplaces a tort. Un faux positif coute cher : il
 // evince un bon modele. Un faux negatif ne coute rien : on garde l'existant.
 async function sondeModele(modelId, essais = 2) {
+  if(require('./ai_budget_guard').backgroundPaused())return {ok:false,why:'paid background probes paused'};
   let dernier = "aucune reponse";
   for (let n = 0; n < essais; n++) {
     try {
@@ -18589,3 +18597,10 @@ module.exports.__liveContractTest = {
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
 };
+
+// Python/background callers share the same global ledger; disabled during the incident.
+app.post('/internal/openrouter/v1/chat/completions',async(req,res)=>{
+  if(!OPENROUTER_API_KEY||req.headers.authorization!==`Bearer ${OPENROUTER_API_KEY}`)return res.status(403).json({error:{message:'Forbidden'}});
+  if(require('./ai_budget_guard').backgroundPaused())return res.status(429).json({error:{message:'Paid background calls paused; client signals have priority'}});
+  try {const r=await httpPost('https://openrouter.ai/api/v1/chat/completions',req.body,{Authorization:`Bearer ${OPENROUTER_API_KEY}`},90000);res.status(r._httpStatus||200).json(r);}catch(_){res.status(503).json({error:{message:'Provider unavailable'}});}
+});
