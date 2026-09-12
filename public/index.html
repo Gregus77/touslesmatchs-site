@@ -1667,7 +1667,7 @@ function tlmHeroMinuteOf(m){
   return -1;
 }
 function tlmHomepageAnalyzedMatch(m){
-  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true&&heroOu25(m).voteCount>0);
+  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true);
 }
 function tlmCurrentAnalyzedMatch(m){
   if(!tlmHomepageAnalyzedMatch(m))return false;

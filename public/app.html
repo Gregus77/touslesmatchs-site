@@ -929,7 +929,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   function loadLive() {
     get("/api/homepage-live?t="+Date.now()).then(flagOffline).then(function (d) {
       var box = $("live-box");
-      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(function(m){return m.client_product_eligible===true&&appOu25(m).voteCount>0;}).filter(function(m){return TLMMatchLifecycle.phase(m)!=='finished'&&appMatchTrackable(m);});
+      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(function(m){return m.client_product_eligible===true;}).filter(function(m){return TLMMatchLifecycle.phase(m)!=='finished'&&appMatchTrackable(m);});
       list.sort(function(a,b){
         var ae=a.selection_evidence||{},be=b.selection_evidence||{};
         if((ae.top5_bottom5===true)!==(be.top5_bottom5===true))return be.top5_bottom5===true?1:-1;

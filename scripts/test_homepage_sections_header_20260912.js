@@ -19,13 +19,13 @@ assert(header.includes("body:not(.tlm-page-app)>nav"),'the shared header must pr
 assert(header.includes("['/','Accueil']")&&header.includes("['/live-ia','Live IA']")&&header.includes("['/performances','Résultats']")&&header.includes("['/bankroll','Bankroll']"));
 assert(header.includes("d&&d.locked===false?'Premium':'Gratuit'"),'Premium status must come from server-verified access');
 assert(headerCss.includes('@media(max-width:980px)')&&headerCss.includes('.tlm-gh-language'));
-assert(home.includes("heroOu25(m).voteCount>0"),'real partial ballots remain visible');
+assert(home.includes("m.client_product_eligible===true"),'admissible current matches remain visible before the first vote');
 assert(home.includes("state.locked?'?':direction==='over'?'O':direction==='under'?'U':'?'"),'free/paid round masking');
 assert(home.includes("voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1)"),'hero five rounds');
 assert(home.includes("tlmVoteCirclesHtml(m)"),'analysis list five rounds');
 assert(home.includes("filter(tlmCurrentAnalyzedMatch)"),'finished matches must not stay in the live section');
 assert(!home.includes('TLM-HOME-FIXTURES-UI-20260830'),'the obsolete eager loader must not overwrite analyzed matches');
-assert(app.includes("m.client_product_eligible===true&&appOu25(m).voteCount>0"),'the app must keep genuine partial live trends');
+assert(app.includes("filter(function(m){return m.client_product_eligible===true;})"),'the app must keep admissible matches before the first vote');
 assert(app.includes("appWasSent(a)||!!a.official_signal_snapshot_id"),'official finished signals must remain in app history');
 assert(!performances.includes('>🥇 Standard<')&&!performances.includes('>🥈 Premium<'),'legacy commercial tier labels must not be rendered');
 assert(home.includes("Calculé à "),'snapshot minute label');
