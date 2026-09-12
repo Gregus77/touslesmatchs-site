@@ -7258,6 +7258,33 @@ Réponds en JSON pur (pas de markdown):
     return null;
   })();
 
+  const shadowNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+  const shadowSum = (...values) => {
+    const parsed = values.map(shadowNumber);
+    return parsed.every((value) => value !== null) ? parsed.reduce((sum, value) => sum + value, 0) : null;
+  };
+  const qualityGrade = bestBetGrade(match, analysisResult.best_bet, analysisResult.confidence, analysisResult.cote);
+  const recordedOdd = _coteReelle ? Number(analysisResult.cote) : null;
+  const qualityShadow = {
+    observation_only: true,
+    total_shots: shadowSum(liveStats?.total_shots_home, liveStats?.total_shots_away),
+    shots_on_target: shadowSum(liveStats?.shots_on_goal_home, liveStats?.shots_on_goal_away),
+    corners: shadowSum(liveStats?.corners_home, liveStats?.corners_away),
+    goals_at_analysis: shadowSum(match?.score_home, match?.score_away),
+    late_window: Number(parseLiveMinuteValue(match.minute)) >= 40,
+    real_odd: recordedOdd,
+    implied_probability: recordedOdd ? Math.round((1 / recordedOdd) * 10000) / 100 : null,
+    confidence_probability: Number(analysisResult.confidence || 0),
+    estimated_edge_points: recordedOdd
+      ? Math.round((Number(analysisResult.confidence || 0) - (1 / recordedOdd) * 100) * 100) / 100
+      : null,
+    historical_segment_winrate: qualityGrade.segWr === null ? null : Math.round(qualityGrade.segWr * 10000) / 100,
+    elite_candidate: qualityGrade.elite,
+  };
+
   const criteriaSnapshot = {
     quorum_reached: voteCountForSignal >= requiredVotesForSignal,
     vote_count: voteCountForSignal,
@@ -7273,6 +7300,7 @@ Réponds en JSON pur (pas de markdown):
     playable: { ok: playable.ok, reason: playable.reason },
     women: isWomen,
     low_trust: lowTrust,
+    quality_shadow: qualityShadow,
   };
   const _blockReason = evaluateClientSignalCriteria({
     blockTier: _blockTier, telegramConfigured: !!TELEGRAM_BOT_TOKEN,
