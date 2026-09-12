@@ -321,6 +321,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-vote-seat{min-width:0;padding:8px 5px;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(255,255,255,.035);text-align:center}
 .mc-vote-seat.over{border-color:rgba(34,211,238,.48);background:rgba(34,211,238,.1)}
 .mc-vote-seat.under{border-color:rgba(217,70,239,.48);background:rgba(217,70,239,.1)}
+.mc-vote-seat.old{opacity:.46;filter:grayscale(.8)}
 .mc-vote-seat-index{width:21px;height:21px;margin:0 auto 5px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.08);color:#e6e9ff;font-size:8px;font-weight:950}
 .mc-vote-seat.over .mc-vote-seat-index{background:rgba(34,211,238,.2);color:#dffaff}
 .mc-vote-seat.under .mc-vote-seat-index{background:rgba(217,70,239,.2);color:#fff0ff}
@@ -771,7 +772,8 @@ function updateAuthBar() {
 // ── Load matches ──
 function loadMatches(force) {
   var url = "/api/live-matches" + (force ? "?force=1" : "");
-  fetch(url).then(function(r){ return r.json(); }).then(function(d) {
+  var headers={};if(userAuth&&userAuth.email&&userAuth.code){headers['X-TLM-Email']=userAuth.email;headers['X-TLM-Code']=userAuth.code;}
+  fetch(url,{headers:headers}).then(function(r){ return r.json(); }).then(function(d) {
     if (d.ok && d.matches) {
       allMatches = d.matches.filter(tlmSoccerOnly);
       renderMatches();
@@ -841,17 +843,17 @@ function liveOu25State(m) {
   while (slots.length < 5) slots.push({ status: "pending", direction: null });
   var over = slots.filter(function(v){ return v && v.status === "voted" && v.direction === "over"; }).length;
   var under = slots.filter(function(v){ return v && v.status === "voted" && v.direction === "under"; }).length;
-  return { slots: slots, voteCount: over + under, overCount: over, underCount: under, windowStatus: String(raw.window_status || "unknown") };
+  return { slots: slots, voteCount: Number(raw.vote_count)||over+under, overCount: over, underCount: under, windowStatus: String(raw.window_status || "unknown"),locked:raw.locked!==false,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,statusText:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,consensusCount:Number(raw.consensus_count)||Math.max(over,under),confidence:raw.official_confidence,odd:raw.official_odd,outcome:raw.outcome||null };
 }
 
 function renderLiveOu25Details(m) {
   var state = liveOu25State(m);
-  var consensusDirection = state.overCount >= 4 ? "Over" : state.underCount >= 4 ? "Under" : "";
-  var consensusCount = Math.max(state.overCount, state.underCount);
-  var verdict = consensusDirection
-    ? "Signal validé : " + consensusCount + "/5 IA · " + consensusDirection + " 2,5"
+  var consensusDirection = state.official&&!state.locked?(state.consensusDirection === 'over' ? "Over" : state.consensusDirection === 'under' ? "Under" : "") : "";
+  var consensusCount = state.consensusCount;
+  var verdict = state.official
+    ? (state.locked ? "Signal officiel enregistré · détails réservés à Premium" : (state.statusText||"Signal officiel")+" · "+consensusDirection+" 2,5 · "+consensusCount+"/5 · confiance "+state.confidence+"/100 · "+(state.odd==null?"cote indisponible":"cote "+Number(state.odd).toFixed(2))+(state.outcome==='win'?" · gagné":state.outcome==='loss'?" · perdu":""))
     : state.voteCount
-      ? "Aucun signal validé — ne pas jouer"
+      ? "Anciennes tendances — aucun signal officiel"
       : "Aucun vote enregistré pour le moment";
   var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
   if (!reason && !state.voteCount) {
@@ -861,11 +863,11 @@ function renderLiveOu25Details(m) {
   }
   var seats = state.slots.map(function(slot, i) {
     var voted = slot && slot.status === "voted" && (slot.direction === "over" || slot.direction === "under");
-    var dir = voted ? slot.direction : "";
-    var shortLabel = dir === "over" ? "O" : dir === "under" ? "U" : String(i + 1);
-    var choice = dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "En attente";
+    var dir = voted&&!state.locked ? slot.direction : "";
+    var shortLabel = voted ? (state.locked ? "?" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : String(i + 1);
+    var choice = voted ? (state.locked ? "Vote masqué" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : "En attente";
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
-    return '<div class="mc-vote-seat ' + dir + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + choice + confidence + '</small></div>';
+    return '<div class="mc-vote-seat ' + dir + (state.official?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + choice + confidence + '</small></div>';
   }).join("");
   return '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Conseil IA · Over/Under 2,5</span><span class="mc-vote-count">' + state.voteCount + '/5</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (consensusDirection ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }

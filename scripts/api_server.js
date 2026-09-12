@@ -23,6 +23,7 @@ const crypto = require("crypto");
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
+const officialSnapshots = require("./official_signal_snapshots");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -296,6 +297,7 @@ app.use((req, res, next) => {
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+officialSnapshots.init(db);
 const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
 const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
 
@@ -2657,6 +2659,7 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
 const CLIENT_OU25_MIN_VOTES = 3;
 const CLIENT_OU25_MIN_CONFIDENCE = Math.max(77, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 77));
+const OFFICIAL_SNAPSHOT_RULE_VERSION = "ou25-snapshot-v1-20260912";
 // Mode Recovery : garde-fous statistiques supplémentaires, sans redéfinir le
 // périmètre des championnats ni les plafonds commerciaux Standard/Premium.
 const RECOVERY_MODE_ENABLED = process.env.OU25_RECOVERY_MODE !== "0";
@@ -3816,6 +3819,11 @@ function isVerifiedClientOu25Row(row) {
   if ((row?.outcome === "win" || row?.outcome === "loss") && !hasConsistentScoreProgression(row)) {
     return false;
   }
+  try {
+    if (db.prepare(`SELECT 1 FROM official_vote_snapshots ovs
+      JOIN official_signal_registry osr ON osr.official_signal_snapshot_id=ovs.id
+      WHERE ovs.analysis_match_key=?`).get(row?.match_key)) return true;
+  } catch (_) {}
   // Historique ancien : comportement conserve.
   if (day && day < CLIENT_HISTORY_REPAIR_DATE) return true;
 
@@ -6459,6 +6467,17 @@ async function runConcileAnalysis(match) {
     : buildStatsStatus(match, null, "match_not_live");
   const liveStats = statsStatus.available ? statsStatus.stats : null;
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
+  if (match.__officialAuto === true) {
+    const snapshotGate = officialSnapshots.reanalysisGate(
+      db, match, liveStats?.red_cards_home || 0, liveStats?.red_cards_away || 0
+    );
+    if (!snapshotGate.allowed) {
+      if (snapshotGate.reason === 'state_change_delay') scheduleOfficialReanalysis(match, snapshotGate.retryAfterMs);
+      const error = new Error(snapshotGate.reason);
+      error.code = 'OFFICIAL_SNAPSHOT_GATE';
+      throw error;
+    }
+  }
 
   // H2H factuel + contexte profond (forme, classement, enjeu, blessés) en parallèle
   let h2hBlock = "", deepBlock = "", h2hData = null;
@@ -7236,6 +7255,41 @@ Réponds en JSON pur (pas de markdown):
   // Cle canonique partagee par analyse, preuve Telegram et resultat final.
   const persistedAnalysisMatchKey = saveConcileAnalysis(match, analysisResult, pickBet);
   analysisResult.match_key = persistedAnalysisMatchKey || analysisResult.match_key;
+  // Un scrutin est une photographie autonome. La ligne concile_analyses reste
+  // la synthèse historique du match, mais ne peut plus servir à reconstruire
+  // les cinq sièges à partir d'observations de minutes ou scores différents.
+  let capturedVoteSnapshot = null;
+  try {
+    const snapshotId = getPredictionSnapshotKey(match);
+    const capturedAt = new Date().toISOString();
+    const voteRows = (analysisResult.vote_summary?.votes || []).map((vote) => ({
+      agent: vote.agent,
+      direction: vote.direction || null,
+      confidence: vote.confidence ?? null,
+      status: vote.direction ? "voted" : "pending",
+      updated_at: capturedAt,
+    }));
+    capturedVoteSnapshot = officialSnapshots.capture(db, {
+      id: snapshotId,
+      match,
+      analysisMatchKey: analysisResult.match_key,
+      minute: parseLiveMinuteValue(match.minute),
+      scoreHome: match.score_home ?? null,
+      scoreAway: match.score_away ?? null,
+      redCardsHome: analysisResult.statsStatus?.stats?.red_cards_home || 0,
+      redCardsAway: analysisResult.statsStatus?.stats?.red_cards_away || 0,
+      votes: voteRows,
+      consensus: /^Over\b/i.test(analysisResult.best_bet) ? "over" : /^Under\b/i.test(analysisResult.best_bet) ? "under" : null,
+      consensusVotes: analysisResult.vote_summary?.vote_count || 0,
+      confidence: analysisResult.confidence,
+      realOdd: analysisResult.cote ?? null,
+      realOddSource: analysisResult.cote_source || null,
+      ruleVersion: OFFICIAL_SNAPSHOT_RULE_VERSION,
+      createdAt: capturedAt,
+    });
+  } catch (error) {
+    console.error("[official-snapshot] capture:", error.message);
+  }
   // Expérience strictement à blanc : mémorise un candidat tôt puis vérifie à
   // nouveau entre 40' et 45' si la direction tient et si la cote réelle est
   // enfin dans la zone 1,45–1,65. Ce chemin ne contient aucun envoi client.
@@ -7493,8 +7547,14 @@ Réponds en JSON pur (pas de markdown):
       // Produit client recentre : football O/U 2,5 uniquement, cinq sieges
       // presents et majorite forte. Les autres sports/marches restent internes.
       const sportDiffusable = sportLc.includes("foot");
+      const officialWindowEligible = Number.isFinite(Number(minute))
+        && Number(minute) >= officialSnapshots.OFFICIAL_FROM_MINUTE
+        && Number(minute) <= officialSnapshots.OFFICIAL_TO_MINUTE;
+      const officialFiveSeatQuorum = Number(voteInfo.vote_active || 0) === 5
+        && voteCountForSignal >= 4;
       const diffusable = bookmakerPlayable && oddOk && sportDiffusable
-        && clientOu25MatchEligible && standingsEvidence.ok && ou25Only && enoughOu25SeatsPresent
+        && clientOu25MatchEligible && officialWindowEligible && standingsEvidence.ok && ou25Only && enoughOu25SeatsPresent
+        && officialFiveSeatQuorum
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
         && recoveryEvidence.ok;
@@ -7504,6 +7564,10 @@ Réponds en JSON pur (pas de markdown):
       if (!diffusable) {
         _tierBlock = RECOVERY_MODE_ENABLED && !recoveryEvidence.ok
           ? `mode Recovery: ${recoveryEvidence.reason}`
+          : !officialWindowEligible
+            ? `hors fenêtre signal officiel ${officialSnapshots.OFFICIAL_FROM_MINUTE}-${officialSnapshots.OFFICIAL_TO_MINUTE}`
+          : !officialFiveSeatQuorum
+            ? `scrutin incomplet: 5 réponses valides et 4/5 concordantes requises`
           : !standingsEvidence.ok
             ? `classement: ${standingsEvidence.reason}`
           : !sportDiffusable
@@ -7519,7 +7583,10 @@ Réponds en JSON pur (pas de markdown):
 
       const _ligneAnalysee = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
       if (gradePremium) {
-        const data = {matchKey:_ligneAnalysee, home:match.home, away:match.away,
+        if (!capturedVoteSnapshot) throw new Error("Signal client refusé: snapshot immuable absent");
+        const officialSnapshot = officialSnapshots.registerOfficial(db, capturedVoteSnapshot.id);
+        criteriaSnapshot.official_signal_snapshot_id = officialSnapshot.id;
+        const data = {matchKey:_ligneAnalysee, officialSignalSnapshotId:officialSnapshot.id, home:match.home, away:match.away,
           competition:match.competition || match.league || '', minute:match.minute,
           scoreHome:match.score_home ?? '?', scoreAway:match.score_away ?? '?',
           market:analysisResult.best_bet, votes:voteCountForSignal, confidence:analysisResult.confidence,
@@ -8156,7 +8223,6 @@ function getPronoStats() {
       WHERE outcome IS NOT NULL
       ORDER BY analysed_at DESC
     `).all();
-
     // Grouper par catégorie de pari
     const byCategory = {};
     for (const row of allResolved) {
@@ -9790,6 +9856,7 @@ async function isBookmakerPlayableBeforeAnalysis(match) {
 }
 
 const liveAnalysisNotices = new Map();
+const officialReanalysisTimers = new Map();
 function liveAnalysisNoticeKey(m) { return `${getTodayStr()}|${m.id || m.fixtureId || m.home+'|'+m.away}`; }
 function setLiveAnalysisNotice(m, reason) {
   const now = Date.now();
@@ -9799,6 +9866,27 @@ function setLiveAnalysisNotice(m, reason) {
 function liveAnalysisNotice(m) {
   const notice=liveAnalysisNotices.get(liveAnalysisNoticeKey(m));
   return notice && Date.now()-notice.at<=12*60*1000 ? notice.reason : null;
+}
+function scheduleOfficialReanalysis(match, delayMs) {
+  const scope = officialSnapshots.fixtureScope(match);
+  if (officialReanalysisTimers.has(scope)) return;
+  const delay = Math.max(1000, Math.min(officialSnapshots.REANALYSIS_DELAY_MS, Number(delayMs) || officialSnapshots.REANALYSIS_DELAY_MS));
+  const timer = setTimeout(async () => {
+    officialReanalysisTimers.delete(scope);
+    try {
+      const current = (await fetchLiveMatches()).find(item => officialSnapshots.fixtureScope(item) === scope);
+      if (!current || !shouldAutoObserveMatch(current) || !isClientOu25MatchEligible(current, true) || hasPredictionSnapshot(current)) return;
+      const gate = officialSnapshots.reanalysisGate(db, current, current.red_cards_home || 0, current.red_cards_away || 0);
+      if (!gate.allowed) return scheduleOfficialReanalysis(current, gate.retryAfterMs);
+      console.log(`[official-snapshot] réanalyse ciblée après changement d'état: ${current.home} vs ${current.away}`);
+      current.__officialAuto = true;
+      await runConcileAnalysis(current);
+    } catch (error) {
+      console.error('[official-snapshot] réanalyse ciblée:', error.message);
+    }
+  }, delay);
+  if (typeof timer.unref === 'function') timer.unref();
+  officialReanalysisTimers.set(scope, timer);
 }
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
@@ -9836,11 +9924,17 @@ async function runAutoConcileObserver() {
 
     for (const match of candidates) {
       try {
+        const gate = officialSnapshots.reanalysisGate(db, match, match.red_cards_home || 0, match.red_cards_away || 0);
+        if (!gate.allowed) {
+          if (gate.reason === 'state_change_delay') scheduleOfficialReanalysis(match, gate.retryAfterMs);
+          continue;
+        }
         console.log(
           `[auto-concile] analyse snapshot: ${match.competition || "competition inconnue"} | ` +
           `${match.home} vs ${match.away} | minute=${match.minute || "?"} | ` +
           `score=${match.score_home ?? "?"}-${match.score_away ?? "?"}`
         );
+        match.__officialAuto = true;
         await runConcileAnalysis(match);
         if (!getLiveOu25VoteState(match).vote_count) setLiveAnalysisNotice(match, 'Aucun vote IA exploitable reçu.');
       } catch (e) {
@@ -10909,11 +11003,22 @@ async function sendWeeklyAgentsAudit() {
 // ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
 async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
   if (!['win','loss'].includes(outcome) || !analysis.match_key || scoreH==null || scoreA==null) return;
+  const official = db.prepare(`SELECT ovs.* FROM official_signal_registry osr
+    JOIN official_vote_snapshots ovs ON ovs.id=osr.official_signal_snapshot_id
+    WHERE ovs.analysis_match_key=? LIMIT 1`).get(analysis.match_key);
+  if (official?.id) {
+    try { officialSnapshots.recordResult(db, official.id, scoreH, scoreA); }
+    catch (error) { console.error('[official-snapshot] résultat:', error.message); }
+  }
   const proof = storedTelegramDelivery(analysis);
   for (const dest of clientTelegramPublisher.targets) {
-    if (!proof.channels.has(dest.channel)) continue;
-    const data={matchKey:analysis.match_key,home:analysis.home,away:analysis.away,
-      market:db.prepare("SELECT market FROM telegram_signal_deliveries WHERE match_key=? AND channel=? AND ok=1 AND typeof(telegram_message_id)='integer' AND telegram_message_id>0 ORDER BY id LIMIT 1").get(analysis.match_key,dest.channel)?.market || analysis.best_bet,
+    const officialDelivery = official?.id ? db.prepare(`SELECT market FROM telegram_signal_deliveries
+      WHERE official_signal_snapshot_id=? AND channel=? AND ok=1 AND typeof(telegram_message_id)='integer'
+        AND telegram_message_id>0 ORDER BY id LIMIT 1`).get(official.id,dest.channel) : null;
+    if (official?.id ? !officialDelivery : !proof.channels.has(dest.channel)) continue;
+    const officialMarket = official?.consensus === 'over' ? 'Over 2.5 buts' : official?.consensus === 'under' ? 'Under 2.5 buts' : null;
+    const data={matchKey:analysis.match_key,officialSignalSnapshotId:official?.id || null,home:analysis.home,away:analysis.away,
+      market:officialDelivery?.market || officialMarket || db.prepare("SELECT market FROM telegram_signal_deliveries WHERE match_key=? AND channel=? AND ok=1 AND typeof(telegram_message_id)='integer' AND telegram_message_id>0 ORDER BY id LIMIT 1").get(analysis.match_key,dest.channel)?.market || analysis.best_bet,
       outcome,scoreHome:scoreH,scoreAway:scoreA};
     data.outcome=getBetOutcomeForScore(data.market,scoreH,scoreA);
     if(!['win','loss'].includes(data.outcome))continue;
@@ -12603,7 +12708,10 @@ function seoPublishedRows(limit) {
              sig_sent_standard, sig_sent_premium, sig_sent_elite, sig_sent_free, diffusion_block
       FROM concile_analyses
       WHERE date(analysed_at) >= '2026-07-03'
-        AND confidence >= ${getPublishedMinConfidence()}
+        AND (confidence >= ${getPublishedMinConfidence()} OR EXISTS (
+          SELECT 1 FROM official_vote_snapshots ovs JOIN official_signal_registry osr
+            ON osr.official_signal_snapshot_id=ovs.id WHERE ovs.analysis_match_key=concile_analyses.match_key
+        ))
         AND outcome IN ('win','loss')
       ORDER BY analysed_at DESC
     `).all();
@@ -13107,6 +13215,52 @@ function getLiveOu25VoteState(match) {
     snapshot_minute: null,
     votes: emptyVotes,
   };
+  try {
+    if (typeof officialSnapshots === 'undefined') throw new Error('official snapshot module unavailable');
+    const immutableState = officialSnapshots.stateForMatch(db, match);
+    const snapshot = immutableState.snapshot;
+    if (snapshot) {
+      const votes = snapshot.votes.slice(0, 5).map((vote, index) => ({
+        agent: vote.agent || CONCILE_AGENT_NAMES[index],
+        direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
+        label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
+        confidence: vote.confidence ?? null,
+        status: snapshot.seat_statuses[index] || vote.status || 'pending',
+        updated_at: vote.updated_at || snapshot.created_at,
+      }));
+      const overCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'over').length;
+      const underCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'under').length;
+      const official = immutableState.kind === 'official';
+      const finalHome = match?.final_score_home ?? (String(match?.status || '').toUpperCase().includes('FIN') ? match?.score_home : null);
+      const finalAway = match?.final_score_away ?? (String(match?.status || '').toUpperCase().includes('FIN') ? match?.score_away : null);
+      return {
+        ...empty,
+        vote_count: overCount + underCount,
+        over_count: overCount,
+        under_count: underCount,
+        consensus_count: Number(snapshot.consensus_votes || Math.max(overCount, underCount)),
+        consensus_at: snapshot.created_at,
+        snapshot_minute: snapshot.minute,
+        snapshot_score: `${snapshot.score_home}-${snapshot.score_away}`,
+        red_cards: { home: snapshot.red_cards_home, away: snapshot.red_cards_away },
+        votes,
+        official,
+        official_signal_snapshot_id: official ? snapshot.id : null,
+        snapshot_id: snapshot.id,
+        recommendation_status: official
+          ? `Signal officiel à ${snapshot.minute}′, score ${snapshot.score_home}-${snapshot.score_away}`
+          : 'Anciennes tendances — aucun signal officiel',
+        consensus_direction: official ? snapshot.consensus : null,
+        confidence: official ? snapshot.confidence : null,
+        real_odd: official ? snapshot.real_odd : null,
+        rule_version: snapshot.rule_version,
+        outcome: official ? (snapshot.outcome || (finalHome != null && finalAway != null
+          ? officialSnapshots.resultFor(snapshot, finalHome, finalAway) : null)) : null,
+      };
+    }
+  } catch (error) {
+    if (error.message !== 'official snapshot module unavailable') console.error('[official-snapshot] lecture:', error.message);
+  }
   if (minute === null || minute < 15) return empty;
 
   try {
@@ -13228,6 +13382,16 @@ function homepageLiveMatch(match, canReveal) {
     consensus_count: Number(raw.consensus_count ?? Math.max(over, under)),
     consensus_at: raw.consensus_at || null,
     snapshot_minute: raw.snapshot_minute ?? null,
+    snapshot_score: raw.snapshot_score || null,
+    official: raw.official === true,
+    official_signal_snapshot_id: raw.official_signal_snapshot_id || null,
+    snapshot_id: raw.snapshot_id || null,
+    recommendation_status: raw.recommendation_status || null,
+    consensus_direction: canReveal ? (raw.consensus_direction || null) : null,
+    official_confidence: canReveal ? (raw.confidence ?? null) : null,
+    official_odd: canReveal ? (raw.real_odd ?? null) : null,
+    rule_version: raw.rule_version || null,
+    outcome: raw.outcome || null,
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
@@ -13296,6 +13460,35 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       }
     }
 
+    // Un signal officiel reste visible après la fermeture de la fenêtre et
+    // après la sortie du match du flux live. Sa recommandation et son résultat
+    // viennent du même identifiant de snapshot, jamais de la dernière tendance.
+    const officialRows = db.prepare(`SELECT ovs.*,ca.competition,ca.sport,ca.home,ca.away,
+        ca.home_logo,ca.away_logo,res.outcome,res.final_score_home,res.final_score_away
+      FROM official_signal_registry osr
+      JOIN official_vote_snapshots ovs ON ovs.id=osr.official_signal_snapshot_id
+      LEFT JOIN concile_analyses ca ON ca.match_key=ovs.analysis_match_key
+      LEFT JOIN official_signal_results res ON res.official_signal_snapshot_id=ovs.id
+      WHERE date(ovs.created_at)=date('now') ORDER BY datetime(ovs.created_at) DESC`).all();
+    for (const official of officialRows) {
+      const alreadyLive = matches.some(item => String(item.fixtureId || item.fixture_id || item.id || '') === String(official.fixture_id || ''));
+      if (alreadyLive || !official.home || !official.away) continue;
+      matches.unshift({
+        id: official.fixture_id || official.analysis_match_key,
+        fixtureId: official.fixture_id || null,
+        home: official.home, away: official.away,
+        competition: official.competition || '', sport: official.sport || 'Football',
+        status: official.outcome ? 'FINISHED' : 'OFFICIAL_SIGNAL',
+        minute: official.minute,
+        score_home: official.outcome ? official.final_score_home : official.score_home,
+        score_away: official.outcome ? official.final_score_away : official.score_away,
+        final_score_home: official.final_score_home,
+        final_score_away: official.final_score_away,
+        home_logo: official.home_logo || null, away_logo: official.away_logo || null,
+        pinnedSignal: true,
+      });
+    }
+
     // Verdict d'analysabilité calculé par le SERVEUR et joint à chaque match.
     // Le front appliquait sa propre règle 25e–65e minute, codée en dur : elle
     // contredisait la règle serveur (sélection par la cote depuis le 28/07/2026)
@@ -13314,13 +13507,16 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
       // Une majorité IA décrit un signal admissible, pas une livraison. Le
       // badge public "diffusé" exige une preuve Telegram payante immuable.
-      const deliveredAnalysis = db.prepare(`SELECT match_key, diffusion_block FROM concile_analyses
-        WHERE date(analysed_at)=date('now')
-          AND lower(trim(home))=lower(trim(?)) AND lower(trim(away))=lower(trim(?))
-        ORDER BY id DESC LIMIT 1`).get(m.home || '', m.away || '');
-      const telegramDeliveryProven = deliveredAnalysis
-        ? storedTelegramDelivery(deliveredAnalysis).paid
-        : false;
+      const deliveredAnalysis = ou25.official_signal_snapshot_id
+        ? db.prepare(`SELECT ca.match_key,ca.diffusion_block FROM official_vote_snapshots ovs
+            JOIN concile_analyses ca ON ca.match_key=ovs.analysis_match_key WHERE ovs.id=?`).get(ou25.official_signal_snapshot_id)
+        : null;
+      const deliveryRow = ou25.official_signal_snapshot_id
+        ? db.prepare(`SELECT 1 FROM telegram_signal_deliveries
+            WHERE official_signal_snapshot_id=? AND ok=1 AND typeof(telegram_message_id)='integer'
+              AND telegram_message_id>0 AND channel IN ('premium','ru_premium') LIMIT 1`).get(ou25.official_signal_snapshot_id)
+        : null;
+      const telegramDeliveryProven = !!deliveryRow;
       // Source de verite pour l'accueil public : un match ne peut etre presente
       // comme un signal que si le championnat est dans le perimetre client ET
       // qu'au moins 3 IA ont reellement enregistre le meme vote O/U 2,5.
@@ -13355,6 +13551,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         .filter(m => m.homepage_display_eligible === true)
         .sort((a, b) => Number(b.ou25?.consensus_count || 0) - Number(a.ou25?.consensus_count || 0));
       const evidenceRows = await Promise.all(evidenceCandidates.map(async (m) => {
+        if (m.ou25?.official) return [String(m.id || m.fixtureId || m.sourceId || `${m.home}|${m.away}`), { ok: true, preserved_rule_version: m.ou25.rule_version }, null];
         const [standing, h2h] = await Promise.all([
           evaluateOu25StandingGap(m),
           canReveal ? fetchH2H(m) : Promise.resolve(null),
@@ -13368,9 +13565,13 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         if (!evidence) continue;
         const standing = evidence[1], h2h = evidence[2];
         m.selection_evidence = standing;
-        m.homepage_display_eligible = m.homepage_display_eligible && standing.ok;
-        m.analysis_verified = m.analysis_verified && standing.ok;
-        if (!standing.ok) m.analysis_exclusion_reason = `Signal écarté : ${standing.reason}.`;
+        // Une preuve officielle figée n'est jamais soumise une seconde fois à
+        // un filtre courant. Les règles applicables sont celles de rule_version.
+        if (!m.ou25?.official) {
+          m.homepage_display_eligible = m.homepage_display_eligible && standing.ok;
+          m.analysis_verified = m.analysis_verified && standing.ok;
+          if (!standing.ok) m.analysis_exclusion_reason = `Signal écarté : ${standing.reason}.`;
+        }
         if (h2h && Number(h2h.last3SampleSize) === 3) {
           m.h2h_last3 = { sample_size: 3, over25_count: Number(h2h.last3Over25Count) };
         }
@@ -13411,7 +13612,20 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
     }));
 
     const strictMatches = await enrichStrictGoal05(withH2H);
-    res.json({ ok: true, matches: strictMatches });
+    let liveAccount = paidGoal05Account(req);
+    if (!liveAccount) {
+      const legacyEmail = String(req.headers['x-tlm-email'] || '').toLowerCase().trim();
+      const legacyCode = String(req.headers['x-tlm-code'] || '').trim();
+      const legacyAuth = legacyEmail && legacyCode ? verifyCode(legacyEmail, legacyCode) : null;
+      if (legacyAuth?.valid && String(legacyAuth.plan || 'free').toLowerCase() !== 'free') liveAccount = legacyAuth;
+    }
+    const liveExpiry = liveAccount?.expires_at;
+    const liveCanReveal = !!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now()));
+    res.set('Vary', 'Authorization, X-TLM-Email, X-TLM-Code');
+    res.json({ ok: true, locked: !liveCanReveal, matches: strictMatches.map(match => ({
+      ...match,
+      ou25: homepageLiveMatch(match, liveCanReveal).ou25,
+    })) });
   } catch (e) {
     res.json({ ok: true, matches: [] });
   }
@@ -15081,7 +15295,10 @@ app.get("/analysis-history", (req, res) => {
              agents_json
       FROM concile_analyses
       WHERE date(analysed_at) >= '2026-07-03'
-        AND confidence >= ${getPublishedMinConfidence()}
+        AND (confidence >= ${getPublishedMinConfidence()} OR EXISTS (
+          SELECT 1 FROM official_vote_snapshots ovs JOIN official_signal_registry osr
+            ON osr.official_signal_snapshot_id=ovs.id WHERE ovs.analysis_match_key=concile_analyses.match_key
+        ))
         AND (outcome IS NULL OR outcome != 'pending')
       ORDER BY analysed_at DESC
     `).all();
@@ -15091,14 +15308,18 @@ app.get("/analysis-history", (req, res) => {
     // connecte : elle doit donc rester identique pour tous les lecteurs. La vue
     // exhaustive de diagnostic reste disponible via /admin/daily-audit.
     const clientRows = rawRows.filter(isVerifiedClientOu25Row);
+    const historyHasOfficialSnapshot = (row) => !!db.prepare(`SELECT 1 FROM official_vote_snapshots ovs
+      JOIN official_signal_registry osr ON osr.official_signal_snapshot_id=ovs.id
+      WHERE ovs.analysis_match_key=?`).get(row?.match_key);
     const planChannel = tierFilter === "vip" ? "premium" : tierFilter === "carte" ? "free" : tierFilter;
     const planRows = tierFilter && isPaidViewer
       ? clientRows.filter(r => {
+          if (historyHasOfficialSnapshot(r)) return true;
           const channels = displayDeliveryChannels(r);
           return channels.has("standard") || channels.has("premium") || channels.has("elite");
         })
       : planChannel ? clientRows.filter(r => displayDeliveryChannels(r).has(planChannel)) : clientRows;
-    const cleanedRows = dedupeAnalysesByMatch(planRows.filter(r => !isNoiseForDisplay(r)));
+    const cleanedRows = dedupeAnalysesByMatch(planRows.filter(r => historyHasOfficialSnapshot(r) || !isNoiseForDisplay(r)));
     const total = cleanedRows.length;
     const rows = cleanedRows.slice(offset, offset + limit);
 
@@ -15131,34 +15352,42 @@ app.get("/analysis-history", (req, res) => {
       try { agents = JSON.parse(r.agents_json || "[]"); } catch {}
       const ou25Proof = storedOu25Consensus(r);
       const deliveryProof = storedTelegramDelivery(r);
+      const officialProof = db.prepare(`SELECT ovs.*,res.outcome AS official_outcome,
+          res.final_score_home AS official_final_home,res.final_score_away AS official_final_away,res.resolved_at AS official_resolved_at
+        FROM official_signal_registry osr JOIN official_vote_snapshots ovs ON ovs.id=osr.official_signal_snapshot_id
+        LEFT JOIN official_signal_results res ON res.official_signal_snapshot_id=ovs.id
+        WHERE ovs.analysis_match_key=? LIMIT 1`).get(r.match_key);
       const displayChannels = displayDeliveryChannels(r);
       const analysisDay = String(r.analysed_at || "").slice(0, 10);
       const historyMode = analysisDay >= CLIENT_TELEGRAM_PROOF_SINCE ? "telegram_proven" : "legacy";
-      const resolved = r.outcome === "win" || r.outcome === "loss";
+      const resolved = !!officialProof?.official_outcome || r.outcome === "win" || r.outcome === "loss";
       const reveal = resolved || isPaidViewer; // pick visible si terminé OU abonné
+      const officialBet = officialProof?.consensus === 'over' ? 'Over 2.5 buts' : officialProof?.consensus === 'under' ? 'Under 2.5 buts' : null;
       return {
         id: r.id,
         home: r.home, away: r.away,
         competition: r.competition, sport: r.sport || "Football",
-        bet: reveal ? r.best_bet : null, confidence: r.confidence,
-        cote: reveal && r.real_odd_source && !/estimation|indisponible/i.test(String(r.real_odd_source))
+        bet: reveal ? (officialBet || r.best_bet) : null, confidence: officialProof?.confidence ?? r.confidence,
+        cote: reveal && officialProof ? (officialProof.real_odd ?? null) : reveal && r.real_odd_source && !/estimation|indisponible/i.test(String(r.real_odd_source))
           ? rowOdd(r) : null,
-        cote_status: reveal && (!r.real_odd_source || /estimation|indisponible/i.test(String(r.real_odd_source)))
+        cote_status: reveal && (officialProof ? officialProof.real_odd == null : (!r.real_odd_source || /estimation|indisponible/i.test(String(r.real_odd_source))))
           ? "indisponible" : "disponible",
         reasoning: reveal ? r.raison : null,
         // Après l'époque des preuves Telegram, le bulletin effectivement livré
         // est la source immuable commune. Un snapshot IA plus tardif ne doit pas
         // ramener publiquement son consensus à zéro.
-        consensus: historyMode === "legacy"
+        consensus: officialProof ? Number(officialProof.consensus_votes || 0) : historyMode === "legacy"
           ? Number(r.consensus_votes || 0)
           : Number(deliveryProof.voteCount || ou25Proof.voteCount || 0),
         locked: !reveal,
-        outcome: r.outcome,
-        analysed_at: r.analysed_at,
-        score: r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
-        minute: r.minute_at_analysis,
-        final_score: r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
-        resolved_at: r.resolved_at,
+        outcome: officialProof?.official_outcome || r.outcome,
+        analysed_at: officialProof?.created_at || r.analysed_at,
+        score: officialProof ? `${officialProof.score_home}-${officialProof.score_away}` : r.score_home_at_analysis != null ? `${r.score_home_at_analysis}-${r.score_away_at_analysis}` : null,
+        minute: officialProof?.minute ?? r.minute_at_analysis,
+        final_score: officialProof?.official_final_home != null ? `${officialProof.official_final_home}-${officialProof.official_final_away}` : r.final_score_home != null ? `${r.final_score_home}-${r.final_score_away}` : null,
+        resolved_at: officialProof?.official_resolved_at || r.resolved_at,
+        official_signal_snapshot_id: officialProof?.id || null,
+        rule_version: officialProof?.rule_version || null,
         home_logo: r.home_logo, away_logo: r.away_logo,
         bet_category: r.bet_category,
         arjel: rowIsArjel(r),
@@ -15202,9 +15431,20 @@ app.get("/analysis-history", (req, res) => {
         AND date(analysed_at) >= '2026-07-03'
       ORDER BY analysed_at DESC
     `).all();
+    const officialResolved = db.prepare(`SELECT ovs.analysis_match_key AS match_key,ca.home,ca.away,ca.competition,ca.country,
+        ca.sport,res.outcome,ovs.created_at AS analysed_at,ovs.confidence,
+        CASE ovs.consensus WHEN 'over' THEN 'Over 2.5 buts' WHEN 'under' THEN 'Under 2.5 buts' END AS best_bet,
+        ovs.real_odd,ovs.real_odd_source,res.final_score_home,res.final_score_away,ovs.minute AS minute_at_analysis,
+        ovs.consensus_votes,ca.sig_sent_free,ca.sig_sent_standard,ca.sig_sent_premium,ca.sig_sent_elite,NULL AS diffusion_block
+      FROM official_signal_registry osr JOIN official_vote_snapshots ovs ON ovs.id=osr.official_signal_snapshot_id
+      JOIN official_signal_results res ON res.official_signal_snapshot_id=ovs.id
+      JOIN concile_analyses ca ON ca.match_key=ovs.analysis_match_key`).all();
+    const officialKeys = new Set(officialResolved.map(row => row.match_key));
+    allResolved.unshift(...officialResolved);
     const seenStat = new Set();
     const dedupResolved = [];
     for (const r of allResolved) {
+      if (officialKeys.has(r.match_key) && !officialResolved.includes(r)) continue;
       // Mêmes exclusions que la liste (jeunes / douteuses) pour un winrate cohérent.
       if (isNoiseForDisplay(r) || !isVerifiedClientOu25Row(r)) continue;
       const k = `${r.home}_${r.away}_${(r.analysed_at || "").slice(0, 10)}`;
