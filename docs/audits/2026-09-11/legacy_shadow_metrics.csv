@@ -1,0 +1,13 @@
+actor,market,observed_predictions,abstentions,stored_resolved,stored_wins,stored_losses,stored_winrate,last20_n,last20_sequence,last20_wins,last20_rate,last10_n,last10_sequence,last10_wins,last10_rate,known_outcome_at_prediction,unknown_snapshot,outcome_mismatch,future_or_unproven_time,verified_predictive,verified_wins,verified_winrate,predictive_independent_events,predictive_last20_n,predictive_last20_rate,predictive_last10_n,predictive_last10_rate,priced_n,profit_units,roi_pct,latest_prediction
+Groq-Llama70B,other,9,1,5,2,3,40.0,5,LLWWL,2,40.0,5,LLWWL,2,40.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-07-02 15:27:44
+Groq-Llama70B,ou25,920,0,752,435,317,57.85,20,WWWWWLLWWLLWWLWWLLLL,11,55.0,10,WWWWWLLWWL,7,70.0,0,752,0,0,0,0,,0,0,,0,,0,,,2026-08-17 03:48:12
+Groq-Llama8B,other,103,22,66,23,43,34.85,20,LLLLLLLLLWLLWLLLLLWL,3,15.0,10,LLLLLLLLLW,1,10.0,0,66,0,0,0,0,,0,0,,0,,0,,,2026-07-28 01:05:52
+Groq-Llama8B,ou25,708,0,537,239,298,44.51,20,LLLLWLLWWWLLLWWWWLLL,8,40.0,10,LLLLWLLWWW,4,40.0,0,537,0,0,0,0,,0,0,,0,,0,,,2026-07-28 01:06:01
+Mistral-Small,other,440,440,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-08-31 19:17:24
+Mistral-Small,ou25,569,0,391,249,142,63.68,20,LLWLLWWWWWWLWLWWWLWW,13,65.0,10,LLWLLWWWWW,6,60.0,0,391,0,0,0,0,,0,0,,0,,0,,,2026-09-01 19:18:03
+OR-KimiK3,other,8,8,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-08-20 17:16:58
+OR-KimiK3,ou25,66,0,65,47,18,72.31,20,WWLWWWLLWWWWWWWWWWLL,15,75.0,10,WWLWWWLLWW,7,70.0,0,65,0,0,0,0,,0,0,,0,,0,,,2026-08-20 18:43:28
+OR-Mistral7B,other,79,79,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 16:53:01
+OR-Mistral7B,ou25,63,0,63,36,27,57.14,20,WLWWWWLWLWWWWWWLWLLW,14,70.0,10,WLWWWWLWLW,7,70.0,0,63,0,0,0,0,,0,0,,0,,0,,,2026-09-06 00:45:32
+OR-Qwen37Max,other,52,46,3,1,2,33.33,3,LLW,1,33.33,3,LLW,1,33.33,0,3,0,0,0,0,,0,0,,0,,0,,,2026-08-18 03:41:15
+OR-Qwen37Max,ou25,153,0,117,69,48,58.97,20,LWLLLWWWLWWWLWWLLWWW,12,60.0,10,LWLLLWWWLW,5,50.0,0,117,0,0,0,0,,0,0,,0,,0,,,2026-09-01 19:18:07

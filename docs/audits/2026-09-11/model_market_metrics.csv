@@ -1,0 +1,345 @@
+source,actor,model,market,observed_predictions,abstentions,stored_resolved,stored_wins,stored_losses,stored_winrate,last20_n,last20_sequence,last20_wins,last20_rate,last10_n,last10_sequence,last10_wins,last10_rate,known_outcome_at_prediction,unknown_snapshot,outcome_mismatch,future_or_unproven_time,verified_predictive,verified_wins,verified_winrate,predictive_independent_events,predictive_last20_n,predictive_last20_rate,predictive_last10_n,predictive_last10_rate,priced_n,profit_units,roi_pct,latest_prediction
+legacy_shadow,Groq-Llama70B,model_id_not_recorded,other,9,1,5,2,3,40.0,5,LLWWL,2,40.0,5,LLWWL,2,40.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-07-02 15:27:44
+legacy_shadow,Groq-Llama70B,model_id_not_recorded,ou25,920,0,752,435,317,57.85,20,WWWWWLLWWLLWWLWWLLLL,11,55.0,10,WWWWWLLWWL,7,70.0,0,752,0,0,0,0,,0,0,,0,,0,,,2026-08-17 03:48:12
+legacy_shadow,Groq-Llama8B,model_id_not_recorded,other,103,22,66,23,43,34.85,20,LLLLLLLLLWLLWLLLLLWL,3,15.0,10,LLLLLLLLLW,1,10.0,0,66,0,0,0,0,,0,0,,0,,0,,,2026-07-28 01:05:52
+legacy_shadow,Groq-Llama8B,model_id_not_recorded,ou25,708,0,537,239,298,44.51,20,LLLLWLLWWWLLLWWWWLLL,8,40.0,10,LLLLWLLWWW,4,40.0,0,537,0,0,0,0,,0,0,,0,,0,,,2026-07-28 01:06:01
+legacy_shadow,Mistral-Small,model_id_not_recorded,other,440,440,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-08-31 19:17:24
+legacy_shadow,Mistral-Small,model_id_not_recorded,ou25,569,0,391,249,142,63.68,20,LLWLLWWWWWWLWLWWWLWW,13,65.0,10,LLWLLWWWWW,6,60.0,0,391,0,0,0,0,,0,0,,0,,0,,,2026-09-01 19:18:03
+legacy_shadow,OR-KimiK3,model_id_not_recorded,other,8,8,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-08-20 17:16:58
+legacy_shadow,OR-KimiK3,model_id_not_recorded,ou25,66,0,65,47,18,72.31,20,WWLWWWLLWWWWWWWWWWLL,15,75.0,10,WWLWWWLLWW,7,70.0,0,65,0,0,0,0,,0,0,,0,,0,,,2026-08-20 18:43:28
+legacy_shadow,OR-Mistral7B,model_id_not_recorded,other,79,79,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 16:53:01
+legacy_shadow,OR-Mistral7B,model_id_not_recorded,ou25,63,0,63,36,27,57.14,20,WLWWWWLWLWWWWWWLWLLW,14,70.0,10,WLWWWWLWLW,7,70.0,0,63,0,0,0,0,,0,0,,0,,0,,,2026-09-06 00:45:32
+legacy_shadow,OR-Qwen37Max,model_id_not_recorded,other,52,46,3,1,2,33.33,3,LLW,1,33.33,3,LLW,1,33.33,0,3,0,0,0,0,,0,0,,0,,0,,,2026-08-18 03:41:15
+legacy_shadow,OR-Qwen37Max,model_id_not_recorded,ou25,153,0,117,69,48,58.97,20,LWLLLWWWLWWWLWWLLWWW,12,60.0,10,LWLLLWWWLW,5,50.0,0,117,0,0,0,0,,0,0,,0,,0,,,2026-09-01 19:18:07
+official_market,Cohere-Command,cohere/command-r-08-2024,btts,11,0,11,7,4,63.64,11,WLWLWWWLWWL,7,63.64,10,WLWLWWWLWW,7,70.0,1,0,0,0,10,6,60.0,7,7,71.43,7,71.43,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,mt1,11,0,11,9,2,81.82,11,WLWLWWWWWWW,9,81.82,10,WLWLWWWWWW,8,80.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,mt1_dom,11,0,11,8,3,72.73,11,LWWWWWLWLWW,8,72.73,10,LWWWWWLWLW,7,70.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,mt1_ext,8,0,8,6,2,75.0,8,WLWLWWWW,6,75.0,8,WLWLWWWW,6,75.0,0,8,0,0,0,0,,0,0,,0,,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,mt2,2,0,2,0,2,0.0,2,LL,0,0.0,2,LL,0,0.0,0,2,0,0,0,0,,0,0,,0,,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,ou05,11,0,11,11,0,100.0,11,WWWWWWWWWWW,11,100.0,10,WWWWWWWWWW,10,100.0,11,0,0,0,0,0,,0,0,,0,,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,ou15,11,0,11,10,1,90.91,11,WWLWWWWWWWW,10,90.91,10,WWLWWWWWWW,9,90.0,4,0,0,0,7,6,85.71,5,5,80.0,5,80.0,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,ou25,11,0,11,9,2,81.82,11,WWWWWLLWWWW,9,81.82,10,WWWWWLLWWW,8,80.0,1,0,0,0,10,8,80.0,7,7,71.43,7,71.43,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-08-2024,resultat,11,0,11,4,7,36.36,11,LLWLLLLWWLW,4,36.36,10,LLWLLLLWWL,3,30.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-07 20:10:48
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,btts,510,0,510,302,208,59.22,20,WLWLLLLLLLWWWWWWLLLW,9,45.0,10,WLWLLLLLLL,2,20.0,76,0,7,25,410,233,56.83,224,20,50.0,10,50.0,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,mt1,510,0,510,361,149,70.78,20,WWLWLWLLLLWWWWWWLLLW,11,55.0,10,WWLWLWLLLL,4,40.0,0,510,0,25,0,0,,0,0,,0,,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,mt1_dom,508,0,508,345,163,67.91,20,WLLLWWLWWWWWWWWWLWWL,14,70.0,10,WLLLWWLWWW,6,60.0,0,508,0,25,0,0,,0,0,,0,,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,mt1_ext,471,0,471,298,173,63.27,20,LLWWWWLWLLWWWWWLWLLW,12,60.0,10,LLWWWWLWLL,5,50.0,0,471,0,24,0,0,,0,0,,0,,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,mt2,237,0,237,125,112,52.74,20,WWLWWLWLWWLLLWLWWWWL,12,60.0,10,WWLWWLWLWW,7,70.0,0,237,0,13,0,0,,0,0,,0,,0,,,2026-08-28 00:35:41
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,mt2_dom,14,0,14,8,6,57.14,14,LWLWLWWLLWWWLW,8,57.14,10,LWLWLWWLLW,5,50.0,0,14,0,0,0,0,,0,0,,0,,0,,,2026-08-20 17:22:32
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,mt2_ext,2,0,2,1,1,50.0,2,WL,1,50.0,2,WL,1,50.0,0,2,0,0,0,0,,0,0,,0,,0,,,2026-08-15 10:24:45
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,ou05,510,0,510,484,26,94.9,20,WWWWWWWWWWWWLLWWWWWW,18,90.0,10,WWWWWWWWWW,10,100.0,293,0,0,25,210,187,89.05,154,20,90.0,10,90.0,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,ou15,510,0,510,379,131,74.31,20,WWLWWLWLWWWWWWWWWLLW,15,75.0,10,WWLWWLWLWW,7,70.0,119,0,3,25,371,249,67.12,218,20,75.0,10,80.0,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,ou25,527,0,527,320,207,60.72,20,WLWWLWWLLLWWWWLWLLLW,11,55.0,10,WLWWLWWLLL,5,50.0,34,0,8,25,465,282,60.65,244,20,55.0,10,60.0,15,3.92,26.13,2026-08-28 19:19:35
+official_market,Cohere-Command,cohere/command-r-plus-08-2024,resultat,510,0,510,259,251,50.78,20,LLLLWWWLWLLLWWWWWLWL,10,50.0,10,LLLLWWWLWL,4,40.0,0,510,0,25,0,0,,0,0,,0,,0,,,2026-08-28 19:19:35
+official_market,Cohere-Command,command-r-plus-08-2024,btts,11,0,11,6,5,54.55,11,WLLLWWWWWLL,6,54.55,10,WLLLWWWWWL,6,60.0,3,0,0,0,8,4,50.0,8,8,50.0,8,50.0,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,mt1,11,0,11,8,3,72.73,11,WWWWWWLWWLL,8,72.73,10,WWWWWWLWWL,8,80.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,mt1_dom,11,0,11,8,3,72.73,11,WWWLWWWWWLL,8,72.73,10,WWWLWWWWWL,8,80.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,mt1_ext,10,0,10,6,4,60.0,10,WWWWWLWLLL,6,60.0,10,WWWWWLWLLL,6,60.0,0,10,0,0,0,0,,0,0,,0,,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,mt2,5,0,5,3,2,60.0,5,LWLWW,3,60.0,5,LWLWW,3,60.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-08-29 14:41:10
+official_market,Cohere-Command,command-r-plus-08-2024,mt2_dom,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-29 13:48:58
+official_market,Cohere-Command,command-r-plus-08-2024,mt2_ext,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-29 13:48:58
+official_market,Cohere-Command,command-r-plus-08-2024,ou05,11,0,11,10,1,90.91,11,WWLWWWWWWWW,10,90.91,10,WWLWWWWWWW,9,90.0,6,0,0,0,5,4,80.0,5,5,80.0,5,80.0,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,ou15,11,0,11,9,2,81.82,11,WWLWWWLWWWW,9,81.82,10,WWLWWWLWWW,8,80.0,3,0,0,0,8,6,75.0,8,8,75.0,8,75.0,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,ou25,11,0,11,4,7,36.36,11,WLLLWLLWWLL,4,36.36,10,WLLLWLLWWL,4,40.0,3,0,1,0,7,2,28.57,7,7,28.57,7,28.57,1,-1,-100.0,2026-08-29 16:01:51
+official_market,Cohere-Command,command-r-plus-08-2024,resultat,11,0,11,5,6,45.45,11,WWLLWLWLLWL,5,45.45,10,WWLLWLWLLW,5,50.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-29 16:01:51
+official_market,Cohere-Command,llama-3.3-70b-versatile,btts,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,0,0,0,1,1,100.0,1,1,100.0,1,100.0,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,mt1,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,mt1_dom,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,mt1_ext,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,mt2,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,mt2_dom,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,ou05,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,1,0,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,ou15,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,0,0,0,1,1,100.0,1,1,100.0,1,100.0,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,ou25,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,0,0,0,1,1,100.0,1,1,100.0,1,100.0,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,llama-3.3-70b-versatile,resultat,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:25:25
+official_market,Cohere-Command,model_id_not_proven,btts,3493,0,2884,1935,949,67.09,20,WWLWLWWWLLLWLWLLLWWW,11,55.0,10,WWLWLWWWLL,6,60.0,721,79,3,552,1744,1008,57.8,677,20,60.0,10,60.0,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,mt1,3493,0,2884,2271,613,78.74,20,WWWWLWWWWWLLWWWLWWWL,15,75.0,10,WWWWLWWWWW,9,90.0,0,2884,0,552,0,0,,0,0,,0,,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,mt1_dom,64,0,64,46,18,71.88,20,WWWWWWWWWLLLWWWLWWLW,15,75.0,10,WWWWWWWWWL,9,90.0,0,64,0,4,0,0,,0,0,,0,,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,mt1_ext,62,0,62,41,21,66.13,20,WLLLWWWLWLWWWWWWWWLL,13,65.0,10,WLLLWWWLWL,5,50.0,0,62,0,4,0,0,,0,0,,0,,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,mt2,36,0,36,13,23,36.11,20,LWWLLWLWLLLLWLLLLLLL,5,25.0,10,LWWLLWLWLL,4,40.0,0,36,0,2,0,0,,0,0,,0,,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,mt2_dom,3,0,3,0,3,0.0,3,LLL,0,0.0,3,LLL,0,0.0,0,3,0,0,0,0,,0,0,,0,,0,,,2026-08-08 10:30:51
+official_market,Cohere-Command,model_id_not_proven,ou05,66,0,66,58,8,87.88,20,WWWWWWWWWWLLWLWWWWWW,17,85.0,10,WWWWWWWWWW,10,100.0,34,3,1,4,28,21,75.0,25,20,75.0,10,80.0,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,ou15,66,0,66,40,26,60.61,20,WWWLLLWLWWLLWLWWWLWL,11,55.0,10,WWWLLLWLWW,6,60.0,8,3,1,4,54,28,51.85,48,20,45.0,10,40.0,0,,,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,ou25,3495,0,2886,1975,911,68.43,20,WWLWLLWWLLLWWWWWLLLW,11,55.0,10,WWLWLLWWLL,5,50.0,511,79,3,552,1958,1243,63.48,719,20,60.0,10,50.0,15,6.26,41.73,2026-08-28 19:37:01
+official_market,Cohere-Command,model_id_not_proven,resultat,3493,0,2884,1642,1242,56.93,20,WLWLLWWWLLLLWWWLWLWL,10,50.0,10,WLWLLWWWLL,5,50.0,0,2884,0,552,0,0,,0,0,,0,,0,,,2026-08-28 19:37:01
+official_market,DeepSeek-V3,deepseek/deepseek-chat,btts,392,0,392,236,156,60.2,20,WLLLWLLWWWLWWWWLWWWW,13,65.0,10,WLLLWLLWWW,5,50.0,49,0,7,16,327,185,56.57,233,20,40.0,10,50.0,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,mt1,392,0,392,294,98,75.0,20,WWLWWWLWWLLWWWWWWWWW,16,80.0,10,WWLWWWLWWL,7,70.0,0,392,0,16,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,mt1_dom,391,0,391,266,125,68.03,20,WWLWLWWWWWWWWWWWWWWW,18,90.0,10,WWLWLWWWWW,8,80.0,0,391,0,16,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,mt1_ext,390,0,390,258,132,66.15,20,WWWWLWLWWLLWWLWWWWLL,13,65.0,10,WWWWLWLWWL,7,70.0,0,390,0,16,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,mt2,390,0,390,286,104,73.33,20,WWWLWWWWWWWWWWWWWWWW,19,95.0,10,WWWLWWWWWW,9,90.0,0,390,0,16,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,mt2_dom,376,0,376,198,178,52.66,20,WWWLWWWLLWWWWWWLLWLW,14,70.0,10,WWWLWWWLLW,7,70.0,0,376,0,16,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,mt2_ext,324,0,324,166,158,51.23,20,WLWWLLLLWLLLWLLLWLWW,8,40.0,10,WLWWLLLLWL,4,40.0,0,324,0,14,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,ou05,392,0,392,361,31,92.09,20,WWWWWWWWWWWWWWWWWWWW,20,100.0,10,WWWWWWWWWW,10,100.0,226,0,4,16,159,132,83.02,130,20,90.0,10,90.0,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,ou15,392,0,392,270,122,68.88,20,LWLWWWLWWLWWLWWLWWWW,14,70.0,10,LWLWWWLWWL,6,60.0,78,0,7,16,298,185,62.08,217,20,70.0,10,60.0,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,ou25,403,0,403,245,158,60.79,20,LLWLLLLLLLLLWLWWLWWL,6,30.0,10,LLWLLLLLLL,1,10.0,24,0,7,16,361,214,59.28,254,20,40.0,10,20.0,30,7.87,26.23,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-chat,resultat,392,0,392,195,197,49.74,20,WWWWLWLWWLLWWLWWWWLL,13,65.0,10,WWWWLWLWWL,7,70.0,0,392,0,16,0,0,,0,0,,0,,0,,,2026-09-06 14:52:04
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,btts,5,0,5,1,4,20.0,5,WLLLL,1,20.0,5,WLLLL,1,20.0,0,0,0,0,5,1,20.0,4,4,25.0,4,25.0,0,,,2026-09-04 19:15:15
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,mt1,5,0,5,2,3,40.0,5,LLWWL,2,40.0,5,LLWWL,2,40.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-09-04 19:15:15
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,mt1_dom,4,0,4,2,2,50.0,4,LWWL,2,50.0,4,LWWL,2,50.0,0,4,0,0,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,mt1_ext,3,0,3,3,0,100.0,3,WWW,3,100.0,3,WWW,3,100.0,0,3,0,0,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,mt2,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,mt2_dom,1,0,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,ou05,5,0,5,5,0,100.0,5,WWWWW,5,100.0,5,WWWWW,5,100.0,1,0,0,0,4,4,100.0,4,4,100.0,4,100.0,0,,,2026-09-04 19:15:15
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,ou15,5,0,5,3,2,60.0,5,WLWWL,3,60.0,5,WLWWL,3,60.0,0,0,0,0,5,3,60.0,4,4,50.0,4,50.0,0,,,2026-09-04 19:15:15
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,ou25,5,0,5,2,3,40.0,5,WWLLL,2,40.0,5,WWLLL,2,40.0,0,0,0,0,5,2,40.0,4,4,50.0,4,50.0,1,0.25,25.0,2026-09-04 19:15:15
+official_market,DeepSeek-V3,deepseek/deepseek-v4-pro,resultat,5,0,5,5,0,100.0,5,WWWWW,5,100.0,5,WWWWW,5,100.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-09-04 19:15:15
+official_market,DeepSeek-V3,model_id_not_proven,btts,5146,0,4191,2770,1421,66.09,20,LWLWWWWLWWWWWWLLLWWL,13,65.0,10,LWLWWWWLWW,7,70.0,1000,87,10,670,2713,1573,57.98,1061,20,65.0,10,80.0,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,mt1,5146,0,4191,3345,846,79.81,20,LWLWWWWLWWLWWWLWLWWW,14,70.0,10,LWLWWWWLWW,7,70.0,0,4191,0,670,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,mt1_dom,569,0,568,367,201,64.61,20,WWLLLWWLWWLWWWLLLWWW,12,60.0,10,WWLLLWWLWW,6,60.0,0,568,0,30,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,mt1_ext,569,0,568,344,224,60.56,20,LWWLLWWWLWWWWWWWLWWW,15,75.0,10,LWWLLWWWLW,6,60.0,0,568,0,30,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,mt2,563,0,562,426,136,75.8,20,WLLWWLLWWWLLLWWWLWWW,12,60.0,10,WLLWWLLWWW,6,60.0,0,562,0,30,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,mt2_dom,544,0,543,286,257,52.67,20,WLLWWLLWWWLLWWWWLLWW,12,60.0,10,WLLWWLLWWW,6,60.0,0,543,0,30,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,mt2_ext,461,0,460,232,228,50.43,20,WWWWLWLLWWWLWWWLWLWW,14,70.0,10,WWWWLWLLWW,7,70.0,0,460,0,26,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,ou05,568,0,567,534,33,94.18,20,WLLWWWLWWWWWWWWWWWWW,17,85.0,10,WLLWWWLWWW,7,70.0,292,2,1,30,260,232,89.23,200,20,90.0,10,80.0,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,ou15,568,0,567,370,197,65.26,20,LWLWWWWLWWWLLWLWLWLW,12,60.0,10,LWLWWWWLWW,7,70.0,116,2,5,30,421,239,56.77,278,20,70.0,10,80.0,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,ou25,5154,0,4199,2848,1351,67.83,20,WWLLWWWLWWWWWLLLLWWL,12,60.0,10,WWLLWWWLWW,7,70.0,698,87,14,670,3016,1929,63.96,1117,20,65.0,10,80.0,36,3.26,9.06,2026-09-02 19:19:19
+official_market,DeepSeek-V3,model_id_not_proven,resultat,5146,0,4191,2277,1914,54.33,20,WLLLLWLLWLLWWWLLLLWL,7,35.0,10,WLLLLWLLWL,3,30.0,0,4191,0,670,0,0,,0,0,,0,,0,,,2026-09-02 19:19:19
+official_market,DeepSeek-V3,moonshotai/kimi-k2,btts,150,0,138,92,46,66.67,20,WWWLWWLLLLLWWLWWWWWL,12,60.0,10,WWWLWWLLLL,5,50.0,25,0,0,0,113,67,59.29,68,20,70.0,10,60.0,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,mt1,148,0,136,115,21,84.56,20,WWWWWWWLWWWWWLWWWWWW,18,90.0,10,WWWWWWWLWW,9,90.0,0,136,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,mt1_dom,145,0,133,112,21,84.21,20,WWWWWWWWWWWWWLWLLWLW,16,80.0,10,WWWWWWWWWW,10,100.0,0,133,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,mt1_ext,140,0,128,110,18,85.94,20,WWWWWWWWLWWWWWWWWWWW,19,95.0,10,WWWWWWWWLW,9,90.0,0,128,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,mt2,126,0,115,85,30,73.91,20,WWWWWWWWWWLWLWWWWLLW,16,80.0,10,WWWWWWWWWW,10,100.0,0,115,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,mt2_dom,114,0,105,66,39,62.86,20,LWWWWWWWWLWLWLWWLLWW,14,70.0,10,LWWWWWWWWL,8,80.0,0,105,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,mt2_ext,107,0,99,44,55,44.44,20,LWLWLLLLLWLLWLWWWWWL,9,45.0,10,LWLWLLLLLW,3,30.0,0,99,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,ou05,152,0,140,130,10,92.86,20,WWWWWWWWWWWWWWWWWWWW,20,100.0,10,WWWWWWWWWW,10,100.0,91,0,0,0,49,39,79.59,34,20,80.0,10,90.0,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,ou15,151,0,139,112,27,80.58,20,WWWWWWWWWWWWWWLWWWWL,18,90.0,10,WWWWWWWWWW,10,100.0,39,0,0,0,100,73,73.0,65,20,70.0,10,70.0,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,ou25,152,0,140,90,50,64.29,20,WWWWWWLLLLLLWWLLWWWW,12,60.0,10,WWWWWWLLLL,6,60.0,10,0,0,0,130,80,61.54,78,20,65.0,10,50.0,0,,,2026-09-11 17:47:11
+official_market,DeepSeek-V3,moonshotai/kimi-k2,resultat,149,0,137,78,59,56.93,20,LWLWWWLWWWLLLLWLLWWL,10,50.0,10,LWLWWWLWWW,7,70.0,0,137,0,0,0,0,,0,0,,0,,0,,,2026-09-11 17:47:11
+official_market,Groq-Llama70B,model_id_not_proven,btts,914,0,749,403,346,53.81,20,WWWWWLLLWWLLLLWLLLWL,9,45.0,10,WWWWWLLLWW,7,70.0,102,23,1,111,548,280,51.09,548,20,50.0,10,70.0,0,,,2026-08-17 03:48:12
+official_market,Groq-Llama70B,model_id_not_proven,mt1,914,0,749,572,177,76.37,20,WLWLWWWLWWWWLLWWWWWL,14,70.0,10,WLWLWWWLWW,7,70.0,0,749,0,111,0,0,,0,0,,0,,0,,,2026-08-17 03:48:12
+official_market,Groq-Llama70B,model_id_not_proven,ou25,914,0,749,434,315,57.94,20,WWWWWLLWWLLWWLWWLLLL,11,55.0,10,WWWWWLLWWL,7,70.0,51,23,1,111,598,334,55.85,598,20,55.0,10,70.0,14,2.85,20.36,2026-08-17 03:48:12
+official_market,Groq-Llama70B,model_id_not_proven,resultat,914,0,749,347,402,46.33,20,WLLLLWWWLLLWWLWLWWLW,10,50.0,10,WLLLLWWWLL,4,40.0,0,749,0,111,0,0,,0,0,,0,,0,,,2026-08-17 03:48:12
+official_market,Groq-Llama8B,model_id_not_proven,btts,556,0,410,178,232,43.41,20,LLLWLLWLWLWWLWLWWLLW,9,45.0,10,LLLWLLWLWL,3,30.0,51,26,0,64,300,140,46.67,300,20,55.0,10,60.0,0,,,2026-07-28 01:06:01
+official_market,Groq-Llama8B,model_id_not_proven,mt1,271,0,205,39,166,19.02,20,LLLLLLLLLWWLLLWLLLLW,4,20.0,10,LLLLLLLLLW,1,10.0,0,205,0,28,0,0,,0,0,,0,,0,,,2026-07-28 01:05:57
+official_market,Groq-Llama8B,model_id_not_proven,ou25,556,0,410,191,219,46.59,20,LLLWLLLWWLWLWWLLLLLW,7,35.0,10,LLLWLLLWWL,3,30.0,31,26,0,64,321,159,49.53,321,20,65.0,10,50.0,3,0.75,25.0,2026-07-28 01:06:01
+official_market,Groq-Llama8B,model_id_not_proven,resultat,285,0,220,88,132,40.0,20,LWWLLWWWWLLWLLLLLLLL,7,35.0,10,LWWLLWWWWL,6,60.0,0,220,0,26,0,0,,0,0,,0,,0,,,2026-07-28 01:05:52
+official_market,Mistral-Large,mistral-large-latest,btts,202,0,202,119,83,58.91,20,LLLWLLWWWLWLLLWLWWWW,10,50.0,10,LLLWLLWWWL,4,40.0,34,0,2,7,161,83,51.55,103,20,30.0,10,20.0,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,mt1,201,0,201,146,55,72.64,20,WLWWWLWWWWWWWWWLWWWW,17,85.0,10,WLWWWLWWWW,8,80.0,0,201,0,7,0,0,,0,0,,0,,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,mt1_dom,197,0,197,147,50,74.62,20,WWWWWLWWWWWWWWWWWWWW,19,95.0,10,WWWWWLWWWW,9,90.0,0,197,0,7,0,0,,0,0,,0,,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,mt1_ext,181,0,181,142,39,78.45,20,WLWWWLWLWWWWWLLWWWWW,15,75.0,10,WLWWWLWLWW,7,70.0,0,181,0,6,0,0,,0,0,,0,,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,mt2,115,0,115,72,43,62.61,20,LWLWWLWWWWWWLWWWWLWL,14,70.0,10,LWLWWLWWWW,7,70.0,0,115,0,3,0,0,,0,0,,0,,0,,,2026-08-22 14:18:47
+official_market,Mistral-Large,mistral-large-latest,mt2_dom,16,0,16,7,9,43.75,16,WLWWWWWLLLLLLWLL,7,43.75,10,WLWWWWWLLL,6,60.0,0,16,0,0,0,0,,0,0,,0,,0,,,2026-08-20 16:46:01
+official_market,Mistral-Large,mistral-large-latest,ou05,202,0,202,187,15,92.57,20,WWWLWLWWWWWWWWWWWWWW,18,90.0,10,WWWLWLWWWW,8,80.0,115,0,0,7,84,69,82.14,62,20,85.0,10,70.0,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,ou15,202,0,202,133,69,65.84,20,WLWWWLWWWWWLWWWLWWWW,16,80.0,10,WLWWWLWWWW,8,80.0,48,0,0,7,149,83,55.7,98,20,55.0,10,50.0,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,ou25,202,0,202,135,67,66.83,20,WLWWWLLWWWLWLLWLWWLW,12,60.0,10,WLWWWLLWWW,7,70.0,18,0,0,7,179,116,64.8,113,20,65.0,10,50.0,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistral-large-latest,resultat,202,0,202,109,93,53.96,20,WWWWWLWLLLLLLLLLLWLL,7,35.0,10,WWWWWLWLLL,6,60.0,0,202,0,7,0,0,,0,0,,0,,0,,,2026-08-25 23:02:24
+official_market,Mistral-Large,mistralai/mistral-large,btts,64,0,63,47,16,74.6,20,LWWWWLLLLWWWWWWWWWWW,15,75.0,10,LWWWWLLLLW,5,50.0,9,0,1,3,50,36,72.0,46,20,70.0,10,60.0,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,mt1,61,0,60,47,13,78.33,20,WWWWWLLLWWWWWWWWWWWL,16,80.0,10,WWWWWLLLWW,7,70.0,0,60,0,3,0,0,,0,0,,0,,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,mt1_dom,60,0,59,49,10,83.05,20,WWWWWWWLWWLWWWWWWWWL,17,85.0,10,WWWWWWWLWW,9,90.0,0,59,0,3,0,0,,0,0,,0,,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,mt1_ext,51,0,51,29,22,56.86,20,LWWLWLLWWLLWWWWWWLWL,12,60.0,10,LWWLWLLWWL,5,50.0,0,51,0,2,0,0,,0,0,,0,,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,mt2,34,0,34,21,13,61.76,20,LWWWWWWWWWWLLWLWWLWW,15,75.0,10,LWWWWWWWWW,9,90.0,0,34,0,2,0,0,,0,0,,0,,0,,,2026-08-28 19:30:54
+official_market,Mistral-Large,mistralai/mistral-large,mt2_dom,5,0,5,3,2,60.0,5,LWWLW,3,60.0,5,LWWLW,3,60.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-08-26 17:37:31
+official_market,Mistral-Large,mistralai/mistral-large,mt2_ext,1,0,1,0,1,0.0,1,L,0,0.0,1,L,0,0.0,0,1,0,0,0,0,,0,0,,0,,0,,,2026-08-08 15:36:25
+official_market,Mistral-Large,mistralai/mistral-large,ou05,65,0,64,58,6,90.62,20,WWWWWWLWWWWWWWWWLWWW,18,90.0,10,WWWWWWLWWW,9,90.0,39,0,0,3,25,19,76.0,22,20,75.0,10,80.0,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,ou15,64,0,63,45,18,71.43,20,WLWWLLLLWWWWLWWWWWWL,13,65.0,10,WLWWLLLLWW,5,50.0,16,0,0,3,44,26,59.09,40,20,50.0,10,50.0,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,ou25,75,0,74,44,30,59.46,20,LLWWWLLLLWWWWLLLLWLW,9,45.0,10,LLWWWLLLLW,4,40.0,5,0,1,3,65,38,58.46,58,20,40.0,10,50.0,8,-6.37,-79.62,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-large,resultat,62,0,61,22,39,36.07,20,WLWWWLLLWLLWWLWLLLLL,8,40.0,10,WLWWWLLLWL,5,50.0,0,61,0,3,0,0,,0,0,,0,,0,,,2026-08-29 17:20:55
+official_market,Mistral-Large,mistralai/mistral-small-2603,btts,156,0,149,91,58,61.07,20,LWWLLLWLWWWWLLWWWWWL,12,60.0,10,LWWLLLWLWW,5,50.0,20,0,0,0,129,71,55.04,82,20,50.0,10,50.0,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,mt1,155,0,148,113,35,76.35,20,LWWWWLLWWWWWWWWLWWWL,15,75.0,10,LWWWWLLWWW,7,70.0,0,148,0,0,0,0,,0,0,,0,,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,mt1_dom,152,0,145,96,49,66.21,20,LWWWWLLWWWWLWWWLWWWL,14,70.0,10,LWWWWLLWWW,7,70.0,0,145,0,0,0,0,,0,0,,0,,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,mt1_ext,145,0,138,93,45,67.39,20,WLWWWWWWWWWWLWWWWWWW,18,90.0,10,WLWWWWWWWW,9,90.0,0,138,0,0,0,0,,0,0,,0,,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,mt2,110,0,105,65,40,61.9,20,LWWWWLWLWWLWLWWWLWLL,12,60.0,10,LWWWWLWLWW,7,70.0,0,105,0,0,0,0,,0,0,,0,,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,mt2_dom,48,0,47,23,24,48.94,20,WWLWWWLLWWWLWLWLLLWL,11,55.0,10,WWLWWWLLWW,7,70.0,0,47,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:01:10
+official_market,Mistral-Large,mistralai/mistral-small-2603,mt2_ext,5,0,5,2,3,40.0,5,WLWLL,2,40.0,5,WLWLL,2,40.0,0,5,0,0,0,0,,0,0,,0,,0,,,2026-09-10 19:49:04
+official_market,Mistral-Large,mistralai/mistral-small-2603,ou05,156,0,149,135,14,90.6,20,LWWWWWWWWWWWWWWWWWWL,18,90.0,10,LWWWWWWWWW,9,90.0,76,0,0,0,73,59,80.82,47,20,75.0,10,70.0,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,ou15,156,0,149,106,43,71.14,20,LWWWWLWWWLLWWLWWWWWL,14,70.0,10,LWWWWLWWWL,7,70.0,33,0,0,0,116,73,62.93,75,20,55.0,10,80.0,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,ou25,156,0,149,97,52,65.1,20,LWWLLLWLWWWWWLWWLWLL,11,55.0,10,LWWLLLWLWW,5,50.0,8,0,0,0,141,89,63.12,90,20,50.0,10,60.0,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,mistralai/mistral-small-2603,resultat,156,0,149,70,79,46.98,20,LWWWWWWWLLLLWLWWLLLL,10,50.0,10,LWWWWWWWLL,7,70.0,0,149,0,0,0,0,,0,0,,0,,0,,,2026-09-11 18:16:47
+official_market,Mistral-Large,model_id_not_proven,btts,4292,0,3629,2366,1263,65.2,20,WLWWWWWWWWWWLLLWWWLL,14,70.0,10,WLWWWWWWWW,9,90.0,786,51,12,559,2432,1401,57.61,1028,20,70.0,10,80.0,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,mt1,4292,0,3629,2723,906,75.03,20,WWWLWWWWWWWWWLLWWWWW,17,85.0,10,WWWLWWWWWW,9,90.0,0,3629,0,559,0,0,,0,0,,0,,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,mt1_dom,448,0,448,313,135,69.87,20,WWWLWWWWWWWLWLLLWLLW,13,65.0,10,WWWLWWWWWW,9,90.0,0,448,0,15,0,0,,0,0,,0,,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,mt1_ext,421,0,421,303,118,71.97,20,LWLWWWWWWLWWWWLWLLWW,14,70.0,10,LWLWWWWWWL,7,70.0,0,421,0,13,0,0,,0,0,,0,,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,mt2,305,0,305,187,118,61.31,20,LLWWWWWWWWLLWWWWWWLW,15,75.0,10,LLWWWWWWWW,8,80.0,0,305,0,9,0,0,,0,0,,0,,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,mt2_dom,77,0,77,45,32,58.44,20,WLWLWWLLLLWWLWWLWLWW,11,55.0,10,WLWLWWLLLL,4,40.0,0,77,0,3,0,0,,0,0,,0,,0,,,2026-09-04 19:16:54
+official_market,Mistral-Large,model_id_not_proven,mt2_ext,6,0,6,4,2,66.67,6,LWWWLW,4,66.67,6,LWWWLW,4,66.67,0,6,0,0,0,0,,0,0,,0,,0,,,2026-08-31 19:47:26
+official_market,Mistral-Large,model_id_not_proven,ou05,456,0,456,418,38,91.67,20,WWWWWWWWWWWWWWLWWWWW,19,95.0,10,WWWWWWWWWW,10,100.0,244,2,1,15,205,170,82.93,156,20,85.0,10,100.0,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,ou15,457,0,457,301,156,65.86,20,WWWWWWWWWWWWWLLWWWWW,18,90.0,10,WWWWWWWWWW,10,100.0,79,2,6,15,363,217,59.78,240,20,85.0,10,90.0,0,,,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,ou25,4300,0,3637,2473,1164,68.0,20,WLWWLLWWWWWWWLLLWWWL,13,65.0,10,WLWWLLWWWW,7,70.0,512,51,11,559,2715,1757,64.71,1096,20,60.0,10,60.0,39,4.04,10.36,2026-09-04 19:41:02
+official_market,Mistral-Large,model_id_not_proven,resultat,4293,0,3630,1876,1754,51.68,20,WWLLLLWWWLLLWLWLWLLW,9,45.0,10,WWLLLLWWWL,5,50.0,0,3630,0,559,0,0,,0,0,,0,,0,,,2026-09-04 19:41:02
+official_market,Mistral-Small,model_id_not_proven,btts,1007,0,828,458,370,55.31,20,LLLWLLWWWWWLWWWWWLWL,12,60.0,10,LLLWLLWWWW,5,50.0,95,29,3,118,622,312,50.16,622,20,50.0,10,50.0,0,,,2026-09-01 19:18:03
+official_market,Mistral-Small,model_id_not_proven,mt1,1007,0,828,588,240,71.01,20,LLWWLLWWWWWWWLWWLWWW,14,70.0,10,LLWWLLWWWW,6,60.0,0,828,0,118,0,0,,0,0,,0,,0,,,2026-09-01 19:18:03
+official_market,Mistral-Small,model_id_not_proven,ou25,1009,0,830,486,344,58.55,20,LLLWLLWWLLWWWLLWWWWL,10,50.0,10,LLLWLLWWLL,3,30.0,45,29,2,118,674,376,55.79,674,20,55.0,10,40.0,22,5.43,24.68,2026-09-01 19:18:03
+official_market,Mistral-Small,model_id_not_proven,resultat,1007,0,828,390,438,47.1,20,WWLWWWLLWWWLLLWWLWWW,13,65.0,10,WWLWWWLLWW,7,70.0,0,828,0,118,0,0,,0,0,,0,,0,,,2026-09-01 19:18:03
+official_market,OR-KimiK3,model_id_not_proven,btts,73,0,73,48,25,65.75,20,WWLLWWWLWWLWLWLWWWLW,13,65.0,10,WWLLWWWLWW,7,70.0,9,0,1,2,62,40,64.52,62,20,65.0,10,70.0,0,,,2026-08-20 18:43:28
+official_market,OR-KimiK3,model_id_not_proven,mt1,73,0,73,43,30,58.9,20,WWWWLWWWWLWWLWWWWWWW,17,85.0,10,WWWWLWWWWL,8,80.0,0,73,0,2,0,0,,0,0,,0,,0,,,2026-08-20 18:43:28
+official_market,OR-KimiK3,model_id_not_proven,ou25,73,0,73,50,23,68.49,20,WWLWLWWWWLLWWWWWWWLW,15,75.0,10,WWLWLWWWWL,7,70.0,0,0,1,2,70,49,70.0,70,20,80.0,10,70.0,4,-0.84,-21.0,2026-08-20 18:43:28
+official_market,OR-KimiK3,model_id_not_proven,resultat,73,0,73,30,43,41.1,20,LWWWWLWWLWLWLWWWWLLW,13,65.0,10,LWWWWLWWLW,7,70.0,0,73,0,2,0,0,,0,0,,0,,0,,,2026-08-20 18:43:28
+official_market,OR-Mistral7B,model_id_not_proven,btts,141,0,141,77,64,54.61,20,WWLWLLWLWWWWLWLWWWLL,12,60.0,10,WWLWLLWLWW,6,60.0,13,0,3,2,124,64,51.61,124,20,55.0,10,60.0,0,,,2026-09-11 16:53:01
+official_market,OR-Mistral7B,model_id_not_proven,mt1,141,0,141,84,57,59.57,20,WWLLWWLLWWWWLWLWWWLL,12,60.0,10,WWLLWWLLWW,6,60.0,0,141,0,2,0,0,,0,0,,0,,0,,,2026-09-11 16:53:01
+official_market,OR-Mistral7B,model_id_not_proven,ou25,142,0,142,77,65,54.23,20,WWLWLWWLWWLWLWLWWLWW,13,65.0,10,WWLWLWWLWW,7,70.0,0,0,2,2,138,75,54.35,138,20,60.0,10,70.0,13,3.16,24.31,2026-09-11 16:53:01
+official_market,OR-Mistral7B,model_id_not_proven,resultat,141,0,141,63,78,44.68,20,LLLLWWLWWLWWWLLLWWWL,10,50.0,10,LLLLWWLWWL,4,40.0,0,141,0,2,0,0,,0,0,,0,,0,,,2026-09-11 16:53:01
+official_market,OR-Qwen37Max,model_id_not_proven,btts,205,0,126,71,55,56.35,20,LWLLLWWWWWWWLLWWLWLW,12,60.0,10,LWLLLWWWWW,6,60.0,14,10,2,16,98,53,54.08,98,20,55.0,10,70.0,0,,,2026-09-01 19:18:07
+official_market,OR-Qwen37Max,model_id_not_proven,mt1,205,0,126,94,32,74.6,20,LWWWLWWWWWWWLWWWWWWW,17,85.0,10,LWWWLWWWWW,8,80.0,0,126,0,16,0,0,,0,0,,0,,0,,,2026-09-01 19:18:07
+official_market,OR-Qwen37Max,model_id_not_proven,ou25,201,0,123,74,49,60.16,20,LWLLLWWWLWWWLWWLLWWW,12,60.0,10,LWLLLWWWLW,5,50.0,4,10,1,15,106,61,57.55,106,20,55.0,10,50.0,5,-0.08,-1.6,2026-09-01 19:18:07
+official_market,OR-Qwen37Max,model_id_not_proven,resultat,205,0,126,53,73,42.06,20,WWLWWLWWWLLWLWLWLWLW,12,60.0,10,WWLWWLWWWL,7,70.0,0,126,0,16,0,0,,0,0,,0,,0,,,2026-09-01 19:18:07
+official_market,OpenRouter-Kimi,model_id_not_proven,btts,44,0,44,21,23,47.73,20,LWWWLLLWWWLWLLWLLLLL,8,40.0,10,LWWWLLLWWW,6,60.0,4,1,1,3,39,17,43.59,31,20,45.0,10,50.0,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,mt1,44,0,44,33,11,75.0,20,LWWLLLLWWWWWWWWLLWWW,13,65.0,10,LWWLLLLWWW,5,50.0,0,44,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,mt1_dom,44,0,44,31,13,70.45,20,WWWLWWLLWLWWWLWLLLWL,11,55.0,10,WWWLWWLLWL,6,60.0,0,44,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,mt1_ext,42,0,42,34,8,80.95,20,LWLLLWWWWLWWWWLWWWWL,13,65.0,10,LWLLLWWWWL,5,50.0,0,42,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,mt2,38,0,38,26,12,68.42,20,WWWWWLWWWLWLWWWWWWLW,16,80.0,10,WWWWWLWWWL,8,80.0,0,38,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,mt2_dom,32,0,32,17,15,53.12,20,LWLLWLWLLLWLWWWWWLWL,10,50.0,10,LWLLWLWLLL,3,30.0,0,32,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,mt2_ext,27,0,27,13,14,48.15,20,WLLLWLWWWLWLWLLWLLLW,9,45.0,10,WLLLWLWWWL,5,50.0,0,27,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,ou05,44,0,44,40,4,90.91,20,WWWWWWWWLWWWWWWWWWWW,19,95.0,10,WWWWWWWWLW,9,90.0,18,1,0,3,25,21,84.0,22,20,90.0,10,90.0,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,ou15,44,0,44,32,12,72.73,20,LWWWWWLWLWLWWWWLLWWW,14,70.0,10,LWWWWWLWLW,7,70.0,5,1,0,3,38,26,68.42,30,20,55.0,10,60.0,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,ou25,44,0,44,26,18,59.09,20,LWWWWLLWLWLWLLWLLLLW,9,45.0,10,LWWWWLLWLW,6,60.0,2,1,1,3,41,23,56.1,33,20,45.0,10,50.0,6,0.3,5.0,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,model_id_not_proven,resultat,44,0,44,19,25,43.18,20,WWWWWLLLLWLLLWLLLWWL,9,45.0,10,WWWWWLLLLW,6,60.0,0,44,0,3,0,0,,0,0,,0,,0,,,2026-08-30 18:17:34
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,btts,50,0,50,31,19,62.0,20,LWLLLWWWWWLLWLWWWWWL,12,60.0,10,LWLLLWWWWW,6,60.0,3,0,2,1,44,25,56.82,34,20,40.0,10,30.0,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,mt1,49,0,49,30,19,61.22,20,WWLLLWWWWWWWWLWLWWWL,14,70.0,10,WWLLLWWWWW,7,70.0,0,49,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,mt1_dom,47,0,47,25,22,53.19,20,WWLLWWWLLWLWLLWWWWWL,12,60.0,10,WWLLWWWLLW,6,60.0,0,47,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,mt1_ext,45,0,45,26,19,57.78,20,LWLWLWLLWWLLWWLWLWWW,11,55.0,10,LWLWLWLLWW,5,50.0,0,45,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,mt2,42,0,42,33,9,78.57,20,LWWWLWWWWWWLWWLWWWWW,16,80.0,10,LWWWLWWWWW,8,80.0,0,42,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,mt2_dom,32,0,32,26,6,81.25,20,LWWLWWWLWWWWWWWWWWWW,17,85.0,10,LWWLWWWLWW,7,70.0,0,32,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,mt2_ext,31,0,31,12,19,38.71,20,LWLLWWLLLLWWWLLLLLLL,6,30.0,10,LWLLWWLLLL,3,30.0,0,31,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,ou05,50,0,50,49,1,98.0,20,WWWWWWWWWWWWWWLWWWWW,19,95.0,10,WWWWWWWWWW,10,100.0,24,0,1,1,25,24,96.0,21,20,95.0,10,90.0,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,ou15,50,0,50,34,16,68.0,20,WWLLLWWWLLWLWLWWWWWL,12,60.0,10,WWLLLWWWLL,5,50.0,6,0,3,1,41,28,68.29,32,20,65.0,10,50.0,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,ou25,50,0,50,26,24,52.0,20,LWLLWLWWWWWLWLWLWWWL,12,60.0,10,LWLLWLWWWW,6,60.0,0,0,3,1,46,24,52.17,34,20,45.0,10,40.0,5,0.32,6.4,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k2,resultat,50,0,50,20,30,40.0,20,LWWWWWWLLWLLLLWLLLLL,8,40.0,10,LWWWWWWLLW,7,70.0,0,50,0,1,0,0,,0,0,,0,,0,,,2026-08-30 14:53:17
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,btts,11,0,11,8,3,72.73,11,LWLLWWWWWWW,8,72.73,10,LWLLWWWWWW,7,70.0,1,0,0,1,9,7,77.78,8,8,75.0,8,75.0,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,mt1,11,0,11,9,2,81.82,11,LWLWWWWWWWW,9,81.82,10,LWLWWWWWWW,8,80.0,0,11,0,1,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,mt1_dom,10,0,10,7,3,70.0,10,LLWWLWWWWW,7,70.0,10,LLWWLWWWWW,7,70.0,0,10,0,1,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,mt1_ext,9,0,9,7,2,77.78,9,LLWWWWWWW,7,77.78,9,LLWWWWWWW,7,77.78,0,9,0,1,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,mt2,9,0,9,8,1,88.89,9,WWLWWWWWW,8,88.89,9,WWLWWWWWW,8,88.89,0,9,0,1,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,mt2_dom,7,0,7,2,5,28.57,7,WLLLWLL,2,28.57,7,WLLLWLL,2,28.57,0,7,0,0,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,mt2_ext,4,0,4,1,3,25.0,4,LWLL,1,25.0,4,LWLL,1,25.0,0,4,0,0,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,ou05,11,0,11,11,0,100.0,11,WWWWWWWWWWW,11,100.0,10,WWWWWWWWWW,10,100.0,11,0,0,1,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,ou15,11,0,11,10,1,90.91,11,LWWWWWWWWWW,10,90.91,10,LWWWWWWWWW,9,90.0,2,0,0,1,8,8,100.0,7,7,100.0,7,100.0,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,ou25,11,0,11,6,5,54.55,11,LWWLWWLLLWW,6,54.55,10,LWWLWWLLLW,5,50.0,0,0,0,1,10,5,50.0,9,9,55.56,9,55.56,3,0.46,15.33,2026-09-01 19:17:23
+official_market,OpenRouter-Kimi,moonshotai/kimi-k3,resultat,11,0,11,6,5,54.55,11,WWWWLLWLLWL,6,54.55,10,WWWWLLWLLW,6,60.0,0,11,0,1,0,0,,0,0,,0,,0,,,2026-09-01 19:17:23
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,btts,70,0,70,41,29,58.57,20,WWLWLLLLWLLWLWLLWWWW,10,50.0,10,WWLWLLLLWL,4,40.0,14,0,1,3,52,27,51.92,50,20,55.0,10,40.0,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,mt1,69,0,69,44,25,63.77,20,WWWWLWWWWWWWWWLLWWWW,17,85.0,10,WWWWLWWWWW,9,90.0,0,69,0,3,0,0,,0,0,,0,,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,mt1_dom,67,0,67,42,25,62.69,20,WWWWWWWLWWWLWLLWWWLW,15,75.0,10,WWWWWWWLWW,9,90.0,0,67,0,3,0,0,,0,0,,0,,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,mt1_ext,57,0,57,41,16,71.93,20,WWWWWWLWWLLWWWWWLLWW,15,75.0,10,WWWWWWLWWL,8,80.0,0,57,0,2,0,0,,0,0,,0,,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,mt2,40,0,40,28,12,70.0,20,WLWWWLWWLWWLWWLWWWWL,14,70.0,10,WLWWWLWWLW,7,70.0,0,40,0,2,0,0,,0,0,,0,,0,,,2026-08-16 17:55:35
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,mt2_dom,17,0,17,13,4,76.47,17,WLWLWWWWWWWWLLWWW,13,76.47,10,WLWLWWWWWW,8,80.0,0,17,0,0,0,0,,0,0,,0,,0,,,2026-08-16 11:36:48
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,mt2_ext,3,0,3,1,2,33.33,3,WLL,1,33.33,3,WLL,1,33.33,0,3,0,0,0,0,,0,0,,0,,0,,,2026-08-14 18:53:28
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,ou05,70,0,70,63,7,90.0,20,WWWWWWWWWWWWWWWWLWWW,19,95.0,10,WWWWWWWWWW,10,100.0,45,0,0,3,24,18,75.0,23,20,80.0,10,80.0,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,ou15,70,0,70,46,24,65.71,20,WWLWLWWLWLLLWWWWWLWW,13,65.0,10,WWLWLWWLWL,6,60.0,22,0,1,3,44,25,56.82,43,20,60.0,10,60.0,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,ou25,70,0,70,49,21,70.0,20,WWLWLWWLWWLLLWLLWWWW,12,60.0,10,WWLWLWWLWW,7,70.0,8,0,1,3,58,40,68.97,54,20,75.0,10,50.0,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,llama-3.3-70b-versatile,resultat,70,0,70,40,30,57.14,20,WLLLLWLLLWLLWWWWWWWL,10,50.0,10,WLLLLWLLLW,3,30.0,0,70,0,3,0,0,,0,0,,0,,0,,,2026-08-16 17:57:26
+official_market,OpenRouter-Qwen,model_id_not_proven,btts,3029,0,2319,1512,807,65.2,20,LWWWLWWWWWWLLLLLLWWW,12,60.0,10,LWWWLWWWWW,8,80.0,504,56,8,277,1656,986,59.54,501,20,45.0,10,60.0,1,0.56,56.0,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,mt1,3029,0,2319,1743,576,75.16,20,LWWWWWLLWWWWWLWWWWLL,14,70.0,10,LWWWWWLLWW,7,70.0,0,2319,0,277,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,mt1_dom,806,0,806,414,392,51.36,20,LWWWWWLLWWWWWLLLWWLL,12,60.0,10,LWWWWWLLWW,7,70.0,0,806,0,38,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,mt1_ext,803,0,803,494,309,61.52,20,WWWWWWWWWWWWWWLLWLWL,16,80.0,10,WWWWWWWWWW,10,100.0,0,803,0,38,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,mt2,788,0,788,612,176,77.66,20,WWWLWWLWWWWWWWWWLWLW,16,80.0,10,WWWLWWLWWW,8,80.0,0,788,0,37,0,0,,0,0,,0,,0,,,2026-09-04 18:35:32
+official_market,OpenRouter-Qwen,model_id_not_proven,mt2_dom,764,0,764,345,419,45.16,20,WWWLWWLWLWWLWLLLWWWW,13,65.0,10,WWWLWWLWLW,7,70.0,0,764,0,35,0,0,,0,0,,0,,0,,,2026-09-04 18:35:32
+official_market,OpenRouter-Qwen,model_id_not_proven,mt2_ext,748,0,748,370,378,49.47,20,WWWLWWWWLWWWWWWWWWLW,17,85.0,10,WWWLWWWWLW,8,80.0,0,748,0,35,0,0,,0,0,,0,,0,,,2026-09-04 18:35:32
+official_market,OpenRouter-Qwen,model_id_not_proven,ou05,805,0,805,767,38,95.28,20,WWWWWWWWWWWWWWWWWWWL,19,95.0,10,WWWWWWWWWW,10,100.0,468,4,1,38,322,289,89.75,170,20,90.0,10,100.0,0,,,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,ou15,806,0,806,494,312,61.29,20,LWWWWWWWWWWLWWWLLLLW,14,70.0,10,LWWWWWWWWW,9,90.0,188,4,2,38,588,295,50.17,220,20,55.0,10,80.0,0,,,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,ou25,3028,0,2318,1518,800,65.49,20,WWWWLLWWWWLLWWWLLLLW,12,60.0,10,WWWWLLWWWW,8,80.0,321,56,10,277,1824,1159,63.54,516,20,60.0,10,70.0,10,-1.32,-13.2,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,model_id_not_proven,resultat,3029,0,2319,1284,1035,55.37,20,WLWLWLWLWLWLLWWLLLWL,9,45.0,10,WLWLWLWLWL,5,50.0,0,2319,0,277,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,btts,135,0,128,82,46,64.06,20,WWLWWLWWLLWWWWWWLWLW,14,70.0,10,WWLWWLWWLL,6,60.0,23,0,0,1,104,59,56.73,66,20,60.0,10,60.0,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,mt1,129,0,122,99,23,81.15,20,WWWWWWWWWWWLWWWWWWLW,18,90.0,10,WWWWWWWWWW,10,100.0,0,122,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,mt1_dom,120,0,113,94,19,83.19,20,WWWWWWWWWLWLWWWWWWLW,17,85.0,10,WWWWWWWWWL,9,90.0,0,113,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,mt1_ext,108,0,102,85,17,83.33,20,WWWWWWWWWWWWWWWLLWWW,18,90.0,10,WWWWWWWWWW,10,100.0,0,102,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,mt2,97,0,92,71,21,77.17,20,LWWWWWWWWWWWWLLLWWWW,16,80.0,10,LWWWWWWWWW,9,90.0,0,92,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,mt2_dom,78,0,73,40,33,54.79,20,LWLWWWLWWWWLLLWWWWWW,14,70.0,10,LWLWWWLWWW,7,70.0,0,73,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,mt2_ext,71,0,66,31,35,46.97,20,WLWLLLWWWLLWLWLLLWWW,10,50.0,10,WLWLLLWWWL,5,50.0,0,66,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,ou05,136,0,129,123,6,95.35,20,LWWWWWWWWWWWWWWWWWWW,19,95.0,10,LWWWWWWWWW,9,90.0,75,0,0,1,53,47,88.68,39,20,85.0,10,90.0,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,ou15,135,0,128,91,37,71.09,20,WWWLWWWWWWWWLLWWWWLW,16,80.0,10,WWWLWWWWWW,9,90.0,31,0,0,1,96,60,62.5,62,20,55.0,10,60.0,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,ou25,136,0,129,81,48,62.79,20,WWWWWLWWLLWWWWWWWWWL,16,80.0,10,WWWWWLWWLL,7,70.0,10,0,0,1,118,71,60.17,74,20,70.0,10,70.0,5,0.13,2.6,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,moonshotai/kimi-k2-0905,resultat,133,0,126,73,53,57.94,20,WLWLWWWWLWWWWWLWWWWW,16,80.0,10,WLWLWWWWLW,7,70.0,0,126,0,1,0,0,,0,0,,0,,0,,,2026-09-11 18:16:52
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,btts,86,0,83,49,34,59.04,20,WLWLWWLLLWWWWWWWWLLL,12,60.0,10,WLWLWWLLLW,5,50.0,16,0,4,1,63,33,52.38,48,20,35.0,10,50.0,0,,,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,mt1,86,0,83,54,29,65.06,20,WLWWWWWWWLWWWWLWWWWL,16,80.0,10,WLWWWWWWWL,8,80.0,0,83,0,1,0,0,,0,0,,0,,0,,,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,mt1_dom,86,0,83,44,39,53.01,20,WLWWWWWLWLWWWWLWWWLL,14,70.0,10,WLWWWWWLWL,7,70.0,0,83,0,1,0,0,,0,0,,0,,0,,,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,mt1_ext,86,0,83,50,33,60.24,20,LLLWLLWLLWLLWWWWWWLW,10,50.0,10,LLLWLLWLLW,3,30.0,0,83,0,1,0,0,,0,0,,0,,0,,,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,mt2,83,0,80,60,20,75.0,20,LWLLWWWWWWLWLWWWWWWW,15,75.0,10,LWLLWWWWWW,7,70.0,0,80,0,1,0,0,,0,0,,0,,0,,,2026-08-20 00:11:15
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,mt2_dom,82,0,79,35,44,44.3,20,LLLWWWWLLLLLLLLWLLLL,5,25.0,10,LLLWWWWLLL,4,40.0,0,79,0,1,0,0,,0,0,,0,,0,,,2026-08-20 00:06:00
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,mt2_ext,79,0,76,37,39,48.68,20,LLWWWWWLWLLLWLLLLWWW,10,50.0,10,LLWWWWWLWL,6,60.0,0,76,0,1,0,0,,0,0,,0,,0,,,2026-08-19 20:23:05
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,ou05,87,0,84,79,5,94.05,20,WWWWWWWWWWWWWWLWWWWW,19,95.0,10,WWWWWWWWWW,10,100.0,53,0,4,1,28,25,89.29,21,20,90.0,10,80.0,0,,,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,ou15,86,0,83,55,28,66.27,20,WLWWWWWLLWWWWWWWWWLL,15,75.0,10,WLWWWWWLLW,7,70.0,25,0,4,1,54,28,51.85,39,20,55.0,10,50.0,0,,,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,ou25,87,0,84,48,36,57.14,20,LLLWLLWLLWWWWWWLLWWL,10,50.0,10,LLLWLLWLLW,3,30.0,8,0,4,1,71,38,53.52,50,20,50.0,10,50.0,1,0.56,56.0,2026-08-20 02:53:06
+official_market,OpenRouter-Qwen,qwen/qwen-plus-2025-07-28,resultat,86,0,83,44,39,53.01,20,WLLWLLWLLWWLWLWLLLLW,8,40.0,10,WLLWLLWLLW,4,40.0,0,83,0,1,0,0,,0,0,,0,,0,,,2026-08-20 02:53:06
+official_market,Perplexity-Web,model_id_not_proven,btts,2385,0,2316,1536,780,66.32,20,LLLWWWLWLWLLLLLWWWWW,10,50.0,10,LLLWWWLWLW,5,50.0,475,12,8,422,1485,865,58.25,688,20,35.0,10,20.0,0,,,2026-09-02 10:38:09
+official_market,Perplexity-Web,model_id_not_proven,mt1,2316,0,2247,1838,409,81.8,20,WWWWWWWWLWWWWLWWWWWW,18,90.0,10,WWWWWWWWLW,9,90.0,0,2247,0,414,0,0,,0,0,,0,,0,,,2026-09-02 10:25:22
+official_market,Perplexity-Web,model_id_not_proven,mt1_dom,132,0,132,76,56,57.58,20,WLWWLWWWWWLWWWLLWLLL,12,60.0,10,WLWWLWWWWW,8,80.0,0,132,0,2,0,0,,0,0,,0,,0,,,2026-09-01 19:08:08
+official_market,Perplexity-Web,model_id_not_proven,mt1_ext,108,0,108,69,39,63.89,20,WWLWWWWLLLWWLWWWLWLL,12,60.0,10,WWLWWWWLLL,6,60.0,0,108,0,2,0,0,,0,0,,0,,0,,,2026-09-01 19:08:08
+official_market,Perplexity-Web,model_id_not_proven,mt2,103,0,103,85,18,82.52,20,WWWWLWWWWLWWLWWWWWWW,17,85.0,10,WWWWLWWWWL,8,80.0,0,103,0,2,0,0,,0,0,,0,,0,,,2026-09-01 19:08:08
+official_market,Perplexity-Web,model_id_not_proven,mt2_dom,103,0,103,52,51,50.49,20,LWLLLWLWWLWWLLWLLLWW,9,45.0,10,LWLLLWLWWL,4,40.0,0,103,0,2,0,0,,0,0,,0,,0,,,2026-09-01 19:08:08
+official_market,Perplexity-Web,model_id_not_proven,mt2_ext,100,0,100,57,43,57.0,20,WWLLLLWLLWLWWLLLLLLW,7,35.0,10,WWLLLLWLLW,4,40.0,0,100,0,2,0,0,,0,0,,0,,0,,,2026-09-01 19:08:08
+official_market,Perplexity-Web,model_id_not_proven,ou05,373,0,373,338,35,90.62,20,WLWWWWLWWLLWWLLWWWLL,12,60.0,10,WLWWWWLWWL,7,70.0,226,0,1,16,143,123,86.01,108,20,65.0,10,60.0,0,,,2026-09-02 22:48:50
+official_market,Perplexity-Web,model_id_not_proven,ou15,286,0,286,215,71,75.17,20,WLLWWWWWLWWWWWLWLWWW,15,75.0,10,WLLWWWWWLW,7,70.0,68,0,2,13,207,144,69.57,129,20,70.0,10,70.0,0,,,2026-09-02 22:48:50
+official_market,Perplexity-Web,model_id_not_proven,ou25,2648,0,2579,1761,818,68.28,20,WLWWWWLLWLLLWWLWLLWW,11,55.0,10,WLWWWWLLWL,6,60.0,347,12,11,427,1874,1210,64.57,884,20,55.0,10,50.0,34,9.92,29.18,2026-09-02 22:48:50
+official_market,Perplexity-Web,model_id_not_proven,resultat,2361,0,2292,1302,990,56.81,20,LWLLWWLLLLLWWLWLWWWW,10,50.0,10,LWLLWWLLLL,3,30.0,0,2292,0,419,0,0,,0,0,,0,,0,,,2026-09-02 10:25:22
+official_market,Perplexity-Web,perplexity/sonar-pro,btts,51,0,49,27,22,55.1,20,LWWLLWLLWLLLLWWLWLLW,8,40.0,10,LWWLLWLLWL,4,40.0,7,0,4,1,38,20,52.63,30,20,40.0,10,40.0,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,mt1,35,0,34,26,8,76.47,20,WWWWLWWLLWLLWWWLLLWW,12,60.0,10,WWWWLWWLLW,7,70.0,0,34,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,mt1_dom,24,0,23,18,5,78.26,20,WWWLWLWWWLWWWLWWWWWW,16,80.0,10,WWWLWLWWWL,7,70.0,0,23,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,mt1_ext,21,0,21,15,6,71.43,20,WWWLLLWLWLWWLWWWWWWW,14,70.0,10,WWWLLLWLWL,5,50.0,0,21,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,mt2,20,0,20,12,8,60.0,20,WLLWWWWLWLLLLWWWLWWW,12,60.0,10,WLLWWWWLWL,6,60.0,0,20,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,mt2_dom,19,0,19,4,15,21.05,19,LLLLLLLLLLLLLLWLWWW,4,21.05,10,LLLLLLLLLL,0,0.0,0,19,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,mt2_ext,18,0,18,9,9,50.0,18,LLWWWWWLLWLLWWLLLW,9,50.0,10,LLWWWWWLLW,6,60.0,0,18,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Perplexity-Web,perplexity/sonar-pro,ou05,123,0,118,100,18,84.75,20,LWLWWWWWWLWWWWWLWLWW,15,75.0,10,LWLWWWWWWL,7,70.0,75,0,4,2,39,32,82.05,37,20,70.0,10,60.0,0,,,2026-09-11 18:16:56
+official_market,Perplexity-Web,perplexity/sonar-pro,ou15,68,0,64,42,22,65.62,20,WWWWWLLLWWLWWWWWLWLL,13,65.0,10,WWWWWLLLWW,7,70.0,15,0,4,1,45,28,62.22,36,20,70.0,10,60.0,0,,,2026-09-11 00:37:14
+official_market,Perplexity-Web,perplexity/sonar-pro,ou25,219,0,213,136,77,63.85,20,LWWLWWWLLLLWLLLWWLLW,9,45.0,10,LWWLWWWLLL,5,50.0,14,0,5,6,189,119,62.96,155,20,55.0,10,50.0,25,13.91,55.64,2026-09-11 18:17:05
+official_market,Perplexity-Web,perplexity/sonar-pro,resultat,40,0,38,20,18,52.63,20,LWWWLLWLWLLLWLWLWLLL,8,40.0,10,LWWWLLWLWL,5,50.0,0,38,0,0,0,0,,0,0,,0,,0,,,2026-09-06 18:39:04
+official_market,Qwen-3.7-Max,model_id_not_proven,btts,94,0,94,50,44,53.19,20,LLWWLLWLLLWLLWWLWLWW,9,45.0,10,LLWWLLWLLL,3,30.0,5,0,2,6,82,43,52.44,64,20,40.0,10,30.0,1,0.92,92.0,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,mt1,93,0,93,70,23,75.27,20,WLWWWWWWLLWWWWWWWWWL,16,80.0,10,WLWWWWWWLL,7,70.0,0,93,0,6,0,0,,0,0,,0,,0,,,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,mt1_dom,90,0,90,55,35,61.11,20,WLWWLWWWWWLWWLWWWWWL,15,75.0,10,WLWWLWWWWW,8,80.0,0,90,0,6,0,0,,0,0,,0,,0,,,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,mt1_ext,79,0,79,46,33,58.23,20,WWWWLWLLLWWWWWWWWWWL,15,75.0,10,WWWWLWLLLW,6,60.0,0,79,0,6,0,0,,0,0,,0,,0,,,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,mt2,61,0,61,45,16,73.77,20,WWLLWWWWWLLWWWWWLLLW,13,65.0,10,WWLLWWWWWL,7,70.0,0,61,0,5,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,Qwen-3.7-Max,model_id_not_proven,mt2_dom,41,0,41,29,12,70.73,20,LLLWWLWWWWLWWWWWWWWW,15,75.0,10,LLLWWLWWWW,6,60.0,0,41,0,3,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,Qwen-3.7-Max,model_id_not_proven,mt2_ext,30,0,30,13,17,43.33,20,LLWLLWLLWLWWLLWWLLLW,8,40.0,10,LLWLLWLLWL,3,30.0,0,30,0,2,0,0,,0,0,,0,,0,,,2026-09-04 18:36:28
+official_market,Qwen-3.7-Max,model_id_not_proven,ou05,94,0,94,86,8,91.49,20,WWWWWWWWWWWWWWWWWWWW,20,100.0,10,WWWWWWWWWW,10,100.0,50,0,0,6,43,36,83.72,38,20,80.0,10,90.0,0,,,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,ou15,94,0,94,62,32,65.96,20,WLWWWWWWWLWWWWWWWLWW,17,85.0,10,WLWWWWWWWL,8,80.0,12,0,1,6,76,48,63.16,59,20,75.0,10,80.0,0,,,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,ou25,94,0,94,54,40,57.45,20,WWWWLLLWWLWLWWWLLLWW,12,60.0,10,WWWWLLLWWL,6,60.0,3,0,2,6,84,46,54.76,65,20,70.0,10,70.0,19,6.68,35.16,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,model_id_not_proven,resultat,94,0,94,53,41,56.38,20,WLWWLWLLWLWLWLWLLWLL,9,45.0,10,WLWWLWLLWL,5,50.0,0,94,0,6,0,0,,0,0,,0,,0,,,2026-09-04 18:40:59
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,btts,151,0,140,86,54,61.43,20,LLLLLWLWWWWWWWWLWLWW,12,60.0,10,LLLLLWLWWW,4,40.0,23,0,0,0,117,63,53.85,78,20,65.0,10,60.0,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,mt1,147,0,136,105,31,77.21,20,WWWWWWLLWWWWWWWLWWLW,16,80.0,10,WWWWWWLLWW,8,80.0,0,136,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,mt1_dom,138,0,127,103,24,81.1,20,WWWWLWLLWWWWWWLWWLLW,14,70.0,10,WWWWLWLLWW,7,70.0,0,127,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,mt1_ext,128,0,118,95,23,80.51,20,WWWWWWWWWWWWLLWWWWWL,17,85.0,10,WWWWWWWWWW,10,100.0,0,118,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,mt2,115,0,106,77,29,72.64,20,WWWWWWWLLLLLLWWWWLWW,13,65.0,10,WWWWWWWLLL,7,70.0,0,106,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,mt2_dom,94,0,88,47,41,53.41,20,WWWLWWLLWWWWWWLWLWWW,15,75.0,10,WWWLWWLLWW,7,70.0,0,88,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,mt2_ext,82,0,76,51,25,67.11,20,LLLWLWLWWWLLWWLLLWWL,9,45.0,10,LLLWLWLWWW,5,50.0,0,76,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,ou05,155,0,144,136,8,94.44,20,WWWWWWWWWWWWWWWWWWWW,20,100.0,10,WWWWWWWWWW,10,100.0,79,0,0,0,65,58,89.23,50,20,85.0,10,80.0,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,ou15,155,0,144,111,33,77.08,20,WWWWWWLWWWLLWWWLWWLW,15,75.0,10,WWWWWWLWWW,9,90.0,31,0,0,0,113,80,70.8,75,20,75.0,10,70.0,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,ou25,155,0,144,90,54,62.5,20,WLLLLWLWLLWWWWWLWLLW,10,50.0,10,WLLLLWLWLL,3,30.0,7,0,0,0,137,83,60.58,87,20,60.0,10,50.0,6,-1.76,-29.33,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,moonshotai/kimi-k2-0905,resultat,149,0,138,76,62,55.07,20,WWWWLWLWWWLWWWWWWLWW,16,80.0,10,WWWWLWLWWW,8,80.0,0,138,0,0,0,0,,0,0,,0,,0,,,2026-09-11 12:31:58
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,btts,11,0,11,5,6,45.45,11,LLLWLWWWWLL,5,45.45,10,LLLWLWWWWL,5,50.0,1,0,0,0,10,4,40.0,10,10,40.0,10,40.0,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,mt1,11,0,11,7,4,63.64,11,WWLWWWLWLWL,7,63.64,10,WWLWWWLWLW,7,70.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,mt1_dom,11,0,11,8,3,72.73,11,WWWWWWLWLWL,8,72.73,10,WWWWWWLWLW,8,80.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,mt1_ext,8,0,8,4,4,50.0,8,WLLWLWLW,4,50.0,8,WLLWLWLW,4,50.0,0,8,0,0,0,0,,0,0,,0,,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,mt2,6,0,6,5,1,83.33,6,WWWLWW,5,83.33,6,WWWLWW,5,83.33,0,6,0,0,0,0,,0,0,,0,,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,mt2_dom,2,0,2,2,0,100.0,2,WW,2,100.0,2,WW,2,100.0,0,2,0,0,0,0,,0,0,,0,,0,,,2026-08-30 08:33:27
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,ou05,11,0,11,9,2,81.82,11,WWWWWWLWLWW,9,81.82,10,WWWWWWLWLW,8,80.0,5,0,0,0,6,4,66.67,6,6,66.67,6,66.67,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,ou15,11,0,11,7,4,63.64,11,WWLWLWWWWLL,7,63.64,10,WWLWLWWWWL,7,70.0,2,0,0,0,9,5,55.56,9,9,55.56,9,55.56,0,,,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,ou25,11,0,11,7,4,63.64,11,LLWWLWWWWLW,7,63.64,10,LLWWLWWWWL,6,60.0,0,0,0,0,11,7,63.64,11,11,63.64,10,60.0,4,0.06,1.5,2026-08-30 19:17:02
+official_market,Qwen-3.7-Max,qwen/qwen-plus-2025-07-28,resultat,11,0,11,6,5,54.55,11,WWLWWWLWLLL,6,54.55,10,WWLWWWLWLL,6,60.0,0,11,0,0,0,0,,0,0,,0,,0,,,2026-08-30 19:17:02
+tournament,Claude Sonnet 5,anthropic/claude-sonnet-5,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:51
+tournament,DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:52:30
+tournament,GLM 5.3 Flash,z-ai/glm-5.3-flash,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:54:16
+tournament,GPT-5.2,openai/gpt-5.2,ou25,31,30,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,1,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:01
+tournament,Gemini 3.7 Flash,google/gemini-3.7-flash,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:51:40
+tournament,Grok 4.6,x-ai/grok-4.6,ou25,31,30,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,1,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:53:26
+tournament,Kimi K3,moonshotai/kimi-k2,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:49:10
+tournament,Mercury 2.5,inception/mercury-2.5-preview,ou25,30,30,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:56:41
+tournament,Muse Spark 1.2,meta/muse-spark-1.2,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:55
+tournament,Qwen 3.8 Max,qwen/qwen3.8-max,ou25,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:09
+tournament_market,Claude Sonnet 5,anthropic/claude-sonnet-5,btts,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:51
+tournament_market,Claude Sonnet 5,anthropic/claude-sonnet-5,ou15,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:51
+tournament_market,Claude Sonnet 5,anthropic/claude-sonnet-5,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:51
+tournament_market,DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,btts,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:52:30
+tournament_market,DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou15,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:52:30
+tournament_market,DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:52:30
+tournament_market,GLM 5.3 Flash,z-ai/glm-5.3-flash,btts,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:54:16
+tournament_market,GLM 5.3 Flash,z-ai/glm-5.3-flash,ou15,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:54:16
+tournament_market,GLM 5.3 Flash,z-ai/glm-5.3-flash,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:54:16
+tournament_market,GPT-5.2,openai/gpt-5.2,btts,31,30,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,1,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:01
+tournament_market,GPT-5.2,openai/gpt-5.2,ou15,31,30,1,1,0,100.0,1,W,1,100.0,1,W,1,100.0,1,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:01
+tournament_market,GPT-5.2,openai/gpt-5.2,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:50:01
+tournament_market,Gemini 3.7 Flash,google/gemini-3.7-flash,btts,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:51:40
+tournament_market,Gemini 3.7 Flash,google/gemini-3.7-flash,ou15,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:51:40
+tournament_market,Gemini 3.7 Flash,google/gemini-3.7-flash,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:51:40
+tournament_market,Grok 4.6,x-ai/grok-4.6,btts,31,28,3,3,0,100.0,3,WWW,3,100.0,3,WWW,3,100.0,3,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:53:26
+tournament_market,Grok 4.6,x-ai/grok-4.6,ou15,31,25,5,5,0,100.0,5,WWWWW,5,100.0,5,WWWWW,5,100.0,5,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:53:26
+tournament_market,Grok 4.6,x-ai/grok-4.6,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:53:26
+tournament_market,Kimi K3,moonshotai/kimi-k2,btts,31,29,2,2,0,100.0,2,WW,2,100.0,2,WW,2,100.0,2,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:49:10
+tournament_market,Kimi K3,moonshotai/kimi-k2,ou15,31,29,2,2,0,100.0,2,WW,2,100.0,2,WW,2,100.0,2,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:49:10
+tournament_market,Kimi K3,moonshotai/kimi-k2,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:49:10
+tournament_market,Mercury 2.5,inception/mercury-2.5-preview,btts,30,30,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:56:41
+tournament_market,Mercury 2.5,inception/mercury-2.5-preview,ou15,30,30,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:56:41
+tournament_market,Mercury 2.5,inception/mercury-2.5-preview,ou35,30,30,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:56:41
+tournament_market,Muse Spark 1.2,meta/muse-spark-1.2,btts,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:55
+tournament_market,Muse Spark 1.2,meta/muse-spark-1.2,ou15,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:55
+tournament_market,Muse Spark 1.2,meta/muse-spark-1.2,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:55
+tournament_market,Qwen 3.8 Max,qwen/qwen3.8-max,btts,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:09
+tournament_market,Qwen 3.8 Max,qwen/qwen3.8-max,ou15,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:09
+tournament_market,Qwen 3.8 Max,qwen/qwen3.8-max,ou35,31,31,0,0,0,,0,,0,,0,,0,,0,0,0,0,0,0,,0,0,,0,,0,,,2026-09-11 10:55:09

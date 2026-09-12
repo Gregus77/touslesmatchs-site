@@ -1,0 +1,16 @@
+model_key,purpose,recorded_entries,estimated_eur
+cohere,official_fallback,1133,6.4581
+cohere,provider_down_fallback,184,1.0488
+deepseek,official_fallback,1913,1.0904099999999999
+deepseek,provider_down_fallback,387,0.22058999999999998
+kimi,official_fallback,380,2.166
+kimi,shadow_test,104,0.099465
+mistral,official_fallback,1924,14.6224
+mistral_chat,customer_support,35,0.01853
+mistralai,provider_down_fallback,228,1.7328
+moonshotai,provider_down_fallback,86,0.4902
+perplexity,official_fallback,2211,12.6027
+perplexity,provider_down_fallback,387,2.2059
+qwen,official_fallback,2260,8.588
+qwen,provider_down_fallback,298,1.1324
+qwen,shadow_test,110,0.10481

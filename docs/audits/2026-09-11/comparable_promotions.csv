@@ -1,0 +1,201 @@
+challenger,model,market,incumbent,comparable_events,availability_pct,last20_rate,last10_rate,incumbent_last20_rate,advantage_pp,cost_acceptable,promotion,decision
+Kimi K3,moonshotai/kimi-k2,ou25,Perplexity-Web,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou25,DeepSeek-V3,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou25,Mistral-Large,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou25,Cohere-Command,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou25,OpenRouter-Qwen,0,45.16,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou25,Perplexity-Web,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou25,DeepSeek-V3,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou25,Mistral-Large,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou25,Cohere-Command,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou25,OpenRouter-Qwen,0,22.58,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou25,Perplexity-Web,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou25,DeepSeek-V3,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou25,Mistral-Large,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou25,Cohere-Command,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou25,OpenRouter-Qwen,0,77.42,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou25,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou25,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou25,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou25,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou25,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou25,Perplexity-Web,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou25,DeepSeek-V3,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou25,Mistral-Large,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou25,Cohere-Command,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou25,OpenRouter-Qwen,0,19.35,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou25,Perplexity-Web,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou25,DeepSeek-V3,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou25,Mistral-Large,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou25,Cohere-Command,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou25,OpenRouter-Qwen,0,100.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou25,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou25,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou25,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou25,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou25,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou25,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou25,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou25,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou25,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou25,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou25,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou25,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou25,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou25,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou25,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou25,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou25,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou25,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou25,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou25,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou15,Perplexity-Web,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou15,DeepSeek-V3,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou15,Mistral-Large,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou15,Cohere-Command,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou15,OpenRouter-Qwen,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou35,Perplexity-Web,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou35,DeepSeek-V3,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou35,Mistral-Large,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou35,Cohere-Command,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,ou35,OpenRouter-Qwen,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,btts,Perplexity-Web,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,btts,DeepSeek-V3,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,btts,Mistral-Large,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,btts,Cohere-Command,0,45.16,,,,,,False,échantillon insuffisant
+Kimi K3,moonshotai/kimi-k2,btts,OpenRouter-Qwen,0,45.16,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou15,Perplexity-Web,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou15,DeepSeek-V3,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou15,Mistral-Large,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou15,Cohere-Command,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou15,OpenRouter-Qwen,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou35,Perplexity-Web,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou35,DeepSeek-V3,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou35,Mistral-Large,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou35,Cohere-Command,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,ou35,OpenRouter-Qwen,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,btts,Perplexity-Web,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,btts,DeepSeek-V3,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,btts,Mistral-Large,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,btts,Cohere-Command,0,22.58,,,,,,False,échantillon insuffisant
+GPT-5.2,openai/gpt-5.2,btts,OpenRouter-Qwen,0,22.58,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou15,Perplexity-Web,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou15,DeepSeek-V3,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou15,Mistral-Large,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou15,Cohere-Command,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou15,OpenRouter-Qwen,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou35,Perplexity-Web,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou35,DeepSeek-V3,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou35,Mistral-Large,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou35,Cohere-Command,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,ou35,OpenRouter-Qwen,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,btts,Perplexity-Web,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,btts,DeepSeek-V3,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,btts,Mistral-Large,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,btts,Cohere-Command,0,77.42,,,,,,False,échantillon insuffisant
+Claude Sonnet 5,anthropic/claude-sonnet-5,btts,OpenRouter-Qwen,0,77.42,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou15,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou15,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou15,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou15,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou15,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou35,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou35,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou35,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou35,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,ou35,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,btts,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,btts,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,btts,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,btts,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Gemini 3.7 Flash,google/gemini-3.7-flash,btts,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou15,Perplexity-Web,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou15,DeepSeek-V3,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou15,Mistral-Large,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou15,Cohere-Command,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou15,OpenRouter-Qwen,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou35,Perplexity-Web,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou35,DeepSeek-V3,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou35,Mistral-Large,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou35,Cohere-Command,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,ou35,OpenRouter-Qwen,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,btts,Perplexity-Web,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,btts,DeepSeek-V3,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,btts,Mistral-Large,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,btts,Cohere-Command,0,19.35,,,,,,False,échantillon insuffisant
+DeepSeek V4 Pro,deepseek/deepseek-v4-pro-0813,btts,OpenRouter-Qwen,0,19.35,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou15,Perplexity-Web,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou15,DeepSeek-V3,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou15,Mistral-Large,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou15,Cohere-Command,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou15,OpenRouter-Qwen,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou35,Perplexity-Web,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou35,DeepSeek-V3,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou35,Mistral-Large,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou35,Cohere-Command,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,ou35,OpenRouter-Qwen,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,btts,Perplexity-Web,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,btts,DeepSeek-V3,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,btts,Mistral-Large,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,btts,Cohere-Command,0,100.0,,,,,,False,échantillon insuffisant
+Grok 4.6,x-ai/grok-4.6,btts,OpenRouter-Qwen,0,100.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou15,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou15,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou15,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou15,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou15,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou35,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou35,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou35,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou35,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,ou35,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,btts,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,btts,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,btts,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,btts,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+GLM 5.3 Flash,z-ai/glm-5.3-flash,btts,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou15,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou15,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou15,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou15,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou15,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou35,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou35,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou35,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou35,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,ou35,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,btts,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,btts,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,btts,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,btts,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Qwen 3.8 Max,qwen/qwen3.8-max,btts,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou15,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou15,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou15,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou15,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou15,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou35,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou35,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou35,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou35,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,ou35,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,btts,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,btts,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,btts,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,btts,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Muse Spark 1.2,meta/muse-spark-1.2,btts,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou15,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou15,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou15,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou15,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou15,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou35,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou35,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou35,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou35,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,ou35,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,btts,Perplexity-Web,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,btts,DeepSeek-V3,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,btts,Mistral-Large,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,btts,Cohere-Command,0,0.0,,,,,,False,échantillon insuffisant
+Mercury 2.5,inception/mercury-2.5-preview,btts,OpenRouter-Qwen,0,0.0,,,,,,False,échantillon insuffisant
