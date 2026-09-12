@@ -1324,13 +1324,16 @@ function verifyTelegramChannels() {
             const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
             console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
           }
-          const requiredTelegramChannels = ["gratuit", "standard", "premium", "ru gratuit", "ru standard", "ru premium", "admin"];
-          const states = requiredTelegramChannels
-            .filter(k => Object.prototype.hasOwnProperty.call(_integrationHealth.telegram.channels, k))
-            .map(k => _integrationHealth.telegram.channels[k]);
+          // Offre actuelle : deux canaux clients par langue (Gratuit et Premium 14,90 €)
+          // plus le canal Admin. Dériver la liste du tableau réellement contrôlé évite
+          // qu'un ancien palier Standard supprimé provoque une fausse panne globale.
+          const requiredTelegramChannels = channels.map(([requiredLabel]) => requiredLabel.toLowerCase());
+          const states = requiredTelegramChannels.map(
+            k => _integrationHealth.telegram.channels[k]
+          );
 
           _integrationHealth.telegram.ok =
-            states.length === requiredTelegramChannels.length &&
+            states.length === channels.length &&
             states.every(Boolean);
           _integrationHealth.telegram.checked_at = new Date().toISOString();
         } catch {
@@ -6579,9 +6582,9 @@ Réponds en JSON pur (pas de markdown):
       ].join("-");
       const _fallbackMatchKey = `${match.home || "?"}_${match.away || "?"}_${_stateTag}`;
       const _fallbackCompetition = match.competition || match.league || "";
-      // Les comptes directs passent d'abord : OpenRouter est une réserve
-      // budgétée pour les seules analyses dont le fournisseur officiel est
-      // indisponible, jamais le chemin par défaut des contrôles ou des sièges.
+      // Les comptes directs restent disponibles uniquement comme secours.
+      // Lorsque le modèle existe sur OpenRouter et que son garde-fou l'autorise,
+      // OpenRouter doit être essayé en premier conformément au compte central payé.
       if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: process.env.DEEPSEEK_MODEL || "deepseek-v4-pro" });
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: process.env.MISTRAL_MODEL || "mistral-small-2603" });
@@ -6613,6 +6616,14 @@ Réponds en JSON pur (pas de markdown):
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: agCfg.openRouterModelKey || "qwen" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: agCfg.model });
       }
+      // Les entrées OpenRouter ajoutées ci-dessus doivent précéder les comptes
+      // directs dans l'ordre d'essai. Le tri est stable : les autres priorités restent
+      // inchangées, mais une clé DeepSeek/OpenAI directe n'est plus requise au Concile.
+      providers.sort((a, b) =>
+        Number(String(b.url || "").includes("openrouter.ai")) -
+        Number(String(a.url || "").includes("openrouter.ai"))
+      );
+
       // Comptes directs gardes en repli SEULEMENT si OpenRouter a refuse
       // (budget/quota du jour atteint) ou echoue — utiles si un jour
       // re-alimentes, mais plus le chemin principal.
@@ -16980,15 +16991,19 @@ async function runMorningAudit() {
   // 4. Les canaux existent-ils toujours et le bot y a-t-il acces.
   await test("Canaux Telegram", async () => {
     if (!TELEGRAM_BOT_TOKEN) return { ok: false, info: "aucun token" };
-    const canaux = [["Gratuit", TELEGRAM_CHANNEL_ID], ["Standard", TELEGRAM_STANDARD_CHANNEL_ID],
-                    ["Premium", TELEGRAM_PREMIUM_CHANNEL_ID]];
+    const canaux = [
+      ["FR Gratuit", TELEGRAM_CHANNEL_ID],
+      ["FR Premium 14,90 €", TELEGRAM_PREMIUM_CHANNEL_ID],
+      ["RU Gratuit", TELEGRAM_RU_FREE_CHANNEL_ID],
+      ["RU Premium 14,90 €", TELEGRAM_RU_PREMIUM_CHANNEL_ID],
+    ];
     const morts = [];
     for (const [nom, id] of canaux) {
       if (!id) { morts.push(`${nom} non configure`); continue; }
       const r = await httpGet(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`);
       if (!r?.ok) morts.push(nom);
     }
-    return morts.length ? { ok: false, info: `injoignables : ${morts.join(", ")}` } : { ok: true, info: "3 canaux clients joignables" };
+    return morts.length ? { ok: false, info: `injoignables : ${morts.join(", ")}` } : { ok: true, info: "4 canaux clients joignables" };
   });
 
   // 5. Paiements. Sans Stripe, aucun abonnement ne peut etre pris.
