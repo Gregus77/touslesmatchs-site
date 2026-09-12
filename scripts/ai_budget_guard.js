@@ -32,6 +32,8 @@ const CFG = {
   // comptabilise les appels réellement tentés ; cette valeur n'est qu'une
   // réservation maximale et ne doit jamais être présentée comme une dépense.
   dailyBudgetEur: Number(process.env.OPENROUTER_DAILY_BUDGET_EUR || 0.90),
+  hermesDailyBudgetEur: Number(process.env.OPENROUTER_HERMES_DAILY_BUDGET_EUR || 0.50),
+  concileDailyBudgetEur: Number(process.env.OPENROUTER_CONCILE_DAILY_BUDGET_EUR || 3.00),
   maxRequestsPerDay: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_DAY || 100),
   maxMatchesPerDay: Number(process.env.OPENROUTER_MAX_MATCHES_PER_DAY || 30),
   maxRequestsPerModelPerDay: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
@@ -169,7 +171,9 @@ function tripBreaker(db, type, detail) {
 // Types dont le declenchement signale un vrai epuisement de quota JOURNALIER
 // (montant en euros, nombre de requetes) : rester bloque jusqu'a minuit est
 // correct, le quota ne se reconstitue pas avant.
-const DAILY_SCOPED_BREAKERS = new Set(["daily_budget", "daily_requests"]);
+const DAILY_SCOPED_BREAKERS = new Set([
+  "daily_budget", "daily_budget_hermes", "daily_budget_concile", "daily_requests",
+]);
 // "spike"/"duplicate_burst" signalent un SURSAUT PONCTUEL (boucle probable,
 // ou pic legitime type soiree europeenne a 8 matchs simultanes). Les laisser
 // actifs jusqu'a minuit desactivait silencieusement des agents du Concile
@@ -203,7 +207,7 @@ function isBreakerTripped(db, type) {
 // le Concile sans quorum. Le budget quotidien, l'anti-doublon et le
 // duplicate_burst restent opposables : eux protegent l'argent et l'integrite,
 // pas la cadence.
-function canProceed(db, { modelKey, matchKey, competition, market, promptVersion, estimatedTokensIn, estimatedTokensOut, allowDespiteSpike }) {
+function canProceed(db, { modelKey, matchKey, competition, market, purpose, promptVersion, estimatedTokensIn, estimatedTokensOut, allowDespiteSpike }) {
   ensureSchema(db);
 
   if (!matchKey || !modelKey) {
@@ -230,7 +234,10 @@ function canProceed(db, { modelKey, matchKey, competition, market, promptVersion
   }
 
   // 4) Coupe-circuit actif ?
-  for (const type of ["daily_budget", "daily_requests", "duplicate_burst"]) {
+  // Les coupe-circuits budgétaires ne sont pas relus aveuglément ici : les
+  // montants sont recalculés juste dessous avec les plafonds runtime actuels.
+  // Ainsi une hausse autorisée de plafond prend effet sans effacer l'audit DB.
+  for (const type of ["daily_requests", "duplicate_burst"]) {
     if (!isBreakerTripped(db, type)) continue;
     if (type === "spike" && allowDespiteSpike) {
       console.warn(`[ai-guard] coupe-circuit "spike" franchi pour "${modelKey}" — repli autorise car fournisseur direct ecarte`);
@@ -255,6 +262,26 @@ function canProceed(db, { modelKey, matchKey, competition, market, promptVersion
       return { allowed: false, reason: "[LIMIT] budget quotidien dépassé", requestKey };
     }
     console.warn(`[ai-guard] budget dépassé (mode observation, HARD_STOP=false) : ${spentToday.toFixed(4)}€/${CFG.dailyBudgetEur}€`);
+  }
+
+  // Hermès et le Concile ont chacun leur enveloppe : l'assistance ne peut plus
+  // consommer le budget réservé aux votes sportifs, tout en restant incluse
+  // dans le plafond global ci-dessus.
+  const purposeLimit = purpose === "hermes" ? CFG.hermesDailyBudgetEur
+    : purpose === "concile" ? CFG.concileDailyBudgetEur : null;
+  if (purposeLimit !== null) {
+    const spentForPurpose = _todaySum(db, `
+      SELECT COALESCE(SUM(cost_estimate_eur),0) FROM ai_call_budget_log
+      WHERE date(created_at) = date('now') AND status = 'ok'
+        AND purpose ${purpose === "hermes"
+          ? "= 'customer_support'"
+          : "IN ('provider_down_fallback','official_fallback')"}
+    `);
+    if (spentForPurpose + estimatedCost > purposeLimit && CFG.hardStop) {
+      const breaker = purpose === "hermes" ? "daily_budget_hermes" : "daily_budget_concile";
+      tripBreaker(db, breaker, `Budget ${purpose} ${purposeLimit}€ atteint (${spentForPurpose.toFixed(4)}€ estimés).`);
+      return { allowed: false, reason: `[LIMIT] budget ${purpose} dépassé`, requestKey };
+    }
   }
 
   // 6) Nombre total de requêtes / jour
