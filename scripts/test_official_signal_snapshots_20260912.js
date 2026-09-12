@@ -1,5 +1,7 @@
 'use strict';
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const Database = require(process.env.TEST_SQLITE_MODULE || 'better-sqlite3');
 const model = require('./official_signal_snapshots');
 const db = new Database(':memory:');
@@ -26,6 +28,9 @@ assert.equal(state.snapshot.outcome,'win');
 assert.deepEqual(state.snapshot.directions,['over','over','over',null,'over']);
 assert.equal(db.prepare('SELECT COUNT(*) n FROM official_vote_snapshots').get().n,3);
 assert.throws(()=>db.prepare("UPDATE official_vote_snapshots SET consensus='under' WHERE id='42_day_30_0-1'").run(),/immutable/);
+const appSource=fs.readFileSync(path.join(__dirname,'../public/app.html'),'utf8');
+assert.match(appSource,/filter\(appMatchTrackable\)/,
+  'the app must retain a finished match when it has an immutable official snapshot');
 
 // La preuve Telegram transporte exactement le même identifiant officiel.
 db.exec(`CREATE TABLE concile_analyses(match_key TEXT PRIMARY KEY,minute_at_analysis INTEGER,

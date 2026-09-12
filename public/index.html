@@ -1853,7 +1853,7 @@ window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive()
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v19-official-snapshots-20260912').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v20-official-results-20260912').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
