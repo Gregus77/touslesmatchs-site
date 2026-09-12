@@ -102,23 +102,19 @@ jobs:
             TLM_STARTED_AFTER="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api)"
             test "$TLM_STARTED_BEFORE" != "$TLM_STARTED_AFTER"
 
-            docker exec touslesmatchs-api node - <<'NODE'
-            const expected = {
-              OPENROUTER_DAILY_BUDGET_EUR: '4',
-              OPENROUTER_HERMES_DAILY_BUDGET_EUR: '0.5',
-              OPENROUTER_CONCILE_DAILY_BUDGET_EUR: '3',
-            };
-            for (const [key, value] of Object.entries(expected)) {
-              if (process.env[key] !== value) throw new Error(`${key} incorrect`);
-            }
-            console.log('RUNTIME_BUDGETS_OK global=4 hermes=0.5 concile=3');
-            NODE
+            docker exec touslesmatchs-api sh -lc '
+              test "$OPENROUTER_DAILY_BUDGET_EUR" = "4"
+              test "$OPENROUTER_HERMES_DAILY_BUDGET_EUR" = "0.5"
+              test "$OPENROUTER_CONCILE_DAILY_BUDGET_EUR" = "3"
+            '
+            echo 'RUNTIME_BUDGETS_OK global=4 hermes=0.5 concile=3'
             test "$(sha256sum scripts/ai_budget_guard.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/ai_budget_guard.js | awk '{print $1}')"
             test "$(sha256sum scripts/analysis_engine.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/analysis_engine.js | awk '{print $1}')"
 
             TLM_HEALTH="$(curl -fsS --max-time 30 "https://www.touslesmatchs.com/api/health?budget=$(date +%s)")"
             printf '%s' "$TLM_HEALTH" | python3 -c 'import json,sys; h=json.load(sys.stdin); assert h.get("ok") is not False; print("PUBLIC_API_HEALTH_OK")'
             docker logs touslesmatchs-api --since 2m 2>&1 | grep -Fq '[auto-concile] enabled'
+            echo 'AUTO_CONCILE_ENABLED_OK'
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             test -z "$(git status --porcelain --untracked-files=no)"
 
