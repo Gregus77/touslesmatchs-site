@@ -2667,6 +2667,25 @@ function isOu25Bet(bet) {
   return /^(Over|Under) 2[.,]5 buts$/i.test(String(bet || "").trim());
 }
 
+// Extrait uniquement un bulletin O/U 2,5 explicitement produit par l'agent.
+// Certains modeles remplissent correctement marches.buts mais omettent le
+// champ bet : ce bulletin etait auparavant jete puis le snapshot considere
+// comme deja traite, ce qui laissait la page a 0/5.
+function extractStructuredOu25Vote(parsed) {
+  if (!parsed || typeof parsed !== "object") return null;
+  const direct = String(parsed.bet || "").trim();
+  if (isOu25Bet(direct)) {
+    return { bet: /^Over\b/i.test(direct) ? "Over 2.5 buts" : "Under 2.5 buts", confidence: Number(parsed.confidence) };
+  }
+  const buts = parsed.marches && typeof parsed.marches === "object" ? parsed.marches.buts : null;
+  const side = String(buts && typeof buts === "object" ? buts.p : "").toLowerCase().trim();
+  const confidence = Number(buts && typeof buts === "object" ? buts.c : NaN);
+  if ((side === "o2.5" || side === "u2.5") && Number.isFinite(confidence)) {
+    return { bet: side === "o2.5" ? "Over 2.5 buts" : "Under 2.5 buts", confidence };
+  }
+  return null;
+}
+
 function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   const byAgent = new Map();
   for (const am of agentMarketList || []) {
@@ -6730,7 +6749,11 @@ Réponds en JSON pur (pas de markdown):
         try { db.prepare("UPDATE agent_calls SET vote_produit = ? WHERE id = ?").run(aVote ? 1 : 0, _dernierAppelId); }
         catch (e) { /* jamais bloquant */ }
       };
+      let providerAttempts = 0;
       for (const [pvIndex, pv] of providers.entries()) {
+        // Une tentative initiale + une seule relance ciblee pour ce siege.
+        // Les autres sieges ne sont jamais rappeles par cette boucle.
+        if (providerAttempts >= 2) break;
         const plannedHost = pv.kind === "cohere" ? "api.cohere.com" : String(pv.url || "").split("/")[2] || String(pv.kind || "");
         // La liste est construite avant le premier appel. Si le premier modèle
         // d'un même hôte vient d'ouvrir son coupe-circuit, ne pas tenter les
@@ -6739,6 +6762,7 @@ Réponds en JSON pur (pas de markdown):
           console.warn(`[concile] ${agCfg.name}: ${plannedHost} déjà écarté pendant cette analyse, tentative ignorée`);
           continue;
         }
+        providerAttempts++;
         const _t0 = Date.now();
         try {
           let resp;
@@ -6754,10 +6778,12 @@ Réponds en JSON pur (pas de markdown):
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-          if (probe && probe !== "{}" && probe.length > 8) {
+          const parsedProbe = lireReponseAgent(probe);
+          const structuredVote = extractStructuredOu25Vote(parsedProbe);
+          if (structuredVote) {
             lastDiag = null;
             marquerProviderSain(plannedHost);
-            tracerAppel(pv, pvIndex, _t0, "ok", resp?._httpStatus ?? 200, `${probe.length} caracteres`);
+            tracerAppel(pv, pvIndex, _t0, "ok", resp?._httpStatus ?? 200, `${probe.length} caracteres, vote O/U 2,5 valide`);
             break;
           }
           // Reponse HTTP recue sans exception, mais sans contenu exploitable —
@@ -6769,7 +6795,9 @@ Réponds en JSON pur (pas de markdown):
           lastDiag = resp?._httpTimedOut ? `timeout ${AGENT_TIMEOUT_MS}ms (${pvHost})`
             : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost}) — ${JSON.stringify(resp).slice(0, 200)}`
             : resp?._httpParseError ? `reponse illisible (${pvHost}): ${resp._raw}`
-            : `reponse sans contenu exploitable (${pvHost})`;
+            : probe && probe !== "{}"
+              ? `reponse sans bulletin O/U 2,5 exploitable (${pvHost})`
+              : `reponse sans contenu exploitable (${pvHost})`;
           tracerAppel(pv, pvIndex, _t0,
             resp?._httpTimedOut ? "timeout"
               : resp?._httpStatus && resp._httpStatus >= 400 ? "http_erreur"
@@ -6790,9 +6818,9 @@ Réponds en JSON pur (pas de markdown):
         console.log(`[concile] ${agCfg.name} : vote recupere sur une reponse mal formatee`);
       }
 
-      const modelGaveBet = parsed && typeof parsed.bet === "string" && parsed.bet.trim().length > 0;
-      tracerVote(modelGaveBet);
-      if (!modelGaveBet) {
+      const structuredOu25 = extractStructuredOu25Vote(parsed);
+      tracerVote(!!structuredOu25);
+      if (!structuredOu25) {
         console.error(`[concile] agent ${agCfg.name} : aucun vote exploitable — ${lastDiag || "raison inconnue"}`);
         return {
           name: agCfg.name, icon: agCfg.icon,
@@ -6802,7 +6830,7 @@ Réponds en JSON pur (pas de markdown):
         };
       }
 
-      const rawBet = parsed.bet || availableBets[0];
+      const rawBet = structuredOu25.bet;
       if (parsed.marches && typeof parsed.marches === "object") {
         agentMarketList.push({ name: agCfg.name, marches: parsed.marches });
         saveAgentMarketPredictions(match, [{ name: agCfg.name, marches: parsed.marches }]);
@@ -6816,7 +6844,7 @@ Réponds en JSON pur (pas de markdown):
       return {
         name: agCfg.name, icon: agCfg.icon,
         bet: validBet,
-        confidence: Math.min(95, Math.max(50, isNaN(parseInt(parsed.confidence)) ? 55 : parseInt(parsed.confidence))),
+        confidence: Math.min(95, Math.max(50, Number.isFinite(Number(structuredOu25.confidence)) ? Number(structuredOu25.confidence) : 55)),
         raison: raisonFinal,
         _ou25Markets: parsed.marches && typeof parsed.marches === "object" ? parsed.marches : null,
         isChief: false, corrected: corrected || false,
