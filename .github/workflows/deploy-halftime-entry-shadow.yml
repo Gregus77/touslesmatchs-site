@@ -77,7 +77,7 @@ jobs:
             sleep 20
             test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = true
             test "$(sha256sum scripts/halftime_entry_shadow.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/halftime_entry_shadow.js | awk '{print $1}')"
-            docker exec touslesmatchs-api node - <<'NODE'
+            docker exec -i touslesmatchs-api node - <<'NODE'
             const Database=require('better-sqlite3');
             const shadow=require('/app/halftime_entry_shadow');
             const db=new Database('/data/tlm.db');
