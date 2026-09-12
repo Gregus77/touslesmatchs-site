@@ -358,3 +358,7 @@
 - Retrait des branches de diffusion Standard/Elite, historique conservé ; teaser protégé, résultats gagnés/perdus et bilans fondés sur les livraisons prouvées.
 - Stripe audité sans mutation : produit mensuel Premium inactif et ancien lien ponctuel. Aucun lien de paiement Telegram publié tant que prix et produit ne sont pas validés actifs/live à 14,90 EUR/mois.
 - Tests isolés Telegram/SQLite et neuf contrôles ciblés sur les fichiers VPS validés. Détails et procédure : docs/handoff/2026-09-11-telegram-free-premium.md.
+
+## 2026-09-11 — [Codex] Audit IA et marchés shadow
+
+Audit reproductible de la sauvegarde SQLite de 21:31:25 UTC : exports par modèle, marché, championnat, minute et confiance, contrôles temporels et comparaison des populations. Aucun remplacement de siège ; BTTS et autres marchés conservés à blanc, échantillon insuffisant. Les six résultats BTTS étaient déjà déterminés au score de départ. Huit tests Python et 200 cas de résolution du worker passent. Aucun changement de production. Voir `docs/audits/2026-09-11/README.md`.
