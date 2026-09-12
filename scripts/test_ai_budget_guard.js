@@ -264,8 +264,33 @@ console.log("\n═══ Scénario 9 — budgets Hermès et Concile séparés so
   db.close();
 }
 
+console.log("\n═══ Scénario 10 — une hausse autorisée du plafond de requêtes prend effet ═══");
+{
+  process.env.OPENROUTER_HARD_STOP = "true";
+  process.env.OPENROUTER_DAILY_BUDGET_EUR = "20";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_DAY = "1";
+  process.env.OPENROUTER_MAX_MATCHES_PER_DAY = "100";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY = "100";
+  process.env.AI_GUARD_SPIKE_THRESHOLD = "100";
+  process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD = "50";
+  let guard = loadGuard();
+  const db = freshDb();
+  const firstReq = { modelKey: "qwen", matchKey: "CAP_FIRST", promptVersion: "v1" };
+  const first = guard.canProceed(db, firstReq);
+  assert(first.allowed === true, "premier appel autorisé sous plafond 1");
+  guard.recordCall(db, { ...firstReq, requestKey: first.requestKey, tokensIn: 500, tokensOut: 80, status: "ok" });
+  const blocked = guard.canProceed(db, { modelKey: "qwen", matchKey: "CAP_BLOCKED", promptVersion: "v1" });
+  assert(blocked.allowed === false && blocked.reason.includes("plafond de requêtes"), "ancien plafond atteint et audité");
+  assert(guard.isBreakerTripped(db, "daily_requests"), "breaker daily_requests conservé dans l'audit");
 
-console.log("\n═══ Scénario 9 — calendrier Paris de production prioritaire ═══");
+  process.env.OPENROUTER_MAX_REQUESTS_PER_DAY = "3";
+  guard = loadGuard();
+  const resumed = guard.canProceed(db, { modelKey: "qwen", matchKey: "CAP_RESUMED", promptVersion: "v1" });
+  assert(resumed.allowed === true, "nouveau plafond 3 appliqué sans effacer le breaker historique");
+  db.close();
+}
+
+console.log("\n═══ Scénario 11 — calendrier Paris de production prioritaire ═══");
 {
   process.env.OPENROUTER_PARIS_SCHEDULE = "1";
   process.env.OPENROUTER_DAILY_BUDGET_EUR = "0.0005";

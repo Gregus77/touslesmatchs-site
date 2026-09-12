@@ -397,7 +397,7 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
   <button class="auth-login-btn" id="auth-btn" onclick="openLoginModal()">Connexion</button>
 </div>
 
-<!-- CLASSEMENT AGENTS IA — Elite only (en haut) -->
+<!-- CLASSEMENT AGENTS IA — Premium (en haut) -->
 <div id="agent-ranking" style="display:none;max-width:720px;margin:32px auto;padding:0 16px">
   <div style="background:rgba(13,16,32,.8);border:1px solid rgba(255,255,255,.08);border-radius:18px;padding:24px;backdrop-filter:blur(20px)">
     <div style="font-size:16px;font-weight:800;margin-bottom:4px">📊 Classement des agents IA</div>
@@ -456,12 +456,12 @@ fetch('/api/bookmaker-links').then(function(r){return r.json();}).then(function(
     <label class="modal-label">Email</label>
     <input class="modal-input" type="email" id="login-email" placeholder="ton@email.com">
     <label class="modal-label">Code d'accès</label>
-    <input class="modal-input" type="text" id="login-code" placeholder="STANDARD-XXXXXX">
+    <input class="modal-input" type="text" id="login-code" placeholder="Votre code d'accès">
     <button class="modal-btn" id="login-btn" onclick="doLogin()">Accéder →</button>
     <div class="modal-error" id="login-error"></div>
     <div style="margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1);text-align:center">
       <div class="modal-sub" style="margin-bottom:10px">Pas encore de code d'accès ?</div>
-      <a href="https://buy.stripe.com/00w14ncbGgo48c4fpA3VC05" target="_blank" style="display:block;text-decoration:none;background:linear-gradient(135deg,#059669,#10b981);color:#fff;font-weight:800;padding:13px;border-radius:10px">⚡ Choisir Standard — dès 4,90&nbsp;€/mois</a>
+      <a href="/#plans" style="display:block;text-decoration:none;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:800;padding:13px;border-radius:10px">🟣 Découvrir Premium — 14,90&nbsp;€/mois</a>
     </div>
   </div>
 </div>
@@ -745,8 +745,7 @@ function updateAuthBar() {
   if (navCta) navCta.style.display = userAuth ? "none" : "";
   if (navLogin) navLogin.style.display = userAuth ? "none" : "";
   if (userAuth) {
-    var isElite = userAuth.plan === "elite";
-    var planName = userAuth.plan.charAt(0).toUpperCase() + userAuth.plan.slice(1);
+    var planName = userAuth.plan === "free" ? "Gratuit" : "Premium";
     var tokens = "";
     if ((userAuth.plan === "premium" || userAuth.plan === "elite")
         && userAuth.credits_max != null && userAuth.credits_left != null) {
@@ -759,7 +758,7 @@ function updateAuthBar() {
         + '<span style="font-size:13px;color:var(--muted2);font-weight:600">analyses<br>aujourd\'hui</span>'
         + '</div>';
     }
-    info.innerHTML = (isElite ? "👑" : "⚡") + " <strong>" + planName + "</strong> — " + userAuth.email + tokens;
+    info.innerHTML = "🟣 <strong>" + planName + "</strong> — " + userAuth.email + tokens;
     btn.textContent = "Déconnexion";
     btn.onclick = doLogout;
   } else {
@@ -1392,7 +1391,7 @@ document.getElementById("login-modal").addEventListener("click", function(e) {
   if (e.target === this) closeLoginModal();
 });
 
-// ── Agent Ranking (Elite only) ──
+// ── Agent Ranking (Premium) ──
 var AGENT_ICONS = {
   "Mistral-7B": "🇫🇷", "Synthèse Concile": "🧠", "GPT Analysis": "🤖",
   "GROQ-Llama": "🦙", "GeminiFlash": "💎", "Mistral-Large": "🌊",
@@ -1400,8 +1399,8 @@ var AGENT_ICONS = {
 };
 
 function loadAgentRanking() {
-  var isEliteOrAdmin = userAuth && (userAuth.plan === "elite" || (userAuth.code && userAuth.code.toUpperCase().startsWith("ELITE-ADMIN")));
-  if (!isEliteOrAdmin) {
+  var isPremiumOrAdmin = userAuth && (userAuth.plan !== "free" || (userAuth.code && userAuth.code.toUpperCase().startsWith("ELITE-ADMIN")));
+  if (!isPremiumOrAdmin) {
     document.getElementById("agent-ranking").style.display = "none";
     return;
   }
@@ -1559,23 +1558,16 @@ setInterval(function(){ if (document.getElementById('tab-stats').classList.conta
 (function(){
   var sp = new URLSearchParams(location.search);
   if (sp.get('success') !== '1') return;
-  // "carte" (offre 1€) retiree du parcours actif le 29/07/2026 : plus aucun
-  // bouton n'y mene, le repli par defaut passe donc a "standard".
-  var plan = sp.get('plan') || 'standard';
+  var plan = sp.get('plan') || 'premium';
   var upsellDiv = document.createElement('div');
   upsellDiv.id = 'upsell-banner';
   upsellDiv.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;padding:20px;background:linear-gradient(135deg,#1a1a2e,#16213e);border-top:2px solid #d4af37;box-shadow:0 -4px 24px rgba(0,0,0,.5);text-align:center;';
   var closeBtn = '<button onclick="this.parentElement.remove()" style="position:absolute;top:8px;right:12px;background:none;border:none;color:#888;font-size:18px;cursor:pointer">✕</button>';
 
-  if (plan === 'premium' || plan === 'standard') {
+  if (plan === 'premium' || plan === 'standard' || plan === 'elite' || plan === 'vip') {
     upsellDiv.innerHTML = closeBtn +
-      '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue — ton acces est actif !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6;margin-bottom:12px">Avec <b style="color:#fff">Elite / VIP</b>, tu passes a <b style="color:#d4af37">30 signaux/jour</b> + <b>alertes Signal Fort automatiques</b>.<br>Les alertes seules valent le prix — sans engagement, annulable a tout moment.</div>' +
-      '<a href="https://buy.stripe.com/4gM9AT5Nifk0gIA91c3VC07" target="_blank" style="display:inline-block;background:linear-gradient(135deg,#d4af37,#f5c842);color:#111;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">Passer Elite / VIP — 29.90€/mois sans engagement</a>';
-  } else if (plan === 'elite' || plan === 'vip') {
-    upsellDiv.innerHTML = closeBtn +
-      '<div style="color:#d4af37;font-weight:800;font-size:16px;margin-bottom:8px">👑 Bienvenue dans Elite — tu as acces a tout !</div>' +
-      '<div style="color:#ccc;font-size:13px;line-height:1.6">30 analyses/jour + alertes Signal Fort + picks en avant-premiere.<br>Rejoins le groupe Telegram Elite pour recevoir tes alertes.</div>';
+      '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Bienvenue dans Premium — ton accès est actif !</div>' +
+      '<div style="color:#ccc;font-size:13px;line-height:1.6">Tu peux consulter les votes O/U 2,5 et tous les signaux admissibles sur le site, l’application et Telegram.</div>';
   } else if (plan === 'carte') {
     upsellDiv.innerHTML = closeBtn +
       '<div style="color:#10b981;font-weight:800;font-size:16px;margin-bottom:8px">✅ Jeton crédité !</div>' +

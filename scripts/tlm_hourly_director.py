@@ -35,6 +35,34 @@ COOLDOWN_SECONDS = 6 * 3600
 SSL_CONTEXT = ssl.create_default_context()
 
 
+def detect_log_alerts(output, error_output):
+    lowered = (output + "\n" + error_output).lower()
+
+    markers = {
+        "invalid_api_key": "clé IA invalide",
+        "invalid api key": "clé IA invalide",
+        "aucun vote exploitable": "Concile : votes indisponibles",
+        "aucun fournisseur configure": "Concile : aucun fournisseur disponible",
+        "key limit exceeded": "plafond fournisseur atteint",
+        "[provider-health]": "fournisseur écarté : vérifier le motif",
+        "budget quotidien": "alerte budget IA",
+        "too many requests": "limite de requêtes atteinte",
+        "http 429": "limite fournisseur atteinte",
+        "unauthorized": "erreur API 401",
+        "expired api key": "clé API expirée",
+        "can't parse entities": "format Telegram invalide",
+        "quota bloque": "quota API-Sports bloqué",
+        "traceback": "exception Python",
+    }
+
+    detected = []
+
+    for marker, label in markers.items():
+        if marker in lowered and label not in detected:
+            detected.append(label)
+    return detected
+
+
 def now_iso():
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -292,7 +320,7 @@ def main():
         "touslesmatchs-council",
         "touslesmatchs-hermes-admin",
     ):
-        code, output, _ = run(
+        code, output, error_output = run(
             ["docker", "logs", "--since", "70m", "--tail", "500", container],
             timeout=30,
         )
@@ -301,22 +329,7 @@ def main():
             warnings.append(f"logs {container} indisponibles")
             continue
 
-        lowered = output.lower()
-
-        markers = {
-            "invalid_api_key": "clé IA invalide",
-            "unauthorized": "erreur API 401",
-            "expired api key": "clé API expirée",
-            "can't parse entities": "format Telegram invalide",
-            "quota bloque": "quota API-Sports bloqué",
-            "traceback": "exception Python",
-        }
-
-        detected = []
-
-        for marker, label in markers.items():
-            if marker in lowered and label not in detected:
-                detected.append(label)
+        detected = detect_log_alerts(output, error_output)
 
         if detected:
             warnings.append(f"{container}: {', '.join(detected)}")
@@ -339,7 +352,7 @@ def main():
     elif warnings:
         title = "⚠️ HERMÈS — SURVEILLANCE"
     else:
-        title = "✅ HERMÈS — TousLesMatchs sain"
+        title = "✅ HERMÈS — Routes accessibles"
 
     lines = [
         title,
@@ -370,7 +383,7 @@ def main():
     elif warnings:
         lines.append("➡️ Service disponible, alertes à contrôler.")
     else:
-        lines.append("Tout fonctionne normalement.")
+        lines.append("Contrôles HTTP réussis, aucune alerte détectée dans les logs consultés. Votes IA et livraisons client non certifiés par ce contrôle.")
 
     report = "\n".join(lines)
     print(report, flush=True)

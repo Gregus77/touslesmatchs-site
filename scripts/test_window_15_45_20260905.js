@@ -20,11 +20,12 @@ const ctx = vm.createContext({
   isCategoryBanned: () => false, isLowTrustCompetition: () => false,
   leagueTier: () => 'trusted_major', leagueHaystack: () => 'Ligue 1 France',
   isMatchDecided: () => false, CONCILE_AGENT_NAMES: ['A','B','C','D','E'],
+  CLIENT_OU25_MIN_VOTES: 3,
   db: {prepare: () => ({all: () => []})}, console,
 });
 vm.runInContext(constant, ctx);
 vm.runInContext(section('function parseLiveMinuteValue(', '// Codes de statut bruts'), ctx);
-vm.runInContext(section('function isClientOu25MatchEligible(', '// Decision du 02/09/2026'), ctx);
+vm.runInContext(section('function isClientOu25MatchEligible(', '// Decision du 05/09/2026'), ctx);
 vm.runInContext(section('const AUTO_CONCILE_WINDOW_MIN =', '// ── Règles métier'), ctx);
 vm.runInContext(section('function livePickBlockReason(', 'function shouldAutoObserveMatch('), ctx);
 vm.runInContext(section('function getLiveOu25VoteState(', '// ── Live matches'), ctx);
@@ -49,7 +50,7 @@ ctx.app = {get(route, callback) { assert.equal(route,'/public-signal-rules'); ha
 vm.runInContext(section('app.get("/public-signal-rules"', 'app.get("/public-analysis-stats"'), ctx);
 let rules;
 handler({}, {set(){},json(value){rules=JSON.parse(JSON.stringify(value));}});
-assert.deepEqual(rules,{ok:true,from_minute:15,to_minute:45,min_votes:4,min_confidence:77,min_odd:1.3,max_odd:2.1});
+assert.deepEqual(rules,{ok:true,from_minute:15,to_minute:45,min_votes:3,min_confidence:77,min_odd:1.3,max_odd:2.1,min_rank_gap:5,top5_bottom5_priority:true});
 assert(fs.readFileSync(path.join(root,'docker-compose.yml'),'utf8').includes('- CLIENT_OU25_CLIENT_MAX_MINUTE=45'));
 // All public text comes from the real API rule response, not a cosmetic 45.
 (async () => {

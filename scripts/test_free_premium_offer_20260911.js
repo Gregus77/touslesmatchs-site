@@ -42,9 +42,16 @@ assert(/elite:\s*"sig_sent_premium"/.test(api), "ancien droit Elite non aligne s
 assert(!/push\(TELEGRAM_STANDARD_CHANNEL_ID, "legacy-standard"\)/.test(api), "ancienne branche Telegram Standard encore active");
 assert(!/push\(TELEGRAM_ELITE_CHANNEL_ID, "legacy-elite"\)/.test(api), "ancienne branche Telegram Elite encore active");
 
-for (const page of ["index.html", "live-ia.html", "app.html", "faq.html"]) {
+for (const page of ["index.html", "live-ia.html", "app.html", "faq.html", "dashboard.html", "cgv.html", "cgu.html", "pronostic-ia.html"]) {
   const html = fs.readFileSync(require("path").join(__dirname, "..", "public", page), "utf8");
   assert(!/buy\.stripe\.com\/(00w14ncbGgo48c4fpA3VC05|4gM9AT5Nifk0gIA91c3VC07)/.test(html), `${page}: ancien lien de vente`);
+  assert(!/(?<!1)4[,.]90\s*(?:€|&nbsp;€)/.test(html), `${page}: ancien prix 4,90 visible`);
 }
+const home = fs.readFileSync(require("path").join(__dirname, "..", "public", "index.html"), "utf8");
+assert(!/data-i18n="plan_std"/.test(home), "carte Standard encore visible");
+assert(!/\/api\/premium-checkout\?lang=fr/.test(home), "lien de paiement publié malgré le produit Premium inactif");
+assert(/Premium — inscriptions bientôt disponibles/.test(home), "CTA informatif Premium absent");
+const telegramClient = fs.readFileSync(require("path").join(__dirname, "telegram_client.js"), "utf8");
+assert(/premium-checkout/.test(telegramClient) && /\?lang=\$\{lang\}/.test(telegramClient), "checkout russe localise absent");
 
-console.log("OK: offre Gratuit/Premium, 11e signal, antidoublon, checkout et compatibilite historique");
+console.log("OK: offre Gratuit/Premium, 11e signal, antidoublon, paiement inactif non publié et compatibilite historique");

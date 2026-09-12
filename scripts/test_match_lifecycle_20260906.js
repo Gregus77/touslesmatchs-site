@@ -15,7 +15,7 @@ assert(life.canFeature({minute:12}));
 for(const name of ['index','app']){
  const html=fs.readFileSync(__dirname+'/../public/'+name+'.html','utf8');
  assert(html.indexOf('/js/match-lifecycle.js')<html.indexOf('TLMMatchLifecycle.canFeature'));
- assert(html.includes('.filter(TLMMatchLifecycle.canFeature)'));
+ assert(html.includes('TLMMatchLifecycle.canFeature'));
  assert(html.includes('.filter(TLMMatchLifecycle.canTrack)'));
  // Parse each executable inline script to catch integration errors.
  for(const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){
@@ -31,8 +31,8 @@ vm.runInContext(part('function tlmHeroMinuteOf(','function tlmHomepageAnalyzedMa
 const old={id:'Fluminense',minute:90,status:'IN_PLAY',ou25:{vote_count:4,consensus_count:4,window_status:'closed'}};
 const live={id:'eligible',minute:25,status:'IN_PLAY',ou25:{vote_count:0,consensus_count:0,window_status:'open'}};
 const rows=[old,live];
-assert.equal(rows.slice().sort(ctx.compareHeroMatches)[0].id,'eligible');
+assert.equal(rows.slice().sort(ctx.compareHeroMatches)[0].id,'Fluminense');
 assert.deepEqual(rows.filter(life.canFeature).map(m=>m.id),['eligible']);
 assert.equal([old].filter(life.canFeature).length,0);
 assert.equal(old.ou25.vote_count,4); // No deletion of historical votes or results.
-console.log('OK: site/app lifecycle, 15–45 inclusive, stoppage time, halftime, terminal statuses, stale data and no false final result');
+console.log('OK: site/app lifecycle, 15–45 inclusive, votes antérieurs suivis après 45, terminal statuses, stale data and no false final result');

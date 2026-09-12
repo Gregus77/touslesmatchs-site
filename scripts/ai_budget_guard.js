@@ -241,7 +241,11 @@ function canProceed(db, { modelKey, matchKey, competition, market, purpose, prom
   // Les coupe-circuits budgétaires ne sont pas relus aveuglément ici : les
   // montants sont recalculés juste dessous avec les plafonds runtime actuels.
   // Ainsi une hausse autorisée de plafond prend effet sans effacer l'audit DB.
-  for (const type of ["daily_requests", "duplicate_burst"]) {
+  // Comme le budget en euros, le plafond de requêtes peut être relevé en
+  // cours de journée par le propriétaire. Ne pas relire aveuglément l'ancien
+  // breaker `daily_requests` : la valeur runtime est recalculée à l'étape 6.
+  // L'audit du déclenchement reste en base, sans maintenir un faux blocage.
+  for (const type of ["duplicate_burst"]) {
     if (!isBreakerTripped(db, type)) continue;
     if (type === "spike" && allowDespiteSpike) {
       console.warn(`[ai-guard] coupe-circuit "spike" franchi pour "${modelKey}" — repli autorise car fournisseur direct ecarte`);

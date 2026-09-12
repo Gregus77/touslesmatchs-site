@@ -128,7 +128,7 @@ ${bodyHtml}
   <p>Chaque analyse repose sur le vote de 5 agents IA spécialisés : là où un seul avis peut se tromper, la confrontation des modèles fait ressortir les désaccords et sécurise la décision. Le verdict n'est publié que lorsque la confiance dépasse notre seuil de qualité.</p>
   <h2>Comment fonctionne le Conseil IA ?</h2>
   <p>Hermès collecte les données vérifiées du match, 5 IA analysent stats, forme et valeur, puis le vote mesure la convergence. Si les signaux sont contradictoires, aucun signal n'est validé. <a href="/#methode">Voir la méthode complète →</a></p>
-  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de toutes les analyses en direct ?</div><p style="margin-bottom:14px">Les membres Standard et Premium reçoivent les analyses Live IA et les signaux du Concile en temps réel.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir les offres</a></div>
+  <div class="card" style="text-align:center"><div style="font-weight:800;margin-bottom:8px">Envie de toutes les analyses en direct ?</div><p style="margin-bottom:14px">Les membres Premium reçoivent tous les signaux admissibles du Concile en temps réel.</p><a href="/#plans" style="display:inline-block;background:linear-gradient(135deg,#059669,#10b981);color:#fff;padding:13px 30px;border-radius:11px;font-weight:800">Voir Premium</a></div>
   ${relatedHtml}`;
     return shell({ title, description, canonical, bodyHtml: body, schema });
   }
@@ -3550,6 +3550,7 @@ function evaluateClientSignalCriteria(c) {
   if (!c.telegramConfigured) return "config: TELEGRAM_BOT_TOKEN absent";
   if (c.recoveryEnabled && !c.recoveryOk) return `mode Recovery: ${c.recoveryReason}`;
   if (!c.matchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${c.maxMinute})`;
+  if (!c.standingsOk) return `classement: ${c.standingsReason || "écart minimum de 5 places non vérifié"}`;
   if (!c.ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
   if (!c.enoughSeats) return `sieges O/U 2,5 insuffisants: ${c.activeVotes}/5 (<3)`;
   if (c.confidence < c.signalThreshold) return `confiance ${c.confidence} < seuil ${c.signalThreshold}`;
@@ -5042,7 +5043,7 @@ async function fetchH2HFromFootballData(match) {
     }
     const rows = list.filter(r =>
       r?.score?.fullTime?.home != null && r?.score?.fullTime?.away != null && r?.status === "FINISHED"
-    );
+    ).sort((a, b) => Date.parse(b.utcDate || b.date || 0) - Date.parse(a.utcDate || a.date || 0));
     if (rows.length < 2) {
       h2hCache.set(ck, { data: null, ts: Date.now() });
       return null;
@@ -5065,6 +5066,7 @@ async function fetchH2HFromFootballData(match) {
       else draws++;
     }
     const n = rows.length;
+    const recent3 = rows.slice(0, 3);
     const h2h = {
       n,
       avgGoals: Math.round((totalGoals / n) * 100) / 100,
@@ -5072,6 +5074,8 @@ async function fetchH2HFromFootballData(match) {
       under25Pct: Math.round((under25 / n) * 100),
       bttsPct: Math.round((btts / n) * 100),
       homeWins, awayWins, draws,
+      last3SampleSize: recent3.length,
+      last3Over25Count: recent3.filter(r => Number(r.score.fullTime.home) + Number(r.score.fullTime.away) >= 3).length,
     };
     h2hCache.set(ck, { data: h2h, ts: Date.now() });
     console.log(`[h2h-fd] Relais Football-Data reussi ${match.home} vs ${match.away}: ${n} matchs`);
@@ -5102,7 +5106,7 @@ async function fetchH2H(match) {
         const rows = (data?.response || []).filter(r =>
           r?.goals?.home != null && r?.goals?.away != null &&
           ["FT", "AET", "PEN"].includes(r?.fixture?.status?.short)
-        );
+        ).sort((a, b) => Date.parse(b?.fixture?.date || 0) - Date.parse(a?.fixture?.date || 0));
         if (rows.length < 2) {
           h2hCache.set(ck, { data: null, ts: Date.now() });
           return null;
@@ -5125,6 +5129,7 @@ async function fetchH2H(match) {
           else draws++;
         }
         const n = rows.length;
+        const recent3 = rows.slice(0, 3);
         const h2h = {
           n,
           avgGoals: Math.round((totalGoals / n) * 100) / 100,
@@ -5132,6 +5137,8 @@ async function fetchH2H(match) {
           under25Pct: Math.round((under25 / n) * 100),
           bttsPct: Math.round((btts / n) * 100),
           homeWins, awayWins, draws,
+          last3SampleSize: recent3.length,
+          last3Over25Count: recent3.filter(r => Number(r.goals.home) + Number(r.goals.away) >= 3).length,
         };
         h2hCache.set(ck, { data: h2h, ts: Date.now() });
         return h2h;
@@ -5542,6 +5549,33 @@ async function fetchStandings(leagueId, season) {
     standingsCache.set(ck, { data: out, ts: Date.now() });
     return out;
   } catch (e) { console.error("[standings]", e.message); return null; }
+}
+
+// Décision propriétaire du 12/09/2026 : aucun signal client O/U 2,5 sans
+// classement vérifié et au moins cinq places d'écart. Une affiche top 5 contre
+// bottom 5 est prioritaire, mais ne remplace jamais les autres garde-fous.
+async function evaluateOu25StandingGap(match) {
+  if (!match?.leagueId || !match?.season || !match?.homeId || !match?.awayId) {
+    return { ok: false, reason: "classement non vérifiable", home_rank: null, away_rank: null, rank_gap: null, top5_bottom5: false };
+  }
+  const standings = await fetchStandings(match.leagueId, match.season);
+  const home = standings?.rows?.find((row) => Number(row.teamId) === Number(match.homeId));
+  const away = standings?.rows?.find((row) => Number(row.teamId) === Number(match.awayId));
+  if (!home || !away || !Number.isFinite(Number(home.rank)) || !Number.isFinite(Number(away.rank))) {
+    return { ok: false, reason: "classement non vérifiable", home_rank: null, away_rank: null, rank_gap: null, top5_bottom5: false };
+  }
+  const homeRank = Number(home.rank), awayRank = Number(away.rank);
+  const rankGap = Math.abs(homeRank - awayRank);
+  const bottomThreshold = Math.max(1, Number(standings.total || 0) - 4);
+  const top5Bottom5 = (homeRank <= 5 && awayRank >= bottomThreshold) || (awayRank <= 5 && homeRank >= bottomThreshold);
+  return {
+    ok: rankGap >= 5,
+    reason: rankGap >= 5 ? "écart de classement vérifié" : `écart de classement ${rankGap} < 5`,
+    home_rank: homeRank,
+    away_rank: awayRank,
+    rank_gap: rankGap,
+    top5_bottom5: top5Bottom5,
+  };
 }
 
 async function fetchInjuries(match) {
@@ -6731,7 +6765,7 @@ Réponds en JSON pur (pas de markdown):
       }
 
       let raw = "{}";
-      let lastDiag = "aucun fournisseur configure";
+      let lastDiag = _avantFiltre > 0 ? "fournisseurs configures mais ecartes par le coupe-circuit (quota/authentification)" : "aucun fournisseur configure";
       // Telemetrie : une ligne par tentative, avec sa duree reelle. C'est la
       // seule facon de trancher entre "timeout trop court" et "autre cause"
       // sans dependre des logs Docker, qui disparaissent a chaque rebuild.
@@ -6818,6 +6852,12 @@ Réponds en JSON pur (pas de markdown):
           tracerAppel(pv, pvIndex, _t0, "reseau", null, e.message);
           console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
+      }
+      if (providerAttempts === 0) {
+        // Compter aussi un siège sans fournisseur disponible. Sans cette trace,
+        // il resterait « jamais tenté » et relancerait indéfiniment les quatre
+        // autres sièges à chaque passage de l'observateur.
+        tracerAppel({ kind: "none", model: "" }, 0, Date.now(), "indisponible", null, lastDiag);
       }
       // Lecture tolerante : voir lireReponseAgent(). JSON.parse() strict jetait
       // des votes valides pour un simple defaut de format.
@@ -7294,8 +7334,12 @@ Réponds en JSON pur (pas de markdown):
   const ou25Only = isOu25Bet(analysisResult.best_bet) && voteInfo.market === "over_under_2_5";
   const clientOu25MatchEligible = isClientOu25MatchEligible(match, true, CLIENT_OU25_CLIENT_MAX_MINUTE);
   const requiredVotesForSignal = clientOu25RequiredVotes(match, analysisResult.best_bet);
-  const recoveryEvidence = await evaluateRecoveryEvidence(match, analysisResult.best_bet, liveStats);
+  const [recoveryEvidence, standingsEvidence] = await Promise.all([
+    evaluateRecoveryEvidence(match, analysisResult.best_bet, liveStats),
+    evaluateOu25StandingGap(match),
+  ]);
   console.log(`[recovery] ${match.home} vs ${match.away}: ${recoveryEvidence.ok ? "OK" : "BLOCK"} — ${recoveryEvidence.reason}`);
+  console.log(`[rank-gap] ${match.home} vs ${match.away}: ${standingsEvidence.ok ? "OK" : "BLOCK"} — ${standingsEvidence.reason}`);
   // Vrai seulement si ce match franchit le filtre d'un canal payant : sert à
   // limiter les tests à blanc aux picks réellement diffusés (budget OpenRouter).
   let shadowWorthy = false;
@@ -7358,6 +7402,7 @@ Réponds en JSON pur (pas de markdown):
     confidence: Number(analysisResult.confidence || 0),
     minute: parseLiveMinuteValue(match.minute),
     recovery: { ok: recoveryEvidence.ok, reason: recoveryEvidence.reason, indicators: recoveryEvidence.indicators || [] },
+    standings: standingsEvidence,
     match_eligible: clientOu25MatchEligible,
     seats_present: enoughOu25SeatsPresent,
     has_real_data: hasRealData,
@@ -7371,6 +7416,7 @@ Réponds en JSON pur (pas de markdown):
     blockTier: _blockTier, telegramConfigured: !!TELEGRAM_BOT_TOKEN,
     recoveryEnabled: RECOVERY_MODE_ENABLED, recoveryOk: recoveryEvidence.ok, recoveryReason: recoveryEvidence.reason,
     matchEligible: clientOu25MatchEligible, maxMinute: CLIENT_OU25_CLIENT_MAX_MINUTE,
+    standingsOk: standingsEvidence.ok, standingsReason: standingsEvidence.reason,
     ou25Only, enoughSeats: enoughOu25SeatsPresent, activeVotes: Number(voteInfo.vote_active || 0),
     confidence: Number(analysisResult.confidence || 0), signalThreshold, minConfidence: CLIENT_OU25_MIN_CONFIDENCE,
     voteCount: voteCountForSignal, requiredVotes: requiredVotesForSignal,
@@ -7448,7 +7494,7 @@ Réponds en JSON pur (pas de markdown):
       // presents et majorite forte. Les autres sports/marches restent internes.
       const sportDiffusable = sportLc.includes("foot");
       const diffusable = bookmakerPlayable && oddOk && sportDiffusable
-        && clientOu25MatchEligible && ou25Only && enoughOu25SeatsPresent
+        && clientOu25MatchEligible && standingsEvidence.ok && ou25Only && enoughOu25SeatsPresent
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
         && recoveryEvidence.ok;
@@ -7458,6 +7504,8 @@ Réponds en JSON pur (pas de markdown):
       if (!diffusable) {
         _tierBlock = RECOVERY_MODE_ENABLED && !recoveryEvidence.ok
           ? `mode Recovery: ${recoveryEvidence.reason}`
+          : !standingsEvidence.ok
+            ? `classement: ${standingsEvidence.reason}`
           : !sportDiffusable
               ? `sport non diffusable: ${match.sport || "?"}`
               : !bookmakerPlayable
@@ -9632,15 +9680,50 @@ function shouldAutoObserveMatch(match) {
   return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
 }
 
-function hasPredictionSnapshot(match) {
+const AUTO_CONCILE_MAX_ATTEMPTS_PER_SEAT = 2;
+function predictionSnapshotStatus(match) {
   const key = getPredictionSnapshotKey(match);
+  const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
   try {
-    const row = db.prepare("SELECT 1 FROM agent_predictions WHERE match_key = ? LIMIT 1").get(key);
-    return !!row;
+    // Une ligne d'un agent hors Concile, ou un vote sur un autre marché, ne
+    // constitue pas un snapshot O/U 2,5. On compte uniquement les cinq sièges
+    // titulaires et leurs votes réellement exploitables.
+    const validRows = db.prepare(`
+      SELECT agent_name FROM agent_predictions
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+        AND bet IN ('Over 2.5 buts','Under 2.5 buts')
+      UNION
+      SELECT agent_name FROM agent_market_predictions
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+        AND market_line = 'buts'
+        AND bet IN ('Over 2.5 buts','Under 2.5 buts')
+    `).all(key, ...CONCILE_AGENT_NAMES, key, ...CONCILE_AGENT_NAMES);
+    const validSeats = new Set(validRows.map((row) => String(row.agent_name || "")));
+    const attemptRows = db.prepare(`
+      SELECT agent_name, COUNT(*) AS attempts
+      FROM agent_calls
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+      GROUP BY agent_name
+    `).all(key, ...CONCILE_AGENT_NAMES);
+    const attempts = new Map(attemptRows.map((row) => [String(row.agent_name || ""), Number(row.attempts || 0)]));
+    const exhaustedSeats = CONCILE_AGENT_NAMES.filter((agent) =>
+      validSeats.has(agent) || (attempts.get(agent) || 0) >= AUTO_CONCILE_MAX_ATTEMPTS_PER_SEAT
+    ).length;
+    return {
+      key,
+      validSeats: validSeats.size,
+      complete: validSeats.size === CONCILE_AGENT_NAMES.length,
+      exhausted: exhaustedSeats === CONCILE_AGENT_NAMES.length,
+    };
   } catch (e) {
     console.error("[auto-concile] snapshot check:", e.message);
-    return true;
+    // Une erreur SQLite ne doit jamais provoquer une boucle d'appels payants.
+    return { key, validSeats: 0, complete: false, exhausted: true };
   }
+}
+function hasPredictionSnapshot(match) {
+  const status = predictionSnapshotStatus(match);
+  return status.complete || status.exhausted;
 }
 
 // ── Filtre ARJEL AVANT analyse (grave le 07/08/2026, decision du fondateur) ──
@@ -10300,7 +10383,7 @@ function sendGoal05Latest(req, res) {
       locked: true,
       available: !!latest?.signal,
       signal: null,
-      cta: "Selection exacte reservee aux membres des 4,90 euros par mois",
+      cta: "Selection exacte reservee aux membres Premium a 14,90 euros par mois",
     });
   }
   return res.json({ ...latest, locked: false });
@@ -10514,7 +10597,7 @@ function scheduleNurturingEmails(email) {
 function buildPlanComparisonHtml() {
   const plans = [
     { name: "Gratuit", price: "0€/mois", color: "#34d399", features: ["Présentation du service", "Guides pédagogiques", "Invitation à rejoindre Premium"] },
-    { name: "🟣 Premium", price: "14.90€/mois", color: "#6366f1", badge: "OFFRE UNIQUE", features: ["Tous les signaux admissibles", "Site, application et Telegram", "Sans plafond quotidien", "Sans engagement"] },
+    { name: "🟣 Premium", price: "14,90 €/mois", color: "#6366f1", badge: "OFFRE UNIQUE", features: ["Tous les signaux admissibles", "Site, application et Telegram", "Sans plafond quotidien", "Sans engagement"] },
   ];
   const rows = plans.map(p => {
     const feats = (p.features || []).map(f => `<div style="font-size:12px;color:#eceaf4;line-height:1.8">✅ ${f}</div>`).join("");
@@ -10575,14 +10658,14 @@ function buildNurtureJ3Html() {
         <div style="font-size:14px;color:#a8aec8;line-height:2">
           ✅ Match + compétition<br>
           ✅ Niveau de confiance du Concile<br>
-          🔒 Le pick exact — <span style="color:#6366f1">réservé Premium/Elite</span><br>
-          🔒 La cote recommandée — <span style="color:#6366f1">réservé Premium/Elite</span><br>
-          🔒 La raison du signal — <span style="color:#6366f1">réservé Premium/Elite</span>
+          🔒 Le pick exact — <span style="color:#6366f1">réservé Premium</span><br>
+          🔒 La cote recommandée — <span style="color:#6366f1">réservé Premium</span><br>
+          🔒 La raison du signal — <span style="color:#6366f1">réservé Premium</span>
         </div>
       </div>
-      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">14.90€/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
+      <p style="font-size:14px;color:#a8aec8;line-height:1.7;margin-bottom:24px">Pour <strong style="color:#eceaf4">14,90 €/mois</strong>, tu accèdes à tout — pick complet, Live IA sur tous les matchs, canal Telegram Premium.</p>
       <div style="text-align:center;margin-bottom:12px">
-        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 14.90€/mois →</a>
+        <a href="https://www.touslesmatchs.com/#plans" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 36px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;box-shadow:0 4px 20px rgba(79,70,229,.4)">S'abonner — 14,90 €/mois →</a>
       </div>
       <div style="text-align:center;margin-bottom:24px">
         <a href="https://www.touslesmatchs.com/#plans" style="color:#6366f1;font-size:13px;text-decoration:none">Pas prêt ? Voir nos offres</a>
@@ -12122,7 +12205,7 @@ app.post("/bankroll/bets/delete", (req, res) => {
 // ── Chatbot Mistral — mémoire isolée par utilisateur ─────────────────────────
 const CHAT_UNAVAILABLE = "Notre assistant est momentanément indisponible. Réessaie dans un instant, ou écris-nous sur Telegram.";
 const CHAT_SYSTEM_PROMPT = `Tu es l'assistant virtuel de TousLesMatchs.com, un service d'analyses sportives par IA appelé le "Concile". Réponds en français, brièvement, clairement et avec le sourire.
-Tu aides sur : le fonctionnement du site, les analyses du Conseil IA, les formules (Standard 4,90 €/mois, Premium 14,90 €/mois, Elite-VIP 29,90 €/mois ; l'analyse du jour est gratuite sur le site avec son résultat vérifiable le lendemain), le canal Telegram, la page Live IA, la page Résultats, la gestion de capital.
+Tu aides sur : le fonctionnement du site, les analyses du Conseil IA, les formules (Gratuit pour les aperçus et Premium à 14,90 €/mois pour tous les signaux admissibles ; l'analyse du jour est gratuite sur le site avec son résultat vérifiable le lendemain), les canaux Telegram français et russes, la page Live IA, la page Résultats, la gestion de capital.
 RÈGLES STRICTES :
 - N'emploie JAMAIS le mot "pari" ni "parier" : dis "analyse", "sélection" ou "pick".
 - Ne garantis JAMAIS de gains ; rappelle que rien n'est certain et que le service est réservé aux 18 ans et plus.
@@ -13112,6 +13195,15 @@ function getLiveOu25VoteState(match) {
   }
 }
 
+function clientOu25VisibilityEligibility(match, ou25) {
+  const accepting = isClientOu25MatchEligible(match, true);
+  const snapshotMinute = Number(ou25?.snapshot_minute);
+  const preserved = Number.isFinite(snapshotMinute)
+    && snapshotMinute >= 15 && snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE
+    && isClientOu25MatchEligible({ ...match, minute: snapshotMinute, minute_at_analysis: snapshotMinute }, true);
+  return { accepting, product: accepting || preserved, preserved };
+}
+
 // ── Live matches ──────────────────────────────────────────────────────────────
 // The homepage receives only the fields it displays. Paid directions are never
 // included in its anonymous response, including labels and tooltips.
@@ -13139,11 +13231,21 @@ function homepageLiveMatch(match, canReveal) {
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
+      updated_at: v.updated_at || null,
       direction: canReveal ? v.direction : null,
       label: canReveal ? v.label : null,
       confidence: canReveal ? v.confidence : null,
     })),
   };
+  if (canReveal && match.selection_evidence) {
+    out.selection_evidence = {
+      home_rank: match.selection_evidence.home_rank,
+      away_rank: match.selection_evidence.away_rank,
+      rank_gap: match.selection_evidence.rank_gap,
+      top5_bottom5: match.selection_evidence.top5_bottom5 === true,
+    };
+  }
+  if (canReveal && match.h2h_last3) out.h2h_last3 = match.h2h_last3;
   return out;
 }
 app.get(["/live-matches", "/homepage-live"], async (req, res) => {
@@ -13202,7 +13304,13 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
     // message parlant de minutes de football. Une seule source de vérité ici.
     const withVerdict = matches.map((m) => {
       const ou25 = getLiveOu25VoteState(m);
-      const clientProductEligible = isClientOu25MatchEligible(m, true);
+      const eligibility = clientOu25VisibilityEligibility(m, ou25);
+      const acceptingClientVotes = eligibility.accepting;
+      // Après 45', la fenêtre de nouveaux appels est fermée, mais un snapshot
+      // vérifié en première mi-temps reste une preuve client. On réévalue le
+      // périmètre statique avec la minute figée du snapshot, sans modifier les
+      // règles de ligue, de catégorie ou de sport.
+      const clientProductEligible = eligibility.product;
       const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
       // Une majorité IA décrit un signal admissible, pas une livraison. Le
       // badge public "diffusé" exige une preuve Telegram payante immuable.
@@ -13235,16 +13343,41 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
         || (!clientProductEligible ? 'Championnat ou catégorie hors du périmètre d’analyse.' : null)
         || analysisExclusionReason;
-      return { ...m, analysable: !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
+      return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
     if (req.path === '/homepage-live') {
       const account = paidGoal05Account(req);
       const expiry = account?.expires_at;
       const canReveal = !!account && (!expiry || (Number.isFinite(Date.parse(expiry)) && Date.parse(expiry) > Date.now()));
+      const publicMatches = withVerdict.filter(isPublicFootballScopeMatch);
+      const evidenceCandidates = publicMatches
+        .filter(m => m.homepage_display_eligible === true)
+        .sort((a, b) => Number(b.ou25?.consensus_count || 0) - Number(a.ou25?.consensus_count || 0));
+      const evidenceRows = await Promise.all(evidenceCandidates.map(async (m) => {
+        const [standing, h2h] = await Promise.all([
+          evaluateOu25StandingGap(m),
+          canReveal ? fetchH2H(m) : Promise.resolve(null),
+        ]);
+        return [String(m.id || m.fixtureId || m.sourceId || `${m.home}|${m.away}`), standing, h2h];
+      }));
+      const evidenceByMatch = new Map(evidenceRows.map(row => [row[0], row]));
+      for (const m of publicMatches) {
+        const key = String(m.id || m.fixtureId || m.sourceId || `${m.home}|${m.away}`);
+        const evidence = evidenceByMatch.get(key);
+        if (!evidence) continue;
+        const standing = evidence[1], h2h = evidence[2];
+        m.selection_evidence = standing;
+        m.homepage_display_eligible = m.homepage_display_eligible && standing.ok;
+        m.analysis_verified = m.analysis_verified && standing.ok;
+        if (!standing.ok) m.analysis_exclusion_reason = `Signal écarté : ${standing.reason}.`;
+        if (h2h && Number(h2h.last3SampleSize) === 3) {
+          m.h2h_last3 = { sample_size: 3, over25_count: Number(h2h.last3Over25Count) };
+        }
+      }
       res.set('Vary', 'Authorization, X-TLM-Email');
       return res.json({ok: true, locked: !canReveal,
-        matches: withVerdict.filter(isPublicFootballScopeMatch).map(m => homepageLiveMatch(m, canReveal))});
+        matches: publicMatches.map(m => homepageLiveMatch(m, canReveal))});
     }
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
@@ -14243,7 +14376,8 @@ app.get("/public-signal-rules", (req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, from_minute: 15, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
     min_votes: CLIENT_OU25_MIN_VOTES, min_confidence: CLIENT_OU25_MIN_CONFIDENCE,
-    min_odd: TIER_MIN_REAL_ODD, max_odd: TIER_MAX_REAL_ODD });
+    min_odd: TIER_MIN_REAL_ODD, max_odd: TIER_MAX_REAL_ODD,
+    min_rank_gap: 5, top5_bottom5_priority: true });
 });
 app.get("/public-analysis-stats", (req, res) => {
   try {
@@ -14312,7 +14446,7 @@ app.get("/public-analysis-stats", (req, res) => {
 app.get("/agent-performance", (req, res) => {
   const { email, code } = req.query;
   const auth = verifyCode(email, code);
-  if (!auth.valid || (auth.plan !== "elite" && !isAdminAccess(email, code))) return res.status(403).json({ ok: false, error: "Acces Elite requis" });
+  if (!auth.valid || (auth.plan === "free" && !isAdminAccess(email, code))) return res.status(403).json({ ok: false, error: "Acces Premium requis" });
   const perf = getAgentPerformance();
   try {
     const meta = db.prepare(`
@@ -15043,6 +15177,7 @@ app.get("/analysis-history", (req, res) => {
           free: displayChannels.has("free"),
         },
         delivery_proven: deliveryProof.paid,
+        telegram_delivery_proven: deliveryProof.channels.size > 0,
         history_mode: historyMode,
         // Motif lisible du non-envoi (null si le signal est bien parti).
         diffusion_block: r.diffusion_block || null,
@@ -15509,22 +15644,26 @@ app.post("/internal/signal-fort-bilan", async (req, res) => {
   res.json({ ok: true, stats: getSignalFortStats() });
 });
 
-// Vitrine du compte gratuit : ce que les abonnes Standard ont reellement recu
-// hier. Sert la preuve par l'exemple sans rien devoiler des signaux EN COURS
-// (uniquement des matchs deja termines et officiellement regles).
+// Vitrine du compte gratuit : ce que le canal Premium FR a reellement recu
+// hier. Une ligne n'est admise que si Telegram a renvoye un message_id positif.
+// Les anciens marqueurs sig_sent_* ne constituent jamais une preuve.
 // Mise de reference fixe a 10 EUR, affichee explicitement cote client — jamais
 // presentee comme un gain reel, uniquement comme une simulation.
-app.get("/standard-yesterday", (req, res) => {
+function sendPremiumYesterday(req, res) {
   try {
     const rows = db.prepare(`
-      SELECT home, away, competition, sport, best_bet, confidence,
+      SELECT DISTINCT ca.home, ca.away, ca.competition, ca.sport, ca.best_bet, ca.confidence,
              real_odd, real_odd_source, outcome, analysed_at,
              final_score_home, final_score_away
-      FROM concile_analyses
-      WHERE sig_sent_standard = 1
-        AND date(analysed_at) = date('now','-1 day')
-        AND outcome IN ('win','loss')
-      ORDER BY analysed_at ASC
+      FROM concile_analyses ca
+      WHERE date(ca.analysed_at) = date('now','-1 day')
+        AND ca.outcome IN ('win','loss')
+        AND EXISTS (
+          SELECT 1 FROM telegram_signal_deliveries td
+          WHERE td.match_key = ca.match_key AND td.channel = 'premium'
+            AND td.ok = 1 AND td.telegram_message_id IS NOT NULL
+        )
+      ORDER BY ca.analysed_at ASC
     `).all();
 
     const MISE = 10;
@@ -15557,10 +15696,12 @@ app.get("/standard-yesterday", (req, res) => {
       profit: Math.round(profit * 100) / 100,
     });
   } catch (e) {
-    console.error("[standard-yesterday]", e.message);
+    console.error("[premium-yesterday]", e.message);
     res.json({ ok: true, selections: [], total: 0, wins: 0, losses: 0, profit: 0, mise_reference: 10 });
   }
-});
+}
+app.get("/premium-yesterday", sendPremiumYesterday);
+app.get("/standard-yesterday", sendPremiumYesterday); // alias de compatibilite, non affiche
 
 app.get("/signal-fort-stats", (req, res) => {
   const stats = getSignalFortStats();

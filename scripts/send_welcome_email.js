@@ -85,7 +85,7 @@ function buildEmail(email) {
 
       <hr style="border:none;border-top:1px solid #ddd;margin:28px 0" />
 
-      <h2>Premium lancement à 4,90€/mois</h2>
+      <h2>Premium à 14,90 €/mois</h2>
       <p>
         En Premium, Hermès surveille plus de matchs, plus de sports et peut envoyer jusqu’à 3 picks prioritaires
         quand les critères sont réunis.
@@ -93,7 +93,7 @@ function buildEmail(email) {
 
       <p>
         <a href="${PREMIUM_URL}" style="display:inline-block;background:#d4af37;color:#111;padding:12px 18px;text-decoration:none;border-radius:6px;font-weight:bold">
-          Passer Premium à 4,90€
+          Passer Premium à 14,90 €
         </a>
       </p>
 
@@ -117,7 +117,7 @@ Hermès ne force pas un pari tous les jours. Quand aucune opportunité solide n�
 Telegram Free :
 ${FREE_TELEGRAM_URL}
 
-Premium lancement à 4,90€/mois :
+Premium à 14,90 €/mois :
 ${PREMIUM_URL}
 
 18+ uniquement. Pronostics informatifs, aucun gain garanti.`;

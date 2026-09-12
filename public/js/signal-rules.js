@@ -12,10 +12,11 @@
       var end = document.getElementById('hero-window-end');
       if (end) end.textContent = r.to_minute + "'";
       var note = document.getElementById('tier-note');
-      if (note) note.textContent = 'Règle actuelle Standard et Premium : football de championnat entre la '
+      if (note) note.textContent = 'Règle actuelle Premium : football de championnat entre la '
         + r.from_minute + 'e et la ' + r.to_minute + 'e minute, majorité minimale '
-        + r.min_votes + '/5, confiance ≥' + r.min_confidence + '/100 et cote ANJ réelle entre '
+        + r.min_votes + '/5, confiance ≥' + r.min_confidence + '/100, cote ANJ réelle entre '
         + Number(r.min_odd).toFixed(2).replace('.', ',') + ' et '
-        + Number(r.max_odd).toFixed(2).replace('.', ',') + '. Les autres critères de qualité restent applicables.';
+        + Number(r.max_odd).toFixed(2).replace('.', ',') + ' et écart vérifié d’au moins '
+        + Number(r.min_rank_gap || 5) + ' places au classement. Les affiches top 5 contre bottom 5 sont prioritaires ; aucun résultat n’est garanti.';
     }).catch(function () { /* Keep neutral wording if the API is unavailable. */ });
 })();
