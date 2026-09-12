@@ -61,6 +61,18 @@ jobs:
             git branch --set-upstream-to=origin/main main
             test -z "$(git status --porcelain --untracked-files=no)"
 
+            mkdir -p "$BACKUP/untracked-overlays"
+            git ls-tree -r --name-only origin/main > "$BACKUP/origin-main-files.txt"
+            git ls-files --others --exclude-standard > "$BACKUP/untracked-files.txt"
+            while IFS= read -r path; do
+              test -n "$path" || continue
+              if grep -Fxq "$path" "$BACKUP/origin-main-files.txt"; then
+                mkdir -p "$BACKUP/untracked-overlays/$(dirname "$path")"
+                mv "$path" "$BACKUP/untracked-overlays/$path"
+                echo "PRESERVED_UNTRACKED_CONFLICT $path"
+              fi
+            done < "$BACKUP/untracked-files.txt"
+
             cp scripts/api_server.js "$BACKUP/api_server.js"
             cp scripts/ai_budget_guard.js "$BACKUP/ai_budget_guard.js"
             cp .env "$BACKUP/.env"
