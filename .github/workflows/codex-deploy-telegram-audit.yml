@@ -98,9 +98,14 @@ jobs:
             ! grep -q 'await test("Diffusion Telegram"' scripts/api_server.js
             echo "TELEGRAM_AUDIT_CODE_OK"
 
-            docker compose up -d --build api
+            API_STARTED_BEFORE="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api 2>/dev/null || true)"
+            docker compose up -d --build --force-recreate api
             sleep 15
             test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = "true"
+            API_STARTED_AFTER="$(docker inspect -f '{{.State.StartedAt}}' touslesmatchs-api)"
+            test -n "$API_STARTED_AFTER"
+            test "$API_STARTED_AFTER" != "$API_STARTED_BEFORE"
+            echo "API_CONTAINER_RESTART_PROVED $API_STARTED_AFTER"
             curl -fsSL "https://www.touslesmatchs.com/api/health?t=$STAMP" | node -e 'let b="";process.stdin.on("data",d=>b+=d).on("end",()=>{const x=JSON.parse(b);const t=x.integrations?.telegram;if(!x.ok||!t?.ok)process.exit(1);const expected=["gratuit","premium","ru gratuit","ru premium","admin"];if(expected.some(k=>t.channels?.[k]!==true))process.exit(1);if("standard" in (t.channels||{})||"ru standard" in (t.channels||{}))process.exit(1);console.log("PUBLIC_TELEGRAM_HEALTH_OK")})'
             docker exec touslesmatchs-api grep -q 'TELEGRAM_AUDIT_FALSE_FAILURES_V1' /app/server.js
             docker exec touslesmatchs-api grep -q 'CLIENT_OU25_MIN_VOTES = 3;' /app/server.js
@@ -118,6 +123,23 @@ jobs:
             docker cp scripts/verify_telegram_channels_20260912.js touslesmatchs-api:/app/verify_telegram_channels_20260912.js
             docker exec touslesmatchs-api node /app/verify_telegram_channels_20260912.js
             echo "API_AND_TELEGRAM_OK"
+
+            # Le serveur arme l'observateur 30 secondes apres son demarrage.
+            # Prouver un cycle reel evite un faux deploiement vert avec un
+            # moteur Concile reste bloque dans l'ancien conteneur.
+            OBSERVER_PROVED=0
+            for attempt in $(seq 1 12); do
+              docker logs touslesmatchs-api --since "$API_STARTED_AFTER" 2>&1 > "$BACKUP/api-startup.log"
+              if grep -q '\[auto-concile\] enabled:' "$BACKUP/api-startup.log" && \
+                 grep -q '\[auto-concile\] live=' "$BACKUP/api-startup.log"; then
+                OBSERVER_PROVED=1
+                break
+              fi
+              sleep 10
+            done
+            test "$OBSERVER_PROVED" = 1
+            grep -E '\[auto-concile\] (enabled:|live=|analyse snapshot:)' "$BACKUP/api-startup.log" | tail -n 30
+            echo "AUTO_CONCILE_CYCLE_OK"
 
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
             test -z "$(git status --porcelain --untracked-files=no)"
