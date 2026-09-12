@@ -467,6 +467,7 @@ const i18n = (function () {
     init: function () { lang = detect(); apply(); },
   };
 })();
+window.i18n = i18n;
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", function () { i18n.init(); });

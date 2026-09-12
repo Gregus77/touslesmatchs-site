@@ -28,6 +28,6 @@ assert(app.includes("Premium à 14,90 €/mois") && !/Dès 4,90\s*€/.test(app)
 assert(home.includes("Pick gratuit du jour") && home.includes("Aucune carte bancaire"), "une preuve gratuite reste disponible pour attirer les visiteurs");
 assert(api.includes("signalsSentToday('sig_sent_free') >= 1"), "diffusion gratuite limitée à une vitrine par jour");
 assert(telegram.includes("La sélection exacte et la raison sont réservées aux membres Premium."), "Telegram gratuit reste un teaser et ne remplace pas l'abonnement");
-assert(home.includes("tlm-app-v20-official-results-20260912") && app.includes("tlm-app-v20-official-results-20260912") && sw.includes("tlm-app-v20-official-results-20260912"), "cache PWA cohérent sur toutes les pages");
+assert(home.includes("tlm-app-v21-stable-interface-20260912") && app.includes("tlm-app-v21-stable-interface-20260912") && sw.includes("tlm-app-v21-stable-interface-20260912"), "cache PWA cohérent sur toutes les pages");
 
 console.log("\nRÉSULTAT : OK");
