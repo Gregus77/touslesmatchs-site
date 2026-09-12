@@ -3774,8 +3774,20 @@ function legacySentChannels(row) {
 
 const CLIENT_HISTORY_REPAIR_DATE = "2026-08-26";
 const CLIENT_TELEGRAM_PROOF_SINCE = "2026-08-27";
+function hasConsistentScoreProgression(row, finalHome = row?.final_score_home, finalAway = row?.final_score_away) {
+  const fh = Number(finalHome), fa = Number(finalAway);
+  if (!Number.isFinite(fh) || !Number.isFinite(fa) || fh < 0 || fa < 0) return false;
+  const liveHome = row?.score_home_at_analysis;
+  const liveAway = row?.score_away_at_analysis;
+  if (liveHome == null || liveAway == null) return true;
+  return fh >= Number(liveHome) && fa >= Number(liveAway);
+}
+
 function isVerifiedClientOu25Row(row) {
   const day = String(row?.analysed_at || "").slice(0, 10);
+  if ((row?.outcome === "win" || row?.outcome === "loss") && !hasConsistentScoreProgression(row)) {
+    return false;
+  }
   // Historique ancien : comportement conserve.
   if (day && day < CLIENT_HISTORY_REPAIR_DATE) return true;
 
@@ -7840,6 +7852,10 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway, resolutionDay 
         WHERE id = ? AND outcome IS NULL AND final_score_home IS NULL
       `);
       pending.forEach(r => {
+        if (!hasConsistentScoreProgression(r, h, a)) {
+          console.error(`[result-integrity] score final refusé pour ${r.home} vs ${r.away}: live=${r.score_home_at_analysis}-${r.score_away_at_analysis}, final=${h}-${a}`);
+          return;
+        }
         const out = getBetOutcomeForScore(r.best_bet, h, a) || betOutcome(r.best_bet) || resolveTeamWinBet(r.best_bet, home, away, h, a);
         if (out) {
           upd.run(out, h, a, "api_finished_match", r.id);
