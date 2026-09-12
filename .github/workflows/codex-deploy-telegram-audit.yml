@@ -8,6 +8,7 @@ on:
       - scripts/ai_budget_guard.js
       - scripts/test_ai_budget_guard.js
       - scripts/test_telegram_active_channels_20260912.js
+      - scripts/test_result_integrity_20260912.js
       - scripts/verify_telegram_channels_20260912.js
       - scripts/test_ou25_post_analysis_odds_20260905.js
       - scripts/test_ou25_consensus_3of5_20260905.js
@@ -86,6 +87,7 @@ jobs:
             node --check scripts/api_server.js
             node --check scripts/ai_budget_guard.js
             node scripts/test_telegram_active_channels_20260912.js
+            node scripts/test_result_integrity_20260912.js
             node scripts/test_ou25_post_analysis_odds_20260905.js
             node scripts/test_ou25_consensus_3of5_20260905.js
             node scripts/test_public_quorum_copy_3of5_20260906.js
