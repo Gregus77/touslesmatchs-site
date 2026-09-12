@@ -13,4 +13,7 @@ assert.strictEqual(guard({score_home_at_analysis:null,score_away_at_analysis:nul
 assert.strictEqual(guard({},-1,2),false);
 assert.match(src,/\[result-integrity\] score final refusé/);
 assert.match(src,/outcome === "win"[\s\S]{0,160}!hasConsistentScoreProgression\(row\)/);
+assert.match(src,/dedupeAnalysesByMatch\(raw\.filter\(hasConsistentScoreProgression\)\)/);
+assert.match(src,/final_score_home >= score_home_at_analysis/);
+assert.match(src,/final_score_away >= score_away_at_analysis/);
 console.log("OK: scores finaux régressifs refusés et exclus des statistiques clients");
