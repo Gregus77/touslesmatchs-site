@@ -366,3 +366,11 @@ Audit reproductible de la sauvegarde SQLite de 21:31:25 UTC : exports par modèl
 ## 2026-09-12 — [Codex] Bilan Paris et snapshot client immuable
 
 Bilan client de la journée Paris à 23 h 45 uniquement, verrou SQLite persistant et bornes UTC correctes. Minute, score initial, sélection et cote figés atomiquement à la mise en file ; preuves Telegram positives indépendantes FR/RU et résultats selon la sélection livrée. Audit documenté de Nürnberg, Darmstadt et Copenhagen, sans nouveaux identifiants ni changement IA/BTTS. Voir `docs/handoff/2026-09-12-telegram-recap-snapshot.md`.
+
+## 2026-09-12 — [Codex] Continuité PR 109 et alertes fournisseurs
+
+- Netlify publie explicitement `public/`, évitant l'ancien index racine avec Standard.
+- Hermès lit stdout ET stderr Docker, reconnaît les pannes de votes et quotas et ne certifie plus tout le service sur des HTTP 200.
+- Diagnostic Concile distingue absence de configuration et fournisseurs écartés.
+- Tests SQLite exécutés localement : budget (24 assertions), mi-temps shadow, snapshots Telegram Paris/DST et reprises FR/RU passent.
+- Avancement estimé 55/100 : code et tests locaux avancés ; déploiement, vérification visuelle et reprise réelle des votes restent à prouver. Budget et clés non modifiés.

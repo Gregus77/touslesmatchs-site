@@ -6758,7 +6758,7 @@ Réponds en JSON pur (pas de markdown):
       }
 
       let raw = "{}";
-      let lastDiag = "aucun fournisseur configure";
+      let lastDiag = _avantFiltre > 0 ? "fournisseurs configures mais ecartes par le coupe-circuit (quota/authentification)" : "aucun fournisseur configure";
       // Telemetrie : une ligne par tentative, avec sa duree reelle. C'est la
       // seule facon de trancher entre "timeout trop court" et "autre cause"
       // sans dependre des logs Docker, qui disparaissent a chaque rebuild.
