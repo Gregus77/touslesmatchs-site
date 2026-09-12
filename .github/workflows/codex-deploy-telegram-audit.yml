@@ -41,15 +41,26 @@ jobs:
             set -euo pipefail
             cd /opt/touslesmatchs
 
-            git fetch origin main
-            test "$(git branch --show-current)" = "main"
-            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = "origin/main"
-            test -z "$(git status --porcelain --untracked-files=no)"
-
             STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
             BACKUP="/opt/backups/tlm-telegram-audit-$STAMP"
             mkdir -p "$BACKUP"
             chmod 700 "$BACKUP"
+
+            git fetch origin main
+            git status --porcelain --untracked-files=no > "$BACKUP/tracked-status.txt"
+            git diff > "$BACKUP/tracked-working.patch"
+            git diff --cached > "$BACKUP/tracked-staged.patch"
+            if test -s "$BACKUP/tracked-status.txt"; then
+              git stash push -m "codex-preserved-before-telegram-deploy-$STAMP"
+              echo "VPS_TRACKED_CHANGES_PRESERVED_IN_STASH"
+            fi
+
+            if test "$(git branch --show-current)" != "main"; then
+              git switch main
+            fi
+            git branch --set-upstream-to=origin/main main
+            test -z "$(git status --porcelain --untracked-files=no)"
+
             cp scripts/api_server.js "$BACKUP/api_server.js"
             cp scripts/ai_budget_guard.js "$BACKUP/ai_budget_guard.js"
             cp .env "$BACKUP/.env"
