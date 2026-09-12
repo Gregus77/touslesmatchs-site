@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nouvelle version IA : faut-il changer pour analyser le football ? | TousLesMatchs</title>
+  <meta name="description" content="Comment comparer deux versions IA sur les mêmes matchs : données horodatées, essais à blanc, réponses manquantes et preuves avant remplacement.">
+  <link rel="canonical" href="https://www.touslesmatchs.com/guides/nouvelle-version-ia-football/">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Nouvelle version IA : faut-il changer pour analyser le football ?">
+  <meta property="og:description" content="Une version plus récente n'est pas une preuve de meilleure analyse football. Voici les vérifications utiles avant de changer.">
+  <meta property="og:url" content="https://www.touslesmatchs.com/guides/nouvelle-version-ia-football/">
+  <link rel="stylesheet" href="/css/guides.css?v=20260908">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Article","headline":"Nouvelle version IA : faut-il changer pour analyser le football ?","description":"Comment comparer deux versions IA sur les mêmes matchs : données horodatées, essais à blanc, réponses manquantes et preuves avant remplacement.","inLanguage":"fr","datePublished":"2026-09-12","dateModified":"2026-09-12","author":{"@type":"Organization","name":"TousLesMatchs"},"publisher":{"@type":"Organization","name":"TousLesMatchs"},"mainEntityOfPage":"https://www.touslesmatchs.com/guides/nouvelle-version-ia-football/"}
+  </script>
+</head>
+<body>
+  <a class="skip" href="#contenu">Aller au contenu</a>
+  <header>
+    <a class="brand" href="/">TOUSLES<span>MATCHS</span></a>
+    <nav aria-label="Navigation">
+      <a href="/guides/">Guides</a><a href="/live-ia">Live IA</a><a href="/performances">Résultats</a><a class="cta" href="/dashboard">Compte gratuit</a>
+    </nav>
+  </header>
+  <main id="contenu">
+    <a class="breadcrumb" href="/guides/">← Tous les guides</a>
+    <article>
+      <p class="eyebrow">LIMITES DES IA · GUIDE</p>
+      <h1>Nouvelle version IA : faut-il changer pour analyser le football ?</h1>
+      <p class="meta">TousLesMatchs · <time datetime="2026-09-12">12 septembre 2026</time> · Français</p>
+      <p><strong>Non, pas sur son nom ou sa date de sortie seulement.</strong> Une nouvelle version mérite un test ; elle ne mérite pas automatiquement la place d'une version déjà évaluée.</p>
+      <p>Ce guide répond à une question réelle, reformulée sans information personnelle : « Le temps de tester une IA, une nouvelle version arrive. Comment suivre les nouveautés sans remplacer sans cesse les modèles ? » La réponse consiste à séparer la découverte d'une version, sa vérification technique et la mesure de ses prévisions.</p>
+
+      <h2>Un appel réussi n'est pas une bonne prévision</h2>
+      <p>Recevoir une réponse prouve que l'accès fonctionne à cet instant. Cela ne prouve ni que le score du match est correct, ni que le marché est compris, ni que la prévision sera juste. Inversement, un quota épuisé ne démontre pas une mauvaise compréhension du football : il révèle un problème de disponibilité.</p>
+      <p>Il faut donc tenir deux bilans : la qualité des réponses et la capacité à répondre à temps. Google recommande de tester l'infrastructure séparément du modèle dans ses <a href="https://developers.google.com/machine-learning/guides/rules-of-ml">règles d'ingénierie du machine learning</a>. Appliqué au live, ce principe évite de confondre panne d'accès et erreur sportive.</p>
+
+      <h2>Comparer le même match au même instant</h2>
+      <p>Pour isoler l'effet d'une version, les deux candidates doivent recevoir le même dossier : rencontre, score, minute, statistiques disponibles et consigne identique. Le marché doit aussi rester le même : une réponse <a href="/guides/btts-ou-over-25/">BTTS ne se compare pas directement à une réponse Over 2,5</a>.</p>
+      <p>Une analyse à la 20e minute et une autre après un but à la 35e ne partent pas des mêmes informations. Si l'une dispose d'une recherche web et l'autre non, on compare deux systèmes complets, pas uniquement deux versions. Cette différence doit être annoncée et les sources consultées conservées.</p>
+      <p>Le nom affiché ne suffit pas : la fiche de test doit identifier la version réellement appelée, la consigne et les éventuels outils utilisés. Une réponse provenant d'un modèle de secours doit être attribuée à ce modèle, pas à celui qui était initialement demandé.</p>
+
+      <h2>Ne pas laisser le résultat entrer dans le test</h2>
+      <p>Rejouer aujourd'hui une rencontre terminée comporte un piège : une recherche web peut retrouver le score final. Un modèle peut aussi avoir rencontré ce résultat auparavant. Lui demander d'« oublier la suite » ne garantit pas un test indépendant.</p>
+      <p>La documentation <a href="https://scikit-learn.org/stable/common_pitfalls.html#data-leakage">scikit-learn sur la fuite de données</a> explique pourquoi l'utilisation d'informations indisponibles au moment de prévoir produit des évaluations trop optimistes. Notre application au football : privilégier une observation sur des matchs à venir, avec les avis enregistrés avant que leur résultat soit connu. Les relectures historiques restent utiles, mais leur risque de contamination doit être signalé.</p>
+
+      <h2>Exemple : pourquoi 80 % ne bat pas forcément 70 %</h2>
+      <table>
+        <caption>Exemple entièrement fictif : 20 mêmes matchs proposés aux deux versions</caption>
+        <thead><tr><th scope="col">Mesure</th><th scope="col">Version A</th><th scope="col">Version B</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Réponses exploitables</th><td>20 / 20</td><td>10 / 20</td></tr>
+          <tr><th scope="row">Prévisions justes</th><td>14 / 20</td><td>8 / 10</td></tr>
+          <tr><th scope="row">Justesse sur les réponses</th><td>70 %</td><td>80 %</td></tr>
+          <tr><th scope="row">Sans réponse exploitable</th><td>0</td><td>10</td></tr>
+        </tbody>
+      </table>
+      <p>B affiche le pourcentage le plus élevé, mais ne répond que sur la moitié des rencontres. Il faut d'abord comparer A et B sur les dix matchs où toutes deux ont répondu, puis examiner séparément les dix absences de B. Ces absences ne sont ni des prévisions gagnées, ni automatiquement des prévisions perdues : elles réduisent la couverture du service.</p>
+      <p>Le tableau ne dit pas combien de réponses A a justes sur ces dix matchs communs. Il est donc insuffisant pour désigner un vainqueur. Même une comparaison complète sur vingt matchs resterait trop limitée pour affirmer une supériorité durable sur tous les championnats.</p>
+
+      <h2>Tester à blanc, puis confirmer sur une autre période</h2>
+      <p>Un essai à blanc enregistre les avis de la candidate sans les présenter comme des signaux envoyés aux abonnés. Il permet de comparer les réponses, les délais et les erreurs sans modifier immédiatement le service. Une bonne série d'essais ne doit jamais être ajoutée au bilan des <a href="/guides/historique-signaux-taux-reussite/">signaux réellement diffusés</a>.</p>
+      <p>Avant de regarder les scores, il est utile de fixer le périmètre, les critères de décision et la durée d'observation. Après un premier choix, une période ultérieure non utilisée pour sélectionner la candidate permet de vérifier si l'avantage se retrouve. Changer les règles après chaque défaite, ou retenir uniquement les journées favorables, fragilise la comparaison.</p>
+      <p>Il n'existe pas ici de nombre magique de matchs qui garantirait une conclusion. La diversité des rencontres, l'ampleur de l'écart et les réponses manquantes comptent. Si les preuves restent insuffisantes, le verdict honnête est « indécis », pas « meilleure IA ».</p>
+
+      <h2>Ce qu'il faut demander avant un remplacement</h2>
+      <ul>
+        <li>Quelle version a réellement répondu, sur quel marché et quelle période ?</li>
+        <li>Les deux versions ont-elles reçu les mêmes informations avant le résultat ?</li>
+        <li>Combien de matchs sont communs, et combien de réponses manquent ?</li>
+        <li>L'avantage se retrouve-t-il sur une période nouvelle, sans modifier les critères ?</li>
+        <li>Le délai, le coût et l'effet sur le <a href="/guides/comprendre-consensus-ia/">consensus des autres IA</a> sont-ils documentés ?</li>
+      </ul>
+      <p>Une candidate peut être plus rapide sans être plus juste, ou répondre mieux seule sans améliorer le consensus. Un remplacement doit préciser le bénéfice effectivement mesuré et permettre un retour à la version précédente en cas de régression.</p>
+      <p>Enfin, sans cote enregistrée au moment pertinent, cette comparaison ne démontre aucune rentabilité. Même avec des cotes, un résultat simulé doit être présenté comme tel, avec ses hypothèses, et non comme un gain réalisé par les abonnés.</p>
+
+      <aside>
+        <h2>À retenir</h2>
+        <p>Suivre les nouveautés, oui. Les promouvoir sur leur seule nouveauté, non. La bonne question est : « Quelles preuves cette version apporte-t-elle sur les mêmes situations ? »</p>
+        <a href="/guides/comprendre-consensus-ia/">Comprendre les votes IA</a><a href="/guides/matchs-live-sans-signal/">Distinguer analyse et diffusion</a>
+      </aside>
+      <p class="meta">Sources primaires consultées le 12 septembre 2026. Les principes généraux cités sont adaptés ici à l'analyse football ; ils ne constituent pas une certification de TousLesMatchs. Ce guide décrit une méthode d'évaluation, pas la preuve de son exécution sur chaque modèle du service. Contenu préparé avec assistance IA et relu avant publication ; aucun classement de modèles ni prédiction en direct.</p>
+    </article>
+  </main>
+  <footer><p>18+ · Aucun gain garanti. Les jeux d'argent comportent des risques. <a href="https://www.joueurs-info-service.fr/">Joueurs Info Service</a></p><a href="/mentions-legales">Mentions légales</a> · <a href="/confidentialite">Confidentialité</a> · <a href="/faq">Questions fréquentes</a></footer>
+</body>
+</html>
