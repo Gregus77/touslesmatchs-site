@@ -43,10 +43,11 @@ function render(kind,data,dest) {
     if(!free) lines.push(`💡 ${ru?'Прогноз':'Sélection'} : ${market()}`);
     else lines.push(ru?'Результат сигнала Premium, анонсированного в этом канале.':'Résultat du signal Premium annoncé dans ce canal.');
   } else if(kind==='recap') {
-    const rows=data.rows,wins=rows.filter(x=>x.outcome==='win').length,losses=rows.filter(x=>x.outcome==='loss').length;
-    lines=[`📊 <b>${ru?'ИТОГИ ДНЯ':'BILAN DU JOUR'} — ${esc(data.day)}</b>`,`✅ ${ru?'Выиграно':'Gagnés'} : ${wins} · ❌ ${ru?'Проиграно':'Perdus'} : ${losses}`,
+    const rows=data.rows,wins=rows.filter(x=>x.outcome==='win').length,losses=rows.filter(x=>x.outcome==='loss').length,pending=rows.length-wins-losses;
+    lines=[`📊 <b>${ru?'ИТОГИ ДНЯ':'BILAN DU JOUR'} — ${esc(data.day)}${data.parts>1?` (${data.part}/${data.parts})`:''}</b>`,`✅ ${ru?'Выиграно':'Gagnés'} : ${wins} · ❌ ${ru?'Проиграно':'Perdus'} : ${losses} · ⏳ ${ru?'Ожидают результата':'En attente'} : ${pending}`,
       ru?'Только сигналы с подтверждённой доставкой в этот канал.':'Uniquement les signaux dont la livraison dans ce canal est prouvée.'];
-    for(const row of rows) lines.push(`${row.outcome==='win'?'✅':'❌'} ${esc(row.home)} — ${esc(row.away)} : ${esc(row.final_score_home)}-${esc(row.final_score_away)}${free?'':` · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`}`);
+    if(!rows.length)lines.push(ru?'В этот день нет подтверждённых сигналов в этом канале.':'Aucun signal livré avec preuve dans ce canal ce jour-là.');
+    for(const row of rows) lines.push(`${row.outcome==='win'?'✅':row.outcome==='loss'?'❌':'⏳'} ${esc(row.home)} — ${esc(row.away)} : ${row.outcome==='pending'?(ru?'ожидает результата':'en attente'):`${esc(row.final_score_home)}-${esc(row.final_score_away)}`}${free?'':` · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`}`);
   } else if(kind==='guide') {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
   } else if(kind==='reminder'||kind==='nopick') {
@@ -74,8 +75,76 @@ function request(token,payload) {
     req.on('error',()=>resolve({ok:false,uncertain:true}));req.on('timeout',()=>req.destroy());req.end(body);
   });
 }
+// SQLite datetimes without an offset are UTC, never the host's local time.
+function sqliteUtcMs(value) {
+  if (typeof value === 'number') return value;
+  const text=String(value || '').trim().replace(' ','T');
+  return Date.parse(/[zZ]$|[+-]\d\d:\d\d$/.test(text)?text:text+'Z');
+}
+function parisParts(at=Date.now()) {
+  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(at));
+  const p=Object.fromEntries(parts.map(x=>[x.type,x.value]));
+  return {day:`${p.year}-${p.month}-${p.day}`,hour:Number(p.hour),minute:Number(p.minute)};
+}
+function parisDayBounds(day) {
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(day))throw new Error('Invalid civil day');
+  const midnight=Date.parse(day+'T00:00:00Z');
+  function localMidnight(utc) {
+    let guess=utc;
+    for(let i=0;i<3;i++) {
+      const p=parisParts(guess);
+      const wall=Date.parse(p.day+'T00:00:00Z')+(p.hour*60+p.minute)*60000;
+      guess+=utc-wall;
+    }
+    return new Date(guess).toISOString();
+  }
+  return {start:localMidnight(midnight),end:localMidnight(midnight+86400000)};
+}
+function recapDue(at=Date.now()) {const p=parisParts(at);return p.hour===23&&p.minute>=45;}
+const FROZEN_FIELDS=['minute_at_analysis','score_home_at_analysis','score_away_at_analysis','best_bet','real_odd','real_odd_source','analysed_at'];
+function initSignalSnapshots(db) {
+  db.exec(`CREATE TABLE IF NOT EXISTS client_signal_snapshots (
+    match_key TEXT PRIMARY KEY, minute_at_analysis INTEGER, score_home_at_analysis INTEGER,
+    score_away_at_analysis INTEGER, best_bet TEXT, real_odd REAL, real_odd_source TEXT,
+    analysed_at TEXT NOT NULL, data_json TEXT NOT NULL, source TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS client_recap_runs (day TEXT PRIMARY KEY, queued_at INTEGER NOT NULL);
+    CREATE TRIGGER IF NOT EXISTS client_snapshot_immutable BEFORE UPDATE ON client_signal_snapshots
+      BEGIN SELECT RAISE(ABORT,'Client signal snapshot is immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS client_analysis_snapshot_guard AFTER UPDATE OF ${FROZEN_FIELDS.join(',')} ON concile_analyses
+    WHEN EXISTS (SELECT 1 FROM client_signal_snapshots s WHERE s.match_key=NEW.match_key AND (${FROZEN_FIELDS.map(f=>`NEW.${f} IS NOT s.${f}`).join(' OR ')}))
+    BEGIN UPDATE concile_analyses SET ${FROZEN_FIELDS.map(f=>`${f}=(SELECT ${f} FROM client_signal_snapshots WHERE match_key=NEW.match_key)`).join(',')} WHERE match_key=NEW.match_key; END;`);
+}
+function freezeSignal(db,data,at,source='queued') {
+  const old=db.prepare('SELECT data_json FROM client_signal_snapshots WHERE match_key=?').get(data.matchKey);
+  if(old)return JSON.parse(old.data_json);
+  const row=db.prepare('SELECT * FROM concile_analyses WHERE match_key=?').get(data.matchKey);
+  if(!row)throw new Error('Signal analysis missing');
+  const date=new Date(at).toISOString();
+  const odd=data.odd==null?null:Number(data.odd);
+  db.prepare(`INSERT INTO client_signal_snapshots VALUES (?,?,?,?,?,?,?,?,?,?)`).run(data.matchKey,data.minute??null,data.scoreHome??null,data.scoreAway??null,data.market,odd,row.real_odd_source??null,date,JSON.stringify(data),source);
+  db.prepare(`UPDATE concile_analyses SET ${FROZEN_FIELDS.map(f=>`${f}=(SELECT ${f} FROM client_signal_snapshots WHERE match_key=?)`).join(',')} WHERE match_key=?`).run(...FROZEN_FIELDS.map(()=>data.matchKey),data.matchKey);
+  return data;
+}
+function recapRows(db,day,channel) {
+  const bounds=parisDayBounds(day);
+  const rows=db.prepare(`SELECT ca.*,td.market AS delivered_market,td.created_at AS delivered_utc,
+    td.telegram_message_id FROM telegram_signal_deliveries td JOIN concile_analyses ca ON ca.match_key=td.match_key
+    WHERE td.channel=? AND td.ok=1 AND typeof(td.telegram_message_id)='integer' AND td.telegram_message_id>0
+      AND datetime(td.created_at)>=datetime(?) AND datetime(td.created_at)<datetime(?)
+    ORDER BY datetime(td.created_at),td.telegram_message_id`).all(channel,bounds.start,bounds.end);
+  const seen=new Set();
+  return rows.filter(row=>{const key=row.match_key;if(seen.has(key))return false;seen.add(key);return true;}).map(row=>{
+    const selection=row.delivered_market;
+    const market=String(selection||'').match(/^(Over|Under) 2[.,]5 (?:buts|goals)$/i);
+    const resolved=['win','loss'].includes(row.outcome)&&row.final_score_home!=null&&row.final_score_away!=null&&market;
+    const won=resolved&&((Number(row.final_score_home)+Number(row.final_score_away)>2.5)===(market[1].toLowerCase()==='over'));
+    return {...row,best_bet:selection,outcome:resolved?(won?'win':'loss'):'pending'};
+  });
+}
+
 function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>{},paymentAvailable=()=>false}) {
   const targets=destinations(env);
+  initSignalSnapshots(db);
   db.exec(`CREATE TABLE IF NOT EXISTS client_telegram_outbox (
     delivery_key TEXT PRIMARY KEY, kind TEXT NOT NULL, channel TEXT NOT NULL, chat_id TEXT NOT NULL,
     match_key TEXT, market TEXT, votes INTEGER, payload TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'pending',
@@ -86,10 +155,28 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
   db.prepare("UPDATE client_telegram_outbox SET state='uncertain' WHERE state='sending' AND next_at<?").run(now());
   let busy=false;
   function enqueue(kind,data,dest,key,expiresAt=now()+7*86400000) {
-    const payload=render(kind,data,{...dest,paymentVerified:paymentAvailable()});
-    return db.prepare(`INSERT OR IGNORE INTO client_telegram_outbox(delivery_key,kind,channel,chat_id,match_key,market,votes,payload,expires_at,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?)`).run(`${kind}:${key}:${dest.id}`,kind,dest.channel,dest.id,data.matchKey||null,data.market||'',Number(data.votes)||0,JSON.stringify(payload),expiresAt,now()).changes > 0;
+    return db.transaction(()=>{
+      const deliveryKey=`${kind}:${key}:${dest.id}`;
+      if(db.prepare('SELECT 1 FROM client_telegram_outbox WHERE delivery_key=?').get(deliveryKey))return false;
+      if(kind==='signal')data=freezeSignal(db,data,now());
+      const payload=render(kind,data,{...dest,paymentVerified:paymentAvailable()});
+      return db.prepare(`INSERT OR IGNORE INTO client_telegram_outbox(delivery_key,kind,channel,chat_id,match_key,market,votes,payload,expires_at,created_at)
+        VALUES(?,?,?,?,?,?,?,?,?,?)`).run(deliveryKey,kind,dest.channel,dest.id,data.matchKey||null,data.market||'',Number(data.votes)||0,JSON.stringify(payload),expiresAt,now()).changes>0;
+    }).immediate();
   }
+  function queueDailyRecap(day=parisParts(now()).day) {
+    return db.transaction(()=>{
+      const claim=db.prepare('INSERT OR IGNORE INTO client_recap_runs(day,queued_at) VALUES (?,?)').run(day,now());
+      if(!claim.changes)return false;
+      for(const dest of targets) {
+        const rows=recapRows(db,day,dest.channel);
+        for(let i=0;i<Math.max(1,rows.length);i+=10)
+          enqueue('recap',{day,rows:rows.slice(i,i+10),part:Math.floor(i/10)+1,parts:Math.max(1,Math.ceil(rows.length/10))},dest,`${day}:${i/10}`);
+      }
+      return true;
+    }).immediate();
+  }
+
   async function flush() {
     if(busy || !env.TELEGRAM_BOT_TOKEN)return false;busy=true;
     try {
@@ -116,7 +203,7 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       return true;
     } finally {busy=false;}
   }
-  return {targets,enqueue,flush};
+  return {targets,enqueue,flush,queueDailyRecap};
 }
 async function verifiedPrice(stripe,priceId) {
   const price=await stripe.prices.retrieve(priceId,{expand:['product']});
@@ -135,4 +222,4 @@ async function verifiedCheckout(stripe,priceId,lang) {
     success_url:'https://www.touslesmatchs.com/merci?session_id={CHECKOUT_SESSION_ID}',
     cancel_url:'https://www.touslesmatchs.com/#plans'});
 }
-module.exports={verifiedPrice,verifiedCheckout,CTA,PAYMENT,payment,legal,esc,destinations,marketRu,render,request,createPublisher};
+module.exports={sqliteUtcMs,parisParts,parisDayBounds,recapDue,initSignalSnapshots,freezeSignal,recapRows,verifiedPrice,verifiedCheckout,CTA,PAYMENT,payment,legal,esc,destinations,marketRu,render,request,createPublisher};

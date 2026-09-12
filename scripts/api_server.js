@@ -3744,7 +3744,7 @@ function storedTelegramDelivery(row) {
     const rows = db.prepare(`
       SELECT channel, market, vote_count
       FROM telegram_signal_deliveries
-      WHERE match_key = ? AND ok = 1 AND telegram_message_id IS NOT NULL
+      WHERE match_key = ? AND ok = 1 AND typeof(telegram_message_id)='integer' AND telegram_message_id > 0
     `).all(key);
     const channels = new Set(rows.map(item => String(item.channel || "")));
     const strongest = rows.slice().sort((a, b) => Number(b.vote_count || 0) - Number(a.vote_count || 0))[0];
@@ -7677,9 +7677,9 @@ function saveConcileAnalysis(match, result, pickBet) {
       "SELECT id, best_bet, outcome, final_score_home, resolved_at FROM concile_analyses WHERE match_key = ?"
     ).get(matchKey);
     if (existing) {
-      if (isProtectedFromOverwrite(existing)) {
-        console.warn(`[concile-trace] analyse résolue immuable, réanalyse ignorée: ${matchKey}`);
-        return;
+      if (isProtectedFromOverwrite(existing) || db.prepare("SELECT 1 FROM client_signal_snapshots WHERE match_key=?").get(matchKey)) {
+        console.warn(`[concile-trace] analyse résolue ou signal client figé, réanalyse ignorée: ${matchKey}`);
+        return matchKey;
       }
       const betChanged = existing.best_bet !== result.best_bet;
       db.prepare(`
@@ -10698,12 +10698,15 @@ async function sendWeeklyAgentsAudit() {
 
 // ── Auto-post résultat Signal Fort sur Telegram quand résolu ─────────────────
 async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
-  if (!['win','loss'].includes(outcome) || !analysis.match_key) return;
+  if (!['win','loss'].includes(outcome) || !analysis.match_key || scoreH==null || scoreA==null) return;
   const proof = storedTelegramDelivery(analysis);
   for (const dest of clientTelegramPublisher.targets) {
     if (!proof.channels.has(dest.channel)) continue;
     const data={matchKey:analysis.match_key,home:analysis.home,away:analysis.away,
-      market:proof.market || analysis.best_bet,outcome,scoreHome:scoreH,scoreAway:scoreA};
+      market:db.prepare("SELECT market FROM telegram_signal_deliveries WHERE match_key=? AND channel=? AND ok=1 AND typeof(telegram_message_id)='integer' AND telegram_message_id>0 ORDER BY id LIMIT 1").get(analysis.match_key,dest.channel)?.market || analysis.best_bet,
+      outcome,scoreHome:scoreH,scoreAway:scoreA};
+    data.outcome=getBetOutcomeForScore(data.market,scoreH,scoreA);
+    if(!['win','loss'].includes(data.outcome))continue;
     clientTelegramPublisher.enqueue('result',data,dest,analysis.match_key);
   }
   await clientTelegramPublisher.flush();
@@ -14699,36 +14702,8 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
   res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
 });
 
-// ── Daily results summary → FREE Telegram channel (22h Paris) ────────────────
-let _lastFreeResultsBilanDate = "";
-async function sendDailyResultsFreeChannel() {
-  return sendTransparentDailyRecap();
-}
-
-// Bilan quotidien : UNIQUEMENT les signaux réellement envoyés.
-// Les pertes sont conservées et affichées exactement comme les gains.
-let _tlmTransparentRecapDay = "";
-
-function tlmParisParts() {
-  const parts = new Intl.DateTimeFormat("fr-FR", {
-    timeZone: "Europe/Paris",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(new Date());
-
-  const o={};
-  for (const x of parts) o[x.type]=x.value;
-
-  return {
-    day:`${o.year}-${o.month}-${o.day}`,
-    hour:Number(o.hour),
-    minute:Number(o.minute),
-  };
-}
+// Client recap: one durable queue transaction at 23:45 Europe/Paris.
+function tlmParisParts() { return telegramClient.parisParts(); }
 
 function tlmFlag(v) {
   return v === 1 || v === true;
@@ -14739,22 +14714,11 @@ function tlmOutcomeIcon(v) {
 }
 
 async function sendTransparentDailyRecap() {
-  const day=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date(Date.now()-86400000));
-  // Read only confirmed deliveries; legacy markers never become Premium proof.
-  const rows=db.prepare(`SELECT ca.* FROM concile_analyses ca
-    WHERE ca.outcome IN ('win','loss') AND date(ca.analysed_at)=?
-      AND EXISTS (SELECT 1 FROM telegram_signal_deliveries td WHERE td.match_key=ca.match_key
-        AND td.ok=1 AND td.telegram_message_id IS NOT NULL)
-    ORDER BY ca.analysed_at`).all(day);
-  for (const dest of clientTelegramPublisher.targets) {
-    const list=dedupeAnalysesByMatch(rows.filter(row=>storedTelegramDelivery(row).channels.has(dest.channel)));
-    // Stable bounded pages; include every loss and every win, no truncation.
-    for(let i=0;i<list.length;i+=10) {
-      clientTelegramPublisher.enqueue('recap',{day,rows:list.slice(i,i+10)},dest,`${day}:${i/10}`);
-    }
-  }
+  const at=Date.now();
+  if(!telegramClient.recapDue(at))return false;
+  const queued=clientTelegramPublisher.queueDailyRecap(telegramClient.parisParts(at).day);
   await clientTelegramPublisher.flush();
-  return rows.length>0;
+  return queued;
 }
 
 function winsSafe(rows) {
@@ -14771,10 +14735,9 @@ setInterval(()=>{
 
     if(
       p.hour===23 &&
-      p.minute>=45 &&
-      _tlmTransparentRecapDay!==p.day
+      p.minute>=45
     ){
-      _tlmTransparentRecapDay=p.day;
+      // SQLite claims the civil day atomically across processes and restarts.
 
       sendTransparentDailyRecap()
         .then(ok=>console.log(
@@ -17499,11 +17462,7 @@ function checkAnalyticsSchedule() {
     _lastBilanDate = todayKey;
     console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin (rattrapage si necessaire)...");
     sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
-    if (_lastFreeResultsBilanDate !== todayKey) {
-      _lastFreeResultsBilanDate = todayKey;
-      console.log("[daily-results-free] Envoi résultats du jour sur canal gratuit (rattrapage si necessaire)...");
-      sendDailyResultsFreeChannel().then(ok => console.log(`[daily-results-free] ${ok ? "OK" : "SKIP/ECHEC"}`));
-    }
+
   }
 
   if (hour >= 23 && _lastDailyReportDate !== todayKey) {
