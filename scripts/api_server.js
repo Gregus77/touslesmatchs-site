@@ -22,6 +22,7 @@ const crypto = require("crypto");
 // Point de passage obligatoire pour tout appel IA lié à l'analyse d'un match
 // (garde-fou budget/anti-doublon/coupe-circuit). Voir scripts/analysis_engine.js.
 const analysisEngine = require("./analysis_engine");
+const halftimeEntryShadow = require("./halftime_entry_shadow");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -7188,6 +7189,35 @@ Réponds en JSON pur (pas de markdown):
   // Cle canonique partagee par analyse, preuve Telegram et resultat final.
   const persistedAnalysisMatchKey = saveConcileAnalysis(match, analysisResult, pickBet);
   analysisResult.match_key = persistedAnalysisMatchKey || analysisResult.match_key;
+  // Expérience strictement à blanc : mémorise un candidat tôt puis vérifie à
+  // nouveau entre 40' et 45' si la direction tient et si la cote réelle est
+  // enfin dans la zone 1,45–1,65. Ce chemin ne contient aucun envoi client.
+  try {
+    const shadowObservation = halftimeEntryShadow.observe(db, {
+      matchKey: analysisResult.match_key,
+      home: match.home,
+      away: match.away,
+      competition: match.competition || match.league || "",
+      minute: parseLiveMinuteValue(match.minute),
+      scoreHome: match.score_home,
+      scoreAway: match.score_away,
+      selection: analysisResult.best_bet,
+      confidence: analysisResult.confidence,
+      consensus: analysisResult.consensus_votes,
+      odd: analysisResult.cote,
+      oddSource: analysisResult.cote_source,
+      context: {
+        stats_status: analysisResult.statsStatus?.status || "unavailable",
+        stats: analysisResult.statsStatus?.stats || null,
+        vote_active: analysisResult.vote_summary?.vote_active || 0,
+      },
+    });
+    if (shadowObservation.action !== "ignored") {
+      console.log(`[halftime-shadow] ${analysisResult.match_key} ${shadowObservation.action}${shadowObservation.reason ? ` — ${shadowObservation.reason}` : ""}`);
+    }
+  } catch (error) {
+    console.error("[halftime-shadow] observation:", error.message);
+  }
 
   // Vrais noms des 5 agents officiels dans le texte public (demande fondateur,
   // 29/07/2026 : "ca fait plus pro"). Deux regles restent en vigueur :
@@ -7932,6 +7962,10 @@ function resolveConcileAnalyses(home, away, scoreHome, scoreAway, resolutionDay 
     // lignes concile_analyses en attente, donc quasiment jamais pour les agents
     // du banc d'essai (Groq-Llama70B/8B, Cerebras, OpenRouter, Mistral-Small...).
     resolveShadowOutcomes(home, away, h, a, resolutionDay);
+    const halftimeResolved = halftimeEntryShadow.resolve(db, {
+      home, away, scoreHome: h, scoreAway: a, resolutionDay,
+    });
+    if (halftimeResolved) console.log(`[halftime-shadow] résolu ${halftimeResolved}: ${home} vs ${away} (${h}-${a})`);
   } catch(e) { console.error("[concile-trace] resolve:", e.message); }
 }
 
@@ -14089,6 +14123,19 @@ app.get("/concile-performance", (req, res) => {
   const { email, code } = req.query;
   if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
   res.json({ ok: true, ...getConcilePerformance() });
+});
+
+// Rapport propriétaire de l'expérience « attendre la mi-temps ». La porte
+// admin évite d'exposer la stratégie interne et aucune promotion n'est faite
+// automatiquement, même après vingt résultats.
+app.get("/admin/halftime-entry-shadow", (req, res) => {
+  const { email, code } = req.query;
+  if (!isAdminAccess(email, code)) return res.status(403).json({ ok: false, error: "Acces admin requis" });
+  try {
+    res.json({ ok: true, ...halftimeEntryShadow.report(db) });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: "Rapport shadow indisponible" });
+  }
 });
 
 // ── Shadow eval — classement des IAs candidates ───────────────────────────────

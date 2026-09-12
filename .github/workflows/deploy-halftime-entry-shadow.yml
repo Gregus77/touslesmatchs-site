@@ -1,0 +1,94 @@
+name: Deploy halftime entry shadow
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile.api"
+      - "scripts/api_server.js"
+      - "scripts/halftime_entry_shadow.js"
+      - "scripts/test_halftime_entry_shadow.js"
+      - ".github/workflows/deploy-halftime-entry-shadow.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "20"
+      - run: npm install --no-save better-sqlite3
+      - run: node --check scripts/api_server.js
+      - run: node scripts/test_halftime_entry_shadow.js
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Backup, deploy and verify shadow collector
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 12m
+          script: |
+            set -Eeuo pipefail
+            cd /opt/touslesmatchs
+            TLM_OLD_HEAD="$(git rev-parse HEAD)"
+            TLM_BACKUP="/opt/backups/halftime-shadow-$(date +%Y%m%d-%H%M%S)"
+            install -d -m 700 "$TLM_BACKUP"
+            cp -a Dockerfile.api "$TLM_BACKUP/Dockerfile.api"
+            cp -a scripts/api_server.js "$TLM_BACKUP/api_server.js"
+            if [ -f scripts/halftime_entry_shadow.js ]; then cp -a scripts/halftime_entry_shadow.js "$TLM_BACKUP/halftime_entry_shadow.js"; fi
+            cp -a /opt/touslesmatchs/data/tlm.db "$TLM_BACKUP/tlm.db" 2>/dev/null || docker exec touslesmatchs-api sh -lc 'cp /data/tlm.db /data/tlm-halftime-shadow-backup.db'
+
+            rollback() {
+              TLM_EXIT=$?
+              set +e
+              cp -a "$TLM_BACKUP/Dockerfile.api" Dockerfile.api
+              cp -a "$TLM_BACKUP/api_server.js" scripts/api_server.js
+              if [ -f "$TLM_BACKUP/halftime_entry_shadow.js" ]; then cp -a "$TLM_BACKUP/halftime_entry_shadow.js" scripts/halftime_entry_shadow.js; else rm -f scripts/halftime_entry_shadow.js; fi
+              docker compose up -d --build --force-recreate api >/dev/null 2>&1
+              echo "ROLLBACK_ATTEMPTED — sauvegarde: $TLM_BACKUP" >&2
+              exit "$TLM_EXIT"
+            }
+
+            git fetch origin main
+            test "$(git branch --show-current)" = main
+            test "$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}')" = origin/main
+            test -z "$(git status --porcelain --untracked-files=no)"
+            git pull --ff-only origin main
+            trap rollback ERR
+
+            node --check scripts/api_server.js
+            docker run --rm -e NODE_PATH=/app/node_modules -v "$PWD/scripts:/tests:ro" -w /tests touslesmatchs-api node test_halftime_entry_shadow.js
+            docker compose up -d --build --force-recreate api
+            sleep 20
+            test "$(docker inspect -f '{{.State.Running}}' touslesmatchs-api)" = true
+            test "$(sha256sum scripts/halftime_entry_shadow.js | awk '{print $1}')" = "$(docker exec touslesmatchs-api sha256sum /app/halftime_entry_shadow.js | awk '{print $1}')"
+            docker exec touslesmatchs-api node - <<'NODE'
+            const Database=require('better-sqlite3');
+            const shadow=require('/app/halftime_entry_shadow');
+            const db=new Database('/data/tlm.db');
+            const r=shadow.report(db);
+            if(r.mode!=='shadow_only'||r.telegram_delivery!==false||r.rules.minimum_resolved_sample!==20) process.exit(2);
+            console.log('HALFTIME_SHADOW_RUNTIME_OK',JSON.stringify(r.totals),r.conclusion);
+            NODE
+            test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://www.touslesmatchs.com/api/health?halftime=$(date +%s))" = 200
+            test "$(curl -sS -o /dev/null -w '%{http_code}' --max-time 20 https://www.touslesmatchs.com/admin/halftime-entry-shadow)" = 403
+            docker logs touslesmatchs-api --since 2m 2>&1 | grep -Ev 'DeprecationWarning' | grep -Eqi 'uncaughtException|SyntaxError' && exit 3 || true
+            test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
+            test -z "$(git status --porcelain --untracked-files=no)"
+            trap - ERR
+            echo "DEPLOY_OK — halftime shadow actif sans Telegram — sauvegarde: $TLM_BACKUP"
