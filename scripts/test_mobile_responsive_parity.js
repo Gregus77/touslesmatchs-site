@@ -40,7 +40,7 @@ assert(
   "les boutons flottants ne doivent pas recouvrir le hero mobile"
 );
 
-const version = "tlm-app-v19-official-snapshots-20260912";
+const version = "tlm-app-v20-official-results-20260912";
 assert(sw.includes(`const VERSION = "${version}"`), "le cache PWA doit utiliser la nouvelle version");
 assert(home.includes(`/sw.js?v=${version}`), "l'accueil doit demander le nouveau service worker");
 assert(

@@ -5,7 +5,7 @@ const start=html.indexOf('function appOu25('),end=html.indexOf('function appLogo
 assert(start>=0&&end>start,'fonctions votes application absentes');
 const ctx=vm.createContext({
   esc:v=>String(v),
-  TLMMatchLifecycle:{phase:m=>Number(m.minute)>45?'closed':'open'},
+  TLMMatchLifecycle:{phase:m=>String(m.status).toUpperCase()==='FINISHED'?'finished':Number(m.minute)>45?'closed':'open',canTrack:m=>String(m.status).toUpperCase()!=='FINISHED'},
 });
 vm.runInContext(html.slice(start,end),ctx);
 const voted=[
@@ -26,6 +26,8 @@ const paidMarkup=ctx.appMiniVotes(paid);
 assert.equal(ctx.appVotes(paid),4);assert.equal((paidMarkup.match(/>O</g)||[]).length,3);assert.equal((paidMarkup.match(/>U</g)||[]).length,1);
 assert(paidMarkup.includes('Anciennes tendances — aucun signal officiel'));
 assert(paidMarkup.includes(' old'));
+assert.equal(ctx.appMatchTrackable({status:'FINISHED',ou25:{official:true}}),true);
+assert.equal(ctx.appMatchTrackable({status:'FINISHED',ou25:{official:false}}),false);
 assert(html.includes('get("/api/homepage-live?t="+Date.now())'));
 assert(html.includes('m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true'));
 console.log('OK: application limitée aux matchs analysés, votes Premium O/U, votes masqués ?, sièges en attente numérotés et votes antérieurs conservés');

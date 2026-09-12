@@ -766,7 +766,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       return;
     }
     pushFeedback('Activation en cours...', true);
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v19-official-snapshots-20260912').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v20-official-results-20260912').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
         return get('/api/push/vapid-public-key').then(function (d) {
@@ -892,6 +892,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var voted=slots.filter(function(v){return v&&v.status==='voted';}).length,over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:Number(raw.vote_count)||voted,consensusCount:Number(raw.consensus_count)||Math.max(over,under),overCount:over,underCount:under,locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,recommendationStatus:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,officialConfidence:raw.official_confidence,officialOdd:raw.official_odd,outcome:raw.outcome||null};}
   function appVoteTime(value){var raw=String(value||'').trim();if(!raw)return '';var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
   function appVotes(m){return appOu25(m).voteCount;}
+  function appMatchTrackable(m){return appOu25(m).official===true||TLMMatchLifecycle.canTrack(m);}
   function appMiniVotes(m){
     var state=appOu25(m);
     var dots=state.slots.map(function(slot,i){
@@ -928,7 +929,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   function loadLive() {
     get("/api/homepage-live?t="+Date.now()).then(flagOffline).then(function (d) {
       var box = $("live-box");
-      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(function(m){return m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true;}).filter(TLMMatchLifecycle.canTrack);
+      var list = (d&&(d.offline||d.cached)?[]:((d && (d.matches || d.live)) || [])).filter(appMatchAllowed).filter(function(m){return m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true;}).filter(appMatchTrackable);
       list.sort(function(a,b){
         var ae=a.selection_evidence||{},be=b.selection_evidence||{};
         if((ae.top5_bottom5===true)!==(be.top5_bottom5===true))return be.top5_bottom5===true?1:-1;
@@ -1143,7 +1144,7 @@ $("perf-kpis").innerHTML =
   // les notifications ne sont pas encore activées. Cela force la récupération
   // des corrections de cache pour tous les utilisateurs Android.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v19-official-snapshots-20260912')
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v20-official-results-20260912')
       .then(function (reg) { return reg.update(); })
       .catch(function () {});
   }
