@@ -3412,7 +3412,7 @@ function ownerExpandedLeagueAllowed(match) {
   const c = recoveryNormalize(match?.country || String(match?.competition || '').split(' · ').slice(1).join(' · '));
   const l = recoveryNormalize(match?.league || String(match?.competition || '').split(' · ')[0]);
   const allowed = [
-    [/^(brazil|brasil|bresil)$/, /^(serie [ab]|brasileirao( serie [ab])?)$/],
+    [/^(brazil|brasil|bresil)$/, /^(serie [ab]|brasileirao( serie [ab])?|campeonato brasileiro serie [ab])$/],
     [/^(argentina|argentine)$/, /^(liga profesional( argentina)?|primera division)$/],
     [/^(denmark|danemark)$/, /^(superliga|superligaen|danish superliga)$/],
     [/^(australia|australie)$/, /^a[- ]league( men)?$/],
