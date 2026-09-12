@@ -10,6 +10,7 @@ on:
       - scripts/test_telegram_active_channels_20260912.js
       - scripts/test_result_integrity_20260912.js
       - scripts/test_quality_shadow_features_20260912.js
+      - scripts/test_targeted_ou25_retry_20260912.js
       - scripts/verify_telegram_channels_20260912.js
       - scripts/test_ou25_post_analysis_odds_20260905.js
       - scripts/test_ou25_consensus_3of5_20260905.js
@@ -90,6 +91,7 @@ jobs:
             node scripts/test_telegram_active_channels_20260912.js
             node scripts/test_result_integrity_20260912.js
             node scripts/test_quality_shadow_features_20260912.js
+            node scripts/test_targeted_ou25_retry_20260912.js
             node scripts/test_ou25_post_analysis_odds_20260905.js
             node scripts/test_ou25_consensus_3of5_20260905.js
             node scripts/test_public_quorum_copy_3of5_20260906.js
