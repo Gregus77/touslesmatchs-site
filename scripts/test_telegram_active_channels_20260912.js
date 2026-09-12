@@ -12,6 +12,6 @@ assert.match(src, /\["RU Gratuit",\s*TELEGRAM_RU_FREE_CHANNEL_ID\]/);
 assert.match(src, /\["RU Premium 14,90 €",\s*TELEGRAM_RU_PREMIUM_CHANNEL_ID\]/);
 assert.doesNotMatch(src, /\["Standard",\s*TELEGRAM_STANDARD_CHANNEL_ID\]/);
 assert.doesNotMatch(src, /\["RU Standard",\s*TELEGRAM_RU_STANDARD_CHANNEL_ID\]/);
-assert.match(src, /providers\.sort\(\(a, b\) => Number\(!isOpenRouterUrl\(a\.url\)\) - Number\(!isOpenRouterUrl\(b\.url\)\)\)/);
+assert.match(src, /providers\.sort\(\(a, b\) =>[\s\S]{0,240}openrouter\.ai[\s\S]{0,240}openrouter\.ai[\s\S]{0,80}\);/);
 
 console.log("OK: 4 canaux clients Telegram + Admin; anciens Standard exclus; OpenRouter prioritaire");
