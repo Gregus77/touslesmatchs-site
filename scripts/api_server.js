@@ -3876,6 +3876,8 @@ function getUnderperformingCompetitions() {
         SUM(CASE WHEN outcome IN ('win','loss') THEN 1 ELSE 0 END) AS total
       FROM concile_analyses
       WHERE outcome IN ('win','loss') AND competition IS NOT NULL AND competition != ''
+        AND (score_home_at_analysis IS NULL OR final_score_home >= score_home_at_analysis)
+        AND (score_away_at_analysis IS NULL OR final_score_away >= score_away_at_analysis)
       GROUP BY competition
       HAVING total >= 8
     `).all();
@@ -3908,7 +3910,8 @@ function getSegmentStats() {
   const data = { comp: {}, market: {}, compMarket: {}, sport: {}, sportMarket: {} };
   try {
     const raw = db.prepare(`
-      SELECT home, away, competition, sport, best_bet, outcome, analysed_at
+      SELECT home, away, competition, sport, best_bet, outcome, analysed_at,
+             score_home_at_analysis, score_away_at_analysis, final_score_home, final_score_away
       FROM concile_analyses
       WHERE outcome IN ('win','loss')
         AND (sig_sent_free = 1 OR sig_sent_standard = 1 OR sig_sent_premium = 1 OR sig_sent_elite = 1)
@@ -3918,7 +3921,7 @@ function getSegmentStats() {
     // noms légèrement différents comptait double — et quand les deux analyses
     // portaient des paris opposés (cas du 28/07/2026), le moteur apprenait
     // simultanément qu'un segment gagne ET qu'il perd, sur le même événement.
-    const rows = dedupeAnalysesByMatch(raw);
+    const rows = dedupeAnalysesByMatch(raw.filter(hasConsistentScoreProgression));
     const bump = (obj, key, win) => { const o = (obj[key] = obj[key] || { w: 0, t: 0 }); o.t++; if (win) o.w++; };
     for (const r of rows) {
       const comp = String(r.competition || "").toLowerCase();
