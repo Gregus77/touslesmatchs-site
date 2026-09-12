@@ -36,6 +36,7 @@ COPY scripts/telegram_client.js ./telegram_client.js
 COPY scripts/long_history.js ./long_history.js
 COPY scripts/bookmakers.config.js ./bookmakers.config.js
 COPY scripts/analysis_engine.js ./analysis_engine.js
+COPY scripts/halftime_entry_shadow.js ./halftime_entry_shadow.js
 COPY scripts/ai_budget_guard.js ./ai_budget_guard.js
 COPY scripts/ai_models.config.js ./ai_models.config.js
 COPY scripts/beta_waitlist.js ./beta_waitlist.js
