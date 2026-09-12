@@ -362,3 +362,7 @@
 ## 2026-09-11 — [Codex] Audit IA et marchés shadow
 
 Audit reproductible de la sauvegarde SQLite de 21:31:25 UTC : exports par modèle, marché, championnat, minute et confiance, contrôles temporels et comparaison des populations. Aucun remplacement de siège ; BTTS et autres marchés conservés à blanc, échantillon insuffisant. Les six résultats BTTS étaient déjà déterminés au score de départ. Huit tests Python et 200 cas de résolution du worker passent. Aucun changement de production. Voir `docs/audits/2026-09-11/README.md`.
+
+## 2026-09-12 — [Codex] Bilan Paris et snapshot client immuable
+
+Bilan client de la journée Paris à 23 h 45 uniquement, verrou SQLite persistant et bornes UTC correctes. Minute, score initial, sélection et cote figés atomiquement à la mise en file ; preuves Telegram positives indépendantes FR/RU et résultats selon la sélection livrée. Audit documenté de Nürnberg, Darmstadt et Copenhagen, sans nouveaux identifiants ni changement IA/BTTS. Voir `docs/handoff/2026-09-12-telegram-recap-snapshot.md`.

@@ -48,7 +48,7 @@ async function main(){
  if(process.env.TEST_SQLITE_MODULE){
   const Database=require(process.env.TEST_SQLITE_MODULE),db=new Database(':memory:');
   db.exec(`CREATE TABLE telegram_signal_deliveries(match_key TEXT,channel TEXT,telegram_message_id INTEGER,market TEXT,vote_count INTEGER,ok INTEGER);
-    CREATE TABLE concile_analyses(match_key TEXT PRIMARY KEY,sig_sent_free INTEGER DEFAULT 0,sig_sent_premium INTEGER DEFAULT 0,sig_sent_standard INTEGER DEFAULT 1,sig_sent_elite INTEGER DEFAULT 1);
+    CREATE TABLE concile_analyses(match_key TEXT PRIMARY KEY,minute_at_analysis INTEGER,score_home_at_analysis INTEGER,score_away_at_analysis INTEGER,best_bet TEXT,real_odd REAL,real_odd_source TEXT,analysed_at TEXT,sig_sent_free INTEGER DEFAULT 0,sig_sent_premium INTEGER DEFAULT 0,sig_sent_standard INTEGER DEFAULT 1,sig_sent_elite INTEGER DEFAULT 1);
     INSERT INTO concile_analyses(match_key) VALUES ('match:1');`);
   let now=100000,calls=[],failRu=true;
   const transport=async(token,payload)=>{calls.push(payload.chat_id);return payload.chat_id==='-4'&&failRu?{ok:false,retryAfter:30}:{ok:true,messageId:calls.length};};
@@ -82,11 +82,11 @@ main().catch(e=>{console.error(e);process.exitCode=1;});
 const vm=require('vm');
 const api=fs.readFileSync(path.join(__dirname,'api_server.js'),'utf8');
 const resultFunction=api.match(/async function notifySignalFortResult\([^]*?\n\}/)[0];
-const queued=[];
+const queued=[],resultPayloads=[];
 const proof={channels:new Set(['premium']),market:'Under 2.5 buts'};
-const context={storedTelegramDelivery:()=>proof,clientTelegramPublisher:{targets,enqueue:(kind,d,dest)=>queued.push(dest.channel),flush:async()=>true}};
-vm.createContext(context);vm.runInContext(resultFunction,context);
+const context={db:{prepare:()=>({get:(key,channel)=>({market:channel==='premium'?'Under 2.5 buts':'Over 2.5 buts'})})},storedTelegramDelivery:()=>proof,clientTelegramPublisher:{targets,enqueue:(kind,d,dest)=>{queued.push(dest.channel);resultPayloads.push(d);},flush:async()=>true}};
+vm.createContext(context);vm.runInContext(api.match(/function getBetOutcomeForScore\([^]*?\n\}/)[0],context);vm.runInContext(resultFunction,context);
 context.notifySignalFortResult({...data,match_key:data.matchKey},'loss',1,0).then(()=>{
  assert.deepEqual(queued,['premium']);queued.length=0;proof.channels=new Set(['ru_premium']);
  return context.notifySignalFortResult({...data,match_key:data.matchKey},'win',1,0);
-}).then(()=>assert.deepEqual(queued,['ru_premium'])).catch(e=>{console.error(e);process.exitCode=1;});
+}).then(()=>{assert.deepEqual(queued,['ru_premium']);assert.equal(resultPayloads[0].outcome,'win');assert.equal(resultPayloads[1].outcome,'loss');}).catch(e=>{console.error(e);process.exitCode=1;});
