@@ -366,3 +366,7 @@ Audit reproductible de la sauvegarde SQLite de 21:31:25 UTC : exports par modèl
 ## 2026-09-12 — [Codex] Bilan Paris et snapshot client immuable
 
 Bilan client de la journée Paris à 23 h 45 uniquement, verrou SQLite persistant et bornes UTC correctes. Minute, score initial, sélection et cote figés atomiquement à la mise en file ; preuves Telegram positives indépendantes FR/RU et résultats selon la sélection livrée. Audit documenté de Nürnberg, Darmstadt et Copenhagen, sans nouveaux identifiants ni changement IA/BTTS. Voir `docs/handoff/2026-09-12-telegram-recap-snapshot.md`.
+
+## 2026-09-12 — Codex — budget global Concile Paris
+
+Correctif urgent séparé de PR 109 : calendrier 4/6 EUR, réservation SQLite globale de chaque appel OpenRouter, conservation des dépenses et réservations incertaines, passerelle Python/worker et suspension temporaire des essais payants. Aucun changement des cinq IA ou des critères clients. Voir `docs/handoff/2026-09-12-concile-budget-incident.md` pour limites et procédure de preuve.

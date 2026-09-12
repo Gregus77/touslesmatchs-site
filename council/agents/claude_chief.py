@@ -17,7 +17,7 @@ ANTHROPIC_MODEL = (os.environ.get("ANTHROPIC_CHIEF_MODEL") or "").strip() or "cl
 
 def _call_openrouter(system, prompt):
     resp = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
+        "http://api:3001/internal/openrouter/v1/chat/completions",
         headers={
             "Authorization": f"Bearer {OPENROUTER_KEY}",
             "Content-Type": "application/json",

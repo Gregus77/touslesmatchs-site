@@ -53,6 +53,8 @@ services:
       # Une variable absente du .env vaut "" -> le code garde son defaut, donc
       # ajouter ces lignes ne change rien tant qu'on ne les renseigne pas.
       # Budget / garde-fou IA (scripts/ai_budget_guard.js)
+      - OPENROUTER_PARIS_SCHEDULE=1
+      - OPENROUTER_USD_PER_EUR=1
       - OPENROUTER_DAILY_BUDGET_EUR=${OPENROUTER_DAILY_BUDGET_EUR}
       - OPENROUTER_HERMES_DAILY_BUDGET_EUR=${OPENROUTER_HERMES_DAILY_BUDGET_EUR}
       - OPENROUTER_CONCILE_DAILY_BUDGET_EUR=${OPENROUTER_CONCILE_DAILY_BUDGET_EUR}
