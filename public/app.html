@@ -766,7 +766,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       return;
     }
     pushFeedback('Activation en cours...', true);
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v14-responsive-20260904').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v18-home-votes-20260912').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
         return get('/api/push/vapid-public-key').then(function (d) {
@@ -889,17 +889,19 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
   function appAwayLogo(m){return m&&(m.away_logo||m.awayLogo||m.away_badge||m.strAwayTeamBadge||(m.teamB&&m.teamB.logo))||'';}
   function appHomeScore(m){var v=m&&(m.score_home!=null?m.score_home:m.home_score!=null?m.home_score:m.intHomeScore!=null?m.intHomeScore:m.goals&&(m.goals.home!=null?m.goals.home:null));return v==null?'':v;}
   function appAwayScore(m){var v=m&&(m.score_away!=null?m.score_away:m.away_score!=null?m.away_score:m.intAwayScore!=null?m.intAwayScore:m.goals&&(m.goals.away!=null?m.goals.away:null));return v==null?'':v;}
-  function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var voted=slots.filter(function(v){return v&&v.status==='voted';}).length,over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:Number(raw.vote_count)||voted,consensusCount:Number(raw.consensus_count)||Math.max(over,under),overCount:over,underCount:under,locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown')};}
+  function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var voted=slots.filter(function(v){return v&&v.status==='voted';}).length,over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:Number(raw.vote_count)||voted,consensusCount:Number(raw.consensus_count)||Math.max(over,under),overCount:over,underCount:under,locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute),consensusAt:raw.consensus_at||null};}
+  function appVoteTime(value){var raw=String(value||'').trim();if(!raw)return '';var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
   function appVotes(m){return appOu25(m).voteCount;}
   function appMiniVotes(m){
     var state=appOu25(m);
     var dots=state.slots.map(function(slot,i){
       var voted=slot&&slot.status==='voted',dir=voted&&(slot.direction==='over'||slot.direction==='under')?slot.direction:'';
       var label=voted?(state.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);
-      var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : en attente');
+      var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : en attente'),voteTime=appVoteTime(slot&&slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;
       return '<span class="tlm-app-live-mini-vote '+dir+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
-    return '<span class="tlm-app-live-vote-summary">'+(TLMMatchLifecycle.phase(m)==='closed'?'Fenêtre terminée · votes antérieurs ':'')+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
+    var preserved='';if(TLMMatchLifecycle.phase(m)==='closed'){preserved='Votes de première mi-temps';if(state.snapshotMinute!=null)preserved+=' · '+state.snapshotMinute+"'";var at=appVoteTime(state.consensusAt);if(at)preserved+=' à '+at;preserved+=' · ';}
+    return '<span class="tlm-app-live-vote-summary">'+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
@@ -919,8 +921,9 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
     var exclusionReason=String(m.analysis_exclusion_reason||'');
     $("app-ai-total").textContent=votes+' / 5';
     $("app-ai-label").textContent=analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':exclusionReason?'Analyse non lancée':analysisClosed?'Fenêtre d’analyse terminée':analysisWaiting?'Analyse à venir':'Analyse IA en cours';
-    $("app-ai-result").textContent=analysisClosed?'Votes antérieurs · aucune nouvelle sélection':votes?(voteState.locked?(voteState.consensusCount+'/5 IA alignées · détails Premium'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
-    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted';el.classList.toggle('on',voted);el.classList.toggle('over',voted&&!voteState.locked&&dir==='over');el.classList.toggle('under',voted&&!voteState.locked&&dir==='under');el.textContent=voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);var detail=voted?(voteState.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : en attente');el.title=detail;el.setAttribute('aria-label',detail);});
+    var preservedAt=voteState.snapshotMinute!=null?(" · enregistré à "+voteState.snapshotMinute+"'"):'';var preservedClock=appVoteTime(voteState.consensusAt);if(preservedClock)preservedAt+=' à '+preservedClock;
+    $("app-ai-result").textContent=analysisClosed?('Votes de première mi-temps'+preservedAt+' · aucune nouvelle sélection'):votes?(voteState.locked?(voteState.consensusCount+'/5 IA alignées · détails Premium'):(voteState.overCount+' Over · '+voteState.underCount+' Under')):exclusionReason?exclusionReason:analysisClosed?'Aucun vote enregistré':analysisWaiting?'Entre la 15e et la 45e':'En attente des IA';
+    Array.prototype.forEach.call(document.querySelectorAll('#app-ai-votes .tlm-app-vote'),function(el,i){var slot=voteState.slots[i]||{},dir=slot.direction,voted=slot.status==='voted';el.classList.toggle('on',voted);el.classList.toggle('over',voted&&!voteState.locked&&dir==='over');el.classList.toggle('under',voted&&!voteState.locked&&dir==='under');el.textContent=voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);var detail=voted?(voteState.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : en attente'),voteTime=appVoteTime(slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;el.title=detail;el.setAttribute('aria-label',detail);});
   }
   function loadLive() {
     get("/api/homepage-live?t="+Date.now()).then(flagOffline).then(function (d) {
@@ -1140,7 +1143,7 @@ $("perf-kpis").innerHTML =
   // les notifications ne sont pas encore activées. Cela force la récupération
   // des corrections de cache pour tous les utilisateurs Android.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v14-responsive-20260904')
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v18-home-votes-20260912')
       .then(function (reg) { return reg.update(); })
       .catch(function () {});
   }

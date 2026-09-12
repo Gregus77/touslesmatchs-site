@@ -89,11 +89,11 @@ nav{position:sticky;top:0;z-index:200;display:flex;align-items:center;justify-co
 .nav-right{display:flex;align-items:center;gap:10px;flex:0 0 auto}
 .nav-hamburger{display:none;background:none;border:1px solid var(--b2);border-radius:8px;color:var(--tx);width:36px;height:36px;font-size:17px;cursor:pointer}
 .nav-plan-badge{font-size:12.5px;font-weight:800;padding:5px 10px;border-radius:999px;background:rgba(124,92,255,.15);color:var(--violet2);border:1px solid rgba(124,92,255,.3)}
-.nav-plan-badge.elite{background:rgba(224,166,60,.14);color:var(--elite);border-color:rgba(224,166,60,.32)}
+.nav-plan-badge.premium{background:rgba(155,123,255,.14);color:var(--premium);border-color:rgba(155,123,255,.32)}
 .nav-user{display:flex;align-items:center;gap:8px}
 .nav-logout{background:none;border:1px solid var(--b2);color:var(--tx2);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:14px}
 @media(max-width:900px){ .nav-center{display:none} .nav-hamburger{display:block} }
-/* Sous ~480px, badge Elite + bouton deconnexion + CTA "Creer mon compte
+/* Sous ~480px, badge Premium + bouton deconnexion + CTA "Creer mon compte
    gratuit" + hamburger ne tenaient plus sur une ligne : nav-right refusait
    de retrecir (flex:0 0 auto), la barre debordait horizontalement et le
    mobile zoomait toute la page pour compenser (tout apparaissait
@@ -1176,7 +1176,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Votes O/U 2,5 détaillés et justification factuelle</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <a href="/api/premium-checkout?lang=fr" class="btn btn-prim btn-block" data-i18n="plan_btn_prem">Choisir Premium</a>
+      <span class="btn btn-prim btn-block" aria-disabled="true" title="Abonnement temporairement indisponible">Premium — inscriptions bientôt disponibles</span>
     </div>
 
   </div>
@@ -1353,7 +1353,7 @@ function renderNavAuth(){
   var plan=localStorage.getItem('tlm_plan');
   if(email&&plan){
     var isPaid=plan!=='free';
-    el.innerHTML='<div class="nav-user"><span class="nav-plan-badge'+(isPaid?' elite':'')+'">'+(isPaid?'Premium':'Gratuit')+'</span><button class="nav-logout" onclick="doLogout()" title="Se déconnecter">✕</button></div>';
+    el.innerHTML='<div class="nav-user"><span class="nav-plan-badge'+(isPaid?' premium':'')+'">'+(isPaid?'Premium':'Gratuit')+'</span><button class="nav-logout" onclick="doLogout()" title="Se déconnecter">✕</button></div>';
   } else {
     el.innerHTML='<button class="btn btn-ghost" onclick="openModal()">Se connecter</button>';
   }
@@ -1700,7 +1700,12 @@ function heroOu25(m){
   while(slots.length<5)slots.push({status:'pending',direction:null});
   return {slots:slots,voteCount:Number(raw.vote_count)||0,consensusCount:Number(raw.consensus_count)||0,
     overCount:Number(raw.over_count)||0,underCount:Number(raw.under_count)||0,
-    locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute)};
+    locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute),consensusAt:raw.consensus_at||null};
+}
+function heroVoteTime(value){
+  var raw=String(value||'').trim();if(!raw)return '';
+  var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');
+  return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
 }
 function heroConsensusDetail(m){
   var state=heroOu25(m),valid=state.slots.filter(function(v){return v&&v.status==='voted'&&(v.direction==='over'||v.direction==='under');});
@@ -1775,6 +1780,7 @@ function renderHeroLive(m){
     paidExplanation='Choix IA : '+(consensus.direction==='over'?'Over':'Under')+' 2,5 · '+consensus.count+'/5 votes';
     if(consensus.averageConfidence!=null)paidExplanation+=' · confiance moyenne '+consensus.averageConfidence+'/100';
     if(voteState.snapshotMinute!=null)paidExplanation+=' · enregistré à '+voteState.snapshotMinute+"'";
+    var consensusTime=heroVoteTime(voteState.consensusAt);if(consensusTime)paidExplanation+=' à '+consensusTime;
     paidExplanation+=heroStandingText(m);
     paidExplanation+=heroH2hText(m);
   }
@@ -1787,7 +1793,8 @@ function renderHeroLive(m){
     voteEls[i].classList.toggle('over',voted&&dir==='over');voteEls[i].classList.toggle('under',voted&&dir==='under');
     var mark=voteEls[i].querySelector('i');
     if(mark)mark.textContent=voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);
-    var detail='IA '+(i+1)+' : '+(voted?(voteState.locked?'vote enregistré, direction réservée aux abonnés':dir==='over'?'Over':'Under'):'en attente');
+    var voteTime=heroVoteTime(slot.updated_at),detail='IA '+(i+1)+' : '+(voted?(voteState.locked?'vote enregistré, direction réservée aux abonnés':dir==='over'?'Over':'Under'):'en attente');
+    if(voted&&voteTime)detail+=' · '+voteTime;
     voteEls[i].title=detail;voteEls[i].setAttribute('aria-label',detail);
   }
   var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/Math.max(1,(tlmSignalWindowEnd||45)-15)*100)):12;progress.style.width=pct+'%';}
@@ -1837,7 +1844,7 @@ window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive()
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v17-home-consensus-20260912').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v18-home-votes-20260912').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -1899,8 +1906,9 @@ async function loadUpcoming(){
   var box=document.getElementById('upcoming-rows');
   var hl=document.getElementById('upcoming-highlight');
   if(!box)return;
+  var controller=new AbortController(),timeout=setTimeout(function(){controller.abort();},12000);
   try{
-    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{cache:'no-store'});
+    var r=await fetch('/api/upcoming-picks?t='+Date.now(),{cache:'no-store',signal:controller.signal});
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var source=(d.fixtures&&d.fixtures.length)?d.fixtures:(d.picks||[]);
@@ -1920,9 +1928,10 @@ async function loadUpcoming(){
       +tlmUpcomingLogo(first.away_logo,first.away)
       +'</div>';
     box.innerHTML=tlmRenderUpcomingChronological(matches.slice(1));
+    if(d.refreshing)setTimeout(loadUpcoming,10000);
   }catch(e){
     box.innerHTML='<div class="empty-note">Les matchs à venir sont momentanément indisponibles.</div>';
-  }
+  }finally{clearTimeout(timeout);}
 }
 /* Le rafraîchissement homepage-fixtures ci-dessous possède ce bloc. */
 

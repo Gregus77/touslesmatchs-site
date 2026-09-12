@@ -49,8 +49,9 @@ for (const page of ["index.html", "live-ia.html", "app.html", "faq.html", "dashb
 }
 const home = fs.readFileSync(require("path").join(__dirname, "..", "public", "index.html"), "utf8");
 assert(!/data-i18n="plan_std"/.test(home), "carte Standard encore visible");
-assert(/\/api\/premium-checkout\?lang=fr/.test(home), "checkout Premium mensuel absent");
+assert(!/\/api\/premium-checkout\?lang=fr/.test(home), "lien de paiement publié malgré le produit Premium inactif");
+assert(/Premium — inscriptions bientôt disponibles/.test(home), "CTA informatif Premium absent");
 const telegramClient = fs.readFileSync(require("path").join(__dirname, "telegram_client.js"), "utf8");
 assert(/premium-checkout/.test(telegramClient) && /\?lang=\$\{lang\}/.test(telegramClient), "checkout russe localise absent");
 
-console.log("OK: offre Gratuit/Premium, 11e signal, antidoublon, checkout et compatibilite historique");
+console.log("OK: offre Gratuit/Premium, 11e signal, antidoublon, paiement inactif non publié et compatibilite historique");

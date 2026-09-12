@@ -18,7 +18,7 @@ def _get_client():
     if _client is None:
         _client = OpenAI(
             api_key=(os.environ.get("OPENROUTER_API_KEY") or "").strip(),
-            base_url="https://openrouter.ai/api/v1",
+            base_url="http://api:3001/internal/openrouter/v1",
             default_headers={
                 "HTTP-Referer": "https://www.touslesmatchs.com",
                 "X-Title": "TousLesMatchs Concile",

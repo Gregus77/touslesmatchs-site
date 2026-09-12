@@ -1850,6 +1850,7 @@ function createInviteLinkForChannel(chatId, labelEmail, label) {
 
 // ── Shadow API helpers ────────────────────────────────────────────────────────
 function callOpenAICompat(prompt, { url, key, model }) {
+  if(new URL(url).hostname==='openrouter.ai')return httpPost(url,{model,messages:[{role:'user',content:prompt}],max_tokens:120},{Authorization:`Bearer ${key}`},15000).then(r=>({ok:!!r.choices?.[0]?.message?.content,text:r.choices?.[0]?.message?.content||'',usageIn:r.usage?.prompt_tokens,usageOut:r.usage?.completion_tokens,error:r.error?.message}));
   return new Promise((resolve) => {
     const body = JSON.stringify({
       model,
@@ -2007,6 +2008,7 @@ function shadowQuotaAllows() {
 }
 
 async function runShadowEvaluation(match) {
+  if(require('./ai_budget_guard').backgroundPaused())return;
   const prompt = buildShadowPrompt(match);
   const matchKey = `${(match.home || "").replace(/\s+/g, "_")}_${(match.away || "").replace(/\s+/g, "_")}_${(match.date || match.utcDate || "").slice(0, 10)}`;
   const activeAgents = SHADOW_AGENTS.filter(a => a.enabled());
@@ -2797,6 +2799,10 @@ async function collectAgentsUntilOu25Quorum(agentPromises, onSettled = null) {
 // toucher aux champs habituels (.choices, .message...) — aucun appelant
 // existant n'est affecte, seuls ceux qui les lisent explicitement en profitent.
 function httpPost(url, body, headers = {}, timeoutMs = 8000) {
+  if(new URL(url).hostname==='openrouter.ai')return require('./ai_budget_guard').withGlobalBudget(db,body,()=>httpPostRaw(url,body,headers,timeoutMs));
+  return httpPostRaw(url,body,headers,timeoutMs);
+}
+function httpPostRaw(url, body, headers = {}, timeoutMs = 8000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const payload = JSON.stringify(body);
@@ -2829,6 +2835,7 @@ function httpPost(url, body, headers = {}, timeoutMs = 8000) {
 }
 
 function httpPostStrict(url, body, headers = {}) {
+  if(new URL(url).hostname==='openrouter.ai')return httpPost(url,body,headers).then(r=>{if(r._httpStatus>=300)throw new Error(`HTTP ${r._httpStatus}: OpenRouter request rejected`);return r;});
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const payload = JSON.stringify(body);
@@ -6846,6 +6853,12 @@ Réponds en JSON pur (pas de markdown):
           console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
         }
       }
+      if (providerAttempts === 0) {
+        // Compter aussi un siège sans fournisseur disponible. Sans cette trace,
+        // il resterait « jamais tenté » et relancerait indéfiniment les quatre
+        // autres sièges à chaque passage de l'observateur.
+        tracerAppel({ kind: "none", model: "" }, 0, Date.now(), "indisponible", null, lastDiag);
+      }
       // Lecture tolerante : voir lireReponseAgent(). JSON.parse() strict jetait
       // des votes valides pour un simple defaut de format.
       const parsed = lireReponseAgent(raw);
@@ -9667,15 +9680,50 @@ function shouldAutoObserveMatch(match) {
   return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
 }
 
-function hasPredictionSnapshot(match) {
+const AUTO_CONCILE_MAX_ATTEMPTS_PER_SEAT = 2;
+function predictionSnapshotStatus(match) {
   const key = getPredictionSnapshotKey(match);
+  const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
   try {
-    const row = db.prepare("SELECT 1 FROM agent_predictions WHERE match_key = ? LIMIT 1").get(key);
-    return !!row;
+    // Une ligne d'un agent hors Concile, ou un vote sur un autre marché, ne
+    // constitue pas un snapshot O/U 2,5. On compte uniquement les cinq sièges
+    // titulaires et leurs votes réellement exploitables.
+    const validRows = db.prepare(`
+      SELECT agent_name FROM agent_predictions
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+        AND bet IN ('Over 2.5 buts','Under 2.5 buts')
+      UNION
+      SELECT agent_name FROM agent_market_predictions
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+        AND market_line = 'buts'
+        AND bet IN ('Over 2.5 buts','Under 2.5 buts')
+    `).all(key, ...CONCILE_AGENT_NAMES, key, ...CONCILE_AGENT_NAMES);
+    const validSeats = new Set(validRows.map((row) => String(row.agent_name || "")));
+    const attemptRows = db.prepare(`
+      SELECT agent_name, COUNT(*) AS attempts
+      FROM agent_calls
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+      GROUP BY agent_name
+    `).all(key, ...CONCILE_AGENT_NAMES);
+    const attempts = new Map(attemptRows.map((row) => [String(row.agent_name || ""), Number(row.attempts || 0)]));
+    const exhaustedSeats = CONCILE_AGENT_NAMES.filter((agent) =>
+      validSeats.has(agent) || (attempts.get(agent) || 0) >= AUTO_CONCILE_MAX_ATTEMPTS_PER_SEAT
+    ).length;
+    return {
+      key,
+      validSeats: validSeats.size,
+      complete: validSeats.size === CONCILE_AGENT_NAMES.length,
+      exhausted: exhaustedSeats === CONCILE_AGENT_NAMES.length,
+    };
   } catch (e) {
     console.error("[auto-concile] snapshot check:", e.message);
-    return true;
+    // Une erreur SQLite ne doit jamais provoquer une boucle d'appels payants.
+    return { key, validSeats: 0, complete: false, exhausted: true };
   }
+}
+function hasPredictionSnapshot(match) {
+  const status = predictionSnapshotStatus(match);
+  return status.complete || status.exhausted;
 }
 
 // ── Filtre ARJEL AVANT analyse (grave le 07/08/2026, decision du fondateur) ──
@@ -13147,6 +13195,15 @@ function getLiveOu25VoteState(match) {
   }
 }
 
+function clientOu25VisibilityEligibility(match, ou25) {
+  const accepting = isClientOu25MatchEligible(match, true);
+  const snapshotMinute = Number(ou25?.snapshot_minute);
+  const preserved = Number.isFinite(snapshotMinute)
+    && snapshotMinute >= 15 && snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE
+    && isClientOu25MatchEligible({ ...match, minute: snapshotMinute, minute_at_analysis: snapshotMinute }, true);
+  return { accepting, product: accepting || preserved, preserved };
+}
+
 // ── Live matches ──────────────────────────────────────────────────────────────
 // The homepage receives only the fields it displays. Paid directions are never
 // included in its anonymous response, including labels and tooltips.
@@ -13174,6 +13231,7 @@ function homepageLiveMatch(match, canReveal) {
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
+      updated_at: v.updated_at || null,
       direction: canReveal ? v.direction : null,
       label: canReveal ? v.label : null,
       confidence: canReveal ? v.confidence : null,
@@ -13246,7 +13304,13 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
     // message parlant de minutes de football. Une seule source de vérité ici.
     const withVerdict = matches.map((m) => {
       const ou25 = getLiveOu25VoteState(m);
-      const clientProductEligible = isClientOu25MatchEligible(m, true);
+      const eligibility = clientOu25VisibilityEligibility(m, ou25);
+      const acceptingClientVotes = eligibility.accepting;
+      // Après 45', la fenêtre de nouveaux appels est fermée, mais un snapshot
+      // vérifié en première mi-temps reste une preuve client. On réévalue le
+      // périmètre statique avec la minute figée du snapshot, sans modifier les
+      // règles de ligue, de catégorie ou de sport.
+      const clientProductEligible = eligibility.product;
       const alignedVotes = Math.max(Number(ou25.over_count || 0), Number(ou25.under_count || 0));
       // Une majorité IA décrit un signal admissible, pas une livraison. Le
       // badge public "diffusé" exige une preuve Telegram payante immuable.
@@ -13279,7 +13343,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
         || (!clientProductEligible ? 'Championnat ou catégorie hors du périmètre d’analyse.' : null)
         || analysisExclusionReason;
-      return { ...m, analysable: !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
+      return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
     if (req.path === '/homepage-live') {
@@ -16730,6 +16794,7 @@ const REMPLACANT_INTERDIT = /(:free|:batch|^~|guard|-code|embed|rerank|vision|im
 // un appel direct, ont ete remplaces a tort. Un faux positif coute cher : il
 // evince un bon modele. Un faux negatif ne coute rien : on garde l'existant.
 async function sondeModele(modelId, essais = 2) {
+  if(require('./ai_budget_guard').backgroundPaused())return {ok:false,why:'paid background probes paused'};
   let dernier = "aucune reponse";
   for (let n = 0; n < essais; n++) {
     try {
@@ -18673,3 +18738,10 @@ module.exports.__liveContractTest = {
   resolveVerifiedLiveMatch,
   resolveLiveMatchesAfterFetchFailure,
 };
+
+// Python/background callers share the same global ledger; disabled during the incident.
+app.post('/internal/openrouter/v1/chat/completions',async(req,res)=>{
+  if(!OPENROUTER_API_KEY||req.headers.authorization!==`Bearer ${OPENROUTER_API_KEY}`)return res.status(403).json({error:{message:'Forbidden'}});
+  if(require('./ai_budget_guard').backgroundPaused())return res.status(429).json({error:{message:'Paid background calls paused; client signals have priority'}});
+  try {const r=await httpPost('https://openrouter.ai/api/v1/chat/completions',req.body,{Authorization:`Bearer ${OPENROUTER_API_KEY}`},90000);res.status(r._httpStatus||200).json(r);}catch(_){res.status(503).json({error:{message:'Provider unavailable'}});}
+});

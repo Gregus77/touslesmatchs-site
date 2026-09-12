@@ -9,7 +9,7 @@ vm.runInContext(part(html,'function heroOu25(', 'function heroWasSent('),ctx);
 vm.runInContext(part(html,'function tlmHeroMinuteOf(', 'function tlmHomepageAnalyzedMatch('),ctx);
 function fixture(id,directions,minute=25){return {id,home:'Home '+id,away:'Away '+id,minute,
   pinnedBet:'SECRET',pinnedReason:'SECRET',ou25:{window_status:'open',votes:
-  directions.map((direction,i)=>({agent:'IA '+i,status:direction?'voted':'pending',direction,label:'SECRET',confidence:88}))}};}
+  directions.map((direction,i)=>({agent:'IA '+i,status:direction?'voted':'pending',direction,label:'SECRET',confidence:88,updated_at:direction?'2026-09-12 18:3'+i+':00':null}))}};}
 const split=fixture('split',['over','over','over','under','under']);
 const four=fixture('four',['under','under','under','under',null]);
 const three=fixture('three',['over','over','over',null,null]);
@@ -24,6 +24,7 @@ for(const m of publicRows){
 }
 const paid=ctx.homepageLiveMatch(four,true);
 assert.equal(paid.ou25.votes[0].direction,'under');assert.equal(paid.ou25.under_count,4);
+assert.equal(paid.ou25.votes[0].updated_at,'2026-09-12 18:30:00');
 paid.selection_evidence={home_rank:2,away_rank:17,rank_gap:15,top5_bottom5:true};
 paid.h2h_last3={sample_size:3,over25_count:2};
 const paidWeaker={...ctx.homepageLiveMatch(fixture('weaker',['under','under','under','under',null]),true),selection_evidence:{home_rank:7,away_rank:13,rank_gap:6,top5_bottom5:false}};
@@ -76,4 +77,5 @@ ctx.tlmSignalWindowEnd=45;
 ctx.renderHeroLive({...paid,minute:68,ou25:{...paid.ou25,window_status:'closed',snapshot_minute:31}});
 assert.equal(elements.get('hero-ai-title').textContent,'Vote enregistré en première mi-temps');
 assert.equal(slots[0].mark.textContent,'U');
+assert(slots[0].title.includes('18:30'));
 console.log('OK: odds waiting label, closed window, other reasons and genuine votes preserved');

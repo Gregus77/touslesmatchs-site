@@ -14,7 +14,8 @@ function assert(condition, message) {
 }
 
 assert(
-  api.includes("const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES"),
+  api.includes("const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES") &&
+    api.includes("clientOu25VisibilityEligibility(m, ou25)"),
   "Le serveur doit exiger une ligue client eligible et au moins 3 votes alignes."
 );
 assert(
@@ -34,7 +35,7 @@ assert(
   "La liste d'accueil ne doit plus se contenter du filtre visuel historique."
 );
 assert(
-  home.includes("/sw.js?v=tlm-app-v8-proof-and-upcoming-20260828") && serviceWorker.includes("tlm-app-v8-proof-and-upcoming-20260828"),
+  home.includes("/sw.js?v=tlm-app-v18-home-votes-20260912") && serviceWorker.includes("tlm-app-v18-home-votes-20260912"),
   "Le cache PWA doit changer de version avec le garde-fou d'accueil."
 );
 

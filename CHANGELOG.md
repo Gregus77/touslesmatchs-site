@@ -372,5 +372,15 @@ Bilan client de la journée Paris à 23 h 45 uniquement, verrou SQLite persistan
 - Netlify publie explicitement `public/`, évitant l'ancien index racine avec Standard.
 - Hermès lit stdout ET stderr Docker, reconnaît les pannes de votes et quotas et ne certifie plus tout le service sur des HTTP 200.
 - Diagnostic Concile distingue absence de configuration et fournisseurs écartés.
+- L'accueil et l'application conservent après 45 minutes le dernier scrutin O/U
+  2,5 de première mi-temps, sa minute et son heure ; les directions restent
+  masquées par `?` en gratuit et visibles comme O/U pour un accès payant valide.
+- La complétude d'un snapshot exige les cinq sièges titulaires sur O/U 2,5 ; un
+  siège manquant est retenté au plus deux fois, y compris sans fournisseur.
+- L'offre publique est réduite à Gratuit et Premium 14,90 €/mois. Les anciens
+  droits Standard/Elite continuent d'ouvrir Premium, sans offre ni badge public.
 - Tests SQLite exécutés localement : budget (24 assertions), mi-temps shadow, snapshots Telegram Paris/DST et reprises FR/RU passent.
-- Avancement estimé 55/100 : code et tests locaux avancés ; déploiement, vérification visuelle et reprise réelle des votes restent à prouver. Budget et clés non modifiés.
+
+## 2026-09-12 — Codex — budget global Concile Paris
+
+Correctif urgent séparé de PR 109 : calendrier 4/6 EUR, réservation SQLite globale de chaque appel OpenRouter, conservation des dépenses et réservations incertaines, passerelle Python/worker et suspension temporaire des essais payants. Aucun changement des cinq IA ou des critères clients. Voir `docs/handoff/2026-09-12-concile-budget-incident.md` pour limites et procédure de preuve.

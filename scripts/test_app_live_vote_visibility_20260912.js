@@ -19,12 +19,13 @@ assert.equal((lockedMarkup.match(/>\?</g)||[]).length,3);
 assert(lockedMarkup.includes('>4<')&&lockedMarkup.includes('>5<'));
 assert(!lockedMarkup.includes('>O<')&&!lockedMarkup.includes('>U<'));
 const paid={minute:68,ou25:{locked:false,vote_count:4,consensus_count:3,votes:[
-  {status:'voted',direction:'over'},{status:'voted',direction:'over'},{status:'voted',direction:'over'},
-  {status:'voted',direction:'under'},{status:'pending',direction:null},
-]}};
+  {status:'voted',direction:'over',updated_at:'2026-09-12 18:31:00'},{status:'voted',direction:'over',updated_at:'2026-09-12 18:32:00'},{status:'voted',direction:'over',updated_at:'2026-09-12 18:33:00'},
+  {status:'voted',direction:'under',updated_at:'2026-09-12 18:34:00'},{status:'pending',direction:null},
+],snapshot_minute:31,consensus_at:'2026-09-12 18:33:00'}};
 const paidMarkup=ctx.appMiniVotes(paid);
 assert.equal(ctx.appVotes(paid),4);assert.equal((paidMarkup.match(/>O</g)||[]).length,3);assert.equal((paidMarkup.match(/>U</g)||[]).length,1);
-assert(paidMarkup.includes('Fenêtre terminée · votes antérieurs'));
+assert(paidMarkup.includes("Votes de première mi-temps · 31'"));
+assert(paidMarkup.includes('18:33'));
 assert(html.includes('get("/api/homepage-live?t="+Date.now())'));
 assert(html.includes('m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true'));
 console.log('OK: application limitée aux matchs analysés, votes Premium O/U, votes masqués ?, sièges en attente numérotés et votes antérieurs conservés');
