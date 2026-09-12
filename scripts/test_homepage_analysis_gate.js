@@ -28,7 +28,7 @@ assert(
 );
 assert(
   home.includes(".filter(tlmCurrentAnalyzedMatch)"),
-  "Le hero et la liste live doivent filtrer les matchs non analyses."
+  "Le hero et la liste live doivent filtrer les matchs hors périmètre ou terminés."
 );
 assert(
   !home.includes("var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).slice(0,3)"),
