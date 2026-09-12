@@ -8,6 +8,7 @@ on:
       - scripts/ai_budget_guard.js
       - scripts/test_ai_budget_guard.js
       - scripts/test_telegram_active_channels_20260912.js
+      - scripts/verify_telegram_channels_20260912.js
       - scripts/test_ou25_post_analysis_odds_20260905.js
       - scripts/test_ou25_consensus_3of5_20260905.js
       - public/index.html
@@ -110,47 +111,8 @@ jobs:
             grep -qF '3 IA / 5 minimum' "$BACKUP/homepage.html"
             grep -qF 'au moins 3' "$BACKUP/faq.html"
             grep -qF 'accord minimum 3 IA' "$BACKUP/cgv.html"
-            docker exec -i touslesmatchs-api node <<'NODE'
-            const https = require("https");
-            function call(method, payload = {}) {
-              return new Promise((resolve, reject) => {
-                const body = JSON.stringify(payload);
-                const req = https.request({
-                  host: "api.telegram.org",
-                  path: "/bot" + process.env.TELEGRAM_BOT_TOKEN + "/" + method,
-                  method: "POST", timeout: 12000,
-                  headers: {"Content-Type":"application/json","Content-Length":Buffer.byteLength(body)}
-                }, res => {
-                  let raw = ""; res.on("data", d => raw += d);
-                  res.on("end", () => { try { resolve(JSON.parse(raw)); } catch (e) { reject(e); } });
-                });
-                req.on("error", reject);
-                req.on("timeout", () => req.destroy(new Error("timeout")));
-                req.end(body);
-              });
-            }
-            (async () => {
-              if (!process.env.TELEGRAM_BOT_TOKEN) throw new Error("token absent");
-              const me = await call("getMe");
-              if (!me.ok || !me.result?.id) throw new Error("bot auth");
-              const targets = [
-                ["FR Gratuit", "TELEGRAM_CHANNEL_ID", "TELEGRAM_FREE_CHANNEL_ID"],
-                ["FR Premium 14,90 €", "TELEGRAM_PREMIUM_CHANNEL_ID"],
-                ["RU Gratuit", "TELEGRAM_RU_FREE_CHANNEL_ID"],
-                ["RU Premium 14,90 €", "TELEGRAM_RU_PREMIUM_CHANNEL_ID"],
-                ["Admin", "TELEGRAM_ADMIN_CHAT_ID"],
-              ];
-              for (const [label, ...keys] of targets) {
-                const id = keys.map(k => process.env[k]).find(Boolean);
-                if (!id) throw new Error(label + " absent");
-                const result = await call("getChatMember", {chat_id:id,user_id:me.result.id});
-                if (!result.ok || !["administrator","creator","member"].includes(result.result?.status) || result.result?.can_post_messages === false) {
-                  throw new Error(label + " inaccessible");
-                }
-              }
-              console.log("TELEGRAM_ACCESS_OK_4_CLIENT_CHANNELS");
-            })().catch(error => { console.error("TELEGRAM_ACCESS_FAILED", error.message); process.exit(1); });
-            NODE
+            docker cp scripts/verify_telegram_channels_20260912.js touslesmatchs-api:/app/verify_telegram_channels_20260912.js
+            docker exec touslesmatchs-api node /app/verify_telegram_channels_20260912.js
             echo "API_AND_TELEGRAM_OK"
 
             test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
