@@ -2483,7 +2483,69 @@ function deductToken(userId) {
 }
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
-function httpGet(url, headers = {}) {
+// Shared transport: concurrent consumers share one call; historical successes survive restart.
+const sportsGetPending = new Map(), sportsGetMemory = new Map();
+let sportsGetTablesReady = false;
+function sportsGetPolicy(url) {
+  const u = new URL(url);
+  if (!['v3.football.api-sports.io','api.football-data.org'].includes(u.hostname)) return null;
+  u.searchParams.sort();
+  const historical = /headtohead|head2head|standings|teams\/statistics/.test(u.pathname);
+  const live = u.searchParams.has('live') || /LIVE|IN_PLAY/.test(u.searchParams.get('status') || '') || /statistics$/.test(u.pathname);
+  return {url:u.toString(),host:u.hostname,path:u.pathname,historical,ttl:historical?6*3600000:live?15000:60000};
+}
+function sportsGetTables() {
+  if (sportsGetTablesReady) return;
+  db.exec(`CREATE TABLE IF NOT EXISTS sports_http_cache (cache_key TEXT PRIMARY KEY,payload TEXT NOT NULL,expires_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS sports_http_usage (day TEXT,host TEXT,path TEXT,calls INTEGER DEFAULT 0,errors INTEGER DEFAULT 0,PRIMARY KEY(day,host,path));
+    CREATE TABLE IF NOT EXISTS sports_http_blocks (host TEXT PRIMARY KEY,until_ms INTEGER NOT NULL,payload TEXT NOT NULL);`);
+  sportsGetTablesReady = true;
+}
+function sportsLiveAvailability() {
+  try {
+    sportsGetTables();
+    const block=db.prepare('SELECT until_ms FROM sports_http_blocks WHERE host=?').get('v3.football.api-sports.io');
+    if(block && block.until_ms>Date.now()) return {available:false,reason:'quota_exhausted',retry_at:new Date(block.until_ms).toISOString(),message:'API-Football indisponible : quota quotidien atteint. Source de secours affichée si disponible ; les minutes manquantes ne sont pas estimées.'};
+  } catch (_) {}
+  return {available:null,message:null};
+}
+async function httpGet(url, headers = {}) {
+  const policy=sportsGetPolicy(url);
+  if(!policy) return httpGetUncached(url,headers);
+  sportsGetTables();
+  const key=crypto.createHash('sha256').update(policy.url+JSON.stringify(headers)).digest('hex');
+  const now=Date.now(), cached=sportsGetMemory.get(key);
+  if(cached && cached.expires>now) return JSON.parse(cached.payload);
+  if(policy.historical){
+    const saved=db.prepare('SELECT payload,expires_at FROM sports_http_cache WHERE cache_key=?').get(key);
+    if(saved && saved.expires_at>now) return JSON.parse(saved.payload);
+  }
+  const block=db.prepare('SELECT until_ms,payload FROM sports_http_blocks WHERE host=?').get(policy.host);
+  if(block && block.until_ms>now) return JSON.parse(block.payload);
+  if(sportsGetPending.has(key)) return JSON.parse(await sportsGetPending.get(key));
+  const work=(async()=>{
+    const day=new Date(now).toISOString().slice(0,10);
+    db.prepare('INSERT INTO sports_http_usage(day,host,path,calls) VALUES(?,?,?,1) ON CONFLICT(day,host,path) DO UPDATE SET calls=calls+1').run(day,policy.host,policy.path);
+    const result=await httpGetUncached(policy.url,headers);
+    const bad=!!(result?.error || result?.message || (result?.errors && Object.keys(result.errors).length));
+    const payload=JSON.stringify(result);
+    if(bad) db.prepare('UPDATE sports_http_usage SET errors=errors+1 WHERE day=? AND host=? AND path=?').run(day,policy.host,policy.path);
+    if(policy.host==='v3.football.api-sports.io' && /request limit for the day|daily.*quota/i.test(JSON.stringify(result?.errors||{}))){
+      const until=Date.parse(day+'T00:00:00Z')+86400000;
+      db.prepare('INSERT OR REPLACE INTO sports_http_blocks(host,until_ms,payload) VALUES(?,?,?)').run(policy.host,until,payload);
+    }
+    const success=!bad && (Array.isArray(result?.response)||Array.isArray(result?.matches)||!!result?.response?.requests);
+    const ttl=success?policy.ttl:30000;
+    if(sportsGetMemory.size>1000) sportsGetMemory.clear();
+    sportsGetMemory.set(key,{payload,expires:Date.now()+ttl});
+    if(success && policy.historical) db.prepare('INSERT OR REPLACE INTO sports_http_cache(cache_key,payload,expires_at) VALUES(?,?,?)').run(key,payload,Date.now()+ttl);
+    return payload;
+  })();
+  sportsGetPending.set(key,work);
+  try{return JSON.parse(await work);}finally{sportsGetPending.delete(key);}
+}
+
+function httpGetUncached(url, headers = {}) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const req = https.request({ hostname: opts.hostname, path: opts.pathname + opts.search, headers }, (res) => {
@@ -2494,6 +2556,7 @@ function httpGet(url, headers = {}) {
         catch { resolve({}); }
       });
     });
+    req.setTimeout(20000, () => req.destroy(new Error("HTTP GET timeout")));
     req.on("error", reject);
     req.end();
   });
@@ -2521,7 +2584,7 @@ function handleApiSportsErrors(sport, data) {
   const errors = apiSportsErrors(data);
   if (!errors) return false;
   console.warn(`[live-matches] API-Sports ${sport} indisponible: ${JSON.stringify(errors)}`);
-  if (isApiSportsQuotaError(errors)) apiSportsBlockedUntil[sport] = Date.now() + API_SPORTS_QUOTA_BLOCK_MS;
+  if (isApiSportsQuotaError(errors)) apiSportsBlockedUntil[sport] = Math.min(Date.now() + API_SPORTS_QUOTA_BLOCK_MS, Date.parse(new Date().toISOString().slice(0,10)+"T00:00:00Z")+86400000);
   return true;
 }
 
@@ -5009,6 +5072,7 @@ async function fetchMatchStats(fixtureId) {
 }
 
 async function fetchMatchStatsForMatch(match) {
+  if (!isClientOu25MatchEligible(match, false)) return buildStatsStatus(match, null, "competition_hors_perimetre");
   const fixtureId = getVerifiedFixtureId(match);
   if (!API_SPORTS_KEY) return buildStatsStatus(match, null, "api_sports_key_missing");
   if (!fixtureId) return buildStatsStatus(match, null, "missing_api_sports_fixture");
@@ -5031,6 +5095,7 @@ const h2hCache = new Map();
 // pour que le reste du pipeline (candidats, buildH2HBlock) n'ait rien a
 // changer.
 async function fetchH2HFromFootballData(match) {
+  if (!isClientOu25MatchEligible(match, false)) return null;
   const fdId = match.source === "football-data" ? match.sourceId : match.fdSourceId;
   if (!FOOTBALL_DATA_KEY || !fdId) return null;
   const ck = `h2h_fd_${fdId}`;
@@ -5095,7 +5160,7 @@ async function fetchH2HFromFootballData(match) {
 }
 
 async function fetchH2H(match) {
-  if (match.sport !== "Football") return null;
+  if (match.sport !== "Football" || !isClientOu25MatchEligible(match, false)) return null;
 
   if (API_SPORTS_KEY && match.source === "api-sports" && match.homeId && match.awayId) {
     const homeId = match.homeId, awayId = match.awayId;
@@ -5111,6 +5176,7 @@ async function fetchH2H(match) {
           `https://v3.football.api-sports.io/fixtures/headtohead?h2h=${homeId}-${awayId}&last=10`,
           { "x-apisports-key": API_SPORTS_KEY }
         );
+        if (apiSportsErrors(data)) return fetchH2HFromFootballData(match);
         const rows = (data?.response || []).filter(r =>
           r?.goals?.home != null && r?.goals?.away != null &&
           ["FT", "AET", "PEN"].includes(r?.fixture?.status?.short)
@@ -5488,6 +5554,8 @@ db.exec('CREATE TABLE IF NOT EXISTS long_history_usage(bucket TEXT PRIMARY KEY,c
 const longHistory = require('./long_history').create(db, {
   request: path => httpGet('https://v3.football.api-sports.io'+path, {'x-apisports-key':API_SPORTS_KEY}),
   reserve: () => {
+    // Incident quota : conserver les données acquises, priorité au live.
+    if(process.env.SPORTS_BACKGROUND_COLLECTION_PAUSED !== '0')return false;
     if(!API_SPORTS_KEY)return false;
     try{return db.transaction(()=>{
       const bucket=new Date().toISOString().slice(0,13);
@@ -13370,7 +13438,7 @@ function homepageLiveMatch(match, canReveal) {
   for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
     'competition','league','sport','status','minute','utcDate','home_logo','away_logo',
     'score_home','score_away','block_reason','analysis_exclusion_reason',
-    'client_product_eligible','analysis_started','analysis_verified','homepage_display_eligible',
+    'client_display_eligible','client_product_eligible','analysis_started','analysis_verified','homepage_display_eligible',
     'signal_delivered','telegram_delivery_proven','diffusion_block','delivery_status']) {
     if (match[key] !== undefined) out[key] = match[key];
   }
@@ -13528,6 +13596,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
       const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
       const visibility = {
+        client_display_eligible: isClientOu25MatchEligible(m, false),
         client_product_eligible: clientProductEligible,
         analysis_started: Number(ou25.vote_count || 0) > 0,
         analysis_verified: homepageDisplayEligible,
@@ -13581,7 +13650,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         }
       }
       res.set('Vary', 'Authorization, X-TLM-Email');
-      return res.json({ok: true, locked: !canReveal,
+      return res.json({ok: true, locked: !canReveal, availability:sportsLiveAvailability(),
         matches: publicMatches.map(m => homepageLiveMatch(m, canReveal))});
     }
 
@@ -13599,7 +13668,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
     // pour tous les matchs live ne coûte donc rien de plus que ce que coûterait
     // déjà l'ouverture individuelle de chaque analyse le même jour.
     const withH2H = await Promise.all(withVerdict.map(async (m) => {
-      if (m.pinnedSignal || m.sport !== "Football" || m.source !== "api-sports" || !m.homeId || !m.awayId) {
+      if (!isClientOu25MatchEligible(m, false) || m.pinnedSignal || m.sport !== "Football" || m.source !== "api-sports" || !m.homeId || !m.awayId) {
         return { ...m, h2h_markets: null };
       }
       try {
@@ -13626,7 +13695,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
     const liveExpiry = liveAccount?.expires_at;
     const liveCanReveal = !!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now()));
     res.set('Vary', 'Authorization, X-TLM-Email, X-TLM-Code');
-    res.json({ ok: true, locked: !liveCanReveal, matches: strictMatches.map(match => ({
+    res.json({ ok: true, locked: !liveCanReveal, availability:sportsLiveAvailability(), matches: strictMatches.map(match => ({
       ...match,
       ou25: homepageLiveMatch(match, liveCanReveal).ou25,
     })) });

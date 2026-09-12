@@ -25,7 +25,7 @@ assert(home.includes("voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'
 assert(home.includes("tlmVoteCirclesHtml(m)"),'analysis list five rounds');
 assert(home.includes("filter(tlmCurrentAnalyzedMatch)"),'finished matches must not stay in the live section');
 assert(!home.includes('TLM-HOME-FIXTURES-UI-20260830'),'the obsolete eager loader must not overwrite analyzed matches');
-assert(app.includes("filter(function(m){return m.client_product_eligible===true;})"),'the app must keep admissible matches before the first vote');
+assert(app.includes("filter(function(m){return m.client_display_eligible===true||m.client_product_eligible===true;})"),'the app must keep admissible matches before the first vote');
 assert(app.includes("appWasSent(a)||!!a.official_signal_snapshot_id"),'official finished signals must remain in app history');
 assert(!performances.includes('>🥇 Standard<')&&!performances.includes('>🥈 Premium<'),'legacy commercial tier labels must not be rendered');
 assert(home.includes("Calculé à "),'snapshot minute label');

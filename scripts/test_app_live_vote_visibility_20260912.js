@@ -29,6 +29,6 @@ assert(paidMarkup.includes(' old'));
 assert.equal(ctx.appMatchTrackable({status:'FINISHED',ou25:{official:true}}),true);
 assert.equal(ctx.appMatchTrackable({status:'FINISHED',ou25:{official:false}}),false);
 assert(html.includes('get("/api/homepage-live?t="+Date.now())'));
-assert(html.includes('filter(function(m){return m.client_product_eligible===true;})'));
+assert(html.includes('filter(function(m){return m.client_display_eligible===true||m.client_product_eligible===true;})'));
 assert(html.includes("TLMMatchLifecycle.phase(m)!=='finished'"));
 console.log('OK: application montre les matchs admissibles, votes Premium O/U, votes masqués ?, sièges en attente numérotés et votes antérieurs conservés');
