@@ -217,6 +217,49 @@ console.log("\n═══ Scénario 8 — plusieurs snapshots live comptent pour 
   db.close();
 }
 
+console.log("\n═══ Scénario 9 — budgets Hermès et Concile séparés sous plafond global ═══");
+{
+  process.env.OPENROUTER_HARD_STOP = "true";
+  process.env.OPENROUTER_DAILY_BUDGET_EUR = "4";
+  process.env.OPENROUTER_HERMES_DAILY_BUDGET_EUR = "0.5";
+  process.env.OPENROUTER_CONCILE_DAILY_BUDGET_EUR = "3";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_DAY = "100";
+  process.env.OPENROUTER_MAX_MATCHES_PER_DAY = "100";
+  process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY = "100";
+  process.env.AI_GUARD_SPIKE_THRESHOLD = "100";
+  process.env.AI_GUARD_DUPLICATE_BURST_THRESHOLD = "50";
+  const guard = loadGuard();
+  const db = freshDb();
+  guard.ensureSchema(db);
+  const insert = db.prepare(`INSERT INTO ai_call_budget_log
+    (request_key,model_key,match_key,purpose,cost_estimate_eur,status)
+    VALUES (?,?,?,?,?,'ok')`);
+  insert.run("hermes-spent", "mistral_chat", "HERMES", "customer_support", 0.5);
+
+  const hermes = guard.canProceed(db, {
+    modelKey: "mistral_chat", matchKey: "HERMES_NEXT", purpose: "hermes",
+    promptVersion: "v1", estimatedTokensIn: 800, estimatedTokensOut: 500,
+  });
+  assert(hermes.allowed === false && hermes.reason.includes("budget hermes"),
+    "Hermès est bloqué à 0,50 € sans bloquer le reste");
+
+  const concile = guard.canProceed(db, {
+    modelKey: "qwen", matchKey: "MATCH_NEXT", purpose: "concile",
+    promptVersion: "v1", estimatedTokensIn: 1500, estimatedTokensOut: 400,
+  });
+  assert(concile.allowed === true, "le Concile reste autorisé quand Hermès a épuisé son enveloppe");
+
+  insert.run("concile-spent", "qwen", "CONCILE", "official_fallback", 3);
+  const concileBlocked = guard.canProceed(db, {
+    modelKey: "qwen", matchKey: "MATCH_AFTER_CAP", purpose: "concile",
+    promptVersion: "v1", estimatedTokensIn: 1500, estimatedTokensOut: 400,
+  });
+  assert(concileBlocked.allowed === false && concileBlocked.reason.includes("budget concile"),
+    "le Concile est bloqué à son propre plafond de 3 €");
+  assert(!guard.isBreakerTripped(db, "daily_budget"), "le plafond global de 4 € reste indépendant");
+  db.close();
+}
+
 try { fs.unlinkSync(DB_FILE); } catch {}
 
 console.log(`\n${"─".repeat(50)}`);
