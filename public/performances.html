@@ -183,6 +183,8 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
+  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
+  <script src="/js/global-header.js?v=20260912-v2" defer></script>
 </head>
 <body class="tlm-wow tlm-page-performances">
 
@@ -284,8 +286,7 @@ async function doLogin(){
   <div class="tier-tabs" id="tier-tabs">
     <div class="tier-tab active" data-tier="all" onclick="selectTier('all')">Tous</div>
     <div class="tier-tab" data-tier="dailypick" onclick="selectTier('dailypick')">🎯 Pick du jour</div>
-    <div class="tier-tab" data-tier="standard" onclick="selectTier('standard')">🥇 Standard</div>
-    <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">🥈 Premium</div>
+    <div class="tier-tab" data-tier="premium" onclick="selectTier('premium')">Premium</div>
   </div>
   <div class="tier-note" id="tier-note">Les critères de diffusion en vigueur sont chargés depuis le serveur.</div>
 
@@ -426,9 +427,8 @@ function renderKpis() {
 }
 
 function tierBadgeLabel(t) {
-  if (t === 'standard') return '🥇 Standard';
-  if (t === 'premium') return '🥈 Premium';
-  if (t === 'elite') return '🥈 Premium';
+  if (t === 'standard') return 'Historique archivé';
+  if (t === 'premium' || t === 'elite') return 'Premium';
   return '';
 }
 

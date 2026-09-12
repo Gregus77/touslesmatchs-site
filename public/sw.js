@@ -2,13 +2,15 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v20-official-results-20260912";
+const VERSION = "tlm-app-v21-stable-interface-20260912";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
 const SHELL_ASSETS = [
   "/app",
   "/app.html",
+  "/css/global-header.css?v=20260912-v2",
+  "/js/global-header.js?v=20260912-v2",
   "/js/match-lifecycle.js?v=20260906",
   "/manifest.webmanifest",
   "/favicon.ico",
@@ -21,6 +23,7 @@ const SHELL_ASSETS = [
 const DATA_PATHS = [
   "/current-pick",
   "/live-matches",
+  "/homepage-live",
   "/tier-stats",
   "/analysis-history",
   "/signal-fort-stats",

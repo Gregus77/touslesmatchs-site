@@ -982,6 +982,33 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 @media(max-width:560px){.tlm-up-row{gap:7px}.tlm-up-logo{width:31px;height:31px;min-width:31px}.tlm-up-teams{font-size:12.5px}.tlm-up-time{font-size:11px;padding:4px 6px}}
 
 </style>
+<style id="tlm-home-sections-20260912">
+/* Accueil léger : le hero et le sélecteur sont les deux seules zones de contenu. */
+.dash>.row:not(.row-hero):not(.tlm-home-switcher-row){display:none!important}
+.tlm-home-switcher{padding:16px;min-width:0}
+.tlm-home-tabs{display:flex;gap:6px;padding:4px;border:1px solid var(--b1);border-radius:12px;background:rgba(4,9,27,.72)}
+.tlm-home-tabs button{flex:1;min-height:42px;border:0;border-radius:9px;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:850;cursor:pointer}
+.tlm-home-tabs button[aria-selected="true"]{background:linear-gradient(115deg,rgba(25,189,243,.2),rgba(115,87,255,.28));color:#fff;box-shadow:inset 0 0 0 1px rgba(82,220,255,.28)}
+.tlm-tab-count{display:inline-grid;min-width:22px;height:22px;margin-left:6px;padding:0 5px;place-items:center;border-radius:99px;background:rgba(255,255,255,.08);font-size:10px}
+.tlm-home-select-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+.tlm-home-select{display:none;width:100%;min-height:44px;padding:0 13px;border:1px solid rgba(82,220,255,.3);border-radius:10px;background:#080e29;color:#fff;font:inherit;font-size:14px;font-weight:850}
+.tlm-home-panel{padding:18px 4px 2px}.tlm-home-panel[hidden]{display:none!important}
+.tlm-analysis-list{display:grid;gap:10px;margin-top:12px}
+.tlm-analysis-row{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:14px;align-items:center;padding:14px;border:1px solid var(--b1);border-radius:13px;background:rgba(6,12,34,.62)}
+.tlm-analysis-teams{min-width:0;font-size:14px;font-weight:850}.tlm-analysis-meta{margin-top:5px;color:var(--muted);font-size:11px}
+.tlm-row-votes{display:flex;align-items:center;gap:7px}.tlm-row-vote{display:grid;width:34px;height:34px;place-items:center;border:2px solid rgba(93,110,157,.46);border-radius:50%;color:#8290bd;font-size:11px;font-weight:950}
+.tlm-row-vote.voted{color:#fff}.tlm-row-vote.over{border-color:#22d3ee;background:rgba(34,211,238,.17)}.tlm-row-vote.under{border-color:#d946ef;background:rgba(217,70,239,.17)}
+.tlm-row-votes.stale .tlm-row-vote{filter:saturate(.35);opacity:.62}.tlm-ai-votes.stale .tlm-ai-vote{filter:saturate(.35);opacity:.64}
+.tlm-vote-snapshot{min-height:15px;margin-top:8px;color:#8f99bd;font-size:10px;font-weight:700;text-align:center}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:680px){
+  .tlm-home-tabs{display:none}.tlm-home-select{display:block}.tlm-home-switcher{padding:12px}.tlm-home-panel{padding-top:14px}
+  .tlm-analysis-row{grid-template-columns:1fr;gap:10px}.tlm-row-votes{justify-content:space-between}.tlm-row-vote{width:32px;height:32px}
+  .tlm-hero-copy{display:none}.tlm-hero-grid{display:block;min-height:0}.tlm-live-hero{padding-top:16px!important}.tlm-hero-proof{display:none!important}
+}
+</style>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
+  <script src="/js/global-header.js?v=20260912-v2" defer></script>
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1062,7 +1089,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
           <p class="tlm-hero-lead">En première mi-temps, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 3 IA sur 5.</p>
           <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">3 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
-          <div class="tlm-hero-actions"><a href="#pick" class="btn btn-prim">Voir le signal gratuit</a><a href="#plans" class="btn btn-ghost">Voir les offres</a></div>
+          <div class="tlm-hero-actions"><a href="#tlm-panel-live" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
         </div>
         <div class="tlm-match-stage" id="hero-live-match" aria-live="polite">
@@ -1075,6 +1102,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           <a class="tlm-ai-box" id="hero-analysis-link" href="/live-ia" aria-label="Ouvrir ce match dans Live IA">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
             <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><span class="tlm-ai-vote"><i>1</i>IA 1</span><span class="tlm-ai-vote"><i>2</i>IA 2</span><span class="tlm-ai-vote"><i>3</i>IA 3</span><span class="tlm-ai-vote"><i>4</i>IA 4</span><span class="tlm-ai-vote"><i>5</i>IA 5</span></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0 / 5</strong><span>IA validées</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
+            <div class="tlm-vote-snapshot" id="hero-vote-snapshot"></div>
             <div class="tlm-analysis-track"><b>15'</b><span><i id="hero-analysis-progress"></i></span><b id="hero-window-end">—</b></div>
             <div class="tlm-ai-open-hint">Ouvrir ce match dans Live IA →</div>
           </a>
@@ -1083,51 +1111,38 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 3 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
     </section>
 
-    <div class="card live-panel" id="live">
-      <div class="live-panel-head">
-        <div class="live-panel-title"><span class="dot"></span><span data-i18n="live_now">Matchs en cours</span></div>
-        <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
-      </div>
-      <div id="live-rows"><div class="empty-note">Chargement…</div></div>
-    </div>
   </div>
 
-  <!-- TLM-CONVERSION-PROOF-FIRST-20260830 -->
-  <!-- RANGEE 2 : PREUVES -->
-  <div class="row" style="grid-template-columns:1fr">
-    <div class="card proof-card">
-      <div class="proof-head"><div><div class="proof-eyebrow">Historique vérifiable</div><div class="proof-title">Historique des diffusions enregistrées, sans cacher les défaites</div><div class="proof-copy">Avant le 27 août, les envois proviennent des marqueurs archivés. Depuis le 27 août, une preuve Telegram est obligatoire.</div></div><a class="proof-link" href="/performances">Voir l’historique complet →</a></div>
-      <div class="proof-bar" id="proof-bar">
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(91,141,239,.14)">🏆</div><div><div class="proof-num" id="pf-total">—</div><div class="proof-lbl">Diffusions résolues</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">±</div><div><div class="proof-num"><span id="pf-wins" style="color:var(--green)">—</span><span style="color:var(--tx2);font-weight:600"> / </span><span id="pf-losses" style="color:var(--red)">—</span></div><div class="proof-lbl">Gagnées / Perdues diffusées</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(62,201,232,.14)">📈</div><div><div class="proof-num" id="pf-winrate">—</div><div class="proof-lbl">Taux des diffusions</div></div></div>
-        <div class="proof-cell"><div class="proof-ico" style="background:rgba(51,196,129,.14)">€</div><div><div class="proof-num" id="pf-profit" style="color:var(--green)">—</div><div class="proof-lbl">Simulation des diffusions (10€)</div></div></div>
-        <div class="proof-cell"><div><div class="proof-num" id="pf-sent">—</div><div class="proof-lbl">Diffusions archivées / vérifiées</div></div></div>
-        <div class="proof-cell"><div><div class="proof-num" id="pf-days">—</div><div class="proof-lbl">Jours avec résultat mesuré</div></div></div>
+  <!-- Navigation légère : une seule rubrique est ouverte et chargée à la fois. -->
+  <div class="row tlm-home-switcher-row" style="grid-template-columns:1fr">
+    <section class="card tlm-home-switcher" aria-labelledby="tlm-home-browser-title">
+      <h2 id="tlm-home-browser-title" class="sr-only">Explorer les matchs</h2>
+      <div class="tlm-home-tabs" role="tablist" aria-label="Explorer les matchs">
+        <button type="button" role="tab" aria-selected="true" aria-controls="tlm-panel-live" data-home-section="live">En direct <span id="live-count" class="tlm-tab-count">—</span></button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tlm-panel-upcoming" data-home-section="upcoming">À venir <span id="upcoming-count" class="tlm-tab-count">—</span></button>
+        <button type="button" role="tab" aria-selected="false" aria-controls="tlm-panel-history" data-home-section="history">Historique <span id="history-count" class="tlm-tab-count">—</span></button>
       </div>
-      <div class="proof-note">Les observations non diffusées ne sont pas présentées comme des signaux reçus. Les performances passées ne garantissent pas les résultats futurs.</div>
-    </div>
-  </div>
+      <label class="tlm-home-select-label" for="tlm-home-select">Rubrique</label>
+      <select id="tlm-home-select" class="tlm-home-select" aria-label="Rubrique affichée">
+        <option value="live" selected>En direct</option>
+        <option value="upcoming">À venir</option>
+        <option value="history">Historique</option>
+      </select>
 
-  <!-- RANGEE 1bis : MATCHS A VENIR — encart distinct -->
-  <div class="row" style="grid-template-columns:1fr">
-    <div class="card upcoming-panel" id="upcoming-panel">
-      <div class="live-panel-head">
-        <div class="live-panel-title"><span class="dot up"></span><span data-i18n="live_upcoming">À venir — aujourd’hui, demain et jours suivants</span></div>
-        <a href="/live-ia" class="live-panel-link">Voir tous les matchs →</a>
+      <div id="tlm-panel-live" class="tlm-home-panel" role="tabpanel" data-home-panel="live">
+        <div class="live-panel-head"><div class="live-panel-title"><span class="dot"></span>Matchs réellement analysés</div><a href="/live-ia" class="live-panel-link">Voir Live IA →</a></div>
+        <div id="live-rows"><div class="empty-note">Chargement…</div></div>
       </div>
-      <div id="upcoming-highlight"></div>
-      <div id="upcoming-rows"><div class="empty-note">Chargement…</div></div>
-    </div>
-  </div>
-
-  <!-- RANGEE 2.5 : DERNIERS VERDICTS DU CONCILE (accordeon par jour, plusieurs
-       jours d'affilee) -->
-  <div class="row" style="grid-template-columns:1fr">
-    <div class="card">
-      <div class="pcard-title" style="margin-bottom:10px">Historique complet depuis le 1er août</div>
-      <div id="daily-accordion"><div class="empty-note">Chargement…</div></div>
-    </div>
+      <div id="tlm-panel-upcoming" class="tlm-home-panel" role="tabpanel" data-home-panel="upcoming" hidden>
+        <div class="live-panel-head"><div class="live-panel-title"><span class="dot up"></span>Matchs à venir</div><a href="/live-ia" class="live-panel-link">Voir le calendrier →</a></div>
+        <div id="upcoming-highlight"></div>
+        <div id="upcoming-rows"><div class="empty-note">Ouvrez cette rubrique pour charger les matchs.</div></div>
+      </div>
+      <div id="tlm-panel-history" class="tlm-home-panel" role="tabpanel" data-home-panel="history" hidden>
+        <div class="live-panel-head"><div class="live-panel-title">Résultats gagnés et perdus · 30 jours</div><a href="/performances" class="live-panel-link">Historique complet →</a></div>
+        <div id="daily-accordion"><div class="empty-note">Ouvrez cette rubrique pour charger les résultats.</div></div>
+      </div>
+    </section>
   </div>
 
   <!-- RANGEE 3 : PICK GRATUIT DU JOUR (seul, immediatement visible) -->
@@ -1351,6 +1366,8 @@ function renderNavAuth(){
   var el=document.getElementById('nav-auth');
   var email=localStorage.getItem('tlm_email');
   var plan=localStorage.getItem('tlm_plan');
+  document.dispatchEvent(new CustomEvent('tlm-auth-change'));
+  if(!el)return;
   if(email&&plan){
     var isPaid=plan!=='free';
     el.innerHTML='<div class="nav-user"><span class="nav-plan-badge'+(isPaid?' premium':'')+'">'+(isPaid?'Premium':'Gratuit')+'</span><button class="nav-logout" onclick="doLogout()" title="Se déconnecter">✕</button></div>';
@@ -1436,7 +1453,7 @@ async function doBiometricLogin(){
     localStorage.setItem('tlm_email',d2.email);
     localStorage.setItem('tlm_code',d2.code);
     localStorage.setItem('tlm_plan',d2.plan);
-    closeModal();renderNavAuth();loadPick();
+    closeModal();renderNavAuth();renderHeroLive(null);loadHeroLive();
   }catch(e){
     errEl.textContent=(e&&e.message)||'Connexion biométrique impossible.';
     errEl.style.display='block';
@@ -1502,7 +1519,7 @@ async function doLogin(){
       localStorage.setItem('tlm_plan',d.plan);
       okEl.textContent='✓ Connecté — Plan '+d.plan;
       okEl.style.display='block';
-      setTimeout(function(){closeModal();renderNavAuth();loadPick();if(remember)maybeOfferBiometric(email,code);},1000);
+      setTimeout(function(){closeModal();renderNavAuth();renderHeroLive(null);loadHeroLive();if(remember)maybeOfferBiometric(email,code);},1000);
     } else {
       errEl.textContent=d.error||'Code invalide.';errEl.style.display='block';
       btn.disabled=false;btn.textContent='Accéder →';
@@ -1528,7 +1545,7 @@ async function doForgotCode(){
 function doLogout(){
   localStorage.removeItem('tlm_email');localStorage.removeItem('tlm_code');localStorage.removeItem('tlm_plan');
   localStorage.removeItem('tlm_session_token');localStorage.removeItem('tlm_session');localStorage.removeItem('tlm_token');
-  renderNavAuth();loadPick();renderHeroLive(null);loadHeroLive();
+  renderNavAuth();renderHeroLive(null);loadHeroLive();
 }
 renderNavAuth();
 
@@ -1585,7 +1602,6 @@ async function loadProof(){
     }).join('');
   } catch(e){ console.error('[proof]',e); }
 }
-loadProof();
 
 /* ══ CAPTURE EMAIL (active la sequence nurturing J0/J+1/J+3 deja codee cote API) ══ */
 function submitEmailCapture(ev) {
@@ -1651,31 +1667,17 @@ function tlmHeroMinuteOf(m){
   return -1;
 }
 function tlmHomepageAnalyzedMatch(m){
-  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true&&m.analysis_verified===true&&m.homepage_display_eligible===true);
+  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true&&heroOu25(m).voteCount>0);
+}
+function tlmCurrentAnalyzedMatch(m){
+  if(!tlmHomepageAnalyzedMatch(m))return false;
+  var phase=TLMMatchLifecycle.phase(m);
+  return phase!=='finished'&&phase!=='unavailable';
 }
 async function loadLive(){
   var grid=document.getElementById('live-rows');
-  try{
-    var r=await fetch('/api/live-matches');
-    var d=await r.json();
-    var matches=(d.matches||d.live||[]).filter(tlmMatchAllowed).filter(TLMMatchLifecycle.canTrack).sort(tlmTimeFirstSort).slice(0,3);
-    if(!matches.length){ grid.innerHTML='<div class="empty-note">Aucun match en direct disponible pour le moment.</div>'; return; }
-    grid.innerHTML=matches.map(function(m){
-      var icon=SPORT_ICO[m.sport]||'🏟️';
-      var rawHomeScore=liveHomeScore(m),rawAwayScore=liveAwayScore(m),sh=rawHomeScore===''?'-':rawHomeScore,sa=rawAwayScore===''?'-':rawAwayScore;
-      var minLabel=esc(minLabelOf(m));
-      var fid=encodeURIComponent(m.id||(m.home+'_'+m.away));
-      return '<div class="live-row">'+
-        '<div class="live-comp"><div class="live-comp-name">'+icon+' '+esc((m.competition||m.sport||'').split(/\s*[·•]\s*/)[0]).slice(0,12)+'</div><div class="live-comp-min">'+minLabel+'</div></div>'+
-        '<div class="live-logo">'+logo(liveHomeLogo(m),m.home)+'</div><div class="live-team-name">'+esc(m.home)+'</div>'+
-        '<div class="live-score">'+esc(sh)+'-'+esc(sa)+'</div>'+
-        '<div class="live-logo">'+logo(liveAwayLogo(m),m.away)+'</div><div class="live-team-name">'+esc(m.away)+'</div>'+
-        '<a class="btn btn-prim btn-sm" href="/live-ia?fixture='+fid+'">Voir</a>'+
-        '</div>';
-    }).join('');
-  } catch(e){ grid.innerHTML='<div class="empty-note">Aucun match suivi n\'est actuellement en direct.</div>'; }
+  if(grid&&!grid.dataset.ready)grid.innerHTML='<div class="empty-note">Synchronisation avec le Concile…</div>';
 }
-loadLive();
 
 /* ══ HERO STADE — match réellement en cours ══ */
 var tlmFeaturedMatch=null;
@@ -1708,6 +1710,48 @@ function heroVoteTime(value){
   var raw=String(value||'').trim();if(!raw)return '';
   var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');
   return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+}
+function tlmVoteSnapshotText(m){
+  var state=heroOu25(m),minute=state.snapshotMinute,score=state.snapshotScore;
+  if(minute==null)return '';
+  var text='Calculé à '+minute+"'";
+  if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);
+  return text;
+}
+function tlmVotesAreOld(m){
+  var state=heroOu25(m),phase=TLMMatchLifecycle.phase(m),score=state.snapshotScore;
+  if(!state.voteCount||state.official)return false;
+  var scoreChanged=score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away))
+    && (Number(score.home)!==Number(liveHomeScore(m))||Number(score.away)!==Number(liveAwayScore(m)));
+  return !!scoreChanged||phase==='closed'||phase==='finished'||phase==='unavailable';
+}
+function tlmVoteCirclesHtml(m){
+  var state=heroOu25(m),old=tlmVotesAreOld(m);
+  return '<div class="tlm-row-votes'+(old?' stale':'')+'" aria-label="Votes IA">'+state.slots.map(function(slot,index){
+    var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
+    var mark=voted?(state.locked?'?':direction==='over'?'O':direction==='under'?'U':'?'):String(index+1);
+    var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'');
+    var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote masqué':direction==='over'?'Over':'Under'):'sans réponse');
+    return '<span class="'+cls+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+mark+'</span>';
+  }).join('')+'</div>';
+}
+function renderAnalyzedList(rows){
+  var grid=document.getElementById('live-rows');if(!grid)return;
+  var matches=(rows||[]).filter(tlmCurrentAnalyzedMatch).sort(compareHeroMatches);
+  var count=document.getElementById('live-count');if(count)count.textContent=String(matches.length);
+  grid.dataset.ready='1';
+  if(!matches.length){
+    var completed=(rows||[]).filter(function(m){return tlmHomepageAnalyzedMatch(m)&&TLMMatchLifecycle.phase(m)==='finished';}).length;
+    grid.innerHTML='<div class="empty-note">Aucun match admissible n’est en cours actuellement.'+(completed?' '+completed+' signal terminé est consultable dans Historique.':' Le Concile reprendra dès qu’un match réel satisfera les critères.')+'</div>';
+    return;
+  }
+  grid.innerHTML='<div class="tlm-analysis-list">'+matches.map(function(m){
+    var snapshot=tlmVoteSnapshotText(m),current=minLabelOf(m),score=liveHomeScore(m)+'-'+liveAwayScore(m);
+    var fid=encodeURIComponent(m.fixtureId||m.fixture_id||m.id||(m.home+'_'+m.away));
+    return '<a class="tlm-analysis-row" href="/live-ia?fixture='+fid+'" style="color:inherit;text-decoration:none">'
+      +'<div class="tlm-analysis-teams">'+esc(m.home)+' — '+esc(m.away)+'<div class="tlm-analysis-meta">'+esc(current)+' · '+esc(score)+(snapshot?' · '+esc(snapshot):'')+'</div></div>'
+      +tlmVoteCirclesHtml(m)+'</a>';
+  }).join('')+'</div>';
 }
 function heroConsensusDetail(m){
   var state=heroOu25(m),valid=state.slots.filter(function(v){return v&&v.status==='voted'&&(v.direction==='over'||v.direction==='under');});
@@ -1759,6 +1803,8 @@ function renderHeroLive(m){
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
     if(analysisLink){analysisLink.href='/live-ia';analysisLink.setAttribute('aria-label','Ouvrir Live IA');}
     var emptyVotes=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var ev=0;ev<emptyVotes.length;ev++){emptyVotes[ev].classList.remove('on','over','under');emptyVotes[ev].removeAttribute('title');emptyVotes[ev].removeAttribute('aria-label');var emptyMark=emptyVotes[ev].querySelector('i');if(emptyMark)emptyMark.textContent=String(ev+1);}
+    var emptyVoteRow=document.getElementById('hero-ai-votes');if(emptyVoteRow)emptyVoteRow.classList.remove('stale');
+    setHeroText('hero-vote-snapshot','');
     var emptyProgress=document.getElementById('hero-analysis-progress');if(emptyProgress)emptyProgress.style.width='0%';
     setHeroText('hero-ai-title','Les 5 IA attendent le prochain match');setHeroText('hero-consensus-label','Aucun signal affiché sans match réel');
     return;
@@ -1776,7 +1822,7 @@ function renderHeroLive(m){
   var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
   var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
   setHeroText('hero-consensus-current',votes+' / 5');
-  setHeroText('hero-ai-title',voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Votes IA Over/Under 2,5':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
+  setHeroText('hero-ai-title',voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Tendance IA en cours':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
   var paidExplanation='';
   if(votes&&!voteState.locked&&voteState.official){
     paidExplanation=(voteState.recommendationStatus||('Signal officiel à '+voteState.snapshotMinute+"′, score "+voteState.snapshotScore))+' · '+(voteState.consensusDirection==='over'?'Over':'Under')+' 2,5 · '+voteState.consensusCount+'/5 votes';
@@ -1784,7 +1830,7 @@ function renderHeroLive(m){
     paidExplanation+=voteState.officialOdd!=null?' · cote '+Number(voteState.officialOdd).toFixed(2):' · cote indisponible';
     if(voteState.outcome==='win')paidExplanation+=' · gagné';else if(voteState.outcome==='loss')paidExplanation+=' · perdu';
   }else if(votes&&!voteState.locked&&!voteState.official){
-    paidExplanation='Anciennes tendances — aucun signal officiel';
+    paidExplanation=tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':('Tendance IA en cours · '+(consensus.direction==='over'?'Over':'Under')+' 2,5 · '+consensus.count+'/5 avis');
   }
   if(votes&&!voteState.locked&&voteState.official){
     if(voteState.snapshotMinute!=null)paidExplanation+=' · enregistré à '+voteState.snapshotMinute+"'";
@@ -1792,9 +1838,10 @@ function renderHeroLive(m){
     paidExplanation+=heroStandingText(m);
     paidExplanation+=heroH2hText(m);
   }
-  setHeroText('hero-consensus-label',votes?(voteState.locked?(voteState.official?'Signal officiel enregistré · détails réservés à Premium':'Anciennes tendances — aucun signal officiel'):paidExplanation):analysisClosed?'Anciennes tendances — aucun signal officiel':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
+  setHeroText('hero-consensus-label',votes?(voteState.locked?(voteState.official?'Signal officiel enregistré · détails réservés à Premium':(tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':'Tendance IA en cours · détails Premium')):paidExplanation):analysisClosed?'Anciennes tendances — aucun signal officiel':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
   if(!votes&&!analysisClosed)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
+  var voteRow=document.getElementById('hero-ai-votes');if(voteRow)voteRow.classList.toggle('stale',tlmVotesAreOld(m));
   for(var i=0;i<voteEls.length;i++){
     var slot=voteState.slots[i]||{},voted=slot.status==='voted',dir=voteState.locked?null:slot.direction;
     voteEls[i].classList.toggle('on',voted);
@@ -1806,6 +1853,7 @@ function renderHeroLive(m){
     if(voted&&voteTime)detail+=' · '+voteTime;
     voteEls[i].title=detail;voteEls[i].setAttribute('aria-label',detail);
   }
+  setHeroText('hero-vote-snapshot',tlmVoteSnapshotText(m));
   var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/Math.max(1,(tlmSignalWindowEnd||45)-15)*100)):12;progress.style.width=pct+'%';}
 }
 function renderHeroWatchlist(p){
@@ -1844,16 +1892,18 @@ async function loadHeroLive(){
     if(request!==tlmHeroRequest||credentials!==JSON.stringify(heroAuthHeaders()))return;
     // Rank the complete live list on every refresh. This selection never starts
     // or stops an analysis; the independent observer continues scanning all matches.
-    var matches=(d.offline||d.cached?[]:(d.matches||[])).filter(tlmHomepageAnalyzedMatch).filter(TLMMatchLifecycle.canTrack).sort(compareHeroMatches);
+    var source=d.offline||d.cached?[]:(d.matches||[]);
+    var matches=source.filter(tlmCurrentAnalyzedMatch).sort(compareHeroMatches);
     tlmHasLiveMatch=!!matches[0];
     renderHeroLive(matches[0]||null);
+    renderAnalyzedList(source);
   }catch(e){if(request===tlmHeroRequest){tlmHasLiveMatch=false;renderHeroLive(null);}}
 }
 window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive();});
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v20-official-results-20260912').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v21-stable-interface-20260912').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -1923,6 +1973,7 @@ async function loadUpcoming(){
     var source=(d.fixtures&&d.fixtures.length)?d.fixtures:(d.picks||[]);
     var matches=source.filter(tlmMatchAllowed).filter(function(p){var kd=tlmUpcomingKickoff(p);return !kd||kd.getTime()>Date.now();});
     matches.sort(function(a,b){var da=tlmUpcomingKickoff(a),db=tlmUpcomingKickoff(b);return (da?da.getTime():Number.MAX_SAFE_INTEGER)-(db?db.getTime():Number.MAX_SAFE_INTEGER);});
+    var upcomingCount=document.getElementById('upcoming-count');if(upcomingCount)upcomingCount.textContent=String(matches.length);
     if(!matches.length){
       if(hl)hl.innerHTML='';
       box.innerHTML='<div class="empty-note">Aucun match à venir disponible pour le moment.</div>';
@@ -1960,20 +2011,21 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var loaded=await Promise.all([fetchAllAnalysisHistory(2000),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
+    var loaded=await Promise.all([fetch('/api/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
     var d=loaded[0],dailyStats={};
     if(loaded[1]&&loaded[1].ok)(loaded[1].daily_concile||[]).forEach(function(r){dailyStats[r.jour]=r;});
-    var rows=(d.analyses||[]).filter(function(a){ return a.outcome==='win'||a.outcome==='loss'; });
+    var cutoff=new Date();cutoff.setDate(cutoff.getDate()-29);cutoff.setHours(0,0,0,0);
+    var rows=(d.analyses||[]).filter(function(a){var raw=String(a.analysed_at||a.date||'').trim(),at=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');return (a.outcome==='win'||a.outcome==='loss')&&!isNaN(at.getTime())&&at>=cutoff;});
+    var historyCount=document.getElementById('history-count');if(historyCount)historyCount.textContent=String(rows.length);
     var byDay={};
     rows.forEach(function(a){
       var day=String(a.analysed_at||'').slice(0,10);
       if(!byDay[day]) byDay[day]=[];
       byDay[day].push(a);
     });
-    // Calendrier CONTINU depuis le 1er aout : aucun jour d'aout ne disparait
-    // lorsque de nouvelles analyses sont ajoutees.
+    // Période glissante de 30 jours, gagnés et perdus sans masquer les défaites.
     var order=[];
-    var firstHistoryDay=new Date('2026-08-01T12:00:00');
+    var firstHistoryDay=new Date(cutoff);
     for(var dt=new Date();dt>=firstHistoryDay;dt.setDate(dt.getDate()-1)){
       order.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0'));
     }
@@ -2061,7 +2113,19 @@ async function loadDailyAccordion(){
     }).join('');
   }catch(e){ box.innerHTML='<div class="empty-note">Impossible de charger les verdicts pour le moment.</div>'; }
 }
-loadDailyAccordion();
+
+var tlmHomeSectionLoaded={live:true,upcoming:false,history:false};
+function setHomeSection(name){
+  if(!tlmHomeSectionLoaded.hasOwnProperty(name))name='live';
+  document.querySelectorAll('[data-home-panel]').forEach(function(panel){panel.hidden=panel.getAttribute('data-home-panel')!==name;});
+  document.querySelectorAll('[data-home-section]').forEach(function(tab){tab.setAttribute('aria-selected',String(tab.getAttribute('data-home-section')===name));});
+  var select=document.getElementById('tlm-home-select');if(select&&select.value!==name)select.value=name;
+  if(name==='upcoming'&&!tlmHomeSectionLoaded.upcoming){tlmHomeSectionLoaded.upcoming=true;loadUpcoming();}
+  if(name==='history'&&!tlmHomeSectionLoaded.history){tlmHomeSectionLoaded.history=true;loadDailyAccordion();}
+}
+document.querySelectorAll('[data-home-section]').forEach(function(tab){tab.addEventListener('click',function(){setHomeSection(tab.getAttribute('data-home-section'));});});
+var tlmHomeSelect=document.getElementById('tlm-home-select');if(tlmHomeSelect)tlmHomeSelect.addEventListener('change',function(){setHomeSection(tlmHomeSelect.value);});
+setHomeSection('live');
 
 /* ══ PICK GRATUIT DU JOUR ══ */
 async function loadPick(){
@@ -2164,7 +2228,6 @@ async function loadPick(){
     box.innerHTML='<div class="empty-note">Aucun pick gratuit n\'est disponible actuellement.</div>';
   }
 }
-loadPick();
 
 /* ══ PREMIUM PROUVÉ DE LA VEILLE ══ */
 async function loadPremiumYesterday(){
@@ -2185,7 +2248,6 @@ async function loadPremiumYesterday(){
     tbody.innerHTML='<tr><td colspan="3" class="empty-note">Aucune sélection Premium prouvée hier.</td></tr>';
   }
 }
-loadPremiumYesterday();
 
 /* ══ FAQ ══ */
 </script>
@@ -2471,20 +2533,7 @@ function tlmMatchHour(m){
 window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨🇿", "Czechia": "🇨🇿", "Serbia": "🇷🇸", "Croatia": "🇭🇷", "Slovenia": "🇸🇮", "Hungary": "🇭🇺", "Romania": "🇷🇴", "Bulgaria": "🇧🇬", "Ukraine": "🇺🇦", "Georgia": "🇬🇪", "Poland": "🇵🇱", "Austria": "🇦🇹", "Switzerland": "🇨🇭", "Greece": "🇬🇷", "Norway": "🇳🇴", "Sweden": "🇸🇪", "Denmark": "🇩🇰", "Finland": "🇫🇮"};
 </script>
 
-<script>
-/* TLM-HOME-FIXTURES-UI-20260830 */
-(function(){
-  const FLAGS={France:'🇫🇷',England:'🏴',Spain:'🇪🇸',Italy:'🇮🇹',Germany:'🇩🇪',Portugal:'🇵🇹',Netherlands:'🇳🇱',Belgium:'🇧🇪',Scotland:'🏴',Turkey:'🇹🇷',Austria:'🇦🇹',Switzerland:'🇨🇭',Poland:'🇵🇱',Greece:'🇬🇷',Denmark:'🇩🇰',Sweden:'🇸🇪',Norway:'🇳🇴',Finland:'🇫🇮',Brazil:'🇧🇷',Argentina:'🇦🇷',Japan:'🇯🇵',Mexico:'🇲🇽',Croatia:'🇭🇷',Colombia:'🇨🇴',Australia:'🇦🇺',World:'🌍'};
-  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const initials=s=>String(s||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-  const logo=(src,n)=>src?'<img src="'+esc(src)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:contain" onerror="this.style.display=\'none\'">':esc(initials(n));
-  const flag=x=>x.country_flag?'<img src="'+esc(x.country_flag)+'" alt="'+esc(x.country||'')+'" style="width:24px;height:17px;display:inline-block;object-fit:cover;border-radius:3px;vertical-align:-3px;margin-right:6px" onerror="this.style.display=\'none\'">':('<span style="margin-right:6px">'+(FLAGS[x.country]||'🌍')+'</span>');
-  function liveRow(m){const sh=m.score_home??'-',sa=m.score_away??'-';return '<div class="live-row"><div class="live-comp"><div class="live-comp-name">⚽ '+flag(m)+esc(m.country||m.competition||'Football')+'</div><div class="live-comp-min">'+esc(m.minute?m.minute+"'":'LIVE')+'</div></div><div class="live-logo">'+logo(m.home_logo,m.home)+'</div><div class="live-team-name">'+esc(m.home)+'</div><div class="live-score">'+esc(sh)+'-'+esc(sa)+'</div><div class="live-logo">'+logo(m.away_logo,m.away)+'</div><div class="live-team-name">'+esc(m.away)+'</div></div>'}
-  function upcomingRow(m){let d=new Date(m.kickoff),when='';if(!isNaN(d)) when=d.toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});return '<div class="upcoming-item"><div class="upcoming-highlight-logo">'+logo(m.home_logo,m.home)+'</div><div class="upcoming-info"><div class="upcoming-teams">⚽ '+flag(m)+esc(m.home)+' — '+esc(m.away)+'</div><div class="upcoming-comp">'+esc(m.country||'International')+' · '+esc(m.competition||'Football')+(when?' · '+esc(when):'')+'</div></div><div class="upcoming-highlight-logo">'+logo(m.away_logo,m.away)+'</div></div>'}
-  async function refreshHomeFixtures(){try{const r=await fetch('/api/homepage-fixtures?t='+Date.now(),{cache:'no-store'}),d=await r.json();if(!d.ok)return;d.live=(d.offline||d.cached?[]:(d.live||[])).filter(tlmMatchAllowed).filter(TLMMatchLifecycle.canTrack);const live=document.getElementById('live-rows'),up=document.getElementById('upcoming-rows'),hl=document.getElementById('upcoming-highlight');if(live)live.innerHTML=(d.live||[]).length?(d.live||[]).map(liveRow).join(''):'<div class="empty-note">Aucun match en direct actuellement.</div>';if(hl)hl.innerHTML='';if(up)up.innerHTML=(d.upcoming||[]).length?(d.upcoming||[]).filter(tlmMatchAllowed).map(upcomingRow).join(''):'<div class="empty-note">Aucun match à venir disponible.</div>';}catch(e){console.error('[home-fixtures-ui]',e)}}
-  refreshHomeFixtures(); setInterval(refreshHomeFixtures,60000);
-})();
-</script>
+
 
 <!-- TLM-CONVERSION-FUNNEL-20260830 -->
 <script>

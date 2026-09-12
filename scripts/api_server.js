@@ -13333,14 +13333,18 @@ function getLiveOu25VoteState(match) {
     const consensusAt = concordantTimes.length >= CLIENT_OU25_MIN_VOTES
       ? concordantTimes[CLIENT_OU25_MIN_VOTES - 1]
       : null;
-    const snapshotMinuteHit = latestSnapshotKey.match(/_(\d+)_\d+-\d+$/);
+    const snapshotStateHit = latestSnapshotKey.match(/_(\d+)_(\d+|x)-(\d+|x)$/);
+    const snapshotScore = snapshotStateHit && snapshotStateHit[2] !== "x" && snapshotStateHit[3] !== "x"
+      ? { home: Number(snapshotStateHit[2]), away: Number(snapshotStateHit[3]) }
+      : null;
     return {
       ...empty,
       vote_count: overCount + underCount,
       over_count: overCount,
       under_count: underCount,
       consensus_at: consensusAt,
-      snapshot_minute: snapshotMinuteHit ? Number(snapshotMinuteHit[1]) : null,
+      snapshot_minute: snapshotStateHit ? Number(snapshotStateHit[1]) : null,
+      snapshot_score: snapshotScore,
       votes,
     };
   } catch (e) {

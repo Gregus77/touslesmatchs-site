@@ -16,7 +16,7 @@ function assert(condition, message) {
 assert(
   api.includes("const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES") &&
     api.includes("clientOu25VisibilityEligibility(m, ou25)"),
-  "Le serveur doit exiger une ligue client eligible et au moins 3 votes alignes."
+  "Le serveur conserve la règle de validation sportive existante."
 );
 assert(
   api.includes("homepage_display_eligible: homepageDisplayEligible"),
@@ -27,7 +27,7 @@ assert(
   "L'accueil doit posseder un garde-fou explicite."
 );
 assert(
-  home.includes(".filter(tlmHomepageAnalyzedMatch)"),
+  home.includes(".filter(tlmCurrentAnalyzedMatch)"),
   "Le hero et la liste live doivent filtrer les matchs non analyses."
 );
 assert(
@@ -35,7 +35,7 @@ assert(
   "La liste d'accueil ne doit plus se contenter du filtre visuel historique."
 );
 assert(
-  home.includes("/sw.js?v=tlm-app-v20-official-results-20260912") && serviceWorker.includes("tlm-app-v20-official-results-20260912"),
+  home.includes("/sw.js?v=tlm-app-v21-stable-interface-20260912") && serviceWorker.includes("tlm-app-v21-stable-interface-20260912"),
   "Le cache PWA doit changer de version avec le garde-fou d'accueil."
 );
 

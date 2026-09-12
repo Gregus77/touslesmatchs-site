@@ -49,7 +49,7 @@ assert(!slots[0].title.includes('Under'));assert(!slots[0]['aria-label'].include
 assert(!elements.get('hero-consensus-label').textContent.includes('Under'));
 // No stale paid-vote cache can restore directions after logout or a new response.
 assert(!html.includes('tlmKeepHeroVotes'));assert(!html.includes('tlmHeroVoteCache'));
-assert(html.includes(".filter(tlmHomepageAnalyzedMatch).filter(TLMMatchLifecycle.canTrack).sort(compareHeroMatches)"));
+assert(html.includes(".filter(tlmCurrentAnalyzedMatch).sort(compareHeroMatches)"));
 assert(api.includes('const matches = await fetchLiveMatches();\n    const observed = matches'));
 console.log('OK: strongest consensus across all matches, leader changes, paid/anonymous projection, masks and accessible labels');
 
