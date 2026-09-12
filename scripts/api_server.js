@@ -5554,6 +5554,8 @@ db.exec('CREATE TABLE IF NOT EXISTS long_history_usage(bucket TEXT PRIMARY KEY,c
 const longHistory = require('./long_history').create(db, {
   request: path => httpGet('https://v3.football.api-sports.io'+path, {'x-apisports-key':API_SPORTS_KEY}),
   reserve: () => {
+    // Incident quota : conserver les données acquises, priorité au live.
+    if(process.env.SPORTS_BACKGROUND_COLLECTION_PAUSED !== '0')return false;
     if(!API_SPORTS_KEY)return false;
     try{return db.transaction(()=>{
       const bucket=new Date().toISOString().slice(0,13);
