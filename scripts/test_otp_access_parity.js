@@ -10,3 +10,8 @@ const h={localStorage:{getItem:k=>({tlm_token:'obsolete',tlm_session_token:'new-
 for(const file of ['dashboard.html','live-ia.html']){const html=fs.readFileSync(path.join(root,'public',file),'utf8');for(const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)){if(/src=|application\/ld\+json|application\/json/.test(m[1]))continue;new vm.Script(m[2],{filename:file});}}
 const home=fs.readFileSync(path.join(root,'public/index.html'),'utf8');assert(home.includes('m.client_display_eligible===true||m.client_product_eligible===true'));assert(api.includes('client_display_eligible: isClientOu25MatchEligible(m, false)'));assert(api.includes('const allMatches = cacheOnly ? (liveMatchesCache.data || []) : await fetchLiveMatches();'));
 console.log('PASS OTP: active owner paid; free, expired and forged remain locked; new email token wins; display scope separate from signal rules');
+
+const live=fs.readFileSync(path.join(root,'public/live-ia.html'),'utf8');
+const lc={escHtml:String};vm.createContext(lc);vm.runInContext(live.slice(live.indexOf('function liveOu25State('),live.indexOf('// ── Render ──')),lc);
+for(const locked of [false,true]){const html=lc.renderLiveOu25Details({ou25:{locked,vote_count:4,votes:['over','under','over',null,'under'].map(direction=>({status:direction?'voted':'pending',direction:locked?null:direction}))}});const marks=Array.from(html.matchAll(/class="mc-vote-seat-index">([^<]+)/g),x=>x[1]);assert.deepEqual(marks,locked?['?','?','?','4','?']:['O','U','O','4','U']);}
+console.log('PASS Live IA: masked real votes remain ?, absent seat remains 4');
