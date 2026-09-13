@@ -28,7 +28,7 @@
     <article>
       <p class="eyebrow">DONNÉES LIVE · GUIDE</p>
       <h1>Matchs en direct, aucun signal : que vérifier ?</h1>
-      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-09">9 septembre 2026</time> · Complété le <time datetime="2026-09-11">11 septembre 2026</time> · Français</p>
+      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-09">9 septembre 2026</time> · Complété le <time datetime="2026-09-13">13 septembre 2026</time> · Français</p>
       <p><strong>Voir un match en direct ne signifie pas qu’un signal doit être envoyé.</strong> Mais l’absence de message ne prouve pas non plus que tout fonctionne. Pour faire la différence, il faut identifier jusqu’où le match a été traité et pourquoi il s’est arrêté là.</p>
       <p>Ce guide répond à une question réelle, reformulée sans information personnelle : « Il y a des matchs en cours, pourquoi je ne reçois aucun signal ? » Il propose une méthode de lecture, pas un diagnostic de l’état actuel du service.</p>
 
@@ -68,6 +68,21 @@
       <p><strong>Exemple fictif :</strong> un contrôle passe à 18 h, mais aucune nouvelle analyse n’est enregistrée. Le statut honnête est « surveillance exécutée, validation de la chaîne en attente », et non « livraison rétablie ». Si une analyse apparaît ensuite, un message confirmé dans le canal français ne suffit pas à confirmer celui du canal russe.</p>
       <p>Un contrôle de données publiques ne remplace pas non plus l’observation de la page avec les droits du lecteur : une carte accessible sans connexion ne prouve pas que le détail réservé à un abonné s’affiche correctement. Le rapport doit préciser ce qui a été vérifié et ce qui reste inconnu.</p>
 
+      <h3 id="alerte-telegram">Une alerte Telegram reçue peut-elle annoncer un échec Telegram ?</h3>
+      <p>Oui, sans que cela prouve une panne générale ni une fausse alerte. Cette question vient d’un rapport transmis par un lecteur, reformulée ici sans données privées. <strong>Le message d’alerte et le contrôle signalé peuvent concerner des chemins différents.</strong> Il faut vérifier lequel, plutôt que conclure à partir du seul mot « Telegram ».</p>
+      <table>
+        <caption>Trois informations à rapprocher avant de conclure</caption>
+        <thead><tr><th scope="col">À comparer</th><th scope="col">Pourquoi cela compte</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Le bot et la destination</th><td>Une alerte reçue dans une conversation ne prouve pas un envoi dans le groupe de signaux. Le bot utilisé peut aussi être différent.</td></tr>
+          <tr><th scope="row">L’action contrôlée</th><td>Reconnaître un bot, vérifier ses droits et envoyer un signal sont trois opérations distinctes.</td></tr>
+          <tr><th scope="row">L’heure du contrôle</th><td>Un message reçu maintenant peut rapporter un échec antérieur. Un total sur 24 heures ne décrit pas, à lui seul, la situation actuelle.</td></tr>
+        </tbody>
+      </table>
+      <p>La documentation Telegram illustre cette distinction : <a href="https://core.telegram.org/bots/api#getme"><code>getMe</code> teste l’authentification du bot</a>, tandis que <a href="https://core.telegram.org/bots/api#sendmessage"><code>sendMessage</code> envoie un texte vers une destination indiquée</a>. Le premier contrôle réussi n’est donc pas une preuve du second. C’est une limite du contrôle, pas un diagnostic de la configuration utilisée par un service.</p>
+      <p><strong>Exemple fictif :</strong> à 18 h 05, une alerte mentionne un contrôle en échec à 18 h. Elle prouve que cette alerte vous est parvenue ; elle ne confirme pas la livraison du signal attendu dans un autre groupe. Inversement, un signal confirmé à 17 h ne suffit pas à établir que la diffusion fonctionne encore à 18 h.</p>
+      <p>Pour obtenir une réponse utile, signalez l’heure avec son fuseau, le canal concerné et le match attendu, sans publier la conversation privée. Demandez quel contrôle a échoué et quelle confirmation existe pour ce signal précis. <strong>Ne demandez pas un renvoi général :</strong> cela pourrait créer des doublons ou présenter une ancienne analyse comme nouvelle. Un message de test doit rester identifié comme test, hors du bilan des signaux.</p>
+
       <h2 id="cote-indisponible">Une cote indisponible signifie-t-elle « aucune analyse » ?</h2>
       <p>Non : l’information sportive et le prix proposé sont deux données distinctes. Un service peut autoriser la diffusion d’une analyse sans cote lorsque ses règles le permettent et que les autres conditions sont satisfaites. Il doit alors indiquer « cote indisponible », sans remplacer le prix manquant par une estimation présentée comme réelle.</p>
       <p>Cette mention ne prouve ni que la sélection est disponible chez un opérateur, ni qu’un prix intéressant existe. Une cote réellement observée mais hors des limites de sélection n’est pas une cote absente. Enfin, l’issue sportive peut être comptée séparément, mais le résultat financier reste non mesurable sans les données nécessaires : voir <a href="/guides/historique-signaux-taux-reussite/">comment lire l’historique des signaux</a>.</p>
@@ -90,7 +105,7 @@
         <p>Le bon réflexe n’est ni de réclamer un signal pour chaque match ni de considérer tout silence comme normal. Cherchez un état explicite, un instant de référence et, si un envoi est annoncé, une confirmation vers la bonne destination.</p>
         <a href="/live-ia">Consulter Live IA</a><a href="/guides/comprendre-consensus-ia/">Comprendre les limites des IA</a>
       </aside>
-      <p class="meta">Méthode : contenu préparé avec assistance IA à partir de questions réelles reformulées. Sources API-Football consultées le 9 septembre 2026 ; documentation Telegram revérifiée le 11 septembre 2026. Ajout du 11 septembre : lecture des preuves de surveillance et distinction entre cote absente et analyse absente. Les scénarios et horaires sont fictifs ; ils ne décrivent ni une panne constatée aujourd’hui ni des performances TousLesMatchs.</p>
+      <p class="meta">Méthode : contenu préparé avec assistance IA à partir de questions réelles reformulées. Sources API-Football consultées le 9 septembre 2026 ; méthodes getMe et sendMessage de Telegram revérifiées le 13 septembre 2026. Ajout du 11 septembre : preuves de surveillance et cote indisponible. Ajout du 13 septembre : distinguer réception d’une alerte, contrôle technique et livraison d’un signal. Les scénarios et horaires sont fictifs ; ils ne décrivent ni une panne constatée aujourd’hui ni des performances TousLesMatchs.</p>
     </article>
   </main>
   <footer>
