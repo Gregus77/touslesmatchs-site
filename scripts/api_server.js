@@ -10469,6 +10469,14 @@ function paidGoal05Account(req) {
   }
 }
 
+// Contrôle des droits seul : ne charge aucun match ni fournisseur.
+app.get('/auth/access', (req,res) => {
+  const account = paidGoal05Account(req);
+  res.set('Cache-Control','private, no-store');
+  res.set('Vary','Authorization, X-TLM-Email');
+  res.json({ok:true, locked:!account, plan:account?'premium':'free'});
+});
+
 function sendGoal05Latest(req, res) {
   const latest = readGoal05LatestSignal();
   if (!paidGoal05Account(req)) {
@@ -13370,7 +13378,7 @@ function homepageLiveMatch(match, canReveal) {
   for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
     'competition','league','sport','status','minute','utcDate','home_logo','away_logo',
     'score_home','score_away','block_reason','analysis_exclusion_reason',
-    'client_product_eligible','analysis_started','analysis_verified','homepage_display_eligible',
+    'client_product_eligible','client_display_eligible','data_notice','data_fetched_at','analysis_started','analysis_verified','homepage_display_eligible',
     'signal_delivered','telegram_delivery_proven','diffusion_block','delivery_status']) {
     if (match[key] !== undefined) out[key] = match[key];
   }
@@ -13419,14 +13427,21 @@ function homepageLiveMatch(match, canReveal) {
 app.get(["/live-matches", "/homepage-live"], async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
-    if (req.query.force === "1") {
+    const cacheOnly = req.query.cache_only === "1";
+    if (!cacheOnly && req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
-    const allMatches = await fetchLiveMatches();
+    const allMatches = cacheOnly ? (liveMatchesCache.data || []) : await fetchLiveMatches();
+    const displayMatches = allMatches.map(m => ({...m,
+      data_fetched_at: liveMatchesCache.ts ? new Date(liveMatchesCache.ts).toISOString() : null,
+      data_notice: m.source === 'football-data'
+        ? 'Score de secours potentiellement retardé — fraîcheur live non confirmée.'
+        : (!liveMatchesCache.ts || Date.now()-liveMatchesCache.ts>120000)
+          ? 'Dernières données connues — direct frais non confirmé.' : null}));
     // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
     // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
-    const matches = allMatches.filter(m => {
+    const matches = displayMatches.filter(m => {
       const sport = String(m?.sport || "").trim();
       // isWomenMatch() manquait cote football : isLowTrustCompetition ne verifie
       // que la fiabilite de la ligue, jamais le genre. Une Liga MX Femenil (donc
@@ -13529,6 +13544,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
       const visibility = {
         client_product_eligible: clientProductEligible,
+        client_display_eligible: isClientOu25MatchEligible(m, false),
         analysis_started: Number(ou25.vote_count || 0) > 0,
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
@@ -13537,7 +13553,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         diffusion_block: deliveredAnalysis?.diffusion_block || null,
         delivery_status: telegramDeliveryProven ? 'diffuse' : 'non_diffuse',
       };
-      const analysisExclusionReason = liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
+      const analysisExclusionReason = m.data_notice || liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m)
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
@@ -13546,6 +13562,12 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
+    if (cacheOnly) {
+      const canReveal = !!paidGoal05Account(req);
+      res.set('Vary','Authorization, X-TLM-Email');
+      return res.json({ok:true, locked:!canReveal, cache_only:true,
+        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal))});
+    }
     if (req.path === '/homepage-live') {
       const account = paidGoal05Account(req);
       const expiry = account?.expires_at;
@@ -15258,6 +15280,27 @@ const SIG_COLUMN_BY_PLAN = {
   elite:    "sig_sent_premium",
 };
 
+// Lecture historique pure : un seul snapshot exact, jamais de votes live recomposés.
+function historyOu25Votes(row, official, paid) {
+  const snapshot = official || db.prepare('SELECT * FROM official_vote_snapshots WHERE id=?').get(row.match_key);
+  let saved = [], statuses = [];
+  try { saved = JSON.parse(snapshot?.votes_json || '[]'); statuses = JSON.parse(snapshot?.seat_statuses_json || '[]'); } catch (_) {}
+  const votes = Array.from({length:5}, (_, i) => {
+    const vote = saved[i] || {};
+    const valid = (statuses[i] || vote.status) === 'voted' && ['over','under'].includes(vote.direction);
+    return { status: valid ? 'voted' : 'pending', direction: valid && paid ? vote.direction : null,
+      confidence: valid && paid ? (vote.confidence ?? null) : null,
+      updated_at: valid ? (vote.updated_at || snapshot?.created_at || null) : null };
+  });
+  return { locked: !paid, votes, vote_count: votes.filter(v => v.status === 'voted').length,
+    window_status: 'closed', historical: true, official: !!official,
+    official_signal_snapshot_id: official?.id || null, snapshot_id: snapshot?.id || null,
+    snapshot_minute: snapshot?.minute ?? row.minute_at_analysis ?? null,
+    snapshot_score: snapshot ? `${snapshot.score_home}-${snapshot.score_away}` : null,
+    consensus_at: snapshot?.created_at || row.analysed_at, outcome: official?.official_outcome || row.outcome,
+    recommendation_status: 'Match terminé — votes historiques, aucune sélection en cours' };
+}
+
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const offset = parseInt(req.query.offset) || 0;
@@ -15277,6 +15320,10 @@ app.get("/analysis-history", (req, res) => {
         isPaidViewer = (a.valid && a.plan && a.plan !== "free") || viewerIsAdmin;
       } catch (_) {}
     }
+    // Même validation serveur que le live ; le badge local ne confère aucun droit.
+    if (paidGoal05Account(req)) isPaidViewer = true;
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Vary', 'Authorization, X-TLM-Email');
     // L'admin garde la vue complète (supervision), sinon on filtre sur le palier —
     // via tierEligible (critères qualité du palier), pas via les envois Telegram
     // réels (sig_sent_*) : ceux-ci sont plafonnés/jour et sous-représentaient
@@ -15369,6 +15416,7 @@ app.get("/analysis-history", (req, res) => {
       const officialBet = officialProof?.consensus === 'over' ? 'Over 2.5 buts' : officialProof?.consensus === 'under' ? 'Under 2.5 buts' : null;
       return {
         id: r.id,
+        ou25: historyOu25Votes(r, officialProof, isPaidViewer),
         home: r.home, away: r.away,
         competition: r.competition, sport: r.sport || "Football",
         bet: reveal ? (officialBet || r.best_bet) : null, confidence: officialProof?.confidence ?? r.confidence,

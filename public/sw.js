@@ -2,7 +2,7 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v21-stable-interface-20260912";
+const VERSION = "tlm-app-v22-history-votes-20260913";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
@@ -94,6 +94,13 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   const dataPath = url.pathname.startsWith("/api/") ? url.pathname.slice(4) : url.pathname;
+  // Les votes historiques dépendent de la session : aucun cache partagé entre comptes.
+  if (dataPath === '/analysis-history') {
+    event.respondWith(fetch(request).catch(() => Response.json(
+      {ok:false, offline:true, error:'Connexion requise pour consulter les votes historiques.'},
+      {status:503, headers:{'Cache-Control':'no-store'}})));
+    return;
+  }
   const isData = DATA_PATHS.some((path) => dataPath === path);
 
   if (isData) {

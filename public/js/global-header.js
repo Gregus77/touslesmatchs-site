@@ -5,8 +5,8 @@
   function currentPath(){var p=location.pathname.replace(/\.html$/,'').replace(/\/$/,'')||'/';return p;}
   function active(href){var p=currentPath(),h=href.replace(/\/$/,'')||'/';return p===h;}
   function linkHtml(pair){return '<a href="'+pair[0]+'"'+(active(pair[0])?' aria-current="page"':'')+'>'+pair[1]+'</a>';}
-  function authHeaders(){try{var token=localStorage.getItem('tlm_token')||localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_session')||'',email=localStorage.getItem('tlm_email')||'',headers={Accept:'application/json'};if(token)headers.Authorization='Bearer '+token;if(email)headers['X-TLM-Email']=email;return headers;}catch(e){return {Accept:'application/json'};}}
-  function refreshStatus(){var el=document.getElementById('tlm-global-status');if(!el)return;el.textContent='Vérification…';fetch('/api/homepage-live?t='+Date.now(),{headers:authHeaders(),cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('auth');return r.json();}).then(function(d){el.textContent=d&&d.locked===false?'Premium':'Gratuit';}).catch(function(){el.textContent='Gratuit';});}
+  function authHeaders(){try{var token=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||localStorage.getItem('tlm_session')||'',email=localStorage.getItem('tlm_email')||'',headers={Accept:'application/json'};if(token)headers.Authorization='Bearer '+token;if(email)headers['X-TLM-Email']=email;return headers;}catch(e){return {Accept:'application/json'};}}
+  function refreshStatus(){var el=document.getElementById('tlm-global-status');if(!el)return;el.textContent='Vérification…';fetch('/api/auth/access?t='+Date.now(),{headers:authHeaders(),cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('auth');return r.json();}).then(function(d){el.textContent=d&&d.locked===false?'Premium':'Gratuit';}).catch(function(){el.textContent='Gratuit';});}
   function selectedLanguage(){try{return localStorage.getItem('tlm_lang')||document.documentElement.lang||'fr';}catch(e){return 'fr';}}
   function mount(){
     document.querySelectorAll('header.tlm-global-header').forEach(function(n){n.remove();});
@@ -31,7 +31,7 @@
     var button=header.querySelector('.tlm-gh-menu'),drawer=header.querySelector('.tlm-gh-drawer');
     button.addEventListener('click',function(){var open=drawer.classList.toggle('open');button.setAttribute('aria-expanded',String(open));button.textContent=open?'×':'☰';});
     drawer.addEventListener('click',function(e){if(e.target.closest('a')){drawer.classList.remove('open');button.setAttribute('aria-expanded','false');button.textContent='☰';}});
-    document.addEventListener('tlm-auth-change',refreshStatus);
+    document.addEventListener('tlm-auth-change',refreshStatus);window.addEventListener('storage',refreshStatus);
     refreshStatus();
   }
   window.tlmMountGlobalHeader=mount;
