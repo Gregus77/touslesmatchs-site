@@ -1008,7 +1008,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 }
 </style>
   <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260912-v2" defer></script>
+  <script src="/js/global-header.js?v=20260913-auth" defer></script>
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1667,7 +1667,7 @@ function tlmHeroMinuteOf(m){
   return -1;
 }
 function tlmHomepageAnalyzedMatch(m){
-  return !!(m&&tlmMatchAllowed(m)&&m.client_product_eligible===true);
+  return !!(m&&tlmMatchAllowed(m)&&(m.client_display_eligible===true||m.client_product_eligible===true));
 }
 function tlmCurrentAnalyzedMatch(m){
   if(!tlmHomepageAnalyzedMatch(m))return false;
@@ -1749,7 +1749,7 @@ function renderAnalyzedList(rows){
     var snapshot=tlmVoteSnapshotText(m),current=minLabelOf(m),score=liveHomeScore(m)+'-'+liveAwayScore(m);
     var fid=encodeURIComponent(m.fixtureId||m.fixture_id||m.id||(m.home+'_'+m.away));
     return '<a class="tlm-analysis-row" href="/live-ia?fixture='+fid+'" style="color:inherit;text-decoration:none">'
-      +'<div class="tlm-analysis-teams">'+esc(m.home)+' — '+esc(m.away)+'<div class="tlm-analysis-meta">'+esc(current)+' · '+esc(score)+(snapshot?' · '+esc(snapshot):'')+'</div></div>'
+      +'<div class="tlm-analysis-teams">'+esc(m.home)+' — '+esc(m.away)+'<div class="tlm-analysis-meta">'+esc(current)+' · '+esc(score)+(snapshot?' · '+esc(snapshot):'')+(m.data_notice?' · '+esc(m.data_notice):'')+'</div></div>'
       +tlmVoteCirclesHtml(m)+'</a>';
   }).join('')+'</div>';
 }
@@ -1816,7 +1816,8 @@ function renderHeroLive(m){
   setHeroLogo('hero-home-logo',liveHomeLogo(m),m.home||'équipe à domicile');setHeroLogo('hero-away-logo',liveAwayLogo(m),m.away||"équipe à l'extérieur");
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
   var hs=liveHomeScore(m),as=liveAwayScore(m);setHeroText('hero-live-score',(hs===''?'—':hs)+' - '+(as===''?'—':as));
-  setHeroText('hero-live-period',String(m.status||m.elapsed||m.period||'1ère période'));
+  setHeroText('hero-live-period',m.data_notice||String(m.status||m.elapsed||m.period||'1ère période'));
+  if(m.data_notice&&status)status.textContent='Dernières données connues';
   var fixtureId=m.fixtureId||m.fixture_id||m.id||m.sourceId||'';
   if(analysisLink){analysisLink.href='/live-ia?fixture='+encodeURIComponent(fixtureId);analysisLink.setAttribute('aria-label','Ouvrir '+String(m.home||'ce match')+' contre '+String(m.away||'')+' dans Live IA');}
   var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));

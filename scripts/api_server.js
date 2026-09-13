@@ -10469,6 +10469,14 @@ function paidGoal05Account(req) {
   }
 }
 
+// Contrôle des droits seul : ne charge aucun match ni fournisseur.
+app.get('/auth/access', (req,res) => {
+  const account = paidGoal05Account(req);
+  res.set('Cache-Control','private, no-store');
+  res.set('Vary','Authorization, X-TLM-Email');
+  res.json({ok:true, locked:!account, plan:account?'premium':'free'});
+});
+
 function sendGoal05Latest(req, res) {
   const latest = readGoal05LatestSignal();
   if (!paidGoal05Account(req)) {
@@ -13370,7 +13378,7 @@ function homepageLiveMatch(match, canReveal) {
   for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
     'competition','league','sport','status','minute','utcDate','home_logo','away_logo',
     'score_home','score_away','block_reason','analysis_exclusion_reason',
-    'client_product_eligible','analysis_started','analysis_verified','homepage_display_eligible',
+    'client_product_eligible','client_display_eligible','data_notice','data_fetched_at','analysis_started','analysis_verified','homepage_display_eligible',
     'signal_delivered','telegram_delivery_proven','diffusion_block','delivery_status']) {
     if (match[key] !== undefined) out[key] = match[key];
   }
@@ -13419,14 +13427,21 @@ function homepageLiveMatch(match, canReveal) {
 app.get(["/live-matches", "/homepage-live"], async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
-    if (req.query.force === "1") {
+    const cacheOnly = req.query.cache_only === "1";
+    if (!cacheOnly && req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
     }
-    const allMatches = await fetchLiveMatches();
+    const allMatches = cacheOnly ? (liveMatchesCache.data || []) : await fetchLiveMatches();
+    const displayMatches = allMatches.map(m => ({...m,
+      data_fetched_at: liveMatchesCache.ts ? new Date(liveMatchesCache.ts).toISOString() : null,
+      data_notice: m.source === 'football-data'
+        ? 'Score de secours potentiellement retardé — fraîcheur live non confirmée.'
+        : (!liveMatchesCache.ts || Date.now()-liveMatchesCache.ts>120000)
+          ? 'Dernières données connues — direct frais non confirmé.' : null}));
     // Filtre STRICT : Live IA n'affiche que les ligues fiables (whitelist), où les
     // données live sont rapides et sûres. Plus jamais de score faux d'une ligue mineure.
-    const matches = allMatches.filter(m => {
+    const matches = displayMatches.filter(m => {
       const sport = String(m?.sport || "").trim();
       // isWomenMatch() manquait cote football : isLowTrustCompetition ne verifie
       // que la fiabilite de la ligue, jamais le genre. Une Liga MX Femenil (donc
@@ -13529,6 +13544,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
       const visibility = {
         client_product_eligible: clientProductEligible,
+        client_display_eligible: isClientOu25MatchEligible(m, false),
         analysis_started: Number(ou25.vote_count || 0) > 0,
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
@@ -13537,7 +13553,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         diffusion_block: deliveredAnalysis?.diffusion_block || null,
         delivery_status: telegramDeliveryProven ? 'diffuse' : 'non_diffuse',
       };
-      const analysisExclusionReason = liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
+      const analysisExclusionReason = m.data_notice || liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m)
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
@@ -13546,6 +13562,12 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
+    if (cacheOnly) {
+      const canReveal = !!paidGoal05Account(req);
+      res.set('Vary','Authorization, X-TLM-Email');
+      return res.json({ok:true, locked:!canReveal, cache_only:true,
+        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal))});
+    }
     if (req.path === '/homepage-live') {
       const account = paidGoal05Account(req);
       const expiry = account?.expires_at;

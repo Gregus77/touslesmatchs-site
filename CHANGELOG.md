@@ -388,3 +388,5 @@ Correctif urgent séparé de PR 109 : calendrier 4/6 EUR, réservation SQLite gl
 ## 2026-09-13 — [Codex] Cinq votes dans Historique
 
 La route historique vérifie la session Premium côté serveur et transmet les cinq sièges d’un snapshot exact. Les directions restent masquées en gratuit. Accueil et application réutilisent les ronds existants avec minute, score de calcul et score final, sans appel sportif ni nouvelle analyse. Cache PWA renouvelé.
+
+- Complément : priorité cohérente du jeton OTP, contrôle des droits du bandeau sans requête sportive, affichage des matchs du périmètre indépendamment de leur admissibilité à une nouvelle analyse ; fraîcheur incertaine explicitée. Aucun droit en base ni critère sportif modifié.

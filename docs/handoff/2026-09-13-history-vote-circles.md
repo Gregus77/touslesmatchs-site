@@ -15,3 +15,11 @@ Tests : test_history_vote_circles, test_app_live_vote_visibility_20260912, test_
 Limite préexistante démontrée : test_official_signal_snapshots_20260912 échoue ligne 14 sur main et sur ce correctif au 13 septembre. Son scénario daté du 12 dépend de la date courante ; il passe avec une horloge isolée fixée au 12 septembre. Aucun changement du test ou du moteur pour masquer ce défaut.
 
 Aucun appel fournisseur, aucune nouvelle analyse IA, aucun envoi Telegram pendant la vérification. La validation visuelle depuis le navigateur du propriétaire reste requise ; ne pas relancer Chromium Snap bloqué.
+
+## Complément demandé : connexion email et parité accueil / Live IA
+
+Le compte actif à 999 analyses possède déjà un droit payant et une session OTP valide. Aucun droit n'est créé ou modifié en base. Le bandeau et l'application privilégiaient un ancien `tlm_token` sur `tlm_session_token`; Live IA ne transmettait pas le jeton OTP. Tous ces lecteurs prennent maintenant le jeton OTP récent. Le bandeau lit `/auth/access`, contrôle serveur sans chargement sportif. Compte publie le changement de connexion et efface les anciens jetons à la déconnexion.
+
+L'accueil filtrait sur l'admissibilité d'analyse, ce qui masquait un match du bon championnat avant tout scrutin ou avec minute inconnue. Le champ séparé `client_display_eligible` autorise son affichage, sans modifier l'admissibilité sportive des analyses. Les scores football-data sont explicitement signalés comme potentiellement retardés, et les caches anciens comme dernières données connues. `cache_only=1` permet la comparaison des deux API depuis le cache existant sans aucun appel fournisseur ou IA.
+
+Test supplémentaire : propriétaire actif déverrouillé, comptes gratuits/expirés et jetons falsifiés verrouillés, priorité du nouveau jeton OTP, syntaxe Compte/Live IA et séparation affichage/critères sportifs.

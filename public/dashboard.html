@@ -126,7 +126,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
   <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260912-v2" defer></script>
+  <script src="/js/global-header.js?v=20260913-auth" defer></script>
 </head>
 <body class="tlm-wow tlm-page-dashboard">
 
@@ -291,7 +291,9 @@ function verifyOtp() {
     if (!d.ok) return showErr(d.error || 'Code invalide.');
     try { if (typeof gtag === 'function') gtag('event','account_access_verified'); } catch (_) {}
     localStorage.setItem('tlm_session_token', d.token);
+    localStorage.setItem('tlm_email', d.email || pendingEmail);
     token = d.token;
+    document.dispatchEvent(new Event('tlm-auth-change'));
     loadDashboard();
   }).catch(function() {
     btn.disabled = false; btn.textContent = 'Se connecter →';
@@ -301,7 +303,8 @@ function verifyOtp() {
 
 function logout() {
   var t = token;
-  localStorage.removeItem('tlm_session_token');
+  ['tlm_session_token','tlm_token','tlm_session','tlm_code','tlm_plan'].forEach(function(k){localStorage.removeItem(k);});
+  document.dispatchEvent(new Event('tlm-auth-change'));
   token = null;
   document.getElementById('dash-section').style.display = 'none';
   document.getElementById('auth-section').style.display = 'block';
