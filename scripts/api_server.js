@@ -963,7 +963,7 @@ db.exec(`
 // Mistral-7B, OR-*) : c'est voulu, on ne falsifie jamais l'historique. Mais leur
 // agrégat ne doit plus apparaître dans agent_weights, sinon /admin/agents et les
 // alertes "agent en baisse" restent pollués par des agents qui ne tournent plus.
-const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "Cohere-Command", "OpenRouter-Qwen"];
+const CONCILE_AGENT_NAMES = ["Perplexity-Web", "DeepSeek-V3", "Mistral-Large", "OpenRouter-Luna", "OpenRouter-Qwen"];
 
 // ── Initialise agent weights if empty ──
 try {
@@ -2690,6 +2690,45 @@ function extractStructuredOu25Vote(parsed) {
     return { bet: side === "o2.5" ? "Over 2.5 buts" : "Under 2.5 buts", confidence };
   }
   return null;
+}
+
+// Schéma utilisé uniquement par Luna. Il correspond au format validé par
+// l'appel isolé du 13/09/2026 et force un bulletin O/U 2,5 directement
+// exploitable, sans texte libre autour du JSON.
+function strictOu25ResponseFormat() {
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: "seat4_ou25_vote",
+      strict: true,
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["bet", "confidence", "raison", "marches"],
+        properties: {
+          bet: { type: "string", enum: ["Over 2.5 buts", "Under 2.5 buts"] },
+          confidence: { type: "integer" },
+          raison: { type: "string" },
+          marches: {
+            type: "object",
+            additionalProperties: false,
+            required: ["buts"],
+            properties: {
+              buts: {
+                type: "object",
+                additionalProperties: false,
+                required: ["p", "c"],
+                properties: {
+                  p: { type: "string", enum: ["o2.5", "u2.5"] },
+                  c: { type: "integer" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
 }
 
 function buildOu25VoteSummary(agentMarketList, agentResults = []) {
@@ -6534,12 +6573,11 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
   // Agent 0 : Perplexity-Web  → accès web temps réel (forme, blessures, H2H)
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
   // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
-  // Agent 3 : Cohere-Command  → spécialiste RAG/données structurées (architecture ≠ tout le reste)
+  // Agent 3 : OpenRouter-Luna → spécialiste O/U structuré, raisonnement désactivé
   // Agent 4 : Kimi            → synthese quantitative (remplace Qwen, 0/26 votes)
   // Agent 5 : Chief           → arbitre Llama-70b (Groq, rapide)
   const usePerplexity = !!PERPLEXITY_API_KEY;
   const useMistral    = !!MISTRAL_API_KEY;
-  const useCohere     = !!COHERE_API_KEY;
   const useOpenRouter = !!OPENROUTER_API_KEY;
 
   const agentNames = [
@@ -6557,10 +6595,14 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       useMistral,
     },
     {
-      name: "Cohere-Command",
-      model: process.env.COHERE_MODEL || "command-a-plus-05-2026",
-      icon: "🧬",
-      useCohere,
+      name: "OpenRouter-Luna",
+      model: resolveModel(process.env.OR_LUNA_MODEL || "openai/gpt-5.6-luna"),
+      icon: "🌙",
+      useOpenRouter,
+      openRouterModelKey: "luna",
+      strictStructured: true,
+      targetedRetry: true,
+      maxTokens: 900,
     },
     {
       name: "OpenRouter-Qwen",
@@ -6585,7 +6627,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
 
     `Tu es Mistral-Large, expert tactique européen. Analyse ${match.home} vs ${match.away} avec : 1) Position au classement et écart entre les deux équipes, 2) Force défensive vs offensive (buts marqués/encaissés par match), 3) Bilan domicile vs extérieur spécifique, 4) Moyenne de buts des H2H pour Under/Over. Top 4 vs Bottom 5 à domicile = signal fort. Raisonne : données → conclusion.`,
 
-    `Tu es Cohere-Command, spécialiste quantitatif exclusivement Over/Under 2,5. Pour ${match.home} vs ${match.away} : 1) Identifie le marché avec la meilleure value en croisant classement + forme + H2H, 2) Si les deux équipes ont une moyenne < 2.0 buts/match ET les H2H sont majoritairement Under = Under très probable, 3) Si écart > 10 places au classement + forme alignée = ML probable. Raisonne en probabilités, évite les marchés surpricés.`,
+    `Tu es OpenRouter-Luna, siège n°4 du Concile, spécialiste exclusivement Over/Under 2,5. Pour ${match.home} vs ${match.away}, rends directement le vote final O/U 2,5 demandé dans le schéma JSON. Appuie la raison uniquement sur les données fournies, sans inventer une statistique absente.`,
 
     `Tu es OpenRouter-Qwen, agent de synthèse quantitative. Ta mission sur ${match.home} vs ${match.away} est de croiser le score live, la dynamique du match, les écarts de niveau et les marchés autorisés pour détecter le signal le plus robuste. Tu dois challenger les autres agents avec une lecture froide des probabilités, sans inventer de données absentes.`,
 
@@ -6608,7 +6650,7 @@ RÈGLE CHAMPION : le marché "But en 1ère mi-temps" a un winrate historique pro
     const isChief = i === CHIEF_INDEX;
     const agCfg = agentNames[i];
     const temp = 0.3 + i * 0.05;
-    const maxTok = isChief ? 400 : 300;
+    const maxTok = Number(agCfg.maxTokens || (isChief ? 400 : 300));
 
     const prompt = `${personas[i]}
 
@@ -6683,7 +6725,6 @@ Réponds en JSON pur (pas de markdown):
       if (agCfg.useDeepseek && DEEPSEEK_API_KEY) providers.push({ kind: "openai", url: "https://api.deepseek.com/v1/chat/completions", key: DEEPSEEK_API_KEY, model: process.env.DEEPSEEK_MODEL || "deepseek-v4-pro" });
       if (agCfg.usePerplexity && PERPLEXITY_API_KEY) providers.push({ kind: "openai", url: "https://api.perplexity.ai/chat/completions", key: PERPLEXITY_API_KEY, model: agCfg.model });
       if (agCfg.useMistral && MISTRAL_API_KEY) providers.push({ kind: "openai", url: "https://api.mistral.ai/v1/chat/completions", key: MISTRAL_API_KEY, model: process.env.MISTRAL_MODEL || "mistral-small-2603" });
-      if (agCfg.useCohere && COHERE_API_KEY) providers.push({ kind: "cohere", key: COHERE_API_KEY, model: agCfg.model });
 
       // Consolidation OpenRouter du 04/08/2026 (decision du fondateur) :
       // Perplexity, DeepSeek, Mistral et Cohere avaient chacun leur propre
@@ -6783,6 +6824,12 @@ Réponds en JSON pur (pas de markdown):
         console.warn(`[concile] ${agCfg.name} : aucun fournisseur configure et aucun ecarte — pas de repli de secours`);
       }
 
+      // Une seule relance ciblée est autorisée pour Luna. Elle ne relance ni
+      // les quatre autres sièges ni le Concile complet.
+      if (agCfg.targetedRetry && providers.length === 1) {
+        providers.push({ ...providers[0], targetedRetry: true });
+      }
+
       let raw = "{}";
       let lastDiag = _avantFiltre > 0 ? "fournisseurs configures mais ecartes par le coupe-circuit (quota/authentification)" : "aucun fournisseur configure";
       // Telemetrie : une ligne par tentative, avec sa duree reelle. C'est la
@@ -6819,7 +6866,7 @@ Réponds en JSON pur (pas de markdown):
         // La liste est construite avant le premier appel. Si le premier modèle
         // d'un même hôte vient d'ouvrir son coupe-circuit, ne pas tenter les
         // autres modèles déjà présents dans cette liste.
-        if (providerEcarte(plannedHost, true)) {
+        if (providerEcarte(plannedHost, true) && !(agCfg.targetedRetry && pv.targetedRetry)) {
           console.warn(`[concile] ${agCfg.name}: ${plannedHost} déjà écarté pendant cette analyse, tentative ignorée`);
           continue;
         }
@@ -6835,7 +6882,15 @@ Réponds en JSON pur (pas de markdown):
             resp = await httpPost("https://api.cohere.com/v2/chat", { model: pv.model, messages: [{ role: "user", content: prompt }], max_tokens: maxTok, temperature: temp }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = resp.message?.content?.[0]?.text || resp.text || "{}";
           } else {
-            resp = await httpPost(pv.url, { model: pv.model, messages: [{ role: "user", content: prompt }], temperature: temp, max_tokens: maxTok }, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
+            const requestBody = { model: pv.model, messages: [{ role: "user", content: prompt }], max_tokens: maxTok };
+            if (agCfg.strictStructured) {
+              requestBody.response_format = strictOu25ResponseFormat();
+              requestBody.reasoning = { effort: "none" };
+              requestBody.provider = { require_parameters: true };
+            } else {
+              requestBody.temperature = temp;
+            }
+            resp = await httpPost(pv.url, requestBody, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -6865,6 +6920,10 @@ Réponds en JSON pur (pas de markdown):
               : resp?._httpParseError ? "illisible" : "vide",
             resp?._httpStatus, lastDiag);
           if (resp?._httpStatus) marquerProvider(pvHost, resp._httpStatus, lastDiag);
+          // Une requête refusée de manière permanente ou structurelle ne
+          // devient pas valide par répétition. Les sorties vides/invalides,
+          // timeouts, 429 et 5xx peuvent utiliser l'unique relance Luna.
+          if (agCfg.targetedRetry && [400, 401, 402, 403, 404].includes(Number(resp?._httpStatus))) break;
         } catch (e) {
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
           lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
@@ -9746,7 +9805,9 @@ function shouldAutoObserveMatch(match) {
   return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
 }
 
-const AUTO_CONCILE_MAX_ATTEMPTS_PER_SEAT = 2;
+// Une passe globale seulement : l'observateur ne rappelle jamais les cinq IA.
+// L'unique relance admise est interne au siège Luna et bornée ci-dessus.
+const AUTO_CONCILE_MAX_ATTEMPTS_PER_SEAT = 1;
 function predictionSnapshotStatus(match) {
   const key = getPredictionSnapshotKey(match);
   const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
@@ -17113,7 +17174,7 @@ const MODELES_CONCILE = {
   "perplexity/sonar-pro": "Perplexity-Web",
   "deepseek/deepseek-chat": "DeepSeek",
   "mistralai/mistral-large": "Mistral-Large",
-  "cohere/command-a-plus-05-2026": "Cohere-Command",
+  "openai/gpt-5.6-luna": "OpenRouter-Luna",
   "moonshotai/kimi-k3": "Kimi",
   "mistralai/mistral-7b-instruct:free": "Mistral-7B (banc d'essai)",
 };
@@ -17326,7 +17387,7 @@ const MODELE_DES_AGENTS = {
   "Perplexity-Web": "perplexity/sonar-pro",
   "DeepSeek-V3": "deepseek/deepseek-chat",
   "Mistral-Large": "mistralai/mistral-small-2603",
-  "Cohere-Command": "cohere/command-a-plus-05-2026",
+  "OpenRouter-Luna": "openai/gpt-5.6-luna",
   "Qwen-3.7-Max": "qwen/qwen3.7-max",
   "OpenRouter-Qwen": "qwen/qwen3.7-max",
   "OpenRouter-Kimi": "moonshotai/kimi-k2",

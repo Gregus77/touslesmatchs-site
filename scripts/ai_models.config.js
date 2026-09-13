@@ -83,6 +83,19 @@ const MODELS = {
     maxTokensOut: Number(process.env.AI_MODEL_QWEN_MAX_TOKENS || 400),
     costPer1kTokensEur: 0.002,
   },
+  luna: {
+    id: process.env.OR_LUNA_MODEL || "openai/gpt-5.6-luna",
+    provider: "openrouter",
+    role: "official",
+    mode: "official",
+    enabled: true,
+    dailyLimit: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY || 30),
+    maxTokensOut: Number(process.env.AI_MODEL_LUNA_MAX_TOKENS || 900),
+    // Réservation locale au tarif de sortie vérifié, donc conservatrice pour
+    // les tokens d’entrée. Le garde-fou global relit le catalogue puis
+    // comptabilise le coût effectivement renvoyé par OpenRouter.
+    costPer1kTokensEur: 0.0012,
+  },
   kimi: {
     id: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k3",
     provider: "openrouter",
@@ -148,6 +161,8 @@ function normalizeModelKey(key) {
     "perplexity-web": "perplexity",
     "deepseek-v3": "deepseek",
     "cohere-command": "cohere",
+    "gpt-5.6-luna": "luna",
+    "openrouter-luna": "luna",
     "openrouter-qwen": "qwen"
   };
 
