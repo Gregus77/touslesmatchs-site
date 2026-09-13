@@ -15258,6 +15258,27 @@ const SIG_COLUMN_BY_PLAN = {
   elite:    "sig_sent_premium",
 };
 
+// Lecture historique pure : un seul snapshot exact, jamais de votes live recomposés.
+function historyOu25Votes(row, official, paid) {
+  const snapshot = official || db.prepare('SELECT * FROM official_vote_snapshots WHERE id=?').get(row.match_key);
+  let saved = [], statuses = [];
+  try { saved = JSON.parse(snapshot?.votes_json || '[]'); statuses = JSON.parse(snapshot?.seat_statuses_json || '[]'); } catch (_) {}
+  const votes = Array.from({length:5}, (_, i) => {
+    const vote = saved[i] || {};
+    const valid = (statuses[i] || vote.status) === 'voted' && ['over','under'].includes(vote.direction);
+    return { status: valid ? 'voted' : 'pending', direction: valid && paid ? vote.direction : null,
+      confidence: valid && paid ? (vote.confidence ?? null) : null,
+      updated_at: valid ? (vote.updated_at || snapshot?.created_at || null) : null };
+  });
+  return { locked: !paid, votes, vote_count: votes.filter(v => v.status === 'voted').length,
+    window_status: 'closed', historical: true, official: !!official,
+    official_signal_snapshot_id: official?.id || null, snapshot_id: snapshot?.id || null,
+    snapshot_minute: snapshot?.minute ?? row.minute_at_analysis ?? null,
+    snapshot_score: snapshot ? `${snapshot.score_home}-${snapshot.score_away}` : null,
+    consensus_at: snapshot?.created_at || row.analysed_at, outcome: official?.official_outcome || row.outcome,
+    recommendation_status: 'Match terminé — votes historiques, aucune sélection en cours' };
+}
+
 app.get("/analysis-history", (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 100);
   const offset = parseInt(req.query.offset) || 0;
@@ -15277,6 +15298,10 @@ app.get("/analysis-history", (req, res) => {
         isPaidViewer = (a.valid && a.plan && a.plan !== "free") || viewerIsAdmin;
       } catch (_) {}
     }
+    // Même validation serveur que le live ; le badge local ne confère aucun droit.
+    if (paidGoal05Account(req)) isPaidViewer = true;
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Vary', 'Authorization, X-TLM-Email');
     // L'admin garde la vue complète (supervision), sinon on filtre sur le palier —
     // via tierEligible (critères qualité du palier), pas via les envois Telegram
     // réels (sig_sent_*) : ceux-ci sont plafonnés/jour et sous-représentaient
@@ -15369,6 +15394,7 @@ app.get("/analysis-history", (req, res) => {
       const officialBet = officialProof?.consensus === 'over' ? 'Over 2.5 buts' : officialProof?.consensus === 'under' ? 'Under 2.5 buts' : null;
       return {
         id: r.id,
+        ou25: historyOu25Votes(r, officialProof, isPaidViewer),
         home: r.home, away: r.away,
         competition: r.competition, sport: r.sport || "Football",
         bet: reveal ? (officialBet || r.best_bet) : null, confidence: officialProof?.confidence ?? r.confidence,

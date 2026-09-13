@@ -384,3 +384,7 @@ Bilan client de la journée Paris à 23 h 45 uniquement, verrou SQLite persistan
 ## 2026-09-12 — Codex — budget global Concile Paris
 
 Correctif urgent séparé de PR 109 : calendrier 4/6 EUR, réservation SQLite globale de chaque appel OpenRouter, conservation des dépenses et réservations incertaines, passerelle Python/worker et suspension temporaire des essais payants. Aucun changement des cinq IA ou des critères clients. Voir `docs/handoff/2026-09-12-concile-budget-incident.md` pour limites et procédure de preuve.
+
+## 2026-09-13 — [Codex] Cinq votes dans Historique
+
+La route historique vérifie la session Premium côté serveur et transmet les cinq sièges d’un snapshot exact. Les directions restent masquées en gratuit. Accueil et application réutilisent les ronds existants avec minute, score de calcul et score final, sans appel sportif ni nouvelle analyse. Cache PWA renouvelé.

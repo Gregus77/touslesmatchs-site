@@ -35,7 +35,7 @@ assert(
   "La liste d'accueil ne doit plus se contenter du filtre visuel historique."
 );
 assert(
-  home.includes("/sw.js?v=tlm-app-v21-stable-interface-20260912") && serviceWorker.includes("tlm-app-v21-stable-interface-20260912"),
+  home.includes("/sw.js?v=tlm-app-v22-history-votes-20260913") && serviceWorker.includes("tlm-app-v22-history-votes-20260913"),
   "Le cache PWA doit changer de version avec le garde-fou d'accueil."
 );
 

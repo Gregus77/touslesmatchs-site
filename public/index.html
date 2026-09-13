@@ -1903,7 +1903,7 @@ window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive()
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v21-stable-interface-20260912').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v22-history-votes-20260913').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -2011,7 +2011,7 @@ function toggleDayAcc(idx){
 async function loadDailyAccordion(){
   var box=document.getElementById('daily-accordion');
   try{
-    var loaded=await Promise.all([fetch('/api/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
+    var loaded=await Promise.all([fetch('/api/analysis-history?limit=500&offset=0&t='+Date.now(),{cache:'no-store',headers:heroAuthHeaders()}).then(function(r){if(!r.ok)throw new Error('history');return r.json();}),fetch('/api/public-analysis-stats',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('stats');return r.json();}).catch(function(){return null;})]);
     var d=loaded[0],dailyStats={};
     if(loaded[1]&&loaded[1].ok)(loaded[1].daily_concile||[]).forEach(function(r){dailyStats[r.jour]=r;});
     var cutoff=new Date();cutoff.setDate(cutoff.getDate()-29);cutoff.setHours(0,0,0,0);
@@ -2099,11 +2099,11 @@ async function loadDailyAccordion(){
           tierBadge='<span class="tier-recu tier-none">Observation publique du moteur — '+esc(lisible)+'</span>';
         }
         return '<div class="day-acc-row">'
-          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+'</div>'
+          + '<div class="day-acc-row-teams">'+esc(a.home)+' — '+esc(a.away)+'<div class="day-acc-row-bet">'+esc(a.bet||'')+(cote?' · '+cote:'')+'</div>'+tierBadge+tlmVoteCirclesHtml(a)+'<div class="day-acc-row-bet">Match terminé · score final '+esc(a.final_score||'indisponible')+' · Votes à '+esc(a.minute==null?'minute inconnue':a.minute+'′')+', score '+esc(a.score||'indisponible')+'</div></div>'
           + '<div class="day-acc-row-badge" style="'+badgeStyle+'">'+(win?'✓ Gagné':'✗ Perdu')+'</div>'
           + '</div>';
       }).join('');
-      return '<div class="day-acc-item" data-day-idx="'+idx+'" data-history-day="'+esc(day)+'">'
+      return '<div class="day-acc-item'+(day===new URLSearchParams(location.search).get('day')?' open':'')+'" data-day-idx="'+idx+'" data-history-day="'+esc(day)+'">'
         + '<div class="day-acc-head" onclick="toggleDayAcc('+idx+')">'
         +   '<div class="day-acc-date"><span class="day-acc-caret">▶</span>'+esc(fmtDayLabel(day))+'</div>'
         +   '<div class="day-acc-summary" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+wins+'/'+list.length+' gagnés · '+fmtSignedEur(profit)+'</div>'
@@ -2125,7 +2125,7 @@ function setHomeSection(name){
 }
 document.querySelectorAll('[data-home-section]').forEach(function(tab){tab.addEventListener('click',function(){setHomeSection(tab.getAttribute('data-home-section'));});});
 var tlmHomeSelect=document.getElementById('tlm-home-select');if(tlmHomeSelect)tlmHomeSelect.addEventListener('change',function(){setHomeSection(tlmHomeSelect.value);});
-setHomeSection('live');
+setHomeSection(location.hash==='#history'?'history':'live');
 
 /* ══ PICK GRATUIT DU JOUR ══ */
 async function loadPick(){

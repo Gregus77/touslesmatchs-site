@@ -766,7 +766,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       return;
     }
     pushFeedback('Activation en cours...', true);
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v21-stable-interface-20260912').then(function (reg) {
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v22-history-votes-20260913').then(function (reg) {
       return Notification.requestPermission().then(function (perm) {
         if (perm !== 'granted') { pushFeedback('Notifications refusées (permission navigateur non accordée).', false); return; }
         return get('/api/push/vapid-public-key').then(function (d) {
@@ -1045,6 +1045,7 @@ $("perf-kpis").innerHTML =
       html += '<a class="item" href="'+(a.official_signal_snapshot_id?'/live-ia?fixture='+encodeURIComponent(a.fixture_id||a.fixtureId||a.match_key||''):'#')+'" style="color:inherit;text-decoration:none"><div class="mid">'
         + '<div class="t">' + esc(a.home || a.match || 'Signal Over / Under 2,5') + (a.away ? ' — ' + esc(a.away) : '') + '</div>'
         + '<div class="m">' + esc((a.analysed_at || a.date || "").slice(0, 10)) + ' · ' + esc(a.competition || "") + odd + ' · '+esc(provenance)+'</div>'
+        + appMiniVotes(a) + '<div class="m">Match terminé · score final '+esc(a.final_score||'indisponible')+' · Votes à '+esc(a.minute==null?'minute inconnue':a.minute+'′')+', score '+esc(a.score||'indisponible')+'</div>'
         + '</div>' + b + '</a>';
     });
     $("perf-list").innerHTML = html;
@@ -1145,7 +1146,7 @@ $("perf-kpis").innerHTML =
   // les notifications ne sont pas encore activées. Cela force la récupération
   // des corrections de cache pour tous les utilisateurs Android.
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js?v=tlm-app-v21-stable-interface-20260912')
+    navigator.serviceWorker.register('/sw.js?v=tlm-app-v22-history-votes-20260913')
       .then(function (reg) { return reg.update(); })
       .catch(function () {});
   }
