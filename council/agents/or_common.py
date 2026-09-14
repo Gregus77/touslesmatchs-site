@@ -69,6 +69,9 @@ def analyze_via_openrouter(name, model, date, matches_text, history_text, stats)
         # Retirer les caractères de contrôle qui cassent json.loads
         raw = re.sub(r"[\x00-\x1f]", " ", raw)
         return json.loads(raw.strip())
-    except Exception as e:
-        print(f"[{name}] Error: {e}")
-        return {"recommendation": "NOPICK", "confidence": 0, "reasoning": f"Erreur: {e}"}
+    except Exception as exc:
+        # Les exceptions SDK peuvent contenir en-têtes, corps JSON ou URL avec
+        # jeton. Les logs et le rapport ne conservent que la classe d'échec.
+        category = "parse_error" if isinstance(exc, (json.JSONDecodeError, ValueError)) else "provider_error"
+        print(f"[{name}] Error category: {category}")
+        return {"recommendation": "NOPICK", "confidence": 0, "reasoning": category}

@@ -16,7 +16,7 @@ const Database = require("better-sqlite3");
 process.env.OPENROUTER_PARIS_SCHEDULE = "0";
 process.env.TELEGRAM_BOT_TOKEN = ""; // This test never sends admin alerts.
 
-const DB_FILE = path.join(__dirname, "..", ".tmp_test_ai_guard.db");
+const DB_FILE = path.join(process.env.TEST_TMP_DIR || path.join(__dirname, ".."), ".tmp_test_ai_guard.db");
 let pass = 0, fail = 0;
 
 function assert(cond, label) {
