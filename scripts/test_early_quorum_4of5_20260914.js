@@ -11,6 +11,7 @@ assert(start >= 0 && end > start, 'quorum functions missing');
 const context = {
   CONCILE_AGENT_NAMES: ['A', 'B', 'C', 'D', 'E'],
   CLIENT_OU25_MIN_VOTES: 4,
+  isOu25Bet: bet => /^(Over|Under) 2\.5 buts$/.test(String(bet || '')),
   console: { error() {} },
 };
 vm.createContext(context);
@@ -32,14 +33,16 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
 
 (async () => {
   const seats = Array.from({ length: 5 }, deferred);
+  const progressivelyPersisted = [];
   let finished = false;
-  const pending = context.collectAgentsUntilOu25Quorum(seats.map(row => row.promise));
+  const pending = context.collectAgentsUntilOu25Quorum(seats.map(row => row.promise), result => progressivelyPersisted.push(result));
   pending.then(() => { finished = true; });
   seats[0].resolve(vote('A', 'o2.5'));
   seats[1].resolve(vote('B', 'o2.5'));
   seats[2].resolve(vote('C', 'o2.5'));
   await tick();
   assert.equal(finished, false, '3/5 must remain an intermediate trend');
+  assert.equal(progressivelyPersisted.length, 3, 'each received vote must be persisted before quorum');
   seats[3].resolve(vote('D', 'o2.5'));
   await tick();
   assert.equal(finished, false, 'the immutable snapshot must wait for the fifth bounded seat');
@@ -48,6 +51,23 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.equal(result.early, false);
   assert.equal(result.results.length, 5);
   assert.equal(context.buildOu25VoteSummary(result.results.map(r => ({name:r.name,marches:r._ou25Markets})), result.results).recommended, true);
+  assert.equal(result.results.find(row => row.name === 'E').bet, 'Under 2.5 buts', 'the late contradictory fifth vote must be preserved');
+
+  const terminal = await context.collectAgentsUntilOu25Quorum([
+    Promise.resolve(vote('A','u2.5')),
+    Promise.resolve(vote('B','u2.5')),
+    Promise.resolve({name:'C',failed:true,failure_type:'unavailable'}),
+    Promise.resolve({name:'D',failed:true,failure_type:'parse_error'}),
+    Promise.resolve({name:'E',failed:true,failure_type:'unavailable',abstention:true}),
+  ]);
+  const terminalState = context.buildOu25VoteSummary(
+    terminal.results.filter(r => r._ou25Markets).map(r => ({name:r.name,marches:r._ou25Markets})),
+    terminal.results
+  );
+  assert.equal(terminalState.vote_count, 2);
+  assert.equal(terminalState.recommended, false, 'abstentions and provider errors must not fill quorum');
+  assert.equal(terminalState.votes.find(row => row.agent === 'C').status, 'unavailable');
+  assert.equal(terminalState.votes.find(row => row.agent === 'D').status, 'parse_error');
 
   const rejected = context.buildOu25VoteSummary([
     {name:'A',marches:vote('A','o2.5')._ou25Markets},

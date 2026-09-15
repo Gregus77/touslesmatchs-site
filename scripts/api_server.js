@@ -6765,17 +6765,10 @@ Réponds en JSON pur (pas de markdown):
       // Ne jamais faire voter un agent officiel sous un autre modèle générique :
       // cinq libellés utilisant le même Llama ne sont pas cinq avis indépendants.
       // Les replis OpenRouter ci-dessous conservent un modèle identifié par agent.
-      // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
-      // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
-      // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
-      if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
-      }
-      if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k2" });
-      }
+      // Aucun repli transversal Qwen/Kimi : un siège garde son modèle désigné
+      // ou se termine explicitement indisponible. L'ancien bloc faisait parfois
+      // voter Qwen sous le nom OpenRouter-Luna, puis laissait le vrai siège Qwen
+      // vide ; deux libellés n'auraient alors pas représenté deux IA indépendantes.
       if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       // Ecarte les fournisseurs dont le compte est en panne (401/402/403/429).

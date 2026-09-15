@@ -425,3 +425,6 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Qwen conserve 300 jetons avec le raisonnement désactivé ; Council-GPT5
   conserve 500 jetons avec un effort minimal. Les deux réglages ont été validés
   par une réponse structurée réelle via la passerelle budgétée.
+- Le repli transversal Qwen/Kimi est retiré : Luna ne peut plus appeler Qwen
+  sous un autre nom. Un modèle indisponible produit un état terminal explicite,
+  jamais un vote copié entre deux sièges.

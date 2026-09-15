@@ -25,6 +25,10 @@ assert.match(source, /OpenRouter limité pour ce modèle — aucun coupe-circuit
   'one model-level 429 must not disable every OpenRouter seat');
 assert.match(source, /reasoning: \{ effort: "none" \}/,
   'Qwen must return content within its unchanged normal output limit');
+assert.doesNotMatch(source, /!providers\.length && OPENROUTER_API_KEY[\s\S]{0,400}modelKey: "qwen"/,
+  'a different seat must never fall back to the Qwen model');
+assert.doesNotMatch(source, /!providers\.length && OPENROUTER_API_KEY[\s\S]{0,400}modelKey: "kimi"/,
+  'a different seat must never fall back to the Kimi model');
 
 const currentKey = '42_2026-09-15_30_0-0';
 const context = {
