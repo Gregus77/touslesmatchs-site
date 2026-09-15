@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mon espace — TousLesMatchs</title>
+<title>Connexion — TousLesMatchs</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#12152a">
 <link rel="icon" href="/favicon.ico">
@@ -125,26 +125,15 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260913-auth" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260915-account-v1">
+  <script src="/js/global-header.js?v=20260915-account-v1" defer></script>
 </head>
 <body class="tlm-wow tlm-page-dashboard">
-
-<nav>
-  <a href="/" class="nav-brand">TousLesMatchs</a>
-  <div class="nav-links">
-    <a href="/">Accueil</a>
-    <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span>Live IA</a>
-    <a href="/performances">Performances</a>
-    <a href="/dashboard" style="color:var(--text)">Mon espace</a>
-  </div>
-  <button class="nav-logout" id="nav-logout" style="display:none" onclick="logout()">Déconnexion</button>
-</nav>
 
 <div class="page">
   <!-- Auth (shown when not logged in) — email + code temporaire (OTP) -->
   <div id="auth-section" class="auth-box" style="display:none">
-    <div class="auth-title">Mon espace</div>
+    <div class="auth-title">Connexion</div>
     <div class="auth-sub" id="auth-sub">Entre ton email pour recevoir un code de connexion</div>
     <div class="auth-card">
       <div class="auth-err" id="auth-err"></div>
@@ -168,9 +157,10 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   <!-- Dashboard (shown when logged in) -->
   <div id="dash-section" style="display:none">
     <div class="dash-header">
-      <div class="dash-welcome" id="dash-welcome">Mon espace</div>
+      <div class="dash-welcome" id="dash-welcome">Mon compte</div>
       <div><span class="dash-email" id="dash-email"></span><span class="dash-plan" id="dash-plan"></span><span class="dash-status" id="dash-status"></span></div>
       <div class="dash-renewal" id="dash-renewal" style="display:none"></div>
+      <button class="nav-logout" id="nav-logout" onclick="logout()">Déconnexion</button>
     </div>
 
     <div class="dash-actions" id="dash-actions" style="display:none">
@@ -308,7 +298,7 @@ function logout() {
   token = null;
   document.getElementById('dash-section').style.display = 'none';
   document.getElementById('auth-section').style.display = 'block';
-  document.getElementById('nav-logout').style.display = 'none';
+  setAccountPageTitle(false);
   backToEmailStep();
   if (t) fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + t } }).catch(function(){});
 }
@@ -331,25 +321,42 @@ function fmtDate(d) {
 
 var STATUS_LABELS = { active: 'Actif', expired: 'Expiré', cancelled: 'Résilié', free: '' };
 
+function setAccountPageTitle(connected) {
+  var title = connected ? 'Mon compte' : 'Connexion';
+  var lang = localStorage.getItem('tlm_lang') || 'fr';
+  var translated = window.TLMI18nAuto && typeof window.TLMI18nAuto.translate === 'function'
+    ? window.TLMI18nAuto.translate(title, lang) : title;
+  document.title = translated + ' — TousLesMatchs';
+  document.querySelector('.auth-title').textContent = connected ? '' : translated;
+  document.getElementById('dash-welcome').textContent = connected ? translated : 'Mon compte';
+}
+document.addEventListener('tlm-language-change', function() {
+  setTimeout(function() {
+    setAccountPageTitle(document.getElementById('dash-section').style.display !== 'none');
+  }, 0);
+});
+
 function loadDashboard() {
   document.getElementById('auth-section').style.display = 'none';
-  document.getElementById('dash-section').style.display = 'block';
-  document.getElementById('nav-logout').style.display = 'block';
+  document.getElementById('dash-section').style.display = 'none';
 
   fetch('/api/auth/dashboard-data', { headers: { 'Authorization': 'Bearer ' + token } })
   .then(function(r) { return r.json(); })
   .then(function(d) {
     if (!d.ok) { logout(); return; }
+    document.getElementById('dash-section').style.display = 'block';
+    setAccountPageTitle(true);
     document.getElementById('dash-email').textContent = d.email;
-    var plan = d.plan || 'free';
-    var status = d.status || 'free';
+    var plan = d.plan;
+    var status = d.status;
     var isLegacyPaid = plan === 'standard' || plan === 'elite' || plan === 'vip';
     var isPaidActive = plan !== 'free' && status === 'active';
 
     var planEl = document.getElementById('dash-plan');
-    var planLabel = plan === 'free' ? 'Gratuit' : 'Premium';
-    planEl.textContent = planLabel;
-    planEl.className = 'dash-plan ' + (isPaidActive ? 'premium' : 'standard');
+    var planLabels = {free:'Gratuit',standard:'Standard',premium:'Premium',elite:'Elite',vip:'VIP'};
+    planEl.textContent = planLabels[plan] || '';
+    planEl.className = 'dash-plan ' + (plan === 'free' ? 'free' : isPaidActive ? 'premium' : 'standard');
+    planEl.style.display = planEl.textContent ? 'inline-block' : 'none';
 
     var statusEl = document.getElementById('dash-status');
     if (STATUS_LABELS[status]) {
@@ -500,6 +507,7 @@ if (token) {
   loadDashboard();
 } else {
   document.getElementById('auth-section').style.display = 'block';
+  setAccountPageTitle(false);
 }
 
 // Enter key support

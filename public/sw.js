@@ -2,15 +2,15 @@
  * Les pages HTML et les donnees sportives utilisent le reseau en priorite.
  * Le cache reste uniquement un secours hors ligne.
  */
-const VERSION = "tlm-app-v22-history-votes-20260913";
+const VERSION = "tlm-app-v23-account-20260915";
 const SHELL_CACHE = `${VERSION}-shell`;
 const DATA_CACHE = `${VERSION}-data`;
 
 const SHELL_ASSETS = [
   "/app",
   "/app.html",
-  "/css/global-header.css?v=20260912-v2",
-  "/js/global-header.js?v=20260912-v2",
+  "/css/global-header.css?v=20260915-account-v1",
+  "/js/global-header.js?v=20260915-account-v1",
   "/js/match-lifecycle.js?v=20260906",
   "/manifest.webmanifest",
   "/favicon.ico",

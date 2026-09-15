@@ -1007,8 +1007,8 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   .tlm-hero-copy{display:none}.tlm-hero-grid{display:block;min-height:0}.tlm-live-hero{padding-top:16px!important}.tlm-hero-proof{display:none!important}
 }
 </style>
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260913-auth" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260915-account-v1">
+  <script src="/js/global-header.js?v=20260915-account-v1" defer></script>
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1905,7 +1905,7 @@ window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive()
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v22-history-votes-20260913').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v23-account-20260915').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -2270,7 +2270,7 @@ async function loadPremiumYesterday(){
 })();
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
-<script src="/js/i18n.js?v=20260907-integral6" defer></script>
+<script src="/js/i18n.js?v=20260915-account-v1" defer></script>
 <script>
 function toggleLangMenu(){ document.getElementById('nav-lang-menu').classList.toggle('open'); }
 function pickLang(l){ i18n.setLang(l); document.getElementById('nav-lang-menu').classList.remove('open'); }
