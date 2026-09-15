@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Historique des signaux : pourquoi les compteurs diffèrent ? | TousLesMatchs</title>
-  <meta name="description" content="Comprendre un compteur gagné/perdu : période, signaux envoyés, doublons, résultats en attente et cotes nécessaires pour parler de rentabilité.">
+  <meta name="description" content="Comprendre un compteur gagné/perdu, une série de pertes et les contrôles nécessaires avant d’évaluer un historique de signaux.">
   <link rel="canonical" href="https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Historique des signaux : pourquoi les compteurs diffèrent ?">
-  <meta property="og:description" content="Les règles simples pour lire un taux de réussite sans mélanger analyses, essais à blanc et signaux envoyés.">
+  <meta property="og:description" content="Les règles pour lire un taux de réussite ou une série de pertes sans mélanger essais à blanc, signaux envoyés et résultats financiers.">
   <meta property="og:url" content="https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/">
   <link rel="stylesheet" href="/css/guides.css?v=20260908">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"Article","headline":"Historique des signaux : pourquoi les compteurs diffèrent ?","description":"Comprendre un compteur gagné/perdu : période, signaux envoyés, doublons, résultats en attente et cotes nécessaires pour parler de rentabilité.","inLanguage":"fr","author":{"@type":"Organization","name":"TousLesMatchs"},"publisher":{"@type":"Organization","name":"TousLesMatchs"},"mainEntityOfPage":"https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/"}
+  {"@context":"https://schema.org","@type":"Article","headline":"Historique des signaux : pourquoi les compteurs diffèrent ?","description":"Comprendre un compteur gagné/perdu, une série de pertes et les contrôles nécessaires avant d’évaluer un historique de signaux.","inLanguage":"fr","author":{"@type":"Organization","name":"TousLesMatchs"},"publisher":{"@type":"Organization","name":"TousLesMatchs"},"mainEntityOfPage":"https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/"}
   </script>
 </head>
 <body>
@@ -28,7 +28,7 @@
     <article>
       <p class="eyebrow">RÉSULTATS · GUIDE</p>
       <h1>Historique des signaux : pourquoi les compteurs diffèrent ?</h1>
-      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-10">10 septembre 2026</time> · Français</p>
+      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-10">10 septembre 2026</time> · Complété le <time datetime="2026-09-15">15 septembre 2026</time> · Français</p>
       <p><strong>Un compteur « 1 gagné sur 1 » ne veut pas forcément dire qu’une seule analyse a été correcte.</strong> Il peut compter uniquement les signaux envoyés, résolus et compris dans une période précise. Mais si plusieurs signaux confirmés dans ce même périmètre ont un résultat final et qu’un seul apparaît, l’historique est incomplet.</p>
       <p>Ce guide répond à une question réelle, reformulée sans information personnelle : « Vous avez indiqué plusieurs matchs gagnants aujourd’hui ; pourquoi le site n’en affiche-t-il qu’un ? » L’objectif est de savoir ce qu’il faut comparer avant de conclure.</p>
 
@@ -70,6 +70,24 @@
       <p><strong>Exemple fictif :</strong> deux résultats gagnés, un perdu et un en attente donnent un taux provisoire de 66,7 % sur trois résultats résolus, avec un quatrième encore ouvert. Afficher seulement « 2/3 » sans signaler l’élément en attente cache une partie du contexte.</p>
       <p>Un taux sur trois résultats est descriptif, pas une promesse pour la suite. Pour comparer des périodes ou des marchés, il faut montrer l’effectif, les dates et les mêmes règles d’inclusion. Une série <a href="/guides/btts-ou-over-25/">BTTS</a> ne doit pas être ajoutée à une série Over/Under sans l’indiquer.</p>
 
+      <h2 id="serie-de-pertes">« Je n’ai que des pertes » : est-ce normal ?</h2>
+      <p><strong>Une courte série de pertes peut se produire, mais elle ne prouve ni que tout fonctionne, ni que le système est fiable.</strong> Le mot « normal » recouvre deux questions différentes : cette suite est-elle possible dans un phénomène incertain, et l’historique affiché correspond-il exactement aux signaux reçus ? Il faut répondre aux deux séparément.</p>
+      <p>Commencez par remplacer l’impression par un décompte vérifiable : « N pertes parmi N signaux envoyés et résolus, entre telle date et telle date ». Trois pertes sur trois résultats donnent bien 0 % de réussite observée, mais cet effectif reste très sensible au résultat suivant. Il ne permet pas, à lui seul, d’estimer une performance durable.</p>
+      <p>Dans un modèle statistique simplifié à deux issues, la loi binomiale décrit le nombre de succès sur N essais lorsque la probabilité reste fixe. La <a href="https://www.itl.nist.gov/div898/handbook/eda/section3/eda366i.htm">documentation du NIST sur la loi binomiale</a> précise cette hypothèse. Des analyses football réelles peuvent différer par le championnat, la minute, le score, la version de l’IA et les données disponibles : appliquer aveuglément une probabilité unique serait donc trompeur. Ce modèle explique pourquoi de petits échantillons fluctuent ; il ne valide pas un service.</p>
+      <table>
+        <caption>Contrôles à faire avant d’interpréter une série de pertes</caption>
+        <thead><tr><th scope="col">Question</th><th scope="col">Preuve attendue</th></tr></thead>
+        <tbody>
+          <tr><td>Qu’avez-vous réellement reçu ?</td><td>Une confirmation d’envoi, la destination et l’heure pour chaque signal</td></tr>
+          <tr><td>Quel était l’instant analysé ?</td><td>Minute, score et direction figés au moment de l’envoi</td></tr>
+          <tr><td>Le résultat est-il correct ?</td><td>Score final vérifié et règle de règlement du marché</td></tr>
+          <tr><td>Les lignes sont-elles comparables ?</td><td>Même marché, aucune répétition du même signal, essais à blanc séparés</td></tr>
+          <tr><td>Un bilan financier est-il affiché ?</td><td>Cote enregistrée au moment pertinent et unité identique sur chaque ligne</td></tr>
+        </tbody>
+      </table>
+      <p>Une anomalie doit être recherchée si un score final est faux, si une sélection a été modifiée après l’événement, si une même décision est comptée plusieurs fois ou si une perte réellement envoyée disparaît du bilan. À l’inverse, une suite défavorable dans un registre complet peut être réelle : elle ne doit pas être effacée ni présentée comme impossible.</p>
+      <p>Une série de pertes ne doit jamais conduire à augmenter la somme engagée pour « se refaire ». L’<a href="https://anj.fr/index.php/zone-risques-la-nouvelle-campagne-de-lautorite-nationale-des-jeux-2026">Autorité nationale des jeux</a> identifie le fait de rejouer pour combler une perte parmi les principaux signaux d’un comportement à risque. Faire une pause, conserver ses limites et demander de l’aide si le contrôle devient difficile protège davantage qu’une nouvelle analyse.</p>
+
       <h2>Sans cote enregistrée, pas de rentabilité mesurable</h2>
       <p>La justesse d’une sélection et son résultat financier sont deux mesures différentes. Pour calculer une simulation, il faut connaître la cote réellement enregistrée au moment concerné et appliquer la même unité à chaque ligne.</p>
       <p><strong>Exemple fictif avec cotes enregistrées :</strong> deux résultats gagnés à 1,60 et 1,70, puis un perdu, avec 10 unités par sélection. Le bilan théorique est +6 +7 −10 = +3 unités. Le taux de réussite est 66,7 %, mais le rendement théorique est +3 ÷ 30 = 10 %. Ces nombres décrivent uniquement cet exemple.</p>
@@ -94,7 +112,7 @@
         <p>Comparez toujours le même périmètre. Les essais à blanc évaluent le moteur ; les signaux envoyés évaluent le service reçu. Sans cote enregistrée, un historique peut mesurer la justesse, pas la rentabilité.</p>
         <a href="/performances">Consulter les résultats</a><a href="/guides/comprendre-consensus-ia/">Comprendre le consensus IA</a>
       </aside>
-      <p class="meta">Méthode : contenu préparé avec assistance IA à partir d’une question réelle reformulée. Les calculs et situations sont fictifs ; aucune performance TousLesMatchs n’est affirmée. Source primaire consultée le 10 septembre 2026.</p>
+      <p class="meta">Méthode : contenu préparé avec assistance IA à partir de questions réelles reformulées. Les calculs et situations sont fictifs ; aucune performance TousLesMatchs n’est affirmée. Documentation Telegram consultée le 10 septembre 2026 ; sources primaires NIST et ANJ revérifiées le 15 septembre 2026.</p>
     </article>
   </main>
   <footer>
