@@ -6401,13 +6401,18 @@ function providerEcarte(host, claimBalanceProbe = false) {
   }
   if (Date.now() - _providerHealthCache.at > 60000) {
     try {
-      const rows = db.prepare("SELECT host, disabled_until, last_error, updated_at, credential_fingerprint FROM provider_health WHERE disabled_until IS NOT NULL").all();
+      const rows = db.prepare("SELECT host, last_status, disabled_until, last_error, updated_at, credential_fingerprint FROM provider_health WHERE disabled_until IS NOT NULL").all();
       const today = new Date().toISOString().slice(0, 10);
       _providerHealthCache.hs = Object.fromEntries(rows
         // Un plafond journalier OpenRouter n'est pas une panne de clé pendant
         // 24h : au changement de jour UTC, la clé rechargée doit être retestée.
         // Les 401/402 et 403 d'abonnement restent, eux, écartés normalement.
         .filter(r => r.credential_fingerprint === providerCredentialFingerprint(r.host))
+        // Un 429 reçu par un modèle OpenRouter n'est pas une panne globale :
+        // lors de l'incident du 14/09, DeepSeek a reçu 429 tandis que quatre
+        // autres modèles répondaient sur le même hôte. Les budgets persistants
+        // et l'unique tentative par snapshot restent opposables.
+        .filter(r => !(r.host === "openrouter.ai" && Number(r.last_status) === 429))
         .filter(r => !(/daily limit/i.test(String(r.last_error || "")) && String(r.updated_at || "").slice(0, 10) < today))
         .map(r => [r.host, r.disabled_until]));
       _providerHealthCache.at = Date.now();
@@ -6418,6 +6423,10 @@ function providerEcarte(host, claimBalanceProbe = false) {
 }
 function marquerProvider(host, status, detail) {
   if (!host) return;
+  if (host === "openrouter.ai" && Number(status) === 429) {
+    console.error("[provider-health] OpenRouter limité pour ce modèle — aucun coupe-circuit global ouvert");
+    return;
+  }
   const message = String(detail || "");
   const daily = /daily limit/i.test(message);
   const insufficientBalance = status === 402 && /insufficient|balance|credit|solde/i.test(message);
@@ -6596,6 +6605,10 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       icon: "🌟",
       useOpenRouter,
       openRouterModelKey: "qwen",
+      // Qwen consommait les 300 jetons en raisonnement puis renvoyait un
+      // contenu vide. Vérifié en production : le même plafond avec le
+      // raisonnement désactivé produit bien le bulletin JSON O/U demandé.
+      reasoning: { effort: "none" },
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
@@ -6828,7 +6841,7 @@ Réponds en JSON pur (pas de markdown):
             (match_key, agent_name, model, host, sport, competition, minute,
              tentative, debut_at, duree_ms, http_status, issue, detail, repli)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
-              _fallbackMatchKey, agCfg.name, String(pv?.model || ""),
+              getPredictionSnapshotKey(match), agCfg.name, String(pv?.model || ""),
               pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || ""),
               String(match.sport || "Football"), String(match.competition || match.league || ""),
               parseLiveMinuteValue(match.minute) ?? null,
@@ -6876,6 +6889,7 @@ Réponds en JSON pur (pas de markdown):
             } else {
               requestBody.temperature = temp;
             }
+            if (agCfg.reasoning) requestBody.reasoning = agCfg.reasoning;
             resp = await httpPost(pv.url, requestBody, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
@@ -13277,6 +13291,7 @@ app.delete("/admin/set-score", (req, res) => {
 // multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
 function getLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
+  const currentSnapshotKey = getPredictionSnapshotKey(match);
   const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= CLIENT_OU25_CLIENT_MAX_MINUTE ? "open" : "closed";
   const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
     agent,
@@ -13302,15 +13317,26 @@ function getLiveOu25VoteState(match) {
     if (typeof officialSnapshots === 'undefined') throw new Error('official snapshot module unavailable');
     const immutableState = officialSnapshots.stateForMatch(db, match);
     const snapshot = immutableState.snapshot;
-    if (snapshot) {
-      const votes = snapshot.votes.slice(0, 5).map((vote, index) => ({
-        agent: vote.agent || CONCILE_AGENT_NAMES[index],
-        direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
-        label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
-        confidence: vote.confidence ?? null,
-        status: snapshot.seat_statuses[index] || vote.status || 'pending',
-        updated_at: vote.updated_at || snapshot.created_at,
-      }));
+    // Un ancien snapshot de la même rencontre ne doit pas masquer les votes
+    // déjà persistés d'une nouvelle tranche/score pendant que les cinq appels
+    // bornés se terminent. Un signal officiel, lui, reste toujours prioritaire.
+    if (snapshot && (immutableState.kind === 'official' || snapshot.id === currentSnapshotKey)) {
+      const votes = snapshot.votes.slice(0, 5).map((vote, index) => {
+        const status = snapshot.seat_statuses[index] || vote.status || 'pending';
+        const reason = vote.reason
+          || (status === 'unavailable' ? 'Fournisseur indisponible ou coupe-circuit actif.'
+            : status === 'empty' ? 'Réponse reçue sans vote O/U exploitable.'
+              : status === 'parse_error' ? 'Réponse IA illisible.'
+                : status === 'rejected_statistical' ? 'Vote écarté par le filtre statistique.' : null);
+        return {
+          agent: vote.agent || CONCILE_AGENT_NAMES[index],
+          direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
+          label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
+          confidence: vote.confidence ?? null,
+          status, reason,
+          updated_at: vote.updated_at || snapshot.created_at,
+        };
+      });
       const overCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'over').length;
       const underCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'under').length;
       const official = immutableState.kind === 'official';
@@ -13327,6 +13353,7 @@ function getLiveOu25VoteState(match) {
         snapshot_score: `${snapshot.score_home}-${snapshot.score_away}`,
         red_cards: { home: snapshot.red_cards_home, away: snapshot.red_cards_away },
         votes,
+        analysis_state: votes.some(vote => vote.status === 'pending') ? 'running' : 'completed',
         official,
         official_signal_snapshot_id: official ? snapshot.id : null,
         snapshot_id: snapshot.id,
@@ -13379,7 +13406,19 @@ function getLiveOu25VoteState(match) {
     // Ne jamais fabriquer un scrutin en mélangeant les sièges de plusieurs
     // observations. Après 45', on conserve le dernier snapshot réellement
     // enregistré, avec son horodatage, même si le match continue d'avancer.
-    const latestSnapshotKey = String(rows[0]?.match_key || "");
+    const callRows = db.prepare(`
+      SELECT agent_name,http_status,issue,vote_produit,created_at
+      FROM agent_calls
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+      ORDER BY id DESC
+    `).all(currentSnapshotKey, ...CONCILE_AGENT_NAMES);
+    const latestCallByAgent = new Map();
+    for (const row of callRows) {
+      if (!latestCallByAgent.has(row.agent_name)) latestCallByAgent.set(row.agent_name, row);
+    }
+    const currentRows = rows.filter(row => String(row.match_key || "") === currentSnapshotKey);
+    const latestSnapshotKey = currentRows.length || callRows.length
+      ? currentSnapshotKey : String(rows[0]?.match_key || "");
     const snapshotRows = latestSnapshotKey
       ? rows.filter((row) => String(row.match_key || "") === latestSnapshotKey)
       : rows;
@@ -13396,7 +13435,24 @@ function getLiveOu25VoteState(match) {
         : /^Under 2[.,]5 buts$/i.test(bet)
           ? "under"
           : null;
-      if (!direction) return emptyVotes.find((vote) => vote.agent === agent);
+      if (!direction) {
+        const call = latestCallByAgent.get(agent);
+        if (!call) return emptyVotes.find((vote) => vote.agent === agent);
+        const httpStatus = Number(call.http_status || 0);
+        const issue = String(call.issue || "");
+        const status = issue === "ok" || issue === "vide" ? "empty"
+          : issue === "illisible" ? "parse_error"
+            : "unavailable";
+        const reason = httpStatus === 401 ? "Authentification fournisseur refusée."
+          : httpStatus === 402 ? "Crédit fournisseur indisponible."
+            : httpStatus === 429 ? "Fournisseur temporairement limité."
+              : issue === "timeout" ? "Délai fournisseur dépassé."
+                : status === "empty" ? "Réponse reçue sans vote O/U exploitable."
+                  : status === "parse_error" ? "Réponse IA illisible."
+                    : "Fournisseur indisponible ou coupe-circuit actif.";
+        return { agent, direction: null, label: null, confidence: null,
+          status, reason, updated_at: call.created_at || null };
+      }
       return {
         agent,
         direction,
@@ -13429,6 +13485,9 @@ function getLiveOu25VoteState(match) {
       snapshot_minute: snapshotStateHit ? Number(snapshotStateHit[1]) : null,
       snapshot_score: snapshotScore,
       votes,
+      analysis_state: (currentRows.length || callRows.length)
+        ? (votes.some(vote => vote.status === "pending") ? "running" : "completed")
+        : "not_started",
     };
   } catch (e) {
     console.error("[live-ou25-votes]", e.message);
@@ -13479,9 +13538,11 @@ function homepageLiveMatch(match, canReveal) {
     official_odd: canReveal ? (raw.real_odd ?? null) : null,
     rule_version: raw.rule_version || null,
     outcome: raw.outcome || null,
+    analysis_state: raw.analysis_state || null,
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
+      reason: v.reason || null,
       updated_at: v.updated_at || null,
       direction: canReveal ? v.direction : null,
       label: canReveal ? v.label : null,
@@ -13620,7 +13681,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const visibility = {
         client_product_eligible: clientProductEligible,
         client_display_eligible: isClientOu25MatchEligible(m, false),
-        analysis_started: Number(ou25.vote_count || 0) > 0,
+        analysis_started: Number(ou25.vote_count || 0) > 0 || ['running','completed'].includes(ou25.analysis_state),
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
         signal_delivered: telegramDeliveryProven,
@@ -13628,7 +13689,10 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         diffusion_block: deliveredAnalysis?.diffusion_block || null,
         delivery_status: telegramDeliveryProven ? 'diffuse' : 'non_diffuse',
       };
-      const analysisExclusionReason = m.data_notice || liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
+      const allSeatsFinishedWithoutVote = ou25.analysis_state === 'completed' && Number(ou25.vote_count || 0) === 0;
+      const analysisExclusionReason = liveAnalysisNotice(m)
+        || (allSeatsFinishedWithoutVote ? 'Analyse terminée : aucun vote IA exploitable reçu.' : null)
+        || m.analysis_exclusion_reason || m.data_notice || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m)
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)

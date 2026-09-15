@@ -1731,7 +1731,8 @@ function tlmVoteCirclesHtml(m){
     var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
     var mark=voted?(state.locked?'?':direction==='over'?'O':direction==='under'?'U':'?'):String(index+1);
     var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'');
-    var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote masqué':direction==='over'?'Over':'Under'):'sans réponse');
+    var failure=slot&&slot.reason||({unavailable:'fournisseur indisponible',empty:'réponse sans vote exploitable',parse_error:'réponse illisible',rejected_statistical:'vote écarté statistiquement'}[slot&&slot.status])||'vote en attente';
+    var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote enregistré, direction réservée à Premium':direction==='over'?'Over':'Under'):failure);
     return '<span class="'+cls+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+mark+'</span>';
   }).join('')+'</div>';
 }

@@ -33,10 +33,12 @@ def _chat(model, messages):
         return _get_client().chat.completions.create(
             model=model, messages=messages, temperature=0.3, max_tokens=500,
             response_format={"type": "json_object"},
+            extra_body={"reasoning": {"effort": "minimal"}},
         )
     except Exception:
         return _get_client().chat.completions.create(
             model=model, messages=messages, temperature=0.3, max_tokens=500,
+            extra_body={"reasoning": {"effort": "minimal"}},
         )
 
 

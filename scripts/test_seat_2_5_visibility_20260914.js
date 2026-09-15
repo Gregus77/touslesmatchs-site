@@ -29,8 +29,8 @@ const homeState = homeContext.heroOu25(match);
 const homeHtml = homeContext.tlmVoteCirclesHtml(match);
 assert.equal(homeState.slots[1].status, 'voted');
 assert.equal(homeState.slots[4].status, 'voted');
-assert.match(homeHtml, /IA 2 : vote masqué/);
-assert.match(homeHtml, /IA 5 : vote masqué/);
+assert.match(homeHtml, /IA 2 : vote enregistré, direction réservée à Premium/);
+assert.match(homeHtml, /IA 5 : vote enregistré, direction réservée à Premium/);
 assert.doesNotMatch(homeHtml, /IA (2|5) : sans réponse/);
 
 const appContext = {
@@ -47,5 +47,20 @@ assert.equal(appState.slots[1].status, 'voted');
 assert.equal(appState.slots[4].status, 'voted');
 assert.match(appHtml, />\?<[\s\S]*>\?</);
 assert.doesNotMatch(appHtml, /IA (2|5) : en attente/);
+
+const partialMatch = { ou25: { votes: [
+  votes[0],
+  { agent: 'DeepSeek-V3', status: 'unavailable', direction: null, reason: 'Fournisseur temporairement limité.' },
+  { agent: 'Mistral-Large', status: 'pending', direction: null },
+  votes[3],
+  { agent: 'OpenRouter-Qwen', status: 'empty', direction: null },
+], vote_count: 2, consensus_count: 1, locked: true, window_status: 'open' } };
+const partialHome = homeContext.tlmVoteCirclesHtml(partialMatch);
+const partialApp = appContext.appMiniVotes(partialMatch);
+assert.match(partialHome, /IA 2 : Fournisseur temporairement limité\./);
+assert.match(partialHome, /IA 5 : réponse sans vote exploitable/);
+assert.match(partialApp, /IA 2 : Fournisseur temporairement limité\./);
+assert.match(partialApp, /IA 5 : réponse sans vote exploitable/);
+assert.match(partialApp, />2\/5 IA</);
 
 console.log('PASS UI: persisted voted states for seats 2 and 5 render on site and PWA without exposing locked directions');

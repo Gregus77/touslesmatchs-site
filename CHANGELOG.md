@@ -412,3 +412,16 @@ La route historique vérifie la session Premium côté serveur et transmet les c
   journalisées par catégorie sans corps JSON ni identifiant sensible.
 - `backup-db.sh` ne supprime plus aucune ancienne sauvegarde automatiquement ;
   l’espace disque est contrôlé avant chaque nouveau `.backup` cohérent.
+
+## 2026-09-15 — [Codex] Votes partiels et sièges Qwen/GPT-5
+
+- Les tentatives IA utilisent désormais la même clé de snapshot que les votes,
+  ce qui arrête les relances 0/5 d'un état de match déjà épuisé.
+- Un 429 propre à un modèle OpenRouter ne coupe plus les quatre autres modèles ;
+  les plafonds globaux, quotidiens et par snapshot restent inchangés.
+- Chaque bulletin persisté devient visible immédiatement sur le site et la PWA,
+  sans attendre le cinquième appel. Les échecs affichent leur catégorie réelle ;
+  seul un scrutin final à quatre voix concordantes peut produire un signal.
+- Qwen conserve 300 jetons avec le raisonnement désactivé ; Council-GPT5
+  conserve 500 jetons avec un effort minimal. Les deux réglages ont été validés
+  par une réponse structurée réelle via la passerelle budgétée.

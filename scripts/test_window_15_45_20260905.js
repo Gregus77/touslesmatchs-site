@@ -21,6 +21,7 @@ const ctx = vm.createContext({
   leagueTier: () => 'trusted_major', leagueHaystack: () => 'Ligue 1 France',
   isMatchDecided: () => false, CONCILE_AGENT_NAMES: ['A','B','C','D','E'],
   CLIENT_OU25_MIN_VOTES: 4,
+  getPredictionSnapshotKey: () => 'test_snapshot',
   db: {prepare: () => ({all: () => []})}, console,
 });
 vm.runInContext(constant, ctx);
