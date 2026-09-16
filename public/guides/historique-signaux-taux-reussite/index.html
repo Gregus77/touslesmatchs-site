@@ -4,15 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Historique des signaux : pourquoi les compteurs diffèrent ? | TousLesMatchs</title>
-  <meta name="description" content="Comprendre un compteur gagné/perdu, une série de pertes et les contrôles nécessaires avant d’évaluer un historique de signaux.">
+  <meta name="description" content="Comprendre pourquoi analyses et livraisons diffèrent, lire une série de pertes et vérifier un historique de signaux.">
   <link rel="canonical" href="https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Historique des signaux : pourquoi les compteurs diffèrent ?">
-  <meta property="og:description" content="Les règles pour lire un taux de réussite ou une série de pertes sans mélanger essais à blanc, signaux envoyés et résultats financiers.">
+  <meta property="og:description" content="Les règles pour comparer analyses, livraisons, série de pertes et résultats sans mélanger essais à blanc et signaux envoyés.">
   <meta property="og:url" content="https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/">
   <link rel="stylesheet" href="/css/guides.css?v=20260908">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"Article","headline":"Historique des signaux : pourquoi les compteurs diffèrent ?","description":"Comprendre un compteur gagné/perdu, une série de pertes et les contrôles nécessaires avant d’évaluer un historique de signaux.","inLanguage":"fr","author":{"@type":"Organization","name":"TousLesMatchs"},"publisher":{"@type":"Organization","name":"TousLesMatchs"},"mainEntityOfPage":"https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/"}
+  {"@context":"https://schema.org","@type":"Article","headline":"Historique des signaux : pourquoi les compteurs diffèrent ?","description":"Comprendre pourquoi analyses et livraisons diffèrent, lire une série de pertes et vérifier un historique de signaux.","inLanguage":"fr","datePublished":"2026-09-10","dateModified":"2026-09-16","author":{"@type":"Organization","name":"TousLesMatchs"},"publisher":{"@type":"Organization","name":"TousLesMatchs"},"mainEntityOfPage":"https://www.touslesmatchs.com/guides/historique-signaux-taux-reussite/"}
   </script>
 </head>
 <body>
@@ -28,7 +28,7 @@
     <article>
       <p class="eyebrow">RÉSULTATS · GUIDE</p>
       <h1>Historique des signaux : pourquoi les compteurs diffèrent ?</h1>
-      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-10">10 septembre 2026</time> · Complété le <time datetime="2026-09-15">15 septembre 2026</time> · Français</p>
+      <p class="meta">TousLesMatchs · Préparé le <time datetime="2026-09-10">10 septembre 2026</time> · Complété le <time datetime="2026-09-16">16 septembre 2026</time> · Français</p>
       <p><strong>Un compteur « 1 gagné sur 1 » ne veut pas forcément dire qu’une seule analyse a été correcte.</strong> Il peut compter uniquement les signaux envoyés, résolus et compris dans une période précise. Mais si plusieurs signaux confirmés dans ce même périmètre ont un résultat final et qu’un seul apparaît, l’historique est incomplet.</p>
       <p>Ce guide répond à une question réelle, reformulée sans information personnelle : « Vous avez indiqué plusieurs matchs gagnants aujourd’hui ; pourquoi le site n’en affiche-t-il qu’un ? » L’objectif est de savoir ce qu’il faut comparer avant de conclure.</p>
 
@@ -55,8 +55,26 @@
         </tbody>
       </table>
       <p>Une sélection correcte en essai à blanc reste utile pour la recherche, mais elle ne devient pas rétroactivement un signal client. À l’inverse, une perte envoyée ne doit pas disparaître parce qu’une analyse ultérieure du même match a changé de direction.</p>
-      <p>Pour un message texte envoyé par un bot Telegram, l’API officielle renvoie le message transmis en cas de succès. L’identifiant et la destination de cette réponse peuvent servir de preuve technique de livraison. Une tentative sans confirmation ne doit pas être comptée comme un envoi certain. <a href="https://core.telegram.org/bots/api#sendmessage">Source : documentation officielle Telegram, consultée le 10 septembre 2026</a>.</p>
+      <p>Pour un message texte envoyé par un bot Telegram, l’API officielle renvoie le message transmis en cas de succès. L’identifiant et la destination de cette réponse peuvent servir de preuve technique de livraison. Une tentative sans confirmation ne doit pas être comptée comme un envoi certain. <a href="https://core.telegram.org/bots/api#sendmessage">Source : documentation officielle Telegram, revérifiée le 16 septembre 2026</a>.</p>
       <p>Pour comprendre toute la chaîne, consultez aussi <a href="/guides/matchs-live-sans-signal/">pourquoi un match en direct peut apparaître sans signal</a>.</p>
+
+      <h2 id="analyses-livraisons">Pourquoi y a-t-il plus d’analyses que de livraisons ?</h2>
+      <p><strong>Parce qu’une analyse est une observation du moteur, tandis qu’une livraison est un message effectivement transmis à une destination définie.</strong> Cette question vient d’un rapport technique partagé par un lecteur ; elle est reformulée ici sans reprendre ses chiffres ni ses données privées.</p>
+      <p>Le même match peut être réexaminé plusieurs fois en direct. Une analyse peut aussi rester en essai à blanc, être incomplète, ne pas atteindre les règles annoncées ou devenir obsolète après un changement de score. Dans ces cas, elle peut compter dans l’activité technique sans devenir un signal envoyé. L’écart n’est donc pas, à lui seul, une panne ; il ne prouve pas non plus la qualité du filtrage.</p>
+      <table>
+        <caption>Lire le passage de l’analyse à la livraison</caption>
+        <thead><tr><th scope="col">Étape</th><th scope="col">Question vérifiable</th><th scope="col">Preuve utile</th></tr></thead>
+        <tbody>
+          <tr><td>Analyse lancée</td><td>Le moteur a-t-il réellement traité ce match à cet instant ?</td><td>Identifiant, heure, score et minute de référence</td></tr>
+          <tr><td>Réponse exploitable</td><td>Les données et les avis nécessaires étaient-ils présents ?</td><td>État des données, réponses et absences conservées</td></tr>
+          <tr><td>Décision</td><td>Le candidat a-t-il été retenu ou écarté ?</td><td>Décision et motif de non-diffusion horodatés</td></tr>
+          <tr><td>Envoi demandé</td><td>Le système a-t-il tenté une diffusion réelle plutôt qu’un essai à blanc ?</td><td>Mode d’exécution et destination prévue</td></tr>
+          <tr><td>Livraison confirmée</td><td>La plateforme a-t-elle accepté le message ?</td><td>Destination, heure et identifiant du message retourné</td></tr>
+        </tbody>
+      </table>
+      <p>Pour comparer deux compteurs, il faut utiliser la même fenêtre horaire, le même fuseau, les mêmes destinations et la même unité. « 24 dernières heures » n’est pas toujours équivalent à « aujourd’hui ». Il faut aussi savoir si le nombre d’analyses compte les passages successifs d’un match, alors que les livraisons sont dédoublonnées par signal.</p>
+      <p>Un succès de l’appel <code>sendMessage</code> renvoie un objet <code>Message</code> selon la <a href="https://core.telegram.org/bots/api#sendmessage">documentation officielle de l’API Telegram</a>. Cela prouve l’acceptation technique du message dans la conversation ciblée, pas sa lecture par chaque membre. Une tentative, une alerte de supervision ou un essai à blanc ne doit donc pas être présenté comme une livraison client confirmée.</p>
+      <p>Enfin, le rapport « livraisons ÷ analyses » n’est ni un taux de réussite sportive ni une rentabilité. Pour mesurer la justesse, il faut attendre les résultats des signaux envoyés. Pour parler de résultat financier, il faut en plus une cote enregistrée au moment pertinent.</p>
 
       <h2>Un match ne doit pas être compté plusieurs fois</h2>
       <p>Une rencontre live peut être analysée à plusieurs instants. Ces captures successives servent au suivi, mais elles ne sont pas plusieurs événements indépendants. Pour l’historique client, l’unité utile est généralement une sélection effectivement envoyée : rencontre, marché, direction, destination et instant d’envoi.</p>
@@ -112,7 +130,7 @@
         <p>Comparez toujours le même périmètre. Les essais à blanc évaluent le moteur ; les signaux envoyés évaluent le service reçu. Sans cote enregistrée, un historique peut mesurer la justesse, pas la rentabilité.</p>
         <a href="/performances">Consulter les résultats</a><a href="/guides/comprendre-consensus-ia/">Comprendre le consensus IA</a>
       </aside>
-      <p class="meta">Méthode : contenu préparé avec assistance IA à partir de questions réelles reformulées. Les calculs et situations sont fictifs ; aucune performance TousLesMatchs n’est affirmée. Documentation Telegram consultée le 10 septembre 2026 ; sources primaires NIST et ANJ revérifiées le 15 septembre 2026.</p>
+      <p class="meta">Méthode : contenu préparé avec assistance IA à partir de questions réelles reformulées. Les calculs et situations sont fictifs ; aucune performance TousLesMatchs n’est affirmée. Documentation Telegram revérifiée le 16 septembre 2026 ; sources primaires NIST et ANJ revérifiées le 15 septembre 2026.</p>
     </article>
   </main>
   <footer>
