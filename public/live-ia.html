@@ -864,7 +864,7 @@ function renderLiveOu25Details(m) {
     else reason = "Les cinq IA n’ont pas encore enregistré de vote exploitable.";
   }
   var seats = state.slots.map(function(slot, i) {
-    var voted = slot && slot.status === "voted" && (slot.direction === "over" || slot.direction === "under");
+    var voted = slot && slot.status === "voted";
     var dir = voted&&!state.locked ? slot.direction : "";
     var shortLabel = voted ? (state.locked ? "?" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : String(i + 1);
     var choice = voted ? (state.locked ? "Vote masqué" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : "En attente";
