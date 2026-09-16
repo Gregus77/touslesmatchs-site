@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
     private static final int NOTIFICATION_PERMISSION = 105;
     private static final String TRUSTED_HOST = "www.touslesmatchs.com";
     private static final String HOME =
-        "https://www.touslesmatchs.com/app.html?source=android&app=goal05&native=107";
+        "https://www.touslesmatchs.com/app-store.html?source=google-play&app=goal05&native=108";
 
     private final String bridgeNonce = UUID.randomUUID().toString();
     private WebView webView;
@@ -53,7 +53,7 @@ public class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         settings.setSupportMultipleWindows(false);
         settings.setUserAgentString(
-            settings.getUserAgentString() + " TousLesMatchsAndroid/1.0.7"
+            settings.getUserAgentString() + " TousLesMatchsAndroidPlay/1.0.8"
         );
 
         webView.setWebChromeClient(new WebChromeClient());

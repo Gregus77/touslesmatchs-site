@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.touslesmatchs.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.touslesmatchs.app"
         minSdk = 24
-        targetSdk = 35
-        versionCode = (project.findProperty("TLM_VERSION_CODE") as String?)?.toInt() ?: 1
-        versionName = (project.findProperty("TLM_VERSION_NAME") as String?) ?: "1.0.6"
+        targetSdk = 36
+        versionCode = (project.findProperty("TLM_VERSION_CODE") as String?)?.toInt() ?: 2
+        versionName = (project.findProperty("TLM_VERSION_NAME") as String?) ?: "1.0.8"
     }
 
     buildTypes {
