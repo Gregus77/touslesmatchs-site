@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Apply tested request limit with frozen API image and automatic rollback
+      - name: Verify real post-repair votes and deliveries read-only
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,100 +25,32 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import subprocess,json,pathlib,os,sqlite3,datetime,hashlib,time,fcntl,urllib.request
-            def run(args,timeout=60):
-             p=subprocess.run(args,capture_output=True,text=True,timeout=timeout)
-             if p.returncode:raise RuntimeError('COMMAND_FAILED')
-             return p.stdout
-            def safe_write(path,data):
-             fd=os.open(str(path),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-             with os.fdopen(fd,'w') as f:f.write(data)
-            lock=open('/var/lock/tlm-production-deploy.lock','a')
-            fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            root=pathlib.Path('/opt/touslesmatchs')
-            branch=run(['git','branch','--show-current']).strip()
-            assert branch=='codex/production-repair-20260914'
-            head=run(['git','rev-parse','HEAD']).strip()
-            assert run(['git','rev-parse','--abbrev-ref','--symbolic-full-name','@{u}']).strip()=='origin/'+branch
-            assert head==run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]
-            dirty=run(['git','diff','--binary','HEAD'])
-            ins=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-            assert ins['State']['Running']
-            env=dict(x.split('=',1) for x in ins['Config']['Env'])
-            assert env.get('OPENROUTER_MAX_REQUESTS_PER_DAY')=='750'
-            assert env.get('OPENROUTER_HARD_STOP')=='true'
-            cfg=json.loads(run(['docker','compose','config','--format','json']))
-            api=cfg['services']['api']
-            # Only reuse mount/port/network topology when it matches the running container.
-            mounts={(v['source'],v['target'],not v.get('read_only',False)) for v in api['volumes']}
-            assert mounts=={(v['Source'],v['Destination'],v['RW']) for v in ins['Mounts']}
-            bindings={}
-            for p in api.get('ports',[]):
-             bindings[str(p['target'])+'/'+p.get('protocol','tcp')]=[{'HostIp':p.get('host_ip',''),'HostPort':str(p['published'])}]
-            assert bindings==ins['HostConfig']['PortBindings']
-            network_names={cfg['networks'][n]['name'] for n in api['networks']}
-            assert network_names==set(ins['NetworkSettings']['Networks'])
-            assert api.get('restart')==ins['HostConfig']['RestartPolicy']['Name']
-            # Compose launch overrides on disk are unverified: pin the exact running launch and image.
-            frozen=dict(api)
-            frozen.pop('build',None)
-            frozen['image']=ins['Image']
-            frozen['environment']=env
-            frozen['entrypoint']=ins['Config'].get('Entrypoint') or []
-            frozen['command']=ins['Config'].get('Cmd') or []
-            frozen['working_dir']=ins['Config'].get('WorkingDir') or '/'
-            baseline={'name':'touslesmatchs','services':{'api':frozen},'networks':cfg['networks']}
-            if cfg.get('volumes'):baseline['volumes']=cfg['volumes']
-            source_env=root/'.env';before_env=source_env.read_text()
-            assert before_env.splitlines().count('OPENROUTER_MAX_REQUESTS_PER_DAY=750')==1
-            backup=pathlib.Path('/opt/backups')/('tlm-request-recovery-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
-            backup.mkdir(mode=0o700)
-            safe_write(backup/'env.before',before_env)
-            safe_write(backup/'api.before.json',json.dumps(baseline))
-            safe_write(backup/'worktree.before.patch',dirty)
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-            dest=sqlite3.connect(str(backup/'tlm.db'));db.backup(dest);dest.close();os.chmod(backup/'tlm.db',0o600)
-            count_before=db.execute('select count(*) from ai_call_budget_log').fetchone()[0];db.close()
-            changed=json.loads(json.dumps(baseline));changed['services']['api']['environment']['OPENROUTER_MAX_REQUESTS_PER_DAY']='1000'
-            safe_write(backup/'api.after.json',json.dumps(changed))
-            assert dirty==run(['git','diff','--binary','HEAD'])
-            assert source_env.read_text()==before_env
-            source_env.write_text(before_env.replace('OPENROUTER_MAX_REQUESTS_PER_DAY=750','OPENROUTER_MAX_REQUESTS_PER_DAY=1000'))
-            os.chmod(source_env,0o600)
-            print('BACKUP='+str(backup))
-            print('DEPLOY_BEGIN='+datetime.datetime.now(datetime.timezone.utc).isoformat(),flush=True)
-            def deploy(path):
-             run(['docker','compose','-p','touslesmatchs','-f',str(path),'up','-d','--no-deps','--no-build','api'],timeout=120)
-            def healthy():
-             for _ in range(20):
-              try:
-               with urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=5) as r:
-                if r.status==200:return True
-              except Exception:pass
-              time.sleep(2)
-             return False
-            try:
-             deploy(backup/'api.after.json')
-             assert healthy()
-             now=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-             afterenv=dict(x.split('=',1) for x in now['Config']['Env'])
-             assert now['Image']==ins['Image']
-             assert afterenv==changed['services']['api']['environment']
-             assert now['Config'].get('Cmd')==ins['Config'].get('Cmd')
-             assert now['Config'].get('Entrypoint')==ins['Config'].get('Entrypoint')
-             assert dirty==run(['git','diff','--binary','HEAD'])
-             js="const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d);console.log(JSON.stringify({requests:s.requests,limit:s.budget.dailyBudgetEur,maxRequests:s.budget.maxRequestsPerDay,hardStop:s.budget.hardStop}));d.close()"
-             values=json.loads(run(['docker','exec','touslesmatchs-api','node','-e',js]).strip())
-             assert values['limit']==6 and values['maxRequests']==1000 and values['hardStop'] is True
-             db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-             assert db.execute('select count(*) from ai_call_budget_log').fetchone()[0]>=count_before;db.close()
-             result={'status':'APPLIED','financial_limit_eur':6,'max_requests':1000,'same_image':True,'same_launch':True,'expenses_preserved':True,'pending_code_preserved':True,'verified_at':datetime.datetime.now(datetime.timezone.utc).isoformat()}
-             safe_write(backup/'result.json',json.dumps(result))
-             print('REPAIR_RESULT='+json.dumps(result))
-             print('ACTIVE_GUARD='+json.dumps(values))
-            except Exception:
-             source_env.write_text(before_env);os.chmod(source_env,0o600)
-             deploy(backup/'api.before.json');ok=healthy()
-             print('REPAIR_RESULT='+json.dumps({'status':'ROLLED_BACK','healthy':ok}))
-             raise SystemExit(1)
+            import subprocess,json,sqlite3,datetime,urllib.request
+            since='2026-09-19 18:12:36'
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+            print('NOW='+datetime.datetime.now(datetime.timezone.utc).isoformat())
+            rows=db.execute("select agent_name,http_status,issue,count(*) n,sum(vote_produit) votes,max(created_at) last from agent_calls where created_at>=? group by agent_name,http_status,issue",(since,)).fetchall()
+            seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
+            issues=['ok','http_erreur','timeout','illisible','vide','reseau','indisponible']
+            print('POST_CALLS='+json.dumps([{**dict(r),'agent_name':r['agent_name'] if r['agent_name'] in seats else 'other','issue':r['issue'] if r['issue'] in issues else 'other'} for r in rows]))
+            rows=db.execute("select channel,count(*) n,max(telegram_message_id) message_id,max(created_at) last from telegram_signal_deliveries where created_at>=? and ok=1 and telegram_message_id is not null group by channel",(since,)).fetchall()
+            print('POST_DELIVERIES='+json.dumps([{**dict(r),'channel':r['channel'] if r['channel'] in ['free','premium','ru_free','ru_premium'] else 'other'} for r in rows]))
+            print('SPENDING='+json.dumps([dict(r) for r in db.execute("select day,status,count(*) n,round(sum(charged_eur),4) charged from openrouter_global_calls where day=date('now') group by day,status")]))
+            db.close()
+            for path,expected in [('/app/server.js','ec355eea6ee0bc403f74a40376b979507fc25c5b417b11a62e2483cb05ca2c95'),('/app/ai_budget_guard.js','071bd258c5d2e27bfb880772463ea005c8b3c6460ee4b80a2457bdea1a472acb')]:
+             p=subprocess.run(['docker','exec','touslesmatchs-api','sha256sum',path],capture_output=True,text=True)
+             print('CODE_UNCHANGED='+json.dumps({'file':path,'same':p.returncode==0 and p.stdout.split()[0]==expected}))
+            for endpoint in ['/health','/live-matches']:
+             try:
+              with urllib.request.urlopen('http://127.0.0.1:3001'+endpoint,timeout=12) as r:
+               d=json.loads(r.read());print('HTTP='+json.dumps({'route':endpoint,'status':r.status}))
+              if endpoint=='/live-matches':
+               matches=d.get('matches',[])
+               print('LIVE_COUNTS='+json.dumps({'all':len(matches),'15_45':sum(isinstance(x.get('minute'),(int,float)) and 15<=x['minute']<=45 for x in matches),'analysable':sum(x.get('analysable') is True for x in matches)}))
+               out=[]
+               for m in matches:
+                q=m.get('ou25',{})
+                out.append({'fixture':m.get('fixtureId',m.get('id')),'minute':m.get('minute'),'analysable':m.get('analysable'),'analysis_verified':m.get('analysis_verified'),'delivered':m.get('signal_delivered'),'telegram_proven':m.get('telegram_delivery_proven'),'ou25_keys':list(q.keys()) if isinstance(q,dict) else []})
+               print('LIVE_STATES='+json.dumps(out))
+             except Exception as e:print('HTTP_READ_FAILED='+type(e).__name__)
             PY
