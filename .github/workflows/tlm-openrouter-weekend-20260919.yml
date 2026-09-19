@@ -1,66 +1,76 @@
-name: TLM OpenRouter safe diagnosis
+name: TLM OpenRouter bounded VPS repair
 on:
   push:
     branches: [codex/openrouter-weekend-20260919]
     paths: [.github/workflows/tlm-openrouter-weekend-20260919.yml]
 permissions:
   contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
 jobs:
-  diagnose:
+  repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 30
     steps:
-      - name: Boolean health checks only
+      - name: Local Codex repair with private logs and bounded budget
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
-          command_timeout: 3m
+          command_timeout: 27m
           script: |
             set -eu
             cd /opt/touslesmatchs
+            umask 077
+            TLM_TASK_DIR="/opt/backups/tlm-openrouter-weekend-20260919"
+            install -d -m 700 "$TLM_TASK_DIR"
+            if ! command -v codex >/dev/null 2>&1; then echo 'CODEX_AVAILABLE=False'; exit 1; fi
+            echo 'CODEX_AVAILABLE=True'
+            cat > "$TLM_TASK_DIR/mission.txt" <<'TLM_MISSION'
+            Mission propriétaire TousLesMatchs du 19 septembre 2026. Restaurer les vrais votes O/U sur site et application après recharge déclarée de 20 USD OpenRouter. Plafond autorisé: 9 EUR PAR JOUR samedi et dimanche Europe/Paris, GLOBAL tous processus/modèles OpenRouter compris et dépenses déjà engagées incluses. Semaine: conserver configuration réelle actuelle. Ne pas convertir 20 USD en autorisation de tout dépenser.
+            
+            Tu travailles SUR LE VPS /opt/touslesmatchs avec Codex déjà installé. Lis intégralement AGENTS.md et consignes applicables. La branche production constatée est codex/production-repair-20260914 upstream homonyme, HEAD 9eab51755e947820986a64329cbe6228c945951b. Revérifie état réel et upstream distant avant toute mutation. Des modifications locales nombreuses existent notamment ai_budget_guard.js, api_server.js, docker-compose.yml, council/hermes.py et frontend. Ne les écrase jamais, ne change pas de branche, pas de reset/clean/pull aveugle. Si travail concurrent modifie les mêmes fichiers ou branche divergente, arrête les mutations et rapporte le blocage. Sauvegardes privées datées mode 700/600 avant modification.
+            
+            Diagnostic déjà prouvé à 17:21 UTC: OPENROUTER_PARIS_SCHEDULE=1, api key endpoint 200 et clé non limitée, aucun succès enregistré ai_call_budget_log sur 30min. ai_circuit_breaker contient daily_budget, daily_requests et spike; leur présence historique NE prouve PAS qu’ils sont encore bloquants. Le calendrier 6/4 du dépôt a été modifié localement et 9 weekend absent du motif testé. Examine version vivante et conteneur, logs, DB en lecture seule en premier, crédit compte réel/limites clé, requêtes coût/réservations, quotas par siège/fallback, timers/retry 402, activité matchs admissibles. Ne sors AUCUN secret, code source ni contenu DB dans stdout; conserve détails dans rapport PRIVÉ sur VPS.
+            
+            Applique la correction minimale: plafond weekend 9 EUR partagé atomiquement pour tous appels réels OpenRouter. Préserve semaine, conversions monnaies prudentes, toutes dépenses et réservations incertaines. Ne remets aucun compteur à zéro. Rehausse les limites de NOMBRE d’appels uniquement si nécessaires dans le plafond financier strict, avec concurrence/déduplication/backoff/anti-boucle conservés. Aucun hardStop=false, pas de désactivation spike, pas de suppression aveugle de breakers. Réarme seulement si cause mesurée résolue. Si incident pic encore réel, corrige la boucle avant reprise. Si compte non crédité ou dépense du jour déjà >=9, aucun contournement: rapporte limite.
+            
+            Préserve critères sportifs, quorum configuré, prix, design, clés, utilisateurs. Aucun faux vote ni notification manuelle clients. Après tests ciblés calendrier Paris/décompte partagé et anti-dépassement, déploie uniquement services concernés. Vérifie code chargé identique au correctif, route API saine, logs sans crash, vraie analyse admissible avec votes individuels persistés et O/U sérialisés API puis site/application si navigateur disponible. Ne force pas un match hors critères ni envoi client artificiel. Rollback ciblé et contrôlé si régression. Un endpoint de santé ne suffit pas à déclarer votes restaurés. Sans match réel admissible: preuve sportive EN_ATTENTE.
+            
+            Enregistre uniquement tes propres changements Git sur branche production canonique en préservant index/worktree préexistants; aucun ajout global ni secret/DB/log/backups. Si tu ne peux séparer proprement tes changements, documente cette limite, ne commite pas le travail tiers. Ne crée pas une seconde production. Push autorisé de tes seuls changements vérifiés, pas de force push.
+            
+            Ecris /opt/backups/tlm-openrouter-weekend-20260919-status.json mode600, objet seulement:
+            status=OK|PARTIAL|BLOCKED|FAILED,
+            cause=budget|request_quota|spike|credit|provider|no_eligible_match|concurrent_changes|branch_divergence|other,
+            weekend_limit_9_verified:boolean,
+            weekday_unchanged:boolean,
+            spending_preserved:boolean,
+            runtime_verified:boolean,
+            real_votes_resumed:boolean,
+            site_votes_verified:boolean,
+            rollback_performed:boolean.
+            Rapport détaillé séparé privé. Ne prétends pas OK si reprise réelle non prouvée. Pas de sous-agents. Mission autonome, pas de questions de routine.
+            TLM_MISSION
+            if timeout 1500 codex exec --full-auto -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
+              echo 'CODEX_PROCESS_COMPLETED=True'
+            else
+              echo 'CODEX_PROCESS_COMPLETED=False'
+            fi
             python3 - <<'PY'
-            import subprocess,json,re,sqlite3,pathlib,datetime,urllib.request
-            from zoneinfo import ZoneInfo
-            def run(a): return subprocess.check_output(a,text=True,stderr=subprocess.DEVNULL)
-            info=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-            env=dict(x.split('=',1) for x in info['Config']['Env'] if '=' in x)
-            txt=pathlib.Path('scripts/ai_budget_guard.js').read_text()
-            print('PRODUCTION_BRANCH_MATCH='+str(run(['git','branch','--show-current']).strip()=='codex/production-repair-20260914'))
-            print('BUDGET_FILE_MODIFIED='+str(bool(run(['git','diff','--name-only','--','scripts/ai_budget_guard.js']).strip())))
-            print('PARIS_SCHEDULE_ENABLED='+str(env.get('OPENROUTER_PARIS_SCHEDULE')=='1'))
-            print('LEGACY_6_4_CALENDAR='+str(bool(re.search(r'dow===0\|\|dow===6\?6:4',txt))))
-            print('WEEKEND_9_PRESENT='+str(bool(re.search(r'(?:weekend|WEEKEND)[^\n]{0,100}(?:=|:)\s*9',txt,re.I))))
-            print('GLOBAL_GUARD_PRESENT='+str('reserveGlobal' in txt))
-            for m in info.get('Mounts',[]):
-             if m['Destination']!='/data': continue
-             root=pathlib.Path(m['Source'])
-             print('BACKGROUND_PAUSED='+str((root/'openrouter-background-paused').exists()))
-             p=root/'tlm.db'
-             if not p.exists(): continue
-             con=sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True)
-             names={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-             if 'ai_circuit_breaker' in names:
-              known={'daily_budget','daily_budget_hermes','daily_budget_concile','daily_requests','daily_matches','daily_model_requests','spike','duplicate_burst'}
-              active={r[0] for r in con.execute('SELECT breach_type FROM ai_circuit_breaker')}
-              for k in sorted(known): print('BREAKER_'+k.upper()+'='+str(k in active))
-             if 'ai_call_budget_log' in names:
-              n=con.execute("SELECT count(*) FROM ai_call_budget_log WHERE created_at>=datetime('now','-30 minutes') AND status='ok'").fetchone()[0]
-              print('RECENT_SUCCESSFUL_CALLS_PRESENT='+str(n>0))
-              reasons=[str(r[0]).lower() for r in con.execute("SELECT DISTINCT block_reason FROM ai_call_budget_log WHERE created_at>=datetime('now','-30 minutes') AND block_reason IS NOT NULL")]
-              for word in ['budget','daily_requests','402','429','spike']: print('RECENT_BLOCK_'+word.upper()+'='+str(any(word in s for s in reasons)))
-             con.close()
-            key=env.get('OPENROUTER_API_KEY')
-            print('OPENROUTER_KEY_CONFIGURED='+str(bool(key)))
-            if key:
-             try:
-              req=urllib.request.Request('https://openrouter.ai/api/v1/key',headers={'Authorization':'Bearer '+key})
-              with urllib.request.urlopen(req,timeout=15) as resp: d=json.load(resp).get('data',{})
-              print('OPENROUTER_AUTH_OK=True')
-              print('OPENROUTER_KEY_LIMIT_EXHAUSTED='+str(d.get('limit_remaining') is not None and d['limit_remaining']<=0))
-             except Exception as e:
-              print('OPENROUTER_AUTH_OK=False')
-              print('OPENROUTER_HTTP_402='+str(getattr(e,'code',None)==402))
+            import json,pathlib
+            p=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919-status.json')
+            if not p.exists():
+             print('STATUS_REPORT_PRESENT=False')
+             log=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log').read_text(errors='replace').lower()
+             for tag, words in [('AUTH_REQUIRED',['unauthorized','not logged in','authentication required']),('MODEL_ERROR',['not supported','model not found']),('SANDBOX_ERROR',['sandbox','operation not permitted']),('RATE_LIMIT',['rate limit','usage limit'])]:
+              print(tag+'='+str(any(w in log for w in words)))
+            else:
+             d=json.loads(p.read_text())
+             for k in ['weekend_limit_9_verified','weekday_unchanged','spending_preserved','runtime_verified','real_votes_resumed','site_votes_verified','rollback_performed']:
+              if type(d.get(k)) is bool: print(k.upper()+'='+str(d[k]))
+             for k, allowed in [('status',{'OK','PARTIAL','BLOCKED','FAILED'}),('cause',{'budget','request_quota','spike','credit','provider','no_eligible_match','concurrent_changes','branch_divergence','other'})]:
+              if d.get(k) in allowed: print(k.upper()+'='+d[k])
             PY
