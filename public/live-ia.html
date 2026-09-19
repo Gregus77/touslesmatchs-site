@@ -315,7 +315,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-vote-count{padding:3px 7px;border-radius:999px;background:rgba(124,92,255,.18);color:#c9c1ff;font-size:10px;white-space:nowrap}
 .mc-vote-panel{padding:0 13px 13px}
 .mc-vote-verdict{margin-bottom:9px;padding:8px 10px;border-radius:9px;background:rgba(255,176,32,.1);color:#ffd483;font-size:10.5px;font-weight:850}
-.mc-vote-verdict.valid{background:rgba(38,211,145,.11);color:#8ff4ca}
+.mc-vote-verdict.consensus-insufficient{background:rgba(244,63,94,.14);color:#ff8096;animation:mcConsensusBad 1s ease-in-out infinite}
+.mc-vote-verdict.consensus-valid{background:rgba(38,211,145,.11);color:#8ff4ca;animation:mcConsensusGood 1.35s ease-in-out infinite}
+@keyframes mcConsensusBad{50%{opacity:.42;box-shadow:0 0 14px rgba(244,63,94,.38)}}
+@keyframes mcConsensusGood{50%{opacity:.58;box-shadow:0 0 14px rgba(34,211,238,.34)}}
+@media(prefers-reduced-motion:reduce){.mc-vote-verdict.consensus-insufficient,.mc-vote-verdict.consensus-valid{animation:none}}
 .mc-vote-reason{margin:-2px 0 9px;color:#9da7cb;font-size:9.5px;line-height:1.4}
 .mc-vote-seats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
 .mc-vote-seat{min-width:0;padding:8px 5px;border:1px solid rgba(255,255,255,.09);border-radius:10px;background:rgba(255,255,255,.035);text-align:center}
@@ -871,7 +875,8 @@ function renderLiveOu25Details(m) {
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
     return '<div class="mc-vote-seat ' + dir + (state.official?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + choice + confidence + '</small></div>';
   }).join("");
-  return '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Conseil IA · Over/Under 2,5</span><span class="mc-vote-count">' + state.voteCount + '/5</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (consensusDirection ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
+  var consensusClass = state.official || consensusCount >= 4 ? ' consensus-valid' : state.voteCount ? ' consensus-insufficient' : '';
+  return '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Conseil IA · Over/Under 2,5</span><span class="mc-vote-count">' + state.voteCount + '/5</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + consensusClass + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }
 
 // ── Render ──

@@ -117,7 +117,7 @@ jobs:
             docker compose build api
             docker compose up -d --no-deps api
             for attempt in 1 2 3 4 5 6; do
-              if curl -fsS http://127.0.0.1:3001/api/health >/dev/null; then break; fi
+              if curl -fsS http://127.0.0.1:3001/current-pick >/dev/null; then break; fi
               test "$attempt" -lt 6
               sleep 5
             done
