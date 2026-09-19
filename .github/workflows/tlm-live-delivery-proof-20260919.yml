@@ -29,7 +29,7 @@ jobs:
             code=r"""
             const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),models=require('/app/ai_models.config'),https=require('https'),fs=require('fs');
             const db=new D('/data/tlm.db');
-            const get=url=>new Promise((resolve,reject)=>{https.get(url,{timeout:15000},r=>{let s='';r.on('data',x=>s+=x);r.on('end',()=>{try{resolve(JSON.parse(s))}catch{reject(Error('parse'))}}).on('error',reject)});
+            const get=url=>new Promise((resolve,reject)=>{const req=https.get(url,{timeout:15000},r=>{let s='';r.on('data',x=>s+=x);r.on('end',()=>{try{resolve(JSON.parse(s))}catch{reject(Error('parse'))}});});req.on('error',reject);req.on('timeout',()=>req.destroy(Error('timeout')));});
             (async()=>{
              const p=g.parisBudget(),s=g.getDailyStats(db),candidate=models.getModel('kimi').id;
              const catalog=await get('https://openrouter.ai/api/v1/models');
