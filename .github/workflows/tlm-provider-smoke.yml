@@ -1,0 +1,54 @@
+name: TLM five provider smoke test
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-provider-smoke.yml]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            docker exec -i touslesmatchs-api node - <<'NODE'
+            (async()=>{
+              const headers={Authorization:'Bearer '+process.env.OPENROUTER_API_KEY,'Content-Type':'application/json'};
+              const keyResponse=await fetch('https://openrouter.ai/api/v1/key',{headers,signal:AbortSignal.timeout(10000)});
+              if(!keyResponse.ok)throw Error('KEY_CHECK_FAILED');
+              const {data:key}=await keyResponse.json();
+              console.log('LIMIT',key.limit,'AVAILABLE',key.limit_remaining);
+              if(!(key.limit_remaining>0))throw Error('NO_PROVIDER_QUOTA');
+              const db=require('better-sqlite3')('/data/tlm.db');
+              const guard=require('/app/ai_budget_guard');
+              const models=['perplexity/sonar-pro','deepseek/deepseek-chat','moonshotai/kimi-k2','openai/gpt-5.6-luna','qwen/qwen3.7-max'];
+              const catalogResponse=await fetch('https://openrouter.ai/api/v1/models',{signal:AbortSignal.timeout(10000)});
+              if(!catalogResponse.ok)throw Error('PRICING_UNAVAILABLE');
+              const catalog=new Map((await catalogResponse.json()).data.map(m=>[m.id,m.pricing]));
+              let maximumReserved=0,successful=0;
+              for(const model of models){
+                const body={model,messages:[{role:'user',content:'Connectivity test only. Reply with OK.'}],max_tokens:32};
+                const pricing=catalog.get(model);
+                if(!pricing){console.log('MODEL_UNAVAILABLE',model);continue;}
+                const upper=(Buffer.byteLength(JSON.stringify(body.messages))+512)*Number(pricing.prompt||0)+32*Number(pricing.completion||0)+Number(pricing.request||0)+Number(pricing.web_search||0)+0.01;
+                if(!Number.isFinite(upper)||upper<0||maximumReserved+upper>0.10){console.log('TEST_SPENDING_BOUND',model);continue;}
+                maximumReserved+=upper;
+                const result=await guard.withGlobalBudget(db,body,async()=>{
+                  const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers,body:JSON.stringify(body),signal:AbortSignal.timeout(25000)});
+                  return {...await res.json(),_httpStatus:res.status};
+                });
+                const text=result.choices?.[0]?.message?.content;
+                const ok=result._httpStatus===200&&typeof text==='string'&&text.trim().length>0;
+                if(ok)successful++;
+                console.log('MODEL_TEST',JSON.stringify({model,http:result._httpStatus,response_received:ok}));
+              }
+              console.log('SUCCESSFUL_MODELS',successful,'NO_SIGNAL_PUBLISHED',true);
+              db.close();
+            })().catch(e=>{console.error('SMOKE_TEST_FAILED',e.name);process.exitCode=1;});
+            NODE
