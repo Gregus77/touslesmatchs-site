@@ -32,7 +32,7 @@ jobs:
             cat > "$TLM_TASK_DIR/mission.txt" <<'TLM_MISSION'
             Mission propriétaire TousLesMatchs du 19 septembre 2026. Restaurer les vrais votes O/U sur site et application après recharge déclarée de 20 USD OpenRouter. Plafond autorisé: 9 EUR PAR JOUR samedi et dimanche Europe/Paris, GLOBAL tous processus/modèles OpenRouter compris et dépenses déjà engagées incluses. Semaine: conserver configuration réelle actuelle. Ne pas convertir 20 USD en autorisation de tout dépenser.
             
-            Tu travailles SUR LE VPS /opt/touslesmatchs avec Codex déjà installé. Lis intégralement AGENTS.md et consignes applicables. La branche production constatée est codex/production-repair-20260914 upstream homonyme, HEAD 9eab51755e947820986a64329cbe6228c945951b. Revérifie état réel et upstream distant avant toute mutation. Des modifications locales nombreuses existent notamment ai_budget_guard.js, api_server.js, docker-compose.yml, council/hermes.py et frontend. Ne les écrase jamais, ne change pas de branche, pas de reset/clean/pull aveugle. Si travail concurrent modifie les mêmes fichiers ou branche divergente, arrête les mutations et rapporte le blocage. Sauvegardes privées datées mode 700/600 avant modification.
+            Tu travailles SUR LE VPS /opt/touslesmatchs avec Codex déjà installé. Lis intégralement AGENTS.md et consignes applicables. La branche production constatée est codex/production-repair-20260914 upstream homonyme, HEAD 9eab51755e947820986a64329cbe6228c945951b. Revérifie état réel et upstream distant avant toute mutation. Des modifications locales nombreuses existent notamment ai_budget_guard.js, api_server.js, docker-compose.yml, council/hermes.py et frontend. Ne les écrase jamais, ne change pas de branche, pas de reset/clean/pull aveugle. Si travail concurrent modifie les mêmes fichiers ou branche divergente, arrête les mutations et rapporte le blocage. Sauvegardes privées datées mode 700/600 avant modification dans /opt/touslesmatchs/backups/ (répertoire de travail autorisé).
             
             Diagnostic déjà prouvé à 17:21 UTC: OPENROUTER_PARIS_SCHEDULE=1, api key endpoint 200 et clé non limitée, aucun succès enregistré ai_call_budget_log sur 30min. ai_circuit_breaker contient daily_budget, daily_requests et spike; leur présence historique NE prouve PAS qu’ils sont encore bloquants. Le calendrier 6/4 du dépôt a été modifié localement et 9 weekend absent du motif testé. Examine version vivante et conteneur, logs, DB en lecture seule en premier, crédit compte réel/limites clé, requêtes coût/réservations, quotas par siège/fallback, timers/retry 402, activité matchs admissibles. Ne sors AUCUN secret, code source ni contenu DB dans stdout; conserve détails dans rapport PRIVÉ sur VPS.
             
@@ -42,7 +42,7 @@ jobs:
             
             Enregistre uniquement tes propres changements Git sur branche production canonique en préservant index/worktree préexistants; aucun ajout global ni secret/DB/log/backups. Si tu ne peux séparer proprement tes changements, documente cette limite, ne commite pas le travail tiers. Ne crée pas une seconde production. Push autorisé de tes seuls changements vérifiés, pas de force push.
             
-            Ecris /opt/backups/tlm-openrouter-weekend-20260919-status.json mode600, objet seulement:
+            Ecris /opt/touslesmatchs/.tlm-openrouter-weekend-20260919-status.json mode600, objet seulement:
             status=OK|PARTIAL|BLOCKED|FAILED,
             cause=budget|request_quota|spike|credit|provider|no_eligible_match|concurrent_changes|branch_divergence|other,
             weekend_limit_9_verified:boolean,
@@ -55,21 +55,21 @@ jobs:
             Rapport détaillé séparé privé. Ne prétends pas OK si reprise réelle non prouvée. Pas de sous-agents. Mission autonome, pas de questions de routine.
             TLM_MISSION
             codex exec --help > "$TLM_TASK_DIR/codex-help.txt" 2>&1 || true
-            if false; then
+            if timeout 1500 codex exec --sandbox workspace-write -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
               echo 'CODEX_PROCESS_COMPLETED=True'
             else
               echo 'CODEX_PROCESS_COMPLETED=False'
             fi
             python3 - <<'PY'
             import json,pathlib
-            p=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919-status.json')
+            p=pathlib.Path('/opt/touslesmatchs/.tlm-openrouter-weekend-20260919-status.json')
             if not p.exists():
              print('STATUS_REPORT_PRESENT=False')
              helptext=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-help.txt').read_text(errors='replace')
              for flag in ['--full-auto','--sandbox','--cd','--model','--output-last-message']:
               print('SUPPORTS_'+flag[2:].replace('-','_').upper()+'='+str(flag in helptext))
              log=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log').read_text(errors='replace').lower()
-             for tag, words in [('READ_ONLY_MODE',['sandbox: read-only','sandbox_mode=read-only','sandbox_mode: read-only','read-only file system']),('APPROVAL_BLOCK',['approval policy','approvals are disabled','cannot request approval']),('CODEX_USAGE_EXHAUSTED',["you have hit your usage limit","usage limit reached","exceeded your current quota"]),('NETWORK_BLOCK',['network is unreachable','network access is disabled']),('NEEDS_WRITE_ACCESS',['read-only','lecture seule']) ,('AUTH_REQUIRED',['unauthorized','not logged in','authentication required']),('MODEL_ERROR',['not supported','model not found']),('SANDBOX_ERROR',['sandbox','operation not permitted']),('RATE_LIMIT',['rate limit','usage limit']),('CLI_ARGUMENT_ERROR',['unexpected argument','unrecognized option','unknown option','unrecognized subcommand']),('NO_TTY',['not a terminal','not a tty']),('PATH_ERROR',['no such file','command not found']),('PERMISSION_ERROR',['permission denied']),('CONFIG_ERROR',['error loading config','invalid configuration'])]:
+             for tag, words in [('AUTH_REQUIRED',['unauthorized','not logged in','authentication required']),('MODEL_ERROR',['not supported','model not found']),('SANDBOX_ERROR',['sandbox','operation not permitted']),('RATE_LIMIT',['rate limit','usage limit']),('CLI_ARGUMENT_ERROR',['unexpected argument','unrecognized option','unknown option','unrecognized subcommand']),('NO_TTY',['not a terminal','not a tty']),('PATH_ERROR',['no such file','command not found']),('PERMISSION_ERROR',['permission denied']),('CONFIG_ERROR',['error loading config','invalid configuration'])]:
               print(tag+'='+str(any(w in log for w in words)))
             else:
              d=json.loads(p.read_text())
