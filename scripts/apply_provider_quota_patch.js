@@ -1,0 +1,18 @@
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const [target,reference]=process.argv.slice(2);
+let live=fs.readFileSync(target,'utf8');
+const desired=fs.readFileSync(reference,'utf8');
+const start=desired.indexOf('async function providerFailureDetail(');
+const end=desired.indexOf('function marquerProvider(',start);
+assert(start>=0&&end>start);
+const marker='function marquerProvider(host, status, detail) {';
+assert.equal(live.split(marker).length,2,'provider marker must be unique');
+assert(!live.includes('async function providerFailureDetail('),'already patched; inspect before retry');
+live=live.replace(marker,desired.slice(start,end)+marker);
+const anchor='if (resp?._httpStatus) marquerProvider(pvHost, resp._httpStatus, lastDiag);';
+assert.equal(live.split(anchor).length,2,'provider error call must be unique');
+const replacement=desired.slice(desired.indexOf('if (resp?._httpStatus) {\n            lastDiag = await providerFailureDetail'),desired.indexOf('          // Une requête refusée'));
+assert(replacement.includes('marquerProvider(pvHost'));
+live=live.replace(anchor,replacement.trimEnd());
+fs.writeFileSync(target,live);
+console.log('TARGETED_QUOTA_PATCH_APPLIED');

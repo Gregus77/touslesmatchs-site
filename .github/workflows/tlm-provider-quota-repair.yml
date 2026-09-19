@@ -28,15 +28,15 @@ jobs:
             cp -p scripts/api_server.js "$backup/api_server.js"
             old_image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
             git fetch origin codex/telegram-recap-premium-20260920
-            git diff b5dd14ef98d7875ed7b69f8b06083d80d4d9d719..origin/codex/telegram-recap-premium-20260920 -- scripts/api_server.js > "$backup/quota.patch"
-            git apply --check "$backup/quota.patch"
+            git show origin/codex/telegram-recap-premium-20260920:scripts/api_server.js > "$backup/desired.js"
+            git show origin/codex/telegram-recap-premium-20260920:scripts/apply_provider_quota_patch.js > "$backup/apply.js"
             rollback() {
               cp -p "$backup/api_server.js" scripts/api_server.js
               docker tag "$old_image" touslesmatchs-api:latest
               docker compose up -d --no-deps api >/dev/null 2>&1
             }
             trap rollback ERR
-            git apply "$backup/quota.patch"
+            node "$backup/apply.js" scripts/api_server.js "$backup/desired.js"
             git show origin/codex/telegram-recap-premium-20260920:scripts/test_provider_daily_limit.js > "$backup/test.js"
             cp "$backup/test.js" scripts/test_provider_daily_limit.js
             node scripts/test_provider_daily_limit.js

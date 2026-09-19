@@ -6469,6 +6469,28 @@ async function providerFailureDetail(host, status, fallback, getKey) {
   return fallback;
 }
 
+// Read-only provider probes; never reset spending or bypass an exhausted key.
+let _providerQuotaProbeAt = 0;
+let _providerQuotaParisDay = "";
+async function recoverProviderDailyQuota() {
+  const parisDay = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  const midnight = parisDay !== _providerQuotaParisDay;
+  _providerQuotaParisDay = parisDay;
+  if (!midnight && Date.now() - _providerQuotaProbeAt < 300000) return;
+  _providerQuotaProbeAt = Date.now();
+  try {
+    const row = db.prepare("SELECT last_status,last_error FROM provider_health WHERE host='openrouter.ai'").get();
+    if (!row || !/daily limit/i.test(row.last_error || "")) return;
+    const data = (await httpGet("https://openrouter.ai/api/v1/key",
+      {Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`}, 5000))?.data;
+    if (data?.limit_reset !== "daily" || typeof data.limit_remaining !== "number" || data.limit_remaining <= 0) return;
+    db.prepare("DELETE FROM provider_health WHERE host='openrouter.ai' AND last_status=? AND last_error=?").run(row.last_status,row.last_error);
+    _providerHealthCache.at = 0;
+    console.log("[provider-health] Daily quota available; natural analysis resumed");
+  } catch (_) {}
+}
+setInterval(recoverProviderDailyQuota, 60000).unref();
+
 function marquerProvider(host, status, detail) {
   if (!host) return;
   if (host === "openrouter.ai" && Number(status) === 429) {

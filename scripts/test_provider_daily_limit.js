@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const source=fs.readFileSync(__dirname+'/api_server.js','utf8');
 const start=source.indexOf('async function providerFailureDetail(');
-const end=source.indexOf('function marquerProvider(',start);
+const end=source.indexOf('// Read-only provider probes;',start);
 const classify=vm.runInNewContext(source.slice(start,end)+';providerFailureDetail');
 (async()=>{
   const key=async()=>({data:{limit:6,limit_remaining:0,limit_reset:'daily'}});
