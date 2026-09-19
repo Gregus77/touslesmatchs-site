@@ -55,7 +55,7 @@ jobs:
             Rapport détaillé séparé privé. Ne prétends pas OK si reprise réelle non prouvée. Pas de sous-agents. Mission autonome, pas de questions de routine.
             TLM_MISSION
             codex exec --help > "$TLM_TASK_DIR/codex-help.txt" 2>&1 || true
-if timeout 1500 codex exec --full-auto -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
+            if timeout 1500 codex exec --full-auto -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
               echo 'CODEX_PROCESS_COMPLETED=True'
             else
               echo 'CODEX_PROCESS_COMPLETED=False'
@@ -65,9 +65,9 @@ if timeout 1500 codex exec --full-auto -C /opt/touslesmatchs - < "$TLM_TASK_DIR/
             p=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919-status.json')
             if not p.exists():
              print('STATUS_REPORT_PRESENT=False')
- helptext=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-help.txt').read_text(errors='replace')
- for flag in ['--full-auto','--sandbox','--cd','--model','--output-last-message']:
-  print('SUPPORTS_'+flag[2:].replace('-','_').upper()+'='+str(flag in helptext))
+             helptext=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-help.txt').read_text(errors='replace')
+             for flag in ['--full-auto','--sandbox','--cd','--model','--output-last-message']:
+              print('SUPPORTS_'+flag[2:].replace('-','_').upper()+'='+str(flag in helptext))
              log=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log').read_text(errors='replace').lower()
              for tag, words in [('AUTH_REQUIRED',['unauthorized','not logged in','authentication required']),('MODEL_ERROR',['not supported','model not found']),('SANDBOX_ERROR',['sandbox','operation not permitted']),('RATE_LIMIT',['rate limit','usage limit']),('CLI_ARGUMENT_ERROR',['unexpected argument','unrecognized option','unknown option','unrecognized subcommand']),('NO_TTY',['not a terminal','not a tty']),('PATH_ERROR',['no such file','command not found']),('PERMISSION_ERROR',['permission denied']),('CONFIG_ERROR',['error loading config','invalid configuration'])]:
               print(tag+'='+str(any(w in log for w in words)))
