@@ -142,7 +142,7 @@ function recapRows(db,day,channel) {
   });
 }
 
-function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>{},paymentAvailable=()=>false}) {
+function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>{},paymentAvailable=()=>false,validateSignal=async()=>({ok:false,terminal:true})}) {
   const targets=destinations(env);
   initSignalSnapshots(db);
   db.exec(`CREATE TABLE IF NOT EXISTS client_telegram_outbox (
@@ -190,6 +190,15 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       for(const row of rows) {
         if(!targets.some(t=>t.channel===row.channel&&t.id===row.chat_id))continue;
         if(row.expires_at<=now()){db.prepare("UPDATE client_telegram_outbox SET state='expired' WHERE delivery_key=?").run(row.delivery_key);continue;}
+        if(row.kind==='signal') {
+          let gate;try {gate=await validateSignal(row);} catch {gate={ok:false};}
+          if(!gate?.ok) {
+            db.prepare("UPDATE client_telegram_outbox SET state=?,next_at=? WHERE delivery_key=? AND state='pending'")
+              .run(gate?.terminal?'expired':'pending',now()+30000,row.delivery_key);
+            continue;
+          }
+          if(row.expires_at<=now()){db.prepare("UPDATE client_telegram_outbox SET state='expired' WHERE delivery_key=?").run(row.delivery_key);continue;}
+        }
         const claim=db.prepare("UPDATE client_telegram_outbox SET state='sending',next_at=? WHERE delivery_key=? AND state='pending'").run(now()+60000,row.delivery_key);
         if(!claim.changes)continue;
         let result;
