@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Back up and test authorized shared budget and quota recovery
+      - name: Deploy explicitly approved shared budget and quota recovery
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,35 +25,85 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import pathlib,subprocess,json,os,datetime,sqlite3,fcntl
+            import subprocess,pathlib,json,os,re,time,datetime,sqlite3,fcntl,urllib.request
             def run(a):return subprocess.check_output(a,text=True,stderr=subprocess.DEVNULL).strip()
             lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            branch=run(['git','branch','--show-current']);head=run(['git','rev-parse','HEAD'])
-            assert run(['git','rev-parse','--abbrev-ref','@{upstream}'])=='origin/'+branch
-            assert run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]==head
-            backup=pathlib.Path('/opt/backups/tlm-budget-recovery-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'));backup.mkdir(mode=0o700)
-            cand=backup/'candidate';cand.mkdir(mode=0o700)
-            def save(p,s):p.write_text(s);os.chmod(p,0o600)
-            inspect=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-            save(backup/'inspect.json',json.dumps(inspect));save(backup/'env.before',pathlib.Path('.env').read_text())
+            pointer=json.loads(pathlib.Path('data/tlm-budget-recovery-current.json').read_text());assert pointer['testsPassed']
+            backup=pathlib.Path(pointer['backup']);cand=backup/'candidate';state=json.loads((backup/'state.json').read_text())
+            merged='61fe4dc907b29f0e212efc5773922f83abd3799f'
+            assert run(['git','rev-parse','HEAD'])==state['head']
+            assert run(['git','branch','--show-current'])==state['branch']
+            assert run(['git','ls-remote','origin','refs/heads/'+state['branch']]).split()[0]==merged
+            assert subprocess.run(['git','diff','--cached','--quiet']).returncode==0
+            subprocess.run(['git','fetch','origin',state['branch']],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            assert subprocess.run(['git','merge-base','--is-ancestor',state['head'],merged]).returncode==0
+            before=json.loads((backup/'inspect.json').read_text());actual=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
+            envmap=lambda v:dict(s.split('=',1) for s in v['Config']['Env'])
+            assert before['Id']==actual['Id'] and envmap(before)==envmap(actual)
+            assert pathlib.Path('.env').read_text()==(backup/'env.before').read_text()
             for name in ['ai_budget_guard.js','ai_models.config.js','telegram_client.js','bookmakers.config.js']:
-             source=run(['docker','exec','touslesmatchs-api','cat','/app/'+name])
-             save(backup/(name+'.before'),source)
-             if name=='ai_budget_guard.js':
-              assert source.count('limit:dow===0||dow===6?6:4')==1
-              source=source.replace('limit:dow===0||dow===6?6:4','limit:dow===0||dow===6?10:2')
-             save(cand/name,source)
-            save(cand/'test.js',"const assert=require('assert'),D=require('better-sqlite3'),g=require('./ai_budget_guard'),models=require('./ai_models.config');\nassert.equal(g.parisBudget(Date.parse('2026-09-18T20:00:00Z')).limit,2);\nassert.equal(g.parisBudget(Date.parse('2026-09-18T22:00:00Z')).limit,10);\nassert.equal(g.parisBudget(Date.parse('2026-09-20T21:59:00Z')).limit,10);\nassert.equal(g.parisBudget(Date.parse('2026-09-20T22:00:00Z')).limit,2);\nfor(const [at,cap] of [['2026-09-19T12:00:00Z',10],['2026-09-21T12:00:00Z',2]]){\n const db=new D(':memory:');assert(g.reserveGlobal(db,{model:'isolated-a'},cap-.01,Date.parse(at)));assert(!g.reserveGlobal(db,{model:'isolated-b'},.02,Date.parse(at)));assert.equal(db.prepare('select count(*) n from openrouter_global_calls').get().n,1);db.close();\n}\nassert.equal(g.CFG.maxRequestsPerDay,2000);\nfor(const key of ['perplexity','deepseek','mistral','luna','qwen'])assert.equal(models.getModel(key).dailyLimit,400);\nconst db=new D(':memory:');g.ensureSchema(db);\nconst day=g.parisBudget().day;\nconst add=db.prepare(\"insert into ai_call_budget_log(request_key,model_key,match_key,cost_estimate_eur,status,created_at) values(?,?,?,0,'ok',?)\");\nfor(let i=0;i<180;i++)add.run('seed'+i,'mistral','one_historical_match',day+' 00:00:00');\nassert(g.canProceed(db,{modelKey:'mistral',matchKey:'new_test_snapshot',purpose:'concile',promptVersion:'test'}).allowed);\nfor(let i=180;i<400;i++)add.run('seed'+i,'mistral','one_historical_match',day+' 00:00:00');\nassert(!g.canProceed(db,{modelKey:'mistral',matchKey:'new_test_snapshot',purpose:'concile',promptVersion:'test'}).allowed);\nassert.equal(db.prepare('select count(*) n from ai_call_budget_log').get().n,400);\ndb.close();console.log('BUDGET_AND_QUOTA_BEHAVIOR_TESTS=True');")
-            save(backup/'guard.worktree.before',pathlib.Path('scripts/ai_budget_guard.js').read_text())
-            save(backup/'worktree.patch',run(['git','diff','--binary','HEAD']))
-            sourceDb=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);dest=sqlite3.connect(str(backup/'tlm.db'));sourceDb.backup(dest);dest.close();sourceDb.close();os.chmod(backup/'tlm.db',0o600)
-            tmp='/tmp/'+backup.name
-            subprocess.run(['docker','cp',str(cand),'touslesmatchs-api:'+tmp],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
-            result=subprocess.run(['docker','exec','-e','NODE_PATH=/app/node_modules','-e','OPENROUTER_MAX_REQUESTS_PER_DAY=2000','-e','OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY=400','-e','TELEGRAM_BOT_TOKEN=','-e','TELEGRAM_ADMIN_CHAT_ID=','touslesmatchs-api','node',tmp+'/test.js'],capture_output=True,text=True)
-            save(backup/'tests.private.log',result.stdout+result.stderr)
-            ok=result.returncode==0 and 'BUDGET_AND_QUOTA_BEHAVIOR_TESTS=True' in result.stdout
-            save(backup/'state.json',json.dumps({'branch':branch,'head':head,'backup':str(backup),'testsPassed':ok}))
-            save(pathlib.Path('data/tlm-budget-recovery-current.json'),json.dumps({'backup':str(backup),'testsPassed':ok}))
-            print('BACKUP_COMPLETE=True')
-            print('BUDGET_AND_QUOTA_BEHAVIOR_TESTS='+str(ok))
+             assert run(['docker','exec','touslesmatchs-api','cat','/app/'+name])==(backup/(name+'.before')).read_text()
+            first=pathlib.Path(json.loads(pathlib.Path('data/tlm-firsthalf-candidate.json').read_text())['backup'])
+            compose=json.loads((first/'compose.after.json').read_text())
+            service=compose['services']['api']
+            assert run(['docker','image','inspect',service['image'],'--format','{{.Id}}'])==actual['Image']
+            assert service['environment']==envmap(actual)
+            def save(p,s):p.write_text(s);os.chmod(p,0o600)
+            save(backup/'compose.before.json',json.dumps(compose))
+            baseTag='tlm-api:budget-base-'+merged[:12];newTag='tlm-api:budget-'+merged[:12]
+            subprocess.run(['docker','image','tag',actual['Image'],baseTag],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            save(cand/'Dockerfile','FROM '+baseTag+'\nCOPY ai_budget_guard.js /app/ai_budget_guard.js\n')
+            with open(backup/'build.private.log','w') as log:
+             result=subprocess.run(['docker','build','--pull=false','-t',newTag,str(cand)],stdout=log,stderr=log,env={**os.environ,'DOCKER_BUILDKIT':'0'})
+            os.chmod(backup/'build.private.log',0o600);assert result.returncode==0
+            print('TESTED_IMAGE_BUILT=True')
+            source=pathlib.Path('scripts/ai_budget_guard.js').read_text();assert source==(backup/'guard.worktree.before').read_text()
+            source,count=re.subn(r'limit:dow===0\|\|dow===6\?(?:6:4|5:2)','limit:dow===0||dow===6?10:2',source);assert count==1
+            testPath=pathlib.Path('scripts/test_budget_vote_recovery_20260919.js');assert not testPath.exists()
+            newEnv=pathlib.Path('.env').read_text()
+            for key,old,new in [('OPENROUTER_MAX_REQUESTS_PER_DAY','1000','2000'),('OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY','180','400')]:
+             assert envmap(actual).get(key)==old
+             newEnv,count=re.subn(r'(?m)^'+key+'='+old+r'\s*$',key+'='+new,newEnv);assert count==1
+             service['environment'][key]=new
+            service['image']=newTag;save(backup/'compose.after.json',json.dumps(compose))
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            counts={t:db.execute('select count(*) from '+t).fetchone()[0] for t in ['agent_calls','openrouter_global_calls','ai_call_budget_log']};db.close()
+            pathlib.Path('scripts/ai_budget_guard.js').write_text(source)
+            testPath.write_text(run(['git','show',merged+':scripts/test_budget_vote_recovery_20260919.js']))
+            index=pathlib.Path(run(['git','rev-parse','--git-path','index']))
+            (backup/'git-index.before').write_bytes(index.read_bytes());os.chmod(backup/'git-index.before',0o600)
+            subprocess.run(['git','read-tree',merged],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            subprocess.run(['git','update-ref','refs/heads/'+state['branch'],merged,state['head']],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            save(pathlib.Path('.env'),newEnv)
+            def up(path):
+             with open(backup/'deploy.private.log','a') as log:
+              return subprocess.run(['docker','compose','-p','touslesmatchs','-f',str(path),'up','-d','--no-deps','--no-build','api'],stdout=log,stderr=log).returncode==0
+            try:
+             assert up(backup/'compose.after.json')
+             healthy=False
+             for _ in range(20):
+              try:
+               if urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=2).status==200:healthy=True;break
+              except:pass
+              time.sleep(2)
+             assert healthy
+             deployed=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
+             assert envmap(deployed)==service['environment']
+             assert deployed['Config']['Cmd']==actual['Config']['Cmd'] and deployed['Config']['Entrypoint']==actual['Config']['Entrypoint']
+             assert run(['docker','exec','touslesmatchs-api','cat','/app/ai_budget_guard.js'])==(cand/'ai_budget_guard.js').read_text().strip()
+             code="const g=require('/app/ai_budget_guard'),m=require('/app/ai_models.config');if(g.parisBudget(Date.parse('2026-09-21T12:00:00Z')).limit!==2||g.parisBudget(Date.parse('2026-09-19T12:00:00Z')).limit!==10||g.CFG.maxRequestsPerDay!==2000||['perplexity','deepseek','mistral','luna','qwen'].some(k=>m.getModel(k).dailyLimit!==400))process.exit(1)"
+             subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+             db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+             assert all(db.execute('select count(*) from '+t).fetchone()[0]>=n for t,n in counts.items());db.close()
+             assert urllib.request.urlopen('https://www.touslesmatchs.com/api/health',timeout=15).status==200
+             save(backup/'deployment.json',json.dumps({'status':'APPLIED','at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commit':merged,'image':deployed['Image'],'weekday':2,'weekend':10,'totalRequests':2000,'perModel':400,'countersPreserved':True}))
+             print('BUDGET_2_10_RUNTIME_VERIFIED=True')
+             print('QUOTAS_2000_400_RUNTIME_VERIFIED=True')
+             print('COUNTERS_PRESERVED=True')
+             print('PUBLIC_API_HEALTH_OK=True')
+            except:
+             save(pathlib.Path('.env'),(backup/'env.before').read_text())
+             up(backup/'compose.before.json')
+             print('BUDGET_DEPLOYMENT_ROLLED_BACK=True')
+             raise
             PY
