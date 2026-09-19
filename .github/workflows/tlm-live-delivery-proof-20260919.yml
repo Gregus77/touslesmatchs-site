@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Save private recovery handoff and verification
+      - name: Verify seat three recovery using owner-authorized booleans
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,19 +25,24 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import json,pathlib,os,datetime,sqlite3,urllib.request
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-            seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
-            counts={seat:db.execute("select count(*) from agent_calls where agent_name=? and vote_produit=1 and created_at>='2026-09-19 18:12:36'",(seat,)).fetchone()[0] for seat in seats}
-            receipts=db.execute("select count(*) from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and created_at>='2026-09-19 18:12:36'").fetchone()[0]
-            spending=db.execute("select coalesce(sum(charged_eur),0) from openrouter_global_calls where day=date('now')").fetchone()[0]
-            db.close()
-            d={'checked_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'status':'PARTIAL','request_recovery':'verified','request_limit':1000,'financial_limit_unchanged_eur':6,'post_repair_votes':counts,'public_five_votes_verified':True,'post_repair_telegram_receipts':receipts,'new_selection_rejected_by_recovery':True,'accounted_cost_eur':spending,'pending':['Review owner latest weekday/weekend financial budget policy before changing monetary limits; do not apply stale 2/5 pending code blindly','Finish prepared Hermes 09/21 changes and tests; source edits remain undeployed','Verify next admissible client Telegram signal in four destinations; no historical replay','Add the two separate Top5 vs Bottom5 team-goal 0.5 shadow experiments only after production stable'],'deployment':{'image_unchanged':True,'api_source_unchanged':True,'guard_source_unchanged':True,'source_env_updated':True,'backup':'/opt/backups/tlm-request-recovery-20260919T181219Z','frozen_api_compose':'/opt/backups/tlm-request-recovery-20260919T181219Z/api.after.json','note':'API recreated from verified existing image with frozen runtime launch/env and request limit only. Canonical compose still contains pending unverified launch changes; compare before future deployments.'}}
-            p=pathlib.Path('/opt/backups/tlm-request-recovery-20260919T181219Z/verification.json')
-            fd=os.open(str(p),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-            with os.fdopen(fd,'w') as f:json.dump(d,f,indent=2)
-            print('HANDOFF_SAVED=True')
-            print('ALL_FIVE_RESUMED='+str(all(n>0 for n in counts.values())))
-            print('NEW_TELEGRAM_PROVEN='+str(receipts>0))
-            print('FINANCIAL_HARD_STOP_PRESERVED=True')
+            import sqlite3,json,urllib.request
+            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
+            r=d.execute("select count(*) n,sum(vote_produit) votes from agent_calls where agent_name='Mistral-Large' and created_at>=datetime('now','-30 minutes')").fetchone()
+            print('IA3_RECENT_CALLS_PRESENT='+str(bool(r['n'])))
+            print('IA3_RECENT_REAL_VOTE='+str(bool(r['votes'])))
+            r=d.execute("select http_status,issue,vote_produit,detail from agent_calls where agent_name='Mistral-Large' order by id desc limit 1").fetchone()
+            if r:
+             s=str(r['detail'] or '').lower()
+             print('IA3_LATEST_REAL_VOTE='+str(bool(r['vote_produit'])))
+             print('IA3_LATEST_HTTP429='+str(r['http_status']==429))
+             print('IA3_LATEST_TIMEOUT='+str(r['issue']=='timeout'))
+             print('IA3_LATEST_BUDGET_REASON='+str('budget' in s))
+             print('IA3_LATEST_QUOTA_REASON='+str(any(w in s for w in ['quota','daily_requests','daily limit','model_daily','per_model'])))
+            try:
+             data=json.load(urllib.request.urlopen('http://127.0.0.1:3001/live-matches',timeout=15))
+             fresh=[m.get('ou25') or {} for m in data.get('matches',[]) if 15<=int(m.get('minute') or 0)<=45 and not m.get('pinnedSignal')]
+             print('CURRENT_ANALYSIS_WINDOW_PRESENT='+str(bool(fresh)))
+             print('CURRENT_FIVE_VOTES_PRESENT='+str(any(o.get('vote_count')==5 for o in fresh)))
+            except:print('LIVE_CHECK_COMPLETED=False')
+            d.close()
             PY
