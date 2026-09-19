@@ -35,12 +35,19 @@ jobs:
             install -d -m 700 "$backup/scripts"
             cp -p scripts/ai_budget_guard.js "$backup/scripts/ai_budget_guard.js"
             cp -p scripts/telegram_client.js "$backup/scripts/telegram_client.js"
+            install -d -m 700 "$backup/public"
+            cp -p public/index.html "$backup/public/index.html"
+            cp -p public/app.html "$backup/public/app.html"
+            cp -p public/live-ia.html "$backup/public/live-ia.html"
             test -e scripts/test_budget_paris_rollover_20260920.js && cp -p scripts/test_budget_paris_rollover_20260920.js "$backup/scripts/" || true
             test -e scripts/test_telegram_financial_recap_20260920.js && cp -p scripts/test_telegram_financial_recap_20260920.js "$backup/scripts/" || true
 
             rollback() {
               cp -p "$backup/scripts/ai_budget_guard.js" scripts/ai_budget_guard.js
               cp -p "$backup/scripts/telegram_client.js" scripts/telegram_client.js
+              cp -p "$backup/public/index.html" public/index.html
+              cp -p "$backup/public/app.html" public/app.html
+              cp -p "$backup/public/live-ia.html" public/live-ia.html
               if test -e "$backup/scripts/test_budget_paris_rollover_20260920.js"; then
                 cp -p "$backup/scripts/test_budget_paris_rollover_20260920.js" scripts/
               else
@@ -62,6 +69,8 @@ jobs:
             source = path.read_text()
             def replace(old, new):
                 global source
+                if new in source:
+                    return
                 if old not in source:
                     raise SystemExit('TARGET_NOT_FOUND=' + old.splitlines()[0])
                 source = source.replace(old, new, 1)
@@ -110,8 +119,25 @@ jobs:
             path.write_text(source)
             PY
             git show origin/codex/telegram-recap-premium-20260920:scripts/test_budget_paris_rollover_20260920.js > scripts/test_budget_paris_rollover_20260920.js
+            merge_live_file() {
+              file="$1"
+              safe="$(printf '%s' "$file" | tr '/' '_')"
+              git show "origin/codex/production-repair-20260914:$file" > "$backup/$safe.base"
+              git show "origin/codex/telegram-recap-premium-20260920:$file" > "$backup/$safe.ours"
+              if ! git merge-file -p "$file" "$backup/$safe.base" "$backup/$safe.ours" > "$backup/$safe.merged"; then
+                echo "MERGE_CONFLICT=$file"
+                return 1
+              fi
+              test -s "$backup/$safe.merged"
+              cat "$backup/$safe.merged" > "$file"
+            }
+            merge_live_file public/index.html
+            merge_live_file public/app.html
+            merge_live_file public/live-ia.html
+            git show origin/codex/telegram-recap-premium-20260920:scripts/test_consensus_visual_status_20260920.js > scripts/test_consensus_visual_status_20260920.js
 
             node scripts/test_budget_paris_rollover_20260920.js
+            node scripts/test_consensus_visual_status_20260920.js
             node --check scripts/ai_budget_guard.js
 
             docker compose build api
@@ -129,6 +155,8 @@ jobs:
             console.log('RUNTIME_PARIS_ROLLOVER_OK=True');
             NODE
             curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+            curl -fsS https://www.touslesmatchs.com/ | grep -q 'consensus-insufficient'
+            curl -fsS https://www.touslesmatchs.com/app | grep -q 'consensus-valid'
             trap - ERR
             echo "DEPLOYMENT_OK=True"
             echo "BACKUP_CREATED=True"
