@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Confirm replacement vote reaches the public API
+      - name: Verify persisted seat vote and anonymous access policy
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,31 +25,27 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,pathlib,urllib.request,datetime,os
+            import json,pathlib,urllib.request,datetime,sqlite3
             info=json.loads(pathlib.Path('data/tlm-seat3-routing-current.json').read_text())
-            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
-            rows=d.execute("select http_status,vote_produit from agent_calls where agent_name='Mistral-Large' and model=? and datetime(created_at)>=datetime(?)",(info['candidate'],info['at'])).fetchall()
-            flags={'REPLACEMENT_REAL_CALL_OBSERVED':bool(rows),'REPLACEMENT_REAL_VOTE_OBSERVED':any(r['vote_produit'] for r in rows),'REPLACEMENT_HTTP429_OBSERVED':any(r['http_status']==429 for r in rows)}
             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=20))
-            def recent(o):
-             try:return datetime.datetime.fromisoformat(str(o.get('consensus_at')).replace('Z','+00:00'))>=datetime.datetime.fromisoformat(info['at'])
-             except:return False
-            flags['PUBLIC_NEW_FIVE_VOTES']=any((m.get('ou25') or {}).get('vote_count')==5 and recent(m.get('ou25') or {}) for m in data.get('matches',[]))
-            def seat_vote(m):
+            fresh=[]
+            for m in data.get('matches',[]):
              o=m.get('ou25') or {}
-             vv=o.get('votes') or []
-             if isinstance(vv,dict):vv=list(vv.values())
-             if len(vv)<3:return False
-             v=vv[2]
-             if not isinstance(v,dict):return False
-             return any(str(v.get(k) or '').lower() in ['o','u','over','under','over 2.5','under 2.5','over 2.5 buts','under 2.5 buts'] for k in ['direction','vote','bet','pick'])
-            flags['PUBLIC_NEW_IA3_VOTE']=any(recent(m.get('ou25') or {}) and seat_vote(m) for m in data.get('matches',[]))
-            flags['PUBLIC_LIVE_OK']=bool(data.get('ok'))
-            flags['NEW_CLIENT_DELIVERY_PROVEN']=bool(d.execute("select 1 from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and datetime(created_at)>=datetime(?) limit 1",(info['at'],)).fetchone())
-            flags['ROUTING_STILL_APPLIED']=bool(d.execute('select 1 from model_overrides where logical_id=? and model_id=?',(info['logical'],info['candidate'])).fetchone())
-            for k,v in flags.items():print(k+'='+str(v))
-            p=pathlib.Path(info['backup'])/('verification-'+datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')+'.json')
-            fd=os.open(str(p),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-            with os.fdopen(fd,'w') as f:json.dump({'checked_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':flags},f)
+             try:
+              if datetime.datetime.fromisoformat(str(o.get('consensus_at')).replace('Z','+00:00'))>=datetime.datetime.fromisoformat(info['at']) and o.get('vote_count')==5:fresh.append(o)
+             except:pass
+            print('NEW_FIVE_VOTE_SNAPSHOT_PRESENT='+str(bool(fresh)))
+            print('PUBLIC_DETAILS_LOCKED='+str(any(o.get('locked') for o in fresh)))
+            print('PUBLIC_VOTE_ARRAY_PRESENT='+str(any(isinstance(o.get('votes'),list) and len(o['votes'])==5 for o in fresh)))
+            print('PUBLIC_VOTE_OBJECT_PRESENT='+str(any(isinstance(o.get('votes'),dict) for o in fresh)))
+            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            rows=d.execute("select votes_json from official_vote_snapshots where datetime(created_at)>=datetime(?)",(info['at'],)).fetchall()
+            valid=False
+            for (raw,) in rows:
+             try:
+              votes=json.loads(raw)
+              if len(votes)>=3 and votes[2].get('direction') in ['over','under'] and votes[2].get('status')=='voted':valid=True
+             except:pass
+            print('NEW_IA3_PERSISTED_SNAPSHOT_VOTE='+str(valid))
             d.close()
             PY
