@@ -1,0 +1,73 @@
+name: TLM repair confirmed daily provider quota
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-provider-quota-repair.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            umask 077
+            backup="/opt/backups/tlm-provider-quota-$(date -u +%Y%m%dT%H%M%SZ)"
+            mkdir -p "$backup"
+            cp -p scripts/api_server.js "$backup/api_server.js"
+            old_image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
+            git fetch origin codex/telegram-recap-premium-20260920
+            git diff b5dd14ef98d7875ed7b69f8b06083d80d4d9d719..origin/codex/telegram-recap-premium-20260920 -- scripts/api_server.js > "$backup/quota.patch"
+            git apply --check "$backup/quota.patch"
+            rollback() {
+              cp -p "$backup/api_server.js" scripts/api_server.js
+              docker tag "$old_image" touslesmatchs-api:latest
+              docker compose up -d --no-deps api >/dev/null 2>&1
+            }
+            trap rollback ERR
+            git apply "$backup/quota.patch"
+            git show origin/codex/telegram-recap-premium-20260920:scripts/test_provider_daily_limit.js > "$backup/test.js"
+            cp "$backup/test.js" scripts/test_provider_daily_limit.js
+            node scripts/test_provider_daily_limit.js
+            node --check scripts/api_server.js
+            docker compose build api > "$backup/build.log" 2>&1
+            docker compose up -d --no-deps api > "$backup/start.log" 2>&1
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS http://127.0.0.1:3001/current-pick >/dev/null; then break; fi
+              test "$attempt" -lt 6
+              sleep 5
+            done
+            expected="$(sha256sum scripts/api_server.js | cut -d ' ' -f1)"
+            actual="$(docker exec touslesmatchs-api sha256sum /app/server.js | cut -d ' ' -f1)"
+            test "$expected" = "$actual"
+            docker exec -i touslesmatchs-api node - <<'NODE'
+            (async()=>{
+              const res=await fetch('https://openrouter.ai/api/v1/key',{headers:{Authorization:'Bearer '+process.env.OPENROUTER_API_KEY},signal:AbortSignal.timeout(10000)});
+              if(!res.ok)throw Error('KEY_STATUS_UNAVAILABLE');
+              const {data}=await res.json();
+              const db=require('better-sqlite3')('/data/tlm.db');
+              const row=db.prepare("SELECT * FROM provider_health WHERE host='openrouter.ai'").get();
+              if(data.limit_reset==='daily'&&typeof data.limit_remaining==='number'&&data.limit_remaining<=0&&row?.last_status===403){
+                require('fs').writeFileSync('/data/provider-quota-before-20260920.json',JSON.stringify(row),{mode:0o600,flag:'wx'});
+                const next=new Date();next.setUTCHours(24,0,0,0);
+                const until=next.toISOString().slice(0,19).replace('T',' ');
+                const changed=db.prepare("UPDATE provider_health SET last_error=?, disabled_until=? WHERE host='openrouter.ai' AND last_status=403 AND disabled_until=?").run('OpenRouter daily limit reached; retry after midnight UTC',until,row.disabled_until);
+                console.log('DAILY_QUOTA_RECOVERED',changed.changes,'RETRY_UTC',until);
+              }else console.log('QUOTA_STATE_UNCHANGED');
+              console.log('RUNTIME_VERIFIED',true,'KEY_REMAINING',data.limit_remaining);
+            })().catch(e=>{console.error(e.code||'RECOVERY_FAILED');process.exitCode=1;});
+            NODE
+            curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+            trap - ERR
+            echo DEPLOYMENT_OK

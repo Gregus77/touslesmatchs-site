@@ -6457,6 +6457,18 @@ function providerEcarte(host, claimBalanceProbe = false) {
   const jusqua = _providerHealthCache.hs[host];
   return !!jusqua && new Date(jusqua.replace(" ", "T") + "Z").getTime() > Date.now();
 }
+async function providerFailureDetail(host, status, fallback, getKey) {
+  if (host !== "openrouter.ai" || ![402,403].includes(Number(status))) return fallback;
+  try {
+    const data = (await getKey())?.data;
+    if (data?.limit_reset === "daily" && Number.isFinite(data.limit)
+      && typeof data.limit_remaining === "number" && data.limit_remaining <= 0) {
+      return "OpenRouter daily limit reached; retry after midnight UTC";
+    }
+  } catch (_) {}
+  return fallback;
+}
+
 function marquerProvider(host, status, detail) {
   if (!host) return;
   if (host === "openrouter.ai" && Number(status) === 429) {
@@ -6954,7 +6966,11 @@ Réponds en JSON pur (pas de markdown):
               : resp?._httpStatus && resp._httpStatus >= 400 ? "http_erreur"
               : resp?._httpParseError ? "illisible" : "vide",
             resp?._httpStatus, lastDiag);
-          if (resp?._httpStatus) marquerProvider(pvHost, resp._httpStatus, lastDiag);
+          if (resp?._httpStatus) {
+            lastDiag = await providerFailureDetail(pvHost, resp._httpStatus, lastDiag,
+              () => httpGet("https://openrouter.ai/api/v1/key", {Authorization: `Bearer ${pv.key}`}, 5000));
+            marquerProvider(pvHost, resp._httpStatus, lastDiag);
+          }
           // Une requête refusée de manière permanente ou structurelle ne
           // devient pas valide par répétition. Les sorties vides/invalides,
           // timeouts, 429 et 5xx peuvent utiliser l'unique relance Luna.
