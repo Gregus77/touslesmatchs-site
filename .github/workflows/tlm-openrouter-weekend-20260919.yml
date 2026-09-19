@@ -55,7 +55,7 @@ jobs:
             Rapport détaillé séparé privé. Ne prétends pas OK si reprise réelle non prouvée. Pas de sous-agents. Mission autonome, pas de questions de routine.
             TLM_MISSION
             codex exec --help > "$TLM_TASK_DIR/codex-help.txt" 2>&1 || true
-            if timeout 1500 codex exec --full-auto -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
+            if timeout 1500 codex exec -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
               echo 'CODEX_PROCESS_COMPLETED=True'
             else
               echo 'CODEX_PROCESS_COMPLETED=False'
