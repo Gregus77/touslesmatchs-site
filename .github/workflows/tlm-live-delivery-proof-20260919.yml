@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Deploy tested live state coherence patch
+      - name: Verify public score coherence and preserve official history
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,71 +25,39 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import os,json,pathlib,subprocess,datetime,fcntl,sys,time,urllib.request,traceback,hashlib
-            os.umask(0o077)
-            def run(args):return subprocess.check_output(args,stderr=subprocess.DEVNULL,text=True)
-            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            backup=pathlib.Path(json.loads(pathlib.Path('data/tlm-live-coherence-current.json').read_text())['backup']);cand=backup/'candidate'
-            changed=False
+            import json,pathlib,sqlite3,urllib.request,datetime,sys
+            backup=pathlib.Path(json.loads(pathlib.Path('data/tlm-live-coherence-current.json').read_text())['backup'])
+            flags={}
+            def score(value):
+             if isinstance(value,dict): value=[value.get('home'),value.get('away')]
+             elif isinstance(value,str): value=value.split('-')
+             else:return None
+             if len(value)!=2 or any(x is None for x in value):return None
+             try:return tuple(int(x) for x in value)
+             except:return None
             try:
-             state=json.loads((backup/'state.json').read_text());assert state['testsPassed']
-             head=run(['git','rev-parse','HEAD']).strip();assert head==state['base']
-             assert run(['git','branch','--show-current']).strip()=='codex/production-repair-20260914'
-             assert not run(['git','diff','--cached','--name-only']).strip()
-             assert pathlib.Path('scripts/api_server.js').read_bytes()==(backup/'scripts_api_server.js.before').read_bytes()
-             assert pathlib.Path('Dockerfile.api').read_bytes()==(backup/'Dockerfile.api.before').read_bytes()
-             info=json.loads(run(['docker','inspect','touslesmatchs-api']))[0];before=json.loads((backup/'inspect.json').read_text())
-             assert info['Image']==before['Image']
-             assert run(['docker','exec','touslesmatchs-api','cat','/app/server.js'])==(backup/'server.runtime.before').read_text()
-             run(['git','fetch','origin','codex/production-repair-20260914'])
-             merged='b5dd14ef98d7875ed7b69f8b06083d80d4d9d719'
-             assert run(['git','rev-parse','origin/codex/production-repair-20260914']).strip()==merged
-             assert subprocess.run(['git','merge-base','--is-ancestor',head,merged],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0
-             tag='tlm-api:coherence-'+merged[:12];base='tlm-api:coherence-base-'+merged[:12]
-             run(['docker','image','tag',info['Image'],base])
-             (cand/'Dockerfile').write_text('FROM '+base+'\nCOPY api_server.js /app/server.js\nCOPY live_state_coherence.js /app/live_state_coherence.js\n')
-             with (backup/'build.log').open('w') as log:
-              result=subprocess.run(['docker','build','--pull=false','-t',tag,str(cand)],env={**os.environ,'DOCKER_BUILDKIT':'0'},stdout=log,stderr=subprocess.STDOUT)
-             assert result.returncode==0
-             cfg=json.loads((backup/'compose.before.json').read_text());cfg['services']['api']['image']=tag
-             (backup/'compose.after.json').write_text(json.dumps(cfg))
-             for name in ['live_state_coherence.js','test_live_state_coherence_20260919.js']:
-              assert not pathlib.Path('scripts/'+name).exists()
-              pathlib.Path('scripts/'+name).write_bytes((cand/name).read_bytes())
-             pathlib.Path('scripts/api_server.js').write_bytes((backup/'server.worktree.after').read_bytes())
-             docker=pathlib.Path('Dockerfile.api').read_text();anchor='COPY scripts/official_signal_snapshots.js ./official_signal_snapshots.js'
-             assert docker.count(anchor)==1
-             extra=''
-             if 'COPY scripts/first_half_delivery.js ./first_half_delivery.js' not in docker:extra+='\nCOPY scripts/first_half_delivery.js ./first_half_delivery.js'
-             extra+='\nCOPY scripts/live_state_coherence.js ./live_state_coherence.js'
-             pathlib.Path('Dockerfile.api').write_text(docker.replace(anchor,anchor+extra))
-             run(['git','read-tree',merged]);run(['git','update-ref','refs/heads/codex/production-repair-20260914',merged,head])
-             changed=True
-             with (backup/'deploy.log').open('w') as log:
-              result=subprocess.run(['docker','compose','-p','touslesmatchs','-f',str(backup/'compose.after.json'),'up','-d','--no-deps','--no-build','api'],stdout=log,stderr=subprocess.STDOUT)
-             assert result.returncode==0
-             healthy=False
-             for attempt in range(20):
-              try:
-               response=json.load(urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=2))
-               healthy=response.get('ok') is True
-               if healthy:break
-              except Exception:pass
-              time.sleep(2)
-             assert healthy
-             after=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-             assert dict(x.split('=',1) for x in after['Config']['Env'])==dict(x.split('=',1) for x in before['Config']['Env'])
-             assert after['Config']['Cmd']==before['Config']['Cmd'] and after['Config']['Entrypoint']==before['Config']['Entrypoint']
-             assert run(['docker','exec','touslesmatchs-api','cat','/app/server.js'])==(cand/'api_server.js').read_text()
-             assert run(['docker','exec','touslesmatchs-api','cat','/app/live_state_coherence.js'])==(cand/'live_state_coherence.js').read_text()
-             for name in ['first_half_delivery.js','telegram_client.js','official_signal_snapshots.js','ai_budget_guard.js','ai_models.config.js']:
-              assert run(['docker','exec','touslesmatchs-api','cat','/app/'+name])==(cand/name).read_text()
-             public=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/health',timeout=15));assert public.get('ok') is True
-             (backup/'deployment.json').write_text(json.dumps({'status':'APPLIED','at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'commit':merged,'image':tag,'testsPassed':True}))
-             print('COHERENCE_DEPLOYED=True');print('ACTIVE_CODE_VERIFIED=True');print('BUDGET_ROUTING_DELIVERY_PRESERVED=True');print('PUBLIC_API_HEALTHY=True')
+             deployment=json.loads((backup/'deployment.json').read_text());assert deployment['status']=='APPLIED'
+             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=25))
+             matches=data.get('matches',[])
+             mismatches=[m for m in matches if not m.get('ou25',{}).get('official') and m.get('ou25',{}).get('snapshot_score') is not None and score(m['ou25']['snapshot_score'])!=score({'home':m.get('score_home'),'away':m.get('score_away')})]
+             flags['PUBLIC_NO_STALE_CURRENT_VOTES']=all(not m['ou25'].get('vote_count') and not m['ou25'].get('consensus_direction') and all(not v.get('direction') for v in m['ou25'].get('votes',[])) for m in mismatches)
+             flags['STALE_REASONS_EXPOSED']=all(m.get('analysis_exclusion_reason') or m['ou25'].get('synchronization_reason') for m in mismatches)
+             flags['STALE_CASE_OBSERVED']=bool(mismatches)
+             target=[m for m in matches if 'mirassol' in str(m.get('home','')).lower() and 'botafogo' in str(m.get('away','')).lower()]
+             flags['TARGET_STILL_VISIBLE']=bool(target)
+             flags['TARGET_NO_MISLEADING_CURRENT_VOTES']=all(m.get('ou25',{}).get('official') or score(m.get('ou25',{}).get('snapshot_score'))==score({'home':m.get('score_home'),'away':m.get('score_away')}) or not m.get('ou25',{}).get('vote_count') for m in target)
+             old=sqlite3.connect('file:'+str(backup/'tlm.db')+'?mode=ro',uri=True);current=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+             cols=[x[1] for x in old.execute('pragma table_info(official_vote_snapshots)')]
+             immutable=[c for c in ['id','minute','score_home','score_away','votes_json','consensus','created_at'] if c in cols];assert 'id' in immutable
+             q='SELECT '+','.join(immutable)+' FROM official_vote_snapshots'
+             original={row[0]:row for row in old.execute(q)};now={row[0]:row for row in current.execute(q)}
+             flags['EXISTING_SNAPSHOTS_UNCHANGED']=all(now.get(k)==v for k,v in original.items())
+             flags['NEW_VOTES_OBSERVED']=bool(current.execute('select 1 from agent_calls where vote_produit=1 and datetime(created_at)>=datetime(?) limit 1',(deployment['at'],)).fetchone())
+             old.close();current.close()
+             (backup/'public-verification.json').write_text(json.dumps({'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':flags}))
+             for key,value in flags.items():print(key+'='+str(value))
+             assert flags['PUBLIC_NO_STALE_CURRENT_VOTES'] and flags['STALE_REASONS_EXPOSED'] and flags['EXISTING_SNAPSHOTS_UNCHANGED']
+             print('PUBLIC_COHERENCE_VERIFIED=True')
             except Exception:
-             (backup/'deployment-error.private').write_text(traceback.format_exc())
-             if changed:
-              with (backup/'rollback.log').open('w') as log: subprocess.run(['docker','compose','-p','touslesmatchs','-f',str(backup/'compose.before.json'),'up','-d','--no-deps','--no-build','api'],stdout=log,stderr=subprocess.STDOUT)
-             print('COHERENCE_DEPLOYED=False');sys.exit(1)
+             print('PUBLIC_COHERENCE_VERIFIED=False');sys.exit(1)
             PY
