@@ -101,16 +101,18 @@ function ensureSchema(db) {
 }
 
 // Clé d'anti-doublon exacte demandée : date + match + modèle + version_du_prompt.
-function buildRequestKey({ matchKey, modelKey, promptVersion }) {
-  const day = new Date().toISOString().slice(0, 10);
+function buildRequestKey({ matchKey, modelKey, promptVersion }, at = Date.now()) {
+  const day = parisBudget(at).day;
   return `${day}__${matchKey}__${modelKey}__${promptVersion || "v1"}`;
 }
 
+function scopeTodaySql(sql, at = Date.now()) {
+  const p = parisBudget(at);
+  return sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
+}
+
 function _todaySum(db, sql, params = []) {
-  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") {
-    const p=parisBudget();
-    sql=sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
-  }
+  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") sql = scopeTodaySql(sql);
   const row = db.prepare(sql).get(...params);
   return row ? Object.values(row)[0] || 0 : 0;
 }
@@ -141,11 +143,12 @@ function _sendAdminAlert(text) {
 
 // Déclenche le coupe-circuit UNE fois par type et par jour — jamais en boucle
 // ("ne pas répéter l'alerte en boucle" — exigence explicite du prompt maître).
-function tripBreaker(db, type, detail) {
+function tripBreaker(db, type, detail, at = Date.now()) {
   ensureSchema(db);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisBudget(at).day;
   const existing = db.prepare("SELECT alerted_at FROM ai_circuit_breaker WHERE breach_type = ?").get(type);
-  const alreadyAlertedToday = existing && existing.alerted_at && existing.alerted_at.slice(0, 10) === today;
+  const existingAlertDay = existing?.alerted_at ? parisParts(sqliteUtcMs(existing.alerted_at)).day : null;
+  const alreadyAlertedToday = existingAlertDay === today;
 
   db.prepare(`
     INSERT INTO ai_circuit_breaker (breach_type, tripped_at, alerted_at, detail)
@@ -186,13 +189,12 @@ const DAILY_SCOPED_BREAKERS = new Set([
 // de la soiree alors que le budget/quota reel n'etait qu'a 15% de la limite.
 const SPIKE_COOLDOWN_MINUTES = 30;
 
-function isBreakerTripped(db, type) {
+function isBreakerTripped(db, type, at = Date.now()) {
   ensureSchema(db);
   const row = db.prepare("SELECT tripped_at FROM ai_circuit_breaker WHERE breach_type = ?").get(type);
   if (!row || !row.tripped_at) return false;
   if (DAILY_SCOPED_BREAKERS.has(type)) {
-    const today = new Date().toISOString().slice(0, 10);
-    return row.tripped_at.slice(0, 10) === today;
+    return parisParts(sqliteUtcMs(row.tripped_at)).day === parisBudget(at).day;
   }
   // Cooldown glissant depuis le DERNIER declenchement, pas depuis minuit.
   const trippedMs = new Date(row.tripped_at.replace(" ", "T") + "Z").getTime();
@@ -308,10 +310,12 @@ function canProceed(db, { modelKey, matchKey, competition, market, purpose, prom
   // 7) Nombre de matchs distincts / jour — un match déjà compté aujourd'hui
   //    (par un autre modèle) ne recompte pas contre ce plafond.
   const currentDailyMatch = dailyMatchIdentity(matchKey);
-  const dailyMatches = new Set(db.prepare(`
+  let dailyMatchesSql = `
     SELECT DISTINCT match_key FROM ai_call_budget_log
     WHERE date(created_at) = date('now') AND status = 'ok' AND match_key IS NOT NULL
-  `).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));
+  `;
+  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") dailyMatchesSql = scopeTodaySql(dailyMatchesSql);
+  const dailyMatches = new Set(db.prepare(dailyMatchesSql).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));
   if (!dailyMatches.has(currentDailyMatch)) {
     if (dailyMatches.size >= CFG.maxMatchesPerDay && CFG.hardStop) {
       return { allowed: false, reason: "[LIMIT] plafond de matchs analysés/jour atteint", requestKey };
@@ -408,11 +412,11 @@ function getDailyStats(db) {
 
 module.exports = {
   ensureSchema, canProceed, recordCall, getDailyStats,
-  tripBreaker, isBreakerTripped, buildRequestKey, CFG,
+  tripBreaker, isBreakerTripped, buildRequestKey, scopeTodaySql, CFG,
 };
 
 // Incident policy: Paris civil days, shared by every OpenRouter HTTP path.
-const {parisParts,parisDayBounds}=require('./telegram_client');
+const {parisParts,parisDayBounds,sqliteUtcMs}=require('./telegram_client');
 const fs=require('fs'),crypto=require('crypto');
 function parisBudget(at=Date.now()) {
  const day=parisParts(at).day,dow=new Date(day+'T12:00:00Z').getUTCDay();

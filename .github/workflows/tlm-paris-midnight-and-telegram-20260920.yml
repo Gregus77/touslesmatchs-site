@@ -1,0 +1,89 @@
+name: TLM Paris midnight and Telegram production repair
+
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Apply bounded repair, test, deploy API, or roll back
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 18m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            umask 077
+            test "$(git branch --show-current)" = "codex/production-repair-20260914"
+
+            stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+            backup="/opt/backups/tlm-paris-midnight-$stamp"
+            install -d -m 700 "$backup/scripts"
+            cp -p scripts/ai_budget_guard.js "$backup/scripts/ai_budget_guard.js"
+            cp -p scripts/telegram_client.js "$backup/scripts/telegram_client.js"
+            test -e scripts/test_budget_paris_rollover_20260920.js && cp -p scripts/test_budget_paris_rollover_20260920.js "$backup/scripts/" || true
+            test -e scripts/test_telegram_financial_recap_20260920.js && cp -p scripts/test_telegram_financial_recap_20260920.js "$backup/scripts/" || true
+
+            rollback() {
+              cp -p "$backup/scripts/ai_budget_guard.js" scripts/ai_budget_guard.js
+              cp -p "$backup/scripts/telegram_client.js" scripts/telegram_client.js
+              if test -e "$backup/scripts/test_budget_paris_rollover_20260920.js"; then
+                cp -p "$backup/scripts/test_budget_paris_rollover_20260920.js" scripts/
+              else
+                rm -f scripts/test_budget_paris_rollover_20260920.js
+              fi
+              if test -e "$backup/scripts/test_telegram_financial_recap_20260920.js"; then
+                cp -p "$backup/scripts/test_telegram_financial_recap_20260920.js" scripts/
+              else
+                rm -f scripts/test_telegram_financial_recap_20260920.js
+              fi
+              docker compose up -d --build --no-deps api >/dev/null 2>&1 || true
+            }
+            trap 'rollback' ERR
+
+            git fetch origin codex/telegram-recap-premium-20260920 codex/production-repair-20260914
+            git diff --binary origin/codex/production-repair-20260914..origin/codex/telegram-recap-premium-20260920 -- \
+              scripts/ai_budget_guard.js scripts/telegram_client.js \
+              scripts/test_budget_paris_rollover_20260920.js scripts/test_telegram_financial_recap_20260920.js \
+              > "$backup/repair.patch"
+            test -s "$backup/repair.patch"
+            git apply --check "$backup/repair.patch"
+            git apply "$backup/repair.patch"
+
+            node scripts/test_budget_paris_rollover_20260920.js
+            node scripts/test_telegram_financial_recap_20260920.js
+            node --check scripts/ai_budget_guard.js
+            node --check scripts/telegram_client.js
+
+            docker compose build api
+            docker compose up -d --no-deps api
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS http://127.0.0.1:3001/api/health >/dev/null; then break; fi
+              test "$attempt" -lt 6
+              sleep 5
+            done
+            docker exec touslesmatchs-api node - <<'NODE'
+            const assert=require('assert');
+            const guard=require('/app/ai_budget_guard');
+            const req={matchKey:'rollover_probe',modelKey:'mistral',promptVersion:'v1'};
+            assert.notEqual(guard.buildRequestKey(req,Date.parse('2026-09-19T21:59:59Z')),guard.buildRequestKey(req,Date.parse('2026-09-19T22:00:00Z')));
+            console.log('RUNTIME_PARIS_ROLLOVER_OK=True');
+            NODE
+            curl -fsS https://www.touslesmatchs.com/api/health >/dev/null
+            trap - ERR
+            echo "DEPLOYMENT_OK=True"
+            echo "BACKUP_CREATED=True"

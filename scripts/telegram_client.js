@@ -3,9 +3,21 @@ const https = require('https');
 const {buildInlineKeyboard}=require('./bookmakers.config');
 const PAYMENT = 'https://www.touslesmatchs.com/api/premium-checkout';
 const CTA = {fr:'Passer à Premium — 14,90 €/mois, sans engagement',ru:'Оформить Premium — 14,90 €/месяц, без обязательств'};
+const OFFER = {
+  fr: [
+    '💎 Offre de lancement à 14,90 €/mois — bientôt 19,90 €/mois.',
+    'Accès illimité à tous les signaux validés disponibles dans la journée. Aucun minimum quotidien n’est promis.',
+  ],
+  ru: [
+    '💎 Стартовая цена — 14,90 € в месяц; скоро 19,90 € в месяц.',
+    'Безлимитный доступ: все доступные в течение дня подтверждённые сигналы. Минимальное количество сигналов в день не гарантируется.',
+  ],
+};
 const esc = value => String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const legal = lang => lang === 'ru' ? '⚠️ 18+ — Ответственная игра. Выигрыш не гарантирован. joueurs-info-service.fr' : '⚠️ 18+ — Jeu responsable. Aucun gain garanti. joueurs-info-service.fr';
 const payment = lang => `${PAYMENT}?lang=${lang}`;
+const euros = value => `${Number(value).toFixed(2).replace('.', ',')} €`;
+const signedEuros = value => `${Number(value) >= 0 ? '+' : ''}${euros(value)}`;
 function destinations(env) {
   const all = [
     {channel:'free',lang:'fr',tier:'free',id:env.TELEGRAM_CHANNEL_ID || env.TELEGRAM_FREE_CHANNEL_ID || env.TELEGRAM_CHAT_ID},
@@ -39,21 +51,49 @@ function render(kind,data,dest) {
       lines.push(ru?`Обоснование: ${esc(data.votes)} из 5 ИИ поддержали этот прогноз; уровень доверия — ${esc(data.confidence)}/100.`:esc(data.reason || `${data.votes} IA sur 5 soutiennent cette sélection.`));
     }
   } else if(kind==='result') {
-    lines=[`${data.outcome==='win'?'✅':'❌'} <b>${ru?(data.outcome==='win'?'ВЫИГРЫШ':'ПРОИГРЫШ'):(data.outcome==='win'?'SIGNAL GAGNÉ':'SIGNAL PERDU')}</b>`,match(),`⚽ ${ru?'Итоговый счёт':'Score final'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`];
-    if(!free) lines.push(`💡 ${ru?'Прогноз':'Sélection'} : ${market()}`);
-    else lines.push(ru?'Результат сигнала Premium, анонсированного в этом канале.':'Résultat du signal Premium annoncé dans ce canal.');
+    if(free) lines=ru
+      ? ['🔒 <b>РЕЗУЛЬТАТ PREMIUM ДОСТУПЕН</b>','Итог и подробности сигнала доступны только подписчикам Premium.']
+      : ['🔒 <b>RÉSULTAT PREMIUM DISPONIBLE</b>','Le résultat et le détail du signal sont réservés aux membres Premium.'];
+    else lines=[`${data.outcome==='win'?'✅':'❌'} <b>${ru?(data.outcome==='win'?'ВЫИГРЫШ':'ПРОИГРЫШ'):(data.outcome==='win'?'SIGNAL GAGNÉ':'SIGNAL PERDU')}</b>`,match(),`⚽ ${ru?'Итоговый счёт':'Score final'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`,`💡 ${ru?'Прогноз':'Sélection'} : ${market()}`];
   } else if(kind==='recap') {
     const rows=data.rows,wins=rows.filter(x=>x.outcome==='win').length,losses=rows.filter(x=>x.outcome==='loss').length,pending=rows.length-wins-losses;
-    lines=[`📊 <b>${ru?'ИТОГИ ДНЯ':'BILAN DU JOUR'} — ${esc(data.day)}${data.parts>1?` (${data.part}/${data.parts})`:''}</b>`,`✅ ${ru?'Выиграно':'Gagnés'} : ${wins} · ❌ ${ru?'Проиграно':'Perdus'} : ${losses} · ⏳ ${ru?'Ожидают результата':'En attente'} : ${pending}`,
-      ru?'Только сигналы с подтверждённой доставкой в этот канал.':'Uniquement les signaux dont la livraison dans ce canal est prouvée.'];
-    if(!rows.length)lines.push(ru?'В этот день нет подтверждённых сигналов в этом канале.':'Aucun signal livré avec preuve dans ce canal ce jour-là.');
-    for(const row of rows) lines.push(`${row.outcome==='win'?'✅':row.outcome==='loss'?'❌':'⏳'} ${esc(row.home)} — ${esc(row.away)} : ${row.outcome==='pending'?(ru?'ожидает результата':'en attente'):`${esc(row.final_score_home)}-${esc(row.final_score_away)}`}${free?'':` · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`}`);
+    lines=[`📊 <b>${ru?'ИТОГИ ДНЯ':'BILAN DU JOUR'} — ${esc(data.day)}${data.parts>1?` (${data.part}/${data.parts})`:''}</b>`];
+    if(free) {
+      lines.push(ru?`Сегодня подтверждено сигналов Premium: ${rows.length}.`:`${rows.length} signal${rows.length>1?'aux':''} Premium validé${rows.length>1?'s':''} aujourd’hui.`,
+        ru?'Результаты и финансовые подробности доступны только подписчикам Premium.':'Les résultats et le détail financier sont réservés aux membres Premium.');
+    } else {
+      lines.push(`✅ ${ru?'Выиграно':'Gagnés'} : ${wins} · ❌ ${ru?'Проиграно':'Perdus'} : ${losses} · ⏳ ${ru?'Ожидают результата':'En attente'} : ${pending}`,
+        ru?'Только сигналы с подтверждённой доставкой в этот канал.':'Uniquement les signaux dont la livraison dans ce canal est prouvée.');
+      if(!rows.length)lines.push(ru?'В этот день нет подтверждённых сигналов в этом канале.':'Aucun signal livré avec preuve dans ce canal ce jour-là.');
+      let totalStaked=0,totalReturn=0,excluded=0;
+      for(const row of rows) {
+        let detail=`${row.outcome==='win'?'✅':row.outcome==='loss'?'❌':'⏳'} ${esc(row.home)} — ${esc(row.away)} : ${row.outcome==='pending'?(ru?'ожидает результата':'en attente'):`${esc(row.final_score_home)}-${esc(row.final_score_away)}`} · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`;
+        if(row.outcome==='win'||row.outcome==='loss') {
+          const odd=Number(row.real_odd);
+          if(Number.isFinite(odd)&&odd>1) {
+            const gross=row.outcome==='win'?10*odd:0;
+            const net=gross-10;
+            totalStaked+=10;totalReturn+=gross;
+            detail+=row.outcome==='win'
+              ? (ru?` · коэффициент ${euros(odd).replace(' €','')} · валовой возврат ${euros(gross)} · чистая прибыль ${signedEuros(net)}`:` · cote ${euros(odd).replace(' €','')} · retour brut ${euros(gross)} · bénéfice net ${signedEuros(net)}`)
+              : (ru?` · коэффициент ${euros(odd).replace(' €','')} · убыток -10,00 €`:` · cote ${euros(odd).replace(' €','')} · perte -10,00 €`);
+          } else {
+            excluded+=1;
+            detail+=ru?' · коэффициент недоступен · исключён из финансового расчёта':' · cote indisponible · exclu du calcul financier';
+          }
+        }
+        lines.push(detail);
+      }
+      lines.push(ru?`💶 Всего поставлено : ${euros(totalStaked)} · Общий возврат : ${euros(totalReturn)} · Чистая прибыль : ${signedEuros(totalReturn-totalStaked)}`:`💶 Total misé : ${euros(totalStaked)} · Retour total : ${euros(totalReturn)} · Bénéfice net : ${signedEuros(totalReturn-totalStaked)}`);
+      if(excluded)lines.push(ru?`ℹ️ Исключено из финансового расчёта: ${excluded} сигнал${excluded===1?'':'а'}.`:`ℹ️ ${excluded} signal${excluded>1?'aux':''} exclu${excluded>1?'s':''} du calcul financier.`);
+    }
   } else if(kind==='guide') {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
   } else if(kind==='reminder'||kind==='nopick') {
     lines=ru?['💎 <b>TousLesMatchs Premium</b>','Бесплатный канал: знакомство с сервисом и руководства.','Premium: все допустимые футбольные сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается. Мы не публикуем сигнал ради количества.']:['💎 <b>TousLesMatchs Premium</b>','Gratuit : présentation du service et guides.','Premium : tous les signaux de football admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum quotidien promis. Aucun signal forcé.'];
   } else throw new Error('Unknown client template');
-  if(free || ['reminder','nopick','guide'].includes(kind)) {
+  if(free) {
+    lines.push(...OFFER[dest.lang]);
     lines.push(paymentVerified ? `<a href="${payment(dest.lang)}">${CTA[dest.lang]}</a>` :
       ru ? 'Подписка Premium — 14,90 €/месяц, без обязательств. Новые подписки временно недоступны.' :
       'Premium — 14,90 €/mois, sans engagement. Les nouvelles souscriptions sont temporairement indisponibles.');
