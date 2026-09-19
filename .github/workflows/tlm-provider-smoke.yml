@@ -33,10 +33,10 @@ jobs:
               const catalog=new Map((await catalogResponse.json()).data.map(m=>[m.id,m.pricing]));
               let maximumReserved=0,successful=0;
               for(const model of models){
-                const body={model,messages:[{role:'user',content:'Connectivity test only. Reply with OK.'}],max_tokens:32};
+                const body={model,messages:[{role:'user',content:'Connectivity test only. Reply with OK.'}],max_tokens:256,reasoning:{effort:'none'}};
                 const pricing=catalog.get(model);
                 if(!pricing){console.log('MODEL_UNAVAILABLE',model);continue;}
-                const upper=(Buffer.byteLength(JSON.stringify(body.messages))+512)*Number(pricing.prompt||0)+32*Number(pricing.completion||0)+Number(pricing.request||0)+Number(pricing.web_search||0)+0.01;
+                const upper=(Buffer.byteLength(JSON.stringify(body.messages))+512)*Number(pricing.prompt||0)+body.max_tokens*Number(pricing.completion||0)+Number(pricing.request||0)+Number(pricing.web_search||0)+0.01;
                 if(!Number.isFinite(upper)||upper<0||maximumReserved+upper>0.10){console.log('TEST_SPENDING_BOUND',model);continue;}
                 maximumReserved+=upper;
                 const result=await guard.withGlobalBudget(db,body,async()=>{
@@ -46,7 +46,7 @@ jobs:
                 const text=result.choices?.[0]?.message?.content;
                 const ok=result._httpStatus===200&&typeof text==='string'&&text.trim().length>0;
                 if(ok)successful++;
-                console.log('MODEL_TEST',JSON.stringify({model,http:result._httpStatus,response_received:ok}));
+                console.log('MODEL_TEST',JSON.stringify({model,http:result._httpStatus,response_received:ok,finish_reason:result.choices?.[0]?.finish_reason}));
               }
               console.log('SUCCESSFUL_MODELS',successful,'NO_SIGNAL_PUBLISHED',true);
               db.close();
