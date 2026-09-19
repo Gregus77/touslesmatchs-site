@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Confirm exact per-seat quota and replacement status
+      - name: Verify budget blockage and condition for higher weekend spending
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,23 +25,22 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,subprocess
+            import json,sqlite3,subprocess,urllib.request
             d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
-            r=d.execute("select model,created_at from agent_calls where agent_name='Mistral-Large' order by id desc limit 1").fetchone()
-            if r:
-             rows=d.execute("select status from openrouter_global_calls where model=? and abs((julianday(created_at)-julianday(?))*86400)<10",(r['model'],r['created_at'])).fetchall()
-             print('IA3_LATEST_HAS_PROVIDER_RESERVATION='+str(bool(rows)))
-             print('IA3_LATEST_PROVIDER_REJECTION='+str(any(x['status']=='rejected' for x in rows)))
-             o=d.execute("select model_id from model_overrides where logical_id='mistralai/mistral-small-2603'").fetchone()
-             print('IA3_REPLACEMENT_STILL_SELECTED='+str(bool(o and o[0]==r['model'])))
+            try:
+             rows=d.execute("select r.outcome,s.real_odd from official_signal_results r join official_vote_snapshots s on s.id=r.official_signal_snapshot_id where r.outcome in ('win','loss') order by r.resolved_at desc limit 20").fetchall()
+             valid=[r for r in rows if isinstance(r['real_odd'],(float,int)) and r['real_odd']>1]
+             print('OFFICIAL_SAMPLE_TWENTY='+str(len(valid)==20))
+             print('OFFICIAL_SAMPLE_PROFIT_POSITIVE='+str(bool(valid) and sum((r['real_odd']-1) if r['outcome']=='win' else -1 for r in valid)>0))
+            except:print('OFFICIAL_PERFORMANCE_PROOF_AVAILABLE=False')
             for i,seat in enumerate(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'],1):
-             r=d.execute("select detail,issue from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
-             s=str(r['detail'] or '').lower() if r else ''
-             print('SEAT_'+str(i)+'_MODEL_DAILY_LIMIT_REASON='+str('plafond quotidien du modèle' in s))
-             print('SEAT_'+str(i)+'_NO_PROVIDER_AVAILABLE='+str(bool(r and r['issue']=='indisponible')))
+             r=d.execute("select vote_produit,created_at>=datetime('now','-15 minutes') recent from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
+             print('SEAT_'+str(i)+'_RECENT_VOTE='+str(bool(r and r['recent'] and r['vote_produit'])))
             d.close()
-            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),m=require('/app/ai_models.config'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d);for(const [i,key] of ['perplexity','deepseek','mistral','luna','qwen'].entries()){const used=s.byModel.filter(x=>m.normalizeModelKey(x.model_key)===key).reduce((v,x)=>v+x.requests,0);console.log('SEAT_'+(i+1)+'_QUOTA_EXHAUSTED='+String(used>=m.getModel(key).dailyLimit));}d.close();"""
-            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],text=True,capture_output=True)
-            for l in p.stdout.splitlines():
-             if l.startswith('SEAT_') and l.rsplit('=',1)[-1] in ['true','false']:print(l)
+            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=15))
+            print('ANALYSIS_WINDOW_PRESENT='+str(any(isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 and m.get('status') not in ['HT','FT'] for m in data.get('matches',[]))))
+            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d),p=g.parisBudget(),u=d.prepare('select coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n from openrouter_global_calls where day=?').get(p.day).n;console.log('CURRENT_CAP_SIX='+String(p.limit===6));console.log('MONEY_HEADROOM_AVAILABLE='+String(u+.05<p.limit));console.log('MODEL_QUOTA_EXHAUSTED='+String(s.byModel.some(x=>x.requests>=180)));d.close();"""
+            r=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],capture_output=True,text=True)
+            for l in r.stdout.splitlines():
+             if l.split('=')[0] in ['CURRENT_CAP_SIX','MONEY_HEADROOM_AVAILABLE','MODEL_QUOTA_EXHAUSTED'] and l.rsplit('=',1)[-1] in ['true','false']:print(l)
             PY
