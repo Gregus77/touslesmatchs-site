@@ -3,6 +3,7 @@ name: TLM Paris midnight and Telegram production repair
 on:
   push:
     branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-paris-midnight-and-telegram-20260920.yml]
 
 permissions:
   contents: read
