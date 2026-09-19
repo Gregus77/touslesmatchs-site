@@ -56,6 +56,9 @@ jobs:
             trap 'rollback' ERR
 
             git fetch origin codex/telegram-recap-premium-20260920 codex/production-repair-20260914
+            echo 'LIVE_GUARD_CONTEXT_BEGIN'
+            nl -ba scripts/ai_budget_guard.js | sed -n '95,210p;300,335p;400,430p'
+            echo 'LIVE_GUARD_CONTEXT_END'
             merge_live_file() {
               file="$1"
               safe="$(printf '%s' "$file" | tr '/' '_')"
