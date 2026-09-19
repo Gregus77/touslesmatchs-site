@@ -56,13 +56,22 @@ jobs:
             trap 'rollback' ERR
 
             git fetch origin codex/telegram-recap-premium-20260920 codex/production-repair-20260914
-            git diff --binary origin/codex/production-repair-20260914..origin/codex/telegram-recap-premium-20260920 -- \
-              scripts/ai_budget_guard.js scripts/telegram_client.js \
-              scripts/test_budget_paris_rollover_20260920.js scripts/test_telegram_financial_recap_20260920.js \
-              > "$backup/repair.patch"
-            test -s "$backup/repair.patch"
-            git apply --check "$backup/repair.patch"
-            git apply "$backup/repair.patch"
+            merge_live_file() {
+              file="$1"
+              safe="$(printf '%s' "$file" | tr '/' '_')"
+              git show "origin/codex/production-repair-20260914:$file" > "$backup/$safe.base"
+              git show "origin/codex/telegram-recap-premium-20260920:$file" > "$backup/$safe.ours"
+              if ! git merge-file -p "$file" "$backup/$safe.base" "$backup/$safe.ours" > "$backup/$safe.merged"; then
+                echo "MERGE_CONFLICT=$file"
+                return 1
+              fi
+              test -s "$backup/$safe.merged"
+              cat "$backup/$safe.merged" > "$file"
+            }
+            merge_live_file scripts/ai_budget_guard.js
+            merge_live_file scripts/telegram_client.js
+            git show origin/codex/telegram-recap-premium-20260920:scripts/test_budget_paris_rollover_20260920.js > scripts/test_budget_paris_rollover_20260920.js
+            git show origin/codex/telegram-recap-premium-20260920:scripts/test_telegram_financial_recap_20260920.js > scripts/test_telegram_financial_recap_20260920.js
 
             node scripts/test_budget_paris_rollover_20260920.js
             node scripts/test_telegram_financial_recap_20260920.js
