@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify normalized snapshot score and individual votes
+      - name: Test score coherence candidate against active runtime
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,22 +25,64 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import json,sqlite3,urllib.request
-            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=15))
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-            for m in data.get('matches',[]):
-             if 'mirassol' not in str(m.get('home','')).lower() or 'botafogo' not in str(m.get('away','')).lower():continue
-             o=m.get('ou25') or {};s=o.get('snapshot_score')
-             if isinstance(s,dict):h,a=s.get('home'),s.get('away')
-             elif isinstance(s,str) and '-' in s:
-              try:h,a=map(int,s.split('-'))
-              except:h,a=None,None
-             else:h,a=None,None
-             print('NORMALIZED_SNAPSHOT_SCORE_MATCHES='+str(h==m.get('score_home') and a==m.get('score_away')))
-             print('SNAPSHOT_IS_OLD_ONE_ZERO='+str(h==1 and a==0))
-             print('UNDER_VOTES_MAJORITY='+str(o.get('under_count',0)>o.get('over_count',0)))
-             print('VIEW_ALREADY_MARKED_HISTORICAL='+str(bool(o.get('historical'))))
-             rows=db.execute("select match_key,bet from agent_market_predictions where lower(home) like '%mirassol%' and lower(away) like '%botafogo%' and market_line='buts' order by created_at desc limit 30").fetchall()
-             print('INDIVIDUAL_UNDER_AT_TWO_ZERO_EXISTS='+str(any(str(k).endswith('_2-0') and 'under' in str(b).lower() for k,b in rows)))
-            db.close()
+            import os,json,pathlib,subprocess,sqlite3,datetime,fcntl,sys
+            os.umask(0o077)
+            def run(args): return subprocess.check_output(args,stderr=subprocess.DEVNULL,text=True)
+            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            try:
+             assert run(['git','branch','--show-current']).strip()=='codex/production-repair-20260914'
+             assert run(['git','rev-parse','HEAD']).strip()=='61fe4dc907b29f0e212efc5773922f83abd3799f'
+             assert not run(['git','diff','--cached','--name-only']).strip()
+             run(['git','fetch','origin','codex/live-score-coherence-20260919'])
+             ref='c094fc4e3fdd8afaba3ed09fb8514717f8eed065'
+             assert run(['git','rev-parse','origin/codex/live-score-coherence-20260919']).strip()==ref
+             backup=pathlib.Path('/opt/backups/tlm-live-coherence-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'));backup.mkdir(mode=0o700);cand=backup/'candidate';cand.mkdir()
+             info=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
+             (backup/'inspect.json').write_text(json.dumps(info))
+             (backup/'worktree.patch').write_text(run(['git','diff']))
+             (backup/'git-index.before').write_bytes(pathlib.Path('.git/index').read_bytes())
+             for file in ['scripts/api_server.js','Dockerfile.api']:
+              (backup/(file.replace('/','_')+'.before')).write_bytes(pathlib.Path(file).read_bytes())
+             live=sqlite3.connect('data/tlm.db');dest=sqlite3.connect(str(backup/'tlm.db'));live.backup(dest);dest.close();live.close()
+             original=run(['docker','exec','touslesmatchs-api','cat','/app/server.js'])
+             (backup/'server.runtime.before').write_text(original)
+             candidate=original
+             patches=json.loads("[[\"const officialSnapshots = require(\\\"./official_signal_snapshots\\\");\",\"const officialSnapshots = require(\\\"./official_signal_snapshots\\\");\\nconst liveStateCoherence = require(\\\"./live_state_coherence\\\");\"],[\"function getLiveOu25VoteState(match) {\",\"function getLiveOu25VoteState(match) {\\n  return liveStateCoherence.publicState(match, getStoredLiveOu25VoteState(match));\\n}\\n\\nfunction getStoredLiveOu25VoteState(match) {\"],[\"const analysisExclusionReason = liveAnalysisNotice(m)\",\"const analysisExclusionReason = ou25.synchronization_reason || liveAnalysisNotice(m)\"],[\"async function fetchMatchStats(fixtureId) {\",\"async function fetchMatchStats(fixtureId, state = null) {\"],[\"const ck = `stats_${id}`;\",\"const ck = liveStateCoherence.statsKey(id, state);\"],[\"if (cached && Date.now() - cached.ts < 60000) return cached.data;\\n\\n  try {\\n    const data = await httpGet(\\n      `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,\",\"if (cached && Date.now() - cached.ts < (state ? 15000 : 60000)) return cached.data;\\n\\n  try {\\n    if (!apiSportsBudgetOk()) return null;\\n    const data = await httpGet(\\n      `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,\"],[\"    const stats = parseMatchStats(data);\\n    matchStatsCache.set(ck, { data: stats, ts: Date.now() });\",\"    if (state) {\\n      const rows = data?.response || [];\\n      const home = rows.filter(row => row.team?.id === state.home);\\n      const away = rows.filter(row => row.team?.id === state.away);\\n      if (home.length !== 1 || away.length !== 1) return null;\\n      data.response = [home[0], away[0]];\\n    }\\n    const stats = parseMatchStats(data);\\n    for (const [key, value] of matchStatsCache) if (Date.now() - value.ts > 60000) matchStatsCache.delete(key);\\n    matchStatsCache.set(ck, { data: stats, ts: Date.now() });\"],[\"async function fetchMatchStatsForMatch(match) {\\n  const fixtureId = getVerifiedFixtureId(match);\\n  if (!API_SPORTS_KEY) return buildStatsStatus(match, null, \\\"api_sports_key_missing\\\");\\n  if (!fixtureId) return buildStatsStatus(match, null, \\\"missing_api_sports_fixture\\\");\\n  if (!apiSportsBudgetOk()) return buildStatsStatus(match, null, \\\"api_sports_budget_horaire_atteint\\\");\\n\\n  const stats = await fetchMatchStats(fixtureId);\\n  if (!stats) return buildStatsStatus({ ...match, fixtureId }, null, \\\"api_sports_stats_unavailable\\\");\\n  return buildStatsStatus({ ...match, fixtureId }, stats, null);\\n}\\n\\n\",\"const liveStateCollector = liveStateCoherence.createCollector({\\n  fetchFixture: async id => {\\n    if (!API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('fixture_unavailable');\\n    const data = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), { \\\"x-apisports-key\\\": API_SPORTS_KEY });\\n    if (apiSportsErrors(data)) throw new Error('fixture_unavailable');\\n    return (data.response || []).find(f => String(f.fixture?.id) === String(id));\\n  },\\n  fetchStats: (id, state) => fetchMatchStats(id, state),\\n});\\nasync function fetchMatchStatsForMatch(match) {\\n  const fixtureId = getVerifiedFixtureId(match);\\n  if (!API_SPORTS_KEY) return buildStatsStatus(match, null, \\\"api_sports_key_missing\\\");\\n  if (!fixtureId) return buildStatsStatus(match, null, \\\"missing_api_sports_fixture\\\");\\n  if (!apiSportsBudgetOk()) return buildStatsStatus(match, null, \\\"api_sports_budget_horaire_atteint\\\");\\n  try {\\n    const collected = await liveStateCollector.collect(match, fixtureId);\\n    return { ...buildStatsStatus({ ...match, fixtureId }, collected.stats, null),\\n      observation: collected.observation };\\n  } catch (error) {\\n    const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message\\n      : 'Synchronisation score/statistiques indisponible : analyse suspendue.';\\n    setLiveAnalysisNotice(match, reason);\\n    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;\\n  }\\n}\\n\\n\"],[\"async function runConcileAnalysis(match) {\",\"async function runConcileAnalysis(match) {\\n  match = { ...match }; // Freeze the score used by every seat for this analysis.\"],[\"  const analysisResult = {\\n    match_key: `${match.home}_${match.away}`,\",\"  if (statsStatus.observation) {\\n    try {\\n      await liveStateCollector.revalidate(match, statsStatus.observation);\\n    } catch (error) {\\n      const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message\\n        : 'Score final de l’analyse non confirmé : publication suspendue.';\\n      setLiveAnalysisNotice(match, reason);\\n      const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;\\n    }\\n  }\\n\\n  const analysisResult = {\\n    match_key: `${match.home}_${match.away}`,\"],[\"    analysis_state: raw.analysis_state || null,\",\"    analysis_state: raw.analysis_state || null,\\n    synchronization_reason: raw.synchronization_reason || null,\"],[\"  const liveStats = statsStatus.available ? statsStatus.stats : null;\\n  const statsBlock = buildStatsBlock(liveStats, match.home, match.away);\",\"  if (isLiveMatch && sport === 'Football' && !statsStatus.observation) {\\n    const reason = 'Synchronisation score/statistiques non confirmée : analyse suspendue.';\\n    setLiveAnalysisNotice(match, reason);\\n    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;\\n  }\\n  const liveStats = statsStatus.available ? statsStatus.stats : null;\\n  const statsBlock = buildStatsBlock(liveStats, match.home, match.away);\"]]")
+             for old,new in patches:
+              assert candidate.count(old)==1
+              candidate=candidate.replace(old,new)
+             local=pathlib.Path('scripts/api_server.js').read_text()
+             for old,new in patches:
+              assert local.count(old)==1
+              local=local.replace(old,new)
+             (cand/'api_server.js').write_text(candidate)
+             (backup/'server.worktree.after').write_text(local)
+             for name in ['live_state_coherence.js','test_live_state_coherence_20260919.js','test_first_half_delivery_20260919.js']:
+              (cand/name).write_text(run(['git','show',ref+':scripts/'+name]))
+             for name in ['telegram_client.js','first_half_delivery.js','official_signal_snapshots.js','bookmakers.config.js','ai_budget_guard.js','ai_models.config.js']:
+              (cand/name).write_text(run(['docker','exec','touslesmatchs-api','cat','/app/'+name]))
+             for name in ['test_openrouter_global_budget.js']:
+              (cand/name).write_text(run(['git','show',ref+':scripts/'+name]))
+             run(['docker','exec','touslesmatchs-api','mkdir','-p','/tmp/tlm-live-coherence'])
+             run(['docker','cp',str(cand)+'/.','touslesmatchs-api:/tmp/tlm-live-coherence/'])
+             commands=['node --check api_server.js','node test_live_state_coherence_20260919.js','node test_first_half_delivery_20260919.js']
+             results=[]
+             for command in commands:
+              result=subprocess.run(['docker','exec','touslesmatchs-api','sh','-lc','cd /tmp/tlm-live-coherence && NODE_PATH=/app/node_modules '+command],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+              (backup/('test-'+str(len(results))+'.log')).write_text(result.stdout)
+              results.append(result.returncode==0)
+              print('ISOLATED_TEST_'+str(len(results))+'='+str(results[-1]))
+             assert all(results)
+             prior=pathlib.Path(json.loads(pathlib.Path('data/tlm-budget-recovery-current.json').read_text())['backup'])
+             config=json.loads((prior/'compose.after.json').read_text())
+             assert run(['docker','image','inspect',config['services']['api']['image'],'--format','{{.Id}}']).strip()==info['Image']
+             env=dict(x.split('=',1) for x in info['Config']['Env'])
+             assert config['services']['api']['environment']==env
+             (backup/'compose.before.json').write_text(json.dumps(config))
+             (backup/'patches.json').write_text(json.dumps(patches))
+             (backup/'state.json').write_text(json.dumps({'base':'61fe4dc907b29f0e212efc5773922f83abd3799f','candidate':ref,'testsPassed':True,'image':info['Image']}))
+             pathlib.Path('data/tlm-live-coherence-current.json').write_text(json.dumps({'backup':str(backup),'testsPassed':True}))
+             print('CANDIDATE_READY=True')
+            except Exception:
+             print('CANDIDATE_READY=False');sys.exit(1)
             PY
