@@ -24,6 +24,7 @@ const crypto = require("crypto");
 const analysisEngine = require("./analysis_engine");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
+const liveStateCoherence = require("./live_state_coherence");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -5020,22 +5021,31 @@ async function requireVerifiedLiveMatch(input) {
 
 const matchStatsCache = new Map();
 
-async function fetchMatchStats(fixtureId) {
+async function fetchMatchStats(fixtureId, state = null) {
   if (!API_SPORTS_KEY || !fixtureId) return null;
   const id = String(fixtureId);
   // Seulement pour les fixtures football (pas bk-, hk-, etc.)
   if (id.startsWith("bk-") || id.startsWith("hk-") || id.startsWith("demo")) return null;
 
-  const ck = `stats_${id}`;
+  const ck = liveStateCoherence.statsKey(id, state);
   const cached = matchStatsCache.get(ck);
-  if (cached && Date.now() - cached.ts < 60000) return cached.data;
+  if (cached && Date.now() - cached.ts < (state ? 15000 : 60000)) return cached.data;
 
   try {
+    if (!apiSportsBudgetOk()) return null;
     const data = await httpGet(
       `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,
       { "x-apisports-key": API_SPORTS_KEY }
     );
+    if (state) {
+      const rows = data?.response || [];
+      const home = rows.filter(row => row.team?.id === state.home);
+      const away = rows.filter(row => row.team?.id === state.away);
+      if (home.length !== 1 || away.length !== 1) return null;
+      data.response = [home[0], away[0]];
+    }
     const stats = parseMatchStats(data);
+    for (const [key, value] of matchStatsCache) if (Date.now() - value.ts > 60000) matchStatsCache.delete(key);
     matchStatsCache.set(ck, { data: stats, ts: Date.now() });
     return stats;
   } catch (e) {
@@ -5044,15 +5054,30 @@ async function fetchMatchStats(fixtureId) {
   }
 }
 
+const liveStateCollector = liveStateCoherence.createCollector({
+  fetchFixture: async id => {
+    if (!API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('fixture_unavailable');
+    const data = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), { "x-apisports-key": API_SPORTS_KEY });
+    if (apiSportsErrors(data)) throw new Error('fixture_unavailable');
+    return (data.response || []).find(f => String(f.fixture?.id) === String(id));
+  },
+  fetchStats: (id, state) => fetchMatchStats(id, state),
+});
 async function fetchMatchStatsForMatch(match) {
   const fixtureId = getVerifiedFixtureId(match);
   if (!API_SPORTS_KEY) return buildStatsStatus(match, null, "api_sports_key_missing");
   if (!fixtureId) return buildStatsStatus(match, null, "missing_api_sports_fixture");
   if (!apiSportsBudgetOk()) return buildStatsStatus(match, null, "api_sports_budget_horaire_atteint");
-
-  const stats = await fetchMatchStats(fixtureId);
-  if (!stats) return buildStatsStatus({ ...match, fixtureId }, null, "api_sports_stats_unavailable");
-  return buildStatsStatus({ ...match, fixtureId }, stats, null);
+  try {
+    const collected = await liveStateCollector.collect(match, fixtureId);
+    return { ...buildStatsStatus({ ...match, fixtureId }, collected.stats, null),
+      observation: collected.observation };
+  } catch (error) {
+    const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message
+      : 'Synchronisation score/statistiques indisponible : analyse suspendue.';
+    setLiveAnalysisNotice(match, reason);
+    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+  }
 }
 
 // ── H2H (confrontations directes) — donnée factuelle pour ancrer l'analyse ────
@@ -6481,6 +6506,7 @@ function hoteDuProvider(pv) {
 }
 
 async function runConcileAnalysis(match) {
+  match = { ...match }; // Freeze the score used by every seat for this analysis.
   // Plafond de replis de secours pour CETTE analyse (5 agents = 5 maximum).
   // Empeche qu'un incident fournisseur transforme une analyse en rafale
   // d'appels payants, meme sous le plafond journalier.
@@ -6510,6 +6536,11 @@ async function runConcileAnalysis(match) {
   const statsStatus = isLiveMatch
     ? await fetchMatchStatsForMatch(match)
     : buildStatsStatus(match, null, "match_not_live");
+  if (isLiveMatch && sport === 'Football' && !statsStatus.observation) {
+    const reason = 'Synchronisation score/statistiques non confirmée : analyse suspendue.';
+    setLiveAnalysisNotice(match, reason);
+    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+  }
   const liveStats = statsStatus.available ? statsStatus.stats : null;
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
   if (match.__officialAuto === true) {
@@ -7286,6 +7317,17 @@ Réponds en JSON pur (pas de markdown):
   // Vraie cote ARJEL (sinon estimation marché variée par type de pari)
   const oddInfo = await computeBestOdd(match, chief.bet, chief.confidence);
   console.log(`[concile] Cote ${match.home} vs ${match.away}: ${oddInfo.cote} (${oddInfo.source}) — ${chief.bet}`);
+
+  if (statsStatus.observation) {
+    try {
+      await liveStateCollector.revalidate(match, statsStatus.observation);
+    } catch (error) {
+      const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message
+        : 'Score final de l’analyse non confirmé : publication suspendue.';
+      setLiveAnalysisNotice(match, reason);
+      const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+    }
+  }
 
   const analysisResult = {
     match_key: `${match.home}_${match.away}`,
@@ -13294,6 +13336,10 @@ app.delete("/admin/set-score", (req, res) => {
 // Source unique : agent_market_predictions, déjà alimentée par les réponses
 // multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
 function getLiveOu25VoteState(match) {
+  return liveStateCoherence.publicState(match, getStoredLiveOu25VoteState(match));
+}
+
+function getStoredLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
   const currentSnapshotKey = getPredictionSnapshotKey(match);
   const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= CLIENT_OU25_CLIENT_MAX_MINUTE ? "open" : "closed";
@@ -13543,6 +13589,7 @@ function homepageLiveMatch(match, canReveal) {
     rule_version: raw.rule_version || null,
     outcome: raw.outcome || null,
     analysis_state: raw.analysis_state || null,
+    synchronization_reason: raw.synchronization_reason || null,
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
@@ -13694,7 +13741,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         delivery_status: telegramDeliveryProven ? 'diffuse' : 'non_diffuse',
       };
       const allSeatsFinishedWithoutVote = ou25.analysis_state === 'completed' && Number(ou25.vote_count || 0) === 0;
-      const analysisExclusionReason = liveAnalysisNotice(m)
+      const analysisExclusionReason = ou25.synchronization_reason || liveAnalysisNotice(m)
         || (allSeatsFinishedWithoutVote ? 'Analyse terminée : aucun vote IA exploitable reçu.' : null)
         || m.analysis_exclusion_reason || m.data_notice || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
