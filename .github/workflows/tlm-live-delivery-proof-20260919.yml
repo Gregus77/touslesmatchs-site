@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify real replacement votes and public serialization
+      - name: Confirm replacement vote reaches the public API
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -35,6 +35,15 @@ jobs:
              try:return datetime.datetime.fromisoformat(str(o.get('consensus_at')).replace('Z','+00:00'))>=datetime.datetime.fromisoformat(info['at'])
              except:return False
             flags['PUBLIC_NEW_FIVE_VOTES']=any((m.get('ou25') or {}).get('vote_count')==5 and recent(m.get('ou25') or {}) for m in data.get('matches',[]))
+            def seat_vote(m):
+             o=m.get('ou25') or {}
+             vv=o.get('votes') or []
+             if isinstance(vv,dict):vv=list(vv.values())
+             if len(vv)<3:return False
+             v=vv[2]
+             if not isinstance(v,dict):return False
+             return any(str(v.get(k) or '').lower() in ['o','u','over','under','over 2.5','under 2.5','over 2.5 buts','under 2.5 buts'] for k in ['direction','vote','bet','pick'])
+            flags['PUBLIC_NEW_IA3_VOTE']=any(recent(m.get('ou25') or {}) and seat_vote(m) for m in data.get('matches',[]))
             flags['PUBLIC_LIVE_OK']=bool(data.get('ok'))
             flags['NEW_CLIENT_DELIVERY_PROVEN']=bool(d.execute("select 1 from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and datetime(created_at)>=datetime(?) limit 1",(info['at'],)).fetchone())
             flags['ROUTING_STILL_APPLIED']=bool(d.execute('select 1 from model_overrides where logical_id=? and model_id=?',(info['logical'],info['candidate'])).fetchone())
