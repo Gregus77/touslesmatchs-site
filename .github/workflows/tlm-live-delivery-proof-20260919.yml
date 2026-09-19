@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify expired temporary banner removal
+      - name: Verify new eligible signal pipeline and individual deliveries
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,33 +25,16 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import pathlib,json,time,urllib.request,subprocess,fcntl,sys,datetime
-            try:
-             lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-             state=json.loads(pathlib.Path('data/tlm-papa-banner-current.json').read_text())
-             backup=pathlib.Path(state['backup']).resolve()
-             assert backup.parent==pathlib.Path('/opt/backups') and backup.name.startswith('tlm-papa-banner-')
-             manifest=json.loads((backup/'manifest.json').read_text())
-             expired=time.time()*1000>=state['expires']
-             assert expired
-             paths=[pathlib.Path(p).resolve() for p in manifest['paths']]
-             assert all(p.is_relative_to(pathlib.Path('/opt/touslesmatchs')) for p in paths)
-             needs_removal=any(manifest['block'] in p.read_text() for p in paths)
-             fcntl.flock(lock,fcntl.LOCK_UN)
-             if needs_removal:
-              result=subprocess.run(['/usr/bin/python3',str(backup/'remove.py')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=30)
-              assert result.returncode==0
-             removed=json.loads((backup/'removed.json').read_text()).get('removed') is True
-             flags={'SERVER_REMOVAL_CONFIRMED':removed,'SOURCE_BLOCK_ABSENT':all('TLM-PAPA-TEMPORARY-START' not in p.read_text() for p in paths)}
-             for label,path in [('HOME_BANNER_REMOVED','/'),('LIVE_BANNER_REMOVED','/live-ia')]:
-              request=urllib.request.Request('https://www.touslesmatchs.com'+path+'?removal_check='+str(int(time.time())),headers={'Cache-Control':'no-cache'})
-              with urllib.request.urlopen(request,timeout=20) as response:
-               text=response.read().decode()
-               flags[label]=response.status==200 and 'TLM-PAPA-TEMPORARY-START' not in text and 'tlm-papa-temporary' not in text
-             for key,value in flags.items():print(key+'='+str(value))
-             (backup/'removal-verification.json').write_text(json.dumps({'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':flags}))
-             assert all(flags.values())
-             print('REMOVAL_FULLY_VERIFIED=True')
-            except Exception:
-             print('REMOVAL_FULLY_VERIFIED=False');sys.exit(1)
+            import subprocess,json,urllib.request,pathlib,datetime
+            code="const D=require('better-sqlite3'),fs=require('fs'),d=new D('/data/tlm.db',{readonly:true});\nconst tg=require('/app/telegram_client');const dest=tg.destinations(process.env);\nfor(const c of ['free','premium','ru_free','ru_premium'])console.log('DEST_'+c.toUpperCase()+'_CONFIGURED='+String(dest.some(x=>x.channel===c)));\nconst source=fs.readFileSync('/app/server.js','utf8');\nconsole.log('AUTO_ANALYSIS_ENABLED='+String(!['false','0'].includes(String(process.env.AUTO_CONCILE_ENABLED||'true').toLowerCase())));\nconsole.log('PUBLISHER_PERIOD_VALIDATION='+String(source.includes('validateSignal: validateFirstHalfDelivery')));\nconsole.log('PUBLISHER_LOOP_PRESENT='+String(source.includes('setInterval(() => clientTelegramPublisher.flush()')));\nconst since='2026-09-19T21:09:03Z';\nfor(const c of ['free','premium','ru_free','ru_premium']){\nconst row=d.prepare('SELECT 1 FROM telegram_signal_deliveries WHERE channel=? AND ok=1 AND telegram_message_id>0 AND datetime(created_at)>=datetime(?) LIMIT 1').get(c,since);\nconsole.log('NEW_'+c.toUpperCase()+'_DELIVERY_PROVEN='+String(!!row));}\nconst registry=d.prepare('SELECT 1 FROM official_signal_registry r JOIN official_vote_snapshots s ON s.id=r.official_signal_snapshot_id WHERE datetime(s.created_at)>=datetime(?) LIMIT 1').get(since);console.log('NEW_OFFICIAL_SIGNAL='+String(!!registry));\nconsole.log('FRESH_REAL_VOTES='+String(!!d.prepare(\"SELECT 1 FROM agent_calls WHERE vote_produit=1 AND datetime(created_at)>=datetime('now','-20 minutes') LIMIT 1\").get()));\nconsole.log('FRESH_COMPLETED_ANALYSIS='+String(!!d.prepare(\"SELECT 1 FROM concile_analyses WHERE datetime(analysed_at)>=datetime('now','-20 minutes') LIMIT 1\").get()));\nfor(const state of ['pending','uncertain','expired','delivered'])console.log('RECENT_OUTBOX_'+state.toUpperCase()+'='+String(!!d.prepare('SELECT 1 FROM client_telegram_outbox WHERE kind=? AND state=? AND created_at>=? LIMIT 1').get('signal',state,Date.now()-3600000)));\nconst rows=d.prepare(\"SELECT block_reason,decision,criteria_json FROM signal_decision_journal WHERE datetime(created_at)>=datetime('now','-45 minutes') ORDER BY id DESC LIMIT 100\").all();\nfor(const [category,pattern]of [['STANDINGS',/classement|standing/i],['ODDS',/cote|odd/i],['QUALITY',/qualit|recovery/i],['VOTES',/vote|siege/i],['CONFIDENCE',/confiance|confidence/i],['WINDOW',/minute|fen.tre|window|mi.temps/i],['DATA',/donn.e|stats|synchron/i]])console.log('RECENT_BLOCK_'+category+'='+String(rows.some(r=>pattern.test(r.block_reason||''))));\nconsole.log('RECENT_DECISIONS_EXIST='+String(rows.length>0));\nd.close();"
+            r=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],capture_output=True,text=True)
+            for line in r.stdout.splitlines():
+             if line.endswith('=true') or line.endswith('=false'):print(line)
+            print('RUNTIME_AUDIT_COMPLETE='+str(r.returncode==0))
+            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=25))
+            matches=data.get('matches',[])
+            print('LIVE_FIRST_HALF_MATCH_PRESENT='+str(any(m.get('status') in ['IN_PLAY','LIVE'] and isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 for m in matches)))
+            print('LIVE_FOUR_VOTE_CONSENSUS_PRESENT='+str(any((m.get('ou25',{}).get('consensus_count') or 0)>=4 for m in matches)))
+            print('SITE_OFFICIAL_SIGNAL_PRESENT='+str(any(m.get('ou25',{}).get('official') for m in matches)))
+            pathlib.Path('data/tlm-delivery-current-audit.json').write_text(json.dumps({'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':r.stdout,'complete':r.returncode==0}))
             PY
