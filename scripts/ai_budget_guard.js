@@ -416,7 +416,7 @@ const {parisParts,parisDayBounds}=require('./telegram_client');
 const fs=require('fs'),crypto=require('crypto');
 function parisBudget(at=Date.now()) {
  const day=parisParts(at).day,dow=new Date(day+'T12:00:00Z').getUTCDay();
- return {day,limit:dow===0||dow===6?6:4,...parisDayBounds(day)};
+ return {day,limit:dow===0||dow===6?10:2,...parisDayBounds(day)};
 }
 function backgroundPaused(){return fs.existsSync('/data/openrouter-background-paused');}
 let catalogCache=null,catalogAt=0;
