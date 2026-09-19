@@ -25,62 +25,38 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import subprocess,json,sqlite3,datetime,urllib.request
-            since='2026-09-19 18:12:36'
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
-            print('NOW='+datetime.datetime.now(datetime.timezone.utc).isoformat())
-            rows=db.execute("select agent_name,http_status,issue,count(*) n,sum(vote_produit) votes,max(created_at) last from agent_calls where created_at>=? group by agent_name,http_status,issue",(since,)).fetchall()
-            seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
-            issues=['ok','http_erreur','timeout','illisible','vide','reseau','indisponible']
-            print('POST_CALLS='+json.dumps([{**dict(r),'agent_name':r['agent_name'] if r['agent_name'] in seats else 'other','issue':r['issue'] if r['issue'] in issues else 'other'} for r in rows]))
-            rows=db.execute("select channel,count(*) n,max(telegram_message_id) message_id,max(created_at) last from telegram_signal_deliveries where created_at>=? and ok=1 and telegram_message_id is not null group by channel",(since,)).fetchall()
-            print('POST_DELIVERIES='+json.dumps([{**dict(r),'channel':r['channel'] if r['channel'] in ['free','premium','ru_free','ru_premium'] else 'other'} for r in rows]))
-            print('SPENDING='+json.dumps([dict(r) for r in db.execute("select day,status,count(*) n,round(sum(charged_eur),4) charged from openrouter_global_calls where day=date('now') group by day,status")]))
+            import urllib.request,json,sqlite3
+            with urllib.request.urlopen('http://127.0.0.1:3001/live-matches',timeout=15) as r:d=json.loads(r.read())
+            flags={k:False for k in ['new_five_votes','new_signal_delivered','missing_odds','confidence_block','outside_window','recovery_block','league_block','other_block']}
+            for m in d.get('matches',[]):
+             q=m.get('ou25') or {}
+             if str(m.get('fixtureId',m.get('id')))!='1493141':continue
+             flags['new_five_votes']=q.get('vote_count')==5
+             flags['new_signal_delivered']=m.get('telegram_delivery_proven') is True
+             text=' '.join(str(m.get(k) or '') for k in ['block_reason','analysis_exclusion_reason','diffusion_block','delivery_status']).lower()
+             flags['missing_odds']=any(x in text for x in ['cote','odds','odd'])
+             flags['confidence_block']=any(x in text for x in ['confiance','confidence'])
+             flags['outside_window']=any(x in text for x in ['fenêtre','fenetre','window','minute'])
+             flags['recovery_block']='recovery' in text
+             flags['league_block']=any(x in text for x in ['championnat','league','competition'])
+             flags['other_block']=bool(text.strip()) and not any(flags[k] for k in ['missing_odds','confidence_block','outside_window','recovery_block','league_block'])
+            print('RECOVERY_FLAGS='+json.dumps(flags))
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            count=db.execute("select count(*) from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and created_at>='2026-09-19 18:12:36'").fetchone()[0]
+            print('NEW_TELEGRAM_DELIVERY_PRESENT='+str(count>0))
+            # Classify locally, without publishing records, odds, names, IDs or free text.
+            texts=db.execute("select block_reason from signal_decision_journal where created_at>='2026-09-19 18:12:36' and match_key in (select distinct match_key from agent_calls where created_at>='2026-09-19 18:12:36' and vote_produit=1)").fetchall()
+            s=' '.join(str(x[0] or '') for x in texts).lower()
+            print('DISPOSITION_FLAGS='+json.dumps({'odds':any(x in s for x in ['cote','odds','odd']),'confidence':any(x in s for x in ['confiance','confidence']),'window':any(x in s for x in ['fenêtre','fenetre','window','minute']),'recovery':'recovery' in s,'reason_recorded':bool(s.strip())}))
             db.close()
-            for path,expected in [('/app/server.js','ec355eea6ee0bc403f74a40376b979507fc25c5b417b11a62e2483cb05ca2c95'),('/app/ai_budget_guard.js','071bd258c5d2e27bfb880772463ea005c8b3c6460ee4b80a2457bdea1a472acb')]:
-             p=subprocess.run(['docker','exec','touslesmatchs-api','sha256sum',path],capture_output=True,text=True)
-             print('CODE_UNCHANGED='+json.dumps({'file':path,'same':p.returncode==0 and p.stdout.split()[0]==expected}))
-            for endpoint in ['/health','/live-matches']:
+            for path in ['/','/api/health','/api/live-matches']:
              try:
-              with urllib.request.urlopen('http://127.0.0.1:3001'+endpoint,timeout=12) as r:
-               d=json.loads(r.read());print('HTTP='+json.dumps({'route':endpoint,'status':r.status}))
-              if endpoint=='/live-matches':
-               matches=d.get('matches',[])
-               print('LIVE_COUNTS='+json.dumps({'all':len(matches),'15_45':sum(isinstance(x.get('minute'),(int,float)) and 15<=x['minute']<=45 for x in matches),'analysable':sum(x.get('analysable') is True for x in matches)}))
-               out=[]
-               for m in matches:
-                q=m.get('ou25',{})
-                out.append({'fixture':m.get('fixtureId',m.get('id')),'minute':m.get('minute'),'analysable':m.get('analysable'),'analysis_verified':m.get('analysis_verified'),'delivered':m.get('signal_delivered'),'telegram_proven':m.get('telegram_delivery_proven'),'ou25_keys':list(q.keys()) if isinstance(q,dict) else []})
-               print('LIVE_STATES='+json.dumps(out))
-             except Exception as e:print('HTTP_READ_FAILED='+type(e).__name__)
-            PY
-            python3 - <<'PY'
-            import subprocess,json,sqlite3,urllib.request,re,time,datetime
-            env={}
-            p=subprocess.run(['docker','inspect','touslesmatchs-api'],capture_output=True,text=True)
-            i=json.loads(p.stdout)[0]
-            for v in i['Config']['Env']:
-             k,_,x=v.partition('=');env[k]=x
-            print('OBSERVER_CONFIG='+json.dumps({k:env.get(k) if re.fullmatch(r'[0-9.]+|true|false',env.get(k,'')) else 'unset_or_other' for k in ['AUTO_CONCILE_ENABLED','AUTO_CONCILE_INTERVAL_MS','AUTO_CONCILE_MAX_PER_CYCLE','AUTO_CONCILE_MAX_MATCHES','OPENROUTER_FALLBACK_DAILY_CAP']}),flush=True)
-            for step in range(9):
-             db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-             rows=db.execute("select agent_name,count(*),sum(vote_produit),max(created_at) from agent_calls where created_at>='2026-09-19 18:12:36' group by agent_name").fetchall()
-             seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
-             print('WATCH='+json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'seats':[{'seat':r[0] if r[0] in seats else 'other','calls':r[1],'votes':r[2],'last':r[3]} for r in rows]}),flush=True)
-             db.close()
-             if sum(r[2] or 0 for r in rows)>=5:break
-             if step<8:time.sleep(30)
-            p=subprocess.run(['docker','logs','--since','2026-09-19T18:12:19Z','touslesmatchs-api'],capture_output=True,text=True)
-            s=p.stdout+'\n'+p.stderr
-            terms=['runAutoConcile','auto-concile','daily_requests','plafond de requêtes','budget','aucun vote exploitable','aucun fournisseur','429','402','EADDRINUSE','Cannot find module']
-            print('LOG_CATEGORIES='+json.dumps({k:s.lower().count(k.lower()) for k in terms}))
-            try:
-             with urllib.request.urlopen('http://127.0.0.1:3001/live-matches',timeout=15) as r:d=json.loads(r.read())
-             rows=[]
-             for m in d.get('matches',[]):
-              q=m.get('ou25') or {}
-              if q.get('consensus_at') and str(q['consensus_at'])>='2026-09-19T18:12:36':
-               rows.append({'fixture':m.get('fixtureId'),'votes':q.get('vote_count'),'consensus':q.get('consensus_count'),'over':q.get('over_count'),'under':q.get('under_count'),'at':q.get('consensus_at')})
-             print('API_AFTER='+json.dumps(rows))
-            except Exception as e:print('API_READ_ERROR='+type(e).__name__)
+              with urllib.request.urlopen('https://www.touslesmatchs.com'+path,timeout=15) as r:
+               status=r.status;body=r.read(5000000)
+              info={'path':path,'http':status}
+              if path=='/api/live-matches':
+               data=json.loads(body);matches=data.get('matches',[]) if isinstance(data,dict) else data
+               info['new_five_votes_public']=any((m.get('ou25') or {}).get('vote_count')==5 for m in matches if str(m.get('fixtureId',m.get('id')))=='1493141')
+              print('PUBLIC_PROOF='+json.dumps(info))
+             except Exception:print('PUBLIC_READ_FAILED=True')
             PY
