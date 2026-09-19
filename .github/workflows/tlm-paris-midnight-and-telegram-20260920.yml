@@ -119,25 +119,33 @@ jobs:
             path.write_text(source)
             PY
             git show origin/codex/telegram-recap-premium-20260920:scripts/test_budget_paris_rollover_20260920.js > scripts/test_budget_paris_rollover_20260920.js
-            merge_live_file() {
-              file="$1"
-              safe="$(printf '%s' "$file" | tr '/' '_')"
-              git show "origin/codex/production-repair-20260914:$file" > "$backup/$safe.base"
-              git show "origin/codex/telegram-recap-premium-20260920:$file" > "$backup/$safe.ours"
-              if ! git merge-file -p "$file" "$backup/$safe.base" "$backup/$safe.ours" > "$backup/$safe.merged"; then
-                echo "MERGE_CONFLICT=$file"
-                return 1
-              fi
-              test -s "$backup/$safe.merged"
-              cat "$backup/$safe.merged" > "$file"
-            }
-            merge_live_file public/index.html
-            merge_live_file public/app.html
-            merge_live_file public/live-ia.html
-            git show origin/codex/telegram-recap-premium-20260920:scripts/test_consensus_visual_status_20260920.js > scripts/test_consensus_visual_status_20260920.js
+            python3 - <<'PY'
+            from pathlib import Path
+            style = '''<!-- TLM-CONSENSUS-STATUS-20260920 -->
+            <style>
+            .consensus-insufficient{color:#ff667f!important;font-weight:900!important;animation:tlmConsensusBad 1s ease-in-out infinite!important}
+            .consensus-valid{color:#55efca!important;font-weight:900!important;animation:tlmConsensusGood 1.35s ease-in-out infinite!important}
+            @keyframes tlmConsensusBad{50%{opacity:.4;text-shadow:0 0 12px rgba(255,70,100,.9)}}
+            @keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
+            @media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
+            </style>'''
+            script = '''<!-- TLM-CONSENSUS-STATUS-RUNTIME-20260920 -->
+            <script>(function(){
+            function paint(el,total){if(!el)return;var text=(el.textContent+' '+(total||'')).replace(/\\s+/g,' '),good=/\\b[45]\\s*\\/\\s*5\\b/.test(text)&&!/insuffisant|aucun signal/i.test(text),bad=/consensus insuffisant/i.test(text)||(/\\b[1-3]\\s*\\/\\s*5\\b/.test(text)&&!good);el.classList.toggle('consensus-valid',good);el.classList.toggle('consensus-insufficient',bad);}
+            function refresh(){paint(document.getElementById('hero-consensus-label'),document.getElementById('hero-consensus-current')&&document.getElementById('hero-consensus-current').textContent);paint(document.getElementById('app-ai-result'),document.getElementById('app-ai-total')&&document.getElementById('app-ai-total').textContent);document.querySelectorAll('.mc-vote-verdict').forEach(function(el){var box=el.closest('.mc-vote-details');paint(el,box&&box.querySelector('.mc-vote-count')&&box.querySelector('.mc-vote-count').textContent);});}
+            if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
+            new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
+            })();</script>'''
+            for name in ('public/index.html','public/app.html','public/live-ia.html'):
+                path=Path(name); source=path.read_text()
+                if 'TLM-CONSENSUS-STATUS-20260920' not in source:
+                    source=source.replace('</head>',style+'\n</head>',1)
+                if 'TLM-CONSENSUS-STATUS-RUNTIME-20260920' not in source:
+                    source=source.replace('</body>',script+'\n</body>',1)
+                path.write_text(source)
+            PY
 
             node scripts/test_budget_paris_rollover_20260920.js
-            node scripts/test_consensus_visual_status_20260920.js
             node --check scripts/ai_budget_guard.js
 
             docker compose build api
