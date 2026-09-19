@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Back up and apply owner-authorized seat three model routing
+      - name: Verify real replacement votes and public serialization
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,65 +25,22 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,subprocess,pathlib,datetime,os,fcntl,hashlib
-            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            def cmd(args):return subprocess.check_output(args,text=True,stderr=subprocess.DEVNULL).strip()
-            branch=cmd(['git','branch','--show-current']);head=cmd(['git','rev-parse','HEAD']);up=cmd(['git','rev-parse','--abbrev-ref','@{upstream}'])
-            remote=cmd(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]
-            assert branch=='codex/production-repair-20260914' and up=='origin/'+branch and head==remote
-            diff=subprocess.check_output(['git','diff','--binary','HEAD'])
-            status=subprocess.check_output(['git','status','--porcelain'])
-            env=dict(x.split('=',1) for x in json.loads(cmd(['docker','inspect','touslesmatchs-api']))[0]['Config']['Env'])
-            logical=env.get('OR_MISTRAL_MODEL') or 'mistralai/mistral-small-2603'
-            proof=json.loads(pathlib.Path('data/tlm-seat3-candidate-20260919.json').read_text())
-            assert proof['ok'] and proof['independent']
-            assert (datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(proof['at'].replace('Z','+00:00'))).total_seconds()<900
-            candidate=proof['candidate']
-            assert candidate.startswith('moonshotai/') and not candidate.endswith(':free')
-            source=cmd(['docker','exec','touslesmatchs-api','cat','/app/server.js'])
-            assert 'process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603"' in source
-            start=source.index('function resolveModel(logicalId) {')
-            end=source.index('\nconst SHADOW_AGENTS',start)
-            function=source[start:end].strip()
-            assert function.endswith('}')
-            test="const vm=require('vm'),assert=require('assert');const sandbox={Date,_modelOverrideCache:{at:0,map:{}},db:{prepare:()=>({all:()=>[{logical_id:"+json.dumps(logical)+",model_id:"+json.dumps(candidate)+"}]})}};vm.runInNewContext("+json.dumps(function+";this.resolve=resolveModel;")+",sandbox);assert.equal(sandbox.resolve("+json.dumps(logical)+"),"+json.dumps(candidate)+");for(const id of ['deepseek/deepseek-chat','perplexity/sonar-pro','openai/gpt-5.6-luna','qwen/qwen3.7-max'])assert.equal(sandbox.resolve(id),id);"
-            p=subprocess.run(['docker','exec','-i','touslesmatchs-api','node'],input=test,text=True,capture_output=True)
-            assert p.returncode==0
-            print('ROUTING_BEHAVIOR_TEST_PASSED=True')
-            stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-            backup=pathlib.Path('/opt/backups/tlm-seat3-routing-'+stamp);backup.mkdir(mode=0o700)
-            def save(name,obj):
-             fd=os.open(str(backup/name),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
-             with os.fdopen(fd,'w') as f:json.dump(obj,f)
-            db=sqlite3.connect('data/tlm.db');db.row_factory=sqlite3.Row
-            prev=db.execute('select * from model_overrides where logical_id=?',(logical,)).fetchone()
-            assert prev is None
-            dest=sqlite3.connect(str(backup/'tlm.db'));db.backup(dest);dest.close();os.chmod(backup/'tlm.db',0o600)
-            save('routing.before.json',{'branch':branch,'head':head,'upstream':up,'prior':dict(prev) if prev else None,'logical':logical,'candidate':candidate,'sourceHash':hashlib.sha256(source.encode()).hexdigest()})
-            changed=False
-            try:
-             db.execute('BEGIN IMMEDIATE')
-             assert db.execute('select 1 from model_overrides where logical_id=?',(logical,)).fetchone() is None
-             db.execute("insert into model_overrides(logical_id,model_id,replaced_at,reason) values(?,?,datetime('now'),?)",(logical,candidate,'Owner-authorized seat 3 availability replacement after provider HTTP 429; isolated shadow transport verified; original votes preserved'))
-             db.commit();changed=True
-             assert subprocess.check_output(['git','diff','--binary','HEAD'])==diff
-             assert subprocess.check_output(['git','status','--porcelain'])==status
-             assert cmd(['docker','exec','touslesmatchs-api','cat','/app/server.js'])==source
-             import urllib.request
-             assert urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=10).status==200
-             applied=datetime.datetime.now(datetime.timezone.utc).isoformat()
-             save('result.json',{'status':'APPLIED_AWAITING_NATURAL_VOTE','at':applied,'logical':logical,'candidate':candidate,'budgetUnchanged':True,'sourceUnchanged':True,'historicalVotesUnchanged':True})
-             fd=os.open('data/tlm-seat3-routing-current.json',os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
-             with os.fdopen(fd,'w') as out:json.dump({'at':applied,'logical':logical,'candidate':candidate,'backup':str(backup)},out)
-             print('IA3_REPLACEMENT_APPLIED=True')
-             print('OTHER_FOUR_ROUTES_PRESERVED=True')
-             print('BUDGET_AND_HISTORY_PRESERVED=True')
-             print('API_HEALTH_OK=True')
-            except:
-             db.rollback()
-             if changed:
-              db.execute('delete from model_overrides where logical_id=? and model_id=?',(logical,candidate));db.commit()
-             print('IA3_REPLACEMENT_ROLLED_BACK=True')
-             raise
-            finally:db.close()
+            import sqlite3,json,pathlib,urllib.request,datetime,os
+            info=json.loads(pathlib.Path('data/tlm-seat3-routing-current.json').read_text())
+            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
+            rows=d.execute("select http_status,vote_produit from agent_calls where agent_name='Mistral-Large' and model=? and datetime(created_at)>=datetime(?)",(info['candidate'],info['at'])).fetchall()
+            flags={'REPLACEMENT_REAL_CALL_OBSERVED':bool(rows),'REPLACEMENT_REAL_VOTE_OBSERVED':any(r['vote_produit'] for r in rows),'REPLACEMENT_HTTP429_OBSERVED':any(r['http_status']==429 for r in rows)}
+            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=20))
+            def recent(o):
+             try:return datetime.datetime.fromisoformat(str(o.get('consensus_at')).replace('Z','+00:00'))>=datetime.datetime.fromisoformat(info['at'])
+             except:return False
+            flags['PUBLIC_NEW_FIVE_VOTES']=any((m.get('ou25') or {}).get('vote_count')==5 and recent(m.get('ou25') or {}) for m in data.get('matches',[]))
+            flags['PUBLIC_LIVE_OK']=bool(data.get('ok'))
+            flags['NEW_CLIENT_DELIVERY_PROVEN']=bool(d.execute("select 1 from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and datetime(created_at)>=datetime(?) limit 1",(info['at'],)).fetchone())
+            flags['ROUTING_STILL_APPLIED']=bool(d.execute('select 1 from model_overrides where logical_id=? and model_id=?',(info['logical'],info['candidate'])).fetchone())
+            for k,v in flags.items():print(k+'='+str(v))
+            p=pathlib.Path(info['backup'])/('verification-'+datetime.datetime.now(datetime.timezone.utc).strftime('%H%M%S')+'.json')
+            fd=os.open(str(p),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+            with os.fdopen(fd,'w') as f:json.dump({'checked_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':flags},f)
+            d.close()
             PY
