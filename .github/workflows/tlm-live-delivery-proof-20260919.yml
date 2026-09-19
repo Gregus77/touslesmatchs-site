@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Publish verified temporary banner
+      - name: Publish temporary banner on verified homepage and Live
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -42,10 +42,10 @@ jobs:
              for mount in info['Mounts']:
               root=pathlib.Path(mount['Source'])
               if root.is_dir():
-               for rel in ['index.html','app.html','public/app.html','public/index.html','dist/index.html']:
+               for rel in ['index.html','app.html','live-ia.html','live-ia/index.html','public/app.html','public/index.html','public/live-ia.html','dist/index.html','dist/live-ia.html']:
                 p=root/rel
                 if p.is_file():candidates.add(p)
-             for rel in ['public/app.html','public/index.html','dist/index.html','index.html']:
+             for rel in ['public/app.html','public/index.html','public/live-ia.html','dist/index.html','dist/live-ia.html','index.html']:
               p=pathlib.Path('/opt/touslesmatchs')/rel
               if p.is_file():candidates.add(p)
              pages=[]
