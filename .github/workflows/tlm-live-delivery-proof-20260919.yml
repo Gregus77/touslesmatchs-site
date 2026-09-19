@@ -25,16 +25,14 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import subprocess,json,urllib.request,pathlib,datetime
-            code="const fs=require('fs'),vm=require('vm');const source=fs.readFileSync('/app/server.js','utf8');\nconst functions=['ownerExpandedLeagueAllowed','leagueHaystack','leagueTier','isWomenMatch','isUsaOrCanadaMatch','isAmericanFootballMatch','isLowTrustCompetition','isCategoryBanned','parseLiveMinuteValue','recoveryNormalize','isClientOu25MatchEligible','isPublicFootballScopeMatch','tlmScopeNorm','tlmScopeCountry'];\nlet code='';\nfor(const name of functions){const start=source.indexOf('function '+name+'(');const end=source.indexOf('\\n}',start)+2;if(start<0||end<2)throw Error('function_missing');code+=source.slice(start,end)+'\\n';}\nfor(const name of ['LOW_TRUST_COMPETITION_KEYWORDS','LEAGUE_TIER_SECONDARY','LEAGUE_TIER_WATCHLIST','TRUSTED_COMPETITIONS','CATEGORY_BAN_KEYWORDS']){\nconst start=source.indexOf('const '+name+' = [');const end=source.indexOf('\\n];',start)+3;if(start<0||end<3)throw Error('constant_missing');code+=source.slice(start,end)+'\\n';}\nconst start=source.indexOf('const PUBLIC_FOOTBALL_BLOCKED_COUNTRIES = new Set([');const end=source.indexOf('\\n]);',start)+4;if(start<0)throw Error('countries_missing');code+=source.slice(start,end)+'\\n';\nconst box={};vm.createContext(box);vm.runInContext(code,box);\nconst cases=[['ARGENTINA_FOLLOW_ENABLED','Argentina','Liga Profesional Argentina'],['BRAZIL_SERIE_A_FOLLOW_ENABLED','Brazil','Serie A'],['BRAZIL_SERIE_B_FOLLOW_ENABLED','Brazil','Serie B']];\nfor(const [label,country,league]of cases){const m={sport:'Football',country,league,competition:league+' · '+country,home:'Home',away:'Away',minute:30};console.log(label+'='+String(box.isClientOu25MatchEligible(m,false,45)&&box.isPublicFootballScopeMatch(m)));}\n"
-            result=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
-            if result.returncode:
-             print('RUNTIME_SCOPE_CHECK=False')
-            else:
-             for line in result.stdout.splitlines():
-              if line.endswith('=true') or line.endswith('=false'):print(line)
+            import pathlib,json,time,urllib.request,subprocess
+            p=json.loads(pathlib.Path('data/tlm-papa-banner-current.json').read_text())
+            backup=pathlib.Path(p['backup'])
+            print('BANNER_EXPIRED='+str(time.time()*1000>=p['expires']))
+            print('BANNER_REMOVAL_CONFIRMED='+str((backup/'removed.json').exists()))
+            r=subprocess.run(['systemctl','is-active',p['timer']],capture_output=True,text=True)
+            print('BANNER_TIMER_ACTIVE='+str(r.stdout.strip()=='active'))
             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=20))
             for key,country in [('ARGENTINA_MATCH_VISIBLE','argentina'),('BRAZIL_MATCH_VISIBLE','brazil')]:
              print(key+'='+str(any(country in str(m.get('country','')).lower() or country in str(m.get('competition','')).lower() for m in data.get('matches',[]))))
-            pathlib.Path('data/tlm-south-america-scope-verification.json').write_text(json.dumps({'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'scope':result.stdout,'ok':result.returncode==0}))
             PY
