@@ -1,0 +1,41 @@
+name: TLM homepage analysis navigation
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-home-analysis-link.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            backup="/opt/backups/tlm-home-analysis-link-$(date -u +%Y%m%dT%H%M%SZ)"
+            mkdir -p "$backup"
+            cp -p public/index.html "$backup/index.html"
+            git fetch origin codex/telegram-recap-premium-20260920
+            git show origin/codex/telegram-recap-premium-20260920:scripts/patch_home_analysis_link.js > "$backup/patch_home_analysis_link.js"
+            git show origin/codex/telegram-recap-premium-20260920:scripts/test_home_analysis_link.js > "$backup/test_home_analysis_link.js"
+            node "$backup/test_home_analysis_link.js"
+            rollback() { cp -p "$backup/index.html" public/index.html; }
+            trap rollback ERR
+            node "$backup/patch_home_analysis_link.js" public/index.html
+            curl -fsSL "https://www.touslesmatchs.com/?navigation-check=$(date +%s)" > "$backup/served.html"
+            node "$backup/patch_home_analysis_link.js" "$backup/served.html"
+            cmp -s public/index.html "$backup/served.html"
+            curl -fsSL https://www.touslesmatchs.com/live-ia > "$backup/live.html"
+            grep -qi 'Live IA' "$backup/live.html"
+            trap - ERR
+            echo HOME_ANALYSIS_NAVIGATION_DEPLOYED

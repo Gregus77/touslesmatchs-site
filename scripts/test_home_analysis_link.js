@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+assert.ok(fs.existsSync(__dirname+'/patch_home_analysis_link.js'),'navigation patch missing');
+const patch=require('./patch_home_analysis_link');
+const input='<a href="#tlm-panel-live" class="btn btn-prim">Voir les analyses</a><a href="#plans">Tarifs</a>';
+const output=patch(input);
+assert.equal(output,'<a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="#plans">Tarifs</a>');
+assert.equal(patch(output),output);
+assert.throws(()=>patch('<a href="#plans">Tarifs</a>'));
+assert.throws(()=>patch(input+input));
+console.log('HOME_ANALYSIS_LINK_TEST_OK');
