@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify real votes after approved budget recovery
+      - name: Check Mirassol score and vote snapshot consistency
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,25 +25,24 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import json,pathlib,sqlite3,urllib.request,subprocess,datetime,os
-            backup=pathlib.Path(json.loads(pathlib.Path('data/tlm-budget-recovery-current.json').read_text())['backup'])
-            deployment=json.loads((backup/'deployment.json').read_text());since=deployment['at']
+            import json,sqlite3,urllib.request
             db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
-            flags={}
-            for i,seat in enumerate(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'],1):
-             flags['SEAT_'+str(i)+'_NEW_REAL_VOTE']=bool(db.execute("select 1 from agent_calls where agent_name=? and vote_produit=1 and datetime(created_at)>=datetime(?) limit 1",(seat,since)).fetchone())
+            rows=db.execute("select match_key,minute_at_analysis,score_home_at_analysis,score_away_at_analysis,best_bet,analysed_at,agents_json from concile_analyses where lower(home) like '%mirassol%' and lower(away) like '%botafogo%' order by analysed_at desc limit 12").fetchall()
+            flags={'MATCH_ANALYSES_FOUND':bool(rows),'OVER_AT_ONE_ZERO_FOUND':any(r['score_home_at_analysis']==1 and r['score_away_at_analysis']==0 and 'over' in str(r['best_bet']).lower() for r in rows),'UNDER_AT_TWO_ZERO_FOUND':any(r['score_home_at_analysis']==2 and r['score_away_at_analysis']==0 and 'under' in str(r['best_bet']).lower() for r in rows)}
             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=20))
-            flags['CURRENT_ANALYSIS_WINDOW_PRESENT']=any(isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 and m.get('status') not in ['HT','FT'] for m in data.get('matches',[]))
-            flags['CURRENT_ELIGIBLE_MATCH_PRESENT']=any(m.get('analysable') and isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 and m.get('status') not in ['HT','FT'] for m in data.get('matches',[]))
-            flags['NEW_TELEGRAM_DELIVERY_PROVEN']=bool(db.execute("select 1 from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and datetime(created_at)>=datetime(?) limit 1",(since,)).fetchone())
-            route=json.loads(pathlib.Path('data/tlm-seat3-routing-current.json').read_text())
-            flags['KIMI_ROUTE_PRESERVED']=bool(db.execute('select 1 from model_overrides where logical_id=? and model_id=?',(route['logical'],route['candidate'])).fetchone())
+            matches=[m for m in data.get('matches',[]) if 'mirassol' in str(m.get('home','')).lower() and 'botafogo' in str(m.get('away','')).lower()]
+            flags['MATCH_PUBLICLY_VISIBLE']=bool(matches)
+            for m in matches:
+             o=m.get('ou25') or {};score=str(m.get('score_home'))+'-'+str(m.get('score_away'))
+             flags['LIVE_SCORE_TWO_ZERO']=score=='2-0'
+             flags['SNAPSHOT_SCORE_MATCHES_LIVE']=str(o.get('snapshot_score'))==score
+             flags['PUBLIC_UNDER_RECOMMENDATION']=str(o.get('consensus_direction')).lower()=='under'
+             flags['OFFICIAL_SIGNAL_DISPLAYED']=bool(o.get('official'))
+             ident=str(m.get('fixtureId') or m.get('id'))
+             snaps=db.execute("select * from official_vote_snapshots where fixture_id=? order by created_at desc limit 12",(ident,)).fetchall()
+             flags['SNAPSHOT_OVER_AT_ONE_ZERO']=any(r['score_home']==1 and r['score_away']==0 and str(r['consensus']).lower()=='over' for r in snaps)
+             flags['SNAPSHOT_UNDER_AT_TWO_ZERO']=any(r['score_home']==2 and r['score_away']==0 and str(r['consensus']).lower()=='under' for r in snaps)
+             flags['DELIVERY_PROVEN_FOR_MATCH']=bool(db.execute("select 1 from telegram_signal_deliveries d join official_vote_snapshots s on s.id=d.official_signal_snapshot_id where s.fixture_id=? and d.ok=1 and d.telegram_message_id is not null limit 1",(ident,)).fetchone())
             for k,v in flags.items():print(k+'='+str(v))
-            fd=os.open(str(backup/'verification.json'),os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
-            with os.fdopen(fd,'w') as f:json.dump({'checked_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':flags},f)
             db.close()
-            code="const g=require('/app/ai_budget_guard'),D=require('better-sqlite3'),db=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(db);console.log('REQUEST_HEADROOM_AVAILABLE='+String(s.requests<s.budget.maxRequestsPerDay));console.log('ALL_MODEL_QUOTAS_AVAILABLE='+String(s.byModel.every(x=>x.requests<400)));console.log('FROM_THIRTY_PRESERVED='+String(require('/app/official_signal_snapshots').OFFICIAL_FROM_MINUTE===30));db.close();"
-            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],capture_output=True,text=True)
-            for l in p.stdout.splitlines():
-             if l.split('=')[0] in ['REQUEST_HEADROOM_AVAILABLE','ALL_MODEL_QUOTAS_AVAILABLE','FROM_THIRTY_PRESERVED'] and l.rsplit('=',1)[-1] in ['true','false']:print(l)
             PY
