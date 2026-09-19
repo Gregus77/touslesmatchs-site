@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Diagnose current five-seat availability without exposing counters
+      - name: Confirm exact per-seat quota and replacement status
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,21 +25,23 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,subprocess,urllib.request
+            import sqlite3,json,subprocess
             d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
+            r=d.execute("select model,created_at from agent_calls where agent_name='Mistral-Large' order by id desc limit 1").fetchone()
+            if r:
+             rows=d.execute("select status from openrouter_global_calls where model=? and abs((julianday(created_at)-julianday(?))*86400)<10",(r['model'],r['created_at'])).fetchall()
+             print('IA3_LATEST_HAS_PROVIDER_RESERVATION='+str(bool(rows)))
+             print('IA3_LATEST_PROVIDER_REJECTION='+str(any(x['status']=='rejected' for x in rows)))
+             o=d.execute("select model_id from model_overrides where logical_id='mistralai/mistral-small-2603'").fetchone()
+             print('IA3_REPLACEMENT_STILL_SELECTED='+str(bool(o and o[0]==r['model'])))
             for i,seat in enumerate(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'],1):
-             r=d.execute("select vote_produit,http_status,detail,created_at>=datetime('now','-20 minutes') recent from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
+             r=d.execute("select detail,issue from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
              s=str(r['detail'] or '').lower() if r else ''
-             for label,value in {'RECENT':bool(r and r['recent']),'VOTE':bool(r and r['vote_produit']),'HTTP429':bool(r and r['http_status']==429),'LIMIT_REASON':any(x in s for x in ['budget','plafond','limit','quota'])}.items():print('SEAT_'+str(i)+'_'+label+'='+str(value))
-            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d),p=g.parisBudget();const u=d.prepare('select coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n from openrouter_global_calls where day=?').get(p.day).n;console.log('MONEY_HEADROOM='+String(u+.05<p.limit));console.log('MONEY_CAP_REACHED='+String(u>=p.limit-.01));console.log('REQUEST_HEADROOM='+String(s.requests<s.budget.maxRequestsPerDay));console.log('ANY_MODEL_QUOTA_REACHED='+String(s.byModel.some(x=>x.requests>=180)));console.log('CAP_IS_SIX='+String(p.limit===6));d.close();"""
+             print('SEAT_'+str(i)+'_MODEL_DAILY_LIMIT_REASON='+str('plafond quotidien du modèle' in s))
+             print('SEAT_'+str(i)+'_NO_PROVIDER_AVAILABLE='+str(bool(r and r['issue']=='indisponible')))
+            d.close()
+            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),m=require('/app/ai_models.config'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d);for(const [i,key] of ['perplexity','deepseek','mistral','luna','qwen'].entries()){const used=s.byModel.filter(x=>m.normalizeModelKey(x.model_key)===key).reduce((v,x)=>v+x.requests,0);console.log('SEAT_'+(i+1)+'_QUOTA_EXHAUSTED='+String(used>=m.getModel(key).dailyLimit));}d.close();"""
             p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],text=True,capture_output=True)
             for l in p.stdout.splitlines():
-             if l.split('=')[0] in ['MONEY_HEADROOM','MONEY_CAP_REACHED','REQUEST_HEADROOM','ANY_MODEL_QUOTA_REACHED','CAP_IS_SIX'] and l.rsplit('=',1)[-1] in ['true','false']:print(l)
-            try:
-             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=15))
-             print('PUBLIC_LIVE_OK='+str(bool(data.get('ok'))))
-             print('ANALYSIS_WINDOW_MATCHES_PRESENT='+str(any(isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 and m.get('status') not in ['HT','FT'] for m in data.get('matches',[]))))
-             print('PUBLIC_FIVE_VOTES_PRESENT='+str(any((m.get('ou25') or {}).get('vote_count')==5 for m in data.get('matches',[]))))
-            except:print('PUBLIC_LIVE_OK=False')
-            d.close()
+             if l.startswith('SEAT_') and l.rsplit('=',1)[-1] in ['true','false']:print(l)
             PY
