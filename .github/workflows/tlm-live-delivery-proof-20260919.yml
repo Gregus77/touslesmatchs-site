@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify public score coherence and preserve official history
+      - name: Publish five minute Papa banner with automatic removal
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,39 +25,67 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import json,pathlib,sqlite3,urllib.request,datetime,sys
-            backup=pathlib.Path(json.loads(pathlib.Path('data/tlm-live-coherence-current.json').read_text())['backup'])
-            flags={}
-            def score(value):
-             if isinstance(value,dict): value=[value.get('home'),value.get('away')]
-             elif isinstance(value,str): value=value.split('-')
-             else:return None
-             if len(value)!=2 or any(x is None for x in value):return None
-             try:return tuple(int(x) for x in value)
-             except:return None
+            import pathlib,subprocess,json,os,datetime,time,urllib.request,fcntl,sys
+            os.umask(0o077)
+            def run(args):return subprocess.check_output(args,text=True,stderr=subprocess.DEVNULL)
+            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            backup=pathlib.Path('/opt/backups/tlm-papa-banner-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'));backup.mkdir(mode=0o700)
             try:
-             deployment=json.loads((backup/'deployment.json').read_text());assert deployment['status']=='APPLIED'
-             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=25))
-             matches=data.get('matches',[])
-             mismatches=[m for m in matches if not m.get('ou25',{}).get('official') and m.get('ou25',{}).get('snapshot_score') is not None and score(m['ou25']['snapshot_score'])!=score({'home':m.get('score_home'),'away':m.get('score_away')})]
-             flags['PUBLIC_NO_STALE_CURRENT_VOTES']=all(not m['ou25'].get('vote_count') and not m['ou25'].get('consensus_direction') and all(not v.get('direction') for v in m['ou25'].get('votes',[])) for m in mismatches)
-             flags['STALE_REASONS_EXPOSED']=all(m.get('analysis_exclusion_reason') or m['ou25'].get('synchronization_reason') for m in mismatches)
-             flags['STALE_CASE_OBSERVED']=bool(mismatches)
-             target=[m for m in matches if 'mirassol' in str(m.get('home','')).lower() and 'botafogo' in str(m.get('away','')).lower()]
-             flags['TARGET_STILL_VISIBLE']=bool(target)
-             flags['TARGET_NO_MISLEADING_CURRENT_VOTES']=all(m.get('ou25',{}).get('official') or score(m.get('ou25',{}).get('snapshot_score'))==score({'home':m.get('score_home'),'away':m.get('score_away')}) or not m.get('ou25',{}).get('vote_count') for m in target)
-             old=sqlite3.connect('file:'+str(backup/'tlm.db')+'?mode=ro',uri=True);current=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-             cols=[x[1] for x in old.execute('pragma table_info(official_vote_snapshots)')]
-             immutable=[c for c in ['id','minute','score_home','score_away','votes_json','consensus','created_at'] if c in cols];assert 'id' in immutable
-             q='SELECT '+','.join(immutable)+' FROM official_vote_snapshots'
-             original={row[0]:row for row in old.execute(q)};now={row[0]:row for row in current.execute(q)}
-             flags['EXISTING_SNAPSHOTS_UNCHANGED']=all(now.get(k)==v for k,v in original.items())
-             flags['NEW_VOTES_OBSERVED']=bool(current.execute('select 1 from agent_calls where vote_produit=1 and datetime(created_at)>=datetime(?) limit 1',(deployment['at'],)).fetchone())
-             old.close();current.close()
-             (backup/'public-verification.json').write_text(json.dumps({'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'flags':flags}))
-             for key,value in flags.items():print(key+'='+str(value))
-             assert flags['PUBLIC_NO_STALE_CURRENT_VOTES'] and flags['STALE_REASONS_EXPOSED'] and flags['EXISTING_SNAPSHOTS_UNCHANGED']
-             print('PUBLIC_COHERENCE_VERIFIED=True')
+             branch=run(['git','branch','--show-current']).strip();upstream=run(['git','rev-parse','--abbrev-ref','@{u}']).strip()
+             assert upstream=='origin/'+branch
+             head=run(['git','rev-parse','HEAD']).strip()
+             assert run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]==head
+             (backup/'git.json').write_text(json.dumps({'branch':branch,'head':head,'upstream':upstream,'status':run(['git','status','--short'])}))
+             info=json.loads(run(['docker','inspect','touslesmatchs-site']))[0]
+             (backup/'site.json').write_text(json.dumps(info))
+             candidates=set()
+             for mount in info['Mounts']:
+              root=pathlib.Path(mount['Source'])
+              if root.is_dir():
+               for rel in ['index.html','app.html','public/app.html','public/index.html','dist/index.html']:
+                p=root/rel
+                if p.is_file():candidates.add(p)
+             for rel in ['public/app.html','public/index.html','dist/index.html','index.html']:
+              p=pathlib.Path('/opt/touslesmatchs')/rel
+              if p.is_file():candidates.add(p)
+             pages=[]
+             for url in ['https://www.touslesmatchs.com/','https://www.touslesmatchs.com/live-ia']:
+              body=urllib.request.urlopen(url+'?papa_check='+str(int(time.time())),timeout=20).read()
+              paths=[p for p in candidates if p.read_bytes()==body]
+              assert paths
+              pages.extend(paths)
+             pages=list(set(pages));assert pages
+             expires=int(time.time()*1000)+300000
+             js="""(function(){var end=EXPIRES;if(Date.now()>=end)return;var box=document.createElement('aside');box.id='tlm-papa-temporary';box.setAttribute('aria-label','Je t’aime mon fils. Signé Papa');box.innerHTML='<style>#tlm-papa-temporary{position:fixed;top:56px;left:0;right:0;z-index:100000;overflow:hidden;background:linear-gradient(100deg,#087ca7,#9633da);color:white;box-shadow:0 3px 20px #0006;pointer-events:none;padding:10px 0;font:700 20px/1.4 system-ui,sans-serif}#tlm-papa-temporary span{display:block;width:max-content;white-space:nowrap;animation:tlmPapaScroll 14s linear infinite}@keyframes tlmPapaScroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}@media(prefers-reduced-motion:reduce){#tlm-papa-temporary span{animation:none;margin:auto;max-width:100%;white-space:normal;text-align:center}}</style><span>Je t’aime mon fils. Signé Papa ❤️</span>';document.body.appendChild(box);function remove(){if(Date.now()>=end){box.remove();document.removeEventListener('visibilitychange',remove);}}setTimeout(remove,Math.max(0,end-Date.now()));document.addEventListener('visibilitychange',remove);})();""".replace('EXPIRES',str(expires))
+             block='<!-- TLM-PAPA-TEMPORARY-START --><script>'+js+'</script><!-- TLM-PAPA-TEMPORARY-END -->'
+             manifest={'paths':[str(p) for p in pages],'block':block,'expires':expires}
+             (backup/'manifest.json').write_text(json.dumps(manifest))
+             (backup/'banner.js').write_text(js)
+             run(['node','--check',str(backup/'banner.js')])
+             for i,p in enumerate(pages):
+              original=p.read_text();assert '</body>' in original and 'TLM-PAPA-TEMPORARY-START' not in original
+              (backup/('before-'+str(i)+'.html')).write_text(original)
+             cleanup="""import json,pathlib,fcntl,datetime
+            root=pathlib.Path(__file__).parent
+            m=json.loads((root/'manifest.json').read_text())
+            lock=open('/var/lock/tlm-production-deploy.lock','a')
+            fcntl.flock(lock,fcntl.LOCK_EX)
+            for name in m['paths']:
+             p=pathlib.Path(name)
+             s=p.read_text()
+             if m['block'] in s:p.write_text(s.replace(m['block'],'',1))
+            (root/'removed.json').write_text(json.dumps({'removed':True,'at':datetime.datetime.now(datetime.timezone.utc).isoformat()}))
+            """
+             (backup/'remove.py').write_text(cleanup)
+             unit='tlm-papa-banner-'+str(int(time.time()))
+             run(['systemd-run','--unit='+unit,'--on-active=300s','--timer-property=AccuracySec=1s','/usr/bin/python3',str(backup/'remove.py')])
+             assert run(['systemctl','is-active',unit+'.timer']).strip()=='active'
+             for p in pages:p.write_text(p.read_text().replace('</body>',block+'</body>',1))
+             pathlib.Path('data/tlm-papa-banner-current.json').write_text(json.dumps({'backup':str(backup),'expires':expires,'timer':unit+'.timer'}))
+             check=urllib.request.urlopen('https://www.touslesmatchs.com/?papa='+str(int(time.time())),timeout=20).read().decode()
+             assert block in check
+             print('BANNER_PUBLISHED=True');print('FIVE_MINUTE_REMOVAL_SCHEDULED=True')
             except Exception:
-             print('PUBLIC_COHERENCE_VERIFIED=False');sys.exit(1)
+             if (backup/'remove.py').exists():subprocess.run(['/usr/bin/python3',str(backup/'remove.py')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+             print('BANNER_PUBLISHED=False');sys.exit(1)
             PY
