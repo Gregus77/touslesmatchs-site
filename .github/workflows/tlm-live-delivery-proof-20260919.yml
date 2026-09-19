@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Prepare and test first-half delivery candidate safely
+      - name: Deploy verified first-half window with rollback
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,49 +25,85 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import subprocess,pathlib,os,json,datetime,sqlite3,fcntl
+            import subprocess,pathlib,json,os,hashlib,time,fcntl,urllib.request
             def run(a):return subprocess.check_output(a,text=True,stderr=subprocess.DEVNULL).strip()
             lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            branch=run(['git','branch','--show-current']);head=run(['git','rev-parse','HEAD']);up=run(['git','rev-parse','--abbrev-ref','@{upstream}'])
-            assert up=='origin/'+branch and run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]==head
-            subprocess.run(['git','fetch','origin','codex/first-half-delivery-20260919'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
-            revision=run(['git','rev-parse','FETCH_HEAD'])
-            assert revision=='2caa6cbd4c12d5f28d054cc299ae62c0c7946877'
-            stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-            backup=pathlib.Path('/opt/backups/tlm-firsthalf-'+stamp);backup.mkdir(mode=0o700)
-            cand=backup/'candidate';cand.mkdir(mode=0o700)
-            def save(path,content):
-             path.write_text(content);os.chmod(path,0o600)
-            save(backup/'worktree.patch',run(['git','diff','--binary','HEAD']))
+            state=json.loads(pathlib.Path('data/tlm-firsthalf-candidate.json').read_text());assert state['testsPassed']
+            backup=pathlib.Path(state['backup']);prior=json.loads((backup/'state.json').read_text());cand=backup/'candidate'
+            head=run(['git','rev-parse','HEAD']);branch=run(['git','branch','--show-current']);assert head==prior['head'] and branch==prior['branch']
+            assert subprocess.run(['git','diff','--cached','--quiet']).returncode==0
+            merged='399bc39f03b3e899bca507afa4d2224efa77928d'
+            assert run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]==merged
+            subprocess.run(['git','fetch','origin',branch],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+            assert run(['git','rev-parse','origin/'+branch])==merged
+            assert subprocess.run(['git','merge-base','--is-ancestor',head,merged]).returncode==0
             inspect=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-            save(backup/'inspect.json',json.dumps(inspect))
+            before=json.loads((backup/'inspect.json').read_text())
+            assert inspect['Id']==before['Id'] and inspect['Image']==before['Image']
             for name in ['server.js','telegram_client.js','official_signal_snapshots.js','bookmakers.config.js']:
-             src=run(['docker','exec','touslesmatchs-api','cat','/app/'+name])
-             save(backup/(name+'.before'),src)
-             save(cand/name,src)
-            for name in ['first_half_delivery.js','test_first_half_delivery_20260919.js']:
-             save(cand/name,run(['git','show',revision+':scripts/'+name]))
+             assert run(['docker','exec','touslesmatchs-api','cat','/app/'+name])==(backup/(name+'.before')).read_text()
+            base=json.loads(pathlib.Path('/opt/backups/tlm-request-recovery-20260919T181219Z/api.after.json').read_text())
+            service=base['services']['api']
+            assert service['image']==inspect['Image']
+            assert service['environment']==dict(x.split('=',1) for x in inspect['Config']['Env'])
+            assert service.get('command')==inspect['Config']['Cmd'] and service.get('entrypoint')==inspect['Config']['Entrypoint']
+            def save(p,s):p.write_text(s);os.chmod(p,0o600)
+            save(backup/'compose.before.json',json.dumps(base))
+            tag='tlm-api:firsthalf-'+merged[:12]
+            save(cand/'Dockerfile','FROM '+inspect['Image']+'\nCOPY server.js telegram_client.js official_signal_snapshots.js first_half_delivery.js /app/\n')
+            with open(backup/'build.private.log','w') as log:
+             result=subprocess.run(['docker','build','-t',tag,str(cand)],stdout=log,stderr=log)
+            os.chmod(backup/'build.private.log',0o600)
+            assert result.returncode==0
+            print('TARGETED_IMAGE_BUILT=True')
+            # Apply only the reviewed edits to the dirty checkout; preserve all other content.
             patches=json.loads("{\"server.js\":[{\"old\":\"const clientTelegramPublisher = telegramClient.createPublisher({\",\"new\":\"const firstHalfDelivery = require('./first_half_delivery');\\nconst validateFirstHalfDelivery = firstHalfDelivery.createValidator({\\n  db,\\n  fetchFixture: async (id) => {\\n    if (!/^\\\\d+$/.test(String(id)) || !API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('period_unavailable');\\n    const response = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), {'x-apisports-key': API_SPORTS_KEY});\\n    if (apiSportsErrors(response)) throw new Error('period_unavailable');\\n    return (response.response || []).find(f => String(f.fixture?.id) === String(id));\\n  },\\n});\\nconst clientTelegramPublisher = telegramClient.createPublisher({\\n  validateSignal: validateFirstHalfDelivery,\"}],\"telegram_client.js\":[{\"old\":\"paymentAvailable=()=>false}) {\",\"new\":\"paymentAvailable=()=>false,validateSignal=async()=>({ok:false,terminal:true})}) {\"},{\"old\":\"        const claim=db.prepare(\\\"UPDATE client_telegram_outbox SET state='sending'\",\"new\":\"        if(row.kind==='signal') {\\n          let gate;try {gate=await validateSignal(row);} catch {gate={ok:false};}\\n          if(!gate?.ok) {\\n            db.prepare(\\\"UPDATE client_telegram_outbox SET state=?,next_at=? WHERE delivery_key=? AND state='pending'\\\")\\n              .run(gate?.terminal?'expired':'pending',now()+30000,row.delivery_key);\\n            continue;\\n          }\\n          if(row.expires_at<=now()){db.prepare(\\\"UPDATE client_telegram_outbox SET state='expired' WHERE delivery_key=?\\\").run(row.delivery_key);continue;}\\n        }\\n        const claim=db.prepare(\\\"UPDATE client_telegram_outbox SET state='sending'\"}],\"official_signal_snapshots.js\":[{\"old\":\"const OFFICIAL_FROM_MINUTE = 35;\",\"new\":\"const OFFICIAL_FROM_MINUTE = 30;\"}]}")
+            mapping={'server.js':'scripts/api_server.js','telegram_client.js':'scripts/telegram_client.js','official_signal_snapshots.js':'scripts/official_signal_snapshots.js'}
+            localBefore={}
             for name,edits in patches.items():
-             source=(cand/name).read_text()
+             p=pathlib.Path(mapping[name]);source=p.read_text();localBefore[str(p)]=source
              for edit in edits:
               assert source.count(edit['old'])==1
               source=source.replace(edit['old'],edit['new'])
-             save(cand/name,source)
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-            dest=sqlite3.connect(str(backup/'tlm.db'));db.backup(dest);dest.close();db.close();os.chmod(backup/'tlm.db',0o600)
-            target='/tmp/tlm-firsthalf-'+stamp
-            subprocess.run(['docker','cp',str(cand),'touslesmatchs-api:'+target],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
-            for name in ['server.js','telegram_client.js','official_signal_snapshots.js','first_half_delivery.js']:
-             result=subprocess.run(['docker','exec','touslesmatchs-api','node','--check',target+'/'+name],capture_output=True,text=True)
-             assert result.returncode==0
-            result=subprocess.run(['docker','exec','-e','NODE_PATH=/app/node_modules','touslesmatchs-api','node',target+'/test_first_half_delivery_20260919.js'],capture_output=True,text=True)
-            ok=result.returncode==0 and 'FIRST_HALF_WINDOW_TESTS_PASSED=True' in result.stdout
-            save(backup/'tests.private.log',result.stdout+result.stderr)
-            save(backup/'state.json',json.dumps({'branch':branch,'head':head,'revision':revision,'backup':str(backup),'testsPassed':ok}))
-            save(pathlib.Path('/opt/touslesmatchs/data/tlm-firsthalf-candidate.json'),json.dumps({'backup':str(backup),'testsPassed':ok,'revision':revision}))
-            print('CANONICAL_BRANCH_VERIFIED=True')
-            print('PRECHANGE_BACKUP_COMPLETE=True')
-            print('ACTUAL_RUNTIME_CANDIDATE_SYNTAX_OK=True')
-            print('FIRST_HALF_WINDOW_TESTS_PASSED='+str(ok))
+             save(backup/(name+'.worktree.before'),localBefore[str(p)])
+             p.write_text(source)
+            for name in ['first_half_delivery.js','test_first_half_delivery_20260919.js']:
+             p=pathlib.Path('scripts')/name;assert not p.exists();p.write_text((cand/name).read_text())
+            # Index was proven clean. Advance it to the reviewed commit without checking out unrelated worktree files.
+            index=pathlib.Path(run(['git','rev-parse','--git-path','index']))
+            save(backup/'git-index-location.json',json.dumps({'path':str(index),'oldHead':head,'newHead':merged}))
+            (backup/'git-index.before').write_bytes(index.read_bytes());os.chmod(backup/'git-index.before',0o600)
+            subprocess.run(['git','read-tree',merged],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            subprocess.run(['git','update-ref','refs/heads/'+branch,merged,head],check=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            service['image']=tag
+            save(backup/'compose.after.json',json.dumps(base))
+            def up(file):
+             with open(backup/'deployment.private.log','a') as log:
+              return subprocess.run(['docker','compose','-p','touslesmatchs','-f',str(file),'up','-d','--no-deps','--no-build','api'],stdout=log,stderr=log).returncode==0
+            ok=False
+            try:
+             assert up(backup/'compose.after.json')
+             for attempt in range(20):
+              try:
+               if urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=2).status==200:ok=True;break
+              except:pass
+              time.sleep(2)
+             assert ok
+             current=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
+             assert current['Config']['Env']==inspect['Config']['Env']
+             assert current['Config']['Cmd']==inspect['Config']['Cmd'] and current['Config']['Entrypoint']==inspect['Config']['Entrypoint']
+             for name in ['server.js','telegram_client.js','official_signal_snapshots.js','first_half_delivery.js']:
+              assert run(['docker','exec','touslesmatchs-api','cat','/app/'+name])==(cand/name).read_text().strip()
+             assert run(['git','rev-parse','HEAD'])==merged
+             assert urllib.request.urlopen('https://www.touslesmatchs.com/api/health',timeout=10).status==200
+             save(backup/'deployment.json',json.dumps({'status':'APPLIED','commit':merged,'image':current['Image'],'testsPassed':True,'financialConfigUnchanged':True,'phasePreflightEnabled':True}))
+             print('FIRST_HALF_RULE_DEPLOYED=True')
+             print('RUNTIME_FILES_VERIFIED=True')
+             print('CANONICAL_COMMIT_VERIFIED=True')
+             print('BUDGET_AND_MODELS_PRESERVED=True')
+             print('PUBLIC_API_HEALTH_OK=True')
+            except:
+             up(backup/'compose.before.json')
+             print('FIRST_HALF_DEPLOYMENT_ROLLED_BACK=True')
+             raise
             PY
