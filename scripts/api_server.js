@@ -1196,7 +1196,18 @@ async function refreshTelegramPaymentAvailability() {
 }
 setTimeout(refreshTelegramPaymentAvailability,5000);
 setInterval(refreshTelegramPaymentAvailability,10*60*1000);
+const firstHalfDelivery = require('./first_half_delivery');
+const validateFirstHalfDelivery = firstHalfDelivery.createValidator({
+  db,
+  fetchFixture: async (id) => {
+    if (!/^\d+$/.test(String(id)) || !API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('period_unavailable');
+    const response = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), {'x-apisports-key': API_SPORTS_KEY});
+    if (apiSportsErrors(response)) throw new Error('period_unavailable');
+    return (response.response || []).find(f => String(f.fixture?.id) === String(id));
+  },
+});
 const clientTelegramPublisher = telegramClient.createPublisher({
+  validateSignal: validateFirstHalfDelivery,
   paymentAvailable:()=>Date.now()<telegramPaymentVerifiedUntil,
   db, env: process.env,
   onDelivered: row => {
