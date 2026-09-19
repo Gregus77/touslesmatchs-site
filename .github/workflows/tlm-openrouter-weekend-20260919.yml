@@ -1,0 +1,66 @@
+name: TLM OpenRouter safe diagnosis
+on:
+  push:
+    branches: [codex/openrouter-weekend-20260919]
+    paths: [.github/workflows/tlm-openrouter-weekend-20260919.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Boolean health checks only
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            python3 - <<'PY'
+            import subprocess,json,re,sqlite3,pathlib,datetime,urllib.request
+            from zoneinfo import ZoneInfo
+            def run(a): return subprocess.check_output(a,text=True,stderr=subprocess.DEVNULL)
+            info=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
+            env=dict(x.split('=',1) for x in info['Config']['Env'] if '=' in x)
+            txt=pathlib.Path('scripts/ai_budget_guard.js').read_text()
+            print('PRODUCTION_BRANCH_MATCH='+str(run(['git','branch','--show-current']).strip()=='codex/production-repair-20260914'))
+            print('BUDGET_FILE_MODIFIED='+str(bool(run(['git','diff','--name-only','--','scripts/ai_budget_guard.js']).strip())))
+            print('PARIS_SCHEDULE_ENABLED='+str(env.get('OPENROUTER_PARIS_SCHEDULE')=='1'))
+            print('LEGACY_6_4_CALENDAR='+str(bool(re.search(r'dow===0\|\|dow===6\?6:4',txt))))
+            print('WEEKEND_9_PRESENT='+str(bool(re.search(r'(?:weekend|WEEKEND)[^\n]{0,100}(?:=|:)\s*9',txt,re.I))))
+            print('GLOBAL_GUARD_PRESENT='+str('reserveGlobal' in txt))
+            for m in info.get('Mounts',[]):
+             if m['Destination']!='/data': continue
+             root=pathlib.Path(m['Source'])
+             print('BACKGROUND_PAUSED='+str((root/'openrouter-background-paused').exists()))
+             p=root/'tlm.db'
+             if not p.exists(): continue
+             con=sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True)
+             names={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+             if 'ai_circuit_breaker' in names:
+              known={'daily_budget','daily_budget_hermes','daily_budget_concile','daily_requests','daily_matches','daily_model_requests','spike','duplicate_burst'}
+              active={r[0] for r in con.execute('SELECT breach_type FROM ai_circuit_breaker')}
+              for k in sorted(known): print('BREAKER_'+k.upper()+'='+str(k in active))
+             if 'ai_call_budget_log' in names:
+              n=con.execute("SELECT count(*) FROM ai_call_budget_log WHERE created_at>=datetime('now','-30 minutes') AND status='ok'").fetchone()[0]
+              print('RECENT_SUCCESSFUL_CALLS_PRESENT='+str(n>0))
+              reasons=[str(r[0]).lower() for r in con.execute("SELECT DISTINCT block_reason FROM ai_call_budget_log WHERE created_at>=datetime('now','-30 minutes') AND block_reason IS NOT NULL")]
+              for word in ['budget','daily_requests','402','429','spike']: print('RECENT_BLOCK_'+word.upper()+'='+str(any(word in s for s in reasons)))
+             con.close()
+            key=env.get('OPENROUTER_API_KEY')
+            print('OPENROUTER_KEY_CONFIGURED='+str(bool(key)))
+            if key:
+             try:
+              req=urllib.request.Request('https://openrouter.ai/api/v1/key',headers={'Authorization':'Bearer '+key})
+              with urllib.request.urlopen(req,timeout=15) as resp: d=json.load(resp).get('data',{})
+              print('OPENROUTER_AUTH_OK=True')
+              print('OPENROUTER_KEY_LIMIT_EXHAUSTED='+str(d.get('limit_remaining') is not None and d['limit_remaining']<=0))
+             except Exception as e:
+              print('OPENROUTER_AUTH_OK=False')
+              print('OPENROUTER_HTTP_402='+str(getattr(e,'code',None)==402))
+            PY
