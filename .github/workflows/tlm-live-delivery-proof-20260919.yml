@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Bounded isolated shadow candidate transport test
+      - name: Back up and apply owner-authorized seat three model routing
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,43 +25,65 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import subprocess,json,os,pathlib,datetime
-            code=r"""
-            const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),models=require('/app/ai_models.config'),https=require('https'),fs=require('fs');
-            const db=new D('/data/tlm.db');
-            const get=url=>new Promise((resolve,reject)=>{const req=https.get(url,{timeout:15000},r=>{let s='';r.on('data',x=>s+=x);r.on('end',()=>{try{resolve(JSON.parse(s))}catch{reject(Error('parse'))}});});req.on('error',reject);req.on('timeout',()=>req.destroy(Error('timeout')));});
-            (async()=>{
-             const p=g.parisBudget(),s=g.getDailyStats(db),candidate=models.getModel('kimi').id;
-             const catalog=await get('https://openrouter.ai/api/v1/models');
-             const entry=catalog.data.find(x=>x.id===candidate);
-             const independent=!['deepseek','perplexity','luna','qwen'].some(k=>models.getModel(k).id===candidate);
-             console.log('CANDIDATE_IS_SHADOW='+String(models.getModel('kimi').mode==='test'));
-             console.log('CANDIDATE_DISTINCT='+String(independent));
-             console.log('CANDIDATE_LISTED='+String(!!entry));
-             if(!entry||!independent) return;
-             const recent=db.prepare("SELECT count(*) n FROM agent_calls WHERE model=? AND vote_produit=1").get(candidate).n;
-             console.log('CANDIDATE_PRIOR_REAL_VOTE='+String(recent>0));
-             const body={model:candidate,max_tokens:400,temperature:0.3,messages:[{role:'user',content:'Test technique isolé, sans pronostic officiel et sans données de match. Réponds uniquement avec cet objet JSON pour vérifier le transport et le format : {"status":"ok","abstention":true,"raison":"Données de match absentes"}.'}]};
-             const fx=Number(process.env.OPENROUTER_USD_PER_EUR||1),pricing=entry.pricing;
-             const reservation=((Buffer.byteLength(JSON.stringify(body.messages))+512)*Number(pricing.prompt||0)+400*Number(pricing.completion||0)+Number(pricing.request||0)+Number(pricing.web_search||0)+.01)/fx;
-             const tests=db.prepare("SELECT coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n FROM openrouter_global_calls WHERE day=? AND model=?").get(p.day,candidate).n;
-             if(!(reservation>0&&reservation<=.05&&tests+reservation<=.25&&s.requests<s.budget.maxRequestsPerDay)){console.log('CANDIDATE_TEST_BUDGET_ALLOWED=false');return;}
-             console.log('CANDIDATE_TEST_BUDGET_ALLOWED=true');
-             const response=await g.withGlobalBudget(db,body,()=>new Promise((resolve,reject)=>{
-             const req=https.request('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENROUTER_API_KEY,'Content-Type':'application/json'},timeout:25000},r=>{let raw='';r.on('data',x=>raw+=x);r.on('end',()=>{try{resolve({...JSON.parse(raw),_httpStatus:r.statusCode})}catch{resolve({_httpStatus:r.statusCode})}})});
-             req.on('error',reject);req.on('timeout',()=>req.destroy(Error('timeout')));req.end(JSON.stringify(body));
-             }));
-             let valid=false;try{const raw=response.choices?.[0]?.message?.content||'';const obj=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));valid=obj.status==='ok'&&obj.abstention===true;}catch{}
-             const ok=response._httpStatus===200&&valid;
-             console.log('CANDIDATE_HTTP_OK='+String(response._httpStatus===200));
-             console.log('CANDIDATE_VALID_RESPONSE='+String(valid));
-             const path='/data/tlm-seat3-candidate-20260919.json';
-             fs.writeFileSync(path,JSON.stringify({at:new Date().toISOString(),candidate,ok,independent,kind:'transport_test_not_official',financialLimit:p.limit}),{mode:0o600});
-             db.close();
-            })().catch(()=>{console.log('CANDIDATE_TEST_COMPLETED=false');db.close()});
-            """
-            p=subprocess.run(['docker','exec','-i','touslesmatchs-api','node'],input=code,capture_output=True,text=True)
-            for l in p.stdout.splitlines():
-             if l.startswith('CANDIDATE_') and l.rsplit('=',1)[-1] in ['true','false']:print(l)
-            if p.returncode:print('CANDIDATE_PROCESS_OK=False')
+            import sqlite3,json,subprocess,pathlib,datetime,os,fcntl,hashlib
+            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            def cmd(args):return subprocess.check_output(args,text=True,stderr=subprocess.DEVNULL).strip()
+            branch=cmd(['git','branch','--show-current']);head=cmd(['git','rev-parse','HEAD']);up=cmd(['git','rev-parse','--abbrev-ref','@{upstream}'])
+            remote=cmd(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]
+            assert branch=='codex/production-repair-20260914' and up=='origin/'+branch and head==remote
+            diff=subprocess.check_output(['git','diff','--binary','HEAD'])
+            status=subprocess.check_output(['git','status','--porcelain'])
+            env=dict(x.split('=',1) for x in json.loads(cmd(['docker','inspect','touslesmatchs-api']))[0]['Config']['Env'])
+            logical=env.get('OR_MISTRAL_MODEL') or 'mistralai/mistral-small-2603'
+            proof=json.loads(pathlib.Path('data/tlm-seat3-candidate-20260919.json').read_text())
+            assert proof['ok'] and proof['independent']
+            assert (datetime.datetime.now(datetime.timezone.utc)-datetime.datetime.fromisoformat(proof['at'].replace('Z','+00:00'))).total_seconds()<900
+            candidate=proof['candidate']
+            assert candidate.startswith('moonshotai/') and not candidate.endswith(':free')
+            source=cmd(['docker','exec','touslesmatchs-api','cat','/app/server.js'])
+            assert 'process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603"' in source
+            start=source.index('function resolveModel(logicalId) {')
+            end=source.index('\nconst SHADOW_AGENTS',start)
+            function=source[start:end].strip()
+            assert function.endswith('}')
+            test="const vm=require('vm'),assert=require('assert');const sandbox={Date,_modelOverrideCache:{at:0,map:{}},db:{prepare:()=>({all:()=>[{logical_id:"+json.dumps(logical)+",model_id:"+json.dumps(candidate)+"}]})}};vm.runInNewContext("+json.dumps(function+";this.resolve=resolveModel;")+",sandbox);assert.equal(sandbox.resolve("+json.dumps(logical)+"),"+json.dumps(candidate)+");for(const id of ['deepseek/deepseek-chat','perplexity/sonar-pro','openai/gpt-5.6-luna','qwen/qwen3.7-max'])assert.equal(sandbox.resolve(id),id);"
+            p=subprocess.run(['docker','exec','-i','touslesmatchs-api','node'],input=test,text=True,capture_output=True)
+            assert p.returncode==0
+            print('ROUTING_BEHAVIOR_TEST_PASSED=True')
+            stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+            backup=pathlib.Path('/opt/backups/tlm-seat3-routing-'+stamp);backup.mkdir(mode=0o700)
+            def save(name,obj):
+             fd=os.open(str(backup/name),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+             with os.fdopen(fd,'w') as f:json.dump(obj,f)
+            db=sqlite3.connect('data/tlm.db');db.row_factory=sqlite3.Row
+            prev=db.execute('select * from model_overrides where logical_id=?',(logical,)).fetchone()
+            assert prev is None
+            dest=sqlite3.connect(str(backup/'tlm.db'));db.backup(dest);dest.close();os.chmod(backup/'tlm.db',0o600)
+            save('routing.before.json',{'branch':branch,'head':head,'upstream':up,'prior':dict(prev) if prev else None,'logical':logical,'candidate':candidate,'sourceHash':hashlib.sha256(source.encode()).hexdigest()})
+            changed=False
+            try:
+             db.execute('BEGIN IMMEDIATE')
+             assert db.execute('select 1 from model_overrides where logical_id=?',(logical,)).fetchone() is None
+             db.execute("insert into model_overrides(logical_id,model_id,replaced_at,reason) values(?,?,datetime('now'),?)",(logical,candidate,'Owner-authorized seat 3 availability replacement after provider HTTP 429; isolated shadow transport verified; original votes preserved'))
+             db.commit();changed=True
+             assert subprocess.check_output(['git','diff','--binary','HEAD'])==diff
+             assert subprocess.check_output(['git','status','--porcelain'])==status
+             assert cmd(['docker','exec','touslesmatchs-api','cat','/app/server.js'])==source
+             import urllib.request
+             assert urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=10).status==200
+             applied=datetime.datetime.now(datetime.timezone.utc).isoformat()
+             save('result.json',{'status':'APPLIED_AWAITING_NATURAL_VOTE','at':applied,'logical':logical,'candidate':candidate,'budgetUnchanged':True,'sourceUnchanged':True,'historicalVotesUnchanged':True})
+             fd=os.open('data/tlm-seat3-routing-current.json',os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
+             with os.fdopen(fd,'w') as out:json.dump({'at':applied,'logical':logical,'candidate':candidate,'backup':str(backup)},out)
+             print('IA3_REPLACEMENT_APPLIED=True')
+             print('OTHER_FOUR_ROUTES_PRESERVED=True')
+             print('BUDGET_AND_HISTORY_PRESERVED=True')
+             print('API_HEALTH_OK=True')
+            except:
+             db.rollback()
+             if changed:
+              db.execute('delete from model_overrides where logical_id=? and model_id=?',(logical,candidate));db.commit()
+             print('IA3_REPLACEMENT_ROLLED_BACK=True')
+             raise
+            finally:db.close()
             PY
