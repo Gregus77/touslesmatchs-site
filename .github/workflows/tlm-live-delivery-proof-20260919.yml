@@ -25,38 +25,28 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import urllib.request,json,sqlite3
-            with urllib.request.urlopen('http://127.0.0.1:3001/live-matches',timeout=15) as r:d=json.loads(r.read())
-            flags={k:False for k in ['new_five_votes','new_signal_delivered','missing_odds','confidence_block','outside_window','recovery_block','league_block','other_block']}
-            for m in d.get('matches',[]):
-             q=m.get('ou25') or {}
-             if str(m.get('fixtureId',m.get('id')))!='1493141':continue
-             flags['new_five_votes']=q.get('vote_count')==5
-             flags['new_signal_delivered']=m.get('telegram_delivery_proven') is True
-             text=' '.join(str(m.get(k) or '') for k in ['block_reason','analysis_exclusion_reason','diffusion_block','delivery_status']).lower()
-             flags['missing_odds']=any(x in text for x in ['cote','odds','odd'])
-             flags['confidence_block']=any(x in text for x in ['confiance','confidence'])
-             flags['outside_window']=any(x in text for x in ['fenêtre','fenetre','window','minute'])
-             flags['recovery_block']='recovery' in text
-             flags['league_block']=any(x in text for x in ['championnat','league','competition'])
-             flags['other_block']=bool(text.strip()) and not any(flags[k] for k in ['missing_odds','confidence_block','outside_window','recovery_block','league_block'])
-            print('RECOVERY_FLAGS='+json.dumps(flags))
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-            count=db.execute("select count(*) from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and created_at>='2026-09-19 18:12:36'").fetchone()[0]
-            print('NEW_TELEGRAM_DELIVERY_PRESENT='+str(count>0))
-            # Classify locally, without publishing records, odds, names, IDs or free text.
-            texts=db.execute("select block_reason from signal_decision_journal where created_at>='2026-09-19 18:12:36' and match_key in (select distinct match_key from agent_calls where created_at>='2026-09-19 18:12:36' and vote_produit=1)").fetchall()
-            s=' '.join(str(x[0] or '') for x in texts).lower()
-            print('DISPOSITION_FLAGS='+json.dumps({'odds':any(x in s for x in ['cote','odds','odd']),'confidence':any(x in s for x in ['confiance','confidence']),'window':any(x in s for x in ['fenêtre','fenetre','window','minute']),'recovery':'recovery' in s,'reason_recorded':bool(s.strip())}))
+            import sqlite3,json,urllib.request,subprocess
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
+            r=db.execute("select * from official_vote_snapshots where fixture_id=? order by created_at desc limit 1",('1493141',)).fetchone()
+            if r:
+             def num(v):
+              try:return float(v)
+              except:return None
+             minute=num(r['minute']);conf=num(r['confidence']);odd=num(r['real_odd'])
+             print('SNAPSHOT_CHECKS='+json.dumps({'present':True,'four_agree':(num(r['consensus_votes']) or 0)>=4,'minute_35_45':minute is not None and 35<=minute<=45,'confidence_present':conf is not None,'confidence_at_least_77':conf is not None and conf>=77,'odd_present':odd is not None and odd>0,'odd_in_130_210':odd is not None and 1.30<=odd<=2.10}))
+             rows=db.execute("select block_reason from signal_decision_journal where match_key=? or snapshot_key=? order by id desc limit 12",(r['analysis_match_key'],r['id'])).fetchall()
+             s=' '.join(str(x[0] or '') for x in rows).lower()
+             print('JOURNAL_CHECKS='+json.dumps({'reason_present':bool(s.strip()),'odds':any(x in s for x in ['cote','odd']),'confidence':any(x in s for x in ['confiance','confidence']),'window':any(x in s for x in ['minute','window','fenêtre']),'recovery':'recovery' in s,'quorum':'quorum' in s,'already_sent':any(x in s for x in ['already','déjà','deja']),'data':any(x in s for x in ['data','donnée']),'red_card':any(x in s for x in ['rouge','red_card'])}))
+             # Semantic analysis of rejection messages stays local; only booleans leave VPS.
+             a=db.execute("select diffusion_block,raison,stats_status from concile_analyses where match_key=? order by id desc limit 1",(r['analysis_match_key'],)).fetchone()
+             if a:
+              s=' '.join(str(v or '') for v in a).lower()
+              print('ANALYSIS_CHECKS='+json.dumps({'present':True,'odds':any(x in s for x in ['cote','odd']),'confidence':any(x in s for x in ['confiance','confidence']),'recovery':'recovery' in s,'data':any(x in s for x in ['data','donnée']),'insufficient':any(x in s for x in ['insuffis','missing','absen']),'stale':any(x in s for x in ['stale','périm','ancien'])}))
             db.close()
-            for path in ['/','/api/health','/api/live-matches']:
-             try:
-              with urllib.request.urlopen('https://www.touslesmatchs.com'+path,timeout=15) as r:
-               status=r.status;body=r.read(5000000)
-              info={'path':path,'http':status}
-              if path=='/api/live-matches':
-               data=json.loads(body);matches=data.get('matches',[]) if isinstance(data,dict) else data
-               info['new_five_votes_public']=any((m.get('ou25') or {}).get('vote_count')==5 for m in matches if str(m.get('fixtureId',m.get('id')))=='1493141')
-              print('PUBLIC_PROOF='+json.dumps(info))
-             except Exception:print('PUBLIC_READ_FAILED=True')
+            p=subprocess.run(['docker','logs','--since','2026-09-19T18:12:19Z','touslesmatchs-api'],capture_output=True,text=True)
+            s=(p.stdout+p.stderr).lower()
+            for term in ['telegram','signal','diffusion','1493141']:
+             lines=[l for l in s.splitlines() if term in l]
+             joined=' '.join(lines)
+             print('DELIVERY_LOG_FLAGS='+json.dumps({'topic':term,'present':bool(lines),'odds':any(x in joined for x in ['cote','odd']),'confidence':any(x in joined for x in ['confidence','confiance']),'recovery':'recovery' in joined,'data':any(x in joined for x in ['missing','insuffis','données']),'error':any(x in joined for x in ['error','erreur','failed']),'window':any(x in joined for x in ['window','fenêtre','minute'])}))
             PY
