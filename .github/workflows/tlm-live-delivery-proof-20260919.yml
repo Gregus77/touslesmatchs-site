@@ -54,3 +54,33 @@ jobs:
                print('LIVE_STATES='+json.dumps(out))
              except Exception as e:print('HTTP_READ_FAILED='+type(e).__name__)
             PY
+            python3 - <<'PY'
+            import subprocess,json,sqlite3,urllib.request,re,time,datetime
+            env={}
+            p=subprocess.run(['docker','inspect','touslesmatchs-api'],capture_output=True,text=True)
+            i=json.loads(p.stdout)[0]
+            for v in i['Config']['Env']:
+             k,_,x=v.partition('=');env[k]=x
+            print('OBSERVER_CONFIG='+json.dumps({k:env.get(k) if re.fullmatch(r'[0-9.]+|true|false',env.get(k,'')) else 'unset_or_other' for k in ['AUTO_CONCILE_ENABLED','AUTO_CONCILE_INTERVAL_MS','AUTO_CONCILE_MAX_PER_CYCLE','AUTO_CONCILE_MAX_MATCHES','OPENROUTER_FALLBACK_DAILY_CAP']}),flush=True)
+            for step in range(9):
+             db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+             rows=db.execute("select agent_name,count(*),sum(vote_produit),max(created_at) from agent_calls where created_at>='2026-09-19 18:12:36' group by agent_name").fetchall()
+             seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
+             print('WATCH='+json.dumps({'time':datetime.datetime.now(datetime.timezone.utc).isoformat(),'seats':[{'seat':r[0] if r[0] in seats else 'other','calls':r[1],'votes':r[2],'last':r[3]} for r in rows]}),flush=True)
+             db.close()
+             if sum(r[2] or 0 for r in rows)>=5:break
+             if step<8:time.sleep(30)
+            p=subprocess.run(['docker','logs','--since','2026-09-19T18:12:19Z','touslesmatchs-api'],capture_output=True,text=True)
+            s=p.stdout+'\n'+p.stderr
+            terms=['runAutoConcile','auto-concile','daily_requests','plafond de requêtes','budget','aucun vote exploitable','aucun fournisseur','429','402','EADDRINUSE','Cannot find module']
+            print('LOG_CATEGORIES='+json.dumps({k:s.lower().count(k.lower()) for k in terms}))
+            try:
+             with urllib.request.urlopen('http://127.0.0.1:3001/live-matches',timeout=15) as r:d=json.loads(r.read())
+             rows=[]
+             for m in d.get('matches',[]):
+              q=m.get('ou25') or {}
+              if q.get('consensus_at') and str(q['consensus_at'])>='2026-09-19T18:12:36':
+               rows.append({'fixture':m.get('fixtureId'),'votes':q.get('vote_count'),'consensus':q.get('consensus_count'),'over':q.get('over_count'),'under':q.get('under_count'),'at':q.get('consensus_at')})
+             print('API_AFTER='+json.dumps(rows))
+            except Exception as e:print('API_READ_ERROR='+type(e).__name__)
+            PY
