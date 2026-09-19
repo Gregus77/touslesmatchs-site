@@ -42,11 +42,11 @@ jobs:
             const fs=require('fs'),{inject}=require(process.argv[2]);
             for(const page of ['index','app','live-ia']){const path='public/'+page+'.html';fs.writeFileSync(path,inject(fs.readFileSync(path,'utf8')));}
             NODE
-            curl -fsS https://touslesmatchs.com/river-diagnostic-20260920.html > "$backup/report-check.html"
+            curl -fsSL https://touslesmatchs.com/river-diagnostic-20260920.html > "$backup/report-check.html"
             echo CHECK_REPORT
             grep -q 'Hors signal officiel' "$backup/report-check.html"
             for page in index app; do
-              curl -fsS "https://touslesmatchs.com/$page.html?test=river&v=$(date +%s)" > "$backup/check-$page.html"
+              curl -fsSL "https://touslesmatchs.com/$page.html?test=river&v=$(date +%s)" > "$backup/check-$page.html"
               echo "CHECK_PAGE=$page"
               wc -c "public/$page.html" "$backup/check-$page.html"
               grep -q 'TLM-RIVER-DIAGNOSTIC-20260920' "$backup/check-$page.html"
