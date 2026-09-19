@@ -55,7 +55,7 @@ jobs:
             Rapport détaillé séparé privé. Ne prétends pas OK si reprise réelle non prouvée. Pas de sous-agents. Mission autonome, pas de questions de routine.
             TLM_MISSION
             codex exec --help > "$TLM_TASK_DIR/codex-help.txt" 2>&1 || true
-            if timeout 1500 codex exec -C /opt/touslesmatchs - < "$TLM_TASK_DIR/mission.txt" > "$TLM_TASK_DIR/codex-private.log" 2>&1; then
+            if false; then
               echo 'CODEX_PROCESS_COMPLETED=True'
             else
               echo 'CODEX_PROCESS_COMPLETED=False'
@@ -69,7 +69,7 @@ jobs:
              for flag in ['--full-auto','--sandbox','--cd','--model','--output-last-message']:
               print('SUPPORTS_'+flag[2:].replace('-','_').upper()+'='+str(flag in helptext))
              log=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log').read_text(errors='replace').lower()
-             for tag, words in [('AUTH_REQUIRED',['unauthorized','not logged in','authentication required']),('MODEL_ERROR',['not supported','model not found']),('SANDBOX_ERROR',['sandbox','operation not permitted']),('RATE_LIMIT',['rate limit','usage limit']),('CLI_ARGUMENT_ERROR',['unexpected argument','unrecognized option','unknown option','unrecognized subcommand']),('NO_TTY',['not a terminal','not a tty']),('PATH_ERROR',['no such file','command not found']),('PERMISSION_ERROR',['permission denied']),('CONFIG_ERROR',['error loading config','invalid configuration'])]:
+             for tag, words in [('READ_ONLY_MODE',['sandbox: read-only','sandbox_mode=read-only','sandbox_mode: read-only','read-only file system']),('APPROVAL_BLOCK',['approval policy','approvals are disabled','cannot request approval']),('CODEX_USAGE_EXHAUSTED',["you have hit your usage limit","usage limit reached","exceeded your current quota"]),('NETWORK_BLOCK',['network is unreachable','network access is disabled']),('NEEDS_WRITE_ACCESS',['read-only','lecture seule']) ,('AUTH_REQUIRED',['unauthorized','not logged in','authentication required']),('MODEL_ERROR',['not supported','model not found']),('SANDBOX_ERROR',['sandbox','operation not permitted']),('RATE_LIMIT',['rate limit','usage limit']),('CLI_ARGUMENT_ERROR',['unexpected argument','unrecognized option','unknown option','unrecognized subcommand']),('NO_TTY',['not a terminal','not a tty']),('PATH_ERROR',['no such file','command not found']),('PERMISSION_ERROR',['permission denied']),('CONFIG_ERROR',['error loading config','invalid configuration'])]:
               print(tag+'='+str(any(w in log for w in words)))
             else:
              d=json.loads(p.read_text())
