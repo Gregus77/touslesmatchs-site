@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Deploy tested image with exact environment value comparison
+      - name: Diagnose current five-seat availability without exposing counters
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,49 +25,21 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import json,pathlib,subprocess,time,urllib.request,os,fcntl
-            def run(a):return subprocess.check_output(a,text=True,stderr=subprocess.DEVNULL).strip()
-            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
-            state=json.loads(pathlib.Path('data/tlm-firsthalf-candidate.json').read_text());assert state['testsPassed']
-            backup=pathlib.Path(state['backup']);cand=backup/'candidate';before=json.loads((backup/'inspect.json').read_text())
-            current=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-            envmap=lambda x:dict(s.split('=',1) for s in x['Config']['Env'])
-            assert envmap(current)==envmap(before)
-            assert current['Image']==before['Image']
-            assert urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=10).status==200
-            print('ROLLBACK_HEALTH_AND_ENV_VERIFIED=True')
-            merged='399bc39f03b3e899bca507afa4d2224efa77928d'
-            assert run(['git','rev-parse','HEAD'])==merged
-            assert run(['git','ls-remote','origin','refs/heads/'+run(['git','branch','--show-current'])]).split()[0]==merged
-            planned=json.loads((backup/'compose.after.json').read_text())
-            assert planned['services']['api']['environment']==envmap(before)
-            print('PLANNED_ENV_VALUES_UNCHANGED=True')
-            def up(file):
-             with open(backup/'deployment.private.log','a') as log:
-              return subprocess.run(['docker','compose','-p','touslesmatchs','-f',str(file),'up','-d','--no-deps','--no-build','api'],stdout=log,stderr=log).returncode==0
+            import sqlite3,json,subprocess,urllib.request
+            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
+            for i,seat in enumerate(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'],1):
+             r=d.execute("select vote_produit,http_status,detail,created_at>=datetime('now','-20 minutes') recent from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
+             s=str(r['detail'] or '').lower() if r else ''
+             for label,value in {'RECENT':bool(r and r['recent']),'VOTE':bool(r and r['vote_produit']),'HTTP429':bool(r and r['http_status']==429),'LIMIT_REASON':any(x in s for x in ['budget','plafond','limit','quota'])}.items():print('SEAT_'+str(i)+'_'+label+'='+str(value))
+            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d),p=g.parisBudget();const u=d.prepare('select coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n from openrouter_global_calls where day=?').get(p.day).n;console.log('MONEY_HEADROOM='+String(u+.05<p.limit));console.log('MONEY_CAP_REACHED='+String(u>=p.limit-.01));console.log('REQUEST_HEADROOM='+String(s.requests<s.budget.maxRequestsPerDay));console.log('ANY_MODEL_QUOTA_REACHED='+String(s.byModel.some(x=>x.requests>=180)));console.log('CAP_IS_SIX='+String(p.limit===6));d.close();"""
+            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],text=True,capture_output=True)
+            for l in p.stdout.splitlines():
+             if l.split('=')[0] in ['MONEY_HEADROOM','MONEY_CAP_REACHED','REQUEST_HEADROOM','ANY_MODEL_QUOTA_REACHED','CAP_IS_SIX'] and l.rsplit('=',1)[-1] in ['true','false']:print(l)
             try:
-             assert up(backup/'compose.after.json')
-             healthy=False
-             for _ in range(20):
-              try:
-               if urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=2).status==200:healthy=True;break
-              except:pass
-              time.sleep(2)
-             assert healthy
-             actual=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
-             assert envmap(actual)==envmap(before)
-             assert actual['Config']['Cmd']==before['Config']['Cmd'] and actual['Config']['Entrypoint']==before['Config']['Entrypoint']
-             for name in ['server.js','telegram_client.js','official_signal_snapshots.js','first_half_delivery.js']:
-              assert run(['docker','exec','touslesmatchs-api','cat','/app/'+name])==(cand/name).read_text().strip()
-             assert urllib.request.urlopen('https://www.touslesmatchs.com/api/health',timeout=10).status==200
-             p=backup/'deployment.json';p.write_text(json.dumps({'status':'APPLIED','commit':merged,'image':actual['Image'],'testsPassed':True,'financialConfigUnchanged':True,'phasePreflightEnabled':True}));os.chmod(p,0o600)
-             print('FIRST_HALF_RULE_DEPLOYED=True')
-             print('RUNTIME_FILES_VERIFIED=True')
-             print('CANONICAL_COMMIT_VERIFIED=True')
-             print('BUDGET_AND_MODELS_PRESERVED=True')
-             print('PUBLIC_API_HEALTH_OK=True')
-            except:
-             up(backup/'compose.before.json')
-             print('FIRST_HALF_DEPLOYMENT_ROLLED_BACK=True')
-             raise
+             data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=15))
+             print('PUBLIC_LIVE_OK='+str(bool(data.get('ok'))))
+             print('ANALYSIS_WINDOW_MATCHES_PRESENT='+str(any(isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 and m.get('status') not in ['HT','FT'] for m in data.get('matches',[]))))
+             print('PUBLIC_FIVE_VOTES_PRESENT='+str(any((m.get('ou25') or {}).get('vote_count')==5 for m in data.get('matches',[]))))
+            except:print('PUBLIC_LIVE_OK=False')
+            d.close()
             PY
