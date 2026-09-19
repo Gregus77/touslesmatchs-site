@@ -25,52 +25,41 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,subprocess,urllib.request,pathlib,datetime
-            db=sqlite3.connect("file:/opt/touslesmatchs/data/tlm.db?mode=ro",uri=True);db.row_factory=sqlite3.Row
-            print("CHECK_TIME="+datetime.datetime.now(datetime.timezone.utc).isoformat())
-            env={}
-            p=subprocess.run(['docker','inspect','touslesmatchs-api'],capture_output=True,text=True)
+            import subprocess,json,pathlib,hashlib,re,sqlite3
+            def run(a):return subprocess.run(a,capture_output=True,text=True,timeout=30)
+            inspect=json.loads(run(['docker','inspect','touslesmatchs-api']).stdout)[0]
+            env=dict(x.split('=',1) for x in inspect['Config']['Env'])
+            allow=['OPENROUTER_MAX_REQUESTS_PER_DAY','OPENROUTER_MAX_MATCHES_PER_DAY','OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY','OPENROUTER_PARIS_SCHEDULE','OPENROUTER_DAILY_BUDGET_EUR','OPENROUTER_CONCILE_DAILY_BUDGET_EUR','AI_GUARD_SPIKE_THRESHOLD','OPENROUTER_HARD_STOP','OPENROUTER_FALLBACK_DAILY_CAP']
+            print('RUNTIME_LIMITS='+json.dumps({k:env.get(k) if re.fullmatch(r'[0-9.]+|true|false',env.get(k,'')) else 'unset_or_other' for k in allow}))
+            p=run(['docker','compose','config','--format','json'])
             if p.returncode==0:
-             for v in json.loads(p.stdout)[0]['Config']['Env']:
-              k,_,val=v.partition('=');env[k]=val
-            print("DESTINATIONS_PRESENT="+json.dumps({k:bool(env.get(k)) for k in ['TELEGRAM_CHANNEL_ID','TELEGRAM_PREMIUM_CHANNEL_ID','TELEGRAM_RU_FREE_CHANNEL_ID','TELEGRAM_RU_PREMIUM_CHANNEL_ID','TELEGRAM_ADMIN_CHAT_ID']}))
-            names={'TELEGRAM_CHANNEL_ID':'FR_FREE','TELEGRAM_PREMIUM_CHANNEL_ID':'FR_PREMIUM','TELEGRAM_RU_FREE_CHANNEL_ID':'RU_FREE','TELEGRAM_RU_PREMIUM_CHANNEL_ID':'RU_PREMIUM','TELEGRAM_ADMIN_CHAT_ID':'ADMIN'}
-            def channel(v):
-             for k,n in names.items():
-              if env.get(k) and str(v)==env[k]:return n
-             v=str(v).lower()
-             return v if v in ['free','premium','ru_free','ru_premium','fr_free','fr_premium','standard','elite','admin','hermes'] else 'unmapped'
-            rows=db.execute("select channel,count(*) n,sum(case when ok=1 and telegram_message_id is not null then 1 else 0 end) proven,max(case when ok=1 and telegram_message_id is not null then created_at end) last_success,max(created_at) last_attempt from telegram_signal_deliveries where created_at>=datetime('now','-24 hours') group by channel").fetchall()
-            print("DELIVERIES_24H="+json.dumps([{**dict(r),'channel':channel(r['channel'])} for r in rows]))
-            rows=db.execute("select telegram_message_id,channel,created_at,vote_count,official_signal_snapshot_id from telegram_signal_deliveries where ok=1 and telegram_message_id is not null order by id desc limit 8").fetchall()
-            print("LAST_RECEIPTS="+json.dumps([{**dict(r),'channel':channel(r['channel'])} for r in rows]))
-            def reason(v):
-             s=str(v).lower()
-             for term in ['daily_budget','daily_requests','spike','budget','quota','429','402','timeout','provider','fournisseur','cote','odd','consensus','quorum','minute','window','league','competition','recovery']:
-              if term in s:return term
-             return 'none' if not v else 'other'
-            rows=db.execute("select status,block_reason,count(*) n,max(created_at) last_at from ai_call_budget_log where created_at>=datetime('now','-2 hours') group by status,block_reason").fetchall()
-            print("AI_BUDGET_2H="+json.dumps([{**dict(r),'status':r['status'] if r['status'] in ['success','blocked','ok','error','rejected','reserved','completed','failed'] else 'other','block_reason':reason(r['block_reason'])} for r in rows]))
-            print("BREAKERS="+json.dumps([{'category':reason(r['breach_type']),'tripped_at':r['tripped_at']} for r in db.execute("select breach_type,tripped_at from ai_circuit_breaker")]))
-            print("LAST_VOTE="+json.dumps(dict(db.execute("select max(created_at) last_at from agent_calls where vote_produit=1").fetchone())))
-            print("OFFICIAL_2H="+str(db.execute("select count(*) from official_vote_snapshots where created_at>=datetime('now','-2 hours')").fetchone()[0]))
-            rows=db.execute("select block_reason,count(*) n from signal_decision_journal where created_at>=datetime('now','-2 hours') and block_reason is not null group by block_reason").fetchall()
-            print("DECISIONS_2H="+json.dumps([{'reason':reason(r['block_reason']),'count':r['n']} for r in rows]))
-            tables={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
-            if 'provider_health' in tables:
-             cols=[r[1] for r in db.execute('PRAGMA table_info(provider_health)')];print("PROVIDER_COLUMNS="+json.dumps(cols))
-             if all(x in cols for x in ['host','last_status','disabled_until','updated_at']):
-              print("OPENROUTER_HEALTH="+json.dumps(dict(db.execute("select last_status,disabled_until,updated_at from provider_health where host='openrouter.ai'").fetchone() or {})))
+             c=json.loads(p.stdout)['services']['api']; e=c.get('environment',{})
+             print('COMPOSE_ENV_DIFFERENCES='+json.dumps([k for k in set(env)|set(e) if str(env.get(k,''))!=str(e.get(k,''))]))
+             print('COMPOSE_LIMITS='+json.dumps({k:e.get(k) if re.fullmatch(r'[0-9.]+|true|false',str(e.get(k,''))) else 'unset_or_other' for k in allow}))
+             print('COMPOSE_API_FIELDS='+json.dumps(list(c.keys())))
+             print('RUNTIME_MOUNTS='+json.dumps([{'source':m['Source'],'dest':m['Destination'],'rw':m['RW']} for m in inspect['Mounts']]))
+            for path,remote in [('scripts/ai_budget_guard.js','/app/ai_budget_guard.js'),('scripts/api_server.js','/app/server.js'),('scripts/ai_models.config.js','/app/ai_models.config.js'),('scripts/telegram_client.js','/app/telegram_client.js')]:
+             data=pathlib.Path(path).read_bytes();r=run(['docker','exec','touslesmatchs-api','sha256sum',remote])
+             live=r.stdout.split()[0] if r.returncode==0 else 'missing'
+             print('FILE_HASH='+json.dumps({'path':path,'local':hashlib.sha256(data).hexdigest(),'runtime':live,'same':live==hashlib.sha256(data).hexdigest()}))
+            g=pathlib.Path('scripts/ai_budget_guard.js').read_text()
+            for term in ['function parisBudget','function getDailyStats','function reserveGlobal']:
+             i=g.find(term); print('GUARD_FRAGMENT='+json.dumps({'function':term,'code':g[i:i+1800] if i>=0 else 'absent'}))
+            js="const m=require('/app/ai_models.config');console.log('SAFE_MODELS='+JSON.stringify(m.listEnabledModels().map(k=>({key:k,limit:m.getModel(k).dailyLimit,maxTokens:m.getModel(k).maxTokensOut}))));"
+            r=run(['docker','exec','touslesmatchs-api','node','-e',js])
+            for l in r.stdout.splitlines():
+             if l.startswith('SAFE_MODELS='):print(l)
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            print('MODEL_COUNTS='+json.dumps(db.execute("select model_key,count(*) from ai_call_budget_log where status='ok' and created_at>=date('now') group by model_key").fetchall()))
+            print('OPENING='+json.dumps(db.execute("select day,eur from openrouter_global_opening where day=date('now')").fetchall()))
             db.close()
-            js="const D=require('better-sqlite3');const db=new D('/data/tlm.db',{readonly:true});try{const g=require('/app/ai_budget_guard');const s=g.getDailyStats(db);console.log('SAFE_STATS='+JSON.stringify({limit:s.budget?.dailyBudgetEur,hermes:s.budget?.hermesDailyBudgetEur,tests:s.budget?.testDailyBudgetEur,concile:s.budget?.concileDailyBudgetEur,cost:s.costEur,requests:s.requests}));}catch{console.log('SAFE_STATS={}')}finally{db.close()}"
-            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',js],capture_output=True,text=True,timeout=15)
-            for line in p.stdout.splitlines():
-             if line.startswith('SAFE_STATS='):
-              d=json.loads(line.split('=',1)[1]);print("ACTIVE_GUARD="+json.dumps({k:v for k,v in d.items() if isinstance(v,(int,float))}))
-            for label,location in [('PRIVATE_LOG','/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log')]:
-             p=pathlib.Path(location)
-             if p.exists():
-              s=p.read_text(errors='replace').lower()
-              terms=['sandbox','permission denied','operation not permitted','docker.sock','network','approv','refus','denied','blocked','bloqu','quota','usage limit','not permitted','read-only','readonly','restricted','restriction']
-              print(label+"_COUNTS="+json.dumps({v:s.count(v) for v in terms}))
+            for path in ['scripts/test_ai_budget_guard.js','scripts/test_openrouter_global_budget.js','scripts/test_hermes_schedule_and_shared_budget_20260918.js','scripts/test_ia3_provider_routing_20260918.js']:
+             print('TEST_PRESENT='+json.dumps({'path':path,'exists':pathlib.Path(path).exists()}))
+            p=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log')
+            if p.exists():
+             s=p.read_text(errors='replace').lower()
+             # Only literal known blockers; no raw log output.
+             for token in ['permission denied','sandbox','network','bloqu','refus']:
+              matches=[s[max(0,m.start()-120):m.end()+180] for m in re.finditer(re.escape(token),s)]
+              print('BLOCK_CONTEXT_FLAGS='+json.dumps({'token':token,'docker':any('docker' in x for x in matches),'git':any('git' in x for x in matches),'dns':any('dns' in x or 'resolve' in x for x in matches),'socket':any('socket' in x for x in matches),'approval':any('approv' in x for x in matches),'network':any('network' in x or 'réseau' in x for x in matches)}))
             PY
