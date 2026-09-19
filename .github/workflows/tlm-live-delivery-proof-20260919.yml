@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Distinguish provider refusal from internal limits
+      - name: Verify model routing cause without exposing configuration
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,22 +25,25 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,subprocess
-            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
-            r=d.execute("select model,created_at,http_status from agent_calls where agent_name='Mistral-Large' order by id desc limit 1").fetchone()
-            if r:
-             rows=d.execute("select status from openrouter_global_calls where model=? and abs((julianday(created_at)-julianday(?))*86400)<10",(r['model'],r['created_at'])).fetchall()
-             print('IA3_PROVIDER_REQUEST_REJECTED='+str(any(x['status']=='rejected' for x in rows)))
-             print('IA3_PROVIDER_REQUEST_COMPLETED='+str(any(x['status']=='completed' for x in rows)))
-             print('IA3_GLOBAL_RESERVATION_PRESENT='+str(bool(rows)))
-            for seat in ['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']:
-             r=d.execute("select vote_produit from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
-             print('SEAT_'+str(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'].index(seat)+1)+'_LATEST_VOTE='+str(bool(r and r[0])))
+            import sqlite3,json,subprocess,urllib.request
+            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            r=d.execute("select model,host from agent_calls where agent_name='Mistral-Large' and http_status=429 order by id desc limit 1").fetchone()
+            print('IA3_FAILED_FREE_MODEL='+str(bool(r and r[0].endswith(':free'))))
+            print('IA3_FAILED_SMALL_2603='+str(bool(r and r[0]=='mistralai/mistral-small-2603')))
+            print('IA3_FAILED_OPENROUTER='+str(bool(r and r[1]=='openrouter.ai')))
+            env=json.loads(subprocess.check_output(['docker','inspect','touslesmatchs-api'],text=True))[0]['Config']['Env']
+            v=dict(x.split('=',1) for x in env)
+            logical=v.get('OR_MISTRAL_MODEL') or 'mistralai/mistral-small-2603'
+            o=d.execute("select model_id from model_overrides where logical_id=? and lower(coalesce(reason,'')) not like 'promotion :%'",(logical,)).fetchone()
+            print('IA3_ACTIVE_OVERRIDE='+str(bool(o)))
+            print('IA3_OVERRIDE_FREE='+str(bool(o and o[0].endswith(':free'))))
+            print('IA3_CONFIGURED_FREE='+str(logical.endswith(':free')))
+            print('IA3_FAILED_LOGICAL_MATCH='+str(bool(r and r[0]==logical)))
+            try:
+             cat=json.load(urllib.request.urlopen('https://openrouter.ai/api/v1/models',timeout=15))['data']
+             ids={x['id'] for x in cat}
+             print('MISTRAL_PAID_COUNTERPART_LISTED='+str(bool(r and r[0].removesuffix(':free') in ids)))
+             print('MISTRAL_SMALL_2603_LISTED='+str('mistralai/mistral-small-2603' in ids))
+            except:print('CATALOG_CHECK=False')
             d.close()
-            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d),p=g.parisBudget();const u=d.prepare('select coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n from openrouter_global_calls where day=?').get(p.day).n;console.log('GLOBAL_MONEY_AVAILABLE='+String(u+0.05<p.limit));console.log('GLOBAL_REQUESTS_AVAILABLE='+String(s.requests<s.budget.maxRequestsPerDay));console.log('IA3_MODEL_QUOTA_AVAILABLE='+String(s.byModel.filter(x=>/mistral/i.test(x.model_key)).every(x=>x.requests<180)));d.close()"""
-            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],capture_output=True,text=True)
-            if p.returncode==0:
-             for l in p.stdout.splitlines():
-              if l in [k+'='+v for k in ['GLOBAL_MONEY_AVAILABLE','GLOBAL_REQUESTS_AVAILABLE','IA3_MODEL_QUOTA_AVAILABLE'] for v in ['true','false']]:print(l)
-            else:print('GUARD_CHECK_COMPLETED=False')
             PY
