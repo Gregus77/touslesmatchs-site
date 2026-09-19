@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Publish five minute Papa banner with automatic removal
+      - name: Publish verified temporary banner
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -31,11 +31,11 @@ jobs:
             lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
             backup=pathlib.Path('/opt/backups/tlm-papa-banner-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'));backup.mkdir(mode=0o700)
             try:
-             branch=run(['git','branch','--show-current']).strip();upstream=run(['git','rev-parse','--abbrev-ref','@{u}']).strip()
-             assert upstream=='origin/'+branch
+             print('STARTED=True');branch=run(['git','branch','--show-current']).strip();upstream=run(['git','rev-parse','--abbrev-ref','@{u}']).strip()
+             print('UPSTREAM_MATCH='+str(upstream=='origin/'+branch));assert upstream=='origin/'+branch
              head=run(['git','rev-parse','HEAD']).strip()
              assert run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]==head
-             (backup/'git.json').write_text(json.dumps({'branch':branch,'head':head,'upstream':upstream,'status':run(['git','status','--short'])}))
+             print('BRANCH_VERIFIED=True');(backup/'git.json').write_text(json.dumps({'branch':branch,'head':head,'upstream':upstream,'status':run(['git','status','--short'])}))
              info=json.loads(run(['docker','inspect','touslesmatchs-site']))[0]
              (backup/'site.json').write_text(json.dumps(info))
              candidates=set()
@@ -52,8 +52,8 @@ jobs:
              for url in ['https://www.touslesmatchs.com/','https://www.touslesmatchs.com/live-ia']:
               body=urllib.request.urlopen(url+'?papa_check='+str(int(time.time())),timeout=20).read()
               paths=[p for p in candidates if p.read_bytes()==body]
-              assert paths
-              pages.extend(paths)
+              print('PAGE_SOURCE_FOUND='+str(bool(paths)));assert paths
+              print('PAGE_SOURCE_MATCH=True');pages.extend(paths)
              pages=list(set(pages));assert pages
              expires=int(time.time()*1000)+300000
              js="""(function(){var end=EXPIRES;if(Date.now()>=end)return;var box=document.createElement('aside');box.id='tlm-papa-temporary';box.setAttribute('aria-label','Je t’aime mon fils. Signé Papa');box.innerHTML='<style>#tlm-papa-temporary{position:fixed;top:56px;left:0;right:0;z-index:100000;overflow:hidden;background:linear-gradient(100deg,#087ca7,#9633da);color:white;box-shadow:0 3px 20px #0006;pointer-events:none;padding:10px 0;font:700 20px/1.4 system-ui,sans-serif}#tlm-papa-temporary span{display:block;width:max-content;white-space:nowrap;animation:tlmPapaScroll 14s linear infinite}@keyframes tlmPapaScroll{from{transform:translateX(100vw)}to{transform:translateX(-100%)}}@media(prefers-reduced-motion:reduce){#tlm-papa-temporary span{animation:none;margin:auto;max-width:100%;white-space:normal;text-align:center}}</style><span>Je t’aime mon fils. Signé Papa ❤️</span>';document.body.appendChild(box);function remove(){if(Date.now()>=end){box.remove();document.removeEventListener('visibilitychange',remove);}}setTimeout(remove,Math.max(0,end-Date.now()));document.addEventListener('visibilitychange',remove);})();""".replace('EXPIRES',str(expires))
@@ -83,9 +83,10 @@ jobs:
              for p in pages:p.write_text(p.read_text().replace('</body>',block+'</body>',1))
              pathlib.Path('data/tlm-papa-banner-current.json').write_text(json.dumps({'backup':str(backup),'expires':expires,'timer':unit+'.timer'}))
              check=urllib.request.urlopen('https://www.touslesmatchs.com/?papa='+str(int(time.time())),timeout=20).read().decode()
-             assert block in check
+             print('PUBLIC_BLOCK_PRESENT='+str(block in check));assert block in check
              print('BANNER_PUBLISHED=True');print('FIVE_MINUTE_REMOVAL_SCHEDULED=True')
             except Exception:
+             fcntl.flock(lock,fcntl.LOCK_UN)
              if (backup/'remove.py').exists():subprocess.run(['/usr/bin/python3',str(backup/'remove.py')],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
              print('BANNER_PUBLISHED=False');sys.exit(1)
             PY
