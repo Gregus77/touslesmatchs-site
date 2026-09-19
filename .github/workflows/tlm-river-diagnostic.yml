@@ -30,7 +30,8 @@ jobs:
             node "$backup/test_river_diagnostic.js"
             for page in index app live-ia; do cp -p "public/$page.html" "$backup/$page.html"; done
             docker cp "$backup/river_diagnostic.js" touslesmatchs-api:/tmp/river_diagnostic.js
-            docker exec touslesmatchs-api node /tmp/river_diagnostic.js
+            # Reuse the completed one-off analysis rather than charging another run.
+            docker exec touslesmatchs-api test -s /data/river-diagnostic-20260920.html
             docker cp touslesmatchs-api:/data/river-diagnostic-20260920.html public/river-diagnostic-20260920.html
             chmod 644 public/river-diagnostic-20260920.html
             rollback() { for page in index app live-ia; do cp -p "$backup/$page.html" "public/$page.html"; done; }
@@ -39,8 +40,11 @@ jobs:
             const fs=require('fs'),{inject}=require(process.argv[2]);
             for(const page of ['index','app','live-ia']){const path='public/'+page+'.html';fs.writeFileSync(path,inject(fs.readFileSync(path,'utf8')));}
             NODE
-            curl -fsS https://touslesmatchs.com/river-diagnostic-20260920.html | grep -q 'Hors signal officiel'
-            curl -fsS https://touslesmatchs.com/ | grep -q 'TLM-RIVER-DIAGNOSTIC-20260920'
-            curl -fsS https://touslesmatchs.com/app | grep -q 'TLM-RIVER-DIAGNOSTIC-20260920'
+            curl -fsS https://touslesmatchs.com/river-diagnostic-20260920.html > "$backup/report-check.html"
+            grep -q 'Hors signal officiel' "$backup/report-check.html"
+            for page in index app; do
+              curl -fsS "https://touslesmatchs.com/$page.html?test=river&v=$(date +%s)" > "$backup/check-$page.html"
+              grep -q 'TLM-RIVER-DIAGNOSTIC-20260920' "$backup/check-$page.html"
+            done
             trap - ERR
             echo RIVER_DIAGNOSTIC_PUBLISHED
