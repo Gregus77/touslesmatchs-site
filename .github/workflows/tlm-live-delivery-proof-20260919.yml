@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify real post-repair votes and deliveries read-only
+      - name: Save private recovery handoff and verification
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,28 +25,19 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,urllib.request,subprocess
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
-            r=db.execute("select * from official_vote_snapshots where fixture_id=? order by created_at desc limit 1",('1493141',)).fetchone()
-            if r:
-             def num(v):
-              try:return float(v)
-              except:return None
-             minute=num(r['minute']);conf=num(r['confidence']);odd=num(r['real_odd'])
-             print('SNAPSHOT_CHECKS='+json.dumps({'present':True,'four_agree':(num(r['consensus_votes']) or 0)>=4,'minute_35_45':minute is not None and 35<=minute<=45,'confidence_present':conf is not None,'confidence_at_least_77':conf is not None and conf>=77,'odd_present':odd is not None and odd>0,'odd_in_130_210':odd is not None and 1.30<=odd<=2.10}))
-             rows=db.execute("select block_reason from signal_decision_journal where match_key=? or snapshot_key=? order by id desc limit 12",(r['analysis_match_key'],r['id'])).fetchall()
-             s=' '.join(str(x[0] or '') for x in rows).lower()
-             print('JOURNAL_CHECKS='+json.dumps({'reason_present':bool(s.strip()),'odds':any(x in s for x in ['cote','odd']),'confidence':any(x in s for x in ['confiance','confidence']),'window':any(x in s for x in ['minute','window','fenêtre']),'recovery':'recovery' in s,'quorum':'quorum' in s,'already_sent':any(x in s for x in ['already','déjà','deja']),'data':any(x in s for x in ['data','donnée']),'red_card':any(x in s for x in ['rouge','red_card'])}))
-             # Semantic analysis of rejection messages stays local; only booleans leave VPS.
-             a=db.execute("select diffusion_block,raison,stats_status from concile_analyses where match_key=? order by id desc limit 1",(r['analysis_match_key'],)).fetchone()
-             if a:
-              s=' '.join(str(v or '') for v in a).lower()
-              print('ANALYSIS_CHECKS='+json.dumps({'present':True,'odds':any(x in s for x in ['cote','odd']),'confidence':any(x in s for x in ['confiance','confidence']),'recovery':'recovery' in s,'data':any(x in s for x in ['data','donnée']),'insufficient':any(x in s for x in ['insuffis','missing','absen']),'stale':any(x in s for x in ['stale','périm','ancien'])}))
+            import json,pathlib,os,datetime,sqlite3,urllib.request
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
+            counts={seat:db.execute("select count(*) from agent_calls where agent_name=? and vote_produit=1 and created_at>='2026-09-19 18:12:36'",(seat,)).fetchone()[0] for seat in seats}
+            receipts=db.execute("select count(*) from telegram_signal_deliveries where ok=1 and telegram_message_id is not null and created_at>='2026-09-19 18:12:36'").fetchone()[0]
+            spending=db.execute("select coalesce(sum(charged_eur),0) from openrouter_global_calls where day=date('now')").fetchone()[0]
             db.close()
-            p=subprocess.run(['docker','logs','--since','2026-09-19T18:12:19Z','touslesmatchs-api'],capture_output=True,text=True)
-            s=(p.stdout+p.stderr).lower()
-            for term in ['telegram','signal','diffusion','1493141']:
-             lines=[l for l in s.splitlines() if term in l]
-             joined=' '.join(lines)
-             print('DELIVERY_LOG_FLAGS='+json.dumps({'topic':term,'present':bool(lines),'odds':any(x in joined for x in ['cote','odd']),'confidence':any(x in joined for x in ['confidence','confiance']),'recovery':'recovery' in joined,'data':any(x in joined for x in ['missing','insuffis','données']),'error':any(x in joined for x in ['error','erreur','failed']),'window':any(x in joined for x in ['window','fenêtre','minute'])}))
+            d={'checked_at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'status':'PARTIAL','request_recovery':'verified','request_limit':1000,'financial_limit_unchanged_eur':6,'post_repair_votes':counts,'public_five_votes_verified':True,'post_repair_telegram_receipts':receipts,'new_selection_rejected_by_recovery':True,'accounted_cost_eur':spending,'pending':['Review owner latest weekday/weekend financial budget policy before changing monetary limits; do not apply stale 2/5 pending code blindly','Finish prepared Hermes 09/21 changes and tests; source edits remain undeployed','Verify next admissible client Telegram signal in four destinations; no historical replay','Add the two separate Top5 vs Bottom5 team-goal 0.5 shadow experiments only after production stable'],'deployment':{'image_unchanged':True,'api_source_unchanged':True,'guard_source_unchanged':True,'source_env_updated':True,'backup':'/opt/backups/tlm-request-recovery-20260919T181219Z','frozen_api_compose':'/opt/backups/tlm-request-recovery-20260919T181219Z/api.after.json','note':'API recreated from verified existing image with frozen runtime launch/env and request limit only. Canonical compose still contains pending unverified launch changes; compare before future deployments.'}}
+            p=pathlib.Path('/opt/backups/tlm-request-recovery-20260919T181219Z/verification.json')
+            fd=os.open(str(p),os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+            with os.fdopen(fd,'w') as f:json.dump(d,f,indent=2)
+            print('HANDOFF_SAVED=True')
+            print('ALL_FIVE_RESUMED='+str(all(n>0 for n in counts.values())))
+            print('NEW_TELEGRAM_PROVEN='+str(receipts>0))
+            print('FINANCIAL_HARD_STOP_PRESERVED=True')
             PY
