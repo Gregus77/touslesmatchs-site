@@ -19,6 +19,6 @@ echo "   → /opt/backups/${NAME}"
 echo "   → /root/backups/${NAME}"
 ls -lh "/opt/backups/${NAME}"
 
-# Rotation : garder les 30 dernières sauvegardes .db pour ne pas saturer le disque
-ls -1t /opt/backups/tlm-*-*.db 2>/dev/null | tail -n +31 | xargs -r rm -f
-ls -1t /root/backups/tlm-*-*.db 2>/dev/null | tail -n +31 | xargs -r rm -f
+# Conservation volontaire : aucune rotation ni suppression automatique.
+# L'espace disque doit être contrôlé avant chaque exécution et toute purge
+# éventuelle nécessite une décision explicite, séparée de la sauvegarde.

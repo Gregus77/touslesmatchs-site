@@ -7,7 +7,7 @@ const targets=client.destinations(env);
 assert.deepEqual(targets.map(x=>x.channel),['free','premium','ru_free','ru_premium']);
 assert.throws(()=>client.destinations({...env,TELEGRAM_PREMIUM_CHANNEL_ID:'-1'}));
 assert.throws(()=>client.destinations({...env,TELEGRAM_CHANNEL_ID:'-7'}));
-const data={matchKey:'match:1',home:'Under United & FC',away:'Over City',competition:'Example',minute:45,scoreHome:1,scoreAway:0,votes:3,confidence:81,market:'Under 2.5 buts',odd:'1.65',reason:'Justification française secrète',outcome:'loss'};
+const data={matchKey:'match:1',home:'Under United & FC',away:'Over City',competition:'Example',minute:45,scoreHome:1,scoreAway:0,votes:4,confidence:81,market:'Under 2.5 buts',odd:'1.65',reason:'Justification française secrète',outcome:'loss'};
 for(const dest of targets){
  const signal=client.render('signal',data,{...dest,paymentVerified:true});
  assert(signal.text.includes('Under United &amp; FC'));assert(signal.text.includes('Over City'));

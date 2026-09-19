@@ -390,3 +390,41 @@ Correctif urgent séparé de PR 109 : calendrier 4/6 EUR, réservation SQLite gl
 La route historique vérifie la session Premium côté serveur et transmet les cinq sièges d’un snapshot exact. Les directions restent masquées en gratuit. Accueil et application réutilisent les ronds existants avec minute, score de calcul et score final, sans appel sportif ni nouvelle analyse. Cache PWA renouvelé.
 
 - Complément : priorité cohérente du jeton OTP, contrôle des droits du bandeau sans requête sportive, affichage des matchs du périmètre indépendamment de leur admissibilité à une nouvelle analyse ; fraîcheur incertaine explicitée. Aucun droit en base ni critère sportif modifié.
+
+## 2026-09-14 — [Codex] Fiabilité Concile et Telegram
+
+- Le quorum public exige quatre votes concordants réels ; les réponses absentes,
+  invalides et rejetées statistiquement restent distinguées et ne créent plus de
+  sélection intermédiaire diffusable. Le snapshot attend les cinq appels bornés,
+  afin que les réponses tardives réelles des sièges 2 et 5 apparaissent aussi
+  sur le site et la PWA sans retarder au-delà des timeouts existants.
+- L’analyse reste strictement dans la fenêtre 15–45 et la diffusion dans 35–45,
+  sans temps additionnel, baisse de confiance, marché +0,5 ni routage shadow.
+- Les cinq sièges conservent des modèles distincts ; les promotions automatiques
+  fondées sur des populations incomparables sont ignorées et GPT-5 utilise la
+  passerelle OpenRouter budgétée déjà autorisée. Les challengers, marchés et
+  routages shadow restent actifs, persistés séparément et non diffusables.
+- Les messages Telegram échappent tous les champs dynamiques, valident une liste
+  fermée de balises, se découpent à 4 096 caractères et ne sont livrés qu’après
+  une réponse positive accompagnée d’un `message_id` entier.
+- La santé Telegram/Brevo sépare configuration, dernier contrôle, fraîcheur,
+  résultat courant et dernière livraison prouvée. Les erreurs fournisseur sont
+  journalisées par catégorie sans corps JSON ni identifiant sensible.
+- `backup-db.sh` ne supprime plus aucune ancienne sauvegarde automatiquement ;
+  l’espace disque est contrôlé avant chaque nouveau `.backup` cohérent.
+
+## 2026-09-15 — [Codex] Votes partiels et sièges Qwen/GPT-5
+
+- Les tentatives IA utilisent désormais la même clé de snapshot que les votes,
+  ce qui arrête les relances 0/5 d'un état de match déjà épuisé.
+- Un 429 propre à un modèle OpenRouter ne coupe plus les quatre autres modèles ;
+  les plafonds globaux, quotidiens et par snapshot restent inchangés.
+- Chaque bulletin persisté devient visible immédiatement sur le site et la PWA,
+  sans attendre le cinquième appel. Les échecs affichent leur catégorie réelle ;
+  seul un scrutin final à quatre voix concordantes peut produire un signal.
+- Qwen conserve 300 jetons avec le raisonnement désactivé ; Council-GPT5
+  conserve 500 jetons avec un effort minimal. Les deux réglages ont été validés
+  par une réponse structurée réelle via la passerelle budgétée.
+- Le repli transversal Qwen/Kimi est retiré : Luna ne peut plus appeler Qwen
+  sous un autre nom. Un modèle indisponible produit un état terminal explicite,
+  jamais un vote copié entre deux sièges.

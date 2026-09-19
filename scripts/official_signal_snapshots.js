@@ -1,7 +1,8 @@
 'use strict';
 
-const OFFICIAL_FROM_MINUTE = 35;
+const OFFICIAL_FROM_MINUTE = 30;
 const OFFICIAL_TO_MINUTE = 45;
+const MIN_CONSENSUS_VOTES = 4;
 const REANALYSIS_DELAY_MS = 150000;
 
 function fixtureIdOf(match) {
@@ -85,6 +86,7 @@ function init(db) {
 
 function statusFor(vote) {
   if (vote?.direction === 'over' || vote?.direction === 'under') return 'voted';
+  if (['rejected_statistical', 'parse_error', 'empty', 'unavailable'].includes(vote?.status)) return vote.status;
   if (vote?.failed || vote?.status === 'error') return 'error';
   return vote?.status === 'unavailable' ? 'unavailable' : 'pending';
 }
@@ -119,6 +121,19 @@ function registerOfficial(db, snapshotId, options = {}) {
   const minute = Number(row.minute);
   if (!options.legacyProof && (!Number.isFinite(minute) || minute < OFFICIAL_FROM_MINUTE || minute > OFFICIAL_TO_MINUTE)) {
     throw new Error(`official signal outside ${OFFICIAL_FROM_MINUTE}-${OFFICIAL_TO_MINUTE}`);
+  }
+  if (!options.legacyProof) {
+    const statuses = JSON.parse(row.seat_statuses_json || '[]');
+    const directions = JSON.parse(row.directions_json || '[]');
+    const consensus = row.consensus === 'over' || row.consensus === 'under' ? row.consensus : null;
+    const activeVotes = statuses.filter(status => status === 'voted').length;
+    const concordantVotes = consensus
+      ? directions.filter((direction, index) => statuses[index] === 'voted' && direction === consensus).length
+      : 0;
+    if (activeVotes < MIN_CONSENSUS_VOTES || Number(row.consensus_votes) < MIN_CONSENSUS_VOTES
+        || concordantVotes < MIN_CONSENSUS_VOTES) {
+      throw new Error(`official signal requires ${MIN_CONSENSUS_VOTES} real concordant votes`);
+    }
   }
   db.prepare(`INSERT OR IGNORE INTO official_signal_registry
     (fixture_scope,official_signal_snapshot_id,created_at) VALUES (?,?,?)`)
@@ -222,6 +237,6 @@ function recordResult(db, snapshotId, finalHome, finalAway, source = 'api_finish
 }
 
 module.exports = {
-  OFFICIAL_FROM_MINUTE, OFFICIAL_TO_MINUTE, REANALYSIS_DELAY_MS,
+  OFFICIAL_FROM_MINUTE, OFFICIAL_TO_MINUTE, MIN_CONSENSUS_VOTES, REANALYSIS_DELAY_MS,
   init, fixtureScope, capture, registerOfficial, stateForMatch, reanalysisGate, resultFor, recordResult,
 };

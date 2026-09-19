@@ -1196,10 +1196,22 @@ async function refreshTelegramPaymentAvailability() {
 }
 setTimeout(refreshTelegramPaymentAvailability,5000);
 setInterval(refreshTelegramPaymentAvailability,10*60*1000);
+const firstHalfDelivery = require('./first_half_delivery');
+const validateFirstHalfDelivery = firstHalfDelivery.createValidator({
+  db,
+  fetchFixture: async (id) => {
+    if (!/^\d+$/.test(String(id)) || !API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('period_unavailable');
+    const response = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), {'x-apisports-key': API_SPORTS_KEY});
+    if (apiSportsErrors(response)) throw new Error('period_unavailable');
+    return (response.response || []).find(f => String(f.fixture?.id) === String(id));
+  },
+});
 const clientTelegramPublisher = telegramClient.createPublisher({
+  validateSignal: validateFirstHalfDelivery,
   paymentAvailable:()=>Date.now()<telegramPaymentVerifiedUntil,
   db, env: process.env,
   onDelivered: row => {
+    _integrationHealth.telegram.last_delivery_at = row.created_at || new Date().toISOString();
     if (!row.match_key) return;
     storedTelegramDeliveryCache.delete(row.match_key);
     if(row.kind === 'signal') {
@@ -1213,10 +1225,13 @@ setInterval(() => clientTelegramPublisher.flush().catch(e => console.error('[cli
 const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
+const INTEGRATION_CHECK_MAX_AGE_MS = 30 * 60 * 1000;
 const _integrationHealth = {
-  brevo: { configured: !!BREVO_API_KEY, ok: null, checked_at: null },
-  telegram: { configured: !!TELEGRAM_BOT_TOKEN, ok: null, checked_at: null, channels: {} },
+  brevo: { configured: !!BREVO_API_KEY, ok: null, checked_at: null, last_delivery_at: null, last_operation_at: null },
+  telegram: { configured: !!TELEGRAM_BOT_TOKEN, ok: null, checked_at: null, last_delivery_at: null, channels: {} },
 };
+let _telegramHealthCheckPromise = null;
+let _brevoHealthCheckPromise = null;
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 // Aucun compteur payant : Premium recoit tous les signaux admissibles. Le seul
@@ -1286,12 +1301,26 @@ function getTierThresholds() {
 // Un ID périmé (typiquement après migration d'un groupe en supergroupe, où l'ID
 // change) faisait échouer les envois EN SILENCE : sendTelegramMessage renvoie
 // simplement false. Ce contrôle rend le problème visible immédiatement.
-function verifyTelegramChannels() {
-  if (!TELEGRAM_BOT_TOKEN) {
-    _integrationHealth.telegram.ok = false;
-    _integrationHealth.telegram.checked_at = new Date().toISOString();
-    return;
-  }
+function telegramGetChat(chatId) {
+  return new Promise((resolve) => {
+    const req = https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(chatId)}`, (res) => {
+      let data = "";
+      res.on("data", chunk => { data += chunk; });
+      res.on("end", () => {
+        let parsed = null;
+        try { parsed = JSON.parse(data); } catch (_) {}
+        const rawType = String(parsed?.result?.type || "");
+        const type = ["channel", "group", "supergroup", "private"].includes(rawType) ? rawType : null;
+        resolve({ ok: res.statusCode === 200 && parsed?.ok === true, http_status: Number(res.statusCode || 0), type });
+      });
+    });
+    req.setTimeout(10000, () => req.destroy(new Error("telegram_timeout")));
+    req.on("error", () => resolve({ ok: false, http_status: 0, type: null }));
+  });
+}
+
+async function verifyTelegramChannels() {
+  if (_telegramHealthCheckPromise) return _telegramHealthCheckPromise;
   const channels = [
     ["Gratuit",  TELEGRAM_CHANNEL_ID],
     ["Premium",  TELEGRAM_PREMIUM_CHANNEL_ID],
@@ -1299,83 +1328,46 @@ function verifyTelegramChannels() {
     ["RU Premium",  TELEGRAM_RU_PREMIUM_CHANNEL_ID],
     ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
   ];
-  // Tous les canaux commencent a "non verifies". Sans cette initialisation,
-  // le premier getChat reussi pouvait faire passer l'etat global a true alors
-  // que les quatre autres controles etaient encore en vol.
-  for (const [label] of channels) {
-    _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-  }
-  _integrationHealth.telegram.ok = false;
-  _integrationHealth.telegram.checked_at = new Date().toISOString();
-  for (const [label, id] of channels) {
-    if (!id) {
-      console.warn(`[telegram-check] ${label} : NON CONFIGURÉ`);
-      continue;
-    }
-    https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`, (res) => {
-      let data = "";
-      res.on("data", d => data += d);
-      res.on("end", () => {
-        try {
-          const j = JSON.parse(data);
-          if (!j.ok) {
-            _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-            console.error(`[telegram-check] ❌ ${label} (${id}) INJOIGNABLE — ${j.description || "erreur"} — les messages de ce palier ne partiront PAS`);
-          } else {
-            _integrationHealth.telegram.channels[label.toLowerCase()] = true;
-            const t = j.result.type;
-            const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
-            console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
-          }
-          // Offre actuelle : deux canaux clients par langue (Gratuit et Premium 14,90 €)
-          // plus le canal Admin. Dériver la liste du tableau réellement contrôlé évite
-          // qu'un ancien palier Standard supprimé provoque une fausse panne globale.
-          const requiredTelegramChannels = channels.map(([requiredLabel]) => requiredLabel.toLowerCase());
-          const states = requiredTelegramChannels.map(
-            k => _integrationHealth.telegram.channels[k]
-          );
-
-          _integrationHealth.telegram.ok =
-            states.length === channels.length &&
-            states.every(Boolean);
-          _integrationHealth.telegram.checked_at = new Date().toISOString();
-        } catch {
-          _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-          _integrationHealth.telegram.ok = false;
-          _integrationHealth.telegram.checked_at = new Date().toISOString();
-          console.error(`[telegram-check] ${label} : réponse illisible`);
-        }
-      });
-    }).on("error", (e) => {
-      _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-      _integrationHealth.telegram.ok = false;
-      _integrationHealth.telegram.checked_at = new Date().toISOString();
-      console.error(`[telegram-check] ${label} : ${e.message}`);
-    });
-  }
+  _telegramHealthCheckPromise = (async () => {
+    const configured = !!TELEGRAM_BOT_TOKEN && channels.every(([, id]) => !!id);
+    const results = await Promise.all(channels.map(async ([label, id]) => {
+      if (!TELEGRAM_BOT_TOKEN || !id) return { label, ok: false, http_status: 0, type: null };
+      return { label, ...(await telegramGetChat(id)) };
+    }));
+    const states = Object.fromEntries(results.map(row => [row.label.toLowerCase(), row.ok]));
+    const ok = configured && results.every(row => row.ok);
+    _integrationHealth.telegram.configured = configured;
+    _integrationHealth.telegram.channels = states;
+    _integrationHealth.telegram.ok = ok;
+    _integrationHealth.telegram.checked_at = new Date().toISOString();
+    const failedLabels = results.filter(row => !row.ok).map(row => row.label).join(", ");
+    console[ok ? "log" : "error"](`[telegram-check] ${ok ? "OK" : "ECHEC"} — ${results.length - results.filter(row => row.ok).length}/${results.length} anomalie(s)${failedLabels ? `: ${failedLabels}` : ""}`);
+    return ok;
+  })().finally(() => { _telegramHealthCheckPromise = null; });
+  return _telegramHealthCheckPromise;
 }
 
 async function verifyBrevoConfiguration() {
-  _integrationHealth.brevo.checked_at = new Date().toISOString();
-  if (!BREVO_API_KEY) {
-    _integrationHealth.brevo.ok = false;
-    console.error("[brevo-check] BREVO_API_KEY NON CONFIGURÉE — aucun email ne partira");
-    return false;
-  }
-  try {
-    const account = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY });
-    const ok = !!account && !account.code && !account.error;
+  if (_brevoHealthCheckPromise) return _brevoHealthCheckPromise;
+  _brevoHealthCheckPromise = (async () => {
+    _integrationHealth.brevo.configured = !!BREVO_API_KEY;
+    let ok = false;
+    if (BREVO_API_KEY) {
+      try {
+        const account = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY }, 10000);
+        ok = !!account && !account.code && !account.error;
+      } catch (_) { ok = false; }
+    }
     _integrationHealth.brevo.ok = ok;
     _integrationHealth.brevo.checked_at = new Date().toISOString();
-    if (ok) console.log("[brevo-check] ✅ API Brevo joignable");
-    else console.error(`[brevo-check] ❌ clé refusée — ${String(account?.message || "erreur API").slice(0, 120)}`);
+    console[ok ? "log" : "error"](`[brevo-check] ${ok ? "OK" : "ECHEC"}`);
     return ok;
-  } catch (e) {
-    _integrationHealth.brevo.ok = false;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.error(`[brevo-check] ❌ ${e.message}`);
-    return false;
-  }
+  })().finally(() => { _brevoHealthCheckPromise = null; });
+  return _brevoHealthCheckPromise;
+}
+
+async function refreshIntegrationHealth() {
+  return Promise.allSettled([verifyTelegramChannels(), verifyBrevoConfiguration()]);
 }
 
 // Diffuse un message identique à tous les canaux payants. Le FORMAT est le même
@@ -1531,7 +1523,8 @@ const _modelOverrideCache = { at: 0, map: {} };
 function resolveModel(logicalId) {
   if (Date.now() - _modelOverrideCache.at > 60000) {
     try {
-      const rows = db.prepare("SELECT logical_id, model_id FROM model_overrides").all();
+      const rows = db.prepare(`SELECT logical_id, model_id FROM model_overrides
+        WHERE lower(COALESCE(reason,'')) NOT LIKE 'promotion :%'`).all();
       _modelOverrideCache.map = Object.fromEntries(rows.map(r => [r.logical_id, r.model_id]));
       _modelOverrideCache.at = Date.now();
     } catch (e) { /* table pas encore creee au tout premier boot */ }
@@ -2028,9 +2021,12 @@ async function runShadowEvaluation(match) {
         matchKey, competition: match.competition || match.league || "",
       });
       if (!result.ok || !result.text) {
-        // Log explicite : un agent mal configuré (mauvais identifiant de modèle,
-        // clé absente, quota dépassé) doit se voir dans les logs, pas disparaître.
-        console.error(`[shadow] ${agent.name} SANS RÉPONSE — ${result.error || "raison inconnue"}`);
+        // Ne jamais recopier un corps fournisseur : il peut contenir en-têtes,
+        // URL ou JSON sensibles. Le détail durable vient du garde-fou structuré.
+        const category = /^\[(?:LIMIT|IA|DATA)\]/.test(String(result.error || ""))
+          ? String(result.error).slice(1, String(result.error).indexOf("]"))
+          : "PROVIDER";
+        console.error(`[shadow] ${agent.name} SANS RÉPONSE — catégorie=${category}`);
         continue;
       }
 
@@ -2054,8 +2050,8 @@ async function runShadowEvaluation(match) {
         parsed.bet, parsed.confidence, parsed.raison
       );
       console.log(`[shadow] ${agent.icon} ${agent.name} → ${parsed.bet} (${parsed.confidence}%) pour ${match.home} vs ${match.away}`);
-    } catch (e) {
-      console.error(`[shadow] ${agent.name} erreur:`, e.message);
+    } catch (_) {
+      console.error(`[shadow] ${agent.name} erreur — catégorie=PROVIDER_OR_PARSE`);
     }
   }
 }
@@ -2081,7 +2077,7 @@ function resolveShadowOutcomes(home, away, scoreHome, scoreAway, resolutionDay =
           .run(outcome, scoreHome, scoreAway, row.id);
       }
     }
-  } catch (e) { console.error("[shadow] resolve:", e.message); }
+  } catch (_) { console.error("[shadow] résolution échouée — catégorie=DATA"); }
 }
 
 function bookmakerEmailHtml() {
@@ -2483,7 +2479,7 @@ function deductToken(userId) {
 }
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
-function httpGet(url, headers = {}) {
+function httpGet(url, headers = {}, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const req = https.request({ hostname: opts.hostname, path: opts.pathname + opts.search, headers }, (res) => {
@@ -2494,6 +2490,7 @@ function httpGet(url, headers = {}) {
         catch { resolve({}); }
       });
     });
+    req.setTimeout(timeoutMs, () => req.destroy(new Error("HTTP GET timeout")));
     req.on("error", reject);
     req.end();
   });
@@ -2657,7 +2654,7 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Produit client unique : les cinq sieges votent tous sur Over/Under 2,5.
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
-const CLIENT_OU25_MIN_VOTES = 3;
+const CLIENT_OU25_MIN_VOTES = 4;
 const CLIENT_OU25_MIN_CONFIDENCE = Math.max(77, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 77));
 const OFFICIAL_SNAPSHOT_RULE_VERSION = "ou25-snapshot-v1-20260912";
 // Mode Recovery : garde-fous statistiques supplémentaires, sans redéfinir le
@@ -2732,8 +2729,10 @@ function strictOu25ResponseFormat() {
 }
 
 function buildOu25VoteSummary(agentMarketList, agentResults = []) {
+  const resultByAgent = new Map((agentResults || []).filter(Boolean).map(row => [row.name, row]));
   const byAgent = new Map();
   for (const am of agentMarketList || []) {
+    if (resultByAgent.get(am?.name)?.statistically_rejected) continue;
     if (!CONCILE_AGENT_NAMES.includes(am?.name) || byAgent.has(am.name)) continue;
     const raw = am?.marches?.buts;
     const side = String(raw?.p || "").toLowerCase();
@@ -2750,6 +2749,7 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   // comme son siège O/U. On ne remplace jamais un bulletin marches.buts existant,
   // on n'invente aucun vote et les agents en échec restent exclus.
   for (const ar of agentResults || []) {
+    if (ar?.statistically_rejected) continue;
     if (!CONCILE_AGENT_NAMES.includes(ar?.name) || byAgent.has(ar.name)) continue;
     if (!isOu25Bet(ar?.bet)) continue;
     const confidence = Number(ar?.confidence);
@@ -2759,7 +2759,14 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
       confidence: Math.min(95, Math.max(40, confidence)),
     });
   }
-  const votes = CONCILE_AGENT_NAMES.map((agent) => ({ agent, ...(byAgent.get(agent) || { direction: null, confidence: null }) }));
+  const votes = CONCILE_AGENT_NAMES.map((agent) => {
+    if (byAgent.has(agent)) return { agent, ...byAgent.get(agent), status: "voted" };
+    const result = resultByAgent.get(agent);
+    const status = result?.statistically_rejected ? "rejected_statistical"
+      : result?.failure_type === "parse_error" ? "parse_error"
+        : result?.failed ? "unavailable" : "pending";
+    return { agent, direction: null, confidence: null, status };
+  });
   const over = votes.filter(v => v.direction === "over");
   const under = votes.filter(v => v.direction === "under");
   const winners = over.length >= under.length ? over : under;
@@ -2773,10 +2780,10 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   const voteStatus = unanimous ? "elite" : voteCount >= CLIENT_OU25_MIN_VOTES ? "strong" : "none";
   const voteLabel = unanimous
     ? "5/5 unanime O/U 2,5"
-    : voteCount >= 4
+    : voteCount >= CLIENT_OU25_MIN_VOTES
       ? "4/5 signal fort O/U 2,5"
-      : voteCount >= CLIENT_OU25_MIN_VOTES
-        ? "3/5 signal valide O/U 2,5"
+      : voteCount >= 3
+        ? "3/5 tendance IA — quorum non atteint"
         : !complete
           ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
           : `${voteCount}/5 aucun signal O/U 2,5`;
@@ -2798,35 +2805,25 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   };
 }
 
-// Attend uniquement jusqu'au premier quorum O/U 2,5 réellement acquis.
-// Les cinq requêtes restent lancées (pas d'annulation ambiguë côté fournisseur),
-// mais la persistance et la diffusion client ne sont plus retardées par les deux
-// sièges les plus lents une fois trois bulletins valides concordants reçus.
+// Attend la fin bornée des cinq sièges avant de figer le snapshot. Le précédent
+// retour au premier quorum persistait 3/5 puis 4/5 tandis que DeepSeek et Qwen
+// terminaient quelques secondes plus tard : leurs vrais votes existaient dans
+// agent_predictions, mais le snapshot immuable montré au site restait "pending".
+// Chaque appel conserve son timeout existant ; aucun délai n'est augmenté.
 async function collectAgentsUntilOu25Quorum(agentPromises, onSettled = null) {
   return new Promise((resolve) => {
     const settled = [];
     let completed = 0;
-    let decided = false;
-    const finish = (early) => {
-      if (decided) return;
-      decided = true;
-      resolve({ results: settled.slice(), early });
-    };
     agentPromises.forEach((promise) => {
       Promise.resolve(promise).then((result) => {
         completed++;
         if (result) settled.push(result);
         if (onSettled) onSettled(result);
-        const markets = settled
-          .filter((row) => row && row._ou25Markets)
-          .map((row) => ({ name: row.name, marches: row._ou25Markets }));
-        const summary = buildOu25VoteSummary(markets, settled);
-        if (summary.recommended) finish(completed < agentPromises.length);
-        else if (completed === agentPromises.length) finish(false);
-      }).catch((error) => {
+        if (completed === agentPromises.length) resolve({ results: settled.slice(), early: false });
+      }).catch(() => {
         completed++;
-        console.error(`[concile] agent non collecte: ${error?.message || error}`);
-        if (completed === agentPromises.length) finish(false);
+        console.error('[concile] agent non collecté — catégorie=PROVIDER_OR_PARSE');
+        if (completed === agentPromises.length) resolve({ results: settled.slice(), early: false });
       });
     });
   });
@@ -3579,7 +3576,7 @@ function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = CLIE
   return true;
 }
 
-// Decision du 05/09/2026 : signal client des 3 votes concordants sur 5.
+// Décision propriétaire : signal client à partir de 4 votes réels concordants sur 5.
 function clientOu25RequiredVotes() {
   return CLIENT_OU25_MIN_VOTES;
 }
@@ -3594,7 +3591,7 @@ function evaluateClientSignalCriteria(c) {
   if (!c.matchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${c.maxMinute})`;
   if (!c.standingsOk) return `classement: ${c.standingsReason || "écart minimum de 5 places non vérifié"}`;
   if (!c.ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
-  if (!c.enoughSeats) return `sieges O/U 2,5 insuffisants: ${c.activeVotes}/5 (<3)`;
+  if (!c.enoughSeats) return `sieges O/U 2,5 insuffisants: ${c.activeVotes}/5 (<${CLIENT_OU25_MIN_VOTES})`;
   if (c.confidence < c.signalThreshold) return `confiance ${c.confidence} < seuil ${c.signalThreshold}`;
   if (c.confidence < c.minConfidence) return `confiance ${c.confidence} < plancher O/U 2,5 ${c.minConfidence}`;
   if (c.voteCount < c.requiredVotes) return `votes ${c.voteCount} < ${c.requiredVotes}`;
@@ -6415,13 +6412,18 @@ function providerEcarte(host, claimBalanceProbe = false) {
   }
   if (Date.now() - _providerHealthCache.at > 60000) {
     try {
-      const rows = db.prepare("SELECT host, disabled_until, last_error, updated_at, credential_fingerprint FROM provider_health WHERE disabled_until IS NOT NULL").all();
+      const rows = db.prepare("SELECT host, last_status, disabled_until, last_error, updated_at, credential_fingerprint FROM provider_health WHERE disabled_until IS NOT NULL").all();
       const today = new Date().toISOString().slice(0, 10);
       _providerHealthCache.hs = Object.fromEntries(rows
         // Un plafond journalier OpenRouter n'est pas une panne de clé pendant
         // 24h : au changement de jour UTC, la clé rechargée doit être retestée.
         // Les 401/402 et 403 d'abonnement restent, eux, écartés normalement.
         .filter(r => r.credential_fingerprint === providerCredentialFingerprint(r.host))
+        // Un 429 reçu par un modèle OpenRouter n'est pas une panne globale :
+        // lors de l'incident du 14/09, DeepSeek a reçu 429 tandis que quatre
+        // autres modèles répondaient sur le même hôte. Les budgets persistants
+        // et l'unique tentative par snapshot restent opposables.
+        .filter(r => !(r.host === "openrouter.ai" && Number(r.last_status) === 429))
         .filter(r => !(/daily limit/i.test(String(r.last_error || "")) && String(r.updated_at || "").slice(0, 10) < today))
         .map(r => [r.host, r.disabled_until]));
       _providerHealthCache.at = Date.now();
@@ -6432,6 +6434,10 @@ function providerEcarte(host, claimBalanceProbe = false) {
 }
 function marquerProvider(host, status, detail) {
   if (!host) return;
+  if (host === "openrouter.ai" && Number(status) === 429) {
+    console.error("[provider-health] OpenRouter limité pour ce modèle — aucun coupe-circuit global ouvert");
+    return;
+  }
   const message = String(detail || "");
   const daily = /daily limit/i.test(message);
   const insufficientBalance = status === 402 && /insufficient|balance|credit|solde/i.test(message);
@@ -6480,9 +6486,9 @@ async function runConcileAnalysis(match) {
   // d'appels payants, meme sous le plafond journalier.
   let _secoursCetteAnalyse = 0;
   const SECOURS_MAX_PAR_ANALYSE = 5;
-  if (!GROQ_API_KEY) {
-    return getMockAnalysis(match);
-  }
+  // Aucun vote de secours synthétique : si les fournisseurs réels sont absents
+  // ou coupés, chaque siège est persisté comme indisponible et aucun signal ne
+  // peut être formé. OpenRouter suffit à alimenter le Concile sans clé Groq.
 
   const neutralNote = isNeutralComp(match.competition)
     ? "\n⚠️ TERRAIN NEUTRE — ne PAS mentionner l'avantage domicile, il n'existe pas dans cette compétition."
@@ -6547,7 +6553,7 @@ async function runConcileAnalysis(match) {
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
   const recoveryPromptBlock = RECOVERY_MODE_ENABLED
-    ? `\n\nMODE RECOVERY — sortie client uniquement si : historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= ${CLIENT_OU25_MIN_CONFIDENCE} et au moins 3 votes concordants sur 5. Le périmètre championnat et les plafonds sont ceux du produit, pas ceux de Recovery. En cas de doute, ne force jamais la confiance.`
+        ? `\n\nMODE RECOVERY — sortie client uniquement si : historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= ${CLIENT_OU25_MIN_CONFIDENCE} et au moins 4 votes concordants sur 5. Le périmètre championnat et les plafonds sont ceux du produit, pas ceux de Recovery. En cas de doute, ne force jamais la confiance.`
     : "";
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
@@ -6574,7 +6580,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
   // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
   // Agent 3 : OpenRouter-Luna → spécialiste O/U structuré, raisonnement désactivé
-  // Agent 4 : Kimi            → synthese quantitative (remplace Qwen, 0/26 votes)
+  // Agent 4 : Qwen            → synthèse quantitative indépendante
   // Agent 5 : Chief           → arbitre Llama-70b (Groq, rapide)
   const usePerplexity = !!PERPLEXITY_API_KEY;
   const useMistral    = !!MISTRAL_API_KEY;
@@ -6610,6 +6616,10 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       icon: "🌟",
       useOpenRouter,
       openRouterModelKey: "qwen",
+      // Qwen consommait les 300 jetons en raisonnement puis renvoyait un
+      // contenu vide. Vérifié en production : le même plafond avec le
+      // raisonnement désactivé produit bien le bulletin JSON O/U demandé.
+      reasoning: { effort: "none" },
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
@@ -6746,7 +6756,7 @@ Réponds en JSON pur (pas de markdown):
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "mistral" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel(process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603") });
       }
-      // Agent titulaire OpenRouter (Kimi depuis le 26/08/2026) : meme
+      // Agent titulaire OpenRouter Qwen : même
       // garde-fou budgetaire que les 4 agents ci-dessus.
       if (agCfg.useOpenRouter && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: agCfg.openRouterModelKey || "qwen" })) {
@@ -6766,17 +6776,10 @@ Réponds en JSON pur (pas de markdown):
       // Ne jamais faire voter un agent officiel sous un autre modèle générique :
       // cinq libellés utilisant le même Llama ne sont pas cinq avis indépendants.
       // Les replis OpenRouter ci-dessous conservent un modèle identifié par agent.
-      // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
-      // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
-      // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
-      if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
-      }
-      if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k2" });
-      }
+      // Aucun repli transversal Qwen/Kimi : un siège garde son modèle désigné
+      // ou se termine explicitement indisponible. L'ancien bloc faisait parfois
+      // voter Qwen sous le nom OpenRouter-Luna, puis laissait le vrai siège Qwen
+      // vide ; deux libellés n'auraient alors pas représenté deux IA indépendantes.
       if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       // Ecarte les fournisseurs dont le compte est en panne (401/402/403/429).
@@ -6842,7 +6845,7 @@ Réponds en JSON pur (pas de markdown):
             (match_key, agent_name, model, host, sport, competition, minute,
              tentative, debut_at, duree_ms, http_status, issue, detail, repli)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
-              _fallbackMatchKey, agCfg.name, String(pv?.model || ""),
+              getPredictionSnapshotKey(match), agCfg.name, String(pv?.model || ""),
               pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || ""),
               String(match.sport || "Football"), String(match.competition || match.league || ""),
               parseLiveMinuteValue(match.minute) ?? null,
@@ -6890,6 +6893,7 @@ Réponds en JSON pur (pas de markdown):
             } else {
               requestBody.temperature = temp;
             }
+            if (agCfg.reasoning) requestBody.reasoning = agCfg.reasoning;
             resp = await httpPost(pv.url, requestBody, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
@@ -6909,8 +6913,8 @@ Réponds en JSON pur (pas de markdown):
           // de savoir si c'etait un vrai timeout ou une cle/quota en erreur).
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
           lastDiag = resp?._httpTimedOut ? `timeout ${AGENT_TIMEOUT_MS}ms (${pvHost})`
-            : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost}) — ${JSON.stringify(resp).slice(0, 200)}`
-            : resp?._httpParseError ? `reponse illisible (${pvHost}): ${resp._raw}`
+            : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost})`
+            : resp?._httpParseError ? `reponse illisible (${pvHost})`
             : probe && probe !== "{}"
               ? `reponse sans bulletin O/U 2,5 exploitable (${pvHost})`
               : `reponse sans contenu exploitable (${pvHost})`;
@@ -6926,9 +6930,9 @@ Réponds en JSON pur (pas de markdown):
           if (agCfg.targetedRetry && [400, 401, 402, 403, 404].includes(Number(resp?._httpStatus))) break;
         } catch (e) {
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
-          lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
-          tracerAppel(pv, pvIndex, _t0, "reseau", null, e.message);
-          console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
+          lastDiag = `erreur reseau (${pvHost})`;
+          tracerAppel(pv, pvIndex, _t0, "reseau", null, lastDiag);
+          console.error(`[concile] ${agCfg.name} fournisseur échec réseau (${pvHost})`);
         }
       }
       if (providerAttempts === 0) {
@@ -6952,7 +6956,7 @@ Réponds en JSON pur (pas de markdown):
           name: agCfg.name, icon: agCfg.icon,
           bet: "—", confidence: null,
           raison: "⚠️ Agent sans réponse exploitable dans le délai imparti — non compté dans le verdict.",
-          isChief: false, failed: true,
+          isChief: false, failed: true, failure_type: "unavailable",
         };
       }
 
@@ -6966,6 +6970,10 @@ Réponds en JSON pur (pas de markdown):
       const raisonFinal = corrected
         ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
         : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
+      const historical = agentPerf[agCfg.name];
+      const statisticallyRejected = Number(historical?.resolved || 0) >= 30
+        && Number.isFinite(Number(historical?.winrate))
+        && Number(historical.winrate) < 52;
 
       return {
         name: agCfg.name, icon: agCfg.icon,
@@ -6974,6 +6982,7 @@ Réponds en JSON pur (pas de markdown):
         raison: raisonFinal,
         _ou25Markets: parsed.marches && typeof parsed.marches === "object" ? parsed.marches : null,
         isChief: false, corrected: corrected || false,
+        statistically_rejected: statisticallyRejected,
       };
     } catch (e) {
       // Ne JAMAIS remplacer un echec de parsing par un vote invente
@@ -6984,19 +6993,18 @@ Réponds en JSON pur (pas de markdown):
       // coupee par max_tokens), chaque echec injectait silencieusement un
       // faux vote dans "5 IA independantes votent". Meme traitement que
       // l'absence de reponse exploitable : exclu du decompte, jamais invente.
-      console.error(`[concile] agent ${agCfg.name} erreur JSON:`, e.message);
+      console.error(`[concile] agent ${agCfg.name} erreur de parsing`);
       return {
         name: agCfg.name, icon: agCfg.icon,
         bet: "—", confidence: null,
         raison: "⚠️ Réponse illisible (JSON malformé) — non compté dans le verdict.",
-        isChief: false, failed: true,
+        isChief: false, failed: true, failure_type: "parse_error",
       };
     }
   }
 
-  // Phase 1 : cinq appels parallèles, décision dès le troisième bulletin O/U
-  // concordant. Les réponses tardives continuent d'être enregistrées pour
-  // l'audit, mais ne peuvent ni changer ni rediffuser le signal déjà figé.
+  // Phase 1 : cinq appels parallèles, puis photographie des cinq états une fois
+  // tous les appels bornés terminés. Le quorum métier reste strictement 4/5.
   const agentPromises = AGENT_INDEXES.map(i => runSingleAgent(i));
   const collected = await collectAgentsUntilOu25Quorum(agentPromises, (result) => {
     if (result && !result.failed) {
@@ -7011,17 +7019,16 @@ Réponds en JSON pur (pas de markdown):
         market: "over_under_2_5",
         direction: ballot?.direction || null,
         confidence: ballot?.confidence ?? result.confidence,
-        decision: ballot?.direction ? "valid_vote" : "no_valid_ou25_vote",
+        decision: result.statistically_rejected
+          ? "rejected_statistical"
+          : ballot?.direction ? "valid_vote" : "no_valid_ou25_vote",
       });
     }
   });
   const agentResults = collected.results;
-  const decisionMarketList = agentResults
+  let decisionMarketList = agentResults
     .filter((row) => row && row._ou25Markets)
     .map((row) => ({ name: row.name, marches: row._ou25Markets }));
-  if (collected.early) {
-    console.log(`[concile] quorum O/U 2,5 atteint après ${agentResults.length}/5 réponses — décision immédiate, réponses restantes en audit`);
-  }
 
   // Phase 2: Run Chief AFTER, with all agent votes available
   // Filter weak agents (winrate < 52% AND resolved >= 30 predictions)
@@ -7033,6 +7040,7 @@ Réponds en JSON pur (pas de markdown):
     const winrate = p ? p.winrate : null;
     if (resolved >= 30 && winrate !== null && winrate < 52) {
       benchedAgents.push(`${a.name} (${winrate}% sur ${resolved})`);
+      a.statistically_rejected = true;
       return false; // Filter out
     }
     return true; // Keep
@@ -7042,6 +7050,8 @@ Réponds en JSON pur (pas de markdown):
   if (benchedAgents.length > 0) {
     console.log(`[concile] Benched agents (winrate < 52%, resolved >= 30): ${benchedAgents.join(", ")}`);
   }
+  const activeAgentNames = new Set(activedAgentResults.map(agent => agent.name));
+  decisionMarketList = decisionMarketList.filter(row => activeAgentNames.has(row.name));
 
   const previousVotes = activedAgentResults.map((a) => {
     const p = agentPerf[a.name];
@@ -7100,13 +7110,13 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
   if (collected.early) {
-    // Le Chief n'est pas un sixième votant public. Une fois les trois bulletins
+    // Le Chief n'est pas un sixième votant public. Une fois les quatre bulletins
     // concordants acquis, l'appeler retarderait inutilement la publication et
     // consommerait un appel IA sans pouvoir changer le verdict client.
     agentResults.push({
       name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
       bet: "—", confidence: null,
-      raison: "Quorum client déjà acquis sur trois bulletins O/U 2,5.",
+      raison: "Quorum client déjà acquis sur quatre bulletins O/U 2,5.",
       isChief: true, failed: true,
     });
   } else try {
@@ -7133,7 +7143,7 @@ Réponds en JSON pur (pas de markdown):
         const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         if (probe && probe !== "{}" && probe.length > 8) break;
       } catch (e) {
-        console.error(`[concile] Chief fournisseur échec: ${e.message}`);
+        console.error(`[concile] Chief fournisseur échec`);
       }
     }
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -7167,7 +7177,7 @@ Réponds en JSON pur (pas de markdown):
     // 60-85%. Sans, le consensus des 4 autres agents (s'ils convergent a 3+)
     // prend le relais normalement ; sinon la confiance retombe a 55 (deja
     // sous tous les seuils de diffusion), jamais de faux signal envoye.
-    console.error(`[concile] agent Chief erreur JSON:`, e.message);
+    console.error(`[concile] agent Chief erreur de parsing`);
     agentResults.push({
       name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
       bet: "—", confidence: null,
@@ -7325,7 +7335,7 @@ Réponds en JSON pur (pas de markdown):
       agent: vote.agent,
       direction: vote.direction || null,
       confidence: vote.confidence ?? null,
-      status: vote.direction ? "voted" : "pending",
+      status: vote.status || (vote.direction ? "voted" : "pending"),
       updated_at: capturedAt,
     }));
     capturedVoteSnapshot = officialSnapshots.capture(db, {
@@ -7462,6 +7472,7 @@ Réponds en JSON pur (pas de markdown):
   // répondre factuellement à "pourquoi 0 signal aujourd'hui ?" au lieu de
   // supposer. Écrit en base plus bas, agrégé par /admin/funnel-report.
   let _tierBlock = null; // motif de non-diffusion detecte dans le bloc palier
+  let _journalDecision = "blocked";
   // ── Regime par classe de ligue (07/08/2026, decision du fondateur) ─────────
   // "Le but n'est pas d'avoir plus de signaux a tout prix. Le but est de
   // reperer les ligues qui peuvent devenir rentables sans salir l'historique."
@@ -7549,7 +7560,6 @@ Réponds en JSON pur (pas de markdown):
           if (!k.endsWith(currentHour)) _signalSentCache.delete(k);
         }
       }
-      _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
       // escTgHtml APRES maskAiNames : maskAiNames travaille sur des noms de
@@ -7603,17 +7613,18 @@ Réponds en JSON pur (pas de markdown):
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
       const oddOk = !_coteReelle || (realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD);
       const sportLc = String(match.sport || "Football").toLowerCase();
-      // Produit client recentre : football O/U 2,5 uniquement, cinq sieges
-      // presents et majorite forte. Les autres sports/marches restent internes.
+      // Produit client recentre : football O/U 2,5 uniquement et au moins
+      // quatre votes réels concordants. Une cinquième absence reste distincte
+      // d'un désaccord et ne fabrique jamais un bulletin.
       const sportDiffusable = sportLc.includes("foot");
       const officialWindowEligible = Number.isFinite(Number(minute))
         && Number(minute) >= officialSnapshots.OFFICIAL_FROM_MINUTE
         && Number(minute) <= officialSnapshots.OFFICIAL_TO_MINUTE;
-      const officialFiveSeatQuorum = Number(voteInfo.vote_active || 0) === 5
-        && voteCountForSignal >= 4;
+      const officialStrongQuorum = Number(voteInfo.vote_active || 0) >= CLIENT_OU25_MIN_VOTES
+        && voteCountForSignal >= CLIENT_OU25_MIN_VOTES;
       const diffusable = bookmakerPlayable && oddOk && sportDiffusable
         && clientOu25MatchEligible && officialWindowEligible && standingsEvidence.ok && ou25Only && enoughOu25SeatsPresent
-        && officialFiveSeatQuorum
+        && officialStrongQuorum
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE
         && recoveryEvidence.ok;
@@ -7625,8 +7636,8 @@ Réponds en JSON pur (pas de markdown):
           ? `mode Recovery: ${recoveryEvidence.reason}`
           : !officialWindowEligible
             ? `hors fenêtre signal officiel ${officialSnapshots.OFFICIAL_FROM_MINUTE}-${officialSnapshots.OFFICIAL_TO_MINUTE}`
-          : !officialFiveSeatQuorum
-            ? `scrutin incomplet: 5 réponses valides et 4/5 concordantes requises`
+          : !officialStrongQuorum
+            ? `scrutin incomplet: ${voteInfo.vote_active || 0}/5 réponses réelles, ${voteCountForSignal}/5 concordantes (4 requises)`
           : !standingsEvidence.ok
             ? `classement: ${standingsEvidence.reason}`
           : !sportDiffusable
@@ -7654,14 +7665,27 @@ Réponds en JSON pur (pas de markdown):
         const identity = canonicalMatchKey(match.home,match.away) + ':' + todayStr;
         // Bounded retries remain inside the current live window, never replay old picks.
         const expiresAt = Date.now() + Math.max(0, Math.min(120, (CLIENT_OU25_CLIENT_MAX_MINUTE - Number(minute) + 1) * 60)) * 1000;
+        let queuedDestinations = 0;
         for (const dest of clientTelegramPublisher.targets) {
           if (signalDeliveredToChannelToday(match,dest.channel)) continue;
           if (dest.tier === 'free' && signalsSentToday('sig_sent_free') >= 1 && dest.lang === 'fr') continue;
           const queued=clientTelegramPublisher.enqueue('signal',data,dest,dest.tier === 'free' ? todayStr : identity,expiresAt);
-          if(queued) db.prepare('INSERT OR IGNORE INTO signal_delivery_expectations(match_key,channel) VALUES (?,?)').run(_ligneAnalysee,dest.channel);
+          if(queued) {
+            queuedDestinations++;
+            db.prepare('INSERT OR IGNORE INTO signal_delivery_expectations(match_key,channel) VALUES (?,?)').run(_ligneAnalysee,dest.channel);
+          }
         }
+        // Le cache mémoire n'est armé qu'après la sélection officielle
+        // persistée. Une simple évaluation à 15-34' ne peut donc plus empêcher
+        // le même match de devenir diffusable dans la fenêtre 35-45'.
+        _signalSentCache.add(signalKey);
+        _journalDecision = queuedDestinations > 0
+          ? "official_selection_queued"
+          : "official_selection_registered";
         clientTelegramPublisher.flush().catch(e => console.error('[client-telegram]',e.message));
       }
+    } else {
+      _tierBlock = "signal officiel déjà enregistré ou mis en file pour cette heure";
     }
   }
 
@@ -7670,7 +7694,7 @@ Réponds en JSON pur (pas de markdown):
     market: analysisResult.best_bet,
     direction: /^Over/i.test(analysisResult.best_bet) ? "over" : /^Under/i.test(analysisResult.best_bet) ? "under" : null,
     confidence: analysisResult.confidence,
-    decision: (_blockReason || _tierBlock) ? "blocked" : "accepted_for_delivery",
+    decision: _journalDecision,
     criteria: criteriaSnapshot,
     blockReason: _blockReason || _tierBlock || null,
   });
@@ -10033,13 +10057,11 @@ async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null,
       payload,
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    _integrationHealth.brevo.ok = true;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.log(`[brevo] contact upserted: ${email} tag=${tag} lang=${contactLang}`);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.log(`[brevo] contact upserted tag=${tag} lang=${contactLang}`);
   } catch (e) {
-    _integrationHealth.brevo.ok = false;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.error("[brevo] error:", e.message);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.error("[brevo] contact upsert failed");
   }
 }
 
@@ -10112,12 +10134,10 @@ async function brevoSendEmail(to, subject, htmlContent, opts = {}) {
       },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    _integrationHealth.brevo.ok = true;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    _integrationHealth.brevo.last_delivery_at = new Date().toISOString();
     return result;
   } catch (e) {
-    _integrationHealth.brevo.ok = false;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
     throw e;
   }
 }
@@ -10474,22 +10494,38 @@ function isMarketAvailableInFrance(marketType, competition) {
 
 // ===== FIN MOTEUR DE SCORING V2 =====
 
-app.get("/health", (_, res) => res.json({
-  ok: true,
-  integrations: {
-    brevo: {
-      configured: _integrationHealth.brevo.configured,
-      ok: _integrationHealth.brevo.ok,
-      checked_at: _integrationHealth.brevo.checked_at,
+function integrationHealthView(state, lastDeliveryAt = null) {
+  const checkedMs = state.checked_at ? new Date(state.checked_at).getTime() : NaN;
+  const fresh = Number.isFinite(checkedMs) && Date.now() - checkedMs <= INTEGRATION_CHECK_MAX_AGE_MS;
+  const result = !state.configured ? "not_configured"
+    : !state.checked_at ? "never_checked"
+      : !fresh ? "stale"
+        : state.ok ? "ok" : "failed";
+  return {
+    configured: state.configured,
+    checked_at: state.checked_at,
+    check_fresh: fresh,
+    check_result: result,
+    ok: fresh && state.ok === true,
+    last_delivery_at: lastDeliveryAt || state.last_delivery_at || null,
+  };
+}
+
+app.get("/health", (_, res) => {
+  const telegramLastDelivery = db.prepare(`SELECT MAX(created_at) AS at
+    FROM telegram_signal_deliveries
+    WHERE ok=1 AND telegram_message_id IS NOT NULL AND telegram_message_id>0 AND error IS NULL`).get()?.at || null;
+  res.json({
+    ok: true,
+    integrations: {
+      brevo: integrationHealthView(_integrationHealth.brevo),
+      telegram: {
+        ...integrationHealthView(_integrationHealth.telegram, telegramLastDelivery),
+        channels: _integrationHealth.telegram.channels,
+      },
     },
-    telegram: {
-      configured: _integrationHealth.telegram.configured,
-      ok: _integrationHealth.telegram.ok,
-      checked_at: _integrationHealth.telegram.checked_at,
-      channels: _integrationHealth.telegram.channels,
-    },
-  },
-}));
+  });
+});
 
 function normalizeContactLang(lang = "", country = "") {
   const raw = String(lang || "").toLowerCase();
@@ -10653,9 +10689,8 @@ app.post("/subscribe-email", async (req, res) => {
       brevoPayload,
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    _integrationHealth.brevo.ok = true;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} utm=${JSON.stringify(lead.utm)} lang=${lead.lang} country=${lead.country}`);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.log(`[subscribe-email] Lead ajoute Brevo source=${lead.source} lang=${lead.lang} country=${lead.country}`);
 
     // Email de bienvenue uniquement pour les nouveaux inscrits
     if (!existing) {
@@ -10683,7 +10718,7 @@ app.post("/subscribe-email", async (req, res) => {
   </div>
 </div>`;
       brevoSendEmail(emailClean, "Bienvenue sur TousLesMatchs — ton premier pick arrive bientôt 🎯", welcomeHtml)
-        .catch(e => console.error("[subscribe-email] welcome email:", e.message));
+        .catch(() => console.error("[subscribe-email] welcome email failed"));
 
       // Séquence nurturing : J+1 (preuve) et J+3 (urgence)
       scheduleNurturingEmails(emailClean);
@@ -10691,11 +10726,8 @@ app.post("/subscribe-email", async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    if (BREVO_API_KEY && /HTTP (401|403|4\d\d|5\d\d)/.test(String(e.message || ""))) {
-      _integrationHealth.brevo.ok = false;
-      _integrationHealth.brevo.checked_at = new Date().toISOString();
-    }
-    console.error("[subscribe-email] error:", e.message);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.error("[subscribe-email] Brevo operation failed");
     res.json({ ok: true });
   }
 });
@@ -13263,6 +13295,7 @@ app.delete("/admin/set-score", (req, res) => {
 // multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
 function getLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
+  const currentSnapshotKey = getPredictionSnapshotKey(match);
   const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= CLIENT_OU25_CLIENT_MAX_MINUTE ? "open" : "closed";
   const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
     agent,
@@ -13288,15 +13321,26 @@ function getLiveOu25VoteState(match) {
     if (typeof officialSnapshots === 'undefined') throw new Error('official snapshot module unavailable');
     const immutableState = officialSnapshots.stateForMatch(db, match);
     const snapshot = immutableState.snapshot;
-    if (snapshot) {
-      const votes = snapshot.votes.slice(0, 5).map((vote, index) => ({
-        agent: vote.agent || CONCILE_AGENT_NAMES[index],
-        direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
-        label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
-        confidence: vote.confidence ?? null,
-        status: snapshot.seat_statuses[index] || vote.status || 'pending',
-        updated_at: vote.updated_at || snapshot.created_at,
-      }));
+    // Un ancien snapshot de la même rencontre ne doit pas masquer les votes
+    // déjà persistés d'une nouvelle tranche/score pendant que les cinq appels
+    // bornés se terminent. Un signal officiel, lui, reste toujours prioritaire.
+    if (snapshot && (immutableState.kind === 'official' || snapshot.id === currentSnapshotKey)) {
+      const votes = snapshot.votes.slice(0, 5).map((vote, index) => {
+        const status = snapshot.seat_statuses[index] || vote.status || 'pending';
+        const reason = vote.reason
+          || (status === 'unavailable' ? 'Fournisseur indisponible ou coupe-circuit actif.'
+            : status === 'empty' ? 'Réponse reçue sans vote O/U exploitable.'
+              : status === 'parse_error' ? 'Réponse IA illisible.'
+                : status === 'rejected_statistical' ? 'Vote écarté par le filtre statistique.' : null);
+        return {
+          agent: vote.agent || CONCILE_AGENT_NAMES[index],
+          direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
+          label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
+          confidence: vote.confidence ?? null,
+          status, reason,
+          updated_at: vote.updated_at || snapshot.created_at,
+        };
+      });
       const overCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'over').length;
       const underCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'under').length;
       const official = immutableState.kind === 'official';
@@ -13313,6 +13357,7 @@ function getLiveOu25VoteState(match) {
         snapshot_score: `${snapshot.score_home}-${snapshot.score_away}`,
         red_cards: { home: snapshot.red_cards_home, away: snapshot.red_cards_away },
         votes,
+        analysis_state: votes.some(vote => vote.status === 'pending') ? 'running' : 'completed',
         official,
         official_signal_snapshot_id: official ? snapshot.id : null,
         snapshot_id: snapshot.id,
@@ -13365,7 +13410,19 @@ function getLiveOu25VoteState(match) {
     // Ne jamais fabriquer un scrutin en mélangeant les sièges de plusieurs
     // observations. Après 45', on conserve le dernier snapshot réellement
     // enregistré, avec son horodatage, même si le match continue d'avancer.
-    const latestSnapshotKey = String(rows[0]?.match_key || "");
+    const callRows = db.prepare(`
+      SELECT agent_name,http_status,issue,vote_produit,created_at
+      FROM agent_calls
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+      ORDER BY id DESC
+    `).all(currentSnapshotKey, ...CONCILE_AGENT_NAMES);
+    const latestCallByAgent = new Map();
+    for (const row of callRows) {
+      if (!latestCallByAgent.has(row.agent_name)) latestCallByAgent.set(row.agent_name, row);
+    }
+    const currentRows = rows.filter(row => String(row.match_key || "") === currentSnapshotKey);
+    const latestSnapshotKey = currentRows.length || callRows.length
+      ? currentSnapshotKey : String(rows[0]?.match_key || "");
     const snapshotRows = latestSnapshotKey
       ? rows.filter((row) => String(row.match_key || "") === latestSnapshotKey)
       : rows;
@@ -13382,7 +13439,24 @@ function getLiveOu25VoteState(match) {
         : /^Under 2[.,]5 buts$/i.test(bet)
           ? "under"
           : null;
-      if (!direction) return emptyVotes.find((vote) => vote.agent === agent);
+      if (!direction) {
+        const call = latestCallByAgent.get(agent);
+        if (!call) return emptyVotes.find((vote) => vote.agent === agent);
+        const httpStatus = Number(call.http_status || 0);
+        const issue = String(call.issue || "");
+        const status = issue === "ok" || issue === "vide" ? "empty"
+          : issue === "illisible" ? "parse_error"
+            : "unavailable";
+        const reason = httpStatus === 401 ? "Authentification fournisseur refusée."
+          : httpStatus === 402 ? "Crédit fournisseur indisponible."
+            : httpStatus === 429 ? "Fournisseur temporairement limité."
+              : issue === "timeout" ? "Délai fournisseur dépassé."
+                : status === "empty" ? "Réponse reçue sans vote O/U exploitable."
+                  : status === "parse_error" ? "Réponse IA illisible."
+                    : "Fournisseur indisponible ou coupe-circuit actif.";
+        return { agent, direction: null, label: null, confidence: null,
+          status, reason, updated_at: call.created_at || null };
+      }
       return {
         agent,
         direction,
@@ -13415,6 +13489,9 @@ function getLiveOu25VoteState(match) {
       snapshot_minute: snapshotStateHit ? Number(snapshotStateHit[1]) : null,
       snapshot_score: snapshotScore,
       votes,
+      analysis_state: (currentRows.length || callRows.length)
+        ? (votes.some(vote => vote.status === "pending") ? "running" : "completed")
+        : "not_started",
     };
   } catch (e) {
     console.error("[live-ou25-votes]", e.message);
@@ -13465,9 +13542,11 @@ function homepageLiveMatch(match, canReveal) {
     official_odd: canReveal ? (raw.real_odd ?? null) : null,
     rule_version: raw.rule_version || null,
     outcome: raw.outcome || null,
+    analysis_state: raw.analysis_state || null,
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
+      reason: v.reason || null,
       updated_at: v.updated_at || null,
       direction: canReveal ? v.direction : null,
       label: canReveal ? v.label : null,
@@ -13606,7 +13685,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       const visibility = {
         client_product_eligible: clientProductEligible,
         client_display_eligible: isClientOu25MatchEligible(m, false),
-        analysis_started: Number(ou25.vote_count || 0) > 0,
+        analysis_started: Number(ou25.vote_count || 0) > 0 || ['running','completed'].includes(ou25.analysis_state),
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
         signal_delivered: telegramDeliveryProven,
@@ -13614,7 +13693,10 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         diffusion_block: deliveredAnalysis?.diffusion_block || null,
         delivery_status: telegramDeliveryProven ? 'diffuse' : 'non_diffuse',
       };
-      const analysisExclusionReason = m.data_notice || liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
+      const allSeatsFinishedWithoutVote = ou25.analysis_state === 'completed' && Number(ou25.vote_count || 0) === 0;
+      const analysisExclusionReason = liveAnalysisNotice(m)
+        || (allSeatsFinishedWithoutVote ? 'Analyse terminée : aucun vote IA exploitable reçu.' : null)
+        || m.analysis_exclusion_reason || m.data_notice || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m)
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
@@ -14676,6 +14758,8 @@ app.post("/internal/strong-signals", (req, res) => {
 app.get("/public-signal-rules", (req, res) => {
   res.set("Cache-Control", "no-store");
   res.json({ ok: true, from_minute: 15, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
+    delivery_from_minute: officialSnapshots.OFFICIAL_FROM_MINUTE,
+    delivery_to_minute: officialSnapshots.OFFICIAL_TO_MINUTE,
     min_votes: CLIENT_OU25_MIN_VOTES, min_confidence: CLIENT_OU25_MIN_CONFIDENCE,
     min_odd: TIER_MIN_REAL_ODD, max_odd: TIER_MAX_REAL_ODD,
     min_rank_gap: 5, top5_bottom5_priority: true });
@@ -15415,7 +15499,7 @@ app.get("/analysis-history", (req, res) => {
       ORDER BY analysed_at DESC
     `).all();
     // Cote client : une analyse n'entre dans l'historique que si elle a ete
-    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 3/5.
+    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 4/5.
     // Cette route alimente la page Resultats, y compris quand le fondateur est
     // connecte : elle doit donc rester identique pour tous les lecteurs. La vue
     // exhaustive de diagnostic reste disponible via /admin/daily-audit.
@@ -15655,7 +15739,7 @@ app.get("/analysis-history", (req, res) => {
       verification: {
         repaired_date: CLIENT_HISTORY_REPAIR_DATE,
         telegram_proof_since: CLIENT_TELEGRAM_PROOF_SINCE,
-        rule: "football_ou25_5_seats_min_3_votes_minute_15_45",
+        rule: "football_ou25_5_seats_min_4_votes_analysis_15_45_delivery_35_45",
       },
     });
   } catch (e) {
@@ -17445,26 +17529,18 @@ function auditAgentsEtPromotion() {
       return { lignes, promotions };
     }
 
-    // Promotion APPLIQUEE automatiquement (decision du fondateur, 07/08/2026 :
-    // "tu dois toujours garder les meilleurs, et si tu fais un changement tu me
-    // le dis"). Le siege du titulaire sortant est pointe vers le modele du
-    // challenger, via la meme table model_overrides que les substitutions de
-    // modeles morts. Le changement est annonce dans le rapport du matin.
+    // Les populations de agent_predictions et shadow_evals ne portent pas sur
+    // les mêmes matchs. Leur classement peut donc produire une recommandation,
+    // jamais une bascule automatique d'un siège officiel. Toute promotion doit
+    // être validée sur les mêmes match_key puis autorisée explicitement.
     const cibleSortant = MODELE_DES_AGENTS[plusFaibleTitulaire.nom];
     const modeleEntrant = MODELE_DES_AGENTS[meilleurChallenger.nom];
     if (cibleSortant && modeleEntrant) {
       const vraiModeleEntrant = resolveModel(modeleEntrant);
-      db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
-                  VALUES (?,?,datetime('now'),?)
-                  ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
-                    replaced_at=excluded.replaced_at, reason=excluded.reason`)
-        .run(cibleSortant, vraiModeleEntrant,
-             `promotion : ${meilleurChallenger.nom} ${meilleurChallenger.winrate}% remplace ${plusFaibleTitulaire.nom} ${plusFaibleTitulaire.winrate}%`);
-      _modelOverrideCache.at = 0;
-      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart, modele: vraiModeleEntrant });
-      lignes.push(`🏅 <b>CHANGEMENT AU CONCILE</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) remplace ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}), ecart ${ecart} points`);
-      lignes.push(`   → siege ${plusFaibleTitulaire.nom} pointe desormais sur <b>${vraiModeleEntrant}</b>`);
-      console.log(`[promotion] ${meilleurChallenger.nom} remplace ${plusFaibleTitulaire.nom} (${cibleSortant} -> ${vraiModeleEntrant})`);
+      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire,
+        ecart, modele: vraiModeleEntrant, appliquee: false });
+      lignes.push(`🔎 <b>Promotion non appliquée</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) et ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}) doivent être comparés sur les mêmes matchs`);
+      console.log(`[promotion] recommandation uniquement — populations non comparables, aucun siège modifié`);
     } else {
       // Challenger hors OpenRouter : on ne peut pas basculer par simple
       // changement d'identifiant, on signale sans rien casser.
@@ -17601,13 +17677,13 @@ async function runMorningAudit() {
   });
 
   // 3. Volume métier : zéro signal peut être parfaitement normal avec les filtres
-  // stricts 3/5. Le transport Telegram est contrôlé séparément juste après.
+  // stricts 4/5. Le transport Telegram est contrôlé séparément juste après.
   await test("Volume de signaux", async () => {
     const depuis = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
     const rows = db.prepare("SELECT sig_sent_standard s, sig_sent_premium p, sig_sent_elite e FROM concile_analyses WHERE analysed_at >= ?").all(depuis);
     const envoyes = rows.filter(r => r.s === 1 || r.p === 1 || r.e === 1).length;
     if (rows.length >= 30 && envoyes === 0) {
-      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 3/5, transport vérifié séparément` };
+      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 4/5, transport vérifié séparément` };
     }
     return { ok: true, info: `${envoyes} signaux diffusés en 48h` };
   });
@@ -17901,9 +17977,13 @@ async function notifyPersistentSignalProof(status, proof) {
 async function runPersistentSignalProof() {
   const objective = db.prepare("SELECT * FROM signal_proof_objective WHERE id=1").get();
   if (!objective || objective.status !== "pending" || objective.notified_at) return { status: objective?.status || "missing" };
-  const candidate = db.prepare(`SELECT * FROM concile_analyses WHERE id>? AND diffusion_block IS NULL
-    AND consensus_votes>=3 AND minute_at_analysis BETWEEN 15 AND 45
-    AND lower(replace(best_bet,',','.')) LIKE '%2.5%' ORDER BY id LIMIT 1`).get(objective.baseline_analysis_id);
+  const candidate = db.prepare(`SELECT analysis.* FROM official_signal_registry registry
+    JOIN official_vote_snapshots snapshot ON snapshot.id=registry.official_signal_snapshot_id
+    JOIN concile_analyses analysis ON analysis.match_key=snapshot.analysis_match_key
+    WHERE analysis.id>? AND snapshot.consensus_votes>=${CLIENT_OU25_MIN_VOTES}
+      AND snapshot.minute BETWEEN ${officialSnapshots.OFFICIAL_FROM_MINUTE}
+                              AND ${officialSnapshots.OFFICIAL_TO_MINUTE}
+    ORDER BY analysis.id LIMIT 1`).get(objective.baseline_analysis_id);
   const orphanCall = db.prepare(`SELECT id,match_key,agent_name,host,http_status,issue,created_at FROM agent_calls
     WHERE id>? AND datetime(created_at)<=datetime('now','-20 minutes') ORDER BY id LIMIT 1`).get(objective.baseline_call_id);
   if (!candidate) {
@@ -17934,11 +18014,11 @@ async function runPersistentSignalProof() {
     consensus_votes:candidate.consensus_votes, calls:calls.map(c=>({agent:c.agent_name,model:c.model,host:c.host,http_status:c.http_status,issue:c.issue,vote:c.vote_produit})),
     deliveries, expected_destinations:expectedChannels, missing_destinations:[...new Set(missing)],
     public_display:publicRow&&!publicRow.error?{visible:true,market:publicRow.bet,locked:publicRow.locked===true,consensus:publicRow.consensus,confidence:publicRow.confidence,cote:publicRow.cote,cote_status:publicRow.cote_status,sent:publicRow.sent||{}}:{visible:false,error:publicRow?.error||"signal absent"} };
-  const complete = calls.some(c=>c.issue==="ok"&&c.vote_produit===1) && Number(candidate.consensus_votes)>=3
+  const complete = calls.some(c=>c.issue==="ok"&&c.vote_produit===1) && Number(candidate.consensus_votes)>=CLIENT_OU25_MIN_VOTES
     && expectedChannels.some(channel=>["free","standard","premium","elite"].includes(channel))
     && missing.length===0 && proof.public_display.visible
     && (proof.public_display.market===candidate.best_bet || proof.public_display.locked)
-    && Number(proof.public_display.consensus)>=3;
+    && Number(proof.public_display.consensus)>=CLIENT_OU25_MIN_VOTES;
   if (complete) return notifyPersistentSignalProof("complete", proof);
   const age = Date.now()-new Date(String(candidate.analysed_at).replace(" ","T")+"Z").getTime();
   if (age<20*60*1000) return {status:"pending",match_key:candidate.match_key,proof};
@@ -17956,13 +18036,19 @@ async function runReliabilityLoop(trigger = "scheduler") {
   const run = db.prepare("INSERT INTO reliability_runs(started_at,status,details_json) VALUES (?,'running','{}')").run(startedAt);
   try {
     await new Promise(resolve => setImmediate(resolve));
-    const eligible = db.prepare(`SELECT match_key, home, away, analysed_at, outcome,
-        sig_sent_free, sig_sent_standard, sig_sent_premium, sig_sent_elite
-      FROM concile_analyses
-      WHERE analysed_at >= datetime('now','-24 hours')
-        AND diffusion_block IS NULL AND consensus_votes >= 3
-        AND minute_at_analysis BETWEEN 15 AND 45
-        AND lower(replace(best_bet,',','.')) LIKE '%2.5%'`).all();
+    await refreshIntegrationHealth();
+    const eligible = db.prepare(`SELECT analysis.match_key, analysis.home, analysis.away,
+        analysis.analysed_at, analysis.outcome, analysis.sig_sent_free,
+        analysis.sig_sent_standard, analysis.sig_sent_premium, analysis.sig_sent_elite
+      FROM official_signal_registry registry
+      JOIN official_vote_snapshots snapshot
+        ON snapshot.id=registry.official_signal_snapshot_id
+      JOIN concile_analyses analysis
+        ON analysis.match_key=snapshot.analysis_match_key
+      WHERE snapshot.created_at >= datetime('now','-24 hours')
+        AND snapshot.consensus_votes >= ${CLIENT_OU25_MIN_VOTES}
+        AND snapshot.minute BETWEEN ${officialSnapshots.OFFICIAL_FROM_MINUTE}
+                                AND ${officialSnapshots.OFFICIAL_TO_MINUTE}`).all();
     const keys = [...new Set(eligible.map(r => r.match_key))];
     const deliveries = keys.length ? db.prepare(`SELECT match_key,channel,telegram_message_id,ok,error,created_at
       FROM telegram_signal_deliveries WHERE match_key IN (${keys.map(() => '?').join(',')})`).all(...keys) : [];
@@ -18022,8 +18108,10 @@ async function runReliabilityLoop(trigger = "scheduler") {
     const unresolved = eligible.filter(r => !r.outcome && Date.now() - new Date(String(r.analysed_at).replace(' ','T')+'Z').getTime() > 6 * 3600e3);
     const markerIncident = markerDrift.length && repair.status !== "success";
     const incident = broken.length || missing.length || markerIncident ? "delivery-proof" : null;
-    const details = { trigger, data_freshness: eligible[0]?.analysed_at || null, eligible_matches: keys.length,
-      persisted_votes_required: 3, deliveries: deliveries.map(d => ({ destination: d.channel, message_id: d.telegram_message_id, ok: d.ok, error: d.error || null })),
+    const latestAnalysis = db.prepare("SELECT MAX(analysed_at) AS at FROM concile_analyses").get()?.at || null;
+    const details = { trigger, data_freshness: latestAnalysis, eligible_matches: keys.length,
+      selection_source: "official_signal_registry", persisted_votes_required: CLIENT_OU25_MIN_VOTES,
+      deliveries: deliveries.map(d => ({ destination: d.channel, message_id: d.telegram_message_id, ok: d.ok, error: d.error || null })),
       missing_delivery_proofs: missing, marker_drift: markerDrift, repair,
       unresolved_results: unresolved.map(r => r.match_key), dry_run_ai_calls: 0, sent_signals: 0, openrouter_calls: 0, codex_cost_usd: 0 };
     db.prepare(`UPDATE reliability_runs SET finished_at=?,status=?,incident_key=?,eligible_count=?,delivery_ok_count=?,delivery_bad_count=?,unresolved_count=?,details_json=? WHERE id=?`)
@@ -19009,8 +19097,7 @@ app.listen(PORT, () => {
     setTimeout(()=>longHistory.step(),10000);
     setInterval(()=>longHistory.step(),10000);
     console.log(`TousLesMatchs API running on :${PORT}`);
-    verifyTelegramChannels();
-    verifyBrevoConfiguration().catch((e) => console.error("[brevo-check]", e.message));
+    refreshIntegrationHealth().catch(() => console.error("[integration-check] ECHEC"));
 
     // ── Accès offert au testeur (Elite, 30 analyses/jour) ──────────────────────
     // Date d'expiration FIXE : la version précédente calculait "aujourd'hui + 60 jours"

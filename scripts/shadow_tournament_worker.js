@@ -68,6 +68,19 @@ db.exec(`
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+function safeErrorCategory(value) {
+  const text = String(value || "").toLowerCase();
+  if (/\b401\b|invalid[_ -]?api[_ -]?key|unauthori[sz]ed/.test(text)) return "auth_401";
+  if (/\b402\b|insufficient (?:balance|credit)|payment required/.test(text)) return "balance_402";
+  if (/\b403\b|forbidden/.test(text)) return "forbidden_403";
+  if (/\b429\b|rate.?limit|quota|budget|plafond/.test(text)) return "quota_429";
+  if (/timeout|timed out/.test(text)) return "timeout";
+  if (/json|parse|invalide|invalid response/.test(text)) return "parse_error";
+  if (/absente|missing|not configured|non configur/.test(text)) return "not_configured";
+  if (/vide|empty/.test(text)) return "empty_response";
+  return "provider_error";
+}
+
 function callsToday(modelName) {
   if (modelName) return db.prepare(
     "SELECT COUNT(*) n FROM shadow_tournament_calls WHERE model_name=? AND date(created_at)=date('now')"
@@ -132,13 +145,13 @@ function callModel(name, modelId, prompt) {
             return resolve({ ok: false, latency, error: payload?.error?.message || `HTTP ${res.statusCode}` });
           }
           resolve({ ok: true, latency, text: payload?.choices?.[0]?.message?.content || "" });
-        } catch (error) {
-          resolve({ ok: false, latency, error: `réponse invalide: ${error.message}` });
+        } catch (_) {
+          resolve({ ok: false, latency, error: "parse_error" });
         }
       });
     });
     req.on("timeout", () => req.destroy(new Error("timeout")));
-    req.on("error", error => resolve({ ok: false, latency: Date.now() - started, error: error.message }));
+    req.on("error", () => resolve({ ok: false, latency: Date.now() - started, error: "transport_error" }));
     req.write(body);
     req.end();
   });
@@ -318,8 +331,8 @@ async function run() {
     let error = null;
     if (result.ok) {
       try { ({ ou25, markets } = parsePredictions(result.text)); }
-      catch (parseError) { error = parseError.message; }
-    } else error = result.error;
+      catch (_) { error = "parse_error"; }
+    } else error = safeErrorCategory(result.error);
 
     addPrediction.run(match.match_key, name, modelId, match.home, match.away,
       match.competition || "", match.minute_at_analysis, match.score_home_at_analysis,
@@ -343,6 +356,6 @@ async function run() {
 }
 
 run().catch(error => {
-  console.error(JSON.stringify({ ok: false, error: error.message }));
+  console.error(JSON.stringify({ ok: false, error: safeErrorCategory(error && error.message) }));
   process.exitCode = 1;
 }).finally(() => db.close());

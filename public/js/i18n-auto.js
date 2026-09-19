@@ -497,7 +497,8 @@
   function addSelector(lang){
     var labels=LANGUAGE_LABELS[lang]||NAMES;
     var existing=document.getElementById("tlm-language-universal"); if(existing){Array.from(existing.options).forEach(function(o){o.textContent=labels[o.value]||NAMES[o.value]||o.value;});existing.value=lang;return;}
-    if(document.getElementById("lang-current"))return;
+    // Le bandeau partagé porte déjà l'unique sélecteur de ces pages.
+    if(document.getElementById("tlm-global-language")||document.querySelector("header.tlm-global-header")||document.getElementById("lang-current"))return;
     var select=document.createElement("select");select.id="tlm-language-universal";select.setAttribute("aria-label",maps[lang]["Langue"]||"Language");
     LANGS.forEach(function(code){var o=document.createElement("option");o.value=code;o.textContent=labels[code]||NAMES[code];select.appendChild(o);});
     select.value=lang;select.addEventListener("change",function(){if(window.i18n&&i18n.setLang)i18n.setLang(select.value);else{try{localStorage.setItem("tlm_lang",select.value);}catch(e){}location.reload();}});
@@ -509,7 +510,10 @@
     if(changing)return;changing=true;
     var lang=language();document.documentElement.lang=lang==="pt"?"pt-BR":lang==="zh"?"zh-CN":lang;
     walk(document.body,lang);addSelector(lang);
-    document.title=translateDynamic(originalTitle,lang);
+    if(document.body.classList.contains('tlm-page-dashboard')){
+      var signedIn=document.getElementById('dash-section')?.style.display==='block';
+      document.title=translateDynamic(signedIn?'Mon compte':'Connexion',lang)+' — TousLesMatchs';
+    }else document.title=translateDynamic(originalTitle,lang);
     changing=false;
   }
   function init(){
