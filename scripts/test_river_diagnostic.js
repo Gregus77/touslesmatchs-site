@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+assert.ok(fs.existsSync(__dirname+'/river_diagnostic.js'),'isolated diagnostic implementation missing');
+const {parseVote,render,inject}=require('./river_diagnostic');
+assert.equal(parseVote('OVER').direction,'OVER');
+assert.equal(parseVote('UNDER').direction,'UNDER');
+for(const x of ['',null,'OVER or UNDER','ABSTAIN','<script>UNDER</script>'])assert.equal(parseVote(x).direction,null);
+const html=render({at:'2026-09-19T23:00:00Z',match:{minute:45,score_home:0,score_away:1},votes:[{direction:'UNDER'},{direction:null}]});
+assert.ok(html.includes('IA 1 : UNDER'));
+assert.ok(html.includes('IA 2 : avis indisponible'));
+assert.ok(html.includes('Hors signal officiel'));
+assert.ok(html.includes('0–1'));
+const original='<html><body><main>Unchanged</main></body></html>';
+const added=inject(original);
+assert.ok(added.includes('<main>Unchanged</main>'));
+assert.equal(inject(added),added);
+assert.throws(()=>inject('no body'));
+console.log('RIVER_DIAGNOSTIC_TESTS_OK');

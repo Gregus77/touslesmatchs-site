@@ -1,0 +1,46 @@
+name: TLM exceptional River diagnostic
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-river-diagnostic.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            backup="/opt/backups/tlm-river-diagnostic-$(date -u +%Y%m%dT%H%M%SZ)"
+            mkdir -p "$backup"
+            git fetch origin codex/telegram-recap-premium-20260920
+            git show origin/codex/telegram-recap-premium-20260920:scripts/river_diagnostic.js > "$backup/river_diagnostic.js"
+            git show origin/codex/telegram-recap-premium-20260920:scripts/test_river_diagnostic.js > "$backup/test_river_diagnostic.js"
+            node "$backup/test_river_diagnostic.js"
+            for page in index app live-ia; do cp -p "public/$page.html" "$backup/$page.html"; done
+            docker cp "$backup/river_diagnostic.js" touslesmatchs-api:/tmp/river_diagnostic.js
+            docker exec touslesmatchs-api node /tmp/river_diagnostic.js
+            docker cp touslesmatchs-api:/data/river-diagnostic-20260920.html public/river-diagnostic-20260920.html
+            chmod 644 public/river-diagnostic-20260920.html
+            rollback() { for page in index app live-ia; do cp -p "$backup/$page.html" "public/$page.html"; done; }
+            trap rollback ERR
+            node - "$backup/river_diagnostic.js" <<'NODE'
+            const fs=require('fs'),{inject}=require(process.argv[2]);
+            for(const page of ['index','app','live-ia']){const path='public/'+page+'.html';fs.writeFileSync(path,inject(fs.readFileSync(path,'utf8')));}
+            NODE
+            curl -fsS https://touslesmatchs.com/river-diagnostic-20260920.html | grep -q 'Hors signal officiel'
+            curl -fsS https://touslesmatchs.com/ | grep -q 'TLM-RIVER-DIAGNOSTIC-20260920'
+            curl -fsS https://touslesmatchs.com/app | grep -q 'TLM-RIVER-DIAGNOSTIC-20260920'
+            trap - ERR
+            echo RIVER_DIAGNOSTIC_PUBLISHED
