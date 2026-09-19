@@ -56,30 +56,63 @@ jobs:
             trap 'rollback' ERR
 
             git fetch origin codex/telegram-recap-premium-20260920 codex/production-repair-20260914
-            echo 'LIVE_GUARD_CONTEXT_BEGIN'
-            nl -ba scripts/ai_budget_guard.js | sed -n '95,210p;300,335p;400,430p'
-            echo 'LIVE_GUARD_CONTEXT_END'
-            merge_live_file() {
-              file="$1"
-              safe="$(printf '%s' "$file" | tr '/' '_')"
-              git show "origin/codex/production-repair-20260914:$file" > "$backup/$safe.base"
-              git show "origin/codex/telegram-recap-premium-20260920:$file" > "$backup/$safe.ours"
-              if ! git merge-file -p "$file" "$backup/$safe.base" "$backup/$safe.ours" > "$backup/$safe.merged"; then
-                echo "MERGE_CONFLICT=$file"
-                return 1
-              fi
-              test -s "$backup/$safe.merged"
-              cat "$backup/$safe.merged" > "$file"
+            python3 - <<'PY'
+            from pathlib import Path
+            path = Path('scripts/ai_budget_guard.js')
+            source = path.read_text()
+            def replace(old, new):
+                global source
+                if old not in source:
+                    raise SystemExit('TARGET_NOT_FOUND=' + old.splitlines()[0])
+                source = source.replace(old, new, 1)
+            replace(
+              'function buildRequestKey({ matchKey, modelKey, promptVersion }) {\n  const day = parisParts(Date.now()).day;',
+              'function buildRequestKey({ matchKey, modelKey, promptVersion }, at = Date.now()) {\n  const day = parisBudget(at).day;')
+            replace(
+              '''function _todaySum(db, sql, params = []) {
+              if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") {
+                const p=parisBudget();
+                sql=sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
+              }
+              const row = db.prepare(sql).get(...params);''',
+              '''function scopeTodaySql(sql, at = Date.now()) {
+              const p = parisBudget(at);
+              return sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
             }
-            merge_live_file scripts/ai_budget_guard.js
-            merge_live_file scripts/telegram_client.js
+
+            function _todaySum(db, sql, params = []) {
+              if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") sql = scopeTodaySql(sql);
+              const row = db.prepare(sql).get(...params);''')
+            replace('function tripBreaker(db, type, detail) {\n  ensureSchema(db);\n  const today = new Date().toISOString().slice(0, 10);',
+                    'function tripBreaker(db, type, detail, at = Date.now()) {\n  ensureSchema(db);\n  const today = parisBudget(at).day;')
+            replace('const alreadyAlertedToday = existing && existing.alerted_at && existing.alerted_at.slice(0, 10) === today;',
+                    'const existingAlertDay = existing?.alerted_at ? parisParts(sqliteUtcMs(existing.alerted_at)).day : null;\n  const alreadyAlertedToday = existingAlertDay === today;')
+            replace('function isBreakerTripped(db, type) {', 'function isBreakerTripped(db, type, at = Date.now()) {')
+            replace('''  if (DAILY_SCOPED_BREAKERS.has(type)) {
+                const today = new Date().toISOString().slice(0, 10);
+                return row.tripped_at.slice(0, 10) === today;
+              }''',
+              '''  if (DAILY_SCOPED_BREAKERS.has(type)) {
+                return parisParts(sqliteUtcMs(row.tripped_at)).day === parisBudget(at).day;
+              }''')
+            replace('''  const dailyMatches = new Set(db.prepare(`
+                SELECT DISTINCT match_key FROM ai_call_budget_log
+                WHERE date(created_at) = date('now') AND status = 'ok' AND match_key IS NOT NULL
+              `).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));''',
+              '''  let dailyMatchesSql = `
+                SELECT DISTINCT match_key FROM ai_call_budget_log
+                WHERE date(created_at) = date('now') AND status = 'ok' AND match_key IS NOT NULL
+              `;
+              if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") dailyMatchesSql = scopeTodaySql(dailyMatchesSql);
+              const dailyMatches = new Set(db.prepare(dailyMatchesSql).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));''')
+            replace('tripBreaker, isBreakerTripped, buildRequestKey, CFG,', 'tripBreaker, isBreakerTripped, buildRequestKey, scopeTodaySql, CFG,')
+            replace("const {parisParts,parisDayBounds}=require('./telegram_client');", "const {parisParts,parisDayBounds,sqliteUtcMs}=require('./telegram_client');")
+            path.write_text(source)
+            PY
             git show origin/codex/telegram-recap-premium-20260920:scripts/test_budget_paris_rollover_20260920.js > scripts/test_budget_paris_rollover_20260920.js
-            git show origin/codex/telegram-recap-premium-20260920:scripts/test_telegram_financial_recap_20260920.js > scripts/test_telegram_financial_recap_20260920.js
 
             node scripts/test_budget_paris_rollover_20260920.js
-            node scripts/test_telegram_financial_recap_20260920.js
             node --check scripts/ai_budget_guard.js
-            node --check scripts/telegram_client.js
 
             docker compose build api
             docker compose up -d --no-deps api
@@ -88,7 +121,7 @@ jobs:
               test "$attempt" -lt 6
               sleep 5
             done
-            docker exec touslesmatchs-api node - <<'NODE'
+            docker exec -i touslesmatchs-api node - <<'NODE'
             const assert=require('assert');
             const guard=require('/app/ai_budget_guard');
             const req={matchKey:'rollover_probe',modelKey:'mistral',promptVersion:'v1'};
