@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify model routing cause without exposing configuration
+      - name: Bounded isolated shadow candidate transport test
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,25 +25,43 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,subprocess,urllib.request
-            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
-            r=d.execute("select model,host from agent_calls where agent_name='Mistral-Large' and http_status=429 order by id desc limit 1").fetchone()
-            print('IA3_FAILED_FREE_MODEL='+str(bool(r and r[0].endswith(':free'))))
-            print('IA3_FAILED_SMALL_2603='+str(bool(r and r[0]=='mistralai/mistral-small-2603')))
-            print('IA3_FAILED_OPENROUTER='+str(bool(r and r[1]=='openrouter.ai')))
-            env=json.loads(subprocess.check_output(['docker','inspect','touslesmatchs-api'],text=True))[0]['Config']['Env']
-            v=dict(x.split('=',1) for x in env)
-            logical=v.get('OR_MISTRAL_MODEL') or 'mistralai/mistral-small-2603'
-            o=d.execute("select model_id from model_overrides where logical_id=? and lower(coalesce(reason,'')) not like 'promotion :%'",(logical,)).fetchone()
-            print('IA3_ACTIVE_OVERRIDE='+str(bool(o)))
-            print('IA3_OVERRIDE_FREE='+str(bool(o and o[0].endswith(':free'))))
-            print('IA3_CONFIGURED_FREE='+str(logical.endswith(':free')))
-            print('IA3_FAILED_LOGICAL_MATCH='+str(bool(r and r[0]==logical)))
-            try:
-             cat=json.load(urllib.request.urlopen('https://openrouter.ai/api/v1/models',timeout=15))['data']
-             ids={x['id'] for x in cat}
-             print('MISTRAL_PAID_COUNTERPART_LISTED='+str(bool(r and r[0].removesuffix(':free') in ids)))
-             print('MISTRAL_SMALL_2603_LISTED='+str('mistralai/mistral-small-2603' in ids))
-            except:print('CATALOG_CHECK=False')
-            d.close()
+            import subprocess,json,os,pathlib,datetime
+            code=r"""
+            const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),models=require('/app/ai_models.config'),https=require('https'),fs=require('fs');
+            const db=new D('/data/tlm.db');
+            const get=url=>new Promise((resolve,reject)=>{https.get(url,{timeout:15000},r=>{let s='';r.on('data',x=>s+=x);r.on('end',()=>{try{resolve(JSON.parse(s))}catch{reject(Error('parse'))}}).on('error',reject)});
+            (async()=>{
+             const p=g.parisBudget(),s=g.getDailyStats(db),candidate=models.getModel('kimi').id;
+             const catalog=await get('https://openrouter.ai/api/v1/models');
+             const entry=catalog.data.find(x=>x.id===candidate);
+             const independent=!['deepseek','perplexity','luna','qwen'].some(k=>models.getModel(k).id===candidate);
+             console.log('CANDIDATE_IS_SHADOW='+String(models.getModel('kimi').mode==='test'));
+             console.log('CANDIDATE_DISTINCT='+String(independent));
+             console.log('CANDIDATE_LISTED='+String(!!entry));
+             if(!entry||!independent) return;
+             const recent=db.prepare("SELECT count(*) n FROM agent_calls WHERE model=? AND vote_produit=1").get(candidate).n;
+             console.log('CANDIDATE_PRIOR_REAL_VOTE='+String(recent>0));
+             const body={model:candidate,max_tokens:400,temperature:0.3,messages:[{role:'user',content:'Test technique isolé, sans pronostic officiel et sans données de match. Réponds uniquement avec cet objet JSON pour vérifier le transport et le format : {"status":"ok","abstention":true,"raison":"Données de match absentes"}.'}]};
+             const fx=Number(process.env.OPENROUTER_USD_PER_EUR||1),pricing=entry.pricing;
+             const reservation=((Buffer.byteLength(JSON.stringify(body.messages))+512)*Number(pricing.prompt||0)+400*Number(pricing.completion||0)+Number(pricing.request||0)+Number(pricing.web_search||0)+.01)/fx;
+             const tests=db.prepare("SELECT coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n FROM openrouter_global_calls WHERE day=? AND model=?").get(p.day,candidate).n;
+             if(!(reservation>0&&reservation<=.05&&tests+reservation<=.25&&s.requests<s.budget.maxRequestsPerDay)){console.log('CANDIDATE_TEST_BUDGET_ALLOWED=false');return;}
+             console.log('CANDIDATE_TEST_BUDGET_ALLOWED=true');
+             const response=await g.withGlobalBudget(db,body,()=>new Promise((resolve,reject)=>{
+             const req=https.request('https://openrouter.ai/api/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENROUTER_API_KEY,'Content-Type':'application/json'},timeout:25000},r=>{let raw='';r.on('data',x=>raw+=x);r.on('end',()=>{try{resolve({...JSON.parse(raw),_httpStatus:r.statusCode})}catch{resolve({_httpStatus:r.statusCode})}})});
+             req.on('error',reject);req.on('timeout',()=>req.destroy(Error('timeout')));req.end(JSON.stringify(body));
+             }));
+             let valid=false;try{const raw=response.choices?.[0]?.message?.content||'';const obj=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));valid=obj.status==='ok'&&obj.abstention===true;}catch{}
+             const ok=response._httpStatus===200&&valid;
+             console.log('CANDIDATE_HTTP_OK='+String(response._httpStatus===200));
+             console.log('CANDIDATE_VALID_RESPONSE='+String(valid));
+             const path='/data/tlm-seat3-candidate-20260919.json';
+             fs.writeFileSync(path,JSON.stringify({at:new Date().toISOString(),candidate,ok,independent,kind:'transport_test_not_official',financialLimit:p.limit}),{mode:0o600});
+             db.close();
+            })().catch(()=>{console.log('CANDIDATE_TEST_COMPLETED=false');db.close()});
+            """
+            p=subprocess.run(['docker','exec','-i','touslesmatchs-api','node'],input=code,capture_output=True,text=True)
+            for l in p.stdout.splitlines():
+             if l.startswith('CANDIDATE_') and l.rsplit('=',1)[-1] in ['true','false']:print(l)
+            if p.returncode:print('CANDIDATE_PROCESS_OK=False')
             PY
