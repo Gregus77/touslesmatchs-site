@@ -25,51 +25,52 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,pathlib,urllib.request,datetime
-            print("PROOF_TIME="+datetime.datetime.now(datetime.timezone.utc).isoformat())
-            db=sqlite3.connect("file:/opt/touslesmatchs/data/tlm.db?mode=ro",uri=True)
-            db.row_factory=sqlite3.Row
-            tables=['agent_calls','concile_analyses','telegram_signal_deliveries','ai_call_budget_log','openrouter_global_calls','ai_circuit_breaker','signal_decision_journal','decision_journal','official_vote_snapshots']
-            present={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
-            for t in tables:
-             if t not in present:
-              print("TABLE="+t+" MISSING");continue
-             cols=[r[1] for r in db.execute('PRAGMA table_info("'+t+'")')]
-             print("SCHEMA="+json.dumps({"table":t,"columns":cols}))
-             if t=='agent_calls':
-              allowed={'ok','http_erreur','timeout','illisible','vide','reseau','indisponible','budget','budget_exceeded'}
-              seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
-              for seat in seats:
-               rows=db.execute("select http_status,issue,count(*) n,sum(vote_produit) votes,max(created_at) last_at from agent_calls where agent_name=? and created_at>=datetime('now','-2 hours') group by http_status,issue",(seat,)).fetchall()
-               print("SEAT_2H="+json.dumps({"seat":seat,"rows":[{"http":r['http_status'] if isinstance(r['http_status'],int) else None,"issue":r['issue'] if r['issue'] in allowed else 'other',"count":r['n'],"votes":r['votes'],"last":r['last_at']} for r in rows]}))
-             if t=='telegram_signal_deliveries':
-              datecol=next((c for c in ['sent_at','created_at','updated_at'] if c in cols),None)
-              if datecol:
-               n=db.execute('select count(*) from "'+t+'" where "'+datecol+'" >= datetime(\'now\',\'-24 hours\')').fetchone()[0]
-               print('TELEGRAM_ROWS_24H='+str(n))
-             if t=='openrouter_global_calls':
-              if all(c in cols for c in ['day','reserved_eur','charged_eur','status']):
-               rows=db.execute("select day,status,count(*) n,round(sum(reserved_eur),4) reserved,round(sum(coalesce(charged_eur,0)),4) charged from openrouter_global_calls where day>=date('now','-1 day') group by day,status").fetchall()
-               print("BUDGET="+json.dumps([dict(r) for r in rows]))
+            import sqlite3,json,subprocess,urllib.request,pathlib,datetime
+            db=sqlite3.connect("file:/opt/touslesmatchs/data/tlm.db?mode=ro",uri=True);db.row_factory=sqlite3.Row
+            print("CHECK_TIME="+datetime.datetime.now(datetime.timezone.utc).isoformat())
+            env={}
+            p=subprocess.run(['docker','inspect','touslesmatchs-api'],capture_output=True,text=True)
+            if p.returncode==0:
+             for v in json.loads(p.stdout)[0]['Config']['Env']:
+              k,_,val=v.partition('=');env[k]=val
+            print("DESTINATIONS_PRESENT="+json.dumps({k:bool(env.get(k)) for k in ['TELEGRAM_CHANNEL_ID','TELEGRAM_PREMIUM_CHANNEL_ID','TELEGRAM_RU_FREE_CHANNEL_ID','TELEGRAM_RU_PREMIUM_CHANNEL_ID','TELEGRAM_ADMIN_CHAT_ID']}))
+            names={'TELEGRAM_CHANNEL_ID':'FR_FREE','TELEGRAM_PREMIUM_CHANNEL_ID':'FR_PREMIUM','TELEGRAM_RU_FREE_CHANNEL_ID':'RU_FREE','TELEGRAM_RU_PREMIUM_CHANNEL_ID':'RU_PREMIUM','TELEGRAM_ADMIN_CHAT_ID':'ADMIN'}
+            def channel(v):
+             for k,n in names.items():
+              if env.get(k) and str(v)==env[k]:return n
+             v=str(v).lower()
+             return v if v in ['free','premium','ru_free','ru_premium','fr_free','fr_premium','standard','elite','admin','hermes'] else 'unmapped'
+            rows=db.execute("select channel,count(*) n,sum(case when ok=1 and telegram_message_id is not null then 1 else 0 end) proven,max(case when ok=1 and telegram_message_id is not null then created_at end) last_success,max(created_at) last_attempt from telegram_signal_deliveries where created_at>=datetime('now','-24 hours') group by channel").fetchall()
+            print("DELIVERIES_24H="+json.dumps([{**dict(r),'channel':channel(r['channel'])} for r in rows]))
+            rows=db.execute("select telegram_message_id,channel,created_at,vote_count,official_signal_snapshot_id from telegram_signal_deliveries where ok=1 and telegram_message_id is not null order by id desc limit 8").fetchall()
+            print("LAST_RECEIPTS="+json.dumps([{**dict(r),'channel':channel(r['channel'])} for r in rows]))
+            def reason(v):
+             s=str(v).lower()
+             for term in ['daily_budget','daily_requests','spike','budget','quota','429','402','timeout','provider','fournisseur','cote','odd','consensus','quorum','minute','window','league','competition','recovery']:
+              if term in s:return term
+             return 'none' if not v else 'other'
+            rows=db.execute("select status,block_reason,count(*) n,max(created_at) last_at from ai_call_budget_log where created_at>=datetime('now','-2 hours') group by status,block_reason").fetchall()
+            print("AI_BUDGET_2H="+json.dumps([{**dict(r),'status':r['status'] if r['status'] in ['success','blocked','ok','error','rejected','reserved','completed','failed'] else 'other','block_reason':reason(r['block_reason'])} for r in rows]))
+            print("BREAKERS="+json.dumps([{'category':reason(r['breach_type']),'tripped_at':r['tripped_at']} for r in db.execute("select breach_type,tripped_at from ai_circuit_breaker")]))
+            print("LAST_VOTE="+json.dumps(dict(db.execute("select max(created_at) last_at from agent_calls where vote_produit=1").fetchone())))
+            print("OFFICIAL_2H="+str(db.execute("select count(*) from official_vote_snapshots where created_at>=datetime('now','-2 hours')").fetchone()[0]))
+            rows=db.execute("select block_reason,count(*) n from signal_decision_journal where created_at>=datetime('now','-2 hours') and block_reason is not null group by block_reason").fetchall()
+            print("DECISIONS_2H="+json.dumps([{'reason':reason(r['block_reason']),'count':r['n']} for r in rows]))
+            tables={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
+            if 'provider_health' in tables:
+             cols=[r[1] for r in db.execute('PRAGMA table_info(provider_health)')];print("PROVIDER_COLUMNS="+json.dumps(cols))
+             if all(x in cols for x in ['host','last_status','disabled_until','updated_at']):
+              print("OPENROUTER_HEALTH="+json.dumps(dict(db.execute("select last_status,disabled_until,updated_at from provider_health where host='openrouter.ai'").fetchone() or {})))
             db.close()
-            for label,url in [('HEALTH','http://127.0.0.1:3001/health'),('LIVE','http://127.0.0.1:3001/live-matches')]:
-             try:
-              with urllib.request.urlopen(url,timeout=15) as res:
-               data=json.loads(res.read(5000000));print(label+'_HTTP='+str(res.status))
-              if label=='LIVE':
-               print('LIVE_SHAPE='+json.dumps(list(data.keys()) if isinstance(data,dict) else {'list':len(data)}))
-               rows=data if isinstance(data,list) else next((data[k] for k in ['matches','fixtures','data','live'] if isinstance(data.get(k),list)),[])
-               print("LIVE_COUNT="+str(len(rows)))
-               if rows:print('LIVE_ROW_FIELDS='+json.dumps(list(rows[0].keys())))
-             except Exception as e:
-              print(label+'_READ=FAILED_'+type(e).__name__)
-            p=pathlib.Path('/opt/touslesmatchs/.tlm-openrouter-weekend-20260919-status.json')
-            if p.exists():
-             d=json.loads(p.read_text())
-             print('PRIOR_STATUS='+json.dumps({k:v for k,v in d.items() if isinstance(v,bool) or (k=='status' and v in ['OK','PARTIAL','BLOCKED','FAILED']) or (k=='cause' and v in ['budget','request_quota','spike','credit','provider','no_eligible_match','concurrent_changes','branch_divergence','other'])}))
-            p=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log')
-            if p.exists():
-             s=p.read_text(errors='replace')[-40000:].lower()
-             patterns={'docker_permission':['permission denied while trying to connect','docker.sock: connect: permission denied'],'sandbox':['sandbox denied','operation not permitted','sandbox restrictions','sandbox restriction','sandbox bloque','sandbox bloque'],'approval':['approval required','approval policy','approbation','approval request'],'network':['network is unreachable','temporary failure in name resolution'],'usage':['usage limit','rate limit reached'],'branch':['diverged','divergence']}
-             print("PRIOR_LOG_FLAGS="+json.dumps({k:any(v in s for v in vals) for k,vals in patterns.items()}))
+            js="const D=require('better-sqlite3');const db=new D('/data/tlm.db',{readonly:true});try{const g=require('/app/ai_budget_guard');const s=g.getDailyStats(db);console.log('SAFE_STATS='+JSON.stringify({limit:s.budget?.dailyBudgetEur,hermes:s.budget?.hermesDailyBudgetEur,tests:s.budget?.testDailyBudgetEur,concile:s.budget?.concileDailyBudgetEur,cost:s.costEur,requests:s.requests}));}catch{console.log('SAFE_STATS={}')}finally{db.close()}"
+            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',js],capture_output=True,text=True,timeout=15)
+            for line in p.stdout.splitlines():
+             if line.startswith('SAFE_STATS='):
+              d=json.loads(line.split('=',1)[1]);print("ACTIVE_GUARD="+json.dumps({k:v for k,v in d.items() if isinstance(v,(int,float))}))
+            for label,location in [('PRIVATE_LOG','/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log')]:
+             p=pathlib.Path(location)
+             if p.exists():
+              s=p.read_text(errors='replace').lower()
+              terms=['sandbox','permission denied','operation not permitted','docker.sock','network','approv','refus','denied','blocked','bloqu','quota','usage limit','not permitted','read-only','readonly','restricted','restriction']
+              print(label+"_COUNTS="+json.dumps({v:s.count(v) for v in terms}))
             PY
