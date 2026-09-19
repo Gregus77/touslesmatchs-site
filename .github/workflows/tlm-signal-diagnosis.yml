@@ -1,0 +1,31 @@
+name: TLM current signal diagnosis
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-signal-diagnosis.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            docker exec -i touslesmatchs-api node - <<'NODE'
+            const db=require('better-sqlite3')('/data/tlm.db',{readonly:true});
+            function report(name,sql){try{console.log(name,JSON.stringify(db.prepare(sql).all()));}catch(e){console.log(name,'query unavailable');}}
+            console.log('UTC',new Date().toISOString());
+            report('providers',"SELECT host,last_status,disabled_until,updated_at,CASE WHEN lower(last_error) LIKE '%credit%' OR lower(last_error) LIKE '%balance%' THEN 'credit' WHEN lower(last_error) LIKE '%daily%' THEN 'daily' ELSE 'other' END reason FROM provider_health");
+            report('calls',"SELECT host,model,http_status,issue,count(*) n,sum(vote_produit) votes,max(created_at) latest FROM agent_calls WHERE created_at>datetime('now','-45 minutes') GROUP BY host,model,http_status,issue");
+            report('breakers',"SELECT breach_type,tripped_at FROM ai_circuit_breaker");
+            report('global',"SELECT day,status,count(*) n,sum(coalesce(charged_eur,reserved_eur)) eur FROM openrouter_global_calls GROUP BY day,status ORDER BY day DESC LIMIT 12");
+            const https=require('https');
+            for(const endpoint of ['key','credits']){
+              const req=https.get('https://openrouter.ai/api/v1/'+endpoint,{headers:{Authorization:'Bearer '+process.env.OPENROUTER_API_KEY},timeout:10000},res=>{let body='';res.on('data',x=>body+=x);res.on('end',()=>{try{const d=JSON.parse(body).data||{};console.log('OPENROUTER_'+endpoint,JSON.stringify({http:res.statusCode,limit:d.limit,limit_remaining:d.limit_remaining,usage_daily:d.usage_daily,total_credits:d.total_credits,total_usage:d.total_usage}));}catch{console.log('OPENROUTER_'+endpoint,res.statusCode);}})});req.on('error',()=>console.log('PROBE_FAILED',endpoint));req.on('timeout',()=>req.destroy());
+            }
+            NODE
