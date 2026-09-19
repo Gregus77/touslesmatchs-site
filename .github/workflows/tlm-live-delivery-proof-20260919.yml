@@ -1,0 +1,75 @@
+name: TLM read-only live and delivery proof
+on:
+  push:
+    branches: [codex/live-delivery-proof-20260919]
+    paths: [.github/workflows/tlm-live-delivery-proof-20260919.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read aggregate evidence without sending messages or changing production
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 3m
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            python3 - <<'PY'
+            import sqlite3,json,pathlib,urllib.request,datetime
+            print("PROOF_TIME="+datetime.datetime.now(datetime.timezone.utc).isoformat())
+            db=sqlite3.connect("file:/opt/touslesmatchs/data/tlm.db?mode=ro",uri=True)
+            db.row_factory=sqlite3.Row
+            tables=['agent_calls','concile_analyses','telegram_signal_deliveries','ai_call_budget_log','openrouter_global_calls','ai_circuit_breaker','signal_decision_journal','decision_journal','official_vote_snapshots']
+            present={r[0] for r in db.execute("select name from sqlite_master where type='table'")}
+            for t in tables:
+             if t not in present:
+              print("TABLE="+t+" MISSING");continue
+             cols=[r[1] for r in db.execute('PRAGMA table_info("'+t+'")')]
+             print("SCHEMA="+json.dumps({"table":t,"columns":cols}))
+             if t=='agent_calls':
+              allowed={'ok','http_erreur','timeout','illisible','vide','reseau','indisponible','budget','budget_exceeded'}
+              seats=['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']
+              for seat in seats:
+               rows=db.execute("select http_status,issue,count(*) n,sum(vote_produit) votes,max(created_at) last_at from agent_calls where agent_name=? and created_at>=datetime('now','-2 hours') group by http_status,issue",(seat,)).fetchall()
+               print("SEAT_2H="+json.dumps({"seat":seat,"rows":[{"http":r['http_status'] if isinstance(r['http_status'],int) else None,"issue":r['issue'] if r['issue'] in allowed else 'other',"count":r['n'],"votes":r['votes'],"last":r['last_at']} for r in rows]}))
+             if t=='telegram_signal_deliveries':
+              datecol=next((c for c in ['sent_at','created_at','updated_at'] if c in cols),None)
+              if datecol:
+               n=db.execute('select count(*) from "'+t+'" where "'+datecol+'" >= datetime(\'now\',\'-24 hours\')').fetchone()[0]
+               print('TELEGRAM_ROWS_24H='+str(n))
+             if t=='openrouter_global_calls':
+              if all(c in cols for c in ['day','reserved_eur','charged_eur','status']):
+               rows=db.execute("select day,status,count(*) n,round(sum(reserved_eur),4) reserved,round(sum(coalesce(charged_eur,0)),4) charged from openrouter_global_calls where day>=date('now','-1 day') group by day,status").fetchall()
+               print("BUDGET="+json.dumps([dict(r) for r in rows]))
+            db.close()
+            for label,url in [('HEALTH','http://127.0.0.1:3001/health'),('LIVE','http://127.0.0.1:3001/live-matches')]:
+             try:
+              with urllib.request.urlopen(url,timeout=15) as res:
+               data=json.loads(res.read(5000000));print(label+'_HTTP='+str(res.status))
+              if label=='LIVE':
+               print('LIVE_SHAPE='+json.dumps(list(data.keys()) if isinstance(data,dict) else {'list':len(data)}))
+               rows=data if isinstance(data,list) else next((data[k] for k in ['matches','fixtures','data','live'] if isinstance(data.get(k),list)),[])
+               print("LIVE_COUNT="+str(len(rows)))
+               if rows:print('LIVE_ROW_FIELDS='+json.dumps(list(rows[0].keys())))
+             except Exception as e:
+              print(label+'_READ=FAILED_'+type(e).__name__)
+            p=pathlib.Path('/opt/touslesmatchs/.tlm-openrouter-weekend-20260919-status.json')
+            if p.exists():
+             d=json.loads(p.read_text())
+             print('PRIOR_STATUS='+json.dumps({k:v for k,v in d.items() if isinstance(v,bool) or (k=='status' and v in ['OK','PARTIAL','BLOCKED','FAILED']) or (k=='cause' and v in ['budget','request_quota','spike','credit','provider','no_eligible_match','concurrent_changes','branch_divergence','other'])}))
+            p=pathlib.Path('/opt/backups/tlm-openrouter-weekend-20260919/codex-private.log')
+            if p.exists():
+             s=p.read_text(errors='replace')[-40000:].lower()
+             patterns={'docker_permission':['permission denied while trying to connect','docker.sock: connect: permission denied'],'sandbox':['sandbox denied','operation not permitted','sandbox restrictions','sandbox restriction','sandbox bloque','sandbox bloque'],'approval':['approval required','approval policy','approbation','approval request'],'network':['network is unreachable','temporary failure in name resolution'],'usage':['usage limit','rate limit reached'],'branch':['diverged','divergence']}
+             print("PRIOR_LOG_FLAGS="+json.dumps({k:any(v in s for v in vals) for k,vals in patterns.items()}))
+            PY
