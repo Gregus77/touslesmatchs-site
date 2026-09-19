@@ -59,7 +59,7 @@ jobs:
               const db=require('better-sqlite3')('/data/tlm.db');
               const row=db.prepare("SELECT * FROM provider_health WHERE host='openrouter.ai'").get();
               if(data.limit_reset==='daily'&&typeof data.limit_remaining==='number'&&data.limit_remaining<=0&&row?.last_status===403){
-                require('fs').writeFileSync('/data/provider-quota-before-20260920.json',JSON.stringify(row),{mode:0o600,flag:'wx'});
+                if(!require('fs').existsSync('/data/provider-quota-before-20260920.json'))require('fs').writeFileSync('/data/provider-quota-before-20260920.json',JSON.stringify(row),{mode:0o600,flag:'wx'});
                 const next=new Date();next.setUTCHours(24,0,0,0);
                 const until=next.toISOString().slice(0,19).replace('T',' ');
                 const changed=db.prepare("UPDATE provider_health SET last_error=?, disabled_until=? WHERE host='openrouter.ai' AND last_status=403 AND disabled_until=?").run('OpenRouter daily limit reached; retry after midnight UTC',until,row.disabled_until);

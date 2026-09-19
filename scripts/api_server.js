@@ -6472,11 +6472,15 @@ async function providerFailureDetail(host, status, fallback, getKey) {
 // Read-only provider probes; never reset spending or bypass an exhausted key.
 let _providerQuotaProbeAt = 0;
 let _providerQuotaParisDay = "";
+let _providerQuotaParisMinute = "";
 async function recoverProviderDailyQuota() {
   const parisDay = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  const parisMinute = new Intl.DateTimeFormat("en-GB", {timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
   const midnight = parisDay !== _providerQuotaParisDay;
+  const retryAt0002 = parisMinute === "00:02" && parisDay + parisMinute !== _providerQuotaParisMinute;
+  if (retryAt0002) _providerQuotaParisMinute = parisDay + parisMinute;
   _providerQuotaParisDay = parisDay;
-  if (!midnight && Date.now() - _providerQuotaProbeAt < 300000) return;
+  if (!midnight && !retryAt0002 && Date.now() - _providerQuotaProbeAt < 300000) return;
   _providerQuotaProbeAt = Date.now();
   try {
     const row = db.prepare("SELECT last_status,last_error FROM provider_health WHERE host='openrouter.ai'").get();
