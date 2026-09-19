@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Check Mirassol score and vote snapshot consistency
+      - name: Verify normalized snapshot score and individual votes
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -26,23 +26,21 @@ jobs:
             cd /opt/touslesmatchs
             python3 - <<'PY'
             import json,sqlite3,urllib.request
-            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);db.row_factory=sqlite3.Row
-            rows=db.execute("select match_key,minute_at_analysis,score_home_at_analysis,score_away_at_analysis,best_bet,analysed_at,agents_json from concile_analyses where lower(home) like '%mirassol%' and lower(away) like '%botafogo%' order by analysed_at desc limit 12").fetchall()
-            flags={'MATCH_ANALYSES_FOUND':bool(rows),'OVER_AT_ONE_ZERO_FOUND':any(r['score_home_at_analysis']==1 and r['score_away_at_analysis']==0 and 'over' in str(r['best_bet']).lower() for r in rows),'UNDER_AT_TWO_ZERO_FOUND':any(r['score_home_at_analysis']==2 and r['score_away_at_analysis']==0 and 'under' in str(r['best_bet']).lower() for r in rows)}
-            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=20))
-            matches=[m for m in data.get('matches',[]) if 'mirassol' in str(m.get('home','')).lower() and 'botafogo' in str(m.get('away','')).lower()]
-            flags['MATCH_PUBLICLY_VISIBLE']=bool(matches)
-            for m in matches:
-             o=m.get('ou25') or {};score=str(m.get('score_home'))+'-'+str(m.get('score_away'))
-             flags['LIVE_SCORE_TWO_ZERO']=score=='2-0'
-             flags['SNAPSHOT_SCORE_MATCHES_LIVE']=str(o.get('snapshot_score'))==score
-             flags['PUBLIC_UNDER_RECOMMENDATION']=str(o.get('consensus_direction')).lower()=='under'
-             flags['OFFICIAL_SIGNAL_DISPLAYED']=bool(o.get('official'))
-             ident=str(m.get('fixtureId') or m.get('id'))
-             snaps=db.execute("select * from official_vote_snapshots where fixture_id=? order by created_at desc limit 12",(ident,)).fetchall()
-             flags['SNAPSHOT_OVER_AT_ONE_ZERO']=any(r['score_home']==1 and r['score_away']==0 and str(r['consensus']).lower()=='over' for r in snaps)
-             flags['SNAPSHOT_UNDER_AT_TWO_ZERO']=any(r['score_home']==2 and r['score_away']==0 and str(r['consensus']).lower()=='under' for r in snaps)
-             flags['DELIVERY_PROVEN_FOR_MATCH']=bool(db.execute("select 1 from telegram_signal_deliveries d join official_vote_snapshots s on s.id=d.official_signal_snapshot_id where s.fixture_id=? and d.ok=1 and d.telegram_message_id is not null limit 1",(ident,)).fetchone())
-            for k,v in flags.items():print(k+'='+str(v))
+            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=15))
+            db=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True)
+            for m in data.get('matches',[]):
+             if 'mirassol' not in str(m.get('home','')).lower() or 'botafogo' not in str(m.get('away','')).lower():continue
+             o=m.get('ou25') or {};s=o.get('snapshot_score')
+             if isinstance(s,dict):h,a=s.get('home'),s.get('away')
+             elif isinstance(s,str) and '-' in s:
+              try:h,a=map(int,s.split('-'))
+              except:h,a=None,None
+             else:h,a=None,None
+             print('NORMALIZED_SNAPSHOT_SCORE_MATCHES='+str(h==m.get('score_home') and a==m.get('score_away')))
+             print('SNAPSHOT_IS_OLD_ONE_ZERO='+str(h==1 and a==0))
+             print('UNDER_VOTES_MAJORITY='+str(o.get('under_count',0)>o.get('over_count',0)))
+             print('VIEW_ALREADY_MARKED_HISTORICAL='+str(bool(o.get('historical'))))
+             rows=db.execute("select match_key,bet from agent_market_predictions where lower(home) like '%mirassol%' and lower(away) like '%botafogo%' and market_line='buts' order by created_at desc limit 30").fetchall()
+             print('INDIVIDUAL_UNDER_AT_TWO_ZERO_EXISTS='+str(any(str(k).endswith('_2-0') and 'under' in str(b).lower() for k,b in rows)))
             db.close()
             PY
