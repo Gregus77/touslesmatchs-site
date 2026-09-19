@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify seat three recovery using owner-authorized booleans
+      - name: Distinguish provider refusal from internal limits
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,24 +25,22 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import sqlite3,json,urllib.request
+            import sqlite3,json,subprocess
             d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
-            r=d.execute("select count(*) n,sum(vote_produit) votes from agent_calls where agent_name='Mistral-Large' and created_at>=datetime('now','-30 minutes')").fetchone()
-            print('IA3_RECENT_CALLS_PRESENT='+str(bool(r['n'])))
-            print('IA3_RECENT_REAL_VOTE='+str(bool(r['votes'])))
-            r=d.execute("select http_status,issue,vote_produit,detail from agent_calls where agent_name='Mistral-Large' order by id desc limit 1").fetchone()
+            r=d.execute("select model,created_at,http_status from agent_calls where agent_name='Mistral-Large' order by id desc limit 1").fetchone()
             if r:
-             s=str(r['detail'] or '').lower()
-             print('IA3_LATEST_REAL_VOTE='+str(bool(r['vote_produit'])))
-             print('IA3_LATEST_HTTP429='+str(r['http_status']==429))
-             print('IA3_LATEST_TIMEOUT='+str(r['issue']=='timeout'))
-             print('IA3_LATEST_BUDGET_REASON='+str('budget' in s))
-             print('IA3_LATEST_QUOTA_REASON='+str(any(w in s for w in ['quota','daily_requests','daily limit','model_daily','per_model'])))
-            try:
-             data=json.load(urllib.request.urlopen('http://127.0.0.1:3001/live-matches',timeout=15))
-             fresh=[m.get('ou25') or {} for m in data.get('matches',[]) if 15<=int(m.get('minute') or 0)<=45 and not m.get('pinnedSignal')]
-             print('CURRENT_ANALYSIS_WINDOW_PRESENT='+str(bool(fresh)))
-             print('CURRENT_FIVE_VOTES_PRESENT='+str(any(o.get('vote_count')==5 for o in fresh)))
-            except:print('LIVE_CHECK_COMPLETED=False')
+             rows=d.execute("select status from openrouter_global_calls where model=? and abs((julianday(created_at)-julianday(?))*86400)<10",(r['model'],r['created_at'])).fetchall()
+             print('IA3_PROVIDER_REQUEST_REJECTED='+str(any(x['status']=='rejected' for x in rows)))
+             print('IA3_PROVIDER_REQUEST_COMPLETED='+str(any(x['status']=='completed' for x in rows)))
+             print('IA3_GLOBAL_RESERVATION_PRESENT='+str(bool(rows)))
+            for seat in ['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen']:
+             r=d.execute("select vote_produit from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
+             print('SEAT_'+str(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'].index(seat)+1)+'_LATEST_VOTE='+str(bool(r and r[0])))
             d.close()
+            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d),p=g.parisBudget();const u=d.prepare('select coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n from openrouter_global_calls where day=?').get(p.day).n;console.log('GLOBAL_MONEY_AVAILABLE='+String(u+0.05<p.limit));console.log('GLOBAL_REQUESTS_AVAILABLE='+String(s.requests<s.budget.maxRequestsPerDay));console.log('IA3_MODEL_QUOTA_AVAILABLE='+String(s.byModel.filter(x=>/mistral/i.test(x.model_key)).every(x=>x.requests<180)));d.close()"""
+            p=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],capture_output=True,text=True)
+            if p.returncode==0:
+             for l in p.stdout.splitlines():
+              if l in [k+'='+v for k in ['GLOBAL_MONEY_AVAILABLE','GLOBAL_REQUESTS_AVAILABLE','IA3_MODEL_QUOTA_AVAILABLE'] for v in ['true','false']]:print(l)
+            else:print('GUARD_CHECK_COMPLETED=False')
             PY
