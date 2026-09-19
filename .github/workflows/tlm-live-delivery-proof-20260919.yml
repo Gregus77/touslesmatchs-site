@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Verify budget blockage and condition for higher weekend spending
+      - name: Back up and test authorized shared budget and quota recovery
         uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -25,22 +25,35 @@ jobs:
             set -eu
             cd /opt/touslesmatchs
             python3 - <<'PY'
-            import json,sqlite3,subprocess,urllib.request
-            d=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);d.row_factory=sqlite3.Row
-            try:
-             rows=d.execute("select r.outcome,s.real_odd from official_signal_results r join official_vote_snapshots s on s.id=r.official_signal_snapshot_id where r.outcome in ('win','loss') order by r.resolved_at desc limit 20").fetchall()
-             valid=[r for r in rows if isinstance(r['real_odd'],(float,int)) and r['real_odd']>1]
-             print('OFFICIAL_SAMPLE_TWENTY='+str(len(valid)==20))
-             print('OFFICIAL_SAMPLE_PROFIT_POSITIVE='+str(bool(valid) and sum((r['real_odd']-1) if r['outcome']=='win' else -1 for r in valid)>0))
-            except:print('OFFICIAL_PERFORMANCE_PROOF_AVAILABLE=False')
-            for i,seat in enumerate(['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'],1):
-             r=d.execute("select vote_produit,created_at>=datetime('now','-15 minutes') recent from agent_calls where agent_name=? order by id desc limit 1",(seat,)).fetchone()
-             print('SEAT_'+str(i)+'_RECENT_VOTE='+str(bool(r and r['recent'] and r['vote_produit'])))
-            d.close()
-            data=json.load(urllib.request.urlopen('https://www.touslesmatchs.com/api/live-matches',timeout=15))
-            print('ANALYSIS_WINDOW_PRESENT='+str(any(isinstance(m.get('minute'),(int,float)) and 15<=m['minute']<=45 and m.get('status') not in ['HT','FT'] for m in data.get('matches',[]))))
-            code="""const D=require('better-sqlite3'),g=require('/app/ai_budget_guard'),d=new D('/data/tlm.db',{readonly:true});const s=g.getDailyStats(d),p=g.parisBudget(),u=d.prepare('select coalesce(sum(coalesce(charged_eur,reserved_eur)),0) n from openrouter_global_calls where day=?').get(p.day).n;console.log('CURRENT_CAP_SIX='+String(p.limit===6));console.log('MONEY_HEADROOM_AVAILABLE='+String(u+.05<p.limit));console.log('MODEL_QUOTA_EXHAUSTED='+String(s.byModel.some(x=>x.requests>=180)));d.close();"""
-            r=subprocess.run(['docker','exec','touslesmatchs-api','node','-e',code],capture_output=True,text=True)
-            for l in r.stdout.splitlines():
-             if l.split('=')[0] in ['CURRENT_CAP_SIX','MONEY_HEADROOM_AVAILABLE','MODEL_QUOTA_EXHAUSTED'] and l.rsplit('=',1)[-1] in ['true','false']:print(l)
+            import pathlib,subprocess,json,os,datetime,sqlite3,fcntl
+            def run(a):return subprocess.check_output(a,text=True,stderr=subprocess.DEVNULL).strip()
+            lock=open('/var/lock/tlm-production-deploy.lock','a');fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+            branch=run(['git','branch','--show-current']);head=run(['git','rev-parse','HEAD'])
+            assert run(['git','rev-parse','--abbrev-ref','@{upstream}'])=='origin/'+branch
+            assert run(['git','ls-remote','origin','refs/heads/'+branch]).split()[0]==head
+            backup=pathlib.Path('/opt/backups/tlm-budget-recovery-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'));backup.mkdir(mode=0o700)
+            cand=backup/'candidate';cand.mkdir(mode=0o700)
+            def save(p,s):p.write_text(s);os.chmod(p,0o600)
+            inspect=json.loads(run(['docker','inspect','touslesmatchs-api']))[0]
+            save(backup/'inspect.json',json.dumps(inspect));save(backup/'env.before',pathlib.Path('.env').read_text())
+            for name in ['ai_budget_guard.js','ai_models.config.js','telegram_client.js','bookmakers.config.js']:
+             source=run(['docker','exec','touslesmatchs-api','cat','/app/'+name])
+             save(backup/(name+'.before'),source)
+             if name=='ai_budget_guard.js':
+              assert source.count('limit:dow===0||dow===6?6:4')==1
+              source=source.replace('limit:dow===0||dow===6?6:4','limit:dow===0||dow===6?10:2')
+             save(cand/name,source)
+            save(cand/'test.js',"const assert=require('assert'),D=require('better-sqlite3'),g=require('./ai_budget_guard'),models=require('./ai_models.config');\nassert.equal(g.parisBudget(Date.parse('2026-09-18T20:00:00Z')).limit,2);\nassert.equal(g.parisBudget(Date.parse('2026-09-18T22:00:00Z')).limit,10);\nassert.equal(g.parisBudget(Date.parse('2026-09-20T21:59:00Z')).limit,10);\nassert.equal(g.parisBudget(Date.parse('2026-09-20T22:00:00Z')).limit,2);\nfor(const [at,cap] of [['2026-09-19T12:00:00Z',10],['2026-09-21T12:00:00Z',2]]){\n const db=new D(':memory:');assert(g.reserveGlobal(db,{model:'isolated-a'},cap-.01,Date.parse(at)));assert(!g.reserveGlobal(db,{model:'isolated-b'},.02,Date.parse(at)));assert.equal(db.prepare('select count(*) n from openrouter_global_calls').get().n,1);db.close();\n}\nassert.equal(g.CFG.maxRequestsPerDay,2000);\nfor(const key of ['perplexity','deepseek','mistral','luna','qwen'])assert.equal(models.getModel(key).dailyLimit,400);\nconst db=new D(':memory:');g.ensureSchema(db);\nconst day=g.parisBudget().day;\nconst add=db.prepare(\"insert into ai_call_budget_log(request_key,model_key,match_key,cost_estimate_eur,status,created_at) values(?,?,?,0,'ok',?)\");\nfor(let i=0;i<180;i++)add.run('seed'+i,'mistral','one_historical_match',day+' 00:00:00');\nassert(g.canProceed(db,{modelKey:'mistral',matchKey:'new_test_snapshot',purpose:'concile',promptVersion:'test'}).allowed);\nfor(let i=180;i<400;i++)add.run('seed'+i,'mistral','one_historical_match',day+' 00:00:00');\nassert(!g.canProceed(db,{modelKey:'mistral',matchKey:'new_test_snapshot',purpose:'concile',promptVersion:'test'}).allowed);\nassert.equal(db.prepare('select count(*) n from ai_call_budget_log').get().n,400);\ndb.close();console.log('BUDGET_AND_QUOTA_BEHAVIOR_TESTS=True');")
+            save(backup/'guard.worktree.before',pathlib.Path('scripts/ai_budget_guard.js').read_text())
+            save(backup/'worktree.patch',run(['git','diff','--binary','HEAD']))
+            sourceDb=sqlite3.connect('file:/opt/touslesmatchs/data/tlm.db?mode=ro',uri=True);dest=sqlite3.connect(str(backup/'tlm.db'));sourceDb.backup(dest);dest.close();sourceDb.close();os.chmod(backup/'tlm.db',0o600)
+            tmp='/tmp/'+backup.name
+            subprocess.run(['docker','cp',str(cand),'touslesmatchs-api:'+tmp],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,check=True)
+            result=subprocess.run(['docker','exec','-e','NODE_PATH=/app/node_modules','-e','OPENROUTER_MAX_REQUESTS_PER_DAY=2000','-e','OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY=400','-e','TELEGRAM_BOT_TOKEN=','-e','TELEGRAM_ADMIN_CHAT_ID=','touslesmatchs-api','node',tmp+'/test.js'],capture_output=True,text=True)
+            save(backup/'tests.private.log',result.stdout+result.stderr)
+            ok=result.returncode==0 and 'BUDGET_AND_QUOTA_BEHAVIOR_TESTS=True' in result.stdout
+            save(backup/'state.json',json.dumps({'branch':branch,'head':head,'backup':str(backup),'testsPassed':ok}))
+            save(pathlib.Path('data/tlm-budget-recovery-current.json'),json.dumps({'backup':str(backup),'testsPassed':ok}))
+            print('BACKUP_COMPLETE=True')
+            print('BUDGET_AND_QUOTA_BEHAVIOR_TESTS='+str(ok))
             PY
