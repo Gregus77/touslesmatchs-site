@@ -1,0 +1,41 @@
+name: TLM month pass read-only prerequisites
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-month-pass-preflight.yml]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            docker exec -i touslesmatchs-api node - <<'NODE'
+            (async()=>{
+              const env=process.env,fs=require('fs');
+              console.log('UTC',new Date().toISOString());
+              console.log('CONFIG',JSON.stringify({stripe:!!env.STRIPE_SECRET_KEY,brevo:!!env.BREVO_API_KEY,webhookSecret:!!env.STRIPE_WEBHOOK_SECRET,telegramSameAsAdmin:!!env.TELEGRAM_BOT_TOKEN&&env.TELEGRAM_BOT_TOKEN===env.HERMES_ADMIN_TLM_BOT}));
+              const cdb=require('better-sqlite3')(env.CODES_DB_PATH||'/data/codes.db',{readonly:true});
+              console.log('ACCESS_COLUMNS',JSON.stringify(cdb.prepare('PRAGMA table_info(codes)').all().map(x=>x.name)));
+              console.log('ACCESS_TOTALS',JSON.stringify(cdb.prepare('SELECT plan,count(*) n FROM codes GROUP BY plan').all()));cdb.close();
+              if(env.STRIPE_SECRET_KEY){
+                const stripe=new(require('stripe'))(env.STRIPE_SECRET_KEY);
+                try {const hooks=await stripe.webhookEndpoints.list({limit:100});console.log('STRIPE_WEBHOOKS',JSON.stringify(hooks.data.map(x=>({id:x.id,status:x.status,livemode:x.livemode,events:x.enabled_events,host:new URL(x.url).hostname,path:new URL(x.url).pathname}))));}catch(e){console.log('STRIPE_WEBHOOK_READ_ERROR',e.code||e.type);}
+                try{const prices=await stripe.prices.list({active:true,limit:100,expand:['data.product']});console.log('PASS_CANDIDATES',JSON.stringify(prices.data.filter(x=>x.unit_amount===1490&&x.currency==='eur').map(x=>({id:x.id,productId:x.product.id,name:x.product.name,productActive:x.product.active,type:x.type,livemode:x.livemode,offer:x.product.metadata?.tlm_offer||null}))));}catch(e){console.log('STRIPE_PRICE_READ_ERROR',e.code||e.type);}
+              }
+              if(env.TELEGRAM_BOT_TOKEN){
+                async function read(method,body={}){const r=await fetch('https://api.telegram.org/bot'+env.TELEGRAM_BOT_TOKEN+'/'+method,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(15000)});const data=await r.json();if(!data.ok)throw new Error('Telegram '+data.error_code);return data.result;}
+                try{const me=await read('getMe'),hook=await read('getWebhookInfo');console.log('TELEGRAM_WEBHOOK',JSON.stringify({configured:!!hook.url,pending:hook.pending_update_count,allowedUpdates:hook.allowed_updates||null}));
+                  for(const key of ['TELEGRAM_PREMIUM_CHANNEL_ID','TELEGRAM_RU_PREMIUM_CHANNEL_ID']){if(!env[key]){console.log(key,'MISSING');continue;}const member=await read('getChatMember',{chat_id:env[key],user_id:me.id});console.log(key,JSON.stringify({role:member.status,canInvite:member.can_invite_users===true,canRestrict:member.can_restrict_members===true}));}
+                }catch(e){console.log('TELEGRAM_READ_ERROR',e.message.startsWith('Telegram ')?e.message:e.name);}
+              }
+              const server=fs.readFileSync('/app/server.js','utf8');console.log('RUNTIME',JSON.stringify({legacyReferral:server.includes('creditReferrer'),legacyExpiry:server.includes('runExpiryCron'),monthPass:server.includes('premium_month_pass'),telegramBinding:server.includes('chat_join_request')}));
+            })().catch(e=>{console.error('AUDIT_ERROR',e.name);process.exitCode=1;});
+            NODE
