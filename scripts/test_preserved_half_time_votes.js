@@ -57,7 +57,7 @@ assert.equal(snapshots.archivedStateForMatch(db,{fixtureId:999},new Date('2026-0
 assert.equal(snapshots.archivedStateForMatch(db,{fixtureId:123},new Date('2026-09-21T00:20:00Z')).snapshot,null);
 db.close();
 function extract(file,start,end){const s=fs.readFileSync(path.join(root,'public',file),'utf8');const i=s.indexOf(start),j=s.indexOf(end,i+start.length);assert(i>=0&&j>i);return s.slice(i,j);}
-const front={esc:String,escHtml:String,TLMMatchLifecycle:{phase:()=> 'closed'},liveHomeScore:m=>m.score_home,liveAwayScore:m=>m.score_away};
+const front={document:{getElementById:()=>null},esc:String,escHtml:String,TLMMatchLifecycle:{phase:()=> 'closed'},liveHomeScore:m=>m.score_home,liveAwayScore:m=>m.score_away};
 vm.createContext(front);
 vm.runInContext(extract('index.html','function heroOu25(','function renderAnalyzedList('),front);
 const match={minute:65,status:'2H',ou25:{...actual,locked:false}};
