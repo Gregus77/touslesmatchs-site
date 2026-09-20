@@ -1,4 +1,5 @@
 name: TLM preserve first-half vote evidence
+# Revision 2: preserve the newer production live verdict renderer.
 on:
   push:
     branches: [codex/telegram-recap-premium-20260920]

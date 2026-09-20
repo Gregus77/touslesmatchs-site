@@ -40,7 +40,9 @@ function patch(root,desired){
     "  if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);",
     "  if(typeof score==='string'&&/^\\d+-\\d+$/.test(score))text+=' · score '+score;\n  else if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);"));
   update('public/app.html',s=>once(s,"preserved='Anciennes tendances — aucun signal officiel · ';","preserved=esc(state.recommendationStatus||'Anciennes tendances — aucun signal officiel')+' · ';"));
-  update('public/live-ia.html',s=>once(s,'? "Anciennes tendances — aucun signal officiel"','? (state.statusText || "Anciennes tendances — aucun signal officiel")'));
+  update('public/live-ia.html',s=>once(s,
+    '  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";',
+    '  if(!state.official&&state.windowStatus===\'closed\'&&state.statusText)verdict=state.statusText;\n  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";'));
   // Validate every anchor before touching any file.
   for(const [p,s] of changes)fs.writeFileSync(p,s);
   console.log('PRESERVED_VOTES_PATCH_OK');

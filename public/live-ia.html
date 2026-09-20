@@ -861,6 +861,7 @@ function renderLiveOu25Details(m) {
     : state.voteCount
       ? (state.statusText || "Anciennes tendances — aucun signal officiel")
       : "Aucun vote enregistré pour le moment";
+  if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
   var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
   if (!reason && !state.voteCount) {
     if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 15e minute.";
