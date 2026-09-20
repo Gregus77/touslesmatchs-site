@@ -20,8 +20,9 @@
       if(hit){minute=Number(hit[1])+Number(hit[2]||0);break;}
     }
     if(minute<0)return 'unknown';
-    if(minute>45||(m.ou25&&m.ou25.window_status==='closed'))return 'closed';
-    if(minute<15)return 'waiting';
+    var firstHalf=statuses.some(function(s){return /^(1H|FIRST HALF|FIRST_HALF)$/.test(s);});
+    if((minute>45&&!firstHalf)||(m.ou25&&m.ou25.window_status==='closed'))return 'closed';
+    if(minute<35)return 'waiting';
     return 'open';
   }
   function canFeature(m){var p=phase(m);return p==='open'||p==='waiting';}

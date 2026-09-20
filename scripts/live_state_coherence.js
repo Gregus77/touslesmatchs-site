@@ -6,6 +6,25 @@ function score(value) {
   return pair.map(Number).join('-');
 }
 
+function liveMinute(value) {
+  const hit=String(value ?? '').trim().match(/^(\d+)(?:\+(\d+))?(?:['′’])?$/);
+  return hit ? Number(hit[1])+Number(hit[2]||0) : null;
+}
+
+function analysisWindow(match) {
+  const minute=liveMinute(match?.minute);
+  const statuses=[match?.status,match?.period,match?.status_short,match?.fixture?.status]
+    .map(s=>String(s&&typeof s==='object'?s.short||s.long||'':s||'').trim().toUpperCase());
+  if(statuses.some(s=>/^(HT|HALFTIME|HALF TIME|HALF_TIME|2H|SECOND HALF|FT|FINISHED|FULL TIME|FULL_TIME|AET|PEN|ET|BT|P|SUSP|INT|ABD|CANC|PST|NS|SCHEDULED)$/.test(s)))
+    return {open:false,status:'closed',minute,reason:'Analyse indisponible : première mi-temps terminée ou match interrompu.'};
+  if(minute===null)return {open:false,status:'unknown',minute,reason:'Analyse indisponible : minute inconnue ou non numérique.'};
+  if(minute<35)return {open:false,status:'waiting',minute,reason:'Analyse indisponible avant la 35e minute.'};
+  const first=statuses.some(s=>/^(1H|FIRST HALF|FIRST_HALF)$/.test(s));
+  const live=statuses.some(s=>/^(IN_PLAY|LIVE)$/.test(s));
+  if(first || (live && minute<=45))return {open:true,status:'open',minute,reason:null};
+  return {open:false,status:'closed',minute,reason:'Analyse indisponible : première mi-temps non confirmée.'};
+}
+
 function firstHalfClosed(match) {
   const statuses = [match?.status, match?.period, match?.status_short, match?.fixture?.status]
     .map(s => String(s && typeof s === 'object' ? s.short || s.long || '' : s || '').trim().toUpperCase());
@@ -53,8 +72,8 @@ function fixtureState(fixture, match, id) {
     throw failure('Score modifié ou non confirmé : analyse suspendue.');
   if (phase !== '1H' || !Number.isInteger(minute) || minute < 15)
     throw failure('Première mi-temps non confirmée : analyse suspendue.');
-  const observed = Number(match.minute);
-  if (!Number.isFinite(observed) || minute < observed || minute - observed > 2)
+  const observed = liveMinute(match.minute);
+  if (observed === null || minute < observed || minute - observed > 2)
     throw failure('Minute du match désynchronisée : analyse suspendue.');
   const home = fixture?.teams?.home?.id, away = fixture?.teams?.away?.id;
   if (!Number.isInteger(home) || !Number.isInteger(away) || home === away)
@@ -89,4 +108,4 @@ function statsKey(id, state) {
   return state ? `stats_${id}_${state.phase}_${state.minute}_${state.score}_${state.home}_${state.away}` : `stats_${id}`;
 }
 
-module.exports = {score, publicState, firstHalfClosed, fixtureState, createCollector, statsKey};
+module.exports = {score, publicState, firstHalfClosed, fixtureState, createCollector, statsKey, liveMinute, analysisWindow};

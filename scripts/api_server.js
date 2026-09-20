@@ -3288,6 +3288,7 @@ function normalizeApiSportsFootballFixture(f) {
     ht_away: f.score?.halftime?.away ?? null,
     minute: f.fixture.status.elapsed ?? null,
     status: String(f.fixture?.status?.short || "").toUpperCase() === "HT" ? "HT" : "IN_PLAY",
+    period: String(f.fixture?.status?.short || "").toUpperCase(),
     competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
     country: f.league?.country || "",
     utcDate: f.fixture.date,
@@ -3566,7 +3567,7 @@ function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = CLIE
   const sport = String(match?.sport || "Football").toLowerCase();
   if (!sport.includes("foot")) return false;
   const minute = parseLiveMinuteValue(match?.minute_at_analysis ?? match?.minute);
-  if (requireMinute && (minute === null || minute < 15 || minute > maxMinute)) return false;
+  if (requireMinute && !liveStateCoherence.analysisWindow({...match,minute:match?.minute_at_analysis ?? match?.minute}).open) return false;
   if (isWomenMatch(match) || isCategoryBanned(match) || isLowTrustCompetition(match)) return false;
   const tier = leagueTier(match);
   if (tier !== "trusted_major" && tier !== "trusted_secondary") return false;
@@ -4670,10 +4671,10 @@ function hasKnownScore(match) {
 function parseLiveMinuteValue(minute) {
   if (minute === null || minute === undefined) return null;
   const raw = String(minute).trim();
-  // Accepte uniquement une minute entière réelle. Les statuts et arrêts de jeu sont exclus.
-  const matched = raw.match(/^(\d{1,3})(?:['’′])?$/);
+  // Les arrêts de jeu sont numériques ; la période est vérifiée séparément.
+  const matched = raw.match(/^(\d{1,3})(?:\+(\d{1,2}))?(?:['’′])?$/);
   if (!matched) return null;
-  const parsed = Number(matched[1]);
+  const parsed = Number(matched[1]) + Number(matched[2] || 0);
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 120 ? parsed : null;
 }
 
@@ -7702,9 +7703,7 @@ Réponds en JSON pur (pas de markdown):
       // quatre votes réels concordants. Une cinquième absence reste distincte
       // d'un désaccord et ne fabrique jamais un bulletin.
       const sportDiffusable = sportLc.includes("foot");
-      const officialWindowEligible = Number.isFinite(Number(minute))
-        && Number(minute) >= officialSnapshots.OFFICIAL_FROM_MINUTE
-        && Number(minute) <= officialSnapshots.OFFICIAL_TO_MINUTE;
+      const officialWindowEligible = liveStateCoherence.analysisWindow(match).open;
       const officialStrongQuorum = Number(voteInfo.vote_active || 0) >= CLIENT_OU25_MIN_VOTES
         && voteCountForSignal >= CLIENT_OU25_MIN_VOTES;
       const diffusable = bookmakerPlayable && oddOk && sportDiffusable
@@ -7749,7 +7748,7 @@ Réponds en JSON pur (pas de markdown):
           reason:maskAiNames(String(analysisResult.raison || '').slice(0,200))};
         const identity = canonicalMatchKey(match.home,match.away) + ':' + todayStr;
         // Bounded retries remain inside the current live window, never replay old picks.
-        const expiresAt = Date.now() + Math.max(0, Math.min(120, (CLIENT_OU25_CLIENT_MAX_MINUTE - Number(minute) + 1) * 60)) * 1000;
+        const expiresAt = Date.now() + 120000; // Fresh fixture validation stops delivery immediately at HT.
         let queuedDestinations = 0;
         for (const dest of clientTelegramPublisher.targets) {
           if (signalDeliveredToChannelToday(match,dest.channel)) continue;
@@ -9841,7 +9840,7 @@ const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
 // Décision propriétaire du 03/09/2026 : le produit live O/U 2,5 fonctionne
 // strictement de la 15e à la 45e minute du temps réglementaire de la première
 // mi-temps. Cette règle ne doit plus pouvoir être ramenée à 40 par un ancien .env.
-const AUTO_CONCILE_WINDOW_MIN = 15;
+const AUTO_CONCILE_WINDOW_MIN = 35;
 const AUTO_CONCILE_WINDOW_MAX = CLIENT_OU25_CLIENT_MAX_MINUTE;
 const AUTO_CONCILE_TIME_WINDOW = true;
 
@@ -9861,12 +9860,8 @@ function isMatchDecided(match) {
 // Retourne null si le match peut être pronostiqué en live, sinon la raison du blocage.
 // Utilisé par l'auto-observer ET les endpoints d'analyse manuelle (pas le prématch).
 function livePickBlockReason(match) {
-  // Fenêtre produit unique 15-45. Une minute inconnue, un statut textuel ou les
-  // arrêts de jeu (ex. 45+2) restent visibles mais ne sont jamais analysables.
-  const minute = parseLiveMinuteValue(match && match.minute);
-  if (minute === null) return "Analyse indisponible : minute inconnue ou non numérique.";
-  if (minute < AUTO_CONCILE_WINDOW_MIN) return `Analyse indisponible avant la ${AUTO_CONCILE_WINDOW_MIN}e minute.`;
-  if (minute > AUTO_CONCILE_WINDOW_MAX) return `Analyse indisponible après la ${AUTO_CONCILE_WINDOW_MAX}e minute.`;
+  const window = liveStateCoherence.analysisWindow(match);
+  if (!window.open) return window.reason;
   // R2 conservée : un match à finalité connue n'a plus rien à offrir.
   if (isMatchDecided(match)) return "Analyse indisponible : match à finalité connue (écart de 3 buts ou plus).";
   return null;
@@ -9909,9 +9904,7 @@ function shouldAutoObserveMatch(match) {
   if (isBlacklistedForLiveDisplay(match)) return false;
   if (isUnderperformingCompetition(match)) return false;
   if (isMatchDecided(match)) return false;
-  // Fenêtre produit O/U 2,5 : 15e à 45e, hors arrêts de jeu et statuts texte.
-  const minute = parseLiveMinuteValue(match.minute);
-  return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
+  return liveStateCoherence.analysisWindow(match).open;
 }
 
 // Une passe globale seulement : l'observateur ne rappelle jamais les cinq IA.
@@ -13386,7 +13379,7 @@ function getLiveOu25VoteState(match) {
 function getStoredLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
   const currentSnapshotKey = getPredictionSnapshotKey(match);
-  const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= CLIENT_OU25_CLIENT_MAX_MINUTE ? "open" : "closed";
+  const windowStatus = liveStateCoherence.analysisWindow(match).status;
   const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
     agent,
     direction: null,
@@ -13397,7 +13390,7 @@ function getStoredLiveOu25VoteState(match) {
   }));
   const empty = {
     market: "over_under_2_5",
-    from_minute: 15,
+    from_minute: 35,
     to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
     window_status: windowStatus,
     vote_count: 0,
@@ -13597,8 +13590,8 @@ function clientOu25VisibilityEligibility(match, ou25) {
   const accepting = isClientOu25MatchEligible(match, true);
   const snapshotMinute = Number(ou25?.snapshot_minute);
   const preserved = Number.isFinite(snapshotMinute)
-    && snapshotMinute >= 15 && (snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE || ou25?.first_half_verified === true)
-    && isClientOu25MatchEligible({ ...match, minute: Math.min(snapshotMinute,45), minute_at_analysis: Math.min(snapshotMinute,45) }, true);
+    && (snapshotMinute >= 35 || ou25?.official === true) && (snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE || ou25?.first_half_verified === true)
+    && isClientOu25MatchEligible(match, false);
   return { accepting, product: accepting || preserved, preserved };
 }
 
@@ -13608,7 +13601,7 @@ function clientOu25VisibilityEligibility(match, ou25) {
 function homepageLiveMatch(match, canReveal) {
   const out = {};
   for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
-    'competition','league','sport','status','minute','utcDate','home_logo','away_logo',
+    'competition','league','sport','status','period','minute','utcDate','home_logo','away_logo',
     'score_home','score_away','block_reason','analysis_exclusion_reason',
     'client_product_eligible','client_display_eligible','data_notice','data_fetched_at','analysis_started','analysis_verified','homepage_display_eligible',
     'signal_delivered','telegram_delivery_proven','diffusion_block','delivery_status']) {
@@ -14873,7 +14866,7 @@ app.post("/internal/strong-signals", (req, res) => {
 // ── Statistiques publiques réelles utilisées par le site et l'application ──
 app.get("/public-signal-rules", (req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, from_minute: 15, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
+  res.json({ ok: true, from_minute: 35, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE, includes_first_half_stoppage: true,
     delivery_from_minute: officialSnapshots.OFFICIAL_FROM_MINUTE,
     delivery_to_minute: officialSnapshots.OFFICIAL_TO_MINUTE,
     min_votes: CLIENT_OU25_MIN_VOTES, min_confidence: CLIENT_OU25_MIN_CONFIDENCE,
@@ -18097,8 +18090,9 @@ async function runPersistentSignalProof() {
     JOIN official_vote_snapshots snapshot ON snapshot.id=registry.official_signal_snapshot_id
     JOIN concile_analyses analysis ON analysis.match_key=snapshot.analysis_match_key
     WHERE analysis.id>? AND snapshot.consensus_votes>=${CLIENT_OU25_MIN_VOTES}
-      AND snapshot.minute BETWEEN ${officialSnapshots.OFFICIAL_FROM_MINUTE}
-                              AND ${officialSnapshots.OFFICIAL_TO_MINUTE}
+      AND snapshot.minute >= ${officialSnapshots.OFFICIAL_FROM_MINUTE}
+      AND (snapshot.minute <= ${officialSnapshots.OFFICIAL_TO_MINUTE} OR EXISTS
+        (SELECT 1 FROM vote_snapshot_events e WHERE e.snapshot_id=snapshot.id AND e.event_type='first_half_verified'))
     ORDER BY analysis.id LIMIT 1`).get(objective.baseline_analysis_id);
   const orphanCall = db.prepare(`SELECT id,match_key,agent_name,host,http_status,issue,created_at FROM agent_calls
     WHERE id>? AND datetime(created_at)<=datetime('now','-20 minutes') ORDER BY id LIMIT 1`).get(objective.baseline_call_id);
@@ -18163,8 +18157,9 @@ async function runReliabilityLoop(trigger = "scheduler") {
         ON analysis.match_key=snapshot.analysis_match_key
       WHERE snapshot.created_at >= datetime('now','-24 hours')
         AND snapshot.consensus_votes >= ${CLIENT_OU25_MIN_VOTES}
-        AND snapshot.minute BETWEEN ${officialSnapshots.OFFICIAL_FROM_MINUTE}
-                                AND ${officialSnapshots.OFFICIAL_TO_MINUTE}`).all();
+        AND snapshot.minute >= ${officialSnapshots.OFFICIAL_FROM_MINUTE}
+        AND (snapshot.minute <= ${officialSnapshots.OFFICIAL_TO_MINUTE} OR EXISTS
+          (SELECT 1 FROM vote_snapshot_events e WHERE e.snapshot_id=snapshot.id AND e.event_type='first_half_verified'))`).all();
     const keys = [...new Set(eligible.map(r => r.match_key))];
     const deliveries = keys.length ? db.prepare(`SELECT match_key,channel,telegram_message_id,ok,error,created_at
       FROM telegram_signal_deliveries WHERE match_key IN (${keys.map(() => '?').join(',')})`).all(...keys) : [];

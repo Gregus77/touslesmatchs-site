@@ -1,5 +1,21 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-20 — Fenêtre 35 minutes à la fin réelle de première mi-temps
+
+- Aligne les portes d'analyse et de diffusion sur 35 minutes. Après 45 minutes,
+  exige une première mi-temps confirmée ; HT/2H ne sont jamais une nouvelle entrée.
+- Conserve la période du fournisseur et lit les minutes comme 45+3. Les snapshots
+  après 45 exigent une preuve première mi-temps ; aucun ancien vote n'est réécrit.
+- La file Telegram conserve une durée maximale de deux minutes, avec contrôle
+  frais du score et de la période avant chaque tentative ; plus d'expiration
+  immédiate causée seulement par une minute supérieure à 45.
+- Inclut les snapshots vérifiés du temps additionnel dans les audits de livraison.
+- Tests ciblés fenêtre, diffusion/reprise à HT, archives, cohérence et session :
+  réussis. Revue indépendante : deux défauts reproduits puis corrigés. Test React
+  général : aucun test trouvé (limitation existante, pas une suite générale verte).
+- Publication protégée par patch de contexte, sauvegarde et retour arrière.
+
+
 ## 2026-09-20 — Session existante reconnue par Live IA
 
 - Restaure la session vérifiée déjà utilisée par le bandeau, attend sa validation

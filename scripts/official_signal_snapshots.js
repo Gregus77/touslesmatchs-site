@@ -1,6 +1,6 @@
 'use strict';
 
-const OFFICIAL_FROM_MINUTE = 30;
+const OFFICIAL_FROM_MINUTE = 35;
 const OFFICIAL_TO_MINUTE = 45;
 const MIN_CONSENSUS_VOTES = 4;
 const REANALYSIS_DELAY_MS = 150000;
@@ -126,7 +126,8 @@ function registerOfficial(db, snapshotId, options = {}) {
   const row = db.prepare('SELECT * FROM official_vote_snapshots WHERE id=?').get(snapshotId);
   if (!row) throw new Error('official snapshot missing');
   const minute = Number(row.minute);
-  if (!options.legacyProof && (!Number.isFinite(minute) || minute < OFFICIAL_FROM_MINUTE || minute > OFFICIAL_TO_MINUTE)) {
+  const stoppageVerified = minute > OFFICIAL_TO_MINUTE && !!db.prepare("SELECT 1 FROM vote_snapshot_events WHERE snapshot_id=? AND event_type='first_half_verified'").get(snapshotId);
+  if (!options.legacyProof && (!Number.isFinite(minute) || minute < OFFICIAL_FROM_MINUTE || (minute > OFFICIAL_TO_MINUTE && !stoppageVerified))) {
     throw new Error(`official signal outside ${OFFICIAL_FROM_MINUTE}-${OFFICIAL_TO_MINUTE}`);
   }
   if (!options.legacyProof) {

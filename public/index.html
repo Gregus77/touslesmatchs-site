@@ -1801,7 +1801,7 @@ function renderHeroLive(m){
   var analysisLink=document.getElementById('hero-analysis-link');
   setHeroText('hero-live-date',new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}));
   if(!m){
-    if(status)status.textContent='Aucun match dans la fenêtre 15–45 min';
+    if(status)status.textContent='Aucun match entre la 35e minute et la fin de première mi-temps';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
     setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0 / 5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
@@ -1824,8 +1824,8 @@ function renderHeroLive(m){
   if(m.data_notice&&status)status.textContent='Dernières données connues';
   var fixtureId=m.fixtureId||m.fixture_id||m.id||m.sourceId||'';
   if(analysisLink){analysisLink.href='/live-ia?fixture='+encodeURIComponent(fixtureId);analysisLink.setAttribute('aria-label','Ouvrir '+String(m.home||'ce match')+' contre '+String(m.away||'')+' dans Live IA');}
-  var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
-  var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
+  var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed';
+  var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<35);
   setHeroText('hero-consensus-current',votes+' / 5');
   setHeroText('hero-ai-title',voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Tendance IA en cours':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
   var paidExplanation='';
@@ -1843,7 +1843,7 @@ function renderHeroLive(m){
     paidExplanation+=heroStandingText(m);
     paidExplanation+=heroH2hText(m);
   }
-  setHeroText('hero-consensus-label',votes?(voteState.locked?(voteState.official?'Signal officiel enregistré · détails réservés à Premium':(tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':'Tendance IA en cours · détails Premium')):paidExplanation):analysisClosed?'Anciennes tendances — aucun signal officiel':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
+  setHeroText('hero-consensus-label',votes?(voteState.locked?(voteState.official?'Signal officiel enregistré · détails réservés à Premium':(tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':'Tendance IA en cours · détails Premium')):paidExplanation):analysisClosed?'Anciennes tendances — aucun signal officiel':analysisWaiting?'À partir de la 35e minute':'En attente des IA');
   if(!votes&&!analysisClosed)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
   var consensusLabel=document.getElementById('hero-consensus-label'),consensusValid=voteState.official||voteState.consensusCount>=4,consensusInsufficient=votes>0&&!analysisClosed&&!consensusValid;
   if(consensusLabel){consensusLabel.classList.toggle('consensus-valid',consensusValid);consensusLabel.classList.toggle('consensus-insufficient',consensusInsufficient);}

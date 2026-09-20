@@ -1,9 +1,10 @@
 'use strict';
-const assert=require('assert'),D=require('better-sqlite3'),{evaluateFirstHalf,createValidator}=require('./first_half_delivery'),{createPublisher}=require('./telegram_client');
+const assert=require('assert'),{evaluateFirstHalf,createValidator}=require('./first_half_delivery'),{createPublisher}=require('./telegram_client');
+let D;try{D=require('better-sqlite3');}catch{D=require('node:sqlite').DatabaseSync;}
 const snap={fixture_id:'1',minute:45,score_home:0,score_away:0};
 const fixture=(status,elapsed)=>({fixture:{id:1,status:{short:status,elapsed,extra:3}},goals:{home:0,away:0}});
-for(const n of [30,35,45,48])assert(evaluateFirstHalf(fixture('1H',n),snap).ok);
-for(const n of [0,15,29,null,'45+3'])assert(!evaluateFirstHalf(fixture('1H',n),snap).ok);
+for(const n of [35,45,48])assert(evaluateFirstHalf(fixture('1H',n),snap).ok);
+for(const n of [0,15,29,30,34,null,'45+3'])assert(!evaluateFirstHalf(fixture('1H',n),snap).ok);
 for(const s of ['HT','2H','FT','ET','NS','IN_PLAY',''])assert(!evaluateFirstHalf(fixture(s,45),snap).ok);
 assert(!evaluateFirstHalf({...fixture('1H',40),goals:{home:1,away:0}},snap).ok);
 async function scenario(phase,minute,failFirst=false){
@@ -23,9 +24,10 @@ async function scenario(phase,minute,failFirst=false){
  db.close();return count;
 }
 (async()=>{
- for(const n of [30,45,48])assert.equal(await scenario('1H',n),1);
+ for(const n of [35,45,48])assert.equal(await scenario('1H',n),1);
  for(const s of ['HT','2H','FT'])assert.equal(await scenario(s,45),0);
  assert.equal(await scenario('1H',29),0);
+ assert.equal(await scenario('1H',34),0);
  await scenario('1H',45,true);
  console.log('FIRST_HALF_WINDOW_TESTS_PASSED=True');
 })().catch(()=>{console.log('FIRST_HALF_WINDOW_TESTS_PASSED=False');process.exitCode=1});

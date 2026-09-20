@@ -1,0 +1,66 @@
+name: TLM signal window 35 to verified half-time
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-signal-window-35.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            bash -se <<'DEPLOY'
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            umask 077
+            backup="/opt/backups/tlm-window35-$(date -u +%Y%m%dT%H%M%SZ)"
+            for dir in original stage desired baseline served; do mkdir -p "$backup/$dir/scripts" "$backup/$dir/public/js"; done
+            files="scripts/api_server.js scripts/live_state_coherence.js scripts/official_signal_snapshots.js scripts/first_half_delivery.js public/js/match-lifecycle.js public/index.html public/live-ia.html"
+            for f in $files; do cp -p "$f" "$backup/original/$f"; cp -p "$f" "$backup/stage/$f"; done
+            old_image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
+            image_ref="$(docker inspect -f '{{.Config.Image}}' touslesmatchs-api)"
+            docker compose config --images | grep -Fx "$image_ref" >/dev/null
+            git fetch origin codex/telegram-recap-premium-20260920
+            revision='${{ github.sha }}'
+            for f in $files; do git show "$revision:$f" > "$backup/desired/$f"; git show "21eb8f6:$f" > "$backup/baseline/$f"; done
+            git show "$revision:scripts/patch_signal_window_35.js" > "$backup/patch.js"
+            for t in test_signal_window_35.js test_preserved_half_time_votes.js test_live_session.js test_live_state_coherence_20260919.js; do git show "$revision:scripts/$t" > "$backup/stage/scripts/$t"; done
+            node "$backup/patch.js" "$backup/stage" "$backup/desired" "$backup/baseline"
+            node --check "$backup/stage/scripts/api_server.js"
+            for t in test_signal_window_35.js test_preserved_half_time_votes.js test_live_session.js test_live_state_coherence_20260919.js; do
+              docker run --rm -e NODE_PATH=/app/node_modules -v "$backup/stage:/work:ro" "$old_image" node "/work/scripts/$t"
+            done
+            rollback() {
+              for f in $files; do cp -p "$backup/original/$f" "$f"; done
+              docker tag "$old_image" "$image_ref"
+              docker compose up -d --no-deps api >/dev/null 2>&1
+            }
+            trap rollback ERR
+            for f in $files; do cp -p "$backup/stage/$f" "$f"; done
+            docker compose build api > "$backup/build.log" 2>&1
+            docker compose up -d --no-deps api > "$backup/start.log" 2>&1
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS http://127.0.0.1:3001/public-signal-rules > "$backup/rules.json"; then break; fi
+              test "$attempt" -lt 6
+              sleep 5
+            done
+            node - "$backup/rules.json" <<'NODE'
+            const assert=require('assert'),fs=require('fs');const x=JSON.parse(fs.readFileSync(process.argv[2]));assert.equal(x.from_minute,35);assert.equal(x.delivery_from_minute,35);assert.equal(x.includes_first_half_stoppage,true);console.log('ACTIVE_WINDOW_RULES_OK');
+            NODE
+            docker exec touslesmatchs-api node -e "const c=require('/app/live_state_coherence');if(!c.analysisWindow({minute:48,status:'IN_PLAY',period:'1H'}).open||c.analysisWindow({minute:45,status:'HT'}).open)process.exit(1);console.log('RUNTIME_WINDOW_OK')"
+            curl -fsSL 'https://www.touslesmatchs.com/js/match-lifecycle.js' > "$backup/served/public/js/match-lifecycle.js"
+            cmp "$backup/stage/public/js/match-lifecycle.js" "$backup/served/public/js/match-lifecycle.js"
+            trap - ERR
+            printf 'DEPLOYED_WINDOW35_BACKUP=%s\n' "$backup"
+            DEPLOY

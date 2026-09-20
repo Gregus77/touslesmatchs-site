@@ -903,8 +903,8 @@ function renderLiveOu25Details(m) {
   if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
   var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
   if (!reason && !state.voteCount) {
-    if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 15e minute.";
-    else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote 15e–45e est terminée.";
+    if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 35e minute.";
+    else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote est terminée : fin de première mi-temps.";
     else reason = "Les cinq IA n’ont pas encore enregistré de vote exploitable.";
   }
   var seats = state.slots.map(function(slot, i) {
