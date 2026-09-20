@@ -1,5 +1,16 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-20 — Session existante reconnue par Live IA
+
+- Restaure la session vérifiée déjà utilisée par le bandeau, attend sa validation
+  avant d'ouvrir la connexion, et transmet cette session aux demandes d'analyse.
+- Vérifie les droits actifs et l'expiration côté serveur, sans récupérer l'ancien
+  code d'accès. Maintient les limites et leur compteur, ainsi que l'accès par code.
+- Tests ciblés : connexion Premium/Elite, refus session expirée/falsifiée, compte
+  désactivé, crédits épuisés et débit du bon compte. Aucun paiement ni secret changé.
+- La commande générale React ne trouve aucun test ; ces tests ciblés ne remplacent
+  pas une suite générale ni une vérification dans le navigateur réel du membre.
+
 ## 2026-09-20 — Conservation des votes de première mi-temps
 
 - Conserve les votes réels de 35–45 minutes après la mi-temps et les buts suivants,

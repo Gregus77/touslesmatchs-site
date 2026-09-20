@@ -697,16 +697,46 @@ function confMeta(conf) {
   return { cls: "red", emoji: "🔴", label: "Prudence" };
 }
 
+function liveAuthHeaders(json) {
+  var headers={Accept:'application/json'};
+  if(json)headers['Content-Type']='application/json';
+  try {
+    var token=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||localStorage.getItem('tlm_session')||'';
+    var email=localStorage.getItem('tlm_email')||'';
+    if(token)headers.Authorization='Bearer '+token;
+    if(email)headers['X-TLM-Email']=email;
+  } catch(_) {}
+  if(userAuth&&userAuth.email&&userAuth.code){headers['X-TLM-Email']=userAuth.email;headers['X-TLM-Code']=userAuth.code;}
+  return headers;
+}
+async function restoreLiveAuth() {
+  var headers=liveAuthHeaders(),email='',code='';
+  try {email=localStorage.getItem('tlm_email')||'';code=localStorage.getItem('tlm_code')||'';}catch(_){}
+  if(headers.Authorization){
+    try {
+      var response=await fetch('/api/auth/session',{headers:headers,cache:'no-store'});
+      var session=response.ok?await response.json():null;
+      if(session&&session.ok&&session.email)return {email:session.email,plan:session.plan||'free',credits_max:session.credits_max};
+    }catch(_){}
+    try {
+      var response2=await fetch('/api/auth/access',{headers:headers,cache:'no-store'});
+      var access=response2.ok?await response2.json():null;
+      if(access&&access.ok&&access.locked===false)return {email:email,plan:access.plan||'premium',credits_left:access.credits_left,credits_max:access.credits_max};
+    }catch(_){}
+  }
+  if(email&&code){
+    try {
+      var legacyResponse=await fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code})});
+      var legacy=legacyResponse.ok?await legacyResponse.json():null;
+      if(legacy&&legacy.valid)return {email:email,code:code,plan:legacy.plan,credits_left:legacy.credits_left,credits_max:legacy.credits_max};
+    }catch(_){}
+  }
+  return null;
+}
+var liveAuthReady;
 // ── Init ──
 (function init() {
-  const email = localStorage.getItem("tlm_email");
-  const code = localStorage.getItem("tlm_code");
-  const plan = localStorage.getItem("tlm_plan");
-  if (email && code && plan) {
-    userAuth = { email, code, plan };
-    updateAuthBar();
-    refreshCredits();   // récupère le compteur de jetons à jour au chargement
-  }
+  liveAuthReady=restoreLiveAuth().then(function(auth){userAuth=auth;updateAuthBar();if(auth){closeLoginModal();loadMatches();refreshCredits();}renderMatches();return auth;});
   loadMatches();
   setInterval(function(){ loadMatches(); refreshCredits(); }, 60000);
   setTimeout(checkWatchedForUpdates, 8000);
@@ -729,6 +759,15 @@ function onSearchInput(v) {
 
 // Récupère le compteur de jetons à jour depuis le serveur (au chargement).
 function refreshCredits() {
+  if(userAuth&&!userAuth.code){
+    var currentUser=userAuth;
+    return fetch('/api/auth/access',{headers:liveAuthHeaders(),cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null;}).then(function(d){
+        if(d&&d.ok&&d.locked===false&&userAuth===currentUser){
+          userAuth.credits_left=d.credits_left;userAuth.credits_max=d.credits_max;userAuth.plan=d.plan;updateAuthBar();
+        }
+      }).catch(function(){});
+  }
   if (!userAuth || !userAuth.email || !userAuth.code) return;
   fetch("/api/verify-code", {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -778,7 +817,7 @@ function updateAuthBar() {
 // ── Load matches ──
 function loadMatches(force) {
   var url = "/api/live-matches" + (force ? "?force=1" : "");
-  var headers={};try{var otp=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||'';if(otp)headers.Authorization='Bearer '+otp;}catch(_){}if(userAuth&&userAuth.email&&userAuth.code){headers['X-TLM-Email']=userAuth.email;headers['X-TLM-Code']=userAuth.code;}
+  var headers=liveAuthHeaders();
   fetch(url,{headers:headers}).then(function(r){ return r.json(); }).then(function(d) {
     if (d.ok && d.matches) {
       allMatches = d.matches.filter(tlmSoccerOnly);
@@ -1131,7 +1170,8 @@ function buyCarteToken() {
     .catch(function(){ alert('Erreur réseau, réessaie.'); });
 }
 
-function requestAnalysis(btn, matchId, home, away) {
+async function requestAnalysis(btn, matchId, home, away) {
+  await liveAuthReady;
   if (!userAuth) {
     openLoginModal();
     return;
@@ -1148,7 +1188,7 @@ function requestAnalysis(btn, matchId, home, away) {
 
   fetch("/api/concile-analysis", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: liveAuthHeaders(true),
     signal: controller ? controller.signal : undefined,
     body: JSON.stringify({
       email: userAuth.email,
@@ -1257,7 +1297,7 @@ function checkWatchedForUpdates() {
     }
     fetch("/api/concile-analysis", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: liveAuthHeaders(true),
       body: JSON.stringify({
         email: userAuth.email, code: userAuth.code,
         match: { id: match.id, home: match.home, away: match.away, score_home: match.score_home, score_away: match.score_away, minute: match.minute, competition: match.competition }
@@ -1316,7 +1356,7 @@ function showUpdatePopup(home, away, voteLabel, betText, confText, resumeText) {
 
 // ── Auth ──
 function toggleMenu() { document.getElementById("mmenu").classList.toggle("open"); }
-function openLoginModal() { document.getElementById("login-modal").classList.add("open"); }
+async function openLoginModal() { await liveAuthReady;if(userAuth){closeLoginModal();return;}document.getElementById("login-modal").classList.add("open"); }
 function closeLoginModal() { document.getElementById("login-modal").classList.remove("open"); }
 
 function doLogin() {
@@ -1359,11 +1399,17 @@ function doLogin() {
 }
 
 function doLogout() {
+  var logoutHeaders=liveAuthHeaders(true);
   userAuth = null;
   localStorage.removeItem("tlm_email");
   localStorage.removeItem("tlm_code");
   localStorage.removeItem("tlm_session");
   localStorage.removeItem("tlm_plan");
+  localStorage.removeItem('tlm_session_token');
+  localStorage.removeItem('tlm_token');
+  liveAuthReady=Promise.resolve(null);
+  fetch('/api/auth/logout',{method:'POST',headers:logoutHeaders}).catch(function(){});
+  document.dispatchEvent(new CustomEvent('tlm-auth-change'));
   updateAuthBar();
   document.getElementById("agent-ranking").style.display = "none";
   renderMatches();

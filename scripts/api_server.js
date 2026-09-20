@@ -10640,7 +10640,7 @@ function paidGoal05Account(req) {
 
   try {
     const session = db.prepare("SELECT email, expires_at FROM sessions WHERE token = ?").get(sessionToken);
-    if (!session || Date.parse(session.expires_at) < Date.now()) return null;
+    if (!session || !Number.isFinite(Date.parse(session.expires_at)) || Date.parse(session.expires_at) <= Date.now()) return null;
     const account = lookupAccountByEmail(session.email);
     if (!account || String(account.plan || "free").toLowerCase() === "free") return null;
     if (account.expires_at && Date.parse(account.expires_at) < Date.now()) return null;
@@ -10653,10 +10653,11 @@ function paidGoal05Account(req) {
 
 // Contrôle des droits seul : ne charge aucun match ni fournisseur.
 app.get('/auth/access', (req,res) => {
-  const account = paidGoal05Account(req);
+  const account = concileSessionAccess(req);
   res.set('Cache-Control','private, no-store');
   res.set('Vary','Authorization, X-TLM-Email');
-  res.json({ok:true, locked:!account, plan:account?'premium':'free'});
+  res.json({ok:true, locked:!account, plan:account?account.plan:'free',
+    credits_left:account?account.credits_left:null,credits_max:account?account.credits_max:null});
 });
 
 function sendGoal05Latest(req, res) {
@@ -14079,15 +14080,36 @@ function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
 
 const analysisCache = new Map();
 
+// Session reuse explicitly authorized: identity comes from the verified session,
+// never from submitted email/plan. No reusable access code is read or disclosed.
+function concileSessionAccess(req) {
+  const account = paidGoal05Account(req);
+  if (!account?.email) return null;
+  let codesDb;
+  try {
+    codesDb = new Database(CODES_DB_PATH, {readonly:true});
+    const row = codesDb.prepare('SELECT rowid AS account_id,email,plan,expires_at,credits_max,credits_used,credits_date FROM codes WHERE lower(email)=? AND active=1 ORDER BY rowid DESC LIMIT 1')
+      .get(String(account.email).toLowerCase().trim());
+    if (!row || !['standard','premium','elite','vip'].includes(String(row.plan).toLowerCase())) return null;
+    if (row.expires_at && (!Number.isFinite(Date.parse(row.expires_at)) || Date.parse(row.expires_at) <= Date.now())) return null;
+    return {...row,valid:true,credits_left:creditsLeftForPlan(row.plan,row.credits_max,row.credits_used,row.credits_date)};
+  } catch (_) { return null; }
+  finally { if (codesDb) codesDb.close(); }
+}
+
 app.post("/concile-analysis", async (req, res) => {
-  const { email, code, match } = req.body || {};
-  if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
+  const { code, match } = req.body || {};
+  const sessionAccess = concileSessionAccess(req);
+  const email = sessionAccess?.email || req.body?.email;
+  if (!sessionAccess && (!email || !code)) return res.json({ ok: false, error: "Connexion requise" });
   if (!match || !match.home || !match.away) return res.json({ ok: false, error: "Données du match manquantes" });
 
-  const auth = verifyCode(email, code);
+  const auth = sessionAccess || verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
-  const allowAdminFields = isAdminAccess(email, code);
+  const allowAdminFields = !sessionAccess && isAdminAccess(email, code);
+  const creditWhere = sessionAccess ? 'rowid = ?' : 'code = ? AND email = ?';
+  const creditArgs = sessionAccess ? [sessionAccess.account_id] : [code.toUpperCase().trim(),email.toLowerCase().trim()];
 
   // Check credits (credits_max=0 means unlimited)
   const today = new Date().toISOString().slice(0, 10);
@@ -14120,15 +14142,15 @@ app.post("/concile-analysis", async (req, res) => {
     // Decrement credits in codes.db (only on real analysis, not cache hit)
     try {
       const wdb = new Database(CODES_DB_PATH);
-      const row = wdb.prepare("SELECT credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
-        .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+      const row = wdb.prepare(`SELECT credits_max, credits_used, credits_date FROM codes WHERE ${creditWhere} AND active = 1`)
+        .get(...creditArgs);
       if (row && row.credits_max > 0) {
         if (row.credits_date === today) {
-          wdb.prepare("UPDATE codes SET credits_used = credits_used + 1 WHERE code = ? AND email = ?")
-            .run(code.toUpperCase().trim(), email.toLowerCase().trim());
+          wdb.prepare(`UPDATE codes SET credits_used = credits_used + 1 WHERE ${creditWhere} AND active = 1`)
+            .run(...creditArgs);
         } else {
-          wdb.prepare("UPDATE codes SET credits_used = 1, credits_date = ? WHERE code = ? AND email = ?")
-            .run(today, code.toUpperCase().trim(), email.toLowerCase().trim());
+          wdb.prepare(`UPDATE codes SET credits_used = 1, credits_date = ? WHERE ${creditWhere} AND active = 1`)
+            .run(today,...creditArgs);
         }
       }
       wdb.close();
@@ -14140,8 +14162,8 @@ app.post("/concile-analysis", async (req, res) => {
     if (!allowAdminFields) {
       try {
         const rdb = new Database(CODES_DB_PATH, { readonly: true });
-        const cr = rdb.prepare("SELECT plan, credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
-          .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+        const cr = rdb.prepare(`SELECT plan, credits_max, credits_used, credits_date FROM codes WHERE ${creditWhere} AND active = 1`)
+          .get(...creditArgs);
         rdb.close();
         if (cr && cr.credits_max > 0) {
           creditFields = { credits_left: creditsLeftForPlan(cr.plan, cr.credits_max, cr.credits_used, cr.credits_date), credits_max: cr.credits_max };

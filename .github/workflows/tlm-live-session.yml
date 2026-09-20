@@ -1,0 +1,67 @@
+name: TLM verified session reuse
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-live-session.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            bash -se <<'DEPLOY'
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            umask 077
+            backup="/opt/backups/tlm-live-session-$(date -u +%Y%m%dT%H%M%SZ)"
+            for dir in original stage desired baseline served; do mkdir -p "$backup/$dir/scripts" "$backup/$dir/public"; done
+            files="scripts/api_server.js public/live-ia.html"
+            for f in $files; do cp -p "$f" "$backup/original/$f"; cp -p "$f" "$backup/stage/$f"; done
+            old_image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
+            image_ref="$(docker inspect -f '{{.Config.Image}}' touslesmatchs-api)"
+            docker compose config --images | grep -Fx "$image_ref" >/dev/null
+            git fetch origin codex/telegram-recap-premium-20260920
+            revision='${{ github.sha }}'
+            for f in $files; do git show "$revision:$f" > "$backup/desired/$f"; git show "7d14e58:$f" > "$backup/baseline/$f"; done
+            git show "$revision:scripts/patch_live_session.js" > "$backup/patch.js"
+            git show "$revision:scripts/test_live_session.js" > "$backup/stage/scripts/test_live_session.js"
+            node "$backup/patch.js" "$backup/stage" "$backup/desired" "$backup/baseline"
+            node --check "$backup/stage/scripts/api_server.js"
+            docker run --rm -e NODE_PATH=/app/node_modules -v "$backup/stage:/work:ro" "$old_image" node /work/scripts/test_live_session.js
+            rollback() {
+              for f in $files; do cp -p "$backup/original/$f" "$f"; done
+              docker tag "$old_image" "$image_ref"
+              docker compose up -d --no-deps api >/dev/null 2>&1
+            }
+            trap rollback ERR
+            for f in $files; do cp -p "$backup/stage/$f" "$f"; done
+            docker compose build api > "$backup/build.log" 2>&1
+            docker compose up -d --no-deps api > "$backup/start.log" 2>&1
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS http://127.0.0.1:3001/current-pick >/dev/null; then break; fi
+              test "$attempt" -lt 6
+              sleep 5
+            done
+            expected="$(sha256sum scripts/api_server.js | cut -d ' ' -f1)"
+            actual="$(docker exec touslesmatchs-api sha256sum /app/server.js | cut -d ' ' -f1)"
+            test "$expected" = "$actual"
+            curl -fsSL "https://www.touslesmatchs.com/live-ia?session-check=$(date +%s)" > "$backup/served/public/live-ia.html"
+            cmp -s public/live-ia.html "$backup/served/public/live-ia.html"
+            cp scripts/api_server.js "$backup/served/scripts/"
+            cp "$backup/stage/scripts/test_live_session.js" "$backup/served/scripts/"
+            docker run --rm -e NODE_PATH=/app/node_modules -v "$backup/served:/work:ro" "$image_ref" node /work/scripts/test_live_session.js
+            curl -fsSL https://www.touslesmatchs.com/api/health >/dev/null
+            trap - ERR
+            echo LIVE_SESSION_DEPLOYED
+            DEPLOY
