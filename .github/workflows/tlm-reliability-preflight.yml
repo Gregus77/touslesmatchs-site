@@ -1,0 +1,35 @@
+name: TLM reliability read-only preflight
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-reliability-preflight.yml]
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            docker exec -i touslesmatchs-api node - <<'NODE'
+            (async()=>{
+            const fs=require('fs'),crypto=require('crypto'),db=require('better-sqlite3')('/data/tlm.db',{readonly:true});
+            console.log('UTC',new Date().toISOString());
+            for(const name of ['official_signal_snapshots.js','telegram_client.js']){const p='/app/'+name;if(fs.existsSync(p))console.log('FILE',name,crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex'));}
+            const lines=fs.readFileSync('/app/server.js','utf8').split('\n');
+            for(const anchor of ['function livePickBlockReason(','function shouldAutoObserveMatch(','function isClientOu25MatchEligible(','function getLiveOu25VoteState(','function scheduleOfficialReanalysis(','const AUTO_CONCILE_INTERVAL_MS','const windowStatus =']){const i=lines.findIndex(x=>x.includes(anchor));console.log('CODE',anchor,JSON.stringify(lines.slice(i,i+(anchor.startsWith('const ')?1:anchor.includes('getLive')?38:45))));}
+            const snap=require('/app/official_signal_snapshots');console.log('SNAPSHOT_POLICY',JSON.stringify({from:snap.OFFICIAL_FROM_MINUTE,to:snap.OFFICIAL_TO_MINUTE,delay:snap.REANALYSIS_DELAY_MS}));
+            console.log('BLOCKS',JSON.stringify(db.prepare("SELECT diffusion_block,count(*) n FROM concile_analyses WHERE analysed_at>=datetime('now','-12 hours') GROUP BY diffusion_block").all()));
+            console.log('TARGETS',JSON.stringify(db.prepare("SELECT home,away,minute_at_analysis,score_home_at_analysis,score_away_at_analysis,consensus_votes,confidence,best_bet,diffusion_block,analysed_at FROM concile_analyses WHERE (home LIKE '%Vasco%' OR home LIKE '%Atlas%' OR home LIKE '%San Luis%') AND analysed_at>=datetime('now','-12 hours') ORDER BY analysed_at DESC LIMIT 16").all()));
+            console.log('VOTE_SCHEMA',JSON.stringify(db.prepare('PRAGMA table_info(agent_calls)').all().map(x=>x.name)));
+            const key=process.env.STRIPE_SECRET_KEY;console.log('STRIPE_CONFIG',JSON.stringify({present:!!key,mode:key?.startsWith('sk_live_')?'live':key?.startsWith('sk_test_')?'test':'unknown',webhookPresent:!!process.env.STRIPE_WEBHOOK_SECRET,premiumPrice:process.env.STRIPE_PRICE_ID_PREMIUM||process.env.STRIPE_PRICE_PRO||null}));
+            if(key){const stripe=new(require('stripe'))(key);const configured=process.env.STRIPE_PRICE_ID_PREMIUM||process.env.STRIPE_PRICE_PRO;try{if(configured){const p=await stripe.prices.retrieve(configured,{expand:['product']});console.log('CONFIGURED_PRICE',JSON.stringify({id:p.id,active:p.active,currency:p.currency,amount:p.unit_amount,recurring:p.recurring,product:{id:p.product.id,name:p.product.name,active:p.product.active}}));}const ps=await stripe.prices.list({active:true,limit:100});console.log('PRICES_1490',JSON.stringify(ps.data.filter(p=>p.unit_amount===1490&&p.currency==='eur').map(p=>({id:p.id,product:p.product,recurring:p.recurring}))));const links=await stripe.paymentLinks.list({active:true,limit:100});for(const l of links.data){const items=await stripe.paymentLinks.listLineItems(l.id,{limit:10});if(items.data.some(i=>i.price?.unit_amount===1490&&i.price?.currency==='eur'))console.log('LINK_1490',JSON.stringify({id:l.id,url:l.url,prices:items.data.map(i=>i.price.id)}));}}catch(e){console.log('STRIPE_READ_ERROR',e.code||e.type||'unknown');}}
+            db.close();
+            })().catch(e=>{console.error('AUDIT_ERROR',e.name);process.exitCode=1;});
+            NODE
