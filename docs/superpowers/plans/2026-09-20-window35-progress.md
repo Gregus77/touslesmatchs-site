@@ -23,4 +23,9 @@ First deployment run35481350692 stopped BEFORE replacing any production file:
 homepage has newer decisionText verdict absent from checkout. Public source
 inspected; patch now changes four exact window literals only, preserving verdict.
 Variant regression reproduced RED then tested GREEN. Next rollout pending.
+Run35481407663 stopped before deployment because isolated archive test lacked
+public/app.html. Added read-only test dependency; application itself unchanged.
+Run35481450502 succeeded at2026-09-20T01:31:17Z: four staged suites passed,
+runtime window check passed and served lifecycle asset matches stage.
+Backup: /opt/backups/tlm-window35-20260920T012800Z. Commit1251a6f.
 Actual newly delivered client message: still pending natural signal evidence.
