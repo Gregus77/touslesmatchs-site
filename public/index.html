@@ -1717,7 +1717,8 @@ function tlmVoteSnapshotText(m){
   var state=heroOu25(m),minute=state.snapshotMinute,score=state.snapshotScore;
   if(minute==null)return '';
   var text='Calculé à '+minute+"'";
-  if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);
+  if(typeof score==='string'&&/^\d+-\d+$/.test(score))text+=' · score '+score;
+  else if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);
   return text;
 }
 function tlmVotesAreOld(m){

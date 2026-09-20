@@ -902,7 +902,7 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
       var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+failure),voteTime=appVoteTime(slot&&slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;
       return '<span class="tlm-app-live-mini-vote '+dir+(state.official?'':' old')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
-    var preserved='';if(state.official){preserved=(state.recommendationStatus||('Signal officiel à '+state.snapshotMinute+'′, score '+state.snapshotScore))+' · ';}else if(TLMMatchLifecycle.phase(m)==='closed'){preserved='Anciennes tendances — aucun signal officiel · ';}
+    var preserved='';if(state.official){preserved=(state.recommendationStatus||('Signal officiel à '+state.snapshotMinute+'′, score '+state.snapshotScore))+' · ';}else if(TLMMatchLifecycle.phase(m)==='closed'){preserved=esc(state.recommendationStatus||'Anciennes tendances — aucun signal officiel')+' · ';}
     return '<span class="tlm-app-live-vote-summary">'+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.voteCount+'/5 IA</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}

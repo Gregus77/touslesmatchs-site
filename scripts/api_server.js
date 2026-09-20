@@ -7432,6 +7432,7 @@ Réponds en JSON pur (pas de markdown):
       redCardsHome: analysisResult.statsStatus?.stats?.red_cards_home || 0,
       redCardsAway: analysisResult.statsStatus?.stats?.red_cards_away || 0,
       votes: voteRows,
+      observation: statsStatus.observation,
       consensus: /^Over\b/i.test(analysisResult.best_bet) ? "over" : /^Under\b/i.test(analysisResult.best_bet) ? "under" : null,
       consensusVotes: analysisResult.vote_summary?.vote_count || 0,
       confidence: analysisResult.confidence,
@@ -13407,12 +13408,15 @@ function getStoredLiveOu25VoteState(match) {
   };
   try {
     if (typeof officialSnapshots === 'undefined') throw new Error('official snapshot module unavailable');
-    const immutableState = officialSnapshots.stateForMatch(db, match);
+    const immutableState = liveStateCoherence.firstHalfClosed(match)
+      ? officialSnapshots.archivedStateForMatch(db, match)
+      : officialSnapshots.stateForMatch(db, match);
     const snapshot = immutableState.snapshot;
     // Un ancien snapshot de la même rencontre ne doit pas masquer les votes
     // déjà persistés d'une nouvelle tranche/score pendant que les cinq appels
     // bornés se terminent. Un signal officiel, lui, reste toujours prioritaire.
-    if (snapshot && (immutableState.kind === 'official' || snapshot.id === currentSnapshotKey)) {
+    if (snapshot && (immutableState.kind === 'official' || snapshot.id === currentSnapshotKey
+      || (liveStateCoherence.firstHalfClosed(match) && Number(snapshot.minute) >= 35 && (Number(snapshot.minute) <= 45 || snapshot.first_half_verified === true)))) {
       const votes = snapshot.votes.slice(0, 5).map((vote, index) => {
         const status = snapshot.seat_statuses[index] || vote.status || 'pending';
         const reason = vote.reason
@@ -13449,6 +13453,7 @@ function getStoredLiveOu25VoteState(match) {
         official,
         official_signal_snapshot_id: official ? snapshot.id : null,
         snapshot_id: snapshot.id,
+        first_half_verified: snapshot.first_half_verified === true,
         recommendation_status: official
           ? `Signal officiel à ${snapshot.minute}′, score ${snapshot.score_home}-${snapshot.score_away}`
           : 'Anciennes tendances — aucun signal officiel',
@@ -13591,8 +13596,8 @@ function clientOu25VisibilityEligibility(match, ou25) {
   const accepting = isClientOu25MatchEligible(match, true);
   const snapshotMinute = Number(ou25?.snapshot_minute);
   const preserved = Number.isFinite(snapshotMinute)
-    && snapshotMinute >= 15 && snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE
-    && isClientOu25MatchEligible({ ...match, minute: snapshotMinute, minute_at_analysis: snapshotMinute }, true);
+    && snapshotMinute >= 15 && (snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE || ou25?.first_half_verified === true)
+    && isClientOu25MatchEligible({ ...match, minute: Math.min(snapshotMinute,45), minute_at_analysis: Math.min(snapshotMinute,45) }, true);
   return { accepting, product: accepting || preserved, preserved };
 }
 

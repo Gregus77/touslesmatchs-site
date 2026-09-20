@@ -6,8 +6,24 @@ function score(value) {
   return pair.map(Number).join('-');
 }
 
+function firstHalfClosed(match) {
+  const statuses = [match?.status, match?.period, match?.status_short, match?.fixture?.status]
+    .map(s => String(s && typeof s === 'object' ? s.short || s.long || '' : s || '').trim().toUpperCase());
+  if (statuses.some(s => /^(HT|HALFTIME|HALF TIME|HALF_TIME|2H|SECOND HALF|FT|FINISHED|FULL TIME|FULL_TIME|AET|PEN|ET|BT|P)$/.test(s))) return true;
+  if (statuses.some(s => /^(1H|FIRST HALF|FIRST_HALF)$/.test(s))) return false;
+  const hit = String(match?.minute ?? '').match(/^(\d+)(?:\+(\d+))?(?:['′’])?$/);
+  return !!hit && Number(hit[1]) + Number(hit[2] || 0) > 45;
+}
+
 function publicState(match, state) {
   if (state.official === true) return state; // An issued prediction is immutable.
+  const snapshotMinute = Number(state.snapshot_minute);
+  // Display evidence of the old decision, never a new actionable prediction.
+  if (firstHalfClosed(match) && state.snapshot_minute != null && snapshotMinute >= 35 && (snapshotMinute <= 45 || state.first_half_verified === true)) {
+    return {...state, window_status: 'closed', analysis_state: 'archived',
+      recommendation_status: `Analyse conservée à ${snapshotMinute}′, score ${score(state.snapshot_score) || 'indisponible'} — aucun signal officiel`,
+      consensus_direction: null};
+  }
   const current = score({home: match.score_home, away: match.score_away});
   const previous = score(state.snapshot_score);
   const hasVotes = Number(state.vote_count || 0) > 0 || (state.votes || []).some(v => v.direction);
@@ -73,4 +89,4 @@ function statsKey(id, state) {
   return state ? `stats_${id}_${state.phase}_${state.minute}_${state.score}_${state.home}_${state.away}` : `stats_${id}`;
 }
 
-module.exports = {score, publicState, fixtureState, createCollector, statsKey};
+module.exports = {score, publicState, firstHalfClosed, fixtureState, createCollector, statsKey};

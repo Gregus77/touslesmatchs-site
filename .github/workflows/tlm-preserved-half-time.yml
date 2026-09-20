@@ -1,0 +1,71 @@
+name: TLM preserve first-half vote evidence
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-preserved-half-time.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -eu
+            cd /opt/touslesmatchs
+            umask 077
+            backup="/opt/backups/tlm-preserved-votes-$(date -u +%Y%m%dT%H%M%SZ)"
+            mkdir -p "$backup/original/scripts" "$backup/original/public" "$backup/stage/scripts" "$backup/stage/public" "$backup/desired/scripts"
+            files="scripts/api_server.js scripts/live_state_coherence.js scripts/official_signal_snapshots.js public/index.html public/app.html public/live-ia.html"
+            for f in $files; do cp -p "$f" "$backup/original/$f"; cp -p "$f" "$backup/stage/$f"; done
+            old_image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
+            git fetch origin codex/telegram-recap-premium-20260920
+            revision='${{ github.sha }}'
+            git show "$revision:scripts/live_state_coherence.js" > "$backup/desired/scripts/live_state_coherence.js"
+            git show "$revision:scripts/official_signal_snapshots.js" > "$backup/desired/scripts/official_signal_snapshots.js"
+            git show "$revision:scripts/patch_preserved_half_time.js" > "$backup/patch.js"
+            for test in test_preserved_half_time_votes.js test_live_state_coherence_20260919.js; do git show "$revision:scripts/$test" > "$backup/stage/scripts/$test"; done
+            node "$backup/patch.js" "$backup/stage" "$backup/desired"
+            node --check "$backup/stage/scripts/api_server.js"
+            docker run --rm -e NODE_PATH=/app/node_modules -v "$backup/stage:/work:ro" "$old_image" node /work/scripts/test_preserved_half_time_votes.js
+            node "$backup/stage/scripts/test_live_state_coherence_20260919.js"
+            rollback() {
+              for f in $files; do cp -p "$backup/original/$f" "$f"; done
+              docker tag "$old_image" touslesmatchs-api:latest
+              docker compose up -d --no-deps api >/dev/null 2>&1
+            }
+            trap rollback ERR
+            for f in $files; do cp -p "$backup/stage/$f" "$f"; done
+            docker compose build api > "$backup/build.log" 2>&1
+            docker compose up -d --no-deps api > "$backup/start.log" 2>&1
+            for attempt in 1 2 3 4 5 6; do
+              if curl -fsS http://127.0.0.1:3001/current-pick >/dev/null; then break; fi
+              test "$attempt" -lt 6
+              sleep 5
+            done
+            for pair in 'scripts/api_server.js /app/server.js' 'scripts/live_state_coherence.js /app/live_state_coherence.js' 'scripts/official_signal_snapshots.js /app/official_signal_snapshots.js'; do
+              set -- $pair
+              expected="$(sha256sum "$1" | cut -d ' ' -f1)"
+              actual="$(docker exec touslesmatchs-api sha256sum "$2" | cut -d ' ' -f1)"
+              test "$expected" = "$actual"
+            done
+            mkdir -p "$backup/served/public" "$backup/served/scripts"
+            cp scripts/api_server.js scripts/live_state_coherence.js scripts/official_signal_snapshots.js "$backup/served/scripts/"
+            cp "$backup/stage/scripts/test_preserved_half_time_votes.js" "$backup/served/scripts/"
+            for f in index app live-ia; do
+              curl -fsSL "https://www.touslesmatchs.com/$f.html?preservation-check=$(date +%s)" > "$backup/served/public/$f.html"
+              cmp -s "public/$f.html" "$backup/served/public/$f.html"
+            done
+            docker run --rm -e NODE_PATH=/app/node_modules -v "$backup/served:/work:ro" touslesmatchs-api:latest node /work/scripts/test_preserved_half_time_votes.js
+            curl -fsSL https://www.touslesmatchs.com/api/health >/dev/null
+            trap - ERR
+            echo PRESERVED_VOTES_DEPLOYED

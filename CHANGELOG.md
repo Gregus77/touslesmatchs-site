@@ -1,5 +1,16 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-20 — Conservation des votes de première mi-temps
+
+- Conserve les votes réels de 35–45 minutes après la mi-temps et les buts suivants,
+  avec leur minute et score d'origine, y compris sans signal officiel.
+- Retrouve les snapshots par rencontre lors du passage de minuit UTC.
+- Préserve aussi un snapshot au-delà de 45 minutes uniquement avec preuve de
+  première mi-temps enregistrée. Ne modifie pas encore la programmation des analyses.
+- Tests de la base en mémoire, des trois affichages, des droits Premium et du
+  correctif ciblé; sauvegarde et retour arrière prévus au déploiement.
+- Aucun résultat, vote antérieur, secret ou seuil de publication modifié.
+
 ## 2026-09-06 — Libellés publics alignés sur le quorum 3 IA sur 5
 
 - Remplace les anciens minimums 4/5 par le quorum réellement déployé de 3/5

@@ -859,7 +859,7 @@ function renderLiveOu25Details(m) {
   var verdict = state.official
     ? (state.locked ? "Signal officiel enregistré · détails réservés à Premium" : (state.statusText||"Signal officiel")+" · "+consensusDirection+" 2,5 · "+consensusCount+"/5 · confiance "+state.confidence+"/100 · "+(state.odd==null?"cote indisponible":"cote "+Number(state.odd).toFixed(2))+(state.outcome==='win'?" · gagné":state.outcome==='loss'?" · perdu":""))
     : state.voteCount
-      ? "Anciennes tendances — aucun signal officiel"
+      ? (state.statusText || "Anciennes tendances — aucun signal officiel")
       : "Aucun vote enregistré pour le moment";
   var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
   if (!reason && !state.voteCount) {
