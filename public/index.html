@@ -381,7 +381,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260907-integral6"></script>
+<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1723,21 +1723,23 @@ function tlmVoteSnapshotText(m){
 }
 function tlmVotesAreOld(m){
   var state=heroOu25(m),phase=TLMMatchLifecycle.phase(m),score=state.snapshotScore;
-  if(!state.voteCount||state.official)return false;
+  if(!state.voteCount)return false;
+  if(TLMMatchLifecycle.entryClosed(m))return true;
+  if(state.official)return false;
   var scoreChanged=score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away))
     && (Number(score.home)!==Number(liveHomeScore(m))||Number(score.away)!==Number(liveAwayScore(m)));
   return !!scoreChanged||phase==='closed'||phase==='finished'||phase==='unavailable';
 }
 function tlmVoteCirclesHtml(m){
   var state=heroOu25(m),old=tlmVotesAreOld(m);
-  return '<div class="tlm-row-votes'+(old?' stale':'')+'" aria-label="Votes IA">'+state.slots.map(function(slot,index){
+  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
     var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
     var mark=voted?(state.locked?'?':direction==='over'?'O':direction==='under'?'U':'?'):String(index+1);
     var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'');
     var failure=slot&&slot.reason||({unavailable:'fournisseur indisponible',empty:'réponse sans vote exploitable',parse_error:'réponse illisible',rejected_statistical:'vote écarté statistiquement'}[slot&&slot.status])||'vote en attente';
     var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote enregistré, direction réservée à Premium':direction==='over'?'Over':'Under'):failure);
     return '<span class="'+cls+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+mark+'</span>';
-  }).join('')+'</div>';
+  }).join('')+'</div></div>';
 }
 function renderAnalyzedList(rows){
   var grid=document.getElementById('live-rows');if(!grid)return;
@@ -1852,7 +1854,7 @@ function renderHeroLive(m){
   for(var i=0;i<voteEls.length;i++){
     var slot=voteState.slots[i]||{},voted=slot.status==='voted',dir=voteState.locked?null:slot.direction;
     voteEls[i].classList.toggle('on',voted);
-    voteEls[i].classList.toggle('old',voted&&!voteState.official);
+    voteEls[i].classList.toggle('old',voted&&(!voteState.official||TLMMatchLifecycle.entryClosed(m)));
     voteEls[i].classList.toggle('over',voted&&dir==='over');voteEls[i].classList.toggle('under',voted&&dir==='under');
     var mark=voteEls[i].querySelector('i');
     if(mark)mark.textContent=voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);
@@ -1861,6 +1863,11 @@ function renderHeroLive(m){
     voteEls[i].title=detail;voteEls[i].setAttribute('aria-label',detail);
   }
   setHeroText('hero-vote-snapshot',tlmVoteSnapshotText(m));
+  if(TLMMatchLifecycle.entryClosed(m)){
+    setHeroText('hero-ai-title','Analyse historique — entrée fermée');
+    setHeroText('hero-consensus-label','ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL');
+    var closedLabel=document.getElementById('hero-consensus-label');if(closedLabel){closedLabel.classList.remove('consensus-valid');closedLabel.classList.add('consensus-insufficient');}
+  }
   var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/Math.max(1,(tlmSignalWindowEnd||45)-15)*100)):12;progress.style.width=pct+'%';}
 }
 function renderHeroWatchlist(p){

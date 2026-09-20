@@ -1,5 +1,18 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-20 — Entrée fermée, historique conservé
+
+- Accueil, application et Live IA : avertissement explicite après mi-temps,
+  y compris les signaux officiels. Votes conservés mais grisés, sans consensus vert.
+- Avertissement visible avant ouverture des détails ; retire la nouvelle analyse
+  après clôture. Un état périmé ou inconnu ne rouvre jamais l'entrée.
+- Aucun vote, résultat ni perte modifié. La première mi-temps confirmée au-delà
+  de 45 minutes reste éligible ; les protections Premium restent en place.
+- Tests ciblés d'affichage, archives, fenêtre, session, cohérence, syntaxe et patch
+  idempotent réussis. Relecture indépendante et cas périmé reproduit puis corrigé.
+- Déploiement frontend uniquement, sauvegarde et restauration en cas d'échec ;
+  comparaison des quatre fichiers réellement servis. Pas de redémarrage API.
+
 ## 2026-09-20 — Fenêtre 35 minutes à la fin réelle de première mi-temps
 
 - Aligne les portes d'analyse et de diffusion sur 35 minutes. Après 45 minutes,

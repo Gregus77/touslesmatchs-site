@@ -1,0 +1,52 @@
+name: TLM archived signal entry closure
+on:
+  push:
+    branches: [codex/telegram-recap-premium-20260920]
+    paths: [.github/workflows/tlm-closed-signal-display.yml]
+permissions:
+  contents: read
+concurrency:
+  group: tlm-production-deploy
+  cancel-in-progress: false
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            bash -se <<'DEPLOY'
+            set -euo pipefail
+            cd /opt/touslesmatchs
+            umask 077
+            backup="/opt/backups/tlm-entry-closed-$(date -u +%Y%m%dT%H%M%SZ)"
+            for dir in original stage desired baseline served; do mkdir -p "$backup/$dir/scripts" "$backup/$dir/public/js"; done
+            files="public/js/match-lifecycle.js public/index.html public/app.html public/live-ia.html"
+            for f in $files; do cp -p "$f" "$backup/original/$f"; cp -p "$f" "$backup/stage/$f"; done
+            for f in api_server.js live_state_coherence.js official_signal_snapshots.js; do cp -p "scripts/$f" "$backup/stage/scripts/"; done
+            image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
+            git fetch origin codex/telegram-recap-premium-20260920
+            revision='${{ github.sha }}'
+            for f in $files; do git show "$revision:$f" > "$backup/desired/$f"; git show "eb5a5dc:$f" > "$backup/baseline/$f"; done
+            git show "$revision:scripts/patch_closed_signal_display.js" > "$backup/patch.js"
+            for t in test_closed_signal_display.js test_preserved_half_time_votes.js; do git show "$revision:scripts/$t" > "$backup/stage/scripts/$t"; done
+            node "$backup/patch.js" "$backup/stage" "$backup/desired" "$backup/baseline"
+            for t in test_closed_signal_display.js test_preserved_half_time_votes.js; do
+              docker run --rm -e NODE_PATH=/app/node_modules -v "$backup/stage:/work:ro" "$image" node "/work/scripts/$t"
+            done
+            rollback() { for f in $files; do cp -p "$backup/original/$f" "$f"; done; }
+            trap rollback ERR
+            for f in $files; do cp -p "$backup/stage/$f" "$f"; done
+            for f in $files; do
+              url="https://www.touslesmatchs.com/${f#public/}"
+              curl -fsSL "$url?verify=${revision}" > "$backup/served/$f"
+              cmp "$backup/stage/$f" "$backup/served/$f"
+            done
+            trap - ERR
+            printf 'DEPLOYED_ENTRY_CLOSED_BACKUP=%s\n' "$backup"
+            DEPLOY

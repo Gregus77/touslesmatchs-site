@@ -335,6 +335,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </style>
   <link rel="stylesheet" href="/css/global-header.css?v=20260915-account-v1">
   <script src="/js/global-header.js?v=20260915-account-v1" defer></script>
+<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -893,6 +894,7 @@ function liveOu25State(m) {
 
 function renderLiveOu25Details(m) {
   var state = liveOu25State(m);
+  var entryClosed=TLMMatchLifecycle.entryClosed(m);
   var consensusDirection = state.official&&!state.locked?(state.consensusDirection === 'over' ? "Over" : state.consensusDirection === 'under' ? "Under" : "") : "";
   var consensusCount = state.consensusCount;
   var verdict = state.official
@@ -913,10 +915,10 @@ function renderLiveOu25Details(m) {
     var shortLabel = voted ? (state.locked ? "?" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : String(i + 1);
     var choice = voted ? (state.locked ? "Vote masqué" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : "En attente";
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
-    return '<div class="mc-vote-seat ' + dir + (state.official?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + choice + confidence + '</small></div>';
+    return '<div class="mc-vote-seat ' + dir + (state.official&&!entryClosed?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + choice + confidence + '</small></div>';
   }).join("");
-  var consensusClass = state.official || consensusCount >= 4 ? ' consensus-valid' : state.voteCount ? ' consensus-insufficient' : '';
-  return '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Conseil IA · Over/Under 2,5</span><span class="mc-vote-count">' + state.voteCount + '/5</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + consensusClass + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
+  var consensusClass = entryClosed?'':state.official || consensusCount >= 4 ? ' consensus-valid' : state.voteCount ? ' consensus-insufficient' : '';
+  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>'+(entryClosed?'Analyse historique':'Conseil IA')+' · Over/Under 2,5</span><span class="mc-vote-count">' + state.voteCount + '/5</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + consensusClass + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }
 
 // ── Render ──
@@ -1053,8 +1055,8 @@ function renderMatches() {
     // du fondateur le 01/08/2026, ça montre que le site suit le match).
     // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
     if (isLive && !isDone && !m.pinnedSignal) {
-      if (m.analysable === false) {
-        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(m.analysis_exclusion_reason || m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
+      if (m.analysable === false || TLMMatchLifecycle.entryClosed(m)) {
+        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(TLMMatchLifecycle.entryClosed(m)?"Entrée fermée — analyse conservée pour le bilan, aucune nouvelle entrée.":m.analysis_exclusion_reason || m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
       } else {
         var cached = analysisCache[matchId];
         html += '<div class="mc-cta">';
