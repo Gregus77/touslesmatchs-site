@@ -29,6 +29,8 @@ jobs:
             for dir in original stage desired baseline served; do mkdir -p "$backup/$dir/scripts" "$backup/$dir/public/js"; done
             files="scripts/api_server.js scripts/live_state_coherence.js scripts/official_signal_snapshots.js scripts/first_half_delivery.js public/js/match-lifecycle.js public/index.html public/live-ia.html"
             for f in $files; do cp -p "$f" "$backup/original/$f"; cp -p "$f" "$backup/stage/$f"; done
+            # Read-only dependency of the archive regression test, not deployed.
+            cp -p public/app.html "$backup/stage/public/app.html"
             old_image="$(docker inspect -f '{{.Image}}' touslesmatchs-api)"
             image_ref="$(docker inspect -f '{{.Config.Image}}' touslesmatchs-api)"
             docker compose config --images | grep -Fx "$image_ref" >/dev/null
