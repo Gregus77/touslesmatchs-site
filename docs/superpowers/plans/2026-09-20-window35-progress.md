@@ -19,4 +19,8 @@ even before collection. This preserves compatibility with normalized providers.
 Ruling: existing official legacy snapshots remain displayable under their old
 rule; never rewrite historical records to pretend they met the new35 threshold.
 No confidence/odds/league change, no secret change, no payment/email activation.
-Deployment and actual newly delivered client message: pending verification.
+First deployment run35481350692 stopped BEFORE replacing any production file:
+homepage has newer decisionText verdict absent from checkout. Public source
+inspected; patch now changes four exact window literals only, preserving verdict.
+Variant regression reproduced RED then tested GREEN. Next rollout pending.
+Actual newly delivered client message: still pending natural signal evidence.

@@ -6,6 +6,17 @@ function patch(root,desired,baseline){
  for(const file of files){
   const read=dir=>fs.readFileSync(path.join(dir,file),'utf8').replace(/\r\n/g,'\n');
   const old=read(baseline),next=read(desired);let live=read(root);
+  if(file==='public/index.html'){
+   // The served homepage has a newer decisionText verdict. Preserve it; only
+   // change these independently inspected window literals, never its verdict.
+   for(const [a,b] of [
+    ['Aucun match dans la fenêtre 15–45 min','Aucun match entre la 35e minute et la fin de première mi-temps'],
+    ["var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));","var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed';"],
+    ["var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);","var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<35);"],
+    ['À partir de la 15e minute','À partir de la 35e minute']
+   ]){if(live.includes(b)&&!live.includes(a))continue;assert.equal(live.split(a).length,2,'Ambiguous homepage window literal');live=live.replace(a,b);}
+   staged.push([path.join(root,file),live]);continue;
+  }
   if(old===next){continue;}
   let diff;
   try{diff=cp.execFileSync('git',['diff','--no-index','--no-ext-diff','--unified=3',path.join(baseline,file),path.join(desired,file)],{encoding:'utf8'});}

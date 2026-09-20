@@ -1,4 +1,5 @@
 name: TLM signal window 35 to verified half-time
+# Deployment revision 2: preserve inspected production decisionText variant.
 on:
   push:
     branches: [codex/telegram-recap-premium-20260920]
