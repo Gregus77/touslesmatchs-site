@@ -28,7 +28,7 @@ for(const name of ['tlmVoteCirclesHtml','appMiniVotes','renderLiveOu25Details'])
 const detail=context.renderLiveOu25Details(match);
 assert(detail.indexOf('ENTRÉE FERMÉE')<detail.indexOf('<details'),'Warning is visible with details collapsed');
 assert.doesNotMatch(detail,/consensus-valid/,'Closed entry must not flash green');
-function element(){const classes=new Set();return {textContent:'',style:{},classList:{toggle(k,on){on?classes.add(k):classes.delete(k);},add(k){classes.add(k);},remove(...ks){ks.forEach(k=>classes.delete(k));},contains:k=>classes.has(k)},setAttribute(){},removeAttribute(){}};}
+function element(){const classes=new Set();return {textContent:'',style:{},dataset:{},classList:{toggle(k,on){on?classes.add(k):classes.delete(k);},add(k){classes.add(k);},remove(...ks){ks.forEach(k=>classes.delete(k));},contains:k=>classes.has(k)},setAttribute(){},removeAttribute(){}};}
 const nodes={},dots=Array.from({length:5},element);
 Object.assign(context,{$:id=>nodes[id]||(nodes[id]=element()),appCountry:()=>'',appFlagUrl:()=>'',appHomeLogo:()=>'',appAwayLogo:()=>'',appLogo:()=>{},appHomeScore:m=>m.score_home,appAwayScore:m=>m.score_away});
 context.document.querySelectorAll=()=>dots;

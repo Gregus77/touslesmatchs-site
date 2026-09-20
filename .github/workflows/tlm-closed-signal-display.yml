@@ -1,4 +1,5 @@
 name: TLM archived signal entry closure
+# Revision 2 preserves production provider captions and delivery-proof verdicts.
 on:
   push:
     branches: [codex/telegram-recap-premium-20260920]
