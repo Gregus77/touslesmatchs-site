@@ -1,5 +1,15 @@
 # CHANGELOG — TousLesMatchs
 
+## 2026-09-20 — Pass Premium : raccordement préparé, ventes non activées
+
+- Ajoute un adaptateur Stripe signé, paiement ponctuel et relecture serveur,
+  avec tests de paiement différé, falsification, rejeu, remboursement et expiration.
+- Prépare la projection des droits dans les seuls comptes gérés par le pass ;
+  préserve les anciens abonnés et administrateurs. Aucun compte réel modifié.
+- Les rappels FR/RU restent isolés, sans envoi. Aucun secret changé ni paiement réel.
+- Pas de déploiement ou d'ouverture des ventes : intégration complète et tests
+  Stripe en environnement de test restent nécessaires. Tagalog privé uniquement.
+
 ## 2026-09-20 — Entrée fermée, historique conservé
 
 - Accueil, application et Live IA : avertissement explicite après mi-temps,

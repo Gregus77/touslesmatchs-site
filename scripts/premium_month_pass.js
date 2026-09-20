@@ -24,9 +24,9 @@ function addCalendarMonth(value) {
 function verifyPurchase(session, price, config) {
   const items = session?.line_items;
   if (!config || typeof config.livemode !== 'boolean' || !config.priceId || !config.productId
-    || !price || price.id !== config.priceId || price.active !== true || price.type !== 'one_time'
+    || !price || price.id !== config.priceId || (price.active !== true && config.allowArchived !== true) || price.type !== 'one_time'
     || price.recurring != null || price.currency !== 'eur' || price.unit_amount !== 1490
-    || price.livemode !== config.livemode || price.product?.id !== config.productId || price.product.active !== true
+    || price.livemode !== config.livemode || price.product?.id !== config.productId || (price.product.active !== true && config.allowArchived !== true)
     || session?.mode !== 'payment' || session.status !== 'complete' || session.payment_status !== 'paid'
     || session.livemode !== config.livemode || session.amount_total !== 1490 || session.currency !== 'eur'
     || session.metadata?.tlm_offer !== OFFER || !/^cs_/.test(session.id || '')
