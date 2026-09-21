@@ -77,3 +77,31 @@
   window.tlmMountGlobalHeader=mount;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();
 })();
+
+/* TLM commercial-plan compatibility:
+   Standard / Elite / VIP historiques = Premium côté client. */
+(function(){
+  function commercialPlan(p){
+    p=String(p||'free').toLowerCase();
+    return /^(standard|premium|elite|vip)$/.test(p) ? 'premium' : p;
+  }
+
+  window.tlmCommercialPlan=commercialPlan;
+
+  function normalizeVisiblePlan(){
+    document.querySelectorAll('.plan-badge,.dash-plan,[data-plan-badge]').forEach(function(el){
+      var t=(el.textContent||'').trim().toLowerCase();
+      if(t==='elite'||t==='vip'||t==='standard'){
+        el.textContent='PREMIUM';
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded',normalizeVisiblePlan);
+
+  new MutationObserver(normalizeVisiblePlan).observe(document.documentElement,{
+    childList:true,
+    subtree:true,
+    characterData:true
+  });
+})();

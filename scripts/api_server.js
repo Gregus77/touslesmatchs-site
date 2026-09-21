@@ -12593,6 +12593,13 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
 });
 
 // ── Auth: profil utilisateur ──────────────────────────────────────────────────
+
+function publicCommercialPlan(plan) {
+  const p = String(plan || "free").toLowerCase();
+  if (["standard","premium","elite","vip"].includes(p)) return "premium";
+  return p;
+}
+
 app.get("/auth/me", authMiddleware, (req, res) => {
   const user = db.prepare("SELECT id, email, status, preferred_language, created_at FROM users WHERE id = ?").get(req.user.id);
   if (!user) return res.json({ ok: false, error: "Utilisateur introuvable" });

@@ -2686,5 +2686,85 @@ function refresh(){paint(document.getElementById('hero-consensus-label'),documen
 if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
 new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
 })();</script>
+
+<!-- TLM PREMIUM ACCOUNT STATE -->
+<script>
+(function(){
+  function token(){
+    return localStorage.getItem('tlm_token')
+      || localStorage.getItem('token')
+      || sessionStorage.getItem('tlm_token')
+      || '';
+  }
+
+  function commercialPlan(p){
+    p=String(p||'free').toLowerCase();
+    return /^(standard|premium|elite|vip)$/.test(p) ? 'premium' : p;
+  }
+
+  function formatDate(v){
+    if(!v) return '';
+    var d=new Date(v);
+    if(isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('fr-FR',{
+      day:'2-digit',
+      month:'2-digit',
+      year:'numeric'
+    });
+  }
+
+  async function refreshPremiumState(){
+    var cta=document.getElementById('premium-main-cta');
+    if(!cta) return;
+
+    var tk=token();
+
+    if(!tk){
+      cta.textContent='Passer Premium — 14,90 €/mois';
+      cta.href='/premium-checkout?lang=fr';
+      return;
+    }
+
+    try{
+      var r=await fetch('/api/auth/me',{
+        headers:{Authorization:'Bearer '+tk},
+        credentials:'same-origin'
+      });
+
+      if(!r.ok) return;
+
+      var data=await r.json();
+      var plan=commercialPlan(data.plan);
+      var expiry=data.expires_at || null;
+
+      if(plan==='premium'){
+        var date=formatDate(expiry);
+
+        cta.textContent=date
+          ? '✓ Vous êtes Premium — actif jusqu’au '+date
+          : '✓ Vous êtes Premium';
+
+        cta.href='/dashboard';
+
+        cta.style.background='linear-gradient(135deg,#16a34a,#059669)';
+        cta.title='Votre abonnement Premium est actif';
+
+        document.querySelectorAll('.plan-badge,[data-plan-badge]').forEach(function(el){
+          el.textContent='PREMIUM';
+        });
+      } else {
+        cta.textContent='Passer Premium — 14,90 €/mois';
+        cta.href='/premium-checkout?lang=fr';
+      }
+
+    }catch(e){
+      console.warn('[premium-state]',e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded',refreshPremiumState);
+})();
+</script>
+
 </body>
 </html>
