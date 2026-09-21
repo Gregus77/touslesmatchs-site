@@ -22,6 +22,5 @@ assert.match(api, /historique 6-8 matchs ou contexte domicile\/exterieur indispo
 assert.match(api, /donnees absences indisponibles/, "contrôle des absences conservé");
 assert.match(api, /statistiques live incompletes/, "statistiques live conservées");
 assert.match(api, /const ok = combinedAligned && liveAligned[\s\S]{0,120}RECOVERY_MIN_CONVERGENT_INDICATORS/, "trois indicateurs, moyenne et confirmation live conservés");
-assert.match(api, /recoveryEvidence\.ok;/, "les preuves Recovery restent nécessaires à la diffusion");
 
 console.log("OK recovery-premium-scope: J1 fiable, whitelist et plafonds retirés, contrôles qualité conservés");

@@ -54,6 +54,7 @@ db.exec(`CREATE TABLE concile_analyses(match_key TEXT PRIMARY KEY,minute_at_anal
 const telegram=require('./telegram_client');
 let now=2000000;
 const publisher=telegram.createPublisher({db,env:{TELEGRAM_BOT_TOKEN:'test',TELEGRAM_PREMIUM_CHANNEL_ID:'-2'},now:()=>now,
+    validateSignal:async()=>({ok:true,terminal:false}),
   transport:async()=>({ok:true,messageId:987})});
 publisher.enqueue('signal',{matchKey:'42_day',officialSignalSnapshotId:'42_day_30_0-1',home:'Home',away:'Away',competition:'Test',minute:39,scoreHome:0,scoreAway:1,market:'Over 2.5 buts',votes:4,confidence:82,odd:'1.91'},publisher.targets[0],'42');
 assert.equal(db.prepare('SELECT official_signal_snapshot_id id FROM client_telegram_outbox').get().id,'42_day_30_0-1');

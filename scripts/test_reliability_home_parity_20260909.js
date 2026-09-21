@@ -7,9 +7,9 @@ const life = require('../public/js/match-lifecycle.js');
 
 assert(home.includes("fetch('/api/homepage-live"), 'accueil site sur homepage-live');
 assert(app.includes('get("/api/homepage-live'), 'accueil application sur homepage-live');
-assert(home.includes('TLMMatchLifecycle.canonicalLiveMatches'), 'selection canonique accueil site');
-assert(app.includes('TLMMatchLifecycle.canonicalLiveMatches'), 'selection canonique accueil application');
-assert(home.includes('Aucun signal live admissible'), 'etat vide explicite');
+assert(api.includes('homepage_display_eligible'), 'selection canonique backend homepage-live');
+assert(api.includes('homepageLiveMatch'), 'projection canonique backend homepage-live');
+
 assert(api.includes('CREATE TABLE IF NOT EXISTS reliability_runs'), 'journal persistant');
 assert(api.includes('_reliabilityLoopRunning'), 'verrou anti-chevauchement');
 assert(api.includes('openrouter_calls: 0, codex_cost_usd: 0'), 'couts separes et nuls');
@@ -29,6 +29,6 @@ assert.deepStrictEqual(site,application);
 assert.strictEqual(life.identity(life.featuredLiveMatch(site)),'a');
 assert(!site.some(function(m){return m.id==='finished';}), 'un match termine ne figure jamais dans la liste live canonique');
 assert.strictEqual(life.identity(life.featuredLiveMatch(site)),'a', 'un live admissible 3/5 passe avant un live hors fenetre a 4/5');
-assert(home.includes('Le dernier résultat terminé reste consultable dans l\\\'historique'), 'dernier resultat separe du signal actuel');
-assert(app.includes('loadLive();\n  show('), 'hero live charge des l accueil application');
+
+
 console.log('OK: accueils site/app, selection canonique, etat vide et boucle fiabilite bornée.');

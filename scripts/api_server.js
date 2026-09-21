@@ -11289,7 +11289,13 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     const officialMarket = official?.consensus === 'over' ? 'Over 2.5 buts' : official?.consensus === 'under' ? 'Under 2.5 buts' : null;
     const data={matchKey:analysis.match_key,officialSignalSnapshotId:official?.id || null,home:analysis.home,away:analysis.away,
       market:officialDelivery?.market || officialMarket || db.prepare("SELECT market FROM telegram_signal_deliveries WHERE match_key=? AND channel=? AND ok=1 AND typeof(telegram_message_id)='integer' AND telegram_message_id>0 ORDER BY id LIMIT 1").get(analysis.match_key,dest.channel)?.market || analysis.best_bet,
-      outcome,scoreHome:scoreH,scoreAway:scoreA};
+      outcome,scoreHome:scoreH,scoreAway:scoreA,
+      signalMinute:official?.minute ?? analysis.minute_at_analysis ?? null,
+      signalScoreHome:official?.score_home ?? analysis.score_home_at_analysis ?? null,
+      signalScoreAway:official?.score_away ?? analysis.score_away_at_analysis ?? null,
+      votes:official?.consensus_votes ?? analysis.consensus_votes ?? null,
+      confidence:official?.confidence ?? analysis.confidence ?? null,
+      odd:official?.real_odd ?? analysis.real_odd ?? null};
     data.outcome=getBetOutcomeForScore(data.market,scoreH,scoreA);
     if(!['win','loss'].includes(data.outcome))continue;
     clientTelegramPublisher.enqueue('result',data,dest,analysis.match_key);
@@ -14952,7 +14958,6 @@ app.post('/internal/client-telegram-publication', (req,res) => {
 
 // Legacy create-checkout accessible via /create-checkout et /api/create-checkout
 app.post("/create-checkout", handleCreateCheckout);
-app.post("/create-checkout", handleCreateCheckout);
 
 // ── Community stats (Telegram member count) ───────────────────────────────────
 let tgMemberCache = { count: null, ts: 0 };
@@ -15720,7 +15725,7 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
   res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
 });
 
-// Client recap: one durable queue transaction at 23:45 Europe/Paris.
+// Client recap: tentative à partir de 23:00 Europe/Paris ; report automatique si un signal reste en attente.
 function tlmParisParts() { return telegramClient.parisParts(); }
 
 function tlmFlag(v) {
@@ -15746,20 +15751,20 @@ function winsSafe(rows) {
 }
 
 // Vérification chaque minute.
-// Exécution UNE seule fois par journée à partir de 23h45 heure de Paris.
+// Exécution UNE seule fois par journée à partir de 23h00 heure de Paris, après résolution des signaux du jour.
 setInterval(()=>{
   try {
     const p=tlmParisParts();
 
     if(
       p.hour===23 &&
-      p.minute>=45
+      p.minute>=0
     ){
       // SQLite claims the civil day atomically across processes and restarts.
 
       sendTransparentDailyRecap()
         .then(ok=>console.log(
-          `[transparent-recap] 23h45 Paris: ${ok ? "OK" : "SKIP"}`
+          `[transparent-recap] 23h00+ Paris: ${ok ? "OK" : "SKIP"}`
         ))
         .catch(e=>console.error("[transparent-recap]",e.message));
     }
