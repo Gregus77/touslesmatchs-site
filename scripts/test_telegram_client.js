@@ -72,6 +72,10 @@ async function main(){
   // Eleven distinct admissible signals all pass (no inherited commercial cap).
   for(let i=0;i<11;i++) pub.enqueue('signal',data,targets[1],'unlimited-'+i,now+120000);
   const unlimitedBefore=calls.length;await pub.flush();assert.equal(calls.length-unlimitedBefore,11);
+  // Each official identity also produces its own FR and RU free teaser.
+  for(let i=0;i<11;i++) for(const freeDest of [targets[0],targets[2]])
+    pub.enqueue('signal',data,freeDest,'daily-free-'+i,now+120000);
+  const freeBefore=calls.length;await pub.flush();assert.equal(calls.length-freeBefore,22);
   db.close();
  }
  console.log('PASS Telegram FR/RU, teaser, destinations, monthly checkout, '+(process.env.TEST_SQLITE_MODULE?'SQLite retries/restart/dedup/proofs/expiry':'templates (SQLite suite requires TEST_SQLITE_MODULE)'));
@@ -81,6 +85,8 @@ main().catch(e=>{console.error(e);process.exitCode=1;});
 // Exercise the actual API result router: FR proof must not authorize a RU result.
 const vm=require('vm');
 const api=fs.readFileSync(path.join(__dirname,'api_server.js'),'utf8');
+assert(!api.includes("dest.tier === 'free' && signalsSentToday('sig_sent_free') >= 1"));
+assert(api.includes("clientTelegramPublisher.enqueue('signal',data,dest,identity,expiresAt)"));
 const resultFunction=api.match(/async function notifySignalFortResult\([^]*?\n\}/)[0];
 const queued=[],resultPayloads=[];
 const proof={channels:new Set(['premium']),market:'Under 2.5 buts'};

@@ -16,6 +16,7 @@ async function page(file, session, plan) {
   if (session) window.localStorage.setItem('tlm_session_token', 'test-session');
   window.fetch = async url => {
     if (url.startsWith('/api/auth/session')) return session ? response({ok:true,plan}) : response({ok:false},401);
+    if (url.startsWith('/api/auth/passkey/status')) return response({ok:true,enabled:false});
     if (url.startsWith('/api/auth/access')) return response({ok:true,locked:true,plan:'free'});
     if (url.startsWith('/api/auth/dashboard-data')) return session ? response({ok:true,email:'test@example.invalid',plan,status:plan==='free'?'free':'active',recent:[]}) : response({ok:false},401);
     if (url.startsWith('/api/auth/referral-link')) return response({ok:false});
@@ -62,12 +63,12 @@ async function page(file, session, plan) {
   assert.strictEqual(free.window.document.getElementById('dash-section').style.display, 'block');
   assert.strictEqual(free.window.document.getElementById('dash-plan').textContent, 'Gratuit');
   assert.strictEqual(free.window.document.querySelector('.tlm-gh-account').textContent, 'Mon compte');
-  assert.strictEqual(free.window.document.querySelector('.auth-title').textContent, '');
+  assert.strictEqual(free.window.document.querySelector('#auth-section .auth-title').textContent, '');
   assert(free.window.document.title.startsWith('Mon compte'));
   assert(free.window.document.getElementById('nav-logout'));
   free.window.logout();
   await tick();
-  assert.strictEqual(free.window.document.querySelector('.auth-title').textContent, 'Connexion');
+  assert.strictEqual(free.window.document.querySelector('#auth-section .auth-title').textContent, 'Connexion');
   assert.strictEqual(free.window.document.querySelector('.tlm-gh-account').textContent, 'Se connecter');
   assert(free.window.document.getElementById('tlm-global-status').hidden);
   free.window.close();

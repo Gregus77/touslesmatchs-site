@@ -1,9 +1,10 @@
 'use strict';
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 
-const source = fs.readFileSync('scripts/api_server.js', 'utf8');
+const source = fs.readFileSync(path.join(__dirname,'api_server.js'), 'utf8');
 const tracerStart = source.indexOf('const tracerAppel =');
 const tracerEnd = source.indexOf('const tracerVote =', tracerStart);
 const tracer = source.slice(tracerStart, tracerEnd);
@@ -12,7 +13,7 @@ assert.match(tracer, /getPredictionSnapshotKey\(match\)/,
 assert.doesNotMatch(tracer, /_fallbackMatchKey, agCfg\.name/,
   'budget key must not leak into vote-attempt tracking');
 
-const liveStart = source.indexOf('function getLiveOu25VoteState');
+const liveStart = source.indexOf('function ou25TerminalReason');
 const liveEnd = source.indexOf('function clientOu25VisibilityEligibility', liveStart);
 const live = source.slice(liveStart, liveEnd);
 assert.match(live, /immutableState\.kind === 'official' \|\| snapshot\.id === currentSnapshotKey/,
@@ -30,14 +31,15 @@ assert.doesNotMatch(source, /!providers\.length && OPENROUTER_API_KEY[\s\S]{0,40
 assert.doesNotMatch(source, /!providers\.length && OPENROUTER_API_KEY[\s\S]{0,400}modelKey: "kimi"/,
   'a different seat must never fall back to the Kimi model');
 
-const currentKey = '42_2026-09-15_30_0-0';
+const currentKey = '42_2026-09-15_35_0-0';
 const context = {
+  liveStateCoherence: require('./live_state_coherence'),
   CLIENT_OU25_CLIENT_MAX_MINUTE: 45,
   CLIENT_OU25_MIN_VOTES: 4,
   CONCILE_AGENT_NAMES: ['Perplexity-Web','DeepSeek-V3','Mistral-Large','OpenRouter-Luna','OpenRouter-Qwen'],
   parseLiveMinuteValue: value => Number(value),
   getPredictionSnapshotKey: () => currentKey,
-  officialSnapshots: { stateForMatch: () => ({ kind: 'trend', snapshot: {
+  officialSnapshots: { archivedStateForMatch: () => context.officialSnapshots.stateForMatch(), stateForMatch: () => ({ kind: 'trend', snapshot: {
     id: '42_2026-09-15_15_0-0', votes: [], seat_statuses: [], directions: [],
   } }) },
   db: { prepare(sql) { return { all() {
@@ -54,11 +56,23 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(live, context);
-const progress = context.getLiveOu25VoteState({fixtureId:42,home:'Alpha',away:'Beta',minute:30});
+const progress = context.getLiveOu25VoteState({fixtureId:42,home:'Alpha',away:'Beta',minute:35,status:'1H',score_home:0,score_away:0});
 assert.equal(progress.vote_count, 1, 'a real first vote must be visible before quorum');
 assert.equal(progress.votes[0].status, 'voted');
 assert.equal(progress.votes[1].status, 'unavailable');
-assert.equal(progress.votes[1].reason, 'Fournisseur temporairement limité.');
+assert.equal(progress.votes[1].reason, 'Fournisseur temporairement limité (HTTP 429).');
 assert.equal(progress.analysis_state, 'running');
 
-console.log('PASS partial votes: shared snapshot key, immediate progress, explicit failures, model-scoped 429 and Qwen bounded output');
+context.officialSnapshots.stateForMatch = () => ({ kind:'trend', snapshot:{
+  id:'42_2026-09-15_45_1-0', minute:45, score_home:1, score_away:0,
+  created_at:'2026-09-15T00:45:00.000Z', consensus_votes:4,
+  seat_statuses:['voted','unavailable','voted','voted','voted'],
+  votes:context.CONCILE_AGENT_NAMES.map((agent,index)=>({agent,direction:index===1?null:'under',status:index===1?'unavailable':'voted'})),
+} });
+const afterWindow=context.getLiveOu25VoteState({fixtureId:42,home:'Alpha',away:'Beta',minute:70});
+assert.equal(afterWindow.snapshot_minute,45,'closed match must retain its latest immutable trend');
+assert.equal(afterWindow.vote_count,4);
+assert.equal(afterWindow.votes[1].status,'unavailable','a terminal fifth seat must not revert to pending after 45 minutes');
+assert.equal(afterWindow.votes[1].reason,'Fournisseur temporairement limité (HTTP 429).');
+
+console.log('PASS partial votes: immediate progress, terminal states retained after window, model-scoped 429 and Qwen bounded output');

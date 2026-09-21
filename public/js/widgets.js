@@ -144,7 +144,13 @@
     // (le jeton n'existait pas encore) -- on interroge quand meme : le
     // serveur sait dire si c'est perime ou s'il n'y a simplement rien a
     // comparer pour l'instant (voir /session-check).
-    fetch("/api/session-check?email=" + encodeURIComponent(email) + "&code=" + encodeURIComponent(code) + "&session=" + encodeURIComponent(session))
+    // Le code d'accès et le jeton ne doivent jamais figurer dans l'URL.
+    fetch("/api/session-check", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({email:email,code:code,session:session}),
+      cache: "no-store"
+    })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d && d.active === false) {

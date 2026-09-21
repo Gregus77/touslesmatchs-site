@@ -1,6 +1,6 @@
 'use strict';
 
-const OFFICIAL_FROM_MINUTE = 30;
+const OFFICIAL_FROM_MINUTE = 35;
 const OFFICIAL_TO_MINUTE = 45;
 const MIN_CONSENSUS_VOTES = 4;
 const REANALYSIS_DELAY_MS = 150000;
@@ -100,7 +100,7 @@ function capture(db, input) {
   const scope = input.fixtureScope || fixtureScope(input.match, createdAt.slice(0, 10));
   const id = String(input.id || '').trim();
   if (!id) throw new Error('snapshot id missing');
-  db.prepare(`INSERT OR IGNORE INTO official_vote_snapshots
+  const inserted = db.prepare(`INSERT OR IGNORE INTO official_vote_snapshots
     (id,fixture_scope,fixture_id,analysis_match_key,minute,score_home,score_away,
      red_cards_home,red_cards_away,seat_statuses_json,directions_json,votes_json,
      consensus,consensus_votes,confidence,real_odd,real_odd_source,rule_version,created_at)
@@ -112,6 +112,13 @@ function capture(db, input) {
       input.consensus || null, Number(input.consensusVotes || 0), input.confidence ?? null,
       input.realOdd ?? null, input.realOddSource || null, input.ruleVersion, createdAt
     );
+  if (inserted.changes && input.observation?.phase === '1H'
+      && input.observation.score === `${input.scoreHome}-${input.scoreAway}`) {
+    db.prepare(`INSERT OR IGNORE INTO vote_snapshot_events
+      (fixture_scope,snapshot_id,event_type,state_key,details_json,created_at)
+      VALUES (?,?,'first_half_verified',?,?,?)`).run(scope,id,id,
+        JSON.stringify({phase:'1H',minute:input.observation.minute,verified_at:input.observation.verified_at}),createdAt);
+  }
   return db.prepare('SELECT * FROM official_vote_snapshots WHERE id=?').get(id);
 }
 
@@ -119,7 +126,8 @@ function registerOfficial(db, snapshotId, options = {}) {
   const row = db.prepare('SELECT * FROM official_vote_snapshots WHERE id=?').get(snapshotId);
   if (!row) throw new Error('official snapshot missing');
   const minute = Number(row.minute);
-  if (!options.legacyProof && (!Number.isFinite(minute) || minute < OFFICIAL_FROM_MINUTE || minute > OFFICIAL_TO_MINUTE)) {
+  const stoppageVerified = minute > OFFICIAL_TO_MINUTE && !!db.prepare("SELECT 1 FROM vote_snapshot_events WHERE snapshot_id=? AND event_type='first_half_verified'").get(snapshotId);
+  if (!options.legacyProof && (!Number.isFinite(minute) || minute < OFFICIAL_FROM_MINUTE || (minute > OFFICIAL_TO_MINUTE && !stoppageVerified))) {
     throw new Error(`official signal outside ${OFFICIAL_FROM_MINUTE}-${OFFICIAL_TO_MINUTE}`);
   }
   if (!options.legacyProof) {
@@ -153,6 +161,7 @@ function parseRow(row) {
     fixture_id: row.fixture_id,
     analysis_match_key: row.analysis_match_key,
     minute: row.minute,
+    first_half_verified: Number(row.first_half_verified) === 1,
     score_home: row.score_home,
     score_away: row.score_away,
     red_cards_home: row.red_cards_home,
@@ -183,6 +192,28 @@ function stateForMatch(db, match, day = civilDay()) {
   const trend = db.prepare(`SELECT * FROM official_vote_snapshots
     WHERE fixture_scope=? ORDER BY datetime(created_at) DESC,rowid DESC LIMIT 1`).get(scope);
   return { kind: trend ? 'trend' : 'none', snapshot: parseRow(trend) };
+}
+
+// Read-only historical display; never used to publish a retrospective signal.
+// Fixture identity survives midnight. The bounded age prevents unrelated old history.
+function archivedStateForMatch(db, match, now = new Date()) {
+  const fixture = fixtureIdOf(match);
+  if (!fixture) return stateForMatch(db, match);
+  const row = db.prepare(`SELECT s.*,r.official_signal_snapshot_id,res.outcome,
+      res.final_score_home,res.final_score_away,
+      EXISTS(SELECT 1 FROM vote_snapshot_events e WHERE e.snapshot_id=s.id
+        AND e.event_type='first_half_verified') AS first_half_verified
+    FROM official_vote_snapshots s
+    LEFT JOIN official_signal_registry r ON r.official_signal_snapshot_id=s.id
+    LEFT JOIN official_signal_results res ON res.official_signal_snapshot_id=s.id
+    WHERE s.fixture_id=? AND datetime(s.created_at)>=datetime(?,'-12 hours')
+      AND datetime(s.created_at)<=datetime(?)
+      AND (r.official_signal_snapshot_id IS NOT NULL OR (s.minute>=35 AND
+        (s.minute<=45 OR EXISTS(SELECT 1 FROM vote_snapshot_events e
+          WHERE e.snapshot_id=s.id AND e.event_type='first_half_verified'))))
+    ORDER BY (r.official_signal_snapshot_id IS NOT NULL) DESC,
+      datetime(s.created_at) DESC,s.rowid DESC LIMIT 1`).get(fixture,new Date(now).toISOString(),new Date(now).toISOString());
+  return {kind:row ? row.official_signal_snapshot_id ? 'official' : 'trend' : 'none',snapshot:parseRow(row)};
 }
 
 function stateKey(match, redHome = 0, redAway = 0) {
@@ -238,5 +269,5 @@ function recordResult(db, snapshotId, finalHome, finalAway, source = 'api_finish
 
 module.exports = {
   OFFICIAL_FROM_MINUTE, OFFICIAL_TO_MINUTE, MIN_CONSENSUS_VOTES, REANALYSIS_DELAY_MS,
-  init, fixtureScope, capture, registerOfficial, stateForMatch, reanalysisGate, resultFor, recordResult,
+  init, fixtureScope, capture, registerOfficial, stateForMatch, archivedStateForMatch, reanalysisGate, resultFor, recordResult,
 };

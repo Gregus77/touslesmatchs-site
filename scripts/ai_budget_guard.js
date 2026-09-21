@@ -32,6 +32,7 @@ const CFG = {
   // comptabilise les appels réellement tentés ; cette valeur n'est qu'une
   // réservation maximale et ne doit jamais être présentée comme une dépense.
   dailyBudgetEur: Number(process.env.OPENROUTER_DAILY_BUDGET_EUR || 0.90),
+  testDailyBudgetEur: Number(process.env.OPENROUTER_TEST_DAILY_BUDGET_EUR || 0.25),
   hermesDailyBudgetEur: Number(process.env.OPENROUTER_HERMES_DAILY_BUDGET_EUR || 0.50),
   concileDailyBudgetEur: Number(process.env.OPENROUTER_CONCILE_DAILY_BUDGET_EUR || 3.00),
   maxRequestsPerDay: Number(process.env.OPENROUTER_MAX_REQUESTS_PER_DAY || 100),
@@ -101,16 +102,18 @@ function ensureSchema(db) {
 }
 
 // Clé d'anti-doublon exacte demandée : date + match + modèle + version_du_prompt.
-function buildRequestKey({ matchKey, modelKey, promptVersion }) {
-  const day = new Date().toISOString().slice(0, 10);
+function buildRequestKey({ matchKey, modelKey, promptVersion }, at = Date.now()) {
+  const day = parisBudget(at).day;
   return `${day}__${matchKey}__${modelKey}__${promptVersion || "v1"}`;
 }
 
+function scopeTodaySql(sql, at = Date.now()) {
+  const p = parisBudget(at);
+  return sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
+}
+
 function _todaySum(db, sql, params = []) {
-  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") {
-    const p=parisBudget();
-    sql=sql.replaceAll("date(created_at) = date('now')", `datetime(created_at)>=datetime('${p.start}') AND datetime(created_at)<datetime('${p.end}')`);
-  }
+  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") sql = scopeTodaySql(sql);
   const row = db.prepare(sql).get(...params);
   return row ? Object.values(row)[0] || 0 : 0;
 }
@@ -141,11 +144,12 @@ function _sendAdminAlert(text) {
 
 // Déclenche le coupe-circuit UNE fois par type et par jour — jamais en boucle
 // ("ne pas répéter l'alerte en boucle" — exigence explicite du prompt maître).
-function tripBreaker(db, type, detail) {
+function tripBreaker(db, type, detail, at = Date.now()) {
   ensureSchema(db);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisBudget(at).day;
   const existing = db.prepare("SELECT alerted_at FROM ai_circuit_breaker WHERE breach_type = ?").get(type);
-  const alreadyAlertedToday = existing && existing.alerted_at && existing.alerted_at.slice(0, 10) === today;
+  const existingAlertDay = existing?.alerted_at ? parisParts(sqliteUtcMs(existing.alerted_at)).day : null;
+  const alreadyAlertedToday = existingAlertDay === today;
 
   db.prepare(`
     INSERT INTO ai_circuit_breaker (breach_type, tripped_at, alerted_at, detail)
@@ -186,13 +190,12 @@ const DAILY_SCOPED_BREAKERS = new Set([
 // de la soiree alors que le budget/quota reel n'etait qu'a 15% de la limite.
 const SPIKE_COOLDOWN_MINUTES = 30;
 
-function isBreakerTripped(db, type) {
+function isBreakerTripped(db, type, at = Date.now()) {
   ensureSchema(db);
   const row = db.prepare("SELECT tripped_at FROM ai_circuit_breaker WHERE breach_type = ?").get(type);
   if (!row || !row.tripped_at) return false;
   if (DAILY_SCOPED_BREAKERS.has(type)) {
-    const today = new Date().toISOString().slice(0, 10);
-    return row.tripped_at.slice(0, 10) === today;
+    return parisParts(sqliteUtcMs(row.tripped_at)).day === parisBudget(at).day;
   }
   // Cooldown glissant depuis le DERNIER declenchement, pas depuis minuit.
   const trippedMs = new Date(row.tripped_at.replace(" ", "T") + "Z").getTime();
@@ -262,33 +265,34 @@ function canProceed(db, { modelKey, matchKey, competition, market, purpose, prom
     estimatedTokensIn || CFG.defaultPromptTokensIn,
     estimatedTokensOut || model.maxTokensOut
   );
+  const testPurpose = purpose === "shadow" || purpose === "shadow_test";
+  const priorityReserve = testPurpose ? Math.max(0, Number(process.env.OPENROUTER_TEST_PRIORITY_RESERVE_EUR || 0.25)) : 0;
+  const effectiveDailyBudget = testPurpose ? Math.max(0, dailyBudget - priorityReserve) : dailyBudget;
   const spentToday = _todaySum(db, `
     SELECT COALESCE(SUM(cost_estimate_eur),0) FROM ai_call_budget_log
     WHERE date(created_at) = date('now') AND status = 'ok'
   `);
-  if (spentToday + estimatedCost > dailyBudget) {
+  if (spentToday + estimatedCost > effectiveDailyBudget) {
     if (CFG.hardStop) {
-      tripBreaker(db, "daily_budget", `Budget quotidien ${dailyBudget}€ atteint (${spentToday.toFixed(4)}€ dépensés). Appels IA suspendus jusqu'à demain.`);
-      return { allowed: false, reason: "[LIMIT] budget quotidien dépassé", requestKey };
+      tripBreaker(db, testPurpose ? "daily_budget_tests" : "daily_budget", `Budget ${testPurpose ? "tests à blanc" : "quotidien"} ${effectiveDailyBudget}€ atteint (${spentToday.toFixed(4)}€ enregistrés).`);
+      return { allowed: false, reason: testPurpose ? "[LIMIT] réserve prioritaire analyses officielles" : "[LIMIT] budget quotidien dépassé", requestKey };
     }
     console.warn(`[ai-guard] budget dépassé (mode observation, HARD_STOP=false) : ${spentToday.toFixed(4)}€/${dailyBudget}€`);
   }
 
-  // Hermès et le Concile ont chacun leur enveloppe : l'assistance ne peut plus
-  // consommer le budget réservé aux votes sportifs, tout en restant incluse
-  // dans le plafond global ci-dessus.
   const purposeLimit = purpose === "hermes" ? CFG.hermesDailyBudgetEur
-    : purpose === "concile" ? (process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? dailyBudget : CFG.concileDailyBudgetEur) : null;
+    : purpose === "concile" ? Math.min(dailyBudget, CFG.concileDailyBudgetEur)
+    : purpose === "shadow" || purpose === "shadow_test" ? CFG.testDailyBudgetEur : null;
   if (purposeLimit !== null) {
     const spentForPurpose = _todaySum(db, `
       SELECT COALESCE(SUM(cost_estimate_eur),0) FROM ai_call_budget_log
       WHERE date(created_at) = date('now') AND status = 'ok'
-        AND purpose ${purpose === "hermes"
-          ? "= 'customer_support'"
-          : "IN ('provider_down_fallback','official_fallback')"}
+        AND purpose ${purpose === "hermes" ? "IN ('hermes','customer_support')"
+          : purpose === "concile" ? "IN ('concile','provider_down_fallback','official_fallback')"
+          : "IN ('shadow','shadow_test')"}
     `);
     if (spentForPurpose + estimatedCost > purposeLimit && CFG.hardStop) {
-      const breaker = purpose === "hermes" ? "daily_budget_hermes" : "daily_budget_concile";
+      const breaker = purpose === "hermes" ? "daily_budget_hermes" : purpose === "concile" ? "daily_budget_concile" : "daily_budget_tests";
       tripBreaker(db, breaker, `Budget ${purpose} ${purposeLimit}€ atteint (${spentForPurpose.toFixed(4)}€ estimés).`);
       return { allowed: false, reason: `[LIMIT] budget ${purpose} dépassé`, requestKey };
     }
@@ -308,10 +312,12 @@ function canProceed(db, { modelKey, matchKey, competition, market, purpose, prom
   // 7) Nombre de matchs distincts / jour — un match déjà compté aujourd'hui
   //    (par un autre modèle) ne recompte pas contre ce plafond.
   const currentDailyMatch = dailyMatchIdentity(matchKey);
-  const dailyMatches = new Set(db.prepare(`
+  let dailyMatchesSql = `
     SELECT DISTINCT match_key FROM ai_call_budget_log
     WHERE date(created_at) = date('now') AND status = 'ok' AND match_key IS NOT NULL
-  `).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));
+  `;
+  if (process.env.OPENROUTER_PARIS_SCHEDULE === "1") dailyMatchesSql = scopeTodaySql(dailyMatchesSql);
+  const dailyMatches = new Set(db.prepare(dailyMatchesSql).all().map((row) => dailyMatchIdentity(row.match_key)).filter(Boolean));
   if (!dailyMatches.has(currentDailyMatch)) {
     if (dailyMatches.size >= CFG.maxMatchesPerDay && CFG.hardStop) {
       return { allowed: false, reason: "[LIMIT] plafond de matchs analysés/jour atteint", requestKey };
@@ -403,16 +409,17 @@ function getDailyStats(db) {
     FROM ai_call_budget_log WHERE ${dayFilter} AND status = 'ok'
     GROUP BY model_key
   `).all();
-  return { ...totals, byModel, budget: process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? {...CFG,dailyBudgetEur:parisBudget().limit,concileDailyBudgetEur:parisBudget().limit,calendar:"Europe/Paris"} : CFG };
+  const activeLimit = process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? parisBudget().limit : CFG.dailyBudgetEur;
+  return { ...totals, byModel, budget: { ...CFG, dailyBudgetEur: activeLimit, calendar: "Europe/Paris", scope: "total partagé (officiel + tests à blanc)" } };
 }
 
 module.exports = {
   ensureSchema, canProceed, recordCall, getDailyStats,
-  tripBreaker, isBreakerTripped, buildRequestKey, CFG,
+  tripBreaker, isBreakerTripped, buildRequestKey, scopeTodaySql, CFG,
 };
 
 // Incident policy: Paris civil days, shared by every OpenRouter HTTP path.
-const {parisParts,parisDayBounds}=require('./telegram_client');
+const {parisParts,parisDayBounds,sqliteUtcMs}=require('./telegram_client');
 const fs=require('fs'),crypto=require('crypto');
 function parisBudget(at=Date.now()) {
  const day=parisParts(at).day,dow=new Date(day+'T12:00:00Z').getUTCDay();

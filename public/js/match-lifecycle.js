@@ -20,12 +20,22 @@
       if(hit){minute=Number(hit[1])+Number(hit[2]||0);break;}
     }
     if(minute<0)return 'unknown';
-    if(minute>45||(m.ou25&&m.ou25.window_status==='closed'))return 'closed';
-    if(minute<15)return 'waiting';
+    var firstHalf=statuses.some(function(s){return /^(1H|FIRST HALF|FIRST_HALF)$/.test(s);});
+    if((minute>45&&!firstHalf)||(m.ou25&&m.ou25.window_status==='closed'))return 'closed';
+    if(minute<35)return 'waiting';
     return 'open';
   }
   function canFeature(m){var p=phase(m);return p==='open'||p==='waiting';}
   function canTrack(m){var p=phase(m);return p==='open'||p==='waiting'||p==='closed';}
-  root.TLMMatchLifecycle={phase:phase,canFeature:canFeature,canTrack:canTrack};
+  function entryClosed(m){var p=phase(m);return !!m&&(p==='unknown'||p==='closed'||p==='finished'||p==='unavailable'||!!(m.ou25&&m.ou25.window_status==='closed'));}
+  function entryNoticeHtml(m){
+    if(!entryClosed(m))return '';
+    var raw=m&&m.ou25||{},minute=raw.snapshot_minute,score=raw.snapshot_score;
+    var detail='Analyse historique';
+    if(minute!=null&&Number.isFinite(Number(minute)))detail+=' à '+Number(minute)+'′';
+    if(typeof score==='string'&&/^\d+-\d+$/.test(score))detail+=' · score '+score;
+    return '<span class="tlm-entry-closed" role="status" style="display:block;color:#ff8495;font-size:11px;font-weight:800;line-height:1.5;margin:6px 0">ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL<span style="display:block;color:#a8afc4;font-weight:600">'+detail+' · conservée pour le bilan, pas une nouvelle recommandation</span></span>';
+  }
+  root.TLMMatchLifecycle={phase:phase,canFeature:canFeature,canTrack:canTrack,entryClosed:entryClosed,entryNoticeHtml:entryNoticeHtml};
   if(typeof module==='object'&&module.exports)module.exports=root.TLMMatchLifecycle;
 })(typeof globalThis!=='undefined'?globalThis:this);

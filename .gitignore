@@ -30,3 +30,18 @@ android-native/app/google-services.json
 
 # État généré par la vigie horaire sur le VPS
 /shared/vps-status.json
+
+# TLM runtime / backups locaux
+/backups/
+/CACHED
+/FETCH_HEAD
+/[[]internal]
+/exporting
+/naming
+/reading
+/resolve
+/resolving
+/transferring
+/unpacking
+/.tlm-openrouter-weekend-*-status.json
+/scripts/api_server.js.before-*

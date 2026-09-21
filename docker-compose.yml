@@ -56,8 +56,10 @@ services:
       - OPENROUTER_PARIS_SCHEDULE=1
       - OPENROUTER_USD_PER_EUR=1
       - OPENROUTER_DAILY_BUDGET_EUR=${OPENROUTER_DAILY_BUDGET_EUR}
-      - OPENROUTER_HERMES_DAILY_BUDGET_EUR=${OPENROUTER_HERMES_DAILY_BUDGET_EUR}
-      - OPENROUTER_CONCILE_DAILY_BUDGET_EUR=${OPENROUTER_CONCILE_DAILY_BUDGET_EUR}
+      - OPENROUTER_TEST_DAILY_BUDGET_EUR=${OPENROUTER_TEST_DAILY_BUDGET_EUR:-0.25}
+      - OPENROUTER_HERMES_DAILY_BUDGET_EUR=${OPENROUTER_HERMES_DAILY_BUDGET_EUR:-0.50}
+      - OPENROUTER_CONCILE_DAILY_BUDGET_EUR=${OPENROUTER_CONCILE_DAILY_BUDGET_EUR:-3.00}
+      - OPENROUTER_TEST_PRIORITY_RESERVE_EUR=${OPENROUTER_TEST_PRIORITY_RESERVE_EUR:-0.25}
       - OPENROUTER_MAX_REQUESTS_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_DAY}
       - OPENROUTER_MAX_MATCHES_PER_DAY=${OPENROUTER_MAX_MATCHES_PER_DAY}
       - OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY=${OPENROUTER_MAX_REQUESTS_PER_MODEL_PER_DAY}
@@ -101,6 +103,8 @@ services:
       # par le Concile pour GPT-5), contrairement a Google dont le quota
       # image etait a 0.
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Déploiement progressif WebAuthn ; inactif tant que les preuves réelles manquent.
+      - PASSKEYS_ENABLED=${PASSKEYS_ENABLED:-0}
       # Clés lues par api_server.js mais qui n'étaient PAS transmises : sans elles,
       # Perplexity-Web et Cohere-Command retombent silencieusement sur llama-3.3-70b
       # (Groq) — soit le même modèle que Claude Chief, ce qui annule la diversité du

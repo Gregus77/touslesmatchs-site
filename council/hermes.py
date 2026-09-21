@@ -335,16 +335,8 @@ def run_council():
     else:
         log.warning("Telegram non configuré — messages non envoyés")
 
-    # 14. Daily report to admin Telegram
-    _send_daily_report(
-        decision=decision,
-        agent_reports=agent_reports,
-        shadow_reports=shadow_reports,
-        excluded_agents=excluded_agents,
-        stats=stats,
-        sport_counts=sport_counts,
-        is_nopick=is_nopick,
-    )
+    # Ordinary admin reporting is centralized in the API's two Paris-time slots.
+    # Keep the council run and its customer-facing pick delivery unchanged.
 
     log.info("=" * 60)
     log.info("HERMES COUNCIL - Session terminée")
