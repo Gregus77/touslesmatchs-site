@@ -444,7 +444,7 @@ function loadDashboard() {
     var isPaidActive = plan !== 'free' && status === 'active';
 
     var planEl = document.getElementById('dash-plan');
-    var planLabels = {free:'Gratuit',standard:'Standard',premium:'Premium',elite:'Elite',vip:'VIP'};
+    var planLabels = {free:'Gratuit',standard:'Premium',premium:'Premium',elite:'Premium',vip:'Premium'};
     planEl.textContent = planLabels[plan] || '';
     planEl.className = 'dash-plan ' + (plan === 'free' ? 'free' : isPaidActive ? 'premium' : 'standard');
     planEl.style.display = planEl.textContent ? 'inline-block' : 'none';

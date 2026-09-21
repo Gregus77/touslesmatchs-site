@@ -13,7 +13,7 @@
     var label=connected?'Mon compte':'Se connecter';
     document.querySelectorAll('.tlm-gh-account,.tlm-gh-drawer-account').forEach(function(el){el.textContent=translate(label);el.dataset.connected=connected?'true':'false';el.dataset.plan=plan||'';});
     var badge=document.getElementById('tlm-global-status');if(!badge)return;
-    var labels={free:'Gratuit',standard:'Standard',premium:'Premium',elite:'Elite',vip:'VIP'};
+    var labels={free:'Gratuit',standard:'Premium',premium:'Premium',elite:'Premium',vip:'Premium'};
     badge.hidden=!(connected&&labels[plan]);
     badge.textContent=badge.hidden?'':translate(labels[plan]);
   }
