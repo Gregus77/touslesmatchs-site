@@ -2766,5 +2766,149 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
 })();
 </script>
 
+
+<script>
+/* TLM PREMIUM STATE FINAL */
+(function(){
+
+ function commercialPlan(p){
+   p=String(p||'free').toLowerCase();
+   return ['standard','premium','elite','vip'].includes(p)
+     ? 'premium' : p;
+ }
+
+ function getToken(){
+   return localStorage.getItem('tlm_token')
+       || localStorage.getItem('token')
+       || localStorage.getItem('auth_token')
+       || sessionStorage.getItem('tlm_token')
+       || sessionStorage.getItem('token')
+       || '';
+ }
+
+ function dateFR(value){
+   if(!value) return '';
+   const d=new Date(value);
+   if(Number.isNaN(d.getTime())) return '';
+
+   return d.toLocaleDateString('fr-FR',{
+     day:'2-digit',
+     month:'2-digit',
+     year:'numeric'
+   });
+ }
+
+ function normalizeBadges(){
+   document.querySelectorAll(
+     '.plan-badge,.dash-plan,[data-plan-badge]'
+   ).forEach(el=>{
+     const value=(el.textContent||'').trim().toLowerCase();
+
+     if(['elite','vip','standard','premium'].includes(value)){
+       el.textContent='PREMIUM';
+     }
+   });
+ }
+
+ async function loadAccount(){
+
+   normalizeBadges();
+
+   const cta=document.getElementById('premium-main-cta');
+
+   if(!cta) return;
+
+   const tk=getToken();
+
+   if(!tk){
+     cta.textContent='Passer Premium — 14,90 €/mois';
+     cta.href='/premium-checkout?lang=fr';
+     return;
+   }
+
+   try{
+
+     const response=await fetch('/api/auth/me',{
+       headers:{
+         Authorization:'Bearer '+tk
+       },
+       credentials:'same-origin',
+       cache:'no-store'
+     });
+
+     if(!response.ok) throw new Error('auth '+response.status);
+
+     const account=await response.json();
+
+     const plan=commercialPlan(account.plan);
+     const status=String(account.status||'').toLowerCase();
+     const expiry=account.expires_at || null;
+
+     const active=
+       plan==='premium' &&
+       status!=='expired' &&
+       (!expiry || Date.parse(expiry)>Date.now());
+
+     if(active){
+
+       const date=dateFR(expiry);
+
+       cta.removeAttribute('href');
+
+       cta.textContent=date
+         ? '✓ Premium actif jusqu’au '+date
+         : '✓ Votre abonnement Premium est actif';
+
+       cta.title='Votre abonnement Premium est déjà actif';
+
+       cta.style.cursor='default';
+       cta.style.background=
+         'linear-gradient(135deg,#16a34a,#059669)';
+
+       cta.setAttribute('aria-disabled','true');
+
+       cta.onclick=function(ev){
+         ev.preventDefault();
+         return false;
+       };
+
+       normalizeBadges();
+
+       return;
+     }
+
+     cta.textContent='Passer Premium — 14,90 €/mois';
+     cta.href='/premium-checkout?lang=fr';
+     cta.removeAttribute('aria-disabled');
+     cta.style.cursor='pointer';
+     cta.onclick=null;
+
+   }catch(error){
+
+     console.warn('[premium-state-final]',error);
+
+     /*
+       IMPORTANT :
+       si l'état du compte ne peut pas être vérifié,
+       on ne déclenche pas automatiquement un achat.
+     */
+     cta.textContent='Vérification de votre abonnement…';
+     cta.removeAttribute('href');
+     cta.setAttribute('aria-disabled','true');
+   }
+ }
+
+ document.addEventListener('DOMContentLoaded',loadAccount);
+
+ /*
+   Plusieurs anciens scripts reconstruisent le header après DOMContentLoaded.
+   On refait donc la normalisation après leur rendu.
+ */
+ setTimeout(loadAccount,500);
+ setTimeout(loadAccount,1500);
+
+})();
+</script>
+
 </body>
 </html>
