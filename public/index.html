@@ -1033,6 +1033,64 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 @keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
 @media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
 </style>
+
+<style id="tlm-signal-status-v25">
+.tlm-status-v25{
+ margin:12px 0;
+ padding:15px 17px;
+ border:1px solid;
+ border-radius:15px;
+ display:flex;
+ align-items:center;
+ gap:13px;
+ font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+ box-shadow:0 12px 35px rgba(0,0,0,.18);
+}
+.tlm-status-v25 .tlm-status-icon{
+ width:42px;height:42px;min-width:42px;
+ border:2px solid currentColor;border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ font-size:24px;font-weight:950;
+}
+.tlm-status-v25 strong{
+ display:block;font-size:17px;font-weight:950;
+ letter-spacing:.01em;line-height:1.15;
+}
+.tlm-status-v25 span{
+ display:block;margin-top:4px;font-size:11px;
+ line-height:1.4;color:#dbe4ff;
+}
+.tlm-status-v25.is-valid{
+ color:#32f58a;
+ border-color:rgba(50,245,138,.58);
+ background:linear-gradient(135deg,rgba(0,100,55,.38),rgba(4,35,28,.72));
+ box-shadow:0 0 30px rgba(50,245,138,.10);
+}
+.tlm-status-v25.is-wait{
+ color:#ffa338;
+ border-color:rgba(255,163,56,.55);
+ background:linear-gradient(135deg,rgba(120,60,0,.30),rgba(42,25,12,.72));
+}
+.tlm-status-v25.is-rejected{
+ color:#ff4f62;
+ border-color:rgba(255,79,98,.58);
+ background:linear-gradient(135deg,rgba(125,12,30,.34),rgba(48,10,20,.74));
+}
+.tlm-status-v25.is-valid.is-new{
+ animation:tlmNewSignalPulse .8s ease-in-out 2;
+}
+@keyframes tlmNewSignalPulse{
+ 50%{transform:scale(1.012);box-shadow:0 0 38px rgba(50,245,138,.35)}
+}
+@media(prefers-reduced-motion:reduce){
+ .tlm-status-v25.is-valid.is-new{animation:none}
+}
+@media(max-width:650px){
+ .tlm-status-v25{padding:13px}
+ .tlm-status-v25 strong{font-size:15px}
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -2692,6 +2750,129 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
 
 
 
+
+
+<script>
+/* TLM-SIGNAL-STATUS-V25 */
+(function(){
+ "use strict";
+
+ function esc(v){
+   return String(v==null?"":v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+ }
+
+ function state(match){
+   var o=(match&&match.ou25)||{};
+   var votes=Number(o.vote_count||0);
+   var aligned=Number(o.consensus_count||0);
+   var minute=Number(match&&match.minute||o.snapshot_minute||0);
+
+   /*
+     REGLE ABSOLUE :
+     4/5 ou 5/5 n'est JAMAIS suffisant pour afficher vert.
+     Vert = snapshot officiel validé par le backend uniquement.
+   */
+   if(o.official===true){
+     var direction=o.consensus_direction==="over"?"OVER 2,5":"UNDER 2,5";
+     var confidence=o.official_confidence;
+     var odd=o.official_odd;
+
+     return {
+       type:"valid",
+       title:"SIGNAL VALIDÉ — À SUIVRE",
+       detail:
+         direction+" · "+aligned+"/5 IA"+
+         (confidence!=null?" · "+confidence+" %":"")+
+         (odd!=null?" · cote "+odd:"")
+     };
+   }
+
+   var reason=String(
+     (match&&(match.diffusion_block||match.analysis_exclusion_reason||match.block_reason))
+     || o.recommendation_status || ""
+   ).replace(/^Signal écarté\s*:\s*/i,"").replace(/\.$/,"");
+
+   var finished =
+     votes>=5 ||
+     String(o.analysis_state||"")==="completed" ||
+     (votes>0 && aligned>=4 && !!reason);
+
+   if(!finished){
+     return {
+       type:"wait",
+       title:"ANALYSE EN COURS",
+       detail:votes
+         ? votes+"/5 IA ont répondu · décision en cours"
+         : minute>=35
+           ? "Interrogation des 5 IA en cours"
+           : "Analyse disponible à partir de la 35e minute"
+     };
+   }
+
+   var trend="";
+   if(aligned>0){
+     var d=o.consensus_direction;
+     if(!d && Array.isArray(o.votes)){
+       var over=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="over"}).length;
+       var under=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="under"}).length;
+       d=over>=under?"over":"under";
+     }
+     trend=(d==="over"?"Over 2,5":"Under 2,5")+" ("+aligned+"/5)";
+   }
+
+   return {
+     type:"rejected",
+     title:"AUCUN SIGNAL VALIDÉ",
+     detail:
+       (trend?"Tendance IA : "+trend+". ":"")+
+       (reason?reason+". ":"")+
+       "Ne pas considérer cette tendance comme un signal TousLesMatchs."
+   };
+ }
+
+ function html(match,isNew){
+   var s=state(match);
+   var icon=s.type==="valid"?"✓":s.type==="wait"?"◷":"×";
+   return '<div class="tlm-status-v25 is-'+s.type+(isNew?" is-new":"")+'">'+
+     '<div class="tlm-status-icon">'+icon+'</div>'+
+     '<div><strong>'+esc(s.title)+'</strong><span>'+esc(s.detail)+'</span></div>'+
+   '</div>';
+ }
+
+ function mount(id,match){
+   var host=document.getElementById(id);
+   if(!host)return;
+
+   var existing=host.querySelector(".tlm-status-v25");
+   if(existing)existing.remove();
+
+   var box=document.createElement("div");
+   var official=!!(match&&match.ou25&&match.ou25.official===true);
+   var key=official
+     ? String(match.ou25.official_signal_snapshot_id||match.id||match.fixtureId||"")
+     : "";
+
+   var isNew=false;
+   if(key){
+     try{
+       isNew=localStorage.getItem("tlm_last_green_signal")!==key;
+       localStorage.setItem("tlm_last_green_signal",key);
+     }catch(e){}
+   }
+
+   box.innerHTML=html(match,isNew);
+   host.insertBefore(box.firstChild,host.firstChild);
+ }
+
+ window.TLMSignalStatusV25={
+   state:state,
+   html:html,
+   mount:mount
+ };
+})();
+</script>
 
 </body>
 </html>
