@@ -34,7 +34,15 @@
     var detail='Analyse historique';
     if(minute!=null&&Number.isFinite(Number(minute)))detail+=' à '+Number(minute)+'′';
     if(typeof score==='string'&&/^\d+-\d+$/.test(score))detail+=' · score '+score;
-    return '<span class="tlm-entry-closed" role="status" style="display:block;color:#ff8495;font-size:11px;font-weight:800;line-height:1.5;margin:6px 0">ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL<span style="display:block;color:#a8afc4;font-weight:600">'+detail+' · conservée pour le bilan, pas une nouvelle recommandation</span></span>';
+    var closed='ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL';
+    var suffix='conservée pour le bilan, pas une nouvelle recommandation';
+    var lang=(function(){try{return localStorage.getItem('tlm_lang')||'fr';}catch(e){return 'fr';}})();
+    if(window.TLMI18nV26){
+      closed=TLMI18nV26.translate(closed,lang);
+      detail=TLMI18nV26.translate(detail,lang);
+      suffix=TLMI18nV26.translate(suffix,lang);
+    }
+    return '<span class="tlm-entry-closed" role="status" style="display:block;color:#ff8495;font-size:11px;font-weight:800;line-height:1.5;margin:6px 0">'+closed+'<span style="display:block;color:#a8afc4;font-weight:600">'+detail+' · '+suffix+'</span></span>';
   }
   root.TLMMatchLifecycle={phase:phase,canFeature:canFeature,canTrack:canTrack,entryClosed:entryClosed,entryNoticeHtml:entryNoticeHtml};
   if(typeof module==='object'&&module.exports)module.exports=root.TLMMatchLifecycle;

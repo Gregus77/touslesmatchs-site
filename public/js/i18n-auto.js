@@ -534,3 +534,267 @@
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
   window.TLMI18nAuto={translate:translateDynamic,apply:applyAll,languages:LANGS.slice()};
 })();
+
+/* TLM-I18N-V26-BEGIN */
+(function(){
+"use strict";
+
+var V26={
+"Premium":{
+ fr:"Premium",en:"Premium",es:"Premium",pt:"Premium",ru:"Премиум",zh:"高级版"
+},
+"analyses aujourd'hui":{
+ fr:"analyses aujourd'hui",en:"analyses today",es:"análisis hoy",
+ pt:"análises hoje",ru:"анализов сегодня",zh:"今日分析"
+},
+"Mi-temps":{
+ fr:"Mi-temps",en:"Half-time",es:"Descanso",pt:"Intervalo",ru:"Перерыв",zh:"半场"
+},
+"En direct":{
+ fr:"En direct",en:"Live",es:"En directo",pt:"Ao vivo",ru:"В эфире",zh:"直播"
+},
+"Terminé":{
+ fr:"Terminé",en:"Finished",es:"Finalizado",pt:"Encerrado",ru:"Завершён",zh:"已结束"
+},
+"À venir":{
+ fr:"À venir",en:"Upcoming",es:"Próximo",pt:"Em breve",ru:"Предстоящий",zh:"即将开始"
+},
+"Analyse historique":{
+ fr:"Analyse historique",en:"Historical analysis",es:"Análisis histórico",
+ pt:"Análise histórica",ru:"Исторический анализ",zh:"历史分析"
+},
+"Analyse historique — entrée fermée":{
+ fr:"Analyse historique — entrée fermée",
+ en:"Historical analysis — entry closed",
+ es:"Análisis histórico — entrada cerrada",
+ pt:"Análise histórica — entrada encerrada",
+ ru:"Исторический анализ — вход закрыт",
+ zh:"历史分析 — 已停止入场"
+},
+"ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL":{
+ fr:"ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL",
+ en:"ENTRY CLOSED — DO NOT ENTER THIS SIGNAL",
+ es:"ENTRADA CERRADA — NO ENTRAR EN ESTA SEÑAL",
+ pt:"ENTRADA ENCERRADA — NÃO ENTRAR NESTE SINAL",
+ ru:"ВХОД ЗАКРЫТ — НЕ ВХОДИТЬ ПО ЭТОМУ СИГНАЛУ",
+ zh:"入场已关闭 — 请勿再跟随此信号"
+},
+"Entrée fermée — analyse conservée pour le bilan, aucune nouvelle entrée.":{
+ fr:"Entrée fermée — analyse conservée pour le bilan, aucune nouvelle entrée.",
+ en:"Entry closed — analysis kept for the record, no new entry.",
+ es:"Entrada cerrada — análisis conservado para el balance, sin nueva entrada.",
+ pt:"Entrada encerrada — análise mantida para o balanço, sem nova entrada.",
+ ru:"Вход закрыт — анализ сохранён для статистики, новых входов нет.",
+ zh:"入场已关闭 — 分析仅保留用于统计，不再接受新入场。"
+},
+"Analyse conservée à 45'":{
+ fr:"Analyse conservée à 45'",en:"Analysis saved at 45'",
+ es:"Análisis guardado en el 45'",pt:"Análise guardada aos 45'",
+ ru:"Анализ сохранён на 45-й минуте",zh:"分析已保存于第45分钟"
+},
+"aucun signal officiel":{
+ fr:"aucun signal officiel",en:"no official signal",
+ es:"sin señal oficial",pt:"nenhum sinal oficial",
+ ru:"официального сигнала нет",zh:"无官方信号"
+},
+"Anciennes tendances — aucun signal officiel":{
+ fr:"Anciennes tendances — aucun signal officiel",
+ en:"Previous trends — no official signal",
+ es:"Tendencias anteriores — sin señal oficial",
+ pt:"Tendências anteriores — nenhum sinal oficial",
+ ru:"Предыдущие тенденции — официального сигнала нет",
+ zh:"历史趋势 — 无官方信号"
+},
+"Signal validé — livraison en attente":{
+ fr:"Signal validé — livraison en attente",
+ en:"Validated signal — delivery pending",
+ es:"Señal validada — envío pendiente",
+ pt:"Sinal validado — envio pendente",
+ ru:"Сигнал подтверждён — отправка ожидается",
+ zh:"信号已验证 — 等待发送"
+},
+"Envoyé sur Telegram":{
+ fr:"Envoyé sur Telegram",en:"Sent on Telegram",es:"Enviado por Telegram",
+ pt:"Enviado pelo Telegram",ru:"Отправлено в Telegram",zh:"已发送至 Telegram"
+},
+"Tendance IA":{
+ fr:"Tendance IA",en:"AI trend",es:"Tendencia IA",pt:"Tendência IA",
+ ru:"Тенденция ИИ",zh:"AI 趋势"
+},
+"Tendance IA en cours":{
+ fr:"Tendance IA en cours",en:"AI trend in progress",
+ es:"Tendencia IA en curso",pt:"Tendência IA em curso",
+ ru:"Текущая тенденция ИИ",zh:"AI 趋势分析中"
+},
+"En attente des IA":{
+ fr:"En attente des IA",en:"Waiting for AI models",
+ es:"Esperando a las IA",pt:"Aguardando as IAs",
+ ru:"Ожидание ответов ИИ",zh:"等待 AI 响应"
+},
+"ANALYSE EN COURS":{
+ fr:"ANALYSE EN COURS",en:"ANALYSIS IN PROGRESS",
+ es:"ANÁLISIS EN CURSO",pt:"ANÁLISE EM CURSO",
+ ru:"АНАЛИЗ В ПРОЦЕССЕ",zh:"分析进行中"
+},
+"SIGNAL VALIDÉ — À SUIVRE":{
+ fr:"SIGNAL VALIDÉ — À SUIVRE",en:"VALIDATED SIGNAL — FOLLOW",
+ es:"SEÑAL VALIDADA — SEGUIR",pt:"SINAL VALIDADO — SEGUIR",
+ ru:"ПОДТВЕРЖДЁННЫЙ СИГНАЛ — СЛЕДОВАТЬ",zh:"已验证信号 — 可跟随"
+},
+"AUCUN SIGNAL VALIDÉ":{
+ fr:"AUCUN SIGNAL VALIDÉ",en:"NO VALIDATED SIGNAL",
+ es:"SIN SEÑAL VALIDADA",pt:"NENHUM SINAL VALIDADO",
+ ru:"НЕТ ПОДТВЕРЖДЁННОГО СИГНАЛА",zh:"无已验证信号"
+},
+"Ne pas considérer cette tendance comme un signal TousLesMatchs.":{
+ fr:"Ne pas considérer cette tendance comme un signal TousLesMatchs.",
+ en:"Do not consider this trend a TousLesMatchs signal.",
+ es:"No considere esta tendencia como una señal de TousLesMatchs.",
+ pt:"Não considere esta tendência como um sinal TousLesMatchs.",
+ ru:"Не считайте эту тенденцию сигналом TousLesMatchs.",
+ zh:"请勿将此趋势视为 TousLesMatchs 官方信号。"
+},
+"Interrogation des 5 IA en cours":{
+ fr:"Interrogation des 5 IA en cours",en:"Querying the 5 AI models",
+ es:"Consultando las 5 IA",pt:"Consultando as 5 IAs",
+ ru:"Запрашиваются 5 моделей ИИ",zh:"正在查询 5 个 AI 模型"
+},
+"Analyse disponible à partir de la 35e minute":{
+ fr:"Analyse disponible à partir de la 35e minute",
+ en:"Analysis available from minute 35",
+ es:"Análisis disponible desde el minuto 35",
+ pt:"Análise disponível a partir do minuto 35",
+ ru:"Анализ доступен с 35-й минуты",
+ zh:"从第35分钟开始提供分析"
+},
+"IA ont répondu":{
+ fr:"IA ont répondu",en:"AI models responded",es:"IA respondieron",
+ pt:"IAs responderam",ru:"ИИ ответили",zh:"个 AI 已响应"
+},
+"consensus":{
+ fr:"consensus",en:"consensus",es:"consenso",pt:"consenso",ru:"консенсус",zh:"共识"
+},
+"classement non vérifiable":{
+ fr:"classement non vérifiable",en:"standings could not be verified",
+ es:"clasificación no verificable",pt:"classificação não verificável",
+ ru:"турнирную таблицу не удалось проверить",zh:"无法验证排名"
+},
+"Signal écarté":{
+ fr:"Signal écarté",en:"Signal rejected",es:"Señal descartada",
+ pt:"Sinal rejeitado",ru:"Сигнал отклонён",zh:"信号已排除"
+},
+"Signal disponible":{
+ fr:"Signal disponible",en:"Signal available",es:"Señal disponible",
+ pt:"Sinal disponível",ru:"Сигнал доступен",zh:"信号可用"
+},
+"Signal prêt":{
+ fr:"Signal prêt",en:"Signal ready",es:"Señal lista",pt:"Sinal pronto",
+ ru:"Сигнал готов",zh:"信号已就绪"
+},
+"Une sélection validée vient d’être détectée.":{
+ fr:"Une sélection validée vient d’être détectée.",
+ en:"A validated selection has just been detected.",
+ es:"Se acaba de detectar una selección validada.",
+ pt:"Uma seleção validada acabou de ser detectada.",
+ ru:"Только что обнаружен подтверждённый выбор.",
+ zh:"刚刚检测到一个已验证选择。"
+},
+"Voir":{
+ fr:"Voir",en:"View",es:"Ver",pt:"Ver",ru:"Открыть",zh:"查看"
+},
+"Fermer":{
+ fr:"Fermer",en:"Close",es:"Cerrar",pt:"Fechar",ru:"Закрыть",zh:"关闭"
+}
+};
+
+function lang(){
+ try{
+   var l=localStorage.getItem("tlm_lang");
+   if(V26["Premium"][l]!==undefined)return l;
+ }catch(e){}
+ return (document.documentElement.lang||"fr").slice(0,2).toLowerCase();
+}
+
+function trExact(text,l){
+ var clean=String(text||"").trim();
+ if(V26[clean] && V26[clean][l]!==undefined)return V26[clean][l];
+
+ /*
+   Dynamic strings: preserve numbers, score, minute and vote counts.
+ */
+ var replacements=Object.keys(V26).sort(function(a,b){return b.length-a.length;});
+ var result=String(text||"");
+
+ replacements.forEach(function(key){
+   if(key==="Premium")return;
+   if(result.indexOf(key)>=0){
+     result=result.split(key).join(V26[key][l]||key);
+   }
+ });
+
+ return result;
+}
+
+function applyV26(root){
+ var l=lang();
+ if(l==="fr")return;
+
+ root=root||document.body;
+ if(!root)return;
+
+ var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ var nodes=[],n;
+
+ while((n=walker.nextNode()))nodes.push(n);
+
+ nodes.forEach(function(node){
+   if(!node.parentElement)return;
+   if(node.parentElement.closest("script,style,noscript"))return;
+
+   var original=node.nodeValue;
+   var translated=trExact(original,l);
+
+   if(translated!==original)node.nodeValue=translated;
+ });
+
+ root.querySelectorAll &&
+ root.querySelectorAll("[placeholder],[title],[aria-label]").forEach(function(el){
+   ["placeholder","title","aria-label"].forEach(function(attr){
+     if(!el.hasAttribute(attr))return;
+     var old=el.getAttribute(attr);
+     var next=trExact(old,l);
+     if(next!==old)el.setAttribute(attr,next);
+   });
+ });
+}
+
+var timer=null;
+function schedule(){
+ clearTimeout(timer);
+ timer=setTimeout(function(){applyV26(document.body)},20);
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+ applyV26(document.body);
+ setTimeout(function(){applyV26(document.body)},300);
+ setTimeout(function(){applyV26(document.body)},1200);
+
+ new MutationObserver(schedule).observe(document.body,{
+   childList:true,
+   subtree:true,
+   characterData:true
+ });
+});
+
+document.addEventListener("tlm-language-change",function(){
+ setTimeout(function(){applyV26(document.body)},0);
+ setTimeout(function(){applyV26(document.body)},250);
+});
+
+window.TLMI18nV26={
+ translate:trExact,
+ apply:applyV26
+};
+
+})();
+/* TLM-I18N-V26-END */

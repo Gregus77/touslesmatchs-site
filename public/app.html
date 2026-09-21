@@ -1962,9 +1962,12 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
  function html(match,isNew){
    var s=state(match);
    var icon=s.type==="valid"?"✓":s.type==="wait"?"◷":"×";
+   var lang=(function(){try{return localStorage.getItem("tlm_lang")||"fr";}catch(e){return "fr";}})();
+   var title=window.TLMI18nV26?TLMI18nV26.translate(s.title,lang):s.title;
+   var detail=window.TLMI18nV26?TLMI18nV26.translate(s.detail,lang):s.detail;
    return '<div class="tlm-status-v25 is-'+s.type+(isNew?" is-new":"")+'">'+
      '<div class="tlm-status-icon">'+icon+'</div>'+
-     '<div><strong>'+esc(s.title)+'</strong><span>'+esc(s.detail)+'</span></div>'+
+     '<div><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></div>'+
    '</div>';
  }
 
