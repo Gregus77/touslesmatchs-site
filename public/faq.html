@@ -185,7 +185,7 @@ async function doLogin(){
       localStorage.setItem('tlm_email', email);
       localStorage.setItem('tlm_code', code);
       localStorage.setItem('tlm_session', d.session_token || '');
-      localStorage.setItem('tlm_plan', d.plan);
+      localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
       okEl.textContent = '✓ Connecté — Plan ' + d.plan;
       okEl.style.display = 'block';
       setTimeout(function(){

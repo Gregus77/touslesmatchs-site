@@ -125,8 +125,8 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
-  <link rel="stylesheet" href="/css/global-header.css?v=20260915-account-v1">
-  <script src="/js/global-header.js?v=20260915-account-v1" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
 </head>
 <body class="tlm-wow tlm-page-dashboard">
 
@@ -261,7 +261,7 @@ function loginWithPasskey() {
     token=d.token;
     localStorage.setItem('tlm_session_token',token);
     localStorage.setItem('tlm_email',d.email);
-    localStorage.setItem('tlm_plan',d.plan || 'free');
+    localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan||"free"):(/^(standard|premium|elite|vip)$/i.test(String(d.plan||"free"))?"premium":String(d.plan||"free").toLowerCase())));
     document.dispatchEvent(new Event('tlm-auth-change'));
     loadDashboard();
   }).catch(function(){showErr('Connexion passkey impossible. Utilise le code reçu par email.');});

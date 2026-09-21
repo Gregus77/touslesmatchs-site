@@ -336,8 +336,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-vote-seat small{display:block;margin-top:3px;color:#8994ba;font-size:7.5px;line-height:1.25}
 @media(max-width:560px){.mc-vote-details{margin-left:10px;margin-right:10px}.mc-vote-seats{gap:4px}.mc-vote-seat{padding:7px 3px}.mc-vote-seat strong{font-size:7px}.mc-vote-seat small{font-size:6.8px}}
 </style>
-  <link rel="stylesheet" href="/css/global-header.css?v=20260915-account-v1">
-  <script src="/js/global-header.js?v=20260915-account-v1" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
 <!-- TLM-CONSENSUS-STATUS-20260920 -->
 <style>
 .consensus-insufficient{color:#ff667f!important;font-weight:900!important;animation:tlmConsensusBad 1s ease-in-out infinite!important}
@@ -1396,7 +1396,7 @@ function doLogin() {
       localStorage.setItem("tlm_email", email);
       localStorage.setItem("tlm_code", code);
       localStorage.setItem("tlm_session", d.session_token || "");
-      localStorage.setItem("tlm_plan", d.plan);
+      localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
       closeLoginModal();
       updateAuthBar();
       loadAgentRanking();

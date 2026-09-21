@@ -105,3 +105,140 @@
     characterData:true
   });
 })();
+
+
+/* TLM-COMMERCIAL-ACCOUNT-BEGIN */
+(function(){
+  "use strict";
+
+  function commercialPlan(value){
+    var p=String(value||"free").toLowerCase();
+    return /^(standard|premium|elite|vip)$/.test(p) ? "premium" : p;
+  }
+
+  function saveCommercialPlan(value){
+    var p=commercialPlan(value);
+    try { localStorage.setItem("tlm_plan",p); } catch(e){}
+    return p;
+  }
+
+  function token(){
+    try {
+      return localStorage.getItem("tlm_token")
+        || localStorage.getItem("tlm_session_token")
+        || localStorage.getItem("token")
+        || "";
+    } catch(e){ return ""; }
+  }
+
+  function headers(){
+    var t=token();
+    return t ? {Authorization:"Bearer "+t} : {};
+  }
+
+  function formatDate(v){
+    if(!v)return "";
+    var d=new Date(v);
+    if(isNaN(d.getTime()))return "";
+    return d.toLocaleDateString("fr-FR",{
+      day:"2-digit",month:"2-digit",year:"numeric"
+    });
+  }
+
+  function paidActive(account){
+    if(!account)return false;
+    if(commercialPlan(account.plan)!=="premium")return false;
+    if(String(account.status||"active").toLowerCase()==="expired")return false;
+    if(account.expires_at && Date.parse(account.expires_at)<=Date.now())return false;
+    return true;
+  }
+
+  async function account(){
+    if(!token())return null;
+
+    var urls=["/api/auth/session?t="+Date.now(),"/api/auth/me?t="+Date.now()];
+
+    for(var i=0;i<urls.length;i++){
+      try{
+        var r=await fetch(urls[i],{
+          headers:headers(),
+          cache:"no-store",
+          credentials:"same-origin"
+        });
+        if(!r.ok)continue;
+        var d=await r.json();
+        if(d && (d.ok!==false)){
+          d.plan=saveCommercialPlan(d.plan);
+          return d;
+        }
+      }catch(e){}
+    }
+    return null;
+  }
+
+  function normalizeVisiblePlan(){
+    document.querySelectorAll(
+      ".nav-plan-badge,.dash-plan,[data-plan-badge],[data-account-plan]"
+    ).forEach(function(el){
+      var t=(el.textContent||"").trim().toLowerCase();
+      if(/^(elite|vip|standard|premium)$/.test(t)){
+        el.textContent="PREMIUM";
+        el.classList.remove("elite","vip","standard");
+        el.classList.add("premium");
+      }
+    });
+  }
+
+  async function refreshCommercialUI(){
+    normalizeVisiblePlan();
+
+    var a=await account();
+    if(!a)return;
+
+    normalizeVisiblePlan();
+
+    var active=paidActive(a);
+    var expiry=formatDate(a.expires_at);
+
+    var cta=document.getElementById("premium-main-cta");
+
+    if(cta){
+      if(active){
+        cta.textContent=expiry
+          ? "✓ Premium actif jusqu’au "+expiry
+          : "✓ Votre abonnement Premium est actif";
+
+        cta.removeAttribute("href");
+        cta.setAttribute("aria-disabled","true");
+        cta.style.cursor="default";
+        cta.style.background="linear-gradient(135deg,#16a34a,#059669)";
+        cta.onclick=function(e){e.preventDefault();return false;};
+      }else{
+        cta.textContent="Passer Premium — 14,90 €/mois";
+        cta.href="/premium-checkout?lang=fr";
+        cta.removeAttribute("aria-disabled");
+        cta.style.cursor="pointer";
+        cta.onclick=null;
+      }
+    }
+
+    document.querySelectorAll("[data-premium-expiry]").forEach(function(el){
+      el.textContent=active && expiry ? expiry : "";
+    });
+  }
+
+  window.TLMCommercialAccount={
+    commercialPlan:commercialPlan,
+    savePlan:saveCommercialPlan,
+    account:account,
+    paidActive:paidActive,
+    refresh:refreshCommercialUI
+  };
+
+  document.addEventListener("DOMContentLoaded",function(){
+    refreshCommercialUI();
+    setTimeout(refreshCommercialUI,400);
+    setTimeout(refreshCommercialUI,1200);
+  });
+})();
+/* TLM-COMMERCIAL-ACCOUNT-END */

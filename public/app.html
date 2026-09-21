@@ -477,6 +477,76 @@ header .brand{display:flex;align-items:center;gap:8px}header .brand img{width:32
 @keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
 @media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
 </style>
+
+<style id="tlm-app-trust-ui">
+body.tlm-page-app{
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  letter-spacing:0;
+}
+body.tlm-page-app .app-user-row,
+body.tlm-page-app .user-row,
+body.tlm-page-app .account-row{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+}
+body.tlm-page-app .app-user-row input,
+body.tlm-page-app .user-row input{
+  margin:0;
+}
+body.tlm-page-app input[type="search"],
+body.tlm-page-app .search-input{
+  min-height:44px;
+  padding:0 16px;
+  border-radius:12px;
+}
+body.tlm-page-app .country-header,
+body.tlm-page-app .country-row,
+body.tlm-page-app .league-country{
+  margin-top:28px;
+  margin-bottom:12px;
+  padding:14px 18px;
+  border-radius:14px;
+}
+body.tlm-page-app .country-header,
+body.tlm-page-app .country-row{
+  font-size:17px;
+  font-weight:800;
+  line-height:1.25;
+}
+body.tlm-page-app .league-title,
+body.tlm-page-app .competition-title{
+  margin:14px 4px 10px;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.035em;
+}
+body.tlm-page-app .match-card{
+  margin-bottom:18px;
+  border-radius:16px;
+}
+body.tlm-page-app .match-card,
+body.tlm-page-app .card{
+  line-height:1.45;
+}
+body.tlm-page-app button,
+body.tlm-page-app .btn{
+  min-height:40px;
+}
+@media(max-width:700px){
+ body.tlm-page-app .app-user-row,
+ body.tlm-page-app .user-row,
+ body.tlm-page-app .account-row{
+   gap:10px;
+ }
+ body.tlm-page-app .country-header,
+ body.tlm-page-app .country-row{
+   margin-top:20px;
+ }
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-app">
 
@@ -1148,7 +1218,7 @@ $("perf-kpis").innerHTML =
               if (d.session_token) localStorage.setItem("tlm_token", d.session_token);
               else if (d.token) localStorage.setItem("tlm_token", d.token);
               else localStorage.setItem("tlm_token", "code:" + code.toUpperCase());
-              localStorage.setItem("tlm_plan", d.plan || d.status || "free");
+              localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan||d.status||"free"):(/^(standard|premium|elite|vip)$/i.test(String(d.plan||d.status||"free"))?"premium":String(d.plan||d.status||"free").toLowerCase())));
             } catch (e) {}
             msg.textContent = "Connexion réussie.";
             renderChip(); loaded.pick = false; renderMe(); show("pick");
@@ -1720,5 +1790,35 @@ function refresh(){paint(document.getElementById('hero-consensus-label'),documen
 if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
 new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
 })();</script>
+
+<script>
+/* TLM-APP-PREMIUM-UI-BEGIN */
+(function(){
+ function cleanPremiumUI(){
+   var plan="";
+   try{plan=String(localStorage.getItem("tlm_plan")||"").toLowerCase();}catch(e){}
+
+   if(plan!=="premium")return;
+
+   document.querySelectorAll("body *").forEach(function(el){
+     if(el.children.length>0)return;
+     var t=(el.textContent||"").trim();
+
+     if(/999\s*\/\s*999/.test(t)){
+       var box=el.closest(".quota,.credits,.counter,.usage,.token-count,.user-counter")
+               || el.parentElement;
+       if(box)box.style.display="none";
+     }
+   });
+ }
+ document.addEventListener("DOMContentLoaded",function(){
+   cleanPremiumUI();
+   setTimeout(cleanPremiumUI,500);
+   setTimeout(cleanPremiumUI,1500);
+ });
+})();
+/* TLM-APP-PREMIUM-UI-END */
+</script>
+
 </body>
 </html>

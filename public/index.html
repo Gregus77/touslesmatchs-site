@@ -1023,8 +1023,8 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   .tlm-hero-copy{display:none}.tlm-hero-grid{display:block;min-height:0}.tlm-live-hero{padding-top:16px!important}.tlm-hero-proof{display:none!important}
 }
 </style>
-  <link rel="stylesheet" href="/css/global-header.css?v=20260915-account-v1">
-  <script src="/js/global-header.js?v=20260915-account-v1" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
 <!-- TLM-CONSENSUS-STATUS-20260920 -->
 <style>
 .consensus-insufficient{color:#ff667f!important;font-weight:900!important;animation:tlmConsensusBad 1s ease-in-out infinite!important}
@@ -1477,7 +1477,7 @@ async function doBiometricLogin(){
     if(!d2.ok) throw new Error(d2.error||'Vérification échouée');
     localStorage.setItem('tlm_email',d2.email);
     localStorage.setItem('tlm_code',d2.code);
-    localStorage.setItem('tlm_plan',d2.plan);
+    localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d2.plan):(/^(standard|premium|elite|vip)$/i.test(String(d2.plan))?"premium":String(d2.plan||"free").toLowerCase())));
     closeModal();renderNavAuth();renderHeroLive(null);loadHeroLive();
   }catch(e){
     errEl.textContent=(e&&e.message)||'Connexion biométrique impossible.';
@@ -1541,7 +1541,7 @@ async function doLogin(){
     if(d.valid){
       if(remember){localStorage.setItem('tlm_email',email);localStorage.setItem('tlm_code',code);localStorage.setItem('tlm_session',d.session_token||'');}
       else{localStorage.removeItem('tlm_email');localStorage.removeItem('tlm_code');localStorage.removeItem('tlm_session');}
-      localStorage.setItem('tlm_plan',d.plan);
+      localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
       okEl.textContent='✓ Connecté — Plan '+d.plan;
       okEl.style.display='block';
       setTimeout(function(){closeModal();renderNavAuth();renderHeroLive(null);loadHeroLive();if(remember)maybeOfferBiometric(email,code);},1000);
@@ -2688,227 +2688,10 @@ new MutationObserver(refresh).observe(document.documentElement,{subtree:true,chi
 })();</script>
 
 <!-- TLM PREMIUM ACCOUNT STATE -->
-<script>
-(function(){
-  function token(){
-    return localStorage.getItem('tlm_token')
-      || localStorage.getItem('token')
-      || sessionStorage.getItem('tlm_token')
-      || '';
-  }
-
-  function commercialPlan(p){
-    p=String(p||'free').toLowerCase();
-    return /^(standard|premium|elite|vip)$/.test(p) ? 'premium' : p;
-  }
-
-  function formatDate(v){
-    if(!v) return '';
-    var d=new Date(v);
-    if(isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('fr-FR',{
-      day:'2-digit',
-      month:'2-digit',
-      year:'numeric'
-    });
-  }
-
-  async function refreshPremiumState(){
-    var cta=document.getElementById('premium-main-cta');
-    if(!cta) return;
-
-    var tk=token();
-
-    if(!tk){
-      cta.textContent='Passer Premium — 14,90 €/mois';
-      cta.href='/premium-checkout?lang=fr';
-      return;
-    }
-
-    try{
-      var r=await fetch('/api/auth/me',{
-        headers:{Authorization:'Bearer '+tk},
-        credentials:'same-origin'
-      });
-
-      if(!r.ok) return;
-
-      var data=await r.json();
-      var plan=commercialPlan(data.plan);
-      var expiry=data.expires_at || null;
-
-      if(plan==='premium'){
-        var date=formatDate(expiry);
-
-        cta.textContent=date
-          ? '✓ Vous êtes Premium — actif jusqu’au '+date
-          : '✓ Vous êtes Premium';
-
-        cta.href='/dashboard';
-
-        cta.style.background='linear-gradient(135deg,#16a34a,#059669)';
-        cta.title='Votre abonnement Premium est actif';
-
-        document.querySelectorAll('.plan-badge,[data-plan-badge]').forEach(function(el){
-          el.textContent='PREMIUM';
-        });
-      } else {
-        cta.textContent='Passer Premium — 14,90 €/mois';
-        cta.href='/premium-checkout?lang=fr';
-      }
-
-    }catch(e){
-      console.warn('[premium-state]',e);
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded',refreshPremiumState);
-})();
-</script>
 
 
-<script>
-/* TLM PREMIUM STATE FINAL */
-(function(){
 
- function commercialPlan(p){
-   p=String(p||'free').toLowerCase();
-   return ['standard','premium','elite','vip'].includes(p)
-     ? 'premium' : p;
- }
 
- function getToken(){
-   return localStorage.getItem('tlm_token')
-       || localStorage.getItem('token')
-       || localStorage.getItem('auth_token')
-       || sessionStorage.getItem('tlm_token')
-       || sessionStorage.getItem('token')
-       || '';
- }
-
- function dateFR(value){
-   if(!value) return '';
-   const d=new Date(value);
-   if(Number.isNaN(d.getTime())) return '';
-
-   return d.toLocaleDateString('fr-FR',{
-     day:'2-digit',
-     month:'2-digit',
-     year:'numeric'
-   });
- }
-
- function normalizeBadges(){
-   document.querySelectorAll(
-     '.plan-badge,.dash-plan,[data-plan-badge]'
-   ).forEach(el=>{
-     const value=(el.textContent||'').trim().toLowerCase();
-
-     if(['elite','vip','standard','premium'].includes(value)){
-       el.textContent='PREMIUM';
-     }
-   });
- }
-
- async function loadAccount(){
-
-   normalizeBadges();
-
-   const cta=document.getElementById('premium-main-cta');
-
-   if(!cta) return;
-
-   const tk=getToken();
-
-   if(!tk){
-     cta.textContent='Passer Premium — 14,90 €/mois';
-     cta.href='/premium-checkout?lang=fr';
-     return;
-   }
-
-   try{
-
-     const response=await fetch('/api/auth/me',{
-       headers:{
-         Authorization:'Bearer '+tk
-       },
-       credentials:'same-origin',
-       cache:'no-store'
-     });
-
-     if(!response.ok) throw new Error('auth '+response.status);
-
-     const account=await response.json();
-
-     const plan=commercialPlan(account.plan);
-     const status=String(account.status||'').toLowerCase();
-     const expiry=account.expires_at || null;
-
-     const active=
-       plan==='premium' &&
-       status!=='expired' &&
-       (!expiry || Date.parse(expiry)>Date.now());
-
-     if(active){
-
-       const date=dateFR(expiry);
-
-       cta.removeAttribute('href');
-
-       cta.textContent=date
-         ? '✓ Premium actif jusqu’au '+date
-         : '✓ Votre abonnement Premium est actif';
-
-       cta.title='Votre abonnement Premium est déjà actif';
-
-       cta.style.cursor='default';
-       cta.style.background=
-         'linear-gradient(135deg,#16a34a,#059669)';
-
-       cta.setAttribute('aria-disabled','true');
-
-       cta.onclick=function(ev){
-         ev.preventDefault();
-         return false;
-       };
-
-       normalizeBadges();
-
-       return;
-     }
-
-     cta.textContent='Passer Premium — 14,90 €/mois';
-     cta.href='/premium-checkout?lang=fr';
-     cta.removeAttribute('aria-disabled');
-     cta.style.cursor='pointer';
-     cta.onclick=null;
-
-   }catch(error){
-
-     console.warn('[premium-state-final]',error);
-
-     /*
-       IMPORTANT :
-       si l'état du compte ne peut pas être vérifié,
-       on ne déclenche pas automatiquement un achat.
-     */
-     cta.textContent='Vérification de votre abonnement…';
-     cta.removeAttribute('href');
-     cta.setAttribute('aria-disabled','true');
-   }
- }
-
- document.addEventListener('DOMContentLoaded',loadAccount);
-
- /*
-   Plusieurs anciens scripts reconstruisent le header après DOMContentLoaded.
-   On refait donc la normalisation après leur rendu.
- */
- setTimeout(loadAccount,500);
- setTimeout(loadAccount,1500);
-
-})();
-</script>
 
 </body>
 </html>
