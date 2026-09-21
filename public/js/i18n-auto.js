@@ -798,3 +798,139 @@ window.TLMI18nV26={
 
 })();
 /* TLM-I18N-V26-END */
+
+/* TLM-I18N-V27-BEGIN */
+(function(){
+"use strict";
+
+var D={
+"À venir":{
+fr:"À venir",en:"Upcoming",es:"Próximos",pt:"Próximos",ru:"Предстоящие",zh:"即将开始"
+},
+"Historique":{
+fr:"Historique",en:"History",es:"Historial",pt:"Histórico",ru:"История",zh:"历史"
+},
+"Matchs réellement analysés":{
+fr:"Matchs réellement analysés",en:"Matches actually analyzed",
+es:"Partidos realmente analizados",pt:"Jogos realmente analisados",
+ru:"Фактически проанализированные матчи",zh:"实际分析的比赛"
+},
+"Voir Live IA →":{
+fr:"Voir Live IA →",en:"View Live AI →",es:"Ver IA en directo →",
+pt:"Ver IA ao vivo →",ru:"Открыть ИИ в прямом эфире →",zh:"查看实时 AI →"
+},
+"conservée pour le bilan, pas une nouvelle recommandation":{
+fr:"conservée pour le bilan, pas une nouvelle recommandation",
+en:"kept for the record, not a new recommendation",
+es:"conservado para el balance, no es una nueva recomendación",
+pt:"mantida para o balanço, não é uma nova recomendação",
+ru:"сохранён для статистики, это не новая рекомендация",
+zh:"仅保留用于统计，并非新的推荐"
+},
+"Premium actif jusqu’au":{
+fr:"Premium actif jusqu’au",en:"Premium active until",
+es:"Premium activo hasta",pt:"Premium ativo até",
+ru:"Премиум активен до",zh:"高级版有效期至"
+},
+"Premium actif jusqu'au":{
+fr:"Premium actif jusqu'au",en:"Premium active until",
+es:"Premium activo hasta",pt:"Premium ativo até",
+ru:"Премиум активен до",zh:"高级版有效期至"
+},
+"Minimum 4 IA sur 5 concordantes":{
+fr:"Minimum 4 IA sur 5 concordantes",
+en:"At least 4 of 5 AI models must agree",
+es:"Al menos 4 de 5 IA deben coincidir",
+pt:"Pelo menos 4 de 5 IAs devem concordar",
+ru:"Минимум 4 из 5 моделей ИИ должны совпасть",
+zh:"至少 5 个 AI 中有 4 个意见一致"
+},
+"tous les signaux admissibles":{
+fr:"tous les signaux admissibles",
+en:"all eligible signals",
+es:"todas las señales admisibles",
+pt:"todos os sinais elegíveis",
+ru:"все подходящие сигналы",
+zh:"所有符合条件的信号"
+}
+};
+
+function language(){
+ try{
+  var l=localStorage.getItem("tlm_lang");
+  if(["fr","en","es","pt","ru","zh"].includes(l))return l;
+ }catch(e){}
+ return (document.documentElement.lang||"fr").slice(0,2);
+}
+
+function translateText(text,l){
+ var out=String(text||"");
+
+ Object.keys(D)
+  .sort(function(a,b){return b.length-a.length})
+  .forEach(function(key){
+    if(out.indexOf(key)!==-1){
+      out=out.split(key).join(D[key][l]||key);
+    }
+  });
+
+ return out;
+}
+
+function apply(root){
+ var l=language();
+ if(l==="fr")return;
+
+ root=root||document.body;
+ if(!root)return;
+
+ var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ var nodes=[],node;
+
+ while((node=walker.nextNode()))nodes.push(node);
+
+ nodes.forEach(function(n){
+   if(!n.parentElement)return;
+   if(n.parentElement.closest("script,style,noscript"))return;
+
+   var next=translateText(n.nodeValue,l);
+   if(next!==n.nodeValue)n.nodeValue=next;
+ });
+
+ root.querySelectorAll("[title],[aria-label],[placeholder]").forEach(function(el){
+   ["title","aria-label","placeholder"].forEach(function(a){
+     if(!el.hasAttribute(a))return;
+     var old=el.getAttribute(a);
+     var next=translateText(old,l);
+     if(next!==old)el.setAttribute(a,next);
+   });
+ });
+}
+
+var timer;
+function schedule(){
+ clearTimeout(timer);
+ timer=setTimeout(function(){apply(document.body)},25);
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+ apply(document.body);
+ setTimeout(schedule,300);
+ setTimeout(schedule,1000);
+
+ new MutationObserver(schedule).observe(document.body,{
+   subtree:true,
+   childList:true,
+   characterData:true
+ });
+});
+
+document.addEventListener("tlm-language-change",function(){
+ setTimeout(schedule,0);
+ setTimeout(schedule,300);
+});
+
+window.TLMI18nV27={apply:apply,translate:translateText};
+
+})();
+/* TLM-I18N-V27-END */
