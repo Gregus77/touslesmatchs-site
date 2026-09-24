@@ -410,7 +410,38 @@ function getDailyStats(db) {
     GROUP BY model_key
   `).all();
   const activeLimit = process.env.OPENROUTER_PARIS_SCHEDULE === "1" ? parisBudget().limit : CFG.dailyBudgetEur;
-  return { ...totals, byModel, budget: { ...CFG, dailyBudgetEur: activeLimit, calendar: "Europe/Paris", scope: "total partagé (officiel + tests à blanc)" } };
+  // Les champs historiques restent les estimations du garde-fou local.
+  // Python et les autres clients de la passerelle ne remplissent que le
+  // registre global : zéro ici ne signifie donc pas zéro dépense OpenRouter.
+  // Lecture seulement, sans appel fournisseur ni nouvelle réservation.
+  let global = { available: false, day: p.day };
+  if (db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='openrouter_global_calls'").get()) {
+    const rows = db.prepare(`SELECT model, COUNT(*) AS requests,
+      SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed,
+      SUM(CASE WHEN status='rejected' THEN 1 ELSE 0 END) AS rejected,
+      SUM(CASE WHEN status='uncertain' THEN 1 ELSE 0 END) AS uncertain,
+      SUM(CASE WHEN status='reserved' THEN 1 ELSE 0 END) AS reserved,
+      COALESCE(SUM(charged_eur),0) AS chargedEur,
+      COALESCE(SUM(CASE WHEN charged_eur IS NULL THEN reserved_eur ELSE 0 END),0) AS reservedEur
+      FROM openrouter_global_calls WHERE day=? GROUP BY model ORDER BY model`).all(p.day);
+    const summed = rows.reduce((sum, row) => {
+      for (const field of Object.keys(sum)) sum[field] += Number(row[field] || 0);
+      return sum;
+    }, { requests: 0, completed: 0, rejected: 0, uncertain: 0, reserved: 0, chargedEur: 0, reservedEur: 0 });
+    const openingEur = db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='openrouter_global_opening'").get()
+      ? Number(db.prepare('SELECT eur FROM openrouter_global_opening WHERE day=?').get(p.day)?.eur || 0) : 0;
+    const localParisEstimateEur = Number(db.prepare(`SELECT COALESCE(SUM(cost_estimate_eur),0) AS n
+      FROM ai_call_budget_log WHERE datetime(created_at)>=datetime(?)
+      AND datetime(created_at)<datetime(?) AND status='ok'`).get(p.start, p.end).n);
+    // Même réconciliation que reserveGlobal(), sans additionner deux fois
+    // l'estimation locale et le coût fournisseur d'un même appel.
+    const usedEur = Math.max(localParisEstimateEur, openingEur + summed.chargedEur + summed.reservedEur);
+    global = { available: true, day: p.day, ...summed, openingEur, localParisEstimateEur,
+      usedEur, limitEur: p.limit, remainingEur: Math.max(0, p.limit - usedEur), byModel: rows,
+      scope: "passerelle OpenRouter partagée, dont council Python; réservations incertaines incluses" };
+  }
+  return { ...totals, byModel, accounting: "estimations locales ai_call_budget_log; voir global pour la passerelle partagée", global,
+    budget: { ...CFG, dailyBudgetEur: activeLimit, calendar: "Europe/Paris", scope: "total partagé (officiel + tests à blanc)" } };
 }
 
 module.exports = {

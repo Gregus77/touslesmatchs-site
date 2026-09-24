@@ -428,3 +428,10 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Le repli transversal Qwen/Kimi est retiré : Luna ne peut plus appeler Qwen
   sous un autre nom. Un modèle indisponible produit un état terminal explicite,
   jamais un vote copié entre deux sièges.
+
+## 2026-09-24 — [Codex] Audit des 48 heures sans signal et supervision
+
+- Diagnostic et preuves enregistrés avant correction : un match, deux scrutins, aucun signal admissible; limites de rétention des logs explicites.
+- Liste publique des cinq sièges alignée sur le routage existant; budget global OpenRouter exposé séparément des estimations locales, appels Python inclus; métadonnée de fenêtre historique actualisée.
+- Tests hors réseau et déploiement API seule; critères métier, modèles, résultats et données client inchangés. Preuve naturelle encore attendue.
+- Rapport : `docs/audits/2026-09-24-48h-sans-signal.md`. Les modifications locales antérieures sont préservées.

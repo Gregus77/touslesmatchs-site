@@ -2406,6 +2406,7 @@ setTimeout(() => checkApiSportsRealQuota(), 5000);
 // comprises — la page dit donc toujours la verite, sans intervention.
 app.get("/concile-roster", (_req, res) => {
   const jolinom = (id) => {
+    if (String(id).includes("gpt-5.6-luna")) return "Luna";
     const fam = String(id).split("/")[0];
     return ({ perplexity: "Perplexity", deepseek: "DeepSeek", mistralai: "Mistral",
               cohere: "Cohere", qwen: "Qwen", moonshotai: "Kimi", "meta-llama": "Llama",
@@ -2415,9 +2416,9 @@ app.get("/concile-roster", (_req, res) => {
   const sieges = [
   "perplexity/sonar-pro",
   "deepseek/deepseek-chat",
-  "mistralai/mistral-small-2603",
-  "qwen/qwen3.7-max",
-  "moonshotai/kimi-k2"
+  process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603",
+  process.env.OR_LUNA_MODEL || "openai/gpt-5.6-luna",
+  process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"
 ];
   const noms = sieges.map(sg => jolinom(resolveModel(sg)));
   res.set("Cache-Control", "public, max-age=300");
@@ -16110,7 +16111,7 @@ app.get("/analysis-history", (req, res) => {
       verification: {
         repaired_date: CLIENT_HISTORY_REPAIR_DATE,
         telegram_proof_since: CLIENT_TELEGRAM_PROOF_SINCE,
-        rule: "football_ou25_5_seats_min_4_votes_analysis_15_45_delivery_35_45",
+        rule: "football_ou25_5_seats_min_4_votes_from_35_until_verified_first_half_end",
       },
     });
   } catch (e) {
