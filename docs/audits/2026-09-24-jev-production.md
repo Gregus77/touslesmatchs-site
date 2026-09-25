@@ -1,6 +1,6 @@
 # Jev / TypeSafe — intégration de production
 
-État au 25 septembre 2026 : **PARTIEL — code et image candidate validés hors réseau, activation bloquée par l'absence de TYPESAFE_API_KEY**. Progression : 60 %. Ne pas confondre l'image candidate avec le service effectivement déployé. Aucune preuve naturelle Jev n'existe.
+État au 25 septembre 2026 : **PARTIEL — code et image candidate validés hors réseau, activation bloquée par la validation du modèle de la première réponse authentifiée**. Progression : 60 %. Ne pas confondre l'image candidate avec le service effectivement déployé. Aucune preuve naturelle Jev n'existe.
 
 ## Périmètre et décision propriétaire
 
@@ -18,7 +18,7 @@ OpenAPI téléchargé et vérifié le 25/09, version 0.2.0 ; SHA-256 `a191f8a7df
 
 Le client utilise `POST /v1/systemone`, un `state` structuré et la question native `production_decision` de type `choice`, avec SEND, WAIT, REANALYZE et REJECT. La réponse doit contenir le modèle, le choix, une confiance numérique de 0 à 1, les quatre probabilités normalisées et les compteurs de tokens. Le modèle retourné est contrôlé contre une liste explicitement vérifiée sur le compte ; aucune identité de modèle n'est présumée.
 
-**Modèle accessible au compte : non déterminé**, faute de clé. Aucun `GET /v1/models` authentifié ni POST TypeSafe n'a encore été exécuté. `scripts/verify_jev_api.js` effectuera le GET, choisira un modèle Jev effectivement retourné puis un unique POST minimal. Un reçu exclusif est écrit avant ce POST : timeout ou interruption ne déclenchent jamais une deuxième tentative payante. Ce contrôle ne crée ni match ni ligne de décision en production et n'appelle pas Telegram.
+**Modèles accessibles confirmés par GET authentifié HTTP 200 : `jev-latest` et `jev-preview`.** Un seul POST a été exécuté avec `jev-preview` : HTTP 200 en 533 ms, mais contrôle du champ modèle rejeté (`model_unavailable`). Le corps n'avait pas été conservé avant validation : nom résolu, choix, confiance, probabilités et tokens ne sont donc pas vérifiables pour cette tentative. La clé est désormais configurée. Le script corrigé `scripts/verify_jev_api.js` privilégie désormais le modèle stable `jev-latest` à l'alias preview et conserve les champs expurgés avant validation. Aucun second POST n'a été exécuté. Un reçu exclusif est écrit avant ce POST : timeout ou interruption ne déclenchent jamais une deuxième tentative payante. Ce contrôle ne crée ni match ni ligne de décision en production et n'appelle pas Telegram.
 
 ## Fonctionnement préparé
 
@@ -84,6 +84,20 @@ Les modifications antérieures de Caddy, des pages publiques, du thème, de l'in
 
 ## État final actuel
 
-**PARTIEL — 60 %. Clé requise avant validation authentifiée et activation.** Aucun signal historique rejoué, aucun vote/cote/message_id inventé en production, aucun résultat historique réécrit, aucun appel OpenRouter déclenché par ces vérifications et aucun secret affiché.
+**PARTIEL — 60 %. Nouvelle validation authentifiée soumise à l'autorisation du propriétaire avant activation.** Aucun signal historique rejoué, aucun vote/cote/message_id inventé en production, aucun résultat historique réécrit, aucun appel OpenRouter déclenché par ces vérifications et aucun secret affiché.
 
 **EN ATTENTE D'UNE PREUVE SUR MATCH NATUREL.** Même après validation technique et déploiement, cette réserve restera tant qu'un vrai match n'aura pas traversé Jev et les étapes de diffusion observables.
+
+
+## Reprise authentifiée du 25/09 à 02:13 UTC — blocage et correctif
+
+- GET `/v1/models` : HTTP 200 ; alias du compte `jev-latest`, `jev-preview`.
+- POST `/v1/systemone` : **exactement une tentative**, HTTP 200, 533 ms ; rejet local `model_unavailable` avant vérification des autres champs.
+- Défaut certain du validateur de contrôle : il imposait que le modèle de réponse figure dans la liste des alias alors que l'OpenAPI autorise un nom résolu différent. La valeur réelle n'ayant pas été conservée, impossible de déterminer rétrospectivement si c'était un alias résolu, un nom absent ou une autre anomalie.
+- Correctif hors réseau : découverte de la liaison alias vérifié → nom retourné par la réponse HTTPS authentifiée, validation complète du schéma, puis verrouillage de ce nom exact en production. Aucun joker ni acceptation dynamique de nouveaux modèles en production. Les champs utiles expurgés sont conservés même en cas de validation rejetée ; ni en-têtes ni réponse brute ne sont enregistrés.
+- Test supplémentaire `scripts/test_jev_alias_discovery_20260925.js` réussi sans réseau : priorité stable, résolution d'alias, verrouillage strict de production, rejets des alias non accessibles et des probabilités invalides, protection des secrets et conservation des preuves.
+- Le reçu de la première tentative est conservé. Le verrou anti-répétition demeure actif. **Une deuxième tentative ne sera pas lancée sans autorisation explicite**, conformément à la limite d'un POST donnée par le propriétaire.
+- Contrôle après le blocage : API HTTP 200, `ok=true`, image précédente inchangée, `JEV_ENABLED=0`, `JEV_PRODUCTION_MODE=0`, aucune table Jev en base de production. Aucun déploiement, aucune mutation de données par cette reprise et aucun envoi Telegram. Cela ne signifie pas que les tâches naturelles de l'application n'ont effectué aucune écriture pendant ce temps.
+- Pas de validation post-déploiement site/application/Telegram à revendiquer : le déploiement n'a pas eu lieu. Aucune preuve naturelle Jev.
+
+Fichiers supplémentaires de cette reprise : correctif `scripts/verify_jev_api.js`, nouveau test d'alias, ce rapport et ajout au CHANGELOG. La procédure privée `deploy.py` reconnaît désormais la liaison alias/nom résolu prouvée par le reçu authentifié, au lieu d'imposer que le nom résolu soit lui-même un alias du catalogue.

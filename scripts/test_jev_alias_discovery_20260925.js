@@ -1,0 +1,22 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {selectModel,responseEvidence,discoverAliasResponse}=require('./verify_jev_api');
+const {validateResponse}=require('./jev_decision_engine');
+const names=['jev-latest','jev-preview'];
+assert.equal(selectModel(names.map(name=>({name,release_date:'2026-09-10'}))),'jev-latest');
+const body={model:'jev-canonical-test-version',answers:{production_decision:{type:'choice',choice:'REJECT',confidence:0.9,
+  probabilities:{SEND:0.03,WAIT:0.03,REANALYZE:0.04,REJECT:0.9}}},usage:{input_tokens:40,output_tokens:8}};
+assert.throws(()=>validateResponse(body,names),/model_unavailable/);
+const discovered=discoverAliasResponse(body,names,'jev-latest','test-secret');
+assert.equal(discovered.model,body.model);
+assert.equal(validateResponse(body,[discovered.model]).input_tokens,40);
+assert.throws(()=>validateResponse({...body,model:'unexpected-next-version'},[discovered.model]),/model_unavailable/);
+assert.throws(()=>discoverAliasResponse(body,names,'unlisted-model','test-secret'),/invalid_alias_binding/);
+assert.throws(()=>discoverAliasResponse({...body,model:'test-secret'},names,'jev-latest','test-secret'),/invalid_alias_binding/);
+assert.equal(responseEvidence({...body,model:'Authorization: Bearer test-secret'},'test-secret').returned_model,null);
+assert.equal(responseEvidence(body,'test-secret').confidence,0.9);
+assert.equal(responseEvidence({...body,usage:{input_tokens:NaN}},'test-secret').input_tokens,null);
+const invalid=structuredClone(body);invalid.answers.production_decision.probabilities.SEND=9;
+assert.throws(()=>discoverAliasResponse(invalid,names,'jev-latest','test-secret'),/invalid_probabilities/);
+assert.equal(responseEvidence(invalid,'test-secret').returned_model,body.model);
+console.log('PASS alias discovery: stable preference, authenticated alias binding, strict production pinning, invalid responses rejected, safe evidence retained; zero network calls.');

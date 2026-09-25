@@ -443,3 +443,9 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - 30 scénarios Jev et test du bloc réel de publication réussis sans réseau ; neuf scripts de régression réussis. Image candidate construite, rollback conservé.
 - Corrige une erreur de syntaxe préexistante dans le tableau de bord admin. Préserve toutes les modifications antérieures non liées.
 - État : préparation validée, déploiement NON effectué, clé TypeSafe absente. Rapport `docs/audits/2026-09-24-jev-production.md`. Aucune preuve naturelle revendiquée.
+
+## 2026-09-25 — Codex — contrôle authentifié TypeSafe et résolution des alias
+
+- GET modèles réussi : `jev-latest`, `jev-preview`. Une seule tentative systemone sur `jev-preview`, HTTP 200 en 533 ms, rejetée localement au contrôle du modèle ; autres champs non conservés donc non validables.
+- Corrige le contrôle de découverte pour respecter les noms résolus autorisés par l'OpenAPI et conserver les preuves expurgées avant validation ; priorité à l'alias stable. La production conservera une liste exacte de noms vérifiés.
+- Test d'alias hors réseau réussi. Aucun second POST, aucune activation/déploiement, API saine et Jev désactivé. Nouvelle tentative soumise à autorisation explicite du propriétaire.
