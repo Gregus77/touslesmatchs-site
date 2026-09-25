@@ -390,3 +390,71 @@ Correctif urgent séparé de PR 109 : calendrier 4/6 EUR, réservation SQLite gl
 La route historique vérifie la session Premium côté serveur et transmet les cinq sièges d’un snapshot exact. Les directions restent masquées en gratuit. Accueil et application réutilisent les ronds existants avec minute, score de calcul et score final, sans appel sportif ni nouvelle analyse. Cache PWA renouvelé.
 
 - Complément : priorité cohérente du jeton OTP, contrôle des droits du bandeau sans requête sportive, affichage des matchs du périmètre indépendamment de leur admissibilité à une nouvelle analyse ; fraîcheur incertaine explicitée. Aucun droit en base ni critère sportif modifié.
+
+## 2026-09-14 — [Codex] Fiabilité Concile et Telegram
+
+- Le quorum public exige quatre votes concordants réels ; les réponses absentes,
+  invalides et rejetées statistiquement restent distinguées et ne créent plus de
+  sélection intermédiaire diffusable. Le snapshot attend les cinq appels bornés,
+  afin que les réponses tardives réelles des sièges 2 et 5 apparaissent aussi
+  sur le site et la PWA sans retarder au-delà des timeouts existants.
+- L’analyse reste strictement dans la fenêtre 15–45 et la diffusion dans 35–45,
+  sans temps additionnel, baisse de confiance, marché +0,5 ni routage shadow.
+- Les cinq sièges conservent des modèles distincts ; les promotions automatiques
+  fondées sur des populations incomparables sont ignorées et GPT-5 utilise la
+  passerelle OpenRouter budgétée déjà autorisée. Les challengers, marchés et
+  routages shadow restent actifs, persistés séparément et non diffusables.
+- Les messages Telegram échappent tous les champs dynamiques, valident une liste
+  fermée de balises, se découpent à 4 096 caractères et ne sont livrés qu’après
+  une réponse positive accompagnée d’un `message_id` entier.
+- La santé Telegram/Brevo sépare configuration, dernier contrôle, fraîcheur,
+  résultat courant et dernière livraison prouvée. Les erreurs fournisseur sont
+  journalisées par catégorie sans corps JSON ni identifiant sensible.
+- `backup-db.sh` ne supprime plus aucune ancienne sauvegarde automatiquement ;
+  l’espace disque est contrôlé avant chaque nouveau `.backup` cohérent.
+
+## 2026-09-15 — [Codex] Votes partiels et sièges Qwen/GPT-5
+
+- Les tentatives IA utilisent désormais la même clé de snapshot que les votes,
+  ce qui arrête les relances 0/5 d'un état de match déjà épuisé.
+- Un 429 propre à un modèle OpenRouter ne coupe plus les quatre autres modèles ;
+  les plafonds globaux, quotidiens et par snapshot restent inchangés.
+- Chaque bulletin persisté devient visible immédiatement sur le site et la PWA,
+  sans attendre le cinquième appel. Les échecs affichent leur catégorie réelle ;
+  seul un scrutin final à quatre voix concordantes peut produire un signal.
+- Qwen conserve 300 jetons avec le raisonnement désactivé ; Council-GPT5
+  conserve 500 jetons avec un effort minimal. Les deux réglages ont été validés
+  par une réponse structurée réelle via la passerelle budgétée.
+- Le repli transversal Qwen/Kimi est retiré : Luna ne peut plus appeler Qwen
+  sous un autre nom. Un modèle indisponible produit un état terminal explicite,
+  jamais un vote copié entre deux sièges.
+
+## 2026-09-24 — [Codex] Audit des 48 heures sans signal et supervision
+
+- Diagnostic et preuves enregistrés avant correction : un match, deux scrutins, aucun signal admissible; limites de rétention des logs explicites.
+- Liste publique des cinq sièges alignée sur le routage existant; budget global OpenRouter exposé séparément des estimations locales, appels Python inclus; métadonnée de fenêtre historique actualisée.
+- Tests hors réseau et déploiement API seule; critères métier, modèles, résultats et données client inchangés. Preuve naturelle encore attendue.
+- Rapport : `docs/audits/2026-09-24-48h-sans-signal.md`. Les modifications locales antérieures sont préservées.
+
+## 2026-09-25 — Codex — préparation Jev / TypeSafe production
+
+- Intégration native `systemone` après snapshot immuable, décision traditionnelle conservée, dépassement quantitatif explicitement autorisé par le propriétaire, exclusions structurelles et validation fraîche préservées.
+- Persistance additive, anti-doublon, coupe-circuit, repli TLM, réobservations bornées et supervision admin sécurisée ; aucune activation sans modèle vérifié sur le compte.
+- 30 scénarios Jev et test du bloc réel de publication réussis sans réseau ; neuf scripts de régression réussis. Image candidate construite, rollback conservé.
+- Corrige une erreur de syntaxe préexistante dans le tableau de bord admin. Préserve toutes les modifications antérieures non liées.
+- État : préparation validée, déploiement NON effectué, clé TypeSafe absente. Rapport `docs/audits/2026-09-24-jev-production.md`. Aucune preuve naturelle revendiquée.
+
+## 2026-09-25 — Codex — contrôle authentifié TypeSafe et résolution des alias
+
+- GET modèles réussi : `jev-latest`, `jev-preview`. Une seule tentative systemone sur `jev-preview`, HTTP 200 en 533 ms, rejetée localement au contrôle du modèle ; autres champs non conservés donc non validables.
+- Corrige le contrôle de découverte pour respecter les noms résolus autorisés par l'OpenAPI et conserver les preuves expurgées avant validation ; priorité à l'alias stable. La production conservera une liste exacte de noms vérifiés.
+- Test d'alias hors réseau réussi. Aucun second POST, aucune activation/déploiement, API saine et Jev désactivé. Nouvelle tentative soumise à autorisation explicite du propriétaire.
+
+## 2026-09-25 — Codex — Jev activé en production
+
+- Second et dernier POST de test explicitement autorisé : HTTP 200, alias `jev-latest` résolu en `jev-1.13.0`, REJECT 1,00 sur contrôle sans match, probabilités valides, 403/56 tokens, 551 ms. Un lancement intermédiaire avait échoué localement avant POST ; preuve par transport injecté, correctif et reçu séparé conservés.
+- API seule déployée à 02:27:25 UTC : Jev enabled/production=1, seuil 0,70, timeout 8 s, noms de réponse exacts autorisés. Image précédente conservée et rollback automatique préparé.
+- Endpoint admin authentifié actif, accès public refusé ; onze endpoints/pages HTTP 200 ; quatre canaux Telegram administrables sans envoi de test ; quatre services Running.
+- 817 snapshots, 11 sélections, 11 résultats officiels et 2 678 analyses résolues inchangés. Sur 79 tables, seuls les horodatages/délais opérationnels de six tables sont actualisés par les routines existantes.
+- Sauvegardes SQLite cohérentes avant/après et copies du projet conservées. Aucun troisième POST de test, aucun secret affiché, aucun faux signal, aucune preuve naturelle revendiquée.
+- Rapport final : `docs/audits/2026-09-24-jev-production.md`. État : OK technique, EN ATTENTE D'UNE PREUVE SUR MATCH NATUREL.

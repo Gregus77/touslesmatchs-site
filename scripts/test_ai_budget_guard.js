@@ -16,7 +16,7 @@ const Database = require("better-sqlite3");
 process.env.OPENROUTER_PARIS_SCHEDULE = "0";
 process.env.TELEGRAM_BOT_TOKEN = ""; // This test never sends admin alerts.
 
-const DB_FILE = path.join(__dirname, "..", ".tmp_test_ai_guard.db");
+const DB_FILE = path.join(process.env.TEST_TMP_DIR || path.join(__dirname, ".."), ".tmp_test_ai_guard.db");
 let pass = 0, fail = 0;
 
 function assert(cond, label) {
@@ -294,12 +294,12 @@ console.log("\n═══ Scénario 11 — calendrier Paris de production priorit
 {
   process.env.OPENROUTER_PARIS_SCHEDULE = "1";
   process.env.OPENROUTER_DAILY_BUDGET_EUR = "0.0005";
-  process.env.OPENROUTER_CONCILE_DAILY_BUDGET_EUR = "0.0001";
+  process.env.OPENROUTER_CONCILE_DAILY_BUDGET_EUR = "3";
   const guard = loadGuard(), db = freshDb();
   const req = {modelKey:"qwen",matchKey:"PARIS_POLICY",purpose:"concile",estimatedTokensIn:1500,estimatedTokensOut:400};
   assert(guard.canProceed(db,req).allowed, "le calendrier autorisé remplace les anciens sous-plafonds");
   const stats=guard.getDailyStats(db), limit=guard.parisBudget().limit;
-  assert(stats.budget.dailyBudgetEur===limit && stats.budget.concileDailyBudgetEur===limit, "API budget : plafond global et Concile cohérents");
+  assert(stats.budget.dailyBudgetEur===limit && stats.budget.scope.includes("partagé") && stats.budget.concileDailyBudgetEur===3, "plafond global partagé et sous-plafond Concile conservé");
   db.prepare("INSERT INTO ai_call_budget_log(request_key,model_key,match_key,purpose,cost_estimate_eur,status) VALUES ('retained','qwen','OLD','official_fallback',?,'ok')").run(limit);
   assert(!guard.canProceed(db,req).allowed, "le plafond Paris bloque réellement les dépenses supplémentaires");
   assert(guard.getDailyStats(db).costEur===limit, "les dépenses conservées sont comptées sur la journée Paris");

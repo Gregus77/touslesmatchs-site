@@ -7,7 +7,7 @@ const file=path.join(fs.mkdtempSync(path.join(os.tmpdir(),'recap-test-')),'test.
 const db=new Database(file);db.pragma('journal_mode = WAL');
 db.exec(`CREATE TABLE concile_analyses(match_key TEXT PRIMARY KEY,home TEXT,away TEXT,competition TEXT,minute_at_analysis INTEGER,score_home_at_analysis INTEGER,score_away_at_analysis INTEGER,best_bet TEXT,real_odd REAL,real_odd_source TEXT,analysed_at TEXT,outcome TEXT,final_score_home INTEGER,final_score_away INTEGER,sig_sent_free INTEGER DEFAULT 0,sig_sent_premium INTEGER DEFAULT 0);
 CREATE TABLE telegram_signal_deliveries(match_key TEXT,channel TEXT,telegram_message_id INTEGER,market TEXT,vote_count INTEGER,ok INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-let time=Date.parse('2026-09-11T21:45:00Z'),calls=0,failRu=true;
+let time=Date.parse('2026-09-11T21:00:00Z'),calls=0,failRu=true;
 const transport=async(token,payload)=>payload.chat_id==='-4'&&failRu?{ok:false,retryAfter:30}:{ok:true,messageId:++calls};
 const pub=c.createPublisher({db,env,transport,now:()=>time});
 assert.equal(c.sqliteUtcMs('2026-09-11 22:00:00'),Date.parse('2026-09-11T22:00:00Z'));

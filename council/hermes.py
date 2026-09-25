@@ -6,7 +6,6 @@ Exécuté automatiquement à 11h59 chaque jour via le scheduler.
 import os
 import sys
 import json
-import html
 import logging
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -78,13 +77,16 @@ def run_agent(agent_module, date, matches_text, history_text, stats):
         log.info(f"[{agent_module.NAME}] Recommande: {report.get('recommendation')} "
                  f"({report.get('match','NOPICK')}) confiance={report.get('confidence',0)}")
         return agent_module.NAME, report
-    except Exception as e:
-        log.error(f"[{agent_module.NAME}] Failed: {e}")
-        return agent_module.NAME, {"recommendation": "NOPICK", "confidence": 0, "reasoning": str(e)}
+    except Exception:
+        # Une exception SDK peut embarquer des en-têtes ou un corps JSON
+        # sensible. Le détail brut ne doit jamais atteindre les logs/Telegram.
+        log.error(f"[{agent_module.NAME}] Failed: provider_or_parse_error")
+        return agent_module.NAME, {"recommendation": "NOPICK", "confidence": 0,
+                                  "reasoning": "provider_or_parse_error"}
 
 
 def filter_agents_by_accuracy(agents, agent_accuracy):
-    """Keep only agents with >= 80% accuracy (or all if not enough data).
+    """Keep only agents at the configured 55% floor (or all if not enough data).
 
     Le mapping ci-dessous DOIT correspondre EXACTEMENT aux noms
     stockés dans concile_analyses / agent_predictions (colonne agent_name),
@@ -159,7 +161,7 @@ def run_council():
 
     log.info(f"Contexte: {stats['wins']}W/{stats['losses']}L ({stats['winrate']}% winrate)")
 
-    # 3. Filter agents by accuracy (>= 80%)
+    # 3. Filter agents by the unchanged statistical floor (55%)
     all_agents = [
         ("gpt", gpt_agent),
         ("gemini", gemini_agent),
@@ -182,7 +184,10 @@ def run_council():
             name, report = future.result()
             agent_reports[key] = report
 
-    # 4b. Run shadow agents (vote enregistré mais n'influence PAS la décision)
+    # 4b. Les challengers restent actifs à blanc. Leurs réponses sont persistées
+    # séparément et ne participent jamais à la décision ni à Telegram. Le budget
+    # central peut les refuser : ce refus est conservé comme indisponibilité,
+    # sans contourner les plafonds ni retarder les cinq sièges prioritaires.
     shadow_agents = [
         ("opus", opus_agent),
         ("gpt4o", gpt4o_agent),
@@ -198,8 +203,7 @@ def run_council():
             key = futures[future]
             name, report = future.result()
             shadow_reports[key] = report
-            log.info(f"  [SHADOW] {name}: {report.get('recommendation')} "
-                     f"conf={report.get('confidence',0)} — {report.get('match','—')}")
+            log.info(f"  [SHADOW] {name}: état={'ok' if report.get('confidence', 0) else 'indisponible'}")
 
     # 5. Collect premium candidates (confidence 7-7.9)
     premium_candidates = []
@@ -316,10 +320,10 @@ def run_council():
     # 13. Telegram — free channel
     if telegram_ok():
         if is_nopick:
-            send_nopick()
-            log.info("Telegram gratuit : NOPICK envoyé")
+            sent = send_nopick()
+            log.info("Telegram gratuit : NOPICK envoyé" if sent else "Telegram gratuit : NOPICK non envoyé")
         else:
-            send_free_pick(
+            sent = send_free_pick(
                 match=decision.get("match"),
                 bet=decision.get("bet"),
                 odds=decision.get("odds"),
@@ -327,20 +331,12 @@ def run_council():
                 confidence=decision.get("confidence", 0),
                 reasoning=decision.get("reasoning", ""),
             )
-            log.info("Telegram gratuit : pick du jour envoyé")
+            log.info("Telegram gratuit : pick du jour envoyé" if sent else "Telegram gratuit : pick non envoyé")
     else:
         log.warning("Telegram non configuré — messages non envoyés")
 
-    # 14. Daily report to admin Telegram
-    _send_daily_report(
-        decision=decision,
-        agent_reports=agent_reports,
-        shadow_reports=shadow_reports,
-        excluded_agents=excluded_agents,
-        stats=stats,
-        sport_counts=sport_counts,
-        is_nopick=is_nopick,
-    )
+    # Ordinary admin reporting is centralized in the API's two Paris-time slots.
+    # Keep the council run and its customer-facing pick delivery unchanged.
 
     log.info("=" * 60)
     log.info("HERMES COUNCIL - Session terminée")
@@ -355,58 +351,54 @@ def _send_daily_report(decision, agent_reports, shadow_reports, excluded_agents,
     name_map = {
         "gpt": "DeepSeek", "gemini": "Gemini Flash",
         "mistral": "Mistral", "groq": "Groq/Llama3",
-        "opus": "Opus", "gpt4o": "GPT-4o",
+        "opus": "Opus", "gpt4o": "GPT-4o", "gpt5": "GPT-5",
     }
     sports_line = " | ".join(f"{s}: {c}" for s, c in sorted(sport_counts.items()))
-
-    # Echappement HTML : ce texte vient d'IA (raisonnement, noms de match) et
-    # n'est jamais garanti exempt de "<"/">"/"&", qui cassent le parse_mode
-    # HTML de Telegram ("Unsupported start tag"). Constate le 01/08/2026 sur
-    # le rapport admin quotidien.
-    def esc(v):
-        return html.escape(str(v)) if v is not None else "-"
 
     agents_lines = []
     for key, report in agent_reports.items():
         name = name_map.get(key, key)
-        rec = esc(report.get("recommendation", "?"))
+        rec = str(report.get("recommendation", "?"))
         conf = report.get("confidence", 0)
-        match = esc(report.get("match", "-"))
-        agents_lines.append(f"  {esc(name)}: {rec} ({conf}/10) — {match}")
+        match = str(report.get("match", "-"))
+        agents_lines.append(f"  {name}: {rec} ({conf}/10) — {match}")
 
     for key, report in shadow_reports.items():
         name = name_map.get(key, key)
-        rec = esc(report.get("recommendation", "?"))
+        rec = str(report.get("recommendation", "?"))
         conf = report.get("confidence", 0)
-        match = esc(report.get("match", "-"))
-        agents_lines.append(f"  👻 {esc(name)} (shadow): {rec} ({conf}/10) — {match}")
+        match = str(report.get("match", "-"))
+        agents_lines.append(f"  👻 {name} (shadow): {rec} ({conf}/10) — {match}")
 
     excluded_lines = []
     for key, name, accuracy in excluded_agents:
-        excluded_lines.append(f"  {esc(name)}: {accuracy}% (< 80%)")
+        excluded_lines.append(f"  {name}: {accuracy}% (< {MIN_AGENT_ACCURACY}%)")
 
     report_data = {
         "date": date_str,
-        "sports": esc(sports_line),
+        "sports": sports_line,
         "total_matches": sum(sport_counts.values()),
         "decision": "PICK" if not is_nopick else "NOPICK",
-        "match": esc(decision.get("match", "-")),
-        "bet": esc(decision.get("bet", "-")),
-        "odds": esc(decision.get("odds", "-")),
+        "match": decision.get("match", "-"),
+        "bet": decision.get("bet", "-"),
+        "odds": decision.get("odds", "-"),
         "confidence": decision.get("confidence", 0),
         "agents": "\n".join(agents_lines),
         "excluded": "\n".join(excluded_lines) if excluded_lines else "Aucun",
         "winrate": stats.get("winrate", 0),
         "roi": stats.get("roi", 0),
         "total_picks": stats.get("wins", 0) + stats.get("losses", 0),
-        "improvement": esc(decision.get("improvement_notes", "")[:200]),
+        "improvement": str(decision.get("improvement_notes", ""))[:200],
     }
 
     try:
-        send_daily_report(report_data)
-        log.info("Rapport quotidien envoyé sur Telegram admin")
-    except Exception as e:
-        log.error(f"Erreur envoi rapport quotidien: {e}")
+        sent = send_daily_report(report_data)
+        if sent:
+            log.info("Rapport quotidien envoyé sur Telegram admin")
+        else:
+            log.error("Rapport quotidien non envoyé sur Telegram admin")
+    except Exception:
+        log.error("Erreur envoi rapport quotidien: telegram_delivery_error")
 
 
 if __name__ == "__main__":

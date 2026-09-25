@@ -251,11 +251,11 @@
     ["Non. Les analyses sont fournies à titre informatif uniquement. TousLesMatchs ne garantit aucun gain. Les jeux d'argent et de hasard comportent des risques. Jouez uniquement ce que vous pouvez perdre. Conseils :","No. Analyses are informational only. TousLesMatchs guarantees no return. Gambling carries risks. Risk only what you can afford to lose. Help:","No. Los análisis son solo informativos. TousLesMatchs no garantiza ganancias. El juego implica riesgos. Arriesga solo lo que puedas permitirte perder. Ayuda:","Não. As análises são apenas informativas. O TousLesMatchs não garante ganhos. O jogo envolve riscos. Arrisque apenas o que pode perder. Ajuda:","Нет. Аналитика носит только информационный характер. TousLesMatchs не гарантирует результат. Азартные игры связаны с риском. Рискуйте только доступной суммой. Помощь:","不。分析仅供参考，TousLesMatchs 不保证收益。博彩存在风险，请仅承担您能承受的损失。帮助："],
     ["Le Concile combine 5 IA indépendantes. Chaque IA vote séparément à partir des statistiques live, de l'historique, de la dynamique et des probabilités. Le signal est mis en avant seulement si les votes convergent. Si la convergence est faible, aucun signal n'est forcé.","The Council combines five independent AIs. Each AI votes separately using live statistics, history, match dynamics and probabilities. A signal is highlighted only when the votes converge. No signal is forced when agreement is weak.","El Consejo reúne cinco IA independientes. Cada IA vota por separado usando estadísticas en directo, historial, dinámica y probabilidades. Solo se destaca una señal cuando los votos convergen. Si el acuerdo es débil, no se fuerza ninguna señal.","O Conselho reúne cinco IA independentes. Cada IA vota separadamente com base em estatísticas ao vivo, histórico, dinâmica e probabilidades. Um sinal só é destacado quando os votos convergem. Se o acordo for fraco, nenhum sinal é forçado.","Совет объединяет пять независимых ИИ. Каждый голосует отдельно на основе текущей статистики, истории, динамики и вероятностей. Сигнал выделяется только при совпадении голосов. При слабом согласии сигнал не формируется.","评议会由五个独立 AI 组成。每个 AI 根据实时统计、历史、比赛走势和概率分别投票。只有投票趋同时才突出显示信号；共识较弱时不会强行发布。"],
     ["Le Conseil IA compare le consensus entre agents, la value (écart entre probabilité estimée et cote du marché), les objections soulevées, les données manquantes et le niveau de risque propre au sport. Si le doute reste trop fort, c'est NO BET — aucune analyse n'est publiée plutôt que de forcer un pick fragile.","The AI Council compares agreement between agents, the gap between estimated probability and market odds, objections, missing data and sport-specific risk. If uncertainty remains too high, no analysis is published.","El Consejo IA compara el consenso, la diferencia entre probabilidad estimada y cuota de mercado, las objeciones, los datos ausentes y el riesgo propio del deporte. Si la incertidumbre sigue siendo alta, no se publica ningún análisis.","O Conselho de IA compara o consenso, a diferença entre a probabilidade estimada e a odd do mercado, objeções, dados em falta e o risco específico do desporto. Se a incerteza continuar elevada, nenhuma análise é publicada.","Совет ИИ сравнивает согласие агентов, разницу между расчётной вероятностью и рыночным коэффициентом, возражения, недостающие данные и риск конкретного вида спорта. При высокой неопределённости анализ не публикуется.","AI 评议会会比较模型共识、估算概率与市场赔率的差距、反对意见、缺失数据以及该运动的特定风险。如果不确定性仍然过高，则不发布分析。"],
-    ["Le pick gratuit est publié lorsqu'une sélection gratuite est disponible. En Live IA, le produit football se concentre sur la 15e à la 45e minute, avec Over/Under 2,5 et un accord minimum de 3 IA sur 5.","The free pick is published when a free selection is available. Live AI focuses on football between minutes 15 and 45, with Over/Under 2.5 and agreement from at least three of five AIs.","La selección gratuita se publica cuando está disponible. La IA en directo se centra en el fútbol entre los minutos 15 y 45, con Más/Menos 2,5 y el acuerdo de al menos tres de cinco IA.","A seleção gratuita é publicada quando está disponível. A IA ao vivo foca-se no futebol entre os minutos 15 e 45, com Mais/Menos 2,5 e acordo de pelo menos três de cinco IA.","Бесплатный выбор публикуется, когда он доступен. ИИ-анализ в эфире работает с футбольными матчами с 15-й по 45-ю минуту, для тотала 2,5 требуется согласие минимум трёх из пяти ИИ.","有免费推荐时才会发布。AI 实时分析专注于足球比赛第 15 至 45 分钟的大/小 2.5 球市场，并要求至少五个 AI 中有三个达成一致。"],
-    ["Un match peut être écarté s'il est hors périmètre, hors de la fenêtre 15e-45e minute, si les données sont insuffisantes ou si le Concile n'obtient pas au moins 4 votes sur 5 sur Over/Under 2,5.","A match may be excluded when it is outside scope or the 15–45 minute window, when data is insufficient, or when the Council does not obtain at least three matching votes out of five on Over/Under 2.5.","Un partido puede excluirse si está fuera del ámbito o de la ventana de los minutos 15–45, si faltan datos o si el Consejo no obtiene al menos tres votos coincidentes de cinco en Más/Menos 2,5.","Um jogo pode ser excluído se estiver fora do âmbito ou da janela de 15–45 minutos, se os dados forem insuficientes ou se o Conselho não obtiver pelo menos três votos concordantes em cinco em Mais/Menos 2,5.","Матч исключается, если он вне охвата или окна 15–45 минут, если данных недостаточно либо Совет не получил минимум три совпадающих голоса из пяти по тоталу 2,5.","如果比赛不在范围内或不在第 15–45 分钟窗口、数据不足，或评议会未在大/小 2.5 球上获得至少五票中的三票一致，则会排除该比赛。"],
+    ["En Live IA, les analyses football ont lieu entre la 15e et la 45e minute. Un signal Over/Under 2,5 peut être diffusé entre la 35e et la 45e minute si au moins 4 IA sur 5 concordent et si les autres critères sont remplis. La livraison Telegram est vérifiée séparément.","Live football analyses run from minute 15 to 45. An Over/Under 2.5 signal can be sent from minute 35 to 45 only when at least four of five AIs agree and all other criteria are met. Telegram delivery is verified separately.","Los análisis de fútbol en directo se realizan entre los minutos 15 y 45. Una señal Más/Menos 2,5 solo puede enviarse entre los minutos 35 y 45 con al menos cuatro de cinco IA de acuerdo y los demás criterios cumplidos. La entrega de Telegram se verifica por separado.","As análises de futebol ao vivo decorrem entre os minutos 15 e 45. Um sinal Mais/Menos 2,5 só pode ser enviado entre os minutos 35 e 45 com pelo menos quatro de cinco IA concordantes e os restantes critérios cumpridos. A entrega no Telegram é verificada à parte.","Футбольный ИИ-анализ проводится с 15-й по 45-ю минуту. Сигнал на тотал 2,5 можно отправить с 35-й по 45-ю минуту лишь при совпадении минимум четырёх голосов из пяти и выполнении остальных критериев. Доставка в Telegram проверяется отдельно.","足球实时分析在第 15 至 45 分钟进行。大/小 2.5 球信号仅在第 35 至 45 分钟、至少五个 AI 中四个意见一致且满足其他条件时才可能发送。Telegram 投递需单独验证。"],
+    ["Un match peut être écarté s'il est hors périmètre, hors de la fenêtre 15e-45e minute, si les données sont insuffisantes ou si le Concile n'obtient pas au moins 4 votes sur 5 sur Over/Under 2,5.","A match may be excluded when it is outside scope or the 15–45 minute window, when data is insufficient, or when the Council does not obtain at least four matching votes out of five on Over/Under 2.5.","Un partido puede excluirse si está fuera del ámbito o de la ventana de los minutos 15–45, si faltan datos o si el Consejo no obtiene al menos cuatro votos coincidentes de cinco en Más/Menos 2,5.","Um jogo pode ser excluído se estiver fora do âmbito ou da janela de 15–45 minutos, se os dados forem insuficientes ou se o Conselho não obtiver pelo menos quatro votos concordantes em cinco em Mais/Menos 2,5.","Матч исключается, если он вне охвата или окна 15–45 минут, если данных недостаточно либо Совет не получил минимум четыре совпадающих голоса из пяти по тоталу 2,5.","如果比赛不在范围内或不在第 15–45 分钟窗口、数据不足，或评议会未在大/小 2.5 球上获得至少五票中的四票一致，则会排除该比赛。"],
     ["Le football uniquement.","Football only.","Solo fútbol.","Apenas futebol.","Только футбол.","仅限足球。"],
     ["Hermès collecte les matchs via API-Sports, puis vérifie chaque donnée sur 3 sources indépendantes. Aucun match non confirmé n'est analysé.","Hermès collects matches through API-Sports, then checks every data point against three independent sources. Unconfirmed matches are not analysed.","Hermès recopila los partidos mediante API-Sports y verifica cada dato en tres fuentes independientes. No se analiza ningún partido sin confirmar.","O Hermès recolhe os jogos através da API-Sports e verifica cada dado em três fontes independentes. Jogos não confirmados não são analisados.","Hermès получает матчи через API-Sports и проверяет каждый показатель по трём независимым источникам. Неподтверждённые матчи не анализируются.","Hermès 通过 API-Sports 获取比赛，并用三个独立来源核对每项数据。未确认的比赛不会被分析。"],
-    ["Chaque IA analyse stats, dynamique, historique, value et marchés selon le sport. 5/5 = signal unanime, 4/5 = signal renforcé, 3/5 = signal validé. À 2/5 ou moins, aucun signal client n’est diffusé.","Each AI analyses statistics, dynamics, history and markets. 5/5 means unanimous, 4/5 reinforced and 3/5 validated. With 2/5 or less, no client signal is sent.","Cada IA analiza estadísticas, dinámica, historial y mercados. 5/5 significa unanimidad, 4/5 señal reforzada y 3/5 señal validada. Con 2/5 o menos, no se envía ninguna señal.","Cada IA analisa estatísticas, dinâmica, histórico e mercados. 5/5 significa unanimidade, 4/5 sinal reforçado e 3/5 sinal validado. Com 2/5 ou menos, nenhum sinal é enviado.","Каждый ИИ анализирует статистику, динамику, историю и рынки. 5/5 — единогласно, 4/5 — усиленный сигнал, 3/5 — подтверждённый. При 2/5 и ниже сигнал клиентам не отправляется.","每个 AI 分析统计、走势、历史和市场。5/5 表示全票一致，4/5 表示强化信号，3/5 表示验证通过；2/5 或更低时不向客户发送信号。"],
+    ["Chaque IA analyse les données exploitables du match. 5/5 = accord unanime ; 4/5 = accord minimal. À 3/5 ou moins : consensus insuffisant — aucun signal. Un accord seul ne garantit ni sélection ni envoi.","Each AI examines usable match data. 5/5 means unanimous agreement; 4/5 is the minimum. With 3/5 or fewer: insufficient agreement, no signal. Agreement alone does not prove selection or delivery.","Cada IA analiza los datos útiles del partido. 5/5 significa unanimidad; 4/5 es el mínimo. Con 3/5 o menos, consenso insuficiente: ninguna señal. El acuerdo no demuestra selección ni entrega.","Cada IA analisa os dados utilizáveis do jogo. 5/5 é unanimidade; 4/5 é o mínimo. Com 3/5 ou menos, consenso insuficiente: nenhum sinal. O acordo não prova seleção nem entrega.","Каждый ИИ анализирует доступные данные матча. 5/5 — единогласие; 4/5 — необходимый минимум. При 3/5 и ниже согласие недостаточно: сигнала нет. Совпадение голосов само по себе не доказывает отбор или доставку.","每个 AI 分析可用比赛数据。5/5 表示一致，4/5 是最低要求；3/5 或更少表示共识不足，不产生信号。意见一致本身不证明已选中或已投递。"],
     ["Le pick est publié sur le site, envoyé par email et notifié sur Telegram. Les abonnés Premium reçoivent tous les signaux admissibles en temps réel sur Telegram.","The selection is published on the site, sent by email and announced on Telegram. Premium members receive every eligible signal in real time on Telegram.","La selección se publica en el sitio, se envía por email y se anuncia en Telegram. Los miembros Premium reciben todas las señales admisibles en tiempo real.","A seleção é publicada no site, enviada por email e anunciada no Telegram. Os membros Premium recebem todos os sinais elegíveis em tempo real.","Выбор публикуется на сайте, отправляется по email и в Telegram. Участники Premium получают все допустимые сигналы в реальном времени.","推荐会发布在网站上，并通过邮件和 Telegram 通知。Premium 会员会实时收到所有符合条件的信号。"],
     ["Chaque résultat est enregistré et intégré. Les stats sont réelles, mises à jour après chaque match. Le Concile apprend — pick après pick.","Every result is recorded and included. Statistics are real and updated after each match. The Council learns from each selection.","Cada resultado se registra y se integra. Las estadísticas son reales y se actualizan después de cada partido. El Consejo aprende con cada selección.","Cada resultado é registado e integrado. As estatísticas são reais e atualizadas após cada jogo. O Conselho aprende com cada seleção.","Каждый результат сохраняется и учитывается. Статистика реальна и обновляется после каждого матча. Совет учится на каждом выборе.","每个结果都会记录并纳入统计。统计数据真实，并在每场比赛后更新。评议会会从每次推荐中学习。"],
     ["Rejoins Premium à 14,90 €/mois. Tu vois ce que 5 IA pensent vraiment.","Join Premium for €14.90/month and see what five AIs actually conclude.","Únete a Premium por 14,90 €/mes y descubre qué concluyen realmente cinco IA.","Junte-se ao Premium por 14,90 €/mês e veja o que cinco IAs realmente concluem.","Подключите Premium за 14,90 € в месяц и смотрите выводы пяти ИИ.","每月 14.90 欧元加入 Premium，查看五个 AI 的真实结论。"],
@@ -264,9 +264,9 @@
     ["TousLesMatchs — Le Conseil IA sportif","TousLesMatchs — The AI Sports Council","TousLesMatchs — El Consejo IA deportivo","TousLesMatchs — O Conselho de IA desportivo","TousLesMatchs — Спортивный Совет ИИ","TousLesMatchs — AI 体育评议会"],
     ["Votre signal","Your signal","Tu señal","O seu sinal","Ваш сигнал","您的信号"],
     ["Over ou Under 2,5.","Over or Under 2.5.","Más o Menos de 2,5.","Mais ou Menos de 2,5.","Тотал больше или меньше 2,5.","大于或小于 2.5 球。"],
-    ["Entre la 15e et la 45e minute, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 3 IA sur 5.","Between minutes 15 and 45, five AIs analyse the match. You receive only signals validated by at least three of five AIs.","Entre los minutos 15 y 45, cinco IA analizan el partido. Solo recibes señales validadas por al menos tres de cinco IA.","Entre os minutos 15 e 45, cinco IA analisam o jogo. Recebe apenas sinais validados por pelo menos três de cinco IA.","С 15-й по 45-ю минуту матч анализируют пять ИИ. Вы получаете только сигналы, подтверждённые минимум тремя из пяти ИИ.","第 15 至 45 分钟，五个 AI 分析比赛。您只会收到至少五个 AI 中三个验证的信号。"],
+    ["Entre la 15e et la 45e minute, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.","Between minutes 15 and 45, five AIs analyse the match. A signal is validated only with at least four matching opinions out of five and the other quality criteria.","Entre los minutos 15 y 45, cinco IA analizan el partido. Una señal solo se valida con al menos cuatro de cinco opiniones coincidentes y los demás criterios de calidad.","Entre os minutos 15 e 45, cinco IA analisam o jogo. Um sinal só é validado com pelo menos quatro de cinco pareceres concordantes e os restantes critérios de qualidade.","С 15-й по 45-ю минуту матч анализируют пять ИИ. Сигнал допускается только при совпадении минимум четырёх голосов из пяти и выполнении остальных критериев качества.","第 15 至 45 分钟，五个 AI 分析比赛。只有至少五个 AI 中四个意见一致并满足其他质量标准，信号才可能通过验证。"],
     ["Football uniquement","Football only","Solo fútbol","Apenas futebol","Только футбол","仅限足球"],
-    ["3 IA / 5 minimum","At least 3 of 5 AIs","Mínimo 3 de 5 IA","Mínimo 3 de 5 IA","Минимум 3 ИИ из 5","至少 3/5 AI"],
+    ["4 IA / 5 minimum","At least 4 of 5 AIs","Mínimo 4 de 5 IA","Mínimo 4 de 5 IA","Минимум 4 ИИ из 5","至少 4/5 AI"],
     ["Analyse sportive informative · Aucun résultat n'est garanti.","Informational sports analysis · No result is guaranteed.","Análisis deportivo informativo · Ningún resultado está garantizado.","Análise desportiva informativa · Nenhum resultado é garantido.","Спортивная аналитика носит информационный характер · Результат не гарантирован.","体育分析仅供参考 · 不保证任何结果。"],
     ["Recherche du match en direct","Searching for a live match","Buscando un partido en directo","A procurar um jogo ao vivo","Поиск матча в эфире","正在查找直播比赛"],
     ["MATCH NON ANALYSÉ","MATCH NOT ANALYSED","PARTIDO NO ANALIZADO","JOGO NÃO ANALISADO","МАТЧ НЕ ПРОАНАЛИЗИРОВАН","比赛未分析"],
@@ -276,7 +276,7 @@
     ["Données en temps réel","Real-time data","Datos en tiempo real","Dados em tempo real","Данные в реальном времени","实时数据"],
     ["Équipes, scores et minutes actualisés.","Teams, scores and minutes updated.","Equipos, marcadores y minutos actualizados.","Equipas, resultados e minutos atualizados.","Команды, счёт и минуты обновляются.","球队、比分和分钟实时更新。"],
     ["5 IA indépendantes","Five independent AIs","Cinco IA independientes","Cinco IA independentes","Пять независимых ИИ","五个独立 AI"],
-    ["Accord minimum de 3 sur 5.","At least three of five must agree.","Acuerdo mínimo de tres de cinco.","Concordância mínima de três em cinco.","Минимум три совпадающих голоса из пяти.","至少五个中三个达成一致。"],
+    ["Accord minimum de 4 sur 5.","At least four of five must agree.","Acuerdo mínimo de cuatro de cinco.","Concordância mínima de quatro em cinco.","Минимум четыре совпадающих голоса из пяти.","至少五个中四个达成一致。"],
     ["Sécurisé et privé","Secure and private","Seguro y privado","Seguro e privado","Безопасно и конфиденциально","安全且私密"],
     ["Vos données restent confidentielles.","Your data remains private.","Tus datos siguen siendo confidenciales.","Os seus dados permanecem confidenciais.","Ваши данные остаются конфиденциальными.","您的数据保持私密。"],
     ["Voir tous les matchs →","See all matches →","Ver todos los partidos →","Ver todos os jogos →","Посмотреть все матчи →","查看所有比赛 →"],
@@ -362,7 +362,7 @@
     ["Süper Lig","Süper Lig","Süper Lig","Süper Lig","Суперлига Турции","土超"],
     ["CONCACAF Caribbean Club Championship","CONCACAF Caribbean Club Championship","Campeonato de Clubes del Caribe CONCACAF","Campeonato de Clubes do Caribe da CONCACAF","Клубный чемпионат Карибского бассейна КОНКАКАФ","中北美及加勒比海俱乐部锦标赛"],
     ["UEFA Champions League","UEFA Champions League","Liga de Campeones de la UEFA","Liga dos Campeões da UEFA","Лига чемпионов УЕФА","欧洲冠军联赛"],
-    ["Règle actuelle Premium : football de championnat entre la 15e et la 45e minute, majorité minimale 3/5, confiance ≥77/100, cote ANJ réelle entre 1,30 et 2,10 et au moins 5 places d'écart au classement. Les autres critères de qualité restent applicables.","Current Premium rule: league football between minutes 15 and 45, at least 3/5 agreement, confidence ≥77/100, verified ANJ odds from 1.30 to 2.10 and a verified league-table gap of at least five places. Other quality criteria still apply.","Regla Premium actual: fútbol de liga entre los minutos 15 y 45, mayoría mínima 3/5, confianza ≥77/100, cuota ANJ real entre 1,30 y 2,10 y al menos cinco puestos de diferencia en la tabla. Se mantienen los demás criterios de calidad.","Regra Premium atual: futebol de liga entre os minutos 15 e 45, maioria mínima de 3/5, confiança ≥77/100, odd ANJ real entre 1,30 e 2,10 e diferença de pelo menos cinco posições na tabela. Mantêm-se os restantes critérios de qualidade.","Текущее правило Premium: матчи чемпионатов с 15-й по 45-ю минуту, минимум 3/5 совпадающих голосов, уверенность ≥77/100, реальный коэффициент ANJ от 1,30 до 2,10 и разница в таблице не менее пяти мест. Остальные критерии качества сохраняются.","当前 Premium 规则：联赛第 15 至 45 分钟、至少 3/5 多数、置信度 ≥77/100、真实 ANJ 赔率 1.30 至 2.10，且联赛排名差至少五位。其他质量标准仍然适用。"],
+    ["Règle actuelle Premium : football de championnat analysé entre la 15e et la 45e minute, diffusion entre la 35e et la 45e, au moins 4/5 avis concordants et autres critères de qualité. Tous les signaux admissibles sont proposés, sans plafond quotidien commercial.","Current Premium rule: league football analysed between minutes 15 and 45, signals sent between minutes 35 and 45, at least 4/5 matching opinions and other quality criteria. All eligible signals are offered, without a commercial daily cap.","Regla Premium actual: fútbol de liga analizado entre los minutos 15 y 45, señales enviadas entre los minutos 35 y 45, al menos 4/5 opiniones coincidentes y los demás criterios de calidad. Todas las señales admisibles, sin límite comercial diario.","Regra Premium atual: futebol de campeonato analisado entre os minutos 15 e 45, envio entre os minutos 35 e 45, pelo menos 4/5 pareceres concordantes e os restantes critérios de qualidade. Todos os sinais elegíveis, sem limite comercial diário.","Текущее правило Premium: матчи чемпионатов анализируются с 15-й по 45-ю минуту, отправка с 35-й по 45-ю, минимум 4/5 совпадающих голосов и остальные критерии качества. Все допустимые сигналы без коммерческого суточного лимита.","当前 Premium 规则：联赛在第 15 至 45 分钟分析，信号在第 35 至 45 分钟发送，至少 4/5 意见一致且满足其他质量标准。所有合格信号均提供，不设商业每日上限。"],
     ["BON","GOOD","BUENO","BOM","ХОРОШО","良好"],
     ["FIABLE","RELIABLE","FIABLE","FIÁVEL","НАДЁЖНО","可靠"],
     ["TELEGRAM VÉRIFIÉ","TELEGRAM VERIFIED","TELEGRAM VERIFICADO","TELEGRAM VERIFICADO","TELEGRAM ПОДТВЕРЖДЁН","TELEGRAM 已验证"],
@@ -497,7 +497,8 @@
   function addSelector(lang){
     var labels=LANGUAGE_LABELS[lang]||NAMES;
     var existing=document.getElementById("tlm-language-universal"); if(existing){Array.from(existing.options).forEach(function(o){o.textContent=labels[o.value]||NAMES[o.value]||o.value;});existing.value=lang;return;}
-    if(document.getElementById("lang-current"))return;
+    // Le bandeau partagé porte déjà l'unique sélecteur de ces pages.
+    if(document.getElementById("tlm-global-language")||document.querySelector("header.tlm-global-header")||document.getElementById("lang-current"))return;
     var select=document.createElement("select");select.id="tlm-language-universal";select.setAttribute("aria-label",maps[lang]["Langue"]||"Language");
     LANGS.forEach(function(code){var o=document.createElement("option");o.value=code;o.textContent=labels[code]||NAMES[code];select.appendChild(o);});
     select.value=lang;select.addEventListener("change",function(){if(window.i18n&&i18n.setLang)i18n.setLang(select.value);else{try{localStorage.setItem("tlm_lang",select.value);}catch(e){}location.reload();}});
@@ -509,7 +510,10 @@
     if(changing)return;changing=true;
     var lang=language();document.documentElement.lang=lang==="pt"?"pt-BR":lang==="zh"?"zh-CN":lang;
     walk(document.body,lang);addSelector(lang);
-    document.title=translateDynamic(originalTitle,lang);
+    if(document.body.classList.contains('tlm-page-dashboard')){
+      var signedIn=document.getElementById('dash-section')?.style.display==='block';
+      document.title=translateDynamic(signedIn?'Mon compte':'Connexion',lang)+' — TousLesMatchs';
+    }else document.title=translateDynamic(originalTitle,lang);
     changing=false;
   }
   function init(){
@@ -530,3 +534,539 @@
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
   window.TLMI18nAuto={translate:translateDynamic,apply:applyAll,languages:LANGS.slice()};
 })();
+
+/* TLM-I18N-V26-BEGIN */
+(function(){
+"use strict";
+
+var V26={
+"Premium":{
+ fr:"Premium",en:"Premium",es:"Premium",pt:"Premium",ru:"Премиум",zh:"高级版"
+},
+"analyses aujourd'hui":{
+ fr:"analyses aujourd'hui",en:"analyses today",es:"análisis hoy",
+ pt:"análises hoje",ru:"анализов сегодня",zh:"今日分析"
+},
+"Mi-temps":{
+ fr:"Mi-temps",en:"Half-time",es:"Descanso",pt:"Intervalo",ru:"Перерыв",zh:"半场"
+},
+"En direct":{
+ fr:"En direct",en:"Live",es:"En directo",pt:"Ao vivo",ru:"В эфире",zh:"直播"
+},
+"Terminé":{
+ fr:"Terminé",en:"Finished",es:"Finalizado",pt:"Encerrado",ru:"Завершён",zh:"已结束"
+},
+"À venir":{
+ fr:"À venir",en:"Upcoming",es:"Próximo",pt:"Em breve",ru:"Предстоящий",zh:"即将开始"
+},
+"Analyse historique":{
+ fr:"Analyse historique",en:"Historical analysis",es:"Análisis histórico",
+ pt:"Análise histórica",ru:"Исторический анализ",zh:"历史分析"
+},
+"Analyse historique — entrée fermée":{
+ fr:"Analyse historique — entrée fermée",
+ en:"Historical analysis — entry closed",
+ es:"Análisis histórico — entrada cerrada",
+ pt:"Análise histórica — entrada encerrada",
+ ru:"Исторический анализ — вход закрыт",
+ zh:"历史分析 — 已停止入场"
+},
+"ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL":{
+ fr:"ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL",
+ en:"ENTRY CLOSED — DO NOT ENTER THIS SIGNAL",
+ es:"ENTRADA CERRADA — NO ENTRAR EN ESTA SEÑAL",
+ pt:"ENTRADA ENCERRADA — NÃO ENTRAR NESTE SINAL",
+ ru:"ВХОД ЗАКРЫТ — НЕ ВХОДИТЬ ПО ЭТОМУ СИГНАЛУ",
+ zh:"入场已关闭 — 请勿再跟随此信号"
+},
+"Entrée fermée — analyse conservée pour le bilan, aucune nouvelle entrée.":{
+ fr:"Entrée fermée — analyse conservée pour le bilan, aucune nouvelle entrée.",
+ en:"Entry closed — analysis kept for the record, no new entry.",
+ es:"Entrada cerrada — análisis conservado para el balance, sin nueva entrada.",
+ pt:"Entrada encerrada — análise mantida para o balanço, sem nova entrada.",
+ ru:"Вход закрыт — анализ сохранён для статистики, новых входов нет.",
+ zh:"入场已关闭 — 分析仅保留用于统计，不再接受新入场。"
+},
+"Analyse conservée à 45'":{
+ fr:"Analyse conservée à 45'",en:"Analysis saved at 45'",
+ es:"Análisis guardado en el 45'",pt:"Análise guardada aos 45'",
+ ru:"Анализ сохранён на 45-й минуте",zh:"分析已保存于第45分钟"
+},
+"aucun signal officiel":{
+ fr:"aucun signal officiel",en:"no official signal",
+ es:"sin señal oficial",pt:"nenhum sinal oficial",
+ ru:"официального сигнала нет",zh:"无官方信号"
+},
+"Anciennes tendances — aucun signal officiel":{
+ fr:"Anciennes tendances — aucun signal officiel",
+ en:"Previous trends — no official signal",
+ es:"Tendencias anteriores — sin señal oficial",
+ pt:"Tendências anteriores — nenhum sinal oficial",
+ ru:"Предыдущие тенденции — официального сигнала нет",
+ zh:"历史趋势 — 无官方信号"
+},
+"Signal validé — livraison en attente":{
+ fr:"Signal validé — livraison en attente",
+ en:"Validated signal — delivery pending",
+ es:"Señal validada — envío pendiente",
+ pt:"Sinal validado — envio pendente",
+ ru:"Сигнал подтверждён — отправка ожидается",
+ zh:"信号已验证 — 等待发送"
+},
+"Envoyé sur Telegram":{
+ fr:"Envoyé sur Telegram",en:"Sent on Telegram",es:"Enviado por Telegram",
+ pt:"Enviado pelo Telegram",ru:"Отправлено в Telegram",zh:"已发送至 Telegram"
+},
+"Tendance IA":{
+ fr:"Tendance IA",en:"AI trend",es:"Tendencia IA",pt:"Tendência IA",
+ ru:"Тенденция ИИ",zh:"AI 趋势"
+},
+"Tendance IA en cours":{
+ fr:"Tendance IA en cours",en:"AI trend in progress",
+ es:"Tendencia IA en curso",pt:"Tendência IA em curso",
+ ru:"Текущая тенденция ИИ",zh:"AI 趋势分析中"
+},
+"En attente des IA":{
+ fr:"En attente des IA",en:"Waiting for AI models",
+ es:"Esperando a las IA",pt:"Aguardando as IAs",
+ ru:"Ожидание ответов ИИ",zh:"等待 AI 响应"
+},
+"ANALYSE EN COURS":{
+ fr:"ANALYSE EN COURS",en:"ANALYSIS IN PROGRESS",
+ es:"ANÁLISIS EN CURSO",pt:"ANÁLISE EM CURSO",
+ ru:"АНАЛИЗ В ПРОЦЕССЕ",zh:"分析进行中"
+},
+"SIGNAL VALIDÉ — À SUIVRE":{
+ fr:"SIGNAL VALIDÉ — À SUIVRE",en:"VALIDATED SIGNAL — FOLLOW",
+ es:"SEÑAL VALIDADA — SEGUIR",pt:"SINAL VALIDADO — SEGUIR",
+ ru:"ПОДТВЕРЖДЁННЫЙ СИГНАЛ — СЛЕДОВАТЬ",zh:"已验证信号 — 可跟随"
+},
+"AUCUN SIGNAL VALIDÉ":{
+ fr:"AUCUN SIGNAL VALIDÉ",en:"NO VALIDATED SIGNAL",
+ es:"SIN SEÑAL VALIDADA",pt:"NENHUM SINAL VALIDADO",
+ ru:"НЕТ ПОДТВЕРЖДЁННОГО СИГНАЛА",zh:"无已验证信号"
+},
+"Ne pas considérer cette tendance comme un signal TousLesMatchs.":{
+ fr:"Ne pas considérer cette tendance comme un signal TousLesMatchs.",
+ en:"Do not consider this trend a TousLesMatchs signal.",
+ es:"No considere esta tendencia como una señal de TousLesMatchs.",
+ pt:"Não considere esta tendência como um sinal TousLesMatchs.",
+ ru:"Не считайте эту тенденцию сигналом TousLesMatchs.",
+ zh:"请勿将此趋势视为 TousLesMatchs 官方信号。"
+},
+"Interrogation des 5 IA en cours":{
+ fr:"Interrogation des 5 IA en cours",en:"Querying the 5 AI models",
+ es:"Consultando las 5 IA",pt:"Consultando as 5 IAs",
+ ru:"Запрашиваются 5 моделей ИИ",zh:"正在查询 5 个 AI 模型"
+},
+"Analyse disponible à partir de la 35e minute":{
+ fr:"Analyse disponible à partir de la 35e minute",
+ en:"Analysis available from minute 35",
+ es:"Análisis disponible desde el minuto 35",
+ pt:"Análise disponível a partir do minuto 35",
+ ru:"Анализ доступен с 35-й минуты",
+ zh:"从第35分钟开始提供分析"
+},
+"IA ont répondu":{
+ fr:"IA ont répondu",en:"AI models responded",es:"IA respondieron",
+ pt:"IAs responderam",ru:"ИИ ответили",zh:"个 AI 已响应"
+},
+"consensus":{
+ fr:"consensus",en:"consensus",es:"consenso",pt:"consenso",ru:"консенсус",zh:"共识"
+},
+"classement non vérifiable":{
+ fr:"classement non vérifiable",en:"standings could not be verified",
+ es:"clasificación no verificable",pt:"classificação não verificável",
+ ru:"турнирную таблицу не удалось проверить",zh:"无法验证排名"
+},
+"Signal écarté":{
+ fr:"Signal écarté",en:"Signal rejected",es:"Señal descartada",
+ pt:"Sinal rejeitado",ru:"Сигнал отклонён",zh:"信号已排除"
+},
+"Signal disponible":{
+ fr:"Signal disponible",en:"Signal available",es:"Señal disponible",
+ pt:"Sinal disponível",ru:"Сигнал доступен",zh:"信号可用"
+},
+"Signal prêt":{
+ fr:"Signal prêt",en:"Signal ready",es:"Señal lista",pt:"Sinal pronto",
+ ru:"Сигнал готов",zh:"信号已就绪"
+},
+"Une sélection validée vient d’être détectée.":{
+ fr:"Une sélection validée vient d’être détectée.",
+ en:"A validated selection has just been detected.",
+ es:"Se acaba de detectar una selección validada.",
+ pt:"Uma seleção validada acabou de ser detectada.",
+ ru:"Только что обнаружен подтверждённый выбор.",
+ zh:"刚刚检测到一个已验证选择。"
+},
+"Voir":{
+ fr:"Voir",en:"View",es:"Ver",pt:"Ver",ru:"Открыть",zh:"查看"
+},
+"Fermer":{
+ fr:"Fermer",en:"Close",es:"Cerrar",pt:"Fechar",ru:"Закрыть",zh:"关闭"
+}
+};
+
+function lang(){
+ try{
+   var l=localStorage.getItem("tlm_lang");
+   if(V26["Premium"][l]!==undefined)return l;
+ }catch(e){}
+ return (document.documentElement.lang||"fr").slice(0,2).toLowerCase();
+}
+
+function trExact(text,l){
+ var clean=String(text||"").trim();
+ if(V26[clean] && V26[clean][l]!==undefined)return V26[clean][l];
+
+ /*
+   Dynamic strings: preserve numbers, score, minute and vote counts.
+ */
+ var replacements=Object.keys(V26).sort(function(a,b){return b.length-a.length;});
+ var result=String(text||"");
+
+ replacements.forEach(function(key){
+   if(key==="Premium")return;
+   if(result.indexOf(key)>=0){
+     result=result.split(key).join(V26[key][l]||key);
+   }
+ });
+
+ return result;
+}
+
+function applyV26(root){
+ var l=lang();
+ if(l==="fr")return;
+
+ root=root||document.body;
+ if(!root)return;
+
+ var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ var nodes=[],n;
+
+ while((n=walker.nextNode()))nodes.push(n);
+
+ nodes.forEach(function(node){
+   if(!node.parentElement)return;
+   if(node.parentElement.closest("script,style,noscript"))return;
+
+   var original=node.nodeValue;
+   var translated=trExact(original,l);
+
+   if(translated!==original)node.nodeValue=translated;
+ });
+
+ root.querySelectorAll &&
+ root.querySelectorAll("[placeholder],[title],[aria-label]").forEach(function(el){
+   ["placeholder","title","aria-label"].forEach(function(attr){
+     if(!el.hasAttribute(attr))return;
+     var old=el.getAttribute(attr);
+     var next=trExact(old,l);
+     if(next!==old)el.setAttribute(attr,next);
+   });
+ });
+}
+
+var timer=null;
+function schedule(){
+ clearTimeout(timer);
+ timer=setTimeout(function(){applyV26(document.body)},20);
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+ applyV26(document.body);
+ setTimeout(function(){applyV26(document.body)},300);
+ setTimeout(function(){applyV26(document.body)},1200);
+
+ new MutationObserver(schedule).observe(document.body,{
+   childList:true,
+   subtree:true,
+   characterData:true
+ });
+});
+
+document.addEventListener("tlm-language-change",function(){
+ setTimeout(function(){applyV26(document.body)},0);
+ setTimeout(function(){applyV26(document.body)},250);
+});
+
+window.TLMI18nV26={
+ translate:trExact,
+ apply:applyV26
+};
+
+})();
+/* TLM-I18N-V26-END */
+
+/* TLM-I18N-V27-BEGIN */
+(function(){
+"use strict";
+
+var D={
+"À venir":{
+fr:"À venir",en:"Upcoming",es:"Próximos",pt:"Próximos",ru:"Предстоящие",zh:"即将开始"
+},
+"Historique":{
+fr:"Historique",en:"History",es:"Historial",pt:"Histórico",ru:"История",zh:"历史"
+},
+"Matchs réellement analysés":{
+fr:"Matchs réellement analysés",en:"Matches actually analyzed",
+es:"Partidos realmente analizados",pt:"Jogos realmente analisados",
+ru:"Фактически проанализированные матчи",zh:"实际分析的比赛"
+},
+"Voir Live IA →":{
+fr:"Voir Live IA →",en:"View Live AI →",es:"Ver IA en directo →",
+pt:"Ver IA ao vivo →",ru:"Открыть ИИ в прямом эфире →",zh:"查看实时 AI →"
+},
+"conservée pour le bilan, pas une nouvelle recommandation":{
+fr:"conservée pour le bilan, pas une nouvelle recommandation",
+en:"kept for the record, not a new recommendation",
+es:"conservado para el balance, no es una nueva recomendación",
+pt:"mantida para o balanço, não é uma nova recomendação",
+ru:"сохранён для статистики, это не новая рекомендация",
+zh:"仅保留用于统计，并非新的推荐"
+},
+"Premium actif jusqu’au":{
+fr:"Premium actif jusqu’au",en:"Premium active until",
+es:"Premium activo hasta",pt:"Premium ativo até",
+ru:"Премиум активен до",zh:"高级版有效期至"
+},
+"Premium actif jusqu'au":{
+fr:"Premium actif jusqu'au",en:"Premium active until",
+es:"Premium activo hasta",pt:"Premium ativo até",
+ru:"Премиум активен до",zh:"高级版有效期至"
+},
+"Minimum 4 IA sur 5 concordantes":{
+fr:"Minimum 4 IA sur 5 concordantes",
+en:"At least 4 of 5 AI models must agree",
+es:"Al menos 4 de 5 IA deben coincidir",
+pt:"Pelo menos 4 de 5 IAs devem concordar",
+ru:"Минимум 4 из 5 моделей ИИ должны совпасть",
+zh:"至少 5 个 AI 中有 4 个意见一致"
+},
+"tous les signaux admissibles":{
+fr:"tous les signaux admissibles",
+en:"all eligible signals",
+es:"todas las señales admisibles",
+pt:"todos os sinais elegíveis",
+ru:"все подходящие сигналы",
+zh:"所有符合条件的信号"
+}
+};
+
+function language(){
+ try{
+  var l=localStorage.getItem("tlm_lang");
+  if(["fr","en","es","pt","ru","zh"].includes(l))return l;
+ }catch(e){}
+ return (document.documentElement.lang||"fr").slice(0,2);
+}
+
+function translateText(text,l){
+ var out=String(text||"");
+
+ Object.keys(D)
+  .sort(function(a,b){return b.length-a.length})
+  .forEach(function(key){
+    if(out.indexOf(key)!==-1){
+      out=out.split(key).join(D[key][l]||key);
+    }
+  });
+
+ return out;
+}
+
+function apply(root){
+ var l=language();
+ if(l==="fr")return;
+
+ root=root||document.body;
+ if(!root)return;
+
+ var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ var nodes=[],node;
+
+ while((node=walker.nextNode()))nodes.push(node);
+
+ nodes.forEach(function(n){
+   if(!n.parentElement)return;
+   if(n.parentElement.closest("script,style,noscript"))return;
+
+   var next=translateText(n.nodeValue,l);
+   if(next!==n.nodeValue)n.nodeValue=next;
+ });
+
+ root.querySelectorAll("[title],[aria-label],[placeholder]").forEach(function(el){
+   ["title","aria-label","placeholder"].forEach(function(a){
+     if(!el.hasAttribute(a))return;
+     var old=el.getAttribute(a);
+     var next=translateText(old,l);
+     if(next!==old)el.setAttribute(a,next);
+   });
+ });
+}
+
+var timer;
+function schedule(){
+ clearTimeout(timer);
+ timer=setTimeout(function(){apply(document.body)},25);
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+ apply(document.body);
+ setTimeout(schedule,300);
+ setTimeout(schedule,1000);
+
+ new MutationObserver(schedule).observe(document.body,{
+   subtree:true,
+   childList:true,
+   characterData:true
+ });
+});
+
+document.addEventListener("tlm-language-change",function(){
+ setTimeout(schedule,0);
+ setTimeout(schedule,300);
+});
+
+window.TLMI18nV27={apply:apply,translate:translateText};
+
+})();
+/* TLM-I18N-V27-END */
+
+/* TLM-I18N-V27-BEGIN */
+(function(){
+"use strict";
+
+var D={
+"À venir":{
+fr:"À venir",en:"Upcoming",es:"Próximos",pt:"Próximos",ru:"Предстоящие",zh:"即将开始"
+},
+"Historique":{
+fr:"Historique",en:"History",es:"Historial",pt:"Histórico",ru:"История",zh:"历史"
+},
+"Matchs réellement analysés":{
+fr:"Matchs réellement analysés",en:"Matches actually analyzed",
+es:"Partidos realmente analizados",pt:"Jogos realmente analisados",
+ru:"Фактически проанализированные матчи",zh:"实际分析的比赛"
+},
+"Voir Live IA →":{
+fr:"Voir Live IA →",en:"View Live AI →",es:"Ver IA en directo →",
+pt:"Ver IA ao vivo →",ru:"Открыть ИИ в прямом эфире →",zh:"查看实时 AI →"
+},
+"conservée pour le bilan, pas une nouvelle recommandation":{
+fr:"conservée pour le bilan, pas une nouvelle recommandation",
+en:"kept for the record, not a new recommendation",
+es:"conservado para el balance, no es una nueva recomendación",
+pt:"mantida para o balanço, não é uma nova recomendação",
+ru:"сохранён для статистики, это не новая рекомендация",
+zh:"仅保留用于统计，并非新的推荐"
+},
+"Premium actif jusqu’au":{
+fr:"Premium actif jusqu’au",en:"Premium active until",
+es:"Premium activo hasta",pt:"Premium ativo até",
+ru:"Премиум активен до",zh:"高级版有效期至"
+},
+"Premium actif jusqu'au":{
+fr:"Premium actif jusqu'au",en:"Premium active until",
+es:"Premium activo hasta",pt:"Premium ativo até",
+ru:"Премиум активен до",zh:"高级版有效期至"
+},
+"Minimum 4 IA sur 5 concordantes":{
+fr:"Minimum 4 IA sur 5 concordantes",
+en:"At least 4 of 5 AI models must agree",
+es:"Al menos 4 de 5 IA deben coincidir",
+pt:"Pelo menos 4 de 5 IAs devem concordar",
+ru:"Минимум 4 из 5 моделей ИИ должны совпасть",
+zh:"至少 5 个 AI 中有 4 个意见一致"
+},
+"tous les signaux admissibles":{
+fr:"tous les signaux admissibles",
+en:"all eligible signals",
+es:"todas las señales admisibles",
+pt:"todos os sinais elegíveis",
+ru:"все подходящие сигналы",
+zh:"所有符合条件的信号"
+}
+};
+
+function language(){
+ try{
+  var l=localStorage.getItem("tlm_lang");
+  if(["fr","en","es","pt","ru","zh"].includes(l))return l;
+ }catch(e){}
+ return (document.documentElement.lang||"fr").slice(0,2);
+}
+
+function translateText(text,l){
+ var out=String(text||"");
+
+ Object.keys(D)
+  .sort(function(a,b){return b.length-a.length})
+  .forEach(function(key){
+    if(out.indexOf(key)!==-1){
+      out=out.split(key).join(D[key][l]||key);
+    }
+  });
+
+ return out;
+}
+
+function apply(root){
+ var l=language();
+ if(l==="fr")return;
+
+ root=root||document.body;
+ if(!root)return;
+
+ var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+ var nodes=[],node;
+
+ while((node=walker.nextNode()))nodes.push(node);
+
+ nodes.forEach(function(n){
+   if(!n.parentElement)return;
+   if(n.parentElement.closest("script,style,noscript"))return;
+
+   var next=translateText(n.nodeValue,l);
+   if(next!==n.nodeValue)n.nodeValue=next;
+ });
+
+ root.querySelectorAll("[title],[aria-label],[placeholder]").forEach(function(el){
+   ["title","aria-label","placeholder"].forEach(function(a){
+     if(!el.hasAttribute(a))return;
+     var old=el.getAttribute(a);
+     var next=translateText(old,l);
+     if(next!==old)el.setAttribute(a,next);
+   });
+ });
+}
+
+var timer;
+function schedule(){
+ clearTimeout(timer);
+ timer=setTimeout(function(){apply(document.body)},25);
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+ apply(document.body);
+ setTimeout(schedule,300);
+ setTimeout(schedule,1000);
+
+ new MutationObserver(schedule).observe(document.body,{
+   subtree:true,
+   childList:true,
+   characterData:true
+ });
+});
+
+document.addEventListener("tlm-language-change",function(){
+ setTimeout(schedule,0);
+ setTimeout(schedule,300);
+});
+
+window.TLMI18nV27={apply:apply,translate:translateText};
+
+})();
+/* TLM-I18N-V27-END */

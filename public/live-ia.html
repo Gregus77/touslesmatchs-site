@@ -322,6 +322,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-vote-seat.over{border-color:rgba(34,211,238,.48);background:rgba(34,211,238,.1)}
 .mc-vote-seat.under{border-color:rgba(217,70,239,.48);background:rgba(217,70,239,.1)}
 .mc-vote-seat.old{opacity:.46;filter:grayscale(.8)}
+.mc-vote-seat.old{opacity:1;filter:none}
+.mc-vote-seat.over{border-color:#22d3ee;background:#087b9a}
+.mc-vote-seat.under{border-color:#d946ef;background:#8528d6}
+.mc-vote-seat.over .mc-vote-seat-index,.mc-vote-seat.under .mc-vote-seat-index{background:rgba(0,0,0,.25);color:#fff}
+.mc-vote-seat.over strong,.mc-vote-seat.under strong,.mc-vote-seat.over small,.mc-vote-seat.under small{color:#fff}
+.mc-vote-seat.terminal{border-color:#fbbf24;background:#5f4519}
+.mc-vote-seat.terminal small{color:#fff}
 .mc-vote-seat-index{width:21px;height:21px;margin:0 auto 5px;display:grid;place-items:center;border-radius:50%;background:rgba(255,255,255,.08);color:#e6e9ff;font-size:8px;font-weight:950}
 .mc-vote-seat.over .mc-vote-seat-index{background:rgba(34,211,238,.2);color:#dffaff}
 .mc-vote-seat.under .mc-vote-seat-index{background:rgba(217,70,239,.2);color:#fff0ff}
@@ -329,8 +336,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mc-vote-seat small{display:block;margin-top:3px;color:#8994ba;font-size:7.5px;line-height:1.25}
 @media(max-width:560px){.mc-vote-details{margin-left:10px;margin-right:10px}.mc-vote-seats{gap:4px}.mc-vote-seat{padding:7px 3px}.mc-vote-seat strong{font-size:7px}.mc-vote-seat small{font-size:6.8px}}
 </style>
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260913-auth" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
+<!-- TLM-CONSENSUS-STATUS-20260920 -->
+<style>
+.consensus-insufficient{color:#ff667f!important;font-weight:900!important;animation:tlmConsensusBad 1s ease-in-out infinite!important}
+.consensus-valid{color:#55efca!important;font-weight:900!important;animation:tlmConsensusGood 1.35s ease-in-out infinite!important}
+@keyframes tlmConsensusBad{50%{opacity:.4;text-shadow:0 0 12px rgba(255,70,100,.9)}}
+@keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
+@media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
+</style>
+<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -693,16 +709,46 @@ function confMeta(conf) {
   return { cls: "red", emoji: "🔴", label: "Prudence" };
 }
 
+function liveAuthHeaders(json) {
+  var headers={Accept:'application/json'};
+  if(json)headers['Content-Type']='application/json';
+  try {
+    var token=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||localStorage.getItem('tlm_session')||'';
+    var email=localStorage.getItem('tlm_email')||'';
+    if(token)headers.Authorization='Bearer '+token;
+    if(email)headers['X-TLM-Email']=email;
+  } catch(_) {}
+  if(userAuth&&userAuth.email&&userAuth.code){headers['X-TLM-Email']=userAuth.email;headers['X-TLM-Code']=userAuth.code;}
+  return headers;
+}
+async function restoreLiveAuth() {
+  var headers=liveAuthHeaders(),email='',code='';
+  try {email=localStorage.getItem('tlm_email')||'';code=localStorage.getItem('tlm_code')||'';}catch(_){}
+  if(headers.Authorization){
+    try {
+      var response=await fetch('/api/auth/session',{headers:headers,cache:'no-store'});
+      var session=response.ok?await response.json():null;
+      if(session&&session.ok&&session.email)return {email:session.email,plan:session.plan||'free',credits_max:session.credits_max};
+    }catch(_){}
+    try {
+      var response2=await fetch('/api/auth/access',{headers:headers,cache:'no-store'});
+      var access=response2.ok?await response2.json():null;
+      if(access&&access.ok&&access.locked===false)return {email:email,plan:access.plan||'premium',credits_left:access.credits_left,credits_max:access.credits_max};
+    }catch(_){}
+  }
+  if(email&&code){
+    try {
+      var legacyResponse=await fetch('/api/verify-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,code:code})});
+      var legacy=legacyResponse.ok?await legacyResponse.json():null;
+      if(legacy&&legacy.valid)return {email:email,code:code,plan:legacy.plan,credits_left:legacy.credits_left,credits_max:legacy.credits_max};
+    }catch(_){}
+  }
+  return null;
+}
+var liveAuthReady;
 // ── Init ──
 (function init() {
-  const email = localStorage.getItem("tlm_email");
-  const code = localStorage.getItem("tlm_code");
-  const plan = localStorage.getItem("tlm_plan");
-  if (email && code && plan) {
-    userAuth = { email, code, plan };
-    updateAuthBar();
-    refreshCredits();   // récupère le compteur de jetons à jour au chargement
-  }
+  liveAuthReady=restoreLiveAuth().then(function(auth){userAuth=auth;updateAuthBar();if(auth){closeLoginModal();loadMatches();refreshCredits();}renderMatches();return auth;});
   loadMatches();
   setInterval(function(){ loadMatches(); refreshCredits(); }, 60000);
   setTimeout(checkWatchedForUpdates, 8000);
@@ -725,6 +771,15 @@ function onSearchInput(v) {
 
 // Récupère le compteur de jetons à jour depuis le serveur (au chargement).
 function refreshCredits() {
+  if(userAuth&&!userAuth.code){
+    var currentUser=userAuth;
+    return fetch('/api/auth/access',{headers:liveAuthHeaders(),cache:'no-store'})
+      .then(function(r){return r.ok?r.json():null;}).then(function(d){
+        if(d&&d.ok&&d.locked===false&&userAuth===currentUser){
+          userAuth.credits_left=d.credits_left;userAuth.credits_max=d.credits_max;userAuth.plan=d.plan;updateAuthBar();
+        }
+      }).catch(function(){});
+  }
   if (!userAuth || !userAuth.email || !userAuth.code) return;
   fetch("/api/verify-code", {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -774,7 +829,7 @@ function updateAuthBar() {
 // ── Load matches ──
 function loadMatches(force) {
   var url = "/api/live-matches" + (force ? "?force=1" : "");
-  var headers={};try{var otp=localStorage.getItem('tlm_session_token')||localStorage.getItem('tlm_token')||'';if(otp)headers.Authorization='Bearer '+otp;}catch(_){}if(userAuth&&userAuth.email&&userAuth.code){headers['X-TLM-Email']=userAuth.email;headers['X-TLM-Code']=userAuth.code;}
+  var headers=liveAuthHeaders();
   fetch(url,{headers:headers}).then(function(r){ return r.json(); }).then(function(d) {
     if (d.ok && d.matches) {
       allMatches = d.matches.filter(tlmSoccerOnly);
@@ -850,28 +905,35 @@ function liveOu25State(m) {
 
 function renderLiveOu25Details(m) {
   var state = liveOu25State(m);
-  var consensusDirection = state.official&&!state.locked?(state.consensusDirection === 'over' ? "Over" : state.consensusDirection === 'under' ? "Under" : "") : "";
+  var entryClosed=TLMMatchLifecycle.entryClosed(m);
+  var consensusDirection = !state.locked?(state.consensusDirection === 'over'||state.overCount>=state.underCount&&state.overCount>0 ? "OVER" : state.consensusDirection === 'under'||state.underCount>0 ? "UNDER" : "") : "";
   var consensusCount = state.consensusCount;
-  var verdict = state.official
-    ? (state.locked ? "Signal officiel enregistré · détails réservés à Premium" : (state.statusText||"Signal officiel")+" · "+consensusDirection+" 2,5 · "+consensusCount+"/5 · confiance "+state.confidence+"/100 · "+(state.odd==null?"cote indisponible":"cote "+Number(state.odd).toFixed(2))+(state.outcome==='win'?" · gagné":state.outcome==='loss'?" · perdu":""))
-    : state.voteCount
-      ? "Anciennes tendances — aucun signal officiel"
-      : "Aucun vote enregistré pour le moment";
+  var responseCount=state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
+  var minute=Number(m&&m.minute),directionText=consensusDirection?consensusDirection+' 2,5 — '+consensusCount+'/5':'Consensus '+consensusCount+'/5';
+  var verdict=state.official?(m&&m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
+    :state.voteCount&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(consensusCount<4?' · consensus insuffisant':'')
+    :state.voteCount&&consensusCount<4?'Consensus insuffisant — aucun signal'
+    :state.voteCount?(m&&(m.diffusion_block||m.analysis_exclusion_reason)||'Tendance — autres critères non remplis, aucun signal')
+    :(m&&(m.analysis_exclusion_reason||m.block_reason)||'Aucun vote enregistré pour le moment');
+  if(state.voteCount)verdict=directionText+' · '+verdict;
+  if(state.official&&!state.locked)verdict+=' · confiance '+state.confidence+'/100 · '+(state.odd==null?'cote indisponible':'cote '+Number(state.odd).toFixed(2))+(state.outcome==='win'?' · gagné':state.outcome==='loss'?' · perdu':'');
+  if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
   var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
   if (!reason && !state.voteCount) {
-    if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 15e minute.";
-    else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote 15e–45e est terminée.";
+    if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 35e minute.";
+    else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote est terminée : fin de première mi-temps.";
     else reason = "Les cinq IA n’ont pas encore enregistré de vote exploitable.";
   }
   var seats = state.slots.map(function(slot, i) {
     var voted = slot && slot.status === "voted" && (slot.direction === "over" || slot.direction === "under");
     var dir = voted&&!state.locked ? slot.direction : "";
-    var shortLabel = voted ? (state.locked ? "?" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : String(i + 1);
-    var choice = voted ? (state.locked ? "Vote masqué" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : "En attente";
+    var failure=slot&&slot.status==='abstained'?'Abstention explicite':slot&&slot.status==='empty'?'Réponse sans avis exploitable':slot&&slot.status==='parse_error'?'Réponse invalide':slot&&slot.status==='rejected_statistical'?'Vote écarté':/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé':slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
+    var shortLabel = voted ? (state.locked ? "✓" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : failure==='En attente'?String(i+1):'—';
+    var choice = voted ? (state.locked ? "Vote enregistré · direction Premium" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : failure;
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";
-    return '<div class="mc-vote-seat ' + dir + (state.official?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + choice + confidence + '</small></div>';
+    return '<div class="mc-vote-seat ' + dir + (!voted&&slot&&slot.status!=='pending'?' terminal':'') + (state.official&&!entryClosed?'':' old') + '"><span class="mc-vote-seat-index">' + shortLabel + '</span><strong>' + escHtml(slot && slot.agent || ("IA " + (i + 1))) + '</strong><small>' + escHtml(choice) + confidence + '</small></div>';
   }).join("");
-  return '<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>Conseil IA · Over/Under 2,5</span><span class="mc-vote-count">' + state.voteCount + '/5</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (consensusDirection ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
+  return TLMMatchLifecycle.entryNoticeHtml(m)+'<details class="mc-vote-details" data-vote-details><summary><span class="mc-vote-summary-left"><span>'+(entryClosed?'Analyse historique':'Conseil IA')+' · Over/Under 2,5</span><span class="mc-vote-count">' + consensusCount + '/5 consensus · '+responseCount+'/5 IA ont répondu</span></span></summary><div class="mc-vote-panel"><div class="mc-vote-verdict' + (state.official&&!entryClosed ? ' valid' : '') + '">' + escHtml(verdict) + '</div>' + (reason ? '<div class="mc-vote-reason">' + escHtml(reason) + '</div>' : '') + '<div class="mc-vote-seats">' + seats + '</div></div></details>';
 }
 
 // ── Render ──
@@ -1008,8 +1070,8 @@ function renderMatches() {
     // du fondateur le 01/08/2026, ça montre que le site suit le match).
     // Les signaux épinglés sont exclus : leur analyse est déjà affichée au-dessus.
     if (isLive && !isDone && !m.pinnedSignal) {
-      if (m.analysable === false) {
-        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(m.analysis_exclusion_reason || m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
+      if (m.analysable === false || TLMMatchLifecycle.entryClosed(m)) {
+        html += '<div class="mc-cta"><div class="mc-not-playable">⏳ ' + escHtml(TLMMatchLifecycle.entryClosed(m)?"Entrée fermée — analyse conservée pour le bilan, aucune nouvelle entrée.":m.analysis_exclusion_reason || m.block_reason || "Pas encore de signal exploitable sur ce match.") + '</div></div>';
       } else {
         var cached = analysisCache[matchId];
         html += '<div class="mc-cta">';
@@ -1125,7 +1187,8 @@ function buyCarteToken() {
     .catch(function(){ alert('Erreur réseau, réessaie.'); });
 }
 
-function requestAnalysis(btn, matchId, home, away) {
+async function requestAnalysis(btn, matchId, home, away) {
+  await liveAuthReady;
   if (!userAuth) {
     openLoginModal();
     return;
@@ -1142,7 +1205,7 @@ function requestAnalysis(btn, matchId, home, away) {
 
   fetch("/api/concile-analysis", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: liveAuthHeaders(true),
     signal: controller ? controller.signal : undefined,
     body: JSON.stringify({
       email: userAuth.email,
@@ -1251,7 +1314,7 @@ function checkWatchedForUpdates() {
     }
     fetch("/api/concile-analysis", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: liveAuthHeaders(true),
       body: JSON.stringify({
         email: userAuth.email, code: userAuth.code,
         match: { id: match.id, home: match.home, away: match.away, score_home: match.score_home, score_away: match.score_away, minute: match.minute, competition: match.competition }
@@ -1310,7 +1373,7 @@ function showUpdatePopup(home, away, voteLabel, betText, confText, resumeText) {
 
 // ── Auth ──
 function toggleMenu() { document.getElementById("mmenu").classList.toggle("open"); }
-function openLoginModal() { document.getElementById("login-modal").classList.add("open"); }
+async function openLoginModal() { await liveAuthReady;if(userAuth){closeLoginModal();return;}document.getElementById("login-modal").classList.add("open"); }
 function closeLoginModal() { document.getElementById("login-modal").classList.remove("open"); }
 
 function doLogin() {
@@ -1333,7 +1396,7 @@ function doLogin() {
       localStorage.setItem("tlm_email", email);
       localStorage.setItem("tlm_code", code);
       localStorage.setItem("tlm_session", d.session_token || "");
-      localStorage.setItem("tlm_plan", d.plan);
+      localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
       closeLoginModal();
       updateAuthBar();
       loadAgentRanking();
@@ -1353,11 +1416,17 @@ function doLogin() {
 }
 
 function doLogout() {
+  var logoutHeaders=liveAuthHeaders(true);
   userAuth = null;
   localStorage.removeItem("tlm_email");
   localStorage.removeItem("tlm_code");
   localStorage.removeItem("tlm_session");
   localStorage.removeItem("tlm_plan");
+  localStorage.removeItem('tlm_session_token');
+  localStorage.removeItem('tlm_token');
+  liveAuthReady=Promise.resolve(null);
+  fetch('/api/auth/logout',{method:'POST',headers:logoutHeaders}).catch(function(){});
+  document.dispatchEvent(new CustomEvent('tlm-auth-change'));
   updateAuthBar();
   document.getElementById("agent-ranking").style.display = "none";
   renderMatches();
@@ -1780,5 +1849,12 @@ function tlmMatchHour(m){
 <script id="TLM_EXTRA_COUNTRY_FLAGS_FINAL">
 window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨🇿", "Czechia": "🇨🇿", "Serbia": "🇷🇸", "Croatia": "🇭🇷", "Slovenia": "🇸🇮", "Hungary": "🇭🇺", "Romania": "🇷🇴", "Bulgaria": "🇧🇬", "Ukraine": "🇺🇦", "Georgia": "🇬🇪", "Poland": "🇵🇱", "Austria": "🇦🇹", "Switzerland": "🇨🇭", "Greece": "🇬🇷", "Norway": "🇳🇴", "Sweden": "🇸🇪", "Denmark": "🇩🇰", "Finland": "🇫🇮"};
 </script>
+<!-- TLM-CONSENSUS-STATUS-RUNTIME-20260920 -->
+<script>(function(){
+function paint(el,total){if(!el)return;var text=(el.textContent+' '+(total||'')).replace(/\s+/g,' '),good=/\b[45]\s*\/\s*5\b/.test(text)&&!/insuffisant|aucun signal/i.test(text),bad=/consensus insuffisant/i.test(text)||(/\b[1-3]\s*\/\s*5\b/.test(text)&&!good);el.classList.toggle('consensus-valid',good);el.classList.toggle('consensus-insufficient',bad);}
+function refresh(){paint(document.getElementById('hero-consensus-label'),document.getElementById('hero-consensus-current')&&document.getElementById('hero-consensus-current').textContent);paint(document.getElementById('app-ai-result'),document.getElementById('app-ai-total')&&document.getElementById('app-ai-total').textContent);document.querySelectorAll('.mc-vote-verdict').forEach(function(el){var box=el.closest('.mc-vote-details');paint(el,box&&box.querySelector('.mc-vote-count')&&box.querySelector('.mc-vote-count').textContent);});}
+if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
+new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
+})();</script>
 </body>
 </html>

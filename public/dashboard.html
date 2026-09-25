@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mon espace — TousLesMatchs</title>
+<title>Connexion — TousLesMatchs</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#12152a">
 <link rel="icon" href="/favicon.ico">
@@ -125,26 +125,20 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260913-auth" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
 </head>
 <body class="tlm-wow tlm-page-dashboard">
 
-<nav>
-  <a href="/" class="nav-brand">TousLesMatchs</a>
-  <div class="nav-links">
-    <a href="/">Accueil</a>
-    <a href="/live-ia" class="nav-live-link"><span class="nav-live-dot"></span>Live IA</a>
-    <a href="/performances">Performances</a>
-    <a href="/dashboard" style="color:var(--text)">Mon espace</a>
-  </div>
-  <button class="nav-logout" id="nav-logout" style="display:none" onclick="logout()">Déconnexion</button>
-</nav>
-
 <div class="page">
+  <div id="session-restore-section" class="auth-box" style="display:none">
+    <div class="auth-title">Connexion momentanément indisponible</div>
+    <div class="auth-sub">Ta session est conservée. Réessaie lorsque le service répond.</div>
+    <button class="auth-btn" type="button" onclick="loadDashboard()">Réessayer</button>
+  </div>
   <!-- Auth (shown when not logged in) — email + code temporaire (OTP) -->
   <div id="auth-section" class="auth-box" style="display:none">
-    <div class="auth-title">Mon espace</div>
+    <div class="auth-title">Connexion</div>
     <div class="auth-sub" id="auth-sub">Entre ton email pour recevoir un code de connexion</div>
     <div class="auth-card">
       <div class="auth-err" id="auth-err"></div>
@@ -162,21 +156,32 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
         <button class="auth-btn" id="auth-verify-btn" onclick="verifyOtp()">Se connecter →</button>
         <div class="auth-switch"><a onclick="backToEmailStep()">← Changer d'email / renvoyer un code</a></div>
       </div>
+      <div id="passkey-login-area" style="display:none;margin-top:12px">
+        <button class="auth-btn" type="button" onclick="loginWithPasskey()">Se connecter avec une passkey</button>
+        <div class="auth-sub" style="margin-top:8px">Selon ton appareil : empreinte, visage ou code de déverrouillage. Email/code reste disponible.</div>
+      </div>
     </div>
   </div>
 
   <!-- Dashboard (shown when logged in) -->
   <div id="dash-section" style="display:none">
     <div class="dash-header">
-      <div class="dash-welcome" id="dash-welcome">Mon espace</div>
+      <div class="dash-welcome" id="dash-welcome">Mon compte</div>
       <div><span class="dash-email" id="dash-email"></span><span class="dash-plan" id="dash-plan"></span><span class="dash-status" id="dash-status"></span></div>
       <div class="dash-renewal" id="dash-renewal" style="display:none"></div>
+      <button class="nav-logout" id="nav-logout" onclick="logout()">Déconnexion</button>
     </div>
 
     <div class="dash-actions" id="dash-actions" style="display:none">
       <button class="dash-action-btn" id="telegram-btn" onclick="openTelegram()">📩 Rejoindre le canal Telegram</button>
       <button class="dash-action-btn" id="billing-btn" onclick="openBillingPortal()">⚙️ Gérer / résilier mon abonnement</button>
       <a class="dash-action-btn" href="/#plans">↗️ Changer d'offre</a>
+    </div>
+    <div id="passkey-manage-area" style="display:none;margin-top:16px;background:var(--bg2);border:1px solid var(--b2);border-radius:16px;padding:18px">
+      <div class="section-title" style="margin-top:0">Mes passkeys</div>
+      <div class="auth-sub">Enregistre plusieurs appareils. Aucun visage ni aucune empreinte n'est conservé par TousLesMatchs.</div>
+      <button class="dash-action-btn" type="button" onclick="registerPasskey()">Ajouter une passkey</button>
+      <div id="passkey-list" style="margin-top:12px"></div>
     </div>
 
     <div class="kpi-grid">
@@ -221,6 +226,7 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
   </div>
 </footer>
 
+<script src="/js/simplewebauthn-browser.js?v=passkey-web-v1"></script>
 <script>
 // Connexion unifiée email + code temporaire (OTP) — même système que le
 // reste du site (voir /auth/request-otp, /auth/verify-otp). L'ancien
@@ -229,6 +235,78 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 // clients) — confirmé avant modification, cf. audit Phase 1.
 var token = localStorage.getItem('tlm_session_token');
 var pendingEmail = '';
+var passkeysEnabled = false;
+function passkeyHeaders() { return { 'Content-Type':'application/json', 'Authorization':'Bearer '+token }; }
+function refreshPasskeyAvailability() {
+  fetch('/api/auth/passkey/status', {cache:'no-store'}).then(function(r){return r.json();}).then(function(d){
+    passkeysEnabled = d.enabled === true && typeof SimpleWebAuthnBrowser !== 'undefined' && typeof PublicKeyCredential !== 'undefined';
+    document.getElementById('passkey-login-area').style.display = passkeysEnabled ? 'block' : 'none';
+    if (passkeysEnabled && document.getElementById('dash-section').style.display !== 'none') {
+      document.getElementById('passkey-manage-area').style.display='block'; loadPasskeyList();
+    }
+  }).catch(function(){ passkeysEnabled=false; });
+}
+function loginWithPasskey() {
+  if (!passkeysEnabled) return;
+  var email = document.getElementById('auth-email').value.trim().toLowerCase();
+  if (!email) return showErr('Entre ton email avant de choisir la passkey.');
+  fetch('/api/auth/passkey/login-options',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email})})
+  .then(function(r){return r.json();}).then(async function(d){
+    if (!d.ok) throw new Error('options');
+    var credential = await SimpleWebAuthnBrowser.startAuthentication({optionsJSON:d.options});
+    var verified = await fetch('/api/auth/passkey/login-verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:email,attempt_id:d.attempt_id,credential:credential})});
+    return verified.json();
+  }).then(function(d){
+    if (!d.ok || !d.token) throw new Error('verify');
+    token=d.token;
+    localStorage.setItem('tlm_session_token',token);
+    localStorage.setItem('tlm_email',d.email);
+    localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan||"free"):(/^(standard|premium|elite|vip)$/i.test(String(d.plan||"free"))?"premium":String(d.plan||"free").toLowerCase())));
+    document.dispatchEvent(new Event('tlm-auth-change'));
+    loadDashboard();
+  }).catch(function(){showErr('Connexion passkey impossible. Utilise le code reçu par email.');});
+}
+function registerPasskey() {
+  if (!passkeysEnabled || !token) return;
+  var label = prompt('Nom de cette passkey (ex. mon téléphone) :','Mon appareil');
+  if (label === null) return;
+  fetch('/api/auth/passkey/register-options',{method:'POST',headers:passkeyHeaders(),body:'{}'})
+  .then(function(r){return r.json();}).then(async function(d){
+    if (!d.ok) throw new Error('recent-auth');
+    var credential = await SimpleWebAuthnBrowser.startRegistration({optionsJSON:d.options});
+    var verified = await fetch('/api/auth/passkey/register-verify',{method:'POST',headers:passkeyHeaders(),body:JSON.stringify({credential:credential,label:label})});
+    return verified.json();
+  }).then(function(d){if(!d.ok)throw new Error('verify');loadPasskeyList();})
+  .catch(function(){alert('Activation impossible. Reconnecte-toi récemment avec email/code, puis réessaie.');});
+}
+function loadPasskeyList() {
+  if (!passkeysEnabled || !token) return;
+  fetch('/api/auth/passkey/list',{headers:{Authorization:'Bearer '+token},cache:'no-store'})
+  .then(function(r){return r.json();}).then(function(d){
+    if(!d.ok)return;
+    var box=document.getElementById('passkey-list');box.replaceChildren();
+    (d.passkeys||[]).forEach(function(item){
+      var row=document.createElement('div');row.style.cssText='display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0';
+      var name=document.createElement('span');name.textContent=item.label||'Mon appareil';row.appendChild(name);
+      var rename=document.createElement('button');rename.className='dash-action-btn';rename.textContent='Renommer';rename.onclick=function(){renamePasskey(item.id,item.label);};row.appendChild(rename);
+      var remove=document.createElement('button');remove.className='dash-action-btn';remove.textContent='Supprimer';remove.onclick=function(){deletePasskey(item.id);};row.appendChild(remove);
+      box.appendChild(row);
+    });
+    if(!(d.passkeys||[]).length)box.textContent='Aucune passkey enregistrée.';
+  }).catch(function(){});
+}
+function renamePasskey(id,oldLabel) {
+  var label=prompt('Nouveau nom :',oldLabel||'Mon appareil');if(!label)return;
+  fetch('/api/auth/passkey/rename',{method:'POST',headers:passkeyHeaders(),body:JSON.stringify({id:id,label:label})})
+  .then(function(r){return r.json();}).then(function(d){if(!d.ok)throw new Error('rename');loadPasskeyList();})
+  .catch(function(){alert('Renommage impossible. Reconnecte-toi récemment avec email/code.');});
+}
+function deletePasskey(id) {
+  if(!confirm('Supprimer cette passkey ? Email/code restera disponible.'))return;
+  fetch('/api/auth/passkey/delete',{method:'POST',headers:passkeyHeaders(),body:JSON.stringify({id:id})})
+  .then(function(r){return r.json();}).then(function(d){if(!d.ok)throw new Error('delete');loadPasskeyList();})
+  .catch(function(){alert('Suppression impossible. Reconnecte-toi récemment avec email/code.');});
+}
 
 function esc(s) {
   return String(s || '').replace(/[&<>"']/g, function(c) {
@@ -308,7 +386,7 @@ function logout() {
   token = null;
   document.getElementById('dash-section').style.display = 'none';
   document.getElementById('auth-section').style.display = 'block';
-  document.getElementById('nav-logout').style.display = 'none';
+  setAccountPageTitle(false);
   backToEmailStep();
   if (t) fetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + t } }).catch(function(){});
 }
@@ -331,25 +409,45 @@ function fmtDate(d) {
 
 var STATUS_LABELS = { active: 'Actif', expired: 'Expiré', cancelled: 'Résilié', free: '' };
 
+function setAccountPageTitle(connected) {
+  var title = connected ? 'Mon compte' : 'Connexion';
+  var lang = localStorage.getItem('tlm_lang') || 'fr';
+  var translated = window.TLMI18nAuto && typeof window.TLMI18nAuto.translate === 'function'
+    ? window.TLMI18nAuto.translate(title, lang) : title;
+  document.title = translated + ' — TousLesMatchs';
+  document.querySelector('#auth-section .auth-title').textContent = connected ? '' : translated;
+  document.getElementById('dash-welcome').textContent = connected ? translated : 'Mon compte';
+}
+document.addEventListener('tlm-language-change', function() {
+  setTimeout(function() {
+    setAccountPageTitle(document.getElementById('dash-section').style.display !== 'none');
+  }, 0);
+});
+
 function loadDashboard() {
   document.getElementById('auth-section').style.display = 'none';
-  document.getElementById('dash-section').style.display = 'block';
-  document.getElementById('nav-logout').style.display = 'block';
+  document.getElementById('dash-section').style.display = 'none';
+  document.getElementById('session-restore-section').style.display = 'none';
 
   fetch('/api/auth/dashboard-data', { headers: { 'Authorization': 'Bearer ' + token } })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    if (!d.ok) { logout(); return; }
+  .then(function(r) { return r.json().then(function(d){return {status:r.status,data:d};}); })
+  .then(function(answer) {
+    if (answer.status === 401) { logout(); return; }
+    var d = answer.data;
+    if (!d.ok) { document.getElementById('session-restore-section').style.display = 'block'; return; }
+    document.getElementById('dash-section').style.display = 'block';
+    setAccountPageTitle(true);
     document.getElementById('dash-email').textContent = d.email;
-    var plan = d.plan || 'free';
-    var status = d.status || 'free';
+    var plan = d.plan;
+    var status = d.status;
     var isLegacyPaid = plan === 'standard' || plan === 'elite' || plan === 'vip';
     var isPaidActive = plan !== 'free' && status === 'active';
 
     var planEl = document.getElementById('dash-plan');
-    var planLabel = plan === 'free' ? 'Gratuit' : 'Premium';
-    planEl.textContent = planLabel;
-    planEl.className = 'dash-plan ' + (isPaidActive ? 'premium' : 'standard');
+    var planLabels = {free:'Gratuit',standard:'Premium',premium:'Premium',elite:'Premium',vip:'Premium'};
+    planEl.textContent = planLabels[plan] || '';
+    planEl.className = 'dash-plan ' + (plan === 'free' ? 'free' : isPaidActive ? 'premium' : 'standard');
+    planEl.style.display = planEl.textContent ? 'inline-block' : 'none';
 
     var statusEl = document.getElementById('dash-status');
     if (STATUS_LABELS[status]) {
@@ -388,8 +486,9 @@ function loadDashboard() {
     renderTierStats(plan);
     renderRecentResults(d.recent || [], isPaidActive);
     loadReferralLink();
+    if (passkeysEnabled) { document.getElementById('passkey-manage-area').style.display='block'; loadPasskeyList(); }
   })
-  .catch(function() { logout(); });
+  .catch(function() { document.getElementById('session-restore-section').style.display = 'block'; });
 }
 
 function loadReferralLink() {
@@ -500,7 +599,9 @@ if (token) {
   loadDashboard();
 } else {
   document.getElementById('auth-section').style.display = 'block';
+  setAccountPageTitle(false);
 }
+refreshPasskeyAvailability();
 
 // Enter key support
 var legacyAuthPass = document.getElementById('auth-pass');

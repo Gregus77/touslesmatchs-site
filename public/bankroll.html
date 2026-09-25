@@ -220,8 +220,8 @@ body.tlm-page-bankroll .hidden{display:none!important}
 }
 </style>
 
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260912-v2" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
 </head>
 <body class="tlm-wow tlm-page-bankroll">
 <nav>
@@ -427,7 +427,7 @@ function openLoginModal(){
         localStorage.setItem('tlm_email', email);
         localStorage.setItem('tlm_code', code);
         localStorage.setItem('tlm_session', d.session_token || '');
-        localStorage.setItem('tlm_plan', d.plan);
+        localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
         document.getElementById('login-card').classList.add('hidden');
         var _navLogin = document.getElementById('nav-se-connecter');
         if (_navLogin) _navLogin.style.display = 'none';

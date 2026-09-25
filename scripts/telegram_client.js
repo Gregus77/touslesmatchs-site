@@ -40,13 +40,24 @@ function render(kind,data,dest) {
     }
   } else if(kind==='result') {
     lines=[`${data.outcome==='win'?'✅':'❌'} <b>${ru?(data.outcome==='win'?'ВЫИГРЫШ':'ПРОИГРЫШ'):(data.outcome==='win'?'SIGNAL GAGNÉ':'SIGNAL PERDU')}</b>`,match(),`⚽ ${ru?'Итоговый счёт':'Score final'} : ${esc(data.scoreHome)}-${esc(data.scoreAway)}`];
-    if(!free) lines.push(`💡 ${ru?'Прогноз':'Sélection'} : ${market()}`);
-    else lines.push(ru?'Результат сигнала Premium, анонсированного в этом канале.':'Résultat du signal Premium annoncé dans ce canal.');
+    lines.push(
+      `🎯 ${ru?'Исходный прогноз':'Prédiction originale'} : <b>${market()}</b>`,
+      `💰 ${ru?'Исходный коэффициент':'Cote originale'} : ${data.odd?esc(data.odd):ru?'недоступен':'indisponible'}`,
+      `⏱ ${ru?'Сигнал на минуте':'Signal donné à la minute'} : ${esc(data.signalMinute ?? '?')} · ${ru?'Счёт тогда':'Score au signal'} : ${esc(data.signalScoreHome ?? '?')}-${esc(data.signalScoreAway ?? '?')}`,
+      `🧠 ${ru?'Исходное голосование ИИ':'Vote IA original'} : ${esc(data.votes ?? '?')}/5`,
+      `📊 ${ru?'Исходный уровень доверия':'Confiance originale'} : ${esc(data.confidence ?? '?')}/100`
+    );
   } else if(kind==='recap') {
     const rows=data.rows,wins=rows.filter(x=>x.outcome==='win').length,losses=rows.filter(x=>x.outcome==='loss').length,pending=rows.length-wins-losses;
+    const eurRub=Math.max(1,Number(process.env.EUR_RUB_DISPLAY_RATE||100));
+    const stakeEur=10,stakeRub=Math.round(stakeEur*eurRub);
+    const netEur=rows.reduce((sum,row)=>sum+(row.outcome==='win'&&Number(row.real_odd)>0?stakeEur*(Number(row.real_odd)-1):row.outcome==='loss'?-stakeEur:0),0);
+    const netRub=Math.round(netEur*eurRub);
     lines=[`📊 <b>${ru?'ИТОГИ ДНЯ':'BILAN DU JOUR'} — ${esc(data.day)}${data.parts>1?` (${data.part}/${data.parts})`:''}</b>`,`✅ ${ru?'Выиграно':'Gagnés'} : ${wins} · ❌ ${ru?'Проиграно':'Perdus'} : ${losses} · ⏳ ${ru?'Ожидают результата':'En attente'} : ${pending}`,
+      ru?`💰 Условная ставка: ${stakeRub} ₽ на сигнал · Чистый результат: ${netRub>=0?'+':''}${netRub} ₽`:`💰 Mise théorique : 10 € par signal · Résultat net : ${netEur>=0?'+':''}${netEur.toFixed(2)} €`,
+      ru?'Расчёт является прозрачной симуляцией на основе исходных коэффициентов.':'Simulation transparente calculée avec les cotes originales.',
       ru?'Только сигналы с подтверждённой доставкой в этот канал.':'Uniquement les signaux dont la livraison dans ce canal est prouvée.'];
-    if(!rows.length)lines.push(ru?'В этот день нет подтверждённых сигналов в этом канале.':'Aucun signal livré avec preuve dans ce canal ce jour-là.');
+    if(!rows.length)lines.push(ru?'🔎 Сегодня наши ИИ анализировали доступные матчи, но ни один матч не соответствовал всем критериям официального сигнала. Мы не публикуем прогноз ради количества. 🎯':'🔎 Nos IA ont analysé les matchs disponibles aujourd’hui, mais aucun match n’a réuni tous les critères d’un signal officiel. Aucun pari forcé. 🎯');
     for(const row of rows) lines.push(`${row.outcome==='win'?'✅':row.outcome==='loss'?'❌':'⏳'} ${esc(row.home)} — ${esc(row.away)} : ${row.outcome==='pending'?(ru?'ожидает результата':'en attente'):`${esc(row.final_score_home)}-${esc(row.final_score_away)}`}${free?'':` · ${esc(ru?marketRu(row.best_bet):row.best_bet)}`}`);
   } else if(kind==='guide') {
     lines=ru?['📘 <b>Как читать сигналы TousLesMatchs</b>','Футбол: тотал больше 2,5 означает минимум 3 гола; тотал меньше 2,5 — максимум 2 гола за основное время.','Прогноз публикуется только при соблюдении действующих критериев качества. Голосование ИИ не гарантирует результат.','Бесплатный канал: знакомство с сервисом, руководства и анонсы. Premium: все допустимые сигналы на сайте, в приложении и Telegram, без дневного лимита.','Минимальное число сигналов в день не обещается.']:['📘 <b>Lire les signaux TousLesMatchs</b>','Football : Over 2,5 signifie au moins 3 buts ; Under 2,5 signifie au maximum 2 buts dans le temps réglementaire.','Un signal doit respecter les critères qualité actifs. Le vote IA ne garantit aucun résultat.','Gratuit : présentation, guides et aperçus. Premium : tous les signaux admissibles sur le site, l’application et Telegram, sans plafond quotidien.','Aucun minimum de signaux par jour n’est promis.'];
@@ -100,7 +111,7 @@ function parisDayBounds(day) {
   }
   return {start:localMidnight(midnight),end:localMidnight(midnight+86400000)};
 }
-function recapDue(at=Date.now()) {const p=parisParts(at);return p.hour===23&&p.minute>=45;}
+function recapDue(at=Date.now()) {const p=parisParts(at);return p.hour===23&&p.minute>=0;}
 const FROZEN_FIELDS=['minute_at_analysis','score_home_at_analysis','score_away_at_analysis','best_bet','real_odd','real_odd_source','analysed_at'];
 function initSignalSnapshots(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS client_signal_snapshots (
@@ -142,7 +153,7 @@ function recapRows(db,day,channel) {
   });
 }
 
-function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>{},paymentAvailable=()=>false}) {
+function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>{},paymentAvailable=()=>false,validateSignal=async()=>({ok:false,terminal:true})}) {
   const targets=destinations(env);
   initSignalSnapshots(db);
   db.exec(`CREATE TABLE IF NOT EXISTS client_telegram_outbox (
@@ -172,6 +183,8 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
   }
   function queueDailyRecap(day=parisParts(now()).day) {
     return db.transaction(()=>{
+      const unresolved=targets.some(dest=>recapRows(db,day,dest.channel).some(row=>row.outcome==='pending'));
+      if(unresolved)return false;
       const claim=db.prepare('INSERT OR IGNORE INTO client_recap_runs(day,queued_at) VALUES (?,?)').run(day,now());
       if(!claim.changes)return false;
       for(const dest of targets) {
@@ -190,6 +203,15 @@ function createPublisher({db,env,transport=request,now=Date.now,onDelivered=()=>
       for(const row of rows) {
         if(!targets.some(t=>t.channel===row.channel&&t.id===row.chat_id))continue;
         if(row.expires_at<=now()){db.prepare("UPDATE client_telegram_outbox SET state='expired' WHERE delivery_key=?").run(row.delivery_key);continue;}
+        if(row.kind==='signal') {
+          let gate;try {gate=await validateSignal(row);} catch {gate={ok:false};}
+          if(!gate?.ok) {
+            db.prepare("UPDATE client_telegram_outbox SET state=?,next_at=? WHERE delivery_key=? AND state='pending'")
+              .run(gate?.terminal?'expired':'pending',now()+30000,row.delivery_key);
+            continue;
+          }
+          if(row.expires_at<=now()){db.prepare("UPDATE client_telegram_outbox SET state='expired' WHERE delivery_key=?").run(row.delivery_key);continue;}
+        }
         const claim=db.prepare("UPDATE client_telegram_outbox SET state='sending',next_at=? WHERE delivery_key=? AND state='pending'").run(now()+60000,row.delivery_key);
         if(!claim.changes)continue;
         let result;

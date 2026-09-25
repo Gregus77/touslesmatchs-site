@@ -45,9 +45,9 @@ const i18n = (function () {
       plan_free: "GRATUIT", plan_free_1: "Pick gratuit du jour",
       plan_free_2: "Résultats publics", plan_free_3: "Aucune carte bancaire",
       plan_std: "STANDARD", plan_std_1: "Jusqu'à 3 sélections/jour",
-      plan_std_2: "Minimum 3 IA sur 5 d'accord sur Over/Under 2,5",
+      plan_std_2: "Accès historique · signal officiel : minimum 4 IA sur 5 concordantes",
       plan_prem: "PREMIUM", plan_prem_1: "Tous les signaux admissibles, sans plafond quotidien",
-      plan_prem_2: "Minimum 3 IA sur 5 d'accord · tous les signaux admissibles",
+      plan_prem_2: "Minimum 4 IA sur 5 concordantes · tous les signaux admissibles",
       plan_nocommit: "Sans engagement", plan_popular: "Le plus choisi",
       plan_month: "/mois",
       plan_btn_std: "Choisir Premium", plan_btn_prem: "Choisir Premium",
@@ -477,6 +477,6 @@ if (document.readyState === "loading") {
 (function(){
   if(document.querySelector('script[src*="/js/i18n-auto.js"]')) return;
   var script=document.createElement('script');
-  script.src='/js/i18n-auto.js?v=20260907-integral6';
+  script.src='/js/i18n-auto.js?v=20260915-account-v1';
   document.head.appendChild(script);
 })();

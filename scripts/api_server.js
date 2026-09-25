@@ -24,6 +24,8 @@ const crypto = require("crypto");
 const analysisEngine = require("./analysis_engine");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
+const jevDecisionEngine = require("./jev_decision_engine");
+const liveStateCoherence = require("./live_state_coherence");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -253,7 +255,9 @@ app.use((req, res, next) => {
   // donc jamais rate-limite jusqu'ici cote IP — seul l'espace de recherche
   // (8 caracteres, ~1400 milliards de combinaisons) rendait un brute-force
   // impraticable. Defense en profondeur, pas une faille activement exploitee.
-  if (req.method === "POST" && (req.path === "/auth/login" || req.path === "/auth/register" || req.path === "/verify-code")) {
+  if (req.method === "POST" && (req.path === "/auth/login" || req.path === "/auth/register" || req.path === "/verify-code"
+      || req.path === "/auth/request-otp" || req.path === "/auth/verify-otp"
+      || req.path === "/auth/passkey/login-options" || req.path === "/auth/passkey/login-verify")) {
     if (!rlAllow("auth_" + ip, 20, 15 * 60 * 1000)) {
       return res.status(429).json({ ok: false, error: "Trop de tentatives, réessaie dans quelques minutes." });
     }
@@ -283,7 +287,7 @@ const ADMIN_READONLY_PATHS = new Set([
   // performance par segment, et depense IA quotidienne. Aucune donnee
   // personnelle ni credential, mais de quoi renseigner un concurrent.
   "/admin/stats", "/admin/funnel-report", "/admin/segment-report",
-  "/admin/ai-budget-stats",
+  "/admin/ai-budget-stats", "/admin/jev-status",
 ]);
 app.use((req, res, next) => {
   if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
@@ -298,6 +302,7 @@ app.use((req, res, next) => {
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
 officialSnapshots.init(db);
+const jevEngine = jevDecisionEngine.createEngine({db, logger: event => console.log('[jev]', JSON.stringify(event))});
 const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
 const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
 
@@ -1196,10 +1201,22 @@ async function refreshTelegramPaymentAvailability() {
 }
 setTimeout(refreshTelegramPaymentAvailability,5000);
 setInterval(refreshTelegramPaymentAvailability,10*60*1000);
+const firstHalfDelivery = require('./first_half_delivery');
+const validateFirstHalfDelivery = firstHalfDelivery.createValidator({
+  db,
+  fetchFixture: async (id) => {
+    if (!/^\d+$/.test(String(id)) || !API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('period_unavailable');
+    const response = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), {'x-apisports-key': API_SPORTS_KEY});
+    if (apiSportsErrors(response)) throw new Error('period_unavailable');
+    return (response.response || []).find(f => String(f.fixture?.id) === String(id));
+  },
+});
 const clientTelegramPublisher = telegramClient.createPublisher({
+  validateSignal: validateFirstHalfDelivery,
   paymentAvailable:()=>Date.now()<telegramPaymentVerifiedUntil,
   db, env: process.env,
   onDelivered: row => {
+    _integrationHealth.telegram.last_delivery_at = row.created_at || new Date().toISOString();
     if (!row.match_key) return;
     storedTelegramDeliveryCache.delete(row.match_key);
     if(row.kind === 'signal') {
@@ -1213,10 +1230,13 @@ setInterval(() => clientTelegramPublisher.flush().catch(e => console.error('[cli
 const TELEGRAM_GOAL05_INVITE_URL = process.env.TELEGRAM_GOAL05_INVITE_URL || "";
 const TELEGRAM_ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 const TELEGRAM_SUPPORT_CHAT_ID = process.env.TELEGRAM_SUPPORT_CHAT_ID || "";
+const INTEGRATION_CHECK_MAX_AGE_MS = 30 * 60 * 1000;
 const _integrationHealth = {
-  brevo: { configured: !!BREVO_API_KEY, ok: null, checked_at: null },
-  telegram: { configured: !!TELEGRAM_BOT_TOKEN, ok: null, checked_at: null, channels: {} },
+  brevo: { configured: !!BREVO_API_KEY, ok: null, checked_at: null, last_delivery_at: null, last_submission_at: null, last_operation_at: null },
+  telegram: { configured: !!TELEGRAM_BOT_TOKEN, ok: null, checked_at: null, last_delivery_at: null, channels: {} },
 };
+let _telegramHealthCheckPromise = null;
+let _brevoHealthCheckPromise = null;
 const _signalSentCache = new Set();
 const _freeSignalDailyDate = { date: "", count: 0 };
 // Aucun compteur payant : Premium recoit tous les signaux admissibles. Le seul
@@ -1264,7 +1284,7 @@ const ELITE_TIER_RAMP_UP_DATE = new Date("2026-09-01T00:00:00Z").getTime();
 // fiabilite, juste moins de volume. Decision fondateur.
 function getEliteMinConf() { return Date.now() < ELITE_TIER_RAMP_UP_DATE ? 75 : 82; }
 // Fenetre de cote reelle demandee le 02/09/2026 : jamais sous 1.40 ni au-dessus de 2.10.
-const TIER_MIN_REAL_ODD = Math.max(1.30, Number(process.env.TIER_MIN_REAL_ODD || 1.30));
+const TIER_MIN_REAL_ODD = Math.max(1.50, Number(process.env.TIER_MIN_REAL_ODD || 1.50));
 const TIER_MAX_REAL_ODD = Math.min(2.10, Number(process.env.TIER_MAX_REAL_ODD || 2.10));
 // Sports diffusables sur TOUS les paliers payants. Restreindre les paliers d'entrée
 // au football n'avait aucune justification : un signal hockey à 90 % vaut mieux qu'un
@@ -1278,7 +1298,7 @@ const ELITE_SPORTS = DIFFUSABLE_SPORTS; // conservé : encore référencé par t
 // Compatibilite des endpoints statistiques historiques : leurs trois cles
 // pointent desormais vers l'unique seuil sportif Premium, sans objectif de volume.
 function getTierThresholds() {
-  const threshold = Number(CLIENT_OU25_MIN_CONFIDENCE) || 77;
+  const threshold = Number(CLIENT_OU25_MIN_CONFIDENCE) || 80;
   return { standard: threshold, premium: threshold, elite: threshold, source: "offre Premium unique, sans plafond" };
 }
 
@@ -1286,12 +1306,26 @@ function getTierThresholds() {
 // Un ID périmé (typiquement après migration d'un groupe en supergroupe, où l'ID
 // change) faisait échouer les envois EN SILENCE : sendTelegramMessage renvoie
 // simplement false. Ce contrôle rend le problème visible immédiatement.
-function verifyTelegramChannels() {
-  if (!TELEGRAM_BOT_TOKEN) {
-    _integrationHealth.telegram.ok = false;
-    _integrationHealth.telegram.checked_at = new Date().toISOString();
-    return;
-  }
+function telegramGetChat(chatId) {
+  return new Promise((resolve) => {
+    const req = https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(chatId)}`, (res) => {
+      let data = "";
+      res.on("data", chunk => { data += chunk; });
+      res.on("end", () => {
+        let parsed = null;
+        try { parsed = JSON.parse(data); } catch (_) {}
+        const rawType = String(parsed?.result?.type || "");
+        const type = ["channel", "group", "supergroup", "private"].includes(rawType) ? rawType : null;
+        resolve({ ok: res.statusCode === 200 && parsed?.ok === true, http_status: Number(res.statusCode || 0), type });
+      });
+    });
+    req.setTimeout(10000, () => req.destroy(new Error("telegram_timeout")));
+    req.on("error", () => resolve({ ok: false, http_status: 0, type: null }));
+  });
+}
+
+async function verifyTelegramChannels() {
+  if (_telegramHealthCheckPromise) return _telegramHealthCheckPromise;
   const channels = [
     ["Gratuit",  TELEGRAM_CHANNEL_ID],
     ["Premium",  TELEGRAM_PREMIUM_CHANNEL_ID],
@@ -1299,83 +1333,46 @@ function verifyTelegramChannels() {
     ["RU Premium",  TELEGRAM_RU_PREMIUM_CHANNEL_ID],
     ["Admin",    TELEGRAM_ADMIN_CHAT_ID],
   ];
-  // Tous les canaux commencent a "non verifies". Sans cette initialisation,
-  // le premier getChat reussi pouvait faire passer l'etat global a true alors
-  // que les quatre autres controles etaient encore en vol.
-  for (const [label] of channels) {
-    _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-  }
-  _integrationHealth.telegram.ok = false;
-  _integrationHealth.telegram.checked_at = new Date().toISOString();
-  for (const [label, id] of channels) {
-    if (!id) {
-      console.warn(`[telegram-check] ${label} : NON CONFIGURÉ`);
-      continue;
-    }
-    https.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${encodeURIComponent(id)}`, (res) => {
-      let data = "";
-      res.on("data", d => data += d);
-      res.on("end", () => {
-        try {
-          const j = JSON.parse(data);
-          if (!j.ok) {
-            _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-            console.error(`[telegram-check] ❌ ${label} (${id}) INJOIGNABLE — ${j.description || "erreur"} — les messages de ce palier ne partiront PAS`);
-          } else {
-            _integrationHealth.telegram.channels[label.toLowerCase()] = true;
-            const t = j.result.type;
-            const warn = t === "group" ? "  ⚠️ groupe simple : son ID changera lors de la migration en supergroupe" : "";
-            console.log(`[telegram-check] ✅ ${label} : ${j.result.title || id} (${t})${warn}`);
-          }
-          // Offre actuelle : deux canaux clients par langue (Gratuit et Premium 14,90 €)
-          // plus le canal Admin. Dériver la liste du tableau réellement contrôlé évite
-          // qu'un ancien palier Standard supprimé provoque une fausse panne globale.
-          const requiredTelegramChannels = channels.map(([requiredLabel]) => requiredLabel.toLowerCase());
-          const states = requiredTelegramChannels.map(
-            k => _integrationHealth.telegram.channels[k]
-          );
-
-          _integrationHealth.telegram.ok =
-            states.length === channels.length &&
-            states.every(Boolean);
-          _integrationHealth.telegram.checked_at = new Date().toISOString();
-        } catch {
-          _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-          _integrationHealth.telegram.ok = false;
-          _integrationHealth.telegram.checked_at = new Date().toISOString();
-          console.error(`[telegram-check] ${label} : réponse illisible`);
-        }
-      });
-    }).on("error", (e) => {
-      _integrationHealth.telegram.channels[label.toLowerCase()] = false;
-      _integrationHealth.telegram.ok = false;
-      _integrationHealth.telegram.checked_at = new Date().toISOString();
-      console.error(`[telegram-check] ${label} : ${e.message}`);
-    });
-  }
+  _telegramHealthCheckPromise = (async () => {
+    const configured = !!TELEGRAM_BOT_TOKEN && channels.every(([, id]) => !!id);
+    const results = await Promise.all(channels.map(async ([label, id]) => {
+      if (!TELEGRAM_BOT_TOKEN || !id) return { label, ok: false, http_status: 0, type: null };
+      return { label, ...(await telegramGetChat(id)) };
+    }));
+    const states = Object.fromEntries(results.map(row => [row.label.toLowerCase(), row.ok]));
+    const ok = configured && results.every(row => row.ok);
+    _integrationHealth.telegram.configured = configured;
+    _integrationHealth.telegram.channels = states;
+    _integrationHealth.telegram.ok = ok;
+    _integrationHealth.telegram.checked_at = new Date().toISOString();
+    const failedLabels = results.filter(row => !row.ok).map(row => row.label).join(", ");
+    console[ok ? "log" : "error"](`[telegram-check] ${ok ? "OK" : "ECHEC"} — ${results.length - results.filter(row => row.ok).length}/${results.length} anomalie(s)${failedLabels ? `: ${failedLabels}` : ""}`);
+    return ok;
+  })().finally(() => { _telegramHealthCheckPromise = null; });
+  return _telegramHealthCheckPromise;
 }
 
 async function verifyBrevoConfiguration() {
-  _integrationHealth.brevo.checked_at = new Date().toISOString();
-  if (!BREVO_API_KEY) {
-    _integrationHealth.brevo.ok = false;
-    console.error("[brevo-check] BREVO_API_KEY NON CONFIGURÉE — aucun email ne partira");
-    return false;
-  }
-  try {
-    const account = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY });
-    const ok = !!account && !account.code && !account.error;
+  if (_brevoHealthCheckPromise) return _brevoHealthCheckPromise;
+  _brevoHealthCheckPromise = (async () => {
+    _integrationHealth.brevo.configured = !!BREVO_API_KEY;
+    let ok = false;
+    if (BREVO_API_KEY) {
+      try {
+        const account = await httpGet("https://api.brevo.com/v3/account", { "api-key": BREVO_API_KEY }, 10000);
+        ok = !!account && !account.code && !account.error;
+      } catch (_) { ok = false; }
+    }
     _integrationHealth.brevo.ok = ok;
     _integrationHealth.brevo.checked_at = new Date().toISOString();
-    if (ok) console.log("[brevo-check] ✅ API Brevo joignable");
-    else console.error(`[brevo-check] ❌ clé refusée — ${String(account?.message || "erreur API").slice(0, 120)}`);
+    console[ok ? "log" : "error"](`[brevo-check] ${ok ? "OK" : "ECHEC"}`);
     return ok;
-  } catch (e) {
-    _integrationHealth.brevo.ok = false;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.error(`[brevo-check] ❌ ${e.message}`);
-    return false;
-  }
+  })().finally(() => { _brevoHealthCheckPromise = null; });
+  return _brevoHealthCheckPromise;
+}
+
+async function refreshIntegrationHealth() {
+  return Promise.allSettled([verifyTelegramChannels(), verifyBrevoConfiguration()]);
 }
 
 // Diffuse un message identique à tous les canaux payants. Le FORMAT est le même
@@ -1401,7 +1398,7 @@ let _adaptiveThresholdCache = { value: 75, computedAt: 0 };
 // Devenu saisonnier le 04/08/2026 : voir getEliteMinConf() — 75 jusqu'au 15
 // aout, 82 ensuite. Fonction (pas une const) pour retomber a 82 sans redeploiement.
 // Décision qualité du 01/09/2026 : aucun signal client O/U 2,5 sous 78 %.
-function getSignalFloor() { return 77; }
+function getSignalFloor() { return 80; }
 
 // Confiance minimale pour qu'une analyse apparaisse en VITRINE (résultats du jour,
 // historique, stats). En dessous, c'est de l'analyse interne du Concile (page Live
@@ -1531,7 +1528,8 @@ const _modelOverrideCache = { at: 0, map: {} };
 function resolveModel(logicalId) {
   if (Date.now() - _modelOverrideCache.at > 60000) {
     try {
-      const rows = db.prepare("SELECT logical_id, model_id FROM model_overrides").all();
+      const rows = db.prepare(`SELECT logical_id, model_id FROM model_overrides
+        WHERE lower(COALESCE(reason,'')) NOT LIKE 'promotion :%'`).all();
       _modelOverrideCache.map = Object.fromEntries(rows.map(r => [r.logical_id, r.model_id]));
       _modelOverrideCache.at = Date.now();
     } catch (e) { /* table pas encore creee au tout premier boot */ }
@@ -1752,7 +1750,6 @@ async function sendHermesDailyDigest(text) {
   return ok;
 }
 
-const ADMIN_CRITICAL_REMINDER_MS = 6 * 3600 * 1000;
 async function updateAdminIncident(incidentKey, active, { source = "api", severity = "warning", detail = "" } = {}) {
   if (!incidentKey) return { action: "ignored" };
   const now = Date.now();
@@ -1762,7 +1759,7 @@ async function updateAdminIncident(incidentKey, active, { source = "api", severi
     const claim = db.prepare(`UPDATE admin_incident_notifications SET status='resolved',resolved_at_ms=?,last_seen_ms=?
       WHERE incident_key=? AND status='active'`).run(now, now, incidentKey);
     if (claim.changes !== 1) return { action: "unchanged" };
-    const ok = TELEGRAM_ADMIN_CHAT_ID
+    const ok = row.severity === "critical" && TELEGRAM_ADMIN_CHAT_ID
       ? await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `✅ <b>Incident résolu</b>\n\n${detail || row.detail || incidentKey}`, { adminOperationalAlert: true })
       : false;
     return { action: "resolved", notification_ok: ok };
@@ -1775,23 +1772,25 @@ async function updateAdminIncident(incidentKey, active, { source = "api", severi
         detail=excluded.detail,first_seen_ms=excluded.first_seen_ms,last_seen_ms=excluded.last_seen_ms,
         last_notified_ms=excluded.last_notified_ms,resolved_at_ms=NULL`)
       .run(incidentKey, source, severity, detail, now, now, 0);
-    const ok = TELEGRAM_ADMIN_CHAT_ID
+    const ok = severity === "critical" && TELEGRAM_ADMIN_CHAT_ID
       ? await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `🚨 <b>Nouvel incident</b>\n\n${detail || incidentKey}`, { adminOperationalAlert: true })
       : false;
     if (ok) db.prepare("UPDATE admin_incident_notifications SET last_notified_ms=? WHERE incident_key=?").run(Date.now(), incidentKey);
     return { action: "opened", notification_ok: ok };
   }
+  const severityRank = { info: 0, warning: 1, critical: 2 };
+  const aggravated = severity === "critical" && (severityRank[row.severity] || 0) < severityRank.critical;
   db.prepare("UPDATE admin_incident_notifications SET last_seen_ms=?,detail=?,severity=? WHERE incident_key=?")
     .run(now, detail || row.detail, severity, incidentKey);
-  if (severity === "critical" && now - Number(row.last_notified_ms || 0) >= ADMIN_CRITICAL_REMINDER_MS) {
+  if (aggravated) {
     const claim = db.prepare(`UPDATE admin_incident_notifications SET last_notified_ms=?
       WHERE incident_key=? AND status='active' AND last_notified_ms=?`).run(now, incidentKey, Number(row.last_notified_ms || 0));
     if (claim.changes === 1) {
-      const ok = TELEGRAM_ADMIN_CHAT_ID
-        ? await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `⏳ <b>Incident critique persistant depuis 6 h</b>\n\n${detail || row.detail}`, { adminOperationalAlert: true })
+      const ok = severity === "critical" && TELEGRAM_ADMIN_CHAT_ID
+        ? await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, `⚠️ <b>Incident aggravé</b>\n\n${detail || row.detail}`, { adminOperationalAlert: true })
         : false;
       if (!ok) db.prepare("UPDATE admin_incident_notifications SET last_notified_ms=? WHERE incident_key=?").run(Number(row.last_notified_ms || 0), incidentKey);
-      return { action: "reminder", notification_ok: ok };
+      return { action: "aggravated", notification_ok: ok };
     }
   }
   return { action: "silent" };
@@ -2028,9 +2027,12 @@ async function runShadowEvaluation(match) {
         matchKey, competition: match.competition || match.league || "",
       });
       if (!result.ok || !result.text) {
-        // Log explicite : un agent mal configuré (mauvais identifiant de modèle,
-        // clé absente, quota dépassé) doit se voir dans les logs, pas disparaître.
-        console.error(`[shadow] ${agent.name} SANS RÉPONSE — ${result.error || "raison inconnue"}`);
+        // Ne jamais recopier un corps fournisseur : il peut contenir en-têtes,
+        // URL ou JSON sensibles. Le détail durable vient du garde-fou structuré.
+        const category = /^\[(?:LIMIT|IA|DATA)\]/.test(String(result.error || ""))
+          ? String(result.error).slice(1, String(result.error).indexOf("]"))
+          : "PROVIDER";
+        console.error(`[shadow] ${agent.name} SANS RÉPONSE — catégorie=${category}`);
         continue;
       }
 
@@ -2054,8 +2056,8 @@ async function runShadowEvaluation(match) {
         parsed.bet, parsed.confidence, parsed.raison
       );
       console.log(`[shadow] ${agent.icon} ${agent.name} → ${parsed.bet} (${parsed.confidence}%) pour ${match.home} vs ${match.away}`);
-    } catch (e) {
-      console.error(`[shadow] ${agent.name} erreur:`, e.message);
+    } catch (_) {
+      console.error(`[shadow] ${agent.name} erreur — catégorie=PROVIDER_OR_PARSE`);
     }
   }
 }
@@ -2081,7 +2083,7 @@ function resolveShadowOutcomes(home, away, scoreHome, scoreAway, resolutionDay =
           .run(outcome, scoreHome, scoreAway, row.id);
       }
     }
-  } catch (e) { console.error("[shadow] resolve:", e.message); }
+  } catch (_) { console.error("[shadow] résolution échouée — catégorie=DATA"); }
 }
 
 function bookmakerEmailHtml() {
@@ -2406,6 +2408,7 @@ setTimeout(() => checkApiSportsRealQuota(), 5000);
 // comprises — la page dit donc toujours la verite, sans intervention.
 app.get("/concile-roster", (_req, res) => {
   const jolinom = (id) => {
+    if (String(id).includes("gpt-5.6-luna")) return "Luna";
     const fam = String(id).split("/")[0];
     return ({ perplexity: "Perplexity", deepseek: "DeepSeek", mistralai: "Mistral",
               cohere: "Cohere", qwen: "Qwen", moonshotai: "Kimi", "meta-llama": "Llama",
@@ -2415,9 +2418,9 @@ app.get("/concile-roster", (_req, res) => {
   const sieges = [
   "perplexity/sonar-pro",
   "deepseek/deepseek-chat",
-  "mistralai/mistral-small-2603",
-  "qwen/qwen3.7-max",
-  "moonshotai/kimi-k2"
+  process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603",
+  process.env.OR_LUNA_MODEL || "openai/gpt-5.6-luna",
+  process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max"
 ];
   const noms = sieges.map(sg => jolinom(resolveModel(sg)));
   res.set("Cache-Control", "public, max-age=300");
@@ -2483,7 +2486,7 @@ function deductToken(userId) {
 }
 
 // ── HTTP helper ───────────────────────────────────────────────────────────────
-function httpGet(url, headers = {}) {
+function httpGet(url, headers = {}, timeoutMs = 15000) {
   return new Promise((resolve, reject) => {
     const opts = new URL(url);
     const req = https.request({ hostname: opts.hostname, path: opts.pathname + opts.search, headers }, (res) => {
@@ -2494,6 +2497,7 @@ function httpGet(url, headers = {}) {
         catch { resolve({}); }
       });
     });
+    req.setTimeout(timeoutMs, () => req.destroy(new Error("HTTP GET timeout")));
     req.on("error", reject);
     req.end();
   });
@@ -2657,8 +2661,8 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Produit client unique : les cinq sieges votent tous sur Over/Under 2,5.
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
-const CLIENT_OU25_MIN_VOTES = 3;
-const CLIENT_OU25_MIN_CONFIDENCE = Math.max(77, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 77));
+const CLIENT_OU25_MIN_VOTES = 4;
+const CLIENT_OU25_MIN_CONFIDENCE = Math.max(80, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 80));
 const OFFICIAL_SNAPSHOT_RULE_VERSION = "ou25-snapshot-v1-20260912";
 // Mode Recovery : garde-fous statistiques supplémentaires, sans redéfinir le
 // périmètre des championnats ni les plafonds commerciaux Standard/Premium.
@@ -2732,8 +2736,10 @@ function strictOu25ResponseFormat() {
 }
 
 function buildOu25VoteSummary(agentMarketList, agentResults = []) {
+  const resultByAgent = new Map((agentResults || []).filter(Boolean).map(row => [row.name, row]));
   const byAgent = new Map();
   for (const am of agentMarketList || []) {
+    if (resultByAgent.get(am?.name)?.statistically_rejected) continue;
     if (!CONCILE_AGENT_NAMES.includes(am?.name) || byAgent.has(am.name)) continue;
     const raw = am?.marches?.buts;
     const side = String(raw?.p || "").toLowerCase();
@@ -2750,6 +2756,7 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   // comme son siège O/U. On ne remplace jamais un bulletin marches.buts existant,
   // on n'invente aucun vote et les agents en échec restent exclus.
   for (const ar of agentResults || []) {
+    if (ar?.statistically_rejected) continue;
     if (!CONCILE_AGENT_NAMES.includes(ar?.name) || byAgent.has(ar.name)) continue;
     if (!isOu25Bet(ar?.bet)) continue;
     const confidence = Number(ar?.confidence);
@@ -2759,7 +2766,14 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
       confidence: Math.min(95, Math.max(40, confidence)),
     });
   }
-  const votes = CONCILE_AGENT_NAMES.map((agent) => ({ agent, ...(byAgent.get(agent) || { direction: null, confidence: null }) }));
+  const votes = CONCILE_AGENT_NAMES.map((agent) => {
+    if (byAgent.has(agent)) return { agent, ...byAgent.get(agent), status: "voted" };
+    const result = resultByAgent.get(agent);
+    const status = result?.statistically_rejected ? "rejected_statistical"
+      : result?.failure_type === "parse_error" ? "parse_error"
+        : result?.failed ? "unavailable" : "pending";
+    return { agent, direction: null, confidence: null, status };
+  });
   const over = votes.filter(v => v.direction === "over");
   const under = votes.filter(v => v.direction === "under");
   const winners = over.length >= under.length ? over : under;
@@ -2773,10 +2787,10 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   const voteStatus = unanimous ? "elite" : voteCount >= CLIENT_OU25_MIN_VOTES ? "strong" : "none";
   const voteLabel = unanimous
     ? "5/5 unanime O/U 2,5"
-    : voteCount >= 4
+    : voteCount >= CLIENT_OU25_MIN_VOTES
       ? "4/5 signal fort O/U 2,5"
-      : voteCount >= CLIENT_OU25_MIN_VOTES
-        ? "3/5 signal valide O/U 2,5"
+      : voteCount >= 3
+        ? "3/5 tendance IA — quorum non atteint"
         : !complete
           ? `${byAgent.size}/5 sieges O/U 2,5 renseignes`
           : `${voteCount}/5 aucun signal O/U 2,5`;
@@ -2798,38 +2812,47 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   };
 }
 
-// Attend uniquement jusqu'au premier quorum O/U 2,5 réellement acquis.
-// Les cinq requêtes restent lancées (pas d'annulation ambiguë côté fournisseur),
-// mais la persistance et la diffusion client ne sont plus retardées par les deux
-// sièges les plus lents une fois trois bulletins valides concordants reçus.
+// Attend la fin bornée des cinq sièges avant de figer le snapshot. Le précédent
+// retour au premier quorum persistait 3/5 puis 4/5 tandis que DeepSeek et Qwen
+// terminaient quelques secondes plus tard : leurs vrais votes existaient dans
+// agent_predictions, mais le snapshot immuable montré au site restait "pending".
+// Chaque appel conserve son timeout existant ; aucun délai n'est augmenté.
 async function collectAgentsUntilOu25Quorum(agentPromises, onSettled = null) {
   return new Promise((resolve) => {
     const settled = [];
     let completed = 0;
-    let decided = false;
-    const finish = (early) => {
-      if (decided) return;
-      decided = true;
-      resolve({ results: settled.slice(), early });
-    };
     agentPromises.forEach((promise) => {
       Promise.resolve(promise).then((result) => {
         completed++;
         if (result) settled.push(result);
         if (onSettled) onSettled(result);
-        const markets = settled
-          .filter((row) => row && row._ou25Markets)
-          .map((row) => ({ name: row.name, marches: row._ou25Markets }));
-        const summary = buildOu25VoteSummary(markets, settled);
-        if (summary.recommended) finish(completed < agentPromises.length);
-        else if (completed === agentPromises.length) finish(false);
-      }).catch((error) => {
+        if (completed === agentPromises.length) resolve({ results: settled.slice(), early: false });
+      }).catch(() => {
         completed++;
-        console.error(`[concile] agent non collecte: ${error?.message || error}`);
-        if (completed === agentPromises.length) finish(false);
+        console.error('[concile] agent non collecté — catégorie=PROVIDER_OR_PARSE');
+        if (completed === agentPromises.length) resolve({ results: settled.slice(), early: false });
       });
     });
   });
+}
+
+// Une limitation du modèle DeepSeek chez OpenRouter peut être transitoire.
+// Une réponse du garde-fou budgétaire (également HTTP 429) n'est jamais relancée.
+// La reprise conserve le modèle et le délai total du siège, sans toucher au quorum.
+function shouldRetryDeepSeekOu25RateLimit({ agentName, provider, response, attempt, minute, elapsedMs }) {
+  return agentName === "DeepSeek-V3"
+    && attempt === 1
+    && String(provider?.url || "").includes("openrouter.ai/api/v1/chat/completions")
+    && provider?.model === "deepseek/deepseek-chat"
+    && Number(response?._httpStatus) === 429
+    && !/global budget|global openrouter|daily budget|pricing unavailable|model pricing/i.test(String(response?.error?.message || ""))
+    && Number.isFinite(minute) && minute >= 15 && minute <= 45
+    && elapsedMs < 20000;
+}
+
+function agentProviderRouting(agentName, providerUrl, existing = {}) {
+  if (agentName !== "Mistral-Large" || !String(providerUrl || "").includes("openrouter.ai/api/v1/chat/completions")) return existing;
+  return { ...existing, sort: "throughput", allow_fallbacks: true };
 }
 
 // Un timeout ou une erreur HTTP (401/429/5xx) resolvait silencieusement en
@@ -3290,6 +3313,7 @@ function normalizeApiSportsFootballFixture(f) {
     ht_away: f.score?.halftime?.away ?? null,
     minute: f.fixture.status.elapsed ?? null,
     status: String(f.fixture?.status?.short || "").toUpperCase() === "HT" ? "HT" : "IN_PLAY",
+    period: String(f.fixture?.status?.short || "").toUpperCase(),
     competition: f.league.name + (f.league.country !== "World" ? " · " + f.league.country : ""),
     country: f.league?.country || "",
     utcDate: f.fixture.date,
@@ -3559,6 +3583,26 @@ function isCategoryBanned(matchOrCompetition = "") {
   return CATEGORY_BAN_KEYWORDS.some((keyword) => value.includes(keyword));
 }
 
+// Exclusion sportive client inchangée : une coupe/qualification n'a pas le
+// contexte de championnat utilisé pour le track-record O/U 2,5. Ce motif est
+// séparé du classement ARJEL et doit être exposé sur Live/PWA, même à 0/5.
+const CLIENT_OU25_EXCLUDED_EVENT_REGEX = /\bcup\b|coupe|copa|pokal|coppa|taça|champions league|europa league|conference league|conmebol libertadores|conmebol sudamericana|qualif|play[ -]?off|barrage|friendly|amical/;
+function clientOu25StaticExclusionReason(match) {
+  if (isAmericanFootballMatch(match) || !String(match?.sport || 'Football').toLowerCase().includes('foot'))
+    return 'Sport hors du marché football Over/Under 2,5.';
+  if (isWomenMatch(match)) return 'Catégorie féminine exclue des analyses officielles.';
+  if (isCategoryBanned(match)) return 'Catégorie sportive exclue des analyses officielles.';
+  if (isLowTrustCompetition(match)) return 'Compétition exclue par le filtre de fiabilité sportive.';
+  const tier = leagueTier(match);
+  if (tier !== 'trusted_major' && tier !== 'trusted_secondary')
+    return 'Championnat non validé pour les signaux officiels.';
+  const name = leagueHaystack(match);
+  if (!CLIENT_OU25_EXCLUDED_EVENT_REGEX.test(name)) return null;
+  if (/coppa italia/.test(name)) return 'Coppa Italia : coupe exclue du produit client ; historique de championnat non comparable.';
+  if (/afc champions league/.test(name)) return 'AFC Champions League Elite : tournoi continental exclu du produit client ; historique de championnat non comparable.';
+  return 'Coupe, tournoi continental ou qualification exclu du produit client ; historique de championnat non comparable.';
+}
+
 // Perimetre volontairement etroit du produit client O/U 2,5. Les analyses
 // hors de ce cadre restent en base pour apprendre, mais ne sont ni diffusees
 // ni presentees comme des signaux recus par les abonnes.
@@ -3568,18 +3612,18 @@ function isClientOu25MatchEligible(match, requireMinute = true, maxMinute = CLIE
   const sport = String(match?.sport || "Football").toLowerCase();
   if (!sport.includes("foot")) return false;
   const minute = parseLiveMinuteValue(match?.minute_at_analysis ?? match?.minute);
-  if (requireMinute && (minute === null || minute < 15 || minute > maxMinute)) return false;
+  if (requireMinute && !liveStateCoherence.analysisWindow({...match,minute:match?.minute_at_analysis ?? match?.minute}).open) return false;
   if (isWomenMatch(match) || isCategoryBanned(match) || isLowTrustCompetition(match)) return false;
   const tier = leagueTier(match);
   if (tier !== "trusted_major" && tier !== "trusted_secondary") return false;
   const h = leagueHaystack(match);
   // Coupes, qualifications, barrages et amicaux ont un contexte trop variable
   // pour le track-record championnat utilise par le Concile.
-  if (/\bcup\b|coupe|copa|pokal|coppa|taça|champions league|europa league|conference league|conmebol libertadores|conmebol sudamericana|qualif|play[ -]?off|barrage|friendly|amical/.test(h)) return false;
+  if (CLIENT_OU25_EXCLUDED_EVENT_REGEX.test(h)) return false;
   return true;
 }
 
-// Decision du 05/09/2026 : signal client des 3 votes concordants sur 5.
+// Décision propriétaire : signal client à partir de 4 votes réels concordants sur 5.
 function clientOu25RequiredVotes() {
   return CLIENT_OU25_MIN_VOTES;
 }
@@ -3594,7 +3638,7 @@ function evaluateClientSignalCriteria(c) {
   if (!c.matchEligible) return `hors perimetre client O/U 2,5 (football championnat, minute 15-${c.maxMinute})`;
   if (!c.standingsOk) return `classement: ${c.standingsReason || "écart minimum de 5 places non vérifié"}`;
   if (!c.ou25Only) return "marche client interdit: Over/Under 2,5 uniquement";
-  if (!c.enoughSeats) return `sieges O/U 2,5 insuffisants: ${c.activeVotes}/5 (<3)`;
+  if (!c.enoughSeats) return `sieges O/U 2,5 insuffisants: ${c.activeVotes}/5 (<${CLIENT_OU25_MIN_VOTES})`;
   if (c.confidence < c.signalThreshold) return `confiance ${c.confidence} < seuil ${c.signalThreshold}`;
   if (c.confidence < c.minConfidence) return `confiance ${c.confidence} < plancher O/U 2,5 ${c.minConfidence}`;
   if (c.voteCount < c.requiredVotes) return `votes ${c.voteCount} < ${c.requiredVotes}`;
@@ -4672,10 +4716,10 @@ function hasKnownScore(match) {
 function parseLiveMinuteValue(minute) {
   if (minute === null || minute === undefined) return null;
   const raw = String(minute).trim();
-  // Accepte uniquement une minute entière réelle. Les statuts et arrêts de jeu sont exclus.
-  const matched = raw.match(/^(\d{1,3})(?:['’′])?$/);
+  // Les arrêts de jeu sont numériques ; la période est vérifiée séparément.
+  const matched = raw.match(/^(\d{1,3})(?:\+(\d{1,2}))?(?:['’′])?$/);
   if (!matched) return null;
-  const parsed = Number(matched[1]);
+  const parsed = Number(matched[1]) + Number(matched[2] || 0);
   return Number.isInteger(parsed) && parsed >= 0 && parsed <= 120 ? parsed : null;
 }
 
@@ -5023,22 +5067,31 @@ async function requireVerifiedLiveMatch(input) {
 
 const matchStatsCache = new Map();
 
-async function fetchMatchStats(fixtureId) {
+async function fetchMatchStats(fixtureId, state = null) {
   if (!API_SPORTS_KEY || !fixtureId) return null;
   const id = String(fixtureId);
   // Seulement pour les fixtures football (pas bk-, hk-, etc.)
   if (id.startsWith("bk-") || id.startsWith("hk-") || id.startsWith("demo")) return null;
 
-  const ck = `stats_${id}`;
+  const ck = liveStateCoherence.statsKey(id, state);
   const cached = matchStatsCache.get(ck);
-  if (cached && Date.now() - cached.ts < 60000) return cached.data;
+  if (cached && Date.now() - cached.ts < (state ? 15000 : 60000)) return cached.data;
 
   try {
+    if (!apiSportsBudgetOk()) return null;
     const data = await httpGet(
       `https://v3.football.api-sports.io/fixtures/statistics?fixture=${id}`,
       { "x-apisports-key": API_SPORTS_KEY }
     );
+    if (state) {
+      const rows = data?.response || [];
+      const home = rows.filter(row => row.team?.id === state.home);
+      const away = rows.filter(row => row.team?.id === state.away);
+      if (home.length !== 1 || away.length !== 1) return null;
+      data.response = [home[0], away[0]];
+    }
     const stats = parseMatchStats(data);
+    for (const [key, value] of matchStatsCache) if (Date.now() - value.ts > 60000) matchStatsCache.delete(key);
     matchStatsCache.set(ck, { data: stats, ts: Date.now() });
     return stats;
   } catch (e) {
@@ -5047,15 +5100,30 @@ async function fetchMatchStats(fixtureId) {
   }
 }
 
+const liveStateCollector = liveStateCoherence.createCollector({
+  fetchFixture: async id => {
+    if (!API_SPORTS_KEY || !apiSportsBudgetOk()) throw new Error('fixture_unavailable');
+    const data = await httpGet('https://v3.football.api-sports.io/fixtures?id=' + encodeURIComponent(id), { "x-apisports-key": API_SPORTS_KEY });
+    if (apiSportsErrors(data)) throw new Error('fixture_unavailable');
+    return (data.response || []).find(f => String(f.fixture?.id) === String(id));
+  },
+  fetchStats: (id, state) => fetchMatchStats(id, state),
+});
 async function fetchMatchStatsForMatch(match) {
   const fixtureId = getVerifiedFixtureId(match);
   if (!API_SPORTS_KEY) return buildStatsStatus(match, null, "api_sports_key_missing");
   if (!fixtureId) return buildStatsStatus(match, null, "missing_api_sports_fixture");
   if (!apiSportsBudgetOk()) return buildStatsStatus(match, null, "api_sports_budget_horaire_atteint");
-
-  const stats = await fetchMatchStats(fixtureId);
-  if (!stats) return buildStatsStatus({ ...match, fixtureId }, null, "api_sports_stats_unavailable");
-  return buildStatsStatus({ ...match, fixtureId }, stats, null);
+  try {
+    const collected = await liveStateCollector.collect(match, fixtureId);
+    return { ...buildStatsStatus({ ...match, fixtureId }, collected.stats, null),
+      observation: collected.observation };
+  } catch (error) {
+    const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message
+      : 'Synchronisation score/statistiques indisponible : analyse suspendue.';
+    setLiveAnalysisNotice(match, reason);
+    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+  }
 }
 
 // ── H2H (confrontations directes) — donnée factuelle pour ancrer l'analyse ────
@@ -6023,6 +6091,12 @@ function parseMatchStats(data) {
     total_shots_away: get(away, "Total Shots"),
     dangerous_attacks_home: get(home, "Dangerous Attacks"),
     dangerous_attacks_away: get(away, "Dangerous Attacks"),
+    xg_home: get(home, "expected_goals"),
+    xg_away: get(away, "expected_goals"),
+    observed_cards: {
+      yellow_cards_home: get(home, "Yellow Cards"), yellow_cards_away: get(away, "Yellow Cards"),
+      red_cards_home: get(home, "Red Cards"), red_cards_away: get(away, "Red Cards"),
+    },
     yellow_cards_home: get(home, "Yellow Cards") || 0,
     yellow_cards_away: get(away, "Yellow Cards") || 0,
     red_cards_home: get(home, "Red Cards") || 0,
@@ -6415,13 +6489,18 @@ function providerEcarte(host, claimBalanceProbe = false) {
   }
   if (Date.now() - _providerHealthCache.at > 60000) {
     try {
-      const rows = db.prepare("SELECT host, disabled_until, last_error, updated_at, credential_fingerprint FROM provider_health WHERE disabled_until IS NOT NULL").all();
+      const rows = db.prepare("SELECT host, last_status, disabled_until, last_error, updated_at, credential_fingerprint FROM provider_health WHERE disabled_until IS NOT NULL").all();
       const today = new Date().toISOString().slice(0, 10);
       _providerHealthCache.hs = Object.fromEntries(rows
         // Un plafond journalier OpenRouter n'est pas une panne de clé pendant
         // 24h : au changement de jour UTC, la clé rechargée doit être retestée.
         // Les 401/402 et 403 d'abonnement restent, eux, écartés normalement.
         .filter(r => r.credential_fingerprint === providerCredentialFingerprint(r.host))
+        // Un 429 reçu par un modèle OpenRouter n'est pas une panne globale :
+        // lors de l'incident du 14/09, DeepSeek a reçu 429 tandis que quatre
+        // autres modèles répondaient sur le même hôte. Les budgets persistants
+        // et l'unique tentative par snapshot restent opposables.
+        .filter(r => !(r.host === "openrouter.ai" && Number(r.last_status) === 429))
         .filter(r => !(/daily limit/i.test(String(r.last_error || "")) && String(r.updated_at || "").slice(0, 10) < today))
         .map(r => [r.host, r.disabled_until]));
       _providerHealthCache.at = Date.now();
@@ -6430,8 +6509,50 @@ function providerEcarte(host, claimBalanceProbe = false) {
   const jusqua = _providerHealthCache.hs[host];
   return !!jusqua && new Date(jusqua.replace(" ", "T") + "Z").getTime() > Date.now();
 }
+async function providerFailureDetail(host, status, fallback, getKey) {
+  if (host !== "openrouter.ai" || ![402,403].includes(Number(status))) return fallback;
+  try {
+    const data = (await getKey())?.data;
+    if (data?.limit_reset === "daily" && Number.isFinite(data.limit)
+      && typeof data.limit_remaining === "number" && data.limit_remaining <= 0) {
+      return "OpenRouter daily limit reached; retry after midnight UTC";
+    }
+  } catch (_) {}
+  return fallback;
+}
+
+// Read-only provider probes; never reset spending or bypass an exhausted key.
+let _providerQuotaProbeAt = 0;
+let _providerQuotaParisDay = "";
+let _providerQuotaParisMinute = "";
+async function recoverProviderDailyQuota() {
+  const parisDay = new Intl.DateTimeFormat("en-CA", {timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  const parisMinute = new Intl.DateTimeFormat("en-GB", {timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
+  const midnight = parisDay !== _providerQuotaParisDay;
+  const retryAt0002 = parisMinute === "00:02" && parisDay + parisMinute !== _providerQuotaParisMinute;
+  if (retryAt0002) _providerQuotaParisMinute = parisDay + parisMinute;
+  _providerQuotaParisDay = parisDay;
+  if (!midnight && !retryAt0002 && Date.now() - _providerQuotaProbeAt < 300000) return;
+  _providerQuotaProbeAt = Date.now();
+  try {
+    const row = db.prepare("SELECT last_status,last_error FROM provider_health WHERE host='openrouter.ai'").get();
+    if (!row || !/daily limit/i.test(row.last_error || "")) return;
+    const data = (await httpGet("https://openrouter.ai/api/v1/key",
+      {Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`}, 5000))?.data;
+    if (data?.limit_reset !== "daily" || typeof data.limit_remaining !== "number" || data.limit_remaining <= 0) return;
+    db.prepare("DELETE FROM provider_health WHERE host='openrouter.ai' AND last_status=? AND last_error=?").run(row.last_status,row.last_error);
+    _providerHealthCache.at = 0;
+    console.log("[provider-health] Daily quota available; natural analysis resumed");
+  } catch (_) {}
+}
+setInterval(recoverProviderDailyQuota, 60000).unref();
+
 function marquerProvider(host, status, detail) {
   if (!host) return;
+  if (host === "openrouter.ai" && Number(status) === 429) {
+    console.error("[provider-health] OpenRouter limité pour ce modèle — aucun coupe-circuit global ouvert");
+    return;
+  }
   const message = String(detail || "");
   const daily = /daily limit/i.test(message);
   const insufficientBalance = status === 402 && /insufficient|balance|credit|solde/i.test(message);
@@ -6475,14 +6596,15 @@ function hoteDuProvider(pv) {
 }
 
 async function runConcileAnalysis(match) {
+  match = { ...match }; // Freeze the score used by every seat for this analysis.
   // Plafond de replis de secours pour CETTE analyse (5 agents = 5 maximum).
   // Empeche qu'un incident fournisseur transforme une analyse en rafale
   // d'appels payants, meme sous le plafond journalier.
   let _secoursCetteAnalyse = 0;
   const SECOURS_MAX_PAR_ANALYSE = 5;
-  if (!GROQ_API_KEY) {
-    return getMockAnalysis(match);
-  }
+  // Aucun vote de secours synthétique : si les fournisseurs réels sont absents
+  // ou coupés, chaque siège est persisté comme indisponible et aucun signal ne
+  // peut être formé. OpenRouter suffit à alimenter le Concile sans clé Groq.
 
   const neutralNote = isNeutralComp(match.competition)
     ? "\n⚠️ TERRAIN NEUTRE — ne PAS mentionner l'avantage domicile, il n'existe pas dans cette compétition."
@@ -6504,6 +6626,11 @@ async function runConcileAnalysis(match) {
   const statsStatus = isLiveMatch
     ? await fetchMatchStatsForMatch(match)
     : buildStatsStatus(match, null, "match_not_live");
+  if (isLiveMatch && sport === 'Football' && !statsStatus.observation) {
+    const reason = 'Synchronisation score/statistiques non confirmée : analyse suspendue.';
+    setLiveAnalysisNotice(match, reason);
+    const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+  }
   const liveStats = statsStatus.available ? statsStatus.stats : null;
   const statsBlock = buildStatsBlock(liveStats, match.home, match.away);
   if (match.__officialAuto === true) {
@@ -6547,7 +6674,7 @@ async function runConcileAnalysis(match) {
   const minuteDisplay = match.minute ? `${match.minute}'` : (estimatedMin > 0 ? `~${estimatedMin}' (estimé)` : "Pré-match");
 
   const recoveryPromptBlock = RECOVERY_MODE_ENABLED
-    ? `\n\nMODE RECOVERY — sortie client uniquement si : historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= ${CLIENT_OU25_MIN_CONFIDENCE} et au moins 3 votes concordants sur 5. Le périmètre championnat et les plafonds sont ceux du produit, pas ceux de Recovery. En cas de doute, ne force jamais la confiance.`
+        ? `\n\nMODE RECOVERY — sortie client uniquement si : historique recent complet, moyenne Over >= 2.80 ou Under <= 2.20, au moins 3 indicateurs convergents, confirmation live, absences disponibles, confiance >= ${CLIENT_OU25_MIN_CONFIDENCE} et au moins 4 votes concordants sur 5. Le périmètre championnat et les plafonds sont ceux du produit, pas ceux de Recovery. En cas de doute, ne force jamais la confiance.`
     : "";
   const matchContext = `Match: ${match.home} vs ${match.away}
 Compétition: ${match.competition || "International"}${sportNote}
@@ -6574,7 +6701,7 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
   // Agent 1 : DeepSeek-V3     → contrarian (architecture chinoise, entraînement différent)
   // Agent 2 : Mistral-Large   → modèle européen (architecture MoE, ≠ Llama/GPT)
   // Agent 3 : OpenRouter-Luna → spécialiste O/U structuré, raisonnement désactivé
-  // Agent 4 : Kimi            → synthese quantitative (remplace Qwen, 0/26 votes)
+  // Agent 4 : Qwen            → synthèse quantitative indépendante
   // Agent 5 : Chief           → arbitre Llama-70b (Groq, rapide)
   const usePerplexity = !!PERPLEXITY_API_KEY;
   const useMistral    = !!MISTRAL_API_KEY;
@@ -6610,6 +6737,10 @@ Tu DOIS choisir UNIQUEMENT parmi cette liste. Tout autre marché est mathématiq
       icon: "🌟",
       useOpenRouter,
       openRouterModelKey: "qwen",
+      // Qwen consommait les 300 jetons en raisonnement puis renvoyait un
+      // contenu vide. Vérifié en production : le même plafond avec le
+      // raisonnement désactivé produit bien le bulletin JSON O/U demandé.
+      reasoning: { effort: "none" },
     },
     { name: "Claude Chief", model: "llama-3.3-70b-versatile", icon: "👑" },
   ];
@@ -6746,7 +6877,7 @@ Réponds en JSON pur (pas de markdown):
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "mistral" })) {
         providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: resolveModel(process.env.OR_MISTRAL_MODEL || "mistralai/mistral-small-2603") });
       }
-      // Agent titulaire OpenRouter (Kimi depuis le 26/08/2026) : meme
+      // Agent titulaire OpenRouter Qwen : même
       // garde-fou budgetaire que les 4 agents ci-dessus.
       if (agCfg.useOpenRouter && OPENROUTER_API_KEY
           && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: agCfg.openRouterModelKey || "qwen" })) {
@@ -6766,17 +6897,10 @@ Réponds en JSON pur (pas de markdown):
       // Ne jamais faire voter un agent officiel sous un autre modèle générique :
       // cinq libellés utilisant le même Llama ne sont pas cinq avis indépendants.
       // Les replis OpenRouter ci-dessous conservent un modèle identifié par agent.
-      // Repli OpenRouter sous garde-fou budget/anti-doublon/coupe-circuit (voir
-      // analysis_engine.js). Chemin rare : n'intervient que si l'agent n'a ni
-      // fournisseur officiel dédié, ni DeepSeek/Mistral/Groq partagés disponibles.
-      if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "qwen" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_QWEN_MODEL || "qwen/qwen3.7-max" });
-      }
-      if (!providers.length && OPENROUTER_API_KEY
-          && analysisEngine.allowOfficialOpenRouterFallback(db, { agentLabel: agCfg.name, matchKey: _fallbackMatchKey, competition: _fallbackCompetition, modelKey: "kimi" })) {
-        providers.push({ kind: "openai", url: "https://openrouter.ai/api/v1/chat/completions", key: OPENROUTER_API_KEY, model: process.env.OR_KIMI_MODEL || "moonshotai/kimi-k2" });
-      }
+      // Aucun repli transversal Qwen/Kimi : un siège garde son modèle désigné
+      // ou se termine explicitement indisponible. L'ancien bloc faisait parfois
+      // voter Qwen sous le nom OpenRouter-Luna, puis laissait le vrai siège Qwen
+      // vide ; deux libellés n'auraient alors pas représenté deux IA indépendantes.
       if (!providers.length && CEREBRAS_API_KEY) providers.push({ kind: "openai", url: "https://api.cerebras.ai/v1/chat/completions", key: CEREBRAS_API_KEY, model: "llama-3.3-70b" });
 
       // Ecarte les fournisseurs dont le compte est en panne (401/402/403/429).
@@ -6824,10 +6948,14 @@ Réponds en JSON pur (pas de markdown):
         console.warn(`[concile] ${agCfg.name} : aucun fournisseur configure et aucun ecarte — pas de repli de secours`);
       }
 
-      // Une seule relance ciblée est autorisée pour Luna. Elle ne relance ni
-      // les quatre autres sièges ni le Concile complet.
+      // Luna conserve sa relance existante. DeepSeek n'a qu'une reprise HTTP 429
+      // du même modèle, après vérification séparée de son budget et de sa fenêtre.
       if (agCfg.targetedRetry && providers.length === 1) {
         providers.push({ ...providers[0], targetedRetry: true });
+      }
+      if (agCfg.name === "DeepSeek-V3" && providers[0]?.model === "deepseek/deepseek-chat"
+          && String(providers[0].url || "").includes("openrouter.ai")) {
+        providers.splice(1, 0, { ...providers[0], transientRetry: true });
       }
 
       let raw = "{}";
@@ -6836,13 +6964,15 @@ Réponds en JSON pur (pas de markdown):
       // seule facon de trancher entre "timeout trop court" et "autre cause"
       // sans dependre des logs Docker, qui disparaissent a chaque rebuild.
       let _dernierAppelId = null;
+      let transientRetryPending = false;
+      const agentAttemptWindowStartedAt = Date.now();
       const tracerAppel = (pv, i, t0, issue, status, detail) => {
         try {
           const r = db.prepare(`INSERT INTO agent_calls
             (match_key, agent_name, model, host, sport, competition, minute,
              tentative, debut_at, duree_ms, http_status, issue, detail, repli)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
-              _fallbackMatchKey, agCfg.name, String(pv?.model || ""),
+              getPredictionSnapshotKey(match), agCfg.name, String(pv?.model || ""),
               pv?.kind === "cohere" ? "api.cohere.com" : String(pv?.url || "").split("/")[2] || String(pv?.kind || ""),
               String(match.sport || "Football"), String(match.competition || match.league || ""),
               parseLiveMinuteValue(match.minute) ?? null,
@@ -6862,11 +6992,42 @@ Réponds en JSON pur (pas de markdown):
         // Une tentative initiale + une seule relance ciblee pour ce siege.
         // Les autres sieges ne sont jamais rappeles par cette boucle.
         if (providerAttempts >= 2) break;
+        if (agCfg.name === "DeepSeek-V3" && providerAttempts > 0
+            && providers[0]?.model === "deepseek/deepseek-chat"
+            && pv.model !== providers[0].model) break;
+        let attemptTimeoutMs = AGENT_TIMEOUT_MS;
+        if (pv.transientRetry) {
+          if (!transientRetryPending) continue;
+          // Le deuxième appel ne prolonge jamais le délai total de ce siège.
+          const remaining = AGENT_TIMEOUT_MS - (Date.now() - agentAttemptWindowStartedAt);
+          if (remaining < 5000) continue;
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          attemptTimeoutMs = AGENT_TIMEOUT_MS - (Date.now() - agentAttemptWindowStartedAt);
+          if (attemptTimeoutMs < 5000) continue;
+          const retryGuard = require('./ai_budget_guard');
+          const retryCheck = retryGuard.canProceed(db, {
+            modelKey: "deepseek", matchKey: _fallbackMatchKey,
+            competition: _fallbackCompetition, market: "concile", purpose: "concile",
+            promptVersion: `fallback_${agCfg.name}_429_retry`,
+            estimatedTokensIn: 1500, estimatedTokensOut: 400,
+          });
+          if (!retryCheck.allowed) {
+            console.warn(`[concile] ${agCfg.name}: reprise HTTP 429 refusée par le garde-fou`);
+            break;
+          }
+          retryGuard.recordCall(db, {
+            requestKey: retryCheck.requestKey, modelKey: "deepseek",
+            matchKey: _fallbackMatchKey, competition: _fallbackCompetition,
+            market: "concile", purpose: "official_fallback",
+            tokensIn: 1500, tokensOut: 400, status: "ok",
+          });
+          transientRetryPending = false;
+        }
         const plannedHost = pv.kind === "cohere" ? "api.cohere.com" : String(pv.url || "").split("/")[2] || String(pv.kind || "");
         // La liste est construite avant le premier appel. Si le premier modèle
         // d'un même hôte vient d'ouvrir son coupe-circuit, ne pas tenter les
         // autres modèles déjà présents dans cette liste.
-        if (providerEcarte(plannedHost, true) && !(agCfg.targetedRetry && pv.targetedRetry)) {
+        if (providerEcarte(plannedHost, true) && !(agCfg.targetedRetry && pv.targetedRetry) && !pv.transientRetry) {
           console.warn(`[concile] ${agCfg.name}: ${plannedHost} déjà écarté pendant cette analyse, tentative ignorée`);
           continue;
         }
@@ -6890,7 +7051,9 @@ Réponds en JSON pur (pas de markdown):
             } else {
               requestBody.temperature = temp;
             }
-            resp = await httpPost(pv.url, requestBody, { Authorization: `Bearer ${pv.key}` }, AGENT_TIMEOUT_MS);
+            if (agCfg.reasoning) requestBody.reasoning = agCfg.reasoning;
+            requestBody.provider = agentProviderRouting(agCfg.name, pv.url, requestBody.provider);
+            resp = await httpPost(pv.url, requestBody, { Authorization: `Bearer ${pv.key}` }, attemptTimeoutMs);
             raw = resp.choices?.[0]?.message?.content || "{}";
           }
           const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -6909,8 +7072,8 @@ Réponds en JSON pur (pas de markdown):
           // de savoir si c'etait un vrai timeout ou une cle/quota en erreur).
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
           lastDiag = resp?._httpTimedOut ? `timeout ${AGENT_TIMEOUT_MS}ms (${pvHost})`
-            : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost}) — ${JSON.stringify(resp).slice(0, 200)}`
-            : resp?._httpParseError ? `reponse illisible (${pvHost}): ${resp._raw}`
+            : resp?._httpStatus ? `HTTP ${resp._httpStatus} (${pvHost})`
+            : resp?._httpParseError ? `reponse illisible (${pvHost})`
             : probe && probe !== "{}"
               ? `reponse sans bulletin O/U 2,5 exploitable (${pvHost})`
               : `reponse sans contenu exploitable (${pvHost})`;
@@ -6919,16 +7082,28 @@ Réponds en JSON pur (pas de markdown):
               : resp?._httpStatus && resp._httpStatus >= 400 ? "http_erreur"
               : resp?._httpParseError ? "illisible" : "vide",
             resp?._httpStatus, lastDiag);
-          if (resp?._httpStatus) marquerProvider(pvHost, resp._httpStatus, lastDiag);
+          if (resp?._httpStatus) {
+            lastDiag = await providerFailureDetail(pvHost, resp._httpStatus, lastDiag,
+              () => httpGet("https://openrouter.ai/api/v1/key", {Authorization: `Bearer ${pv.key}`}, 5000));
+            marquerProvider(pvHost, resp._httpStatus, lastDiag);
+          }
+          if (!pv.transientRetry) {
+            transientRetryPending = shouldRetryDeepSeekOu25RateLimit({
+              agentName: agCfg.name, provider: pv, response: resp,
+              attempt: providerAttempts,
+              minute: parseLiveMinuteValue(match.minute),
+              elapsedMs: Date.now() - agentAttemptWindowStartedAt,
+            });
+          }
           // Une requête refusée de manière permanente ou structurelle ne
           // devient pas valide par répétition. Les sorties vides/invalides,
           // timeouts, 429 et 5xx peuvent utiliser l'unique relance Luna.
           if (agCfg.targetedRetry && [400, 401, 402, 403, 404].includes(Number(resp?._httpStatus))) break;
         } catch (e) {
           const pvHost = pv.kind === "cohere" ? "api.cohere.com" : (pv.url || "").split("/")[2] || pv.kind;
-          lastDiag = `erreur reseau (${pvHost}): ${e.message}`;
-          tracerAppel(pv, pvIndex, _t0, "reseau", null, e.message);
-          console.error(`[concile] ${agCfg.name} fournisseur échec: ${e.message}`);
+          lastDiag = `erreur reseau (${pvHost})`;
+          tracerAppel(pv, pvIndex, _t0, "reseau", null, lastDiag);
+          console.error(`[concile] ${agCfg.name} fournisseur échec réseau (${pvHost})`);
         }
       }
       if (providerAttempts === 0) {
@@ -6952,7 +7127,7 @@ Réponds en JSON pur (pas de markdown):
           name: agCfg.name, icon: agCfg.icon,
           bet: "—", confidence: null,
           raison: "⚠️ Agent sans réponse exploitable dans le délai imparti — non compté dans le verdict.",
-          isChief: false, failed: true,
+          isChief: false, failed: true, failure_type: "unavailable",
         };
       }
 
@@ -6966,6 +7141,10 @@ Réponds en JSON pur (pas de markdown):
       const raisonFinal = corrected
         ? `[Corrigé: "${original}" → "${validBet}"] ${parsed.raison || fallbackRaison}`
         : (parsed.raison && parsed.raison.length > 10 ? parsed.raison : fallbackRaison);
+      const historical = agentPerf[agCfg.name];
+      const statisticallyRejected = Number(historical?.resolved || 0) >= 30
+        && Number.isFinite(Number(historical?.winrate))
+        && Number(historical.winrate) < 52;
 
       return {
         name: agCfg.name, icon: agCfg.icon,
@@ -6974,6 +7153,7 @@ Réponds en JSON pur (pas de markdown):
         raison: raisonFinal,
         _ou25Markets: parsed.marches && typeof parsed.marches === "object" ? parsed.marches : null,
         isChief: false, corrected: corrected || false,
+        statistically_rejected: statisticallyRejected,
       };
     } catch (e) {
       // Ne JAMAIS remplacer un echec de parsing par un vote invente
@@ -6984,19 +7164,18 @@ Réponds en JSON pur (pas de markdown):
       // coupee par max_tokens), chaque echec injectait silencieusement un
       // faux vote dans "5 IA independantes votent". Meme traitement que
       // l'absence de reponse exploitable : exclu du decompte, jamais invente.
-      console.error(`[concile] agent ${agCfg.name} erreur JSON:`, e.message);
+      console.error(`[concile] agent ${agCfg.name} erreur de parsing`);
       return {
         name: agCfg.name, icon: agCfg.icon,
         bet: "—", confidence: null,
         raison: "⚠️ Réponse illisible (JSON malformé) — non compté dans le verdict.",
-        isChief: false, failed: true,
+        isChief: false, failed: true, failure_type: "parse_error",
       };
     }
   }
 
-  // Phase 1 : cinq appels parallèles, décision dès le troisième bulletin O/U
-  // concordant. Les réponses tardives continuent d'être enregistrées pour
-  // l'audit, mais ne peuvent ni changer ni rediffuser le signal déjà figé.
+  // Phase 1 : cinq appels parallèles, puis photographie des cinq états une fois
+  // tous les appels bornés terminés. Le quorum métier reste strictement 4/5.
   const agentPromises = AGENT_INDEXES.map(i => runSingleAgent(i));
   const collected = await collectAgentsUntilOu25Quorum(agentPromises, (result) => {
     if (result && !result.failed) {
@@ -7011,17 +7190,16 @@ Réponds en JSON pur (pas de markdown):
         market: "over_under_2_5",
         direction: ballot?.direction || null,
         confidence: ballot?.confidence ?? result.confidence,
-        decision: ballot?.direction ? "valid_vote" : "no_valid_ou25_vote",
+        decision: result.statistically_rejected
+          ? "rejected_statistical"
+          : ballot?.direction ? "valid_vote" : "no_valid_ou25_vote",
       });
     }
   });
   const agentResults = collected.results;
-  const decisionMarketList = agentResults
+  let decisionMarketList = agentResults
     .filter((row) => row && row._ou25Markets)
     .map((row) => ({ name: row.name, marches: row._ou25Markets }));
-  if (collected.early) {
-    console.log(`[concile] quorum O/U 2,5 atteint après ${agentResults.length}/5 réponses — décision immédiate, réponses restantes en audit`);
-  }
 
   // Phase 2: Run Chief AFTER, with all agent votes available
   // Filter weak agents (winrate < 52% AND resolved >= 30 predictions)
@@ -7033,6 +7211,7 @@ Réponds en JSON pur (pas de markdown):
     const winrate = p ? p.winrate : null;
     if (resolved >= 30 && winrate !== null && winrate < 52) {
       benchedAgents.push(`${a.name} (${winrate}% sur ${resolved})`);
+      a.statistically_rejected = true;
       return false; // Filter out
     }
     return true; // Keep
@@ -7042,6 +7221,8 @@ Réponds en JSON pur (pas de markdown):
   if (benchedAgents.length > 0) {
     console.log(`[concile] Benched agents (winrate < 52%, resolved >= 30): ${benchedAgents.join(", ")}`);
   }
+  const activeAgentNames = new Set(activedAgentResults.map(agent => agent.name));
+  decisionMarketList = decisionMarketList.filter(row => activeAgentNames.has(row.name));
 
   const previousVotes = activedAgentResults.map((a) => {
     const p = agentPerf[a.name];
@@ -7100,13 +7281,13 @@ Réponds en JSON pur (pas de markdown):
 }`;
 
   if (collected.early) {
-    // Le Chief n'est pas un sixième votant public. Une fois les trois bulletins
+    // Le Chief n'est pas un sixième votant public. Une fois les quatre bulletins
     // concordants acquis, l'appeler retarderait inutilement la publication et
     // consommerait un appel IA sans pouvoir changer le verdict client.
     agentResults.push({
       name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
       bet: "—", confidence: null,
-      raison: "Quorum client déjà acquis sur trois bulletins O/U 2,5.",
+      raison: "Quorum client déjà acquis sur quatre bulletins O/U 2,5.",
       isChief: true, failed: true,
     });
   } else try {
@@ -7133,7 +7314,7 @@ Réponds en JSON pur (pas de markdown):
         const probe = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
         if (probe && probe !== "{}" && probe.length > 8) break;
       } catch (e) {
-        console.error(`[concile] Chief fournisseur échec: ${e.message}`);
+        console.error(`[concile] Chief fournisseur échec`);
       }
     }
     const cleaned = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -7167,7 +7348,7 @@ Réponds en JSON pur (pas de markdown):
     // 60-85%. Sans, le consensus des 4 autres agents (s'ils convergent a 3+)
     // prend le relais normalement ; sinon la confiance retombe a 55 (deja
     // sous tous les seuils de diffusion), jamais de faux signal envoye.
-    console.error(`[concile] agent Chief erreur JSON:`, e.message);
+    console.error(`[concile] agent Chief erreur de parsing`);
     agentResults.push({
       name: agentNames[CHIEF_INDEX].name, icon: agentNames[CHIEF_INDEX].icon,
       bet: "—", confidence: null,
@@ -7277,6 +7458,17 @@ Réponds en JSON pur (pas de markdown):
   const oddInfo = await computeBestOdd(match, chief.bet, chief.confidence);
   console.log(`[concile] Cote ${match.home} vs ${match.away}: ${oddInfo.cote} (${oddInfo.source}) — ${chief.bet}`);
 
+  if (statsStatus.observation) {
+    try {
+      await liveStateCollector.revalidate(match, statsStatus.observation);
+    } catch (error) {
+      const reason = error.code === 'LIVE_STATE_UNVERIFIED' ? error.message
+        : 'Score final de l’analyse non confirmé : publication suspendue.';
+      setLiveAnalysisNotice(match, reason);
+      const failure = new Error(reason); failure.code = 'LIVE_STATE_UNVERIFIED'; throw failure;
+    }
+  }
+
   const analysisResult = {
     match_key: `${match.home}_${match.away}`,
     best_bet: chief.bet,
@@ -7325,7 +7517,7 @@ Réponds en JSON pur (pas de markdown):
       agent: vote.agent,
       direction: vote.direction || null,
       confidence: vote.confidence ?? null,
-      status: vote.direction ? "voted" : "pending",
+      status: vote.status || (vote.direction ? "voted" : "pending"),
       updated_at: capturedAt,
     }));
     capturedVoteSnapshot = officialSnapshots.capture(db, {
@@ -7338,11 +7530,14 @@ Réponds en JSON pur (pas de markdown):
       redCardsHome: analysisResult.statsStatus?.stats?.red_cards_home || 0,
       redCardsAway: analysisResult.statsStatus?.stats?.red_cards_away || 0,
       votes: voteRows,
+      observation: statsStatus.observation,
       consensus: /^Over\b/i.test(analysisResult.best_bet) ? "over" : /^Under\b/i.test(analysisResult.best_bet) ? "under" : null,
       consensusVotes: analysisResult.vote_summary?.vote_count || 0,
       confidence: analysisResult.confidence,
-      realOdd: analysisResult.cote ?? null,
-      realOddSource: analysisResult.cote_source || null,
+      realOdd: Number(analysisResult.cote) > 1 && analysisResult.cote_source
+        && !/estimation|indisponible/i.test(String(analysisResult.cote_source)) ? Number(analysisResult.cote) : null,
+      realOddSource: Number(analysisResult.cote) > 1 && analysisResult.cote_source
+        && !/estimation|indisponible/i.test(String(analysisResult.cote_source)) ? analysisResult.cote_source : null,
       ruleVersion: OFFICIAL_SNAPSHOT_RULE_VERSION,
       createdAt: capturedAt,
     });
@@ -7462,6 +7657,7 @@ Réponds en JSON pur (pas de markdown):
   // répondre factuellement à "pourquoi 0 signal aujourd'hui ?" au lieu de
   // supposer. Écrit en base plus bas, agrégé par /admin/funnel-report.
   let _tierBlock = null; // motif de non-diffusion detecte dans le bloc palier
+  let _journalDecision = "blocked";
   // ── Regime par classe de ligue (07/08/2026, decision du fondateur) ─────────
   // "Le but n'est pas d'avoir plus de signaux a tout prix. Le but est de
   // reperer les ligues qui peuvent devenir rentables sans salir l'historique."
@@ -7525,7 +7721,7 @@ Réponds en JSON pur (pas de markdown):
     low_trust: lowTrust,
     quality_shadow: qualityShadow,
   };
-  const _blockReason = evaluateClientSignalCriteria({
+  const traditionalCriteriaBlock = evaluateClientSignalCriteria({
     blockTier: _blockTier, telegramConfigured: !!TELEGRAM_BOT_TOKEN,
     recoveryEnabled: RECOVERY_MODE_ENABLED, recoveryOk: recoveryEvidence.ok, recoveryReason: recoveryEvidence.reason,
     matchEligible: clientOu25MatchEligible, maxMinute: CLIENT_OU25_CLIENT_MAX_MINUTE,
@@ -7536,6 +7732,66 @@ Réponds en JSON pur (pas de markdown):
     hasRealData, qualityOk: qualityGate.ok, qualityReason: qualityGate.reason,
     playableOk: playable.ok, playableReason: playable.reason, isWomen, lowTrust,
   });
+
+  // The historical decision stays complete, including the later odds/window gates.
+  const traditionalOddOk = !_coteReelle || (recordedOdd >= TIER_MIN_REAL_ODD && recordedOdd <= TIER_MAX_REAL_ODD);
+  const traditionalBlock = traditionalCriteriaBlock || (!traditionalOddOk ? "real_odd_outside_traditional_range" : null);
+  const traditionalEligible = !traditionalBlock;
+  const structuralAllowed = clientOu25MatchEligible && ou25Only && !isWomen && !lowTrust
+    && String(match.sport || '').toLowerCase() === 'football';
+  const firstHalfOpen = liveStateCoherence.analysisWindow(match).open && statsStatus.observation?.phase === '1H';
+  const snapshotMatchesCurrent = capturedVoteSnapshot && capturedVoteSnapshot.consensus_votes === voteCountForSignal
+    && capturedVoteSnapshot.confidence === Number(analysisResult.confidence)
+    && capturedVoteSnapshot.consensus === (/^Over\b/i.test(analysisResult.best_bet) ? 'over' : /^Under\b/i.test(analysisResult.best_bet) ? 'under' : null)
+    && capturedVoteSnapshot.score_home === match.score_home && capturedVoteSnapshot.score_away === match.score_away
+    && capturedVoteSnapshot.real_odd === recordedOdd
+    && Date.now() - Date.parse(capturedVoteSnapshot.created_at) >= 0
+    && Date.now() - Date.parse(capturedVoteSnapshot.created_at) <= 120000;
+  let jevEvaluation = null;
+  let _blockReason = traditionalBlock;
+  if (capturedVoteSnapshot && jevEngine.config.enabled && jevEngine.config.production_mode) {
+    const state = jevDecisionEngine.buildState({match, snapshot:capturedVoteSnapshot, stats:liveStats,
+      standings:standingsEvidence, recovery:{...recoveryEvidence,enabled:RECOVERY_MODE_ENABLED},
+      integrity:{first_half_open:firstHalfOpen,competition_allowed:structuralAllowed,
+        real_data:hasRealData && Boolean(statsStatus.observation) && Boolean(snapshotMatchesCurrent),stats_status:statsStatus.status},
+      traditional:{eligible:traditionalEligible,block_reason:traditionalBlock,
+        rules:{quorum:CLIENT_OU25_MIN_VOTES,confidence:CLIENT_OU25_MIN_CONFIDENCE,
+          known_odd_min:TIER_MIN_REAL_ODD,known_odd_max:TIER_MAX_REAL_ODD,ranking_gap_min:5,recovery:RECOVERY_MODE_ENABLED}}});
+    try {
+      jevEvaluation = await jevEngine.evaluate({match_key:analysisResult.match_key,snapshot_id:capturedVoteSnapshot.id,
+        fixture_id:capturedVoteSnapshot.fixture_id,state,structural_allowed:structuralAllowed,first_half_open:firstHalfOpen,
+        traditional_eligible:traditionalEligible,traditional_block_reason:traditionalBlock,
+        revalidate:async () => {
+          if (!isClientOu25MatchEligible(match,true) || !structuralAllowed) return false;
+          await liveStateCollector.revalidate(match,statsStatus.observation);
+          return true;
+        }});
+      // Persisted pending/failed evaluations can never become fabricated Jev SENDs.
+      _blockReason = jevEvaluation.final_decision === 'SEND' ? null
+        : `jev:${jevEvaluation.final_decision}:${jevEvaluation.structural_block_reason || jevEvaluation.error_category || jevEvaluation.decision_source}`;
+      if (['WAIT','REANALYZE'].includes(jevEvaluation.final_decision) && firstHalfOpen)
+        scheduleJevReobservation(match,capturedVoteSnapshot.id);
+    } catch {
+      // Local persistence failure must not authorize a quantitative override.
+      _blockReason = traditionalBlock;
+      if (!_blockReason) {
+        try { await liveStateCollector.revalidate(match,statsStatus.observation); }
+        catch { _blockReason = 'jev_fallback_live_state_unverified'; }
+      }
+      console.error('[jev] local_persistence_error; traditional guards retained');
+    }
+    criteriaSnapshot.jev = jevEvaluation ? {
+      id:jevEvaluation.id,traditional_decision:jevEvaluation.traditional_decision,
+      traditional_block_reason:jevEvaluation.traditional_block_reason,jev_decision:jevEvaluation.decision,
+      jev_confidence:jevEvaluation.confidence,jev_probabilities:{SEND:jevEvaluation.prob_send,WAIT:jevEvaluation.prob_wait,
+        REANALYZE:jevEvaluation.prob_reanalyze,REJECT:jevEvaluation.prob_reject},
+      final_decision:jevEvaluation.final_decision,decision_source:jevEvaluation.decision_source,
+      error_category:jevEvaluation.error_category
+    } : {traditional_decision:traditionalEligible?'SEND':'REJECT',final_decision:_blockReason?'REJECT':'SEND',
+      decision_source:'tlm_fallback_jev_unavailable',error_category:'local_persistence_error'};
+  }
+  const jevSendAuthorized = jevEvaluation?.decision === 'SEND' && jevEvaluation?.final_decision === 'SEND'
+    && jevEvaluation?.decision_source === 'jev_production';
 
   if (!_blockReason) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
@@ -7549,7 +7805,6 @@ Réponds en JSON pur (pas de markdown):
           if (!k.endsWith(currentHour)) _signalSentCache.delete(k);
         }
       }
-      _signalSentCache.add(signalKey);
       const si = { Football:"⚽", Basketball:"🏀", Hockey:"🏒", Baseball:"⚾" };
       const ico = si[match.sport] || "🎯";
       // escTgHtml APRES maskAiNames : maskAiNames travaille sur des noms de
@@ -7603,20 +7858,21 @@ Réponds en JSON pur (pas de markdown):
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
       const oddOk = !_coteReelle || (realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD);
       const sportLc = String(match.sport || "Football").toLowerCase();
-      // Produit client recentre : football O/U 2,5 uniquement, cinq sieges
-      // presents et majorite forte. Les autres sports/marches restent internes.
+      // Produit client recentre : football O/U 2,5 uniquement et au moins
+      // quatre votes réels concordants. Une cinquième absence reste distincte
+      // d'un désaccord et ne fabrique jamais un bulletin.
       const sportDiffusable = sportLc.includes("foot");
-      const officialWindowEligible = Number.isFinite(Number(minute))
-        && Number(minute) >= officialSnapshots.OFFICIAL_FROM_MINUTE
-        && Number(minute) <= officialSnapshots.OFFICIAL_TO_MINUTE;
-      const officialFiveSeatQuorum = Number(voteInfo.vote_active || 0) === 5
-        && voteCountForSignal >= 4;
-      const diffusable = bookmakerPlayable && oddOk && sportDiffusable
+      const officialWindowEligible = liveStateCoherence.analysisWindow(match).open;
+      const officialStrongQuorum = Number(voteInfo.vote_active || 0) >= CLIENT_OU25_MIN_VOTES
+        && voteCountForSignal >= CLIENT_OU25_MIN_VOTES;
+      const traditionalDiffusable = bookmakerPlayable && oddOk && sportDiffusable
         && clientOu25MatchEligible && officialWindowEligible && standingsEvidence.ok && ou25Only && enoughOu25SeatsPresent
-        && officialFiveSeatQuorum
+        && officialStrongQuorum
         && voteCountForSignal >= requiredVotesForSignal
-        && conf >= CLIENT_OU25_MIN_CONFIDENCE
-        && recoveryEvidence.ok;
+        && conf >= CLIENT_OU25_MIN_CONFIDENCE;
+      const diffusable = jevSendAuthorized
+        ? structuralAllowed && firstHalfOpen && officialWindowEligible
+        : traditionalDiffusable;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
@@ -7625,8 +7881,8 @@ Réponds en JSON pur (pas de markdown):
           ? `mode Recovery: ${recoveryEvidence.reason}`
           : !officialWindowEligible
             ? `hors fenêtre signal officiel ${officialSnapshots.OFFICIAL_FROM_MINUTE}-${officialSnapshots.OFFICIAL_TO_MINUTE}`
-          : !officialFiveSeatQuorum
-            ? `scrutin incomplet: 5 réponses valides et 4/5 concordantes requises`
+          : !officialStrongQuorum
+            ? `scrutin incomplet: ${voteInfo.vote_active || 0}/5 réponses réelles, ${voteCountForSignal}/5 concordantes (4 requises)`
           : !standingsEvidence.ok
             ? `classement: ${standingsEvidence.reason}`
           : !sportDiffusable
@@ -7643,7 +7899,10 @@ Réponds en JSON pur (pas de markdown):
       const _ligneAnalysee = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
       if (gradePremium) {
         if (!capturedVoteSnapshot) throw new Error("Signal client refusé: snapshot immuable absent");
-        const officialSnapshot = officialSnapshots.registerOfficial(db, capturedVoteSnapshot.id);
+        // Revalidate cached decisions too; registration never revives an old score.
+        if (jevEvaluation) await liveStateCollector.revalidate(match,statsStatus.observation);
+        const officialSnapshot = officialSnapshots.registerOfficial(db, capturedVoteSnapshot.id,
+          jevSendAuthorized ? {jevDecisionId:jevEvaluation.id} : {});
         criteriaSnapshot.official_signal_snapshot_id = officialSnapshot.id;
         const data = {matchKey:_ligneAnalysee, officialSignalSnapshotId:officialSnapshot.id, home:match.home, away:match.away,
           competition:match.competition || match.league || '', minute:match.minute,
@@ -7653,15 +7912,29 @@ Réponds en JSON pur (pas de markdown):
           reason:maskAiNames(String(analysisResult.raison || '').slice(0,200))};
         const identity = canonicalMatchKey(match.home,match.away) + ':' + todayStr;
         // Bounded retries remain inside the current live window, never replay old picks.
-        const expiresAt = Date.now() + Math.max(0, Math.min(120, (CLIENT_OU25_CLIENT_MAX_MINUTE - Number(minute) + 1) * 60)) * 1000;
+        const expiresAt = Date.now() + 120000; // Fresh fixture validation stops delivery immediately at HT.
+        let queuedDestinations = 0;
         for (const dest of clientTelegramPublisher.targets) {
           if (signalDeliveredToChannelToday(match,dest.channel)) continue;
-          if (dest.tier === 'free' && signalsSentToday('sig_sent_free') >= 1 && dest.lang === 'fr') continue;
-          const queued=clientTelegramPublisher.enqueue('signal',data,dest,dest.tier === 'free' ? todayStr : identity,expiresAt);
-          if(queued) db.prepare('INSERT OR IGNORE INTO signal_delivery_expectations(match_key,channel) VALUES (?,?)').run(_ligneAnalysee,dest.channel);
+          // Chaque signal officiel a son alerte Gratuit FR/RU propre. L'identité
+          // sportive reste unique; le canal/langue ne compte que pour la livraison.
+          const queued=clientTelegramPublisher.enqueue('signal',data,dest,identity,expiresAt);
+          if(queued) {
+            queuedDestinations++;
+            db.prepare('INSERT OR IGNORE INTO signal_delivery_expectations(match_key,channel) VALUES (?,?)').run(_ligneAnalysee,dest.channel);
+          }
         }
+        // Le cache mémoire n'est armé qu'après la sélection officielle
+        // persistée. Une simple évaluation à 15-34' ne peut donc plus empêcher
+        // le même match de devenir diffusable dans la fenêtre 35-45'.
+        _signalSentCache.add(signalKey);
+        _journalDecision = queuedDestinations > 0
+          ? "official_selection_queued"
+          : "official_selection_registered";
         clientTelegramPublisher.flush().catch(e => console.error('[client-telegram]',e.message));
       }
+    } else {
+      _tierBlock = "signal officiel déjà enregistré ou mis en file pour cette heure";
     }
   }
 
@@ -7670,7 +7943,7 @@ Réponds en JSON pur (pas de markdown):
     market: analysisResult.best_bet,
     direction: /^Over/i.test(analysisResult.best_bet) ? "over" : /^Under/i.test(analysisResult.best_bet) ? "under" : null,
     confidence: analysisResult.confidence,
-    decision: (_blockReason || _tierBlock) ? "blocked" : "accepted_for_delivery",
+    decision: _journalDecision,
     criteria: criteriaSnapshot,
     blockReason: _blockReason || _tierBlock || null,
   });
@@ -9732,7 +10005,7 @@ const AUTO_CONCILE_MULTISPORT = process.env.AUTO_CONCILE_MULTISPORT === "1";
 // Décision propriétaire du 03/09/2026 : le produit live O/U 2,5 fonctionne
 // strictement de la 15e à la 45e minute du temps réglementaire de la première
 // mi-temps. Cette règle ne doit plus pouvoir être ramenée à 40 par un ancien .env.
-const AUTO_CONCILE_WINDOW_MIN = 15;
+const AUTO_CONCILE_WINDOW_MIN = 35;
 const AUTO_CONCILE_WINDOW_MAX = CLIENT_OU25_CLIENT_MAX_MINUTE;
 const AUTO_CONCILE_TIME_WINDOW = true;
 
@@ -9752,12 +10025,8 @@ function isMatchDecided(match) {
 // Retourne null si le match peut être pronostiqué en live, sinon la raison du blocage.
 // Utilisé par l'auto-observer ET les endpoints d'analyse manuelle (pas le prématch).
 function livePickBlockReason(match) {
-  // Fenêtre produit unique 15-45. Une minute inconnue, un statut textuel ou les
-  // arrêts de jeu (ex. 45+2) restent visibles mais ne sont jamais analysables.
-  const minute = parseLiveMinuteValue(match && match.minute);
-  if (minute === null) return "Analyse indisponible : minute inconnue ou non numérique.";
-  if (minute < AUTO_CONCILE_WINDOW_MIN) return `Analyse indisponible avant la ${AUTO_CONCILE_WINDOW_MIN}e minute.`;
-  if (minute > AUTO_CONCILE_WINDOW_MAX) return `Analyse indisponible après la ${AUTO_CONCILE_WINDOW_MAX}e minute.`;
+  const window = liveStateCoherence.analysisWindow(match);
+  if (!window.open) return window.reason;
   // R2 conservée : un match à finalité connue n'a plus rien à offrir.
   if (isMatchDecided(match)) return "Analyse indisponible : match à finalité connue (écart de 3 buts ou plus).";
   return null;
@@ -9800,9 +10069,7 @@ function shouldAutoObserveMatch(match) {
   if (isBlacklistedForLiveDisplay(match)) return false;
   if (isUnderperformingCompetition(match)) return false;
   if (isMatchDecided(match)) return false;
-  // Fenêtre produit O/U 2,5 : 15e à 45e, hors arrêts de jeu et statuts texte.
-  const minute = parseLiveMinuteValue(match.minute);
-  return minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX;
+  return liveStateCoherence.analysisWindow(match).open;
 }
 
 // Une passe globale seulement : l'observateur ne rappelle jamais les cinq IA.
@@ -9949,6 +10216,31 @@ function scheduleOfficialReanalysis(match, delayMs) {
   if (typeof timer.unref === 'function') timer.unref();
   officialReanalysisTimers.set(scope, timer);
 }
+// Bounded natural reobservation; no fabricated state and no reset of seat budgets.
+const jevReobservationTimers = new Map();
+function scheduleJevReobservation(match, snapshotId) {
+  const scope = officialSnapshots.fixtureScope(match);
+  if (jevReobservationTimers.has(scope)) return;
+  const timer = setTimeout(async () => {
+    jevReobservationTimers.delete(scope);
+    try {
+      const current = (await fetchLiveMatches()).find(item => officialSnapshots.fixtureScope(item) === scope);
+      if (!current || !shouldAutoObserveMatch(current) || !isClientOu25MatchEligible(current,true)) return;
+      if (officialSnapshots.stateForMatch(db,current).kind === 'official') return;
+      const nextKey = getPredictionSnapshotKey(current);
+      const gate = officialSnapshots.reanalysisGate(db,current,current.red_cards_home || 0,current.red_cards_away || 0);
+      const allowedKey = gate.allowed && !hasPredictionSnapshot(current) ? nextKey : null;
+      const permit = jevDecisionEngine.reserveReobservation(db,scope,snapshotId,Date.now(),allowedKey);
+      if (!permit.poll) return;
+      if (!permit.analyze) return scheduleJevReobservation(current,snapshotId);
+      current.__officialAuto = true;
+      await runConcileAnalysis(current);
+    } catch { console.error('[jev] natural_reobservation_unavailable'); }
+  },60000);
+  timer.unref?.();
+  jevReobservationTimers.set(scope,timer);
+}
+
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
   autoConcileObserverRunning = true;
@@ -10033,13 +10325,11 @@ async function brevoAddContact(email, tag, lang = "FR", marketingConsent = null,
       payload,
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    _integrationHealth.brevo.ok = true;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.log(`[brevo] contact upserted: ${email} tag=${tag} lang=${contactLang}`);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.log(`[brevo] contact upserted tag=${tag} lang=${contactLang}`);
   } catch (e) {
-    _integrationHealth.brevo.ok = false;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.error("[brevo] error:", e.message);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.error("[brevo] contact upsert failed");
   }
 }
 
@@ -10112,12 +10402,11 @@ async function brevoSendEmail(to, subject, htmlContent, opts = {}) {
       },
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    _integrationHealth.brevo.ok = true;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    // HTTP 2xx signifie "soumis à Brevo", pas "livré dans la boîte".
+    _integrationHealth.brevo.last_submission_at = new Date().toISOString();
     return result;
   } catch (e) {
-    _integrationHealth.brevo.ok = false;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
     throw e;
   }
 }
@@ -10474,22 +10763,39 @@ function isMarketAvailableInFrance(marketType, competition) {
 
 // ===== FIN MOTEUR DE SCORING V2 =====
 
-app.get("/health", (_, res) => res.json({
-  ok: true,
-  integrations: {
-    brevo: {
-      configured: _integrationHealth.brevo.configured,
-      ok: _integrationHealth.brevo.ok,
-      checked_at: _integrationHealth.brevo.checked_at,
+function integrationHealthView(state, lastDeliveryAt = null) {
+  const checkedMs = state.checked_at ? new Date(state.checked_at).getTime() : NaN;
+  const fresh = Number.isFinite(checkedMs) && Date.now() - checkedMs <= INTEGRATION_CHECK_MAX_AGE_MS;
+  const result = !state.configured ? "not_configured"
+    : !state.checked_at ? "never_checked"
+      : !fresh ? "stale"
+        : state.ok ? "ok" : "failed";
+  return {
+    configured: state.configured,
+    checked_at: state.checked_at,
+    check_fresh: fresh,
+    check_result: result,
+    ok: fresh && state.ok === true,
+    last_delivery_at: lastDeliveryAt || state.last_delivery_at || null,
+    last_submission_at: state.last_submission_at || null,
+  };
+}
+
+app.get("/health", (_, res) => {
+  const telegramLastDelivery = db.prepare(`SELECT MAX(created_at) AS at
+    FROM telegram_signal_deliveries
+    WHERE ok=1 AND telegram_message_id IS NOT NULL AND telegram_message_id>0 AND error IS NULL`).get()?.at || null;
+  res.json({
+    ok: true,
+    integrations: {
+      brevo: integrationHealthView(_integrationHealth.brevo),
+      telegram: {
+        ...integrationHealthView(_integrationHealth.telegram, telegramLastDelivery),
+        channels: _integrationHealth.telegram.channels,
+      },
     },
-    telegram: {
-      configured: _integrationHealth.telegram.configured,
-      ok: _integrationHealth.telegram.ok,
-      checked_at: _integrationHealth.telegram.checked_at,
-      channels: _integrationHealth.telegram.channels,
-    },
-  },
-}));
+  });
+});
 
 function normalizeContactLang(lang = "", country = "") {
   const raw = String(lang || "").toLowerCase();
@@ -10519,7 +10825,7 @@ function paidGoal05Account(req) {
 
   try {
     const session = db.prepare("SELECT email, expires_at FROM sessions WHERE token = ?").get(sessionToken);
-    if (!session || Date.parse(session.expires_at) < Date.now()) return null;
+    if (!session || !Number.isFinite(Date.parse(session.expires_at)) || Date.parse(session.expires_at) <= Date.now()) return null;
     const account = lookupAccountByEmail(session.email);
     if (!account || String(account.plan || "free").toLowerCase() === "free") return null;
     if (account.expires_at && Date.parse(account.expires_at) < Date.now()) return null;
@@ -10532,10 +10838,11 @@ function paidGoal05Account(req) {
 
 // Contrôle des droits seul : ne charge aucun match ni fournisseur.
 app.get('/auth/access', (req,res) => {
-  const account = paidGoal05Account(req);
+  const account = concileSessionAccess(req);
   res.set('Cache-Control','private, no-store');
   res.set('Vary','Authorization, X-TLM-Email');
-  res.json({ok:true, locked:!account, plan:account?'premium':'free'});
+  res.json({ok:true, locked:!account, plan:account?account.plan:'free',
+    credits_left:account?account.credits_left:null,credits_max:account?account.credits_max:null});
 });
 
 function sendGoal05Latest(req, res) {
@@ -10653,9 +10960,8 @@ app.post("/subscribe-email", async (req, res) => {
       brevoPayload,
       { "api-key": BREVO_API_KEY, "content-type": "application/json" }
     );
-    _integrationHealth.brevo.ok = true;
-    _integrationHealth.brevo.checked_at = new Date().toISOString();
-    console.log(`[subscribe-email] Lead ajoute Brevo: ${emailClean} source=${lead.source} utm=${JSON.stringify(lead.utm)} lang=${lead.lang} country=${lead.country}`);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.log(`[subscribe-email] Lead ajoute Brevo source=${lead.source} lang=${lead.lang} country=${lead.country}`);
 
     // Email de bienvenue uniquement pour les nouveaux inscrits
     if (!existing) {
@@ -10683,7 +10989,7 @@ app.post("/subscribe-email", async (req, res) => {
   </div>
 </div>`;
       brevoSendEmail(emailClean, "Bienvenue sur TousLesMatchs — ton premier pick arrive bientôt 🎯", welcomeHtml)
-        .catch(e => console.error("[subscribe-email] welcome email:", e.message));
+        .catch(() => console.error("[subscribe-email] welcome email failed"));
 
       // Séquence nurturing : J+1 (preuve) et J+3 (urgence)
       scheduleNurturingEmails(emailClean);
@@ -10691,11 +10997,8 @@ app.post("/subscribe-email", async (req, res) => {
 
     res.json({ ok: true });
   } catch (e) {
-    if (BREVO_API_KEY && /HTTP (401|403|4\d\d|5\d\d)/.test(String(e.message || ""))) {
-      _integrationHealth.brevo.ok = false;
-      _integrationHealth.brevo.checked_at = new Date().toISOString();
-    }
-    console.error("[subscribe-email] error:", e.message);
+    _integrationHealth.brevo.last_operation_at = new Date().toISOString();
+    console.error("[subscribe-email] Brevo operation failed");
     res.json({ ok: true });
   }
 });
@@ -11088,7 +11391,13 @@ async function notifySignalFortResult(analysis, outcome, scoreH, scoreA) {
     const officialMarket = official?.consensus === 'over' ? 'Over 2.5 buts' : official?.consensus === 'under' ? 'Under 2.5 buts' : null;
     const data={matchKey:analysis.match_key,officialSignalSnapshotId:official?.id || null,home:analysis.home,away:analysis.away,
       market:officialDelivery?.market || officialMarket || db.prepare("SELECT market FROM telegram_signal_deliveries WHERE match_key=? AND channel=? AND ok=1 AND typeof(telegram_message_id)='integer' AND telegram_message_id>0 ORDER BY id LIMIT 1").get(analysis.match_key,dest.channel)?.market || analysis.best_bet,
-      outcome,scoreHome:scoreH,scoreAway:scoreA};
+      outcome,scoreHome:scoreH,scoreAway:scoreA,
+      signalMinute:official?.minute ?? analysis.minute_at_analysis ?? null,
+      signalScoreHome:official?.score_home ?? analysis.score_home_at_analysis ?? null,
+      signalScoreAway:official?.score_away ?? analysis.score_away_at_analysis ?? null,
+      votes:official?.consensus_votes ?? analysis.consensus_votes ?? null,
+      confidence:official?.confidence ?? analysis.confidence ?? null,
+      odd:official?.real_odd ?? analysis.real_odd ?? null};
     data.outcome=getBetOutcomeForScore(data.market,scoreH,scoreA);
     if(!['win','loss'].includes(data.outcome))continue;
     clientTelegramPublisher.enqueue('result',data,dest,analysis.match_key);
@@ -11629,6 +11938,8 @@ const OTP_TTL_MS = 10 * 60000;             // code valable 10 min
 const OTP_REQUEST_COOLDOWN_MS = 60000;      // 1 demande / email / minute
 const OTP_MAX_ATTEMPTS = 5;                 // au-dela, le code est grille
 const SESSION_TTL_MS = 30 * 24 * 3600000;   // session glissante 30 jours
+const SESSION_ABSOLUTE_TTL_MS = 90 * 24 * 3600000; // jamais permanente
+const SESSION_RENEW_WHEN_LEFT_MS = 7 * 24 * 3600000;
 
 const _otpRequestCooldown = new Map(); // email -> timestamp derniere demande
 
@@ -11787,8 +12098,16 @@ function requireSession(req, res, next) {
   if (!token) return res.status(401).json({ ok: false, error: "Non connecté" });
   try {
     const row = db.prepare("SELECT * FROM sessions WHERE token = ?").get(token);
-    if (!row || new Date(row.expires_at) < new Date()) return res.status(401).json({ ok: false, error: "Session expirée" });
-    db.prepare("UPDATE sessions SET last_seen_at = datetime('now') WHERE token = ?").run(token);
+    const now = Date.now();
+    const expiry = telegramClient.sqliteUtcMs(row?.expires_at);
+    if (!row || !Number.isFinite(expiry) || expiry <= now) return res.status(401).json({ ok: false, error: "Session expirée" });
+    const created = telegramClient.sqliteUtcMs(row.created_at);
+    const absoluteEnd = Number.isFinite(created) ? created + SESSION_ABSOLUTE_TTL_MS : expiry;
+    const renewedEnd = Math.min(absoluteEnd, now + SESSION_TTL_MS);
+    if (expiry - now < SESSION_RENEW_WHEN_LEFT_MS && renewedEnd > expiry) {
+      db.prepare("UPDATE sessions SET last_seen_at=datetime('now'),expires_at=? WHERE token=? AND datetime(expires_at)>datetime('now')")
+        .run(new Date(renewedEnd).toISOString(), token);
+    } else db.prepare("UPDATE sessions SET last_seen_at=datetime('now') WHERE token=?").run(token);
     req.session = { email: row.email, token };
     next();
   } catch (e) {
@@ -11999,9 +12318,12 @@ app.post("/verify-code", (req, res) => {
 // periodiquement (voir widgets.js). Si le jeton ne correspond plus (un autre
 // appareil s'est connecte avec le meme code entre-temps), on renvoie
 // active:false et le client se deconnecte de lui-meme.
-app.get("/session-check", (req, res) => {
-  const { email, code } = req.query || {};
-  const session = req.query?.session || "";
+function handleCodeSessionCheck(req, res) {
+  // POST is the current path. GET is retained only for an installed PWA that
+  // has not yet refreshed its old JS; no new client emits secrets in a URL.
+  const input = req.method === 'POST' ? (req.body || {}) : (req.query || {});
+  const { email, code } = input;
+  const session = input.session || "";
   if (!email || !code) return res.json({ active: false });
   try {
     const codesDb = new Database(CODES_DB_PATH, { readonly: true });
@@ -12022,7 +12344,9 @@ app.get("/session-check", (req, res) => {
     console.error("[session-check] error:", e.message);
     return res.json({ active: true }); // panne serveur : ne pas deconnecter tout le monde par erreur
   }
-});
+}
+app.post("/session-check", handleCodeSessionCheck);
+app.get("/session-check", handleCodeSessionCheck);
 
 // Liste des comptes qui partagent leur code (connexions concurrentes
 // detectees) -- pour reperer qui contacter avant risque de bannissement.
@@ -12048,6 +12372,143 @@ const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthent
 const WEBAUTHN_RP_NAME = "TousLesMatchs";
 const WEBAUTHN_RP_ID = "touslesmatchs.com";
 const WEBAUTHN_ORIGINS = ["https://touslesmatchs.com", "https://www.touslesmatchs.com"];
+// Authentification passkey en préparation : activation impossible tant que
+// les tests WebView, origine et révocation ne sont pas terminés.
+const PASSKEYS_ENABLED = false;
+const PASSKEY_CHALLENGE_TTL_MS = 5 * 60000;
+const PASSKEY_RECENT_AUTH_MS = 10 * 60000;
+const PASSKEY_MAX_PER_ACCOUNT = 8;
+const passkeyChallenges = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, item] of passkeyChallenges) if (item.expires <= now) passkeyChallenges.delete(key);
+}, 60000).unref();
+function passkeyUnavailable(req, res, next) {
+  // Preserve existing legacy WebAuthn routes while the new OTP-based rollout
+  // remains disabled; the original dependency version is retained.
+  return next();
+}
+app.use('/webauthn', passkeyUnavailable);
+function passkeyGate(_req, res, next) {
+  if (!PASSKEYS_ENABLED) return res.status(503).json({ ok: false, error: 'Passkeys non activées.' });
+  next();
+}
+function passkeyRecentlyVerified(req, res, next) {
+  const row = db.prepare('SELECT created_at FROM sessions WHERE token=? AND email=?').get(req.session.token, req.session.email);
+  const verifiedAt = telegramClient.sqliteUtcMs(row?.created_at);
+  if (!Number.isFinite(verifiedAt) || verifiedAt > Date.now() || Date.now() - verifiedAt > PASSKEY_RECENT_AUTH_MS)
+    return res.status(403).json({ ok: false, error: 'Reconnecte-toi avec email/code avant de gérer tes passkeys.' });
+  next();
+}
+function passkeyChallengePut(key, challenge, email, operation, sessionToken = null) {
+  if (passkeyChallenges.size >= 10000) throw new Error('challenge capacity');
+  passkeyChallenges.set(key, { challenge, email, operation, sessionToken, expires: Date.now() + PASSKEY_CHALLENGE_TTL_MS });
+}
+function passkeyChallengeTake(key, email, operation, sessionToken = null) {
+  const entry = passkeyChallenges.get(key);
+  passkeyChallenges.delete(key); // consume before cryptographic verification
+  if (!entry || entry.expires <= Date.now() || entry.email !== email || entry.operation !== operation || entry.sessionToken !== sessionToken) return null;
+  return entry.challenge;
+}
+function passkeyCredentialRows(email) {
+  return db.prepare('SELECT id,public_key,counter,transports,device_label,created_at,last_used_at FROM webauthn_credentials WHERE email=? ORDER BY created_at,id').all(email);
+}
+if (PASSKEYS_ENABLED) ensureColumn('webauthn_credentials', 'transports', 'TEXT DEFAULT NULL');
+app.get('/auth/passkey/status', (_req, res) => res.json({ ok: true, enabled: PASSKEYS_ENABLED, web: PASSKEYS_ENABLED, native_android_verified: false }));
+app.post('/auth/passkey/register-options', passkeyGate, requireSession, passkeyRecentlyVerified, async (req, res) => {
+  try {
+    const email = req.session.email;
+    const existing = passkeyCredentialRows(email);
+    if (existing.length >= PASSKEY_MAX_PER_ACCOUNT) return res.status(409).json({ ok: false, error: 'Limite de passkeys atteinte.' });
+    const options = await generateRegistrationOptions({
+      rpName: WEBAUTHN_RP_NAME, rpID: WEBAUTHN_RP_ID, userName: email,
+      userID: crypto.createHmac('sha256', JWT_SECRET).update('passkey-user:' + email).digest(),
+      attestationType: 'none',
+      excludeCredentials: existing.map(row => ({ id: row.id })),
+      authenticatorSelection: { residentKey: 'preferred', userVerification: 'required' },
+    });
+    passkeyChallengePut('register:' + req.session.token, options.challenge, email, 'register', req.session.token);
+    res.json({ ok: true, options });
+  } catch (_) { res.status(500).json({ ok: false, error: 'Création impossible.' }); }
+});
+app.post('/auth/passkey/register-verify', passkeyGate, requireSession, passkeyRecentlyVerified, async (req, res) => {
+  const email = req.session.email;
+  const expectedChallenge = passkeyChallengeTake('register:' + req.session.token, email, 'register', req.session.token);
+  if (!expectedChallenge) return res.status(400).json({ ok: false, error: 'Défi expiré ou déjà utilisé.' });
+  try {
+    const verification = await verifyRegistrationResponse({
+      response: req.body?.credential, expectedChallenge,
+      expectedOrigin: WEBAUTHN_ORIGINS, expectedRPID: WEBAUTHN_RP_ID,
+      requireUserVerification: true,
+    });
+    if (!verification.verified || !verification.registrationInfo?.credential) throw new Error('not verified');
+    const credential = verification.registrationInfo.credential;
+    const label = String(req.body?.label || 'Mon appareil').trim().slice(0, 60);
+    const inserted = db.prepare(`INSERT OR IGNORE INTO webauthn_credentials
+      (id,email,code,public_key,counter,device_label,transports) VALUES(?,?,'',?,?,?,?)`)
+      .run(credential.id, email, Buffer.from(credential.publicKey).toString('base64'), credential.counter,
+        label, JSON.stringify(credential.transports || []));
+    if (inserted.changes !== 1) throw new Error('duplicate credential');
+    res.json({ ok: true });
+  } catch (_) { res.status(400).json({ ok: false, error: 'Vérification échouée.' }); }
+});
+app.post('/auth/passkey/login-options', passkeyGate, async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, error: 'Email invalide.' });
+  try {
+    // Une liste d'ID, même complétée de leurres, révèle la longueur des ID
+    // réels et donc potentiellement l'existence du compte. L'authentificateur
+    // découvre ses passkeys; l'ID reçu est lié à l'email uniquement au verify.
+    const options = await generateAuthenticationOptions({ rpID: WEBAUTHN_RP_ID, userVerification: 'required', allowCredentials: [] });
+    const attemptId = crypto.randomBytes(16).toString('base64url');
+    passkeyChallengePut('login:' + attemptId, options.challenge, email, 'login');
+    res.json({ ok: true, options, attempt_id: attemptId });
+  } catch (_) { res.status(500).json({ ok: false, error: 'Connexion impossible.' }); }
+});
+app.post('/auth/passkey/login-verify', passkeyGate, async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const attemptId = String(req.body?.attempt_id || '');
+  const expectedChallenge = passkeyChallengeTake('login:' + attemptId, email, 'login');
+  if (!expectedChallenge) return res.status(400).json({ ok: false, error: 'Connexion impossible.' });
+  try {
+    const response = req.body?.credential;
+    const stored = db.prepare('SELECT id,public_key,counter FROM webauthn_credentials WHERE id=? AND email=?').get(response?.id, email);
+    if (!stored) throw new Error('unknown credential');
+    const verification = await verifyAuthenticationResponse({
+      response, expectedChallenge, expectedOrigin: WEBAUTHN_ORIGINS,
+      expectedRPID: WEBAUTHN_RP_ID, requireUserVerification: true,
+      credential: { id: stored.id, publicKey: Buffer.from(stored.public_key, 'base64'), counter: stored.counter },
+    });
+    if (!verification.verified) throw new Error('not verified');
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+    db.transaction(() => {
+      const updated = db.prepare('UPDATE webauthn_credentials SET counter=?,last_used_at=datetime(\'now\') WHERE id=? AND email=? AND counter=?')
+        .run(verification.authenticationInfo.newCounter, stored.id, email, stored.counter);
+      if (updated.changes !== 1) throw new Error('counter race');
+      db.prepare('DELETE FROM sessions WHERE email=?').run(email); // same revocation as OTP login
+      db.prepare('INSERT INTO sessions(token,email,expires_at) VALUES(?,?,?)').run(token, email, expiresAt);
+    })();
+    const account = lookupAccountByEmail(email);
+    res.json({ ok: true, token, email, plan: account?.plan || 'free' });
+  } catch (_) { res.status(400).json({ ok: false, error: 'Connexion impossible.' }); }
+});
+app.get('/auth/passkey/list', passkeyGate, requireSession, (req, res) => {
+  const rows = passkeyCredentialRows(req.session.email).map(row => ({ id: row.id, label: row.device_label || 'Mon appareil', created_at: row.created_at, last_used_at: row.last_used_at }));
+  res.json({ ok: true, passkeys: rows });
+});
+app.post('/auth/passkey/rename', passkeyGate, requireSession, passkeyRecentlyVerified, (req, res) => {
+  const id = String(req.body?.id || ''), label = String(req.body?.label || '').trim().slice(0, 60);
+  if (!id || !label) return res.status(400).json({ ok: false });
+  const changed = db.prepare('UPDATE webauthn_credentials SET device_label=? WHERE id=? AND email=?').run(label, id, req.session.email).changes;
+  res.json({ ok: changed === 1 });
+});
+app.post('/auth/passkey/delete', passkeyGate, requireSession, passkeyRecentlyVerified, (req, res) => {
+  const id = String(req.body?.id || '');
+  if (!id) return res.status(400).json({ ok: false });
+  const changed = db.prepare('DELETE FROM webauthn_credentials WHERE id=? AND email=?').run(id, req.session.email).changes;
+  res.json({ ok: changed === 1 });
+});
 const webauthnChallenges = new Map(); // email -> { challenge, expires }
 function putWebauthnChallenge(email, challenge) {
   webauthnChallenges.set(email, { challenge, expires: Date.now() + 5 * 60000 });
@@ -12234,6 +12695,13 @@ app.get("/user/tokens", authMiddleware, (req, res) => {
 });
 
 // ── Auth: profil utilisateur ──────────────────────────────────────────────────
+
+function publicCommercialPlan(plan) {
+  const p = String(plan || "free").toLowerCase();
+  if (["standard","premium","elite","vip"].includes(p)) return "premium";
+  return p;
+}
+
 app.get("/auth/me", authMiddleware, (req, res) => {
   const user = db.prepare("SELECT id, email, status, preferred_language, created_at FROM users WHERE id = ?").get(req.user.id);
   if (!user) return res.json({ ok: false, error: "Utilisateur introuvable" });
@@ -13261,9 +13729,25 @@ app.delete("/admin/set-score", (req, res) => {
 // ── Votes réels Over/Under 2,5 pour les cinq cases live ──────────────────────
 // Source unique : agent_market_predictions, déjà alimentée par les réponses
 // multi-marchés de chaque agent. Aucun vote n'est déduit du consensus principal.
+function ou25TerminalReason(status, call) {
+  const httpStatus = Number(call?.http_status || 0), issue = String(call?.issue || '');
+  if (httpStatus === 401) return 'Authentification fournisseur refusée (HTTP 401).';
+  if (httpStatus === 402) return 'Crédit fournisseur indisponible (HTTP 402).';
+  if (httpStatus === 429) return 'Fournisseur temporairement limité (HTTP 429).';
+  if (issue === 'timeout') return 'Délai fournisseur dépassé.';
+  if (status === 'empty' || issue === 'vide') return 'Réponse sans avis O/U exploitable.';
+  if (status === 'parse_error' || issue === 'illisible') return 'Réponse IA invalide ou illisible.';
+  if (status === 'rejected_statistical') return 'Vote écarté par le filtre statistique.';
+  return 'Fournisseur indisponible ou coupe-circuit actif.';
+}
 function getLiveOu25VoteState(match) {
+  return liveStateCoherence.publicState(match, getStoredLiveOu25VoteState(match));
+}
+
+function getStoredLiveOu25VoteState(match) {
   const minute = parseLiveMinuteValue(match?.minute);
-  const windowStatus = minute === null ? "unknown" : minute < 15 ? "waiting" : minute <= CLIENT_OU25_CLIENT_MAX_MINUTE ? "open" : "closed";
+  const currentSnapshotKey = getPredictionSnapshotKey(match);
+  const windowStatus = liveStateCoherence.analysisWindow(match).status;
   const emptyVotes = CONCILE_AGENT_NAMES.map((agent) => ({
     agent,
     direction: null,
@@ -13274,7 +13758,7 @@ function getLiveOu25VoteState(match) {
   }));
   const empty = {
     market: "over_under_2_5",
-    from_minute: 15,
+    from_minute: 35,
     to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
     window_status: windowStatus,
     vote_count: 0,
@@ -13286,17 +13770,32 @@ function getLiveOu25VoteState(match) {
   };
   try {
     if (typeof officialSnapshots === 'undefined') throw new Error('official snapshot module unavailable');
-    const immutableState = officialSnapshots.stateForMatch(db, match);
+    const immutableState = liveStateCoherence.firstHalfClosed(match)
+      ? officialSnapshots.archivedStateForMatch(db, match)
+      : officialSnapshots.stateForMatch(db, match);
     const snapshot = immutableState.snapshot;
-    if (snapshot) {
-      const votes = snapshot.votes.slice(0, 5).map((vote, index) => ({
-        agent: vote.agent || CONCILE_AGENT_NAMES[index],
-        direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
-        label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
-        confidence: vote.confidence ?? null,
-        status: snapshot.seat_statuses[index] || vote.status || 'pending',
-        updated_at: vote.updated_at || snapshot.created_at,
-      }));
+    // Un ancien snapshot de la même rencontre ne doit pas masquer les votes
+    // déjà persistés d'une nouvelle tranche/score pendant que les cinq appels
+    // bornés se terminent. Un signal officiel, lui, reste toujours prioritaire.
+    if (snapshot && (immutableState.kind === 'official' || snapshot.id === currentSnapshotKey
+      || (liveStateCoherence.firstHalfClosed(match) && Number(snapshot.minute) >= 35 && (Number(snapshot.minute) <= 45 || snapshot.first_half_verified === true)))) {
+      const failedCallRows = db.prepare(`SELECT agent_name,http_status,issue,created_at FROM agent_calls
+        WHERE match_key=? ORDER BY id DESC`).all(snapshot.id);
+      const failedCallByAgent = new Map();
+      for (const call of failedCallRows) if (!failedCallByAgent.has(call.agent_name)) failedCallByAgent.set(call.agent_name,call);
+      const votes = snapshot.votes.slice(0, 5).map((vote, index) => {
+        const status = snapshot.seat_statuses[index] || vote.status || 'pending';
+        const call = failedCallByAgent.get(vote.agent || CONCILE_AGENT_NAMES[index]);
+        const reason = status === 'voted' || status === 'pending' ? null : ou25TerminalReason(status,call);
+        return {
+          agent: vote.agent || CONCILE_AGENT_NAMES[index],
+          direction: vote.direction === 'over' || vote.direction === 'under' ? vote.direction : null,
+          label: vote.direction === 'over' ? 'Over 2,5' : vote.direction === 'under' ? 'Under 2,5' : null,
+          confidence: vote.confidence ?? null,
+          status, reason,
+          updated_at: vote.updated_at || snapshot.created_at,
+        };
+      });
       const overCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'over').length;
       const underCount = votes.filter(vote => vote.status === 'voted' && vote.direction === 'under').length;
       const official = immutableState.kind === 'official';
@@ -13313,9 +13812,11 @@ function getLiveOu25VoteState(match) {
         snapshot_score: `${snapshot.score_home}-${snapshot.score_away}`,
         red_cards: { home: snapshot.red_cards_home, away: snapshot.red_cards_away },
         votes,
+        analysis_state: votes.some(vote => vote.status === 'pending') ? 'running' : 'completed',
         official,
         official_signal_snapshot_id: official ? snapshot.id : null,
         snapshot_id: snapshot.id,
+        first_half_verified: snapshot.first_half_verified === true,
         recommendation_status: official
           ? `Signal officiel à ${snapshot.minute}′, score ${snapshot.score_home}-${snapshot.score_away}`
           : 'Anciennes tendances — aucun signal officiel',
@@ -13330,7 +13831,7 @@ function getLiveOu25VoteState(match) {
   } catch (error) {
     if (error.message !== 'official snapshot module unavailable') console.error('[official-snapshot] lecture:', error.message);
   }
-  if (minute === null || minute < 15) return empty;
+  if (minute === null || minute < 35) return empty;
 
   try {
     const placeholders = CONCILE_AGENT_NAMES.map(() => "?").join(",");
@@ -13365,7 +13866,19 @@ function getLiveOu25VoteState(match) {
     // Ne jamais fabriquer un scrutin en mélangeant les sièges de plusieurs
     // observations. Après 45', on conserve le dernier snapshot réellement
     // enregistré, avec son horodatage, même si le match continue d'avancer.
-    const latestSnapshotKey = String(rows[0]?.match_key || "");
+    const callRows = db.prepare(`
+      SELECT agent_name,http_status,issue,vote_produit,created_at
+      FROM agent_calls
+      WHERE match_key = ? AND agent_name IN (${placeholders})
+      ORDER BY id DESC
+    `).all(currentSnapshotKey, ...CONCILE_AGENT_NAMES);
+    const latestCallByAgent = new Map();
+    for (const row of callRows) {
+      if (!latestCallByAgent.has(row.agent_name)) latestCallByAgent.set(row.agent_name, row);
+    }
+    const currentRows = rows.filter(row => String(row.match_key || "") === currentSnapshotKey);
+    const latestSnapshotKey = currentRows.length || callRows.length
+      ? currentSnapshotKey : String(rows[0]?.match_key || "");
     const snapshotRows = latestSnapshotKey
       ? rows.filter((row) => String(row.match_key || "") === latestSnapshotKey)
       : rows;
@@ -13382,7 +13895,17 @@ function getLiveOu25VoteState(match) {
         : /^Under 2[.,]5 buts$/i.test(bet)
           ? "under"
           : null;
-      if (!direction) return emptyVotes.find((vote) => vote.agent === agent);
+      if (!direction) {
+        const call = latestCallByAgent.get(agent);
+        if (!call) return emptyVotes.find((vote) => vote.agent === agent);
+        const issue = String(call.issue || "");
+        const status = issue === "ok" || issue === "vide" ? "empty"
+          : issue === "illisible" ? "parse_error"
+            : "unavailable";
+        const reason = ou25TerminalReason(status,call);
+        return { agent, direction: null, label: null, confidence: null,
+          status, reason, updated_at: call.created_at || null };
+      }
       return {
         agent,
         direction,
@@ -13415,6 +13938,9 @@ function getLiveOu25VoteState(match) {
       snapshot_minute: snapshotStateHit ? Number(snapshotStateHit[1]) : null,
       snapshot_score: snapshotScore,
       votes,
+      analysis_state: (currentRows.length || callRows.length)
+        ? (votes.some(vote => vote.status === "pending") ? "running" : "completed")
+        : "not_started",
     };
   } catch (e) {
     console.error("[live-ou25-votes]", e.message);
@@ -13426,8 +13952,8 @@ function clientOu25VisibilityEligibility(match, ou25) {
   const accepting = isClientOu25MatchEligible(match, true);
   const snapshotMinute = Number(ou25?.snapshot_minute);
   const preserved = Number.isFinite(snapshotMinute)
-    && snapshotMinute >= 15 && snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE
-    && isClientOu25MatchEligible({ ...match, minute: snapshotMinute, minute_at_analysis: snapshotMinute }, true);
+    && (snapshotMinute >= 35 || ou25?.official === true) && (snapshotMinute <= CLIENT_OU25_CLIENT_MAX_MINUTE || ou25?.first_half_verified === true)
+    && isClientOu25MatchEligible(match, false);
   return { accepting, product: accepting || preserved, preserved };
 }
 
@@ -13437,7 +13963,7 @@ function clientOu25VisibilityEligibility(match, ou25) {
 function homepageLiveMatch(match, canReveal) {
   const out = {};
   for (const key of ['id','fixtureId','fixture_id','sourceId','home','away','country',
-    'competition','league','sport','status','minute','utcDate','home_logo','away_logo',
+    'competition','league','sport','status','period','minute','utcDate','home_logo','away_logo',
     'score_home','score_away','block_reason','analysis_exclusion_reason',
     'client_product_eligible','client_display_eligible','data_notice','data_fetched_at','analysis_started','analysis_verified','homepage_display_eligible',
     'signal_delivered','telegram_delivery_proven','diffusion_block','delivery_status']) {
@@ -13465,9 +13991,12 @@ function homepageLiveMatch(match, canReveal) {
     official_odd: canReveal ? (raw.real_odd ?? null) : null,
     rule_version: raw.rule_version || null,
     outcome: raw.outcome || null,
+    analysis_state: raw.analysis_state || null,
+    synchronization_reason: raw.synchronization_reason || null,
     over_count: canReveal ? over : null, under_count: canReveal ? under : null,
     votes: slots.map(v => ({
       status: v.status, agent: v.agent,
+      reason: v.reason || null,
       updated_at: v.updated_at || null,
       direction: canReveal ? v.direction : null,
       label: canReveal ? v.label : null,
@@ -13597,16 +14126,16 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
               AND telegram_message_id>0 AND channel IN ('premium','ru_premium') LIMIT 1`).get(ou25.official_signal_snapshot_id)
         : null;
       const telegramDeliveryProven = !!deliveryRow;
-      // Source de verite pour l'accueil public : un match ne peut etre presente
-      // comme un signal que si le championnat est dans le perimetre client ET
-      // qu'au moins 3 IA ont reellement enregistre le meme vote O/U 2,5.
+      // Source de vérité pour l'accueil public : un match ne peut être présenté
+      // comme un signal que si le championnat est dans le périmètre client ET
+      // qu'au moins quatre IA ont réellement enregistré le même vote O/U 2,5.
       // Cela evite qu'un simple match live bien illustre (logos + score) soit
       // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
-      const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
+      const homepageDisplayEligible = clientProductEligible && (ou25.official === true || alignedVotes >= CLIENT_OU25_MIN_VOTES);
       const visibility = {
         client_product_eligible: clientProductEligible,
         client_display_eligible: isClientOu25MatchEligible(m, false),
-        analysis_started: Number(ou25.vote_count || 0) > 0,
+        analysis_started: Number(ou25.vote_count || 0) > 0 || ['running','completed'].includes(ou25.analysis_state),
         analysis_verified: homepageDisplayEligible,
         homepage_display_eligible: homepageDisplayEligible,
         signal_delivered: telegramDeliveryProven,
@@ -13614,7 +14143,15 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
         diffusion_block: deliveredAnalysis?.diffusion_block || null,
         delivery_status: telegramDeliveryProven ? 'diffuse' : 'non_diffuse',
       };
-      const analysisExclusionReason = m.data_notice || liveAnalysisNotice(m) || m.analysis_exclusion_reason || null;
+      const allSeatsFinishedWithoutVote = ou25.analysis_state === 'completed' && Number(ou25.vote_count || 0) === 0;
+      const staticExclusionReason = clientOu25StaticExclusionReason(m);
+      const noCycleReason = Number(ou25.vote_count || 0) === 0 && !['running','completed'].includes(ou25.analysis_state)
+        && (parseLiveMinuteValue(m.minute) === null || parseLiveMinuteValue(m.minute) > CLIENT_OU25_CLIENT_MAX_MINUTE)
+        ? livePickBlockReason(m) : null;
+      const analysisExclusionReason = ou25.synchronization_reason || liveAnalysisNotice(m)
+        || staticExclusionReason
+        || (allSeatsFinishedWithoutVote ? 'Analyse terminée : aucun vote IA exploitable reçu.' : null)
+        || m.analysis_exclusion_reason || m.data_notice || noCycleReason || null;
       if (m.pinnedSignal) return { ...m, analysable: false, block_reason: null, analysis_exclusion_reason: null, ou25, ...visibility };
       const reason = livePickBlockReason(m)
         || (isUnderperformingCompetition(m) ? 'Championnat écarté : résultats historiques insuffisants.' : null)
@@ -13903,15 +14440,34 @@ function sanitizeAnalysisForClient(analysis, allowAdminFields = false) {
 
 const analysisCache = new Map();
 
+function concileSessionAccess(req) {
+  const account = paidGoal05Account(req);
+  if (!account?.email) return null;
+  let codesDb;
+  try {
+    codesDb = new Database(CODES_DB_PATH, {readonly:true});
+    const row = codesDb.prepare('SELECT rowid AS account_id,email,plan,expires_at,credits_max,credits_used,credits_date FROM codes WHERE lower(email)=? AND active=1 ORDER BY rowid DESC LIMIT 1')
+      .get(String(account.email).toLowerCase().trim());
+    if (!row || !['standard','premium','elite','vip'].includes(String(row.plan).toLowerCase())) return null;
+    if (row.expires_at && (!Number.isFinite(Date.parse(row.expires_at)) || Date.parse(row.expires_at) <= Date.now())) return null;
+    return {...row,valid:true,credits_left:creditsLeftForPlan(row.plan,row.credits_max,row.credits_used,row.credits_date)};
+  } catch (_) { return null; }
+  finally { if (codesDb) codesDb.close(); }
+}
+
 app.post("/concile-analysis", async (req, res) => {
-  const { email, code, match } = req.body || {};
-  if (!email || !code) return res.json({ ok: false, error: "Connexion requise" });
+  const { code, match } = req.body || {};
+  const sessionAccess = concileSessionAccess(req);
+  const email = sessionAccess?.email || req.body?.email;
+  if (!sessionAccess && (!email || !code)) return res.json({ ok: false, error: "Connexion requise" });
   if (!match || !match.home || !match.away) return res.json({ ok: false, error: "Données du match manquantes" });
 
-  const auth = verifyCode(email, code);
+  const auth = sessionAccess || verifyCode(email, code);
   if (!auth.valid) return res.json({ ok: false, error: auth.error || "Code invalide" });
   if (auth.plan === "free") return res.json({ ok: false, error: "UPGRADE_REQUIRED", plan: "free" });
-  const allowAdminFields = isAdminAccess(email, code);
+  const allowAdminFields = !sessionAccess && isAdminAccess(email, code);
+  const creditWhere = sessionAccess ? 'rowid = ?' : 'code = ? AND email = ?';
+  const creditArgs = sessionAccess ? [sessionAccess.account_id] : [code.toUpperCase().trim(),email.toLowerCase().trim()];
 
   // Check credits (credits_max=0 means unlimited)
   const today = new Date().toISOString().slice(0, 10);
@@ -13944,15 +14500,15 @@ app.post("/concile-analysis", async (req, res) => {
     // Decrement credits in codes.db (only on real analysis, not cache hit)
     try {
       const wdb = new Database(CODES_DB_PATH);
-      const row = wdb.prepare("SELECT credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
-        .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+      const row = wdb.prepare(`SELECT credits_max, credits_used, credits_date FROM codes WHERE ${creditWhere} AND active = 1`)
+        .get(...creditArgs);
       if (row && row.credits_max > 0) {
         if (row.credits_date === today) {
-          wdb.prepare("UPDATE codes SET credits_used = credits_used + 1 WHERE code = ? AND email = ?")
-            .run(code.toUpperCase().trim(), email.toLowerCase().trim());
+          wdb.prepare(`UPDATE codes SET credits_used = credits_used + 1 WHERE ${creditWhere} AND active = 1`)
+            .run(...creditArgs);
         } else {
-          wdb.prepare("UPDATE codes SET credits_used = 1, credits_date = ? WHERE code = ? AND email = ?")
-            .run(today, code.toUpperCase().trim(), email.toLowerCase().trim());
+          wdb.prepare(`UPDATE codes SET credits_used = 1, credits_date = ? WHERE ${creditWhere} AND active = 1`)
+            .run(today,...creditArgs);
         }
       }
       wdb.close();
@@ -13964,8 +14520,8 @@ app.post("/concile-analysis", async (req, res) => {
     if (!allowAdminFields) {
       try {
         const rdb = new Database(CODES_DB_PATH, { readonly: true });
-        const cr = rdb.prepare("SELECT plan, credits_max, credits_used, credits_date FROM codes WHERE code = ? AND email = ? AND active = 1")
-          .get(code.toUpperCase().trim(), email.toLowerCase().trim());
+        const cr = rdb.prepare(`SELECT plan, credits_max, credits_used, credits_date FROM codes WHERE ${creditWhere} AND active = 1`)
+          .get(...creditArgs);
         rdb.close();
         if (cr && cr.credits_max > 0) {
           creditFields = { credits_left: creditsLeftForPlan(cr.plan, cr.credits_max, cr.credits_used, cr.credits_date), credits_max: cr.credits_max };
@@ -14511,7 +15067,6 @@ app.post('/internal/client-telegram-publication', (req,res) => {
 
 // Legacy create-checkout accessible via /create-checkout et /api/create-checkout
 app.post("/create-checkout", handleCreateCheckout);
-app.post("/create-checkout", handleCreateCheckout);
 
 // ── Community stats (Telegram member count) ───────────────────────────────────
 let tgMemberCache = { count: null, ts: 0 };
@@ -14675,7 +15230,9 @@ app.post("/internal/strong-signals", (req, res) => {
 // ── Statistiques publiques réelles utilisées par le site et l'application ──
 app.get("/public-signal-rules", (req, res) => {
   res.set("Cache-Control", "no-store");
-  res.json({ ok: true, from_minute: 15, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE,
+  res.json({ ok: true, from_minute: 35, to_minute: CLIENT_OU25_CLIENT_MAX_MINUTE, includes_first_half_stoppage: true,
+    delivery_from_minute: officialSnapshots.OFFICIAL_FROM_MINUTE,
+    delivery_to_minute: officialSnapshots.OFFICIAL_TO_MINUTE,
     min_votes: CLIENT_OU25_MIN_VOTES, min_confidence: CLIENT_OU25_MIN_CONFIDENCE,
     min_odd: TIER_MIN_REAL_ODD, max_odd: TIER_MAX_REAL_ODD,
     min_rank_gap: 5, top5_bottom5_priority: true });
@@ -15277,7 +15834,7 @@ app.get("/admin/send-stats-bilan", async (req, res) => {
   res.json({ ok, message: ok ? "Bilan envoye sur Telegram admin" : "Echec envoi" });
 });
 
-// Client recap: one durable queue transaction at 23:45 Europe/Paris.
+// Client recap: tentative à partir de 23:00 Europe/Paris ; report automatique si un signal reste en attente.
 function tlmParisParts() { return telegramClient.parisParts(); }
 
 function tlmFlag(v) {
@@ -15303,20 +15860,20 @@ function winsSafe(rows) {
 }
 
 // Vérification chaque minute.
-// Exécution UNE seule fois par journée à partir de 23h45 heure de Paris.
+// Exécution UNE seule fois par journée à partir de 23h00 heure de Paris, après résolution des signaux du jour.
 setInterval(()=>{
   try {
     const p=tlmParisParts();
 
     if(
       p.hour===23 &&
-      p.minute>=45
+      p.minute>=0
     ){
       // SQLite claims the civil day atomically across processes and restarts.
 
       sendTransparentDailyRecap()
         .then(ok=>console.log(
-          `[transparent-recap] 23h45 Paris: ${ok ? "OK" : "SKIP"}`
+          `[transparent-recap] 23h00+ Paris: ${ok ? "OK" : "SKIP"}`
         ))
         .catch(e=>console.error("[transparent-recap]",e.message));
     }
@@ -15415,7 +15972,7 @@ app.get("/analysis-history", (req, res) => {
       ORDER BY analysed_at DESC
     `).all();
     // Cote client : une analyse n'entre dans l'historique que si elle a ete
-    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 3/5.
+    // envoyee sur au moins un canal payant ET respecte le contrat O/U 2,5 4/5.
     // Cette route alimente la page Resultats, y compris quand le fondateur est
     // connecte : elle doit donc rester identique pour tous les lecteurs. La vue
     // exhaustive de diagnostic reste disponible via /admin/daily-audit.
@@ -15655,7 +16212,7 @@ app.get("/analysis-history", (req, res) => {
       verification: {
         repaired_date: CLIENT_HISTORY_REPAIR_DATE,
         telegram_proof_since: CLIENT_TELEGRAM_PROOF_SINCE,
-        rule: "football_ou25_5_seats_min_3_votes_minute_15_45",
+        rule: "football_ou25_5_seats_min_4_votes_from_35_until_verified_first_half_end",
       },
     });
   } catch (e) {
@@ -16844,6 +17401,7 @@ let _lastWeeklyReportDate = "";
 let _lastBilanDate = "";
 let _lastDailyPickSeedDate = "";
 let _lastGainImageDate = "";
+let _lastHermesEveningBilanDate = "";
 
 // Garantit un pick du jour daté d'AUJOURD'HUI en ligne au plus tard vers
 // 4h-5h du matin (demande de Greg le 01/08/2026). L'auto-concile ne
@@ -17445,26 +18003,18 @@ function auditAgentsEtPromotion() {
       return { lignes, promotions };
     }
 
-    // Promotion APPLIQUEE automatiquement (decision du fondateur, 07/08/2026 :
-    // "tu dois toujours garder les meilleurs, et si tu fais un changement tu me
-    // le dis"). Le siege du titulaire sortant est pointe vers le modele du
-    // challenger, via la meme table model_overrides que les substitutions de
-    // modeles morts. Le changement est annonce dans le rapport du matin.
+    // Les populations de agent_predictions et shadow_evals ne portent pas sur
+    // les mêmes matchs. Leur classement peut donc produire une recommandation,
+    // jamais une bascule automatique d'un siège officiel. Toute promotion doit
+    // être validée sur les mêmes match_key puis autorisée explicitement.
     const cibleSortant = MODELE_DES_AGENTS[plusFaibleTitulaire.nom];
     const modeleEntrant = MODELE_DES_AGENTS[meilleurChallenger.nom];
     if (cibleSortant && modeleEntrant) {
       const vraiModeleEntrant = resolveModel(modeleEntrant);
-      db.prepare(`INSERT INTO model_overrides (logical_id, model_id, replaced_at, reason)
-                  VALUES (?,?,datetime('now'),?)
-                  ON CONFLICT(logical_id) DO UPDATE SET model_id=excluded.model_id,
-                    replaced_at=excluded.replaced_at, reason=excluded.reason`)
-        .run(cibleSortant, vraiModeleEntrant,
-             `promotion : ${meilleurChallenger.nom} ${meilleurChallenger.winrate}% remplace ${plusFaibleTitulaire.nom} ${plusFaibleTitulaire.winrate}%`);
-      _modelOverrideCache.at = 0;
-      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire, ecart, modele: vraiModeleEntrant });
-      lignes.push(`🏅 <b>CHANGEMENT AU CONCILE</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) remplace ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}), ecart ${ecart} points`);
-      lignes.push(`   → siege ${plusFaibleTitulaire.nom} pointe desormais sur <b>${vraiModeleEntrant}</b>`);
-      console.log(`[promotion] ${meilleurChallenger.nom} remplace ${plusFaibleTitulaire.nom} (${cibleSortant} -> ${vraiModeleEntrant})`);
+      promotions.push({ entrant: meilleurChallenger, sortant: plusFaibleTitulaire,
+        ecart, modele: vraiModeleEntrant, appliquee: false });
+      lignes.push(`🔎 <b>Promotion non appliquée</b> — ${meilleurChallenger.nom} (${meilleurChallenger.winrate}% sur ${meilleurChallenger.resolus}) et ${plusFaibleTitulaire.nom} (${plusFaibleTitulaire.winrate}% sur ${plusFaibleTitulaire.resolus}) doivent être comparés sur les mêmes matchs`);
+      console.log(`[promotion] recommandation uniquement — populations non comparables, aucun siège modifié`);
     } else {
       // Challenger hors OpenRouter : on ne peut pas basculer par simple
       // changement d'identifiant, on signale sans rien casser.
@@ -17601,13 +18151,13 @@ async function runMorningAudit() {
   });
 
   // 3. Volume métier : zéro signal peut être parfaitement normal avec les filtres
-  // stricts 3/5. Le transport Telegram est contrôlé séparément juste après.
+  // stricts 4/5. Le transport Telegram est contrôlé séparément juste après.
   await test("Volume de signaux", async () => {
     const depuis = new Date(Date.now() - 48 * 3600e3).toISOString().slice(0, 19).replace("T", " ");
     const rows = db.prepare("SELECT sig_sent_standard s, sig_sent_premium p, sig_sent_elite e FROM concile_analyses WHERE analysed_at >= ?").all(depuis);
     const envoyes = rows.filter(r => r.s === 1 || r.p === 1 || r.e === 1).length;
     if (rows.length >= 30 && envoyes === 0) {
-      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 3/5, transport vérifié séparément` };
+      return { ok: false, niveau: "orange", info: `0 signal admissible sur ${rows.length} analyses en 48h — filtres 4/5, transport vérifié séparément` };
     }
     return { ok: true, info: `${envoyes} signaux diffusés en 48h` };
   });
@@ -17755,9 +18305,13 @@ async function runMorningAudit() {
   return ok;
 }
 
-async function sendDailyHealthCheck() {
+async function sendDailyHealthCheck(slot) {
   if (!TELEGRAM_ADMIN_CHAT_ID) return false;
   try {
+    const now = new Date();
+    const period = hermesBilanPeriod(slot, now);
+    const periodStart = period.start, periodEnd = period.end;
+    const todayParis = telegramClient.parisParts(now.getTime()).day;
     // Diffusion de la veille, comptée sur les colonnes réellement marquées à l'envoi.
     const d = db.prepare(`
       SELECT COUNT(*) AS analyses,
@@ -17766,8 +18320,8 @@ async function sendDailyHealthCheck() {
              COALESCE(SUM(sig_sent_premium),0)  AS premium,
              COALESCE(SUM(sig_sent_elite),0)    AS elite
       FROM concile_analyses
-      WHERE date(analysed_at) = date('now','-1 day')
-    `).get() || {};
+      WHERE datetime(analysed_at) >= datetime(?) AND datetime(analysed_at) < datetime(?)
+    `).get(periodStart, periodEnd) || {};
 
     // Résultats des matchs RÉSOLUS hier (resolved_at, pas analysed_at : une analyse
     // de la veille peut n'être tranchée que le lendemain).
@@ -17775,10 +18329,10 @@ async function sendDailyHealthCheck() {
       SELECT COALESCE(SUM(outcome='win'),0) AS wins, COALESCE(SUM(outcome='loss'),0) AS losses,
              COALESCE(SUM(CASE WHEN outcome='win' THEN real_odd*10-10 ELSE -10 END),0) AS profit
       FROM concile_analyses
-      WHERE outcome IN ('win','loss') AND date(resolved_at) = date('now','-1 day')
+      WHERE outcome IN ('win','loss') AND datetime(resolved_at) >= datetime(?) AND datetime(resolved_at) < datetime(?)
         AND real_odd >= ${TIER_MIN_REAL_ODD}
         AND real_odd <= ${TIER_MAX_REAL_ODD}
-    `).get() || {};
+    `).get(periodStart, periodEnd) || {};
     const resolved = (r.wins || 0) + (r.losses || 0);
     const wr = resolved > 0 ? Math.round((r.wins / resolved) * 1000) / 10 : null;
 
@@ -17789,12 +18343,21 @@ async function sendDailyHealthCheck() {
     const best = agents[0], worst = agents[agents.length - 1];
 
     const paid = (d.standard || 0) + (d.premium || 0) + (d.elite || 0);
+    const spend = db.prepare(`SELECT COALESCE(SUM(cost_estimate_eur),0) AS eur FROM ai_call_budget_log
+      WHERE status='ok' AND datetime(created_at)>=datetime(?) AND datetime(created_at)<datetime(?)`).get(periodStart, slot === "09" ? periodEnd : now.toISOString()) || { eur: 0 };
+    const budget = require("./ai_budget_guard").parisBudget();
+    const todayStart = telegramClient.parisDayBounds(todayParis).start;
+    const spendToday = db.prepare(`SELECT COALESCE(SUM(cost_estimate_eur),0) AS eur FROM ai_call_budget_log
+      WHERE status='ok' AND datetime(created_at)>=datetime(?) AND datetime(created_at)<=datetime(?)`).get(todayStart, now.toISOString()) || { eur: 0 };
+    const budgetRemaining = Math.max(0, budget.limit - Number(spendToday.eur || 0));
     const head = paid === 0
-      ? "🔴 <b>BILAN SANTÉ — aucun signal payant hier</b>"
-      : "📊 <b>BILAN SANTÉ QUOTIDIEN</b>";
+      ? "🔴 <b>BILAN HERMÈS — aucun signal payant hier</b>"
+      : "📊 <b>BILAN HERMÈS ORDINAIRE</b>";
 
     const lines = [
-      head, "",
+      `${head}${slot ? ` · ${slot}h Paris` : ""}`, "",
+      `🕒 Période : ${period.label}`,
+      `💶 Dépense enregistrée par compteur interne : ${(slot === "09" ? spend.eur : spendToday.eur || 0).toFixed(4)} € (estimation interne, pas une facture fournisseur) · budget restant aujourd’hui : ${budgetRemaining.toFixed(2)} € / ${budget.limit} €`,
       `📡 <b>Diffusion d'hier</b> (${d.analyses || 0} analyses)`,
       `🆓 Gratuit : ${d.free || 0}`,
       `🟣 Premium : ${d.premium || 0} (sans plafond)`,
@@ -17814,12 +18377,48 @@ async function sendDailyHealthCheck() {
     ].filter(Boolean);
 
     const ok = await sendTelegramMessage(TELEGRAM_ADMIN_CHAT_ID, lines.join("\n"));
-    console.log(`[health-check] bilan quotidien : ${ok ? "OK" : "ECHEC"}`);
+    console.log(`[health-check] bilan ${slot || "manuel"} : ${ok ? "OK" : "ECHEC"}`);
     return ok;
   } catch (e) {
     console.error("[health-check]", e.message);
     return false;
   }
+}
+
+function claimHermesBilan(db, day, slot, nowMs = Date.now()) {
+  db.exec(`CREATE TABLE IF NOT EXISTS hermes_bilan_dispatch(day TEXT NOT NULL, slot TEXT NOT NULL, status TEXT NOT NULL, claimed_at TEXT NOT NULL, PRIMARY KEY(day,slot))`);
+  const claim = db.prepare(`INSERT INTO hermes_bilan_dispatch(day,slot,status,claimed_at) VALUES (?,?,'sending',?)
+    ON CONFLICT(day,slot) DO UPDATE SET status='sending',claimed_at=excluded.claimed_at
+    WHERE hermes_bilan_dispatch.status='failed' OR (hermes_bilan_dispatch.status='sending' AND datetime(hermes_bilan_dispatch.claimed_at)<datetime('now','-10 minutes'))`)
+    .run(day, slot, new Date(nowMs).toISOString());
+  return claim.changes === 1;
+}
+
+function finishHermesBilan(db, day, slot, ok) {
+  return db.prepare("UPDATE hermes_bilan_dispatch SET status=? WHERE day=? AND slot=? AND status='sending'").run(ok ? "sent" : "failed", day, slot).changes === 1;
+}
+
+function dueHermesBilanSlot(hour) {
+  if (hour >= 9 && hour < 21) return "09";
+  if (hour >= 21) return "21";
+  return null;
+}
+
+function hermesBilanPeriod(slot, at = new Date()) {
+  const today = telegramClient.parisParts(at.getTime()).day;
+  const yesterday = new Date(Date.parse(`${today}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  return slot === "09"
+    ? { start: telegramClient.parisDayBounds(yesterday).start, end: telegramClient.parisDayBounds(today).start, label: "veille (Europe/Paris)" }
+    : { start: telegramClient.parisDayBounds(today).start, end: at.toISOString(), label: "aujourd’hui jusqu’à l’envoi (Europe/Paris)" };
+}
+
+async function sendHermesOperationalBilan(slot) {
+  const day = telegramClient.parisParts(Date.now()).day;
+  if (!claimHermesBilan(db, day, slot)) return false;
+  let ok = false;
+  try { ok = await sendDailyHealthCheck(slot); }
+  finally { finishHermesBilan(db, day, slot, ok); }
+  return ok;
 }
 
 // ── AUTO 2 — Alerte « palier à sec » (toutes les 6h) ─────────────────────────
@@ -17901,9 +18500,14 @@ async function notifyPersistentSignalProof(status, proof) {
 async function runPersistentSignalProof() {
   const objective = db.prepare("SELECT * FROM signal_proof_objective WHERE id=1").get();
   if (!objective || objective.status !== "pending" || objective.notified_at) return { status: objective?.status || "missing" };
-  const candidate = db.prepare(`SELECT * FROM concile_analyses WHERE id>? AND diffusion_block IS NULL
-    AND consensus_votes>=3 AND minute_at_analysis BETWEEN 15 AND 45
-    AND lower(replace(best_bet,',','.')) LIKE '%2.5%' ORDER BY id LIMIT 1`).get(objective.baseline_analysis_id);
+  const candidate = db.prepare(`SELECT analysis.* FROM official_signal_registry registry
+    JOIN official_vote_snapshots snapshot ON snapshot.id=registry.official_signal_snapshot_id
+    JOIN concile_analyses analysis ON analysis.match_key=snapshot.analysis_match_key
+    WHERE analysis.id>? AND snapshot.consensus_votes>=${CLIENT_OU25_MIN_VOTES}
+      AND snapshot.minute >= ${officialSnapshots.OFFICIAL_FROM_MINUTE}
+      AND (snapshot.minute <= ${officialSnapshots.OFFICIAL_TO_MINUTE} OR EXISTS
+        (SELECT 1 FROM vote_snapshot_events e WHERE e.snapshot_id=snapshot.id AND e.event_type='first_half_verified'))
+    ORDER BY analysis.id LIMIT 1`).get(objective.baseline_analysis_id);
   const orphanCall = db.prepare(`SELECT id,match_key,agent_name,host,http_status,issue,created_at FROM agent_calls
     WHERE id>? AND datetime(created_at)<=datetime('now','-20 minutes') ORDER BY id LIMIT 1`).get(objective.baseline_call_id);
   if (!candidate) {
@@ -17934,11 +18538,11 @@ async function runPersistentSignalProof() {
     consensus_votes:candidate.consensus_votes, calls:calls.map(c=>({agent:c.agent_name,model:c.model,host:c.host,http_status:c.http_status,issue:c.issue,vote:c.vote_produit})),
     deliveries, expected_destinations:expectedChannels, missing_destinations:[...new Set(missing)],
     public_display:publicRow&&!publicRow.error?{visible:true,market:publicRow.bet,locked:publicRow.locked===true,consensus:publicRow.consensus,confidence:publicRow.confidence,cote:publicRow.cote,cote_status:publicRow.cote_status,sent:publicRow.sent||{}}:{visible:false,error:publicRow?.error||"signal absent"} };
-  const complete = calls.some(c=>c.issue==="ok"&&c.vote_produit===1) && Number(candidate.consensus_votes)>=3
+  const complete = calls.some(c=>c.issue==="ok"&&c.vote_produit===1) && Number(candidate.consensus_votes)>=CLIENT_OU25_MIN_VOTES
     && expectedChannels.some(channel=>["free","standard","premium","elite"].includes(channel))
     && missing.length===0 && proof.public_display.visible
     && (proof.public_display.market===candidate.best_bet || proof.public_display.locked)
-    && Number(proof.public_display.consensus)>=3;
+    && Number(proof.public_display.consensus)>=CLIENT_OU25_MIN_VOTES;
   if (complete) return notifyPersistentSignalProof("complete", proof);
   const age = Date.now()-new Date(String(candidate.analysed_at).replace(" ","T")+"Z").getTime();
   if (age<20*60*1000) return {status:"pending",match_key:candidate.match_key,proof};
@@ -17956,13 +18560,20 @@ async function runReliabilityLoop(trigger = "scheduler") {
   const run = db.prepare("INSERT INTO reliability_runs(started_at,status,details_json) VALUES (?,'running','{}')").run(startedAt);
   try {
     await new Promise(resolve => setImmediate(resolve));
-    const eligible = db.prepare(`SELECT match_key, home, away, analysed_at, outcome,
-        sig_sent_free, sig_sent_standard, sig_sent_premium, sig_sent_elite
-      FROM concile_analyses
-      WHERE analysed_at >= datetime('now','-24 hours')
-        AND diffusion_block IS NULL AND consensus_votes >= 3
-        AND minute_at_analysis BETWEEN 15 AND 45
-        AND lower(replace(best_bet,',','.')) LIKE '%2.5%'`).all();
+    await refreshIntegrationHealth();
+    const eligible = db.prepare(`SELECT analysis.match_key, analysis.home, analysis.away,
+        analysis.analysed_at, analysis.outcome, analysis.sig_sent_free,
+        analysis.sig_sent_standard, analysis.sig_sent_premium, analysis.sig_sent_elite
+      FROM official_signal_registry registry
+      JOIN official_vote_snapshots snapshot
+        ON snapshot.id=registry.official_signal_snapshot_id
+      JOIN concile_analyses analysis
+        ON analysis.match_key=snapshot.analysis_match_key
+      WHERE snapshot.created_at >= datetime('now','-24 hours')
+        AND snapshot.consensus_votes >= ${CLIENT_OU25_MIN_VOTES}
+        AND snapshot.minute >= ${officialSnapshots.OFFICIAL_FROM_MINUTE}
+        AND (snapshot.minute <= ${officialSnapshots.OFFICIAL_TO_MINUTE} OR EXISTS
+          (SELECT 1 FROM vote_snapshot_events e WHERE e.snapshot_id=snapshot.id AND e.event_type='first_half_verified'))`).all();
     const keys = [...new Set(eligible.map(r => r.match_key))];
     const deliveries = keys.length ? db.prepare(`SELECT match_key,channel,telegram_message_id,ok,error,created_at
       FROM telegram_signal_deliveries WHERE match_key IN (${keys.map(() => '?').join(',')})`).all(...keys) : [];
@@ -18022,8 +18633,10 @@ async function runReliabilityLoop(trigger = "scheduler") {
     const unresolved = eligible.filter(r => !r.outcome && Date.now() - new Date(String(r.analysed_at).replace(' ','T')+'Z').getTime() > 6 * 3600e3);
     const markerIncident = markerDrift.length && repair.status !== "success";
     const incident = broken.length || missing.length || markerIncident ? "delivery-proof" : null;
-    const details = { trigger, data_freshness: eligible[0]?.analysed_at || null, eligible_matches: keys.length,
-      persisted_votes_required: 3, deliveries: deliveries.map(d => ({ destination: d.channel, message_id: d.telegram_message_id, ok: d.ok, error: d.error || null })),
+    const latestAnalysis = db.prepare("SELECT MAX(analysed_at) AS at FROM concile_analyses").get()?.at || null;
+    const details = { trigger, data_freshness: latestAnalysis, eligible_matches: keys.length,
+      selection_source: "official_signal_registry", persisted_votes_required: CLIENT_OU25_MIN_VOTES,
+      deliveries: deliveries.map(d => ({ destination: d.channel, message_id: d.telegram_message_id, ok: d.ok, error: d.error || null })),
       missing_delivery_proofs: missing, marker_drift: markerDrift, repair,
       unresolved_results: unresolved.map(r => r.match_key), dry_run_ai_calls: 0, sent_signals: 0, openrouter_calls: 0, codex_cost_usd: 0 };
     db.prepare(`UPDATE reliability_runs SET finished_at=?,status=?,incident_key=?,eligible_count=?,delivery_ok_count=?,delivery_bad_count=?,unresolved_count=?,details_json=? WHERE id=?`)
@@ -18097,25 +18710,6 @@ function checkAnalyticsSchedule() {
   // repose desormais uniquement sur un signal live O/U 2,5 effectivement
   // diffuse entre la 15e et la 45e minute.
 
-  if (hour >= 22 && _lastBilanDate !== todayKey) {
-    _lastBilanDate = todayKey;
-    console.log("[bilan-stats] Envoi bilan quotidien 22h sur Telegram admin (rattrapage si necessaire)...");
-    sendStatsBilanTelegram().then(ok => console.log(`[bilan-stats] ${ok ? "OK" : "ECHEC"}`));
-
-  }
-
-  if (hour >= 23 && _lastDailyReportDate !== todayKey) {
-    _lastDailyReportDate = todayKey;
-    console.log("[analytics] Envoi rapport visiteurs quotidien (23h, rattrapage si necessaire)...");
-    sendDailyVisitorReport();
-  }
-
-  if (hour >= 23 && _lastLearningReportDate !== todayKey) {
-    _lastLearningReportDate = todayKey;
-    console.log("[analytics] Envoi rapport d'apprentissage quotidien (23h, rattrapage si necessaire)...");
-    sendLearningReportTelegram().then(ok => console.log(`[learning-report] ${ok ? "OK" : "ECHEC"}`));
-  }
-
   // Campagne nurturing "ce que tu aurais gagne" — mardi + vendredi, 10h Paris.
   // Frequence volontairement faible (pas quotidienne) pour ne pas lasser les
   // abonnes (demande fondateur, 30/07/2026).
@@ -18137,17 +18731,17 @@ function checkAnalyticsSchedule() {
     sendPerformanceReportTelegram(7).then(ok => console.log(`[perf-report] ${ok ? "OK" : "ECHEC"}`));
   }
 
-  // Bilan administrateur unique à 9 h Paris. ">=" permet un rattrapage unique
-  // après redémarrage ; sendHermesDailyDigest déduplique durablement par date.
-  // conteneur redemarre pile sur le creneau.
-  if (hour >= 9 && _lastMorningAuditDate !== todayKey) {
+  // Deux bilans ordinaires, préparés exclusivement depuis SQLite : 09h veille,
+  // 21h journée en cours. Ne pas rattraper 09h après 21h.
+  const dueBilanSlot = dueHermesBilanSlot(hour);
+  if (dueBilanSlot === "09" && _lastMorningAuditDate !== todayKey) {
     _lastMorningAuditDate = todayKey;
-    console.log("[audit-matinal] Lancement de l'audit complet...");
-    runMorningAudit().catch(e => console.error("[audit-matinal]", e.message));
+    sendHermesOperationalBilan("09").catch(e => console.error("[hermes-bilan-09]", e.message));
   }
-
-  // L'ancien bilan 7 h reste disponible manuellement mais n'est plus planifié :
-  // ses contrôles sont couverts par l'audit 9 h et la boucle silencieuse 15 min.
+  if (dueBilanSlot === "21" && _lastHermesEveningBilanDate !== todayKey) {
+    _lastHermesEveningBilanDate = todayKey;
+    sendHermesOperationalBilan("21").catch(e => console.error("[hermes-bilan-21]", e.message));
+  }
 
   // AUTO 2 — paliers à sec, contrôlé toutes les 6h (0h / 6h / 12h / 18h)
   if (hour % 6 === 0) checkDryTiers();
@@ -18235,7 +18829,7 @@ function concileHealthWatchdog() {
       alerte("consensus", `🟠 <b>Concile : pas de consensus</b>\n\n` +
         `<b>${sansConsensus}</b> analyses sur ${rows24.length} (${pctSansConsensus}%) sortent a 55% ` +
         `« aucun consensus » en 24h.\n\n` +
-        `Il faut 3 IA d'accord sur le MEME marche pour qu'un signal existe. ` +
+        `Il faut au moins 4 IA d'accord sur le MEME marché, puis satisfaire les autres critères, pour qu'un signal existe. ` +
         `Au-dela de 50%, ce n'est plus de la prudence, c'est un dysfonctionnement : ` +
         `agents en echec, ou marches proposes trop dispersés pour converger.`);
     }
@@ -18316,6 +18910,11 @@ app.get("/internal/expiring-codes", (req, res) => {
 });
 
 // ── Admin Dashboard — aggregated data endpoint ──────────────────────────────
+app.get("/admin/jev-status", (req,res) => {
+  try { res.json({ok:true,...jevEngine.status()}); }
+  catch { res.status(503).json({ok:false,error:'jev_status_unavailable'}); }
+});
+
 app.get("/admin/dashboard-data", (req, res) => {
   const { email, code } = req.query;
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });
@@ -19009,8 +19608,7 @@ app.listen(PORT, () => {
     setTimeout(()=>longHistory.step(),10000);
     setInterval(()=>longHistory.step(),10000);
     console.log(`TousLesMatchs API running on :${PORT}`);
-    verifyTelegramChannels();
-    verifyBrevoConfiguration().catch((e) => console.error("[brevo-check]", e.message));
+    refreshIntegrationHealth().catch(() => console.error("[integration-check] ECHEC"));
 
     // ── Accès offert au testeur (Elite, 30 analyses/jour) ──────────────────────
     // Date d'expiration FIXE : la version précédente calculait "aujourd'hui + 60 jours"

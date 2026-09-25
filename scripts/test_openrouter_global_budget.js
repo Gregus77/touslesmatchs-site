@@ -2,19 +2,19 @@
 const assert=require('assert'),Database=require('better-sqlite3'),guard=require('./ai_budget_guard');
 const db=new Database(':memory:');guard.globalSchema(db);
 const sat=Date.parse('2026-09-12T18:00:00Z'),fri=Date.parse('2026-09-11T18:00:00Z');
-assert.equal(guard.parisBudget(sat).limit,6);assert.equal(guard.parisBudget(fri).limit,4);
-assert.equal(guard.parisBudget(Date.parse('2026-09-11T22:00:00Z')).limit,6);
-assert.equal(guard.parisBudget(Date.parse('2026-09-13T22:00:00Z')).limit,4);
+assert.equal(guard.parisBudget(sat).limit,10);assert.equal(guard.parisBudget(fri).limit,2);
+assert.equal(guard.parisBudget(Date.parse('2026-09-11T22:00:00Z')).limit,10);
+assert.equal(guard.parisBudget(Date.parse('2026-09-13T22:00:00Z')).limit,2);
 for(const [at,hours] of [['2026-03-29T12:00:00Z',23],['2026-10-25T12:00:00Z',25]]){const p=guard.parisBudget(Date.parse(at));assert.equal((Date.parse(p.end)-Date.parse(p.start))/3600000,hours);}
-db.prepare("INSERT INTO openrouter_global_opening VALUES ('2026-09-12',5.5,'preexisting expense')").run();
+db.prepare("INSERT INTO openrouter_global_opening VALUES ('2026-09-12',9.5,'preexisting expense')").run();
 assert(guard.reserveGlobal(db,{model:'seat'},.3,sat));assert(!guard.reserveGlobal(db,{model:'other seat'},.3,sat));
-assert.equal(db.prepare('SELECT eur FROM openrouter_global_opening').get().eur,5.5);
+assert.equal(db.prepare('SELECT eur FROM openrouter_global_opening').get().eur,9.5);
 const id=guard.reserveGlobal(db,{model:'seat'},.1,sat);assert(id);assert.equal(db.prepare('SELECT count(*) n FROM openrouter_global_calls').get().n,2);
 // Uncertain reservations persist and remain charged to the ceiling, including after restart.
 db.prepare("UPDATE openrouter_global_calls SET status='uncertain' WHERE id=?").run(id);
 assert(!guard.reserveGlobal(db,{model:'seat'},.2,sat));
 assert(!guard.reserveGlobal(db,{model:'seat'},NaN,sat));
-assert(guard.reserveGlobal(db,{model:'seat'},3.99,fri));assert(!guard.reserveGlobal(db,{model:'seat'},.02,fri));
+assert(guard.reserveGlobal(db,{model:'seat'},1.99,fri));assert(!guard.reserveGlobal(db,{model:'seat'},.02,fri));
 console.log('PASS global pending reservations, retained expenses, Paris weekdays/weekend/DST and ceilings');
 // Mock only the public price catalogue. No provider call and no client message.
 const https=require('https'),{EventEmitter}=require('events');

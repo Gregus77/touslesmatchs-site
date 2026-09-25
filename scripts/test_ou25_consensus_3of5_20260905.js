@@ -6,7 +6,7 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "scripts", "api_server.js"), "utf8");
 
-assert.match(source, /const CLIENT_OU25_MIN_VOTES\s*=\s*3;/, "le consensus client O\/U 2,5 doit etre 3\/5");
+assert.match(source, /const CLIENT_OU25_MIN_VOTES\s*=\s*4;/, "le consensus client O\/U 2,5 doit etre 4\/5");
 assert.match(source, /CLIENT_OU25_MIN_CONFIDENCE\s*=\s*Math\.max\(77,/, "la confiance minimale doit rester a 77");
 assert.match(source, /TIER_MIN_REAL_ODD\s*=\s*Math\.max\(1\.30,/, "la cote reelle minimale doit rester a 1,30");
 assert.match(source, /TIER_MAX_REAL_ODD\s*=\s*Math\.min\(2\.10,/, "la cote reelle maximale doit rester a 2,10");
@@ -19,7 +19,7 @@ assert.ok(start >= 0 && end > start, "fonction buildOu25VoteSummary introuvable"
 
 const context = {
   CONCILE_AGENT_NAMES: ["IA-1", "IA-2", "IA-3", "IA-4", "IA-5"],
-  CLIENT_OU25_MIN_VOTES: 3,
+  CLIENT_OU25_MIN_VOTES: 4,
 };
 vm.createContext(context);
 vm.runInContext(source.slice(start, end), context);
@@ -34,13 +34,13 @@ function ballot(sides) {
 let summary = context.buildOu25VoteSummary(ballot(["o2.5", "o2.5", "o2.5", "u2.5", "u2.5"]));
 assert.strictEqual(summary.vote_top, "Over 2.5 buts");
 assert.strictEqual(summary.vote_count, 3);
-assert.strictEqual(summary.recommended, true);
-assert.strictEqual(summary.vote_status, "strong");
+assert.strictEqual(summary.recommended, false);
+assert.strictEqual(summary.vote_status, "none");
 
 summary = context.buildOu25VoteSummary(ballot(["u2.5", "u2.5", "u2.5", "o2.5", "o2.5"]));
 assert.strictEqual(summary.vote_top, "Under 2.5 buts");
 assert.strictEqual(summary.vote_count, 3);
-assert.strictEqual(summary.recommended, true);
+assert.strictEqual(summary.recommended, false);
 
 summary = context.buildOu25VoteSummary(ballot(["o2.5", "o2.5", "u2.5", "u2.5"]));
 assert.strictEqual(summary.vote_count, 2);
@@ -49,6 +49,11 @@ assert.strictEqual(summary.vote_status, "none");
 
 summary = context.buildOu25VoteSummary(ballot(["o2.5", "o2.5", "o2.5"]));
 assert.strictEqual(summary.vote_count, 3);
-assert.strictEqual(summary.recommended, true);
+assert.strictEqual(summary.recommended, false);
 
-console.log("OK: consensus O/U 2,5 valide a 3/5; 2/5 bloque; confiance, cotes, fenetre et Recovery preserves");
+summary = context.buildOu25VoteSummary(ballot(["o2.5", "o2.5", "o2.5", "o2.5", "u2.5"]));
+assert.strictEqual(summary.vote_count, 4);
+assert.strictEqual(summary.recommended, true);
+assert.strictEqual(summary.vote_status, "strong");
+
+console.log("OK: consensus O/U 2,5 valide a 4/5; 3/5 et 2/5 bloques; confiance, cotes, fenetre et Recovery preserves");

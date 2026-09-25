@@ -381,7 +381,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260907-integral6"></script>
+<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -999,6 +999,22 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
 .tlm-row-votes{display:flex;align-items:center;gap:7px}.tlm-row-vote{display:grid;width:34px;height:34px;place-items:center;border:2px solid rgba(93,110,157,.46);border-radius:50%;color:#8290bd;font-size:11px;font-weight:950}
 .tlm-row-vote.voted{color:#fff}.tlm-row-vote.over{border-color:#22d3ee;background:rgba(34,211,238,.17)}.tlm-row-vote.under{border-color:#d946ef;background:rgba(217,70,239,.17)}
 .tlm-row-votes.stale .tlm-row-vote{filter:saturate(.35);opacity:.62}.tlm-ai-votes.stale .tlm-ai-vote{filter:saturate(.35);opacity:.64}
+/* Les votes réels restent lisibles avant 35' et dans les snapshots anciens. */
+.tlm-ai-vote.old,.tlm-ai-votes.stale .tlm-ai-vote,.tlm-row-votes.stale .tlm-row-vote{opacity:1;filter:none}
+.tlm-ai-vote.on i,.tlm-row-vote.voted{color:#fff;background:#30436a}
+.tlm-ai-vote.on.over i,.tlm-row-vote.over{border-color:#22d3ee;background:#087b9a;color:#fff}
+.tlm-ai-vote.on.under i,.tlm-row-vote.under{border-color:#d946ef;background:#8528d6;color:#fff}
+.tlm-ai-vote.terminal i,.tlm-row-vote.terminal{border-color:#fbbf24;background:#5f4519;color:#fff}
+.tlm-ai-votes .tlm-ai-vote{border:0;background:transparent;font:inherit;cursor:pointer;padding:4px 0;min-width:0;min-height:44px}
+.tlm-ai-votes .tlm-ai-vote:focus-visible{outline:2px solid #52dcff;outline-offset:2px;border-radius:8px}
+.tlm-ai-box{cursor:default}
+.tlm-ai-open-hint a{color:#52dcff;text-decoration:none}
+.tlm-ai-open-hint a:focus-visible{outline:2px solid #52dcff;outline-offset:2px}
+.tlm-ai-total strong{font-size:24px;line-height:1.12;overflow-wrap:anywhere}
+.tlm-ai-total span{text-transform:none;font-size:10px}
+.tlm-ai-result{color:#c8d1ed}
+@media(max-width:600px){.tlm-ai-total{min-width:100px}.tlm-ai-total strong{font-size:20px}.tlm-ai-total span{font-size:9px}}
+@media(max-width:360px){.tlm-ai-vote i{width:23px;height:23px}.tlm-ai-votes{gap:2px}.tlm-ai-total{min-width:96px}.tlm-ai-total strong{font-size:18px}}
 .tlm-vote-snapshot{min-height:15px;margin-top:8px;color:#8f99bd;font-size:10px;font-weight:700;text-align:center}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
 @media(max-width:680px){
@@ -1007,8 +1023,74 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
   .tlm-hero-copy{display:none}.tlm-hero-grid{display:block;min-height:0}.tlm-live-hero{padding-top:16px!important}.tlm-hero-proof{display:none!important}
 }
 </style>
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260913-auth" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
+<!-- TLM-CONSENSUS-STATUS-20260920 -->
+<style>
+.consensus-insufficient{color:#ff667f!important;font-weight:900!important;animation:tlmConsensusBad 1s ease-in-out infinite!important}
+.consensus-valid{color:#55efca!important;font-weight:900!important;animation:tlmConsensusGood 1.35s ease-in-out infinite!important}
+@keyframes tlmConsensusBad{50%{opacity:.4;text-shadow:0 0 12px rgba(255,70,100,.9)}}
+@keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
+@media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
+</style>
+
+<style id="tlm-signal-status-v25">
+.tlm-status-v25{
+ margin:12px 0;
+ padding:15px 17px;
+ border:1px solid;
+ border-radius:15px;
+ display:flex;
+ align-items:center;
+ gap:13px;
+ font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+ box-shadow:0 12px 35px rgba(0,0,0,.18);
+}
+.tlm-status-v25 .tlm-status-icon{
+ width:42px;height:42px;min-width:42px;
+ border:2px solid currentColor;border-radius:50%;
+ display:flex;align-items:center;justify-content:center;
+ font-size:24px;font-weight:950;
+}
+.tlm-status-v25 strong{
+ display:block;font-size:17px;font-weight:950;
+ letter-spacing:.01em;line-height:1.15;
+}
+.tlm-status-v25 span{
+ display:block;margin-top:4px;font-size:11px;
+ line-height:1.4;color:#dbe4ff;
+}
+.tlm-status-v25.is-valid{
+ color:#32f58a;
+ border-color:rgba(50,245,138,.58);
+ background:linear-gradient(135deg,rgba(0,100,55,.38),rgba(4,35,28,.72));
+ box-shadow:0 0 30px rgba(50,245,138,.10);
+}
+.tlm-status-v25.is-wait{
+ color:#ffa338;
+ border-color:rgba(255,163,56,.55);
+ background:linear-gradient(135deg,rgba(120,60,0,.30),rgba(42,25,12,.72));
+}
+.tlm-status-v25.is-rejected{
+ color:#ff4f62;
+ border-color:rgba(255,79,98,.58);
+ background:linear-gradient(135deg,rgba(125,12,30,.34),rgba(48,10,20,.74));
+}
+.tlm-status-v25.is-valid.is-new{
+ animation:tlmNewSignalPulse .8s ease-in-out 2;
+}
+@keyframes tlmNewSignalPulse{
+ 50%{transform:scale(1.012);box-shadow:0 0 38px rgba(50,245,138,.35)}
+}
+@media(prefers-reduced-motion:reduce){
+ .tlm-status-v25.is-valid.is-new{animation:none}
+}
+@media(max-width:650px){
+ .tlm-status-v25{padding:13px}
+ .tlm-status-v25 strong{font-size:15px}
+}
+</style>
+
 </head>
 <body class="tlm-wow tlm-page-home">
 
@@ -1087,9 +1169,9 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <div class="tlm-hero-copy">
           <div class="tlm-hero-kicker">Football · Analyse live</div>
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
-          <p class="tlm-hero-lead">En première mi-temps, 5 IA analysent le match. Vous recevez uniquement les signaux validés par au moins 3 IA sur 5.</p>
-          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">3 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
-          <div class="tlm-hero-actions"><a href="#tlm-panel-live" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
+          <p class="tlm-hero-lead">Entre la 15e et la 45e minute, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.</p>
+          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
+          <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
         </div>
         <div class="tlm-match-stage" id="hero-live-match" aria-live="polite">
@@ -1099,16 +1181,17 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
             <div class="tlm-stage-score"><span id="hero-live-score">— - —</span><small class="tlm-stage-period" id="hero-live-period">En attente</small></div>
             <div class="tlm-stage-team"><img class="tlm-stage-team-logo" id="hero-away-logo" src="/logo192.png" alt=""><strong id="hero-away-name">Équipe à l'extérieur</strong><span class="tlm-team-country"><img class="tlm-country-flag" id="hero-away-flag" alt="" hidden><span id="hero-away-country">—</span></span></div>
           </div>
-          <a class="tlm-ai-box" id="hero-analysis-link" href="/live-ia" aria-label="Ouvrir ce match dans Live IA">
+          <div class="tlm-ai-box">
             <div class="tlm-ai-title" id="hero-ai-title">Analyse IA en cours</div>
-            <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><span class="tlm-ai-vote"><i>1</i>IA 1</span><span class="tlm-ai-vote"><i>2</i>IA 2</span><span class="tlm-ai-vote"><i>3</i>IA 3</span><span class="tlm-ai-vote"><i>4</i>IA 4</span><span class="tlm-ai-vote"><i>5</i>IA 5</span></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0 / 5</strong><span>IA validées</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
+            <div class="tlm-ai-row"><div class="tlm-ai-votes" id="hero-ai-votes"><button type="button" class="tlm-ai-vote"><i>1</i>IA 1</button><button type="button" class="tlm-ai-vote"><i>2</i>IA 2</button><button type="button" class="tlm-ai-vote"><i>3</i>IA 3</button><button type="button" class="tlm-ai-vote"><i>4</i>IA 4</button><button type="button" class="tlm-ai-vote"><i>5</i>IA 5</button></div><div class="tlm-ai-total"><strong id="hero-consensus-current">0/5</strong><span id="hero-response-count">0/5 IA ont répondu</span><div class="tlm-ai-result" id="hero-consensus-label">En attente d'accord</div></div></div>
+            <div class="tlm-vote-snapshot" id="hero-vote-explanation" aria-live="polite"></div>
             <div class="tlm-vote-snapshot" id="hero-vote-snapshot"></div>
             <div class="tlm-analysis-track"><b>15'</b><span><i id="hero-analysis-progress"></i></span><b id="hero-window-end">—</b></div>
-            <div class="tlm-ai-open-hint">Ouvrir ce match dans Live IA →</div>
-          </a>
+            <div class="tlm-ai-open-hint"><a id="hero-analysis-link" href="/live-ia" aria-label="Ouvrir ce match dans Live IA">Ouvrir ce match dans Live IA →</a></div>
+          </div>
         </div>
       </div>
-      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 3 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
+      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 4 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
     </section>
 
   </div>
@@ -1191,7 +1274,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
         <li><span class="plan-check">✓</span><span data-i18n="plan_prem_2">Votes O/U 2,5 détaillés et justification factuelle</span></li>
         <li><span class="plan-check">✓</span>Sans engagement</li>
       </ul>
-      <span class="btn btn-prim btn-block" aria-disabled="true" title="Abonnement temporairement indisponible">Premium — inscriptions bientôt disponibles</span>
+      <a id="premium-main-cta" class="btn btn-prim btn-block" href="/premium-checkout?lang=fr">Passer Premium — 14,90 €/mois</a>
     </div>
 
   </div>
@@ -1402,9 +1485,9 @@ function openModal(){
 /* ══ CONNEXION BIOMETRIQUE (Face ID / empreinte, mobile) ══ */
 function isMobileDevice(){ return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); }
 async function biometricSupported(){
-  try{
-    return isMobileDevice() && window.PublicKeyCredential && typeof SimpleWebAuthnBrowser!=='undefined' && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-  }catch(e){ return false; }
+  // L'ancien parcours retournait le code d'abonnement au navigateur. Il reste
+  // masqué pendant la migration vers les passkeys liées à une session OTP.
+  return false;
 }
 async function maybeOfferBiometric(email,code){
   if(!(await biometricSupported())) return;
@@ -1452,7 +1535,7 @@ async function doBiometricLogin(){
     if(!d2.ok) throw new Error(d2.error||'Vérification échouée');
     localStorage.setItem('tlm_email',d2.email);
     localStorage.setItem('tlm_code',d2.code);
-    localStorage.setItem('tlm_plan',d2.plan);
+    localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d2.plan):(/^(standard|premium|elite|vip)$/i.test(String(d2.plan))?"premium":String(d2.plan||"free").toLowerCase())));
     closeModal();renderNavAuth();renderHeroLive(null);loadHeroLive();
   }catch(e){
     errEl.textContent=(e&&e.message)||'Connexion biométrique impossible.';
@@ -1516,7 +1599,7 @@ async function doLogin(){
     if(d.valid){
       if(remember){localStorage.setItem('tlm_email',email);localStorage.setItem('tlm_code',code);localStorage.setItem('tlm_session',d.session_token||'');}
       else{localStorage.removeItem('tlm_email');localStorage.removeItem('tlm_code');localStorage.removeItem('tlm_session');}
-      localStorage.setItem('tlm_plan',d.plan);
+      localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
       okEl.textContent='✓ Connecté — Plan '+d.plan;
       okEl.style.display='block';
       setTimeout(function(){closeModal();renderNavAuth();renderHeroLive(null);loadHeroLive();if(remember)maybeOfferBiometric(email,code);},1000);
@@ -1706,6 +1789,23 @@ function heroOu25(m){
     official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,recommendationStatus:raw.recommendation_status||null,
     consensusDirection:raw.consensus_direction||null,officialConfidence:raw.official_confidence,officialOdd:raw.official_odd,outcome:raw.outcome||null};
 }
+function heroResponseCount(slots){
+  return (slots||[]).filter(function(slot){return slot&&['voted','empty','parse_error','rejected_statistical'].indexOf(slot.status)!==-1;}).length;
+}
+function heroTerminalCaption(slot){
+  if(!slot||slot.status==='voted'||slot.status==='pending')return null;
+  if(slot.status==='abstained')return {mark:'—',label:'Abstention explicite'};
+  if(slot.status==='empty')return {mark:'—',label:'Réponse sans avis exploitable'};
+  if(slot.status==='parse_error')return {mark:'—',label:'Réponse invalide'};
+  if(slot.status==='rejected_statistical')return {mark:'—',label:'Vote écarté'};
+  if(/délai|timeout/i.test(String(slot.reason||'')))return {mark:'—',label:'Délai dépassé'};
+  return {mark:'—',label:'Avis indisponible'};
+}
+var heroVoteButtons=document.getElementById('hero-ai-votes');
+if(heroVoteButtons)heroVoteButtons.addEventListener('click',function(event){
+  var button=event.target.closest('button.tlm-ai-vote');
+  if(button)setHeroText('hero-vote-explanation',button.dataset.explanation||button.getAttribute('aria-label')||'');
+});
 function heroVoteTime(value){
   var raw=String(value||'').trim();if(!raw)return '';
   var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');
@@ -1715,25 +1815,29 @@ function tlmVoteSnapshotText(m){
   var state=heroOu25(m),minute=state.snapshotMinute,score=state.snapshotScore;
   if(minute==null)return '';
   var text='Calculé à '+minute+"'";
-  if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);
+  if(typeof score==='string'&&/^\d+-\d+$/.test(score))text+=' · score '+score;
+  else if(score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away)))text+=' · score '+Number(score.home)+'-'+Number(score.away);
   return text;
 }
 function tlmVotesAreOld(m){
   var state=heroOu25(m),phase=TLMMatchLifecycle.phase(m),score=state.snapshotScore;
-  if(!state.voteCount||state.official)return false;
+  if(!state.voteCount)return false;
+  if(TLMMatchLifecycle.entryClosed(m))return true;
+  if(state.official)return false;
   var scoreChanged=score&&Number.isFinite(Number(score.home))&&Number.isFinite(Number(score.away))
     && (Number(score.home)!==Number(liveHomeScore(m))||Number(score.away)!==Number(liveAwayScore(m)));
   return !!scoreChanged||phase==='closed'||phase==='finished'||phase==='unavailable';
 }
 function tlmVoteCirclesHtml(m){
   var state=heroOu25(m),old=tlmVotesAreOld(m);
-  return '<div class="tlm-row-votes'+(old?' stale':'')+'" aria-label="Votes IA">'+state.slots.map(function(slot,index){
+  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
     var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
-    var mark=voted?(state.locked?'?':direction==='over'?'O':direction==='under'?'U':'?'):String(index+1);
-    var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'');
-    var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote masqué':direction==='over'?'Over':'Under'):'sans réponse');
+    var terminal=heroTerminalCaption(slot),mark=voted?(state.locked?'✓':direction==='over'?'O':direction==='under'?'U':'?'):terminal?terminal.mark:String(index+1);
+    var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'')+(terminal?' terminal':'');
+    var failure=terminal?terminal.label:'Vote en attente';
+    var detail='IA '+(index+1)+' : '+(voted?(state.locked?'vote enregistré, direction réservée à Premium':direction==='over'?'Over':'Under'):failure);
     return '<span class="'+cls+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+mark+'</span>';
-  }).join('')+'</div>';
+  }).join('')+'</div></div>';
 }
 function renderAnalyzedList(rows){
   var grid=document.getElementById('live-rows');if(!grid)return;
@@ -1789,7 +1893,7 @@ function compareHeroMatches(a,b){
   if(am!==bm)return am-bm;
   return String(a.id||a.home+'|'+a.away).localeCompare(String(b.id||b.home+'|'+b.away));
 }
-function heroWasSent(m){return !!(m&&(m.signal_delivered||m.sig_sent_free||m.sig_sent_standard||m.sig_sent_elite||m.sent));}
+function heroWasSent(m){return !!(m&&m.telegram_delivery_proven===true);}
 function renderHeroLive(m){
   var status=document.getElementById('hero-live-status');
   var voteState=heroOu25(m),votes=voteState.voteCount,sent=heroWasSent(m),minute=tlmHeroMinuteOf(m),consensus=heroConsensusDetail(m);
@@ -1797,14 +1901,14 @@ function renderHeroLive(m){
   var analysisLink=document.getElementById('hero-analysis-link');
   setHeroText('hero-live-date',new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}));
   if(!m){
-    if(status)status.textContent='Aucun match dans la fenêtre 15–45 min';
+    if(status)status.textContent='Aucun match entre la 35e minute et la fin de première mi-temps';
     setHeroText('hero-live-minute','—');setHeroText('hero-live-period','Prochaine actualisation automatique');
-    setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0 / 5');
+    setHeroText('hero-home-name','Équipe à domicile');setHeroText('hero-away-name',"Équipe à l'extérieur");setHeroText('hero-home-country','');setHeroText('hero-away-country','');setHeroText('hero-live-score','— - —');setHeroText('hero-consensus-current','0/5');
     setHeroLogo('hero-home-logo','/logo192.png','TousLesMatchs');setHeroLogo('hero-away-logo','/logo192.png','TousLesMatchs');heroFlag(document.getElementById('hero-home-flag'),'');heroFlag(document.getElementById('hero-away-flag'),'');
     if(analysisLink){analysisLink.href='/live-ia';analysisLink.setAttribute('aria-label','Ouvrir Live IA');}
-    var emptyVotes=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var ev=0;ev<emptyVotes.length;ev++){emptyVotes[ev].classList.remove('on','over','under');emptyVotes[ev].removeAttribute('title');emptyVotes[ev].removeAttribute('aria-label');var emptyMark=emptyVotes[ev].querySelector('i');if(emptyMark)emptyMark.textContent=String(ev+1);}
+    var emptyVotes=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var ev=0;ev<emptyVotes.length;ev++){emptyVotes[ev].classList.remove('on','over','under','terminal');emptyVotes[ev].removeAttribute('title');emptyVotes[ev].removeAttribute('aria-label');delete emptyVotes[ev].dataset.explanation;var emptyMark=emptyVotes[ev].querySelector('i');if(emptyMark)emptyMark.textContent=String(ev+1);if(emptyVotes[ev].lastChild&&emptyVotes[ev].lastChild.nodeType===3)emptyVotes[ev].lastChild.textContent='IA '+(ev+1);}
     var emptyVoteRow=document.getElementById('hero-ai-votes');if(emptyVoteRow)emptyVoteRow.classList.remove('stale');
-    setHeroText('hero-vote-snapshot','');
+    setHeroText('hero-response-count','0/5 IA ont répondu');setHeroText('hero-vote-explanation','');setHeroText('hero-vote-snapshot','');
     var emptyProgress=document.getElementById('hero-analysis-progress');if(emptyProgress)emptyProgress.style.width='0%';
     setHeroText('hero-ai-title','Les 5 IA attendent le prochain match');setHeroText('hero-consensus-label','Aucun signal affiché sans match réel');
     return;
@@ -1820,9 +1924,12 @@ function renderHeroLive(m){
   if(m.data_notice&&status)status.textContent='Dernières données connues';
   var fixtureId=m.fixtureId||m.fixture_id||m.id||m.sourceId||'';
   if(analysisLink){analysisLink.href='/live-ia?fixture='+encodeURIComponent(fixtureId);analysisLink.setAttribute('aria-label','Ouvrir '+String(m.home||'ce match')+' contre '+String(m.away||'')+' dans Live IA');}
-  var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed'||(isFinite(minute)&&minute>(tlmSignalWindowEnd||45));
-  var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<15);
-  setHeroText('hero-consensus-current',votes+' / 5');
+  var analysisClosed=!TLMMatchLifecycle.canFeature(m)||voteState.windowStatus==='closed';
+  var analysisWaiting=voteState.windowStatus==='waiting'||(isFinite(minute)&&minute>0&&minute<35);
+  var alignedCount=Number(voteState.consensusCount)||consensus.count;
+  var direction=voteState.consensusDirection||consensus.direction;
+  setHeroText('hero-consensus-current',votes?(voteState.locked?'CONSENSUS '+alignedCount+'/5':(direction==='over'?'OVER':'UNDER')+' 2,5 — '+alignedCount+'/5'):'0/5');
+  setHeroText('hero-response-count',heroResponseCount(voteState.slots)+'/5 IA ont répondu');
   setHeroText('hero-ai-title',voteState.official?'Signal officiel figé':analysisClosed&&votes?'Anciennes tendances':analysisClosed?'Fenêtre d’analyse terminée':votes?'Tendance IA en cours':m.block_reason?(/\bcotes?\b/i.test(String(m.block_reason))?(analysisWaiting?'Analyse à venir':'Analyse en attente de cote'):'Match non analysé'):analysisWaiting?'Analyse à venir':'En attente d’analyse');
   var paidExplanation='';
   if(votes&&!voteState.locked&&voteState.official){
@@ -1839,22 +1946,37 @@ function renderHeroLive(m){
     paidExplanation+=heroStandingText(m);
     paidExplanation+=heroH2hText(m);
   }
-  setHeroText('hero-consensus-label',votes?(voteState.locked?(voteState.official?'Signal officiel enregistré · détails réservés à Premium':(tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel':'Tendance IA en cours · détails Premium')):paidExplanation):analysisClosed?'Anciennes tendances — aucun signal officiel':analysisWaiting?'À partir de la 15e minute':'En attente des IA');
-  if(!votes&&!analysisClosed)setHeroText('hero-consensus-label',m.block_reason||m.analysis_exclusion_reason||'En attente de votes vérifiés · contrôle automatique');
+  var deliveryProven=heroWasSent(m);
+  var decisionText=deliveryProven&&voteState.official?'Envoyé sur Telegram'
+    :voteState.official?'Signal validé — livraison en attente'
+    :votes&&tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel'
+    :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(alignedCount<4?' · consensus insuffisant':'')
+    :votes&&alignedCount<4?'Consensus insuffisant — aucun signal'
+    :votes?(m.diffusion_block||m.analysis_exclusion_reason||'Tendance — autres critères non remplis, aucun signal')
+    :(m.analysis_exclusion_reason||m.block_reason||m.data_notice||(analysisWaiting?'À partir de la 35e minute':'En attente des IA'));
+  setHeroText('hero-consensus-label',decisionText+(voteState.official&&!voteState.locked&&paidExplanation?' · '+paidExplanation:''));
+  setHeroText('hero-vote-explanation','');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');
   var voteRow=document.getElementById('hero-ai-votes');if(voteRow)voteRow.classList.toggle('stale',tlmVotesAreOld(m));
   for(var i=0;i<voteEls.length;i++){
     var slot=voteState.slots[i]||{},voted=slot.status==='voted',dir=voteState.locked?null:slot.direction;
-    voteEls[i].classList.toggle('on',voted);
-    voteEls[i].classList.toggle('old',voted&&!voteState.official);
+    var terminal=heroTerminalCaption(slot);
+    voteEls[i].classList.toggle('on',voted);voteEls[i].classList.toggle('terminal',!!terminal);
+    voteEls[i].classList.toggle('old',voted&&(!voteState.official||TLMMatchLifecycle.entryClosed(m)));
     voteEls[i].classList.toggle('over',voted&&dir==='over');voteEls[i].classList.toggle('under',voted&&dir==='under');
     var mark=voteEls[i].querySelector('i');
-    if(mark)mark.textContent=voted?(voteState.locked?'?':dir==='over'?'O':dir==='under'?'U':'?'):String(i+1);
-    var voteTime=heroVoteTime(slot.updated_at),detail='IA '+(i+1)+' : '+(voted?(voteState.locked?'vote enregistré, direction réservée aux abonnés':dir==='over'?'Over':'Under'):'en attente');
+    if(mark)mark.textContent=voted?(voteState.locked?'✓':dir==='over'?'O':dir==='under'?'U':'?'):terminal?terminal.mark:String(i+1);
+    if(voteEls[i].lastChild&&voteEls[i].lastChild.nodeType===3)voteEls[i].lastChild.textContent=terminal?terminal.label:'IA '+(i+1);
+    var voteTime=heroVoteTime(slot.updated_at),detail='IA '+(i+1)+' : '+(voted?(voteState.locked?'vote enregistré, direction réservée aux abonnés':dir==='over'?'Over':'Under'):(terminal?terminal.label:'en attente'));
     if(voted&&voteTime)detail+=' · '+voteTime;
-    voteEls[i].title=detail;voteEls[i].setAttribute('aria-label',detail);
+    voteEls[i].title=detail;voteEls[i].dataset.explanation=detail;voteEls[i].setAttribute('aria-label',detail);
   }
   setHeroText('hero-vote-snapshot',tlmVoteSnapshotText(m));
+  if(TLMMatchLifecycle.entryClosed(m)){
+    setHeroText('hero-ai-title','Analyse historique — entrée fermée');
+    setHeroText('hero-consensus-label','ENTRÉE FERMÉE — NE PLUS ENTRER SUR CE SIGNAL');
+    var closedLabel=document.getElementById('hero-consensus-label');if(closedLabel){closedLabel.classList.remove('consensus-valid');closedLabel.classList.add('consensus-insufficient');}
+  }
   var progress=document.getElementById('hero-analysis-progress');if(progress){var pct=isFinite(minute)?Math.max(5,Math.min(100,(minute-15)/Math.max(1,(tlmSignalWindowEnd||45)-15)*100)):12;progress.style.width=pct+'%';}
 }
 function renderHeroWatchlist(p){
@@ -1869,9 +1991,9 @@ function renderHeroWatchlist(p){
   setHeroText('hero-home-country',country);setHeroText('hero-away-country',country);setHeroText('hero-live-score',hour);
   setHeroLogo('hero-home-logo',p.home_logo,p.home||'équipe à domicile');setHeroLogo('hero-away-logo',p.away_logo,p.away||"équipe à l'extérieur");
   heroFlag(document.getElementById('hero-home-flag'),country);heroFlag(document.getElementById('hero-away-flag'),country);
-  setHeroText('hero-consensus-current','0 / 5');setHeroText('hero-ai-title','Les 5 IA surveillent cette rencontre');
+  setHeroText('hero-consensus-current','0/5');setHeroText('hero-response-count','0/5 IA ont répondu');setHeroText('hero-vote-explanation','');setHeroText('hero-ai-title','Les 5 IA surveillent cette rencontre');
   setHeroText('hero-consensus-label','Observation uniquement · aucun signal validé');
-  var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var i=0;i<voteEls.length;i++){voteEls[i].classList.remove('on');var mark=voteEls[i].querySelector('i');if(mark)mark.textContent=String(i+1);}
+  var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');for(var i=0;i<voteEls.length;i++){voteEls[i].classList.remove('on','over','under','terminal');var mark=voteEls[i].querySelector('i');if(mark)mark.textContent=String(i+1);if(voteEls[i].lastChild&&voteEls[i].lastChild.nodeType===3)voteEls[i].lastChild.textContent='IA '+(i+1);}
   var progress=document.getElementById('hero-analysis-progress');if(progress)progress.style.width='0%';
 }
 var tlmHeroRequest=0;
@@ -1904,7 +2026,7 @@ window.addEventListener('storage',function(){renderHeroLive(null);loadHeroLive()
 loadHeroLive();setInterval(loadHeroLive,30000);
 
 /* Met a jour le service worker meme si l'accueil precedent etait reste en cache. */
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v22-history-votes-20260913').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js?v=tlm-app-v23-account-20260915').catch(function(){});});}
 
 /* ══ MATCHS A VENIR — CHRONOLOGIQUES ══ */
 function tlmUpcomingCountryLeague(p){
@@ -2269,7 +2391,7 @@ async function loadPremiumYesterday(){
 })();
 </script>
 <script src="/js/widgets.js?v=2" defer></script>
-<script src="/js/i18n.js?v=20260907-integral6" defer></script>
+<script src="/js/i18n.js?v=20260915-account-v1" defer></script>
 <script>
 function toggleLangMenu(){ document.getElementById('nav-lang-menu').classList.toggle('open'); }
 function pickLang(l){ i18n.setLang(l); document.getElementById('nav-lang-menu').classList.remove('open'); }
@@ -2615,5 +2737,145 @@ window.TLM_EXTRA_COUNTRY_FLAGS={"Slovakia": "🇸🇰", "Czech Republic": "🇨�
 })();
 </script>
 <script src="/js/signal-rules.js?v=20260905" defer></script>
+<!-- TLM-CONSENSUS-STATUS-RUNTIME-20260920 -->
+<script>(function(){
+function paint(el,total){if(!el)return;var text=(el.textContent+' '+(total||'')).replace(/\s+/g,' '),good=/\b[45]\s*\/\s*5\b/.test(text)&&!/insuffisant|aucun signal/i.test(text),bad=/consensus insuffisant/i.test(text)||(/\b[1-3]\s*\/\s*5\b/.test(text)&&!good);el.classList.toggle('consensus-valid',good);el.classList.toggle('consensus-insufficient',bad);}
+function refresh(){paint(document.getElementById('hero-consensus-label'),document.getElementById('hero-consensus-current')&&document.getElementById('hero-consensus-current').textContent);paint(document.getElementById('app-ai-result'),document.getElementById('app-ai-total')&&document.getElementById('app-ai-total').textContent);document.querySelectorAll('.mc-vote-verdict').forEach(function(el){var box=el.closest('.mc-vote-details');paint(el,box&&box.querySelector('.mc-vote-count')&&box.querySelector('.mc-vote-count').textContent);});}
+if(typeof compareHeroMatches==='function'){var previousCompare=compareHeroMatches;compareHeroMatches=function(a,b){var av=Number(a&&a.ou25&&a.ou25.vote_count||0),bv=Number(b&&b.ou25&&b.ou25.vote_count||0);if((av>0)!==(bv>0))return bv>0?1:-1;return previousCompare(a,b);};if(typeof loadHeroLive==='function')loadHeroLive();}
+new MutationObserver(refresh).observe(document.documentElement,{subtree:true,childList:true,characterData:true});refresh();
+})();</script>
+
+<!-- TLM PREMIUM ACCOUNT STATE -->
+
+
+
+
+
+
+<script>
+/* TLM-SIGNAL-STATUS-V25 */
+(function(){
+ "use strict";
+
+ function esc(v){
+   return String(v==null?"":v)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+ }
+
+ function state(match){
+   var o=(match&&match.ou25)||{};
+   var votes=Number(o.vote_count||0);
+   var aligned=Number(o.consensus_count||0);
+   var minute=Number(match&&match.minute||o.snapshot_minute||0);
+
+   /*
+     REGLE ABSOLUE :
+     4/5 ou 5/5 n'est JAMAIS suffisant pour afficher vert.
+     Vert = snapshot officiel validé par le backend uniquement.
+   */
+   if(o.official===true){
+     var direction=o.consensus_direction==="over"?"OVER 2,5":"UNDER 2,5";
+     var confidence=o.official_confidence;
+     var odd=o.official_odd;
+
+     return {
+       type:"valid",
+       title:"SIGNAL VALIDÉ — À SUIVRE",
+       detail:
+         direction+" · "+aligned+"/5 IA"+
+         (confidence!=null?" · "+confidence+" %":"")+
+         (odd!=null?" · cote "+odd:"")
+     };
+   }
+
+   var reason=String(
+     (match&&(match.diffusion_block||match.analysis_exclusion_reason||match.block_reason))
+     || o.recommendation_status || ""
+   ).replace(/^Signal écarté\s*:\s*/i,"").replace(/\.$/,"");
+
+   var finished =
+     votes>=5 ||
+     String(o.analysis_state||"")==="completed" ||
+     (votes>0 && aligned>=4 && !!reason);
+
+   if(!finished){
+     return {
+       type:"wait",
+       title:"ANALYSE EN COURS",
+       detail:votes
+         ? votes+"/5 IA ont répondu · décision en cours"
+         : minute>=35
+           ? "Interrogation des 5 IA en cours"
+           : "Analyse disponible à partir de la 35e minute"
+     };
+   }
+
+   var trend="";
+   if(aligned>0){
+     var d=o.consensus_direction;
+     if(!d && Array.isArray(o.votes)){
+       var over=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="over"}).length;
+       var under=o.votes.filter(function(v){return v&&v.status==="voted"&&v.direction==="under"}).length;
+       d=over>=under?"over":"under";
+     }
+     trend=(d==="over"?"Over 2,5":"Under 2,5")+" ("+aligned+"/5)";
+   }
+
+   return {
+     type:"rejected",
+     title:"AUCUN SIGNAL VALIDÉ",
+     detail:
+       (trend?"Tendance IA : "+trend+". ":"")+
+       (reason?reason+". ":"")+
+       "Ne pas considérer cette tendance comme un signal TousLesMatchs."
+   };
+ }
+
+ function html(match,isNew){
+   var s=state(match);
+   var icon=s.type==="valid"?"✓":s.type==="wait"?"◷":"×";
+   var lang=(function(){try{return localStorage.getItem("tlm_lang")||"fr";}catch(e){return "fr";}})();
+   var title=window.TLMI18nV26?TLMI18nV26.translate(s.title,lang):s.title;
+   var detail=window.TLMI18nV26?TLMI18nV26.translate(s.detail,lang):s.detail;
+   return '<div class="tlm-status-v25 is-'+s.type+(isNew?" is-new":"")+'">'+
+     '<div class="tlm-status-icon">'+icon+'</div>'+
+     '<div><strong>'+esc(title)+'</strong><span>'+esc(detail)+'</span></div>'+
+   '</div>';
+ }
+
+ function mount(id,match){
+   var host=document.getElementById(id);
+   if(!host)return;
+
+   var existing=host.querySelector(".tlm-status-v25");
+   if(existing)existing.remove();
+
+   var box=document.createElement("div");
+   var official=!!(match&&match.ou25&&match.ou25.official===true);
+   var key=official
+     ? String(match.ou25.official_signal_snapshot_id||match.id||match.fixtureId||"")
+     : "";
+
+   var isNew=false;
+   if(key){
+     try{
+       isNew=localStorage.getItem("tlm_last_green_signal")!==key;
+       localStorage.setItem("tlm_last_green_signal",key);
+     }catch(e){}
+   }
+
+   box.innerHTML=html(match,isNew);
+   host.insertBefore(box.firstChild,host.firstChild);
+ }
+
+ window.TLMSignalStatusV25={
+   state:state,
+   html:html,
+   mount:mount
+ };
+})();
+</script>
+
 </body>
 </html>

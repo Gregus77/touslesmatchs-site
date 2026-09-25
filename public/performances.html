@@ -183,8 +183,8 @@ footer{border-top:1px solid var(--b1);padding:40px 32px;text-align:center;margin
 
   <meta name="theme-color" content="#070a20">
   <link rel="stylesheet" href="/css/tlm-wow-theme.css?v=20260805">
-  <link rel="stylesheet" href="/css/global-header.css?v=20260912-v2">
-  <script src="/js/global-header.js?v=20260912-v2" defer></script>
+  <link rel="stylesheet" href="/css/global-header.css?v=20260922-commercial-v24">
+  <script src="/js/global-header.js?v=20260922-commercial-v24" defer></script>
 </head>
 <body class="tlm-wow tlm-page-performances">
 
@@ -250,7 +250,7 @@ async function doLogin(){
       localStorage.setItem('tlm_email', email);
       localStorage.setItem('tlm_code', code);
       localStorage.setItem('tlm_session', d.session_token || '');
-      localStorage.setItem('tlm_plan', d.plan);
+      localStorage.setItem("tlm_plan",(window.TLMCommercialAccount?TLMCommercialAccount.commercialPlan(d.plan):( /^(standard|premium|elite|vip)$/i.test(String(d.plan)) ? "premium" : String(d.plan||"free").toLowerCase())));
       okEl.textContent = '✓ Connecté — Plan ' + d.plan;
       okEl.style.display = 'block';
       setTimeout(function(){
