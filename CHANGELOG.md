@@ -435,3 +435,11 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - Liste publique des cinq sièges alignée sur le routage existant; budget global OpenRouter exposé séparément des estimations locales, appels Python inclus; métadonnée de fenêtre historique actualisée.
 - Tests hors réseau et déploiement API seule; critères métier, modèles, résultats et données client inchangés. Preuve naturelle encore attendue.
 - Rapport : `docs/audits/2026-09-24-48h-sans-signal.md`. Les modifications locales antérieures sont préservées.
+
+## 2026-09-25 — Codex — préparation Jev / TypeSafe production
+
+- Intégration native `systemone` après snapshot immuable, décision traditionnelle conservée, dépassement quantitatif explicitement autorisé par le propriétaire, exclusions structurelles et validation fraîche préservées.
+- Persistance additive, anti-doublon, coupe-circuit, repli TLM, réobservations bornées et supervision admin sécurisée ; aucune activation sans modèle vérifié sur le compte.
+- 30 scénarios Jev et test du bloc réel de publication réussis sans réseau ; neuf scripts de régression réussis. Image candidate construite, rollback conservé.
+- Corrige une erreur de syntaxe préexistante dans le tableau de bord admin. Préserve toutes les modifications antérieures non liées.
+- État : préparation validée, déploiement NON effectué, clé TypeSafe absente. Rapport `docs/audits/2026-09-24-jev-production.md`. Aucune preuve naturelle revendiquée.

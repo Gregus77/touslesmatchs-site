@@ -138,8 +138,21 @@ function registerOfficial(db, snapshotId, options = {}) {
     const concordantVotes = consensus
       ? directions.filter((direction, index) => statuses[index] === 'voted' && direction === consensus).length
       : 0;
-    if (activeVotes < MIN_CONSENSUS_VOTES || Number(row.consensus_votes) < MIN_CONSENSUS_VOTES
-        || concordantVotes < MIN_CONSENSUS_VOTES) {
+    // Quantitative override requires an actual persisted Jev SEND for this exact
+    // immutable snapshot. A boolean option is never sufficient authority.
+    let jevAuthorized = false;
+    if (options.jevDecisionId) {
+      const proof = db.prepare(`SELECT * FROM jev_decisions WHERE id=? AND snapshot_id=?
+        AND decision='SEND' AND final_decision='SEND' AND decision_source='jev_production'
+        AND confidence>=min_confidence AND error_category IS NULL AND structural_block_reason IS NULL`).get(options.jevDecisionId,row.id);
+      const age = proof ? Date.now() - Date.parse(proof.created_at) : Infinity;
+      jevAuthorized = Boolean(proof && age >= 0 && age <= 120000);
+      if (!jevAuthorized) throw new Error('Jev production authorization missing or stale');
+      if (!consensus || concordantVotes < 1 || Number(row.consensus_votes) !== concordantVotes)
+        throw new Error('Jev cannot invent a consensus');
+    }
+    if (!jevAuthorized && (activeVotes < MIN_CONSENSUS_VOTES || Number(row.consensus_votes) < MIN_CONSENSUS_VOTES
+        || concordantVotes < MIN_CONSENSUS_VOTES)) {
       throw new Error(`official signal requires ${MIN_CONSENSUS_VOTES} real concordant votes`);
     }
   }

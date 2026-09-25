@@ -24,6 +24,7 @@ const crypto = require("crypto");
 const analysisEngine = require("./analysis_engine");
 const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
+const jevDecisionEngine = require("./jev_decision_engine");
 const liveStateCoherence = require("./live_state_coherence");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
@@ -286,7 +287,7 @@ const ADMIN_READONLY_PATHS = new Set([
   // performance par segment, et depense IA quotidienne. Aucune donnee
   // personnelle ni credential, mais de quoi renseigner un concurrent.
   "/admin/stats", "/admin/funnel-report", "/admin/segment-report",
-  "/admin/ai-budget-stats",
+  "/admin/ai-budget-stats", "/admin/jev-status",
 ]);
 app.use((req, res, next) => {
   if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
@@ -301,6 +302,7 @@ app.use((req, res, next) => {
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
 officialSnapshots.init(db);
+const jevEngine = jevDecisionEngine.createEngine({db, logger: event => console.log('[jev]', JSON.stringify(event))});
 const GOAL05_LATEST_SIGNAL_FILE = process.env.GOAL05_LATEST_SIGNAL_FILE || path.join(path.dirname(DB_PATH), "goal05-latest-signal.json");
 const GOAL05_LATEST_MAX_AGE_MS = Number(process.env.GOAL05_LATEST_MAX_AGE_MS || 18 * 60 * 60 * 1000);
 
@@ -6089,6 +6091,12 @@ function parseMatchStats(data) {
     total_shots_away: get(away, "Total Shots"),
     dangerous_attacks_home: get(home, "Dangerous Attacks"),
     dangerous_attacks_away: get(away, "Dangerous Attacks"),
+    xg_home: get(home, "expected_goals"),
+    xg_away: get(away, "expected_goals"),
+    observed_cards: {
+      yellow_cards_home: get(home, "Yellow Cards"), yellow_cards_away: get(away, "Yellow Cards"),
+      red_cards_home: get(home, "Red Cards"), red_cards_away: get(away, "Red Cards"),
+    },
     yellow_cards_home: get(home, "Yellow Cards") || 0,
     yellow_cards_away: get(away, "Yellow Cards") || 0,
     red_cards_home: get(home, "Red Cards") || 0,
@@ -7526,8 +7534,10 @@ Réponds en JSON pur (pas de markdown):
       consensus: /^Over\b/i.test(analysisResult.best_bet) ? "over" : /^Under\b/i.test(analysisResult.best_bet) ? "under" : null,
       consensusVotes: analysisResult.vote_summary?.vote_count || 0,
       confidence: analysisResult.confidence,
-      realOdd: analysisResult.cote ?? null,
-      realOddSource: analysisResult.cote_source || null,
+      realOdd: Number(analysisResult.cote) > 1 && analysisResult.cote_source
+        && !/estimation|indisponible/i.test(String(analysisResult.cote_source)) ? Number(analysisResult.cote) : null,
+      realOddSource: Number(analysisResult.cote) > 1 && analysisResult.cote_source
+        && !/estimation|indisponible/i.test(String(analysisResult.cote_source)) ? analysisResult.cote_source : null,
       ruleVersion: OFFICIAL_SNAPSHOT_RULE_VERSION,
       createdAt: capturedAt,
     });
@@ -7711,7 +7721,7 @@ Réponds en JSON pur (pas de markdown):
     low_trust: lowTrust,
     quality_shadow: qualityShadow,
   };
-  const _blockReason = evaluateClientSignalCriteria({
+  const traditionalCriteriaBlock = evaluateClientSignalCriteria({
     blockTier: _blockTier, telegramConfigured: !!TELEGRAM_BOT_TOKEN,
     recoveryEnabled: RECOVERY_MODE_ENABLED, recoveryOk: recoveryEvidence.ok, recoveryReason: recoveryEvidence.reason,
     matchEligible: clientOu25MatchEligible, maxMinute: CLIENT_OU25_CLIENT_MAX_MINUTE,
@@ -7722,6 +7732,66 @@ Réponds en JSON pur (pas de markdown):
     hasRealData, qualityOk: qualityGate.ok, qualityReason: qualityGate.reason,
     playableOk: playable.ok, playableReason: playable.reason, isWomen, lowTrust,
   });
+
+  // The historical decision stays complete, including the later odds/window gates.
+  const traditionalOddOk = !_coteReelle || (recordedOdd >= TIER_MIN_REAL_ODD && recordedOdd <= TIER_MAX_REAL_ODD);
+  const traditionalBlock = traditionalCriteriaBlock || (!traditionalOddOk ? "real_odd_outside_traditional_range" : null);
+  const traditionalEligible = !traditionalBlock;
+  const structuralAllowed = clientOu25MatchEligible && ou25Only && !isWomen && !lowTrust
+    && String(match.sport || '').toLowerCase() === 'football';
+  const firstHalfOpen = liveStateCoherence.analysisWindow(match).open && statsStatus.observation?.phase === '1H';
+  const snapshotMatchesCurrent = capturedVoteSnapshot && capturedVoteSnapshot.consensus_votes === voteCountForSignal
+    && capturedVoteSnapshot.confidence === Number(analysisResult.confidence)
+    && capturedVoteSnapshot.consensus === (/^Over\b/i.test(analysisResult.best_bet) ? 'over' : /^Under\b/i.test(analysisResult.best_bet) ? 'under' : null)
+    && capturedVoteSnapshot.score_home === match.score_home && capturedVoteSnapshot.score_away === match.score_away
+    && capturedVoteSnapshot.real_odd === recordedOdd
+    && Date.now() - Date.parse(capturedVoteSnapshot.created_at) >= 0
+    && Date.now() - Date.parse(capturedVoteSnapshot.created_at) <= 120000;
+  let jevEvaluation = null;
+  let _blockReason = traditionalBlock;
+  if (capturedVoteSnapshot && jevEngine.config.enabled && jevEngine.config.production_mode) {
+    const state = jevDecisionEngine.buildState({match, snapshot:capturedVoteSnapshot, stats:liveStats,
+      standings:standingsEvidence, recovery:{...recoveryEvidence,enabled:RECOVERY_MODE_ENABLED},
+      integrity:{first_half_open:firstHalfOpen,competition_allowed:structuralAllowed,
+        real_data:hasRealData && Boolean(statsStatus.observation) && Boolean(snapshotMatchesCurrent),stats_status:statsStatus.status},
+      traditional:{eligible:traditionalEligible,block_reason:traditionalBlock,
+        rules:{quorum:CLIENT_OU25_MIN_VOTES,confidence:CLIENT_OU25_MIN_CONFIDENCE,
+          known_odd_min:TIER_MIN_REAL_ODD,known_odd_max:TIER_MAX_REAL_ODD,ranking_gap_min:5,recovery:RECOVERY_MODE_ENABLED}}});
+    try {
+      jevEvaluation = await jevEngine.evaluate({match_key:analysisResult.match_key,snapshot_id:capturedVoteSnapshot.id,
+        fixture_id:capturedVoteSnapshot.fixture_id,state,structural_allowed:structuralAllowed,first_half_open:firstHalfOpen,
+        traditional_eligible:traditionalEligible,traditional_block_reason:traditionalBlock,
+        revalidate:async () => {
+          if (!isClientOu25MatchEligible(match,true) || !structuralAllowed) return false;
+          await liveStateCollector.revalidate(match,statsStatus.observation);
+          return true;
+        }});
+      // Persisted pending/failed evaluations can never become fabricated Jev SENDs.
+      _blockReason = jevEvaluation.final_decision === 'SEND' ? null
+        : `jev:${jevEvaluation.final_decision}:${jevEvaluation.structural_block_reason || jevEvaluation.error_category || jevEvaluation.decision_source}`;
+      if (['WAIT','REANALYZE'].includes(jevEvaluation.final_decision) && firstHalfOpen)
+        scheduleJevReobservation(match,capturedVoteSnapshot.id);
+    } catch {
+      // Local persistence failure must not authorize a quantitative override.
+      _blockReason = traditionalBlock;
+      if (!_blockReason) {
+        try { await liveStateCollector.revalidate(match,statsStatus.observation); }
+        catch { _blockReason = 'jev_fallback_live_state_unverified'; }
+      }
+      console.error('[jev] local_persistence_error; traditional guards retained');
+    }
+    criteriaSnapshot.jev = jevEvaluation ? {
+      id:jevEvaluation.id,traditional_decision:jevEvaluation.traditional_decision,
+      traditional_block_reason:jevEvaluation.traditional_block_reason,jev_decision:jevEvaluation.decision,
+      jev_confidence:jevEvaluation.confidence,jev_probabilities:{SEND:jevEvaluation.prob_send,WAIT:jevEvaluation.prob_wait,
+        REANALYZE:jevEvaluation.prob_reanalyze,REJECT:jevEvaluation.prob_reject},
+      final_decision:jevEvaluation.final_decision,decision_source:jevEvaluation.decision_source,
+      error_category:jevEvaluation.error_category
+    } : {traditional_decision:traditionalEligible?'SEND':'REJECT',final_decision:_blockReason?'REJECT':'SEND',
+      decision_source:'tlm_fallback_jev_unavailable',error_category:'local_persistence_error'};
+  }
+  const jevSendAuthorized = jevEvaluation?.decision === 'SEND' && jevEvaluation?.final_decision === 'SEND'
+    && jevEvaluation?.decision_source === 'jev_production';
 
   if (!_blockReason) {
     const signalKey = `${match.home}_${match.away}_${new Date().toISOString().slice(0, 13)}`;
@@ -7795,11 +7865,14 @@ Réponds en JSON pur (pas de markdown):
       const officialWindowEligible = liveStateCoherence.analysisWindow(match).open;
       const officialStrongQuorum = Number(voteInfo.vote_active || 0) >= CLIENT_OU25_MIN_VOTES
         && voteCountForSignal >= CLIENT_OU25_MIN_VOTES;
-      const diffusable = bookmakerPlayable && oddOk && sportDiffusable
+      const traditionalDiffusable = bookmakerPlayable && oddOk && sportDiffusable
         && clientOu25MatchEligible && officialWindowEligible && standingsEvidence.ok && ou25Only && enoughOu25SeatsPresent
         && officialStrongQuorum
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE;
+      const diffusable = jevSendAuthorized
+        ? structuralAllowed && firstHalfOpen && officialWindowEligible
+        : traditionalDiffusable;
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
@@ -7826,7 +7899,10 @@ Réponds en JSON pur (pas de markdown):
       const _ligneAnalysee = persistedAnalysisMatchKey || getPredictionSnapshotKey(match);
       if (gradePremium) {
         if (!capturedVoteSnapshot) throw new Error("Signal client refusé: snapshot immuable absent");
-        const officialSnapshot = officialSnapshots.registerOfficial(db, capturedVoteSnapshot.id);
+        // Revalidate cached decisions too; registration never revives an old score.
+        if (jevEvaluation) await liveStateCollector.revalidate(match,statsStatus.observation);
+        const officialSnapshot = officialSnapshots.registerOfficial(db, capturedVoteSnapshot.id,
+          jevSendAuthorized ? {jevDecisionId:jevEvaluation.id} : {});
         criteriaSnapshot.official_signal_snapshot_id = officialSnapshot.id;
         const data = {matchKey:_ligneAnalysee, officialSignalSnapshotId:officialSnapshot.id, home:match.home, away:match.away,
           competition:match.competition || match.league || '', minute:match.minute,
@@ -10140,6 +10216,31 @@ function scheduleOfficialReanalysis(match, delayMs) {
   if (typeof timer.unref === 'function') timer.unref();
   officialReanalysisTimers.set(scope, timer);
 }
+// Bounded natural reobservation; no fabricated state and no reset of seat budgets.
+const jevReobservationTimers = new Map();
+function scheduleJevReobservation(match, snapshotId) {
+  const scope = officialSnapshots.fixtureScope(match);
+  if (jevReobservationTimers.has(scope)) return;
+  const timer = setTimeout(async () => {
+    jevReobservationTimers.delete(scope);
+    try {
+      const current = (await fetchLiveMatches()).find(item => officialSnapshots.fixtureScope(item) === scope);
+      if (!current || !shouldAutoObserveMatch(current) || !isClientOu25MatchEligible(current,true)) return;
+      if (officialSnapshots.stateForMatch(db,current).kind === 'official') return;
+      const nextKey = getPredictionSnapshotKey(current);
+      const gate = officialSnapshots.reanalysisGate(db,current,current.red_cards_home || 0,current.red_cards_away || 0);
+      const allowedKey = gate.allowed && !hasPredictionSnapshot(current) ? nextKey : null;
+      const permit = jevDecisionEngine.reserveReobservation(db,scope,snapshotId,Date.now(),allowedKey);
+      if (!permit.poll) return;
+      if (!permit.analyze) return scheduleJevReobservation(current,snapshotId);
+      current.__officialAuto = true;
+      await runConcileAnalysis(current);
+    } catch { console.error('[jev] natural_reobservation_unavailable'); }
+  },60000);
+  timer.unref?.();
+  jevReobservationTimers.set(scope,timer);
+}
+
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
   autoConcileObserverRunning = true;
@@ -14030,7 +14131,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       // qu'au moins quatre IA ont réellement enregistré le même vote O/U 2,5.
       // Cela evite qu'un simple match live bien illustre (logos + score) soit
       // affiche avec un faux statut "Analyse IA en cours" alors qu'il est a 0/5.
-      const homepageDisplayEligible = clientProductEligible && alignedVotes >= CLIENT_OU25_MIN_VOTES;
+      const homepageDisplayEligible = clientProductEligible && (ou25.official === true || alignedVotes >= CLIENT_OU25_MIN_VOTES);
       const visibility = {
         client_product_eligible: clientProductEligible,
         client_display_eligible: isClientOu25MatchEligible(m, false),
@@ -18809,6 +18910,11 @@ app.get("/internal/expiring-codes", (req, res) => {
 });
 
 // ── Admin Dashboard — aggregated data endpoint ──────────────────────────────
+app.get("/admin/jev-status", (req,res) => {
+  try { res.json({ok:true,...jevEngine.status()}); }
+  catch { res.status(503).json({ok:false,error:'jev_status_unavailable'}); }
+});
+
 app.get("/admin/dashboard-data", (req, res) => {
   const { email, code } = req.query;
   if (!isAdmin(email, code)) return res.status(403).json({ ok: false, error: "Accès admin requis" });

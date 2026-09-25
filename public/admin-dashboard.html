@@ -133,6 +133,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <!-- DASHBOARD -->
 <div class="dashboard" id="dashboard">
+  <div class="card" style="margin-bottom:16px"><h2>Jev / TypeSafe</h2><div id="jevStatus">État non chargé</div></div>
   <div class="dash-header">
     <div>
       <h1>Dashboard Admin</h1>
@@ -271,6 +272,12 @@ async function fetchDashboard() {
     const data = await r.json();
     if (!data.ok) return false;
     renderDashboard(data);
+    fetch(`${API_BASE}/admin/jev-status?${params}`).then(r => r.ok ? r.json() : null).then(j => {
+      const el = document.getElementById('jevStatus');
+      if (!j?.ok) { el.textContent = 'Jev : supervision indisponible'; return; }
+      const last = j.last_decision;
+      el.textContent = `JEV : ${j.enabled && j.configured ? 'ACTIF' : 'INACTIF'} · MODE : ${j.production_mode ? 'PRODUCTION' : 'INACTIF'} · MODÈLE : ${j.model || 'non configuré'} · DERNIÈRE DÉCISION : ${last?.decision || 'aucune'} · CONFIANCE : ${last?.confidence == null ? '—' : Math.round(last.confidence*100)+' %'} · LATENCE : ${last?.latency_ms == null ? '—' : last.latency_ms+' ms'} · ERREURS 24H : ${j.windows['24h'].errors}`;
+    }).catch(() => { document.getElementById('jevStatus').textContent = 'Jev : supervision indisponible'; });
     return true;
   } catch (e) {
     console.error("Dashboard fetch error:", e);
@@ -336,7 +343,7 @@ function renderDashboard(d) {
     const hoursSince = Math.round((Date.now() - latestDate.getTime()) / 3600000);
     const freshColor = hoursSince <= 24 ? 'green' : hoursSince <= 48 ? 'orange' : 'red';
     document.getElementById("backupsContent").innerHTML = `
-      <div class="stat-row"><span class="stat-label">Derniere sauvegarde</span><span class="stat-value ${freshColor}">${hoursSince < 1 ? 'Il y a moins d\\'1h' : 'Il y a ' + hoursSince + 'h'}</span></div>
+      <div class="stat-row"><span class="stat-label">Derniere sauvegarde</span><span class="stat-value ${freshColor}">${hoursSince < 1 ? "Il y a moins d’1h" : 'Il y a ' + hoursSince + 'h'}</span></div>
       <div class="stat-row"><span class="stat-label">Fichier</span><span class="stat-value" style="font-size:.8rem">${esc(bk.latest.name)}</span></div>
       <div class="stat-row"><span class="stat-label">Taille</span><span class="stat-value">${bk.latest.sizeMB} MB</span></div>
       <div class="stat-row"><span class="stat-label">Total sauvegardes</span><span class="stat-value">${bk.total || 0}</span></div>
