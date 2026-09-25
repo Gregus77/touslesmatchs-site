@@ -39,7 +39,10 @@ function discoverAliasResponse(body,names,requestedModel,secret) {
 async function main() {
   const key=readKey();
   if (!key) {console.log('TYPESAFE_API_KEY absente : aucun appel réseau.');process.exitCode=2;return;}
-  const receiptPath=path.join(evidence,'authenticated-check.json');
+  const second = process.argv.includes('--authorized-second-attempt');
+  const receiptName = second ? 'authenticated-check-attempt-2.json' : 'authenticated-check.json';
+  if (second && !fs.existsSync(path.join(evidence,'authenticated-check.json'))) throw new Error('first_receipt_required');
+  const receiptPath=path.join(evidence,receiptName);
   if(fs.existsSync(receiptPath)) {
     console.log('Contrôle déjà tenté : reçu conservé, aucun nouvel appel payant.');
     process.exitCode=JSON.parse(fs.readFileSync(receiptPath,'utf8')).ok ? 0 : 3;return;
@@ -64,9 +67,9 @@ async function main() {
     const r=await fetch('https://api.typesafe.ai/v1/systemone',{method:'POST',headers,redirect:'error',body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
     status=r.status;
     if(!r.ok) throw new Error(`http_${status}`);
-    const body=await r.json();
-    observed=responseEvidence(body,key);
-    const answer=discoverAliasResponse(body,models.map(x=>x.name),model,key);
+    const responseBody=await r.json();
+    observed=responseEvidence(responseBody,key);
+    const answer=discoverAliasResponse(responseBody,models.map(x=>x.name),model,key);
     const latency=Date.now()-started;
     const receipt={ok:true,http_status:status,requested_model:model,returned_model:answer.model,
       choice:answer.choice,confidence:answer.confidence,probabilities:answer.probabilities,
@@ -74,11 +77,11 @@ async function main() {
       recommended_timeout_ms:Math.min(20000,Math.max(8000,Math.ceil(latency*3/1000)*1000)),
       completed_at:new Date().toISOString(),purpose:'network_schema_check_only',production_decision_persisted:false,
       model_binding:{requested_alias_verified_by_models:true,canonical_name_from_authenticated_response:true}};
-    save('authenticated-check.json',receipt);console.log(JSON.stringify(receipt));
+    save(receiptName,receipt);console.log(JSON.stringify(receipt));
   } catch(e) {
     const category=e.category || (/^http_\d+$/.test(e.message)?e.message:e.name==='TimeoutError'?'timeout':'network_or_schema_error');
-    save('authenticated-check.json',{ok:false,http_status:status,model,error_category:category,latency_ms:Date.now()-started,observed_response:observed});
-    console.log(`Échec expurgé : ${category}. Aucun second POST.`);process.exitCode=3;
+    save(receiptName,{ok:false,http_status:status,model,error_category:category,latency_ms:Date.now()-started,observed_response:observed});
+    console.log(`Échec expurgé : ${category}. Aucun nouvel appel POST.`);process.exitCode=3;
   }
 }
 module.exports={selectModel,responseEvidence,discoverAliasResponse};

@@ -449,3 +449,12 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - GET modèles réussi : `jev-latest`, `jev-preview`. Une seule tentative systemone sur `jev-preview`, HTTP 200 en 533 ms, rejetée localement au contrôle du modèle ; autres champs non conservés donc non validables.
 - Corrige le contrôle de découverte pour respecter les noms résolus autorisés par l'OpenAPI et conserver les preuves expurgées avant validation ; priorité à l'alias stable. La production conservera une liste exacte de noms vérifiés.
 - Test d'alias hors réseau réussi. Aucun second POST, aucune activation/déploiement, API saine et Jev désactivé. Nouvelle tentative soumise à autorisation explicite du propriétaire.
+
+## 2026-09-25 — Codex — Jev activé en production
+
+- Second et dernier POST de test explicitement autorisé : HTTP 200, alias `jev-latest` résolu en `jev-1.13.0`, REJECT 1,00 sur contrôle sans match, probabilités valides, 403/56 tokens, 551 ms. Un lancement intermédiaire avait échoué localement avant POST ; preuve par transport injecté, correctif et reçu séparé conservés.
+- API seule déployée à 02:27:25 UTC : Jev enabled/production=1, seuil 0,70, timeout 8 s, noms de réponse exacts autorisés. Image précédente conservée et rollback automatique préparé.
+- Endpoint admin authentifié actif, accès public refusé ; onze endpoints/pages HTTP 200 ; quatre canaux Telegram administrables sans envoi de test ; quatre services Running.
+- 817 snapshots, 11 sélections, 11 résultats officiels et 2 678 analyses résolues inchangés. Sur 79 tables, seuls les horodatages/délais opérationnels de six tables sont actualisés par les routines existantes.
+- Sauvegardes SQLite cohérentes avant/après et copies du projet conservées. Aucun troisième POST de test, aucun secret affiché, aucun faux signal, aucune preuve naturelle revendiquée.
+- Rapport final : `docs/audits/2026-09-24-jev-production.md`. État : OK technique, EN ATTENTE D'UNE PREUVE SUR MATCH NATUREL.
