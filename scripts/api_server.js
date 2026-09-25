@@ -3332,7 +3332,7 @@ const CATEGORY_BAN_KEYWORDS = [
   "friendly", "friendlies", "club friendly", "international friendly", "amical", "amicaux",
   "u17", "u18", "u19", "u20", "u21", "u23",
   "under 17", "under 18", "under 19", "under 20", "under 21", "under 23",
-  "reserve", "reserves", "b team", "ii ", " ii", "youth", "youth championship", "academy",
+  "reserve", "reserves", "b team", "youth", "youth championship", "academy",
   "regional cup", "state cup", "state league",
   "world cup", "coupe du monde", "fifa world", "copa del mundo",
 ];
@@ -3545,6 +3545,33 @@ const TRUSTED_COMPETITIONS = [
   // trouvee en audit, pas un changement de politique.
 ];
 
+// Category phrases must be whole words: "II" is a team suffix, not "III Liga".
+function matchesCategoryPhrase(value, phrase) {
+  const escaped = phrase.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}_])${escaped}(?=$|[^\\p{L}\\p{N}_])`, "iu").test(String(value || ""));
+}
+
+function isReserveTeamName(name) {
+  return /(?:^|\s|\()ii(?:i)?\s*\)?$/iu.test(String(name || "").trim());
+}
+
+function competitionFilterText(matchOrCompetition) {
+  if (typeof matchOrCompetition === "string") return matchOrCompetition.toLowerCase();
+  // Country restrictions describe the competition, never the names of its teams.
+  return [matchOrCompetition?.competition, matchOrCompetition?.league, matchOrCompetition?.country]
+    .filter(Boolean).join(" ").toLowerCase();
+}
+
+function hasLowTrustCompetitionKeyword(matchOrCompetition) {
+  const value = competitionFilterText(matchOrCompetition);
+  return LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => {
+    // Categories are checked separately against competition and team fields.
+    if (CATEGORY_BAN_KEYWORDS.includes(keyword)) return false;
+    if (keyword === "primera d") return matchesCategoryPhrase(value, keyword);
+    return value.includes(keyword);
+  });
+}
+
 function isLowTrustCompetition(matchOrCompetition = "") {
   if (typeof matchOrCompetition === "object" && isUsaOrCanadaMatch(matchOrCompetition)) return true;
   // On lit AUSSI league et country : selon la source (api-sports construit
@@ -3553,13 +3580,8 @@ function isLowTrustCompetition(matchOrCompetition = "") {
   // beaucoup par pays, passait alors a cote. Cas constate le 05/08/2026 :
   // "Olimpik-Mobiuz vs Jayxun · Pro League A · Uzbekistan" analyse malgre
   // "uzbekistan" present dans la liste depuis longtemps.
-  const raw = typeof matchOrCompetition === "string"
-    ? matchOrCompetition
-    : [matchOrCompetition?.competition, matchOrCompetition?.league,
-       matchOrCompetition?.country, matchOrCompetition?.home,
-       matchOrCompetition?.away].filter(Boolean).join(" ");
-  const value = String(raw || "").toLowerCase();
-  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
+  const value = competitionFilterText(matchOrCompetition);
+  if (isCategoryBanned(matchOrCompetition) || hasLowTrustCompetitionKeyword(matchOrCompetition)) return true;
   if (ownerExpandedLeagueAllowed(matchOrCompetition)) return false;
   if (TRUSTED_COMPETITIONS.some(tc => value.includes(tc))) return false;
   // Ligues classees secondaire ou en observation (07/08/2026) : elles ne sont
@@ -3576,17 +3598,21 @@ function isLowTrustCompetition(matchOrCompetition = "") {
 // absolu, jamais leve par l'exemption UEFA. A verifier AVANT tout court-circuit
 // "!isUefaCompetition(match) && ...", jamais a la place.
 function isCategoryBanned(matchOrCompetition = "") {
-  const raw = typeof matchOrCompetition === "string"
-    ? matchOrCompetition
-    : [matchOrCompetition?.competition, matchOrCompetition?.home, matchOrCompetition?.away].filter(Boolean).join(" ");
-  const value = String(raw || "").toLowerCase();
-  return CATEGORY_BAN_KEYWORDS.some((keyword) => value.includes(keyword));
+  const fields = typeof matchOrCompetition === "string"
+    ? [matchOrCompetition]
+    : [matchOrCompetition?.competition, matchOrCompetition?.league, matchOrCompetition?.home, matchOrCompetition?.away];
+  const teams = typeof matchOrCompetition === "string"
+    ? [] : [matchOrCompetition?.home, matchOrCompetition?.away];
+  return teams.some(isReserveTeamName)
+    || fields.some(value => CATEGORY_BAN_KEYWORDS.some(keyword => matchesCategoryPhrase(value, keyword)));
 }
 
 // Exclusion sportive client inchangée : une coupe/qualification n'a pas le
 // contexte de championnat utilisé pour le track-record O/U 2,5. Ce motif est
 // séparé du classement ARJEL et doit être exposé sur Live/PWA, même à 0/5.
-const CLIENT_OU25_EXCLUDED_EVENT_REGEX = /\bcup\b|coupe|copa|pokal|coppa|taça|champions league|europa league|conference league|conmebol libertadores|conmebol sudamericana|qualif|play[ -]?off|barrage|friendly|amical/;
+// Keep national-team tournaments out of the client product when geography
+// stops matching team names. This correction does not authorize internationals.
+const CLIENT_OU25_EXCLUDED_EVENT_REGEX = /\bcup\b|coupe|copa|pokal|coppa|taça|champions league|europa league|conference league|conmebol libertadores|conmebol sudamericana|\bnations league\b|\buefa euro\b|\beuro 20\d{2}\b|qualif|play[ -]?off|barrage|friendly|amical/;
 function clientOu25StaticExclusionReason(match) {
   if (isAmericanFootballMatch(match) || !String(match?.sport || 'Football').toLowerCase().includes('foot'))
     return 'Sport hors du marché football Over/Under 2,5.';
@@ -3939,14 +3965,7 @@ function displayDeliveryChannels(row) {
 // ce qu'Hermes recommande (pick quotidien, auto-concile).
 function isBlacklistedForLiveDisplay(matchOrCompetition = "") {
   if (typeof matchOrCompetition === "object" && isAmericanFootballMatch(matchOrCompetition)) return true;
-  // league/country lus aussi, meme raison que dans isLowTrustCompetition.
-  const raw = typeof matchOrCompetition === "string"
-    ? matchOrCompetition
-    : [matchOrCompetition?.competition, matchOrCompetition?.league,
-       matchOrCompetition?.country, matchOrCompetition?.home,
-       matchOrCompetition?.away].filter(Boolean).join(" ");
-  const value = String(raw || "").toLowerCase();
-  if (LOW_TRUST_COMPETITION_KEYWORDS.some((keyword) => value.includes(keyword))) return true;
+  if (isCategoryBanned(matchOrCompetition) || hasLowTrustCompetitionKeyword(matchOrCompetition)) return true;
   if (typeof matchOrCompetition === "object" && isWomenMatch(matchOrCompetition)) return true;
   return false;
 }

@@ -458,3 +458,12 @@ La route historique vérifie la session Premium côté serveur et transmet les c
 - 817 snapshots, 11 sélections, 11 résultats officiels et 2 678 analyses résolues inchangés. Sur 79 tables, seuls les horodatages/délais opérationnels de six tables sont actualisés par les routines existantes.
 - Sauvegardes SQLite cohérentes avant/après et copies du projet conservées. Aucun troisième POST de test, aucun secret affiché, aucun faux signal, aucune preuve naturelle revendiquée.
 - Rapport final : `docs/audits/2026-09-24-jev-production.md`. État : OK technique, EN ATTENTE D'UNE PREUVE SUR MATCH NATUREL.
+
+## 2026-09-25 — Codex — faux positifs du filtre, sans extension de whitelist
+
+- Catégories reconnues par expressions délimitées ; réserves II/III détectées sur les équipes, sans collision avec III Liga.
+- Primera D reste exclue sans bloquer Primera Division argentine déjà autorisée ; géographie limitée aux métadonnées de compétition.
+- Nations League et alias Euro des sélections exclus structurellement pour éviter toute ouverture indirecte du produit client. Whitelist, seuils, roster Kimi et Jev inchangés.
+- 99 contrôles de filtre et sept suites hors réseau réussis, dont 30 scénarios Jev simulés ; aucune inférence ni Telegram réel de test.
+- API seule déployée depuis l’image active, uniquement server.js remplacé ; sauvegarde et rollback conservés, trois autres services inchangés. Jev enabled/production=1 et roster réel vérifiés.
+- Rapport : `docs/audits/2026-09-25-filter-false-positives.md`.
