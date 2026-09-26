@@ -34,7 +34,7 @@ function setup({choice='SEND',confidence=0.9,transport,traditional=false,env={}}
 }
 (async()=>{
   await test('1 SEND overrides quantitative refusals only with actual persisted authority',async()=>{
-    const t=setup();assert.throws(()=>snapshots.registerOfficial(t.db,t.snapshot.id),/requires 4/);
+    const t=setup();assert.throws(()=>snapshots.registerOfficial(t.db,t.snapshot.id),/requires 3/);
     const result=await t.engine.evaluate(t.input);assert.equal(result.final_decision,'SEND');assert.equal(result.traditional_eligible,0);
     snapshots.registerOfficial(t.db,t.snapshot.id,{jevDecisionId:result.id});
     assert.equal(snapshots.stateForMatch(t.db,t.match).kind,'official');

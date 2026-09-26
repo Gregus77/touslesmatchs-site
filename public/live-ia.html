@@ -915,7 +915,7 @@ function renderLiveOu25Details(m) {
 
     :state.voteCount?(m&&(m.diffusion_block||m.analysis_exclusion_reason)||'Tendance — autres critères non remplis, aucun signal')
     :(m&&(m.analysis_exclusion_reason||m.block_reason)||'Aucun vote enregistré pour le moment');
-  if(state.voteCount)verdict=directionText+' · '+verdict;
+  if(state.voteCount)verdict=TLMMatchLifecycle.marketText(m)+' · '+verdict;
   if(state.official&&!state.locked)verdict+=' · confiance '+state.confidence+'/100 · '+(state.odd==null?'cote indisponible':'cote '+Number(state.odd).toFixed(2))+(state.outcome==='win'?' · gagné':state.outcome==='loss'?' · perdu':'');
   if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
   if(!state.voteCount)verdict=TLMMatchLifecycle.statusText(m);

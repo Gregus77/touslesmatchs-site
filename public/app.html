@@ -1057,7 +1057,7 @@ body.tlm-page-app .btn{
       return '<span class="tlm-app-live-mini-vote '+(voted?'voted ':'')+dir+(terminal?' terminal':'')+(state.official&&!TLMMatchLifecycle.entryClosed(m)?'':' old')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
     var preserved=esc(TLMMatchLifecycle.statusText(m))+' · ';
-    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
+    return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+esc(TLMMatchLifecycle.marketText(m))+' · '+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
   function renderAppHero(m){
@@ -1084,8 +1084,7 @@ body.tlm-page-app .btn{
     if(TLMMatchLifecycle.entryClosed(m))$("app-ai-label").textContent='Analyse historique — entrée fermée';
     $("app-ai-result").textContent=voteState.official?(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
       :votes&&analysisClosed?'Anciennes tendances — aucun signal officiel'
-      :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(aligned<4?' · consensus insuffisant':'')
-      :votes&&aligned<4?'Consensus insuffisant — aucun signal'
+      :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
       :votes?(m.diffusion_block||exclusionReason||'Tendance — autres critères non remplis, aucun signal')
       :exclusionReason||m.block_reason||m.data_notice||(analysisWaiting?'Analyse en cours — affichage à partir de la 35e minute':'En attente des IA');
     $("app-vote-explanation").textContent='';

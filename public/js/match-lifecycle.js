@@ -28,11 +28,23 @@
   function canFeature(m){var p=phase(m);return p==='open'||p==='waiting';}
   function canTrack(m){var p=phase(m);return p==='open'||p==='waiting'||p==='closed';}
   function entryClosed(m){var p=phase(m);return !!m&&(p==='unknown'||p==='closed'||p==='finished'||p==='unavailable'||!!(m.ou25&&m.ou25.window_status==='closed'));}
+  function marketText(m){
+    var r=m&&m.ou25||{},votes=(r.votes||[]).filter(function(v){return v.status==='voted';});
+    if(!votes.length)return '';
+    if(r.locked!==false)return 'Over/Under 2,5 · '+Number(r.consensus_count||0)+'/5 consensus';
+    var over=votes.filter(function(v){return v.direction==='over';}),under=votes.filter(function(v){return v.direction==='under';});
+    var direction=r.official?r.consensus_direction:over.length>under.length?'over':under.length>over.length?'under':null;
+    if(direction!=='over'&&direction!=='under')return 'Over/Under 2,5 — votes partagés';
+    var leaders=direction==='over'?over:under;
+    var result=direction.toUpperCase()+' 2,5 · '+leaders.length+'/5';
+    if(r.official&&r.official_confidence!=null)result+=' · confiance '+Number(r.official_confidence)+'/100';
+    return result;
+  }
   function statusText(m){
     var raw=m&&m.ou25||{},state=raw.analysis_state;
     if(raw.official)return 'Signal validé'+(entryClosed(m)?' en première mi-temps — suivi du résultat':'');
     if(state==='excluded')return 'Non retenu';
-    if(state==='failed_before_providers'||state==='failed')return 'Analyse interrompue — statistiques ou données indisponibles';
+    if(state==='failed_before_providers'||state==='failed')return raw.recommendation_status || 'Analyse interrompue — statistiques ou données indisponibles';
     if(entryClosed(m))return 'Analyse terminée — aucun signal validé';
     if(Number(raw.vote_count)>0)return 'Analysé — '+Number(raw.consensus_count||0)+'/5 consensus';
     if(phase(m)==='waiting')return 'Analyse en cours — décision à partir de la 35e minute';
@@ -42,6 +54,6 @@
     if(!entryClosed(m))return '';
     return '<span class="tlm-analysis-status" role="status" style="display:block;color:#a8afc4;font-size:11px;line-height:1.5;margin:6px 0">'+statusText(m)+'</span>';
   }
-  root.TLMMatchLifecycle={statusText:statusText,phase:phase,canFeature:canFeature,canTrack:canTrack,entryClosed:entryClosed,entryNoticeHtml:entryNoticeHtml};
+  root.TLMMatchLifecycle={marketText:marketText,statusText:statusText,phase:phase,canFeature:canFeature,canTrack:canTrack,entryClosed:entryClosed,entryNoticeHtml:entryNoticeHtml};
   if(typeof module==='object'&&module.exports)module.exports=root.TLMMatchLifecycle;
 })(typeof globalThis!=='undefined'?globalThis:this);

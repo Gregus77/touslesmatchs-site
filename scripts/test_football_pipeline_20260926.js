@@ -97,7 +97,7 @@ async function main(){
  for(const [category,payload] of cases){
   let calls=0;const logs=[];const localDb=new Database(':memory:');const localStore=coherence.createAttemptStore(localDb,()=>now);
   const ctx=vm.createContext({liveStateCoherence:coherence,footballAttempts:localStore,Date,console:{error:(...x)=>logs.push(x),log(){}},
-   API_SPORTS_KEY:'test-only',matchStatsCache:new Map(),apiSportsBudgetOk:()=>true,
+   API_SPORTS_KEY:'test-only',footballStatisticsCovered:async()=>null,matchStatsCache:new Map(),apiSportsBudgetOk:()=>true,
    apiSportsErrors:data=>!!(data?.errors&&Object.keys(data.errors).length),setLiveAnalysisNotice(){},
    isNeutralComp:()=>false,computeLiveConstraints:()=>({}),
    AGENT_INDEXES:[0,1,2,3,4],collectAgentsUntilOu25Quorum:async()=>{calls+=5;throw new Error('forbidden');},
@@ -121,7 +121,7 @@ async function main(){
  // Render the actual browser functions without DOM, network or authentication.
  const html=fs.readFileSync(path.join(__dirname,'../public/live-ia.html'),'utf8');
  const a=html.indexOf('function liveOu25State('),b=html.indexOf('// ── Render',a);
- const ui=vm.createContext({TLMMatchLifecycle:{statusText:()=> 'Non retenu',entryClosed:()=>true,entryNoticeHtml:()=>''},
+ const ui=vm.createContext({TLMMatchLifecycle:{marketText:()=> 'Over/Under 2,5',statusText:()=> 'Non retenu',entryClosed:()=>true,entryNoticeHtml:()=>''},
   escHtml:v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;'),isFinite});
  vm.runInContext(html.slice(a,b),ui);
  check('Live IA renders exclusion and failure as uncalled, never pending',()=>{

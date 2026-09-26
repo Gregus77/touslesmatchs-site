@@ -2662,7 +2662,7 @@ function buildVoteSummary(activeAgents, selectedBet) {
 // Produit client unique : les cinq sieges votent tous sur Over/Under 2,5.
 // Le pari principal libre (victoire, BTTS, etc.) reste utile a l'audit interne,
 // mais ne peut plus etre presente comme un consensus O/U 2,5 aux abonnes.
-const CLIENT_OU25_MIN_VOTES = 4;
+const CLIENT_OU25_MIN_VOTES = 3;
 const CLIENT_OU25_MIN_CONFIDENCE = Math.max(80, Number(process.env.CLIENT_OU25_MIN_CONFIDENCE || 80));
 const OFFICIAL_SNAPSHOT_RULE_VERSION = "ou25-snapshot-v1-20260912";
 // Mode Recovery : garde-fous statistiques supplémentaires, sans redéfinir le
@@ -2789,7 +2789,7 @@ function buildOu25VoteSummary(agentMarketList, agentResults = []) {
   const voteLabel = unanimous
     ? "5/5 unanime O/U 2,5"
     : voteCount >= CLIENT_OU25_MIN_VOTES
-      ? "4/5 signal fort O/U 2,5"
+      ? `${voteCount}/5 signal valide O/U 2,5`
       : voteCount >= 3
         ? "3/5 tendance IA — quorum non atteint"
         : !complete
@@ -5102,6 +5102,26 @@ async function requireVerifiedLiveMatch(input) {
 
 const matchStatsCache = new Map();
 
+// Coverage is consulted only after an empty statistics response, never as invented data.
+const footballStatsCoverageCache = new Map();
+async function footballStatisticsCovered(state) {
+  if (!state?.leagueId || !state?.season) return null;
+  const key = `${state.leagueId}:${state.season}`;
+  const cached = footballStatsCoverageCache.get(key);
+  if (cached && Date.now() - cached.ts < 86400000) return cached.covered;
+  if (!apiSportsBudgetOk()) return null;
+  try {
+    const data = await httpGet(`https://v3.football.api-sports.io/leagues?id=${encodeURIComponent(state.leagueId)}&season=${encodeURIComponent(state.season)}`, {"x-apisports-key":API_SPORTS_KEY});
+    if (apiSportsErrors(data)) return null;
+    const league = (data.response || []).find(row => String(row.league?.id) === String(state.leagueId));
+    const season = (league?.seasons || []).find(row => String(row.year) === String(state.season));
+    const covered = season?.coverage?.fixtures?.statistics_fixtures;
+    if (typeof covered !== 'boolean') return null;
+    footballStatsCoverageCache.set(key,{covered,ts:Date.now()});
+    return covered;
+  } catch (_) { return null; }
+}
+
 async function fetchMatchStats(fixtureId, state = null) {
   if (!API_SPORTS_KEY || !fixtureId) return null;
   const id = String(fixtureId);
@@ -5127,7 +5147,11 @@ async function fetchMatchStats(fixtureId, state = null) {
     matchStatsCache.set(ck, { data: stats, ts: Date.now() });
     return stats;
   } catch (e) {
-    if (state) throw liveStateCoherence.statsFailure(liveStateCoherence.diagnosticCategory(e));
+    if (state) {
+      if (liveStateCoherence.diagnosticCategory(e) === 'empty_response' && await footballStatisticsCovered(state) === false)
+        throw liveStateCoherence.statsFailure('coverage_unavailable');
+      throw liveStateCoherence.statsFailure(liveStateCoherence.diagnosticCategory(e));
+    }
     console.error('[match-stats]', liveStateCoherence.diagnosticCategory(e));
     return null;
   }
@@ -7226,7 +7250,7 @@ Réponds en JSON pur (pas de markdown):
   }
 
   // Phase 1 : cinq appels parallèles, puis photographie des cinq états une fois
-  // tous les appels bornés terminés. Le quorum métier reste strictement 4/5.
+  // tous les appels bornés terminés. Le quorum propriétaire est de 3/5 ; les cinq appels restent bornés.
   if (match.__footballAttemptId) footballAttempts.providers(match.__footballAttemptId);
   const agentPromises = AGENT_INDEXES.map(i => runSingleAgent(i));
   const collected = await collectAgentsUntilOu25Quorum(agentPromises, (result) => {
@@ -14069,7 +14093,7 @@ function homepageLiveMatch(match, canReveal, ownerDiagnostics = false) {
     out.ou25.synchronization_reason = null;
     const state = raw.analysis_state;
     const message = state === 'excluded' ? 'Non retenu'
-      : ['failed_before_providers','failed'].includes(state) ? 'Analyse interrompue — statistiques indisponibles' : null;
+      : ['failed_before_providers','failed'].includes(state) ? (raw.attempt?.reason_category === 'coverage_unavailable' ? 'Non analysable — statistiques live non couvertes pour cette compétition' : 'Analyse interrompue — statistiques indisponibles') : null;
     for (const key of ['block_reason','analysis_exclusion_reason','data_notice','diffusion_block']) {
       if (out[key]) out[key] = message || 'Analyse non disponible';
     }

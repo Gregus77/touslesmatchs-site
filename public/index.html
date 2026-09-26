@@ -1170,7 +1170,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           <div class="tlm-hero-kicker">Football · Analyse live</div>
           <h1 id="hero-title">Votre signal<br>Over ou Under 2,5.<span class="hero-gradient">Décidé avant la mi-temps.</span></h1>
           <p class="tlm-hero-lead">Entre la 15e et la 45e minute, 5 IA analysent le match. Un signal n'est validé qu'avec au moins 4 avis concordants sur 5 et les autres critères de qualité.</p>
-          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">4 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
+          <div class="tlm-hero-chips"><span class="tlm-hero-chip">Football uniquement</span><span class="tlm-hero-chip">3 IA / 5 minimum</span><span class="tlm-hero-chip">18+</span></div>
           <div class="tlm-hero-actions"><a href="/live-ia" class="btn btn-prim">Voir les analyses</a><a href="/dashboard" class="btn btn-ghost">Mon compte</a></div>
           <div class="tlm-hero-legal">Analyse sportive informative · Aucun résultat n'est garanti.</div>
         </div>
@@ -1191,7 +1191,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
           </div>
         </div>
       </div>
-      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 4 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
+      <div class="tlm-hero-proof"><div><strong>Méthode transparente</strong><span>Aucun résultat promis.</span></div><div><strong>Données en temps réel</strong><span>Équipes, scores et minutes actualisés.</span></div><div><strong>5 IA indépendantes</strong><span>Accord minimum de 3 sur 5.</span></div><div><strong>Sécurisé et privé</strong><span>Vos données restent confidentielles.</span></div></div>
     </section>
 
   </div>
@@ -1830,7 +1830,7 @@ function tlmVotesAreOld(m){
 }
 function tlmVoteCirclesHtml(m){
   var state=heroOu25(m),old=tlmVotesAreOld(m);
-  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
+  return '<div class="tlm-row-vote-block" style="max-width:360px">'+TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-analysis-market">'+esc(TLMMatchLifecycle.marketText(m))+'</span><div class="tlm-row-votes'+(old?' stale':'')+'"'+(TLMMatchLifecycle.entryClosed(m)?' style="filter:grayscale(1);opacity:.65"':'')+' aria-label="Votes IA">'+state.slots.map(function(slot,index){
     var voted=slot&&slot.status==='voted',direction=state.locked?null:slot.direction;
     var terminal=heroTerminalCaption(slot),mark=voted?(state.locked?'✓':direction==='over'?'O':direction==='under'?'U':'?'):terminal?terminal.mark:String(index+1);
     var cls='tlm-row-vote'+(voted?' voted':'')+(voted&&direction?' '+direction:'')+(terminal?' terminal':'');

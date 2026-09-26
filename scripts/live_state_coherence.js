@@ -81,7 +81,7 @@ function fixtureState(fixture, match, id) {
   const home = fixture?.teams?.home?.id, away = fixture?.teams?.away?.id;
   if (!Number.isInteger(home) || !Number.isInteger(away) || home === away)
     throw statsFailure('teams_missing');
-  return {fixtureId: String(id), score: actual, phase, minute, home, away};
+  return {fixtureId: String(id), score: actual, phase, minute, home, away, leagueId: fixture.league?.id, season: fixture.league?.season};
 }
 
 function createCollector({fetchFixture, fetchStats, clock = Date.now}) {
@@ -114,6 +114,7 @@ function statsKey(id, state) {
 // Fixed vocabulary only: never persist an upstream body, URL, key or error text.
 const DIAGNOSTICS = Object.freeze({
   empty_response: 'Réponse statistique vide.',
+  coverage_unavailable: 'Statistiques live non couvertes par le fournisseur pour cette compétition/saison.',
   fixture_unknown: 'Fixture inconnue dans la réponse sportive.',
   teams_missing: 'Équipes absentes ou non identifiées dans la réponse sportive.',
   incomplete_data: 'Données statistiques incomplètes ou sans mesure exploitable pour chaque équipe.',

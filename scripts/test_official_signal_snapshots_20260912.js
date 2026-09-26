@@ -21,11 +21,11 @@ model.registerOfficial(db,'42_day_30_0-1');
 model.registerOfficial(db,'42_day_30_0-1'); // idempotent, never duplicates
 assert.throws(()=>model.registerOfficial(db,'42_day_15_0-0'),/outside 35-45|already frozen/);
 const incomplete={fixtureId:43,home:'Incomplete',away:'Away',score_home:0,score_away:0};
-model.capture(db,{id:'43_day_40_0-0',match:incomplete,analysisMatchKey:'43_day',minute:40,scoreHome:0,scoreAway:0,votes:seats(['under','under','under',null,null]),consensus:'under',consensusVotes:3,confidence:82,ruleVersion:'v2',createdAt:'2026-09-12T20:04:00Z'});
-assert.throws(()=>model.registerOfficial(db,'43_day_40_0-0'),/requires 4 real concordant votes/);
+model.capture(db,{id:'43_day_40_0-0',match:incomplete,analysisMatchKey:'43_day',minute:40,scoreHome:0,scoreAway:0,votes:seats(['under','under',null,null,null]),consensus:'under',consensusVotes:2,confidence:82,ruleVersion:'v2',createdAt:'2026-09-12T20:04:00Z'});
+assert.throws(()=>model.registerOfficial(db,'43_day_40_0-0'),/requires 3 real concordant votes/);
 const disagreement={fixtureId:44,home:'Disagreement',away:'Away',score_home:0,score_away:0};
 model.capture(db,{id:'44_day_40_0-0',match:disagreement,analysisMatchKey:'44_day',minute:40,scoreHome:0,scoreAway:0,votes:seats(['over','over','over','under','under']),consensus:'over',consensusVotes:4,confidence:82,ruleVersion:'v2',createdAt:'2026-09-12T20:05:00Z'});
-assert.throws(()=>model.registerOfficial(db,'44_day_40_0-0'),/requires 4 real concordant votes/);
+assert.throws(()=>model.registerOfficial(db,'44_day_40_0-0'),/requires 3 real concordant votes/);
 model.capture(db,{id:'42_day_45_1-1',fixtureScope:matchScope,match:{...match,score_home:1,score_away:1},analysisMatchKey:'42_day',minute:45,scoreHome:1,scoreAway:1,votes:seats(['under','under','under','under',null]),consensus:'under',consensusVotes:4,confidence:84,realOdd:1.8,ruleVersion:'v2',createdAt:'2026-09-12T20:09:00Z'});
 model.recordResult(db,'42_day_30_0-1',1,2,'test');
 const state=model.stateForMatch(db,{...match,minute:79,score_home:1,score_away:2,status:'FINISHED'},testDay);
