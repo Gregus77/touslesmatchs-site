@@ -381,7 +381,7 @@ footer{border-top:1px solid var(--b1);padding:32px 0 22px;background:var(--panel
 
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
+<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1213,7 +1213,7 @@ header nav a[href*="live-ia"], nav a[href*="live-ia"]{color:#35e8ff!important}
       </select>
 
       <div id="tlm-panel-live" class="tlm-home-panel" role="tabpanel" data-home-panel="live">
-        <div class="live-panel-head"><div class="live-panel-title"><span class="dot"></span>Matchs réellement analysés</div><a href="/live-ia" class="live-panel-link">Voir Live IA →</a></div>
+        <div class="live-panel-head"><div class="live-panel-title"><span class="dot"></span>Matchs suivis en direct</div><a href="/live-ia" class="live-panel-link">Voir Live IA →</a></div>
         <div id="live-rows"><div class="empty-note">Chargement…</div></div>
       </div>
       <div id="tlm-panel-upcoming" class="tlm-home-panel" role="tabpanel" data-home-panel="upcoming" hidden>
@@ -1794,7 +1794,7 @@ function heroResponseCount(slots){
 }
 function heroTerminalCaption(slot){
   if(!slot||slot.status==='voted'||slot.status==='pending')return null;
-  if(slot.status==='abstained')return {mark:'—',label:'Abstention explicite'};
+  if(slot.status==='excluded')return{mark:'—',label:'Non retenu'};if(slot.status==='not_called')return{mark:'—',label:'IA non appelée'};if(slot.status==='collecting')return{mark:'—',label:'Vérification des données avant les IA'};if(slot.status==='abstained')return {mark:'—',label:'Abstention explicite'};
   if(slot.status==='empty')return {mark:'—',label:'Réponse sans avis exploitable'};
   if(slot.status==='parse_error')return {mark:'—',label:'Réponse invalide'};
   if(slot.status==='rejected_statistical')return {mark:'—',label:'Vote écarté'};
@@ -1854,7 +1854,7 @@ function renderAnalyzedList(rows){
     var fid=encodeURIComponent(m.fixtureId||m.fixture_id||m.id||(m.home+'_'+m.away));
     return '<a class="tlm-analysis-row" href="/live-ia?fixture='+fid+'" style="color:inherit;text-decoration:none">'
       +'<div class="tlm-analysis-teams">'+esc(m.home)+' — '+esc(m.away)+'<div class="tlm-analysis-meta">'+esc(current)+' · '+esc(score)+(snapshot?' · '+esc(snapshot):'')+(m.data_notice?' · '+esc(m.data_notice):'')+'</div></div>'
-      +tlmVoteCirclesHtml(m)+'</a>';
+      +'<span class="tlm-analysis-meta">'+esc(TLMMatchLifecycle.statusText(m))+'</span>'+tlmVoteCirclesHtml(m)+'</a>';
   }).join('')+'</div>';
 }
 function heroConsensusDetail(m){
@@ -1950,10 +1950,9 @@ function renderHeroLive(m){
   var decisionText=deliveryProven&&voteState.official?'Envoyé sur Telegram'
     :voteState.official?'Signal validé — livraison en attente'
     :votes&&tlmVotesAreOld(m)?'Anciennes tendances — aucun signal officiel'
-    :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(alignedCount<4?' · consensus insuffisant':'')
-    :votes&&alignedCount<4?'Consensus insuffisant — aucun signal'
+    :votes&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
     :votes?(m.diffusion_block||m.analysis_exclusion_reason||'Tendance — autres critères non remplis, aucun signal')
-    :(m.analysis_exclusion_reason||m.block_reason||m.data_notice||(analysisWaiting?'À partir de la 35e minute':'En attente des IA'));
+    :TLMMatchLifecycle.statusText(m);
   setHeroText('hero-consensus-label',decisionText+(voteState.official&&!voteState.locked&&paidExplanation?' · '+paidExplanation:''));
   setHeroText('hero-vote-explanation','');
   var voteEls=document.querySelectorAll('#hero-ai-votes .tlm-ai-vote');

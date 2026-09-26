@@ -346,7 +346,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 @keyframes tlmConsensusGood{50%{opacity:.55;text-shadow:0 0 12px rgba(34,211,238,.9)}}
 @media(prefers-reduced-motion:reduce){.consensus-insufficient,.consensus-valid{animation:none!important}}
 </style>
-<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
+<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
 </head>
 <body class="tlm-wow tlm-page-live">
 
@@ -911,23 +911,24 @@ function renderLiveOu25Details(m) {
   var responseCount=state.slots.filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;
   var minute=Number(m&&m.minute),directionText=consensusDirection?consensusDirection+' 2,5 — '+consensusCount+'/5':'Consensus '+consensusCount+'/5';
   var verdict=state.official?(m&&m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')
-    :state.voteCount&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'+(consensusCount<4?' · consensus insuffisant':'')
-    :state.voteCount&&consensusCount<4?'Consensus insuffisant — aucun signal'
+    :state.voteCount&&isFinite(minute)&&minute<35?'Tendance — pas encore de signal'
+
     :state.voteCount?(m&&(m.diffusion_block||m.analysis_exclusion_reason)||'Tendance — autres critères non remplis, aucun signal')
     :(m&&(m.analysis_exclusion_reason||m.block_reason)||'Aucun vote enregistré pour le moment');
   if(state.voteCount)verdict=directionText+' · '+verdict;
   if(state.official&&!state.locked)verdict+=' · confiance '+state.confidence+'/100 · '+(state.odd==null?'cote indisponible':'cote '+Number(state.odd).toFixed(2))+(state.outcome==='win'?' · gagné':state.outcome==='loss'?' · perdu':'');
   if(!state.official&&state.windowStatus==='closed'&&state.statusText)verdict=state.statusText;
-  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason) || "";
+  if(!state.voteCount)verdict=TLMMatchLifecycle.statusText(m);
+  var reason = m && (m.analysis_exclusion_reason || m.block_reason || m.analysis_block_reason || (m.ou25 && m.ou25.attempt && m.ou25.attempt.reason)) || "";
   if (!reason && !state.voteCount) {
     if (state.windowStatus === "before_window" || state.windowStatus === "waiting") reason = "La fenêtre de vote débute à la 35e minute.";
     else if (state.windowStatus === "after_window" || state.windowStatus === "closed") reason = "La fenêtre de vote est terminée : fin de première mi-temps.";
     else reason = "Les cinq IA n’ont pas encore enregistré de vote exploitable.";
   }
   var seats = state.slots.map(function(slot, i) {
-    var voted = slot && slot.status === "voted" && (slot.direction === "over" || slot.direction === "under");
+    var voted = slot && slot.status === "voted";
     var dir = voted&&!state.locked ? slot.direction : "";
-    var failure=slot&&slot.status==='abstained'?'Abstention explicite':slot&&slot.status==='empty'?'Réponse sans avis exploitable':slot&&slot.status==='parse_error'?'Réponse invalide':slot&&slot.status==='rejected_statistical'?'Vote écarté':/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé':slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
+    var failure=slot&&slot.status==='excluded'?'Exclu avant Concile':slot&&slot.status==='not_called'?'IA non appelée':slot&&slot.status==='collecting'?'Vérification des données':slot&&slot.status==='abstained'?'Abstention explicite':slot&&slot.status==='empty'?'Réponse sans avis exploitable':slot&&slot.status==='parse_error'?'Réponse invalide':slot&&slot.status==='rejected_statistical'?'Vote écarté':/délai|timeout/i.test(String(slot&&slot.reason||''))?'Délai dépassé':slot&&slot.status==='unavailable'?'Avis indisponible':'En attente';
     var shortLabel = voted ? (state.locked ? "✓" : dir === "over" ? "O" : dir === "under" ? "U" : "?") : failure==='En attente'?String(i+1):'—';
     var choice = voted ? (state.locked ? "Vote enregistré · direction Premium" : dir === "over" ? "Over 2,5" : dir === "under" ? "Under 2,5" : "Vote enregistré") : failure;
     var confidence = voted && slot.confidence != null ? " · " + escHtml(String(slot.confidence)) + "%" : "";

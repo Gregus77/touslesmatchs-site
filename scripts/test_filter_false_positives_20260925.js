@@ -17,7 +17,7 @@ const arrays = ['CATEGORY_BAN_KEYWORDS', 'LOW_TRUST_COMPETITION_KEYWORDS',
   'LEAGUE_TIER_SECONDARY', 'LEAGUE_TIER_WATCHLIST', 'TRUSTED_COMPETITIONS'];
 const functions = ['matchesCategoryPhrase', 'isReserveTeamName', 'competitionFilterText',
   'hasLowTrustCompetitionKeyword', 'recoveryNormalize', 'ownerExpandedLeagueAllowed',
-  'leagueHaystack', 'leagueTier', 'isLowTrustCompetition', 'isCategoryBanned',
+  'matchesExistingLeagueRule', 'leagueHaystack', 'leagueTier', 'isLowTrustCompetition', 'isCategoryBanned',
   'isWomenMatch', 'isUsaOrCanadaMatch', 'isAmericanFootballMatch', 'tlmScopeNorm',
   'tlmScopeCountry', 'isPublicFootballScopeMatch', 'isBlacklistedForLiveDisplay',
   'parseLiveMinuteValue', 'isClientOu25MatchEligible', 'clientOu25StaticExclusionReason'];

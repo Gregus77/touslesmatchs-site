@@ -178,7 +178,7 @@
   body.tlm-page-app #chatbot{display:none!important;visibility:hidden!important;pointer-events:none!important}
 </style>
 <!-- Google Analytics (GA4) -->
-<script src="/js/match-lifecycle.js?v=20260920-entry-closed"></script>
+<script src="/js/match-lifecycle.js?v=20260926-football-attempts"></script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ME2T7G7PSK"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
@@ -1042,7 +1042,7 @@ body.tlm-page-app .btn{
   function appOu25(m){var raw=m&&m.ou25||{},slots=Array.isArray(raw.votes)?raw.votes.slice(0,5):[];while(slots.length<5)slots.push({status:'pending',direction:null});var voted=slots.filter(function(v){return v&&v.status==='voted';}).length,over=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='over';}).length,under=slots.filter(function(v){return v&&v.status==='voted'&&v.direction==='under';}).length;return{slots:slots,voteCount:Number(raw.vote_count)||voted,consensusCount:Number(raw.consensus_count)||Math.max(over,under),overCount:over,underCount:under,locked:raw.locked!==false,windowStatus:String(raw.window_status||'unknown'),snapshotMinute:raw.snapshot_minute==null?null:Number(raw.snapshot_minute),snapshotScore:raw.snapshot_score||null,consensusAt:raw.consensus_at||null,official:raw.official===true,officialId:raw.official_signal_snapshot_id||null,recommendationStatus:raw.recommendation_status||null,consensusDirection:raw.consensus_direction||null,officialConfidence:raw.official_confidence,officialOdd:raw.official_odd,outcome:raw.outcome||null};}
   function appVoteTime(value){var raw=String(value||'').trim();if(!raw)return '';var d=new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(raw)?raw:raw.replace(' ','T')+'Z');return isNaN(d.getTime())?'':d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});}
   function appResponseCount(slots){return(slots||[]).filter(function(v){return v&&['voted','empty','parse_error','rejected_statistical','abstained'].indexOf(v.status)!==-1;}).length;}
-  function appTerminalCaption(slot){if(!slot||slot.status==='voted'||slot.status==='pending')return null;if(slot.status==='abstained')return{mark:'—',text:'Abstention explicite'};if(slot.status==='empty')return{mark:'—',text:'Réponse sans avis exploitable'};if(slot.status==='parse_error')return{mark:'—',text:'Réponse invalide'};if(slot.status==='rejected_statistical')return{mark:'—',text:'Vote écarté'};if(/délai|timeout/i.test(String(slot.reason||'')))return{mark:'—',text:'Délai dépassé'};return{mark:'—',text:'Avis indisponible'};}
+  function appTerminalCaption(slot){if(!slot||slot.status==='voted'||slot.status==='pending')return null;if(slot.status==='excluded')return{mark:'—',text:'Exclu avant Concile : '+String(slot.reason||'')};if(slot.status==='not_called')return{mark:'—',text:'IA non appelée : '+String(slot.reason||'')};if(slot.status==='collecting')return{mark:'—',text:'Vérification des données avant les IA'};if(slot.status==='abstained')return{mark:'—',text:'Abstention explicite'};if(slot.status==='empty')return{mark:'—',text:'Réponse sans avis exploitable'};if(slot.status==='parse_error')return{mark:'—',text:'Réponse invalide'};if(slot.status==='rejected_statistical')return{mark:'—',text:'Vote écarté'};if(/délai|timeout/i.test(String(slot.reason||'')))return{mark:'—',text:'Délai dépassé'};return{mark:'—',text:'Avis indisponible'};}
   var appVoteButtons=document.getElementById('app-ai-votes');
   if(appVoteButtons)appVoteButtons.addEventListener('click',function(event){var button=event.target.closest('button.tlm-app-vote');if(button)$("app-vote-explanation").textContent=button.dataset.explanation||button.getAttribute('aria-label')||'';});
   function appVotes(m){return appOu25(m).voteCount;}
@@ -1056,7 +1056,7 @@ body.tlm-page-app .btn{
       var detail=voted?(state.locked?'IA '+(i+1)+' : vote enregistré, direction réservée à Premium':((slot.agent||('IA '+(i+1)))+' : '+(slot.label||dir)+(slot.confidence!=null?' · '+slot.confidence+'%':''))):('IA '+(i+1)+' : '+(terminal?terminal.text:'En attente')),voteTime=appVoteTime(slot&&slot.updated_at);if(voted&&voteTime)detail+=' · '+voteTime;
       return '<span class="tlm-app-live-mini-vote '+(voted?'voted ':'')+dir+(terminal?' terminal':'')+(state.official&&!TLMMatchLifecycle.entryClosed(m)?'':' old')+'" title="'+esc(detail)+'" aria-label="'+esc(detail)+'">'+label+'</span>';
     }).join('');
-    var preserved='';if(state.official){preserved=(m.telegram_delivery_proven===true?'Envoyé sur Telegram':'Signal validé — livraison en attente')+' · ';}else if(!state.voteCount&&(m.analysis_exclusion_reason||m.block_reason)){preserved=esc(m.analysis_exclusion_reason||m.block_reason)+' · ';}else if(TLMMatchLifecycle.phase(m)==='closed'){preserved=esc(state.recommendationStatus||'Anciennes tendances — aucun signal officiel')+' · ';}
+    var preserved=esc(TLMMatchLifecycle.statusText(m))+' · ';
     return TLMMatchLifecycle.entryNoticeHtml(m)+'<span class="tlm-app-live-vote-summary">'+preserved+'<span class="tlm-app-live-mini-votes">'+dots+'</span><span>'+state.consensusCount+'/5 consensus · '+appResponseCount(state.slots)+'/5 IA ont répondu</span></span>';
   }
   function appLogo(el,src,name){if(!el)return;el.src=src||'/logo192.png';el.alt='Logo '+name;el.onerror=function(){this.src='/logo192.png';this.onerror=null;};}
