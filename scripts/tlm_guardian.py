@@ -3,6 +3,26 @@ import os,json,sqlite3,pathlib,datetime,time,urllib.request,urllib.parse,subproc
 from zoneinfo import ZoneInfo
 ROOT=pathlib.Path(os.environ.get('TLM_ROOT','/opt/touslesmatchs'))
 DATA=ROOT/'data'
+PROTECTED_OU25_MARKERS={
+ 'public/index.html':(
+  'state.locked?null:slot.direction',
+  'direction réservée à Premium',
+  "voteState.locked?'CONSENSUS",
+ ),
+ 'public/live-ia.html':(
+  'locked:raw.locked!==false',
+  'voted&&!state.locked ? slot.direction',
+  'Vote enregistré · direction Premium',
+ ),
+ 'public/app.html':(
+  "state.locked?'✓'",
+  'direction réservée à Premium',
+  "voteState.locked?'CONSENSUS",
+ ),
+}
+def protected_ou25_display_ok(relative_path,text):
+ markers=PROTECTED_OU25_MARKERS.get(relative_path)
+ return bool(markers) and all(marker in text for marker in markers)
 def config():
  out={}
  for line in (ROOT/'.env').read_text().splitlines():
@@ -48,8 +68,9 @@ def report(db,live=None,rules=None,disk=None):
  if disk is not None:
   out['disk_percent']=disk
   if disk>=80:out['incidents'].append({'type':'disk_high','percent':disk})
- for f in ['public/index.html','public/live-ia.html','public/app.html']:
-  if (ROOT/f).exists() and 'marketText' not in (ROOT/f).read_text():out['incidents'].append({'type':'protected_ou25_display_missing','file':f})
+ for f in PROTECTED_OU25_MARKERS:
+  path=ROOT/f
+  if path.exists() and not protected_ou25_display_ok(f,path.read_text()):out['incidents'].append({'type':'protected_ou25_display_missing','file':f})
  return out
 
 def summary(r):
