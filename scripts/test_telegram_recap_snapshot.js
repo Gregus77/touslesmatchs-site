@@ -9,7 +9,7 @@ db.exec(`CREATE TABLE concile_analyses(match_key TEXT PRIMARY KEY,home TEXT,away
 CREATE TABLE telegram_signal_deliveries(match_key TEXT,channel TEXT,telegram_message_id INTEGER,market TEXT,vote_count INTEGER,ok INTEGER,created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 let time=Date.parse('2026-09-11T21:00:00Z'),calls=0,failRu=true;
 const transport=async(token,payload)=>payload.chat_id==='-4'&&failRu?{ok:false,retryAfter:30}:{ok:true,messageId:++calls};
-const pub=c.createPublisher({db,env,transport,now:()=>time});
+const pub=c.createPublisher({db,env,transport,now:()=>time,validateSignal:async()=>({ok:true})});
 assert.equal(c.sqliteUtcMs('2026-09-11 22:00:00'),Date.parse('2026-09-11T22:00:00Z'));
 assert.equal(c.parisParts(c.sqliteUtcMs('2026-09-11 22:00:00')).day,'2026-09-12');
 for(const [day,hours] of [['2026-09-11',24],['2026-03-29',23],['2026-10-25',25]]) {
@@ -35,11 +35,11 @@ for(const [key,at,id,ch] of [['start','2026-09-10 22:00:00',1,'premium'],['befor
 }
 const list=c.recapRows(db,'2026-09-11','premium');assert.deepEqual(list.map(r=>r.match_key),['start','last']);assert(list.every(r=>r.outcome==='loss'));assert.equal(c.recapRows(db,'2026-09-11','ru_premium').length,0);
 assert(pub.queueDailyRecap('2026-09-11'));assert(!pub.queueDailyRecap('2026-09-11'));
-const second=new Database(file),other=c.createPublisher({db:second,env,transport,now:()=>time});assert(!other.queueDailyRecap('2026-09-11'));
+const second=new Database(file),other=c.createPublisher({db:second,env,transport,now:()=>time,validateSignal:async()=>({ok:true})});assert(!other.queueDailyRecap('2026-09-11'));
 assert.equal(db.prepare("SELECT count(*) n FROM client_telegram_outbox WHERE kind='recap'").get().n,4);
 analysis('invalid-recap');db.prepare("INSERT INTO telegram_signal_deliveries(match_key,channel,telegram_message_id,market,vote_count,ok,created_at) VALUES ('invalid-recap','ru_premium',99,'unsupported',3,1,'2026-09-12 10:00:00')").run();
-assert.throws(()=>pub.queueDailyRecap('2026-09-12'));
+assert(!pub.queueDailyRecap('2026-09-12'));
 assert(!db.prepare("SELECT 1 FROM client_recap_runs WHERE day='2026-09-12'").get());
 assert.equal(db.prepare("SELECT count(*) n FROM client_telegram_outbox WHERE kind='recap'").get().n,4);
-const pending=c.render('recap',{day:'2026-09-11',rows:[{home:'H',away:'A',outcome:'pending',best_bet:'Over 2.5 buts'}]},pub.targets[0]);assert(pending.text.includes('En attente'));assert(!pending.text.includes('Over 2.5'));
+const pending=c.render('recap',{day:'2026-09-11',rows:[{home:'H',away:'A',outcome:'pending',best_bet:'Over 2.5 buts'}]},pub.targets[0]);assert(/en attente/i.test(pending.text));assert(!pending.text.includes('Over 2.5'));
 (async()=>{await Promise.all([pub.flush(),other.flush()]);assert.equal(db.prepare("SELECT count(*) n FROM telegram_signal_deliveries WHERE match_key='match'").get().n,1);failRu=false;time+=31000;await other.flush();assert.equal(db.prepare("SELECT count(*) n FROM telegram_signal_deliveries WHERE match_key='match'").get().n,2);assert.equal(db.prepare("SELECT count(*) n FROM client_telegram_outbox WHERE state='delivered'").get().n,6);second.close();db.close();console.log('PASS timezone/DST/boundaries, immutable queued snapshot, separate FR/RU proof, pending results, persistent lock, duplicate execution and retry');})().catch(e=>{console.error(e);process.exitCode=1;});

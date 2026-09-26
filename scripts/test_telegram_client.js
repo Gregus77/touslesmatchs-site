@@ -52,20 +52,20 @@ async function main(){
     INSERT INTO concile_analyses(match_key) VALUES ('match:1');`);
   let now=100000,calls=[],failRu=true;
   const transport=async(token,payload)=>{calls.push(payload.chat_id);return payload.chat_id==='-4'&&failRu?{ok:false,retryAfter:30}:{ok:true,messageId:calls.length};};
-  let pub=client.createPublisher({db,env,transport,now:()=>now});
+  let pub=client.createPublisher({db,env,transport,now:()=>now,validateSignal:async()=>({ok:true})});
   for(const dest of targets)pub.enqueue('signal',data,dest,'identity',now+120000);
   await Promise.all([pub.flush(),pub.flush()]);assert.equal(calls.length,4);
   assert.equal(db.prepare("SELECT COUNT(*) n FROM telegram_signal_deliveries WHERE channel='ru_premium'").get().n,0);
   for(const dest of targets)pub.enqueue('signal',data,dest,'identity',now+120000);
   await pub.flush();assert.equal(calls.length,4);
-  pub=client.createPublisher({db,env,transport,now:()=>now});now+=31000;failRu=false;await pub.flush();assert.deepEqual(calls,['-1','-2','-3','-4','-4']);
+  pub=client.createPublisher({db,env,transport,now:()=>now,validateSignal:async()=>({ok:true})});now+=31000;failRu=false;await pub.flush();assert.deepEqual(calls,['-1','-2','-3','-4','-4']);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM telegram_signal_deliveries').get().n,4);
   assert.equal(db.prepare('SELECT sig_sent_standard FROM concile_analyses').get().sig_sent_standard,1);
   assert.equal(db.prepare('SELECT sig_sent_elite FROM concile_analyses').get().sig_sent_elite,1);
   // Result and recap successes must never manufacture a signal proof.
   pub.enqueue('result',data,targets[1],'result');await pub.flush();assert.equal(db.prepare('SELECT COUNT(*) n FROM telegram_signal_deliveries').get().n,4);
   // Unknown acceptance must not be retried automatically (Telegram has no idempotency key).
-  const uncertain=client.createPublisher({db,env,transport:async()=>({ok:true}),now:()=>now});
+  const uncertain=client.createPublisher({db,env,transport:async()=>({ok:true}),now:()=>now,validateSignal:async()=>({ok:true})});
   uncertain.enqueue('reminder',{},targets[0],'unknown');await uncertain.flush();assert.equal(db.prepare("SELECT state FROM client_telegram_outbox WHERE delivery_key LIKE 'reminder:unknown:%'").get().state,'uncertain');
   // A signal that expires before a retry cannot be sent outside the live window.
   pub.enqueue('signal',data,targets[1],'expired',now-1);const before=calls.length;await pub.flush();assert.equal(calls.length,before);
