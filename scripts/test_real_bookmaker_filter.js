@@ -32,11 +32,11 @@ assert(
 );
 assert(
   source.includes("voteCountForSignal >= requiredVotesForSignal"),
-  "le quorum de quatre votes doit rester present"
+  "le quorum client configure doit rester present"
 );
 assert(
-  source.includes("minute !== null && minute >= AUTO_CONCILE_WINDOW_MIN && minute <= AUTO_CONCILE_WINDOW_MAX"),
-  "la fenetre 15-45 et le refus des minutes invalides doivent rester presents"
+  source.includes("const officialWindowEligible = liveStateCoherence.analysisWindow(match).open;"),
+  "la fenetre officielle verifiee de premiere mi-temps doit rester presente"
 );
 assert(
   /function rowHasRealBookmakerOdd\(r\)[\s\S]*?!\/estimation\/i\.test\(source\)/.test(source),

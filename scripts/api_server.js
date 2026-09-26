@@ -7858,7 +7858,7 @@ Réponds en JSON pur (pas de markdown):
   });
 
   // The historical decision stays complete, including the later odds/window gates.
-  const traditionalOddOk = !_coteReelle || (recordedOdd >= TIER_MIN_REAL_ODD && recordedOdd <= TIER_MAX_REAL_ODD);
+  const traditionalOddOk = _coteReelle && (recordedOdd >= TIER_MIN_REAL_ODD && recordedOdd <= TIER_MAX_REAL_ODD);
   const traditionalBlock = traditionalCriteriaBlock || (!traditionalOddOk ? "real_odd_outside_traditional_range" : null);
   const traditionalEligible = !traditionalBlock;
   const structuralAllowed = clientOu25MatchEligible && ou25Only && !isWomen && !lowTrust
@@ -7965,10 +7965,10 @@ Réponds en JSON pur (pas de markdown):
       const sigTier = computeSignalTier(analysisResult.best_bet, analysisResult.confidence, minute);
       const tierBadge = sigTier === "standard" ? "🥇 STANDARD" : sigTier === "premium" ? "🥈 PREMIUM" : "🥉 ELITE";
       console.log(`[signal-fort] Palier: ${tierBadge} (${sigTier}) — ${analysisResult.best_bet} ${analysisResult.confidence}% min=${minute}`);
-      // Décision propriétaire : une cote absente est affichée comme telle et ne
-      // bloque pas seule. Une vraie cote connue reste soumise à la plage produit.
-      const bookmakerPlayable = true;
-      if (!_coteReelle) console.log(`[signal-fort] Cote indisponible — admissibilite sportive conservee, aucun calcul de rentabilite`);
+      // Une diffusion client exige toujours une cote bookmaker reelle dans la plage produit.
+      // Jev peut arbitrer les criteres quantitatifs, jamais contourner ce garde-fou commercial.
+      const bookmakerPlayable = Boolean(_coteReelle && _bmSig);
+      if (!bookmakerPlayable) console.log(`[signal-fort] Cote bookmaker reelle indisponible — diffusion bloquee`);
       if (_freeSignalDailyDate.date !== todayStr) { _freeSignalDailyDate.date = todayStr; _freeSignalDailyDate.count = signalsSentToday("sig_sent_free"); }
 
       // ── Diffusion par palier (conditions fondateur) ─────────────────────────
@@ -7980,7 +7980,7 @@ Réponds en JSON pur (pas de markdown):
       //   tant qu'un canal dédié n'est pas configuré (voir constantes) → pas de doublon.
       const conf = Number(analysisResult.confidence) || 0;
       const realOdd = (analysisResult.cote && _bmSig) ? Number(analysisResult.cote) : 0; // _bmSig ⇒ cote réelle bookmaker
-      const oddOk = !_coteReelle || (realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD);
+      const oddOk = _coteReelle && (realOdd >= TIER_MIN_REAL_ODD && realOdd <= TIER_MAX_REAL_ODD);
       const sportLc = String(match.sport || "Football").toLowerCase();
       // Produit client recentre : football O/U 2,5 uniquement et au moins
       // quatre votes réels concordants. Une cinquième absence reste distincte
@@ -7994,9 +7994,10 @@ Réponds en JSON pur (pas de markdown):
         && officialStrongQuorum
         && voteCountForSignal >= requiredVotesForSignal
         && conf >= CLIENT_OU25_MIN_CONFIDENCE;
-      const diffusable = jevSendAuthorized
-        ? structuralAllowed && firstHalfOpen && officialWindowEligible
-        : traditionalDiffusable;
+      const diffusable = bookmakerPlayable && oddOk && sportDiffusable
+        && (jevSendAuthorized
+          ? structuralAllowed && firstHalfOpen && officialWindowEligible
+          : traditionalDiffusable);
       // Motif précis quand l'analyse a franchi tous les filtres qualité mais
       // n'atteint aucun canal payant. Distingue les trois causes, qui appellent
       // des corrections très différentes.
