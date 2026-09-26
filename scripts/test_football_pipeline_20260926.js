@@ -131,7 +131,7 @@ async function main(){
   const output=ui.renderLiveOu25Details({...base,period:'HT',ou25:failed});assert.match(output,/IA non appelée/);assert.match(output,/Réponse statistique vide/);assert.doesNotMatch(output,/En attente/);
  });
  check('public API projection preserves diagnosis without exposing vote directions',()=>{
-  const projected=vm.createContext({});vm.runInContext(fn('homepageLiveMatch'),projected);
+  const projected=vm.createContext({db:{},tlmOperations:{evidence:()=>({})}});vm.runInContext(fn('homepageLiveMatch'),projected);
   const raw=coherence.attemptState(base,empty,{started_at:new Date(now).toISOString(),minute:35,stage:'collecting',outcome:'failed',reason:'Réponse statistique vide.'},null);
   const result=projected.homepageLiveMatch({...base,ou25:raw},false,true);assert.equal(result.ou25.attempt.minute,35);
   assert.equal(result.ou25.analysis_state,'failed_before_providers');assert(result.ou25.votes.every(v=>v.direction===null&&v.status==='not_called'));

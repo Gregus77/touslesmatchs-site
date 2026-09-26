@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm'),pat
 const lifecycle=require('../public/js/match-lifecycle');
 const source=fs.readFileSync(path.join(__dirname,'api_server.js'),'utf8');
 const projection=source.match(/function homepageLiveMatch\([^]*?\n}/)[0];
-const api=vm.createContext({});vm.runInContext(projection,api);
+const api=vm.createContext({db:{},tlmOperations:{evidence:()=>({})}});vm.runInContext(projection,api);
 const ctx=vm.createContext({TLMMatchLifecycle:lifecycle,esc:String,escHtml:String,isFinite,liveHomeScore:m=>m.score_home,liveAwayScore:m=>m.score_away});
 function inject(file,names){const s=fs.readFileSync(path.join(__dirname,'../public',file),'utf8');for(const [name,next] of names){const start=s.indexOf('function '+name+'(');assert(start>=0);const end=s.indexOf('function '+next+'(',start);assert(end>start);vm.runInContext(s.slice(start,end),ctx);}}
 inject('index.html',[['heroOu25','heroResponseCount'],['heroResponseCount','heroTerminalCaption'],['tlmVotesAreOld','tlmVoteCirclesHtml'],['tlmVoteCirclesHtml','renderAnalyzedList']]);

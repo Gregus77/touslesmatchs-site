@@ -26,6 +26,8 @@ const halftimeEntryShadow = require("./halftime_entry_shadow");
 const officialSnapshots = require("./official_signal_snapshots");
 const jevDecisionEngine = require("./jev_decision_engine");
 const liveStateCoherence = require("./live_state_coherence");
+const tlmOperations = require("./tlm_operations");
+const multisportShadow = require("./multisport_shadow");
 const { BETA_PLUS05_CAPACITY, buildBetaPlus05InvitationEmail, decideBetaApplication, formatBetaApplicationsCsv, normalizeBetaEmail } = require("./beta_waitlist");
 const { bookmakerButtons, buildInlineKeyboard } = require("./bookmakers.config");
 
@@ -287,7 +289,7 @@ const ADMIN_READONLY_PATHS = new Set([
   // performance par segment, et depense IA quotidienne. Aucune donnee
   // personnelle ni credential, mais de quoi renseigner un concurrent.
   "/admin/stats", "/admin/funnel-report", "/admin/segment-report",
-  "/admin/ai-budget-stats", "/admin/jev-status",
+  "/admin/ai-budget-stats", "/admin/jev-status", "/admin/operations-status",
 ]);
 app.use((req, res, next) => {
   if (req.method === "GET" && ADMIN_READONLY_PATHS.has(req.path)) {
@@ -301,6 +303,7 @@ app.use((req, res, next) => {
 // ── Database ──────────────────────────────────────────────────────────────────
 const DB_PATH = process.env.DB_PATH || "/data/tlm.db";
 const db = new Database(DB_PATH);
+tlmOperations.init(db);
 officialSnapshots.init(db);
 const footballAttempts = liveStateCoherence.createAttemptStore(db);
 const jevEngine = jevDecisionEngine.createEngine({db, logger: event => console.log('[jev]', JSON.stringify(event))});
@@ -4243,6 +4246,7 @@ function getVerifiedFixtureId(match) {
 function buildStatsStatus(match, stats, reason) {
   return {
     available: !!stats,
+    status: stats ? "available" : "unavailable",
     source: stats ? "api-sports" : null,
     fixtureId: getVerifiedFixtureId(match),
     reason: stats ? null : reason,
@@ -4470,6 +4474,8 @@ async function fetchFromApiSports() {
       source: "api-sports",
       sourceId: String(g.id),
       fixtureId: null,
+      leagueId:g.league?.id,leagueSeason:g.league?.season,stage:g.stage||g.league?.stage||null,
+      homeId:g.teams?.home?.id,awayId:g.teams?.away?.id,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? null, score_away: g.scores?.away?.total ?? null,
@@ -4496,6 +4502,8 @@ async function fetchFromApiSports() {
       source: "api-sports",
       sourceId: String(g.id),
       fixtureId: null,
+      leagueId:g.league?.id,leagueSeason:g.league?.season,stage:g.stage||g.league?.stage||null,
+      homeId:g.teams?.home?.id,awayId:g.teams?.away?.id,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home ?? null, score_away: g.scores?.away ?? null,
@@ -4524,6 +4532,8 @@ async function fetchFromApiSports() {
       source: "api-sports",
       sourceId: String(g.id),
       fixtureId: null,
+      leagueId:g.league?.id,leagueSeason:g.league?.season,stage:g.stage||g.league?.stage||null,
+      homeId:g.teams?.home?.id,awayId:g.teams?.away?.id,
       home: g.teams?.home?.name, away: g.teams?.away?.name,
       home_logo: g.teams?.home?.logo || null, away_logo: g.teams?.away?.logo || null,
       score_home: g.scores?.home?.total ?? g.scores?.home ?? null,
@@ -5017,6 +5027,9 @@ async function fetchLiveMatches() {
   // Auto-résoudre les prédictions des matchs terminés
   matches.filter(m => m.status === "FINISHED").forEach(m => autoResolvePredictions(m));
 
+  tlmOperations.observe(db,matches,m=>({eligible:m.sport==='Football'&&shouldAutoObserveMatch(m)&&isClientOu25MatchEligible(m,true),
+    reason:publicLiveFilterReason(m)||footballObserverExclusionReason(m)||clientOu25StaticExclusionReason(m)||(liveStateCoherence.analysisWindow(m).open?null:liveStateCoherence.analysisWindow(m).reason)}));
+  secondaryShadowEngine.observe(matches);
   const productMatches = matches.filter(isPublicFootballScopeMatch);
   const visibleMatches = productMatches.filter(m => !isFinishedOrUnavailableForLiveDisplay(m));
   for (const match of matches) {
@@ -10323,11 +10336,32 @@ function scheduleJevReobservation(match, snapshotId) {
   jevReobservationTimers.set(scope,timer);
 }
 
+const secondaryShadowEngine = multisportShadow.create({
+  db,
+  read: async (sport, resource) => {
+    const cfg=ODDS_ENDPOINT_BY_SPORT[String(sport).toLowerCase()];
+    if(!cfg || !API_SPORTS_KEY || shouldSkipApiSportsSport(cfg.key) || !apiSportsBudgetOk())return null;
+    try { const data=await httpGet(`https://${cfg.host}/${resource}`,{"x-apisports-key":API_SPORTS_KEY});
+      return handleApiSportsErrors(cfg.key,data)?null:data;
+    } catch (_) { return null; }
+  },
+  fetchOdds: match => apiSportsBudgetOk()?fetchRealOdds(match):Promise.resolve(null),
+  agent: () => SHADOW_AGENTS.find(a=>a.name==='OR-KimiK3'&&a.enabled()),
+  call: (agent,prompt,context)=>analysisEngine.guardedShadowCall(db,agent,prompt,context),
+  quota: () => {
+    const persisted=db.prepare("SELECT count(*) n FROM multisport_shadow WHERE date(analysed_at)=date('now')").get().n;
+    const legacy=db.prepare("SELECT count(DISTINCT match_key) n FROM shadow_evals WHERE date(created_at)=date('now')").get().n;
+    return persisted+legacy<SHADOW_DAILY_CAP && shadowQuotaAllows();
+  },
+  paused: ()=>!AUTO_CONCILE_MULTISPORT || require('./ai_budget_guard').backgroundPaused(),
+});
+
 async function runAutoConcileObserver() {
   if (!AUTO_CONCILE_OBSERVER || autoConcileObserverRunning) return;
   autoConcileObserverRunning = true;
   try {
     const matches = await fetchLiveMatches();
+
     const observed = matches
       .filter(shouldAutoObserveMatch)
       // Le filtre produit doit preceder les cinq appels du Concile. Le 27/08,
@@ -10377,6 +10411,7 @@ async function runAutoConcileObserver() {
         console.error("[auto-concile] analyse:", e.message);
       }
     }
+    try { await secondaryShadowEngine.tick(); } catch (_) { console.error('[shadow-multisport] cycle indisponible'); }
   } catch (e) {
     console.error("[auto-concile] cycle:", e.message);
   } finally {
@@ -14088,6 +14123,7 @@ function homepageLiveMatch(match, canReveal, ownerDiagnostics = false) {
       confidence: canReveal ? v.confidence : null,
     })),
   };
+  if (ownerDiagnostics) out.owner_analysis = tlmOperations.evidence(db,match,raw);
   if (!ownerDiagnostics) {
     out.ou25.attempt = null;
     out.ou25.synchronization_reason = null;
@@ -14115,6 +14151,9 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
   try {
     res.set("Cache-Control", "no-store, max-age=0");
     const cacheOnly = req.query.cache_only === "1";
+    const diagnosticEmail = String(req.headers["x-tlm-email"] || "");
+    const diagnosticCode = String(req.headers["x-tlm-code"] || "");
+    const ownerDiagnostics = !!(diagnosticEmail && diagnosticCode && isAdmin(diagnosticEmail, diagnosticCode));
     if (!cacheOnly && req.query.force === "1") {
       liveMatchesCache = { data: null, ts: 0 };
       console.log("[live-matches] Cache forcé vidé par l'utilisateur");
@@ -14257,16 +14296,17 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       return { ...m, analysable: acceptingClientVotes && !reason, block_reason: reason, analysis_exclusion_reason: analysisExclusionReason, ou25, ...visibility };
     });
 
+    const ownerShadow=ownerDiagnostics?[multisportShadow.footballReport(db),...multisportShadow.report(db)]:undefined;
     if (cacheOnly) {
-      const canReveal = !!paidGoal05Account(req);
+      const canReveal = ownerDiagnostics || !!paidGoal05Account(req);
       res.set('Vary','Authorization, X-TLM-Email');
-      return res.json({ok:true, locked:!canReveal, cache_only:true,
-        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal))});
+      return res.json({ok:true, locked:!canReveal, cache_only:true, owner_shadow:ownerShadow,
+        matches:withVerdict.filter(isPublicFootballScopeMatch).map(m=>homepageLiveMatch(m,canReveal,ownerDiagnostics))});
     }
     if (req.path === '/homepage-live') {
       const account = paidGoal05Account(req);
       const expiry = account?.expires_at;
-      const canReveal = !!account && (!expiry || (Number.isFinite(Date.parse(expiry)) && Date.parse(expiry) > Date.now()));
+      const canReveal = ownerDiagnostics || (!!account && (!expiry || (Number.isFinite(Date.parse(expiry)) && Date.parse(expiry) > Date.now())));
       const publicMatches = withVerdict.filter(isPublicFootballScopeMatch);
       const evidenceCandidates = publicMatches
         .filter(m => m.homepage_display_eligible === true)
@@ -14299,7 +14339,7 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       }
       res.set('Vary', 'Authorization, X-TLM-Email');
       return res.json({ok: true, locked: !canReveal,
-        matches: publicMatches.map(m => homepageLiveMatch(m, canReveal))});
+        matches: publicMatches.map(m => homepageLiveMatch(m, canReveal,ownerDiagnostics))});
     }
 
     // Règle du 29/07/2026 ("n'afficher que ce qui est jouable") assouplie le
@@ -14341,12 +14381,9 @@ app.get(["/live-matches", "/homepage-live"], async (req, res) => {
       if (legacyAuth?.valid && String(legacyAuth.plan || 'free').toLowerCase() !== 'free') liveAccount = legacyAuth;
     }
     const liveExpiry = liveAccount?.expires_at;
-    const liveCanReveal = !!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now()));
+    const liveCanReveal = ownerDiagnostics || (!!liveAccount && (!liveExpiry || (Number.isFinite(Date.parse(liveExpiry)) && Date.parse(liveExpiry) > Date.now())));
     res.set('Vary', 'Authorization, X-TLM-Email, X-TLM-Code');
-    const diagnosticEmail = String(req.headers['x-tlm-email'] || '');
-    const diagnosticCode = String(req.headers['x-tlm-code'] || '');
-    const ownerDiagnostics = !!(diagnosticEmail && diagnosticCode && isAdmin(diagnosticEmail, diagnosticCode));
-    res.json({ ok: true, locked: !liveCanReveal, matches: strictMatches.map(match => ({
+    res.json({ ok: true, locked: !liveCanReveal, owner_shadow:ownerShadow, matches: strictMatches.map(match => ({
       ...match,
       ...homepageLiveMatch(match, liveCanReveal, ownerDiagnostics),
     })) });
@@ -19537,6 +19574,13 @@ app.get("/admin/ai-budget-stats", (req, res) => {
     const guard = require("./ai_budget_guard");
     res.json({ ok: true, stats: guard.getDailyStats(db) });
   } catch (e) { res.json({ ok: false, error: e.message }); }
+});
+
+app.get('/admin/operations-status', (req,res)=>{
+ const usage=db.prepare("SELECT coalesce(sum(count),0) used FROM api_sports_usage WHERE bucket LIKE ?").get(new Date().toISOString().slice(0,10)+'%');
+ res.json({ok:true,api_sports:{internal_used_today:usage.used,internal_daily_budget:API_SPORTS_DAILY_BUDGET,blocked_until:apiSportsBlockedUntil},
+  min_votes:CLIENT_OU25_MIN_VOTES,jev_enabled:process.env.JEV_ENABLED==='1',jev_production:process.env.JEV_PRODUCTION_MODE==='1',
+  shadow_daily_cap:SHADOW_DAILY_CAP,shadow_background_paused:require('./ai_budget_guard').backgroundPaused()});
 });
 
 app.get("/admin/guardian-state", (req, res) => {
