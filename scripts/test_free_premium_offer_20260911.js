@@ -49,9 +49,16 @@ for (const page of ["index.html", "live-ia.html", "app.html", "faq.html", "dashb
 }
 const home = fs.readFileSync(require("path").join(__dirname, "..", "public", "index.html"), "utf8");
 assert(!/data-i18n="plan_std"/.test(home), "carte Standard encore visible");
-assert(!/\/api\/premium-checkout\?lang=fr/.test(home), "lien de paiement publié malgré le produit Premium inactif");
-assert(/Premium — inscriptions bientôt disponibles/.test(home), "CTA informatif Premium absent");
+assert(/href="\/api\/premium-checkout\?lang=fr"/.test(home), "lien Premium actif absent");
+assert(/Passer Premium — 14,90 €\/mois/.test(home), "CTA Premium actif absent");
 const telegramClient = fs.readFileSync(require("path").join(__dirname, "telegram_client.js"), "utf8");
 assert(/premium-checkout/.test(telegramClient) && /\?lang=\$\{lang\}/.test(telegramClient), "checkout russe localise absent");
 
-console.log("OK: offre Gratuit/Premium, 11e signal, antidoublon, paiement inactif non publié et compatibilite historique");
+for (const source of ["App.js", "Subscription.js"]) {
+  const text = fs.readFileSync(require("path").join(__dirname, "..", "src", source), "utf8");
+  assert(!/(?:9|19|29)[,.]90\s*(?:€|EUR)/.test(text), `${source}: ancien prix commercial encore présent`);
+  assert(!/label:"(?:STANDARD|ELITE)"|name: "(?:VIP|Elite)"/.test(text), `${source}: ancienne offre commerciale encore présente`);
+}
+assert(/14,90(?:€| EUR)\/mois/.test(fs.readFileSync(require("path").join(__dirname, "..", "src", "App.js"), "utf8")), "frontend React sans tarif Premium");
+
+console.log("OK: offre unique Gratuit/Premium, anciens encarts absents, tunnel Premium actif et compatibilite historique");

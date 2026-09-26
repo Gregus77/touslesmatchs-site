@@ -64,7 +64,7 @@ var faqs = [
   {q:"Comment votre IA analyse les matchs ?", a:"Notre Concile de 6 IAs croise la forme recente, les blessures, les confrontations directes, les stats domicile/exterieur et d'autres variables. Seuls les picks avec un score de confiance >= 7/10 sont publies."},
   {q:"Combien de picks par jour ?", a:"Un seul pick par jour, maximum. Qualite plutot que quantite. Les jours sans pick valable sont indiques clairement."},
   {q:"Quel bankroll est recommande ?", a:"Ne misez jamais plus de 2 a 5% de votre bankroll total sur un seul pick. Les paris sportifs comportent des risques."},
-  {q:"Qu'est-ce que le plan Elite ?", a:"Le plan Elite a 19,90 EUR/mois donne acces a un pick HORS-ARJEL supplementaire chaque jour, sur Pinnacle et PS3838 ou les cotes sont souvent superieures."},
+  {q:"Que comprend Premium ?", a:"Premium coute 14,90 EUR/mois et donne acces a tous les signaux admissibles, aux votes IA detailles et au canal Telegram Premium, sans engagement."},
 ];
 
 var bookmakers = [
@@ -484,9 +484,9 @@ export default function App() {
     // ════ 6. PRICING ════
     React.createElement("section", {id:"pricing", className:"pricing-section reveal"},
       React.createElement("div", {className:"container", style:{textAlign:"center"}},
-        React.createElement("div", {className:"section-tag", style:{justifyContent:"center"}}, "NOS FORMULES"),
+        React.createElement("div", {className:"section-tag", style:{justifyContent:"center"}}, "DEUX ACCES"),
         React.createElement("p", {style:{color:"var(--muted)",fontSize:"15px",marginBottom:"8px"}},
-          lang==="fr" ? "Commencez gratuitement. Passez Elite quand vous etes pret." : "Start free. Go Elite when you're ready."
+          lang==="fr" ? "Commencez gratuitement. Passez Premium quand vous etes pret." : "Start free. Go Premium when you're ready."
         ),
         React.createElement("div", {className:"pricing-grid"},
           [
@@ -496,14 +496,9 @@ export default function App() {
               cta:"Commencer", btnCls:"free", action:null
             },
             {
-              label:"STANDARD", price:"9,90€", sub:"/ mois", cls:"",
-              features:["1 pick ARJEL prioritaire","Alertes Telegram instantanees","Statistiques avancees","Historique complet"],
-              cta:"Essayer Standard", btnCls:"standard", action:"standard"
-            },
-            {
-              label:"ELITE", price:"19,90€", sub:"/ mois", cls:" elite", badge:"LE PLUS POPULAIRE",
-              features:["Tout Standard inclus","1 pick HORS-ARJEL (Pinnacle)","Cotes superieures vs France","Canal Telegram prive"],
-              cta:"Devenir Elite", btnCls:"elite", action:"premium"
+              label:"PREMIUM", price:"14,90€", sub:"/ mois", cls:" elite", badge:"OFFRE UNIQUE",
+              features:["Tous les signaux admissibles","Votes IA detailles","Canal Telegram Premium","Sans engagement"],
+              cta:"Passer Premium", btnCls:"elite", action:"premium"
             }
           ].map(function(plan,i) {
             return React.createElement("div", {key:i, className:"pricing-card"+plan.cls},
@@ -522,10 +517,7 @@ export default function App() {
               React.createElement("button", {className:"pricing-btn "+plan.btnCls, onClick:function() {
                 if (!plan.action) return;
                 if (window.trackEvent) window.trackEvent("click_pricing_cta",{plan:plan.action});
-                fetch("https://www.touslesmatchs.com/api/create-checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plan:plan.action})})
-                  .then(function(r){return r.json();})
-                  .then(function(d){if(d.url) window.location.href=d.url; else window.open(TELEGRAM_LINK,"_blank");})
-                  .catch(function(){window.open(TELEGRAM_LINK,"_blank");});
+                window.location.href="https://www.touslesmatchs.com/api/premium-checkout?lang=fr";
               }}, plan.cta)
             );
           })
